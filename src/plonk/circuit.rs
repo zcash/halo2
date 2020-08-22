@@ -6,7 +6,7 @@ use crate::arithmetic::Field;
 
 /// This represents a PLONK wire, which could be a fixed (selector) wire or an
 /// advice wire.
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum Wire {
     /// A wires
     A,
@@ -16,15 +16,23 @@ pub enum Wire {
     C,
     /// D wires
     D,
+    /// Fixed wires
+    Fixed(usize),
+    /// Advice wires
+    Advice(usize),
 }
 
 /// Represents a pointer to a value in the constraint system.
 #[derive(Clone, Debug)]
-pub struct Variable(pub(crate) Wire, pub(crate) usize);
+pub struct Variable(pub Wire, pub usize);
 
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
 pub trait ConstraintSystem<F: Field> {
+    /// Assign a wire value
+    fn assign(&mut self, var: Variable, to: impl FnOnce() -> Result<F, Error>)
+        -> Result<(), Error>;
+
     /// Creates a gate.
     fn create_gate(
         &mut self,
@@ -131,8 +139,8 @@ impl<F> Mul<F> for Polynomial<F> {
 /// permutation arrangements.
 #[derive(Debug, Clone)]
 pub struct MetaCircuit {
-    // num_fixed_wires: usize,
-    // num_advice_wires: usize,
+    pub(crate) num_fixed_wires: usize,
+    pub(crate) num_advice_wires: usize,
     // permutations: Vec<Vec<Wire>>,
     // gates: Vec<Polynomial>,
     // queries: HashSet<(Wire, usize)>,
@@ -141,6 +149,24 @@ pub struct MetaCircuit {
 
 impl Default for MetaCircuit {
     fn default() -> MetaCircuit {
-        MetaCircuit {}
+        MetaCircuit {
+            num_fixed_wires: 0,
+            num_advice_wires: 0,
+        }
+    }
+}
+
+impl MetaCircuit {
+    /// Allocate a new fixed wire
+    pub fn fixed_wire(&mut self) -> Wire {
+        let tmp = Wire::Fixed(self.num_fixed_wires);
+        self.num_fixed_wires += 1;
+        tmp
+    }
+    /// Allocate a new advice wire
+    pub fn advice_wire(&mut self) -> Wire {
+        let tmp = Wire::Advice(self.num_advice_wires);
+        self.num_advice_wires += 1;
+        tmp
     }
 }

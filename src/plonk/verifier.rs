@@ -22,6 +22,11 @@ impl<C: CurveAffine> Proof<C> {
         hash_point(&mut transcript, &self.d_commitment)
             .expect("proof cannot contain points at infinity");
 
+        for commitment in &self.advice_commitments {
+            hash_point(&mut transcript, commitment)
+                .expect("proof cannot contain points at infinity");
+        }
+
         for c in &self.h_commitments {
             hash_point(&mut transcript, c).expect("proof cannot contain points at infinity");
         }

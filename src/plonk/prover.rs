@@ -1,5 +1,5 @@
 use super::{
-    circuit::{Circuit, ConstraintSystem, MetaCircuit, Wire, Variable},
+    circuit::{Circuit, ConstraintSystem, MetaCircuit, Variable, Wire},
     hash_point, Error, Proof, SRS,
 };
 use crate::arithmetic::{
@@ -31,9 +31,29 @@ impl<C: CurveAffine> Proof<C> {
             sc: Vec<F>,
             sd: Vec<F>,
             sm: Vec<F>,
+            advice: Vec<Vec<F>>,
         }
 
         impl<F: Field> ConstraintSystem<F> for WitnessCollection<F> {
+            fn assign(
+                &mut self,
+                var: Variable,
+                to: impl FnOnce() -> Result<F, Error>,
+            ) -> Result<(), Error> {
+                // We only care about advice wires here.
+                match var.0 {
+                    Wire::Advice(index) => {
+                        *self
+                            .advice
+                            .get_mut(index)
+                            .and_then(|v| v.get_mut(var.1))
+                            .ok_or(Error::BoundsFailure)? = to()?;
+                    }
+                    _ => {}
+                }
+                Ok(())
+            }
+
             fn create_gate(
                 &mut self,
                 sa: F,
@@ -66,6 +86,9 @@ impl<C: CurveAffine> Proof<C> {
             // }
         }
 
+        let mut meta = MetaCircuit::default();
+        let config = ConcreteCircuit::configure(&mut meta);
+
         let mut witness = WitnessCollection {
             a: vec![],
             b: vec![],
@@ -76,11 +99,8 @@ impl<C: CurveAffine> Proof<C> {
             sc: vec![],
             sd: vec![],
             sm: vec![],
+            advice: vec![vec![C::Scalar::zero(); params.n as usize]; meta.num_advice_wires],
         };
-
-        let mut meta = MetaCircuit::default();
-
-        let config = ConcreteCircuit::configure(&mut meta);
 
         // Synthesize the circuit to obtain the witness and other information.
         circuit.synthesize(&mut witness, config)?;
@@ -115,10 +135,21 @@ impl<C: CurveAffine> Proof<C> {
         let c_commitment = params.commit_lagrange(&witness.c, c_blind).to_affine();
         let d_commitment = params.commit_lagrange(&witness.d, d_blind).to_affine();
 
+        let advice_blinds = vec![C::Scalar::one(); witness.advice.len()]; // TODO: not random
+        let advice_commitments = witness
+            .advice
+            .iter()
+            .zip(advice_blinds.iter())
+            .map(|(poly, blind)| params.commit_lagrange(poly, *blind).to_affine())
+            .collect();
+
         hash_point(&mut transcript, &a_commitment)?;
         hash_point(&mut transcript, &b_commitment)?;
         hash_point(&mut transcript, &c_commitment)?;
         hash_point(&mut transcript, &d_commitment)?;
+        for commitment in &advice_commitments {
+            hash_point(&mut transcript, commitment)?;
+        }
 
         let domain = &srs.domain;
 
@@ -126,6 +157,12 @@ impl<C: CurveAffine> Proof<C> {
         let (b_coset, b_poly) = domain.obtain_coset(witness.b);
         let (c_coset, c_poly) = domain.obtain_coset(witness.c);
         let (d_coset, d_poly) = domain.obtain_coset(witness.d);
+
+        let advice_polys: Vec<_> = witness
+            .advice
+            .into_iter()
+            .map(|poly| domain.obtain_coset(poly))
+            .collect();
 
         // (a * sa) + (b * sb) + (a * sm * b) + (d * sd) - (c * sc)
         let mut h_poly = Vec::with_capacity(a_coset.len());
@@ -253,6 +290,7 @@ impl<C: CurveAffine> Proof<C> {
             b_commitment,
             c_commitment,
             d_commitment,
+            advice_commitments,
             h_commitments,
             a_eval_x,
             b_eval_x,

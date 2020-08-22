@@ -42,15 +42,21 @@ pub struct SRS<C: CurveAffine> {
     sd_commitment: C,
     sm_commitment: C,
     domain: EvaluationDomain<C::Scalar>,
+
+    fixed_commitments: Vec<C>,
+    fixed_polys: Vec<(Vec<C::Scalar>, Vec<C::Scalar>)>,
+    meta: MetaCircuit,
 }
 
 /// This is an object which represents a (Turbo)PLONK proof.
+// This structure must never allow points at infinity.
 #[derive(Debug, Clone)]
 pub struct Proof<C: CurveAffine> {
     a_commitment: C,
     b_commitment: C,
     c_commitment: C,
     d_commitment: C,
+    advice_commitments: Vec<C>,
     h_commitments: Vec<C>,
     a_eval_x: C::Scalar,
     b_eval_x: C::Scalar,
@@ -77,6 +83,8 @@ pub enum Error {
     IncompatibleParams,
     /// The constraint system is not satisfied.
     ConstraintSystemFailure,
+    /// Out of bounds index passed to a backend
+    BoundsFailure,
 }
 
 fn hash_point<C: CurveAffine, H: Hasher<C::Base>>(
@@ -103,7 +111,16 @@ fn test_proving() {
     // Initialize the polynomial commitment parameters
     let params: Params<EqAffine> = Params::new::<DummyHash<Fq>>(K);
 
-    struct MyConfig {}
+    struct MyConfig {
+        a: Wire,
+        b: Wire,
+        c: Wire,
+
+        sa: Wire,
+        sb: Wire,
+        sc: Wire,
+        sm: Wire,
+    }
     struct MyCircuit<F: Field> {
         a: Option<F>,
     }
@@ -112,7 +129,24 @@ fn test_proving() {
         type Config = MyConfig;
 
         fn configure(meta: &mut MetaCircuit) -> MyConfig {
-            MyConfig {}
+            let a = meta.advice_wire();
+            let b = meta.advice_wire();
+            let c = meta.advice_wire();
+
+            let sa = meta.fixed_wire();
+            let sb = meta.fixed_wire();
+            let sc = meta.fixed_wire();
+            let sm = meta.fixed_wire();
+
+            MyConfig {
+                a,
+                b,
+                c,
+                sa,
+                sb,
+                sc,
+                sm,
+            }
         }
 
         fn synthesize(
@@ -135,6 +169,42 @@ fn test_proving() {
                 })?;
                 //cs.copy(a, d);
                 //cs.copy(c, e);
+            }
+
+            // Similar to the above...
+            let mut row = 0;
+            for _ in 0..10 {
+                cs.assign(Variable(config.a, row), || {
+                    self.a.ok_or(Error::SynthesisError)
+                })?;
+                cs.assign(Variable(config.b, row), || {
+                    self.a.ok_or(Error::SynthesisError)
+                })?;
+                let a_squared = self.a.map(|a| a.square());
+                cs.assign(Variable(config.c, row), || {
+                    self.a.ok_or(Error::SynthesisError)
+                })?;
+                // Multiplication gate
+                cs.assign(Variable(config.sa, row), || Ok(Field::zero()))?;
+                cs.assign(Variable(config.sb, row), || Ok(Field::zero()))?;
+                cs.assign(Variable(config.sc, row), || Ok(Field::one()))?;
+                cs.assign(Variable(config.sm, row), || Ok(Field::one()))?;
+                row += 1;
+
+                cs.assign(Variable(config.a, row), || {
+                    self.a.ok_or(Error::SynthesisError)
+                })?;
+                cs.assign(Variable(config.b, row), || {
+                    a_squared.ok_or(Error::SynthesisError)
+                })?;
+                let fin = a_squared.and_then(|a_squared| self.a.map(|a| a + a_squared));
+                cs.assign(Variable(config.c, row), || fin.ok_or(Error::SynthesisError))?;
+                // Addition gate
+                cs.assign(Variable(config.sa, row), || Ok(Field::one()))?;
+                cs.assign(Variable(config.sb, row), || Ok(Field::one()))?;
+                cs.assign(Variable(config.sc, row), || Ok(Field::one()))?;
+                cs.assign(Variable(config.sm, row), || Ok(Field::zero()))?;
+                row += 1;
             }
 
             Ok(())

@@ -1,5 +1,5 @@
 use super::{
-    circuit::{Circuit, ConstraintSystem, MetaCircuit, Wire, Variable},
+    circuit::{Circuit, ConstraintSystem, MetaCircuit, Variable, Wire},
     domain::EvaluationDomain,
     Error, GATE_DEGREE, SRS,
 };
@@ -19,9 +19,28 @@ impl<C: CurveAffine> SRS<C> {
             sc: Vec<F>,
             sd: Vec<F>,
             sm: Vec<F>,
+            fixed: Vec<Vec<F>>,
         }
 
         impl<F: Field> ConstraintSystem<F> for Assembly<F> {
+            fn assign(
+                &mut self,
+                var: Variable,
+                to: impl FnOnce() -> Result<F, Error>,
+            ) -> Result<(), Error> {
+                // We only care about fixed wires here.
+                match var.0 {
+                    Wire::Fixed(index) => {
+                        *self
+                            .fixed
+                            .get_mut(index)
+                            .and_then(|v| v.get_mut(var.1))
+                            .ok_or(Error::BoundsFailure)? = to()?;
+                    }
+                    _ => {}
+                }
+                Ok(())
+            }
             fn create_gate(
                 &mut self,
                 sa: F,
@@ -46,17 +65,17 @@ impl<C: CurveAffine> SRS<C> {
             }
         }
 
+        let mut meta = MetaCircuit::default();
+        let config = ConcreteCircuit::configure(&mut meta);
+
         let mut assembly: Assembly<C::Scalar> = Assembly {
             sa: vec![],
             sb: vec![],
             sc: vec![],
             sd: vec![],
             sm: vec![],
+            fixed: vec![vec![C::Scalar::zero(); params.n as usize]; meta.num_fixed_wires],
         };
-
-        let mut meta = MetaCircuit::default();
-
-        let config = ConcreteCircuit::configure(&mut meta);
 
         // Synthesize the circuit to obtain SRS
         circuit.synthesize(&mut assembly, config)?;
@@ -84,6 +103,12 @@ impl<C: CurveAffine> SRS<C> {
             .commit_lagrange(&assembly.sm, C::Scalar::one())
             .to_affine();
 
+        let fixed_commitments = assembly
+            .fixed
+            .iter()
+            .map(|poly| params.commit_lagrange(poly, C::Scalar::one()).to_affine())
+            .collect();
+
         let domain = EvaluationDomain::new(GATE_DEGREE, params.k);
 
         let sa = domain.obtain_coset(assembly.sa);
@@ -91,6 +116,12 @@ impl<C: CurveAffine> SRS<C> {
         let sc = domain.obtain_coset(assembly.sc);
         let sd = domain.obtain_coset(assembly.sd);
         let sm = domain.obtain_coset(assembly.sm);
+
+        let fixed_polys = assembly
+            .fixed
+            .into_iter()
+            .map(|poly| domain.obtain_coset(poly))
+            .collect();
 
         Ok(SRS {
             sa,
@@ -104,6 +135,10 @@ impl<C: CurveAffine> SRS<C> {
             sd_commitment,
             sm_commitment,
             domain,
+
+            fixed_commitments,
+            fixed_polys,
+            meta,
         })
     }
 }
