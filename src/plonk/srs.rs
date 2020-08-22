@@ -1,5 +1,5 @@
 use super::{
-    circuit::{Circuit, ConstraintSystem, MetaCircuit, Wire},
+    circuit::{Circuit, ConstraintSystem, MetaCircuit, Wire, Variable},
     domain::EvaluationDomain,
     Error, GATE_DEGREE, SRS,
 };
@@ -30,12 +30,12 @@ impl<C: CurveAffine> SRS<C> {
                 sd: F,
                 sm: F,
                 _: impl Fn() -> Result<(F, F, F, F), Error>,
-            ) -> Result<(Wire, Wire, Wire, Wire), Error> {
+            ) -> Result<(Variable, Variable, Variable, Variable), Error> {
                 let tmp = Ok((
-                    Wire::A(self.sa.len()),
-                    Wire::B(self.sa.len()),
-                    Wire::C(self.sa.len()),
-                    Wire::D(self.sa.len()),
+                    Variable(Wire::A, self.sa.len()),
+                    Variable(Wire::B, self.sa.len()),
+                    Variable(Wire::C, self.sa.len()),
+                    Variable(Wire::D, self.sa.len()),
                 ));
                 self.sa.push(sa);
                 self.sb.push(sb);

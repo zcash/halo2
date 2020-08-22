@@ -9,14 +9,18 @@ use crate::arithmetic::Field;
 #[derive(Clone, Debug)]
 pub enum Wire {
     /// A wires
-    A(usize),
+    A,
     /// B wires
-    B(usize),
+    B,
     /// C wires
-    C(usize),
+    C,
     /// D wires
-    D(usize),
+    D,
 }
+
+/// Represents a pointer to a value in the constraint system.
+#[derive(Clone, Debug)]
+pub struct Variable(pub(crate) Wire, pub(crate) usize);
 
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
@@ -30,13 +34,13 @@ pub trait ConstraintSystem<F: Field> {
         sd: F,
         sm: F,
         f: impl Fn() -> Result<(F, F, F, F), Error>,
-    ) -> Result<(Wire, Wire, Wire, Wire), Error>;
+    ) -> Result<(Variable, Variable, Variable, Variable), Error>;
 
     /// a * b - c = 0
     fn multiply(
         &mut self,
         f: impl Fn() -> Result<(F, F, F), Error>,
-    ) -> Result<(Wire, Wire, Wire, Wire), Error> {
+    ) -> Result<(Variable, Variable, Variable, Variable), Error> {
         self.create_gate(F::zero(), F::zero(), F::one(), F::zero(), F::one(), || {
             let (a, b, c) = f()?;
             Ok((a, b, c, F::zero()))
@@ -47,7 +51,7 @@ pub trait ConstraintSystem<F: Field> {
     fn add(
         &mut self,
         f: impl Fn() -> Result<(F, F, F), Error>,
-    ) -> Result<(Wire, Wire, Wire, Wire), Error> {
+    ) -> Result<(Variable, Variable, Variable, Variable), Error> {
         self.create_gate(F::one(), F::one(), F::one(), F::zero(), F::zero(), || {
             let (a, b, c) = f()?;
             Ok((a, b, c, F::zero()))
@@ -128,11 +132,11 @@ impl<F> Mul<F> for Polynomial<F> {
 #[derive(Debug, Clone)]
 pub struct MetaCircuit {
     // num_fixed_wires: usize,
-// num_advice_wires: usize,
-// permutations: Vec<Vec<Wire>>,
-// gates: Vec<Polynomial>,
-// queries: HashSet<(Wire, usize)>,
-// num_queries: usize,
+    // num_advice_wires: usize,
+    // permutations: Vec<Vec<Wire>>,
+    // gates: Vec<Polynomial>,
+    // queries: HashSet<(Wire, usize)>,
+    // num_queries: usize,
 }
 
 impl Default for MetaCircuit {

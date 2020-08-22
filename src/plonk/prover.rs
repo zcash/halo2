@@ -1,5 +1,5 @@
 use super::{
-    circuit::{Circuit, ConstraintSystem, MetaCircuit, Wire},
+    circuit::{Circuit, ConstraintSystem, MetaCircuit, Wire, Variable},
     hash_point, Error, Proof, SRS,
 };
 use crate::arithmetic::{
@@ -42,13 +42,13 @@ impl<C: CurveAffine> Proof<C> {
                 sd: F,
                 sm: F,
                 f: impl Fn() -> Result<(F, F, F, F), Error>,
-            ) -> Result<(Wire, Wire, Wire, Wire), Error> {
+            ) -> Result<(Variable, Variable, Variable, Variable), Error> {
                 let (a, b, c, d) = f()?;
                 let tmp = Ok((
-                    Wire::A(self.a.len()),
-                    Wire::B(self.a.len()),
-                    Wire::C(self.a.len()),
-                    Wire::D(self.a.len()),
+                    Variable(Wire::A, self.a.len()),
+                    Variable(Wire::B, self.a.len()),
+                    Variable(Wire::C, self.a.len()),
+                    Variable(Wire::D, self.a.len()),
                 ));
                 self.a.push(a);
                 self.b.push(b);
