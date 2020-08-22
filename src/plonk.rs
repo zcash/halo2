@@ -103,12 +103,23 @@ fn test_proving() {
     // Initialize the polynomial commitment parameters
     let params: Params<EqAffine> = Params::new::<DummyHash<Fq>>(K);
 
+    struct MyConfig {}
     struct MyCircuit<F: Field> {
         a: Option<F>,
     }
 
     impl<F: Field> Circuit<F> for MyCircuit<F> {
-        fn synthesize(&self, cs: &mut impl ConstraintSystem<F>) -> Result<(), Error> {
+        type Config = MyConfig;
+
+        fn configure(meta: &mut MetaCircuit) -> MyConfig {
+            MyConfig {}
+        }
+
+        fn synthesize(
+            &self,
+            cs: &mut impl ConstraintSystem<F>,
+            config: MyConfig,
+        ) -> Result<(), Error> {
             for _ in 0..10 {
                 let (_, _, _, _) = cs.multiply(|| {
                     let a = self.a.ok_or(Error::SynthesisError)?;

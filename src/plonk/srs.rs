@@ -1,5 +1,5 @@
 use super::{
-    circuit::{Circuit, ConstraintSystem, Wire},
+    circuit::{Circuit, ConstraintSystem, MetaCircuit, Wire},
     domain::EvaluationDomain,
     Error, GATE_DEGREE, SRS,
 };
@@ -54,8 +54,12 @@ impl<C: CurveAffine> SRS<C> {
             sm: vec![],
         };
 
+        let mut meta = MetaCircuit::default();
+
+        let config = ConcreteCircuit::configure(&mut meta);
+
         // Synthesize the circuit to obtain SRS
-        circuit.synthesize(&mut assembly)?;
+        circuit.synthesize(&mut assembly, config)?;
 
         assembly.sa.resize(params.n as usize, C::Scalar::zero());
         assembly.sb.resize(params.n as usize, C::Scalar::zero());

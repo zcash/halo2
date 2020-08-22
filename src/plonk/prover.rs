@@ -1,5 +1,5 @@
 use super::{
-    circuit::{Circuit, ConstraintSystem, Wire},
+    circuit::{Circuit, ConstraintSystem, MetaCircuit, Wire},
     hash_point, Error, Proof, SRS,
 };
 use crate::arithmetic::{
@@ -78,8 +78,12 @@ impl<C: CurveAffine> Proof<C> {
             sm: vec![],
         };
 
+        let mut meta = MetaCircuit::default();
+
+        let config = ConcreteCircuit::configure(&mut meta);
+
         // Synthesize the circuit to obtain the witness and other information.
-        circuit.synthesize(&mut witness)?;
+        circuit.synthesize(&mut witness, config)?;
 
         // Create a transcript for obtaining Fiat-Shamir challenges.
         let mut transcript = HBase::init(C::Base::one());
