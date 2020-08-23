@@ -1,5 +1,5 @@
 use super::{
-    circuit::{Circuit, ConstraintSystem, MetaCircuit, Variable, Wire},
+    circuit::{AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit, Variable, Wire},
     domain::EvaluationDomain,
     Error, GATE_DEGREE, SRS,
 };
@@ -23,24 +23,31 @@ impl<C: CurveAffine> SRS<C> {
         }
 
         impl<F: Field> ConstraintSystem<F> for Assembly<F> {
-            fn assign(
+            fn assign_advice(
                 &mut self,
-                var: Variable,
-                to: impl FnOnce() -> Result<F, Error>,
+                _: AdviceWire,
+                _: usize,
+                _: impl FnOnce() -> Result<F, Error>,
             ) -> Result<(), Error> {
-                // We only care about fixed wires here.
-                match var.0 {
-                    Wire::Fixed(index) => {
-                        *self
-                            .fixed
-                            .get_mut(index)
-                            .and_then(|v| v.get_mut(var.1))
-                            .ok_or(Error::BoundsFailure)? = to()?;
-                    }
-                    _ => {}
-                }
+                // We only care about fixed wires here
                 Ok(())
             }
+
+            fn assign_fixed(
+                &mut self,
+                wire: FixedWire,
+                row: usize,
+                to: impl FnOnce() -> Result<F, Error>,
+            ) -> Result<(), Error> {
+                *self
+                    .fixed
+                    .get_mut(wire.0)
+                    .and_then(|v| v.get_mut(row))
+                    .ok_or(Error::BoundsFailure)? = to()?;
+
+                Ok(())
+            }
+
             fn create_gate(
                 &mut self,
                 sa: F,

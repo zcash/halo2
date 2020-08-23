@@ -16,11 +16,15 @@ pub enum Wire {
     C,
     /// D wires
     D,
-    /// Fixed wires
-    Fixed(usize),
-    /// Advice wires
-    Advice(usize),
 }
+
+/// This represents a wire which has a fixed (permanent) value
+#[derive(Copy, Clone, Debug)]
+pub struct FixedWire(pub usize);
+
+/// This represents a wire which has a witness-specific value
+#[derive(Copy, Clone, Debug)]
+pub struct AdviceWire(pub usize);
 
 /// Represents a pointer to a value in the constraint system.
 #[derive(Clone, Debug)]
@@ -29,9 +33,21 @@ pub struct Variable(pub Wire, pub usize);
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
 pub trait ConstraintSystem<F: Field> {
-    /// Assign a wire value
-    fn assign(&mut self, var: Variable, to: impl FnOnce() -> Result<F, Error>)
-        -> Result<(), Error>;
+    /// Assign an advice wire value (witness)
+    fn assign_advice(
+        &mut self,
+        wire: AdviceWire,
+        row: usize,
+        to: impl FnOnce() -> Result<F, Error>,
+    ) -> Result<(), Error>;
+
+    /// Assign a fixed value
+    fn assign_fixed(
+        &mut self,
+        wire: FixedWire,
+        row: usize,
+        to: impl FnOnce() -> Result<F, Error>,
+    ) -> Result<(), Error>;
 
     /// Creates a gate.
     fn create_gate(
@@ -93,8 +109,10 @@ pub trait Circuit<F: Field> {
 /// Low-degree polynomial representing an identity that must hold over the committed wires.
 #[derive(Clone, Debug)]
 pub enum Polynomial<F> {
-    /// This is a wire queried at a certain relative location
-    Wire(Wire, isize),
+    /// This is a fixed wire queried at a certain relative location
+    Fixed(FixedWire, isize),
+    /// This is an advice (witness) wire queried at a certain relative location
+    Advice(AdviceWire, isize),
     /// This is the sum of two polynomials
     Sum(Box<Polynomial<F>>, Box<Polynomial<F>>),
     /// This is the product of two polynomials
@@ -106,10 +124,11 @@ pub enum Polynomial<F> {
 impl<F: Field> Polynomial<F> {
     fn degree(&self) -> usize {
         match self {
-            Polynomial::Wire(_, _) => 1,
-            Polynomial::Sum(ref a, ref b) => max(a.degree(), b.degree()),
-            Polynomial::Product(ref a, ref b) => a.degree() + b.degree(),
-            Polynomial::Scaled(ref poly, _) => poly.degree(),
+            Polynomial::Fixed(_, _) => 1,
+            Polynomial::Advice(_, _) => 1,
+            Polynomial::Sum(a, b) => max(a.degree(), b.degree()),
+            Polynomial::Product(a, b) => a.degree() + b.degree(),
+            Polynomial::Scaled(poly, _) => poly.degree(),
         }
     }
 }
@@ -158,14 +177,14 @@ impl Default for MetaCircuit {
 
 impl MetaCircuit {
     /// Allocate a new fixed wire
-    pub fn fixed_wire(&mut self) -> Wire {
-        let tmp = Wire::Fixed(self.num_fixed_wires);
+    pub fn fixed_wire(&mut self) -> FixedWire {
+        let tmp = FixedWire(self.num_fixed_wires);
         self.num_fixed_wires += 1;
         tmp
     }
     /// Allocate a new advice wire
-    pub fn advice_wire(&mut self) -> Wire {
-        let tmp = Wire::Advice(self.num_advice_wires);
+    pub fn advice_wire(&mut self) -> AdviceWire {
+        let tmp = AdviceWire(self.num_advice_wires);
         self.num_advice_wires += 1;
         tmp
     }

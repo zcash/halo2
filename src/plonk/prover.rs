@@ -1,5 +1,5 @@
 use super::{
-    circuit::{Circuit, ConstraintSystem, MetaCircuit, Variable, Wire},
+    circuit::{AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit, Variable, Wire},
     hash_point, Error, Proof, SRS,
 };
 use crate::arithmetic::{
@@ -35,22 +35,29 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         impl<F: Field> ConstraintSystem<F> for WitnessCollection<F> {
-            fn assign(
+            fn assign_advice(
                 &mut self,
-                var: Variable,
+                wire: AdviceWire,
+                row: usize,
                 to: impl FnOnce() -> Result<F, Error>,
             ) -> Result<(), Error> {
-                // We only care about advice wires here.
-                match var.0 {
-                    Wire::Advice(index) => {
-                        *self
-                            .advice
-                            .get_mut(index)
-                            .and_then(|v| v.get_mut(var.1))
-                            .ok_or(Error::BoundsFailure)? = to()?;
-                    }
-                    _ => {}
-                }
+                *self
+                    .advice
+                    .get_mut(wire.0)
+                    .and_then(|v| v.get_mut(row))
+                    .ok_or(Error::BoundsFailure)? = to()?;
+
+                Ok(())
+            }
+
+            fn assign_fixed(
+                &mut self,
+                _: FixedWire,
+                _: usize,
+                _: impl FnOnce() -> Result<F, Error>,
+            ) -> Result<(), Error> {
+                // We only care about advice wires here
+
                 Ok(())
             }
 
