@@ -1,0 +1,62 @@
+name: CI checks
+
+on: [push, pull_request]
+
+jobs:
+  
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.45.2
+          override: true
+
+      # Build the code before running cargo fmt
+      - name: cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all
+
+      # Ensure all code has been formatted with rustfmt
+      - run: rustup component add rustfmt
+      - name: Check formatting
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check --color always
+
+      # Build benchmarks to prevent bitrot
+      - name: Build benchmarks
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all --benches
+
+  build_and_test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.45.2
+          override: true
+      - name: Build tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose --release --all --tests --all-features
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --verbose --release --all
