@@ -1,5 +1,6 @@
 use core::cmp::max;
 use core::ops::{Add, Mul};
+use std::collections::HashMap;
 
 use super::Error;
 use crate::arithmetic::Field;
@@ -19,11 +20,11 @@ pub enum Wire {
 }
 
 /// This represents a wire which has a fixed (permanent) value
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct FixedWire(pub usize);
 
 /// This represents a wire which has a witness-specific value
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct AdviceWire(pub usize);
 
 /// Represents a pointer to a value in the constraint system.
@@ -94,7 +95,7 @@ pub trait Circuit<F: Field> {
 
     /// The circuit is given an opportunity to describe the exact gate
     /// arrangement, wire arrangement, etc.
-    fn configure(meta: &mut MetaCircuit) -> Self::Config;
+    fn configure(meta: &mut MetaCircuit<F>) -> Self::Config;
 
     /// Given the provided `cs`, synthesize the circuit. The concrete type of
     /// the caller will be different depending on the context, and they may or
@@ -119,6 +120,36 @@ pub enum Polynomial<F> {
     Product(Box<Polynomial<F>>, Box<Polynomial<F>>),
     /// This is a scaled polynomial
     Scaled(Box<Polynomial<F>>, F),
+}
+
+impl<F: Field> Polynomial<F> {
+    fn evaluate<T>(
+        &self,
+        fixed_wire: &impl Fn(FixedWire, isize) -> T,
+        advice_wire: &impl Fn(AdviceWire, isize) -> T,
+        sum: &impl Fn(T, T) -> T,
+        product: &impl Fn(T, T) -> T,
+        scaled: &impl Fn(T, F) -> T,
+    ) -> T {
+        match self {
+            Polynomial::Fixed(a, location) => fixed_wire(*a, *location),
+            Polynomial::Advice(a, location) => advice_wire(*a, *location),
+            Polynomial::Sum(a, b) => {
+                let a = a.evaluate(fixed_wire, advice_wire, sum, product, scaled);
+                let b = b.evaluate(fixed_wire, advice_wire, sum, product, scaled);
+                sum(a, b)
+            }
+            Polynomial::Product(a, b) => {
+                let a = a.evaluate(fixed_wire, advice_wire, sum, product, scaled);
+                let b = b.evaluate(fixed_wire, advice_wire, sum, product, scaled);
+                product(a, b)
+            }
+            Polynomial::Scaled(a, f) => {
+                let a = a.evaluate(fixed_wire, advice_wire, sum, product, scaled);
+                scaled(a, *f)
+            }
+        }
+    }
 }
 
 impl<F: Field> Polynomial<F> {
@@ -157,25 +188,51 @@ impl<F> Mul<F> for Polynomial<F> {
 /// This is a description of the circuit environment, such as the gate, wire and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
-pub struct MetaCircuit {
+pub struct MetaCircuit<F> {
     pub(crate) num_fixed_wires: usize,
     pub(crate) num_advice_wires: usize,
     // permutations: Vec<Vec<Wire>>,
-    // gates: Vec<Polynomial>,
-    // queries: HashSet<(Wire, usize)>,
+    gates: Vec<Polynomial<F>>,
+    advice_queries: HashMap<(AdviceWire, isize), usize>,
+    fixed_queries: HashMap<(FixedWire, isize), usize>,
     // num_queries: usize,
 }
 
-impl Default for MetaCircuit {
-    fn default() -> MetaCircuit {
+impl<F: Field> Default for MetaCircuit<F> {
+    fn default() -> MetaCircuit<F> {
         MetaCircuit {
             num_fixed_wires: 0,
             num_advice_wires: 0,
+            gates: vec![],
+            fixed_queries: HashMap::new(),
+            advice_queries: HashMap::new(),
         }
     }
 }
 
-impl MetaCircuit {
+impl<F: Field> MetaCircuit<F> {
+    /// Query a fixed wire at a relative position
+    pub fn query_fixed(&mut self, wire: FixedWire, at: isize) -> Polynomial<F> {
+        let len = self.fixed_queries.len();
+        self.fixed_queries.entry((wire, at)).or_insert_with(|| len);
+
+        Polynomial::Fixed(wire, at)
+    }
+
+    /// Query an advice wire at a relative position
+    pub fn query_advice(&mut self, wire: AdviceWire, at: isize) -> Polynomial<F> {
+        let len = self.advice_queries.len();
+        self.advice_queries.entry((wire, at)).or_insert_with(|| len);
+
+        Polynomial::Advice(wire, at)
+    }
+
+    /// Create a new gate
+    pub fn create_gate(&mut self, f: impl FnOnce(&mut Self) -> Polynomial<F>) {
+        let poly = f(self);
+        self.gates.push(poly);
+    }
+
     /// Allocate a new fixed wire
     pub fn fixed_wire(&mut self) -> FixedWire {
         let tmp = FixedWire(self.num_fixed_wires);

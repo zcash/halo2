@@ -45,7 +45,7 @@ pub struct SRS<C: CurveAffine> {
 
     fixed_commitments: Vec<C>,
     fixed_polys: Vec<(Vec<C::Scalar>, Vec<C::Scalar>)>,
-    meta: MetaCircuit,
+    meta: MetaCircuit<C::Scalar>,
 }
 
 /// This is an object which represents a (Turbo)PLONK proof.
@@ -128,7 +128,7 @@ fn test_proving() {
     impl<F: Field> Circuit<F> for MyCircuit<F> {
         type Config = MyConfig;
 
-        fn configure(meta: &mut MetaCircuit) -> MyConfig {
+        fn configure(meta: &mut MetaCircuit<F>) -> MyConfig {
             let a = meta.advice_wire();
             let b = meta.advice_wire();
             let c = meta.advice_wire();
@@ -137,6 +137,19 @@ fn test_proving() {
             let sb = meta.fixed_wire();
             let sc = meta.fixed_wire();
             let sm = meta.fixed_wire();
+
+            meta.create_gate(|meta| {
+                let a = meta.query_advice(a, 0);
+                let b = meta.query_advice(b, 0);
+                let c = meta.query_advice(c, 0);
+
+                let sa = meta.query_fixed(sa, 0);
+                let sb = meta.query_fixed(sb, 0);
+                let sc = meta.query_fixed(sc, 0);
+                let sm = meta.query_fixed(sm, 0);
+
+                a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))
+            });
 
             MyConfig {
                 a,
