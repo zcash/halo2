@@ -218,8 +218,10 @@ fn test_proving() {
         a: Some((-Fp::from_u64(2) + Fp::ROOT_OF_UNITY).pow(&[100, 0, 0, 0])),
     };
 
+    let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None };
+
     // Initialize the SRS
-    let srs = SRS::generate(&params, &circuit).expect("SRS generation should not fail");
+    let srs = SRS::generate(&params, &empty_circuit).expect("SRS generation should not fail");
 
     // Create a proof
     let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &srs, &circuit)
