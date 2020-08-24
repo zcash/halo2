@@ -118,24 +118,33 @@ impl<C: CurveAffine> SRS<C> {
 
         let domain = EvaluationDomain::new(GATE_DEGREE, params.k);
 
-        let sa = domain.obtain_coset(assembly.sa);
-        let sb = domain.obtain_coset(assembly.sb);
-        let sc = domain.obtain_coset(assembly.sc);
-        let sd = domain.obtain_coset(assembly.sd);
-        let sm = domain.obtain_coset(assembly.sm);
+        let sa_poly = domain.obtain_poly(assembly.sa);
+        let sb_poly = domain.obtain_poly(assembly.sb);
+        let sc_poly = domain.obtain_poly(assembly.sc);
+        let sd_poly = domain.obtain_poly(assembly.sd);
+        let sm_poly = domain.obtain_poly(assembly.sm);
+        let sa_coset = domain.obtain_coset(sa_poly.clone(), 0);
+        let sb_coset = domain.obtain_coset(sb_poly.clone(), 0);
+        let sc_coset = domain.obtain_coset(sc_poly.clone(), 0);
+        let sd_coset = domain.obtain_coset(sd_poly.clone(), 0);
+        let sm_coset = domain.obtain_coset(sm_poly.clone(), 0);
 
         let fixed_polys = assembly
             .fixed
             .into_iter()
-            .map(|poly| domain.obtain_coset(poly))
+            .map(|poly| {
+                let coeffs = domain.obtain_poly(poly);
+                let coset = domain.obtain_coset(coeffs.clone(), 0);
+                (coeffs, coset)
+            })
             .collect();
 
         Ok(SRS {
-            sa,
-            sb,
-            sc,
-            sd,
-            sm,
+            sa: (sa_coset, sa_poly),
+            sb: (sb_coset, sb_poly),
+            sc: (sc_coset, sc_poly),
+            sd: (sd_coset, sd_poly),
+            sm: (sm_coset, sm_poly),
             sa_commitment,
             sb_commitment,
             sc_commitment,

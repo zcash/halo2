@@ -111,9 +111,9 @@ pub trait Circuit<F: Field> {
 #[derive(Clone, Debug)]
 pub enum Polynomial<F> {
     /// This is a fixed wire queried at a certain relative location
-    Fixed(FixedWire, isize),
+    Fixed(FixedWire, i32),
     /// This is an advice (witness) wire queried at a certain relative location
-    Advice(AdviceWire, isize),
+    Advice(AdviceWire, i32),
     /// This is the sum of two polynomials
     Sum(Box<Polynomial<F>>, Box<Polynomial<F>>),
     /// This is the product of two polynomials
@@ -125,8 +125,8 @@ pub enum Polynomial<F> {
 impl<F: Field> Polynomial<F> {
     fn evaluate<T>(
         &self,
-        fixed_wire: &impl Fn(FixedWire, isize) -> T,
-        advice_wire: &impl Fn(AdviceWire, isize) -> T,
+        fixed_wire: &impl Fn(FixedWire, i32) -> T,
+        advice_wire: &impl Fn(AdviceWire, i32) -> T,
         sum: &impl Fn(T, T) -> T,
         product: &impl Fn(T, T) -> T,
         scaled: &impl Fn(T, F) -> T,
@@ -193,8 +193,8 @@ pub struct MetaCircuit<F> {
     pub(crate) num_advice_wires: usize,
     // permutations: Vec<Vec<Wire>>,
     gates: Vec<Polynomial<F>>,
-    advice_queries: HashMap<(AdviceWire, isize), usize>,
-    fixed_queries: HashMap<(FixedWire, isize), usize>,
+    advice_queries: HashMap<(AdviceWire, i32), usize>,
+    fixed_queries: HashMap<(FixedWire, i32), usize>,
     // num_queries: usize,
 }
 
@@ -212,7 +212,7 @@ impl<F: Field> Default for MetaCircuit<F> {
 
 impl<F: Field> MetaCircuit<F> {
     /// Query a fixed wire at a relative position
-    pub fn query_fixed(&mut self, wire: FixedWire, at: isize) -> Polynomial<F> {
+    pub fn query_fixed(&mut self, wire: FixedWire, at: i32) -> Polynomial<F> {
         let len = self.fixed_queries.len();
         self.fixed_queries.entry((wire, at)).or_insert_with(|| len);
 
@@ -220,7 +220,7 @@ impl<F: Field> MetaCircuit<F> {
     }
 
     /// Query an advice wire at a relative position
-    pub fn query_advice(&mut self, wire: AdviceWire, at: isize) -> Polynomial<F> {
+    pub fn query_advice(&mut self, wire: AdviceWire, at: i32) -> Polynomial<F> {
         let len = self.advice_queries.len();
         self.advice_queries.entry((wire, at)).or_insert_with(|| len);
 

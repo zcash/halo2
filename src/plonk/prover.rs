@@ -160,15 +160,24 @@ impl<C: CurveAffine> Proof<C> {
 
         let domain = &srs.domain;
 
-        let (a_coset, a_poly) = domain.obtain_coset(witness.a);
-        let (b_coset, b_poly) = domain.obtain_coset(witness.b);
-        let (c_coset, c_poly) = domain.obtain_coset(witness.c);
-        let (d_coset, d_poly) = domain.obtain_coset(witness.d);
+        let a_poly = domain.obtain_poly(witness.a);
+        let b_poly = domain.obtain_poly(witness.b);
+        let c_poly = domain.obtain_poly(witness.c);
+        let d_poly = domain.obtain_poly(witness.d);
+
+        let a_coset = domain.obtain_coset(a_poly.clone(), 0);
+        let b_coset = domain.obtain_coset(b_poly.clone(), 0);
+        let c_coset = domain.obtain_coset(c_poly.clone(), 0);
+        let d_coset = domain.obtain_coset(d_poly.clone(), 0);
 
         let advice_polys: Vec<_> = witness
             .advice
             .into_iter()
-            .map(|poly| domain.obtain_coset(poly))
+            .map(|poly| {
+                let poly = domain.obtain_poly(poly);
+                let coset = domain.obtain_coset(poly.clone(), 0);
+                (poly, coset)
+            })
             .collect();
 
         // (a * sa) + (b * sb) + (a * sm * b) + (d * sd) - (c * sc)

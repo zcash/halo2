@@ -8,6 +8,7 @@ pub struct EvaluationDomain<G: Group> {
     n: u64,
     k: u32,
     extended_k: u32,
+    omega: G::Scalar,
     omega_inv: G::Scalar,
     extended_omega: G::Scalar,
     extended_omega_inv: G::Scalar,
@@ -91,6 +92,7 @@ impl<G: Group> EvaluationDomain<G> {
             n,
             k,
             extended_k,
+            omega,
             omega_inv,
             extended_omega,
             extended_omega_inv,
@@ -103,32 +105,42 @@ impl<G: Group> EvaluationDomain<G> {
         }
     }
 
-    /// This takes us from an n-length vector into the coset evaluation domain.
-    /// Also returns the polynomial.
+    /// This takes us from an n-length vector into the coefficient form.
     ///
     /// This function will panic if the provided vector is not the correct
     /// length.
-    pub fn obtain_coset(&self, mut a: Vec<G>) -> (Vec<G>, Vec<G>) {
+    pub fn obtain_poly(&self, mut a: Vec<G>) -> Vec<G> {
         assert_eq!(a.len(), 1 << self.k);
 
         // Perform inverse FFT to obtain the polynomial in coefficient form
         Self::ifft(&mut a, self.omega_inv, self.k, self.ifft_divisor);
 
-        // Keep this polynomial around; we'll need to evaluate it at arbitrary
-        // points later.
-        let old = a.clone();
+        a
+    }
 
-        // Distributes powers so that an FFT will move us into the coset
-        // evaluation domain.
-        Self::distribute_powers(&mut a, self.g_coset);
+    /// This takes us from an n-length coefficient vector into the coset
+    /// evaluation domain.
+    ///
+    /// This function will panic if the provided vector is not the correct
+    /// length.
+    pub fn obtain_coset(&self, mut a: Vec<G>, index: i32) -> Vec<G> {
+        assert_eq!(a.len(), 1 << self.k);
 
-        // Resize to account for the quotient polynomial's size
+        assert!(index != i32::MIN);
+        if index == 0 {
+            Self::distribute_powers_zeta(&mut a, self.g_coset);
+        } else {
+            let mut g = G::Scalar::ZETA;
+            if index > 0 {
+                g *= &self.omega.pow_vartime(&[index as u64, 0, 0, 0]);
+            } else {
+                g *= &self.omega_inv.pow_vartime(&[index.abs() as u64, 0, 0, 0]);
+            }
+            Self::distribute_powers(&mut a, g);
+        }
         a.resize(1 << self.extended_k, G::group_zero());
-
-        // Move into coset evaluation domain
         best_fft(&mut a, self.extended_omega, self.extended_k);
-
-        (a, old)
+        a
     }
 
     /// This takes us from the coset evaluation domain and gets us the quotient
@@ -176,7 +188,7 @@ impl<G: Group> EvaluationDomain<G> {
         h_poly
     }
 
-    fn distribute_powers(mut a: &mut [G], g: G::Scalar) {
+    fn distribute_powers_zeta(mut a: &mut [G], g: G::Scalar) {
         let coset_powers = [g, g.square()];
         parallelize(&mut a, |a, mut index| {
             for a in a {
@@ -186,6 +198,16 @@ impl<G: Group> EvaluationDomain<G> {
                     a.group_scale(&coset_powers[i - 1]);
                 }
                 index += 1;
+            }
+        });
+    }
+
+    fn distribute_powers(mut a: &mut [G], g: G::Scalar) {
+        parallelize(&mut a, |a, index| {
+            let mut cur = g.pow_vartime(&[index as u64, 0, 0, 0]);
+            for a in a {
+                a.group_scale(&cur);
+                cur *= &g;
             }
         });
     }
