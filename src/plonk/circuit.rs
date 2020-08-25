@@ -19,17 +19,26 @@ pub enum Wire {
     D,
 }
 
+/// The index of a wire in a MetaCircuit.
+/// Counted separately for FixedWire and AdviceWire.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct WireIdx(pub usize);
+
 /// This represents a wire which has a fixed (permanent) value
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct FixedWire(pub usize);
+pub struct FixedWire(pub WireIdx);
 
 /// This represents a wire which has a witness-specific value
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct AdviceWire(pub usize);
+pub struct AdviceWire(pub WireIdx);
+
+/// The row index in a constraint system
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct RowIdx(pub usize);
 
 /// Represents a pointer to a value in the constraint system.
 #[derive(Clone, Debug)]
-pub struct Variable(pub Wire, pub usize);
+pub struct Variable(pub Wire, pub RowIdx);
 
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
@@ -111,9 +120,9 @@ pub trait Circuit<F: Field> {
 #[derive(Clone, Debug)]
 pub enum Polynomial<F> {
     /// This is a fixed wire queried at a certain relative location
-    Fixed(FixedWire, i32),
+    Fixed(FixedWire, RowOffset),
     /// This is an advice (witness) wire queried at a certain relative location
-    Advice(AdviceWire, i32),
+    Advice(AdviceWire, RowOffset),
     /// This is the sum of two polynomials
     Sum(Box<Polynomial<F>>, Box<Polynomial<F>>),
     /// This is the product of two polynomials
@@ -125,8 +134,8 @@ pub enum Polynomial<F> {
 impl<F: Field> Polynomial<F> {
     fn evaluate<T>(
         &self,
-        fixed_wire: &impl Fn(FixedWire, i32) -> T,
-        advice_wire: &impl Fn(AdviceWire, i32) -> T,
+        fixed_wire: &impl Fn(FixedWire, RowOffset) -> T,
+        advice_wire: &impl Fn(AdviceWire, RowOffset) -> T,
         sum: &impl Fn(T, T) -> T,
         product: &impl Fn(T, T) -> T,
         scaled: &impl Fn(T, F) -> T,
@@ -185,6 +194,14 @@ impl<F> Mul<F> for Polynomial<F> {
     }
 }
 
+/// This is the offset for a wire query relative to a row
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct RowOffset(pub i32);
+
+/// This is the index of a query in the query HashMap
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct QueryIdx(pub usize);
+
 /// This is a description of the circuit environment, such as the gate, wire and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
@@ -193,8 +210,8 @@ pub struct MetaCircuit<F> {
     pub(crate) num_advice_wires: usize,
     // permutations: Vec<Vec<Wire>>,
     gates: Vec<Polynomial<F>>,
-    advice_queries: HashMap<(AdviceWire, i32), usize>,
-    fixed_queries: HashMap<(FixedWire, i32), usize>,
+    advice_queries: HashMap<(AdviceWire, RowOffset), QueryIdx>,
+    fixed_queries: HashMap<(FixedWire, RowOffset), QueryIdx>,
     // num_queries: usize,
 }
 
@@ -212,17 +229,21 @@ impl<F: Field> Default for MetaCircuit<F> {
 
 impl<F: Field> MetaCircuit<F> {
     /// Query a fixed wire at a relative position
-    pub fn query_fixed(&mut self, wire: FixedWire, at: i32) -> Polynomial<F> {
+    pub fn query_fixed(&mut self, wire: FixedWire, at: RowOffset) -> Polynomial<F> {
         let len = self.fixed_queries.len();
-        self.fixed_queries.entry((wire, at)).or_insert_with(|| len);
+        self.fixed_queries
+            .entry((wire, at))
+            .or_insert_with(|| QueryIdx(len));
 
         Polynomial::Fixed(wire, at)
     }
 
     /// Query an advice wire at a relative position
-    pub fn query_advice(&mut self, wire: AdviceWire, at: i32) -> Polynomial<F> {
+    pub fn query_advice(&mut self, wire: AdviceWire, at: RowOffset) -> Polynomial<F> {
         let len = self.advice_queries.len();
-        self.advice_queries.entry((wire, at)).or_insert_with(|| len);
+        self.advice_queries
+            .entry((wire, at))
+            .or_insert_with(|| QueryIdx(len));
 
         Polynomial::Advice(wire, at)
     }
@@ -235,13 +256,13 @@ impl<F: Field> MetaCircuit<F> {
 
     /// Allocate a new fixed wire
     pub fn fixed_wire(&mut self) -> FixedWire {
-        let tmp = FixedWire(self.num_fixed_wires);
+        let tmp = FixedWire(WireIdx(self.num_fixed_wires));
         self.num_fixed_wires += 1;
         tmp
     }
     /// Allocate a new advice wire
     pub fn advice_wire(&mut self) -> AdviceWire {
-        let tmp = AdviceWire(self.num_advice_wires);
+        let tmp = AdviceWire(WireIdx(self.num_advice_wires));
         self.num_advice_wires += 1;
         tmp
     }

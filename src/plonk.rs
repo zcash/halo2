@@ -139,14 +139,14 @@ fn test_proving() {
             let sm = meta.fixed_wire();
 
             meta.create_gate(|meta| {
-                let a = meta.query_advice(a, 0);
-                let b = meta.query_advice(b, 0);
-                let c = meta.query_advice(c, 0);
+                let a = meta.query_advice(a, RowOffset(0));
+                let b = meta.query_advice(b, RowOffset(0));
+                let c = meta.query_advice(c, RowOffset(0));
 
-                let sa = meta.query_fixed(sa, 0);
-                let sb = meta.query_fixed(sb, 0);
-                let sc = meta.query_fixed(sc, 0);
-                let sm = meta.query_fixed(sm, 0);
+                let sa = meta.query_fixed(sa, RowOffset(0));
+                let sb = meta.query_fixed(sb, RowOffset(0));
+                let sc = meta.query_fixed(sc, RowOffset(0));
+                let sm = meta.query_fixed(sm, RowOffset(0));
 
                 a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))
             });

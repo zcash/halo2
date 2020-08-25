@@ -1,5 +1,7 @@
 use super::{
-    circuit::{AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit, Variable, Wire},
+    circuit::{
+        AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit, RowIdx, Variable, Wire,
+    },
     domain::EvaluationDomain,
     Error, GATE_DEGREE, SRS,
 };
@@ -41,7 +43,7 @@ impl<C: CurveAffine> SRS<C> {
             ) -> Result<(), Error> {
                 *self
                     .fixed
-                    .get_mut(wire.0)
+                    .get_mut((wire.0).0)
                     .and_then(|v| v.get_mut(row))
                     .ok_or(Error::BoundsFailure)? = to()?;
 
@@ -58,10 +60,10 @@ impl<C: CurveAffine> SRS<C> {
                 _: impl Fn() -> Result<(F, F, F, F), Error>,
             ) -> Result<(Variable, Variable, Variable, Variable), Error> {
                 let tmp = Ok((
-                    Variable(Wire::A, self.sa.len()),
-                    Variable(Wire::B, self.sa.len()),
-                    Variable(Wire::C, self.sa.len()),
-                    Variable(Wire::D, self.sa.len()),
+                    Variable(Wire::A, RowIdx(self.sa.len())),
+                    Variable(Wire::B, RowIdx(self.sa.len())),
+                    Variable(Wire::C, RowIdx(self.sa.len())),
+                    Variable(Wire::D, RowIdx(self.sa.len())),
                 ));
                 self.sa.push(sa);
                 self.sb.push(sb);

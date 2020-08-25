@@ -1,5 +1,7 @@
 use super::{
-    circuit::{AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit, Variable, Wire},
+    circuit::{
+        AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit, RowIdx, Variable, Wire,
+    },
     hash_point, Error, Proof, SRS,
 };
 use crate::arithmetic::{
@@ -43,7 +45,7 @@ impl<C: CurveAffine> Proof<C> {
             ) -> Result<(), Error> {
                 *self
                     .advice
-                    .get_mut(wire.0)
+                    .get_mut((wire.0).0)
                     .and_then(|v| v.get_mut(row))
                     .ok_or(Error::BoundsFailure)? = to()?;
 
@@ -72,10 +74,10 @@ impl<C: CurveAffine> Proof<C> {
             ) -> Result<(Variable, Variable, Variable, Variable), Error> {
                 let (a, b, c, d) = f()?;
                 let tmp = Ok((
-                    Variable(Wire::A, self.a.len()),
-                    Variable(Wire::B, self.a.len()),
-                    Variable(Wire::C, self.a.len()),
-                    Variable(Wire::D, self.a.len()),
+                    Variable(Wire::A, RowIdx(self.a.len())),
+                    Variable(Wire::B, RowIdx(self.a.len())),
+                    Variable(Wire::C, RowIdx(self.a.len())),
+                    Variable(Wire::D, RowIdx(self.a.len())),
                 ));
                 self.a.push(a);
                 self.b.push(b);
