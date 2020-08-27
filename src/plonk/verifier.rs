@@ -56,7 +56,7 @@ impl<C: CurveAffine> Proof<C> {
             h_eval += &evaluation;
         }
         let xn = x_3.pow(&[params.n as u64, 0, 0, 0]);
-        h_eval *= &(xn - &C::Scalar::one());
+        h_eval *= &(xn - &C::Scalar::one()).invert().unwrap();
 
         // Compute the expected h(x) value
         let mut expected_h_eval = C::Scalar::zero();
@@ -183,55 +183,5 @@ impl<C: CurveAffine> Proof<C> {
             &f_commitment.to_affine(),
             f_eval,
         )
-
-        /*
-
-        let mut q_commitment = self.h_commitments[0].clone().to_projective();
-        let mut expected_opening = self.h_evals_x[0];
-        {
-            let mut accumulate = |commitment: C, opening: C::Scalar| {
-                q_commitment = commitment.to_projective() + &(q_commitment * y);
-                expected_opening = opening + &(expected_opening * &y);
-            };
-
-            for (commitment, eval) in self.h_commitments.iter().zip(self.h_evals_x.iter()).skip(1) {
-                accumulate(*commitment, *eval);
-            }
-
-            accumulate(self.a_commitment, self.a_eval_x);
-            accumulate(self.b_commitment, self.b_eval_x);
-            accumulate(self.c_commitment, self.c_eval_x);
-            accumulate(self.d_commitment, self.d_eval_x);
-            accumulate(srs.sa_commitment, self.sa_eval_x);
-            accumulate(srs.sb_commitment, self.sb_eval_x);
-            accumulate(srs.sc_commitment, self.sc_eval_x);
-            accumulate(srs.sd_commitment, self.sd_eval_x);
-            accumulate(srs.sm_commitment, self.sm_eval_x);
-        }
-        let q_commitment = q_commitment.to_affine();
-
-        let xn = x.pow(&[params.n as u64, 0, 0, 0]);
-
-        // Compute the expected h(x) value
-        let mut h_eval_x = C::Scalar::zero();
-        let mut cur = C::Scalar::one();
-        for eval in &self.h_evals_x {
-            h_eval_x += &(cur * eval);
-            cur *= &xn;
-        }
-
-        // Check that the circuit is satisfied.
-        // (a * sa) + (b * sb) + (a * sm * b) + (d * sd) - (c * sc)
-        if self.a_eval_x * &self.sa_eval_x
-            + &(self.b_eval_x * &self.sb_eval_x)
-            + &(self.a_eval_x * &self.sm_eval_x * &self.b_eval_x)
-            + &(self.d_eval_x * &self.sd_eval_x)
-            - &(self.c_eval_x * &self.sc_eval_x)
-            != h_eval_x * &(xn - &C::Scalar::one())
-        {
-            return false;
-        }
-
-        */
     }
 }
