@@ -41,9 +41,9 @@ pub struct SRS<C: CurveAffine> {
 pub struct Proof<C: CurveAffine> {
     advice_commitments: Vec<C>,
     h_commitments: Vec<C>,
-    advice_evals_x: Vec<C::Scalar>,
-    fixed_evals_x: Vec<C::Scalar>,
-    h_evals_x: Vec<C::Scalar>,
+    advice_evals: Vec<C::Scalar>,
+    fixed_evals: Vec<C::Scalar>,
+    h_evals: Vec<C::Scalar>,
     f_commitment: C,
     q_evals: Vec<C::Scalar>,
     opening: OpeningProof<C>,

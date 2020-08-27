@@ -178,7 +178,7 @@ impl<C: CurveAffine> Proof<C> {
         let x_3: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         // Evaluate polynomials at omega^i x_3
-        let advice_evals_x: Vec<_> = meta
+        let advice_evals: Vec<_> = meta
             .advice_queries
             .iter()
             .map(|&(wire, at)| {
@@ -193,7 +193,7 @@ impl<C: CurveAffine> Proof<C> {
             })
             .collect();
 
-        let fixed_evals_x: Vec<_> = meta
+        let fixed_evals: Vec<_> = meta
             .fixed_queries
             .iter()
             .map(|&(wire, at)| {
@@ -208,7 +208,7 @@ impl<C: CurveAffine> Proof<C> {
             })
             .collect();
 
-        let h_evals_x: Vec<_> = h_pieces
+        let h_evals: Vec<_> = h_pieces
             .iter()
             .map(|poly| eval_polynomial(poly, x_3))
             .collect();
@@ -218,17 +218,17 @@ impl<C: CurveAffine> Proof<C> {
         let mut transcript_scalar = HScalar::init(C::Scalar::one());
 
         // Hash each advice evaluation
-        for eval in advice_evals_x.iter() {
+        for eval in advice_evals.iter() {
             transcript_scalar.absorb(*eval);
         }
 
         // Hash each fixed evaluation
-        for eval in fixed_evals_x.iter() {
+        for eval in fixed_evals.iter() {
             transcript_scalar.absorb(*eval);
         }
 
         // Hash each h(x) piece evaluation
-        for eval in h_evals_x.iter() {
+        for eval in h_evals.iter() {
             transcript_scalar.absorb(*eval);
         }
 
@@ -250,7 +250,7 @@ impl<C: CurveAffine> Proof<C> {
                 if q_polys[query_row].is_none() {
                     q_polys[query_row] = Some(advice_polys[wire.0].clone());
                     q_blinds[query_row] = advice_blinds[wire.0];
-                    q_evals[query_row] = advice_evals_x[i];
+                    q_evals[query_row] = advice_evals[i];
                 } else {
                     parallelize(q_polys[query_row].as_mut().unwrap(), |q, start| {
                         for (q, a) in q.iter_mut().zip(advice_polys[wire.0][start..].iter()) {
@@ -261,7 +261,7 @@ impl<C: CurveAffine> Proof<C> {
                     q_blinds[query_row] *= &x_4;
                     q_blinds[query_row] += &advice_blinds[wire.0];
                     q_evals[query_row] *= &x_4;
-                    q_evals[query_row] += &advice_evals_x[i];
+                    q_evals[query_row] += &advice_evals[i];
                 }
             }
 
@@ -271,7 +271,7 @@ impl<C: CurveAffine> Proof<C> {
                 if q_polys[query_row].is_none() {
                     q_polys[query_row] = Some(srs.fixed_polys[wire.0].clone());
                     q_blinds[query_row] = C::Scalar::one();
-                    q_evals[query_row] = fixed_evals_x[i];
+                    q_evals[query_row] = fixed_evals[i];
                 } else {
                     parallelize(q_polys[query_row].as_mut().unwrap(), |q, start| {
                         for (q, a) in q.iter_mut().zip(srs.fixed_polys[wire.0][start..].iter()) {
@@ -282,14 +282,14 @@ impl<C: CurveAffine> Proof<C> {
                     q_blinds[query_row] *= &x_4;
                     q_blinds[query_row] += &C::Scalar::one();
                     q_evals[query_row] *= &x_4;
-                    q_evals[query_row] += &fixed_evals_x[i];
+                    q_evals[query_row] += &fixed_evals[i];
                 }
             }
 
             for ((h_poly, h_blind), h_eval) in h_pieces
                 .into_iter()
                 .zip(h_blinds.iter())
-                .zip(h_evals_x.iter())
+                .zip(h_evals.iter())
             {
                 // We query the h(X) polynomial at x_3
                 let cur_row = *meta.query_rows.get(&0).unwrap();
@@ -389,9 +389,9 @@ impl<C: CurveAffine> Proof<C> {
         Ok(Proof {
             advice_commitments,
             h_commitments,
-            advice_evals_x,
-            fixed_evals_x,
-            h_evals_x,
+            advice_evals,
+            fixed_evals,
+            h_evals,
             f_commitment,
             q_evals,
             opening,

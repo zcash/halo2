@@ -28,15 +28,15 @@ impl<C: CurveAffine> Proof<C> {
 
         let mut transcript_scalar = HScalar::init(C::Scalar::one());
 
-        for eval in self.advice_evals_x.iter() {
+        for eval in self.advice_evals.iter() {
             transcript_scalar.absorb(*eval);
         }
 
-        for eval in self.fixed_evals_x.iter() {
+        for eval in self.fixed_evals.iter() {
             transcript_scalar.absorb(*eval);
         }
 
-        for eval in &self.h_evals_x {
+        for eval in &self.h_evals {
             transcript_scalar.absorb(*eval);
         }
 
@@ -46,8 +46,8 @@ impl<C: CurveAffine> Proof<C> {
             h_eval *= &x_2;
 
             let evaluation: C::Scalar = poly.evaluate(
-                &|index| self.fixed_evals_x[index],
-                &|index| self.advice_evals_x[index],
+                &|index| self.fixed_evals[index],
+                &|index| self.advice_evals[index],
                 &|a, b| a + &b,
                 &|a, b| a * &b,
                 &|a, scalar| a * &scalar,
@@ -61,7 +61,7 @@ impl<C: CurveAffine> Proof<C> {
         // Compute the expected h(x) value
         let mut expected_h_eval = C::Scalar::zero();
         let mut cur = C::Scalar::one();
-        for eval in &self.h_evals_x {
+        for eval in &self.h_evals {
             expected_h_eval += &(cur * eval);
             cur *= &xn;
         }
@@ -86,14 +86,14 @@ impl<C: CurveAffine> Proof<C> {
                 if q_commitments[query_row].is_none() {
                     q_commitments[query_row] =
                         Some(self.advice_commitments[wire.0].to_projective());
-                    q_evals[query_row] = self.advice_evals_x[i];
+                    q_evals[query_row] = self.advice_evals[i];
                 } else {
                     q_commitments[query_row].as_mut().map(|commitment| {
                         *commitment *= x_4;
                         *commitment += self.advice_commitments[wire.0];
                     });
                     q_evals[query_row] *= &x_4;
-                    q_evals[query_row] += &self.advice_evals_x[i];
+                    q_evals[query_row] += &self.advice_evals[i];
                 }
             }
 
@@ -102,18 +102,18 @@ impl<C: CurveAffine> Proof<C> {
 
                 if q_commitments[query_row].is_none() {
                     q_commitments[query_row] = Some(srs.fixed_commitments[wire.0].to_projective());
-                    q_evals[query_row] = self.fixed_evals_x[i];
+                    q_evals[query_row] = self.fixed_evals[i];
                 } else {
                     q_commitments[query_row].as_mut().map(|commitment| {
                         *commitment *= x_4;
                         *commitment += srs.fixed_commitments[wire.0];
                     });
                     q_evals[query_row] *= &x_4;
-                    q_evals[query_row] += &self.fixed_evals_x[i];
+                    q_evals[query_row] += &self.fixed_evals[i];
                 }
             }
 
-            for (h_commitment, h_eval) in self.h_commitments.iter().zip(self.h_evals_x.iter()) {
+            for (h_commitment, h_eval) in self.h_commitments.iter().zip(self.h_evals.iter()) {
                 // We query the h(X) polynomial at x_3
                 let cur_row = *srs.meta.query_rows.get(&0).unwrap();
 
