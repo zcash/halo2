@@ -313,6 +313,29 @@ pub fn compute_inner_product<F: Field>(a: &[F], b: &[F]) -> F {
     acc
 }
 
+/// Divides polynomial `a` in `X` by `X - b` with
+/// no remainder.
+pub fn kate_division<'a, F: Field, I: IntoIterator<Item = &'a F>>(a: I, mut b: F) -> Vec<F>
+where
+    I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
+{
+    b = -b;
+    let a = a.into_iter();
+
+    let mut q = vec![F::zero(); a.len() - 1];
+
+    let mut tmp = F::zero();
+    for (q, r) in q.iter_mut().rev().zip(a.rev()) {
+        let mut lead_coeff = *r;
+        lead_coeff.sub_assign(&tmp);
+        *q = lead_coeff;
+        tmp = lead_coeff;
+        tmp.mul_assign(&b);
+    }
+
+    q
+}
+
 /// This simple utility function will parallelize an operation that is to be
 /// performed over a mutable slice.
 pub fn parallelize<T: Send, F: Fn(&mut [T], usize) + Send + Clone>(v: &mut [T], f: F) {

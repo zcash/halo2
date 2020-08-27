@@ -23,28 +23,15 @@ pub use verifier::*;
 
 use domain::EvaluationDomain;
 
-// TODO: remove this
-const GATE_DEGREE: u32 = 3;
-
 /// This is a structured reference string (SRS) that is (deterministically)
 /// computed from a specific circuit and parameters for the polynomial
 /// commitment scheme.
 #[derive(Debug)]
 pub struct SRS<C: CurveAffine> {
-    sa: (Vec<C::Scalar>, Vec<C::Scalar>),
-    sb: (Vec<C::Scalar>, Vec<C::Scalar>),
-    sc: (Vec<C::Scalar>, Vec<C::Scalar>),
-    sd: (Vec<C::Scalar>, Vec<C::Scalar>),
-    sm: (Vec<C::Scalar>, Vec<C::Scalar>),
-    sa_commitment: C,
-    sb_commitment: C,
-    sc_commitment: C,
-    sd_commitment: C,
-    sm_commitment: C,
     domain: EvaluationDomain<C::Scalar>,
-
     fixed_commitments: Vec<C>,
-    fixed_polys: Vec<(Vec<C::Scalar>, Vec<C::Scalar>)>,
+    fixed_polys: Vec<Vec<C::Scalar>>,
+    fixed_cosets: Vec<Vec<C::Scalar>>,
     meta: MetaCircuit<C::Scalar>,
 }
 
@@ -52,22 +39,13 @@ pub struct SRS<C: CurveAffine> {
 // This structure must never allow points at infinity.
 #[derive(Debug, Clone)]
 pub struct Proof<C: CurveAffine> {
-    a_commitment: C,
-    b_commitment: C,
-    c_commitment: C,
-    d_commitment: C,
     advice_commitments: Vec<C>,
     h_commitments: Vec<C>,
-    a_eval_x: C::Scalar,
-    b_eval_x: C::Scalar,
-    c_eval_x: C::Scalar,
-    d_eval_x: C::Scalar,
-    sa_eval_x: C::Scalar,
-    sb_eval_x: C::Scalar,
-    sc_eval_x: C::Scalar,
-    sd_eval_x: C::Scalar,
-    sm_eval_x: C::Scalar,
+    advice_evals_x: Vec<C::Scalar>,
+    fixed_evals_x: Vec<C::Scalar>,
     h_evals_x: Vec<C::Scalar>,
+    f_commitment: C,
+    q_evals: Vec<C::Scalar>,
     opening: OpeningProof<C>,
 }
 
@@ -167,30 +145,13 @@ fn test_proving() {
             cs: &mut impl ConstraintSystem<F>,
             config: MyConfig,
         ) -> Result<(), Error> {
-            for _ in 0..10 {
-                let (_, _, _, _) = cs.multiply(|| {
-                    let a = self.a.ok_or(Error::SynthesisError)?;
-                    let a2 = a.square();
-                    Ok((a, a, a2))
-                })?;
-                //cs.copy(a, b);
-                let (_, _, _, _) = cs.add(|| {
-                    let a = self.a.ok_or(Error::SynthesisError)?;
-                    let a2 = a.square();
-                    let a3 = a + a2;
-                    Ok((a, a2, a3))
-                })?;
-                //cs.copy(a, d);
-                //cs.copy(c, e);
-            }
-
             // Similar to the above...
             let mut row = 0;
             for _ in 0..10 {
                 cs.assign_advice(config.a, row, || self.a.ok_or(Error::SynthesisError))?;
                 cs.assign_advice(config.b, row, || self.a.ok_or(Error::SynthesisError))?;
                 let a_squared = self.a.map(|a| a.square());
-                cs.assign_advice(config.c, row, || self.a.ok_or(Error::SynthesisError))?;
+                cs.assign_advice(config.c, row, || a_squared.ok_or(Error::SynthesisError))?;
                 // Multiplication gate
                 cs.assign_fixed(config.sa, row, || Ok(Field::zero()))?;
                 cs.assign_fixed(config.sb, row, || Ok(Field::zero()))?;

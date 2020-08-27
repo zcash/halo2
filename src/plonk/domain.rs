@@ -138,7 +138,7 @@ impl<G: Group> EvaluationDomain<G> {
             }
             Self::distribute_powers(&mut a, g);
         }
-        a.resize(1 << self.extended_k, G::group_zero());
+        a.resize(self.coset_len(), G::group_zero());
         best_fft(&mut a, self.extended_omega, self.extended_k);
         a
     }
@@ -149,7 +149,7 @@ impl<G: Group> EvaluationDomain<G> {
     /// This function will panic if the provided vector is not the correct
     /// length.
     pub fn from_coset(&self, mut a: Vec<G>) -> Vec<G> {
-        assert_eq!(a.len(), 1 << self.extended_k);
+        assert_eq!(a.len(), self.coset_len());
 
         // Inverse FFT
         Self::ifft(
@@ -174,7 +174,7 @@ impl<G: Group> EvaluationDomain<G> {
     /// This divides the polynomial (in the coset domain) by the vanishing
     /// polynomial.
     pub fn divide_by_vanishing_poly(&self, mut h_poly: Vec<G>) -> Vec<G> {
-        assert_eq!(h_poly.len(), 1 << self.extended_k);
+        assert_eq!(h_poly.len(), self.coset_len());
 
         // Divide to obtain the quotient polynomial in the coset evaluation
         // domain.
@@ -220,5 +220,17 @@ impl<G: Group> EvaluationDomain<G> {
                 a.group_scale(&divisor);
             }
         });
+    }
+
+    pub fn coset_len(&self) -> usize {
+        1 << self.extended_k
+    }
+
+    pub fn get_omega(&self) -> G::Scalar {
+        self.omega
+    }
+
+    pub fn get_omega_inv(&self) -> G::Scalar {
+        self.omega_inv
     }
 }
