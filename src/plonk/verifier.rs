@@ -1,4 +1,4 @@
-use super::{hash_point, Proof, SRS};
+use super::{domain::Rotation, hash_point, Proof, SRS};
 use crate::arithmetic::{get_challenge_scalar, Challenge, Curve, CurveAffine, Field};
 use crate::polycommit::Params;
 use crate::transcript::Hasher;
@@ -13,35 +13,34 @@ impl<C: CurveAffine> Proof<C> {
         // Create a transcript for obtaining Fiat-Shamir challenges.
         let mut transcript = HBase::init(C::Base::one());
 
-        hash_point(&mut transcript, &self.a_commitment)
-            .expect("proof cannot contain points at infinity");
-        hash_point(&mut transcript, &self.b_commitment)
-            .expect("proof cannot contain points at infinity");
-        hash_point(&mut transcript, &self.c_commitment)
-            .expect("proof cannot contain points at infinity");
-        hash_point(&mut transcript, &self.d_commitment)
-            .expect("proof cannot contain points at infinity");
+        // Hash the prover's advice commitments into the transcript
+        for commitment in &self.advice_commitments {
+            hash_point(&mut transcript, commitment)
+                .expect("proof cannot contain points at infinity");
+        }
 
+        // Sample x_2 challenge, which keeps the gates linearly independent.
+        let x_2: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        // Obtain a commitment to h(X) in the form of multiple pieces of degree n - 1
         for c in &self.h_commitments {
             hash_point(&mut transcript, c).expect("proof cannot contain points at infinity");
         }
 
-        let x: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        // Sample x_3 challenge, which is used to ensure the circuit is
+        // satisfied with high probability.
+        let x_3: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-        // We set up a second transcript on the scalar field to hash in openings of
-        // our polynomial commitments.
+        // Hash together all the openings provided by the prover into a new
+        // transcript on the scalar field.
         let mut transcript_scalar = HScalar::init(C::Scalar::one());
-        transcript_scalar.absorb(self.a_eval_x);
-        transcript_scalar.absorb(self.b_eval_x);
-        transcript_scalar.absorb(self.c_eval_x);
-        transcript_scalar.absorb(self.d_eval_x);
-        transcript_scalar.absorb(self.sa_eval_x);
-        transcript_scalar.absorb(self.sb_eval_x);
-        transcript_scalar.absorb(self.sc_eval_x);
-        transcript_scalar.absorb(self.sd_eval_x);
-        transcript_scalar.absorb(self.sm_eval_x);
 
-        for eval in &self.h_evals_x {
+        for eval in self
+            .advice_evals
+            .iter()
+            .chain(self.fixed_evals.iter())
+            .chain(self.h_evals.iter())
+        {
             transcript_scalar.absorb(*eval);
         }
 
@@ -49,60 +48,136 @@ impl<C: CurveAffine> Proof<C> {
             C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
         transcript.absorb(transcript_scalar_point);
 
-        let y: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        // Evaluate the circuit using the custom gates provided
+        let mut h_eval = C::Scalar::zero();
+        for poly in srs.meta.gates.iter() {
+            h_eval *= &x_2;
 
-        let mut q_commitment = self.h_commitments[0].clone().to_projective();
-        let mut expected_opening = self.h_evals_x[0];
-        {
-            let mut accumulate = |commitment: C, opening: C::Scalar| {
-                q_commitment = commitment.to_projective() + &(q_commitment * y);
-                expected_opening = opening + &(expected_opening * &y);
-            };
+            let evaluation: C::Scalar = poly.evaluate(
+                &|index| self.fixed_evals[index],
+                &|index| self.advice_evals[index],
+                &|a, b| a + &b,
+                &|a, b| a * &b,
+                &|a, scalar| a * &scalar,
+            );
 
-            for (commitment, eval) in self.h_commitments.iter().zip(self.h_evals_x.iter()).skip(1) {
-                accumulate(*commitment, *eval);
-            }
-
-            accumulate(self.a_commitment, self.a_eval_x);
-            accumulate(self.b_commitment, self.b_eval_x);
-            accumulate(self.c_commitment, self.c_eval_x);
-            accumulate(self.d_commitment, self.d_eval_x);
-            accumulate(srs.sa_commitment, self.sa_eval_x);
-            accumulate(srs.sb_commitment, self.sb_eval_x);
-            accumulate(srs.sc_commitment, self.sc_eval_x);
-            accumulate(srs.sd_commitment, self.sd_eval_x);
-            accumulate(srs.sm_commitment, self.sm_eval_x);
+            h_eval += &evaluation;
         }
-        let q_commitment = q_commitment.to_affine();
-
-        let xn = x.pow(&[params.n as u64, 0, 0, 0]);
+        let xn = x_3.pow(&[params.n as u64, 0, 0, 0]);
 
         // Compute the expected h(x) value
-        let mut h_eval_x = C::Scalar::zero();
+        let mut expected_h_eval = C::Scalar::zero();
         let mut cur = C::Scalar::one();
-        for eval in &self.h_evals_x {
-            h_eval_x += &(cur * eval);
+        for eval in &self.h_evals {
+            expected_h_eval += &(cur * eval);
             cur *= &xn;
         }
 
-        // Check that the circuit is satisfied.
-        // (a * sa) + (b * sb) + (a * sm * b) + (d * sd) - (c * sc)
-        if self.a_eval_x * &self.sa_eval_x
-            + &(self.b_eval_x * &self.sb_eval_x)
-            + &(self.a_eval_x * &self.sm_eval_x * &self.b_eval_x)
-            + &(self.d_eval_x * &self.sd_eval_x)
-            - &(self.c_eval_x * &self.sc_eval_x)
-            != h_eval_x * &(xn - &C::Scalar::one())
-        {
+        if h_eval != (expected_h_eval * &(xn - &C::Scalar::one())) {
             return false;
         }
 
+        // We are now convinced the circuit is satisfied so long as the
+        // polynomial commitments open to the correct values.
+
+        // Sample x_4 for compressing openings at the same points together
+        let x_4: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        // Compress the commitments and expected evaluations at x_3 together
+        // using the challenge x_4
+        let mut q_commitments: Vec<Option<C::Projective>> = vec![None; srs.meta.rotations.len()];
+        let mut q_evals: Vec<_> = vec![C::Scalar::zero(); srs.meta.rotations.len()];
+        {
+            let mut accumulate = |point_index: usize, new_commitment, eval| {
+                q_commitments[point_index] = q_commitments[point_index]
+                    .map(|mut commitment| {
+                        commitment *= x_4;
+                        commitment += new_commitment;
+                        commitment
+                    })
+                    .or_else(|| Some(new_commitment.to_projective()));
+                q_evals[point_index] *= &x_4;
+                q_evals[point_index] += &eval;
+            };
+
+            for (query_index, &(wire, ref at)) in srs.meta.advice_queries.iter().enumerate() {
+                let point_index = (*srs.meta.rotations.get(at).unwrap()).0;
+                accumulate(
+                    point_index,
+                    self.advice_commitments[wire.0],
+                    self.advice_evals[query_index],
+                );
+            }
+
+            for (query_index, &(wire, ref at)) in srs.meta.fixed_queries.iter().enumerate() {
+                let point_index = (*srs.meta.rotations.get(at).unwrap()).0;
+                accumulate(
+                    point_index,
+                    srs.fixed_commitments[wire.0],
+                    self.fixed_evals[query_index],
+                );
+            }
+
+            let current_index = (*srs.meta.rotations.get(&Rotation::default()).unwrap()).0;
+            for (h_commitment, h_eval) in self.h_commitments.iter().zip(self.h_evals.iter()) {
+                accumulate(current_index, *h_commitment, *h_eval);
+            }
+        }
+
+        // Sample a challenge x_5 for keeping the multi-point quotient
+        // polynomial terms linearly independent.
+        let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        // Obtain the commitment to the multi-point quotient polynomial f(X).
+        hash_point(&mut transcript, &self.f_commitment)
+            .expect("proof cannot contain points at infinity");
+
+        // Sample a challenge x_6 for checking that f(X) was committed to
+        // correctly.
+        let x_6: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        for eval in self.q_evals.iter() {
+            transcript_scalar.absorb(*eval);
+        }
+
+        let transcript_scalar_point =
+            C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
+        transcript.absorb(transcript_scalar_point);
+
+        // We can compute the expected f_eval at x_6 using the q_evals provided
+        // by the prover and from x_5
+        let mut f_eval = C::Scalar::zero();
+        for (&row, &point_index) in srs.meta.rotations.iter() {
+            let mut eval = self.q_evals[point_index.0];
+
+            let point = srs.domain.rotate_omega(x_3, row);
+            eval = eval - &q_evals[point_index.0];
+            eval = eval * &(x_6 - &point).invert().unwrap();
+
+            f_eval *= &x_5;
+            f_eval += &eval;
+        }
+
+        // Sample a challenge x_7 that we will use to collapse the openings of
+        // the various remaining polynomials at x_6 together.
+        let x_7: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        // Compute the final commitment that has to be opened
+        let mut f_commitment: C::Projective = self.f_commitment.to_projective();
+        for (_, &point_index) in srs.meta.rotations.iter() {
+            f_commitment *= x_7;
+            f_commitment = f_commitment + &q_commitments[point_index.0].as_ref().unwrap();
+            f_eval *= &x_7;
+            f_eval += &self.q_evals[point_index.0];
+        }
+
+        // Verify the opening proof
         params.verify_proof(
             &self.opening,
             &mut transcript,
-            x,
-            &q_commitment,
-            expected_opening,
+            x_6,
+            &f_commitment.to_affine(),
+            f_eval,
         )
     }
 }

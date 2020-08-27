@@ -1,5 +1,16 @@
 use crate::arithmetic::{best_fft, parallelize, Field, Group};
 
+/// Describes a relative location in the evaluation domain; applying a rotation
+/// by i will rotate the vector in the evaluation domain by i.
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct Rotation(pub i32);
+
+impl Default for Rotation {
+    fn default() -> Rotation {
+        Rotation(0)
+    }
+}
+
 /// This structure contains precomputed constants and other details needed for
 /// performing operations on an evaluation domain of size $2^k$ in the context
 /// of PLONK.
@@ -8,6 +19,7 @@ pub struct EvaluationDomain<G: Group> {
     n: u64,
     k: u32,
     extended_k: u32,
+    omega: G::Scalar,
     omega_inv: G::Scalar,
     extended_omega: G::Scalar,
     extended_omega_inv: G::Scalar,
@@ -91,6 +103,7 @@ impl<G: Group> EvaluationDomain<G> {
             n,
             k,
             extended_k,
+            omega,
             omega_inv,
             extended_omega,
             extended_omega_inv,
@@ -103,32 +116,46 @@ impl<G: Group> EvaluationDomain<G> {
         }
     }
 
-    /// This takes us from an n-length vector into the coset evaluation domain.
-    /// Also returns the polynomial.
+    /// This takes us from an n-length vector into the coefficient form.
     ///
     /// This function will panic if the provided vector is not the correct
     /// length.
-    pub fn obtain_coset(&self, mut a: Vec<G>) -> (Vec<G>, Vec<G>) {
+    pub fn obtain_poly(&self, mut a: Vec<G>) -> Vec<G> {
         assert_eq!(a.len(), 1 << self.k);
 
         // Perform inverse FFT to obtain the polynomial in coefficient form
         Self::ifft(&mut a, self.omega_inv, self.k, self.ifft_divisor);
 
-        // Keep this polynomial around; we'll need to evaluate it at arbitrary
-        // points later.
-        let old = a.clone();
+        a
+    }
 
-        // Distributes powers so that an FFT will move us into the coset
-        // evaluation domain.
-        Self::distribute_powers(&mut a, self.g_coset);
+    /// This takes us from an n-length coefficient vector into the coset
+    /// evaluation domain, rotating by `rotation` if desired.
+    ///
+    /// This function will panic if the provided vector is not the correct
+    /// length.
+    pub fn obtain_coset(&self, mut a: Vec<G>, rotation: Rotation) -> Vec<G> {
+        assert_eq!(a.len(), 1 << self.k);
 
-        // Resize to account for the quotient polynomial's size
-        a.resize(1 << self.extended_k, G::group_zero());
-
-        // Move into coset evaluation domain
+        assert!(rotation.0 != i32::MIN);
+        if rotation.0 == 0 {
+            // In this special case, the powers of zeta repeat so we do not need
+            // to compute them.
+            Self::distribute_powers_zeta(&mut a, self.g_coset);
+        } else {
+            let mut g = G::Scalar::ZETA;
+            if rotation.0 > 0 {
+                g *= &self.omega.pow_vartime(&[rotation.0 as u64, 0, 0, 0]);
+            } else {
+                g *= &self
+                    .omega_inv
+                    .pow_vartime(&[rotation.0.abs() as u64, 0, 0, 0]);
+            }
+            Self::distribute_powers(&mut a, g);
+        }
+        a.resize(self.coset_len(), G::group_zero());
         best_fft(&mut a, self.extended_omega, self.extended_k);
-
-        (a, old)
+        a
     }
 
     /// This takes us from the coset evaluation domain and gets us the quotient
@@ -137,7 +164,7 @@ impl<G: Group> EvaluationDomain<G> {
     /// This function will panic if the provided vector is not the correct
     /// length.
     pub fn from_coset(&self, mut a: Vec<G>) -> Vec<G> {
-        assert_eq!(a.len(), 1 << self.extended_k);
+        assert_eq!(a.len(), self.coset_len());
 
         // Inverse FFT
         Self::ifft(
@@ -162,7 +189,7 @@ impl<G: Group> EvaluationDomain<G> {
     /// This divides the polynomial (in the coset domain) by the vanishing
     /// polynomial.
     pub fn divide_by_vanishing_poly(&self, mut h_poly: Vec<G>) -> Vec<G> {
-        assert_eq!(h_poly.len(), 1 << self.extended_k);
+        assert_eq!(h_poly.len(), self.coset_len());
 
         // Divide to obtain the quotient polynomial in the coset evaluation
         // domain.
@@ -176,7 +203,7 @@ impl<G: Group> EvaluationDomain<G> {
         h_poly
     }
 
-    fn distribute_powers(mut a: &mut [G], g: G::Scalar) {
+    fn distribute_powers_zeta(mut a: &mut [G], g: G::Scalar) {
         let coset_powers = [g, g.square()];
         parallelize(&mut a, |a, mut index| {
             for a in a {
@@ -190,6 +217,16 @@ impl<G: Group> EvaluationDomain<G> {
         });
     }
 
+    fn distribute_powers(mut a: &mut [G], g: G::Scalar) {
+        parallelize(&mut a, |a, index| {
+            let mut cur = g.pow_vartime(&[index as u64, 0, 0, 0]);
+            for a in a {
+                a.group_scale(&cur);
+                cur *= &g;
+            }
+        });
+    }
+
     fn ifft(a: &mut [G], omega_inv: G::Scalar, log_n: u32, divisor: G::Scalar) {
         best_fft(a, omega_inv, log_n);
         parallelize(a, |a, _| {
@@ -198,5 +235,29 @@ impl<G: Group> EvaluationDomain<G> {
                 a.group_scale(&divisor);
             }
         });
+    }
+
+    pub fn coset_len(&self) -> usize {
+        1 << self.extended_k
+    }
+
+    pub fn get_omega(&self) -> G::Scalar {
+        self.omega
+    }
+
+    pub fn get_omega_inv(&self) -> G::Scalar {
+        self.omega_inv
+    }
+
+    pub fn rotate_omega(&self, constant: G::Scalar, rotation: Rotation) -> G::Scalar {
+        let mut point = constant;
+        if rotation.0 >= 0 {
+            point *= &self.get_omega().pow(&[rotation.0 as u64, 0, 0, 0]);
+        } else {
+            point *= &self
+                .get_omega_inv()
+                .pow(&[rotation.0.abs() as u64, 0, 0, 0]);
+        }
+        point
     }
 }

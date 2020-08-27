@@ -1,9 +1,11 @@
 use super::{
-    circuit::{Circuit, ConstraintSystem, Wire},
+    circuit::{AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit},
+    domain::Rotation,
     hash_point, Error, Proof, SRS,
 };
 use crate::arithmetic::{
-    eval_polynomial, get_challenge_scalar, Challenge, Curve, CurveAffine, Field,
+    eval_polynomial, get_challenge_scalar, kate_division, parallelize, Challenge, Curve,
+    CurveAffine, Field,
 };
 use crate::polycommit::Params;
 use crate::transcript::Hasher;
@@ -22,121 +24,130 @@ impl<C: CurveAffine> Proof<C> {
         circuit: &ConcreteCircuit,
     ) -> Result<Self, Error> {
         struct WitnessCollection<F: Field> {
-            a: Vec<F>,
-            b: Vec<F>,
-            c: Vec<F>,
-            d: Vec<F>,
-            sa: Vec<F>,
-            sb: Vec<F>,
-            sc: Vec<F>,
-            sd: Vec<F>,
-            sm: Vec<F>,
+            advice: Vec<Vec<F>>,
         }
 
         impl<F: Field> ConstraintSystem<F> for WitnessCollection<F> {
-            fn create_gate(
+            fn assign_advice(
                 &mut self,
-                sa: F,
-                sb: F,
-                sc: F,
-                sd: F,
-                sm: F,
-                f: impl Fn() -> Result<(F, F, F, F), Error>,
-            ) -> Result<(Wire, Wire, Wire, Wire), Error> {
-                let (a, b, c, d) = f()?;
-                let tmp = Ok((
-                    Wire::A(self.a.len()),
-                    Wire::B(self.a.len()),
-                    Wire::C(self.a.len()),
-                    Wire::D(self.a.len()),
-                ));
-                self.a.push(a);
-                self.b.push(b);
-                self.c.push(c);
-                self.d.push(d);
-                self.sa.push(sa);
-                self.sb.push(sb);
-                self.sc.push(sc);
-                self.sd.push(sd);
-                self.sm.push(sm);
-                tmp
+                wire: AdviceWire,
+                row: usize,
+                to: impl FnOnce() -> Result<F, Error>,
+            ) -> Result<(), Error> {
+                *self
+                    .advice
+                    .get_mut(wire.0)
+                    .and_then(|v| v.get_mut(row))
+                    .ok_or(Error::BoundsFailure)? = to()?;
+
+                Ok(())
             }
-            // fn copy(&mut self, left: Wire, right: Wire) {
-            //     unimplemented!()
-            // }
+
+            fn assign_fixed(
+                &mut self,
+                _: FixedWire,
+                _: usize,
+                _: impl FnOnce() -> Result<F, Error>,
+            ) -> Result<(), Error> {
+                // We only care about advice wires here
+
+                Ok(())
+            }
         }
 
+        let mut meta = MetaCircuit::default();
+        let config = ConcreteCircuit::configure(&mut meta);
+
         let mut witness = WitnessCollection {
-            a: vec![],
-            b: vec![],
-            c: vec![],
-            d: vec![],
-            sa: vec![],
-            sb: vec![],
-            sc: vec![],
-            sd: vec![],
-            sm: vec![],
+            advice: vec![vec![C::Scalar::zero(); params.n as usize]; meta.num_advice_wires],
         };
 
         // Synthesize the circuit to obtain the witness and other information.
-        circuit.synthesize(&mut witness)?;
+        circuit.synthesize(&mut witness, config)?;
 
         // Create a transcript for obtaining Fiat-Shamir challenges.
         let mut transcript = HBase::init(C::Base::one());
 
-        if witness.a.len() > params.n as usize {
-            // The polynomial commitment does not support a high enough degree
-            // polynomial to commit to our wires because this circuit has too
-            // many gates.
-            return Err(Error::IncompatibleParams);
+        // Compute commitments to advice wire polynomials
+        let advice_blinds: Vec<_> = witness.advice.iter().map(|_| C::Scalar::random()).collect();
+        let advice_commitments = witness
+            .advice
+            .iter()
+            .zip(advice_blinds.iter())
+            .map(|(poly, blind)| params.commit_lagrange(poly, *blind).to_affine())
+            .collect();
+
+        for commitment in &advice_commitments {
+            hash_point(&mut transcript, commitment)?;
         }
-
-        witness.a.resize(params.n as usize, C::Scalar::zero());
-        witness.b.resize(params.n as usize, C::Scalar::zero());
-        witness.c.resize(params.n as usize, C::Scalar::zero());
-        witness.d.resize(params.n as usize, C::Scalar::zero());
-        witness.sa.resize(params.n as usize, C::Scalar::zero());
-        witness.sb.resize(params.n as usize, C::Scalar::zero());
-        witness.sc.resize(params.n as usize, C::Scalar::zero());
-        witness.sd.resize(params.n as usize, C::Scalar::zero());
-        witness.sm.resize(params.n as usize, C::Scalar::zero());
-
-        // Compute commitments to the various wire values
-        let a_blind = C::Scalar::one(); // TODO: not random
-        let b_blind = C::Scalar::one(); // TODO: not random
-        let c_blind = C::Scalar::one(); // TODO: not random
-        let d_blind = C::Scalar::one(); // TODO: not random
-        let a_commitment = params.commit_lagrange(&witness.a, a_blind).to_affine();
-        let b_commitment = params.commit_lagrange(&witness.b, b_blind).to_affine();
-        let c_commitment = params.commit_lagrange(&witness.c, c_blind).to_affine();
-        let d_commitment = params.commit_lagrange(&witness.d, d_blind).to_affine();
-
-        hash_point(&mut transcript, &a_commitment)?;
-        hash_point(&mut transcript, &b_commitment)?;
-        hash_point(&mut transcript, &c_commitment)?;
-        hash_point(&mut transcript, &d_commitment)?;
 
         let domain = &srs.domain;
 
-        let (a_coset, a_poly) = domain.obtain_coset(witness.a);
-        let (b_coset, b_poly) = domain.obtain_coset(witness.b);
-        let (c_coset, c_poly) = domain.obtain_coset(witness.c);
-        let (d_coset, d_poly) = domain.obtain_coset(witness.d);
+        let advice_polys: Vec<_> = witness
+            .advice
+            .into_iter()
+            .map(|poly| domain.obtain_poly(poly))
+            .collect();
 
-        // (a * sa) + (b * sb) + (a * sm * b) + (d * sd) - (c * sc)
-        let mut h_poly = Vec::with_capacity(a_coset.len());
-        for ((((((((a, b), c), d), sa), sb), sc), sd), sm) in a_coset
+        let advice_cosets: Vec<_> = meta
+            .advice_queries
             .iter()
-            .zip(b_coset.iter())
-            .zip(c_coset.iter())
-            .zip(d_coset.iter())
-            .zip(srs.sa.0.iter())
-            .zip(srs.sb.0.iter())
-            .zip(srs.sc.0.iter())
-            .zip(srs.sd.0.iter())
-            .zip(srs.sm.0.iter())
-        {
-            h_poly.push((*a) * sa + &((*b) * sb) + &((*a) * sm * b) + &((*d) * sd) - &((*c) * sc));
+            .map(|&(wire, at)| {
+                let poly = advice_polys[wire.0].clone();
+                domain.obtain_coset(poly, at)
+            })
+            .collect();
+
+        // Obtain challenge for keeping all separate gates linearly independent
+        let x_2: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        // Evaluate the circuit using the custom gates provided
+        let mut h_poly = vec![C::Scalar::zero(); domain.coset_len()];
+        for (i, poly) in meta.gates.iter().enumerate() {
+            if i != 0 {
+                for h in h_poly.iter_mut() {
+                    *h *= &x_2;
+                }
+            }
+
+            let evaluation: Vec<C::Scalar> = poly.evaluate(
+                &|index| srs.fixed_cosets[index].clone(),
+                &|index| advice_cosets[index].clone(),
+                &|mut a, b| {
+                    parallelize(&mut a, |a, start| {
+                        for (a, b) in a.iter_mut().zip(b[start..].iter()) {
+                            *a += b;
+                        }
+                    });
+                    a
+                },
+                &|mut a, b| {
+                    parallelize(&mut a, |a, start| {
+                        for (a, b) in a.iter_mut().zip(b[start..].iter()) {
+                            *a *= b;
+                        }
+                    });
+                    a
+                },
+                &|mut a, scalar| {
+                    parallelize(&mut a, |a, _| {
+                        for a in a {
+                            *a *= &scalar;
+                        }
+                    });
+                    a
+                },
+            );
+
+            assert_eq!(h_poly.len(), evaluation.len());
+
+            if i == 0 {
+                h_poly = evaluation;
+            } else {
+                for (h, e) in h_poly.iter_mut().zip(evaluation.into_iter()) {
+                    *h += &e;
+                }
+            }
         }
 
         // Divide by t(X) = X^{params.n} - 1.
@@ -151,7 +162,7 @@ impl<C: CurveAffine> Proof<C> {
             .map(|v| v.to_vec())
             .collect::<Vec<_>>();
         drop(h_poly);
-        let h_blinds = vec![C::Scalar::one(); h_pieces.len()]; // TODO: not random
+        let h_blinds: Vec<_> = h_pieces.iter().map(|_| C::Scalar::random()).collect();
 
         // Compute commitments to each h(X) piece
         let h_commitments: Vec<_> = h_pieces
@@ -165,39 +176,44 @@ impl<C: CurveAffine> Proof<C> {
             hash_point(&mut transcript, c)?;
         }
 
-        let x: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        let x_3: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-        // Evaluate polynomials at x
-        let a_eval_x = eval_polynomial(&a_poly, x);
-        let b_eval_x = eval_polynomial(&b_poly, x);
-        let c_eval_x = eval_polynomial(&c_poly, x);
-        let d_eval_x = eval_polynomial(&d_poly, x);
-        let sa_eval_x = eval_polynomial(&srs.sa.1, x);
-        let sb_eval_x = eval_polynomial(&srs.sb.1, x);
-        let sc_eval_x = eval_polynomial(&srs.sc.1, x);
-        let sd_eval_x = eval_polynomial(&srs.sd.1, x);
-        let sm_eval_x = eval_polynomial(&srs.sm.1, x);
-
-        let h_evals_x: Vec<_> = h_pieces
+        // Evaluate polynomials at omega^i x_3
+        let advice_evals: Vec<_> = meta
+            .advice_queries
             .iter()
-            .map(|poly| eval_polynomial(poly, x))
+            .map(|&(wire, at)| eval_polynomial(&advice_polys[wire.0], domain.rotate_omega(x_3, at)))
+            .collect();
+
+        let fixed_evals: Vec<_> = meta
+            .fixed_queries
+            .iter()
+            .map(|&(wire, at)| {
+                eval_polynomial(&srs.fixed_polys[wire.0], domain.rotate_omega(x_3, at))
+            })
+            .collect();
+
+        let h_evals: Vec<_> = h_pieces
+            .iter()
+            .map(|poly| eval_polynomial(poly, x_3))
             .collect();
 
         // We set up a second transcript on the scalar field to hash in openings of
         // our polynomial commitments.
         let mut transcript_scalar = HScalar::init(C::Scalar::one());
-        transcript_scalar.absorb(a_eval_x);
-        transcript_scalar.absorb(b_eval_x);
-        transcript_scalar.absorb(c_eval_x);
-        transcript_scalar.absorb(d_eval_x);
-        transcript_scalar.absorb(sa_eval_x);
-        transcript_scalar.absorb(sb_eval_x);
-        transcript_scalar.absorb(sc_eval_x);
-        transcript_scalar.absorb(sd_eval_x);
-        transcript_scalar.absorb(sm_eval_x);
 
-        // Hash each h(x) piece
-        for eval in h_evals_x.iter() {
+        // Hash each advice evaluation
+        for eval in advice_evals.iter() {
+            transcript_scalar.absorb(*eval);
+        }
+
+        // Hash each fixed evaluation
+        for eval in fixed_evals.iter() {
+            transcript_scalar.absorb(*eval);
+        }
+
+        // Hash each h(x) piece evaluation
+        for eval in h_evals.iter() {
             transcript_scalar.absorb(*eval);
         }
 
@@ -205,61 +221,146 @@ impl<C: CurveAffine> Proof<C> {
             C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
         transcript.absorb(transcript_scalar_point);
 
-        let y: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        let x_4: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-        let mut q_commitment = h_commitments[0].clone().to_projective();
-        let mut q_poly = h_pieces[0].clone();
-        let mut q_blind = h_blinds[0];
+        // Collapse openings at same points together into single openings using
+        // x_4 challenge.
+        let mut q_polys: Vec<Option<Vec<_>>> = vec![None; meta.rotations.len()];
+        let mut q_blinds = vec![C::Scalar::zero(); meta.rotations.len()];
+        let mut q_evals: Vec<_> = vec![C::Scalar::zero(); meta.rotations.len()];
         {
-            let mut accumulate = |poly: &[_], blind: &C::Scalar, commitment: C| {
-                for (a, q) in poly.iter().zip(q_poly.iter_mut()) {
-                    *q = (*q * &y) + a;
-                }
-                q_commitment = (q_commitment * y) + &commitment.to_projective();
-                q_blind = (q_blind * &y) + blind;
+            let mut accumulate = |point_index: usize, new_poly: &Vec<_>, blind, eval| {
+                q_polys[point_index]
+                    .as_mut()
+                    .map(|poly| {
+                        parallelize(poly, |q, start| {
+                            for (q, a) in q.iter_mut().zip(new_poly[start..].iter()) {
+                                *q *= &x_4;
+                                *q += a;
+                            }
+                        });
+                    })
+                    .or_else(|| {
+                        q_polys[point_index] = Some(new_poly.clone());
+                        Some(())
+                    });
+                q_blinds[point_index] *= &x_4;
+                q_blinds[point_index] += &blind;
+                q_evals[point_index] *= &x_4;
+                q_evals[point_index] += &eval;
             };
 
-            for ((poly, blind), commitment) in h_pieces
-                .iter()
-                .zip(h_blinds.iter())
-                .zip(h_commitments.iter())
-                .skip(1)
-            {
-                accumulate(&poly, blind, *commitment);
+            for (query_index, &(wire, ref at)) in meta.advice_queries.iter().enumerate() {
+                let point_index = (*meta.rotations.get(at).unwrap()).0;
+
+                accumulate(
+                    point_index,
+                    &advice_polys[wire.0],
+                    advice_blinds[wire.0],
+                    advice_evals[query_index],
+                );
             }
 
-            accumulate(&a_poly, &a_blind, a_commitment);
-            accumulate(&b_poly, &b_blind, b_commitment);
-            accumulate(&c_poly, &c_blind, c_commitment);
-            accumulate(&d_poly, &d_blind, d_commitment);
-            accumulate(&srs.sa.1, &Field::one(), srs.sa_commitment);
-            accumulate(&srs.sb.1, &Field::one(), srs.sb_commitment);
-            accumulate(&srs.sc.1, &Field::one(), srs.sc_commitment);
-            accumulate(&srs.sd.1, &Field::one(), srs.sd_commitment);
-            accumulate(&srs.sm.1, &Field::one(), srs.sm_commitment);
+            for (query_index, &(wire, ref at)) in meta.fixed_queries.iter().enumerate() {
+                let point_index = (*meta.rotations.get(at).unwrap()).0;
+
+                accumulate(
+                    point_index,
+                    &srs.fixed_polys[wire.0],
+                    C::Scalar::one(),
+                    fixed_evals[query_index],
+                );
+            }
+
+            // We query the h(X) polynomial at x_3
+            let current_index = (*meta.rotations.get(&Rotation::default()).unwrap()).0;
+            for ((h_poly, h_blind), h_eval) in h_pieces
+                .into_iter()
+                .zip(h_blinds.iter())
+                .zip(h_evals.iter())
+            {
+                accumulate(current_index, &h_poly, *h_blind, *h_eval);
+            }
+        }
+
+        let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        let mut f_poly: Option<Vec<C::Scalar>> = None;
+        for (&row, &point_index) in meta.rotations.iter() {
+            let mut poly = q_polys[point_index.0].as_ref().unwrap().clone();
+            let point = domain.rotate_omega(x_3, row);
+            poly[0] -= &q_evals[point_index.0];
+            let mut poly = kate_division(&poly, point);
+            poly.push(C::Scalar::zero());
+
+            f_poly = f_poly
+                .map(|mut f_poly| {
+                    parallelize(&mut f_poly, |q, start| {
+                        for (q, a) in q.iter_mut().zip(poly[start..].iter()) {
+                            *q *= &x_5;
+                            *q += a;
+                        }
+                    });
+                    f_poly
+                })
+                .or_else(|| Some(poly));
+        }
+        let mut f_poly = f_poly.unwrap();
+        let mut f_blind = C::Scalar::random();
+
+        let f_commitment = params.commit(&f_poly, f_blind).to_affine();
+
+        hash_point(&mut transcript, &f_commitment)?;
+
+        let x_6: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        let mut q_evals = vec![];
+
+        for (_, &point_index) in meta.rotations.iter() {
+            q_evals.push(eval_polynomial(
+                &q_polys[point_index.0].as_ref().unwrap(),
+                x_6,
+            ));
+        }
+
+        for eval in q_evals.iter() {
+            transcript_scalar.absorb(*eval);
+        }
+
+        let transcript_scalar_point =
+            C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
+        transcript.absorb(transcript_scalar_point);
+
+        let x_7: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        for (_, &point_index) in meta.rotations.iter() {
+            f_blind *= &x_7;
+            f_blind += &q_blinds[point_index.0];
+
+            parallelize(&mut f_poly, |f, start| {
+                for (f, a) in f
+                    .iter_mut()
+                    .zip(q_polys[point_index.0].as_ref().unwrap()[start..].iter())
+                {
+                    *f *= &x_7;
+                    *f += a;
+                }
+            });
         }
 
         // Let's prove that the q_commitment opens at x to the expected value.
         let opening = params
-            .create_proof(&mut transcript, &q_poly, q_blind, x)
+            .create_proof(&mut transcript, &f_poly, f_blind, x_6)
             .map_err(|_| Error::ConstraintSystemFailure)?;
 
         Ok(Proof {
-            a_commitment,
-            b_commitment,
-            c_commitment,
-            d_commitment,
+            advice_commitments,
             h_commitments,
-            a_eval_x,
-            b_eval_x,
-            c_eval_x,
-            d_eval_x,
-            sa_eval_x,
-            sb_eval_x,
-            sc_eval_x,
-            sd_eval_x,
-            sm_eval_x,
-            h_evals_x,
+            advice_evals,
+            fixed_evals,
+            h_evals,
+            f_commitment,
+            q_evals,
             opening,
         })
     }
