@@ -84,12 +84,13 @@ fn test_proving() {
     use crate::arithmetic::{EqAffine, Field, Fp, Fq};
     use crate::polycommit::Params;
     use crate::transcript::DummyHash;
+    use std::marker::PhantomData;
     const K: u32 = 5;
 
     // Initialize the polynomial commitment parameters
     let params: Params<EqAffine> = Params::new::<DummyHash<Fq>>(K);
 
-    struct MyConfig {
+    struct PLONKConfig {
         a: AdviceWire,
         b: AdviceWire,
         c: AdviceWire,
@@ -99,14 +100,112 @@ fn test_proving() {
         sc: FixedWire,
         sm: FixedWire,
     }
+
+    #[derive(Copy, Clone)]
+    struct Variable(AdviceWire, usize);
+
+    trait StandardCS<FF: Field> {
+        fn raw_multiply<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
+        where
+            F: FnOnce() -> Result<(FF, FF, FF), Error>;
+        fn raw_add<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
+        where
+            F: FnOnce() -> Result<(FF, FF, FF), Error>;
+    }
+
     struct MyCircuit<F: Field> {
         a: Option<F>,
     }
 
-    impl<F: Field> Circuit<F> for MyCircuit<F> {
-        type Config = MyConfig;
+    struct StandardPLONK<'a, F: Field, CS: ConstraintSystem<F> + 'a> {
+        cs: &'a mut CS,
+        config: PLONKConfig,
+        current_gate: usize,
+        _marker: PhantomData<F>,
+    }
 
-        fn configure(meta: &mut MetaCircuit<F>) -> MyConfig {
+    impl<'a, FF: Field, CS: ConstraintSystem<FF>> StandardPLONK<'a, FF, CS> {
+        fn new(cs: &'a mut CS, config: PLONKConfig) -> Self {
+            StandardPLONK {
+                cs,
+                config,
+                current_gate: 0,
+                _marker: PhantomData,
+            }
+        }
+    }
+
+    impl<'a, FF: Field, CS: ConstraintSystem<FF>> StandardCS<FF> for StandardPLONK<'a, FF, CS> {
+        fn raw_multiply<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
+        where
+            F: FnOnce() -> Result<(FF, FF, FF), Error>,
+        {
+            let index = self.current_gate;
+            self.current_gate += 1;
+            let mut value = None;
+            self.cs.assign_advice(self.config.a, index, || {
+                value = Some(f()?);
+                Ok(value.ok_or(Error::SynthesisError)?.0)
+            })?;
+            self.cs.assign_advice(self.config.b, index, || {
+                Ok(value.ok_or(Error::SynthesisError)?.1)
+            })?;
+            self.cs.assign_advice(self.config.c, index, || {
+                Ok(value.ok_or(Error::SynthesisError)?.2)
+            })?;
+
+            self.cs
+                .assign_fixed(self.config.sa, index, || Ok(FF::zero()))?;
+            self.cs
+                .assign_fixed(self.config.sb, index, || Ok(FF::zero()))?;
+            self.cs
+                .assign_fixed(self.config.sc, index, || Ok(FF::one()))?;
+            self.cs
+                .assign_fixed(self.config.sm, index, || Ok(FF::one()))?;
+            Ok((
+                Variable(self.config.a, index),
+                Variable(self.config.b, index),
+                Variable(self.config.c, index),
+            ))
+        }
+        fn raw_add<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
+        where
+            F: FnOnce() -> Result<(FF, FF, FF), Error>,
+        {
+            let index = self.current_gate;
+            self.current_gate += 1;
+            let mut value = None;
+            self.cs.assign_advice(self.config.a, index, || {
+                value = Some(f()?);
+                Ok(value.ok_or(Error::SynthesisError)?.0)
+            })?;
+            self.cs.assign_advice(self.config.b, index, || {
+                Ok(value.ok_or(Error::SynthesisError)?.1)
+            })?;
+            self.cs.assign_advice(self.config.c, index, || {
+                Ok(value.ok_or(Error::SynthesisError)?.2)
+            })?;
+
+            self.cs
+                .assign_fixed(self.config.sa, index, || Ok(FF::one()))?;
+            self.cs
+                .assign_fixed(self.config.sb, index, || Ok(FF::one()))?;
+            self.cs
+                .assign_fixed(self.config.sc, index, || Ok(FF::one()))?;
+            self.cs
+                .assign_fixed(self.config.sm, index, || Ok(FF::zero()))?;
+            Ok((
+                Variable(self.config.a, index),
+                Variable(self.config.b, index),
+                Variable(self.config.c, index),
+            ))
+        }
+    }
+
+    impl<F: Field> Circuit<F> for MyCircuit<F> {
+        type Config = PLONKConfig;
+
+        fn configure(meta: &mut MetaCircuit<F>) -> PLONKConfig {
             let a = meta.advice_wire();
             let b = meta.advice_wire();
             let c = meta.advice_wire();
@@ -129,7 +228,7 @@ fn test_proving() {
                 a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))
             });
 
-            MyConfig {
+            PLONKConfig {
                 a,
                 b,
                 c,
@@ -143,32 +242,28 @@ fn test_proving() {
         fn synthesize(
             &self,
             cs: &mut impl ConstraintSystem<F>,
-            config: MyConfig,
+            config: PLONKConfig,
         ) -> Result<(), Error> {
-            // Similar to the above...
-            let mut row = 0;
-            for _ in 0..10 {
-                cs.assign_advice(config.a, row, || self.a.ok_or(Error::SynthesisError))?;
-                cs.assign_advice(config.b, row, || self.a.ok_or(Error::SynthesisError))?;
-                let a_squared = self.a.map(|a| a.square());
-                cs.assign_advice(config.c, row, || a_squared.ok_or(Error::SynthesisError))?;
-                // Multiplication gate
-                cs.assign_fixed(config.sa, row, || Ok(Field::zero()))?;
-                cs.assign_fixed(config.sb, row, || Ok(Field::zero()))?;
-                cs.assign_fixed(config.sc, row, || Ok(Field::one()))?;
-                cs.assign_fixed(config.sm, row, || Ok(Field::one()))?;
-                row += 1;
+            let mut cs = StandardPLONK::new(cs, config);
 
-                cs.assign_advice(config.a, row, || self.a.ok_or(Error::SynthesisError))?;
-                cs.assign_advice(config.b, row, || a_squared.ok_or(Error::SynthesisError))?;
-                let fin = a_squared.and_then(|a_squared| self.a.map(|a| a + a_squared));
-                cs.assign_advice(config.c, row, || fin.ok_or(Error::SynthesisError))?;
-                // Addition gate
-                cs.assign_fixed(config.sa, row, || Ok(Field::one()))?;
-                cs.assign_fixed(config.sb, row, || Ok(Field::one()))?;
-                cs.assign_fixed(config.sc, row, || Ok(Field::one()))?;
-                cs.assign_fixed(config.sm, row, || Ok(Field::zero()))?;
-                row += 1;
+            for _ in 0..10 {
+                let mut a_squared = None;
+                let (_, _, _) = cs.raw_multiply(|| {
+                    a_squared = self.a.map(|a| a.square());
+                    Ok((
+                        self.a.ok_or(Error::SynthesisError)?,
+                        self.a.ok_or(Error::SynthesisError)?,
+                        a_squared.ok_or(Error::SynthesisError)?,
+                    ))
+                })?;
+                let (_, _, _) = cs.raw_add(|| {
+                    let fin = a_squared.and_then(|a2| self.a.map(|a| a + a2));
+                    Ok((
+                        self.a.ok_or(Error::SynthesisError)?,
+                        a_squared.ok_or(Error::SynthesisError)?,
+                        fin.ok_or(Error::SynthesisError)?,
+                    ))
+                })?;
             }
 
             Ok(())
