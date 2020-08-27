@@ -35,7 +35,12 @@ impl<C: CurveAffine> Proof<C> {
         // transcript on the scalar field.
         let mut transcript_scalar = HScalar::init(C::Scalar::one());
 
-        for eval in self.advice_evals.iter().chain(self.fixed_evals.iter()).chain(self.h_evals.iter()) {
+        for eval in self
+            .advice_evals
+            .iter()
+            .chain(self.fixed_evals.iter())
+            .chain(self.h_evals.iter())
+        {
             transcript_scalar.absorb(*eval);
         }
 
@@ -84,23 +89,33 @@ impl<C: CurveAffine> Proof<C> {
         let mut q_evals: Vec<_> = vec![C::Scalar::zero(); srs.meta.rotations.len()];
         {
             let mut accumulate = |point_index: usize, new_commitment, eval| {
-                q_commitments[point_index] = q_commitments[point_index].map(|mut commitment| {
-                    commitment *= x_4;
-                    commitment += new_commitment;
-                    commitment
-                }).or_else(|| Some(new_commitment.to_projective()));
+                q_commitments[point_index] = q_commitments[point_index]
+                    .map(|mut commitment| {
+                        commitment *= x_4;
+                        commitment += new_commitment;
+                        commitment
+                    })
+                    .or_else(|| Some(new_commitment.to_projective()));
                 q_evals[point_index] *= &x_4;
                 q_evals[point_index] += &eval;
             };
 
             for (query_index, &(wire, ref at)) in srs.meta.advice_queries.iter().enumerate() {
                 let point_index = (*srs.meta.rotations.get(at).unwrap()).0;
-                accumulate(point_index, self.advice_commitments[wire.0], self.advice_evals[query_index]);
+                accumulate(
+                    point_index,
+                    self.advice_commitments[wire.0],
+                    self.advice_evals[query_index],
+                );
             }
 
             for (query_index, &(wire, ref at)) in srs.meta.fixed_queries.iter().enumerate() {
                 let point_index = (*srs.meta.rotations.get(at).unwrap()).0;
-                accumulate(point_index, srs.fixed_commitments[wire.0], self.fixed_evals[query_index]);
+                accumulate(
+                    point_index,
+                    srs.fixed_commitments[wire.0],
+                    self.fixed_evals[query_index],
+                );
             }
 
             let current_index = (*srs.meta.rotations.get(&Rotation::default()).unwrap()).0;

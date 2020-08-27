@@ -115,7 +115,7 @@ impl<C: CurveAffine> Proof<C> {
                 &|index| advice_cosets[index].clone(),
                 &|mut a, b| {
                     parallelize(&mut a, |a, start| {
-                        for (a, b) in a.into_iter().zip(b[start..].iter()) {
+                        for (a, b) in a.iter_mut().zip(b[start..].iter()) {
                             *a += b;
                         }
                     });
@@ -123,7 +123,7 @@ impl<C: CurveAffine> Proof<C> {
                 },
                 &|mut a, b| {
                     parallelize(&mut a, |a, start| {
-                        for (a, b) in a.into_iter().zip(b[start..].iter()) {
+                        for (a, b) in a.iter_mut().zip(b[start..].iter()) {
                             *a *= b;
                         }
                     });
@@ -188,7 +188,9 @@ impl<C: CurveAffine> Proof<C> {
         let fixed_evals: Vec<_> = meta
             .fixed_queries
             .iter()
-            .map(|&(wire, at)| eval_polynomial(&srs.fixed_polys[wire.0], domain.rotate_omega(x_3, at)))
+            .map(|&(wire, at)| {
+                eval_polynomial(&srs.fixed_polys[wire.0], domain.rotate_omega(x_3, at))
+            })
             .collect();
 
         let h_evals: Vec<_> = h_pieces
@@ -227,78 +229,63 @@ impl<C: CurveAffine> Proof<C> {
         let mut q_blinds = vec![C::Scalar::zero(); meta.rotations.len()];
         let mut q_evals: Vec<_> = vec![C::Scalar::zero(); meta.rotations.len()];
         {
+            let mut accumulate = |point_index: usize, new_poly: &Vec<_>, blind, eval| {
+                q_polys[point_index]
+                    .as_mut()
+                    .map(|poly| {
+                        parallelize(poly, |q, start| {
+                            for (q, a) in q.iter_mut().zip(new_poly[start..].iter()) {
+                                *q *= &x_4;
+                                *q += a;
+                            }
+                        });
+                    })
+                    .or_else(|| {
+                        q_polys[point_index] = Some(new_poly.clone());
+                        Some(())
+                    });
+                q_blinds[point_index] *= &x_4;
+                q_blinds[point_index] += &blind;
+                q_evals[point_index] *= &x_4;
+                q_evals[point_index] += &eval;
+            };
+
             for (query_index, &(wire, ref at)) in meta.advice_queries.iter().enumerate() {
                 let point_index = (*meta.rotations.get(at).unwrap()).0;
 
-                if q_polys[point_index].is_none() {
-                    q_polys[point_index] = Some(advice_polys[wire.0].clone());
-                    q_blinds[point_index] = advice_blinds[wire.0];
-                    q_evals[point_index] = advice_evals[query_index];
-                } else {
-                    parallelize(q_polys[point_index].as_mut().unwrap(), |q, start| {
-                        for (q, a) in q.iter_mut().zip(advice_polys[wire.0][start..].iter()) {
-                            *q *= &x_4;
-                            *q += a;
-                        }
-                    });
-                    q_blinds[point_index] *= &x_4;
-                    q_blinds[point_index] += &advice_blinds[wire.0];
-                    q_evals[point_index] *= &x_4;
-                    q_evals[point_index] += &advice_evals[query_index];
-                }
+                accumulate(
+                    point_index,
+                    &advice_polys[wire.0],
+                    advice_blinds[wire.0],
+                    advice_evals[query_index],
+                );
             }
 
             for (query_index, &(wire, ref at)) in meta.fixed_queries.iter().enumerate() {
                 let point_index = (*meta.rotations.get(at).unwrap()).0;
 
-                if q_polys[point_index].is_none() {
-                    q_polys[point_index] = Some(srs.fixed_polys[wire.0].clone());
-                    q_blinds[point_index] = C::Scalar::one();
-                    q_evals[point_index] = fixed_evals[query_index];
-                } else {
-                    parallelize(q_polys[point_index].as_mut().unwrap(), |q, start| {
-                        for (q, a) in q.iter_mut().zip(srs.fixed_polys[wire.0][start..].iter()) {
-                            *q *= &x_4;
-                            *q += a;
-                        }
-                    });
-                    q_blinds[point_index] *= &x_4;
-                    q_blinds[point_index] += &C::Scalar::one();
-                    q_evals[point_index] *= &x_4;
-                    q_evals[point_index] += &fixed_evals[query_index];
-                }
+                accumulate(
+                    point_index,
+                    &srs.fixed_polys[wire.0],
+                    C::Scalar::one(),
+                    fixed_evals[query_index],
+                );
             }
 
+            // We query the h(X) polynomial at x_3
+            let current_index = (*meta.rotations.get(&Rotation::default()).unwrap()).0;
             for ((h_poly, h_blind), h_eval) in h_pieces
                 .into_iter()
                 .zip(h_blinds.iter())
                 .zip(h_evals.iter())
             {
-                // We query the h(X) polynomial at x_3
-                let point_index = (*meta.rotations.get(&Rotation::default()).unwrap()).0;
-
-                if q_polys[point_index].is_none() {
-                    q_polys[point_index] = Some(h_poly);
-                    q_blinds[point_index] = *h_blind;
-                    q_evals[point_index] = *h_eval;
-                } else {
-                    parallelize(q_polys[point_index].as_mut().unwrap(), |q, start| {
-                        for (q, a) in q.iter_mut().zip(h_poly[start..].iter()) {
-                            *q *= &x_4;
-                            *q += a;
-                        }
-                    });
-                    q_blinds[point_index] *= &x_4;
-                    q_blinds[point_index] += h_blind;
-                    q_evals[point_index] *= &x_4;
-                    q_evals[point_index] += h_eval;
-                }
+                accumulate(current_index, &h_poly, *h_blind, *h_eval);
             }
         }
 
         let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-        let mut f_poly = None;
+        let mut f_poly: Option<Vec<C::Scalar>> = None;
         for (&row, &point_index) in meta.rotations.iter() {
             let mut poly = q_polys[point_index.0].as_ref().unwrap().clone();
             let point = domain.rotate_omega(x_3, row);
@@ -306,16 +293,17 @@ impl<C: CurveAffine> Proof<C> {
             let mut poly = kate_division(&poly, point);
             poly.push(C::Scalar::zero());
 
-            if f_poly.is_none() {
-                f_poly = Some(poly);
-            } else {
-                parallelize(f_poly.as_mut().unwrap(), |q, start| {
-                    for (q, a) in q.iter_mut().zip(poly[start..].iter()) {
-                        *q *= &x_5;
-                        *q += a;
-                    }
-                });
-            }
+            f_poly = f_poly
+                .map(|mut f_poly| {
+                    parallelize(&mut f_poly, |q, start| {
+                        for (q, a) in q.iter_mut().zip(poly[start..].iter()) {
+                            *q *= &x_5;
+                            *q += a;
+                        }
+                    });
+                    f_poly
+                })
+                .or_else(|| Some(poly));
         }
         let mut f_poly = f_poly.unwrap();
         let mut f_blind = C::Scalar::random();
