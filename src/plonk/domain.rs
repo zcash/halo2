@@ -1,5 +1,16 @@
 use crate::arithmetic::{best_fft, parallelize, Field, Group};
 
+/// Describes a relative location in the evaluation domain; applying a rotation
+/// by i will rotate the vector in the evaluation domain by i.
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct Rotation(pub i32);
+
+impl Default for Rotation {
+    fn default() -> Rotation {
+        Rotation(0)
+    }
+}
+
 /// This structure contains precomputed constants and other details needed for
 /// performing operations on an evaluation domain of size $2^k$ in the context
 /// of PLONK.
@@ -119,22 +130,26 @@ impl<G: Group> EvaluationDomain<G> {
     }
 
     /// This takes us from an n-length coefficient vector into the coset
-    /// evaluation domain.
+    /// evaluation domain, rotating by `rotation` if desired.
     ///
     /// This function will panic if the provided vector is not the correct
     /// length.
-    pub fn obtain_coset(&self, mut a: Vec<G>, index: i32) -> Vec<G> {
+    pub fn obtain_coset(&self, mut a: Vec<G>, rotation: Rotation) -> Vec<G> {
         assert_eq!(a.len(), 1 << self.k);
 
-        assert!(index != i32::MIN);
-        if index == 0 {
+        assert!(rotation.0 != i32::MIN);
+        if rotation.0 == 0 {
+            // In this special case, the powers of zeta repeat so we do not need
+            // to compute them.
             Self::distribute_powers_zeta(&mut a, self.g_coset);
         } else {
             let mut g = G::Scalar::ZETA;
-            if index > 0 {
-                g *= &self.omega.pow_vartime(&[index as u64, 0, 0, 0]);
+            if rotation.0 > 0 {
+                g *= &self.omega.pow_vartime(&[rotation.0 as u64, 0, 0, 0]);
             } else {
-                g *= &self.omega_inv.pow_vartime(&[index.abs() as u64, 0, 0, 0]);
+                g *= &self
+                    .omega_inv
+                    .pow_vartime(&[rotation.0.abs() as u64, 0, 0, 0]);
             }
             Self::distribute_powers(&mut a, g);
         }
@@ -232,5 +247,17 @@ impl<G: Group> EvaluationDomain<G> {
 
     pub fn get_omega_inv(&self) -> G::Scalar {
         self.omega_inv
+    }
+
+    pub fn rotate_omega(&self, constant: G::Scalar, rotation: Rotation) -> G::Scalar {
+        let mut point = constant;
+        if rotation.0 >= 0 {
+            point *= &self.get_omega().pow(&[rotation.0 as u64, 0, 0, 0]);
+        } else {
+            point *= &self
+                .get_omega_inv()
+                .pow(&[rotation.0.abs() as u64, 0, 0, 0]);
+        }
+        point
     }
 }

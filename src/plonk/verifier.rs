@@ -1,4 +1,4 @@
-use super::{hash_point, Proof, SRS};
+use super::{domain::Rotation, hash_point, Proof, SRS};
 use crate::arithmetic::{get_challenge_scalar, Challenge, Curve, CurveAffine, Field};
 use crate::polycommit::Params;
 use crate::transcript::Hasher;
@@ -89,56 +89,57 @@ impl<C: CurveAffine> Proof<C> {
 
         // Compress the commitments and expected evaluations at x_3 together
         // using the challenge x_4
-        let mut q_commitments: Vec<_> = vec![None; srs.meta.query_rows.len()];
-        let mut q_evals: Vec<_> = vec![C::Scalar::zero(); srs.meta.query_rows.len()];
+        let mut q_commitments: Vec<_> = vec![None; srs.meta.rotations.len()];
+        let mut q_evals: Vec<_> = vec![C::Scalar::zero(); srs.meta.rotations.len()];
         {
-            for (i, &(wire, ref at)) in srs.meta.advice_queries.iter().enumerate() {
-                let query_row = *srs.meta.query_rows.get(at).unwrap();
+            for (query_index, &(wire, ref at)) in srs.meta.advice_queries.iter().enumerate() {
+                let point_index = (*srs.meta.rotations.get(at).unwrap()).0;
 
-                if q_commitments[query_row].is_none() {
-                    q_commitments[query_row] =
+                if q_commitments[point_index].is_none() {
+                    q_commitments[point_index] =
                         Some(self.advice_commitments[wire.0].to_projective());
-                    q_evals[query_row] = self.advice_evals[i];
+                    q_evals[point_index] = self.advice_evals[query_index];
                 } else {
-                    q_commitments[query_row].as_mut().map(|commitment| {
+                    q_commitments[point_index].as_mut().map(|commitment| {
                         *commitment *= x_4;
                         *commitment += self.advice_commitments[wire.0];
                     });
-                    q_evals[query_row] *= &x_4;
-                    q_evals[query_row] += &self.advice_evals[i];
+                    q_evals[point_index] *= &x_4;
+                    q_evals[point_index] += &self.advice_evals[query_index];
                 }
             }
 
-            for (i, &(wire, ref at)) in srs.meta.fixed_queries.iter().enumerate() {
-                let query_row = *srs.meta.query_rows.get(at).unwrap();
+            for (query_index, &(wire, ref at)) in srs.meta.fixed_queries.iter().enumerate() {
+                let point_index = (*srs.meta.rotations.get(at).unwrap()).0;
 
-                if q_commitments[query_row].is_none() {
-                    q_commitments[query_row] = Some(srs.fixed_commitments[wire.0].to_projective());
-                    q_evals[query_row] = self.fixed_evals[i];
+                if q_commitments[point_index].is_none() {
+                    q_commitments[point_index] =
+                        Some(srs.fixed_commitments[wire.0].to_projective());
+                    q_evals[point_index] = self.fixed_evals[query_index];
                 } else {
-                    q_commitments[query_row].as_mut().map(|commitment| {
+                    q_commitments[point_index].as_mut().map(|commitment| {
                         *commitment *= x_4;
                         *commitment += srs.fixed_commitments[wire.0];
                     });
-                    q_evals[query_row] *= &x_4;
-                    q_evals[query_row] += &self.fixed_evals[i];
+                    q_evals[point_index] *= &x_4;
+                    q_evals[point_index] += &self.fixed_evals[query_index];
                 }
             }
 
             for (h_commitment, h_eval) in self.h_commitments.iter().zip(self.h_evals.iter()) {
                 // We query the h(X) polynomial at x_3
-                let cur_row = *srs.meta.query_rows.get(&0).unwrap();
+                let point_index = (*srs.meta.rotations.get(&Rotation::default()).unwrap()).0;
 
-                if q_commitments[cur_row].is_none() {
-                    q_commitments[cur_row] = Some(h_commitment.to_projective());
-                    q_evals[cur_row] = *h_eval;
+                if q_commitments[point_index].is_none() {
+                    q_commitments[point_index] = Some(h_commitment.to_projective());
+                    q_evals[point_index] = *h_eval;
                 } else {
-                    q_commitments[cur_row].as_mut().map(|commitment| {
+                    q_commitments[point_index].as_mut().map(|commitment| {
                         *commitment *= x_4;
                         *commitment += *h_commitment;
                     });
-                    q_evals[cur_row] *= &x_4;
-                    q_evals[cur_row] += h_eval;
+                    q_evals[point_index] *= &x_4;
+                    q_evals[point_index] += h_eval;
                 }
             }
         }
@@ -166,18 +167,11 @@ impl<C: CurveAffine> Proof<C> {
         // We can compute the expected f_eval at x_6 using the q_evals provided
         // by the prover and from x_5
         let mut f_eval = C::Scalar::zero();
-        for (&row, &col) in srs.meta.query_rows.iter() {
-            let mut eval: C::Scalar = self.q_evals[col].clone();
-            let mut point = x_3;
-            if row >= 0 {
-                point *= &srs.domain.get_omega().pow_vartime(&[row as u64, 0, 0, 0]);
-            } else {
-                point *= &srs
-                    .domain
-                    .get_omega_inv()
-                    .pow_vartime(&[row.abs() as u64, 0, 0, 0]);
-            }
-            eval = eval - &q_evals[col];
+        for (&row, &point_index) in srs.meta.rotations.iter() {
+            let mut eval: C::Scalar = self.q_evals[point_index.0].clone();
+
+            let point = srs.domain.rotate_omega(x_3, row);
+            eval = eval - &q_evals[point_index.0];
             eval = eval * &(x_6 - &point).invert().unwrap();
 
             f_eval *= &x_5;
@@ -190,11 +184,11 @@ impl<C: CurveAffine> Proof<C> {
 
         // Compute the final commitment that has to be opened
         let mut f_commitment: C::Projective = self.f_commitment.to_projective();
-        for (_, &col) in srs.meta.query_rows.iter() {
+        for (_, &point_index) in srs.meta.rotations.iter() {
             f_commitment *= x_7;
-            f_commitment = f_commitment + &q_commitments[col].as_ref().unwrap();
+            f_commitment = f_commitment + &q_commitments[point_index.0].as_ref().unwrap();
             f_eval *= &x_7;
-            f_eval += &self.q_evals[col];
+            f_eval += &self.q_evals[point_index.0];
         }
 
         // Verify the opening proof

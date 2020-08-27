@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use super::Error;
 use crate::arithmetic::Field;
 
+use super::domain::Rotation;
 /// This represents a wire which has a fixed (permanent) value
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct FixedWire(pub usize);
@@ -135,6 +136,11 @@ impl<F> Mul<F> for Polynomial<F> {
     }
 }
 
+/// Represents an index into a vector where each entry corresponds to a distinct
+/// point that polynomials are queried at.
+#[derive(Copy, Clone, Debug)]
+pub struct PointIndex(pub usize);
+
 /// This is a description of the circuit environment, such as the gate, wire and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
@@ -143,15 +149,17 @@ pub struct MetaCircuit<F> {
     pub(crate) num_advice_wires: usize,
     // permutations: Vec<Vec<Wire>>,
     pub(crate) gates: Vec<Polynomial<F>>,
-    pub(crate) advice_queries: Vec<(AdviceWire, i32)>,
-    pub(crate) fixed_queries: Vec<(FixedWire, i32)>,
-    pub(crate) query_rows: HashMap<i32, usize>,
+    pub(crate) advice_queries: Vec<(AdviceWire, Rotation)>,
+    pub(crate) fixed_queries: Vec<(FixedWire, Rotation)>,
+
+    // Mapping from a witness vector rotation to the index in the point vector.
+    pub(crate) rotations: HashMap<Rotation, PointIndex>,
 }
 
 impl<F: Field> Default for MetaCircuit<F> {
     fn default() -> MetaCircuit<F> {
-        let mut query_rows = HashMap::new();
-        query_rows.insert(0, 0);
+        let mut rotations = HashMap::new();
+        rotations.insert(Rotation::default(), PointIndex(0));
 
         MetaCircuit {
             num_fixed_wires: 0,
@@ -159,7 +167,7 @@ impl<F: Field> Default for MetaCircuit<F> {
             gates: vec![],
             fixed_queries: Vec::new(),
             advice_queries: Vec::new(),
-            query_rows,
+            rotations,
         }
     }
 }
@@ -167,9 +175,10 @@ impl<F: Field> Default for MetaCircuit<F> {
 impl<F: Field> MetaCircuit<F> {
     /// Query a fixed wire at a relative position
     pub fn query_fixed(&mut self, wire: FixedWire, at: i32) -> Polynomial<F> {
+        let at = Rotation(at);
         {
-            let len = self.query_rows.len();
-            self.query_rows.entry(at).or_insert(len);
+            let len = self.rotations.len();
+            self.rotations.entry(at).or_insert(PointIndex(len));
         }
 
         // TODO: check for existing query so we don't make redundant queries
@@ -181,9 +190,10 @@ impl<F: Field> MetaCircuit<F> {
 
     /// Query an advice wire at a relative position
     pub fn query_advice(&mut self, wire: AdviceWire, at: i32) -> Polynomial<F> {
+        let at = Rotation(at);
         {
-            let len = self.query_rows.len();
-            self.query_rows.entry(at).or_insert(len);
+            let len = self.rotations.len();
+            self.rotations.entry(at).or_insert(PointIndex(len));
         }
 
         // TODO: check for existing query so we don't make redundant queries
