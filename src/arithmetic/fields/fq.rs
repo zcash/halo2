@@ -173,6 +173,20 @@ const ROOT_OF_UNITY: Fq = Fq::from_raw([
     0x113efc510dc03c0b,
 ]);
 
+/// GENERATOR^{2^s} where t * 2^s + 1 = q
+/// with t odd. In other words, this
+/// is a t root of unity.
+///
+/// `GENERATOR = 5 mod q` is a generator
+/// of the q - 1 order multiplicative
+/// subgroup.
+const DELTA: Fq = Fq::from_raw([
+    0x20daec44973be920,
+    0x4243423589e0a9b5,
+    0x5127e2ce24a8e69c,
+    0x83d2833d15f2bbf9,
+]);
+
 impl Default for Fq {
     #[inline]
     fn default() -> Self {
@@ -444,6 +458,7 @@ impl Field for Fq {
         0x0000000000000000,
         0x10000000,
     ];
+    const DELTA: Self = DELTA;
     const UNROLL_S_EXPONENT: u64 = 0x344cfe85d;
     const TWO_INV: Self = Fq::from_raw([
         0xc21657ea00000001,

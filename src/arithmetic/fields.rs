@@ -64,6 +64,9 @@ pub trait Field:
     /// The value $t^{-1} \mod 2^S$.
     const UNROLL_S_EXPONENT: u64;
 
+    /// Generator of the $t-order$ multiplicative subgroup
+    const DELTA: Self;
+
     /// Inverse of $2$ in the field.
     const TWO_INV: Self;
 
