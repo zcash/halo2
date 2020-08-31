@@ -14,17 +14,6 @@ pub struct FixedWire(pub usize);
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct AdviceWire(pub usize);
 
-/// This represents an advice wire at a certain row in the MetaCircuit
-#[derive(Copy, Clone, Debug)]
-pub struct Variable(pub AdviceWire, pub usize);
-
-impl Variable {
-    /// Construct a Variable
-    pub fn new(wire: AdviceWire, index: usize) -> Variable {
-        Variable(wire, index)
-    }
-}
-
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
 pub trait ConstraintSystem<F: Field> {
@@ -45,7 +34,14 @@ pub trait ConstraintSystem<F: Field> {
     ) -> Result<(), Error>;
 
     /// Assign two advice wires to have the same value
-    fn assign_copy(&mut self, left: Variable, right: Variable) -> Result<(), Error>;
+    fn copy(
+        &mut self,
+        permutation: usize,
+        left_wire: usize,
+        left_row: usize,
+        right_wire: usize,
+        right_row: usize,
+    ) -> Result<(), Error>;
 }
 
 /// This is a trait that circuits provide implementations for so that the
@@ -165,6 +161,14 @@ pub struct MetaCircuit<F> {
 
     // Mapping from a witness vector rotation to the index in the point vector.
     pub(crate) rotations: HashMap<Rotation, PointIndex>,
+
+    // Vector of permutation arguments, where each corresponds to a set of wires
+    // that are involved in a permutation argument. As an example, we could have
+    // a permutation argument between wires (A, B, C) which allows copy
+    // constraints to be enforced between advice wire values in A, B and C, and
+    // another permutation between wires (B, C, D) which allows the same with D
+    // instead of A.
+    pub(crate) permutations: Vec<Vec<AdviceWire>>,
 }
 
 impl<F: Field> Default for MetaCircuit<F> {
@@ -179,11 +183,19 @@ impl<F: Field> Default for MetaCircuit<F> {
             fixed_queries: Vec::new(),
             advice_queries: Vec::new(),
             rotations,
+            permutations: Vec::new(),
         }
     }
 }
 
 impl<F: Field> MetaCircuit<F> {
+    /// Add a permutation argument for some advice wires
+    pub fn permutation(&mut self, wires: &[AdviceWire]) -> usize {
+        let index = self.permutations.len();
+        self.permutations.push(wires.to_vec());
+        index
+    }
+
     /// Query a fixed wire at a relative position
     pub fn query_fixed(&mut self, wire: FixedWire, at: i32) -> Polynomial<F> {
         let at = Rotation(at);

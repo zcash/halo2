@@ -32,6 +32,9 @@ pub struct SRS<C: CurveAffine> {
     fixed_commitments: Vec<C>,
     fixed_polys: Vec<Vec<C::Scalar>>,
     fixed_cosets: Vec<Vec<C::Scalar>>,
+    permutation_commitments: Vec<Vec<C>>,
+    permutation_polys: Vec<Vec<Vec<C::Scalar>>>,
+    permutation_cosets: Vec<Vec<Vec<C::Scalar>>>,
     meta: MetaCircuit<C::Scalar>,
 }
 
@@ -87,6 +90,10 @@ fn test_proving() {
     use std::marker::PhantomData;
     const K: u32 = 5;
 
+    /// This represents an advice wire at a certain row in the MetaCircuit
+    #[derive(Copy, Clone, Debug)]
+    pub struct Variable(AdviceWire, usize);
+
     // Initialize the polynomial commitment parameters
     let params: Params<EqAffine> = Params::new::<DummyHash<Fq>>(K);
 
@@ -99,6 +106,8 @@ fn test_proving() {
         sb: FixedWire,
         sc: FixedWire,
         sm: FixedWire,
+
+        perm: usize,
     }
 
     trait StandardCS<FF: Field> {
@@ -108,6 +117,7 @@ fn test_proving() {
         fn raw_add<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
         where
             F: FnOnce() -> Result<(FF, FF, FF), Error>;
+        fn copy(&mut self, a: Variable, b: Variable) -> Result<(), Error>;
     }
 
     struct MyCircuit<F: Field> {
@@ -160,9 +170,9 @@ fn test_proving() {
             self.cs
                 .assign_fixed(self.config.sm, index, || Ok(FF::one()))?;
             Ok((
-                Variable::new(self.config.a, index),
-                Variable::new(self.config.b, index),
-                Variable::new(self.config.c, index),
+                Variable(self.config.a, index),
+                Variable(self.config.b, index),
+                Variable(self.config.c, index),
             ))
         }
         fn raw_add<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
@@ -192,10 +202,27 @@ fn test_proving() {
             self.cs
                 .assign_fixed(self.config.sm, index, || Ok(FF::zero()))?;
             Ok((
-                Variable::new(self.config.a, index),
-                Variable::new(self.config.b, index),
-                Variable::new(self.config.c, index),
+                Variable(self.config.a, index),
+                Variable(self.config.b, index),
+                Variable(self.config.c, index),
             ))
+        }
+        fn copy(&mut self, a: Variable, b: Variable) -> Result<(), Error> {
+            let left_wire = match a.0 {
+                x if x == self.config.a => 0,
+                x if x == self.config.b => 1,
+                x if x == self.config.c => 2,
+                _ => unreachable!(),
+            };
+            let right_wire = match b.0 {
+                x if x == self.config.a => 0,
+                x if x == self.config.b => 1,
+                x if x == self.config.c => 2,
+                _ => unreachable!(),
+            };
+
+            self.cs
+                .copy(self.config.perm, left_wire, a.1, right_wire, b.1)
         }
     }
 
@@ -206,6 +233,8 @@ fn test_proving() {
             let a = meta.advice_wire();
             let b = meta.advice_wire();
             let c = meta.advice_wire();
+
+            let perm = meta.permutation(&[a, b, c]);
 
             let sa = meta.fixed_wire();
             let sb = meta.fixed_wire();
@@ -233,6 +262,7 @@ fn test_proving() {
                 sb,
                 sc,
                 sm,
+                perm,
             }
         }
 
@@ -253,7 +283,7 @@ fn test_proving() {
                         a_squared.ok_or(Error::SynthesisError)?,
                     ))
                 })?;
-                let (a1, _, _) = cs.raw_add(|| {
+                let (_, b1, _) = cs.raw_add(|| {
                     let fin = a_squared.and_then(|a2| self.a.map(|a| a + a2));
                     Ok((
                         self.a.ok_or(Error::SynthesisError)?,
@@ -261,7 +291,7 @@ fn test_proving() {
                         fin.ok_or(Error::SynthesisError)?,
                     ))
                 })?;
-                cs.cs.assign_copy(a1, c0)?;
+                cs.copy(b1, c0)?;
             }
 
             Ok(())
