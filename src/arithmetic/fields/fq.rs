@@ -181,10 +181,10 @@ const ROOT_OF_UNITY: Fq = Fq::from_raw([
 /// of the q - 1 order multiplicative
 /// subgroup.
 const DELTA: Fq = Fq::from_raw([
-    0x20daec44973be920,
-    0x4243423589e0a9b5,
-    0x5127e2ce24a8e69c,
     0x83d2833d15f2bbf9,
+    0x5127e2ce24a8e69c,
+    0x4243423589e0a9b5,
+    0x20daec44973be920,
 ]);
 
 impl Default for Fq {
@@ -668,4 +668,9 @@ fn test_inv_root_of_unity() {
 #[test]
 fn test_inv_2() {
     assert_eq!(Fq::TWO_INV, Fq::from(2).invert().unwrap());
+}
+
+#[test]
+fn test_delta() {
+    assert_eq!(Fq::DELTA, Fq::from(5).pow(&[1u64 << Fq::S, 0, 0, 0]));
 }
