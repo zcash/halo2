@@ -1,5 +1,5 @@
 use super::{
-    circuit::{AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit},
+    circuit::{AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit, Variable},
     domain::Rotation,
     hash_point, Error, Proof, SRS,
 };
@@ -49,6 +49,12 @@ impl<C: CurveAffine> Proof<C> {
                 _: usize,
                 _: impl FnOnce() -> Result<F, Error>,
             ) -> Result<(), Error> {
+                // We only care about advice wires here
+
+                Ok(())
+            }
+
+            fn assign_copy(&mut self, _: Variable, _: Variable) -> Result<(), Error> {
                 // We only care about advice wires here
 
                 Ok(())

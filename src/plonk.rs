@@ -101,9 +101,6 @@ fn test_proving() {
         sm: FixedWire,
     }
 
-    #[derive(Copy, Clone)]
-    struct Variable(AdviceWire, usize);
-
     trait StandardCS<FF: Field> {
         fn raw_multiply<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
         where
@@ -163,9 +160,9 @@ fn test_proving() {
             self.cs
                 .assign_fixed(self.config.sm, index, || Ok(FF::one()))?;
             Ok((
-                Variable(self.config.a, index),
-                Variable(self.config.b, index),
-                Variable(self.config.c, index),
+                Variable::new(self.config.a, index),
+                Variable::new(self.config.b, index),
+                Variable::new(self.config.c, index),
             ))
         }
         fn raw_add<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
@@ -195,9 +192,9 @@ fn test_proving() {
             self.cs
                 .assign_fixed(self.config.sm, index, || Ok(FF::zero()))?;
             Ok((
-                Variable(self.config.a, index),
-                Variable(self.config.b, index),
-                Variable(self.config.c, index),
+                Variable::new(self.config.a, index),
+                Variable::new(self.config.b, index),
+                Variable::new(self.config.c, index),
             ))
         }
     }
@@ -248,7 +245,7 @@ fn test_proving() {
 
             for _ in 0..10 {
                 let mut a_squared = None;
-                let (_, _, _) = cs.raw_multiply(|| {
+                let (_, _, c0) = cs.raw_multiply(|| {
                     a_squared = self.a.map(|a| a.square());
                     Ok((
                         self.a.ok_or(Error::SynthesisError)?,
@@ -256,7 +253,7 @@ fn test_proving() {
                         a_squared.ok_or(Error::SynthesisError)?,
                     ))
                 })?;
-                let (_, _, _) = cs.raw_add(|| {
+                let (a1, _, _) = cs.raw_add(|| {
                     let fin = a_squared.and_then(|a2| self.a.map(|a| a + a2));
                     Ok((
                         self.a.ok_or(Error::SynthesisError)?,
@@ -264,6 +261,7 @@ fn test_proving() {
                         fin.ok_or(Error::SynthesisError)?,
                     ))
                 })?;
+                cs.cs.assign_copy(a1, c0)?;
             }
 
             Ok(())

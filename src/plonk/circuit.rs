@@ -14,6 +14,17 @@ pub struct FixedWire(pub usize);
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct AdviceWire(pub usize);
 
+/// This represents an advice wire at a certain row in the MetaCircuit
+#[derive(Copy, Clone, Debug)]
+pub struct Variable(pub AdviceWire, pub usize);
+
+impl Variable {
+    /// Construct a Variable
+    pub fn new(wire: AdviceWire, index: usize) -> Variable {
+        Variable(wire, index)
+    }
+}
+
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
 pub trait ConstraintSystem<F: Field> {
@@ -33,7 +44,8 @@ pub trait ConstraintSystem<F: Field> {
         to: impl FnOnce() -> Result<F, Error>,
     ) -> Result<(), Error>;
 
-    // fn copy(&mut self, left: Wire, right: Wire);
+    /// Assign two advice wires to have the same value
+    fn assign_copy(&mut self, left: Variable, right: Variable) -> Result<(), Error>;
 }
 
 /// This is a trait that circuits provide implementations for so that the
@@ -147,7 +159,6 @@ pub struct PointIndex(pub usize);
 pub struct MetaCircuit<F> {
     pub(crate) num_fixed_wires: usize,
     pub(crate) num_advice_wires: usize,
-    // permutations: Vec<Vec<Wire>>,
     pub(crate) gates: Vec<Polynomial<F>>,
     pub(crate) advice_queries: Vec<(AdviceWire, Rotation)>,
     pub(crate) fixed_queries: Vec<(FixedWire, Rotation)>,

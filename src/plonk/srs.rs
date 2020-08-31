@@ -1,5 +1,5 @@
 use super::{
-    circuit::{AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit},
+    circuit::{AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit, Variable},
     domain::EvaluationDomain,
     Error, SRS,
 };
@@ -15,6 +15,7 @@ impl<C: CurveAffine> SRS<C> {
     ) -> Result<Self, Error> {
         struct Assembly<F: Field> {
             fixed: Vec<Vec<F>>,
+            copy: Vec<Vec<Variable>>,
         }
 
         impl<F: Field> ConstraintSystem<F> for Assembly<F> {
@@ -42,6 +43,16 @@ impl<C: CurveAffine> SRS<C> {
 
                 Ok(())
             }
+
+            fn assign_copy(&mut self, left: Variable, right: Variable) -> Result<(), Error> {
+                *self
+                    .copy
+                    .get_mut((left.0).0)
+                    .and_then(|v| v.get_mut(left.1))
+                    .ok_or(Error::BoundsFailure)? = right;
+
+                Ok(())
+            }
         }
 
         let mut meta = MetaCircuit::default();
@@ -49,6 +60,10 @@ impl<C: CurveAffine> SRS<C> {
 
         let mut assembly: Assembly<C::Scalar> = Assembly {
             fixed: vec![vec![C::Scalar::zero(); params.n as usize]; meta.num_fixed_wires],
+            copy: vec![
+                vec![Variable::new(AdviceWire(0), 0); params.n as usize];
+                meta.num_advice_wires
+            ],
         };
 
         // Synthesize the circuit to obtain SRS
