@@ -84,22 +84,27 @@ impl<C: CurveAffine> SRS<C> {
         let mut meta = MetaCircuit::default();
         let config = ConcreteCircuit::configure(&mut meta);
 
-        let mut degree = 1;
-        for poly in meta.gates.iter() {
-            degree = std::cmp::max(degree, poly.degree());
-        }
-        for permutation in &meta.permutations {
-            degree = std::cmp::max(degree, permutation.len() + 1);
-        }
-
-        let domain = EvaluationDomain::new(degree as u32, params.k);
-
+        // Get the largest permutation argument length in terms of the number of
+        // advice wires involved.
         let mut largest_permutation_length = 0;
         for permutation in &meta.permutations {
             largest_permutation_length =
                 std::cmp::max(permutation.len(), largest_permutation_length);
         }
 
+        // The permutation argument will serve alongside the gates, so must be
+        // accounted for.
+        let mut degree = largest_permutation_length;
+
+        // Account for each gate to ensure our quotient polynomial is the
+        // correct degree and that our extended domain is the right size.
+        for poly in meta.gates.iter() {
+            degree = std::cmp::max(degree, poly.degree());
+        }
+
+        let domain = EvaluationDomain::new(degree as u32, params.k);
+
+        // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
         let mut omega_powers = Vec::with_capacity(params.n as usize);
         {
             let mut cur = C::Scalar::one();
@@ -109,6 +114,7 @@ impl<C: CurveAffine> SRS<C> {
             }
         }
 
+        // Compute [omega_powers * \delta^0, omega_powers * \delta^1, ..., omega_powers * \delta^m]
         let mut deltaomega = Vec::with_capacity(largest_permutation_length);
         {
             let mut cur = C::Scalar::one();
@@ -129,9 +135,12 @@ impl<C: CurveAffine> SRS<C> {
             copy: vec![],
         };
 
+        // Initialize the copy vector to keep track of copy constraints in all
+        // the permutation arguments.
         for permutation in &meta.permutations {
             let mut wires = vec![];
             for (i, _) in permutation.iter().enumerate() {
+                // Computes [(i, 0), (i, 1), ..., (i, n - 1)]
                 wires.push((0..params.n).map(|j| (i, j as usize)).collect());
             }
             assembly.copy.push(wires);
@@ -140,7 +149,8 @@ impl<C: CurveAffine> SRS<C> {
         // Synthesize the circuit to obtain SRS
         circuit.synthesize(&mut assembly, config)?;
 
-        // Compute permutation polynomials
+        // Compute permutation polynomials, convert to coset form and
+        // pre-compute commitments for the SRS.
         let mut permutation_commitments = vec![];
         let mut permutation_polys = vec![];
         let mut permutation_cosets = vec![];
@@ -149,17 +159,25 @@ impl<C: CurveAffine> SRS<C> {
             let mut polys = vec![];
             let mut cosets = vec![];
             for (i, _) in permutation.iter().enumerate() {
+                // Computes the permutation polynomial based on the permutation
+                // description in the assembly.
                 let permutation_poly: Vec<_> = (0..params.n as usize)
                     .map(|j| {
+                        // assembly.copy[permutation_index] is indexed by wire
+                        // i, and then indexed by row j, obtaining the index of
+                        // the permuted value in deltaomega.
                         let (permuted_i, permuted_j) = assembly.copy[permutation_index][i][j];
                         deltaomega[permuted_i][permuted_j]
                     })
                     .collect();
+                
+                // Compute commitment to permutation polynomial
                 commitments.push(
                     params
                         .commit_lagrange(&permutation_poly, C::Scalar::one())
                         .to_affine(),
                 );
+                // Store permutation polynomial and precompute its coset evaluation
                 polys.push(permutation_poly.clone());
                 cosets.push(domain.obtain_coset(permutation_poly, Rotation::default()));
             }
