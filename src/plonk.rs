@@ -44,6 +44,10 @@ pub struct SRS<C: CurveAffine> {
 pub struct Proof<C: CurveAffine> {
     advice_commitments: Vec<C>,
     h_commitments: Vec<C>,
+    permutation_product_commitments: Vec<C>,
+    permutation_product_evals: Vec<C::Scalar>,
+    permutation_product_inv_evals: Vec<C::Scalar>,
+    permutation_evals: Vec<C::Scalar>,
     advice_evals: Vec<C::Scalar>,
     fixed_evals: Vec<C::Scalar>,
     h_evals: Vec<C::Scalar>,

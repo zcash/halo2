@@ -111,6 +111,12 @@ impl<C: CurveAffine> Proof<C> {
             })
             .collect();
 
+        // Sample x_0 challenge
+        let x_0: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        // Sample x_1 challenge
+        let x_1: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
         // Obtain challenge for keeping all separate gates linearly independent
         let x_2: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
@@ -369,6 +375,10 @@ impl<C: CurveAffine> Proof<C> {
         Ok(Proof {
             advice_commitments,
             h_commitments,
+            permutation_product_commitments: vec![C::default(); params.n as usize],
+            permutation_product_evals: vec![C::Scalar::one(); params.n as usize],
+            permutation_product_inv_evals: vec![C::Scalar::one(); params.n as usize],
+            permutation_evals: vec![C::Scalar::one(); params.n as usize],
             advice_evals,
             fixed_evals,
             h_evals,

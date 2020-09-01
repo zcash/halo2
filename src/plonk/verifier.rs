@@ -19,6 +19,41 @@ impl<C: CurveAffine> Proof<C> {
                 .expect("proof cannot contain points at infinity");
         }
 
+        // Sample x_0 challenge
+        let x_0: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        // Sample x_1 challenge
+        let x_1: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        // Check permutations
+        // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
+        let mut omega_powers = Vec::with_capacity(params.n as usize);
+        {
+            let mut cur = C::Scalar::one();
+            for _ in 0..params.n {
+                omega_powers.push(cur);
+                cur *= &srs.domain.get_omega();
+            }
+        }
+
+        // For each permutation
+        for perm in &srs.meta.permutations {
+            // Check permutation condition on all points
+            for i in 0..params.n as usize {
+                let left_perm_eval = self.permutation_product_inv_evals[i];
+                let right_perm_eval = self.permutation_product_evals[i];
+
+                for wire in perm {
+                    // z(\omega^{-1} X) (a(X) + \beta X + \gamma) (b(X) + \delta \beta X + \gamma) (c(X) + \delta^2 \beta X + \gamma)
+
+                    // z(X) (a(X) + \beta s_a(X) + \gamma) (b(X) + \beta s_b(X) + \gamma) (c(X) + \beta s_c(X) + \gamma)
+                }
+                if left_perm_eval != right_perm_eval {
+                    return false;
+                }
+            }
+        }
+
         // Sample x_2 challenge, which keeps the gates linearly independent.
         let x_2: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
