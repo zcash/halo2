@@ -310,7 +310,7 @@ impl<C: CurveAffine> Params<C> {
             blind += &(r_randomness * &challenge_sq_inv);
         }
 
-        // We have fully colapsed `a`, `b`, `G`
+        // We have fully collapsed `a`, `b`, `G`
         assert_eq!(a.len(), 1);
         let a = a[0];
         assert_eq!(b.len(), 1);

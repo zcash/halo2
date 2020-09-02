@@ -224,7 +224,7 @@ impl Fq {
         //
         // and computing their sum in the field. It remains to see that arbitrary 256-bit
         // numbers can be placed into Montgomery form safely using the reduction. The
-        // reduction works so long as the product is less than R=2^256 multipled by
+        // reduction works so long as the product is less than R=2^256 multiplied by
         // the modulus. This holds because for any `c` smaller than the modulus, we have
         // that (2^256 - 1)*c is an acceptable product for the reduction. Therefore, the
         // reduction always works so long as `c` is in the field; in this case it is either the
