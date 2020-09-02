@@ -66,15 +66,9 @@ impl<C: CurveAffine> SRS<C> {
                     // Don't perform the copy constraint because it will undo
                     // the effect of the permutation.
                 } else {
-                    *self.copy[permutation]
-                        .get_mut(left_wire)
-                        .and_then(|wire| wire.get_mut(left_row))
-                        .ok_or(Error::BoundsFailure)? = right;
+                    self.copy[permutation][left_wire][left_row] = right;
 
-                    *self.copy[permutation]
-                        .get_mut(right_wire)
-                        .and_then(|wire| wire.get_mut(right_row))
-                        .ok_or(Error::BoundsFailure)? = left;
+                    self.copy[permutation][right_wire][right_row] = left;
                 }
 
                 Ok(())
@@ -94,7 +88,7 @@ impl<C: CurveAffine> SRS<C> {
 
         // The permutation argument will serve alongside the gates, so must be
         // accounted for.
-        let mut degree = largest_permutation_length;
+        let mut degree = largest_permutation_length + 1;
 
         // Account for each gate to ensure our quotient polynomial is the
         // correct degree and that our extended domain is the right size.
