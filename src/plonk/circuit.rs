@@ -169,7 +169,7 @@ pub struct MetaCircuit<F> {
     // another permutation between wires (B, C, D) which allows the same with D
     // instead of A.
     pub(crate) permutations: Vec<Vec<AdviceWire>>,
-    pub(crate) permutation_queries: Vec<Vec<Polynomial<F>>>,
+    pub(crate) permutation_queries: Vec<Vec<usize>>,
 }
 
 impl<F: Field> Default for MetaCircuit<F> {
@@ -203,7 +203,7 @@ impl<F: Field> MetaCircuit<F> {
 
         let mut queries = vec![];
         for wire in wires {
-            queries.push(self.query_advice(*wire, 0));
+            queries.push(self.query_advice_index(*wire, 0));
         }
         self.permutation_queries.push(queries);
 
@@ -225,8 +225,7 @@ impl<F: Field> MetaCircuit<F> {
         Polynomial::Fixed(index)
     }
 
-    /// Query an advice wire at a relative position
-    pub fn query_advice(&mut self, wire: AdviceWire, at: i32) -> Polynomial<F> {
+    fn query_advice_index(&mut self, wire: AdviceWire, at: i32) -> usize {
         let at = Rotation(at);
         {
             let len = self.rotations.len();
@@ -237,7 +236,12 @@ impl<F: Field> MetaCircuit<F> {
         let index = self.advice_queries.len();
         self.advice_queries.push((wire, at));
 
-        Polynomial::Advice(index)
+        index
+    }
+
+    /// Query an advice wire at a relative position
+    pub fn query_advice(&mut self, wire: AdviceWire, at: i32) -> Polynomial<F> {
+        Polynomial::Advice(self.query_advice_index(wire, at))
     }
 
     /// Create a new gate

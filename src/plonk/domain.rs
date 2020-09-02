@@ -29,6 +29,7 @@ pub struct EvaluationDomain<G: Group> {
     ifft_divisor: G::Scalar,
     extended_ifft_divisor: G::Scalar,
     t_evaluations: Vec<G::Scalar>,
+    barycentric_weight: G::Scalar,
 }
 
 impl<G: Group> EvaluationDomain<G> {
@@ -99,6 +100,10 @@ impl<G: Group> EvaluationDomain<G> {
             G::Scalar::batch_invert(&mut t_evaluations);
         }
 
+        // The barycentric weight of 1 over the evaluation domain
+        // 1 / \prod_{i != 0} (1 - omega^i)
+        let barycentric_weight = G::Scalar::from(n).invert().unwrap();
+
         EvaluationDomain {
             n,
             k,
@@ -113,6 +118,7 @@ impl<G: Group> EvaluationDomain<G> {
             ifft_divisor,
             extended_ifft_divisor,
             t_evaluations,
+            barycentric_weight,
         }
     }
 
@@ -259,5 +265,9 @@ impl<G: Group> EvaluationDomain<G> {
                 .pow(&[rotation.0.abs() as u64, 0, 0, 0]);
         }
         point
+    }
+
+    pub fn get_barycentric_weight(&self) -> G::Scalar {
+        self.barycentric_weight
     }
 }
