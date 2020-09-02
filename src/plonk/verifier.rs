@@ -36,36 +36,6 @@ impl<C: CurveAffine> Proof<C> {
             }
         }
 
-        // For each permutation
-        for perm_idx in 0..srs.meta.permutations.len() {
-            // For each X in evaluation domain
-            for point_idx in 0..params.n as usize {
-                let point = omega_powers[point_idx];
-
-                let mut left_perm_eval = self.permutation_product_inv_evals[point_idx];
-                let mut right_perm_eval = self.permutation_product_evals[point_idx];
-                let mut cur_delta = C::Scalar::one();
-
-                for wire_idx in 0..srs.meta.permutations[perm_idx].len() {
-                    // z(\omega^{-1} X) (a(X) + \beta X + \gamma) (b(X) + \delta \beta X + \gamma) (c(X) + \delta^2 \beta X + \gamma)
-                    let left_tmp = &(self.advice_shifted_evals[perm_idx][wire_idx][point_idx]
-                        + &(x_0 * &(cur_delta * &point)));
-                    left_perm_eval *= &left_tmp;
-
-                    cur_delta *= &C::Scalar::DELTA;
-
-                    // z(X) (a(X) + \beta s_a(X) + \gamma) (b(X) + \beta s_b(X) + \gamma) (c(X) + \beta s_c(X) + \gamma)
-                    let perm_eval = srs.permutation_polys[perm_idx][wire_idx][point_idx];
-                    let right_tmp = &(self.advice_shifted_evals[perm_idx][wire_idx][point_idx]
-                        + &(x_0 * &perm_eval));
-                    right_perm_eval *= &right_tmp;
-                }
-                if left_perm_eval != right_perm_eval {
-                    return false;
-                }
-            }
-        }
-
         // Sample x_2 challenge, which keeps the gates linearly independent.
         let x_2: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
@@ -77,6 +47,7 @@ impl<C: CurveAffine> Proof<C> {
         // Sample x_3 challenge, which is used to ensure the circuit is
         // satisfied with high probability.
         let x_3: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        let xn = x_3.pow(&[params.n as u64, 0, 0, 0]);
 
         // Hash together all the openings provided by the prover into a new
         // transcript on the scalar field.
@@ -110,7 +81,52 @@ impl<C: CurveAffine> Proof<C> {
 
             h_eval += &evaluation;
         }
-        let xn = x_3.pow(&[params.n as u64, 0, 0, 0]);
+
+        // Evaluate permutation polynomial at first point
+        // l_0(X) * (1 - z(X)) = 0
+        for eval in self.permutation_product_evals.iter() {
+            h_eval *= &x_2;
+
+            let mut l0_eval = (C::Scalar::from_u64(params.n) * &(xn * &x_3 - &C::Scalar::one()))
+                * &(x_3 - &C::Scalar::one()).invert().unwrap();
+            l0_eval *= &(C::Scalar::one() - &eval);
+
+            h_eval += &l0_eval;
+        }
+
+        // Evaluate permutation polynomial at subsequent points
+        for (perm_idx, queries) in srs.meta.permutation_queries.iter().enumerate() {
+            h_eval *= &x_2;
+
+            // queries is a vector of polynomials
+            let evals: Vec<C::Scalar> = queries
+                .iter()
+                .map(|poly| {
+                    poly.evaluate(
+                        &|index| self.fixed_evals[index],
+                        &|index| self.advice_evals[index],
+                        &|a, b| a + &b,
+                        &|a, b| a * &b,
+                        &|a, scalar| a * &scalar,
+                    )
+                })
+                .collect();
+
+            let mut left = self.permutation_product_inv_evals[perm_idx];
+            let mut cur_delta = x_0 * &x_3;
+            for eval in evals.iter() {
+                left *= &(*eval + &cur_delta + &x_1);
+                cur_delta *= &C::Scalar::DELTA;
+            }
+
+            let mut right = self.permutation_product_evals[perm_idx];
+            for (perm_eval, eval) in self.permutation_evals[perm_idx].iter().zip(evals.iter()) {
+                right *= &(*eval + &(x_0 * perm_eval) + &x_1);
+            }
+
+            h_eval += &left;
+            h_eval -= &right;
+        }
 
         // Compute the expected h(x) value
         let mut expected_h_eval = C::Scalar::zero();

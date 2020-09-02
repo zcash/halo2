@@ -169,6 +169,7 @@ pub struct MetaCircuit<F> {
     // another permutation between wires (B, C, D) which allows the same with D
     // instead of A.
     pub(crate) permutations: Vec<Vec<AdviceWire>>,
+    pub(crate) permutation_queries: Vec<Vec<Polynomial<F>>>,
 }
 
 impl<F: Field> Default for MetaCircuit<F> {
@@ -184,6 +185,7 @@ impl<F: Field> Default for MetaCircuit<F> {
             advice_queries: Vec::new(),
             rotations,
             permutations: Vec::new(),
+            permutation_queries: Vec::new(),
         }
     }
 }
@@ -192,7 +194,19 @@ impl<F: Field> MetaCircuit<F> {
     /// Add a permutation argument for some advice wires
     pub fn permutation(&mut self, wires: &[AdviceWire]) -> usize {
         let index = self.permutations.len();
+        if index == 0 {
+            // no permutations
+            let point_idx = self.rotations.len();
+            self.rotations.insert(Rotation(-1), PointIndex(point_idx));
+        }
         self.permutations.push(wires.to_vec());
+
+        let mut queries = vec![];
+        for wire in wires {
+            queries.push(self.query_advice(*wire, 0));
+        }
+        self.permutation_queries.push(queries);
+
         index
     }
 
