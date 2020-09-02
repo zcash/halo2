@@ -117,6 +117,33 @@ impl<C: CurveAffine> Proof<C> {
         // Sample x_1 challenge
         let x_1: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
+        // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
+        let mut omega_powers = Vec::with_capacity(params.n as usize);
+        {
+            let mut cur = C::Scalar::one();
+            for _ in 0..params.n {
+                omega_powers.push(cur);
+                cur *= &srs.domain.get_omega();
+            }
+        }
+
+        let mut advice_shifted_evals =
+            vec![
+                vec![vec![C::Scalar::zero(); params.n as usize]; meta.num_advice_wires];
+                meta.permutations.len()
+            ];
+
+        for perm_idx in 0..meta.permutations.len() {
+            for wire_idx in 0..meta.permutations[perm_idx].len() {
+                for point_idx in 0..params.n {
+                    let mut eval =
+                        eval_polynomial(&advice_polys[wire_idx], omega_powers[point_idx as usize]);
+                    eval += &x_1;
+                    advice_shifted_evals[perm_idx][wire_idx as usize][point_idx as usize] = eval;
+                }
+            }
+        }
+
         // Obtain challenge for keeping all separate gates linearly independent
         let x_2: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
@@ -379,6 +406,7 @@ impl<C: CurveAffine> Proof<C> {
             permutation_product_evals: vec![C::Scalar::one(); params.n as usize],
             permutation_product_inv_evals: vec![C::Scalar::one(); params.n as usize],
             permutation_evals: vec![C::Scalar::one(); params.n as usize],
+            advice_shifted_evals,
             advice_evals,
             fixed_evals,
             h_evals,

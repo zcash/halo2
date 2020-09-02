@@ -37,16 +37,28 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // For each permutation
-        for perm in &srs.meta.permutations {
-            // Check permutation condition on all points
-            for i in 0..params.n as usize {
-                let left_perm_eval = self.permutation_product_inv_evals[i];
-                let right_perm_eval = self.permutation_product_evals[i];
+        for perm_idx in 0..srs.meta.permutations.len() {
+            // For each X in evaluation domain
+            for point_idx in 0..params.n as usize {
+                let point = omega_powers[point_idx];
 
-                for wire in perm {
+                let mut left_perm_eval = self.permutation_product_inv_evals[point_idx];
+                let mut right_perm_eval = self.permutation_product_evals[point_idx];
+                let mut cur_delta = C::Scalar::one();
+
+                for wire_idx in 0..srs.meta.permutations[perm_idx].len() {
                     // z(\omega^{-1} X) (a(X) + \beta X + \gamma) (b(X) + \delta \beta X + \gamma) (c(X) + \delta^2 \beta X + \gamma)
+                    let left_tmp = &(self.advice_shifted_evals[perm_idx][wire_idx][point_idx]
+                        + &(x_0 * &(cur_delta * &point)));
+                    left_perm_eval *= &left_tmp;
+
+                    cur_delta *= &C::Scalar::DELTA;
 
                     // z(X) (a(X) + \beta s_a(X) + \gamma) (b(X) + \beta s_b(X) + \gamma) (c(X) + \beta s_c(X) + \gamma)
+                    let perm_eval = srs.permutation_polys[perm_idx][wire_idx][point_idx];
+                    let right_tmp = &(self.advice_shifted_evals[perm_idx][wire_idx][point_idx]
+                        + &(x_0 * &perm_eval));
+                    right_perm_eval *= &right_tmp;
                 }
                 if left_perm_eval != right_perm_eval {
                     return false;

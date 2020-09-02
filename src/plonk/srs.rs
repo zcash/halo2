@@ -164,7 +164,7 @@ impl<C: CurveAffine> SRS<C> {
                         deltaomega[permuted_i][permuted_j]
                     })
                     .collect();
-                
+
                 // Compute commitment to permutation polynomial
                 commitments.push(
                     params
