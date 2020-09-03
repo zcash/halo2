@@ -222,6 +222,18 @@ impl<C: CurveAffine> Proof<C> {
             })
             .collect();
 
+        let mut permutation_evals: Vec<Vec<C::Scalar>> =
+            Vec::with_capacity(meta.permutation_queries.len());
+        for (permutation_idx, queries) in meta.permutation_queries.iter().enumerate() {
+            let query_evals: Vec<C::Scalar> = queries
+                .iter()
+                .map(|&query_index| {
+                    eval_polynomial(&srs.permutation_polys[permutation_idx][query_index], x_3)
+                })
+                .collect();
+            permutation_evals.push(query_evals);
+        }
+
         let h_evals: Vec<_> = h_pieces
             .iter()
             .map(|poly| eval_polynomial(poly, x_3))
@@ -239,6 +251,13 @@ impl<C: CurveAffine> Proof<C> {
         // Hash each fixed evaluation
         for eval in fixed_evals.iter() {
             transcript_scalar.absorb(*eval);
+        }
+
+        // Hash each permutation evaluation
+        for permutation in permutation_evals.iter() {
+            for eval in permutation.iter() {
+                transcript_scalar.absorb(*eval);
+            }
         }
 
         // Hash each h(x) piece evaluation
@@ -388,7 +407,7 @@ impl<C: CurveAffine> Proof<C> {
             permutation_product_commitments: vec![C::default(); params.n as usize],
             permutation_product_evals: vec![C::Scalar::one(); params.n as usize],
             permutation_product_inv_evals: vec![C::Scalar::one(); params.n as usize],
-            permutation_evals: vec![vec![C::Scalar::one(); params.n as usize]],
+            permutation_evals,
             advice_evals,
             fixed_evals,
             h_evals,
