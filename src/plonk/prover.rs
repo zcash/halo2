@@ -126,33 +126,6 @@ impl<C: CurveAffine> Proof<C> {
         // Sample x_1 challenge
         let x_1: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-        // TODO: maybe put this in SRS?
-        // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
-        let mut omega_powers = Vec::with_capacity(params.n as usize);
-        {
-            let mut cur = C::Scalar::one();
-            for _ in 0..params.n {
-                omega_powers.push(cur);
-                cur *= &srs.domain.get_omega();
-            }
-        }
-
-        // Compute [omega_powers * \delta^0, omega_powers * \delta^1, ..., omega_powers * \delta^m]
-        let mut deltaomega = Vec::with_capacity(largest_permutation_length);
-        {
-            let mut cur = C::Scalar::one();
-            for _ in 0..largest_permutation_length {
-                let mut omega_powers = omega_powers.clone();
-                for o in &mut omega_powers {
-                    *o *= &cur;
-                }
-
-                deltaomega.push(omega_powers);
-
-                cur *= &C::Scalar::DELTA;
-            }
-        }
-
         // Compute permutation product polynomial commitment
         let mut permutation_product_commitments = vec![];
         let mut permutation_product_blinds = vec![];
@@ -194,7 +167,7 @@ impl<C: CurveAffine> Proof<C> {
             for ((wire, modified_advice), deltaomega) in wires
                 .iter()
                 .zip(modified_advice.iter_mut())
-                .zip(deltaomega.iter())
+                .zip(srs.deltaomega.iter())
             {
                 // For each row i, we compute
                 // p_j(\omega^i) + \delta^j \omega^i \beta + \gamma

@@ -29,6 +29,7 @@ use domain::EvaluationDomain;
 #[derive(Debug)]
 pub struct SRS<C: CurveAffine> {
     domain: EvaluationDomain<C::Scalar>,
+    deltaomega: Vec<Vec<C::Scalar>>,
     fixed_commitments: Vec<C>,
     fixed_polys: Vec<Vec<C::Scalar>>,
     fixed_cosets: Vec<Vec<C::Scalar>>,
