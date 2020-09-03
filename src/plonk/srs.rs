@@ -146,10 +146,12 @@ impl<C: CurveAffine> SRS<C> {
         // Compute permutation polynomials, convert to coset form and
         // pre-compute commitments for the SRS.
         let mut permutation_commitments = vec![];
+        let mut permutations = vec![];
         let mut permutation_polys = vec![];
         let mut permutation_cosets = vec![];
         for (permutation_index, permutation) in meta.permutations.iter().enumerate() {
             let mut commitments = vec![];
+            let mut inner_permutations = vec![];
             let mut polys = vec![];
             let mut cosets = vec![];
             for (i, _) in permutation.iter().enumerate() {
@@ -172,11 +174,13 @@ impl<C: CurveAffine> SRS<C> {
                         .to_affine(),
                 );
                 // Store permutation polynomial and precompute its coset evaluation
-                polys.push(permutation_poly.clone());
-                let permutation_poly = domain.obtain_poly(permutation_poly);
-                cosets.push(domain.obtain_coset(permutation_poly, Rotation::default()));
+                inner_permutations.push(permutation_poly.clone());
+                let poly = domain.obtain_poly(permutation_poly);
+                polys.push(poly.clone());
+                cosets.push(domain.obtain_coset(poly, Rotation::default()));
             }
             permutation_commitments.push(commitments);
+            permutations.push(inner_permutations);
             permutation_polys.push(polys);
             permutation_cosets.push(cosets);
         }
@@ -208,6 +212,7 @@ impl<C: CurveAffine> SRS<C> {
             fixed_polys,
             fixed_cosets,
             permutation_commitments,
+            permutations,
             permutation_polys,
             permutation_cosets,
             meta,

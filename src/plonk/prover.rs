@@ -158,7 +158,7 @@ impl<C: CurveAffine> Proof<C> {
         let mut permutation_product_blinds = vec![];
 
         // Iterate over each permutation
-        for (wires, permutations) in srs.meta.permutations.iter().zip(srs.permutation_polys) {
+        for (wires, permutations) in srs.meta.permutations.iter().zip(srs.permutations.iter()) {
             // Goal is to compute the fraction
             //
             // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /

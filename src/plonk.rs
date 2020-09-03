@@ -33,6 +33,7 @@ pub struct SRS<C: CurveAffine> {
     fixed_polys: Vec<Vec<C::Scalar>>,
     fixed_cosets: Vec<Vec<C::Scalar>>,
     permutation_commitments: Vec<Vec<C>>,
+    permutations: Vec<Vec<Vec<C::Scalar>>>,
     permutation_polys: Vec<Vec<Vec<C::Scalar>>>,
     permutation_cosets: Vec<Vec<Vec<C::Scalar>>>,
     meta: MetaCircuit<C::Scalar>,
