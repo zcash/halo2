@@ -93,7 +93,8 @@ impl<C: CurveAffine> Proof<C> {
                 tmp *= &srs.domain.get_barycentric_weight(); // l_0(x_3)
                 tmp *= &(C::Scalar::one() - &eval); // l_0(X) * (1 - z(X))
 
-                h_eval += &tmp;
+                // We negate this (with no effect on the argument) to simplify the prover.
+                h_eval -= &tmp;
             }
         }
 

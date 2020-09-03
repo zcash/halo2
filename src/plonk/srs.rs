@@ -206,9 +206,17 @@ impl<C: CurveAffine> SRS<C> {
             })
             .collect();
 
+        // Compute l_0(X)
+        // TODO: this can be done more efficiently
+        let mut l0 = vec![C::Scalar::zero(); params.n as usize];
+        l0[0] = C::Scalar::one();
+        let l0 = domain.obtain_poly(l0);
+        let l0 = domain.obtain_coset(l0, Rotation::default());
+
         Ok(SRS {
             domain,
             deltaomega,
+            l0,
             fixed_commitments,
             fixed_polys,
             fixed_cosets,

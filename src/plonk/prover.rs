@@ -127,6 +127,9 @@ impl<C: CurveAffine> Proof<C> {
         let x_1: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         // Compute permutation product polynomial commitment
+        let mut permutation_product_polys = vec![];
+        let mut permutation_product_cosets = vec![];
+        let mut permutation_product_cosets_inv = vec![];
         let mut permutation_product_commitments = vec![];
         let mut permutation_product_blinds = vec![];
 
@@ -218,6 +221,9 @@ impl<C: CurveAffine> Proof<C> {
 
             permutation_product_commitments.push(params.commit_lagrange(&z, blind).to_affine());
             permutation_product_blinds.push(blind);
+            permutation_product_polys.push(z.clone());
+            permutation_product_cosets.push(domain.obtain_coset(z.clone(), Rotation::default()));
+            permutation_product_cosets_inv.push(domain.obtain_coset(z, Rotation(-1)));
         }
 
         // Hash each permutation product commitment
@@ -232,6 +238,7 @@ impl<C: CurveAffine> Proof<C> {
         let mut h_poly = vec![C::Scalar::zero(); domain.coset_len()];
         for (i, poly) in meta.gates.iter().enumerate() {
             if i != 0 {
+                // TODO: parallelize
                 for h in h_poly.iter_mut() {
                     *h *= &x_2;
                 }
@@ -271,9 +278,78 @@ impl<C: CurveAffine> Proof<C> {
             if i == 0 {
                 h_poly = evaluation;
             } else {
+                // TODO: parallelize
                 for (h, e) in h_poly.iter_mut().zip(evaluation.into_iter()) {
                     *h += &e;
                 }
+            }
+        }
+
+        // l_0(X) * (1 - z(X)) = 0
+        // => l_0(X) - l_0(X) z(X) = 0
+        // We negate, so
+        // => l_0(X) z(X) - l_0(X) = 0
+        // TODO: parallelize
+        for coset in permutation_product_cosets.iter() {
+            for h in h_poly.iter_mut() {
+                *h *= &x_2;
+            }
+
+            let mut tmp = srs.l0.clone();
+            for (t, c) in tmp.iter_mut().zip(coset.iter()) {
+                *t *= c;
+            }
+            for (t, c) in tmp.iter_mut().zip(srs.l0.iter()) {
+                *t -= c;
+            }
+
+            for (h, e) in h_poly.iter_mut().zip(tmp.into_iter()) {
+                *h += &e;
+            }
+        }
+
+        // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
+        for (permutation_index, queries) in srs.meta.permutation_queries.iter().enumerate() {
+            for h in h_poly.iter_mut() {
+                *h *= &x_2;
+            }
+
+            let mut left = permutation_product_cosets[permutation_index].clone();
+            for (advice, permutation) in queries
+                .iter()
+                .map(|&query_index| &advice_cosets[query_index])
+                .zip(srs.permutation_cosets[permutation_index].iter())
+            {
+                // TODO: parallelize
+                for ((left, advice), permutation) in
+                    left.iter_mut().zip(advice.iter()).zip(permutation.iter())
+                {
+                    *left *= &(*advice + &(x_0 * permutation) + &x_1);
+                }
+            }
+
+            let mut right = permutation_product_cosets_inv[permutation_index].clone();
+            let mut current_delta = x_0 * &C::Scalar::ZETA;
+            let step = domain.get_omega();
+            for advice in queries
+                .iter()
+                .map(|&query_index| &advice_cosets[query_index])
+            {
+                // TODO: parallelize
+                let mut beta_term = current_delta;
+                for (right, advice) in right.iter_mut().zip(advice.iter()) {
+                    *right *= &(*advice + &beta_term + &x_1);
+                    beta_term *= &step;
+                }
+                current_delta *= &C::Scalar::DELTA;
+            }
+
+            for (h, e) in h_poly.iter_mut().zip(left.into_iter()) {
+                *h += &e;
+            }
+
+            for (h, e) in h_poly.iter_mut().zip(right.into_iter()) {
+                *h -= &e;
             }
         }
 
@@ -320,17 +396,26 @@ impl<C: CurveAffine> Proof<C> {
             })
             .collect();
 
-        let mut permutation_evals: Vec<Vec<C::Scalar>> =
-            Vec::with_capacity(meta.permutation_queries.len());
-        for (permutation_idx, queries) in meta.permutation_queries.iter().enumerate() {
-            let query_evals: Vec<C::Scalar> = queries
-                .iter()
-                .map(|&query_index| {
-                    eval_polynomial(&srs.permutation_polys[permutation_idx][query_index], x_3)
-                })
-                .collect();
-            permutation_evals.push(query_evals);
-        }
+        let permutation_product_evals: Vec<C::Scalar> = permutation_product_polys
+            .iter()
+            .map(|poly| eval_polynomial(poly, x_3))
+            .collect();
+
+        let permutation_product_inv_evals: Vec<C::Scalar> = permutation_product_polys
+            .iter()
+            .map(|poly| eval_polynomial(poly, srs.domain.get_omega_inv() * &x_3))
+            .collect();
+
+        let permutation_evals: Vec<Vec<C::Scalar>> = srs
+            .permutation_polys
+            .iter()
+            .map(|polys| {
+                polys
+                    .iter()
+                    .map(|poly| eval_polynomial(poly, x_3))
+                    .collect()
+            })
+            .collect();
 
         let h_evals: Vec<_> = h_pieces
             .iter()
@@ -342,24 +427,14 @@ impl<C: CurveAffine> Proof<C> {
         let mut transcript_scalar = HScalar::init(C::Scalar::one());
 
         // Hash each advice evaluation
-        for eval in advice_evals.iter() {
-            transcript_scalar.absorb(*eval);
-        }
-
-        // Hash each fixed evaluation
-        for eval in fixed_evals.iter() {
-            transcript_scalar.absorb(*eval);
-        }
-
-        // Hash each permutation evaluation
-        for permutation in permutation_evals.iter() {
-            for eval in permutation.iter() {
-                transcript_scalar.absorb(*eval);
-            }
-        }
-
-        // Hash each h(x) piece evaluation
-        for eval in h_evals.iter() {
+        for eval in advice_evals
+            .iter()
+            .chain(fixed_evals.iter())
+            .chain(h_evals.iter())
+            .chain(permutation_product_evals.iter())
+            .chain(permutation_product_inv_evals.iter())
+            .chain(permutation_evals.iter().flat_map(|evals| evals.iter()))
+        {
             transcript_scalar.absorb(*eval);
         }
 
@@ -426,6 +501,38 @@ impl<C: CurveAffine> Proof<C> {
                 .zip(h_evals.iter())
             {
                 accumulate(current_index, &h_poly, *h_blind, *h_eval);
+            }
+
+            // Handle permutation arguments, if any exist
+            if !srs.meta.permutations.is_empty() {
+                // Open permutation product commitments at x_3
+                for ((poly, blind), eval) in permutation_product_polys
+                    .iter()
+                    .zip(permutation_product_blinds.iter())
+                    .zip(permutation_product_evals.iter())
+                {
+                    accumulate(current_index, poly, *blind, *eval);
+                }
+
+                // Open permutation polynomial commitments at x_3
+                for (poly, eval) in srs
+                    .permutation_polys
+                    .iter()
+                    .zip(permutation_evals.iter())
+                    .flat_map(|(polys, evals)| polys.iter().zip(evals.iter()))
+                {
+                    accumulate(current_index, poly, C::Scalar::one(), *eval);
+                }
+
+                let current_index = (*srs.meta.rotations.get(&Rotation(-1)).unwrap()).0;
+                // Open permutation product commitments at \omega^{-1} x_3
+                for ((poly, blind), eval) in permutation_product_polys
+                    .iter()
+                    .zip(permutation_product_blinds.iter())
+                    .zip(permutation_product_inv_evals.iter())
+                {
+                    accumulate(current_index, poly, *blind, *eval);
+                }
             }
         }
 
@@ -503,8 +610,8 @@ impl<C: CurveAffine> Proof<C> {
             advice_commitments,
             h_commitments,
             permutation_product_commitments,
-            permutation_product_evals: vec![C::Scalar::one(); params.n as usize],
-            permutation_product_inv_evals: vec![C::Scalar::one(); params.n as usize],
+            permutation_product_evals,
+            permutation_product_inv_evals,
             permutation_evals,
             advice_evals,
             fixed_evals,
