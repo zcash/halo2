@@ -331,7 +331,6 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         let x_3: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
-        let x_3n = x_3.pow(&[params.n as u64, 0, 0, 0]);
 
         // Evaluate polynomials at omega^i x_3
         let advice_evals: Vec<_> = meta
