@@ -127,23 +127,6 @@ impl<C: CurveAffine> Proof<C> {
             }
         }
 
-        let mut advice_shifted_evals =
-            vec![
-                vec![vec![C::Scalar::zero(); params.n as usize]; meta.num_advice_wires];
-                meta.permutations.len()
-            ];
-
-        for perm_idx in 0..meta.permutations.len() {
-            for wire_idx in 0..meta.permutations[perm_idx].len() {
-                for point_idx in 0..params.n {
-                    let mut eval =
-                        eval_polynomial(&advice_polys[wire_idx], omega_powers[point_idx as usize]);
-                    eval += &x_1;
-                    advice_shifted_evals[perm_idx][wire_idx as usize][point_idx as usize] = eval;
-                }
-            }
-        }
-
         // Obtain challenge for keeping all separate gates linearly independent
         let x_2: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
