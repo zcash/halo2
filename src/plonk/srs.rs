@@ -173,6 +173,7 @@ impl<C: CurveAffine> SRS<C> {
                 );
                 // Store permutation polynomial and precompute its coset evaluation
                 polys.push(permutation_poly.clone());
+                let permutation_poly = domain.obtain_poly(permutation_poly);
                 cosets.push(domain.obtain_coset(permutation_poly, Rotation::default()));
             }
             permutation_commitments.push(commitments);

@@ -71,6 +71,14 @@ impl<C: CurveAffine> Proof<C> {
         let mut meta = MetaCircuit::default();
         let config = ConcreteCircuit::configure(&mut meta);
 
+        // Get the largest permutation argument length in terms of the number of
+        // advice wires involved.
+        let mut largest_permutation_length = 0;
+        for permutation in &meta.permutations {
+            largest_permutation_length =
+                std::cmp::max(permutation.len(), largest_permutation_length);
+        }
+
         let mut witness = WitnessCollection {
             advice: vec![vec![C::Scalar::zero(); params.n as usize]; meta.num_advice_wires],
         };
@@ -98,6 +106,7 @@ impl<C: CurveAffine> Proof<C> {
 
         let advice_polys: Vec<_> = witness
             .advice
+            .clone()
             .into_iter()
             .map(|poly| domain.obtain_poly(poly))
             .collect();
@@ -117,6 +126,7 @@ impl<C: CurveAffine> Proof<C> {
         // Sample x_1 challenge
         let x_1: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
+        // TODO: maybe put this in SRS?
         // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
         let mut omega_powers = Vec::with_capacity(params.n as usize);
         {
@@ -125,6 +135,121 @@ impl<C: CurveAffine> Proof<C> {
                 omega_powers.push(cur);
                 cur *= &srs.domain.get_omega();
             }
+        }
+
+        // Compute [omega_powers * \delta^0, omega_powers * \delta^1, ..., omega_powers * \delta^m]
+        let mut deltaomega = Vec::with_capacity(largest_permutation_length);
+        {
+            let mut cur = C::Scalar::one();
+            for _ in 0..largest_permutation_length {
+                let mut omega_powers = omega_powers.clone();
+                for o in &mut omega_powers {
+                    *o *= &cur;
+                }
+
+                deltaomega.push(omega_powers);
+
+                cur *= &C::Scalar::DELTA;
+            }
+        }
+
+        // Compute permutation product polynomial commitment
+        let mut permutation_product_commitments = vec![];
+        let mut permutation_product_blinds = vec![];
+
+        // Iterate over each permutation
+        for (wires, permutations) in srs.meta.permutations.iter().zip(srs.permutation_polys) {
+            // Goal is to compute the fraction
+            //
+            // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
+            // (p_j(\omega^i) + \beta s_j(\omega^i) + \gamma)
+            //
+            // where p_j(X) is the jth advice wire in this permutation,
+            // and i is the ith row of the wire.
+            let mut modified_advice = Vec::with_capacity(wires.len());
+
+            // Iterate over each wire of the permutation
+            for (wire, permutation) in wires.iter().zip(permutations.iter()) {
+                // Grab the advice wire's values from the witness
+                let mut tmp = witness.advice[wire.0].clone();
+
+                // For each row i, compute
+                // p_j(\omega^i) + \beta s_j(\omega^i) + \gamma
+                // where p_j(omega^i) = tmp[i]
+                for (tmp, permutation) in tmp.iter_mut().zip(permutation.iter()) {
+                    *tmp += &(x_0 * permutation);
+                    *tmp += &x_1;
+                }
+                modified_advice.push(tmp);
+            }
+
+            // Batch invert to obtain the denominators for the permutation product
+            // polynomial
+            for v in &mut modified_advice {
+                C::Scalar::batch_invert(v);
+            }
+
+            // Iterate over each wire again, this time finishing the computation
+            // of the entire fraction by computing the numerators
+            for ((wire, modified_advice), deltaomega) in wires
+                .iter()
+                .zip(modified_advice.iter_mut())
+                .zip(deltaomega.iter())
+            {
+                // For each row i, we compute
+                // p_j(\omega^i) + \delta^j \omega^i \beta + \gamma
+                // for the jth wire of the permutation
+                for ((wire, modified_advice), deltaomega) in witness.advice[wire.0]
+                    .iter_mut()
+                    .zip(modified_advice.iter_mut())
+                    .zip(deltaomega.iter())
+                {
+                    let mut tmp = *deltaomega; // \delta^j \omega^i
+                    tmp *= &x_0; // \delta^j \omega^i \beta
+                    tmp += &x_1; // \delta^j \omega^i \beta + \gamma
+                    tmp += wire; // p_j(\omega^i) + \delta^j \omega^i \beta + \gamma
+                    *modified_advice *= &tmp;
+                }
+            }
+
+            // The modified_advice vector is a vector of vectors of fractions of
+            // the form
+            //
+            // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
+            // (p_j(\omega^i) + \beta s_j(\omega^i) + \gamma)
+            //
+            // where j is the index into modified_advice, and i is the index
+            // into modified_advice[j], for the jth wire in the permutation
+
+            // Compute the evaluations of the permutation product polynomial
+            // over our domain, starting with z[0] = 1
+            let mut z = vec![C::Scalar::one()];
+            for i in 1..(params.n as usize) {
+                let mut tmp = z[i - 1];
+
+                // Iterate over each wire's modified advice, where for the jth
+                // wire we obtain the fraction
+                //
+                // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
+                // (p_j(\omega^i) + \beta s_j(\omega^i) + \gamma)
+                //
+                // where i is the row of the permutation product polynomial
+                // evaluation vector that we are currently evaluating.
+                for modified_advice in modified_advice.iter() {
+                    tmp *= &modified_advice[i];
+                }
+                z.push(tmp);
+            }
+
+            let blind = C::Scalar::random();
+
+            permutation_product_commitments.push(params.commit_lagrange(&z, blind).to_affine());
+            permutation_product_blinds.push(blind);
+        }
+
+        // Hash each permutation product commitment
+        for c in &permutation_product_commitments {
+            hash_point(&mut transcript, c)?;
         }
 
         // Obtain challenge for keeping all separate gates linearly independent
@@ -206,6 +331,7 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         let x_3: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        let x_3n = x_3.pow(&[params.n as u64, 0, 0, 0]);
 
         // Evaluate polynomials at omega^i x_3
         let advice_evals: Vec<_> = meta
@@ -404,7 +530,7 @@ impl<C: CurveAffine> Proof<C> {
         Ok(Proof {
             advice_commitments,
             h_commitments,
-            permutation_product_commitments: vec![C::default(); params.n as usize],
+            permutation_product_commitments,
             permutation_product_evals: vec![C::Scalar::one(); params.n as usize],
             permutation_product_inv_evals: vec![C::Scalar::one(); params.n as usize],
             permutation_evals,
