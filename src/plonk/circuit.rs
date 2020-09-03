@@ -210,19 +210,30 @@ impl<F: Field> MetaCircuit<F> {
         index
     }
 
-    /// Query a fixed wire at a relative position
-    pub fn query_fixed(&mut self, wire: FixedWire, at: i32) -> Polynomial<F> {
+    fn query_fixed_index(&mut self, wire: FixedWire, at: i32) -> usize {
         let at = Rotation(at);
         {
             let len = self.rotations.len();
             self.rotations.entry(at).or_insert(PointIndex(len));
         }
 
-        // TODO: check for existing query so we don't make redundant queries
+        // Return existing query, if it exists
+        for (index, fixed_query) in self.fixed_queries.iter().enumerate() {
+            if fixed_query == &(wire, at) {
+                return index;
+            }
+        }
+
+        // Make a new query
         let index = self.fixed_queries.len();
         self.fixed_queries.push((wire, at));
 
-        Polynomial::Fixed(index)
+        index
+    }
+
+    /// Query a fixed wire at a relative position
+    pub fn query_fixed(&mut self, wire: FixedWire, at: i32) -> Polynomial<F> {
+        Polynomial::Fixed(self.query_fixed_index(wire, at))
     }
 
     fn query_advice_index(&mut self, wire: AdviceWire, at: i32) -> usize {
@@ -232,7 +243,14 @@ impl<F: Field> MetaCircuit<F> {
             self.rotations.entry(at).or_insert(PointIndex(len));
         }
 
-        // TODO: check for existing query so we don't make redundant queries
+        // Return existing query, if it exists
+        for (index, advice_query) in self.advice_queries.iter().enumerate() {
+            if advice_query == &(wire, at) {
+                return index;
+            }
+        }
+
+        // Make a new query
         let index = self.advice_queries.len();
         self.advice_queries.push((wire, at));
 
