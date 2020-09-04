@@ -134,7 +134,7 @@ impl<C: CurveAffine> Proof<C> {
         let mut permutation_product_blinds = vec![];
 
         // Iterate over each permutation
-        for (wires, permutations) in srs.meta.permutations.iter().zip(srs.permutations.iter()) {
+        for (wires, permuted_values) in srs.meta.permutations.iter().zip(srs.permutations.iter()) {
             // Goal is to compute the fraction
             //
             // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
@@ -145,18 +145,18 @@ impl<C: CurveAffine> Proof<C> {
             let mut modified_advice = Vec::with_capacity(wires.len());
 
             // Iterate over each wire of the permutation
-            for (wire, permutation) in wires.iter().zip(permutations.iter()) {
+            for (wire, permuted_wire_values) in wires.iter().zip(permuted_values.iter()) {
                 // Grab the advice wire's values from the witness
-                let mut tmp = witness.advice[wire.0].clone();
+                let mut tmp_advice_values = witness.advice[wire.0].clone();
 
                 // For each row i, compute
                 // p_j(\omega^i) + \beta s_j(\omega^i) + \gamma
                 // where p_j(omega^i) = tmp[i]
-                for (tmp, permutation) in tmp.iter_mut().zip(permutation.iter()) {
-                    *tmp += &(x_0 * permutation);
-                    *tmp += &x_1;
+                for (tmp_advice_value, permuted_advice_value) in tmp_advice_values.iter_mut().zip(permuted_wire_values.iter()) {
+                    *tmp_advice_value += &(x_0 * permuted_advice_value);
+                    *tmp_advice_value += &x_1;
                 }
-                modified_advice.push(tmp);
+                modified_advice.push(tmp_advice_values);
             }
 
             // Batch invert to obtain the denominators for the permutation product
@@ -175,7 +175,7 @@ impl<C: CurveAffine> Proof<C> {
                 // For each row i, we compute
                 // p_j(\omega^i) + \delta^j \omega^i \beta + \gamma
                 // for the jth wire of the permutation
-                for ((wire, modified_advice), deltaomega) in witness.advice[wire.0]
+                for ((advice_value, modified_advice), deltaomega) in witness.advice[wire.0]
                     .iter_mut()
                     .zip(modified_advice.iter_mut())
                     .zip(deltaomega.iter())
@@ -183,7 +183,7 @@ impl<C: CurveAffine> Proof<C> {
                     let mut tmp = *deltaomega; // \delta^j \omega^i
                     tmp *= &x_0; // \delta^j \omega^i \beta
                     tmp += &x_1; // \delta^j \omega^i \beta + \gamma
-                    tmp += wire; // p_j(\omega^i) + \delta^j \omega^i \beta + \gamma
+                    tmp += advice_value; // p_j(\omega^i) + \delta^j \omega^i \beta + \gamma
                     *modified_advice *= &tmp;
                 }
             }
@@ -200,8 +200,8 @@ impl<C: CurveAffine> Proof<C> {
             // Compute the evaluations of the permutation product polynomial
             // over our domain, starting with z[0] = 1
             let mut z = vec![C::Scalar::one()];
-            for i in 1..(params.n as usize) {
-                let mut tmp = z[i - 1];
+            for row in 1..(params.n as usize) {
+                let mut tmp = z[row - 1];
 
                 // Iterate over each wire's modified advice, where for the jth
                 // wire we obtain the fraction
@@ -211,8 +211,8 @@ impl<C: CurveAffine> Proof<C> {
                 //
                 // where i is the row of the permutation product polynomial
                 // evaluation vector that we are currently evaluating.
-                for modified_advice in modified_advice.iter() {
-                    tmp *= &modified_advice[i];
+                for wire_modified_advice in modified_advice.iter() {
+                    tmp *= &wire_modified_advice[row];
                 }
                 z.push(tmp);
             }
