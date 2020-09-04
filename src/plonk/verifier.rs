@@ -112,7 +112,7 @@ impl<C: CurveAffine> Proof<C> {
             }
 
             let mut right = self.permutation_product_inv_evals[permutation_index];
-            let mut current_delta = x_0;
+            let mut current_delta = x_0 * &x_3;
             for advice_eval in queries
                 .iter()
                 .map(|&query_index| self.advice_evals[query_index])
