@@ -251,6 +251,10 @@ impl<G: Group> EvaluationDomain<G> {
         self.omega
     }
 
+    pub fn get_extended_omega(&self) -> G::Scalar {
+        self.extended_omega
+    }
+
     pub fn get_omega_inv(&self) -> G::Scalar {
         self.omega_inv
     }

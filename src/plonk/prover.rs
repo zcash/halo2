@@ -330,7 +330,7 @@ impl<C: CurveAffine> Proof<C> {
 
             let mut right = permutation_product_cosets_inv[permutation_index].clone();
             let mut current_delta = x_0 * &C::Scalar::ZETA;
-            let step = domain.get_omega();
+            let step = domain.get_extended_omega();
             for advice in queries
                 .iter()
                 .map(|&query_index| &advice_cosets[query_index])
