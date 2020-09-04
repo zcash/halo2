@@ -303,15 +303,15 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
-        for (permutation_index, queries) in srs.meta.permutation_queries.iter().enumerate() {
+        for (permutation_index, wires) in srs.meta.permutations.iter().enumerate() {
             for h in h_poly.iter_mut() {
                 *h *= &x_2;
             }
 
             let mut left = permutation_product_cosets[permutation_index].clone();
-            for (advice, permutation) in queries
+            for (advice, permutation) in wires
                 .iter()
-                .map(|&query_index| &advice_cosets[query_index])
+                .map(|&wire_index| &advice_cosets[wire_index.0])
                 .zip(srs.permutation_cosets[permutation_index].iter())
             {
                 // TODO: parallelize
@@ -325,9 +325,9 @@ impl<C: CurveAffine> Proof<C> {
             let mut right = permutation_product_cosets_inv[permutation_index].clone();
             let mut current_delta = x_0 * &C::Scalar::ZETA;
             let step = domain.get_extended_omega();
-            for advice in queries
+            for advice in wires
                 .iter()
-                .map(|&query_index| &advice_cosets[query_index])
+                .map(|&wire_index| &advice_cosets[wire_index.0])
             {
                 // TODO: parallelize
                 let mut beta_term = current_delta;
