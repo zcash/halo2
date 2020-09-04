@@ -286,9 +286,6 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // l_0(X) * (1 - z(X)) = 0
-        // => l_0(X) - l_0(X) z(X) = 0
-        // We negate, so
-        // => l_0(X) z(X) - l_0(X) = 0
         // TODO: parallelize
         for coset in permutation_product_cosets.iter() {
             for h in h_poly.iter_mut() {
@@ -297,10 +294,7 @@ impl<C: CurveAffine> Proof<C> {
 
             let mut tmp = srs.l0.clone();
             for (t, c) in tmp.iter_mut().zip(coset.iter()) {
-                *t *= c;
-            }
-            for (t, c) in tmp.iter_mut().zip(srs.l0.iter()) {
-                *t -= c;
+                *t *= &(C::Scalar::one() - c);
             }
 
             for (h, e) in h_poly.iter_mut().zip(tmp.into_iter()) {
