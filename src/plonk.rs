@@ -282,7 +282,7 @@ fn test_proving() {
 
             for _ in 0..10 {
                 let mut a_squared = None;
-                let (_, _, c0) = cs.raw_multiply(|| {
+                let (a0, _, c0) = cs.raw_multiply(|| {
                     a_squared = self.a.map(|a| a.square());
                     Ok((
                         self.a.ok_or(Error::SynthesisError)?,
@@ -290,7 +290,7 @@ fn test_proving() {
                         a_squared.ok_or(Error::SynthesisError)?,
                     ))
                 })?;
-                let (_, b1, _) = cs.raw_add(|| {
+                let (a1, b1, _) = cs.raw_add(|| {
                     let fin = a_squared.and_then(|a2| self.a.map(|a| a + a2));
                     Ok((
                         self.a.ok_or(Error::SynthesisError)?,
@@ -298,6 +298,7 @@ fn test_proving() {
                         fin.ok_or(Error::SynthesisError)?,
                     ))
                 })?;
+                cs.copy(a0, a1)?;
                 cs.copy(b1, c0)?;
             }
 
@@ -306,7 +307,7 @@ fn test_proving() {
     }
 
     let circuit: MyCircuit<Fp> = MyCircuit {
-        a: Some((-Fp::from_u64(2) + Fp::ROOT_OF_UNITY).pow(&[100, 0, 0, 0])),
+        a: Some(Fp::random()),
     };
 
     let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None };

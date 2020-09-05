@@ -15,7 +15,9 @@ impl<C: CurveAffine> SRS<C> {
     ) -> Result<Self, Error> {
         struct Assembly<F: Field> {
             fixed: Vec<Vec<F>>,
-            copy: Vec<Vec<Vec<(usize, usize)>>>,
+            mapping: Vec<Vec<Vec<(usize, usize)>>>,
+            aux: Vec<Vec<Vec<(usize, usize)>>>,
+            sizes: Vec<Vec<Vec<usize>>>,
         }
 
         impl<F: Field> ConstraintSystem<F> for Assembly<F> {
@@ -52,24 +54,44 @@ impl<C: CurveAffine> SRS<C> {
                 right_wire: usize,
                 right_row: usize,
             ) -> Result<(), Error> {
-                let left: (usize, usize) = *self.copy[permutation]
-                    .get_mut(left_wire)
-                    .and_then(|wire| wire.get_mut(left_row))
-                    .ok_or(Error::BoundsFailure)?;
-
-                let right: (usize, usize) = *self.copy[permutation]
-                    .get_mut(right_wire)
-                    .and_then(|wire| wire.get_mut(right_row))
-                    .ok_or(Error::BoundsFailure)?;
-
-                if left == (left_wire, left_row) || right == (right_wire, right_row) {
-                    // Don't perform the copy constraint because it will undo
-                    // the effect of the permutation.
-                } else {
-                    self.copy[permutation][left_wire][left_row] = right;
-
-                    self.copy[permutation][right_wire][right_row] = left;
+                // Check bounds first
+                if permutation >= self.mapping.len()
+                    || left_wire >= self.mapping[permutation].len()
+                    || left_row >= self.mapping[permutation][left_wire].len()
+                    || right_wire >= self.mapping[permutation].len()
+                    || right_row >= self.mapping[permutation][right_wire].len()
+                {
+                    return Err(Error::BoundsFailure);
                 }
+
+                let mut left_cycle = self.aux[permutation][left_wire][left_row];
+                let mut right_cycle = self.aux[permutation][right_wire][right_row];
+
+                if left_cycle == right_cycle {
+                    return Ok(());
+                }
+
+                if self.sizes[permutation][left_cycle.0][left_cycle.1]
+                    < self.sizes[permutation][right_cycle.0][right_cycle.1]
+                {
+                    std::mem::swap(&mut left_cycle, &mut right_cycle);
+                }
+
+                self.sizes[permutation][left_cycle.0][left_cycle.1] +=
+                    self.sizes[permutation][right_cycle.0][right_cycle.1];
+                let mut i = right_cycle;
+                loop {
+                    self.aux[permutation][i.0][i.1] = left_cycle;
+                    i = self.mapping[permutation][i.0][i.1];
+                    if i == right_cycle {
+                        break;
+                    }
+                }
+
+                let tmp = self.mapping[permutation][left_wire][left_row];
+                self.mapping[permutation][left_wire][left_row] =
+                    self.mapping[permutation][right_wire][right_row];
+                self.mapping[permutation][right_wire][right_row] = tmp;
 
                 Ok(())
             }
@@ -126,7 +148,9 @@ impl<C: CurveAffine> SRS<C> {
 
         let mut assembly: Assembly<C::Scalar> = Assembly {
             fixed: vec![vec![C::Scalar::zero(); params.n as usize]; meta.num_fixed_wires],
-            copy: vec![],
+            mapping: vec![],
+            aux: vec![],
+            sizes: vec![],
         };
 
         // Initialize the copy vector to keep track of copy constraints in all
@@ -137,7 +161,11 @@ impl<C: CurveAffine> SRS<C> {
                 // Computes [(i, 0), (i, 1), ..., (i, n - 1)]
                 wires.push((0..params.n).map(|j| (i, j as usize)).collect());
             }
-            assembly.copy.push(wires);
+            assembly.mapping.push(wires.clone());
+            assembly.aux.push(wires);
+            assembly
+                .sizes
+                .push(vec![vec![1usize; params.n as usize]; permutation.len()]);
         }
 
         // Synthesize the circuit to obtain SRS
@@ -162,7 +190,7 @@ impl<C: CurveAffine> SRS<C> {
                         // assembly.copy[permutation_index] is indexed by wire
                         // i, and then indexed by row j, obtaining the index of
                         // the permuted value in deltaomega.
-                        let (permuted_i, permuted_j) = assembly.copy[permutation_index][i][j];
+                        let (permuted_i, permuted_j) = assembly.mapping[permutation_index][i][j];
                         deltaomega[permuted_i][permuted_j]
                     })
                     .collect();
