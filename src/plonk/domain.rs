@@ -2,7 +2,7 @@ use crate::arithmetic::{best_fft, parallelize, Field, Group};
 
 /// Describes a relative location in the evaluation domain; applying a rotation
 /// by i will rotate the vector in the evaluation domain by i.
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Rotation(pub i32);
 
 impl Default for Rotation {

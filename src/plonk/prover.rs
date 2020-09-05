@@ -562,13 +562,11 @@ impl<C: CurveAffine> Proof<C> {
 
         let x_6: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-        let mut q_evals = vec![];
+        let mut q_evals = vec![C::Scalar::zero(); meta.rotations.len()];
 
         for (_, &point_index) in meta.rotations.iter() {
-            q_evals.push(eval_polynomial(
-                &q_polys[point_index.0].as_ref().unwrap(),
-                x_6,
-            ));
+            q_evals[point_index.0] =
+                eval_polynomial(&q_polys[point_index.0].as_ref().unwrap(), x_6);
         }
 
         for eval in q_evals.iter() {

@@ -1,6 +1,6 @@
 use core::cmp::max;
 use core::ops::{Add, Mul};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use super::Error;
 use crate::arithmetic::Field;
@@ -160,7 +160,7 @@ pub struct MetaCircuit<F> {
     pub(crate) fixed_queries: Vec<(FixedWire, Rotation)>,
 
     // Mapping from a witness vector rotation to the index in the point vector.
-    pub(crate) rotations: HashMap<Rotation, PointIndex>,
+    pub(crate) rotations: BTreeMap<Rotation, PointIndex>,
 
     // Vector of permutation arguments, where each corresponds to a set of wires
     // that are involved in a permutation argument. As an example, we could have
@@ -174,7 +174,7 @@ pub struct MetaCircuit<F> {
 
 impl<F: Field> Default for MetaCircuit<F> {
     fn default() -> MetaCircuit<F> {
-        let mut rotations = HashMap::new();
+        let mut rotations = BTreeMap::new();
         rotations.insert(Rotation::default(), PointIndex(0));
 
         MetaCircuit {
@@ -195,9 +195,9 @@ impl<F: Field> MetaCircuit<F> {
     pub fn permutation(&mut self, wires: &[AdviceWire]) -> usize {
         let index = self.permutations.len();
         if index == 0 {
-            // no permutations
-            let point_idx = self.rotations.len();
-            self.rotations.insert(Rotation(-1), PointIndex(point_idx));
+            let at = Rotation(-1);
+            let len = self.rotations.len();
+            self.rotations.entry(at).or_insert(PointIndex(len));
         }
         self.permutations.push(wires.to_vec());
 
