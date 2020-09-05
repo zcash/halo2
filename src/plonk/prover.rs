@@ -156,8 +156,8 @@ impl<C: CurveAffine> Proof<C> {
                     .iter_mut()
                     .zip(permuted_wire_values.iter())
                 {
-                    *tmp_advice_value += &(x_0 * permuted_advice_value);
-                    *tmp_advice_value += &x_1;
+                    *tmp_advice_value += &(x_0 * permuted_advice_value); // p_j(\omega^i) + \beta s_j(\omega^i)
+                    *tmp_advice_value += &x_1; // p_j(\omega^i) + \beta s_j(\omega^i) + \gamma
                 }
                 modified_advice.push(tmp_advice_values);
             }
@@ -175,15 +175,13 @@ impl<C: CurveAffine> Proof<C> {
                 // For each row i, we compute
                 // p_j(\omega^i) + \delta^j \omega^i \beta + \gamma
                 // for the jth wire of the permutation
-                for (advice_value, modified_advice) in witness.advice[wire.0]
+                for (tmp_advice_value, modified_advice) in witness.advice[wire.0]
                     .iter_mut()
                     .zip(modified_advice.iter_mut())
                 {
-                    let mut tmp = deltaomega; // \delta^j \omega^i
-                    tmp *= &x_0; // \delta^j \omega^i \beta
-                    tmp += &x_1; // \delta^j \omega^i \beta + \gamma
-                    tmp += advice_value; // p_j(\omega^i) + \delta^j \omega^i \beta + \gamma
-                    *modified_advice *= &tmp;
+                    *tmp_advice_value += &(deltaomega * &x_0); // p_j(\omega^i) + \delta^j \omega^i \beta
+                    *tmp_advice_value += &x_1; // p_j(\omega^i) + \delta^j \omega^i \beta + \gamma
+                    *modified_advice *= tmp_advice_value;
                     deltaomega *= &domain.get_omega();
                 }
                 deltaomega *= &C::Scalar::DELTA;

@@ -157,7 +157,7 @@ impl<C: CurveAffine> SRS<C> {
         // the permutation arguments.
         for permutation in &meta.permutations {
             let mut wires = vec![];
-            for (i, _) in permutation.iter().enumerate() {
+            for i in 0..permutation.len() {
                 // Computes [(i, 0), (i, 1), ..., (i, n - 1)]
                 wires.push((0..params.n).map(|j| (i, j as usize)).collect());
             }
@@ -182,7 +182,7 @@ impl<C: CurveAffine> SRS<C> {
             let mut inner_permutations = vec![];
             let mut polys = vec![];
             let mut cosets = vec![];
-            for (i, _) in permutation.iter().enumerate() {
+            for i in 0..permutation.len() {
                 // Computes the permutation polynomial based on the permutation
                 // description in the assembly.
                 let permutation_poly: Vec<_> = (0..params.n as usize)

@@ -213,14 +213,14 @@ fn test_proving() {
                 Variable(self.config.c, index),
             ))
         }
-        fn copy(&mut self, a: Variable, b: Variable) -> Result<(), Error> {
-            let left_wire = match a.0 {
+        fn copy(&mut self, left: Variable, right: Variable) -> Result<(), Error> {
+            let left_wire = match left.0 {
                 x if x == self.config.a => 0,
                 x if x == self.config.b => 1,
                 x if x == self.config.c => 2,
                 _ => unreachable!(),
             };
-            let right_wire = match b.0 {
+            let right_wire = match right.0 {
                 x if x == self.config.a => 0,
                 x if x == self.config.b => 1,
                 x if x == self.config.c => 2,
@@ -228,7 +228,7 @@ fn test_proving() {
             };
 
             self.cs
-                .copy(self.config.perm, left_wire, a.1, right_wire, b.1)
+                .copy(self.config.perm, left_wire, left.1, right_wire, right.1)
         }
     }
 
