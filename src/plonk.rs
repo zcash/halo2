@@ -314,9 +314,11 @@ fn test_proving() {
     // Initialize the SRS
     let srs = SRS::generate(&params, &empty_circuit).expect("SRS generation should not fail");
 
-    // Create a proof
-    let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &srs, &circuit)
-        .expect("proof generation should not fail");
+    for _ in 0..100 {
+        // Create a proof
+        let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &srs, &circuit)
+            .expect("proof generation should not fail");
 
-    assert!(proof.verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs));
+        assert!(proof.verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs));
+    }
 }

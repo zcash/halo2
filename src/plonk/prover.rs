@@ -152,7 +152,10 @@ impl<C: CurveAffine> Proof<C> {
                 // For each row i, compute
                 // p_j(\omega^i) + \beta s_j(\omega^i) + \gamma
                 // where p_j(omega^i) = tmp[i]
-                for (tmp_advice_value, permuted_advice_value) in tmp_advice_values.iter_mut().zip(permuted_wire_values.iter()) {
+                for (tmp_advice_value, permuted_advice_value) in tmp_advice_values
+                    .iter_mut()
+                    .zip(permuted_wire_values.iter())
+                {
                     *tmp_advice_value += &(x_0 * permuted_advice_value);
                     *tmp_advice_value += &x_1;
                 }
@@ -326,10 +329,7 @@ impl<C: CurveAffine> Proof<C> {
             let mut right = permutation_product_cosets_inv[permutation_index].clone();
             let mut current_delta = x_0 * &C::Scalar::ZETA;
             let step = domain.get_extended_omega();
-            for advice in wires
-                .iter()
-                .map(|&wire_index| &advice_cosets[wire_index.0])
-            {
+            for advice in wires.iter().map(|&wire_index| &advice_cosets[wire_index.0]) {
                 // TODO: parallelize
                 let mut beta_term = current_delta;
                 for (right, advice) in right.iter_mut().zip(advice.iter()) {
@@ -398,7 +398,7 @@ impl<C: CurveAffine> Proof<C> {
 
         let permutation_product_inv_evals: Vec<C::Scalar> = permutation_product_polys
             .iter()
-            .map(|poly| eval_polynomial(poly, srs.domain.get_omega_inv() * &x_3))
+            .map(|poly| eval_polynomial(poly, domain.rotate_omega(x_3, Rotation(-1))))
             .collect();
 
         let permutation_evals: Vec<Vec<C::Scalar>> = srs
