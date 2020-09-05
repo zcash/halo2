@@ -243,7 +243,6 @@ impl<C: CurveAffine> SRS<C> {
 
         Ok(SRS {
             domain,
-            deltaomega,
             l0,
             fixed_commitments,
             fixed_polys,

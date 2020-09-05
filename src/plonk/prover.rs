@@ -170,25 +170,23 @@ impl<C: CurveAffine> Proof<C> {
 
             // Iterate over each wire again, this time finishing the computation
             // of the entire fraction by computing the numerators
-            for ((wire, modified_advice), deltaomega) in wires
-                .iter()
-                .zip(modified_advice.iter_mut())
-                .zip(srs.deltaomega.iter())
-            {
+            let mut deltaomega = C::Scalar::one();
+            for (wire, modified_advice) in wires.iter().zip(modified_advice.iter_mut()) {
                 // For each row i, we compute
                 // p_j(\omega^i) + \delta^j \omega^i \beta + \gamma
                 // for the jth wire of the permutation
-                for ((advice_value, modified_advice), deltaomega) in witness.advice[wire.0]
+                for (advice_value, modified_advice) in witness.advice[wire.0]
                     .iter_mut()
                     .zip(modified_advice.iter_mut())
-                    .zip(deltaomega.iter())
                 {
-                    let mut tmp = *deltaomega; // \delta^j \omega^i
+                    let mut tmp = deltaomega; // \delta^j \omega^i
                     tmp *= &x_0; // \delta^j \omega^i \beta
                     tmp += &x_1; // \delta^j \omega^i \beta + \gamma
                     tmp += advice_value; // p_j(\omega^i) + \delta^j \omega^i \beta + \gamma
                     *modified_advice *= &tmp;
+                    deltaomega *= &domain.get_omega();
                 }
+                deltaomega *= &C::Scalar::DELTA;
             }
 
             // The modified_advice vector is a vector of vectors of fractions of
