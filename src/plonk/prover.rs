@@ -221,6 +221,7 @@ impl<C: CurveAffine> Proof<C> {
 
             permutation_product_commitments.push(params.commit_lagrange(&z, blind).to_affine());
             permutation_product_blinds.push(blind);
+            let z = domain.obtain_poly(z);
             permutation_product_polys.push(z.clone());
             permutation_product_cosets.push(domain.obtain_coset(z.clone(), Rotation::default()));
             permutation_product_cosets_inv.push(domain.obtain_coset(z, Rotation(-1)));
