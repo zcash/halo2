@@ -107,6 +107,8 @@ fn test_proving() {
         a: AdviceWire,
         b: AdviceWire,
         c: AdviceWire,
+        d: AdviceWire,
+        e: AdviceWire,
 
         sa: FixedWire,
         sb: FixedWire,
@@ -160,8 +162,14 @@ fn test_proving() {
                 value = Some(f()?);
                 Ok(value.ok_or(Error::SynthesisError)?.0)
             })?;
+            self.cs.assign_advice(self.config.d, index, || {
+                Ok(value.ok_or(Error::SynthesisError)?.0.square().square())
+            })?;
             self.cs.assign_advice(self.config.b, index, || {
                 Ok(value.ok_or(Error::SynthesisError)?.1)
+            })?;
+            self.cs.assign_advice(self.config.e, index, || {
+                Ok(value.ok_or(Error::SynthesisError)?.1.square().square())
             })?;
             self.cs.assign_advice(self.config.c, index, || {
                 Ok(value.ok_or(Error::SynthesisError)?.2)
@@ -192,8 +200,14 @@ fn test_proving() {
                 value = Some(f()?);
                 Ok(value.ok_or(Error::SynthesisError)?.0)
             })?;
+            self.cs.assign_advice(self.config.d, index, || {
+                Ok(value.ok_or(Error::SynthesisError)?.0.square().square())
+            })?;
             self.cs.assign_advice(self.config.b, index, || {
                 Ok(value.ok_or(Error::SynthesisError)?.1)
+            })?;
+            self.cs.assign_advice(self.config.e, index, || {
+                Ok(value.ok_or(Error::SynthesisError)?.1.square().square())
             })?;
             self.cs.assign_advice(self.config.c, index, || {
                 Ok(value.ok_or(Error::SynthesisError)?.2)
@@ -236,19 +250,25 @@ fn test_proving() {
         type Config = PLONKConfig;
 
         fn configure(meta: &mut MetaCircuit<F>) -> PLONKConfig {
+            let e = meta.advice_wire();
             let a = meta.advice_wire();
             let b = meta.advice_wire();
+            let sf = meta.fixed_wire();
             let c = meta.advice_wire();
+            let d = meta.advice_wire();
 
             let perm = meta.permutation(&[a, b, c]);
 
+            let sm = meta.fixed_wire();
             let sa = meta.fixed_wire();
             let sb = meta.fixed_wire();
             let sc = meta.fixed_wire();
-            let sm = meta.fixed_wire();
 
             meta.create_gate(|meta| {
+                let d = meta.query_advice(d, 1);
                 let a = meta.query_advice(a, 0);
+                let sf = meta.query_fixed(sf, 0);
+                let e = meta.query_advice(e, -1);
                 let b = meta.query_advice(b, 0);
                 let c = meta.query_advice(c, 0);
 
@@ -257,13 +277,15 @@ fn test_proving() {
                 let sc = meta.query_fixed(sc, 0);
                 let sm = meta.query_fixed(sm, 0);
 
-                a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))
+                a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one())) + sf * (d * e)
             });
 
             PLONKConfig {
                 a,
                 b,
                 c,
+                d,
+                e,
                 sa,
                 sb,
                 sc,
