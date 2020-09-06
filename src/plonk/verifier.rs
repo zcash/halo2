@@ -98,13 +98,13 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
-        for (permutation_index, queries) in srs.meta.permutation_queries.iter().enumerate() {
+        for (permutation_index, wires) in srs.meta.permutations.iter().enumerate() {
             h_eval *= &x_2;
 
             let mut left = self.permutation_product_evals[permutation_index];
-            for (advice_eval, permutation_eval) in queries
+            for (advice_eval, permutation_eval) in wires
                 .iter()
-                .map(|&query_index| self.advice_evals[query_index])
+                .map(|&(_, query_index)| self.advice_evals[query_index])
                 .zip(self.permutation_evals[permutation_index].iter())
             {
                 left *= &(advice_eval + &(x_0 * permutation_eval) + &x_1);
@@ -112,9 +112,9 @@ impl<C: CurveAffine> Proof<C> {
 
             let mut right = self.permutation_product_inv_evals[permutation_index];
             let mut current_delta = x_0 * &x_3;
-            for advice_eval in queries
+            for advice_eval in wires
                 .iter()
-                .map(|&query_index| self.advice_evals[query_index])
+                .map(|&(_, query_index)| self.advice_evals[query_index])
             {
                 right *= &(advice_eval + &current_delta + &x_1);
                 current_delta *= &C::Scalar::DELTA;

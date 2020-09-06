@@ -163,13 +163,13 @@ pub struct MetaCircuit<F> {
     pub(crate) rotations: BTreeMap<Rotation, PointIndex>,
 
     // Vector of permutation arguments, where each corresponds to a set of wires
-    // that are involved in a permutation argument. As an example, we could have
-    // a permutation argument between wires (A, B, C) which allows copy
-    // constraints to be enforced between advice wire values in A, B and C, and
-    // another permutation between wires (B, C, D) which allows the same with D
-    // instead of A.
-    pub(crate) permutations: Vec<Vec<AdviceWire>>,
-    pub(crate) permutation_queries: Vec<Vec<usize>>,
+    // that are involved in a permutation argument, as well as the corresponding
+    // query index for each wire. As an example, we could have a permutation
+    // argument between wires (A, B, C) which allows copy constraints to be
+    // enforced between advice wire values in A, B and C, and another
+    // permutation between wires (B, C, D) which allows the same with D instead
+    // of A.
+    pub(crate) permutations: Vec<Vec<(AdviceWire, usize)>>,
 }
 
 impl<F: Field> Default for MetaCircuit<F> {
@@ -185,7 +185,6 @@ impl<F: Field> Default for MetaCircuit<F> {
             advice_queries: Vec::new(),
             rotations,
             permutations: Vec::new(),
-            permutation_queries: Vec::new(),
         }
     }
 }
@@ -199,13 +198,11 @@ impl<F: Field> MetaCircuit<F> {
             let len = self.rotations.len();
             self.rotations.entry(at).or_insert(PointIndex(len));
         }
-        self.permutations.push(wires.to_vec());
-
-        let mut queries = vec![];
-        for wire in wires {
-            queries.push(self.query_advice_index(*wire, 0));
-        }
-        self.permutation_queries.push(queries);
+        let wires = wires
+            .iter()
+            .map(|&wire| (wire, self.query_advice_index(wire, 0)))
+            .collect();
+        self.permutations.push(wires);
 
         index
     }
