@@ -32,6 +32,43 @@ pub trait Group: Copy + Clone + Send + Sync + 'static {
     fn group_scale(&mut self, by: &Self::Scalar);
 }
 
+/// Extension trait for iterators over mutable field elements which allows those
+/// field elements to be inverted in a batch.
+pub trait BatchInvert<F: Field> {
+    /// Consume this iterator and invert each field element (when nonzero),
+    /// returning the inverse of all nonzero field elements.
+    fn batch_invert(self) -> F;
+}
+
+impl<'a, F, I> BatchInvert<F> for I
+where
+    F: Field,
+    I: IntoIterator<Item = &'a mut F>,
+{
+    fn batch_invert(self) -> F {
+        let mut acc = F::one();
+        let mut iter = self.into_iter();
+        let mut tmp = Vec::with_capacity(iter.size_hint().0);
+        while let Some(p) = iter.next() {
+            let q = *p;
+            tmp.push((acc, p));
+            acc = F::conditional_select(&(acc * q), &acc, q.is_zero());
+        }
+        acc = acc.invert().unwrap();
+        let allinv = acc;
+
+        for (tmp, p) in tmp.into_iter().rev() {
+            let skip = p.is_zero();
+
+            let tmp = tmp * acc;
+            acc = F::conditional_select(&(acc * *p), &acc, skip);
+            *p = F::conditional_select(&tmp, p, skip);
+        }
+
+        allinv
+    }
+}
+
 /// This is a 128-bit verifier challenge.
 #[derive(Copy, Clone, Debug)]
 pub struct Challenge(pub(crate) u128);
