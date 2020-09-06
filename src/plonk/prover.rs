@@ -304,7 +304,6 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // l_0(X) * (1 - z(X)) = 0
-        // TODO: parallelize
         for coset in permutation_product_cosets.iter() {
             parallelize(&mut h_poly, |h, start| {
                 for ((h, c), l0) in h
