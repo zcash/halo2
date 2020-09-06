@@ -254,10 +254,11 @@ impl<C: CurveAffine> Proof<C> {
         let mut h_poly = vec![C::Scalar::zero(); domain.coset_len()];
         for (i, poly) in meta.gates.iter().enumerate() {
             if i != 0 {
-                // TODO: parallelize
-                for h in h_poly.iter_mut() {
-                    *h *= &x_2;
-                }
+                parallelize(&mut h_poly, |a, _| {
+                    for a in a.iter_mut() {
+                        *a *= &x_2;
+                    }
+                });
             }
 
             let evaluation: Vec<C::Scalar> = poly.evaluate(
@@ -294,35 +295,36 @@ impl<C: CurveAffine> Proof<C> {
             if i == 0 {
                 h_poly = evaluation;
             } else {
-                // TODO: parallelize
-                for (h, e) in h_poly.iter_mut().zip(evaluation.into_iter()) {
-                    *h += &e;
-                }
+                parallelize(&mut h_poly, |a, start| {
+                    for (a, b) in a.iter_mut().zip(evaluation[start..].iter()) {
+                        *a += b;
+                    }
+                });
             }
         }
 
         // l_0(X) * (1 - z(X)) = 0
         // TODO: parallelize
         for coset in permutation_product_cosets.iter() {
-            for h in h_poly.iter_mut() {
-                *h *= &x_2;
-            }
-
-            let mut tmp = srs.l0.clone();
-            for (t, c) in tmp.iter_mut().zip(coset.iter()) {
-                *t *= &(C::Scalar::one() - c);
-            }
-
-            for (h, e) in h_poly.iter_mut().zip(tmp.into_iter()) {
-                *h += &e;
-            }
+            parallelize(&mut h_poly, |h, start| {
+                for ((h, c), l0) in h
+                    .iter_mut()
+                    .zip(coset[start..].iter())
+                    .zip(srs.l0[start..].iter())
+                {
+                    *h *= &x_2;
+                    *h += &(*l0 * &(C::Scalar::one() - c));
+                }
+            });
         }
 
         // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
         for (permutation_index, wires) in srs.meta.permutations.iter().enumerate() {
-            for h in h_poly.iter_mut() {
-                *h *= &x_2;
-            }
+            parallelize(&mut h_poly, |a, _| {
+                for a in a.iter_mut() {
+                    *a *= &x_2;
+                }
+            });
 
             let mut left = permutation_product_cosets[permutation_index].clone();
             for (advice, permutation) in wires
@@ -330,34 +332,41 @@ impl<C: CurveAffine> Proof<C> {
                 .map(|&wire_index| &advice_cosets[wire_index.0])
                 .zip(srs.permutation_cosets[permutation_index].iter())
             {
-                // TODO: parallelize
-                for ((left, advice), permutation) in
-                    left.iter_mut().zip(advice.iter()).zip(permutation.iter())
-                {
-                    *left *= &(*advice + &(x_0 * permutation) + &x_1);
-                }
+                parallelize(&mut left, |left, start| {
+                    for ((left, advice), permutation) in left
+                        .iter_mut()
+                        .zip(advice[start..].iter())
+                        .zip(permutation[start..].iter())
+                    {
+                        *left *= &(*advice + &(x_0 * permutation) + &x_1);
+                    }
+                });
             }
 
             let mut right = permutation_product_cosets_inv[permutation_index].clone();
             let mut current_delta = x_0 * &C::Scalar::ZETA;
             let step = domain.get_extended_omega();
             for advice in wires.iter().map(|&wire_index| &advice_cosets[wire_index.0]) {
-                // TODO: parallelize
-                let mut beta_term = current_delta;
-                for (right, advice) in right.iter_mut().zip(advice.iter()) {
-                    *right *= &(*advice + &beta_term + &x_1);
-                    beta_term *= &step;
-                }
+                parallelize(&mut right, move |right, start| {
+                    let mut beta_term = current_delta * &step.pow_vartime(&[start as u64, 0, 0, 0]);
+                    for (right, advice) in right.iter_mut().zip(advice[start..].iter()) {
+                        *right *= &(*advice + &beta_term + &x_1);
+                        beta_term *= &step;
+                    }
+                });
                 current_delta *= &C::Scalar::DELTA;
             }
 
-            for (h, e) in h_poly.iter_mut().zip(left.into_iter()) {
-                *h += &e;
-            }
-
-            for (h, e) in h_poly.iter_mut().zip(right.into_iter()) {
-                *h -= &e;
-            }
+            parallelize(&mut h_poly, |a, start| {
+                for ((h, left), right) in a
+                    .iter_mut()
+                    .zip(left[start..].iter())
+                    .zip(right[start..].iter())
+                {
+                    *h += &left;
+                    *h -= &right;
+                }
+            });
         }
 
         // Divide by t(X) = X^{params.n} - 1.
