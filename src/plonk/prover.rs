@@ -71,14 +71,6 @@ impl<C: CurveAffine> Proof<C> {
         let mut meta = MetaCircuit::default();
         let config = ConcreteCircuit::configure(&mut meta);
 
-        // Get the largest permutation argument length in terms of the number of
-        // advice wires involved.
-        let mut largest_permutation_length = 0;
-        for permutation in &meta.permutations {
-            largest_permutation_length =
-                std::cmp::max(permutation.len(), largest_permutation_length);
-        }
-
         let mut witness = WitnessCollection {
             advice: vec![vec![C::Scalar::zero(); params.n as usize]; meta.num_advice_wires],
         };
