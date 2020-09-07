@@ -1,8 +1,8 @@
-use crate::arithmetic::{best_fft, parallelize, Field, Group};
+use crate::arithmetic::{best_fft, parallelize, BatchInvert, Field, Group};
 
 /// Describes a relative location in the evaluation domain; applying a rotation
 /// by i will rotate the vector in the evaluation domain by i.
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Rotation(pub i32);
 
 impl Default for Rotation {
@@ -29,6 +29,7 @@ pub struct EvaluationDomain<G: Group> {
     ifft_divisor: G::Scalar,
     extended_ifft_divisor: G::Scalar,
     t_evaluations: Vec<G::Scalar>,
+    barycentric_weight: G::Scalar,
 }
 
 impl<G: Group> EvaluationDomain<G> {
@@ -56,23 +57,19 @@ impl<G: Group> EvaluationDomain<G> {
             extended_omega = extended_omega.square();
         }
         let extended_omega = extended_omega; // 2^{j+k}'th root of unity
-        let extended_omega_inv = extended_omega.invert().unwrap();
+        let mut extended_omega_inv = extended_omega; // Inversion computed later
 
         let mut omega = extended_omega;
         for _ in k..extended_k {
             omega = omega.square();
         }
         let omega = omega; // 2^{k}'th root of unity
-        let omega_inv = omega.invert().unwrap();
+        let mut omega_inv = omega; // Inversion computed later
 
         // We use zeta here because we know it generates a coset, and it's available
         // already.
         let g_coset = G::Scalar::ZETA;
         let g_coset_inv = g_coset.square();
-
-        // TODO: merge these inversions together with t_evaluations batch inversion?
-        let ifft_divisor = G::Scalar::from_u64(1 << k).invert().unwrap();
-        let extended_ifft_divisor = G::Scalar::from_u64(1 << extended_k).invert().unwrap();
 
         let mut t_evaluations = Vec::with_capacity(1 << (extended_k - k));
         {
@@ -96,8 +93,25 @@ impl<G: Group> EvaluationDomain<G> {
             }
 
             // Invert, because we're dividing by this polynomial.
-            G::Scalar::batch_invert(&mut t_evaluations);
+            // We invert in a batch, below.
         }
+
+        let mut ifft_divisor = G::Scalar::from_u64(1 << k); // Inversion computed later
+        let mut extended_ifft_divisor = G::Scalar::from_u64(1 << extended_k); // Inversion computed later
+
+        // The barycentric weight of 1 over the evaluation domain
+        // 1 / \prod_{i != 0} (1 - omega^i)
+        let mut barycentric_weight = G::Scalar::from(n); // Inversion computed later
+
+        // Compute batch inversion
+        t_evaluations
+            .iter_mut()
+            .chain(Some(&mut ifft_divisor))
+            .chain(Some(&mut extended_ifft_divisor))
+            .chain(Some(&mut barycentric_weight))
+            .chain(Some(&mut extended_omega_inv))
+            .chain(Some(&mut omega_inv))
+            .batch_invert();
 
         EvaluationDomain {
             n,
@@ -113,6 +127,7 @@ impl<G: Group> EvaluationDomain<G> {
             ifft_divisor,
             extended_ifft_divisor,
             t_evaluations,
+            barycentric_weight,
         }
     }
 
@@ -245,6 +260,10 @@ impl<G: Group> EvaluationDomain<G> {
         self.omega
     }
 
+    pub fn get_extended_omega(&self) -> G::Scalar {
+        self.extended_omega
+    }
+
     pub fn get_omega_inv(&self) -> G::Scalar {
         self.omega_inv
     }
@@ -259,5 +278,9 @@ impl<G: Group> EvaluationDomain<G> {
                 .pow(&[rotation.0.abs() as u64, 0, 0, 0]);
         }
         point
+    }
+
+    pub fn get_barycentric_weight(&self) -> G::Scalar {
+        self.barycentric_weight
     }
 }

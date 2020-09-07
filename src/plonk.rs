@@ -29,9 +29,14 @@ use domain::EvaluationDomain;
 #[derive(Debug)]
 pub struct SRS<C: CurveAffine> {
     domain: EvaluationDomain<C::Scalar>,
+    l0: Vec<C::Scalar>,
     fixed_commitments: Vec<C>,
     fixed_polys: Vec<Vec<C::Scalar>>,
     fixed_cosets: Vec<Vec<C::Scalar>>,
+    permutation_commitments: Vec<Vec<C>>,
+    permutations: Vec<Vec<Vec<C::Scalar>>>,
+    permutation_polys: Vec<Vec<Vec<C::Scalar>>>,
+    permutation_cosets: Vec<Vec<Vec<C::Scalar>>>,
     meta: MetaCircuit<C::Scalar>,
 }
 
@@ -41,6 +46,10 @@ pub struct SRS<C: CurveAffine> {
 pub struct Proof<C: CurveAffine> {
     advice_commitments: Vec<C>,
     h_commitments: Vec<C>,
+    permutation_product_commitments: Vec<C>,
+    permutation_product_evals: Vec<C::Scalar>,
+    permutation_product_inv_evals: Vec<C::Scalar>,
+    permutation_evals: Vec<Vec<C::Scalar>>,
     advice_evals: Vec<C::Scalar>,
     fixed_evals: Vec<C::Scalar>,
     h_evals: Vec<C::Scalar>,
@@ -87,6 +96,10 @@ fn test_proving() {
     use std::marker::PhantomData;
     const K: u32 = 5;
 
+    /// This represents an advice wire at a certain row in the MetaCircuit
+    #[derive(Copy, Clone, Debug)]
+    pub struct Variable(AdviceWire, usize);
+
     // Initialize the polynomial commitment parameters
     let params: Params<EqAffine> = Params::new::<DummyHash<Fq>>(K);
 
@@ -94,15 +107,17 @@ fn test_proving() {
         a: AdviceWire,
         b: AdviceWire,
         c: AdviceWire,
+        d: AdviceWire,
+        e: AdviceWire,
 
         sa: FixedWire,
         sb: FixedWire,
         sc: FixedWire,
         sm: FixedWire,
-    }
 
-    #[derive(Copy, Clone)]
-    struct Variable(AdviceWire, usize);
+        perm: usize,
+        perm2: usize,
+    }
 
     trait StandardCS<FF: Field> {
         fn raw_multiply<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
@@ -111,6 +126,7 @@ fn test_proving() {
         fn raw_add<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
         where
             F: FnOnce() -> Result<(FF, FF, FF), Error>;
+        fn copy(&mut self, a: Variable, b: Variable) -> Result<(), Error>;
     }
 
     struct MyCircuit<F: Field> {
@@ -147,8 +163,14 @@ fn test_proving() {
                 value = Some(f()?);
                 Ok(value.ok_or(Error::SynthesisError)?.0)
             })?;
+            self.cs.assign_advice(self.config.d, index, || {
+                Ok(value.ok_or(Error::SynthesisError)?.0.square().square())
+            })?;
             self.cs.assign_advice(self.config.b, index, || {
                 Ok(value.ok_or(Error::SynthesisError)?.1)
+            })?;
+            self.cs.assign_advice(self.config.e, index, || {
+                Ok(value.ok_or(Error::SynthesisError)?.1.square().square())
             })?;
             self.cs.assign_advice(self.config.c, index, || {
                 Ok(value.ok_or(Error::SynthesisError)?.2)
@@ -179,8 +201,14 @@ fn test_proving() {
                 value = Some(f()?);
                 Ok(value.ok_or(Error::SynthesisError)?.0)
             })?;
+            self.cs.assign_advice(self.config.d, index, || {
+                Ok(value.ok_or(Error::SynthesisError)?.0.square().square())
+            })?;
             self.cs.assign_advice(self.config.b, index, || {
                 Ok(value.ok_or(Error::SynthesisError)?.1)
+            })?;
+            self.cs.assign_advice(self.config.e, index, || {
+                Ok(value.ok_or(Error::SynthesisError)?.1.square().square())
             })?;
             self.cs.assign_advice(self.config.c, index, || {
                 Ok(value.ok_or(Error::SynthesisError)?.2)
@@ -200,23 +228,51 @@ fn test_proving() {
                 Variable(self.config.c, index),
             ))
         }
+        fn copy(&mut self, left: Variable, right: Variable) -> Result<(), Error> {
+            let left_wire = match left.0 {
+                x if x == self.config.a => 0,
+                x if x == self.config.b => 1,
+                x if x == self.config.c => 2,
+                _ => unreachable!(),
+            };
+            let right_wire = match right.0 {
+                x if x == self.config.a => 0,
+                x if x == self.config.b => 1,
+                x if x == self.config.c => 2,
+                _ => unreachable!(),
+            };
+
+            self.cs
+                .copy(self.config.perm, left_wire, left.1, right_wire, right.1)?;
+            self.cs
+                .copy(self.config.perm2, left_wire, left.1, right_wire, right.1)
+        }
     }
 
     impl<F: Field> Circuit<F> for MyCircuit<F> {
         type Config = PLONKConfig;
 
         fn configure(meta: &mut MetaCircuit<F>) -> PLONKConfig {
+            let e = meta.advice_wire();
             let a = meta.advice_wire();
             let b = meta.advice_wire();
+            let sf = meta.fixed_wire();
             let c = meta.advice_wire();
+            let d = meta.advice_wire();
 
+            let perm = meta.permutation(&[a, b, c]);
+            let perm2 = meta.permutation(&[a, b, c]);
+
+            let sm = meta.fixed_wire();
             let sa = meta.fixed_wire();
             let sb = meta.fixed_wire();
             let sc = meta.fixed_wire();
-            let sm = meta.fixed_wire();
 
             meta.create_gate(|meta| {
+                let d = meta.query_advice(d, 1);
                 let a = meta.query_advice(a, 0);
+                let sf = meta.query_fixed(sf, 0);
+                let e = meta.query_advice(e, -1);
                 let b = meta.query_advice(b, 0);
                 let c = meta.query_advice(c, 0);
 
@@ -225,17 +281,21 @@ fn test_proving() {
                 let sc = meta.query_fixed(sc, 0);
                 let sm = meta.query_fixed(sm, 0);
 
-                a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))
+                a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one())) + sf * (d * e)
             });
 
             PLONKConfig {
                 a,
                 b,
                 c,
+                d,
+                e,
                 sa,
                 sb,
                 sc,
                 sm,
+                perm,
+                perm2,
             }
         }
 
@@ -248,7 +308,7 @@ fn test_proving() {
 
             for _ in 0..10 {
                 let mut a_squared = None;
-                let (_, _, _) = cs.raw_multiply(|| {
+                let (a0, _, c0) = cs.raw_multiply(|| {
                     a_squared = self.a.map(|a| a.square());
                     Ok((
                         self.a.ok_or(Error::SynthesisError)?,
@@ -256,7 +316,7 @@ fn test_proving() {
                         a_squared.ok_or(Error::SynthesisError)?,
                     ))
                 })?;
-                let (_, _, _) = cs.raw_add(|| {
+                let (a1, b1, _) = cs.raw_add(|| {
                     let fin = a_squared.and_then(|a2| self.a.map(|a| a + a2));
                     Ok((
                         self.a.ok_or(Error::SynthesisError)?,
@@ -264,6 +324,8 @@ fn test_proving() {
                         fin.ok_or(Error::SynthesisError)?,
                     ))
                 })?;
+                cs.copy(a0, a1)?;
+                cs.copy(b1, c0)?;
             }
 
             Ok(())
@@ -271,7 +333,7 @@ fn test_proving() {
     }
 
     let circuit: MyCircuit<Fp> = MyCircuit {
-        a: Some((-Fp::from_u64(2) + Fp::ROOT_OF_UNITY).pow(&[100, 0, 0, 0])),
+        a: Some(Fp::random()),
     };
 
     let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None };
@@ -279,9 +341,11 @@ fn test_proving() {
     // Initialize the SRS
     let srs = SRS::generate(&params, &empty_circuit).expect("SRS generation should not fail");
 
-    // Create a proof
-    let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &srs, &circuit)
-        .expect("proof generation should not fail");
+    for _ in 0..100 {
+        // Create a proof
+        let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &srs, &circuit)
+            .expect("proof generation should not fail");
 
-    assert!(proof.verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs));
+        assert!(proof.verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs));
+    }
 }

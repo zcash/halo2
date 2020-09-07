@@ -19,6 +19,17 @@ impl<C: CurveAffine> Proof<C> {
                 .expect("proof cannot contain points at infinity");
         }
 
+        // Sample x_0 challenge
+        let x_0: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        // Sample x_1 challenge
+        let x_1: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        // Hash each permutation product commitment
+        for c in &self.permutation_product_commitments {
+            hash_point(&mut transcript, c).expect("proof cannot contain points at infinity");
+        }
+
         // Sample x_2 challenge, which keeps the gates linearly independent.
         let x_2: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
@@ -30,6 +41,7 @@ impl<C: CurveAffine> Proof<C> {
         // Sample x_3 challenge, which is used to ensure the circuit is
         // satisfied with high probability.
         let x_3: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        let x_3n = x_3.pow(&[params.n as u64, 0, 0, 0]);
 
         // Hash together all the openings provided by the prover into a new
         // transcript on the scalar field.
@@ -40,6 +52,9 @@ impl<C: CurveAffine> Proof<C> {
             .iter()
             .chain(self.fixed_evals.iter())
             .chain(self.h_evals.iter())
+            .chain(self.permutation_product_evals.iter())
+            .chain(self.permutation_product_inv_evals.iter())
+            .chain(self.permutation_evals.iter().flat_map(|evals| evals.iter()))
         {
             transcript_scalar.absorb(*eval);
         }
@@ -63,17 +78,61 @@ impl<C: CurveAffine> Proof<C> {
 
             h_eval += &evaluation;
         }
-        let xn = x_3.pow(&[params.n as u64, 0, 0, 0]);
+
+        // First element in each permutation product should be 1
+        // l_0(X) * (1 - z(X)) = 0
+        {
+            // TODO: bubble this error up
+            let denominator = (x_3 - &C::Scalar::one()).invert().unwrap();
+
+            for eval in self.permutation_product_evals.iter() {
+                h_eval *= &x_2;
+
+                let mut tmp = denominator; // 1 / (x_3 - 1)
+                tmp *= &(x_3n - &C::Scalar::one()); // (x_3^n - 1) / (x_3 - 1)
+                tmp *= &srs.domain.get_barycentric_weight(); // l_0(x_3)
+                tmp *= &(C::Scalar::one() - &eval); // l_0(X) * (1 - z(X))
+
+                h_eval += &tmp;
+            }
+        }
+
+        // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
+        for (permutation_index, wires) in srs.meta.permutations.iter().enumerate() {
+            h_eval *= &x_2;
+
+            let mut left = self.permutation_product_evals[permutation_index];
+            for (advice_eval, permutation_eval) in wires
+                .iter()
+                .map(|&(_, query_index)| self.advice_evals[query_index])
+                .zip(self.permutation_evals[permutation_index].iter())
+            {
+                left *= &(advice_eval + &(x_0 * permutation_eval) + &x_1);
+            }
+
+            let mut right = self.permutation_product_inv_evals[permutation_index];
+            let mut current_delta = x_0 * &x_3;
+            for advice_eval in wires
+                .iter()
+                .map(|&(_, query_index)| self.advice_evals[query_index])
+            {
+                right *= &(advice_eval + &current_delta + &x_1);
+                current_delta *= &C::Scalar::DELTA;
+            }
+
+            h_eval += &left;
+            h_eval -= &right;
+        }
 
         // Compute the expected h(x) value
         let mut expected_h_eval = C::Scalar::zero();
         let mut cur = C::Scalar::one();
         for eval in &self.h_evals {
             expected_h_eval += &(cur * eval);
-            cur *= &xn;
+            cur *= &x_3n;
         }
 
-        if h_eval != (expected_h_eval * &(xn - &C::Scalar::one())) {
+        if h_eval != (expected_h_eval * &(x_3n - &C::Scalar::one())) {
             return false;
         }
 
@@ -119,8 +178,38 @@ impl<C: CurveAffine> Proof<C> {
             }
 
             let current_index = (*srs.meta.rotations.get(&Rotation::default()).unwrap()).0;
-            for (h_commitment, h_eval) in self.h_commitments.iter().zip(self.h_evals.iter()) {
-                accumulate(current_index, *h_commitment, *h_eval);
+            for (commitment, eval) in self.h_commitments.iter().zip(self.h_evals.iter()) {
+                accumulate(current_index, *commitment, *eval);
+            }
+
+            // Handle permutation arguments, if any exist
+            if !srs.meta.permutations.is_empty() {
+                // Open permutation product commitments at x_3
+                for (commitment, eval) in self
+                    .permutation_product_commitments
+                    .iter()
+                    .zip(self.permutation_product_evals.iter())
+                {
+                    accumulate(current_index, *commitment, *eval);
+                }
+                // Open permutation commitments for each permutation argument at x_3
+                for (commitment, eval) in srs
+                    .permutation_commitments
+                    .iter()
+                    .zip(self.permutation_evals.iter())
+                    .flat_map(|(commitments, evals)| commitments.iter().zip(evals.iter()))
+                {
+                    accumulate(current_index, *commitment, *eval);
+                }
+                let current_index = (*srs.meta.rotations.get(&Rotation(-1)).unwrap()).0;
+                // Open permutation product commitments at \omega^{-1} x_3
+                for (commitment, eval) in self
+                    .permutation_product_commitments
+                    .iter()
+                    .zip(self.permutation_product_inv_evals.iter())
+                {
+                    accumulate(current_index, *commitment, *eval);
+                }
             }
         }
 
@@ -147,7 +236,7 @@ impl<C: CurveAffine> Proof<C> {
         // We can compute the expected f_eval at x_6 using the q_evals provided
         // by the prover and from x_5
         let mut f_eval = C::Scalar::zero();
-        for (&row, &point_index) in srs.meta.rotations.iter() {
+        for (&row, point_index) in srs.meta.rotations.iter() {
             let mut eval = self.q_evals[point_index.0];
 
             let point = srs.domain.rotate_omega(x_3, row);

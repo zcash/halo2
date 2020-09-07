@@ -1,6 +1,6 @@
 use core::cmp::max;
 use core::ops::{Add, Mul};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use super::Error;
 use crate::arithmetic::Field;
@@ -33,7 +33,15 @@ pub trait ConstraintSystem<F: Field> {
         to: impl FnOnce() -> Result<F, Error>,
     ) -> Result<(), Error>;
 
-    // fn copy(&mut self, left: Wire, right: Wire);
+    /// Assign two advice wires to have the same value
+    fn copy(
+        &mut self,
+        permutation: usize,
+        left_wire: usize,
+        left_row: usize,
+        right_wire: usize,
+        right_row: usize,
+    ) -> Result<(), Error>;
 }
 
 /// This is a trait that circuits provide implementations for so that the
@@ -147,18 +155,26 @@ pub struct PointIndex(pub usize);
 pub struct MetaCircuit<F> {
     pub(crate) num_fixed_wires: usize,
     pub(crate) num_advice_wires: usize,
-    // permutations: Vec<Vec<Wire>>,
     pub(crate) gates: Vec<Polynomial<F>>,
     pub(crate) advice_queries: Vec<(AdviceWire, Rotation)>,
     pub(crate) fixed_queries: Vec<(FixedWire, Rotation)>,
 
     // Mapping from a witness vector rotation to the index in the point vector.
-    pub(crate) rotations: HashMap<Rotation, PointIndex>,
+    pub(crate) rotations: BTreeMap<Rotation, PointIndex>,
+
+    // Vector of permutation arguments, where each corresponds to a set of wires
+    // that are involved in a permutation argument, as well as the corresponding
+    // query index for each wire. As an example, we could have a permutation
+    // argument between wires (A, B, C) which allows copy constraints to be
+    // enforced between advice wire values in A, B and C, and another
+    // permutation between wires (B, C, D) which allows the same with D instead
+    // of A.
+    pub(crate) permutations: Vec<Vec<(AdviceWire, usize)>>,
 }
 
 impl<F: Field> Default for MetaCircuit<F> {
     fn default() -> MetaCircuit<F> {
-        let mut rotations = HashMap::new();
+        let mut rotations = BTreeMap::new();
         rotations.insert(Rotation::default(), PointIndex(0));
 
         MetaCircuit {
@@ -168,39 +184,79 @@ impl<F: Field> Default for MetaCircuit<F> {
             fixed_queries: Vec::new(),
             advice_queries: Vec::new(),
             rotations,
+            permutations: Vec::new(),
         }
     }
 }
 
 impl<F: Field> MetaCircuit<F> {
-    /// Query a fixed wire at a relative position
-    pub fn query_fixed(&mut self, wire: FixedWire, at: i32) -> Polynomial<F> {
+    /// Add a permutation argument for some advice wires
+    pub fn permutation(&mut self, wires: &[AdviceWire]) -> usize {
+        let index = self.permutations.len();
+        if index == 0 {
+            let at = Rotation(-1);
+            let len = self.rotations.len();
+            self.rotations.entry(at).or_insert(PointIndex(len));
+        }
+        let wires = wires
+            .iter()
+            .map(|&wire| (wire, self.query_advice_index(wire, 0)))
+            .collect();
+        self.permutations.push(wires);
+
+        index
+    }
+
+    fn query_fixed_index(&mut self, wire: FixedWire, at: i32) -> usize {
         let at = Rotation(at);
         {
             let len = self.rotations.len();
             self.rotations.entry(at).or_insert(PointIndex(len));
         }
 
-        // TODO: check for existing query so we don't make redundant queries
+        // Return existing query, if it exists
+        for (index, fixed_query) in self.fixed_queries.iter().enumerate() {
+            if fixed_query == &(wire, at) {
+                return index;
+            }
+        }
+
+        // Make a new query
         let index = self.fixed_queries.len();
         self.fixed_queries.push((wire, at));
 
-        Polynomial::Fixed(index)
+        index
+    }
+
+    /// Query a fixed wire at a relative position
+    pub fn query_fixed(&mut self, wire: FixedWire, at: i32) -> Polynomial<F> {
+        Polynomial::Fixed(self.query_fixed_index(wire, at))
+    }
+
+    fn query_advice_index(&mut self, wire: AdviceWire, at: i32) -> usize {
+        let at = Rotation(at);
+        {
+            let len = self.rotations.len();
+            self.rotations.entry(at).or_insert(PointIndex(len));
+        }
+
+        // Return existing query, if it exists
+        for (index, advice_query) in self.advice_queries.iter().enumerate() {
+            if advice_query == &(wire, at) {
+                return index;
+            }
+        }
+
+        // Make a new query
+        let index = self.advice_queries.len();
+        self.advice_queries.push((wire, at));
+
+        index
     }
 
     /// Query an advice wire at a relative position
     pub fn query_advice(&mut self, wire: AdviceWire, at: i32) -> Polynomial<F> {
-        let at = Rotation(at);
-        {
-            let len = self.rotations.len();
-            self.rotations.entry(at).or_insert(PointIndex(len));
-        }
-
-        // TODO: check for existing query so we don't make redundant queries
-        let index = self.advice_queries.len();
-        self.advice_queries.push((wire, at));
-
-        Polynomial::Advice(index)
+        Polynomial::Advice(self.query_advice_index(wire, at))
     }
 
     /// Create a new gate
