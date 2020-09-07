@@ -4,7 +4,7 @@ use crate::poly::{commitment::Params, Rotation};
 use crate::transcript::Hasher;
 
 impl<C: CurveAffine> Proof<C> {
-    /// Returns
+    /// Returns a boolean indicating whether or not the proof is valid
     pub fn verify<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
         &self,
         params: &Params<C>,
