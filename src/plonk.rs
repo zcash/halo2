@@ -6,12 +6,13 @@
 //! [plonk]: https://eprint.iacr.org/2019/953
 
 use crate::arithmetic::CurveAffine;
-use crate::polycommit::OpeningProof;
+use crate::poly::{
+    commitment::OpeningProof, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff,
+    Polynomial,
+};
 use crate::transcript::Hasher;
 
-#[macro_use]
 mod circuit;
-mod domain;
 mod prover;
 mod srs;
 mod verifier;
@@ -21,22 +22,20 @@ pub use prover::*;
 pub use srs::*;
 pub use verifier::*;
 
-use domain::EvaluationDomain;
-
 /// This is a structured reference string (SRS) that is (deterministically)
 /// computed from a specific circuit and parameters for the polynomial
 /// commitment scheme.
 #[derive(Debug)]
 pub struct SRS<C: CurveAffine> {
     domain: EvaluationDomain<C::Scalar>,
-    l0: Vec<C::Scalar>,
+    l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     fixed_commitments: Vec<C>,
-    fixed_polys: Vec<Vec<C::Scalar>>,
-    fixed_cosets: Vec<Vec<C::Scalar>>,
+    fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
+    fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     permutation_commitments: Vec<Vec<C>>,
-    permutations: Vec<Vec<Vec<C::Scalar>>>,
-    permutation_polys: Vec<Vec<Vec<C::Scalar>>>,
-    permutation_cosets: Vec<Vec<Vec<C::Scalar>>>,
+    permutations: Vec<Vec<Polynomial<C::Scalar, LagrangeCoeff>>>,
+    permutation_polys: Vec<Vec<Polynomial<C::Scalar, Coeff>>>,
+    permutation_cosets: Vec<Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>>,
     meta: MetaCircuit<C::Scalar>,
 }
 
@@ -91,7 +90,7 @@ fn hash_point<C: CurveAffine, H: Hasher<C::Base>>(
 #[test]
 fn test_proving() {
     use crate::arithmetic::{EqAffine, Field, Fp, Fq};
-    use crate::polycommit::Params;
+    use crate::poly::commitment::Params;
     use crate::transcript::DummyHash;
     use std::marker::PhantomData;
     const K: u32 = 5;

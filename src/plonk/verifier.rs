@@ -1,10 +1,10 @@
-use super::{domain::Rotation, hash_point, Proof, SRS};
+use super::{hash_point, Proof, SRS};
 use crate::arithmetic::{get_challenge_scalar, Challenge, Curve, CurveAffine, Field};
-use crate::polycommit::Params;
+use crate::poly::{commitment::Params, Rotation};
 use crate::transcript::Hasher;
 
 impl<C: CurveAffine> Proof<C> {
-    /// Returns
+    /// Returns a boolean indicating whether or not the proof is valid
     pub fn verify<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
         &self,
         params: &Params<C>,
@@ -261,8 +261,8 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // Verify the opening proof
-        params.verify_proof(
-            &self.opening,
+        self.opening.verify(
+            params,
             &mut transcript,
             x_6,
             &f_commitment.to_affine(),

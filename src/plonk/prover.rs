@@ -1,13 +1,15 @@
 use super::{
     circuit::{AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit},
-    domain::Rotation,
     hash_point, Error, Proof, SRS,
 };
 use crate::arithmetic::{
     eval_polynomial, get_challenge_scalar, kate_division, parallelize, BatchInvert, Challenge,
     Curve, CurveAffine, Field,
 };
-use crate::polycommit::Params;
+use crate::poly::{
+    commitment::{Blind, OpeningProof, Params},
+    Coeff, LagrangeCoeff, Polynomial, Rotation,
+};
 use crate::transcript::Hasher;
 
 impl<C: CurveAffine> Proof<C> {
@@ -24,7 +26,8 @@ impl<C: CurveAffine> Proof<C> {
         circuit: &ConcreteCircuit,
     ) -> Result<Self, Error> {
         struct WitnessCollection<F: Field> {
-            advice: Vec<Vec<F>>,
+            advice: Vec<Polynomial<F, LagrangeCoeff>>,
+            _marker: std::marker::PhantomData<F>,
         }
 
         impl<F: Field> ConstraintSystem<F> for WitnessCollection<F> {
@@ -68,11 +71,13 @@ impl<C: CurveAffine> Proof<C> {
             }
         }
 
+        let domain = &srs.domain;
         let mut meta = MetaCircuit::default();
         let config = ConcreteCircuit::configure(&mut meta);
 
         let mut witness = WitnessCollection {
-            advice: vec![vec![C::Scalar::zero(); params.n as usize]; meta.num_advice_wires],
+            advice: vec![domain.empty_lagrange(); meta.num_advice_wires],
+            _marker: std::marker::PhantomData,
         };
 
         // Synthesize the circuit to obtain the witness and other information.
@@ -84,7 +89,11 @@ impl<C: CurveAffine> Proof<C> {
         let mut transcript = HBase::init(C::Base::one());
 
         // Compute commitments to advice wire polynomials
-        let advice_blinds: Vec<_> = witness.advice.iter().map(|_| C::Scalar::random()).collect();
+        let advice_blinds: Vec<_> = witness
+            .advice
+            .iter()
+            .map(|_| Blind(C::Scalar::random()))
+            .collect();
         let advice_commitments_projective: Vec<_> = witness
             .advice
             .iter()
@@ -100,13 +109,11 @@ impl<C: CurveAffine> Proof<C> {
             hash_point(&mut transcript, commitment)?;
         }
 
-        let domain = &srs.domain;
-
         let advice_polys: Vec<_> = witness
             .advice
             .clone()
             .into_iter()
-            .map(|poly| domain.obtain_poly(poly))
+            .map(|poly| domain.lagrange_to_coeff(poly))
             .collect();
 
         let advice_cosets: Vec<_> = meta
@@ -114,7 +121,7 @@ impl<C: CurveAffine> Proof<C> {
             .iter()
             .map(|&(wire, at)| {
                 let poly = advice_polys[wire.0].clone();
-                domain.obtain_coset(poly, at)
+                domain.coeff_to_extended(poly, at)
             })
             .collect();
 
@@ -209,15 +216,17 @@ impl<C: CurveAffine> Proof<C> {
                 tmp *= &modified_advice[row];
                 z.push(tmp);
             }
+            let z = domain.lagrange_from_vec(z);
 
-            let blind = C::Scalar::random();
+            let blind = Blind(C::Scalar::random());
 
             permutation_product_commitments_projective.push(params.commit_lagrange(&z, blind));
             permutation_product_blinds.push(blind);
-            let z = domain.obtain_poly(z);
+            let z = domain.lagrange_to_coeff(z);
             permutation_product_polys.push(z.clone());
-            permutation_product_cosets.push(domain.obtain_coset(z.clone(), Rotation::default()));
-            permutation_product_cosets_inv.push(domain.obtain_coset(z, Rotation(-1)));
+            permutation_product_cosets
+                .push(domain.coeff_to_extended(z.clone(), Rotation::default()));
+            permutation_product_cosets_inv.push(domain.coeff_to_extended(z, Rotation(-1)));
         }
         let mut permutation_product_commitments =
             vec![C::zero(); permutation_product_commitments_projective.len()];
@@ -237,56 +246,19 @@ impl<C: CurveAffine> Proof<C> {
         let x_2: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         // Evaluate the circuit using the custom gates provided
-        let mut h_poly = vec![C::Scalar::zero(); domain.coset_len()];
-        for (i, poly) in meta.gates.iter().enumerate() {
-            if i != 0 {
-                parallelize(&mut h_poly, |a, _| {
-                    for a in a.iter_mut() {
-                        *a *= &x_2;
-                    }
-                });
-            }
+        let mut h_poly = domain.empty_extended();
+        for poly in meta.gates.iter() {
+            h_poly = h_poly * x_2;
 
-            let evaluation: Vec<C::Scalar> = poly.evaluate(
+            let evaluation = poly.evaluate(
                 &|index| srs.fixed_cosets[index].clone(),
                 &|index| advice_cosets[index].clone(),
-                &|mut a, b| {
-                    parallelize(&mut a, |a, start| {
-                        for (a, b) in a.iter_mut().zip(b[start..].iter()) {
-                            *a += b;
-                        }
-                    });
-                    a
-                },
-                &|mut a, b| {
-                    parallelize(&mut a, |a, start| {
-                        for (a, b) in a.iter_mut().zip(b[start..].iter()) {
-                            *a *= b;
-                        }
-                    });
-                    a
-                },
-                &|mut a, scalar| {
-                    parallelize(&mut a, |a, _| {
-                        for a in a {
-                            *a *= &scalar;
-                        }
-                    });
-                    a
-                },
+                &|a, b| a + &b,
+                &|a, b| a * &b,
+                &|a, scalar| a * scalar,
             );
 
-            assert_eq!(h_poly.len(), evaluation.len());
-
-            if i == 0 {
-                h_poly = evaluation;
-            } else {
-                parallelize(&mut h_poly, |a, start| {
-                    for (a, b) in a.iter_mut().zip(evaluation[start..].iter()) {
-                        *a += b;
-                    }
-                });
-            }
+            h_poly = h_poly + &evaluation;
         }
 
         // l_0(X) * (1 - z(X)) = 0
@@ -305,11 +277,7 @@ impl<C: CurveAffine> Proof<C> {
 
         // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
         for (permutation_index, wires) in srs.meta.permutations.iter().enumerate() {
-            parallelize(&mut h_poly, |a, _| {
-                for a in a.iter_mut() {
-                    *a *= &x_2;
-                }
-            });
+            h_poly = h_poly * x_2;
 
             let mut left = permutation_product_cosets[permutation_index].clone();
             for (advice, permutation) in wires
@@ -342,31 +310,25 @@ impl<C: CurveAffine> Proof<C> {
                 current_delta *= &C::Scalar::DELTA;
             }
 
-            parallelize(&mut h_poly, |a, start| {
-                for ((h, left), right) in a
-                    .iter_mut()
-                    .zip(left[start..].iter())
-                    .zip(right[start..].iter())
-                {
-                    *h += &left;
-                    *h -= &right;
-                }
-            });
+            h_poly = h_poly + &left - &right;
         }
 
         // Divide by t(X) = X^{params.n} - 1.
         let h_poly = domain.divide_by_vanishing_poly(h_poly);
 
         // Obtain final h(X) polynomial
-        let h_poly = domain.from_coset(h_poly);
+        let h_poly = domain.extended_to_coeff(h_poly);
 
         // Split h(X) up into pieces
         let h_pieces = h_poly
             .chunks_exact(params.n as usize)
-            .map(|v| v.to_vec())
+            .map(|v| domain.coeff_from_vec(v.to_vec()))
             .collect::<Vec<_>>();
         drop(h_poly);
-        let h_blinds: Vec<_> = h_pieces.iter().map(|_| C::Scalar::random()).collect();
+        let h_blinds: Vec<_> = h_pieces
+            .iter()
+            .map(|_| Blind(C::Scalar::random()))
+            .collect();
 
         // Compute commitments to each h(X) piece
         let h_commitments_projective: Vec<_> = h_pieces
@@ -451,30 +413,32 @@ impl<C: CurveAffine> Proof<C> {
 
         // Collapse openings at same points together into single openings using
         // x_4 challenge.
-        let mut q_polys: Vec<Option<Vec<_>>> = vec![None; meta.rotations.len()];
-        let mut q_blinds = vec![C::Scalar::zero(); meta.rotations.len()];
+        let mut q_polys: Vec<Option<Polynomial<C::Scalar, Coeff>>> =
+            vec![None; meta.rotations.len()];
+        let mut q_blinds = vec![Blind(C::Scalar::zero()); meta.rotations.len()];
         let mut q_evals: Vec<_> = vec![C::Scalar::zero(); meta.rotations.len()];
         {
-            let mut accumulate = |point_index: usize, new_poly: &Vec<_>, blind, eval| {
-                q_polys[point_index]
-                    .as_mut()
-                    .map(|poly| {
-                        parallelize(poly, |q, start| {
-                            for (q, a) in q.iter_mut().zip(new_poly[start..].iter()) {
-                                *q *= &x_4;
-                                *q += a;
-                            }
+            let mut accumulate =
+                |point_index: usize, new_poly: &Polynomial<_, Coeff>, blind, eval| {
+                    q_polys[point_index]
+                        .as_mut()
+                        .map(|poly| {
+                            parallelize(poly, |q, start| {
+                                for (q, a) in q.iter_mut().zip(new_poly[start..].iter()) {
+                                    *q *= &x_4;
+                                    *q += a;
+                                }
+                            });
+                        })
+                        .or_else(|| {
+                            q_polys[point_index] = Some(new_poly.clone());
+                            Some(())
                         });
-                    })
-                    .or_else(|| {
-                        q_polys[point_index] = Some(new_poly.clone());
-                        Some(())
-                    });
-                q_blinds[point_index] *= &x_4;
-                q_blinds[point_index] += &blind;
-                q_evals[point_index] *= &x_4;
-                q_evals[point_index] += &eval;
-            };
+                    q_blinds[point_index] *= x_4;
+                    q_blinds[point_index] += blind;
+                    q_evals[point_index] *= &x_4;
+                    q_evals[point_index] += &eval;
+                };
 
             for (query_index, &(wire, ref at)) in meta.advice_queries.iter().enumerate() {
                 let point_index = (*meta.rotations.get(at).unwrap()).0;
@@ -493,7 +457,7 @@ impl<C: CurveAffine> Proof<C> {
                 accumulate(
                     point_index,
                     &srs.fixed_polys[wire.0],
-                    C::Scalar::one(),
+                    Blind::default(),
                     fixed_evals[query_index],
                 );
             }
@@ -526,7 +490,7 @@ impl<C: CurveAffine> Proof<C> {
                     .zip(permutation_evals.iter())
                     .flat_map(|(polys, evals)| polys.iter().zip(evals.iter()))
                 {
-                    accumulate(current_index, poly, C::Scalar::one(), *eval);
+                    accumulate(current_index, poly, Blind::default(), *eval);
                 }
 
                 let current_index = (*srs.meta.rotations.get(&Rotation(-1)).unwrap()).0;
@@ -543,13 +507,15 @@ impl<C: CurveAffine> Proof<C> {
 
         let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-        let mut f_poly: Option<Vec<C::Scalar>> = None;
+        let mut f_poly: Option<Polynomial<C::Scalar, Coeff>> = None;
         for (&row, &point_index) in meta.rotations.iter() {
             let mut poly = q_polys[point_index.0].as_ref().unwrap().clone();
             let point = domain.rotate_omega(x_3, row);
             poly[0] -= &q_evals[point_index.0];
-            let mut poly = kate_division(&poly, point);
+            // TODO: change kate_division interface?
+            let mut poly = kate_division(&poly[..], point);
             poly.push(C::Scalar::zero());
+            let poly = domain.coeff_from_vec(poly);
 
             f_poly = f_poly
                 .map(|mut f_poly| {
@@ -564,7 +530,7 @@ impl<C: CurveAffine> Proof<C> {
                 .or_else(|| Some(poly));
         }
         let mut f_poly = f_poly.unwrap();
-        let mut f_blind = C::Scalar::random();
+        let mut f_blind = Blind(C::Scalar::random());
 
         let f_commitment = params.commit(&f_poly, f_blind).to_affine();
 
@@ -590,8 +556,8 @@ impl<C: CurveAffine> Proof<C> {
         let x_7: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         for (_, &point_index) in meta.rotations.iter() {
-            f_blind *= &x_7;
-            f_blind += &q_blinds[point_index.0];
+            f_blind *= x_7;
+            f_blind += q_blinds[point_index.0];
 
             parallelize(&mut f_poly, |f, start| {
                 for (f, a) in f
@@ -605,8 +571,7 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // Let's prove that the q_commitment opens at x to the expected value.
-        let opening = params
-            .create_proof(&mut transcript, &f_poly, f_blind, x_6)
+        let opening = OpeningProof::create(&params, &mut transcript, &f_poly, f_blind, x_6)
             .map_err(|_| Error::ConstraintSystemFailure)?;
 
         Ok(Proof {
