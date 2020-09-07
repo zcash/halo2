@@ -116,6 +116,7 @@ fn test_proving() {
         sm: FixedWire,
 
         perm: usize,
+        perm2: usize,
     }
 
     trait StandardCS<FF: Field> {
@@ -242,7 +243,9 @@ fn test_proving() {
             };
 
             self.cs
-                .copy(self.config.perm, left_wire, left.1, right_wire, right.1)
+                .copy(self.config.perm, left_wire, left.1, right_wire, right.1)?;
+            self.cs
+                .copy(self.config.perm2, left_wire, left.1, right_wire, right.1)
         }
     }
 
@@ -258,6 +261,7 @@ fn test_proving() {
             let d = meta.advice_wire();
 
             let perm = meta.permutation(&[a, b, c]);
+            let perm2 = meta.permutation(&[a, b, c]);
 
             let sm = meta.fixed_wire();
             let sa = meta.fixed_wire();
@@ -291,6 +295,7 @@ fn test_proving() {
                 sc,
                 sm,
                 perm,
+                perm2,
             }
         }
 
