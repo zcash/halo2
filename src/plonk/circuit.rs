@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use super::Error;
 use crate::arithmetic::Field;
 
-use super::domain::Rotation;
+use crate::poly::Rotation;
 /// This represents a wire which has a fixed (permanent) value
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct FixedWire(pub usize);
@@ -65,22 +65,22 @@ pub trait Circuit<F: Field> {
     ) -> Result<(), Error>;
 }
 
-/// Low-degree polynomial representing an identity that must hold over the committed wires.
+/// Low-degree expression representing an identity that must hold over the committed wires.
 #[derive(Clone, Debug)]
-pub enum Polynomial<F> {
+pub enum Expression<F> {
     /// This is a fixed wire queried at a certain relative location
     Fixed(usize),
     /// This is an advice (witness) wire queried at a certain relative location
     Advice(usize),
     /// This is the sum of two polynomials
-    Sum(Box<Polynomial<F>>, Box<Polynomial<F>>),
+    Sum(Box<Expression<F>>, Box<Expression<F>>),
     /// This is the product of two polynomials
-    Product(Box<Polynomial<F>>, Box<Polynomial<F>>),
+    Product(Box<Expression<F>>, Box<Expression<F>>),
     /// This is a scaled polynomial
-    Scaled(Box<Polynomial<F>>, F),
+    Scaled(Box<Expression<F>>, F),
 }
 
-impl<F: Field> Polynomial<F> {
+impl<F: Field> Expression<F> {
     /// Evaluate the polynomial using the provided closures to perform the
     /// operations.
     pub fn evaluate<T>(
@@ -92,19 +92,19 @@ impl<F: Field> Polynomial<F> {
         scaled: &impl Fn(T, F) -> T,
     ) -> T {
         match self {
-            Polynomial::Fixed(index) => fixed_wire(*index),
-            Polynomial::Advice(index) => advice_wire(*index),
-            Polynomial::Sum(a, b) => {
+            Expression::Fixed(index) => fixed_wire(*index),
+            Expression::Advice(index) => advice_wire(*index),
+            Expression::Sum(a, b) => {
                 let a = a.evaluate(fixed_wire, advice_wire, sum, product, scaled);
                 let b = b.evaluate(fixed_wire, advice_wire, sum, product, scaled);
                 sum(a, b)
             }
-            Polynomial::Product(a, b) => {
+            Expression::Product(a, b) => {
                 let a = a.evaluate(fixed_wire, advice_wire, sum, product, scaled);
                 let b = b.evaluate(fixed_wire, advice_wire, sum, product, scaled);
                 product(a, b)
             }
-            Polynomial::Scaled(a, f) => {
+            Expression::Scaled(a, f) => {
                 let a = a.evaluate(fixed_wire, advice_wire, sum, product, scaled);
                 scaled(a, *f)
             }
@@ -114,40 +114,40 @@ impl<F: Field> Polynomial<F> {
     /// Compute the degree of this polynomial
     pub fn degree(&self) -> usize {
         match self {
-            Polynomial::Fixed(_) => 1,
-            Polynomial::Advice(_) => 1,
-            Polynomial::Sum(a, b) => max(a.degree(), b.degree()),
-            Polynomial::Product(a, b) => a.degree() + b.degree(),
-            Polynomial::Scaled(poly, _) => poly.degree(),
+            Expression::Fixed(_) => 1,
+            Expression::Advice(_) => 1,
+            Expression::Sum(a, b) => max(a.degree(), b.degree()),
+            Expression::Product(a, b) => a.degree() + b.degree(),
+            Expression::Scaled(poly, _) => poly.degree(),
         }
     }
 }
 
-impl<F> Add for Polynomial<F> {
-    type Output = Polynomial<F>;
-    fn add(self, rhs: Polynomial<F>) -> Polynomial<F> {
-        Polynomial::Sum(Box::new(self), Box::new(rhs))
+impl<F> Add for Expression<F> {
+    type Output = Expression<F>;
+    fn add(self, rhs: Expression<F>) -> Expression<F> {
+        Expression::Sum(Box::new(self), Box::new(rhs))
     }
 }
 
-impl<F> Mul for Polynomial<F> {
-    type Output = Polynomial<F>;
-    fn mul(self, rhs: Polynomial<F>) -> Polynomial<F> {
-        Polynomial::Product(Box::new(self), Box::new(rhs))
+impl<F> Mul for Expression<F> {
+    type Output = Expression<F>;
+    fn mul(self, rhs: Expression<F>) -> Expression<F> {
+        Expression::Product(Box::new(self), Box::new(rhs))
     }
 }
 
-impl<F> Mul<F> for Polynomial<F> {
-    type Output = Polynomial<F>;
-    fn mul(self, rhs: F) -> Polynomial<F> {
-        Polynomial::Scaled(Box::new(self), rhs)
+impl<F> Mul<F> for Expression<F> {
+    type Output = Expression<F>;
+    fn mul(self, rhs: F) -> Expression<F> {
+        Expression::Scaled(Box::new(self), rhs)
     }
 }
 
 /// Represents an index into a vector where each entry corresponds to a distinct
 /// point that polynomials are queried at.
 #[derive(Copy, Clone, Debug)]
-pub struct PointIndex(pub usize);
+pub(crate) struct PointIndex(pub usize);
 
 /// This is a description of the circuit environment, such as the gate, wire and
 /// permutation arrangements.
@@ -155,7 +155,7 @@ pub struct PointIndex(pub usize);
 pub struct MetaCircuit<F> {
     pub(crate) num_fixed_wires: usize,
     pub(crate) num_advice_wires: usize,
-    pub(crate) gates: Vec<Polynomial<F>>,
+    pub(crate) gates: Vec<Expression<F>>,
     pub(crate) advice_queries: Vec<(AdviceWire, Rotation)>,
     pub(crate) fixed_queries: Vec<(FixedWire, Rotation)>,
 
@@ -229,8 +229,8 @@ impl<F: Field> MetaCircuit<F> {
     }
 
     /// Query a fixed wire at a relative position
-    pub fn query_fixed(&mut self, wire: FixedWire, at: i32) -> Polynomial<F> {
-        Polynomial::Fixed(self.query_fixed_index(wire, at))
+    pub fn query_fixed(&mut self, wire: FixedWire, at: i32) -> Expression<F> {
+        Expression::Fixed(self.query_fixed_index(wire, at))
     }
 
     fn query_advice_index(&mut self, wire: AdviceWire, at: i32) -> usize {
@@ -255,12 +255,12 @@ impl<F: Field> MetaCircuit<F> {
     }
 
     /// Query an advice wire at a relative position
-    pub fn query_advice(&mut self, wire: AdviceWire, at: i32) -> Polynomial<F> {
-        Polynomial::Advice(self.query_advice_index(wire, at))
+    pub fn query_advice(&mut self, wire: AdviceWire, at: i32) -> Expression<F> {
+        Expression::Advice(self.query_advice_index(wire, at))
     }
 
     /// Create a new gate
-    pub fn create_gate(&mut self, f: impl FnOnce(&mut Self) -> Polynomial<F>) {
+    pub fn create_gate(&mut self, f: impl FnOnce(&mut Self) -> Expression<F>) {
         let poly = f(self);
         self.gates.push(poly);
     }

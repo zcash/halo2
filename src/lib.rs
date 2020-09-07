@@ -14,6 +14,6 @@
 #![deny(unsafe_code)]
 
 pub mod arithmetic;
-pub mod plonk;
-pub mod polycommit;
+pub mod poly;
 pub mod transcript;
+pub mod plonk;

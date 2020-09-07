@@ -1,10 +1,12 @@
 use super::{
     circuit::{AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit},
-    domain::{EvaluationDomain, Rotation},
     Error, SRS,
 };
 use crate::arithmetic::{Curve, CurveAffine, Field};
-use crate::polycommit::Params;
+use crate::poly::{
+    commitment::{Blind, Params},
+    EvaluationDomain, LagrangeCoeff, Polynomial, Rotation,
+};
 
 impl<C: CurveAffine> SRS<C> {
     /// This generates a structured reference string for the provided `circuit`
@@ -14,10 +16,11 @@ impl<C: CurveAffine> SRS<C> {
         circuit: &ConcreteCircuit,
     ) -> Result<Self, Error> {
         struct Assembly<F: Field> {
-            fixed: Vec<Vec<F>>,
+            fixed: Vec<Polynomial<F, LagrangeCoeff>>,
             mapping: Vec<Vec<Vec<(usize, usize)>>>,
             aux: Vec<Vec<Vec<(usize, usize)>>>,
             sizes: Vec<Vec<Vec<usize>>>,
+            _marker: std::marker::PhantomData<F>,
         }
 
         impl<F: Field> ConstraintSystem<F> for Assembly<F> {
@@ -147,10 +150,11 @@ impl<C: CurveAffine> SRS<C> {
         }
 
         let mut assembly: Assembly<C::Scalar> = Assembly {
-            fixed: vec![vec![C::Scalar::zero(); params.n as usize]; meta.num_fixed_wires],
+            fixed: vec![domain.empty_lagrange(); meta.num_fixed_wires],
             mapping: vec![],
             aux: vec![],
             sizes: vec![],
+            _marker: std::marker::PhantomData,
         };
 
         // Initialize the copy vector to keep track of copy constraints in all
@@ -185,27 +189,23 @@ impl<C: CurveAffine> SRS<C> {
             for i in 0..permutation.len() {
                 // Computes the permutation polynomial based on the permutation
                 // description in the assembly.
-                let permutation_poly: Vec<_> = (0..params.n as usize)
-                    .map(|j| {
-                        // assembly.copy[permutation_index] is indexed by wire
-                        // i, and then indexed by row j, obtaining the index of
-                        // the permuted value in deltaomega.
-                        let (permuted_i, permuted_j) = assembly.mapping[permutation_index][i][j];
-                        deltaomega[permuted_i][permuted_j]
-                    })
-                    .collect();
+                let mut permutation_poly = domain.empty_lagrange();
+                for (j, p) in permutation_poly.iter_mut().enumerate() {
+                    let (permuted_i, permuted_j) = assembly.mapping[permutation_index][i][j];
+                    *p = deltaomega[permuted_i][permuted_j];
+                }
 
                 // Compute commitment to permutation polynomial
                 commitments.push(
                     params
-                        .commit_lagrange(&permutation_poly, C::Scalar::one())
+                        .commit_lagrange(&permutation_poly, Blind::default())
                         .to_affine(),
                 );
                 // Store permutation polynomial and precompute its coset evaluation
                 inner_permutations.push(permutation_poly.clone());
-                let poly = domain.obtain_poly(permutation_poly);
+                let poly = domain.lagrange_to_coeff(permutation_poly);
                 polys.push(poly.clone());
-                cosets.push(domain.obtain_coset(poly, Rotation::default()));
+                cosets.push(domain.coeff_to_extended(poly, Rotation::default()));
             }
             permutation_commitments.push(commitments);
             permutations.push(inner_permutations);
@@ -216,13 +216,13 @@ impl<C: CurveAffine> SRS<C> {
         let fixed_commitments = assembly
             .fixed
             .iter()
-            .map(|poly| params.commit_lagrange(poly, C::Scalar::one()).to_affine())
+            .map(|poly| params.commit_lagrange(poly, Blind::default()).to_affine())
             .collect();
 
         let fixed_polys: Vec<_> = assembly
             .fixed
             .into_iter()
-            .map(|poly| domain.obtain_poly(poly))
+            .map(|poly| domain.lagrange_to_coeff(poly))
             .collect();
 
         let fixed_cosets = meta
@@ -230,16 +230,16 @@ impl<C: CurveAffine> SRS<C> {
             .iter()
             .map(|&(wire, at)| {
                 let poly = fixed_polys[wire.0].clone();
-                domain.obtain_coset(poly, at)
+                domain.coeff_to_extended(poly, at)
             })
             .collect();
 
         // Compute l_0(X)
         // TODO: this can be done more efficiently
-        let mut l0 = vec![C::Scalar::zero(); params.n as usize];
+        let mut l0 = domain.empty_lagrange();
         l0[0] = C::Scalar::one();
-        let l0 = domain.obtain_poly(l0);
-        let l0 = domain.obtain_coset(l0, Rotation::default());
+        let l0 = domain.lagrange_to_coeff(l0);
+        let l0 = domain.coeff_to_extended(l0, Rotation::default());
 
         Ok(SRS {
             domain,
