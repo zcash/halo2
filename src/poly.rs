@@ -13,6 +13,14 @@ mod domain;
 
 pub use domain::*;
 
+/// This is an error that could occur during proving or circuit synthesis.
+// TODO: these errors need to be cleaned up
+#[derive(Debug)]
+pub enum Error {
+    /// OpeningProof is not well-formed
+    OpeningError,
+}
+
 /// The basis over which a polynomial is described.
 pub trait Basis: Clone + Debug + Send + Sync {}
 

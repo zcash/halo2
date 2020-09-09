@@ -1,6 +1,9 @@
 use super::{hash_point, Proof, SRS};
 use crate::arithmetic::{get_challenge_scalar, Challenge, Curve, CurveAffine, Field};
-use crate::poly::{commitment::Params, Rotation};
+use crate::poly::{
+    commitment::{Params, MSM},
+    Rotation,
+};
 use crate::transcript::Hasher;
 
 impl<C: CurveAffine> Proof<C> {
@@ -261,12 +264,20 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // Verify the opening proof
-        self.opening.verify(
-            params,
-            &mut transcript,
-            x_6,
-            &f_commitment.to_affine(),
-            f_eval,
-        )
+        let (challenges, mut guard) = self
+            .opening
+            .verify(
+                params,
+                &mut MSM::default(&params),
+                &mut transcript,
+                x_6,
+                &f_commitment.to_affine(),
+                f_eval,
+            )
+            .unwrap();
+
+        let msm: MSM<C> = guard.use_challenges(challenges).unwrap();
+
+        msm.is_zero()
     }
 }

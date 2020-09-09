@@ -3,8 +3,11 @@
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
 
-use super::{Coeff, LagrangeCoeff, Polynomial};
-use crate::arithmetic::{best_fft, best_multiexp, parallelize, Curve, CurveAffine, Field};
+use super::{Coeff, Error, LagrangeCoeff, Polynomial};
+use crate::arithmetic::{
+    best_fft, best_multiexp, get_challenge_scalar, parallelize, Challenge, Curve, CurveAffine,
+    Field,
+};
 use crate::transcript::Hasher;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 
@@ -19,6 +22,49 @@ pub struct OpeningProof<C: CurveAffine> {
     delta: C,
     z1: C::Scalar,
     z2: C::Scalar,
+}
+
+/// A multiscalar multiplication in the polynomial commitment scheme
+#[derive(Debug)]
+pub struct MSM<C: CurveAffine> {
+    ///  Scalars in the multiscalar multiplication
+    pub scalars: Vec<C::Scalar>,
+
+    /// Points in the multiscalar multiplication
+    pub bases: Vec<C>,
+}
+
+impl<'a, C: CurveAffine> MSM<C> {
+    /// Empty MSM
+    pub fn default(params: &'a Params<C>) -> Self {
+        let scalars: Vec<C::Scalar> =
+            Vec::with_capacity(params.k as usize * 2 + 4 + params.n as usize);
+        let bases: Vec<C> = Vec::with_capacity(params.k as usize * 2 + 4 + params.n as usize);
+
+        MSM { scalars, bases }
+    }
+
+    /// Add arbitrary term (the scalar and the point)
+    pub fn add_term(&mut self, scalar: C::Scalar, point: C) {
+        &self.scalars.push(scalar);
+        &self.bases.push(point);
+    }
+    /// Add term to g
+    pub fn mutate_g(&mut self, scalar: C::Scalar, point: C) -> Self {
+        unimplemented!()
+    }
+    /// Add term to h
+    pub fn mutate_h(&mut self, scalar: C::Scalar, point: C) -> Self {
+        unimplemented!()
+    }
+    /// Scale by a random blinding factor
+    pub fn scale(&self, scalar: C::Scalar) -> Self {
+        unimplemented!()
+    }
+    /// Perform multiexp and check that it results in zero
+    pub fn is_zero(&self) -> bool {
+        bool::from(best_multiexp(&self.scalars, &self.bases).is_zero())
+    }
 }
 
 /// These are the public parameters for the polynomial commitment scheme.
@@ -154,6 +200,85 @@ impl<C: CurveAffine> Params<C> {
     }
 }
 
+/// A guard returned by the verifier
+#[derive(Debug)]
+pub struct Guard<'a, C: CurveAffine> {
+    /// Negation of z1 value in the OpeningProof
+    pub neg_z1: C::Scalar,
+
+    /// Params that were used by the verifier
+    pub params: &'a Params<C>,
+
+    /// Scalars produced by the verifier for multiscalar multiplication
+    pub scalars: Vec<C::Scalar>,
+
+    /// Points produced by the verifier for multiscalar multiplication
+    pub bases: Vec<C>,
+}
+
+impl<'a, C: CurveAffine> Guard<'a, C> {
+    /// Lets caller supply the challenges and obtain an MSM with updated
+    /// scalars and points.
+    pub fn use_challenges(
+        &mut self,
+        challenges_sq_packed: Vec<Challenge>,
+    ) -> Result<MSM<C>, Error> {
+        // - [z1] G
+        let mut allinv = C::Scalar::one();
+        let mut challenges_sq = Vec::with_capacity(self.params.k as usize);
+
+        for challenge_sq_packed in challenges_sq_packed {
+            let challenge_sq: C::Scalar = get_challenge_scalar(challenge_sq_packed);
+            challenges_sq.push(challenge_sq);
+
+            let challenge = challenge_sq.deterministic_sqrt();
+            if challenge.is_none() {
+                // We didn't sample a square.
+                return Err(Error::OpeningError);
+            }
+            let challenge = challenge.unwrap();
+
+            let challenge_inv = challenge.invert();
+            if bool::from(challenge_inv.is_none()) {
+                // We sampled zero for some reason, unlikely to happen by
+                // chance.
+                return Err(Error::OpeningError);
+            }
+            let challenge_inv = challenge_inv.unwrap();
+            allinv *= &challenge_inv;
+        }
+
+        self.bases.extend(&self.params.g);
+        let mut s = compute_s(&challenges_sq, allinv);
+        // TODO: parallelize
+        for s in &mut s {
+            *s *= &self.neg_z1;
+        }
+        self.scalars.extend(s);
+
+        Ok(MSM {
+            scalars: self.scalars.clone(),
+            bases: self.bases.clone(),
+        })
+    }
+
+    /// Lets caller supply the purported G point and simply appends it to
+    /// return an updated MSM.
+    pub fn use_s(&mut self, mut s: Vec<C::Scalar>) -> Result<MSM<C>, Error> {
+        // - [z1] G
+        self.bases.extend(&self.params.g);
+        for s in &mut s {
+            *s *= &self.neg_z1;
+        }
+        self.scalars.extend(s);
+
+        Ok(MSM {
+            scalars: self.scalars.clone(),
+            bases: self.bases.clone(),
+        })
+    }
+}
+
 /// Wrapper type around a blinding factor.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Blind<F>(pub F);
@@ -273,8 +398,39 @@ fn test_opening_proof() {
             transcript.absorb(Field::one());
         } else {
             let opening_proof = opening_proof.unwrap();
-            assert!(opening_proof.verify(&params, &mut transcript_dup, x, &p, v));
+            // Verify the opening proof
+            let (challenges, mut guard) = opening_proof
+                .verify(
+                    &params,
+                    &mut MSM::default(&params),
+                    &mut transcript_dup,
+                    x,
+                    &p,
+                    v,
+                )
+                .unwrap();
+
+            let msm = guard.use_challenges(challenges).unwrap();
+
+            assert!(msm.is_zero());
             break;
         }
     }
+}
+
+// TODO: parallelize
+fn compute_s<F: Field>(challenges_sq: &[F], allinv: F) -> Vec<F> {
+    let lg_n = challenges_sq.len();
+    let n = 1 << lg_n;
+
+    let mut s = Vec::with_capacity(n);
+    s.push(allinv);
+    for i in 1..n {
+        let lg_i = (32 - 1 - (i as u32).leading_zeros()) as usize;
+        let k = 1 << lg_i;
+        let u_lg_i_sq = challenges_sq[(lg_n - 1) - lg_i];
+        s.push(s[i - k] * u_lg_i_sq);
+    }
+
+    s
 }
