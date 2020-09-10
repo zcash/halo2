@@ -27,6 +27,12 @@ pub struct OpeningProof<C: CurveAffine> {
 /// A multiscalar multiplication in the polynomial commitment scheme
 #[derive(Debug)]
 pub struct MSM<C: CurveAffine> {
+    /// Vector of random generators
+    pub g: Vec<C>,
+
+    /// Random generator
+    pub h: C,
+
     ///  Scalars in the multiscalar multiplication
     pub scalars: Vec<C::Scalar>,
 
@@ -41,7 +47,12 @@ impl<'a, C: CurveAffine> MSM<C> {
             Vec::with_capacity(params.k as usize * 2 + 4 + params.n as usize);
         let bases: Vec<C> = Vec::with_capacity(params.k as usize * 2 + 4 + params.n as usize);
 
-        MSM { scalars, bases }
+        MSM {
+            g: params.g.clone(),
+            h: params.h.clone(),
+            scalars,
+            bases,
+        }
     }
 
     /// Add arbitrary term (the scalar and the point)
@@ -49,18 +60,24 @@ impl<'a, C: CurveAffine> MSM<C> {
         &self.scalars.push(scalar);
         &self.bases.push(point);
     }
+
     /// Add term to g
-    pub fn mutate_g(&mut self, scalar: C::Scalar, point: C) -> Self {
-        unimplemented!()
+    pub fn add_to_g(&mut self, point: C) {
+        &self.g.push(point);
     }
+
     /// Add term to h
-    pub fn mutate_h(&mut self, scalar: C::Scalar, point: C) -> Self {
-        unimplemented!()
+    pub fn add_to_h(&mut self, point: C) {
+        self.h = self.h.add(point).to_affine();
     }
+
     /// Scale by a random blinding factor
-    pub fn scale(&self, scalar: C::Scalar) -> Self {
-        unimplemented!()
+    pub fn scale(&mut self, factor: C::Scalar) {
+        for scalar in self.scalars.iter_mut() {
+            *scalar *= &factor;
+        }
     }
+
     /// Perform multiexp and check that it results in zero
     pub fn is_zero(&self) -> bool {
         bool::from(best_multiexp(&self.scalars, &self.bases).is_zero())
@@ -203,6 +220,12 @@ impl<C: CurveAffine> Params<C> {
 /// A guard returned by the verifier
 #[derive(Debug)]
 pub struct Guard<'a, C: CurveAffine> {
+    /// Vector of random generators
+    pub g: Vec<C>,
+
+    /// Random generator
+    pub h: C,
+
     /// Negation of z1 value in the OpeningProof
     pub neg_z1: C::Scalar,
 
@@ -248,7 +271,7 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
             allinv *= &challenge_inv;
         }
 
-        self.bases.extend(&self.params.g);
+        self.bases.extend(&self.g);
         let mut s = compute_s(&challenges_sq, allinv);
         // TODO: parallelize
         for s in &mut s {
@@ -257,6 +280,8 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
         self.scalars.extend(s);
 
         Ok(MSM {
+            g: self.g.clone(),
+            h: self.h.clone(),
             scalars: self.scalars.clone(),
             bases: self.bases.clone(),
         })
@@ -264,15 +289,17 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
 
     /// Lets caller supply the purported G point and simply appends it to
     /// return an updated MSM.
-    pub fn use_s(&mut self, mut s: Vec<C::Scalar>) -> Result<MSM<C>, Error> {
+    pub fn use_s(&mut self, g: Vec<C>, mut s: Vec<C::Scalar>) -> Result<MSM<C>, Error> {
         // - [z1] G
-        self.bases.extend(&self.params.g);
+        self.bases.extend(&g);
         for s in &mut s {
             *s *= &self.neg_z1;
         }
         self.scalars.extend(s);
 
         Ok(MSM {
+            g: self.g.clone(),
+            h: self.h.clone(),
             scalars: self.scalars.clone(),
             bases: self.bases.clone(),
         })

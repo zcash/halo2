@@ -127,10 +127,12 @@ impl<C: CurveAffine> OpeningProof<C> {
         msm.scalars.push(Field::one());
 
         // - [z2] H
-        msm.bases.push(params.h);
+        msm.bases.push(msm.h);
         msm.scalars.push(-self.z2);
 
         let guard = Guard::<'a, _> {
+            g: msm.g.clone(),
+            h: msm.h.clone(),
             neg_z1,
             params,
             scalars: msm.scalars.clone(),
