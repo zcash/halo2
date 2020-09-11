@@ -36,7 +36,7 @@ pub struct SRS<C: CurveAffine> {
     permutations: Vec<Vec<Polynomial<C::Scalar, LagrangeCoeff>>>,
     permutation_polys: Vec<Vec<Polynomial<C::Scalar, Coeff>>>,
     permutation_cosets: Vec<Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>>,
-    meta: MetaCircuit<C::Scalar>,
+    cs: ConstraintSystem<C::Scalar>,
 }
 
 /// This is an object which represents a (Turbo)PLONK proof.
@@ -95,7 +95,7 @@ fn test_proving() {
     use std::marker::PhantomData;
     const K: u32 = 5;
 
-    /// This represents an advice wire at a certain row in the MetaCircuit
+    /// This represents an advice wire at a certain row in the ConstraintSystem
     #[derive(Copy, Clone, Debug)]
     pub struct Variable(AdviceWire, usize);
 
@@ -132,14 +132,14 @@ fn test_proving() {
         a: Option<F>,
     }
 
-    struct StandardPLONK<'a, F: Field, CS: ConstraintSystem<F> + 'a> {
+    struct StandardPLONK<'a, F: Field, CS: Assignment<F> + 'a> {
         cs: &'a mut CS,
         config: PLONKConfig,
         current_gate: usize,
         _marker: PhantomData<F>,
     }
 
-    impl<'a, FF: Field, CS: ConstraintSystem<FF>> StandardPLONK<'a, FF, CS> {
+    impl<'a, FF: Field, CS: Assignment<FF>> StandardPLONK<'a, FF, CS> {
         fn new(cs: &'a mut CS, config: PLONKConfig) -> Self {
             StandardPLONK {
                 cs,
@@ -150,7 +150,7 @@ fn test_proving() {
         }
     }
 
-    impl<'a, FF: Field, CS: ConstraintSystem<FF>> StandardCS<FF> for StandardPLONK<'a, FF, CS> {
+    impl<'a, FF: Field, CS: Assignment<FF>> StandardCS<FF> for StandardPLONK<'a, FF, CS> {
         fn raw_multiply<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
         where
             F: FnOnce() -> Result<(FF, FF, FF), Error>,
@@ -251,7 +251,7 @@ fn test_proving() {
     impl<F: Field> Circuit<F> for MyCircuit<F> {
         type Config = PLONKConfig;
 
-        fn configure(meta: &mut MetaCircuit<F>) -> PLONKConfig {
+        fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
             let e = meta.advice_wire();
             let a = meta.advice_wire();
             let b = meta.advice_wire();
@@ -300,7 +300,7 @@ fn test_proving() {
 
         fn synthesize(
             &self,
-            cs: &mut impl ConstraintSystem<F>,
+            cs: &mut impl Assignment<F>,
             config: PLONKConfig,
         ) -> Result<(), Error> {
             let mut cs = StandardPLONK::new(cs, config);
