@@ -70,10 +70,6 @@ where
 }
 
 /// This is a 128-bit verifier challenge.
-///
-/// The verifier samples its challenge here as u^2, i.e. the square of the
-/// actual challenge. This is an optimisation that is documented in Section 6.3
-/// of the [Halo](https://eprint.iacr.org/2019/1021) paper.
 #[derive(Copy, Clone, Debug)]
 pub struct Challenge(pub(crate) u128);
 

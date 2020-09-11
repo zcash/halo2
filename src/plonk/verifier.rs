@@ -264,11 +264,12 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // Verify the opening proof
-        let (challenges, mut guard) = self
+        let default_msm = MSM::default(&params);
+        let (challenges, guard) = self
             .opening
             .verify(
                 params,
-                &mut MSM::default(&params),
+                default_msm,
                 &mut transcript,
                 x_6,
                 &f_commitment.to_affine(),
@@ -276,8 +277,8 @@ impl<C: CurveAffine> Proof<C> {
             )
             .unwrap();
 
-        let msm: MSM<C> = guard.use_challenges(challenges).unwrap();
+        let msm: &MSM<C> = &guard.use_challenges(params, challenges).unwrap();
 
-        msm.is_zero()
+        msm.is_zero(params)
     }
 }

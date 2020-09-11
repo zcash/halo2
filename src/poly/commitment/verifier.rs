@@ -11,12 +11,12 @@ impl<C: CurveAffine> OpeningProof<C> {
     pub fn verify<'a, H: Hasher<C::Base>>(
         &self,
         params: &'a Params<C>,
-        msm: &mut MSM<C>,
+        mut msm: MSM<C>,
         transcript: &mut H,
         x: C::Scalar,
         p: &C,
         v: C::Scalar,
-    ) -> Result<(Vec<Challenge>, Guard<'a, C>), Error> {
+    ) -> Result<(Vec<Challenge>, Guard<C>), Error> {
         // Check for well-formedness
         if self.rounds.len() != params.k as usize {
             return Err(Error::OpeningError);
@@ -43,6 +43,7 @@ impl<C: CurveAffine> OpeningProof<C> {
         let mut challenges_inv = Vec::with_capacity(self.rounds.len());
         let mut challenges_sq = Vec::with_capacity(self.rounds.len());
         let mut challenges_sq_packed: Vec<Challenge> = Vec::with_capacity(self.rounds.len());
+        let mut allinv = C::Scalar::one();
 
         for round in &self.rounds {
             // Feed L and R into the transcript.
@@ -74,13 +75,14 @@ impl<C: CurveAffine> OpeningProof<C> {
                 return Err(Error::OpeningError);
             }
             let challenge_inv = challenge_inv.unwrap();
+            allinv *= &challenge_inv;
 
             let challenge_sq_inv = challenge_inv.square();
 
-            msm.scalars.push(challenge_sq);
-            msm.bases.push(round.0);
-            msm.scalars.push(challenge_sq_inv);
-            msm.bases.push(round.1);
+            msm.other_scalars.push(challenge_sq);
+            msm.other_bases.push(round.0);
+            msm.other_scalars.push(challenge_sq_inv);
+            msm.other_bases.push(round.1);
 
             challenges.push(challenge);
             challenges_inv.push(challenge_inv);
@@ -106,7 +108,7 @@ impl<C: CurveAffine> OpeningProof<C> {
         // [c] P + [c * v] U + [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2) + delta - [z1] G - [z1 * b] U - [z2] H
         // = 0
 
-        for scalar in &mut msm.scalars {
+        for scalar in &mut msm.other_scalars {
             *scalar *= &c;
         }
 
@@ -115,28 +117,25 @@ impl<C: CurveAffine> OpeningProof<C> {
         let neg_z1 = -self.z1;
 
         // [c] P
-        msm.bases.push(*p);
-        msm.scalars.push(c);
+        msm.other_bases.push(*p);
+        msm.other_scalars.push(c);
 
         // [c * v] U - [z1 * b] U
-        msm.bases.push(u);
-        msm.scalars.push((c * &v) + &(neg_z1 * &b));
+        msm.other_bases.push(u);
+        msm.other_scalars.push((c * &v) + &(neg_z1 * &b));
 
         // delta
-        msm.bases.push(self.delta);
-        msm.scalars.push(Field::one());
+        msm.other_bases.push(self.delta);
+        msm.other_scalars.push(Field::one());
 
-        // - [z2] H
-        msm.bases.push(msm.h);
-        msm.scalars.push(-self.z2);
+        // z2
+        msm.h_scalar = Some(-self.z2);
 
-        let guard = Guard::<'a, _> {
-            g: msm.g.clone(),
-            h: msm.h.clone(),
+        let guard = Guard {
+            msm,
             neg_z1,
-            params,
-            scalars: msm.scalars.clone(),
-            bases: msm.bases.clone(),
+            allinv,
+            challenges_sq,
         };
 
         Ok((challenges_sq_packed, guard))

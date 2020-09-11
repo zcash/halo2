@@ -27,60 +27,89 @@ pub struct OpeningProof<C: CurveAffine> {
 /// A multiscalar multiplication in the polynomial commitment scheme
 #[derive(Debug)]
 pub struct MSM<C: CurveAffine> {
-    /// Vector of random generators
-    pub g: Vec<C>,
+    /// TODO: documentation
+    pub g_scalars: Option<Vec<C::Scalar>>,
 
-    /// Random generator
-    pub h: C,
+    /// TODO: documentation
+    pub h_scalar: Option<C::Scalar>,
 
-    ///  Scalars in the multiscalar multiplication
-    pub scalars: Vec<C::Scalar>,
+    /// TODO: documentation
+    pub other_scalars: Vec<C::Scalar>,
 
-    /// Points in the multiscalar multiplication
-    pub bases: Vec<C>,
+    /// TODO: documentation
+    pub other_bases: Vec<C>,
 }
 
 impl<'a, C: CurveAffine> MSM<C> {
     /// Empty MSM
-    pub fn default(params: &'a Params<C>) -> Self {
-        let scalars: Vec<C::Scalar> =
-            Vec::with_capacity(params.k as usize * 2 + 4 + params.n as usize);
-        let bases: Vec<C> = Vec::with_capacity(params.k as usize * 2 + 4 + params.n as usize);
+    pub fn default(params: &Params<C>) -> Self {
+        let g_scalars = Some(vec![C::Scalar::one(); params.n as usize]);
+        let h_scalar = Some(C::Scalar::one());
+        let other_scalars: Vec<C::Scalar> = Vec::with_capacity(params.k as usize * 2 + 3);
+        let other_bases: Vec<C> = Vec::with_capacity(params.k as usize * 2 + 3);
 
         MSM {
-            g: params.g.clone(),
-            h: params.h.clone(),
-            scalars,
-            bases,
+            g_scalars,
+            h_scalar,
+            other_scalars,
+            other_bases,
         }
     }
 
     /// Add arbitrary term (the scalar and the point)
     pub fn add_term(&mut self, scalar: C::Scalar, point: C) {
-        &self.scalars.push(scalar);
-        &self.bases.push(point);
+        &self.other_scalars.push(scalar);
+        &self.other_bases.push(point);
     }
 
-    /// Add term to g
-    pub fn add_to_g(&mut self, point: C) {
-        &self.g.push(point);
-    }
-
-    /// Add term to h
-    pub fn add_to_h(&mut self, point: C) {
-        self.h = self.h.add(point).to_affine();
-    }
-
-    /// Scale by a random blinding factor
-    pub fn scale(&mut self, factor: C::Scalar) {
-        for scalar in self.scalars.iter_mut() {
-            *scalar *= &factor;
+    /// Add a vector of scalars to `g_scalars`
+    pub fn add_to_g(&mut self, scalars: Vec<C::Scalar>) {
+        for (g_scalar, scalar) in self
+            .g_scalars
+            .as_mut()
+            .unwrap()
+            .iter_mut()
+            .zip(scalars.iter())
+        {
+            *g_scalar += &scalar;
         }
     }
 
+    /// Add term to h
+    pub fn add_to_h(&mut self, scalar: C::Scalar) {
+        self.h_scalar = Some(self.h_scalar.unwrap() + &scalar);
+    }
+
+    /// Scale all scalars in the MSM by a random blinding factor
+    pub fn scale(&mut self, factor: C::Scalar) {
+        for g_scalar in self.g_scalars.as_mut().unwrap().iter_mut() {
+            *g_scalar *= &factor;
+        }
+        for other_scalar in self.other_scalars.iter_mut() {
+            *other_scalar *= &factor;
+        }
+        self.h_scalar = Some(self.h_scalar.unwrap() * &factor);
+    }
+
     /// Perform multiexp and check that it results in zero
-    pub fn is_zero(&self) -> bool {
-        bool::from(best_multiexp(&self.scalars, &self.bases).is_zero())
+    pub fn is_zero(&self, params: &'a Params<C>) -> bool {
+        let mut scalars: Vec<C::Scalar> = vec![];
+        let mut bases: Vec<C> = vec![];
+
+        scalars.extend(&self.other_scalars);
+        bases.extend(&self.other_bases);
+
+        if let Some(h_scalar) = self.h_scalar {
+            scalars.push(h_scalar);
+            bases.push(params.h);
+        }
+
+        if let Some(g_scalars) = &self.g_scalars {
+            scalars.extend(g_scalars);
+            bases.extend(params.g.iter());
+        }
+
+        bool::from(best_multiexp(&scalars, &bases).is_zero())
     }
 }
 
@@ -219,90 +248,70 @@ impl<C: CurveAffine> Params<C> {
 
 /// A guard returned by the verifier
 #[derive(Debug)]
-pub struct Guard<'a, C: CurveAffine> {
-    /// Vector of random generators
-    pub g: Vec<C>,
-
-    /// Random generator
-    pub h: C,
+pub struct Guard<C: CurveAffine> {
+    /// MSM
+    msm: MSM<C>,
 
     /// Negation of z1 value in the OpeningProof
-    pub neg_z1: C::Scalar,
+    neg_z1: C::Scalar,
 
-    /// Params that were used by the verifier
-    pub params: &'a Params<C>,
+    allinv: C::Scalar,
 
-    /// Scalars produced by the verifier for multiscalar multiplication
-    pub scalars: Vec<C::Scalar>,
-
-    /// Points produced by the verifier for multiscalar multiplication
-    pub bases: Vec<C>,
+    challenges_sq: Vec<C::Scalar>,
 }
 
-impl<'a, C: CurveAffine> Guard<'a, C> {
+impl<C: CurveAffine> Guard<C> {
     /// Lets caller supply the challenges and obtain an MSM with updated
     /// scalars and points.
     pub fn use_challenges(
-        &mut self,
+        mut self,
+        params: &Params<C>,
         challenges_sq_packed: Vec<Challenge>,
     ) -> Result<MSM<C>, Error> {
+        let mut scalars: Vec<C::Scalar> = vec![];
+        let mut bases: Vec<C> = vec![];
+
+        scalars.extend(&self.msm.other_scalars);
+        bases.extend(&self.msm.other_bases);
+
+        // - [z2] H
+        if let Some(h_scalar) = self.msm.h_scalar {
+            scalars.push(h_scalar);
+            bases.push(params.h);
+        }
+
         // - [z1] G
         let mut allinv = C::Scalar::one();
-        let mut challenges_sq = Vec::with_capacity(self.params.k as usize);
+        let mut challenges_sq = Vec::with_capacity(params.k as usize);
 
-        for challenge_sq_packed in challenges_sq_packed {
-            let challenge_sq: C::Scalar = get_challenge_scalar(challenge_sq_packed);
+        for challenge_sq_packed in challenges_sq_packed.iter() {
+            let challenge_sq: C::Scalar = get_challenge_scalar(*challenge_sq_packed);
             challenges_sq.push(challenge_sq);
 
             let challenge = challenge_sq.deterministic_sqrt();
-            if challenge.is_none() {
-                // We didn't sample a square.
-                return Err(Error::OpeningError);
-            }
             let challenge = challenge.unwrap();
 
             let challenge_inv = challenge.invert();
-            if bool::from(challenge_inv.is_none()) {
-                // We sampled zero for some reason, unlikely to happen by
-                // chance.
-                return Err(Error::OpeningError);
-            }
             let challenge_inv = challenge_inv.unwrap();
             allinv *= &challenge_inv;
         }
 
-        self.bases.extend(&self.g);
-        let mut s = compute_s(&challenges_sq, allinv);
-        // TODO: parallelize
-        for s in &mut s {
-            *s *= &self.neg_z1;
-        }
-        self.scalars.extend(s);
+        let s = compute_s(&challenges_sq, allinv * &self.neg_z1);
+        scalars.extend(&s);
+        bases.extend(&params.g);
 
-        Ok(MSM {
-            g: self.g.clone(),
-            h: self.h.clone(),
-            scalars: self.scalars.clone(),
-            bases: self.bases.clone(),
-        })
+        self.msm.g_scalars = Some(s);
+
+        Ok(self.msm)
     }
 
     /// Lets caller supply the purported G point and simply appends it to
     /// return an updated MSM.
-    pub fn use_s(&mut self, g: Vec<C>, mut s: Vec<C::Scalar>) -> Result<MSM<C>, Error> {
-        // - [z1] G
-        self.bases.extend(&g);
-        for s in &mut s {
-            *s *= &self.neg_z1;
-        }
-        self.scalars.extend(s);
+    pub fn use_g(mut self, g: C) -> Result<MSM<C>, Error> {
+        &self.msm.other_scalars.push(self.allinv * &self.neg_z1);
+        &self.msm.other_bases.push(g);
 
-        Ok(MSM {
-            g: self.g.clone(),
-            h: self.h.clone(),
-            scalars: self.scalars.clone(),
-            bases: self.bases.clone(),
-        })
+        Ok(self.msm)
     }
 }
 
@@ -426,20 +435,14 @@ fn test_opening_proof() {
         } else {
             let opening_proof = opening_proof.unwrap();
             // Verify the opening proof
-            let (challenges, mut guard) = opening_proof
-                .verify(
-                    &params,
-                    &mut MSM::default(&params),
-                    &mut transcript_dup,
-                    x,
-                    &p,
-                    v,
-                )
+            let msm = MSM::default(&params);
+            let (challenges, guard) = opening_proof
+                .verify(&params, msm, &mut transcript_dup, x, &p, v)
                 .unwrap();
 
-            let msm = guard.use_challenges(challenges).unwrap();
+            let msm = guard.use_challenges(&params, challenges).unwrap();
 
-            assert!(msm.is_zero());
+            assert!(msm.is_zero(&params));
             break;
         }
     }
