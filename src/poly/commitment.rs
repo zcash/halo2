@@ -5,8 +5,7 @@
 
 use super::{Coeff, Error, LagrangeCoeff, Polynomial};
 use crate::arithmetic::{
-    best_fft, best_multiexp, get_challenge_scalar, parallelize, Challenge, Curve, CurveAffine,
-    Field,
+    best_fft, best_multiexp, parallelize, Challenge, Curve, CurveAffine, Field,
 };
 use crate::transcript::Hasher;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
@@ -249,25 +248,17 @@ impl<C: CurveAffine> Params<C> {
 /// A guard returned by the verifier
 #[derive(Debug)]
 pub struct Guard<C: CurveAffine> {
-    /// MSM
     msm: MSM<C>,
-
-    /// Negation of z1 value in the OpeningProof
     neg_z1: C::Scalar,
-
     allinv: C::Scalar,
-
     challenges_sq: Vec<C::Scalar>,
+    challenges_sq_packed: Vec<Challenge>,
 }
 
 impl<C: CurveAffine> Guard<C> {
     /// Lets caller supply the challenges and obtain an MSM with updated
     /// scalars and points.
-    pub fn use_challenges(
-        mut self,
-        params: &Params<C>,
-        challenges_sq_packed: Vec<Challenge>,
-    ) -> Result<MSM<C>, Error> {
+    pub fn use_challenges(mut self, params: &Params<C>) -> Result<MSM<C>, Error> {
         let mut scalars: Vec<C::Scalar> = vec![];
         let mut bases: Vec<C> = vec![];
 
@@ -281,22 +272,7 @@ impl<C: CurveAffine> Guard<C> {
         }
 
         // - [z1] G
-        let mut allinv = C::Scalar::one();
-        let mut challenges_sq = Vec::with_capacity(params.k as usize);
-
-        for challenge_sq_packed in challenges_sq_packed.iter() {
-            let challenge_sq: C::Scalar = get_challenge_scalar(*challenge_sq_packed);
-            challenges_sq.push(challenge_sq);
-
-            let challenge = challenge_sq.deterministic_sqrt();
-            let challenge = challenge.unwrap();
-
-            let challenge_inv = challenge.invert();
-            let challenge_inv = challenge_inv.unwrap();
-            allinv *= &challenge_inv;
-        }
-
-        let s = compute_s(&challenges_sq, allinv * &self.neg_z1);
+        let s = compute_s(&self.challenges_sq, self.allinv * &self.neg_z1);
         scalars.extend(&s);
         bases.extend(&params.g);
 
@@ -308,7 +284,7 @@ impl<C: CurveAffine> Guard<C> {
     /// Lets caller supply the purported G point and simply appends it to
     /// return an updated MSM.
     pub fn use_g(mut self, g: C) -> Result<MSM<C>, Error> {
-        &self.msm.other_scalars.push(self.allinv * &self.neg_z1);
+        &self.msm.other_scalars.push(self.neg_z1);
         &self.msm.other_bases.push(g);
 
         Ok(self.msm)
@@ -436,11 +412,11 @@ fn test_opening_proof() {
             let opening_proof = opening_proof.unwrap();
             // Verify the opening proof
             let msm = MSM::default(&params);
-            let (challenges, guard) = opening_proof
+            let guard = opening_proof
                 .verify(&params, msm, &mut transcript_dup, x, &p, v)
                 .unwrap();
 
-            let msm = guard.use_challenges(&params, challenges).unwrap();
+            let msm = guard.use_challenges(&params).unwrap();
 
             assert!(msm.is_zero(&params));
             break;

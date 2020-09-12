@@ -16,7 +16,7 @@ impl<C: CurveAffine> OpeningProof<C> {
         x: C::Scalar,
         p: &C,
         v: C::Scalar,
-    ) -> Result<(Vec<Challenge>, Guard<C>), Error> {
+    ) -> Result<Guard<C>, Error> {
         // Check for well-formedness
         if self.rounds.len() != params.k as usize {
             return Err(Error::OpeningError);
@@ -136,9 +136,10 @@ impl<C: CurveAffine> OpeningProof<C> {
             neg_z1,
             allinv,
             challenges_sq,
+            challenges_sq_packed,
         };
 
-        Ok((challenges_sq_packed, guard))
+        Ok(guard)
     }
 }
 
