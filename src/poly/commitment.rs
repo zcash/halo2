@@ -23,6 +23,16 @@ pub struct OpeningProof<C: CurveAffine> {
     z2: C::Scalar,
 }
 
+/// TODO: documentation
+#[derive(Debug, Clone)]
+pub struct Accumulator<C: CurveAffine> {
+    /// TODO: documentation
+    pub g: C,
+
+    /// TODO: documentation
+    pub challenges_sq_packed: Vec<Challenge>,
+}
+
 /// A multiscalar multiplication in the polynomial commitment scheme
 #[derive(Debug, Clone)]
 pub struct MSM<'a, C: CurveAffine> {
@@ -267,11 +277,16 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
 
     /// Lets caller supply the purported G point and simply appends it to
     /// return an updated MSM.
-    pub fn use_g(mut self, g: C) -> MSM<'a, C> {
+    pub fn use_g(mut self, g: C) -> (MSM<'a, C>, Accumulator<C>) {
         &self.msm.other_scalars.push(self.neg_z1);
         &self.msm.other_bases.push(g);
 
-        self.msm
+        let accumulator = Accumulator {
+            g,
+            challenges_sq_packed: self.challenges_sq_packed,
+        };
+
+        (self.msm, accumulator)
     }
 }
 
