@@ -138,7 +138,7 @@ impl<C: CurveAffine> OpeningProof<C> {
         // delta
         msm.add_term(Field::one(), self.delta);
 
-        // z2
+        // - [z2] H
         msm.add_to_h(-self.z2);
 
         let guard = Guard {

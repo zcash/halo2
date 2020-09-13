@@ -23,13 +23,14 @@ pub struct OpeningProof<C: CurveAffine> {
     z2: C::Scalar,
 }
 
-/// TODO: documentation
+/// An accumulator instance consisting of an evaluation claim and a proof.
 #[derive(Debug, Clone)]
 pub struct Accumulator<C: CurveAffine> {
-    /// TODO: documentation
+    /// The claimed output of the linear-time polycommit opening protocol
     pub g: C,
 
-    /// TODO: documentation
+    /// A vector of 128-bit challenges sampled by the verifier, to be used in
+    /// computing g.
     pub challenges_sq_packed: Vec<Challenge>,
 }
 
