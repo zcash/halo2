@@ -345,7 +345,7 @@ fn test_proving() {
         let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &srs, &circuit)
             .expect("proof generation should not fail");
 
-        let msm_default = params.msm();
+        let msm_default = params.empty_msm();
         assert!(proof.verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm_default));
     }
 }

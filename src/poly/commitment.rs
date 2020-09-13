@@ -240,7 +240,7 @@ impl<C: CurveAffine> Params<C> {
 
     /// Generates an empty multiscalar multiplication struct using the
     /// appropriate params.
-    pub fn msm(&self) -> MSM<C> {
+    pub fn empty_msm(&self) -> MSM<C> {
         let g_scalars = None;
         let h_scalar = None;
         let other_scalars = vec![];
@@ -434,7 +434,7 @@ fn test_opening_proof() {
         } else {
             let opening_proof = opening_proof.unwrap();
             // Verify the opening proof
-            let msm = params.msm();
+            let msm = params.empty_msm();
             let guard = opening_proof
                 .verify(&params, msm, &mut transcript_dup, x, &p, v)
                 .unwrap();
