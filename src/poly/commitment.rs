@@ -87,7 +87,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
     }
 
     /// Perform multiexp and check that it results in zero
-    pub fn is_zero(&self) -> bool {
+    pub fn is_zero(self) -> bool {
         let len = self.g_scalars.as_ref().map(|v| v.len()).unwrap_or(0)
             + self.h_scalar.map(|_| 1).unwrap_or(0)
             + self.other_scalars.len();
@@ -106,6 +106,8 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
             scalars.extend(g_scalars);
             bases.extend(self.params.g.iter());
         }
+
+        assert_eq!(scalars.len(), len);
 
         bool::from(best_multiexp(&scalars, &bases).is_zero())
     }
@@ -275,8 +277,8 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
     /// Lets caller supply the challenges and obtain an MSM with updated
     /// scalars and points.
     pub fn use_challenges(mut self) -> MSM<'a, C> {
-        let g = self.compute_g(self.neg_z1);
-        self.msm.add_term(C::Scalar::one(), g);
+        let s = compute_s(&self.challenges_sq, self.allinv * &self.neg_z1);
+        self.msm.add_to_g(&s);
 
         self.msm
     }
@@ -295,8 +297,8 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
     }
 
     /// Computes the g value when given a potential scalar as input.
-    pub fn compute_g(&self, scalar: C::Scalar) -> C {
-        let s = compute_s(&self.challenges_sq, self.allinv * &scalar);
+    pub fn compute_g(&self) -> C {
+        let s = compute_s(&self.challenges_sq, self.allinv);
         best_multiexp(&s, &self.msm.params.g).to_affine()
     }
 }
@@ -443,7 +445,7 @@ fn test_opening_proof() {
             assert!(msm_challenges.is_zero());
 
             // Test use_g()
-            let g = new_guard.compute_g(Field::one());
+            let g = new_guard.compute_g();
             let (msm_g, _accumulator) = new_guard.clone().use_g(g);
 
             assert!(msm_g.is_zero());
