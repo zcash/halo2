@@ -1,4 +1,4 @@
-use super::{hash_point, Proof, SRS};
+use super::{hash_point, Error, Proof, SRS};
 use crate::arithmetic::{get_challenge_scalar, Challenge, Curve, CurveAffine, Field};
 use crate::poly::{
     commitment::{Params, MSM},
@@ -6,14 +6,14 @@ use crate::poly::{
 };
 use crate::transcript::Hasher;
 
-impl<C: CurveAffine> Proof<C> {
+impl<'a, C: CurveAffine> Proof<C> {
     /// Returns a boolean indicating whether or not the proof is valid
     pub fn verify<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
         &self,
-        params: &Params<C>,
+        params: &'a Params<C>,
         srs: &SRS<C>,
-        msm: MSM<C>,
-    ) -> bool {
+        msm: MSM<'a, C>,
+    ) -> Result<MSM<'a, C>, Error> {
         // Create a transcript for obtaining Fiat-Shamir challenges.
         let mut transcript = HBase::init(C::Base::one());
 
@@ -137,7 +137,7 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         if h_eval != (expected_h_eval * &(x_3n - &C::Scalar::one())) {
-            return false;
+            return Err(Error::ConstraintSystemFailure);
         }
 
         // We are now convinced the circuit is satisfied so long as the
@@ -279,6 +279,6 @@ impl<C: CurveAffine> Proof<C> {
 
         let msm_challenges = guard.use_challenges();
 
-        msm_challenges.is_zero()
+        Ok(msm_challenges)
     }
 }

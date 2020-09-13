@@ -346,6 +346,9 @@ fn test_proving() {
             .expect("proof generation should not fail");
 
         let msm_default = params.empty_msm();
-        assert!(proof.verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm_default));
+        let msm = proof
+            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm_default)
+            .unwrap();
+        assert!(msm.is_zero())
     }
 }
