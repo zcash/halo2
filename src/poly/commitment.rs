@@ -24,7 +24,7 @@ pub struct OpeningProof<C: CurveAffine> {
 }
 
 /// A multiscalar multiplication in the polynomial commitment scheme
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MSM<'a, C: CurveAffine> {
     params: &'a Params<C>,
     g_scalars: Option<Vec<C::Scalar>>,
@@ -246,7 +246,7 @@ impl<C: CurveAffine> Params<C> {
 }
 
 /// A guard returned by the verifier
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Guard<'a, C: CurveAffine> {
     msm: MSM<'a, C>,
     neg_z1: C::Scalar,
