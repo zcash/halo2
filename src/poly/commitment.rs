@@ -443,6 +443,7 @@ fn test_opening_proof() {
                 // Test use_g()
                 let g = guard.compute_g();
                 let (msm_g, _accumulator) = guard.clone().use_g(g);
+                assert!(msm_g.is_zero());
             }
 
             // Check another proof to populate `msm.g_scalars`
@@ -458,7 +459,6 @@ fn test_opening_proof() {
             // Test use_g()
             let g = guard.compute_g();
             let (msm_g, _accumulator) = guard.clone().use_g(g);
-
             assert!(msm_g.is_zero());
 
             break;
