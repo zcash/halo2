@@ -1,25 +1,25 @@
-use super::{OpeningProof, Params};
+use super::super::Error;
+use super::{Guard, OpeningProof, Params, MSM};
 use crate::transcript::Hasher;
 
-use crate::arithmetic::{
-    best_multiexp, get_challenge_scalar, Challenge, Curve, CurveAffine, Field,
-};
+use crate::arithmetic::{get_challenge_scalar, Challenge, CurveAffine, Field};
 
 impl<C: CurveAffine> OpeningProof<C> {
     /// Checks to see if an [`OpeningProof`] is valid given the current
     /// `transcript`, and a point `x` that the polynomial commitment `p` opens
     /// purportedly to the value `v`.
-    pub fn verify<H: Hasher<C::Base>>(
+    pub fn verify<'a, H: Hasher<C::Base>>(
         &self,
-        params: &Params<C>,
+        params: &'a Params<C>,
+        mut msm: MSM<'a, C>,
         transcript: &mut H,
         x: C::Scalar,
         p: &C,
         v: C::Scalar,
-    ) -> bool {
+    ) -> Result<Guard<'a, C>, Error> {
         // Check for well-formedness
         if self.rounds.len() != params.k as usize {
-            return false;
+            return Err(Error::OpeningError);
         }
 
         transcript.absorb(C::Base::from_u64(self.fork as u64));
@@ -31,7 +31,7 @@ impl<C: CurveAffine> OpeningProof<C> {
             let u_y2 = u_x.square() * &u_x + &C::b();
             let u_y = u_y2.deterministic_sqrt();
             if u_y.is_none() {
-                return false;
+                return Err(Error::OpeningError);
             }
             let u_y = u_y.unwrap();
 
@@ -45,14 +45,15 @@ impl<C: CurveAffine> OpeningProof<C> {
         let mut challenges = Vec::with_capacity(self.rounds.len());
         let mut challenges_inv = Vec::with_capacity(self.rounds.len());
         let mut challenges_sq = Vec::with_capacity(self.rounds.len());
-        let mut allinv = Field::one();
+        let mut challenges_sq_packed: Vec<Challenge> = Vec::with_capacity(self.rounds.len());
+        let mut allinv = C::Scalar::one();
 
         for round in &self.rounds {
             // Feed L and R into the transcript.
             let l = round.0.get_xy();
             let r = round.1.get_xy();
             if bool::from(l.is_none() | r.is_none()) {
-                return false;
+                return Err(Error::OpeningError);
             }
             let l = l.unwrap();
             let r = r.unwrap();
@@ -66,7 +67,7 @@ impl<C: CurveAffine> OpeningProof<C> {
             let challenge = challenge_sq.deterministic_sqrt();
             if challenge.is_none() {
                 // We didn't sample a square.
-                return false;
+                return Err(Error::OpeningError);
             }
             let challenge = challenge.unwrap();
 
@@ -74,10 +75,10 @@ impl<C: CurveAffine> OpeningProof<C> {
             if bool::from(challenge_inv.is_none()) {
                 // We sampled zero for some reason, unlikely to happen by
                 // chance.
-                return false;
+                return Err(Error::OpeningError);
             }
             let challenge_inv = challenge_inv.unwrap();
-            allinv *= challenge_inv;
+            allinv *= &challenge_inv;
 
             let challenge_sq_inv = challenge_inv.square();
 
@@ -89,11 +90,12 @@ impl<C: CurveAffine> OpeningProof<C> {
             challenges.push(challenge);
             challenges_inv.push(challenge_inv);
             challenges_sq.push(challenge_sq);
+            challenges_sq_packed.push(Challenge(challenge_sq_packed));
         }
 
         let delta = self.delta.get_xy();
         if bool::from(delta.is_none()) {
-            return false;
+            return Err(Error::OpeningError);
         }
         let delta = delta.unwrap();
 
@@ -109,8 +111,18 @@ impl<C: CurveAffine> OpeningProof<C> {
         // [c] P + [c * v] U + [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2) + delta - [z1] G - [z1 * b] U - [z2] H
         // = 0
 
+        // Scale the MSM by a random factor to ensure that if the existing MSM
+        // has is_zero() == false then this argument won't be able to interfere
+        // with it to make it true. It's a way of keeping the MSM's linearly
+        // independent.
+        msm.scale(C::Scalar::random());
+
         for scalar in &mut extra_scalars {
             *scalar *= &c;
+        }
+
+        for (scalar, base) in extra_scalars.iter().zip(extra_bases.iter()) {
+            msm.add_term(*scalar, *base);
         }
 
         let b = compute_b(x, &challenges, &challenges_inv);
@@ -118,31 +130,26 @@ impl<C: CurveAffine> OpeningProof<C> {
         let neg_z1 = -self.z1;
 
         // [c] P
-        extra_bases.push(*p);
-        extra_scalars.push(c);
+        msm.add_term(c, *p);
 
         // [c * v] U - [z1 * b] U
-        extra_bases.push(u);
-        extra_scalars.push((c * &v) + &(neg_z1 * &b));
+        msm.add_term((c * &v) + &(neg_z1 * &b), u);
 
         // delta
-        extra_bases.push(self.delta);
-        extra_scalars.push(Field::one());
+        msm.add_term(Field::one(), self.delta);
 
         // - [z2] H
-        extra_bases.push(params.h);
-        extra_scalars.push(-self.z2);
+        msm.add_to_h(-self.z2);
 
-        // - [z1] G
-        extra_bases.extend(&params.g);
-        let mut s = compute_s(&challenges_sq, allinv);
-        // TODO: parallelize
-        for s in &mut s {
-            *s *= &neg_z1;
-        }
-        extra_scalars.extend(s);
+        let guard = Guard {
+            msm,
+            neg_z1,
+            allinv,
+            challenges_sq,
+            challenges_sq_packed,
+        };
 
-        bool::from(best_multiexp(&extra_scalars, &extra_bases).is_zero())
+        Ok(guard)
     }
 }
 
@@ -159,21 +166,4 @@ fn compute_b<F: Field>(x: F, challenges: &[F], challenges_inv: &[F]) -> F {
                 &challenges_inv[0..(challenges.len() - 1)],
             )
     }
-}
-
-// TODO: parallelize
-fn compute_s<F: Field>(challenges_sq: &[F], allinv: F) -> Vec<F> {
-    let lg_n = challenges_sq.len();
-    let n = 1 << lg_n;
-
-    let mut s = Vec::with_capacity(n);
-    s.push(allinv);
-    for i in 1..n {
-        let lg_i = (32 - 1 - (i as u32).leading_zeros()) as usize;
-        let k = 1 << lg_i;
-        let u_lg_i_sq = challenges_sq[(lg_n - 1) - lg_i];
-        s.push(s[i - k] * u_lg_i_sq);
-    }
-
-    s
 }
