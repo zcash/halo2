@@ -69,7 +69,7 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Evaluate the circuit using the custom gates provided
         let mut h_eval = C::Scalar::zero();
-        for poly in srs.meta.gates.iter() {
+        for poly in srs.cs.gates.iter() {
             h_eval *= &x_2;
 
             let evaluation: C::Scalar = poly.evaluate(
@@ -102,7 +102,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         }
 
         // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
-        for (permutation_index, wires) in srs.meta.permutations.iter().enumerate() {
+        for (permutation_index, wires) in srs.cs.permutations.iter().enumerate() {
             h_eval *= &x_2;
 
             let mut left = self.permutation_product_evals[permutation_index];
@@ -148,8 +148,8 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Compress the commitments and expected evaluations at x_3 together
         // using the challenge x_4
-        let mut q_commitments: Vec<Option<C::Projective>> = vec![None; srs.meta.rotations.len()];
-        let mut q_evals: Vec<_> = vec![C::Scalar::zero(); srs.meta.rotations.len()];
+        let mut q_commitments: Vec<Option<C::Projective>> = vec![None; srs.cs.rotations.len()];
+        let mut q_evals: Vec<_> = vec![C::Scalar::zero(); srs.cs.rotations.len()];
         {
             let mut accumulate = |point_index: usize, new_commitment, eval| {
                 q_commitments[point_index] = q_commitments[point_index]
@@ -163,8 +163,8 @@ impl<'a, C: CurveAffine> Proof<C> {
                 q_evals[point_index] += &eval;
             };
 
-            for (query_index, &(wire, ref at)) in srs.meta.advice_queries.iter().enumerate() {
-                let point_index = (*srs.meta.rotations.get(at).unwrap()).0;
+            for (query_index, &(wire, ref at)) in srs.cs.advice_queries.iter().enumerate() {
+                let point_index = (*srs.cs.rotations.get(at).unwrap()).0;
                 accumulate(
                     point_index,
                     self.advice_commitments[wire.0],
@@ -172,8 +172,8 @@ impl<'a, C: CurveAffine> Proof<C> {
                 );
             }
 
-            for (query_index, &(wire, ref at)) in srs.meta.fixed_queries.iter().enumerate() {
-                let point_index = (*srs.meta.rotations.get(at).unwrap()).0;
+            for (query_index, &(wire, ref at)) in srs.cs.fixed_queries.iter().enumerate() {
+                let point_index = (*srs.cs.rotations.get(at).unwrap()).0;
                 accumulate(
                     point_index,
                     srs.fixed_commitments[wire.0],
@@ -181,13 +181,13 @@ impl<'a, C: CurveAffine> Proof<C> {
                 );
             }
 
-            let current_index = (*srs.meta.rotations.get(&Rotation::default()).unwrap()).0;
+            let current_index = (*srs.cs.rotations.get(&Rotation::default()).unwrap()).0;
             for (commitment, eval) in self.h_commitments.iter().zip(self.h_evals.iter()) {
                 accumulate(current_index, *commitment, *eval);
             }
 
             // Handle permutation arguments, if any exist
-            if !srs.meta.permutations.is_empty() {
+            if !srs.cs.permutations.is_empty() {
                 // Open permutation product commitments at x_3
                 for (commitment, eval) in self
                     .permutation_product_commitments
@@ -205,7 +205,7 @@ impl<'a, C: CurveAffine> Proof<C> {
                 {
                     accumulate(current_index, *commitment, *eval);
                 }
-                let current_index = (*srs.meta.rotations.get(&Rotation(-1)).unwrap()).0;
+                let current_index = (*srs.cs.rotations.get(&Rotation(-1)).unwrap()).0;
                 // Open permutation product commitments at \omega^{-1} x_3
                 for (commitment, eval) in self
                     .permutation_product_commitments
@@ -240,7 +240,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         // We can compute the expected f_eval at x_6 using the q_evals provided
         // by the prover and from x_5
         let mut f_eval = C::Scalar::zero();
-        for (&row, point_index) in srs.meta.rotations.iter() {
+        for (&row, point_index) in srs.cs.rotations.iter() {
             let mut eval = self.q_evals[point_index.0];
 
             let point = srs.domain.rotate_omega(x_3, row);
@@ -257,7 +257,7 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Compute the final commitment that has to be opened
         let mut f_commitment: C::Projective = self.f_commitment.to_projective();
-        for (_, &point_index) in srs.meta.rotations.iter() {
+        for (_, &point_index) in srs.cs.rotations.iter() {
             f_commitment *= x_7;
             f_commitment = f_commitment + &q_commitments[point_index.0].as_ref().unwrap();
             f_eval *= &x_7;

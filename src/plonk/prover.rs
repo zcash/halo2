@@ -1,5 +1,5 @@
 use super::{
-    circuit::{AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit},
+    circuit::{AdviceWire, Assignment, Circuit, ConstraintSystem, FixedWire},
     hash_point, Error, Proof, SRS,
 };
 use crate::arithmetic::{
@@ -30,7 +30,7 @@ impl<C: CurveAffine> Proof<C> {
             _marker: std::marker::PhantomData<F>,
         }
 
-        impl<F: Field> ConstraintSystem<F> for WitnessCollection<F> {
+        impl<F: Field> Assignment<F> for WitnessCollection<F> {
             fn assign_advice(
                 &mut self,
                 wire: AdviceWire,
@@ -72,7 +72,7 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         let domain = &srs.domain;
-        let mut meta = MetaCircuit::default();
+        let mut meta = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut meta);
 
         let mut witness = WitnessCollection {
@@ -140,7 +140,7 @@ impl<C: CurveAffine> Proof<C> {
 
         // Iterate over each permutation
         let mut permutation_modified_advice = vec![];
-        for (wires, permuted_values) in srs.meta.permutations.iter().zip(srs.permutations.iter()) {
+        for (wires, permuted_values) in srs.cs.permutations.iter().zip(srs.permutations.iter()) {
             // Goal is to compute the products of fractions
             //
             // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
@@ -174,7 +174,7 @@ impl<C: CurveAffine> Proof<C> {
             .batch_invert();
 
         for (wires, mut modified_advice) in srs
-            .meta
+            .cs
             .permutations
             .iter()
             .zip(permutation_modified_advice.into_iter())
@@ -276,7 +276,7 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
-        for (permutation_index, wires) in srs.meta.permutations.iter().enumerate() {
+        for (permutation_index, wires) in srs.cs.permutations.iter().enumerate() {
             h_poly = h_poly * x_2;
 
             let mut left = permutation_product_cosets[permutation_index].clone();
@@ -473,7 +473,7 @@ impl<C: CurveAffine> Proof<C> {
             }
 
             // Handle permutation arguments, if any exist
-            if !srs.meta.permutations.is_empty() {
+            if !srs.cs.permutations.is_empty() {
                 // Open permutation product commitments at x_3
                 for ((poly, blind), eval) in permutation_product_polys
                     .iter()
@@ -493,7 +493,7 @@ impl<C: CurveAffine> Proof<C> {
                     accumulate(current_index, poly, Blind::default(), *eval);
                 }
 
-                let current_index = (*srs.meta.rotations.get(&Rotation(-1)).unwrap()).0;
+                let current_index = (*srs.cs.rotations.get(&Rotation(-1)).unwrap()).0;
                 // Open permutation product commitments at \omega^{-1} x_3
                 for ((poly, blind), eval) in permutation_product_polys
                     .iter()

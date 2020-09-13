@@ -16,7 +16,7 @@ pub struct AdviceWire(pub usize);
 
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
-pub trait ConstraintSystem<F: Field> {
+pub trait Assignment<F: Field> {
     /// Assign an advice wire value (witness)
     fn assign_advice(
         &mut self,
@@ -53,16 +53,12 @@ pub trait Circuit<F: Field> {
 
     /// The circuit is given an opportunity to describe the exact gate
     /// arrangement, wire arrangement, etc.
-    fn configure(meta: &mut MetaCircuit<F>) -> Self::Config;
+    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config;
 
     /// Given the provided `cs`, synthesize the circuit. The concrete type of
     /// the caller will be different depending on the context, and they may or
     /// may not expect to have a witness present.
-    fn synthesize(
-        &self,
-        cs: &mut impl ConstraintSystem<F>,
-        config: Self::Config,
-    ) -> Result<(), Error>;
+    fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error>;
 }
 
 /// Low-degree expression representing an identity that must hold over the committed wires.
@@ -152,7 +148,7 @@ pub(crate) struct PointIndex(pub usize);
 /// This is a description of the circuit environment, such as the gate, wire and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
-pub struct MetaCircuit<F> {
+pub struct ConstraintSystem<F> {
     pub(crate) num_fixed_wires: usize,
     pub(crate) num_advice_wires: usize,
     pub(crate) gates: Vec<Expression<F>>,
@@ -172,12 +168,12 @@ pub struct MetaCircuit<F> {
     pub(crate) permutations: Vec<Vec<(AdviceWire, usize)>>,
 }
 
-impl<F: Field> Default for MetaCircuit<F> {
-    fn default() -> MetaCircuit<F> {
+impl<F: Field> Default for ConstraintSystem<F> {
+    fn default() -> ConstraintSystem<F> {
         let mut rotations = BTreeMap::new();
         rotations.insert(Rotation::default(), PointIndex(0));
 
-        MetaCircuit {
+        ConstraintSystem {
             num_fixed_wires: 0,
             num_advice_wires: 0,
             gates: vec![],
@@ -189,7 +185,7 @@ impl<F: Field> Default for MetaCircuit<F> {
     }
 }
 
-impl<F: Field> MetaCircuit<F> {
+impl<F: Field> ConstraintSystem<F> {
     /// Add a permutation argument for some advice wires
     pub fn permutation(&mut self, wires: &[AdviceWire]) -> usize {
         let index = self.permutations.len();

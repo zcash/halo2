@@ -1,5 +1,5 @@
 use super::{
-    circuit::{AdviceWire, Circuit, ConstraintSystem, FixedWire, MetaCircuit},
+    circuit::{AdviceWire, Assignment, Circuit, ConstraintSystem, FixedWire},
     Error, SRS,
 };
 use crate::arithmetic::{Curve, CurveAffine, Field};
@@ -23,7 +23,7 @@ impl<C: CurveAffine> SRS<C> {
             _marker: std::marker::PhantomData<F>,
         }
 
-        impl<F: Field> ConstraintSystem<F> for Assembly<F> {
+        impl<F: Field> Assignment<F> for Assembly<F> {
             fn assign_advice(
                 &mut self,
                 _: AdviceWire,
@@ -100,13 +100,13 @@ impl<C: CurveAffine> SRS<C> {
             }
         }
 
-        let mut meta = MetaCircuit::default();
-        let config = ConcreteCircuit::configure(&mut meta);
+        let mut cs = ConstraintSystem::default();
+        let config = ConcreteCircuit::configure(&mut cs);
 
         // Get the largest permutation argument length in terms of the number of
         // advice wires involved.
         let mut largest_permutation_length = 0;
-        for permutation in &meta.permutations {
+        for permutation in &cs.permutations {
             largest_permutation_length =
                 std::cmp::max(permutation.len(), largest_permutation_length);
         }
@@ -117,7 +117,7 @@ impl<C: CurveAffine> SRS<C> {
 
         // Account for each gate to ensure our quotient polynomial is the
         // correct degree and that our extended domain is the right size.
-        for poly in meta.gates.iter() {
+        for poly in cs.gates.iter() {
             degree = std::cmp::max(degree, poly.degree());
         }
 
@@ -150,7 +150,7 @@ impl<C: CurveAffine> SRS<C> {
         }
 
         let mut assembly: Assembly<C::Scalar> = Assembly {
-            fixed: vec![domain.empty_lagrange(); meta.num_fixed_wires],
+            fixed: vec![domain.empty_lagrange(); cs.num_fixed_wires],
             mapping: vec![],
             aux: vec![],
             sizes: vec![],
@@ -159,7 +159,7 @@ impl<C: CurveAffine> SRS<C> {
 
         // Initialize the copy vector to keep track of copy constraints in all
         // the permutation arguments.
-        for permutation in &meta.permutations {
+        for permutation in &cs.permutations {
             let mut wires = vec![];
             for i in 0..permutation.len() {
                 // Computes [(i, 0), (i, 1), ..., (i, n - 1)]
@@ -181,7 +181,7 @@ impl<C: CurveAffine> SRS<C> {
         let mut permutations = vec![];
         let mut permutation_polys = vec![];
         let mut permutation_cosets = vec![];
-        for (permutation_index, permutation) in meta.permutations.iter().enumerate() {
+        for (permutation_index, permutation) in cs.permutations.iter().enumerate() {
             let mut commitments = vec![];
             let mut inner_permutations = vec![];
             let mut polys = vec![];
@@ -225,7 +225,7 @@ impl<C: CurveAffine> SRS<C> {
             .map(|poly| domain.lagrange_to_coeff(poly))
             .collect();
 
-        let fixed_cosets = meta
+        let fixed_cosets = cs
             .fixed_queries
             .iter()
             .map(|&(wire, at)| {
@@ -251,7 +251,7 @@ impl<C: CurveAffine> SRS<C> {
             permutations,
             permutation_polys,
             permutation_cosets,
-            meta,
+            cs,
         })
     }
 }
