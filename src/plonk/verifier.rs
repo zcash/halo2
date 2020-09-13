@@ -12,6 +12,7 @@ impl<C: CurveAffine> Proof<C> {
         &self,
         params: &Params<C>,
         srs: &SRS<C>,
+        msm: MSM<C>,
     ) -> bool {
         // Create a transcript for obtaining Fiat-Shamir challenges.
         let mut transcript = HBase::init(C::Base::one());
@@ -264,12 +265,11 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // Verify the opening proof
-        let default_msm = params.msm();
         let guard = self
             .opening
             .verify(
                 params,
-                default_msm,
+                msm,
                 &mut transcript,
                 x_6,
                 &f_commitment.to_affine(),
@@ -277,8 +277,8 @@ impl<C: CurveAffine> Proof<C> {
             )
             .unwrap();
 
-        let msm: &MSM<C> = &guard.use_challenges();
+        let msm_challenges = guard.use_challenges();
 
-        msm.is_zero()
+        msm_challenges.is_zero()
     }
 }
