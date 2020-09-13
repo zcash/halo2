@@ -269,8 +269,8 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
     /// Lets caller supply the challenges and obtain an MSM with updated
     /// scalars and points.
     pub fn use_challenges(mut self) -> MSM<'a, C> {
-        let s = compute_s(&self.challenges_sq, self.allinv * &self.neg_z1);
-        self.msm.add_to_g(&s);
+        let g = self.compute_g(self.neg_z1);
+        self.msm.add_term(C::Scalar::one(), g);
 
         self.msm
     }
@@ -278,8 +278,7 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
     /// Lets caller supply the purported G point and simply appends it to
     /// return an updated MSM.
     pub fn use_g(mut self, g: C) -> (MSM<'a, C>, Accumulator<C>) {
-        &self.msm.other_scalars.push(self.neg_z1);
-        &self.msm.other_bases.push(g);
+        &self.msm.add_term(self.neg_z1, g);
 
         let accumulator = Accumulator {
             g,
@@ -287,6 +286,30 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
         };
 
         (self.msm, accumulator)
+    }
+
+    /// Computes the g value when given a potential scalar as input.
+    pub fn compute_g(&self, scalar: C::Scalar) -> C {
+        let s = compute_s(&self.challenges_sq, self.allinv * &scalar);
+        let mut g = C::Projective::zero();
+
+        if let Some(g_scalars) = &self.msm.g_scalars {
+            for ((g_scalar, g_base), s) in
+                g_scalars.iter().zip(self.msm.params.g.iter()).zip(s.iter())
+            {
+                // g_base * (g_scalar + s)
+                let tmp = g_base.mul(*g_scalar + &s);
+                g = g.add(&tmp);
+            }
+        } else {
+            for (g_base, s) in self.msm.params.g.iter().zip(s.iter()) {
+                // g_base * (g_scalar + s)
+                let tmp = g_base.mul(*s);
+                g = g.add(&tmp);
+            }
+        }
+
+        g.to_affine()
     }
 }
 
@@ -415,9 +438,16 @@ fn test_opening_proof() {
                 .verify(&params, msm, &mut transcript_dup, x, &p, v)
                 .unwrap();
 
-            let msm = guard.use_challenges();
+            // Test use_challenges()
+            let msm_challenges = guard.clone().use_challenges();
+            assert!(msm_challenges.is_zero());
 
-            assert!(msm.is_zero());
+            // Test use_g()
+            let g = guard.compute_g(Field::one());
+            let (msm_g, _accumulator) = guard.clone().use_g(g);
+
+            assert!(msm_g.is_zero());
+
             break;
         }
     }
