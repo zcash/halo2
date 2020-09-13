@@ -51,8 +51,11 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         &self.other_bases.push(point);
     }
 
-    /// Add a vector of scalars to `g_scalars`
+    /// Add a vector of scalars to `g_scalars`. This function will panic if the
+    /// caller provides a slice of scalars that is not of length `params.n`.
+    // TODO: parallelize
     pub fn add_to_g(&mut self, scalars: &[C::Scalar]) {
+        assert_eq!(scalars.len(), self.params.n as usize);
         if let Some(g_scalars) = &mut self.g_scalars {
             for (g_scalar, scalar) in g_scalars.iter_mut().zip(scalars.iter()) {
                 *g_scalar += &scalar;
@@ -68,6 +71,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
     }
 
     /// Scale all scalars in the MSM by a random blinding factor
+    // TODO: parallelize
     pub fn scale(&mut self, factor: C::Scalar) {
         if let Some(g_scalars) = &mut self.g_scalars {
             for g_scalar in g_scalars.iter_mut() {
@@ -75,6 +79,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
             }
         }
 
+        // TODO: parallelize
         for other_scalar in self.other_scalars.iter_mut() {
             *other_scalar *= &factor;
         }
@@ -292,25 +297,7 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
     /// Computes the g value when given a potential scalar as input.
     pub fn compute_g(&self, scalar: C::Scalar) -> C {
         let s = compute_s(&self.challenges_sq, self.allinv * &scalar);
-        let mut g = C::Projective::zero();
-
-        if let Some(g_scalars) = &self.msm.g_scalars {
-            for ((g_scalar, g_base), s) in
-                g_scalars.iter().zip(self.msm.params.g.iter()).zip(s.iter())
-            {
-                // g_base * (g_scalar + s)
-                let tmp = g_base.mul(*g_scalar + &s);
-                g = g.add(&tmp);
-            }
-        } else {
-            for (g_base, s) in self.msm.params.g.iter().zip(s.iter()) {
-                // g_base * (g_scalar + s)
-                let tmp = g_base.mul(*s);
-                g = g.add(&tmp);
-            }
-        }
-
-        g.to_affine()
+        best_multiexp(&s, &self.msm.params.g).to_affine()
     }
 }
 
@@ -425,7 +412,7 @@ fn test_opening_proof() {
     transcript.absorb(Fp::from_bytes(&v.to_bytes()).unwrap()); // unlikely to fail since p ~ q
 
     loop {
-        let mut transcript_dup = transcript.clone();
+        let transcript_dup = transcript.clone();
 
         let opening_proof = OpeningProof::create(&params, &mut transcript, &px, blind, x);
         if opening_proof.is_err() {
@@ -434,18 +421,30 @@ fn test_opening_proof() {
         } else {
             let opening_proof = opening_proof.unwrap();
             // Verify the opening proof
-            let msm = params.empty_msm();
             let guard = opening_proof
-                .verify(&params, msm, &mut transcript_dup, x, &p, v)
+                .verify(
+                    &params,
+                    params.empty_msm(),
+                    &mut transcript_dup.clone(),
+                    x,
+                    &p,
+                    v,
+                )
+                .unwrap();
+
+            // Generate a `new_guard` to populate `msm.g_scalars`
+            let msm = guard.use_challenges();
+            let new_guard = opening_proof
+                .verify(&params, msm, &mut transcript_dup.clone(), x, &p, v)
                 .unwrap();
 
             // Test use_challenges()
-            let msm_challenges = guard.clone().use_challenges();
+            let msm_challenges = new_guard.clone().use_challenges();
             assert!(msm_challenges.is_zero());
 
             // Test use_g()
-            let g = guard.compute_g(Field::one());
-            let (msm_g, _accumulator) = guard.clone().use_g(g);
+            let g = new_guard.compute_g(Field::one());
+            let (msm_g, _accumulator) = new_guard.clone().use_g(g);
 
             assert!(msm_g.is_zero());
 
