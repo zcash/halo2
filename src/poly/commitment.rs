@@ -70,7 +70,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         self.h_scalar = self.h_scalar.map_or(Some(scalar), |a| Some(a + &scalar));
     }
 
-    /// Scale all scalars in the MSM by a random blinding factor
+    /// Scale all scalars in the MSM by some scaling factor
     // TODO: parallelize
     pub fn scale(&mut self, factor: C::Scalar) {
         if let Some(g_scalars) = &mut self.g_scalars {
@@ -434,19 +434,30 @@ fn test_opening_proof() {
                 )
                 .unwrap();
 
-            // Generate a `new_guard` to populate `msm.g_scalars`
+            // Test guard behavior prior to checking another proof
+            {
+                // Test use_challenges()
+                let msm_challenges = guard.clone().use_challenges();
+                assert!(msm_challenges.is_zero());
+
+                // Test use_g()
+                let g = guard.compute_g();
+                let (msm_g, _accumulator) = guard.clone().use_g(g);
+            }
+
+            // Check another proof to populate `msm.g_scalars`
             let msm = guard.use_challenges();
-            let new_guard = opening_proof
+            let guard = opening_proof
                 .verify(&params, msm, &mut transcript_dup.clone(), x, &p, v)
                 .unwrap();
 
             // Test use_challenges()
-            let msm_challenges = new_guard.clone().use_challenges();
+            let msm_challenges = guard.clone().use_challenges();
             assert!(msm_challenges.is_zero());
 
             // Test use_g()
-            let g = new_guard.compute_g();
-            let (msm_g, _accumulator) = new_guard.clone().use_g(g);
+            let g = guard.compute_g();
+            let (msm_g, _accumulator) = guard.clone().use_g(g);
 
             assert!(msm_g.is_zero());
 
