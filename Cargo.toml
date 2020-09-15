@@ -20,6 +20,13 @@ publish = false
 [package.metadata.docs.rs]
 rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "plonk"
+harness = false
+
 [dependencies]
 subtle = "2.2.1"
 crossbeam-utils = "0.7"
