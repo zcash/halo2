@@ -256,17 +256,18 @@ impl<'a, C: CurveAffine> Proof<C> {
         let x_7: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         // Compute the final commitment that has to be opened
-        msm.add_term(C::Scalar::one(), self.f_commitment);
+        let mut commitment_msm = params.empty_msm();
+        commitment_msm.add_term(C::Scalar::one(), self.f_commitment);
         for (_, &point_index) in srs.cs.rotations.iter() {
-            msm.scale(x_7);
-            msm.add_msm(&q_commitments[point_index.0]);
+            commitment_msm.scale(x_7);
+            commitment_msm.add_msm(&q_commitments[point_index.0]);
             f_eval *= &x_7;
             f_eval += &self.q_evals[point_index.0];
         }
 
         // Verify the opening proof
         self.opening
-            .verify(params, msm, &mut transcript, x_6, f_eval)
+            .verify(params, msm, &mut transcript, x_6, commitment_msm, f_eval)
             .map_err(|_| Error::OpeningError)
     }
 }

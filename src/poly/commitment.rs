@@ -437,10 +437,17 @@ fn test_opening_proof() {
         } else {
             let opening_proof = opening_proof.unwrap();
             // Verify the opening proof
-            let mut msm = params.empty_msm();
-            msm.add_term(Field::one(), p);
+            let mut commitment_msm = params.empty_msm();
+            commitment_msm.add_term(Field::one(), p);
             let guard = opening_proof
-                .verify(&params, msm, &mut transcript_dup.clone(), x, v)
+                .verify(
+                    &params,
+                    params.empty_msm(),
+                    &mut transcript_dup.clone(),
+                    x,
+                    commitment_msm,
+                    v,
+                )
                 .unwrap();
 
             // Test guard behavior prior to checking another proof
@@ -456,10 +463,18 @@ fn test_opening_proof() {
             }
 
             // Check another proof to populate `msm.g_scalars`
-            let mut msm = guard.use_challenges();
-            msm.add_term(Field::one(), p);
+            let msm = guard.use_challenges();
+            let mut commitment_msm = params.empty_msm();
+            commitment_msm.add_term(Field::one(), p);
             let guard = opening_proof
-                .verify(&params, msm, &mut transcript_dup.clone(), x, v)
+                .verify(
+                    &params,
+                    msm,
+                    &mut transcript_dup.clone(),
+                    x,
+                    commitment_msm,
+                    v,
+                )
                 .unwrap();
 
             // Test use_challenges()

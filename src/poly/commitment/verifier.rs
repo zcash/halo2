@@ -14,6 +14,7 @@ impl<C: CurveAffine> OpeningProof<C> {
         mut msm: MSM<'a, C>,
         transcript: &mut H,
         x: C::Scalar,
+        mut commitment_msm: MSM<'a, C>,
         v: C::Scalar,
     ) -> Result<Guard<'a, C>, Error> {
         // Check for well-formedness
@@ -115,7 +116,8 @@ impl<C: CurveAffine> OpeningProof<C> {
         let neg_z1 = -self.z1;
 
         // [c] P
-        msm.scale(c);
+        commitment_msm.scale(c);
+        msm.add_msm(&commitment_msm);
 
         for scalar in &mut extra_scalars {
             *scalar *= &c;
