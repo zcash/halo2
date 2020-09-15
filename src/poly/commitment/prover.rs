@@ -1,7 +1,7 @@
 use super::super::{Coeff, Polynomial};
 use super::{Blind, OpeningProof, Params};
 use crate::arithmetic::{
-    best_multiexp, compute_inner_product, get_challenge_scalar, parallelize, Challenge, Curve,
+    best_multiexp, compute_inner_product, get_challenge_scalar, small_multiexp, Challenge, Curve,
     CurveAffine, Field,
 };
 use crate::transcript::Hasher;
@@ -220,15 +220,11 @@ fn parallel_generator_collapse<C: CurveAffine>(
     challenge_inv: C::Scalar,
 ) {
     let len = g.len() / 2;
-    let (mut g_lo, g_hi) = g.split_at_mut(len);
+    let (g_lo, g_hi) = g.split_at_mut(len);
 
-    parallelize(&mut g_lo, |g_lo, start| {
-        let g_hi = &g_hi[start..];
-        let mut tmp = Vec::with_capacity(g_lo.len());
-        for (g_lo, g_hi) in g_lo.iter().zip(g_hi.iter()) {
-            // TODO: could use multiexp
-            tmp.push(((*g_lo) * challenge_inv) + &((*g_hi) * challenge));
-        }
-        C::Projective::batch_to_affine(&tmp, g_lo);
-    });
+    let mut tmp = Vec::with_capacity(g_lo.len());
+    for (g_lo, g_hi) in g_lo.iter().zip(g_hi.iter()) {
+        tmp.push(small_multiexp(&[challenge_inv, challenge], &[*g_lo, *g_hi]));
+    }
+    C::Projective::batch_to_affine(&tmp, g_lo);
 }
