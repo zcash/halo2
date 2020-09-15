@@ -20,18 +20,10 @@ fn criterion_benchmark(c: &mut Criterion) {
         let coeff_1 = Fp::random();
         let coeff_2 = Fp::random();
 
-        c.bench_function("shared double-and-add", |b| {
-            b.iter(|| {
-                for (g_lo, g_hi) in g_lo.iter().zip(g_hi.iter()) {
-                    small_multiexp(&[black_box(coeff_1), black_box(coeff_2)], &[*g_lo, *g_hi]);
-                }
-            })
-        });
-
         c.bench_function("double-and-add", |b| {
             b.iter(|| {
                 for (g_lo, g_hi) in g_lo.iter().zip(g_hi.iter()) {
-                    let _ = ((*g_lo) * coeff_1) + &((*g_hi) * coeff_2);
+                    small_multiexp(&[black_box(coeff_1), black_box(coeff_2)], &[*g_lo, *g_hi]);
                 }
             })
         });
