@@ -1,7 +1,7 @@
 use super::{hash_point, Error, Proof, SRS};
-use crate::arithmetic::{get_challenge_scalar, Challenge, Curve, CurveAffine, Field};
+use crate::arithmetic::{get_challenge_scalar, Challenge, CurveAffine, Field};
 use crate::poly::{
-    commitment::{Params, MSM},
+    commitment::{Guard, Params, MSM},
     Rotation,
 };
 use crate::transcript::Hasher;
@@ -12,8 +12,13 @@ impl<'a, C: CurveAffine> Proof<C> {
         &self,
         params: &'a Params<C>,
         srs: &SRS<C>,
-        msm: MSM<'a, C>,
-    ) -> Result<MSM<'a, C>, Error> {
+        mut msm: MSM<'a, C>,
+    ) -> Result<Guard<'a, C>, Error> {
+        // Scale the MSM by a random factor to ensure that if the existing MSM
+        // has is_zero() == false then this argument won't be able to interfere
+        // with it to make it true, with high probability.
+        msm.scale(C::Scalar::random());
+
         // Create a transcript for obtaining Fiat-Shamir challenges.
         let mut transcript = HBase::init(C::Base::one());
 
@@ -148,17 +153,12 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Compress the commitments and expected evaluations at x_3 together
         // using the challenge x_4
-        let mut q_commitments: Vec<Option<C::Projective>> = vec![None; srs.cs.rotations.len()];
+        let mut q_commitments: Vec<_> = vec![params.empty_msm(); srs.cs.rotations.len()];
         let mut q_evals: Vec<_> = vec![C::Scalar::zero(); srs.cs.rotations.len()];
         {
             let mut accumulate = |point_index: usize, new_commitment, eval| {
-                q_commitments[point_index] = q_commitments[point_index]
-                    .map(|mut commitment| {
-                        commitment *= x_4;
-                        commitment += new_commitment;
-                        commitment
-                    })
-                    .or_else(|| Some(new_commitment.to_projective()));
+                q_commitments[point_index].scale(x_4);
+                q_commitments[point_index].add_term(C::Scalar::one(), new_commitment);
                 q_evals[point_index] *= &x_4;
                 q_evals[point_index] += &eval;
             };
@@ -256,29 +256,17 @@ impl<'a, C: CurveAffine> Proof<C> {
         let x_7: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         // Compute the final commitment that has to be opened
-        let mut f_commitment: C::Projective = self.f_commitment.to_projective();
+        msm.add_term(C::Scalar::one(), self.f_commitment);
         for (_, &point_index) in srs.cs.rotations.iter() {
-            f_commitment *= x_7;
-            f_commitment = f_commitment + &q_commitments[point_index.0].as_ref().unwrap();
+            msm.scale(x_7);
+            msm.add_msm(&q_commitments[point_index.0]);
             f_eval *= &x_7;
             f_eval += &self.q_evals[point_index.0];
         }
 
         // Verify the opening proof
-        let guard = self
-            .opening
-            .verify(
-                params,
-                msm,
-                &mut transcript,
-                x_6,
-                &f_commitment.to_affine(),
-                f_eval,
-            )
-            .unwrap();
-
-        let msm_challenges = guard.use_challenges();
-
-        Ok(msm_challenges)
+        self.opening
+            .verify(params, msm, &mut transcript, x_6, f_eval)
+            .map_err(|_| Error::OpeningError)
     }
 }
