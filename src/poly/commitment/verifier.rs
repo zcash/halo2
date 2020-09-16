@@ -14,7 +14,7 @@ impl<C: CurveAffine> OpeningProof<C> {
         mut msm: MSM<'a, C>,
         transcript: &mut H,
         x: C::Scalar,
-        p: &C,
+        mut commitment_msm: MSM<'a, C>,
         v: C::Scalar,
     ) -> Result<Guard<'a, C>, Error> {
         // Check for well-formedness
@@ -111,11 +111,13 @@ impl<C: CurveAffine> OpeningProof<C> {
         // [c] P + [c * v] U + [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2) + delta - [z1] G - [z1 * b] U - [z2] H
         // = 0
 
-        // Scale the MSM by a random factor to ensure that if the existing MSM
-        // has is_zero() == false then this argument won't be able to interfere
-        // with it to make it true. It's a way of keeping the MSM's linearly
-        // independent.
-        msm.scale(C::Scalar::random());
+        let b = compute_b(x, &challenges, &challenges_inv);
+
+        let neg_z1 = -self.z1;
+
+        // [c] P
+        commitment_msm.scale(c);
+        msm.add_msm(&commitment_msm);
 
         for scalar in &mut extra_scalars {
             *scalar *= &c;
@@ -124,13 +126,6 @@ impl<C: CurveAffine> OpeningProof<C> {
         for (scalar, base) in extra_scalars.iter().zip(extra_bases.iter()) {
             msm.add_term(*scalar, *base);
         }
-
-        let b = compute_b(x, &challenges, &challenges_inv);
-
-        let neg_z1 = -self.z1;
-
-        // [c] P
-        msm.add_term(c, *p);
 
         // [c * v] U - [z1 * b] U
         msm.add_term((c * &v) + &(neg_z1 * &b), u);

@@ -45,6 +45,20 @@ pub struct MSM<'a, C: CurveAffine> {
 }
 
 impl<'a, C: CurveAffine> MSM<'a, C> {
+    /// Add another multiexp into this one
+    pub fn add_msm(&mut self, other: &Self) {
+        self.other_scalars.extend(other.other_scalars.iter());
+        self.other_bases.extend(other.other_bases.iter());
+
+        if let Some(g_scalars) = &other.g_scalars {
+            self.add_to_g(&g_scalars);
+        }
+
+        if let Some(h_scalar) = &other.h_scalar {
+            self.add_to_h(*h_scalar);
+        }
+    }
+
     /// Add arbitrary term (the scalar and the point)
     pub fn add_term(&mut self, scalar: C::Scalar, point: C) {
         &self.other_scalars.push(scalar);
@@ -423,13 +437,15 @@ fn test_opening_proof() {
         } else {
             let opening_proof = opening_proof.unwrap();
             // Verify the opening proof
+            let mut commitment_msm = params.empty_msm();
+            commitment_msm.add_term(Field::one(), p);
             let guard = opening_proof
                 .verify(
                     &params,
                     params.empty_msm(),
                     &mut transcript_dup.clone(),
                     x,
-                    &p,
+                    commitment_msm,
                     v,
                 )
                 .unwrap();
@@ -448,8 +464,17 @@ fn test_opening_proof() {
 
             // Check another proof to populate `msm.g_scalars`
             let msm = guard.use_challenges();
+            let mut commitment_msm = params.empty_msm();
+            commitment_msm.add_term(Field::one(), p);
             let guard = opening_proof
-                .verify(&params, msm, &mut transcript_dup.clone(), x, &p, v)
+                .verify(
+                    &params,
+                    msm,
+                    &mut transcript_dup.clone(),
+                    x,
+                    commitment_msm,
+                    v,
+                )
                 .unwrap();
 
             // Test use_challenges()

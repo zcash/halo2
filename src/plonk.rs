@@ -71,6 +71,8 @@ pub enum Error {
     ConstraintSystemFailure,
     /// Out of bounds index passed to a backend
     BoundsFailure,
+    /// Opening error
+    OpeningError,
 }
 
 fn hash_point<C: CurveAffine, H: Hasher<C::Base>>(
@@ -345,10 +347,32 @@ fn test_proving() {
         let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &srs, &circuit)
             .expect("proof generation should not fail");
 
-        let msm_default = params.empty_msm();
-        let msm = proof
-            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm_default)
+        let msm = params.empty_msm();
+        let guard = proof
+            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm)
             .unwrap();
-        assert!(msm.is_zero())
+        {
+            let msm = guard.clone().use_challenges();
+            assert!(msm.is_zero());
+        }
+        {
+            let g = guard.compute_g();
+            let (msm, _) = guard.clone().use_g(g);
+            assert!(msm.is_zero());
+        }
+        let msm = guard.clone().use_challenges();
+        assert!(msm.clone().is_zero());
+        let guard = proof
+            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm)
+            .unwrap();
+        {
+            let msm = guard.clone().use_challenges();
+            assert!(msm.is_zero());
+        }
+        {
+            let g = guard.compute_g();
+            let (msm, _) = guard.clone().use_g(g);
+            assert!(msm.is_zero());
+        }
     }
 }
