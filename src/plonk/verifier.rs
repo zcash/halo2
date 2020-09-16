@@ -237,9 +237,9 @@ impl<'a, C: CurveAffine> Proof<C> {
             C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
         transcript.absorb(transcript_scalar_point);
 
-        // We can compute the expected f_eval at x_6 using the q_evals provided
+        // We can compute the expected msm_eval at x_6 using the q_evals provided
         // by the prover and from x_5
-        let mut f_eval = C::Scalar::zero();
+        let mut msm_eval = C::Scalar::zero();
         for (&row, point_index) in srs.cs.rotations.iter() {
             let mut eval = self.q_evals[point_index.0];
 
@@ -247,8 +247,8 @@ impl<'a, C: CurveAffine> Proof<C> {
             eval = eval - &q_evals[point_index.0];
             eval = eval * &(x_6 - &point).invert().unwrap();
 
-            f_eval *= &x_5;
-            f_eval += &eval;
+            msm_eval *= &x_5;
+            msm_eval += &eval;
         }
 
         // Sample a challenge x_7 that we will use to collapse the openings of
@@ -261,13 +261,13 @@ impl<'a, C: CurveAffine> Proof<C> {
         for (_, &point_index) in srs.cs.rotations.iter() {
             commitment_msm.scale(x_7);
             commitment_msm.add_msm(&q_commitments[point_index.0]);
-            f_eval *= &x_7;
-            f_eval += &self.q_evals[point_index.0];
+            msm_eval *= &x_7;
+            msm_eval += &self.q_evals[point_index.0];
         }
 
         // Verify the opening proof
         self.opening
-            .verify(params, msm, &mut transcript, x_6, commitment_msm, f_eval)
+            .verify(params, msm, &mut transcript, x_6, commitment_msm, msm_eval)
             .map_err(|_| Error::OpeningError)
     }
 }
