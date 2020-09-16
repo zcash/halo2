@@ -184,15 +184,6 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
 /// Uses the double-and-add algorithm with doublings shared across points.
 
 pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Projective {
-    // Gets the bit at position `i`. Bits are numbered from 0 (least significant) to 7 (most significant).
-    fn get_bit_at(byte: u8, i: usize) -> bool {
-        if i < 8 {
-            ((byte >> i) & 1u8) != 0
-        } else {
-            false
-        }
-    }
-
     let coeffs: Vec<[u8; 32]> = coeffs.iter().map(|a| a.to_bytes()).collect();
     let mut acc = C::Projective::zero();
 
@@ -203,7 +194,8 @@ pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::P
             acc = acc.double();
             // for each coeff
             for coeff_idx in 0..coeffs.len() {
-                if get_bit_at(coeffs[coeff_idx][byte_idx], bit_idx) {
+                let byte = coeffs[coeff_idx][byte_idx];
+                if (byte >> bit_idx & 1) != 0 {
                     acc = acc + &bases[coeff_idx].to_projective();
                 }
             }
