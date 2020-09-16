@@ -24,7 +24,7 @@ rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 criterion = "0.3"
 
 [[bench]]
-name = "plonk"
+name = "arithmetic"
 harness = false
 
 [dependencies]
