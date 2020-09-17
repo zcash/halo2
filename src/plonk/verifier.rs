@@ -13,6 +13,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         params: &'a Params<C>,
         srs: &SRS<C>,
         mut msm: MSM<'a, C>,
+        aux_commitments: Vec<C>,
     ) -> Result<Guard<'a, C>, Error> {
         // Scale the MSM by a random factor to ensure that if the existing MSM
         // has is_zero() == false then this argument won't be able to interfere
@@ -24,6 +25,12 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Hash the prover's advice commitments into the transcript
         for commitment in &self.advice_commitments {
+            hash_point(&mut transcript, commitment)
+                .expect("proof cannot contain points at infinity");
+        }
+
+        // Hash the external auxiliary commitments into the transcript
+        for commitment in &aux_commitments {
             hash_point(&mut transcript, commitment)
                 .expect("proof cannot contain points at infinity");
         }
@@ -59,6 +66,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         for eval in self
             .advice_evals
             .iter()
+            .chain(self.aux_evals.iter())
             .chain(self.fixed_evals.iter())
             .chain(self.h_evals.iter())
             .chain(self.permutation_product_evals.iter())
@@ -80,6 +88,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             let evaluation: C::Scalar = poly.evaluate(
                 &|index| self.fixed_evals[index],
                 &|index| self.advice_evals[index],
+                &|index| self.aux_evals[index],
                 &|a, b| a + &b,
                 &|a, b| a * &b,
                 &|a, scalar| a * &scalar,
@@ -169,6 +178,15 @@ impl<'a, C: CurveAffine> Proof<C> {
                     point_index,
                     self.advice_commitments[wire.0],
                     self.advice_evals[query_index],
+                );
+            }
+
+            for (query_index, &(wire, ref at)) in srs.cs.aux_queries.iter().enumerate() {
+                let point_index = (*srs.cs.rotations.get(at).unwrap()).0;
+                accumulate(
+                    point_index,
+                    aux_commitments[wire.0],
+                    self.aux_evals[query_index],
                 );
             }
 
