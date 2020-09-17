@@ -160,6 +160,7 @@ pub(crate) struct PointIndex(pub usize);
 pub struct ConstraintSystem<F> {
     pub(crate) num_fixed_wires: usize,
     pub(crate) num_advice_wires: usize,
+    pub(crate) num_aux_wires: usize,
     pub(crate) gates: Vec<Expression<F>>,
     pub(crate) advice_queries: Vec<(AdviceWire, Rotation)>,
     pub(crate) aux_queries: Vec<(AuxWire, Rotation)>,
@@ -186,6 +187,7 @@ impl<F: Field> Default for ConstraintSystem<F> {
         ConstraintSystem {
             num_fixed_wires: 0,
             num_advice_wires: 0,
+            num_aux_wires: 0,
             gates: vec![],
             fixed_queries: Vec::new(),
             advice_queries: Vec::new(),
@@ -266,6 +268,32 @@ impl<F: Field> ConstraintSystem<F> {
         Expression::Advice(self.query_advice_index(wire, at))
     }
 
+    fn query_aux_index(&mut self, wire: AuxWire, at: i32) -> usize {
+        let at = Rotation(at);
+        {
+            let len = self.rotations.len();
+            self.rotations.entry(at).or_insert(PointIndex(len));
+        }
+
+        // Return existing query, if it exists
+        for (index, aux_query) in self.aux_queries.iter().enumerate() {
+            if aux_query == &(wire, at) {
+                return index;
+            }
+        }
+
+        // Make a new query
+        let index = self.aux_queries.len();
+        self.aux_queries.push((wire, at));
+
+        index
+    }
+
+    /// Query an auxiliary wire at a relative position
+    pub fn query_aux(&mut self, wire: AuxWire, at: i32) -> Expression<F> {
+        Expression::Aux(self.query_aux_index(wire, at))
+    }
+
     /// Create a new gate
     pub fn create_gate(&mut self, f: impl FnOnce(&mut Self) -> Expression<F>) {
         let poly = f(self);
@@ -283,6 +311,13 @@ impl<F: Field> ConstraintSystem<F> {
     pub fn advice_wire(&mut self) -> AdviceWire {
         let tmp = AdviceWire(self.num_advice_wires);
         self.num_advice_wires += 1;
+        tmp
+    }
+
+    /// Allocate a new auxiliary wire
+    pub fn aux_wire(&mut self) -> AuxWire {
+        let tmp = AuxWire(self.num_aux_wires);
+        self.num_aux_wires += 1;
         tmp
     }
 }

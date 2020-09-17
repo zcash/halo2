@@ -262,6 +262,8 @@ fn test_proving() {
             let c = meta.advice_wire();
             let d = meta.advice_wire();
 
+            let x = meta.aux_wire();
+
             let perm = meta.permutation(&[a, b, c]);
             let perm2 = meta.permutation(&[a, b, c]);
 
@@ -269,6 +271,7 @@ fn test_proving() {
             let sa = meta.fixed_wire();
             let sb = meta.fixed_wire();
             let sc = meta.fixed_wire();
+            let sx = meta.fixed_wire();
 
             meta.create_gate(|meta| {
                 let d = meta.query_advice(d, 1);
@@ -278,12 +281,19 @@ fn test_proving() {
                 let b = meta.query_advice(b, 0);
                 let c = meta.query_advice(c, 0);
 
+                let x = meta.query_advice(x, 0);
+
                 let sa = meta.query_fixed(sa, 0);
                 let sb = meta.query_fixed(sb, 0);
                 let sc = meta.query_fixed(sc, 0);
                 let sm = meta.query_fixed(sm, 0);
 
-                a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one())) + sf * (d * e)
+                a.clone() * sa
+                    + b.clone() * sb
+                    + a * b * sm
+                    + (c * sc * (-F::one()))
+                    + sf * (d * e)
+                    + (x * sx * (-F::one()))
             });
 
             PLONKConfig {

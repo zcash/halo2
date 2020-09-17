@@ -15,6 +15,11 @@ impl<'a, C: CurveAffine> Proof<C> {
         mut msm: MSM<'a, C>,
         aux_commitments: Vec<C>,
     ) -> Result<Guard<'a, C>, Error> {
+        // Check that aux_commitments matches the expected number of aux_wires
+        if aux_commitments.len() != srs.cs.num_aux_wires {
+            return Err(Error::IncompatibleParams);
+        }
+
         // Scale the MSM by a random factor to ensure that if the existing MSM
         // has is_zero() == false then this argument won't be able to interfere
         // with it to make it true, with high probability.
