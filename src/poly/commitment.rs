@@ -275,6 +275,11 @@ impl<C: CurveAffine> Params<C> {
             other_bases,
         }
     }
+
+    /// Getter for g generators
+    pub fn get_g(&self) -> Vec<C> {
+        self.g.clone()
+    }
 }
 
 /// A guard returned by the verifier

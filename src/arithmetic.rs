@@ -180,6 +180,30 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
     }
 }
 
+/// Performs a small multi-exponentiation operation.
+/// Uses the double-and-add algorithm with doublings shared across points.
+pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Projective {
+    let coeffs: Vec<[u8; 32]> = coeffs.iter().map(|a| a.to_bytes()).collect();
+    let mut acc = C::Projective::zero();
+
+    // for byte idx
+    for byte_idx in (0..32).rev() {
+        // for bit idx
+        for bit_idx in (0..8).rev() {
+            acc = acc.double();
+            // for each coeff
+            for coeff_idx in 0..coeffs.len() {
+                let byte = coeffs[coeff_idx][byte_idx];
+                if ((byte >> bit_idx) & 1) != 0 {
+                    acc += bases[coeff_idx];
+                }
+            }
+        }
+    }
+
+    acc
+}
+
 /// Performs a multi-exponentiation operation.
 ///
 /// This function will panic if coeffs and bases have a different length.
