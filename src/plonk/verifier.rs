@@ -34,12 +34,6 @@ impl<'a, C: CurveAffine> Proof<C> {
                 .expect("proof cannot contain points at infinity");
         }
 
-        // Hash the external auxiliary commitments into the transcript
-        for commitment in &aux_commitments {
-            hash_point(&mut transcript, commitment)
-                .expect("proof cannot contain points at infinity");
-        }
-
         // Sample x_0 challenge
         let x_0: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 

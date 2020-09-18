@@ -431,7 +431,7 @@ fn test_proving() {
     // TODO: use meaningful value from recursion
     let mut aux_commitments: Vec<EqAffine> = vec![];
     for poly in &aux_lagrange_polys {
-        let commitment = params.commit_lagrange(poly, Blind::default());
+        let commitment = params.commit_lagrange(poly, Blind(Fp::zero()));
         aux_commitments.push(commitment.to_affine());
     }
 
@@ -487,7 +487,7 @@ fn test_proving() {
             let g_lagrange_poly = srs.domain.lagrange_from_vec(g_scalars.clone());
             aux_lagrange_polys = vec![g_lagrange_poly.clone(); 1];
             let g_commitment = params
-                .commit_lagrange(&g_lagrange_poly, Blind::default())
+                .commit_lagrange(&g_lagrange_poly, Blind(Fp::zero()))
                 .to_affine();
             aux_commitments = vec![g_commitment; 1];
         }
