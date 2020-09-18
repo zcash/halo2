@@ -171,34 +171,20 @@ impl<C: CurveAffine> Proof<C> {
 
             // Iterate over each wire of the permutation
             for (&(wire, _), permuted_wire_values) in wires.iter().zip(permuted_values.iter()) {
-                match wire {
-                    Wire::Advice(wire) => {
-                        parallelize(&mut modified_advice, |modified_advice, start| {
-                            for ((modified_advice, advice_value), permuted_advice_value) in
-                                modified_advice
-                                    .iter_mut()
-                                    .zip(witness.advice[wire.0][start..].iter())
-                                    .zip(permuted_wire_values[start..].iter())
-                            {
-                                *modified_advice *=
-                                    &(x_0 * permuted_advice_value + &x_1 + advice_value);
-                            }
-                        });
+                parallelize(&mut modified_advice, |modified_advice, start| {
+                    for ((modified_advice, advice_value), permuted_advice_value) in modified_advice
+                        .iter_mut()
+                        .zip(match wire {
+                            Wire::Advice(wire) => witness.advice[wire.0][start..].iter(),
+                            Wire::Aux(wire) => aux_lagrange_polys[wire.0][start..].iter(),
+                            // TODO: implement for fixed wires
+                            _ => unreachable!(),
+                        })
+                        .zip(permuted_wire_values[start..].iter())
+                    {
+                        *modified_advice *= &(x_0 * permuted_advice_value + &x_1 + advice_value);
                     }
-                    Wire::Aux(wire) => {
-                        parallelize(&mut modified_advice, |modified_aux, start| {
-                            for ((modified_aux, aux_value), permuted_aux_value) in modified_aux
-                                .iter_mut()
-                                .zip(aux_lagrange_polys[wire.0][start..].iter())
-                                .zip(permuted_wire_values[start..].iter())
-                            {
-                                *modified_aux *= &(x_0 * permuted_aux_value + &x_1 + aux_value);
-                            }
-                        });
-                    }
-                    // TODO: implement for fixed wires
-                    _ => unreachable!(),
-                }
+                });
             }
 
             permutation_modified_advice.push(modified_advice);
@@ -222,38 +208,21 @@ impl<C: CurveAffine> Proof<C> {
             let mut deltaomega = C::Scalar::one();
             for &(wire, _) in wires.iter() {
                 let omega = domain.get_omega();
-                match wire {
-                    Wire::Advice(wire) => {
-                        parallelize(&mut modified_advice, |modified_advice, start| {
-                            let mut deltaomega =
-                                deltaomega * &omega.pow_vartime(&[start as u64, 0, 0, 0]);
-                            for (modified_advice, advice_value) in modified_advice
-                                .iter_mut()
-                                .zip(witness.advice[wire.0][start..].iter())
-                            {
-                                // Multiply by p_j(\omega^i) + \delta^j \omega^i \beta
-                                *modified_advice *= &(deltaomega * &x_0 + &x_1 + advice_value);
-                                deltaomega *= &omega;
-                            }
-                        });
+                parallelize(&mut modified_advice, |modified_advice, start| {
+                    let mut deltaomega = deltaomega * &omega.pow_vartime(&[start as u64, 0, 0, 0]);
+                    for (modified_advice, advice_value) in
+                        modified_advice.iter_mut().zip(match wire {
+                            Wire::Advice(wire) => witness.advice[wire.0][start..].iter(),
+                            Wire::Aux(wire) => aux_lagrange_polys[wire.0][start..].iter(),
+                            // TODO: implement for fixed wires
+                            _ => unreachable!(),
+                        })
+                    {
+                        // Multiply by p_j(\omega^i) + \delta^j \omega^i \beta
+                        *modified_advice *= &(deltaomega * &x_0 + &x_1 + advice_value);
+                        deltaomega *= &omega;
                     }
-                    Wire::Aux(wire) => {
-                        parallelize(&mut modified_advice, |modified_advice, start| {
-                            let mut deltaomega =
-                                deltaomega * &omega.pow_vartime(&[start as u64, 0, 0, 0]);
-                            for (modified_advice, advice_value) in modified_advice
-                                .iter_mut()
-                                .zip(aux_lagrange_polys[wire.0][start..].iter())
-                            {
-                                // Multiply by p_j(\omega^i) + \delta^j \omega^i \beta
-                                *modified_advice *= &(deltaomega * &x_0 + &x_1 + advice_value);
-                                deltaomega *= &omega;
-                            }
-                        });
-                    }
-                    // TODO: implement for fixed wires
-                    _ => unreachable!(),
-                }
+                });
                 deltaomega *= &C::Scalar::DELTA;
             }
 
