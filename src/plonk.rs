@@ -92,8 +92,8 @@ fn hash_point<C: CurveAffine, H: Hasher<C::Base>>(
 
 #[test]
 fn test_proving() {
-    use crate::arithmetic::{EqAffine, Field, Fp, Fq};
-    use crate::poly::commitment::Params;
+    use crate::arithmetic::{Curve, EqAffine, Field, Fp, Fq};
+    use crate::poly::commitment::{Blind, Params};
     use crate::transcript::DummyHash;
     use std::marker::PhantomData;
     const K: u32 = 5;
@@ -101,6 +101,14 @@ fn test_proving() {
     /// This represents an advice wire at a certain row in the ConstraintSystem
     #[derive(Copy, Clone, Debug)]
     pub struct Variable(AdviceWire, usize);
+
+    /// This represents an auxiliary wire at a certain row in the ConstraintSystem
+    #[derive(Copy, Clone, Debug)]
+    pub struct AuxVariable(AuxWire, usize);
+
+    /// This represents a wire at a certain row in the ConstraintSystem
+    #[derive(Copy, Clone, Debug)]
+    pub struct PermVariable(Wire, usize);
 
     // Initialize the polynomial commitment parameters
     let params: Params<EqAffine> = Params::new::<DummyHash<Fq>>(K);
@@ -112,10 +120,13 @@ fn test_proving() {
         d: AdviceWire,
         e: AdviceWire,
 
+        x: AuxWire,
+
         sa: FixedWire,
         sb: FixedWire,
         sc: FixedWire,
         sm: FixedWire,
+        sx: FixedWire,
 
         perm: usize,
         perm2: usize,
@@ -128,11 +139,15 @@ fn test_proving() {
         fn raw_add<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
         where
             F: FnOnce() -> Result<(FF, FF, FF), Error>;
-        fn copy(&mut self, a: Variable, b: Variable) -> Result<(), Error>;
+        fn copy(&mut self, a: PermVariable, b: PermVariable) -> Result<(), Error>;
+        fn raw_aux<F>(&mut self, f: F) -> Result<(Variable, AuxVariable), Error>
+        where
+            F: FnOnce() -> Result<(FF, FF), Error>;
     }
 
     struct MyCircuit<F: Field> {
         a: Option<F>,
+        x: Option<F>,
     }
 
     struct StandardPLONK<'a, F: Field, CS: Assignment<F> + 'a> {
@@ -230,17 +245,31 @@ fn test_proving() {
                 Variable(self.config.c, index),
             ))
         }
-        fn copy(&mut self, left: Variable, right: Variable) -> Result<(), Error> {
+        fn copy(&mut self, left: PermVariable, right: PermVariable) -> Result<(), Error> {
             let left_wire = match left.0 {
-                x if x == self.config.a => 0,
-                x if x == self.config.b => 1,
-                x if x == self.config.c => 2,
+                Wire::Advice(wire) => match wire {
+                    x if x == self.config.a => 0,
+                    x if x == self.config.b => 1,
+                    x if x == self.config.c => 2,
+                    _ => unreachable!(),
+                },
+                Wire::Aux(wire) => match wire {
+                    x if x == self.config.x => 3,
+                    _ => unreachable!(),
+                },
                 _ => unreachable!(),
             };
             let right_wire = match right.0 {
-                x if x == self.config.a => 0,
-                x if x == self.config.b => 1,
-                x if x == self.config.c => 2,
+                Wire::Advice(wire) => match wire {
+                    x if x == self.config.a => 0,
+                    x if x == self.config.b => 1,
+                    x if x == self.config.c => 2,
+                    _ => unreachable!(),
+                },
+                Wire::Aux(wire) => match wire {
+                    x if x == self.config.x => 3,
+                    _ => unreachable!(),
+                },
                 _ => unreachable!(),
             };
 
@@ -248,6 +277,24 @@ fn test_proving() {
                 .copy(self.config.perm, left_wire, left.1, right_wire, right.1)?;
             self.cs
                 .copy(self.config.perm2, left_wire, left.1, right_wire, right.1)
+        }
+        fn raw_aux<F>(&mut self, f: F) -> Result<(Variable, AuxVariable), Error>
+        where
+            F: FnOnce() -> Result<(FF, FF), Error>,
+        {
+            let index = self.current_gate;
+            self.current_gate += 1;
+            let mut value = None;
+            self.cs.assign_advice(self.config.a, index, || {
+                value = Some(f()?);
+                Ok(value.ok_or(Error::SynthesisError)?.0)
+            })?;
+            self.cs
+                .assign_fixed(self.config.sx, index, || Ok(FF::zero()))?;
+            Ok((
+                Variable(self.config.a, index),
+                AuxVariable(self.config.x, index),
+            ))
         }
     }
 
@@ -264,8 +311,18 @@ fn test_proving() {
 
             let x = meta.aux_wire();
 
-            let perm = meta.permutation(&[a, b, c]);
-            let perm2 = meta.permutation(&[a, b, c]);
+            let perm = meta.permutation(&[
+                Wire::Advice(a),
+                Wire::Advice(b),
+                Wire::Advice(c),
+                Wire::Aux(x),
+            ]);
+            let perm2 = meta.permutation(&[
+                Wire::Advice(a),
+                Wire::Advice(b),
+                Wire::Advice(c),
+                Wire::Aux(x),
+            ]);
 
             let sm = meta.fixed_wire();
             let sa = meta.fixed_wire();
@@ -281,12 +338,13 @@ fn test_proving() {
                 let b = meta.query_advice(b, 0);
                 let c = meta.query_advice(c, 0);
 
-                let x = meta.query_advice(x, 0);
+                let x = meta.query_aux(x, 0);
 
                 let sa = meta.query_fixed(sa, 0);
                 let sb = meta.query_fixed(sb, 0);
                 let sc = meta.query_fixed(sc, 0);
                 let sm = meta.query_fixed(sm, 0);
+                let sx = meta.query_fixed(sx, 0);
 
                 a.clone() * sa
                     + b.clone() * sb
@@ -302,10 +360,12 @@ fn test_proving() {
                 c,
                 d,
                 e,
+                x,
                 sa,
                 sb,
                 sc,
                 sm,
+                sx,
                 perm,
                 perm2,
             }
@@ -336,9 +396,25 @@ fn test_proving() {
                         fin.ok_or(Error::SynthesisError)?,
                     ))
                 })?;
-                cs.copy(a0, a1)?;
-                cs.copy(b1, c0)?;
+                cs.copy(
+                    PermVariable(Wire::Advice(a0.0), a0.1),
+                    PermVariable(Wire::Advice(a1.0), a1.1),
+                )?;
+                cs.copy(
+                    PermVariable(Wire::Advice(b1.0), b1.1),
+                    PermVariable(Wire::Advice(c0.0), c0.1),
+                )?;
             }
+            let (_, x) = cs.raw_aux(|| {
+                Ok((
+                    self.x.ok_or(Error::SynthesisError)?,
+                    self.x.ok_or(Error::SynthesisError)?,
+                ))
+            })?;
+            cs.copy(
+                PermVariable(Wire::Aux(x.0), x.1),
+                PermVariable(Wire::Aux(x.0), x.1),
+            )?;
 
             Ok(())
         }
@@ -346,21 +422,39 @@ fn test_proving() {
 
     let circuit: MyCircuit<Fp> = MyCircuit {
         a: Some(Fp::random()),
+
+        // TODO: use meaningful value from recursion
+        x: Some(Fp::random()),
     };
 
-    let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None };
+    let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None, x: None };
 
     // Initialize the SRS
     let srs = SRS::generate(&params, &empty_circuit).expect("SRS generation should not fail");
 
+    // TODO: use meaningful value from recursion
+    let aux_lagrange_polys = vec![srs.domain.empty_lagrange(); srs.cs.num_aux_wires];
+
+    // TODO: use meaningful value from recursion
+    let mut aux_commitments: Vec<EqAffine> = vec![];
+    for poly in &aux_lagrange_polys {
+        let commitment = params.commit_lagrange(poly, Blind::default());
+        aux_commitments.push(commitment.to_affine());
+    }
+
     for _ in 0..100 {
         // Create a proof
-        let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &srs, &circuit)
-            .expect("proof generation should not fail");
+        let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(
+            &params,
+            &srs,
+            &circuit,
+            aux_lagrange_polys.clone(),
+        )
+        .expect("proof generation should not fail");
 
         let msm = params.empty_msm();
         let guard = proof
-            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm)
+            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm, aux_commitments.clone())
             .unwrap();
         {
             let msm = guard.clone().use_challenges();
@@ -374,7 +468,7 @@ fn test_proving() {
         let msm = guard.clone().use_challenges();
         assert!(msm.clone().is_zero());
         let guard = proof
-            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm)
+            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm, aux_commitments.clone())
             .unwrap();
         {
             let msm = guard.clone().use_challenges();
