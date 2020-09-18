@@ -420,20 +420,13 @@ fn test_proving() {
         }
     }
 
-    let circuit: MyCircuit<Fp> = MyCircuit {
-        a: Some(Fp::random()),
-
-        // TODO: use meaningful value from recursion
-        x: Some(Fp::random()),
-    };
-
     let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None, x: None };
 
     // Initialize the SRS
     let srs = SRS::generate(&params, &empty_circuit).expect("SRS generation should not fail");
 
     // TODO: use meaningful value from recursion
-    let aux_lagrange_polys = vec![srs.domain.empty_lagrange(); srs.cs.num_aux_wires];
+    let mut aux_lagrange_polys = vec![srs.domain.empty_lagrange(); srs.cs.num_aux_wires];
 
     // TODO: use meaningful value from recursion
     let mut aux_commitments: Vec<EqAffine> = vec![];
@@ -443,6 +436,14 @@ fn test_proving() {
     }
 
     for _ in 0..100 {
+        // Generate circuit
+        let circuit: MyCircuit<Fp> = MyCircuit {
+            a: Some(Fp::random()),
+
+            // TODO: use meaningful value from recursion
+            x: Some(Fp::random()),
+        };
+
         // Create a proof
         let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(
             &params,
@@ -477,7 +478,18 @@ fn test_proving() {
         {
             let g = guard.compute_g();
             let (msm, _) = guard.clone().use_g(g);
-            assert!(msm.is_zero());
+            assert!(msm.clone().is_zero());
+
+            let mut g_scalars = vec![Fp::one(); 1 << K];
+            if let Some(msm_g_scalars) = msm.get_g_scalars() {
+                g_scalars = msm_g_scalars;
+            }
+            let g_lagrange_poly = srs.domain.lagrange_from_vec(g_scalars.clone());
+            aux_lagrange_polys = vec![g_lagrange_poly.clone(); 1];
+            let g_commitment = params
+                .commit_lagrange(&g_lagrange_poly, Blind::default())
+                .to_affine();
+            aux_commitments = vec![g_commitment; 1];
         }
     }
 }
