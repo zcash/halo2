@@ -24,7 +24,7 @@ impl<C: CurveAffine> Proof<C> {
         params: &Params<C>,
         srs: &SRS<C>,
         circuit: &ConcreteCircuit,
-        aux_lagrange_polys: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
+        aux_lagrange_polys: &[Polynomial<C::Scalar, LagrangeCoeff>],
     ) -> Result<Self, Error> {
         struct WitnessCollection<F: Field> {
             advice: Vec<Polynomial<F, LagrangeCoeff>>,
@@ -143,7 +143,10 @@ impl<C: CurveAffine> Proof<C> {
         let aux_polys: Vec<_> = aux_lagrange_polys
             .clone()
             .into_iter()
-            .map(|poly| domain.lagrange_to_coeff(poly))
+            .map(|poly| {
+                let lagrange_vec = domain.lagrange_from_vec(poly.to_vec());
+                domain.lagrange_to_coeff(lagrange_vec)
+            })
             .collect();
 
         let aux_cosets: Vec<_> = meta

@@ -449,7 +449,7 @@ fn test_proving() {
             &params,
             &srs,
             &circuit,
-            aux_lagrange_polys.clone(),
+            &aux_lagrange_polys.clone(),
         )
         .expect("proof generation should not fail");
 
