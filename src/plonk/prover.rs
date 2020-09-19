@@ -534,9 +534,7 @@ impl<C: CurveAffine> Proof<C> {
         let mut f_blind = Blind(C::Scalar::random());
         let mut f_commitment = params.commit(&f_poly, f_blind).to_affine();
 
-        let final_q_evals;
-
-        let opening = loop {
+        let (opening, q_evals) = loop {
             let mut transcript = transcript.clone();
             let mut transcript_scalar = transcript_scalar.clone();
             hash_point(&mut transcript, &f_commitment)?;
@@ -581,8 +579,7 @@ impl<C: CurveAffine> Proof<C> {
             let opening = OpeningProof::create(&params, &mut transcript, &f_poly, f_blind_dup, x_6);
 
             if opening.is_ok() {
-                final_q_evals = q_evals;
-                break opening.unwrap();
+                break (opening.unwrap(), q_evals);
             } else {
                 f_blind += C::Scalar::one();
                 f_commitment = (f_commitment + params.h).to_affine();
@@ -600,7 +597,7 @@ impl<C: CurveAffine> Proof<C> {
             fixed_evals,
             h_evals,
             f_commitment,
-            q_evals: final_q_evals,
+            q_evals,
             opening,
         })
     }
