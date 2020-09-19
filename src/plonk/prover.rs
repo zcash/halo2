@@ -578,18 +578,11 @@ impl<C: CurveAffine> Proof<C> {
                     }
                 });
             }
+            let opening = OpeningProof::create(&params, &mut transcript, &f_poly, f_blind_dup, x_6);
 
-            // Check U
-            let u_x = transcript.clone().squeeze();
-            // y^2 = x^3 + B
-            let u_y2 = u_x.square() * &u_x + &C::b();
-
-            if let Some(_) = u_y2.deterministic_sqrt() {
+            if opening.is_ok() {
                 final_q_evals = q_evals;
-                let opening =
-                    OpeningProof::create(&params, &mut transcript, &f_poly, f_blind_dup, x_6)
-                        .unwrap();
-                break opening;
+                break opening.unwrap();
             } else {
                 f_blind += C::Scalar::one();
                 f_commitment = (f_commitment + params.h).to_affine();
