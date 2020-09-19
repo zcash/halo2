@@ -1,4 +1,4 @@
-use super::super::{Coeff, Polynomial};
+use super::super::{Coeff, Error, Polynomial};
 use super::{Blind, OpeningProof, Params};
 use crate::arithmetic::{
     best_multiexp, compute_inner_product, get_challenge_scalar, parallelize, small_multiexp,
@@ -26,40 +26,22 @@ impl<C: CurveAffine> OpeningProof<C> {
         px: &Polynomial<C::Scalar, Coeff>,
         blind: Blind<C::Scalar>,
         x: C::Scalar,
-    ) -> Result<Self, ()> {
+    ) -> Result<Self, Error> {
         let mut blind = blind.0;
 
         // We're limited to polynomials of degree n - 1.
         assert!(px.len() <= params.n as usize);
-
-        let mut fork = 0;
-
-        // TODO: remove this hack and force the caller to deal with it
-        loop {
-            let mut transcript = transcript.clone();
-            transcript.absorb(C::Base::from_u64(fork as u64));
-            let u_x = transcript.squeeze();
-            // y^2 = x^3 + B
-            let u_y2 = u_x.square() * &u_x + &C::b();
-            let u_y = u_y2.deterministic_sqrt();
-
-            if u_y.is_none() {
-                fork += 1;
-            } else {
-                break;
-            }
-        }
-
-        transcript.absorb(C::Base::from_u64(fork as u64));
 
         // Compute U
         let u = {
             let u_x = transcript.squeeze();
             // y^2 = x^3 + B
             let u_y2 = u_x.square() * &u_x + &C::b();
-            let u_y = u_y2.deterministic_sqrt().unwrap();
-
-            C::from_xy(u_x, u_y).unwrap()
+            if let Some(u_y) = u_y2.deterministic_sqrt() {
+                C::from_xy(u_x, u_y).unwrap()
+            } else {
+                return Err(Error::SamplingError);
+            }
         };
 
         // Initialize the vector `a` as the coefficients of the polynomial,
@@ -205,7 +187,6 @@ impl<C: CurveAffine> OpeningProof<C> {
         let z2 = c * &blind + &s;
 
         Ok(OpeningProof {
-            fork,
             rounds,
             delta,
             z1,

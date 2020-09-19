@@ -16,7 +16,6 @@ mod verifier;
 /// This is a proof object for the polynomial commitment scheme opening.
 #[derive(Debug, Clone)]
 pub struct OpeningProof<C: CurveAffine> {
-    fork: u8,
     rounds: Vec<(C, C)>,
     delta: C,
     z1: C::Scalar,
