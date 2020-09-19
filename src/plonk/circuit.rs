@@ -18,17 +18,6 @@ pub struct AdviceWire(pub usize);
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct AuxWire(pub usize);
 
-/// An enum over all wire types, to be used in permutations
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub enum Wire {
-    /// Fixed wire
-    Fixed(FixedWire),
-    /// Advice wire
-    Advice(AdviceWire),
-    /// Auxiliary wire
-    Aux(AuxWire),
-}
-
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
 pub trait Assignment<F: Field> {
@@ -187,7 +176,7 @@ pub struct ConstraintSystem<F> {
     // enforced between advice wire values in A, B and C, and another
     // permutation between wires (B, C, D) which allows the same with D instead
     // of A.
-    pub(crate) permutations: Vec<Vec<(Wire, usize)>>,
+    pub(crate) permutations: Vec<Vec<(AdviceWire, usize)>>,
 }
 
 impl<F: Field> Default for ConstraintSystem<F> {
@@ -211,7 +200,7 @@ impl<F: Field> Default for ConstraintSystem<F> {
 
 impl<F: Field> ConstraintSystem<F> {
     /// Add a permutation argument for some advice wires
-    pub fn permutation(&mut self, wires: &[Wire]) -> usize {
+    pub fn permutation(&mut self, wires: &[AdviceWire]) -> usize {
         let index = self.permutations.len();
         if index == 0 {
             let at = Rotation(-1);
@@ -220,11 +209,7 @@ impl<F: Field> ConstraintSystem<F> {
         }
         let wires = wires
             .iter()
-            .map(|&wire| match wire {
-                Wire::Advice(wire) => (Wire::Advice(wire), self.query_advice_index(wire, 0)),
-                Wire::Aux(wire) => (Wire::Aux(wire), self.query_aux_index(wire, 0)),
-                Wire::Fixed(wire) => (Wire::Fixed(wire), self.query_fixed_index(wire, 0)),
-            })
+            .map(|&wire| (wire, self.query_advice_index(wire, 0)))
             .collect();
         self.permutations.push(wires);
 

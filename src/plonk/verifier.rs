@@ -13,10 +13,13 @@ impl<'a, C: CurveAffine> Proof<C> {
         params: &'a Params<C>,
         srs: &SRS<C>,
         mut msm: MSM<'a, C>,
-        aux_commitments: Vec<C>,
+        aux_commitments: &[C],
     ) -> Result<Guard<'a, C>, Error> {
         // Check that aux_commitments matches the expected number of aux_wires
-        if aux_commitments.len() != srs.cs.num_aux_wires {
+        // and self.aux_evals
+        if aux_commitments.len() != srs.cs.num_aux_wires
+            || self.aux_evals.len() != srs.cs.num_aux_wires
+        {
             return Err(Error::IncompatibleParams);
         }
 
@@ -27,6 +30,12 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Create a transcript for obtaining Fiat-Shamir challenges.
         let mut transcript = HBase::init(C::Base::one());
+
+        // Hash the aux (external) commitments into the transcript
+        for commitment in aux_commitments {
+            hash_point(&mut transcript, commitment)
+                .expect("proof cannot contain points at infinity"); // TODO
+        }
 
         // Hash the prover's advice commitments into the transcript
         for commitment in &self.advice_commitments {

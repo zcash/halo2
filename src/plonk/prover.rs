@@ -1,5 +1,5 @@
 use super::{
-    circuit::{AdviceWire, Assignment, Circuit, ConstraintSystem, FixedWire, Wire},
+    circuit::{AdviceWire, Assignment, Circuit, ConstraintSystem, FixedWire},
     hash_point, Error, Proof, SRS,
 };
 use crate::arithmetic::{
@@ -24,8 +24,12 @@ impl<C: CurveAffine> Proof<C> {
         params: &Params<C>,
         srs: &SRS<C>,
         circuit: &ConcreteCircuit,
-        aux_lagrange_polys: &[Polynomial<C::Scalar, LagrangeCoeff>],
+        aux: &[Polynomial<C::Scalar, LagrangeCoeff>],
     ) -> Result<Self, Error> {
+        if aux.len() != srs.cs.num_aux_wires {
+            return Err(Error::IncompatibleParams);
+        }
+
         struct WitnessCollection<F: Field> {
             advice: Vec<Polynomial<F, LagrangeCoeff>>,
             _marker: std::marker::PhantomData<F>,
@@ -89,6 +93,38 @@ impl<C: CurveAffine> Proof<C> {
         // Create a transcript for obtaining Fiat-Shamir challenges.
         let mut transcript = HBase::init(C::Base::one());
 
+        // Compute commitments to aux wire polynomials
+        let aux_commitments_projective: Vec<_> = aux
+            .iter()
+            .map(|poly| params.commit_lagrange(poly, Blind(C::Scalar::zero()))) // TODO: bad blind?
+            .collect();
+        let mut aux_commitments = vec![C::zero(); aux_commitments_projective.len()];
+        C::Projective::batch_to_affine(&aux_commitments_projective, &mut aux_commitments);
+        let aux_commitments = aux_commitments;
+        drop(aux_commitments_projective);
+
+        for commitment in &aux_commitments {
+            hash_point(&mut transcript, commitment)?;
+        }
+
+        let aux_polys: Vec<_> = aux
+            .clone()
+            .into_iter()
+            .map(|poly| {
+                let lagrange_vec = domain.lagrange_from_vec(poly.to_vec());
+                domain.lagrange_to_coeff(lagrange_vec)
+            })
+            .collect();
+
+        let aux_cosets: Vec<_> = meta
+            .aux_queries
+            .iter()
+            .map(|&(wire, at)| {
+                let poly = aux_polys[wire.0].clone();
+                domain.coeff_to_extended(poly, at)
+            })
+            .collect();
+
         // Compute commitments to advice wire polynomials
         let advice_blinds: Vec<_> = witness
             .advice
@@ -126,24 +162,6 @@ impl<C: CurveAffine> Proof<C> {
             })
             .collect();
 
-        let aux_polys: Vec<_> = aux_lagrange_polys
-            .clone()
-            .into_iter()
-            .map(|poly| {
-                let lagrange_vec = domain.lagrange_from_vec(poly.to_vec());
-                domain.lagrange_to_coeff(lagrange_vec)
-            })
-            .collect();
-
-        let aux_cosets: Vec<_> = meta
-            .aux_queries
-            .iter()
-            .map(|&(wire, at)| {
-                let poly = aux_polys[wire.0].clone();
-                domain.coeff_to_extended(poly, at)
-            })
-            .collect();
-
         // Sample x_0 challenge
         let x_0: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
@@ -174,12 +192,7 @@ impl<C: CurveAffine> Proof<C> {
                 parallelize(&mut modified_advice, |modified_advice, start| {
                     for ((modified_advice, advice_value), permuted_advice_value) in modified_advice
                         .iter_mut()
-                        .zip(match wire {
-                            Wire::Advice(wire) => witness.advice[wire.0][start..].iter(),
-                            Wire::Aux(wire) => aux_lagrange_polys[wire.0][start..].iter(),
-                            // TODO: implement for fixed wires
-                            _ => unreachable!(),
-                        })
+                        .zip(witness.advice[wire.0][start..].iter())
                         .zip(permuted_wire_values[start..].iter())
                     {
                         *modified_advice *= &(x_0 * permuted_advice_value + &x_1 + advice_value);
@@ -210,13 +223,9 @@ impl<C: CurveAffine> Proof<C> {
                 let omega = domain.get_omega();
                 parallelize(&mut modified_advice, |modified_advice, start| {
                     let mut deltaomega = deltaomega * &omega.pow_vartime(&[start as u64, 0, 0, 0]);
-                    for (modified_advice, advice_value) in
-                        modified_advice.iter_mut().zip(match wire {
-                            Wire::Advice(wire) => witness.advice[wire.0][start..].iter(),
-                            Wire::Aux(wire) => aux_lagrange_polys[wire.0][start..].iter(),
-                            // TODO: implement for fixed wires
-                            _ => unreachable!(),
-                        })
+                    for (modified_advice, advice_value) in modified_advice
+                        .iter_mut()
+                        .zip(witness.advice[wire.0][start..].iter())
                     {
                         // Multiply by p_j(\omega^i) + \delta^j \omega^i \beta
                         *modified_advice *= &(deltaomega * &x_0 + &x_1 + advice_value);
