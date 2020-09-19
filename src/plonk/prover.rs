@@ -530,21 +530,19 @@ impl<C: CurveAffine> Proof<C> {
                 .or_else(|| Some(poly));
         }
 
-        let final_opening;
-        let final_f_commitment;
+        let f_poly = f_poly.unwrap();
+        let mut f_blind = Blind(C::Scalar::random());
+        let mut f_commitment = params.commit(&f_poly, f_blind).to_affine();
+
         let final_q_evals;
 
-        loop {
-            let mut transcript_dup = transcript.clone();
-            let mut transcript_scalar_dup = transcript_scalar.clone();
-            let mut f_poly_dup = f_poly.clone().unwrap();
-
-            let mut f_blind = Blind(C::Scalar::random());
-            let f_commitment = params.commit(&f_poly_dup, f_blind).to_affine();
-            hash_point(&mut transcript_dup, &f_commitment)?;
+        let opening = loop {
+            let mut transcript = transcript.clone();
+            let mut transcript_scalar = transcript_scalar.clone();
+            hash_point(&mut transcript, &f_commitment)?;
 
             let x_6: C::Scalar =
-                get_challenge_scalar(Challenge(transcript_dup.squeeze().get_lower_128()));
+                get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
             let mut q_evals = vec![C::Scalar::zero(); meta.rotations.len()];
 
@@ -554,21 +552,23 @@ impl<C: CurveAffine> Proof<C> {
             }
 
             for eval in q_evals.iter() {
-                transcript_scalar_dup.absorb(*eval);
+                transcript_scalar.absorb(*eval);
             }
 
             let transcript_scalar_point =
-                C::Base::from_bytes(&(transcript_scalar_dup.squeeze()).to_bytes()).unwrap();
-            transcript_dup.absorb(transcript_scalar_point);
+                C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
+            transcript.absorb(transcript_scalar_point);
 
             let x_7: C::Scalar =
-                get_challenge_scalar(Challenge(transcript_dup.squeeze().get_lower_128()));
+                get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
+            let mut f_blind_dup = f_blind.clone();
+            let mut f_poly = f_poly.clone();
             for (_, &point_index) in meta.rotations.iter() {
-                f_blind *= x_7;
-                f_blind += q_blinds[point_index.0];
+                f_blind_dup *= x_7;
+                f_blind_dup += q_blinds[point_index.0];
 
-                parallelize(&mut f_poly_dup, |f, start| {
+                parallelize(&mut f_poly, |f, start| {
                     for (f, a) in f
                         .iter_mut()
                         .zip(q_polys[point_index.0].as_ref().unwrap()[start..].iter())
@@ -580,19 +580,21 @@ impl<C: CurveAffine> Proof<C> {
             }
 
             // Check U
-            let u_x = transcript_dup.clone().squeeze();
+            let u_x = transcript.clone().squeeze();
             // y^2 = x^3 + B
             let u_y2 = u_x.square() * &u_x + &C::b();
 
             if let Some(_) = u_y2.deterministic_sqrt() {
                 final_q_evals = q_evals;
-                final_f_commitment = f_commitment;
-                final_opening =
-                    OpeningProof::create(&params, &mut transcript_dup, &f_poly_dup, f_blind, x_6)
+                let opening =
+                    OpeningProof::create(&params, &mut transcript, &f_poly, f_blind_dup, x_6)
                         .unwrap();
-                break;
+                break opening;
+            } else {
+                f_blind += C::Scalar::one();
+                f_commitment = (f_commitment + params.h).to_affine();
             }
-        }
+        };
 
         Ok(Proof {
             advice_commitments,
@@ -604,9 +606,9 @@ impl<C: CurveAffine> Proof<C> {
             advice_evals,
             fixed_evals,
             h_evals,
-            f_commitment: final_f_commitment,
+            f_commitment,
             q_evals: final_q_evals,
-            opening: final_opening,
+            opening,
         })
     }
 }
