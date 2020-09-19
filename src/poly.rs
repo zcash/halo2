@@ -19,6 +19,8 @@ pub use domain::*;
 pub enum Error {
     /// OpeningProof is not well-formed
     OpeningError,
+    /// Caller needs to re-sample a point
+    SamplingError,
 }
 
 /// The basis over which a polynomial is described.

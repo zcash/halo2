@@ -529,50 +529,62 @@ impl<C: CurveAffine> Proof<C> {
                 })
                 .or_else(|| Some(poly));
         }
-        let mut f_poly = f_poly.unwrap();
+
+        let f_poly = f_poly.unwrap();
         let mut f_blind = Blind(C::Scalar::random());
+        let mut f_commitment = params.commit(&f_poly, f_blind).to_affine();
 
-        let f_commitment = params.commit(&f_poly, f_blind).to_affine();
+        let (opening, q_evals) = loop {
+            let mut transcript = transcript.clone();
+            let mut transcript_scalar = transcript_scalar.clone();
+            hash_point(&mut transcript, &f_commitment)?;
 
-        hash_point(&mut transcript, &f_commitment)?;
+            let x_6: C::Scalar =
+                get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-        let x_6: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+            let mut q_evals = vec![C::Scalar::zero(); meta.rotations.len()];
 
-        let mut q_evals = vec![C::Scalar::zero(); meta.rotations.len()];
+            for (_, &point_index) in meta.rotations.iter() {
+                q_evals[point_index.0] =
+                    eval_polynomial(&q_polys[point_index.0].as_ref().unwrap(), x_6);
+            }
 
-        for (_, &point_index) in meta.rotations.iter() {
-            q_evals[point_index.0] =
-                eval_polynomial(&q_polys[point_index.0].as_ref().unwrap(), x_6);
-        }
+            for eval in q_evals.iter() {
+                transcript_scalar.absorb(*eval);
+            }
 
-        for eval in q_evals.iter() {
-            transcript_scalar.absorb(*eval);
-        }
+            let transcript_scalar_point =
+                C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
+            transcript.absorb(transcript_scalar_point);
 
-        let transcript_scalar_point =
-            C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
-        transcript.absorb(transcript_scalar_point);
+            let x_7: C::Scalar =
+                get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-        let x_7: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+            let mut f_blind_dup = f_blind.clone();
+            let mut f_poly = f_poly.clone();
+            for (_, &point_index) in meta.rotations.iter() {
+                f_blind_dup *= x_7;
+                f_blind_dup += q_blinds[point_index.0];
 
-        for (_, &point_index) in meta.rotations.iter() {
-            f_blind *= x_7;
-            f_blind += q_blinds[point_index.0];
+                parallelize(&mut f_poly, |f, start| {
+                    for (f, a) in f
+                        .iter_mut()
+                        .zip(q_polys[point_index.0].as_ref().unwrap()[start..].iter())
+                    {
+                        *f *= &x_7;
+                        *f += a;
+                    }
+                });
+            }
+            let opening = OpeningProof::create(&params, &mut transcript, &f_poly, f_blind_dup, x_6);
 
-            parallelize(&mut f_poly, |f, start| {
-                for (f, a) in f
-                    .iter_mut()
-                    .zip(q_polys[point_index.0].as_ref().unwrap()[start..].iter())
-                {
-                    *f *= &x_7;
-                    *f += a;
-                }
-            });
-        }
-
-        // Let's prove that the q_commitment opens at x to the expected value.
-        let opening = OpeningProof::create(&params, &mut transcript, &f_poly, f_blind, x_6)
-            .map_err(|_| Error::ConstraintSystemFailure)?;
+            if opening.is_ok() {
+                break (opening.unwrap(), q_evals);
+            } else {
+                f_blind += C::Scalar::one();
+                f_commitment = (f_commitment + params.h).to_affine();
+            }
+        };
 
         Ok(Proof {
             advice_commitments,

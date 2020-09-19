@@ -22,8 +22,6 @@ impl<C: CurveAffine> OpeningProof<C> {
             return Err(Error::OpeningError);
         }
 
-        transcript.absorb(C::Base::from_u64(self.fork as u64));
-
         // Compute U
         let u = {
             let u_x = transcript.squeeze();
