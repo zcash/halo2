@@ -33,14 +33,12 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Hash the aux (external) commitments into the transcript
         for commitment in aux_commitments {
-            hash_point(&mut transcript, commitment)
-                .expect("proof cannot contain points at infinity"); // TODO
+            hash_point(&mut transcript, commitment)?;
         }
 
         // Hash the prover's advice commitments into the transcript
         for commitment in &self.advice_commitments {
-            hash_point(&mut transcript, commitment)
-                .expect("proof cannot contain points at infinity");
+            hash_point(&mut transcript, commitment)?;
         }
 
         // Sample x_0 challenge
@@ -51,7 +49,7 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Hash each permutation product commitment
         for c in &self.permutation_product_commitments {
-            hash_point(&mut transcript, c).expect("proof cannot contain points at infinity");
+            hash_point(&mut transcript, c)?;
         }
 
         // Sample x_2 challenge, which keeps the gates linearly independent.
@@ -59,7 +57,7 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Obtain a commitment to h(X) in the form of multiple pieces of degree n - 1
         for c in &self.h_commitments {
-            hash_point(&mut transcript, c).expect("proof cannot contain points at infinity");
+            hash_point(&mut transcript, c)?;
         }
 
         // Sample x_3 challenge, which is used to ensure the circuit is
@@ -248,8 +246,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         // Obtain the commitment to the multi-point quotient polynomial f(X).
-        hash_point(&mut transcript, &self.f_commitment)
-            .expect("proof cannot contain points at infinity");
+        hash_point(&mut transcript, &self.f_commitment)?;
 
         // Sample a challenge x_6 for checking that f(X) was committed to
         // correctly.
