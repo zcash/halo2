@@ -124,11 +124,6 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
 
         bool::from(best_multiexp(&scalars, &bases).is_zero())
     }
-
-    /// Return g_scalars
-    pub fn get_g_scalars(&self) -> Option<Vec<C::Scalar>> {
-        self.g_scalars.clone()
-    }
 }
 
 /// These are the public parameters for the polynomial commitment scheme.
