@@ -47,9 +47,9 @@ where
 {
     fn batch_invert(self) -> F {
         let mut acc = F::one();
-        let mut iter = self.into_iter();
+        let iter = self.into_iter();
         let mut tmp = Vec::with_capacity(iter.size_hint().0);
-        while let Some(p) = iter.next() {
+        for p in iter {
             let q = *p;
             tmp.push((acc, p));
             acc = F::conditional_select(&(acc * q), &acc, q.is_zero());

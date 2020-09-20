@@ -108,8 +108,7 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         let aux_polys: Vec<_> = aux
-            .clone()
-            .into_iter()
+            .iter()
             .map(|poly| {
                 let lagrange_vec = domain.lagrange_from_vec(poly.to_vec());
                 domain.lagrange_to_coeff(lagrange_vec)
@@ -616,7 +615,7 @@ impl<C: CurveAffine> Proof<C> {
             let x_7: C::Scalar =
                 get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-            let mut f_blind_dup = f_blind.clone();
+            let mut f_blind_dup = f_blind;
             let mut f_poly = f_poly.clone();
             for (_, &point_index) in meta.rotations.iter() {
                 f_blind_dup *= x_7;
@@ -632,10 +631,11 @@ impl<C: CurveAffine> Proof<C> {
                     }
                 });
             }
-            let opening = OpeningProof::create(&params, &mut transcript, &f_poly, f_blind_dup, x_6);
 
-            if opening.is_ok() {
-                break (opening.unwrap(), q_evals);
+            if let Ok(opening) =
+                OpeningProof::create(&params, &mut transcript, &f_poly, f_blind_dup, x_6)
+            {
+                break (opening, q_evals);
             } else {
                 f_blind += C::Scalar::one();
                 f_commitment = (f_commitment + params.h).to_affine();
