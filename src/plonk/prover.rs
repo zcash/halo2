@@ -24,7 +24,12 @@ impl<C: CurveAffine> Proof<C> {
         params: &Params<C>,
         srs: &SRS<C>,
         circuit: &ConcreteCircuit,
+        aux: &[Polynomial<C::Scalar, LagrangeCoeff>],
     ) -> Result<Self, Error> {
+        if aux.len() != srs.cs.num_aux_wires {
+            return Err(Error::IncompatibleParams);
+        }
+
         struct WitnessCollection<F: Field> {
             advice: Vec<Polynomial<F, LagrangeCoeff>>,
             _marker: std::marker::PhantomData<F>,
@@ -87,6 +92,38 @@ impl<C: CurveAffine> Proof<C> {
 
         // Create a transcript for obtaining Fiat-Shamir challenges.
         let mut transcript = HBase::init(C::Base::one());
+
+        // Compute commitments to aux wire polynomials
+        let aux_commitments_projective: Vec<_> = aux
+            .iter()
+            .map(|poly| params.commit_lagrange(poly, Blind(C::Scalar::zero()))) // TODO: bad blind?
+            .collect();
+        let mut aux_commitments = vec![C::zero(); aux_commitments_projective.len()];
+        C::Projective::batch_to_affine(&aux_commitments_projective, &mut aux_commitments);
+        let aux_commitments = aux_commitments;
+        drop(aux_commitments_projective);
+
+        for commitment in &aux_commitments {
+            hash_point(&mut transcript, commitment)?;
+        }
+
+        let aux_polys: Vec<_> = aux
+            .clone()
+            .into_iter()
+            .map(|poly| {
+                let lagrange_vec = domain.lagrange_from_vec(poly.to_vec());
+                domain.lagrange_to_coeff(lagrange_vec)
+            })
+            .collect();
+
+        let aux_cosets: Vec<_> = meta
+            .aux_queries
+            .iter()
+            .map(|&(wire, at)| {
+                let poly = aux_polys[wire.0].clone();
+                domain.coeff_to_extended(poly, at)
+            })
+            .collect();
 
         // Compute commitments to advice wire polynomials
         let advice_blinds: Vec<_> = witness
@@ -253,6 +290,7 @@ impl<C: CurveAffine> Proof<C> {
             let evaluation = poly.evaluate(
                 &|index| srs.fixed_cosets[index].clone(),
                 &|index| advice_cosets[index].clone(),
+                &|index| aux_cosets[index].clone(),
                 &|a, b| a + &b,
                 &|a, b| a * &b,
                 &|a, scalar| a * scalar,
@@ -355,6 +393,12 @@ impl<C: CurveAffine> Proof<C> {
             .map(|&(wire, at)| eval_polynomial(&advice_polys[wire.0], domain.rotate_omega(x_3, at)))
             .collect();
 
+        let aux_evals: Vec<_> = meta
+            .aux_queries
+            .iter()
+            .map(|&(wire, at)| eval_polynomial(&aux_polys[wire.0], domain.rotate_omega(x_3, at)))
+            .collect();
+
         let fixed_evals: Vec<_> = meta
             .fixed_queries
             .iter()
@@ -396,6 +440,7 @@ impl<C: CurveAffine> Proof<C> {
         // Hash each advice evaluation
         for eval in advice_evals
             .iter()
+            .chain(aux_evals.iter())
             .chain(fixed_evals.iter())
             .chain(h_evals.iter())
             .chain(permutation_product_evals.iter())
@@ -448,6 +493,17 @@ impl<C: CurveAffine> Proof<C> {
                     &advice_polys[wire.0],
                     advice_blinds[wire.0],
                     advice_evals[query_index],
+                );
+            }
+
+            for (query_index, &(wire, ref at)) in meta.aux_queries.iter().enumerate() {
+                let point_index = (*meta.rotations.get(at).unwrap()).0;
+
+                accumulate(
+                    point_index,
+                    &aux_polys[wire.0],
+                    Blind(C::Scalar::zero()),
+                    aux_evals[query_index],
                 );
             }
 
@@ -595,6 +651,7 @@ impl<C: CurveAffine> Proof<C> {
             permutation_evals,
             advice_evals,
             fixed_evals,
+            aux_evals,
             h_evals,
             f_commitment,
             q_evals,

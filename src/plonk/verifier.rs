@@ -13,7 +13,16 @@ impl<'a, C: CurveAffine> Proof<C> {
         params: &'a Params<C>,
         srs: &SRS<C>,
         mut msm: MSM<'a, C>,
+        aux_commitments: &[C],
     ) -> Result<Guard<'a, C>, Error> {
+        // Check that aux_commitments matches the expected number of aux_wires
+        // and self.aux_evals
+        if aux_commitments.len() != srs.cs.num_aux_wires
+            || self.aux_evals.len() != srs.cs.num_aux_wires
+        {
+            return Err(Error::IncompatibleParams);
+        }
+
         // Scale the MSM by a random factor to ensure that if the existing MSM
         // has is_zero() == false then this argument won't be able to interfere
         // with it to make it true, with high probability.
@@ -22,10 +31,14 @@ impl<'a, C: CurveAffine> Proof<C> {
         // Create a transcript for obtaining Fiat-Shamir challenges.
         let mut transcript = HBase::init(C::Base::one());
 
+        // Hash the aux (external) commitments into the transcript
+        for commitment in aux_commitments {
+            hash_point(&mut transcript, commitment)?;
+        }
+
         // Hash the prover's advice commitments into the transcript
         for commitment in &self.advice_commitments {
-            hash_point(&mut transcript, commitment)
-                .expect("proof cannot contain points at infinity");
+            hash_point(&mut transcript, commitment)?;
         }
 
         // Sample x_0 challenge
@@ -36,7 +49,7 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Hash each permutation product commitment
         for c in &self.permutation_product_commitments {
-            hash_point(&mut transcript, c).expect("proof cannot contain points at infinity");
+            hash_point(&mut transcript, c)?;
         }
 
         // Sample x_2 challenge, which keeps the gates linearly independent.
@@ -44,7 +57,7 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Obtain a commitment to h(X) in the form of multiple pieces of degree n - 1
         for c in &self.h_commitments {
-            hash_point(&mut transcript, c).expect("proof cannot contain points at infinity");
+            hash_point(&mut transcript, c)?;
         }
 
         // Sample x_3 challenge, which is used to ensure the circuit is
@@ -59,6 +72,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         for eval in self
             .advice_evals
             .iter()
+            .chain(self.aux_evals.iter())
             .chain(self.fixed_evals.iter())
             .chain(self.h_evals.iter())
             .chain(self.permutation_product_evals.iter())
@@ -80,6 +94,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             let evaluation: C::Scalar = poly.evaluate(
                 &|index| self.fixed_evals[index],
                 &|index| self.advice_evals[index],
+                &|index| self.aux_evals[index],
                 &|a, b| a + &b,
                 &|a, b| a * &b,
                 &|a, scalar| a * &scalar,
@@ -172,6 +187,15 @@ impl<'a, C: CurveAffine> Proof<C> {
                 );
             }
 
+            for (query_index, &(wire, ref at)) in srs.cs.aux_queries.iter().enumerate() {
+                let point_index = (*srs.cs.rotations.get(at).unwrap()).0;
+                accumulate(
+                    point_index,
+                    aux_commitments[wire.0],
+                    self.aux_evals[query_index],
+                );
+            }
+
             for (query_index, &(wire, ref at)) in srs.cs.fixed_queries.iter().enumerate() {
                 let point_index = (*srs.cs.rotations.get(at).unwrap()).0;
                 accumulate(
@@ -222,8 +246,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         // Obtain the commitment to the multi-point quotient polynomial f(X).
-        hash_point(&mut transcript, &self.f_commitment)
-            .expect("proof cannot contain points at infinity");
+        hash_point(&mut transcript, &self.f_commitment)?;
 
         // Sample a challenge x_6 for checking that f(X) was committed to
         // correctly.

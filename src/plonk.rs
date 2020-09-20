@@ -50,6 +50,7 @@ pub struct Proof<C: CurveAffine> {
     permutation_product_inv_evals: Vec<C::Scalar>,
     permutation_evals: Vec<Vec<C::Scalar>>,
     advice_evals: Vec<C::Scalar>,
+    aux_evals: Vec<C::Scalar>,
     fixed_evals: Vec<C::Scalar>,
     h_evals: Vec<C::Scalar>,
     f_commitment: C,
@@ -91,8 +92,8 @@ fn hash_point<C: CurveAffine, H: Hasher<C::Base>>(
 
 #[test]
 fn test_proving() {
-    use crate::arithmetic::{EqAffine, Field, Fp, Fq};
-    use crate::poly::commitment::Params;
+    use crate::arithmetic::{Curve, EqAffine, Field, Fp, Fq};
+    use crate::poly::commitment::{Blind, Params};
     use crate::transcript::DummyHash;
     use std::marker::PhantomData;
     const K: u32 = 5;
@@ -115,6 +116,7 @@ fn test_proving() {
         sb: FixedWire,
         sc: FixedWire,
         sm: FixedWire,
+        sp: FixedWire,
 
         perm: usize,
         perm2: usize,
@@ -128,6 +130,9 @@ fn test_proving() {
         where
             F: FnOnce() -> Result<(FF, FF, FF), Error>;
         fn copy(&mut self, a: Variable, b: Variable) -> Result<(), Error>;
+        fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
+        where
+            F: FnOnce() -> Result<FF, Error>;
     }
 
     struct MyCircuit<F: Field> {
@@ -248,6 +253,18 @@ fn test_proving() {
             self.cs
                 .copy(self.config.perm2, left_wire, left.1, right_wire, right.1)
         }
+        fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
+        where
+            F: FnOnce() -> Result<FF, Error>,
+        {
+            let index = self.current_gate;
+            self.current_gate += 1;
+            self.cs.assign_advice(self.config.a, index, || f())?;
+            self.cs
+                .assign_fixed(self.config.sp, index, || Ok(FF::one()))?;
+
+            Ok(Variable(self.config.a, index))
+        }
     }
 
     impl<F: Field> Circuit<F> for MyCircuit<F> {
@@ -260,6 +277,7 @@ fn test_proving() {
             let sf = meta.fixed_wire();
             let c = meta.advice_wire();
             let d = meta.advice_wire();
+            let p = meta.aux_wire();
 
             let perm = meta.permutation(&[a, b, c]);
             let perm2 = meta.permutation(&[a, b, c]);
@@ -268,6 +286,7 @@ fn test_proving() {
             let sa = meta.fixed_wire();
             let sb = meta.fixed_wire();
             let sc = meta.fixed_wire();
+            let sp = meta.fixed_wire();
 
             meta.create_gate(|meta| {
                 let d = meta.query_advice(d, 1);
@@ -285,6 +304,14 @@ fn test_proving() {
                 a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one())) + sf * (d * e)
             });
 
+            meta.create_gate(|meta| {
+                let a = meta.query_advice(a, 0);
+                let p = meta.query_aux(p, 0);
+                let sp = meta.query_fixed(sp, 0);
+
+                sp * (a + p * (-F::one()))
+            });
+
             PLONKConfig {
                 a,
                 b,
@@ -295,6 +322,7 @@ fn test_proving() {
                 sb,
                 sc,
                 sm,
+                sp,
                 perm,
                 perm2,
             }
@@ -306,6 +334,8 @@ fn test_proving() {
             config: PLONKConfig,
         ) -> Result<(), Error> {
             let mut cs = StandardPLONK::new(cs, config);
+
+            let _ = cs.public_input(|| Ok(F::one() + F::one()))?;
 
             for _ in 0..10 {
                 let mut a_squared = None;
@@ -342,14 +372,26 @@ fn test_proving() {
     // Initialize the SRS
     let srs = SRS::generate(&params, &empty_circuit).expect("SRS generation should not fail");
 
+    let mut pubinputs = srs.domain.empty_lagrange();
+    pubinputs[0] = Fp::one();
+    pubinputs[0] += Fp::one();
+    let pubinput = params
+        .commit_lagrange(&pubinputs, Blind(Field::zero()))
+        .to_affine();
+
     for _ in 0..100 {
         // Create a proof
-        let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &srs, &circuit)
-            .expect("proof generation should not fail");
+        let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(
+            &params,
+            &srs,
+            &circuit,
+            &[pubinputs.clone()],
+        )
+        .expect("proof generation should not fail");
 
         let msm = params.empty_msm();
         let guard = proof
-            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm)
+            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm, &[pubinput])
             .unwrap();
         {
             let msm = guard.clone().use_challenges();
@@ -363,7 +405,7 @@ fn test_proving() {
         let msm = guard.clone().use_challenges();
         assert!(msm.clone().is_zero());
         let guard = proof
-            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm)
+            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm, &[pubinput])
             .unwrap();
         {
             let msm = guard.clone().use_challenges();
