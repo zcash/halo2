@@ -1,5 +1,5 @@
 use super::super::Error;
-use super::{Proof, Params, MSM};
+use super::{Params, Proof, MSM};
 use crate::transcript::Hasher;
 
 use crate::arithmetic::{
