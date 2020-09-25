@@ -15,7 +15,7 @@ mod verifier;
 
 /// This is a proof object for the polynomial commitment scheme opening.
 #[derive(Debug, Clone)]
-pub struct OpeningProof<C: CurveAffine> {
+pub struct Proof<C: CurveAffine> {
     rounds: Vec<(C, C)>,
     delta: C,
     z1: C::Scalar,
@@ -434,7 +434,7 @@ fn test_opening_proof() {
     loop {
         let transcript_dup = transcript.clone();
 
-        let opening_proof = OpeningProof::create(&params, &mut transcript, &px, blind, x);
+        let opening_proof = Proof::create(&params, &mut transcript, &px, blind, x);
         if opening_proof.is_err() {
             transcript = transcript_dup;
             transcript.absorb(Field::one());

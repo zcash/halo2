@@ -7,8 +7,7 @@
 
 use crate::arithmetic::CurveAffine;
 use crate::poly::{
-    commitment::OpeningProof, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff,
-    Polynomial,
+    commitment, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
 };
 use crate::transcript::Hasher;
 
@@ -55,7 +54,7 @@ pub struct Proof<C: CurveAffine> {
     h_evals: Vec<C::Scalar>,
     f_commitment: C,
     q_evals: Vec<C::Scalar>,
-    opening: OpeningProof<C>,
+    opening: commitment::Proof<C>,
 }
 
 /// This is an error that could occur during proving or circuit synthesis.
