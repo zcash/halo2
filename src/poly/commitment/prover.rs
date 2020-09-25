@@ -1,12 +1,12 @@
 use super::super::{Coeff, Error, Polynomial};
-use super::{Blind, OpeningProof, Params};
+use super::{Blind, Params, Proof};
 use crate::arithmetic::{
     best_multiexp, compute_inner_product, get_challenge_scalar, parallelize, small_multiexp,
     Challenge, Curve, CurveAffine, Field,
 };
 use crate::transcript::Hasher;
 
-impl<C: CurveAffine> OpeningProof<C> {
+impl<C: CurveAffine> Proof<C> {
     /// Create a polynomial commitment opening proof for the polynomial defined
     /// by the coefficients `px`, the blinding factor `blind` used for the
     /// polynomial commitment, and the point `x` that the polynomial is
@@ -186,7 +186,7 @@ impl<C: CurveAffine> OpeningProof<C> {
         let z1 = a * &c + &d;
         let z2 = c * &blind + &s;
 
-        Ok(OpeningProof {
+        Ok(Proof {
             rounds,
             delta,
             z1,

@@ -7,7 +7,7 @@ use crate::arithmetic::{
     Curve, CurveAffine, Field,
 };
 use crate::poly::{
-    commitment::{Blind, OpeningProof, Params},
+    commitment::{self, Blind, Params},
     Coeff, LagrangeCoeff, Polynomial, Rotation,
 };
 use crate::transcript::Hasher;
@@ -633,7 +633,7 @@ impl<C: CurveAffine> Proof<C> {
             }
 
             if let Ok(opening) =
-                OpeningProof::create(&params, &mut transcript, &f_poly, f_blind_dup, x_6)
+                commitment::Proof::create(&params, &mut transcript, &f_poly, f_blind_dup, x_6)
             {
                 break (opening, q_evals);
             } else {

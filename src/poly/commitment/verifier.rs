@@ -1,13 +1,13 @@
 use super::super::Error;
-use super::{Guard, OpeningProof, Params, MSM};
+use super::{Guard, Params, Proof, MSM};
 use crate::transcript::Hasher;
 
 use crate::arithmetic::{get_challenge_scalar, Challenge, CurveAffine, Field};
 
-impl<C: CurveAffine> OpeningProof<C> {
-    /// Checks to see if an [`OpeningProof`] is valid given the current
-    /// `transcript`, and a point `x` that the polynomial commitment `p` opens
-    /// purportedly to the value `v`.
+impl<C: CurveAffine> Proof<C> {
+    /// Checks to see if an [`Proof`] is valid given the current `transcript`,
+    /// and a point `x` that the polynomial commitment `p` opens purportedly to
+    /// the value `v`.
     pub fn verify<'a, H: Hasher<C::Base>>(
         &self,
         params: &'a Params<C>,
