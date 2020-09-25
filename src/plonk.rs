@@ -375,7 +375,7 @@ fn test_proving() {
     pubinputs[0] = Fp::one();
     pubinputs[0] += Fp::one();
     let pubinput = params
-        .commit_lagrange(&pubinputs, Blind(Field::one()))
+        .commit_lagrange(&pubinputs, Blind::default())
         .to_affine();
 
     for _ in 0..100 {
