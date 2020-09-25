@@ -395,26 +395,26 @@ fn test_proving() {
             .unwrap();
         {
             let msm = guard.clone().use_challenges();
-            assert!(msm.is_zero());
+            assert!(msm.eval());
         }
         {
             let g = guard.compute_g();
             let (msm, _) = guard.clone().use_g(g);
-            assert!(msm.is_zero());
+            assert!(msm.eval());
         }
         let msm = guard.clone().use_challenges();
-        assert!(msm.clone().is_zero());
+        assert!(msm.clone().eval());
         let guard = proof
             .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm, &[pubinput])
             .unwrap();
         {
             let msm = guard.clone().use_challenges();
-            assert!(msm.is_zero());
+            assert!(msm.eval());
         }
         {
             let g = guard.compute_g();
             let (msm, _) = guard.clone().use_g(g);
-            assert!(msm.is_zero());
+            assert!(msm.eval());
         }
     }
 }

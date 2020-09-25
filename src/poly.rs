@@ -119,9 +119,9 @@ impl<F, B> Polynomial<F, B> {
         self.values.iter_mut()
     }
 
-    /// Gets the length of this polynomial in terms of the number of
+    /// Gets the size of this polynomial in terms of the number of
     /// coefficients used to describe it.
-    pub fn len(&self) -> usize {
+    pub fn num_coeffs(&self) -> usize {
         self.values.len()
     }
 }

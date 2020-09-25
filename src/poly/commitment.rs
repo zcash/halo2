@@ -60,8 +60,8 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
 
     /// Add arbitrary term (the scalar and the point)
     pub fn add_term(&mut self, scalar: C::Scalar, point: C) {
-        &self.other_scalars.push(scalar);
-        &self.other_bases.push(point);
+        self.other_scalars.push(scalar);
+        self.other_bases.push(point);
     }
 
     /// Add a vector of scalars to `g_scalars`. This function will panic if the
@@ -100,7 +100,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
     }
 
     /// Perform multiexp and check that it results in zero
-    pub fn is_zero(self) -> bool {
+    pub fn eval(self) -> bool {
         let len = self.g_scalars.as_ref().map(|v| v.len()).unwrap_or(0)
             + self.h_scalar.map(|_| 1).unwrap_or(0)
             + self.other_scalars.len();
@@ -304,7 +304,7 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
     /// Lets caller supply the purported G point and simply appends it to
     /// return an updated MSM.
     pub fn use_g(mut self, g: C) -> (MSM<'a, C>, Accumulator<C>) {
-        &self.msm.add_term(self.neg_z1, g);
+        self.msm.add_term(self.neg_z1, g);
 
         let accumulator = Accumulator {
             g,
@@ -458,12 +458,12 @@ fn test_opening_proof() {
             {
                 // Test use_challenges()
                 let msm_challenges = guard.clone().use_challenges();
-                assert!(msm_challenges.is_zero());
+                assert!(msm_challenges.eval());
 
                 // Test use_g()
                 let g = guard.compute_g();
                 let (msm_g, _accumulator) = guard.clone().use_g(g);
-                assert!(msm_g.is_zero());
+                assert!(msm_g.eval());
             }
 
             // Check another proof to populate `msm.g_scalars`
@@ -483,12 +483,12 @@ fn test_opening_proof() {
 
             // Test use_challenges()
             let msm_challenges = guard.clone().use_challenges();
-            assert!(msm_challenges.is_zero());
+            assert!(msm_challenges.eval());
 
             // Test use_g()
             let g = guard.compute_g();
             let (msm_g, _accumulator) = guard.clone().use_g(g);
-            assert!(msm_g.is_zero());
+            assert!(msm_g.eval());
 
             break;
         }
