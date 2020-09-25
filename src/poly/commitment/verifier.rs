@@ -33,6 +33,7 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
     pub fn use_challenges(mut self) -> MSM<'a, C> {
         let s = compute_s(&self.challenges_sq, self.allinv * &self.neg_z1);
         self.msm.add_to_g(&s);
+        self.msm.add_to_h(self.neg_z1);
 
         self.msm
     }
@@ -53,7 +54,10 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
     /// Computes the g value when given a potential scalar as input.
     pub fn compute_g(&self) -> C {
         let s = compute_s(&self.challenges_sq, self.allinv);
-        best_multiexp(&s, &self.msm.params.g).to_affine()
+
+        let mut tmp = best_multiexp(&s, &self.msm.params.g);
+        tmp += self.msm.params.h;
+        tmp.to_affine()
     }
 }
 
@@ -159,7 +163,7 @@ impl<C: CurveAffine> Proof<C> {
         let c: C::Scalar = get_challenge_scalar(Challenge(c_packed));
 
         // Check
-        // [c] P + [c * v] U + [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2) + delta - [z1] G - [z1 * b] U - [z2] H
+        // [c] P + [c * v] U + [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2) + delta - [z1] G - [z1 * b] U - [z1 - z2] H
         // = 0
 
         let b = compute_b(x, &challenges, &challenges_inv);
@@ -184,8 +188,8 @@ impl<C: CurveAffine> Proof<C> {
         // delta
         msm.add_term(Field::one(), self.delta);
 
-        // - [z2] H
-        msm.add_to_h(-self.z2);
+        // - [z1 - z2] H
+        msm.add_to_h(self.z1 - &self.z2);
 
         let guard = Guard {
             msm,
