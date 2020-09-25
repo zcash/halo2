@@ -96,7 +96,7 @@ impl<C: CurveAffine> Proof<C> {
         // Compute commitments to aux wire polynomials
         let aux_commitments_projective: Vec<_> = aux
             .iter()
-            .map(|poly| params.commit_lagrange(poly, Blind(C::Scalar::zero()))) // TODO: bad blind?
+            .map(|poly| params.commit_lagrange(poly, Blind::default()))
             .collect();
         let mut aux_commitments = vec![C::zero(); aux_commitments_projective.len()];
         C::Projective::batch_to_affine(&aux_commitments_projective, &mut aux_commitments);
@@ -501,7 +501,7 @@ impl<C: CurveAffine> Proof<C> {
                 accumulate(
                     point_index,
                     &aux_polys[wire.0],
-                    Blind(C::Scalar::zero()),
+                    Blind::default(),
                     aux_evals[query_index],
                 );
             }
