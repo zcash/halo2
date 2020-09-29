@@ -12,30 +12,37 @@ use crate::poly::{
 use crate::transcript::Hasher;
 
 mod circuit;
+mod keygen;
 mod prover;
-mod srs;
 mod verifier;
 
 pub use circuit::*;
+pub use keygen::*;
 pub use prover::*;
-pub use srs::*;
 pub use verifier::*;
 
-/// This is a structured reference string (SRS) that is (deterministically)
-/// computed from a specific circuit and parameters for the polynomial
-/// commitment scheme.
+/// This is a verifying key which allows for the verification of proofs for a
+/// particular circuit.
 #[derive(Debug)]
-pub struct SRS<C: CurveAffine> {
+pub struct VerifyingKey<C: CurveAffine> {
     domain: EvaluationDomain<C::Scalar>,
-    l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     fixed_commitments: Vec<C>,
+    permutation_commitments: Vec<Vec<C>>,
+    cs: ConstraintSystem<C::Scalar>,
+}
+
+/// This is a proving key which allows for the creation of proofs for a
+/// particular circuit.
+#[derive(Debug)]
+pub struct ProvingKey<C: CurveAffine> {
+    vk: VerifyingKey<C>,
+    // TODO: get rid of this?
+    l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
     fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
-    permutation_commitments: Vec<Vec<C>>,
     permutations: Vec<Vec<Polynomial<C::Scalar, LagrangeCoeff>>>,
     permutation_polys: Vec<Vec<Polynomial<C::Scalar, Coeff>>>,
     permutation_cosets: Vec<Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>>,
-    cs: ConstraintSystem<C::Scalar>,
 }
 
 /// This is an object which represents a (Turbo)PLONK proof.
@@ -73,6 +80,20 @@ pub enum Error {
     BoundsFailure,
     /// Opening error
     OpeningError,
+}
+
+impl<C: CurveAffine> ProvingKey<C> {
+    /// Get the underlying [`VerifyingKey`].
+    pub fn get_vk(&self) -> &VerifyingKey<C> {
+        &self.vk
+    }
+}
+
+impl<C: CurveAffine> VerifyingKey<C> {
+    /// Get the underlying [`EvaluationDomain`].
+    pub fn get_domain(&self) -> &EvaluationDomain<C::Scalar> {
+        &self.domain
+    }
 }
 
 fn hash_point<C: CurveAffine, H: Hasher<C::Base>>(
@@ -368,10 +389,10 @@ fn test_proving() {
 
     let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None };
 
-    // Initialize the SRS
-    let srs = SRS::generate(&params, &empty_circuit).expect("SRS generation should not fail");
+    // Initialize the proving key
+    let pk = keygen(&params, &empty_circuit).expect("keygen should not fail");
 
-    let mut pubinputs = srs.domain.empty_lagrange();
+    let mut pubinputs = pk.get_vk().get_domain().empty_lagrange();
     pubinputs[0] = Fp::one();
     pubinputs[0] += Fp::one();
     let pubinput = params
@@ -382,7 +403,7 @@ fn test_proving() {
         // Create a proof
         let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(
             &params,
-            &srs,
+            &pk,
             &circuit,
             &[pubinputs.clone()],
         )
@@ -390,7 +411,7 @@ fn test_proving() {
 
         let msm = params.empty_msm();
         let guard = proof
-            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm, &[pubinput])
+            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, pk.get_vk(), msm, &[pubinput])
             .unwrap();
         {
             let msm = guard.clone().use_challenges();
@@ -404,7 +425,7 @@ fn test_proving() {
         let msm = guard.clone().use_challenges();
         assert!(msm.clone().eval());
         let guard = proof
-            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, &srs, msm, &[pubinput])
+            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, pk.get_vk(), msm, &[pubinput])
             .unwrap();
         {
             let msm = guard.clone().use_challenges();
