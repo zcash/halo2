@@ -1,4 +1,4 @@
-use super::{hash_point, Error, Proof, SRS};
+use super::{hash_point, Error, Proof, VerifyingKey};
 use crate::arithmetic::{get_challenge_scalar, Challenge, CurveAffine, Field};
 use crate::poly::{
     commitment::{Guard, Params, MSM},
@@ -11,14 +11,14 @@ impl<'a, C: CurveAffine> Proof<C> {
     pub fn verify<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
         &self,
         params: &'a Params<C>,
-        srs: &SRS<C>,
+        vk: &VerifyingKey<C>,
         mut msm: MSM<'a, C>,
         aux_commitments: &[C],
     ) -> Result<Guard<'a, C>, Error> {
         // Check that aux_commitments matches the expected number of aux_wires
         // and self.aux_evals
-        if aux_commitments.len() != srs.cs.num_aux_wires
-            || self.aux_evals.len() != srs.cs.num_aux_wires
+        if aux_commitments.len() != vk.cs.num_aux_wires
+            || self.aux_evals.len() != vk.cs.num_aux_wires
         {
             return Err(Error::IncompatibleParams);
         }
@@ -88,7 +88,7 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Evaluate the circuit using the custom gates provided
         let mut h_eval = C::Scalar::zero();
-        for poly in srs.cs.gates.iter() {
+        for poly in vk.cs.gates.iter() {
             h_eval *= &x_2;
 
             let evaluation: C::Scalar = poly.evaluate(
@@ -114,7 +114,7 @@ impl<'a, C: CurveAffine> Proof<C> {
 
                 let mut tmp = denominator; // 1 / (x_3 - 1)
                 tmp *= &(x_3n - &C::Scalar::one()); // (x_3^n - 1) / (x_3 - 1)
-                tmp *= &srs.domain.get_barycentric_weight(); // l_0(x_3)
+                tmp *= &vk.domain.get_barycentric_weight(); // l_0(x_3)
                 tmp *= &(C::Scalar::one() - &eval); // l_0(X) * (1 - z(X))
 
                 h_eval += &tmp;
@@ -122,7 +122,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         }
 
         // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
-        for (permutation_index, wires) in srs.cs.permutations.iter().enumerate() {
+        for (permutation_index, wires) in vk.cs.permutations.iter().enumerate() {
             h_eval *= &x_2;
 
             let mut left = self.permutation_product_evals[permutation_index];
@@ -168,8 +168,8 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Compress the commitments and expected evaluations at x_3 together
         // using the challenge x_4
-        let mut q_commitments: Vec<_> = vec![params.empty_msm(); srs.cs.rotations.len()];
-        let mut q_evals: Vec<_> = vec![C::Scalar::zero(); srs.cs.rotations.len()];
+        let mut q_commitments: Vec<_> = vec![params.empty_msm(); vk.cs.rotations.len()];
+        let mut q_evals: Vec<_> = vec![C::Scalar::zero(); vk.cs.rotations.len()];
         {
             let mut accumulate = |point_index: usize, new_commitment, eval| {
                 q_commitments[point_index].scale(x_4);
@@ -178,8 +178,8 @@ impl<'a, C: CurveAffine> Proof<C> {
                 q_evals[point_index] += &eval;
             };
 
-            for (query_index, &(wire, ref at)) in srs.cs.advice_queries.iter().enumerate() {
-                let point_index = (*srs.cs.rotations.get(at).unwrap()).0;
+            for (query_index, &(wire, ref at)) in vk.cs.advice_queries.iter().enumerate() {
+                let point_index = (*vk.cs.rotations.get(at).unwrap()).0;
                 accumulate(
                     point_index,
                     self.advice_commitments[wire.0],
@@ -187,8 +187,8 @@ impl<'a, C: CurveAffine> Proof<C> {
                 );
             }
 
-            for (query_index, &(wire, ref at)) in srs.cs.aux_queries.iter().enumerate() {
-                let point_index = (*srs.cs.rotations.get(at).unwrap()).0;
+            for (query_index, &(wire, ref at)) in vk.cs.aux_queries.iter().enumerate() {
+                let point_index = (*vk.cs.rotations.get(at).unwrap()).0;
                 accumulate(
                     point_index,
                     aux_commitments[wire.0],
@@ -196,22 +196,22 @@ impl<'a, C: CurveAffine> Proof<C> {
                 );
             }
 
-            for (query_index, &(wire, ref at)) in srs.cs.fixed_queries.iter().enumerate() {
-                let point_index = (*srs.cs.rotations.get(at).unwrap()).0;
+            for (query_index, &(wire, ref at)) in vk.cs.fixed_queries.iter().enumerate() {
+                let point_index = (*vk.cs.rotations.get(at).unwrap()).0;
                 accumulate(
                     point_index,
-                    srs.fixed_commitments[wire.0],
+                    vk.fixed_commitments[wire.0],
                     self.fixed_evals[query_index],
                 );
             }
 
-            let current_index = (*srs.cs.rotations.get(&Rotation::default()).unwrap()).0;
+            let current_index = (*vk.cs.rotations.get(&Rotation::default()).unwrap()).0;
             for (commitment, eval) in self.h_commitments.iter().zip(self.h_evals.iter()) {
                 accumulate(current_index, *commitment, *eval);
             }
 
             // Handle permutation arguments, if any exist
-            if !srs.cs.permutations.is_empty() {
+            if !vk.cs.permutations.is_empty() {
                 // Open permutation product commitments at x_3
                 for (commitment, eval) in self
                     .permutation_product_commitments
@@ -221,7 +221,7 @@ impl<'a, C: CurveAffine> Proof<C> {
                     accumulate(current_index, *commitment, *eval);
                 }
                 // Open permutation commitments for each permutation argument at x_3
-                for (commitment, eval) in srs
+                for (commitment, eval) in vk
                     .permutation_commitments
                     .iter()
                     .zip(self.permutation_evals.iter())
@@ -229,7 +229,7 @@ impl<'a, C: CurveAffine> Proof<C> {
                 {
                     accumulate(current_index, *commitment, *eval);
                 }
-                let current_index = (*srs.cs.rotations.get(&Rotation(-1)).unwrap()).0;
+                let current_index = (*vk.cs.rotations.get(&Rotation(-1)).unwrap()).0;
                 // Open permutation product commitments at \omega^{-1} x_3
                 for (commitment, eval) in self
                     .permutation_product_commitments
@@ -263,10 +263,10 @@ impl<'a, C: CurveAffine> Proof<C> {
         // We can compute the expected msm_eval at x_6 using the q_evals provided
         // by the prover and from x_5
         let mut msm_eval = C::Scalar::zero();
-        for (&row, point_index) in srs.cs.rotations.iter() {
+        for (&row, point_index) in vk.cs.rotations.iter() {
             let mut eval = self.q_evals[point_index.0];
 
-            let point = srs.domain.rotate_omega(x_3, row);
+            let point = vk.domain.rotate_omega(x_3, row);
             eval = eval - &q_evals[point_index.0];
             eval = eval * &(x_6 - &point).invert().unwrap();
 
@@ -281,7 +281,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         // Compute the final commitment that has to be opened
         let mut commitment_msm = params.empty_msm();
         commitment_msm.add_term(C::Scalar::one(), self.f_commitment);
-        for (_, &point_index) in srs.cs.rotations.iter() {
+        for (_, &point_index) in vk.cs.rotations.iter() {
             commitment_msm.scale(x_7);
             commitment_msm.add_msm(&q_commitments[point_index.0]);
             msm_eval *= &x_7;

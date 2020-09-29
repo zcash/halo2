@@ -1,6 +1,6 @@
 use super::{
     circuit::{AdviceWire, Assignment, Circuit, ConstraintSystem, FixedWire},
-    hash_point, Error, Proof, SRS,
+    hash_point, Error, Proof, ProvingKey,
 };
 use crate::arithmetic::{
     eval_polynomial, get_challenge_scalar, kate_division, parallelize, BatchInvert, Challenge,
@@ -14,19 +14,19 @@ use crate::transcript::Hasher;
 
 impl<C: CurveAffine> Proof<C> {
     /// This creates a proof for the provided `circuit` when given the public
-    /// parameters `params` and the structured reference string `srs` that was
-    /// previously computed for the same circuit.
+    /// parameters `params` and the proving key [`ProvingKey`] that was
+    /// generated previously for the same circuit.
     pub fn create<
         HBase: Hasher<C::Base>,
         HScalar: Hasher<C::Scalar>,
         ConcreteCircuit: Circuit<C::Scalar>,
     >(
         params: &Params<C>,
-        srs: &SRS<C>,
+        pk: &ProvingKey<C>,
         circuit: &ConcreteCircuit,
         aux: &[Polynomial<C::Scalar, LagrangeCoeff>],
     ) -> Result<Self, Error> {
-        if aux.len() != srs.cs.num_aux_wires {
+        if aux.len() != pk.vk.cs.num_aux_wires {
             return Err(Error::IncompatibleParams);
         }
 
@@ -76,7 +76,7 @@ impl<C: CurveAffine> Proof<C> {
             }
         }
 
-        let domain = &srs.domain;
+        let domain = &pk.vk.domain;
         let mut meta = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut meta);
 
@@ -176,7 +176,7 @@ impl<C: CurveAffine> Proof<C> {
 
         // Iterate over each permutation
         let mut permutation_modified_advice = vec![];
-        for (wires, permuted_values) in srs.cs.permutations.iter().zip(srs.permutations.iter()) {
+        for (wires, permuted_values) in pk.vk.cs.permutations.iter().zip(pk.permutations.iter()) {
             // Goal is to compute the products of fractions
             //
             // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
@@ -209,7 +209,8 @@ impl<C: CurveAffine> Proof<C> {
             .flat_map(|v| v.iter_mut())
             .batch_invert();
 
-        for (wires, mut modified_advice) in srs
+        for (wires, mut modified_advice) in pk
+            .vk
             .cs
             .permutations
             .iter()
@@ -287,7 +288,7 @@ impl<C: CurveAffine> Proof<C> {
             h_poly = h_poly * x_2;
 
             let evaluation = poly.evaluate(
-                &|index| srs.fixed_cosets[index].clone(),
+                &|index| pk.fixed_cosets[index].clone(),
                 &|index| advice_cosets[index].clone(),
                 &|index| aux_cosets[index].clone(),
                 &|a, b| a + &b,
@@ -304,7 +305,7 @@ impl<C: CurveAffine> Proof<C> {
                 for ((h, c), l0) in h
                     .iter_mut()
                     .zip(coset[start..].iter())
-                    .zip(srs.l0[start..].iter())
+                    .zip(pk.l0[start..].iter())
                 {
                     *h *= &x_2;
                     *h += &(*l0 * &(C::Scalar::one() - c));
@@ -313,14 +314,14 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
-        for (permutation_index, wires) in srs.cs.permutations.iter().enumerate() {
+        for (permutation_index, wires) in pk.vk.cs.permutations.iter().enumerate() {
             h_poly = h_poly * x_2;
 
             let mut left = permutation_product_cosets[permutation_index].clone();
             for (advice, permutation) in wires
                 .iter()
                 .map(|&(_, index)| &advice_cosets[index])
-                .zip(srs.permutation_cosets[permutation_index].iter())
+                .zip(pk.permutation_cosets[permutation_index].iter())
             {
                 parallelize(&mut left, |left, start| {
                     for ((left, advice), permutation) in left
@@ -402,7 +403,7 @@ impl<C: CurveAffine> Proof<C> {
             .fixed_queries
             .iter()
             .map(|&(wire, at)| {
-                eval_polynomial(&srs.fixed_polys[wire.0], domain.rotate_omega(x_3, at))
+                eval_polynomial(&pk.fixed_polys[wire.0], domain.rotate_omega(x_3, at))
             })
             .collect();
 
@@ -416,7 +417,7 @@ impl<C: CurveAffine> Proof<C> {
             .map(|poly| eval_polynomial(poly, domain.rotate_omega(x_3, Rotation(-1))))
             .collect();
 
-        let permutation_evals: Vec<Vec<C::Scalar>> = srs
+        let permutation_evals: Vec<Vec<C::Scalar>> = pk
             .permutation_polys
             .iter()
             .map(|polys| {
@@ -511,7 +512,7 @@ impl<C: CurveAffine> Proof<C> {
 
                 accumulate(
                     point_index,
-                    &srs.fixed_polys[wire.0],
+                    &pk.fixed_polys[wire.0],
                     Blind::default(),
                     fixed_evals[query_index],
                 );
@@ -528,7 +529,7 @@ impl<C: CurveAffine> Proof<C> {
             }
 
             // Handle permutation arguments, if any exist
-            if !srs.cs.permutations.is_empty() {
+            if !pk.vk.cs.permutations.is_empty() {
                 // Open permutation product commitments at x_3
                 for ((poly, blind), eval) in permutation_product_polys
                     .iter()
@@ -539,7 +540,7 @@ impl<C: CurveAffine> Proof<C> {
                 }
 
                 // Open permutation polynomial commitments at x_3
-                for (poly, eval) in srs
+                for (poly, eval) in pk
                     .permutation_polys
                     .iter()
                     .zip(permutation_evals.iter())
@@ -548,7 +549,7 @@ impl<C: CurveAffine> Proof<C> {
                     accumulate(current_index, poly, Blind::default(), *eval);
                 }
 
-                let current_index = (*srs.cs.rotations.get(&Rotation(-1)).unwrap()).0;
+                let current_index = (*pk.vk.cs.rotations.get(&Rotation(-1)).unwrap()).0;
                 // Open permutation product commitments at \omega^{-1} x_3
                 for ((poly, blind), eval) in permutation_product_polys
                     .iter()
