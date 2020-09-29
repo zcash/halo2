@@ -241,7 +241,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             * &vk.domain.get_barycentric_weight(); // l_0(x_3)
 
         // Compute the expected value of h(x_3)
-        let h_eval = std::iter::empty()
+        let expected_h_eval = std::iter::empty()
             // Evaluate the circuit using the custom gates provided
             .chain(vk.cs.gates.iter().map(|poly| {
                 poly.evaluate(
@@ -296,15 +296,16 @@ impl<'a, C: CurveAffine> Proof<C> {
             )
             .fold(C::Scalar::zero(), |h_eval, v| h_eval * &x_2 + &v);
 
-        // Compute the expected h(x_3) value
-        let mut expected_h_eval = C::Scalar::zero();
-        let mut cur = C::Scalar::one();
-        for eval in &self.h_evals {
-            expected_h_eval += &(cur * eval);
-            cur *= &x_3n;
-        }
+        // Compute h(x_3) from the prover
+        let (_, h_eval) = self
+            .h_evals
+            .iter()
+            .fold((C::Scalar::one(), C::Scalar::zero()), |(cur, acc), eval| {
+                (cur * &x_3n, acc + &(cur * eval))
+            });
 
-        if h_eval != (expected_h_eval * &(x_3n - &C::Scalar::one())) {
+        // Did the prover commit to the correct polynomial?
+        if expected_h_eval != (h_eval * &(x_3n - &C::Scalar::one())) {
             return Err(Error::ConstraintSystemFailure);
         }
 
