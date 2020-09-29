@@ -83,14 +83,14 @@ pub enum Error {
 }
 
 impl<C: CurveAffine> ProvingKey<C> {
-    /// Get the underlying `VerifyingKey`
+    /// Get the underlying [`VerifyingKey`].
     pub fn get_vk(&self) -> &VerifyingKey<C> {
         &self.vk
     }
 }
 
 impl<C: CurveAffine> VerifyingKey<C> {
-    /// Get the underlying `VerifyingKey`
+    /// Get the underlying [`EvaluationDomain`].
     pub fn get_domain(&self) -> &EvaluationDomain<C::Scalar> {
         &self.domain
     }
