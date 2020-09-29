@@ -10,6 +10,7 @@ use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, RangeFrom, RangeFull,
 
 pub mod commitment;
 mod domain;
+pub mod multiopen;
 
 pub use domain::*;
 

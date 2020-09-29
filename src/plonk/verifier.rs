@@ -2,6 +2,7 @@ use super::{hash_point, Error, Proof, VerifyingKey};
 use crate::arithmetic::{get_challenge_scalar, Challenge, CurveAffine, Field};
 use crate::poly::{
     commitment::{Guard, Params, MSM},
+    multiopen::VerifierQuery,
     Rotation,
 };
 use crate::transcript::Hasher;
@@ -9,18 +10,21 @@ use crate::transcript::Hasher;
 impl<'a, C: CurveAffine> Proof<C> {
     /// Returns a boolean indicating whether or not the proof is valid
     pub fn verify<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
-        &self,
+        &'a self,
         params: &'a Params<C>,
-        vk: &VerifyingKey<C>,
-        mut msm: MSM<'a, C>,
-        aux_commitments: &[C],
+        vk: &'a VerifyingKey<C>,
+        msm: MSM<'a, C>,
+        aux_commitments: &'a [C],
     ) -> Result<Guard<'a, C>, Error> {
         self.check_lengths(vk, aux_commitments)?;
 
-        // Scale the MSM by a random factor to ensure that if the existing MSM
-        // has is_zero() == false then this argument won't be able to interfere
-        // with it to make it true, with high probability.
-        msm.scale(C::Scalar::random());
+        // Check that aux_commitments matches the expected number of aux_wires
+        // and self.aux_evals
+        if aux_commitments.len() != vk.cs.num_aux_wires
+            || self.aux_evals.len() != vk.cs.num_aux_wires
+        {
+            return Err(Error::IncompatibleParams);
+        }
 
         // Create a transcript for obtaining Fiat-Shamir challenges.
         let mut transcript = HBase::init(C::Base::one());
@@ -83,134 +87,106 @@ impl<'a, C: CurveAffine> Proof<C> {
             C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
         transcript.absorb(transcript_scalar_point);
 
-        // Sample x_4 for compressing openings at the same points together
-        let x_4: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        let mut queries: Vec<VerifierQuery<'a, C>> = Vec::new();
 
-        // Compress the commitments and expected evaluations at x_3 together
-        // using the challenge x_4
-        let mut q_commitments: Vec<_> = vec![params.empty_msm(); vk.cs.rotations.len()];
-        let mut q_evals: Vec<_> = vec![C::Scalar::zero(); vk.cs.rotations.len()];
+        for (query_index, &(wire, at)) in vk.cs.advice_queries.iter().enumerate() {
+            let point = vk.domain.rotate_omega(x_3, at);
+            queries.push(VerifierQuery {
+                point,
+                commitment: &self.advice_commitments[wire.0],
+                eval: self.advice_evals[query_index],
+            });
+        }
+
+        for (query_index, &(wire, at)) in vk.cs.aux_queries.iter().enumerate() {
+            let point = vk.domain.rotate_omega(x_3, at);
+            queries.push(VerifierQuery {
+                point,
+                commitment: &aux_commitments[wire.0],
+                eval: self.aux_evals[query_index],
+            });
+        }
+
+        for (query_index, &(wire, at)) in vk.cs.fixed_queries.iter().enumerate() {
+            let point = vk.domain.rotate_omega(x_3, at);
+            queries.push(VerifierQuery {
+                point,
+                commitment: &vk.fixed_commitments[wire.0],
+                eval: self.fixed_evals[query_index],
+            });
+        }
+
+        for ((idx, _), &eval) in self
+            .h_commitments
+            .iter()
+            .enumerate()
+            .zip(self.h_evals.iter())
         {
-            let mut accumulate = |point_index: usize, new_commitment, eval| {
-                q_commitments[point_index].scale(x_4);
-                q_commitments[point_index].add_term(C::Scalar::one(), new_commitment);
-                q_evals[point_index] *= &x_4;
-                q_evals[point_index] += &eval;
-            };
+            let commitment = &self.h_commitments[idx];
+            queries.push(VerifierQuery {
+                point: x_3,
+                commitment,
+                eval,
+            });
+        }
 
-            for (query_index, &(wire, ref at)) in vk.cs.advice_queries.iter().enumerate() {
-                let point_index = (*vk.cs.rotations.get(at).unwrap()).0;
-                accumulate(
-                    point_index,
-                    self.advice_commitments[wire.0],
-                    self.advice_evals[query_index],
-                );
+        // Handle permutation arguments, if any exist
+        if !vk.cs.permutations.is_empty() {
+            // Open permutation product commitments at x_3
+            for ((idx, _), &eval) in self
+                .permutation_product_commitments
+                .iter()
+                .enumerate()
+                .zip(self.permutation_product_evals.iter())
+            {
+                let commitment = &self.permutation_product_commitments[idx];
+                queries.push(VerifierQuery {
+                    point: x_3,
+                    commitment,
+                    eval,
+                });
             }
-
-            for (query_index, &(wire, ref at)) in vk.cs.aux_queries.iter().enumerate() {
-                let point_index = (*vk.cs.rotations.get(at).unwrap()).0;
-                accumulate(
-                    point_index,
-                    aux_commitments[wire.0],
-                    self.aux_evals[query_index],
-                );
-            }
-
-            for (query_index, &(wire, ref at)) in vk.cs.fixed_queries.iter().enumerate() {
-                let point_index = (*vk.cs.rotations.get(at).unwrap()).0;
-                accumulate(
-                    point_index,
-                    vk.fixed_commitments[wire.0],
-                    self.fixed_evals[query_index],
-                );
-            }
-
-            let current_index = (*vk.cs.rotations.get(&Rotation::default()).unwrap()).0;
-            for (commitment, eval) in self.h_commitments.iter().zip(self.h_evals.iter()) {
-                accumulate(current_index, *commitment, *eval);
-            }
-
-            // Handle permutation arguments, if any exist
-            if !vk.cs.permutations.is_empty() {
-                // Open permutation product commitments at x_3
-                for (commitment, eval) in self
-                    .permutation_product_commitments
-                    .iter()
-                    .zip(self.permutation_product_evals.iter())
-                {
-                    accumulate(current_index, *commitment, *eval);
-                }
-                // Open permutation commitments for each permutation argument at x_3
-                for (commitment, eval) in vk
-                    .permutation_commitments
-                    .iter()
-                    .zip(self.permutation_evals.iter())
-                    .flat_map(|(commitments, evals)| commitments.iter().zip(evals.iter()))
-                {
-                    accumulate(current_index, *commitment, *eval);
-                }
-                let current_index = (*vk.cs.rotations.get(&Rotation(-1)).unwrap()).0;
-                // Open permutation product commitments at \omega^{-1} x_3
-                for (commitment, eval) in self
-                    .permutation_product_commitments
-                    .iter()
-                    .zip(self.permutation_product_inv_evals.iter())
-                {
-                    accumulate(current_index, *commitment, *eval);
+            // Open permutation commitments for each permutation argument at x_3
+            for outer_idx in 0..vk.permutation_commitments.len() {
+                let inner_len = vk.permutation_commitments[outer_idx].len();
+                for inner_idx in 0..inner_len {
+                    let commitment = &vk.permutation_commitments[outer_idx][inner_idx];
+                    let eval = self.permutation_evals[outer_idx][inner_idx];
+                    queries.push(VerifierQuery {
+                        point: x_3,
+                        commitment,
+                        eval,
+                    });
                 }
             }
+
+            // Open permutation product commitments at \omega^{-1} x_3
+            let x_3_inv = vk.domain.rotate_omega(x_3, Rotation(-1));
+            for ((idx, _), &eval) in self
+                .permutation_product_commitments
+                .iter()
+                .enumerate()
+                .zip(self.permutation_product_inv_evals.iter())
+            {
+                let commitment = &self.permutation_product_commitments[idx];
+                queries.push(VerifierQuery {
+                    point: x_3_inv,
+                    commitment,
+                    eval,
+                });
+            }
         }
 
-        // Sample a challenge x_5 for keeping the multi-point quotient
-        // polynomial terms linearly independent.
-        let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
-
-        // Obtain the commitment to the multi-point quotient polynomial f(X).
-        hash_point(&mut transcript, &self.f_commitment)?;
-
-        // Sample a challenge x_6 for checking that f(X) was committed to
-        // correctly.
-        let x_6: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
-
-        for eval in self.q_evals.iter() {
-            transcript_scalar.absorb(*eval);
-        }
-
-        let transcript_scalar_point =
-            C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
-        transcript.absorb(transcript_scalar_point);
-
-        // We can compute the expected msm_eval at x_6 using the q_evals provided
-        // by the prover and from x_5
-        let mut msm_eval = C::Scalar::zero();
-        for (&row, point_index) in vk.cs.rotations.iter() {
-            let mut eval = self.q_evals[point_index.0];
-
-            let point = vk.domain.rotate_omega(x_3, row);
-            eval = eval - &q_evals[point_index.0];
-            eval = eval * &(x_6 - &point).invert().unwrap();
-
-            msm_eval *= &x_5;
-            msm_eval += &eval;
-        }
-
-        // Sample a challenge x_7 that we will use to collapse the openings of
-        // the various remaining polynomials at x_6 together.
-        let x_7: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
-
-        // Compute the final commitment that has to be opened
-        let mut commitment_msm = params.empty_msm();
-        commitment_msm.add_term(C::Scalar::one(), self.f_commitment);
-        for (_, &point_index) in vk.cs.rotations.iter() {
-            commitment_msm.scale(x_7);
-            commitment_msm.add_msm(&q_commitments[point_index.0]);
-            msm_eval *= &x_7;
-            msm_eval += &self.q_evals[point_index.0];
-        }
-
-        // Verify the opening proof
-        self.opening
-            .verify(params, msm, &mut transcript, x_6, commitment_msm, msm_eval)
+        // We are now convinced the circuit is satisfied so long as the
+        // polynomial commitments open to the correct values.
+        self.multiopening
+            .verify(
+                params,
+                &mut transcript,
+                &mut transcript_scalar,
+                queries,
+                msm,
+            )
             .map_err(|_| Error::OpeningError)
     }
 
@@ -225,7 +201,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             return Err(Error::IncompatibleParams);
         }
 
-        if self.q_evals.len() != vk.cs.rotations.len() {
+        if self.opening.q_evals.len() != vk.cs.rotations.len() {
             return Err(Error::IncompatibleParams);
         }
 
