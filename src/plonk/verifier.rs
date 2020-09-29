@@ -128,7 +128,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             let mut left = self.permutation_product_evals[permutation_index];
             for (advice_eval, permutation_eval) in wires
                 .iter()
-                .map(|&(_, query_index)| self.advice_evals[query_index])
+                .map(|&wire| self.advice_evals[vk.cs.get_advice_query_index(wire, 0)])
                 .zip(self.permutation_evals[permutation_index].iter())
             {
                 left *= &(advice_eval + &(x_0 * permutation_eval) + &x_1);
@@ -138,7 +138,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             let mut current_delta = x_0 * &x_3;
             for advice_eval in wires
                 .iter()
-                .map(|&(_, query_index)| self.advice_evals[query_index])
+                .map(|&wire| self.advice_evals[vk.cs.get_advice_query_index(wire, 0)])
             {
                 right *= &(advice_eval + &current_delta + &x_1);
                 current_delta *= &C::Scalar::DELTA;

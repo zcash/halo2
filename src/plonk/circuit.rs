@@ -170,13 +170,8 @@ pub struct ConstraintSystem<F> {
     pub(crate) rotations: BTreeMap<Rotation, PointIndex>,
 
     // Vector of permutation arguments, where each corresponds to a set of wires
-    // that are involved in a permutation argument, as well as the corresponding
-    // query index for each wire. As an example, we could have a permutation
-    // argument between wires (A, B, C) which allows copy constraints to be
-    // enforced between advice wire values in A, B and C, and another
-    // permutation between wires (B, C, D) which allows the same with D instead
-    // of A.
-    pub(crate) permutations: Vec<Vec<(AdviceWire, usize)>>,
+    // that are involved in a permutation argument.
+    pub(crate) permutations: Vec<Vec<AdviceWire>>,
 }
 
 impl<F: Field> Default for ConstraintSystem<F> {
@@ -202,16 +197,16 @@ impl<F: Field> ConstraintSystem<F> {
     /// Add a permutation argument for some advice wires
     pub fn permutation(&mut self, wires: &[AdviceWire]) -> usize {
         let index = self.permutations.len();
-        if index == 0 {
+        if self.permutations.is_empty() {
             let at = Rotation(-1);
             let len = self.rotations.len();
             self.rotations.entry(at).or_insert(PointIndex(len));
         }
-        let wires = wires
-            .iter()
-            .map(|&wire| (wire, self.query_advice_index(wire, 0)))
-            .collect();
-        self.permutations.push(wires);
+
+        for wire in wires {
+            self.query_advice_index(*wire, 0);
+        }
+        self.permutations.push(wires.to_vec());
 
         index
     }
@@ -242,7 +237,18 @@ impl<F: Field> ConstraintSystem<F> {
         Expression::Fixed(self.query_fixed_index(wire, at))
     }
 
-    fn query_advice_index(&mut self, wire: AdviceWire, at: i32) -> usize {
+    pub(crate) fn get_advice_query_index(&self, wire: AdviceWire, at: i32) -> usize {
+        let at = Rotation(at);
+        for (index, advice_query) in self.advice_queries.iter().enumerate() {
+            if advice_query == &(wire, at) {
+                return index;
+            }
+        }
+
+        panic!("get_advice_query_index called for non-existant query");
+    }
+
+    pub(crate) fn query_advice_index(&mut self, wire: AdviceWire, at: i32) -> usize {
         let at = Rotation(at);
         {
             let len = self.rotations.len();
