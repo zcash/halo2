@@ -15,13 +15,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         mut msm: MSM<'a, C>,
         aux_commitments: &[C],
     ) -> Result<Guard<'a, C>, Error> {
-        // Check that aux_commitments matches the expected number of aux_wires
-        // and self.aux_evals
-        if aux_commitments.len() != vk.cs.num_aux_wires
-            || self.aux_evals.len() != vk.cs.num_aux_wires
-        {
-            return Err(Error::IncompatibleParams);
-        }
+        self.check_lengths(vk, aux_commitments)?;
 
         // Scale the MSM by a random factor to ensure that if the existing MSM
         // has is_zero() == false then this argument won't be able to interfere
@@ -218,6 +212,64 @@ impl<'a, C: CurveAffine> Proof<C> {
         self.opening
             .verify(params, msm, &mut transcript, x_6, commitment_msm, msm_eval)
             .map_err(|_| Error::OpeningError)
+    }
+
+    /// Checks that the lengths of vectors are consistent with the constraint
+    /// system
+    fn check_lengths(&self, vk: &VerifyingKey<C>, aux_commitments: &[C]) -> Result<(), Error> {
+        // Check that aux_commitments matches the expected number of aux_wires
+        // and self.aux_evals
+        if aux_commitments.len() != vk.cs.num_aux_wires
+            || self.aux_evals.len() != vk.cs.num_aux_wires
+        {
+            return Err(Error::IncompatibleParams);
+        }
+
+        if self.q_evals.len() != vk.cs.rotations.len() {
+            return Err(Error::IncompatibleParams);
+        }
+
+        // TODO: check h_evals
+
+        if self.fixed_evals.len() != vk.cs.fixed_queries.len() {
+            return Err(Error::IncompatibleParams);
+        }
+
+        if self.advice_evals.len() != vk.cs.advice_queries.len() {
+            return Err(Error::IncompatibleParams);
+        }
+
+        if self.permutation_evals.len() != vk.cs.permutations.len() {
+            return Err(Error::IncompatibleParams);
+        }
+
+        for (permutation_evals, permutation) in
+            self.permutation_evals.iter().zip(vk.cs.permutations.iter())
+        {
+            if permutation_evals.len() != permutation.len() {
+                return Err(Error::IncompatibleParams);
+            }
+        }
+
+        if self.permutation_product_inv_evals.len() != vk.cs.permutations.len() {
+            return Err(Error::IncompatibleParams);
+        }
+
+        if self.permutation_product_evals.len() != vk.cs.permutations.len() {
+            return Err(Error::IncompatibleParams);
+        }
+
+        if self.permutation_product_commitments.len() != vk.cs.permutations.len() {
+            return Err(Error::IncompatibleParams);
+        }
+
+        // TODO: check h_commitments
+
+        if self.advice_commitments.len() != vk.cs.num_advice_wires {
+            return Err(Error::IncompatibleParams);
+        }
+
+        Ok(())
     }
 
     /// Checks that this proof's h_evals are correct, and thus that all of the
