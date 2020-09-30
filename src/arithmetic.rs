@@ -430,3 +430,40 @@ fn log2_floor(num: usize) -> u32 {
 
     pow
 }
+
+/// Returns coefficients of an n - 1 degree polynomial given a set of n points and their evaluations
+pub fn interpolate<F: Field>(points: Vec<F>, evals: Vec<F>) -> Vec<F> {
+    assert_eq!(points.len(), evals.len());
+    if points.len() == 1 {
+        // Constant polynomial
+        return vec![evals[0]];
+    } else {
+        let mut interpolation_polys = vec![];
+        for (j, x_j) in points.iter().enumerate() {
+            let mut tmp = vec![F::one()];
+            for (k, x_k) in points.iter().enumerate() {
+                if k != j {
+                    // Compute (x_j - x_k)^(-1)
+                    let denom = (*x_j - x_k).invert().unwrap();
+                    let factor = [-denom * x_k, denom];
+                    let mut product = vec![F::zero(); tmp.len() + factor.len() - 1];
+                    for (i, a) in tmp.iter().enumerate() {
+                        for (j, b) in factor.iter().enumerate() {
+                            product[i + j] += *a * b;
+                        }
+                    }
+                    tmp = product;
+                }
+            }
+            interpolation_polys.push(tmp);
+        }
+        let mut final_poly = vec![F::zero(); points.len()];
+        for (interpolation_poly, evaluation) in interpolation_polys.into_iter().zip(evals.iter()) {
+            for (final_coeff, interpolation_coeff) in final_poly.iter_mut().zip(interpolation_poly)
+            {
+                *final_coeff += interpolation_coeff * evaluation;
+            }
+        }
+        final_poly
+    }
+}
