@@ -408,9 +408,10 @@ fn test_proving() {
         )
         .expect("proof generation should not fail");
 
+        let pubinput_slice = &[pubinput];
         let msm = params.empty_msm();
         let guard = proof
-            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, pk.get_vk(), msm, &[pubinput])
+            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, pk.get_vk(), msm, pubinput_slice)
             .unwrap();
         {
             let msm = guard.clone().use_challenges();
@@ -424,7 +425,7 @@ fn test_proving() {
         let msm = guard.clone().use_challenges();
         assert!(msm.clone().eval());
         let guard = proof
-            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, pk.get_vk(), msm, &[pubinput])
+            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, pk.get_vk(), msm, pubinput_slice)
             .unwrap();
         {
             let msm = guard.clone().use_challenges();
