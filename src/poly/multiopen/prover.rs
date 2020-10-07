@@ -4,7 +4,7 @@ use super::super::{
     commitment::{self, Blind, Params},
     Coeff, Error, Polynomial,
 };
-use super::Proof;
+use super::{Proof, ProverQuery};
 
 use crate::arithmetic::{
     eval_polynomial, get_challenge_scalar, kate_division, parallelize, Challenge, Curve,
@@ -12,6 +12,7 @@ use crate::arithmetic::{
 };
 use crate::plonk::hash_point;
 use crate::transcript::Hasher;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone)]
 struct CommitmentData<C: CurveAffine> {
@@ -170,4 +171,128 @@ impl<C: CurveAffine> Proof<C> {
             opening,
         })
     }
+}
+
+// For multiopen prover: Construct intermediate representations relating polynomials to sets of points by index
+fn construct_intermediate_sets<'a, C: CurveAffine, I>(
+    queries: I,
+) -> (
+    Vec<(&'a Polynomial<C::Scalar, Coeff>, CommitmentData<C>)>, // poly_map
+    Vec<Vec<C::Scalar>>,                                        // point_sets
+)
+where
+    I: IntoIterator<Item = ProverQuery<'a, C>> + Clone,
+{
+    // Construct vec of unique polynomials and corresponding information about their queries
+    let mut poly_map: Vec<(&'a Polynomial<C::Scalar, Coeff>, CommitmentData<C>)> = Vec::new();
+
+    // Also construct mapping from a unique point to a point_index
+    let mut point_index_map: BTreeMap<C::Scalar, usize> = BTreeMap::new();
+
+    // Construct point_indices which each polynomial is queried at
+    for query in queries.clone() {
+        let num_points = point_index_map.len();
+        let point_idx = point_index_map.entry(query.point).or_insert(num_points);
+
+        let mut exists = false;
+        for (existing_poly, existing_commitment_data) in poly_map.iter_mut() {
+            // Add to CommitmentData for existing commitment in commitment_map
+            if std::ptr::eq(query.poly, *existing_poly) {
+                exists = true;
+                existing_commitment_data.point_indices.push(*point_idx);
+            }
+        }
+
+        // Add new poly and CommitmentData to poly_map
+        if !exists {
+            let commitment_data = CommitmentData {
+                set_index: 0,
+                blind: query.blind,
+                point_indices: vec![*point_idx],
+                evals: vec![],
+            };
+            poly_map.push((query.poly, commitment_data));
+        }
+    }
+
+    // Also construct inverse mapping from point_index to the point
+    let mut inverse_point_index_map: BTreeMap<usize, C::Scalar> = BTreeMap::new();
+    for (&point, &point_index) in point_index_map.iter() {
+        inverse_point_index_map.insert(point_index, point);
+    }
+
+    // Construct map of unique ordered point_idx_sets to their set_idx
+    let mut point_idx_sets: BTreeMap<BTreeSet<usize>, usize> = BTreeMap::new();
+    // Also construct mapping from poly to point_idx_set
+    let mut poly_set_map: Vec<(&Polynomial<C::Scalar, Coeff>, BTreeSet<usize>)> = Vec::new();
+
+    for (poly, commitment_data) in poly_map.iter_mut() {
+        let mut point_index_set = BTreeSet::new();
+        // Note that point_index_set is ordered, unlike point_indices
+        for &point_index in commitment_data.point_indices.iter() {
+            point_index_set.insert(point_index);
+        }
+
+        // Push point_index_set to CommitmentData for the relevant poly
+        poly_set_map.push((poly, point_index_set.clone()));
+
+        let num_sets = point_idx_sets.len();
+        point_idx_sets
+            .entry(point_index_set.clone())
+            .or_insert(num_sets);
+    }
+
+    // Initialise empty evals vec for each unique poly
+    for (_, commitment_data) in poly_map.iter_mut() {
+        let len = commitment_data.point_indices.len();
+        commitment_data.evals = vec![C::Scalar::zero(); len];
+    }
+
+    // Populate set_index, evals and points for each poly using point_idx_sets
+    for query in queries.clone() {
+        // The index of the point at which the poly is queried
+        let point_index = point_index_map.get(&query.point).unwrap();
+
+        // The point_index_set at which the poly was queried
+        let mut point_index_set = BTreeSet::new();
+        for (poly, point_idx_set) in poly_set_map.iter() {
+            if std::ptr::eq(query.poly, *poly) {
+                point_index_set = point_idx_set.clone();
+            }
+        }
+
+        // The set_index of the point_index_set
+        let set_index = point_idx_sets.get(&point_index_set).unwrap();
+        for (poly, commitment_data) in poly_map.iter_mut() {
+            if std::ptr::eq(query.poly, *poly) {
+                commitment_data.set_index = *set_index;
+            }
+        }
+
+        let point_index_set: Vec<usize> = point_index_set.iter().cloned().collect();
+
+        // The offset of the point_index in the point_index_set
+        let point_index_in_set = point_index_set
+            .iter()
+            .position(|i| i == point_index)
+            .unwrap();
+
+        for (poly, commitment_data) in poly_map.iter_mut() {
+            if std::ptr::eq(query.poly, *poly) {
+                // Insert the eval using the ordering of the point_index_set
+                commitment_data.evals[point_index_in_set] = query.eval;
+            }
+        }
+    }
+
+    // Get actual points in each point set
+    let mut point_sets: Vec<Vec<C::Scalar>> = vec![Vec::new(); point_idx_sets.len()];
+    for (point_idx_set, &set_idx) in point_idx_sets.iter() {
+        for &point_idx in point_idx_set.iter() {
+            let point = inverse_point_index_map.get(&point_idx).unwrap();
+            point_sets[set_idx].push(*point);
+        }
+    }
+
+    (poly_map, point_sets)
 }
