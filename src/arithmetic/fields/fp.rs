@@ -62,6 +62,28 @@ impl PartialEq for Fp {
     }
 }
 
+impl std::cmp::Ord for Fp {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let left = self.to_bytes();
+        let right = other.to_bytes();
+        for (left_byte, right_byte) in left.iter().zip(right.iter()).rev() {
+            let tmp = left_byte.cmp(right_byte);
+            if let std::cmp::Ordering::Equal = tmp {
+                continue;
+            } else {
+                return tmp;
+            }
+        }
+        std::cmp::Ordering::Equal
+    }
+}
+
+impl std::cmp::PartialOrd for Fp {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl ConditionallySelectable for Fp {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
         Fp([
