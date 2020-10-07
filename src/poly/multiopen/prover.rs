@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use super::super::{
     commitment::{self, Blind, Params},
     Coeff, Error, Polynomial,
@@ -7,12 +5,13 @@ use super::super::{
 use super::{Proof, ProverQuery};
 
 use crate::arithmetic::{
-    eval_polynomial, get_challenge_scalar, kate_division, parallelize, Challenge, Curve,
-    CurveAffine, Field,
+    eval_polynomial, get_challenge_scalar, interpolate, kate_division, parallelize, Challenge,
+    Curve, CurveAffine, Field,
 };
 use crate::plonk::hash_point;
 use crate::transcript::Hasher;
 use std::collections::{BTreeMap, BTreeSet};
+use std::marker::PhantomData;
 
 #[derive(Debug, Clone)]
 struct CommitmentData<C: CurveAffine> {
@@ -24,88 +23,101 @@ struct CommitmentData<C: CurveAffine> {
 
 impl<C: CurveAffine> Proof<C> {
     /// Create a multi-opening proof
-    pub fn create<I, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
+    pub fn create<'a, I, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
         params: &Params<C>,
         transcript: &mut HBase,
         transcript_scalar: &mut HScalar,
-        points: Vec<C::Scalar>,
-        instances: I,
+        queries: I,
     ) -> Result<Self, Error>
     where
-        I: IntoIterator<
-                Item = (
-                    usize,
-                    Polynomial<C::Scalar, Coeff>,
-                    Blind<C::Scalar>,
-                    C::Scalar,
-                ),
-            > + Clone,
+        I: IntoIterator<Item = ProverQuery<'a, C>> + Clone,
     {
         let x_4: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-        // Collapse openings at same points together into single openings using
-        // x_4 challenge.
-        let mut q_polys: Vec<Option<Polynomial<C::Scalar, Coeff>>> = vec![None; points.len()];
-        let mut q_blinds = vec![Blind(C::Scalar::zero()); points.len()];
-        let mut q_evals: Vec<_> = vec![C::Scalar::zero(); points.len()];
-        {
-            let mut accumulate =
-                |point_index: usize, new_poly: Polynomial<C::Scalar, Coeff>, blind, eval| {
-                    q_polys[point_index]
-                        .as_mut()
-                        .map(|poly| {
-                            parallelize(poly, |q, start| {
-                                for (q, a) in q.iter_mut().zip(new_poly[start..].iter()) {
-                                    *q *= &x_4;
-                                    *q += a;
-                                }
-                            });
-                        })
-                        .or_else(|| {
-                            q_polys[point_index] = Some(new_poly.clone());
-                            Some(())
-                        });
-                    q_blinds[point_index] *= x_4;
-                    q_blinds[point_index] += blind;
-                    q_evals[point_index] *= &x_4;
-                    q_evals[point_index] += &eval;
-                };
+        let (poly_map, point_sets) = construct_intermediate_sets::<'a, C, I>(queries);
 
-            for instance in instances.clone() {
+        // Collapse openings at same point sets together into single openings using
+        // x_4 challenge.
+        let mut q_polys: Vec<Option<Polynomial<C::Scalar, Coeff>>> = vec![None; point_sets.len()];
+        let mut q_blinds = vec![Blind(C::Scalar::zero()); point_sets.len()];
+        let mut q_eval_sets: Vec<Vec<_>> = vec![Vec::new(); point_sets.len()];
+        for (set_idx, point_set) in point_sets.iter().enumerate() {
+            q_eval_sets[set_idx] = vec![C::Scalar::zero(); point_set.len()];
+        }
+
+        {
+            let mut accumulate = |set_idx: usize,
+                                  new_poly: &Polynomial<C::Scalar, Coeff>,
+                                  blind: Blind<C::Scalar>,
+                                  evals: Vec<C::Scalar>| {
+                q_polys[set_idx]
+                    .as_mut()
+                    .map(|poly| {
+                        parallelize(poly, |q, start| {
+                            for (q, a) in q.iter_mut().zip(new_poly[start..].iter()) {
+                                *q *= &x_4;
+                                *q += a;
+                            }
+                        });
+                    })
+                    .or_else(|| {
+                        q_polys[set_idx] = Some(new_poly.clone());
+                        Some(())
+                    });
+                q_blinds[set_idx] *= x_4;
+                q_blinds[set_idx] += blind;
+                for (eval_idx, &eval) in evals.iter().enumerate() {
+                    q_eval_sets[set_idx][eval_idx] *= &x_4;
+                    q_eval_sets[set_idx][eval_idx] += &eval;
+                }
+            };
+
+            for (poly, commitment_data) in poly_map {
                 accumulate(
-                    instance.0, // point_index,
-                    instance.1, // poly,
-                    instance.2, // blind,
-                    instance.3, // eval
+                    commitment_data.set_index,      // set_idx,
+                    &poly,                          // poly,
+                    commitment_data.blind,          // blind,
+                    commitment_data.evals.to_vec(), // evals
                 );
             }
         }
 
         let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
+        // Interpolate polynomial for evaluations at each set
+        let mut r_polys: Vec<Vec<C::Scalar>> = Vec::with_capacity(point_sets.len());
+        for (points, evals) in point_sets.iter().zip(q_eval_sets.iter()) {
+            r_polys.push(interpolate(points.clone(), evals.clone()));
+        }
+
         let mut f_poly: Option<Polynomial<C::Scalar, Coeff>> = None;
-        for (point_index, &point) in points.iter().enumerate() {
-            let mut poly = q_polys[point_index].as_ref().unwrap().clone();
-            poly[0] -= &q_evals[point_index];
+        for (set_idx, point_set) in point_sets.clone().iter().enumerate() {
+            let mut poly = q_polys[set_idx].as_ref().unwrap().clone();
+            for (coeff_idx, coeff) in r_polys[set_idx].iter().enumerate() {
+                poly[coeff_idx] -= coeff;
+            }
             // TODO: change kate_division interface?
-            let mut poly = kate_division(&poly[..], point);
-            poly.push(C::Scalar::zero());
-            let poly = Polynomial {
-                values: poly,
-                _marker: PhantomData,
-            };
+            let mut tmp_poly = poly.clone();
+            for point in point_set {
+                let mut poly = kate_division(&tmp_poly[..], *point);
+                poly.push(C::Scalar::zero());
+                tmp_poly = Polynomial {
+                    values: poly,
+                    _marker: PhantomData,
+                };
+            }
 
             f_poly = f_poly
                 .map(|mut f_poly| {
                     parallelize(&mut f_poly, |q, start| {
-                        for (q, a) in q.iter_mut().zip(poly[start..].iter()) {
+                        for (q, a) in q.iter_mut().zip(tmp_poly[start..].iter()) {
                             *q *= &x_5;
                             *q += a;
                         }
                     });
                     f_poly
                 })
-                .or_else(|| Some(poly));
+                .or_else(|| Some(tmp_poly));
         }
 
         let f_poly = f_poly.unwrap();
@@ -120,11 +132,10 @@ impl<C: CurveAffine> Proof<C> {
             let x_6: C::Scalar =
                 get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-            let mut q_evals = vec![C::Scalar::zero(); points.len()];
+            let mut q_evals = vec![C::Scalar::zero(); point_sets.len()];
 
-            for (point_index, _) in points.iter().enumerate() {
-                q_evals[point_index] =
-                    eval_polynomial(&q_polys[point_index].as_ref().unwrap(), x_6);
+            for (set_idx, _) in point_sets.iter().enumerate() {
+                q_evals[set_idx] = eval_polynomial(&q_polys[set_idx].as_ref().unwrap(), x_6);
             }
 
             for eval in q_evals.iter() {
@@ -140,14 +151,14 @@ impl<C: CurveAffine> Proof<C> {
 
             let mut f_blind_dup = f_blind;
             let mut f_poly = f_poly.clone();
-            for (point_index, _) in points.iter().enumerate() {
+            for (set_idx, _) in point_sets.iter().enumerate() {
                 f_blind_dup *= x_7;
-                f_blind_dup += q_blinds[point_index];
+                f_blind_dup += q_blinds[set_idx];
 
                 parallelize(&mut f_poly, |f, start| {
                     for (f, a) in f
                         .iter_mut()
-                        .zip(q_polys[point_index].as_ref().unwrap()[start..].iter())
+                        .zip(q_polys[set_idx].as_ref().unwrap()[start..].iter())
                     {
                         *f *= &x_7;
                         *f += a;

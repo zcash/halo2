@@ -8,7 +8,8 @@ use crate::arithmetic::{
 };
 use crate::poly::{
     commitment::{Blind, Params},
-    multiopen, Coeff, LagrangeCoeff, Polynomial, Rotation,
+    multiopen::{self, ProverQuery},
+    LagrangeCoeff, Polynomial, Rotation,
 };
 use crate::transcript::Hasher;
 
@@ -457,53 +458,50 @@ impl<C: CurveAffine> Proof<C> {
             C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
         transcript.absorb(transcript_scalar_point);
 
-        let mut instances: Vec<(
-            usize,
-            Polynomial<C::Scalar, Coeff>,
-            Blind<C::Scalar>,
-            C::Scalar,
-        )> = Vec::with_capacity(
-            meta.advice_queries.len()
-                + meta.aux_queries.len()
-                + meta.fixed_queries.len()
-                + h_pieces.len()
-                + permutation_product_polys.len()
-                + permutation_product_polys.len()
-                + pk.permutation_polys.len(),
-        );
+        let mut instances: Vec<ProverQuery<C>> = Vec::new();
 
-        for (query_index, &(wire, ref at)) in meta.advice_queries.iter().enumerate() {
-            let point_index = (*meta.rotations.get(at).unwrap()).0;
-            let poly = advice_polys[wire.0].clone();
-            let blind = advice_blinds[wire.0];
-            let eval = advice_evals[query_index];
-            instances.push((point_index, poly, blind, eval));
+        for (query_index, &(wire, at)) in pk.vk.cs.advice_queries.iter().enumerate() {
+            let point = domain.rotate_omega(x_3, at);
+
+            instances.push(ProverQuery {
+                point,
+                poly: &advice_polys[wire.0],
+                blind: advice_blinds[wire.0],
+                eval: advice_evals[query_index],
+            });
         }
 
-        for (query_index, &(wire, ref at)) in meta.aux_queries.iter().enumerate() {
-            let point_index = (*meta.rotations.get(at).unwrap()).0;
-            let poly = aux_polys[wire.0].clone();
-            let blind = Blind::default();
-            let eval = aux_evals[query_index];
-            instances.push((point_index, poly, blind, eval));
+        for (query_index, &(wire, at)) in pk.vk.cs.aux_queries.iter().enumerate() {
+            let point = domain.rotate_omega(x_3, at);
+
+            instances.push(ProverQuery {
+                point,
+                poly: &aux_polys[wire.0],
+                blind: Blind::default(),
+                eval: aux_evals[query_index],
+            });
         }
 
-        for (query_index, &(wire, ref at)) in meta.fixed_queries.iter().enumerate() {
-            let point_index = (*meta.rotations.get(at).unwrap()).0;
-            let poly = pk.fixed_polys[wire.0].clone();
-            let blind = Blind::default();
-            let eval = fixed_evals[query_index];
-            instances.push((point_index, poly, blind, eval));
+        for (query_index, &(wire, at)) in pk.vk.cs.fixed_queries.iter().enumerate() {
+            let point = domain.rotate_omega(x_3, at);
+
+            instances.push(ProverQuery {
+                point,
+                poly: &pk.fixed_polys[wire.0],
+                blind: Blind::default(),
+                eval: fixed_evals[query_index],
+            });
         }
 
         // We query the h(X) polynomial at x_3
-        let current_index = (*meta.rotations.get(&Rotation::default()).unwrap()).0;
-        for ((h_poly, h_blind), h_eval) in h_pieces
-            .into_iter()
-            .zip(h_blinds.iter())
-            .zip(h_evals.iter())
+        for ((h_poly, h_blind), h_eval) in h_pieces.iter().zip(h_blinds.iter()).zip(h_evals.iter())
         {
-            instances.push((current_index, h_poly.clone(), *h_blind, *h_eval));
+            instances.push(ProverQuery {
+                point: x_3,
+                poly: h_poly,
+                blind: *h_blind,
+                eval: *h_eval,
+            });
         }
 
         // Handle permutation arguments, if any exist
@@ -514,7 +512,12 @@ impl<C: CurveAffine> Proof<C> {
                 .zip(permutation_product_blinds.iter())
                 .zip(permutation_product_evals.iter())
             {
-                instances.push((current_index, poly.clone(), *blind, *eval));
+                instances.push(ProverQuery {
+                    point: x_3,
+                    poly: poly,
+                    blind: *blind,
+                    eval: *eval,
+                });
             }
 
             // Open permutation polynomial commitments at x_3
@@ -524,46 +527,48 @@ impl<C: CurveAffine> Proof<C> {
                 .zip(permutation_evals.iter())
                 .flat_map(|(polys, evals)| polys.iter().zip(evals.iter()))
             {
-                instances.push((current_index, poly.clone(), Blind::default(), *eval));
+                instances.push(ProverQuery {
+                    point: x_3,
+                    poly: poly,
+                    blind: Blind::default(),
+                    eval: *eval,
+                });
             }
 
-            let current_index = (*pk.vk.cs.rotations.get(&Rotation(-1)).unwrap()).0;
+            let x_3_inv = domain.rotate_omega(x_3, Rotation(-1));
             // Open permutation product commitments at \omega^{-1} x_3
             for ((poly, blind), eval) in permutation_product_polys
                 .iter()
                 .zip(permutation_product_blinds.iter())
                 .zip(permutation_product_inv_evals.iter())
             {
-                instances.push((current_index, poly.clone(), *blind, *eval));
+                instances.push(ProverQuery {
+                    point: x_3_inv,
+                    poly: poly,
+                    blind: *blind,
+                    eval: *eval,
+                });
             }
         }
 
-        let mut points: Vec<C::Scalar> = vec![C::Scalar::zero(); meta.rotations.len()];
-        for (&row, &point_index) in meta.rotations.iter() {
-            points[point_index.0] = domain.rotate_omega(x_3, row);
+        if let Ok(multiopening) =
+            multiopen::Proof::create(params, &mut transcript, &mut transcript_scalar, instances)
+        {
+            Ok(Proof {
+                advice_commitments,
+                h_commitments,
+                permutation_product_commitments,
+                permutation_product_evals,
+                permutation_product_inv_evals,
+                permutation_evals,
+                advice_evals,
+                fixed_evals,
+                aux_evals,
+                h_evals,
+                multiopening,
+            })
+        } else {
+            Err(Error::OpeningError)
         }
-
-        let multiopening = multiopen::Proof::create(
-            params,
-            &mut transcript,
-            &mut transcript_scalar,
-            points,
-            instances,
-        )
-        .unwrap();
-
-        Ok(Proof {
-            advice_commitments,
-            h_commitments,
-            permutation_product_commitments,
-            permutation_product_evals,
-            permutation_product_inv_evals,
-            permutation_evals,
-            advice_evals,
-            fixed_evals,
-            aux_evals,
-            h_evals,
-            multiopening,
-        })
     }
 }
