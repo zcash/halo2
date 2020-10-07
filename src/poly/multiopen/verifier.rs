@@ -4,6 +4,13 @@ use crate::arithmetic::{get_challenge_scalar, Challenge, CurveAffine, Field};
 use crate::plonk::hash_point;
 use crate::transcript::Hasher;
 
+#[derive(Debug, Clone)]
+struct CommitmentData<C: CurveAffine> {
+    set_index: usize,
+    point_indices: Vec<usize>,
+    evals: Vec<C::Scalar>,
+}
+
 impl<'a, C: CurveAffine> Proof<C> {
     /// Verify a multi-opening proof
     pub fn verify<I, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(

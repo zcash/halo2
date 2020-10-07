@@ -13,6 +13,14 @@ use crate::arithmetic::{
 use crate::plonk::hash_point;
 use crate::transcript::Hasher;
 
+#[derive(Debug, Clone)]
+struct CommitmentData<C: CurveAffine> {
+    set_index: usize,
+    blind: Blind<C::Scalar>,
+    point_indices: Vec<usize>,
+    evals: Vec<C::Scalar>,
+}
+
 impl<C: CurveAffine> Proof<C> {
     /// Create a multi-opening proof
     pub fn create<I, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(

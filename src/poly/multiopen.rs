@@ -21,3 +21,27 @@ pub struct Proof<C: CurveAffine> {
     /// Commitment proof
     pub opening: commitment::Proof<C>,
 }
+
+/// A polynomial query at a point
+#[derive(Debug, Clone)]
+pub struct ProverQuery<'a, C: CurveAffine> {
+    /// point at which polynomial is queried
+    pub point: C::Scalar,
+    /// coefficients of polynomial
+    pub poly: &'a Polynomial<C::Scalar, Coeff>,
+    /// blinding factor of polynomial
+    pub blind: commitment::Blind<C::Scalar>,
+    /// evaluation of polynomial at query point
+    pub eval: C::Scalar,
+}
+
+/// A polynomial query at a point
+#[derive(Debug, Clone)]
+pub struct VerifierQuery<'a, C: CurveAffine> {
+    /// point at which polynomial is queried
+    pub point: C::Scalar,
+    /// commitment to polynomial
+    pub commitment: &'a C,
+    /// evaluation of polynomial at query point
+    pub eval: C::Scalar,
+}
