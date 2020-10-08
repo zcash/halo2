@@ -66,15 +66,14 @@ impl std::cmp::Ord for Fq {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         let left = self.to_bytes();
         let right = other.to_bytes();
-        for (left_byte, right_byte) in left.iter().zip(right.iter()).rev() {
-            let tmp = left_byte.cmp(right_byte);
-            if let std::cmp::Ordering::Equal = tmp {
-                continue;
-            } else {
-                return tmp;
-            }
-        }
-        std::cmp::Ordering::Equal
+        left.iter()
+            .zip(right.iter())
+            .rev()
+            .find_map(|(left_byte, right_byte)| match left_byte.cmp(right_byte) {
+                std::cmp::Ordering::Equal => None,
+                res => Some(res),
+            })
+            .unwrap_or(std::cmp::Ordering::Equal)
     }
 }
 
