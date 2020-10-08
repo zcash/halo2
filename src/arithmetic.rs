@@ -432,7 +432,7 @@ fn log2_floor(num: usize) -> u32 {
 }
 
 /// Returns coefficients of an n - 1 degree polynomial given a set of n points and their evaluations
-pub fn interpolate<F: Field>(points: Vec<F>, evals: Vec<F>) -> Vec<F> {
+pub fn interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
     assert_eq!(points.len(), evals.len());
     if points.len() == 1 {
         // Constant polynomial

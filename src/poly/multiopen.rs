@@ -12,14 +12,14 @@ mod verifier;
 /// This is a multi-point opening proof used in the polynomial commitment scheme opening.
 #[derive(Debug, Clone)]
 pub struct Proof<C: CurveAffine> {
-    /// A vector of evaluations at each set of query points
-    pub q_evals: Vec<C::Scalar>,
+    // A vector of evaluations at each set of query points
+    q_evals: Vec<C::Scalar>,
 
-    /// Commitment to final polynomial
-    pub f_commitment: C,
+    // Commitment to final polynomial
+    f_commitment: C,
 
-    /// Commitment proof
-    pub opening: commitment::Proof<C>,
+    // Commitment proof
+    opening: commitment::Proof<C>,
 }
 
 /// A polynomial query at a point

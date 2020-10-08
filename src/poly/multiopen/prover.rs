@@ -84,41 +84,31 @@ impl<C: CurveAffine> Proof<C> {
 
         let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-        // Interpolate polynomial for evaluations at each set
-        let mut r_polys: Vec<Vec<C::Scalar>> = Vec::with_capacity(point_sets.len());
-        for (points, evals) in point_sets.iter().zip(q_eval_sets.iter()) {
-            r_polys.push(interpolate(points.clone(), evals.clone()));
-        }
-
-        let mut f_poly: Option<Polynomial<C::Scalar, Coeff>> = None;
-        for (set_idx, point_set) in point_sets.clone().iter().enumerate() {
-            let mut poly = q_polys[set_idx].as_ref().unwrap().clone();
-            for (coeff_idx, coeff) in r_polys[set_idx].iter().enumerate() {
-                poly[coeff_idx] -= coeff;
-            }
-            // TODO: change kate_division interface?
-            let mut tmp_poly = poly.clone();
-            for point in point_set {
-                let mut poly = kate_division(&tmp_poly[..], *point);
-                poly.push(C::Scalar::zero());
-                tmp_poly = Polynomial {
+        let f_poly = point_sets
+            .iter()
+            .zip(q_eval_sets.iter())
+            .zip(q_polys.iter())
+            .fold(None, |f_poly, ((points, evals), poly)| {
+                let mut poly = poly.clone()?.values;
+                // TODO: makes implicit asssumption that poly degree is smaller than interpolation poly degree
+                for (p, r) in poly.iter_mut().zip(interpolate(points, evals)) {
+                    *p -= &r;
+                }
+                let mut poly = points
+                    .iter()
+                    .fold(poly, |poly, point| kate_division(&poly, *point));
+                poly.resize(params.n as usize, C::Scalar::zero());
+                let poly = Polynomial {
                     values: poly,
                     _marker: PhantomData,
                 };
-            }
 
-            f_poly = f_poly
-                .map(|mut f_poly| {
-                    parallelize(&mut f_poly, |q, start| {
-                        for (q, a) in q.iter_mut().zip(tmp_poly[start..].iter()) {
-                            *q *= &x_5;
-                            *q += a;
-                        }
-                    });
-                    f_poly
-                })
-                .or_else(|| Some(tmp_poly));
-        }
+                if f_poly.is_none() {
+                    Some(poly)
+                } else {
+                    f_poly.map(|f_poly| f_poly * x_5 + &poly)
+                }
+            });
 
         let f_poly = f_poly.unwrap();
         let mut f_blind = Blind(C::Scalar::random());
@@ -132,11 +122,10 @@ impl<C: CurveAffine> Proof<C> {
             let x_6: C::Scalar =
                 get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-            let mut q_evals = vec![C::Scalar::zero(); point_sets.len()];
-
-            for (set_idx, _) in point_sets.iter().enumerate() {
-                q_evals[set_idx] = eval_polynomial(&q_polys[set_idx].as_ref().unwrap(), x_6);
-            }
+            let q_evals: Vec<C::Scalar> = q_polys
+                .iter()
+                .map(|poly| eval_polynomial(poly.as_ref().unwrap(), x_6))
+                .collect();
 
             for eval in q_evals.iter() {
                 transcript_scalar.absorb(*eval);
@@ -149,25 +138,18 @@ impl<C: CurveAffine> Proof<C> {
             let x_7: C::Scalar =
                 get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-            let mut f_blind_dup = f_blind;
-            let mut f_poly = f_poly.clone();
-            for (set_idx, _) in point_sets.iter().enumerate() {
-                f_blind_dup *= x_7;
-                f_blind_dup += q_blinds[set_idx];
-
-                parallelize(&mut f_poly, |f, start| {
-                    for (f, a) in f
-                        .iter_mut()
-                        .zip(q_polys[set_idx].as_ref().unwrap()[start..].iter())
-                    {
-                        *f *= &x_7;
-                        *f += a;
-                    }
-                });
-            }
+            let (f_poly, f_blind_try) = q_polys.iter().zip(q_blinds.iter()).fold(
+                (f_poly.clone(), f_blind),
+                |(f_poly, f_blind), (poly, blind)| {
+                    (
+                        f_poly * x_7 + &poly.clone().unwrap(),
+                        Blind((f_blind.0 * &x_7) + &blind.0),
+                    )
+                },
+            );
 
             if let Ok(opening) =
-                commitment::Proof::create(&params, &mut transcript, &f_poly, f_blind_dup, x_6)
+                commitment::Proof::create(&params, &mut transcript, &f_poly, f_blind_try, x_6)
             {
                 break (opening, q_evals);
             } else {

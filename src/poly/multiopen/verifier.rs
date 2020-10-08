@@ -84,7 +84,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         let mut r_evals = vec![C::Scalar::zero(); point_sets.len()];
         let mut r_polys: Vec<Vec<C::Scalar>> = Vec::with_capacity(point_sets.len());
         for (points, evals) in point_sets.clone().iter().zip(q_eval_sets.clone().iter()) {
-            r_polys.push(interpolate(points.clone(), evals.clone()));
+            r_polys.push(interpolate(&points, &evals));
         }
         for (r_eval, r_poly) in r_evals.iter_mut().zip(r_polys.iter()) {
             *r_eval = eval_polynomial(r_poly, x_6);
