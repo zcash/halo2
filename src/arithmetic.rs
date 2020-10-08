@@ -432,7 +432,7 @@ fn log2_floor(num: usize) -> u32 {
 }
 
 /// Returns coefficients of an n - 1 degree polynomial given a set of n points and their evaluations
-pub fn interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
+pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
     assert_eq!(points.len(), evals.len());
     if points.len() == 1 {
         // Constant polynomial
@@ -440,19 +440,23 @@ pub fn interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
     } else {
         let mut interpolation_polys = vec![];
         for (j, x_j) in points.iter().enumerate() {
-            let mut tmp = vec![F::one()];
+            let mut tmp: Vec<F> = Vec::with_capacity(points.len() + 1);
+            let mut product = Vec::with_capacity(points.len() + 1);
+            tmp.push(F::one());
             for (k, x_k) in points.iter().enumerate() {
                 if k != j {
                     // Compute (x_j - x_k)^(-1)
                     let denom = (*x_j - x_k).invert().unwrap();
-                    let factor = [-denom * x_k, denom];
-                    let mut product = vec![F::zero(); tmp.len() + factor.len() - 1];
-                    for (i, a) in tmp.iter().enumerate() {
-                        for (j, b) in factor.iter().enumerate() {
-                            product[i + j] += *a * b;
-                        }
+                    product.resize(tmp.len() + 1, F::zero());
+                    for (i, (a, b)) in tmp
+                        .iter()
+                        .chain(std::iter::once(&F::zero()))
+                        .zip(std::iter::once(&F::zero()).chain(tmp.iter()))
+                        .enumerate()
+                    {
+                        product[i] = *a * (-denom * x_k) + *b * denom;
                     }
-                    tmp = product;
+                    std::mem::swap(&mut tmp, &mut product);
                 }
             }
             interpolation_polys.push(tmp);

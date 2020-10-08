@@ -4,7 +4,7 @@ use super::super::{
 };
 use super::{Proof, VerifierQuery};
 use crate::arithmetic::{
-    eval_polynomial, get_challenge_scalar, interpolate, Challenge, CurveAffine, Field,
+    eval_polynomial, get_challenge_scalar, lagrange_interpolate, Challenge, CurveAffine, Field,
 };
 use crate::plonk::hash_point;
 use crate::transcript::Hasher;
@@ -80,11 +80,11 @@ impl<'a, C: CurveAffine> Proof<C> {
             C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
         transcript.absorb(transcript_scalar_point);
 
-        // Interpolate polynomial for evaluations at each set
+        // lagrange_Interpolate polynomial for evaluations at each set
         let mut r_evals = vec![C::Scalar::zero(); point_sets.len()];
         let mut r_polys: Vec<Vec<C::Scalar>> = Vec::with_capacity(point_sets.len());
         for (points, evals) in point_sets.clone().iter().zip(q_eval_sets.clone().iter()) {
-            r_polys.push(interpolate(&points, &evals));
+            r_polys.push(lagrange_interpolate(&points, &evals));
         }
         for (r_eval, r_poly) in r_evals.iter_mut().zip(r_polys.iter()) {
             *r_eval = eval_polynomial(r_poly, x_6);

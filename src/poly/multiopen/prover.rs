@@ -5,8 +5,8 @@ use super::super::{
 use super::{Proof, ProverQuery};
 
 use crate::arithmetic::{
-    eval_polynomial, get_challenge_scalar, interpolate, kate_division, parallelize, Challenge,
-    Curve, CurveAffine, Field,
+    eval_polynomial, get_challenge_scalar, kate_division, lagrange_interpolate, parallelize,
+    Challenge, Curve, CurveAffine, Field,
 };
 use crate::plonk::hash_point;
 use crate::transcript::Hasher;
@@ -91,7 +91,7 @@ impl<C: CurveAffine> Proof<C> {
             .fold(None, |f_poly, ((points, evals), poly)| {
                 let mut poly = poly.clone()?.values;
                 // TODO: makes implicit asssumption that poly degree is smaller than interpolation poly degree
-                for (p, r) in poly.iter_mut().zip(interpolate(points, evals)) {
+                for (p, r) in poly.iter_mut().zip(lagrange_interpolate(points, evals)) {
                     *p -= &r;
                 }
                 let mut poly = points
