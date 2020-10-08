@@ -551,24 +551,22 @@ impl<C: CurveAffine> Proof<C> {
             }
         }
 
-        if let Ok(multiopening) =
+        let multiopening =
             multiopen::Proof::create(params, &mut transcript, &mut transcript_scalar, instances)
-        {
-            Ok(Proof {
-                advice_commitments,
-                h_commitments,
-                permutation_product_commitments,
-                permutation_product_evals,
-                permutation_product_inv_evals,
-                permutation_evals,
-                advice_evals,
-                fixed_evals,
-                aux_evals,
-                h_evals,
-                multiopening,
-            })
-        } else {
-            Err(Error::OpeningError)
-        }
+                .map_err(|_| Error::OpeningError)?;
+
+        Ok(Proof {
+            advice_commitments,
+            h_commitments,
+            permutation_product_commitments,
+            permutation_product_evals,
+            permutation_product_inv_evals,
+            permutation_evals,
+            advice_evals,
+            fixed_evals,
+            aux_evals,
+            h_evals,
+            multiopening,
+        })
     }
 }
