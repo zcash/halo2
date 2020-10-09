@@ -85,29 +85,23 @@ impl<'a, C: CurveAffine> Proof<C> {
             C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
         transcript.absorb(transcript_scalar_point);
 
-        // lagrange_Interpolate polynomial for evaluations at each set
-        let mut r_evals = vec![C::Scalar::zero(); point_sets.len()];
-        let mut r_polys: Vec<Vec<C::Scalar>> = Vec::with_capacity(point_sets.len());
-        for (points, evals) in point_sets.clone().iter().zip(q_eval_sets.clone().iter()) {
-            r_polys.push(lagrange_interpolate(&points, &evals));
-        }
-        for (r_eval, r_poly) in r_evals.iter_mut().zip(r_polys.iter()) {
-            *r_eval = eval_polynomial(r_poly, x_6);
-        }
-
         // We can compute the expected msm_eval at x_6 using the q_evals provided
         // by the prover and from x_5
-        let mut msm_eval = C::Scalar::zero();
-        for (set_idx, points) in point_sets.iter().enumerate() {
-            let mut eval = self.q_evals[set_idx];
-            eval -= &r_evals[set_idx];
-            for point in points {
-                eval = eval * &(x_6 - &point).invert().unwrap();
-            }
-
-            msm_eval *= &x_5;
-            msm_eval += &eval;
-        }
+        let msm_eval = point_sets
+            .iter()
+            .zip(q_eval_sets.iter())
+            .zip(self.q_evals.iter())
+            .fold(
+                C::Scalar::zero(),
+                |msm_eval, ((points, evals), proof_eval)| {
+                    let r_poly = lagrange_interpolate(points, evals);
+                    let r_eval = eval_polynomial(&r_poly, x_6);
+                    let eval = points.iter().fold(*proof_eval - &r_eval, |eval, point| {
+                        eval * &(x_6 - &point).invert().unwrap()
+                    });
+                    msm_eval * &x_5 + &eval
+                },
+            );
 
         // Sample a challenge x_7 that we will use to collapse the openings of
         // the various remaining polynomials at x_6 together.
@@ -116,12 +110,14 @@ impl<'a, C: CurveAffine> Proof<C> {
         // Compute the final commitment that has to be opened
         let mut commitment_msm = params.empty_msm();
         commitment_msm.add_term(C::Scalar::one(), self.f_commitment);
-        for (set_idx, _) in point_sets.iter().enumerate() {
-            commitment_msm.scale(x_7);
-            commitment_msm.add_msm(&q_commitments[set_idx]);
-            msm_eval *= &x_7;
-            msm_eval += &self.q_evals[set_idx];
-        }
+        let (commitment_msm, msm_eval) = q_commitments.iter().zip(self.q_evals.iter()).fold(
+            (commitment_msm, msm_eval),
+            |(mut commitment_msm, msm_eval), (q_commitment, q_eval)| {
+                commitment_msm.scale(x_7);
+                commitment_msm.add_msm(&q_commitment);
+                (commitment_msm, msm_eval * &x_7 + &q_eval)
+            },
+        );
 
         // Verify the opening proof
         self.opening
