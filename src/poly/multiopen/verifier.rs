@@ -25,11 +25,16 @@ impl<'a, C: CurveAffine> Proof<C> {
         transcript: &mut HBase,
         transcript_scalar: &mut HScalar,
         queries: I,
-        msm: MSM<'a, C>,
+        mut msm: MSM<'a, C>,
     ) -> Result<Guard<'a, C>, Error>
     where
         I: IntoIterator<Item = VerifierQuery<'a, C>> + Clone,
     {
+        // Scale the MSM by a random factor to ensure that if the existing MSM
+        // has is_zero() == false then this argument won't be able to interfere
+        // with it to make it true, with high probability.
+        msm.scale(C::Scalar::random());
+
         // Sample x_4 for compressing openings at the same points together
         let x_4: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
