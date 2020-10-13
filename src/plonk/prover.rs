@@ -187,7 +187,7 @@ impl<C: CurveAffine> Proof<C> {
             let mut modified_advice = vec![C::Scalar::one(); params.n as usize];
 
             // Iterate over each wire of the permutation
-            for (&(wire, _), permuted_wire_values) in wires.iter().zip(permuted_values.iter()) {
+            for (&wire, permuted_wire_values) in wires.iter().zip(permuted_values.iter()) {
                 parallelize(&mut modified_advice, |modified_advice, start| {
                     for ((modified_advice, advice_value), permuted_advice_value) in modified_advice
                         .iter_mut()
@@ -219,7 +219,7 @@ impl<C: CurveAffine> Proof<C> {
             // Iterate over each wire again, this time finishing the computation
             // of the entire fraction by computing the numerators
             let mut deltaomega = C::Scalar::one();
-            for &(wire, _) in wires.iter() {
+            for &wire in wires.iter() {
                 let omega = domain.get_omega();
                 parallelize(&mut modified_advice, |modified_advice, start| {
                     let mut deltaomega = deltaomega * &omega.pow_vartime(&[start as u64, 0, 0, 0]);
@@ -320,7 +320,7 @@ impl<C: CurveAffine> Proof<C> {
             let mut left = permutation_product_cosets[permutation_index].clone();
             for (advice, permutation) in wires
                 .iter()
-                .map(|&(_, index)| &advice_cosets[index])
+                .map(|&wire| &advice_cosets[pk.vk.cs.get_advice_query_index(wire, 0)])
                 .zip(pk.permutation_cosets[permutation_index].iter())
             {
                 parallelize(&mut left, |left, start| {
@@ -337,7 +337,10 @@ impl<C: CurveAffine> Proof<C> {
             let mut right = permutation_product_cosets_inv[permutation_index].clone();
             let mut current_delta = x_0 * &C::Scalar::ZETA;
             let step = domain.get_extended_omega();
-            for advice in wires.iter().map(|&(_, index)| &advice_cosets[index]) {
+            for advice in wires
+                .iter()
+                .map(|&wire| &advice_cosets[pk.vk.cs.get_advice_query_index(wire, 0)])
+            {
                 parallelize(&mut right, move |right, start| {
                     let mut beta_term = current_delta * &step.pow_vartime(&[start as u64, 0, 0, 0]);
                     for (right, advice) in right.iter_mut().zip(advice[start..].iter()) {
