@@ -201,10 +201,6 @@ impl<'a, C: CurveAffine> Proof<C> {
             return Err(Error::IncompatibleParams);
         }
 
-        if self.opening.q_evals.len() != vk.cs.rotations.len() {
-            return Err(Error::IncompatibleParams);
-        }
-
         // TODO: check h_evals
 
         if self.fixed_evals.len() != vk.cs.fixed_queries.len() {
