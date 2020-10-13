@@ -28,6 +28,10 @@ criterion = "0.3"
 name = "arithmetic"
 harness = false
 
+[[bench]]
+name = "plonk"
+harness = false
+
 [dependencies]
 subtle = "2.2.1"
 crossbeam-utils = "0.7"
