@@ -440,8 +440,8 @@ pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
     } else {
         let mut interpolation_polys = vec![];
         for (j, x_j) in points.iter().enumerate() {
-            let mut tmp: Vec<F> = Vec::with_capacity(points.len() + 1);
-            let mut product = Vec::with_capacity(points.len() + 1);
+            let mut tmp: Vec<F> = Vec::with_capacity(points.len());
+            let mut product = Vec::with_capacity(points.len() - 1);
             tmp.push(F::one());
             for (k, x_k) in points.iter().enumerate() {
                 if k != j {
@@ -459,6 +459,8 @@ pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
                     std::mem::swap(&mut tmp, &mut product);
                 }
             }
+            assert_eq!(tmp.len(), points.len());
+            assert_eq!(product.len(), points.len() - 1);
             interpolation_polys.push(tmp);
         }
         let mut final_poly = vec![F::zero(); points.len()];

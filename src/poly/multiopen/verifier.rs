@@ -17,9 +17,9 @@ struct CommitmentData<C: CurveAffine> {
     evals: Vec<C::Scalar>,
 }
 
-impl<'a, C: CurveAffine> Proof<C> {
+impl<C: CurveAffine> Proof<C> {
     /// Verify a multi-opening proof
-    pub fn verify<I, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
+    pub fn verify<'a, I, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
         &self,
         params: &'a Params<C>,
         transcript: &mut HBase,
@@ -43,6 +43,9 @@ impl<'a, C: CurveAffine> Proof<C> {
         // Compress the commitments and expected evaluations at x_3 together.
         // using the challenge x_4
         let mut q_commitments: Vec<_> = vec![params.empty_msm(); point_sets.len()];
+
+        // A vec of vecs of evals. The outer vec corresponds to the point set,
+        // while the inner vec corresponds to the points in a particular set.
         let mut q_eval_sets: Vec<Vec<C::Scalar>> = vec![Vec::new(); point_sets.len()];
         for (set_idx, point_set) in point_sets.iter().enumerate() {
             q_eval_sets[set_idx] = vec![C::Scalar::zero(); point_set.len()];
@@ -57,6 +60,8 @@ impl<'a, C: CurveAffine> Proof<C> {
                 }
             };
 
+            // Each commitment corresponds to evaluations at a set of points.
+            // For each set, we collapse each commitment's evals pointwise.
             for (commitment, commitment_data) in commitment_map {
                 accumulate(
                     commitment_data.set_index,      // set_idx,

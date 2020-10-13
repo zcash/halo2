@@ -40,6 +40,9 @@ impl<C: CurveAffine> Proof<C> {
         // x_4 challenge.
         let mut q_polys: Vec<Option<Polynomial<C::Scalar, Coeff>>> = vec![None; point_sets.len()];
         let mut q_blinds = vec![Blind(C::Scalar::zero()); point_sets.len()];
+
+        // A vec of vecs of evals. The outer vec corresponds to the point set,
+        // while the inner vec corresponds to the points in a particular set.
         let mut q_eval_sets: Vec<Vec<_>> = vec![Vec::new(); point_sets.len()];
         for (set_idx, point_set) in point_sets.iter().enumerate() {
             q_eval_sets[set_idx] = vec![C::Scalar::zero(); point_set.len()];
@@ -66,6 +69,8 @@ impl<C: CurveAffine> Proof<C> {
                     });
                 q_blinds[set_idx] *= x_4;
                 q_blinds[set_idx] += blind;
+                // Each polynomial is evaluated at a set of points. For each set,
+                // we collapse each polynomial's evals pointwise.
                 for (eval_idx, &eval) in evals.iter().enumerate() {
                     q_eval_sets[set_idx][eval_idx] *= &x_4;
                     q_eval_sets[set_idx][eval_idx] += &eval;
@@ -142,7 +147,7 @@ impl<C: CurveAffine> Proof<C> {
                 (f_poly.clone(), f_blind),
                 |(f_poly, f_blind), (poly, blind)| {
                     (
-                        f_poly * x_7 + &poly.clone().unwrap(),
+                        f_poly * x_7 + poly.as_ref().unwrap(),
                         Blind((f_blind.0 * &x_7) + &blind.0),
                     )
                 },
