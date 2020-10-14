@@ -5,8 +5,8 @@ use super::super::{
 use super::{Proof, ProverQuery};
 
 use crate::arithmetic::{
-    eval_polynomial, get_challenge_scalar, kate_division, lagrange_interpolate, parallelize,
-    Challenge, Curve, CurveAffine, Field,
+    eval_polynomial, get_challenge_scalar, kate_division, lagrange_interpolate, Challenge, Curve,
+    CurveAffine, Field,
 };
 use crate::plonk::hash_point;
 use crate::transcript::Hasher;
@@ -53,20 +53,11 @@ impl<C: CurveAffine> Proof<C> {
                                   new_poly: &Polynomial<C::Scalar, Coeff>,
                                   blind: Blind<C::Scalar>,
                                   evals: Vec<C::Scalar>| {
-                q_polys[set_idx]
-                    .as_mut()
-                    .map(|poly| {
-                        parallelize(poly, |q, start| {
-                            for (q, a) in q.iter_mut().zip(new_poly[start..].iter()) {
-                                *q *= &x_4;
-                                *q += a;
-                            }
-                        });
-                    })
-                    .or_else(|| {
-                        q_polys[set_idx] = Some(new_poly.clone());
-                        Some(())
-                    });
+                if let Some(poly) = &q_polys[set_idx] {
+                    q_polys[set_idx] = Some(poly.clone() * x_4 + new_poly);
+                } else {
+                    q_polys[set_idx] = Some(new_poly.clone());
+                }
                 q_blinds[set_idx] *= x_4;
                 q_blinds[set_idx] += blind;
                 // Each polynomial is evaluated at a set of points. For each set,
