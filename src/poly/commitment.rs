@@ -248,8 +248,10 @@ fn test_opening_proof() {
         commitment::{Blind, Params},
         EvaluationDomain,
     };
-    use crate::arithmetic::{eval_polynomial, get_challenge_scalar, Challenge, Curve, Field};
-    use crate::transcript::{DummyHash, Hasher};
+    use crate::arithmetic::{
+        eval_polynomial, get_challenge_scalar, Challenge, Curve, CurveAffine, Field,
+    };
+    use crate::transcript::{DummyHash, Hasher, Transcript};
     use crate::tweedle::{EpAffine, Fp, Fq};
 
     let params = Params::<EpAffine>::new::<DummyHash<Fp>>(K);
@@ -265,17 +267,18 @@ fn test_opening_proof() {
 
     let p = params.commit(&px, blind).to_affine();
 
-    let mut transcript = DummyHash::init(Field::one());
+    let mut hasher = DummyHash::init(Field::one());
     let (p_x, p_y) = p.get_xy().unwrap();
-    transcript.absorb(p_x);
-    transcript.absorb(p_y);
-    let x_packed = transcript.squeeze().get_lower_128();
+    hasher.absorb(p_x);
+    hasher.absorb(p_y);
+    let x_packed = hasher.squeeze().get_lower_128();
     let x: Fq = get_challenge_scalar(Challenge(x_packed));
-
     // Evaluate the polynomial
     let v = eval_polynomial(&px, x);
 
-    transcript.absorb(Fp::from_bytes(&v.to_bytes()).unwrap()); // unlikely to fail since p ~ q
+    hasher.absorb(Fp::from_bytes(&v.to_bytes()).unwrap()); // unlikely to fail since p ~ q
+    let scalar_hasher = DummyHash::init(Fq::one());
+    let mut transcript = Transcript::init_with_hashers(&hasher, &scalar_hasher);
 
     loop {
         let transcript_dup = transcript.clone();
@@ -283,7 +286,7 @@ fn test_opening_proof() {
         let opening_proof = Proof::create(&params, &mut transcript, &px, blind, x);
         if opening_proof.is_err() {
             transcript = transcript_dup;
-            transcript.absorb(Field::one());
+            transcript.absorb_base(Field::one());
         } else {
             let opening_proof = opening_proof.unwrap();
             // Verify the opening proof

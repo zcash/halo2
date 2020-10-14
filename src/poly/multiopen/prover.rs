@@ -8,8 +8,7 @@ use crate::arithmetic::{
     eval_polynomial, get_challenge_scalar, kate_division, lagrange_interpolate, Challenge, Curve,
     CurveAffine, Field,
 };
-use crate::plonk::hash_point;
-use crate::transcript::Hasher;
+use crate::transcript::{Hasher, Transcript};
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone)]
@@ -24,8 +23,7 @@ impl<C: CurveAffine> Proof<C> {
     /// Create a multi-opening proof
     pub fn create<'a, I, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
         params: &Params<C>,
-        transcript: &mut HBase,
-        transcript_scalar: &mut HScalar,
+        transcript: &mut Transcript<C, HBase, HScalar>,
         queries: I,
     ) -> Result<Self, Error>
     where
@@ -110,8 +108,9 @@ impl<C: CurveAffine> Proof<C> {
 
         let (opening, q_evals) = loop {
             let mut transcript = transcript.clone();
-            let mut transcript_scalar = transcript_scalar.clone();
-            hash_point(&mut transcript, &f_commitment).unwrap();
+            transcript
+                .absorb_point(&f_commitment)
+                .map_err(|_| Error::SamplingError)?;
 
             let x_6: C::Scalar =
                 get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
@@ -122,12 +121,8 @@ impl<C: CurveAffine> Proof<C> {
                 .collect();
 
             for eval in q_evals.iter() {
-                transcript_scalar.absorb(*eval);
+                transcript.absorb_scalar(*eval);
             }
-
-            let transcript_scalar_point =
-                C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
-            transcript.absorb(transcript_scalar_point);
 
             let x_7: C::Scalar =
                 get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));

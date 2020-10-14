@@ -4,7 +4,7 @@ use crate::arithmetic::{
     best_multiexp, compute_inner_product, get_challenge_scalar, parallelize, small_multiexp,
     Challenge, Curve, CurveAffine, Field,
 };
-use crate::transcript::Hasher;
+use crate::transcript::{Hasher, Transcript};
 
 impl<C: CurveAffine> Proof<C> {
     /// Create a polynomial commitment opening proof for the polynomial defined
@@ -20,13 +20,17 @@ impl<C: CurveAffine> Proof<C> {
     /// opening v, and the point x. It's probably also nice for the transcript
     /// to have seen the elliptic curve description and the SRS, if you want to
     /// be rigorous.
-    pub fn create<H: Hasher<C::Base>>(
+    pub fn create<HBase, HScalar>(
         params: &Params<C>,
-        transcript: &mut H,
+        transcript: &mut Transcript<C, HBase, HScalar>,
         px: &Polynomial<C::Scalar, Coeff>,
         blind: Blind<C::Scalar>,
         x: C::Scalar,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, Error>
+    where
+        HBase: Hasher<C::Base>,
+        HScalar: Hasher<C::Scalar>,
+    {
         let mut blind = blind.0;
 
         // We're limited to polynomials of degree n - 1.
@@ -90,15 +94,10 @@ impl<C: CurveAffine> Proof<C> {
                 // until the challenge is a square.
                 let mut transcript = transcript.clone();
 
+                // Feed L and R into the cloned transcript.
                 // We expect these to not be points at infinity due to the randomness.
-                let (l_x, l_y) = l.get_xy().unwrap();
-                let (r_x, r_y) = r.get_xy().unwrap();
-
-                // Feed L and R into the cloned transcript...
-                transcript.absorb(l_x);
-                transcript.absorb(l_y);
-                transcript.absorb(r_x);
-                transcript.absorb(r_y);
+                transcript.absorb_point(&l).ok();
+                transcript.absorb_point(&r).ok();
 
                 // ... and get the squared challenge.
                 let challenge_sq_packed = transcript.squeeze().get_lower_128();
@@ -122,12 +121,8 @@ impl<C: CurveAffine> Proof<C> {
             let challenge_sq = challenge.square();
 
             // Feed L and R into the real transcript
-            let (l_x, l_y) = l.get_xy().unwrap();
-            let (r_x, r_y) = r.get_xy().unwrap();
-            transcript.absorb(l_x);
-            transcript.absorb(l_y);
-            transcript.absorb(r_x);
-            transcript.absorb(r_y);
+            transcript.absorb_point(&l).ok();
+            transcript.absorb_point(&r).ok();
 
             // And obtain the challenge, even though we already have it, since
             // squeezing affects the transcript.
@@ -172,11 +167,8 @@ impl<C: CurveAffine> Proof<C> {
 
         let delta = best_multiexp(&[d, d * &b, s], &[g, u, params.h]).to_affine();
 
-        let (delta_x, delta_y) = delta.get_xy().unwrap();
-
         // Feed delta into the transcript
-        transcript.absorb(delta_x);
-        transcript.absorb(delta_y);
+        transcript.absorb_point(&delta).ok();
 
         // Obtain the challenge c.
         let c_packed = transcript.squeeze().get_lower_128();

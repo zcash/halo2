@@ -1,6 +1,6 @@
 use super::{
     circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    hash_point, Error, Proof, ProvingKey,
+    Error, Proof, ProvingKey,
 };
 use crate::arithmetic::{
     eval_polynomial, get_challenge_scalar, parallelize, BatchInvert, Challenge, Curve, CurveAffine,
@@ -11,7 +11,7 @@ use crate::poly::{
     multiopen::{self, ProverQuery},
     LagrangeCoeff, Polynomial, Rotation,
 };
-use crate::transcript::Hasher;
+use crate::transcript::{Hasher, Transcript};
 
 impl<C: CurveAffine> Proof<C> {
     /// This creates a proof for the provided `circuit` when given the public
@@ -92,7 +92,7 @@ impl<C: CurveAffine> Proof<C> {
         let witness = witness;
 
         // Create a transcript for obtaining Fiat-Shamir challenges.
-        let mut transcript = HBase::init(C::Base::one());
+        let mut transcript = Transcript::<C, HBase, HScalar>::new();
 
         // Compute commitments to aux column polynomials
         let aux_commitments_projective: Vec<_> = aux
@@ -105,7 +105,7 @@ impl<C: CurveAffine> Proof<C> {
         drop(aux_commitments_projective);
 
         for commitment in &aux_commitments {
-            hash_point(&mut transcript, commitment)?;
+            transcript.absorb_point(commitment).ok();
         }
 
         let aux_polys: Vec<_> = aux
@@ -143,7 +143,7 @@ impl<C: CurveAffine> Proof<C> {
         drop(advice_commitments_projective);
 
         for commitment in &advice_commitments {
-            hash_point(&mut transcript, commitment)?;
+            transcript.absorb_point(commitment).ok();
         }
 
         let advice_polys: Vec<_> = witness
@@ -277,7 +277,7 @@ impl<C: CurveAffine> Proof<C> {
 
         // Hash each permutation product commitment
         for c in &permutation_product_commitments {
-            hash_point(&mut transcript, c)?;
+            transcript.absorb_point(c).ok();
         }
 
         // Obtain challenge for keeping all separate gates linearly independent
@@ -385,7 +385,7 @@ impl<C: CurveAffine> Proof<C> {
 
         // Hash each h(X) piece
         for c in h_commitments.iter() {
-            hash_point(&mut transcript, c)?;
+            transcript.absorb_point(c).ok();
         }
 
         let x_3: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
@@ -444,10 +444,6 @@ impl<C: CurveAffine> Proof<C> {
             .map(|poly| eval_polynomial(poly, x_3))
             .collect();
 
-        // We set up a second transcript on the scalar field to hash in openings of
-        // our polynomial commitments.
-        let mut transcript_scalar = HScalar::init(C::Scalar::one());
-
         // Hash each advice evaluation
         for eval in advice_evals
             .iter()
@@ -458,12 +454,8 @@ impl<C: CurveAffine> Proof<C> {
             .chain(permutation_product_inv_evals.iter())
             .chain(permutation_evals.iter().flat_map(|evals| evals.iter()))
         {
-            transcript_scalar.absorb(*eval);
+            transcript.absorb_scalar(*eval);
         }
-
-        let transcript_scalar_point =
-            C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
-        transcript.absorb(transcript_scalar_point);
 
         let mut instances: Vec<ProverQuery<C>> = Vec::new();
 
@@ -558,9 +550,8 @@ impl<C: CurveAffine> Proof<C> {
             }
         }
 
-        let multiopening =
-            multiopen::Proof::create(params, &mut transcript, &mut transcript_scalar, instances)
-                .map_err(|_| Error::OpeningError)?;
+        let multiopening = multiopen::Proof::create(params, &mut transcript, instances)
+            .map_err(|_| Error::OpeningError)?;
 
         Ok(Proof {
             advice_commitments,

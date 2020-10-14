@@ -6,8 +6,7 @@ use super::{construct_intermediate_sets, Proof, Query, VerifierQuery};
 use crate::arithmetic::{
     eval_polynomial, get_challenge_scalar, lagrange_interpolate, Challenge, CurveAffine, Field,
 };
-use crate::plonk::hash_point;
-use crate::transcript::Hasher;
+use crate::transcript::{Hasher, Transcript};
 
 #[derive(Debug, Clone)]
 struct CommitmentData<C: CurveAffine> {
@@ -21,8 +20,7 @@ impl<C: CurveAffine> Proof<C> {
     pub fn verify<'a, I, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
         &self,
         params: &'a Params<C>,
-        transcript: &mut HBase,
-        transcript_scalar: &mut HScalar,
+        transcript: &mut Transcript<C, HBase, HScalar>,
         queries: I,
         mut msm: MSM<'a, C>,
     ) -> Result<Guard<'a, C>, Error>
@@ -75,19 +73,17 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // Obtain the commitment to the multi-point quotient polynomial f(X).
-        hash_point(transcript, &self.f_commitment).unwrap();
+        transcript
+            .absorb_point(&self.f_commitment)
+            .map_err(|_| Error::SamplingError)?;
 
         // Sample a challenge x_6 for checking that f(X) was committed to
         // correctly.
         let x_6: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         for eval in self.q_evals.iter() {
-            transcript_scalar.absorb(*eval);
+            transcript.absorb_scalar(*eval);
         }
-
-        let transcript_scalar_point =
-            C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
-        transcript.absorb(transcript_scalar_point);
 
         // We can compute the expected msm_eval at x_6 using the q_evals provided
         // by the prover and from x_5
