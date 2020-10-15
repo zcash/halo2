@@ -67,12 +67,12 @@ impl<C: CurveAffine> Proof<C> {
                 }
             };
 
-            for commitment_data in poly_map {
+            for commitment_data in poly_map.into_iter() {
                 accumulate(
                     commitment_data.set_index,        // set_idx,
                     commitment_data.commitment.poly,  // poly,
                     commitment_data.commitment.blind, // blind,
-                    commitment_data.evals.to_vec(),   // evals
+                    commitment_data.evals,            // evals
                 );
             }
         }
