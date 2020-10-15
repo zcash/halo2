@@ -440,7 +440,6 @@ pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
         // Constant polynomial
         return vec![evals[0]];
     } else {
-        let mut interpolation_polys = vec![];
         let mut denoms = Vec::with_capacity(points.len());
         for (j, x_j) in points.iter().enumerate() {
             let mut denom = Vec::with_capacity(points.len() - 1);
@@ -457,7 +456,8 @@ pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
         // Compute (x_j - x_k)^(-1) for each j != i
         denoms.iter_mut().flat_map(|v| v.iter_mut()).batch_invert();
 
-        for (j, denoms) in denoms.into_iter().enumerate() {
+        let mut final_poly = vec![F::zero(); points.len()];
+        for (j, (denoms, eval)) in denoms.into_iter().zip(evals.iter()).enumerate() {
             let mut tmp: Vec<F> = Vec::with_capacity(points.len());
             let mut product = Vec::with_capacity(points.len() - 1);
             tmp.push(F::one());
@@ -481,15 +481,28 @@ pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
             }
             assert_eq!(tmp.len(), points.len());
             assert_eq!(product.len(), points.len() - 1);
-            interpolation_polys.push(tmp);
-        }
-        let mut final_poly = vec![F::zero(); points.len()];
-        for (interpolation_poly, evaluation) in interpolation_polys.into_iter().zip(evals.iter()) {
-            for (final_coeff, interpolation_coeff) in final_poly.iter_mut().zip(interpolation_poly)
-            {
-                *final_coeff += interpolation_coeff * evaluation;
+            for (final_coeff, interpolation_coeff) in final_poly.iter_mut().zip(tmp.into_iter()) {
+                *final_coeff += interpolation_coeff * eval;
             }
         }
         final_poly
+    }
+}
+
+#[test]
+fn test_lagrange_interpolate() {
+    let points = (0..5).map(|_| Fp::random()).collect::<Vec<_>>();
+    let evals = (0..5).map(|_| Fp::random()).collect::<Vec<_>>();
+
+    for coeffs in 0..5 {
+        let points = &points[0..coeffs];
+        let evals = &evals[0..coeffs];
+
+        let poly = lagrange_interpolate(points, evals);
+        assert_eq!(poly.len(), points.len());
+
+        for (point, eval) in points.iter().zip(evals) {
+            assert_eq!(eval_polynomial(&poly, *point), *eval);
+        }
     }
 }
