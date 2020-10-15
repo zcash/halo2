@@ -431,7 +431,9 @@ fn log2_floor(num: usize) -> u32 {
     pow
 }
 
-/// Returns coefficients of an n - 1 degree polynomial given a set of n points and their evaluations
+/// Returns coefficients of an n - 1 degree polynomial given a set of n points
+/// and their evaluations. This function will panic if two values in `points`
+/// are the same.
 pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
     assert_eq!(points.len(), evals.len());
     if points.len() == 1 {
@@ -439,25 +441,43 @@ pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
         return vec![evals[0]];
     } else {
         let mut interpolation_polys = vec![];
+        let mut denoms = Vec::with_capacity(points.len());
         for (j, x_j) in points.iter().enumerate() {
+            let mut denom = Vec::with_capacity(points.len() - 1);
+            for x_k in points
+                .iter()
+                .enumerate()
+                .filter(|&(k, _)| k != j)
+                .map(|a| a.1)
+            {
+                denom.push(*x_j - x_k);
+            }
+            denoms.push(denom);
+        }
+        // Compute (x_j - x_k)^(-1) for each j != i
+        denoms.iter_mut().flat_map(|v| v.iter_mut()).batch_invert();
+
+        for (j, denoms) in denoms.into_iter().enumerate() {
             let mut tmp: Vec<F> = Vec::with_capacity(points.len());
             let mut product = Vec::with_capacity(points.len() - 1);
             tmp.push(F::one());
-            for (k, x_k) in points.iter().enumerate() {
-                if k != j {
-                    // Compute (x_j - x_k)^(-1)
-                    let denom = (*x_j - x_k).invert().unwrap();
-                    product.resize(tmp.len() + 1, F::zero());
-                    for ((a, b), product) in tmp
-                        .iter()
-                        .chain(std::iter::once(&F::zero()))
-                        .zip(std::iter::once(&F::zero()).chain(tmp.iter()))
-                        .zip(product.iter_mut())
-                    {
-                        *product = *a * (-denom * x_k) + *b * denom;
-                    }
-                    std::mem::swap(&mut tmp, &mut product);
+            for (x_k, denom) in points
+                .iter()
+                .enumerate()
+                .filter(|&(k, _)| k != j)
+                .map(|a| a.1)
+                .zip(denoms.into_iter())
+            {
+                product.resize(tmp.len() + 1, F::zero());
+                for ((a, b), product) in tmp
+                    .iter()
+                    .chain(std::iter::once(&F::zero()))
+                    .zip(std::iter::once(&F::zero()).chain(tmp.iter()))
+                    .zip(product.iter_mut())
+                {
+                    *product = *a * (-denom * x_k) + *b * denom;
                 }
+                std::mem::swap(&mut tmp, &mut product);
             }
             assert_eq!(tmp.len(), points.len());
             assert_eq!(product.len(), points.len() - 1);
