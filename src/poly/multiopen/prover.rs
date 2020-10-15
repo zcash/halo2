@@ -32,6 +32,7 @@ impl<C: CurveAffine> Proof<C> {
         I: IntoIterator<Item = ProverQuery<'a, C>> + Clone,
     {
         let x_4: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         let (poly_map, point_sets) = construct_intermediate_sets(queries);
 
@@ -76,8 +77,6 @@ impl<C: CurveAffine> Proof<C> {
                 );
             }
         }
-
-        let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         let f_poly = point_sets
             .iter()

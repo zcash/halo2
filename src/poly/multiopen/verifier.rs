@@ -34,8 +34,12 @@ impl<C: CurveAffine> Proof<C> {
         // with it to make it true, with high probability.
         msm.scale(C::Scalar::random());
 
-        // Sample x_4 for compressing openings at the same points together
+        // Sample x_4 for compressing openings at the same point sets together
         let x_4: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        // Sample a challenge x_5 for keeping the multi-point quotient
+        // polynomial terms linearly independent.
+        let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         let (commitment_map, point_sets) = construct_intermediate_sets(queries);
 
@@ -69,10 +73,6 @@ impl<C: CurveAffine> Proof<C> {
                 );
             }
         }
-
-        // Sample a challenge x_5 for keeping the multi-point quotient
-        // polynomial terms linearly independent.
-        let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         // Obtain the commitment to the multi-point quotient polynomial f(X).
         hash_point(transcript, &self.f_commitment).unwrap();
