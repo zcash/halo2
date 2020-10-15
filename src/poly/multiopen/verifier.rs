@@ -54,9 +54,9 @@ impl<C: CurveAffine> Proof<C> {
             let mut accumulate = |set_idx: usize, new_commitment, evals: Vec<C::Scalar>| {
                 q_commitments[set_idx].scale(x_4);
                 q_commitments[set_idx].add_term(C::Scalar::one(), new_commitment);
-                for (eval_idx, &eval) in evals.iter().enumerate() {
-                    q_eval_sets[set_idx][eval_idx] *= &x_4;
-                    q_eval_sets[set_idx][eval_idx] += &eval;
+                for (eval, set_eval) in evals.iter().zip(q_eval_sets[set_idx].iter_mut()) {
+                    *set_eval *= &x_4;
+                    *set_eval += eval;
                 }
             };
 
