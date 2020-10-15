@@ -62,9 +62,9 @@ impl<C: CurveAffine> Proof<C> {
                 q_blinds[set_idx] += blind;
                 // Each polynomial is evaluated at a set of points. For each set,
                 // we collapse each polynomial's evals pointwise.
-                for (eval_idx, &eval) in evals.iter().enumerate() {
-                    q_eval_sets[set_idx][eval_idx] *= &x_4;
-                    q_eval_sets[set_idx][eval_idx] += &eval;
+                for (eval, set_eval) in evals.iter().zip(q_eval_sets[set_idx].iter_mut()) {
+                    *set_eval *= &x_4;
+                    *set_eval += eval;
                 }
             };
 
