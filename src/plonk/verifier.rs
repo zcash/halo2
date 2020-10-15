@@ -31,12 +31,16 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Hash the aux (external) commitments into the transcript
         for commitment in aux_commitments {
-            transcript.absorb_point(commitment).ok();
+            transcript
+                .absorb_point(commitment)
+                .map_err(|_| Error::TranscriptError)?;
         }
 
         // Hash the prover's advice commitments into the transcript
         for commitment in &self.advice_commitments {
-            transcript.absorb_point(commitment).ok();
+            transcript
+                .absorb_point(commitment)
+                .map_err(|_| Error::TranscriptError)?;
         }
 
         // Sample x_0 challenge
@@ -47,7 +51,9 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Hash each permutation product commitment
         for c in &self.permutation_product_commitments {
-            transcript.absorb_point(c).ok();
+            transcript
+                .absorb_point(c)
+                .map_err(|_| Error::TranscriptError)?;
         }
 
         // Sample x_2 challenge, which keeps the gates linearly independent.
@@ -55,7 +61,9 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Obtain a commitment to h(X) in the form of multiple pieces of degree n - 1
         for c in &self.h_commitments {
-            transcript.absorb_point(c).ok();
+            transcript
+                .absorb_point(c)
+                .map_err(|_| Error::TranscriptError)?;
         }
 
         // Sample x_3 challenge, which is used to ensure the circuit is
