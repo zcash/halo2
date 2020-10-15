@@ -102,9 +102,9 @@ impl<C: CurveAffine> Proof<C> {
                 } else {
                     f_poly.map(|f_poly| f_poly * x_5 + &poly)
                 }
-            });
+            })
+            .unwrap();
 
-        let f_poly = f_poly.unwrap();
         let mut f_blind = Blind(C::Scalar::random());
         let mut f_commitment = params.commit(&f_poly, f_blind).to_affine();
 

@@ -224,60 +224,73 @@ mod tests {
             Fp::random(),
         ];
 
-        let queries = vec![
-            MyQuery {
-                commitment: 0,
-                point: points[0],
-                eval: Fp::random(),
-            },
-            MyQuery {
-                commitment: 0,
-                point: points[1],
-                eval: Fp::random(),
-            },
-            MyQuery {
-                commitment: 1,
-                point: points[0],
-                eval: Fp::random(),
-            },
-            MyQuery {
-                commitment: 1,
-                point: points[1],
-                eval: Fp::random(),
-            },
-            MyQuery {
-                commitment: 2,
-                point: points[0],
-                eval: Fp::random(),
-            },
-            MyQuery {
-                commitment: 2,
-                point: points[1],
-                eval: Fp::random(),
-            },
-            MyQuery {
-                commitment: 2,
-                point: points[2],
-                eval: Fp::random(),
-            },
-            MyQuery {
-                commitment: 3,
-                point: points[0],
-                eval: Fp::random(),
-            },
-            MyQuery {
-                commitment: 3,
-                point: points[3],
-                eval: Fp::random(),
-            },
-            MyQuery {
-                commitment: 4,
-                point: points[4],
-                eval: Fp::random(),
-            },
-        ];
+        let build_queries = || {
+            vec![
+                MyQuery {
+                    commitment: 0,
+                    point: points[0],
+                    eval: Fp::random(),
+                },
+                MyQuery {
+                    commitment: 0,
+                    point: points[1],
+                    eval: Fp::random(),
+                },
+                MyQuery {
+                    commitment: 1,
+                    point: points[0],
+                    eval: Fp::random(),
+                },
+                MyQuery {
+                    commitment: 1,
+                    point: points[1],
+                    eval: Fp::random(),
+                },
+                MyQuery {
+                    commitment: 2,
+                    point: points[0],
+                    eval: Fp::random(),
+                },
+                MyQuery {
+                    commitment: 2,
+                    point: points[1],
+                    eval: Fp::random(),
+                },
+                MyQuery {
+                    commitment: 2,
+                    point: points[2],
+                    eval: Fp::random(),
+                },
+                MyQuery {
+                    commitment: 3,
+                    point: points[0],
+                    eval: Fp::random(),
+                },
+                MyQuery {
+                    commitment: 3,
+                    point: points[3],
+                    eval: Fp::random(),
+                },
+                MyQuery {
+                    commitment: 4,
+                    point: points[4],
+                    eval: Fp::random(),
+                },
+            ]
+        };
+
+        let queries = build_queries();
 
         let (commitment_data, point_sets) = construct_intermediate_sets(queries);
+
+        // It shouldn't matter what the point or eval values are; we should get
+        // the same exact point sets again.
+        {
+            let new_queries = build_queries();
+            let (_, new_point_sets) = construct_intermediate_sets(new_queries);
+
+            assert_eq!(point_sets, new_point_sets);
+        }
 
         let mut a = false;
         let mut a_set = 0;
