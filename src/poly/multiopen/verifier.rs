@@ -62,11 +62,11 @@ impl<C: CurveAffine> Proof<C> {
 
             // Each commitment corresponds to evaluations at a set of points.
             // For each set, we collapse each commitment's evals pointwise.
-            for (commitment, commitment_data) in commitment_map {
+            for (commitment, commitment_data) in commitment_map.into_iter() {
                 accumulate(
-                    commitment_data.set_index,      // set_idx,
-                    *commitment,                    // commitment,
-                    commitment_data.evals.to_vec(), // evals
+                    commitment_data.set_index, // set_idx,
+                    *commitment,               // commitment,
+                    commitment_data.evals,     // evals
                 );
             }
         }
