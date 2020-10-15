@@ -448,13 +448,13 @@ pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
                     // Compute (x_j - x_k)^(-1)
                     let denom = (*x_j - x_k).invert().unwrap();
                     product.resize(tmp.len() + 1, F::zero());
-                    for (i, (a, b)) in tmp
+                    for ((a, b), product) in tmp
                         .iter()
                         .chain(std::iter::once(&F::zero()))
                         .zip(std::iter::once(&F::zero()).chain(tmp.iter()))
-                        .enumerate()
+                        .zip(product.iter_mut())
                     {
-                        product[i] = *a * (-denom * x_k) + *b * denom;
+                        *product = *a * (-denom * x_k) + *b * denom;
                     }
                     std::mem::swap(&mut tmp, &mut product);
                 }
