@@ -43,9 +43,9 @@ impl<C: CurveAffine> Proof<C> {
 
         // A vec of vecs of evals. The outer vec corresponds to the point set,
         // while the inner vec corresponds to the points in a particular set.
-        let mut q_eval_sets: Vec<Vec<_>> = vec![Vec::new(); point_sets.len()];
-        for (set_idx, point_set) in point_sets.iter().enumerate() {
-            q_eval_sets[set_idx] = vec![C::Scalar::zero(); point_set.len()];
+        let mut q_eval_sets = Vec::with_capacity(point_sets.len());
+        for point_set in point_sets.iter() {
+            q_eval_sets.push(vec![C::Scalar::zero(); point_set.len()]);
         }
 
         {
@@ -83,7 +83,7 @@ impl<C: CurveAffine> Proof<C> {
             .zip(q_eval_sets.iter())
             .zip(q_polys.iter())
             .fold(None, |f_poly, ((points, evals), poly)| {
-                let mut poly = poly.clone()?.values;
+                let mut poly = poly.clone().unwrap().values;
                 // TODO: makes implicit asssumption that poly degree is smaller than interpolation poly degree
                 for (p, r) in poly.iter_mut().zip(lagrange_interpolate(points, evals)) {
                     *p -= &r;

@@ -49,9 +49,9 @@ impl<C: CurveAffine> Proof<C> {
 
         // A vec of vecs of evals. The outer vec corresponds to the point set,
         // while the inner vec corresponds to the points in a particular set.
-        let mut q_eval_sets: Vec<Vec<C::Scalar>> = vec![Vec::new(); point_sets.len()];
-        for (set_idx, point_set) in point_sets.iter().enumerate() {
-            q_eval_sets[set_idx] = vec![C::Scalar::zero(); point_set.len()];
+        let mut q_eval_sets = Vec::with_capacity(point_sets.len());
+        for point_set in point_sets.iter() {
+            q_eval_sets.push(vec![C::Scalar::zero(); point_set.len()]);
         }
         {
             let mut accumulate = |set_idx: usize, new_commitment, evals: Vec<C::Scalar>| {
@@ -114,7 +114,7 @@ impl<C: CurveAffine> Proof<C> {
         // Compute the final commitment that has to be opened
         let mut commitment_msm = params.empty_msm();
         commitment_msm.add_term(C::Scalar::one(), self.f_commitment);
-        let (commitment_msm, msm_eval) = q_commitments.iter().zip(self.q_evals.iter()).fold(
+        let (commitment_msm, msm_eval) = q_commitments.into_iter().zip(self.q_evals.iter()).fold(
             (commitment_msm, msm_eval),
             |(mut commitment_msm, msm_eval), (q_commitment, q_eval)| {
                 commitment_msm.scale(x_7);
