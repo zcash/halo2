@@ -1,7 +1,89 @@
-//! This module contains an implementation of the multipoint opening polynomial
-//! commitment scheme described in the [Halo][halo] paper.
+//! This module contains an optimisation of the polynomial commitment opening
+//! scheme described in the [Halo][halo] paper.
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
+//! Consider the commitments $`A, B, C, D`$ to polynomials $`a(X), b(X), c(X)
+//! , d(X)`$. Let's say that $`a`$ and $`b`$ were queried at the point $`x`$,
+//! while $`c`$ and $`d`$ were queried at both points $`x`$ and $`\omega x`$.
+//! (Here, $`\omega`$ is the primitive root of unity in the multiplicative
+//! subgroup over which we constructed the polynomials).
+//!
+//! We can group the commitments in terms of the sets of points at which
+//! they were queried:
+//! ```math
+//! {x}     {x, \omega x}
+//!  A            C
+//!  B            D
+//! ```
+//! The multipoint opening optimisation proceeds as such:
+//! 1. Sample random $`x_3`$, at which we evaluate $`a(X), b(X), c(X), d(X)`$.
+//! 2. The prover provides evaluations of each polynomial at each point of
+//! interest: $`a(x_3), b(x_3), c(x_3), d(x_3), c(\omega x_3), d(\omega x_3)`$
+//! 3. Sample random $`x_4`$, to keep $`a, b, c, d`$ linearly independent.
+//! 4. Accumulate polynomials and their corresponding evaluations according
+//!    to the point set at which they were queried:
+//!
+//! q_polys:
+//! ```math
+//! q_1(X) = a(X) + x_4 b(X)
+//! q_2(X) = c(X) + x_4 d(X)
+//! ```
+//! q_eval_sets:
+//! ```math
+//!         [
+//!             [a(x_3) + x_4 b(x_3)],
+//!             [
+//!                 c(x_3) + x_4 d(x_3),
+//!                 c(\omega x_3) + x_4 d(\omega x_3)
+//!             ]
+//!         ]
+//! ```
+//! NB: $`q_eval_sets`$ is a vector of sets of evaluations,
+//! where the outer vector goes over the point sets, and
+//! the inner vector goes over the points in each set.
+//!
+//! 5. Interpolate each set of values in $`q_eval_sets`$:
+//! r_polys
+//! ```math
+//! r_1(X) s.t.
+//! r_1(x_3) = a(x_3) + x_4 b(x_3)
+//!
+//! r_2(X) s.t.
+//! r_2(x_3) = c(x_3) + x_4 d(x_3)
+//! r_2(\omega x_3) = c(\omega x_3) + x_4 d(\omega x_3)
+//! ```
+//!
+//! 6. Construct $`f_polys`$ which check the correctness of $`q_polys`$:
+//!         f_polys
+//! ```math
+//!           q_1(X) - r_1(X)
+//! f_1(X) = -----------------
+//!             X - x_3
+//!
+//!                q_2(X) - r_2(X)
+//! f_2(X) = ---------------------------
+//!           (X - x_3)(X - \omega x_3)
+//! ```
+//! If $`q_1(x_3)` = `r_1(x_3)`$, then $`f_1(X)`$ should be a polynomial.
+//! If $`q_2(x_3)` = `r_2(x_3)`$ and $`q_2(\omega x_3) = r_2(\omega x_3)`$
+//! then $`f_2(X)`$ should be a polynomial.
+//!
+//! 6. Sample random $`x_5`$ to keep the $`f_polys`$ linearly independent.
+//! 7. Construct $`f(X) = f_1(X) + x_5 f_2(X)`$.
+//! 8. Sample random $`x_6`$, at which we evaluate $`f(X)`$.
+//! ```math
+//! f(x_6) = f_1(x_6) + x_5 f_2(x_6)
+//!
+//!            q_1(x_6) - r_1(x_6)               q_2(x_6) - r_2(x_6)
+//!        = --------------------- + x_5 -------------------------------
+//!                x_6 - x_3               (x_6 - x_3)(x_6 - \omega x_3)
+//! ```
+//! 9. Sample random $`x_7`$ to keep $`f(X)`$ and $`q_polys`$ linearly independent.
+//! 10. Construct $`final_poly`$,
+//! ```math
+//! final_poly(X) = f(X) + x_7 q_1(X) + (x_7)^2 q_2(X),
+//! ```
+//! which is the polynomial we commit to in the inner product argument.
 
 use std::collections::{BTreeMap, BTreeSet};
 
