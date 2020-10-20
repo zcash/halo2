@@ -17,3 +17,9 @@ publish = false
 
 [package.metadata.docs.rs]
 rustdoc-args = [ "--html-in-header", "katex-header.html" ]
+
+[dev-dependencies]
+criterion = "0.3"
+
+[lib]
+bench = false
