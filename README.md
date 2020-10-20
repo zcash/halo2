@@ -2,7 +2,10 @@
 
 **IMPORTANT**: This library is being actively developed and should not be used in production software.
 
-## [Documentation](https://docs.rs/pollard)
+## Documentation
+
+- [The Pollard Book](https://zcash.github.io/pollard/)
+- [Crate documentation]](https://docs.rs/pollard)
 
 ## License
 
