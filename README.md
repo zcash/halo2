@@ -5,7 +5,7 @@
 ## Documentation
 
 - [The Pollard Book](https://zcash.github.io/pollard/)
-- [Crate documentation]](https://docs.rs/pollard)
+- [Crate documentation](https://docs.rs/pollard)
 
 ## License
 
