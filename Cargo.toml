@@ -3,6 +3,7 @@ name = "pollard"
 version = "0.0.0"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
+    "Jack Grigg <jack@electriccoin.co>",
 ]
 edition = "2018"
 description = "Sapling on stilts!"
