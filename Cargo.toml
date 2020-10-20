@@ -5,9 +5,7 @@ authors = [
     "Sean Bowe <sean@electriccoin.co>",
 ]
 edition = "2018"
-description = """
-TBD
-"""
+description = "Sapling on stilts!"
 license = "TGPPL"
 repository = "https://github.com/zcash/pollard"
 documentation = "https://docs.rs/pollard"
