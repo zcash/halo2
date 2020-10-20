@@ -8,12 +8,13 @@ edition = "2018"
 description = """
 TBD
 """
-license = "MIT"
+license = "TGPPL"
 repository = "https://github.com/zcash/pollard"
 documentation = "https://docs.rs/pollard"
 readme = "README.md"
 
-# publish = false
+# We can't publish to crates.io under TGPPL yet.
+publish = false
 
 [package.metadata.docs.rs]
 rustdoc-args = [ "--html-in-header", "katex-header.html" ]
