@@ -1,0 +1,19 @@
+[package]
+name = "pollard"
+version = "0.0.0"
+authors = [
+    "Sean Bowe <sean@electriccoin.co>",
+]
+edition = "2018"
+description = """
+TBD
+"""
+license = "MIT"
+repository = "https://github.com/zcash/pollard"
+documentation = "https://docs.rs/pollard"
+readme = "README.md"
+
+# publish = false
+
+[package.metadata.docs.rs]
+rustdoc-args = [ "--html-in-header", "katex-header.html" ]
