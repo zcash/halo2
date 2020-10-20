@@ -36,6 +36,8 @@ pub trait Field:
     + for<'a> SubAssign<&'a Self>
     + PartialEq
     + Eq
+    + PartialOrd
+    + Ord
     + ConditionallySelectable
     + ConstantTimeEq
     + Group<Scalar = Self>

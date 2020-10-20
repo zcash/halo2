@@ -430,3 +430,79 @@ fn log2_floor(num: usize) -> u32 {
 
     pow
 }
+
+/// Returns coefficients of an n - 1 degree polynomial given a set of n points
+/// and their evaluations. This function will panic if two values in `points`
+/// are the same.
+pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
+    assert_eq!(points.len(), evals.len());
+    if points.len() == 1 {
+        // Constant polynomial
+        return vec![evals[0]];
+    } else {
+        let mut denoms = Vec::with_capacity(points.len());
+        for (j, x_j) in points.iter().enumerate() {
+            let mut denom = Vec::with_capacity(points.len() - 1);
+            for x_k in points
+                .iter()
+                .enumerate()
+                .filter(|&(k, _)| k != j)
+                .map(|a| a.1)
+            {
+                denom.push(*x_j - x_k);
+            }
+            denoms.push(denom);
+        }
+        // Compute (x_j - x_k)^(-1) for each j != i
+        denoms.iter_mut().flat_map(|v| v.iter_mut()).batch_invert();
+
+        let mut final_poly = vec![F::zero(); points.len()];
+        for (j, (denoms, eval)) in denoms.into_iter().zip(evals.iter()).enumerate() {
+            let mut tmp: Vec<F> = Vec::with_capacity(points.len());
+            let mut product = Vec::with_capacity(points.len() - 1);
+            tmp.push(F::one());
+            for (x_k, denom) in points
+                .iter()
+                .enumerate()
+                .filter(|&(k, _)| k != j)
+                .map(|a| a.1)
+                .zip(denoms.into_iter())
+            {
+                product.resize(tmp.len() + 1, F::zero());
+                for ((a, b), product) in tmp
+                    .iter()
+                    .chain(std::iter::once(&F::zero()))
+                    .zip(std::iter::once(&F::zero()).chain(tmp.iter()))
+                    .zip(product.iter_mut())
+                {
+                    *product = *a * (-denom * x_k) + *b * denom;
+                }
+                std::mem::swap(&mut tmp, &mut product);
+            }
+            assert_eq!(tmp.len(), points.len());
+            assert_eq!(product.len(), points.len() - 1);
+            for (final_coeff, interpolation_coeff) in final_poly.iter_mut().zip(tmp.into_iter()) {
+                *final_coeff += interpolation_coeff * eval;
+            }
+        }
+        final_poly
+    }
+}
+
+#[test]
+fn test_lagrange_interpolate() {
+    let points = (0..5).map(|_| Fp::random()).collect::<Vec<_>>();
+    let evals = (0..5).map(|_| Fp::random()).collect::<Vec<_>>();
+
+    for coeffs in 0..5 {
+        let points = &points[0..coeffs];
+        let evals = &evals[0..coeffs];
+
+        let poly = lagrange_interpolate(points, evals);
+        assert_eq!(poly.len(), points.len());
+
+        for (point, eval) in points.iter().zip(evals) {
+            assert_eq!(eval_polynomial(&poly, *point), *eval);
+        }
+    }
+}

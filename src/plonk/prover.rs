@@ -3,12 +3,13 @@ use super::{
     hash_point, Error, Proof, ProvingKey,
 };
 use crate::arithmetic::{
-    eval_polynomial, get_challenge_scalar, kate_division, parallelize, BatchInvert, Challenge,
-    Curve, CurveAffine, Field,
+    eval_polynomial, get_challenge_scalar, parallelize, BatchInvert, Challenge, Curve, CurveAffine,
+    Field,
 };
 use crate::poly::{
-    commitment::{self, Blind, Params},
-    Coeff, LagrangeCoeff, Polynomial, Rotation,
+    commitment::{Blind, Params},
+    multiopen::{self, ProverQuery},
+    LagrangeCoeff, Polynomial, Rotation,
 };
 use crate::transcript::Hasher;
 
@@ -457,194 +458,102 @@ impl<C: CurveAffine> Proof<C> {
             C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
         transcript.absorb(transcript_scalar_point);
 
-        let x_4: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        let mut instances: Vec<ProverQuery<C>> = Vec::new();
 
-        // Collapse openings at same points together into single openings using
-        // x_4 challenge.
-        let mut q_polys: Vec<Option<Polynomial<C::Scalar, Coeff>>> =
-            vec![None; meta.rotations.len()];
-        let mut q_blinds = vec![Blind(C::Scalar::zero()); meta.rotations.len()];
-        let mut q_evals: Vec<_> = vec![C::Scalar::zero(); meta.rotations.len()];
+        for (query_index, &(wire, at)) in pk.vk.cs.advice_queries.iter().enumerate() {
+            let point = domain.rotate_omega(x_3, at);
+
+            instances.push(ProverQuery {
+                point,
+                poly: &advice_polys[wire.0],
+                blind: advice_blinds[wire.0],
+                eval: advice_evals[query_index],
+            });
+        }
+
+        for (query_index, &(wire, at)) in pk.vk.cs.aux_queries.iter().enumerate() {
+            let point = domain.rotate_omega(x_3, at);
+
+            instances.push(ProverQuery {
+                point,
+                poly: &aux_polys[wire.0],
+                blind: Blind::default(),
+                eval: aux_evals[query_index],
+            });
+        }
+
+        for (query_index, &(wire, at)) in pk.vk.cs.fixed_queries.iter().enumerate() {
+            let point = domain.rotate_omega(x_3, at);
+
+            instances.push(ProverQuery {
+                point,
+                poly: &pk.fixed_polys[wire.0],
+                blind: Blind::default(),
+                eval: fixed_evals[query_index],
+            });
+        }
+
+        // We query the h(X) polynomial at x_3
+        for ((h_poly, h_blind), h_eval) in h_pieces.iter().zip(h_blinds.iter()).zip(h_evals.iter())
         {
-            let mut accumulate =
-                |point_index: usize, new_poly: &Polynomial<_, Coeff>, blind, eval| {
-                    q_polys[point_index]
-                        .as_mut()
-                        .map(|poly| {
-                            parallelize(poly, |q, start| {
-                                for (q, a) in q.iter_mut().zip(new_poly[start..].iter()) {
-                                    *q *= &x_4;
-                                    *q += a;
-                                }
-                            });
-                        })
-                        .or_else(|| {
-                            q_polys[point_index] = Some(new_poly.clone());
-                            Some(())
-                        });
-                    q_blinds[point_index] *= x_4;
-                    q_blinds[point_index] += blind;
-                    q_evals[point_index] *= &x_4;
-                    q_evals[point_index] += &eval;
-                };
+            instances.push(ProverQuery {
+                point: x_3,
+                poly: h_poly,
+                blind: *h_blind,
+                eval: *h_eval,
+            });
+        }
 
-            for (query_index, &(wire, ref at)) in meta.advice_queries.iter().enumerate() {
-                let point_index = (*meta.rotations.get(at).unwrap()).0;
-
-                accumulate(
-                    point_index,
-                    &advice_polys[wire.0],
-                    advice_blinds[wire.0],
-                    advice_evals[query_index],
-                );
-            }
-
-            for (query_index, &(wire, ref at)) in meta.aux_queries.iter().enumerate() {
-                let point_index = (*meta.rotations.get(at).unwrap()).0;
-
-                accumulate(
-                    point_index,
-                    &aux_polys[wire.0],
-                    Blind::default(),
-                    aux_evals[query_index],
-                );
-            }
-
-            for (query_index, &(wire, ref at)) in meta.fixed_queries.iter().enumerate() {
-                let point_index = (*meta.rotations.get(at).unwrap()).0;
-
-                accumulate(
-                    point_index,
-                    &pk.fixed_polys[wire.0],
-                    Blind::default(),
-                    fixed_evals[query_index],
-                );
-            }
-
-            // We query the h(X) polynomial at x_3
-            let current_index = (*meta.rotations.get(&Rotation::default()).unwrap()).0;
-            for ((h_poly, h_blind), h_eval) in h_pieces
-                .into_iter()
-                .zip(h_blinds.iter())
-                .zip(h_evals.iter())
+        // Handle permutation arguments, if any exist
+        if !pk.vk.cs.permutations.is_empty() {
+            // Open permutation product commitments at x_3
+            for ((poly, blind), eval) in permutation_product_polys
+                .iter()
+                .zip(permutation_product_blinds.iter())
+                .zip(permutation_product_evals.iter())
             {
-                accumulate(current_index, &h_poly, *h_blind, *h_eval);
-            }
-
-            // Handle permutation arguments, if any exist
-            if !pk.vk.cs.permutations.is_empty() {
-                // Open permutation product commitments at x_3
-                for ((poly, blind), eval) in permutation_product_polys
-                    .iter()
-                    .zip(permutation_product_blinds.iter())
-                    .zip(permutation_product_evals.iter())
-                {
-                    accumulate(current_index, poly, *blind, *eval);
-                }
-
-                // Open permutation polynomial commitments at x_3
-                for (poly, eval) in pk
-                    .permutation_polys
-                    .iter()
-                    .zip(permutation_evals.iter())
-                    .flat_map(|(polys, evals)| polys.iter().zip(evals.iter()))
-                {
-                    accumulate(current_index, poly, Blind::default(), *eval);
-                }
-
-                let current_index = (*pk.vk.cs.rotations.get(&Rotation(-1)).unwrap()).0;
-                // Open permutation product commitments at \omega^{-1} x_3
-                for ((poly, blind), eval) in permutation_product_polys
-                    .iter()
-                    .zip(permutation_product_blinds.iter())
-                    .zip(permutation_product_inv_evals.iter())
-                {
-                    accumulate(current_index, poly, *blind, *eval);
-                }
-            }
-        }
-
-        let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
-
-        let mut f_poly: Option<Polynomial<C::Scalar, Coeff>> = None;
-        for (&row, &point_index) in meta.rotations.iter() {
-            let mut poly = q_polys[point_index.0].as_ref().unwrap().clone();
-            let point = domain.rotate_omega(x_3, row);
-            poly[0] -= &q_evals[point_index.0];
-            // TODO: change kate_division interface?
-            let mut poly = kate_division(&poly[..], point);
-            poly.push(C::Scalar::zero());
-            let poly = domain.coeff_from_vec(poly);
-
-            f_poly = f_poly
-                .map(|mut f_poly| {
-                    parallelize(&mut f_poly, |q, start| {
-                        for (q, a) in q.iter_mut().zip(poly[start..].iter()) {
-                            *q *= &x_5;
-                            *q += a;
-                        }
-                    });
-                    f_poly
-                })
-                .or_else(|| Some(poly));
-        }
-
-        let f_poly = f_poly.unwrap();
-        let mut f_blind = Blind(C::Scalar::random());
-        let mut f_commitment = params.commit(&f_poly, f_blind).to_affine();
-
-        let (opening, q_evals) = loop {
-            let mut transcript = transcript.clone();
-            let mut transcript_scalar = transcript_scalar.clone();
-            hash_point(&mut transcript, &f_commitment)?;
-
-            let x_6: C::Scalar =
-                get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
-
-            let mut q_evals = vec![C::Scalar::zero(); meta.rotations.len()];
-
-            for (_, &point_index) in meta.rotations.iter() {
-                q_evals[point_index.0] =
-                    eval_polynomial(&q_polys[point_index.0].as_ref().unwrap(), x_6);
-            }
-
-            for eval in q_evals.iter() {
-                transcript_scalar.absorb(*eval);
-            }
-
-            let transcript_scalar_point =
-                C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
-            transcript.absorb(transcript_scalar_point);
-
-            let x_7: C::Scalar =
-                get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
-
-            let mut f_blind_dup = f_blind;
-            let mut f_poly = f_poly.clone();
-            for (_, &point_index) in meta.rotations.iter() {
-                f_blind_dup *= x_7;
-                f_blind_dup += q_blinds[point_index.0];
-
-                parallelize(&mut f_poly, |f, start| {
-                    for (f, a) in f
-                        .iter_mut()
-                        .zip(q_polys[point_index.0].as_ref().unwrap()[start..].iter())
-                    {
-                        *f *= &x_7;
-                        *f += a;
-                    }
+                instances.push(ProverQuery {
+                    point: x_3,
+                    poly: poly,
+                    blind: *blind,
+                    eval: *eval,
                 });
             }
 
-            if let Ok(opening) =
-                commitment::Proof::create(&params, &mut transcript, &f_poly, f_blind_dup, x_6)
+            // Open permutation polynomial commitments at x_3
+            for (poly, eval) in pk
+                .permutation_polys
+                .iter()
+                .zip(permutation_evals.iter())
+                .flat_map(|(polys, evals)| polys.iter().zip(evals.iter()))
             {
-                break (opening, q_evals);
-            } else {
-                f_blind += C::Scalar::one();
-                f_commitment = (f_commitment + params.h).to_affine();
+                instances.push(ProverQuery {
+                    point: x_3,
+                    poly: poly,
+                    blind: Blind::default(),
+                    eval: *eval,
+                });
             }
-        };
+
+            let x_3_inv = domain.rotate_omega(x_3, Rotation(-1));
+            // Open permutation product commitments at \omega^{-1} x_3
+            for ((poly, blind), eval) in permutation_product_polys
+                .iter()
+                .zip(permutation_product_blinds.iter())
+                .zip(permutation_product_inv_evals.iter())
+            {
+                instances.push(ProverQuery {
+                    point: x_3_inv,
+                    poly: poly,
+                    blind: *blind,
+                    eval: *eval,
+                });
+            }
+        }
+
+        let multiopening =
+            multiopen::Proof::create(params, &mut transcript, &mut transcript_scalar, instances)
+                .map_err(|_| Error::OpeningError)?;
 
         Ok(Proof {
             advice_commitments,
@@ -657,9 +566,7 @@ impl<C: CurveAffine> Proof<C> {
             fixed_evals,
             aux_evals,
             h_evals,
-            f_commitment,
-            q_evals,
-            opening,
+            multiopening,
         })
     }
 }
