@@ -18,6 +18,9 @@ publish = false
 [package.metadata.docs.rs]
 rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 
+[dependencies]
+halo2 = { git = "https://github.com/zcash/halo2.git", branch = "main" }
+
 [dev-dependencies]
 criterion = "0.3"
 
