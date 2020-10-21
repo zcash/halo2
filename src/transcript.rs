@@ -81,7 +81,8 @@ impl<C: CurveAffine, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>
 
     /// Initialise a new transcript with some given base_hasher and
     /// scalar_hasher
-    pub fn init_with_hashers(base_hasher: &HBase, scalar_hasher: &HScalar) -> Self {
+    #[cfg(test)]
+    pub(crate) fn init_with_hashers(base_hasher: &HBase, scalar_hasher: &HScalar) -> Self {
         Transcript {
             base_hasher: base_hasher.clone(),
             scalar_hasher: scalar_hasher.clone(),
