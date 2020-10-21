@@ -315,12 +315,11 @@ impl<'a, C: CurveAffine> Proof<C> {
             .fold(C::Scalar::zero(), |h_eval, v| h_eval * &x_2 + &v);
 
         // Compute h(x_3) from the prover
-        let (_, h_eval) = self
+        let h_eval = self
             .h_evals
             .iter()
-            .fold((C::Scalar::one(), C::Scalar::zero()), |(cur, acc), eval| {
-                (cur * &x_3n, acc + &(cur * eval))
-            });
+            .rev()
+            .fold(C::Scalar::zero(), |acc, eval| acc * &x_3n + eval);
 
         // Did the prover commit to the correct polynomial?
         if expected_h_eval != (h_eval * &(x_3n - &C::Scalar::one())) {
