@@ -111,9 +111,6 @@ impl<C: CurveAffine> Proof<C> {
             // Feed L and R into the transcript.
             let l = round.0;
             let r = round.1;
-            if bool::from(l.get_xy().is_none() | r.get_xy().is_none()) {
-                return Err(Error::OpeningError);
-            }
             transcript
                 .absorb_point(&l)
                 .map_err(|_| Error::OpeningError)?;
@@ -152,14 +149,9 @@ impl<C: CurveAffine> Proof<C> {
             challenges_sq_packed.push(Challenge(challenge_sq_packed));
         }
 
-        let delta = self.delta;
-        if bool::from(delta.get_xy().is_none()) {
-            return Err(Error::OpeningError);
-        }
-
         // Feed delta into the transcript
         transcript
-            .absorb_point(&delta)
+            .absorb_point(&self.delta)
             .map_err(|_| Error::OpeningError)?;
 
         // Get the challenge `c`
