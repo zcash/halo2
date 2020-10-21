@@ -182,8 +182,12 @@ impl<C: CurveAffine> Proof<C> {
         let mut permutation_product_blinds = vec![];
 
         // Iterate over each permutation
-        let mut permutation_modified_advice = vec![];
-        for (columns, permuted_values) in pk.vk.cs.permutations.iter().zip(pk.permutations.iter()) {
+        let mut permutation_modified_advice = pk
+            .vk
+            .cs
+            .permutations
+            .iter()
+            .zip(pk.permutations.iter())
             // Goal is to compute the products of fractions
             //
             // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
@@ -191,23 +195,28 @@ impl<C: CurveAffine> Proof<C> {
             //
             // where p_j(X) is the jth advice column in this permutation,
             // and i is the ith row of the column.
-            let mut modified_advice = vec![C::Scalar::one(); params.n as usize];
+            .map(|(columns, permuted_values)| {
+                let mut modified_advice = vec![C::Scalar::one(); params.n as usize];
 
-            // Iterate over each column of the permutation
-            for (&column, permuted_column_values) in columns.iter().zip(permuted_values.iter()) {
-                parallelize(&mut modified_advice, |modified_advice, start| {
-                    for ((modified_advice, advice_value), permuted_advice_value) in modified_advice
-                        .iter_mut()
-                        .zip(witness.advice[column.index()][start..].iter())
-                        .zip(permuted_column_values[start..].iter())
-                    {
-                        *modified_advice *= &(x_0 * permuted_advice_value + &x_1 + advice_value);
-                    }
-                });
-            }
+                // Iterate over each column of the permutation
+                for (&column, permuted_column_values) in columns.iter().zip(permuted_values.iter())
+                {
+                    parallelize(&mut modified_advice, |modified_advice, start| {
+                        for ((modified_advice, advice_value), permuted_advice_value) in
+                            modified_advice
+                                .iter_mut()
+                                .zip(witness.advice[column.index()][start..].iter())
+                                .zip(permuted_column_values[start..].iter())
+                        {
+                            *modified_advice *=
+                                &(x_0 * permuted_advice_value + &x_1 + advice_value);
+                        }
+                    });
+                }
 
-            permutation_modified_advice.push(modified_advice);
-        }
+                modified_advice
+            })
+            .collect::<Vec<_>>();
 
         // Batch invert to obtain the denominators for the permutation product
         // polynomials
