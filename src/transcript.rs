@@ -91,9 +91,19 @@ impl<C: CurveAffine, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>
         }
     }
 
+    fn conditional_scalar_squeeze(&mut self) {
+        if self.scalar_needs_squeezing {
+            let transcript_scalar_point =
+                C::Base::from_bytes(&(self.scalar_hasher.squeeze()).to_bytes()).unwrap();
+            self.base_hasher.absorb(transcript_scalar_point);
+            self.scalar_needs_squeezing = false;
+        }
+    }
+
     /// Absorb a curve point into the transcript by absorbing
     /// its x and y coordinates
     pub fn absorb_point(&mut self, point: &C) -> Result<(), ()> {
+        self.conditional_scalar_squeeze();
         let tmp = point.get_xy();
         if bool::from(tmp.is_none()) {
             return Err(());
@@ -106,6 +116,7 @@ impl<C: CurveAffine, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>
 
     /// Absorb a base into the base_hasher
     pub fn absorb_base(&mut self, base: C::Base) {
+        self.conditional_scalar_squeeze();
         self.base_hasher.absorb(base);
     }
 
@@ -117,13 +128,7 @@ impl<C: CurveAffine, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>
 
     /// Squeeze the transcript to obtain a C::Base value.
     pub fn squeeze(&mut self) -> C::Base {
-        if self.scalar_needs_squeezing {
-            let transcript_scalar_point =
-                C::Base::from_bytes(&(self.scalar_hasher.squeeze()).to_bytes()).unwrap();
-            self.base_hasher.absorb(transcript_scalar_point);
-            self.scalar_needs_squeezing = false;
-        }
-
+        self.conditional_scalar_squeeze();
         self.base_hasher.squeeze()
     }
 }
