@@ -144,4 +144,38 @@ impl<C: CurveAffine> Lookup<C> {
 
         constraints
     }
+
+    pub fn construct_proof(
+        &mut self,
+        domain: &EvaluationDomain<C::Scalar>,
+        point: C::Scalar,
+    ) -> Proof<C> {
+        let product = self.product.clone().unwrap();
+        let permuted = self.permuted.clone().unwrap();
+
+        let product_eval: C::Scalar = eval_polynomial(&product.product_poly.get_values(), point);
+
+        let product_next_eval: C::Scalar = eval_polynomial(
+            &product.product_poly.get_values(),
+            domain.rotate_omega(point, Rotation(1)),
+        );
+
+        let permuted_input_eval: C::Scalar = eval_polynomial(&permuted.permuted_input_poly, point);
+        let permuted_input_inv_eval: C::Scalar = eval_polynomial(
+            &permuted.permuted_input_poly,
+            domain.rotate_omega(point, Rotation(-1)),
+        );
+        let permuted_table_eval: C::Scalar = eval_polynomial(&permuted.permuted_table_poly, point);
+
+        Proof {
+            product_commitment: product.product_commitment,
+            product_eval,
+            product_next_eval,
+            permuted_input_commitment: permuted.permuted_input_commitment,
+            permuted_table_commitment: permuted.permuted_table_commitment,
+            permuted_input_eval,
+            permuted_input_inv_eval,
+            permuted_table_eval,
+        }
+    }
 }
