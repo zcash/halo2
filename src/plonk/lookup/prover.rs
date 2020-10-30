@@ -1,0 +1,147 @@
+use super::super::ProvingKey;
+use super::{InputWire, Lookup, Proof, TableWire};
+use crate::arithmetic::{eval_polynomial, parallelize, CurveAffine, Field};
+use crate::poly::{EvaluationDomain, ExtendedLagrangeCoeff, Polynomial, Rotation};
+
+impl<C: CurveAffine> Lookup<C> {
+    pub fn construct_constraints(
+        &self,
+        pk: &ProvingKey<C>,
+        beta: C::Scalar,
+        gamma: C::Scalar,
+        theta: C::Scalar,
+        advice_cosets: &[Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
+        fixed_cosets: &[Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
+    ) -> Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>> {
+        let permuted = self.permuted.clone().unwrap();
+        let product = self.product.clone().unwrap();
+        let unpermuted_input_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>> = self
+            .input_wires
+            .iter()
+            .map(|&input| match input {
+                InputWire::Advice(wire) => {
+                    advice_cosets[pk.vk.cs.get_advice_query_index(wire, 0)].clone()
+                }
+                InputWire::Fixed(wire) => {
+                    fixed_cosets[pk.vk.cs.get_fixed_query_index(wire, 0)].clone()
+                }
+            })
+            .collect();
+
+        let unpermuted_table_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>> = self
+            .table_wires
+            .iter()
+            .map(|&table| match table {
+                TableWire::Advice(wire) => {
+                    advice_cosets[pk.vk.cs.get_advice_query_index(wire, 0)].clone()
+                }
+                TableWire::Fixed(wire) => {
+                    fixed_cosets[pk.vk.cs.get_fixed_query_index(wire, 0)].clone()
+                }
+            })
+            .collect();
+
+        let mut constraints: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>> =
+            Vec::with_capacity(4);
+
+        // l_0(X) * (1 - z'(X)) = 0
+        {
+            let mut first_product_poly = pk.vk.domain.empty_extended();
+            parallelize(&mut first_product_poly, |first_product_poly, start| {
+                for ((first_product_poly, product), l0) in first_product_poly
+                    .iter_mut()
+                    .zip(product.product_coset[start..].iter())
+                    .zip(pk.l0[start..].iter())
+                {
+                    *first_product_poly += &(*l0 * &(C::Scalar::one() - product));
+                }
+            });
+            constraints.push(first_product_poly);
+        }
+
+        // z'(X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
+        // - z'(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
+        {
+            let mut left = product.product_coset.clone();
+            let mut input_terms = pk.vk.domain.empty_extended();
+
+            // Compress the unpermuted Input wires
+            let mut theta_j = C::Scalar::one();
+            for input in unpermuted_input_cosets.iter() {
+                // (a_1(X) + \theta a_2(X) + ...)
+                parallelize(&mut input_terms, |input_term, start| {
+                    for (input_term, input) in input_term.iter_mut().zip(input[start..].iter()) {
+                        *input_term += &(*input * &theta_j);
+                    }
+                });
+                theta_j *= &theta;
+            }
+
+            let mut table_terms = pk.vk.domain.empty_extended();
+            // Compress the unpermuted Table wires
+            let mut theta_j = C::Scalar::one();
+            for table in unpermuted_table_cosets.iter() {
+                //  (s_1(X) + \theta s_2(X) + ...)
+                parallelize(&mut table_terms, |table_term, start| {
+                    for (table_term, table) in table_term.iter_mut().zip(table[start..].iter()) {
+                        *table_term += &(*table * &theta_j);
+                    }
+                });
+                theta_j *= &theta;
+            }
+
+            // add \beta and \gamma blinding
+            parallelize(&mut left, |left, start| {
+                for ((left, input_term), table_term) in left
+                    .iter_mut()
+                    .zip(input_terms[start..].iter())
+                    .zip(table_terms[start..].iter())
+                {
+                    *left *= &(*input_term + &beta);
+                    *left *= &(*table_term + &gamma);
+                }
+            });
+
+            //  z'(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
+            let mut right = product.product_next_coset.clone();
+            parallelize(&mut right, |right, start| {
+                for ((right, permuted_input), permuted_table) in right
+                    .iter_mut()
+                    .zip(permuted.permuted_input_coset[start..].iter())
+                    .zip(permuted.permuted_table_coset[start..].iter())
+                {
+                    *right *= &(*permuted_input + &beta);
+                    *right *= &(*permuted_table + &gamma);
+                }
+            });
+            constraints.push(left - &right);
+        }
+
+        // l_0(X) * (a'(X) - s'(X)) = 0
+        {
+            let mut first_lookup_poly = pk.vk.domain.empty_extended();
+            parallelize(&mut first_lookup_poly, |first_lookup_poly, start| {
+                for (((first_lookup_poly, input), table), l0) in first_lookup_poly
+                    .iter_mut()
+                    .zip(permuted.permuted_input_coset[start..].iter())
+                    .zip(permuted.permuted_table_coset[start..].iter())
+                    .zip(pk.l0[start..].iter())
+                {
+                    *first_lookup_poly += &(*l0 * &(*input - table));
+                }
+            });
+            constraints.push(first_lookup_poly);
+        }
+
+        // (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
+        {
+            let mut lookup_poly =
+                permuted.permuted_input_coset.clone() - &permuted.permuted_table_coset;
+            lookup_poly = lookup_poly
+                * &(permuted.permuted_input_coset.clone() - &permuted.permuted_input_inv_coset);
+            constraints.push(lookup_poly);
+        }
+
+        constraints
+    }
+}

@@ -8,7 +8,7 @@ use crate::poly::{
     Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
 };
 use std::collections::BTreeSet;
-// pub mod prover;
+pub mod prover;
 // pub mod verifier;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
