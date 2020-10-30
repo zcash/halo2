@@ -9,7 +9,7 @@ use crate::poly::{
 };
 use std::collections::BTreeSet;
 pub mod prover;
-// pub mod verifier;
+pub mod verifier;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum InputWire {
