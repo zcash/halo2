@@ -77,4 +77,139 @@ impl<C: CurveAffine> Lookup<C> {
             product: None,
         }
     }
+
+    pub fn construct_permuted(
+        &mut self,
+        pk: &ProvingKey<C>,
+        params: &Params<C>,
+        domain: &EvaluationDomain<C::Scalar>,
+        theta: C::Scalar,
+        advice_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
+        fixed_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
+    ) -> Permuted<C> {
+        // Values of input wires involved in the lookup
+        let unpermuted_input_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>> = self
+            .input_wires
+            .iter()
+            .map(|&input| match input {
+                InputWire::Advice(wire) => advice_values[wire.0].clone(),
+                InputWire::Fixed(wire) => fixed_values[wire.0].clone(),
+            })
+            .collect();
+
+        // Values of table wires involved in the lookup
+        let unpermuted_table_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>> = self
+            .table_wires
+            .iter()
+            .map(|&input| match input {
+                TableWire::Advice(wire) => advice_values[wire.0].clone(),
+                TableWire::Fixed(wire) => fixed_values[wire.0].clone(),
+            })
+            .collect();
+
+        // Permute each (InputWire, TableWire) pair
+        let permuted_values: Vec<(_, _)> = unpermuted_input_values
+            .iter()
+            .zip(unpermuted_table_values.iter())
+            .map(|(unpermuted_input, unpermuted_table)| {
+                Lookup::<C>::permute_wire_pair(unpermuted_input, unpermuted_table)
+            })
+            .collect();
+
+        // Compressed version of input wires
+        let permuted_input_value = permuted_values
+            .iter()
+            .map(|(input, _)| input)
+            .fold(domain.empty_lagrange(), |acc, input| acc * theta + input);
+
+        // Compressed version of table wires
+        let permuted_table_value = permuted_values
+            .iter()
+            .map(|(_, table)| table)
+            .fold(domain.empty_lagrange(), |acc, table| acc * theta + table);
+
+        // Construct Permuted struct
+        let permuted_input_poly = pk.vk.domain.lagrange_to_coeff(permuted_input_value.clone());
+        let permuted_input_coset = pk
+            .vk
+            .domain
+            .coeff_to_extended(permuted_input_poly.clone(), Rotation::default());
+        let permuted_input_inv_coset = pk
+            .vk
+            .domain
+            .coeff_to_extended(permuted_input_poly.clone(), Rotation(-1));
+
+        let permuted_input_blind = Blind(C::Scalar::random());
+        let permuted_input_commitment = params
+            .commit_lagrange(&permuted_input_value, permuted_input_blind)
+            .to_affine();
+
+        let permuted_table_poly = pk.vk.domain.lagrange_to_coeff(permuted_table_value.clone());
+        let permuted_table_coset = pk
+            .vk
+            .domain
+            .coeff_to_extended(permuted_table_poly.clone(), Rotation::default());
+        let permuted_table_blind = Blind(C::Scalar::random());
+        let permuted_table_commitment = params
+            .commit_lagrange(&permuted_table_value, permuted_table_blind)
+            .to_affine();
+
+        let permuted = Permuted {
+            permuted_input_value,
+            permuted_input_poly,
+            permuted_input_coset,
+            permuted_input_inv_coset,
+            permuted_input_blind,
+            permuted_input_commitment,
+            permuted_table_value,
+            permuted_table_poly,
+            permuted_table_coset,
+            permuted_table_blind,
+            permuted_table_commitment,
+        };
+
+        self.permuted = Some(permuted.clone());
+        permuted
+    }
+
+    fn permute_wire_pair(
+        input_value: &Polynomial<C::Scalar, LagrangeCoeff>,
+        table_value: &Polynomial<C::Scalar, LagrangeCoeff>,
+    ) -> (
+        Polynomial<C::Scalar, LagrangeCoeff>,
+        Polynomial<C::Scalar, LagrangeCoeff>,
+    ) {
+        let mut input_coeffs = input_value.get_values().to_vec();
+        let mut table_coeffs = table_value.get_values().to_vec();
+
+        // Sort advice lookup wire values
+        input_coeffs.sort();
+        input_coeffs.reverse();
+        let permuted_input_value = Polynomial::new(input_coeffs.to_vec());
+
+        // Get the unique values that appear in the advice wire
+        let unique_input_coeffs: BTreeSet<C::Scalar> = input_coeffs.iter().cloned().collect();
+
+        // Sort table wire values according to permuted input lookup wire values
+        for &coeff in unique_input_coeffs.iter() {
+            // Earliest index of the unique value in the permuted input poly
+            let input_idx = input_coeffs
+                .iter()
+                .position(|&input_coeff| input_coeff == coeff)
+                .unwrap();
+
+            // Index of the unique value in the fixed values
+            let table_idx = table_coeffs
+                .iter()
+                .position(|&table_coeff| table_coeff == coeff)
+                .unwrap();
+
+            // Move the relevant coeff in the fixed values to match the advice values idx
+            table_coeffs.swap(input_idx, table_idx);
+        }
+
+        let permuted_table_value = Polynomial::new(table_coeffs.to_vec());
+
+        (permuted_input_value, permuted_table_value)
+    }
 }
