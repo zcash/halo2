@@ -39,15 +39,30 @@ impl<'a, C: CurveAffine> Proof<C> {
             hash_point(&mut transcript, commitment)?;
         }
 
+        // Sample theta challenge for keeping lookup columns linearly independent
+        let theta: C::Scalar =
+            get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        for lookup in &self.lookup_proofs {
+            hash_point(&mut transcript, &lookup.permuted_input_commitment)?;
+            hash_point(&mut transcript, &lookup.permuted_table_commitment)?;
+        }
+
         // Sample beta challenge
         let beta: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         // Sample gamma challenge
-        let gamma: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        let gamma: C::Scalar =
+            get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         // Hash each permutation product commitment
         for c in &self.permutation_product_commitments {
             hash_point(&mut transcript, c)?;
+        }
+
+        // Hash each lookup product commitment
+        for lookup in &self.lookup_proofs {
+            hash_point(&mut transcript, &lookup.product_commitment)?;
         }
 
         // Sample x_2 challenge, which keeps the gates linearly independent.
@@ -64,7 +79,7 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // This check ensures the circuit is satisfied so long as the polynomial
         // commitments open to the correct values.
-        self.check_hx(params, vk, beta, gamma, x_2, x_3)?;
+        self.check_hx(params, vk, beta, gamma, x_2, x_3, theta)?;
 
         // Hash together all the openings provided by the prover into a new
         // transcript on the scalar field.
@@ -177,6 +192,38 @@ impl<'a, C: CurveAffine> Proof<C> {
             }
         }
 
+        // Handle lookup arguments, if any exist
+        for lookup in self.lookup_proofs.iter() {
+            // Open lookup product commitments at x_3
+            queries.push(VerifierQuery {
+                point: x_3,
+                commitment: &lookup.product_commitment,
+                eval: lookup.product_eval,
+            });
+
+            // Open lookup input commitments at x_3
+            queries.push(VerifierQuery {
+                point: x_3,
+                commitment: &lookup.permuted_input_commitment,
+                eval: lookup.permuted_input_eval,
+            });
+
+            // Open lookup table commitments at x_3
+            queries.push(VerifierQuery {
+                point: x_3,
+                commitment: &lookup.permuted_table_commitment,
+                eval: lookup.permuted_table_eval,
+            });
+
+            // Open lookup product commitments at \omega x_3
+            let x_3_next = vk.domain.rotate_omega(x_3, Rotation(1));
+            queries.push(VerifierQuery {
+                point: x_3_next,
+                commitment: &lookup.product_commitment,
+                eval: lookup.product_next_eval,
+            });
+        }
+
         // We are now convinced the circuit is satisfied so long as the
         // polynomial commitments open to the correct values.
         self.multiopening
@@ -235,6 +282,10 @@ impl<'a, C: CurveAffine> Proof<C> {
             return Err(Error::IncompatibleParams);
         }
 
+        if self.lookup_proofs.len() != vk.cs.lookups.len() {
+            return Err(Error::IncompatibleParams);
+        }
+
         // TODO: check h_commitments
 
         if self.advice_commitments.len() != vk.cs.num_advice_wires {
@@ -254,6 +305,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         gamma: C::Scalar,
         x_2: C::Scalar,
         x_3: C::Scalar,
+        theta: C::Scalar,
     ) -> Result<(), Error> {
         // x_3^n
         let x_3n = x_3.pow(&[params.n as u64, 0, 0, 0]);
@@ -263,6 +315,22 @@ impl<'a, C: CurveAffine> Proof<C> {
         let l_0 = (x_3 - &C::Scalar::one()).invert().unwrap() // 1 / (x_3 - 1)
             * &(x_3n - &C::Scalar::one()) // (x_3^n - 1) / (x_3 - 1)
             * &vk.domain.get_barycentric_weight(); // l_0(x_3)
+
+        let mut lookup_evaluations: Vec<C::Scalar> = Vec::new();
+        for (lookup, lookup_proof) in vk.cs.lookups.iter().zip(self.lookup_proofs.iter()) {
+            let lookup_evaluation = lookup_proof.check_lookup_constraints(
+                &vk.cs,
+                beta,
+                gamma,
+                theta,
+                l_0,
+                lookup,
+                &self.advice_evals,
+                &self.fixed_evals,
+            );
+            lookup_evaluations.extend(lookup_evaluation);
+        }
+        let lookup_evaluations = lookup_evaluations;
 
         // Compute the expected value of h(x_3)
         let expected_h_eval = std::iter::empty()
@@ -318,6 +386,7 @@ impl<'a, C: CurveAffine> Proof<C> {
                         },
                     ),
             )
+            .chain(lookup_evaluations)
             .fold(C::Scalar::zero(), |h_eval, v| h_eval * &x_2 + &v);
 
         // Compute h(x_3) from the prover
