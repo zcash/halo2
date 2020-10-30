@@ -101,7 +101,7 @@ impl<C: CurveAffine> Proof<C> {
                     let r_poly = lagrange_interpolate(points, evals);
                     let r_eval = eval_polynomial(&r_poly, x_6);
                     let eval = points.iter().fold(*proof_eval - &r_eval, |eval, point| {
-                        eval * &(x_6 - &point).invert().unwrap()
+                        eval * &(x_6 - point).invert().unwrap()
                     });
                     msm_eval * &x_5 + &eval
                 },
@@ -119,7 +119,7 @@ impl<C: CurveAffine> Proof<C> {
             |(mut commitment_msm, msm_eval), (q_commitment, q_eval)| {
                 commitment_msm.scale(x_7);
                 commitment_msm.add_msm(&q_commitment);
-                (commitment_msm, msm_eval * &x_7 + &q_eval)
+                (commitment_msm, msm_eval * &x_7 + q_eval)
             },
         );
 
