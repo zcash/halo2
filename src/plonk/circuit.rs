@@ -2,8 +2,11 @@ use core::cmp::max;
 use core::ops::{Add, Mul};
 use std::collections::BTreeMap;
 
-use super::Error;
-use crate::arithmetic::Field;
+use super::{
+    lookup::{InputWire, Lookup, TableWire},
+    Error,
+};
+use crate::arithmetic::{CurveAffine, Field};
 
 use crate::poly::Rotation;
 /// This represents a wire which has a fixed (permanent) value
@@ -51,13 +54,13 @@ pub trait Assignment<F: Field> {
 /// This is a trait that circuits provide implementations for so that the
 /// backend prover can ask the circuit to synthesize using some given
 /// [`ConstraintSystem`] implementation.
-pub trait Circuit<F: Field> {
+pub trait Circuit<C: CurveAffine, F: Field> {
     /// This is a configuration object that stores things like wires.
     type Config;
 
     /// The circuit is given an opportunity to describe the exact gate
     /// arrangement, wire arrangement, etc.
-    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config;
+    fn configure(meta: &mut ConstraintSystem<C, F>) -> Self::Config;
 
     /// Given the provided `cs`, synthesize the circuit. The concrete type of
     /// the caller will be different depending on the context, and they may or
@@ -157,7 +160,7 @@ pub(crate) struct PointIndex(pub usize);
 /// This is a description of the circuit environment, such as the gate, wire and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
-pub struct ConstraintSystem<F> {
+pub struct ConstraintSystem<C: CurveAffine, F> {
     pub(crate) num_fixed_wires: usize,
     pub(crate) num_advice_wires: usize,
     pub(crate) num_aux_wires: usize,
@@ -172,10 +175,14 @@ pub struct ConstraintSystem<F> {
     // Vector of permutation arguments, where each corresponds to a set of wires
     // that are involved in a permutation argument.
     pub(crate) permutations: Vec<Vec<AdviceWire>>,
+
+    // Vector of lookup arguments, where each corresponds to a set of advice
+    // wires and a set of fixed wires involved in the lookup simultaneously.
+    pub(crate) lookups: Vec<Lookup<C>>,
 }
 
-impl<F: Field> Default for ConstraintSystem<F> {
-    fn default() -> ConstraintSystem<F> {
+impl<C: CurveAffine, F: Field> Default for ConstraintSystem<C, F> {
+    fn default() -> ConstraintSystem<C, F> {
         let mut rotations = BTreeMap::new();
         rotations.insert(Rotation::default(), PointIndex(0));
 
@@ -189,11 +196,12 @@ impl<F: Field> Default for ConstraintSystem<F> {
             aux_queries: Vec::new(),
             rotations,
             permutations: Vec::new(),
+            lookups: Vec::new(),
         }
     }
 }
 
-impl<F: Field> ConstraintSystem<F> {
+impl<C: CurveAffine, F: Field> ConstraintSystem<C, F> {
     /// Add a permutation argument for some advice wires
     pub fn permutation(&mut self, wires: &[AdviceWire]) -> usize {
         let index = self.permutations.len();
@@ -207,6 +215,40 @@ impl<F: Field> ConstraintSystem<F> {
             self.query_advice_index(*wire, 0);
         }
         self.permutations.push(wires.to_vec());
+
+        index
+    }
+
+    /// Add a lookup argument for some (advice wires, fixed wires) pairs
+    pub fn lookup(&mut self, input_wires: &[InputWire], table_wires: &[TableWire]) -> usize {
+        let index = self.lookups.len();
+        if self.lookups.is_empty() {
+            let at = Rotation(-1);
+            let len = self.rotations.len();
+            self.rotations.entry(at).or_insert(PointIndex(len));
+        }
+
+        for input in input_wires {
+            match input {
+                InputWire::Advice(wire) => {
+                    self.query_advice_index(*wire, 0);
+                }
+                InputWire::Fixed(wire) => {
+                    self.query_fixed_index(*wire, 0);
+                }
+            }
+        }
+        for table in table_wires {
+            match table {
+                TableWire::Advice(wire) => {
+                    self.query_advice_index(*wire, 0);
+                }
+                TableWire::Fixed(wire) => {
+                    self.query_fixed_index(*wire, 0);
+                }
+            }
+        }
+        self.lookups.push(Lookup::new(input_wires, table_wires));
 
         index
     }
@@ -246,6 +288,17 @@ impl<F: Field> ConstraintSystem<F> {
         }
 
         panic!("get_advice_query_index called for non-existant query");
+    }
+
+    pub(crate) fn get_fixed_query_index(&self, wire: FixedWire, at: i32) -> usize {
+        let at = Rotation(at);
+        for (index, fixed_query) in self.fixed_queries.iter().enumerate() {
+            if fixed_query == &(wire, at) {
+                return index;
+            }
+        }
+
+        panic!("get_fixed_query_index called for non-existant query");
     }
 
     pub(crate) fn query_advice_index(&mut self, wire: AdviceWire, at: i32) -> usize {

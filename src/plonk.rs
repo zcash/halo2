@@ -13,6 +13,7 @@ use crate::transcript::Hasher;
 
 mod circuit;
 mod keygen;
+mod lookup;
 mod prover;
 mod verifier;
 
@@ -28,7 +29,7 @@ pub struct VerifyingKey<C: CurveAffine> {
     domain: EvaluationDomain<C::Scalar>,
     fixed_commitments: Vec<C>,
     permutation_commitments: Vec<Vec<C>>,
-    cs: ConstraintSystem<C::Scalar>,
+    cs: ConstraintSystem<C, C::Scalar>,
 }
 
 /// This is a proving key which allows for the creation of proofs for a
@@ -55,6 +56,7 @@ pub struct Proof<C: CurveAffine> {
     permutation_product_evals: Vec<C::Scalar>,
     permutation_product_inv_evals: Vec<C::Scalar>,
     permutation_evals: Vec<Vec<C::Scalar>>,
+    lookup_proofs: Vec<lookup::Proof<C>>,
     advice_evals: Vec<C::Scalar>,
     aux_evals: Vec<C::Scalar>,
     fixed_evals: Vec<C::Scalar>,
@@ -114,6 +116,7 @@ fn test_proving() {
     use crate::arithmetic::{Curve, EqAffine, Field, Fp, Fq};
     use crate::poly::commitment::{Blind, Params};
     use crate::transcript::DummyHash;
+    use lookup::{InputWire, TableWire};
     use std::marker::PhantomData;
     const K: u32 = 5;
 
@@ -136,9 +139,12 @@ fn test_proving() {
         sc: FixedWire,
         sm: FixedWire,
         sp: FixedWire,
+        sl: FixedWire,
 
         perm: usize,
         perm2: usize,
+
+        lookup: usize,
     }
 
     trait StandardCS<FF: Field> {
@@ -152,10 +158,12 @@ fn test_proving() {
         fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
         where
             F: FnOnce() -> Result<FF, Error>;
+        fn lookup_fixed(&mut self, values: Vec<FF>) -> Result<(), Error>;
     }
 
     struct MyCircuit<F: Field> {
         a: Option<F>,
+        lookup_array: Vec<F>,
     }
 
     struct StandardPLONK<'a, F: Field, CS: Assignment<F> + 'a> {
@@ -220,6 +228,7 @@ fn test_proving() {
             F: FnOnce() -> Result<(FF, FF, FF), Error>,
         {
             let index = self.current_gate;
+
             self.current_gate += 1;
             let mut value = None;
             self.cs.assign_advice(self.config.a, index, || {
@@ -247,6 +256,7 @@ fn test_proving() {
                 .assign_fixed(self.config.sc, index, || Ok(FF::one()))?;
             self.cs
                 .assign_fixed(self.config.sm, index, || Ok(FF::zero()))?;
+
             Ok((
                 Variable(self.config.a, index),
                 Variable(self.config.b, index),
@@ -284,12 +294,21 @@ fn test_proving() {
 
             Ok(Variable(self.config.a, index))
         }
+        fn lookup_fixed(&mut self, values: Vec<FF>) -> Result<(), Error> {
+            for &value in values.iter() {
+                let index = self.current_gate;
+
+                self.current_gate += 1;
+                self.cs.assign_fixed(self.config.sl, index, || Ok(value))?;
+            }
+            Ok(())
+        }
     }
 
-    impl<F: Field> Circuit<F> for MyCircuit<F> {
+    impl<C: CurveAffine, F: Field> Circuit<C, F> for MyCircuit<F> {
         type Config = PLONKConfig;
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
+        fn configure(meta: &mut ConstraintSystem<C, F>) -> PLONKConfig {
             let e = meta.advice_wire();
             let a = meta.advice_wire();
             let b = meta.advice_wire();
@@ -306,6 +325,9 @@ fn test_proving() {
             let sb = meta.fixed_wire();
             let sc = meta.fixed_wire();
             let sp = meta.fixed_wire();
+            let sl = meta.fixed_wire();
+
+            let lookup = meta.lookup(&[InputWire::Advice(a)], &[TableWire::Fixed(sl)]);
 
             meta.create_gate(|meta| {
                 let d = meta.query_advice(d, 1);
@@ -342,8 +364,10 @@ fn test_proving() {
                 sc,
                 sm,
                 sp,
+                sl,
                 perm,
                 perm2,
+                lookup,
             }
         }
 
@@ -378,22 +402,31 @@ fn test_proving() {
                 cs.copy(b1, c0)?;
             }
 
+            cs.lookup_fixed(self.lookup_array.clone())?;
+
             Ok(())
         }
     }
 
-    let circuit: MyCircuit<Fp> = MyCircuit {
-        a: Some(Fp::random()),
+    let a = Fp::random();
+    let aux = Fp::one() + Fp::one();
+    let lookup_array = vec![a, aux];
+
+    let empty_circuit: MyCircuit<Fp> = MyCircuit {
+        a: None,
+        lookup_array: lookup_array.clone(),
     };
 
-    let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None };
+    let circuit: MyCircuit<Fp> = MyCircuit {
+        a: Some(a),
+        lookup_array: lookup_array.clone(),
+    };
 
     // Initialize the proving key
     let pk = keygen(&params, &empty_circuit).expect("keygen should not fail");
 
     let mut pubinputs = pk.get_vk().get_domain().empty_lagrange();
-    pubinputs[0] = Fp::one();
-    pubinputs[0] += Fp::one();
+    pubinputs[0] = aux;
     let pubinput = params
         .commit_lagrange(&pubinputs, Blind::default())
         .to_affine();
