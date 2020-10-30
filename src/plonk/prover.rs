@@ -514,7 +514,7 @@ impl<C: CurveAffine> Proof<C> {
             {
                 instances.push(ProverQuery {
                     point: x_3,
-                    poly: poly,
+                    poly,
                     blind: *blind,
                     eval: *eval,
                 });
@@ -529,7 +529,7 @@ impl<C: CurveAffine> Proof<C> {
             {
                 instances.push(ProverQuery {
                     point: x_3,
-                    poly: poly,
+                    poly,
                     blind: Blind::default(),
                     eval: *eval,
                 });
@@ -544,7 +544,7 @@ impl<C: CurveAffine> Proof<C> {
             {
                 instances.push(ProverQuery {
                     point: x_3_inv,
-                    poly: poly,
+                    poly,
                     blind: *blind,
                     eval: *eval,
                 });
