@@ -20,7 +20,7 @@ impl<C: CurveAffine> Proof<C> {
     pub fn create<
         HBase: Hasher<C::Base>,
         HScalar: Hasher<C::Scalar>,
-        ConcreteCircuit: Circuit<C, C::Scalar>,
+        ConcreteCircuit: Circuit<C>,
     >(
         params: &Params<C>,
         pk: &ProvingKey<C>,

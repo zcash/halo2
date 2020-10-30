@@ -29,7 +29,7 @@ pub struct VerifyingKey<C: CurveAffine> {
     domain: EvaluationDomain<C::Scalar>,
     fixed_commitments: Vec<C>,
     permutation_commitments: Vec<Vec<C>>,
-    cs: ConstraintSystem<C, C::Scalar>,
+    cs: ConstraintSystem<C>,
 }
 
 /// This is a proving key which allows for the creation of proofs for a

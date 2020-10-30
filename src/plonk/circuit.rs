@@ -54,18 +54,22 @@ pub trait Assignment<F: Field> {
 /// This is a trait that circuits provide implementations for so that the
 /// backend prover can ask the circuit to synthesize using some given
 /// [`ConstraintSystem`] implementation.
-pub trait Circuit<C: CurveAffine, F: Field> {
+pub trait Circuit<C: CurveAffine> {
     /// This is a configuration object that stores things like wires.
     type Config;
 
     /// The circuit is given an opportunity to describe the exact gate
     /// arrangement, wire arrangement, etc.
-    fn configure(meta: &mut ConstraintSystem<C, F>) -> Self::Config;
+    fn configure(meta: &mut ConstraintSystem<C>) -> Self::Config;
 
     /// Given the provided `cs`, synthesize the circuit. The concrete type of
     /// the caller will be different depending on the context, and they may or
     /// may not expect to have a witness present.
-    fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error>;
+    fn synthesize(
+        &self,
+        cs: &mut impl Assignment<C::Scalar>,
+        config: Self::Config,
+    ) -> Result<(), Error>;
 }
 
 /// Low-degree expression representing an identity that must hold over the committed wires.
@@ -160,11 +164,11 @@ pub(crate) struct PointIndex(pub usize);
 /// This is a description of the circuit environment, such as the gate, wire and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
-pub struct ConstraintSystem<C: CurveAffine, F> {
+pub struct ConstraintSystem<C: CurveAffine> {
     pub(crate) num_fixed_wires: usize,
     pub(crate) num_advice_wires: usize,
     pub(crate) num_aux_wires: usize,
-    pub(crate) gates: Vec<Expression<F>>,
+    pub(crate) gates: Vec<Expression<C::Scalar>>,
     pub(crate) advice_queries: Vec<(AdviceWire, Rotation)>,
     pub(crate) aux_queries: Vec<(AuxWire, Rotation)>,
     pub(crate) fixed_queries: Vec<(FixedWire, Rotation)>,
@@ -181,8 +185,8 @@ pub struct ConstraintSystem<C: CurveAffine, F> {
     pub(crate) lookups: Vec<Lookup<C>>,
 }
 
-impl<C: CurveAffine, F: Field> Default for ConstraintSystem<C, F> {
-    fn default() -> ConstraintSystem<C, F> {
+impl<C: CurveAffine> Default for ConstraintSystem<C> {
+    fn default() -> ConstraintSystem<C> {
         let mut rotations = BTreeMap::new();
         rotations.insert(Rotation::default(), PointIndex(0));
 
@@ -201,7 +205,7 @@ impl<C: CurveAffine, F: Field> Default for ConstraintSystem<C, F> {
     }
 }
 
-impl<C: CurveAffine, F: Field> ConstraintSystem<C, F> {
+impl<C: CurveAffine> ConstraintSystem<C> {
     /// Add a permutation argument for some advice wires
     pub fn permutation(&mut self, wires: &[AdviceWire]) -> usize {
         let index = self.permutations.len();
@@ -275,7 +279,7 @@ impl<C: CurveAffine, F: Field> ConstraintSystem<C, F> {
     }
 
     /// Query a fixed wire at a relative position
-    pub fn query_fixed(&mut self, wire: FixedWire, at: i32) -> Expression<F> {
+    pub fn query_fixed(&mut self, wire: FixedWire, at: i32) -> Expression<C::Scalar> {
         Expression::Fixed(self.query_fixed_index(wire, at))
     }
 
@@ -323,7 +327,7 @@ impl<C: CurveAffine, F: Field> ConstraintSystem<C, F> {
     }
 
     /// Query an advice wire at a relative position
-    pub fn query_advice(&mut self, wire: AdviceWire, at: i32) -> Expression<F> {
+    pub fn query_advice(&mut self, wire: AdviceWire, at: i32) -> Expression<C::Scalar> {
         Expression::Advice(self.query_advice_index(wire, at))
     }
 
@@ -349,12 +353,12 @@ impl<C: CurveAffine, F: Field> ConstraintSystem<C, F> {
     }
 
     /// Query an auxiliary wire at a relative position
-    pub fn query_aux(&mut self, wire: AuxWire, at: i32) -> Expression<F> {
+    pub fn query_aux(&mut self, wire: AuxWire, at: i32) -> Expression<C::Scalar> {
         Expression::Aux(self.query_aux_index(wire, at))
     }
 
     /// Create a new gate
-    pub fn create_gate(&mut self, f: impl FnOnce(&mut Self) -> Expression<F>) {
+    pub fn create_gate(&mut self, f: impl FnOnce(&mut Self) -> Expression<C::Scalar>) {
         let poly = f(self);
         self.gates.push(poly);
     }

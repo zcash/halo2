@@ -5,7 +5,7 @@ use crate::arithmetic::{CurveAffine, Field};
 impl<C: CurveAffine> Proof<C> {
     pub fn check_lookup_constraints(
         &self,
-        cs: &ConstraintSystem<C, C::Scalar>,
+        cs: &ConstraintSystem<C>,
         beta: C::Scalar,
         gamma: C::Scalar,
         theta: C::Scalar,
