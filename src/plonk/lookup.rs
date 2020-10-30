@@ -212,4 +212,187 @@ impl<C: CurveAffine> Lookup<C> {
 
         (permuted_input_value, permuted_table_value)
     }
+
+    pub fn construct_product(
+        &mut self,
+        pk: &ProvingKey<C>,
+        params: &Params<C>,
+        beta: C::Scalar,
+        gamma: C::Scalar,
+        theta: C::Scalar,
+        advice_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
+        fixed_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
+    ) -> Product<C> {
+        let permuted = self.permuted.clone().unwrap();
+        let unpermuted_input_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>> = self
+            .input_wires
+            .iter()
+            .map(|&input| match input {
+                InputWire::Advice(wire) => advice_values[wire.0].clone(),
+                InputWire::Fixed(wire) => fixed_values[wire.0].clone(),
+            })
+            .collect();
+
+        let unpermuted_table_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>> = self
+            .table_wires
+            .iter()
+            .map(|&table| match table {
+                TableWire::Advice(wire) => advice_values[wire.0].clone(),
+                TableWire::Fixed(wire) => fixed_values[wire.0].clone(),
+            })
+            .collect();
+
+        // Goal is to compute the products of fractions
+        //
+        // (a_1(\omega^i) + \theta a_2(\omega^i) + ... + beta)(s_1(\omega^i) + \theta(\omega^i) + ... + \gamma) /
+        // (a'(\omega^i) + \beta)(s'(\omega^i) + \gamma)
+        //
+        // where a_j(X) is the jth input wire in this lookup,
+        // where a'(X) is the compression of the permuted input wires,
+        // q_j(X) is the jth table wire in this lookup,
+        // q'(X) is the compression of the permuted table wires,
+        // and i is the ith row of the wire.
+        let mut lookup_product = vec![C::Scalar::one(); params.n as usize];
+
+        // Denominator uses the permuted input wire and permuted table wire
+        parallelize(&mut lookup_product, |lookup_product, start| {
+            for ((lookup_product, permuted_input_value), permuted_table_value) in lookup_product
+                .iter_mut()
+                .zip(permuted.permuted_input_value[start..].iter())
+                .zip(permuted.permuted_table_value[start..].iter())
+            {
+                *lookup_product *= &(beta + permuted_input_value);
+                *lookup_product *= &(gamma + permuted_table_value);
+            }
+        });
+
+        // Batch invert to obtain the denominators for the lookup product
+        // polynomials
+        lookup_product.iter_mut().batch_invert();
+
+        // Finish the computation of the entire fraction by computing the numerators
+        // (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
+        // Compress unpermuted InputWires
+        let mut input_term = vec![C::Scalar::zero(); params.n as usize];
+        let mut theta_j = C::Scalar::one();
+        for unpermuted_input_value in unpermuted_input_values.iter() {
+            parallelize(&mut input_term, |input_term, start| {
+                for (input_term, advice_value) in input_term
+                    .iter_mut()
+                    .zip(unpermuted_input_value.get_values()[start..].iter())
+                {
+                    *input_term += &(*advice_value * &theta_j);
+                }
+            });
+            theta_j *= &theta;
+        }
+
+        // Compress unpermuted TableWires
+        let mut table_term = vec![C::Scalar::zero(); params.n as usize];
+        let mut theta_j = C::Scalar::one();
+        for unpermuted_table_value in unpermuted_table_values.iter() {
+            parallelize(&mut table_term, |table_term, start| {
+                for (table_term, fixed_value) in table_term
+                    .iter_mut()
+                    .zip(unpermuted_table_value.get_values()[start..].iter())
+                {
+                    *table_term += &(*fixed_value * &theta_j);
+                }
+            });
+            theta_j *= &theta;
+        }
+
+        // Add blinding \beta and \gamma
+        parallelize(&mut lookup_product, |product, start| {
+            for ((product, input_term), table_term) in product
+                .iter_mut()
+                .zip(input_term[start..].iter())
+                .zip(table_term[start..].iter())
+            {
+                *product *= &(*input_term + &beta);
+                *product *= &(*table_term + &gamma);
+            }
+        });
+
+        // The product vector is a vector of products of fractions of the form
+        //
+        // (a_1(\omega^i) + \theta a_2(\omega^i) + ... + \beta)(s_1(\omega^i) + \theta s_2(\omega^i) + ... + \gamma)/
+        // (a'(\omega^i) + \beta) (s'(\omega^i) + \gamma)
+        //
+        // where a_j(\omega^i) is the jth input wire in this lookup,
+        // a'j(\omega^i) is the permuted input wire,
+        // s_j(\omega^i) is the jth table wire in this lookup,
+        // s'(\omega^i) is the permuted table wire,
+        // and i is the ith row of the wire.
+
+        // Compute the evaluations of the lookup product polynomial
+        // over our domain, starting with z[0] = 1
+        let mut z = vec![C::Scalar::one()];
+        for row in 1..(params.n as usize) {
+            let mut tmp = z[row - 1];
+            tmp *= &lookup_product[row - 1];
+            z.push(tmp);
+        }
+        let z = pk.vk.domain.lagrange_from_vec(z);
+
+        // Check lagrange form of product is correctly constructed over the domain
+        // z'(X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
+        // - z'(omega X) (a'(X) + \beta) (s'(X) + \gamma)
+        let n = params.n as usize;
+
+        for i in 0..n {
+            let next_idx = (i + 1) % n;
+
+            let mut left = z.get_values().clone()[i];
+            let mut input_term = C::Scalar::zero();
+            let mut theta_j = C::Scalar::one();
+            for unpermuted_input_value in unpermuted_input_values.iter() {
+                let input_value = unpermuted_input_value.get_values()[i];
+                input_term += &(theta_j * &input_value);
+                theta_j *= &theta;
+            }
+
+            let mut table_term = C::Scalar::zero();
+            let mut theta_j = C::Scalar::one();
+            for unpermuted_table_value in unpermuted_table_values.iter() {
+                let table_value = unpermuted_table_value.get_values()[i];
+                table_term += &(theta_j * &table_value);
+                theta_j *= &theta;
+            }
+
+            input_term += &beta;
+            table_term += &gamma;
+            left *= &(input_term * &table_term);
+
+            let mut right = z.get_values().clone()[next_idx];
+            let permuted_input_value = &permuted.permuted_input_value.get_values()[i];
+
+            let permuted_table_value = &permuted.permuted_table_value.get_values()[i];
+
+            right *= &(beta + permuted_input_value);
+            right *= &(gamma + permuted_table_value);
+
+            assert_eq!(left, right);
+        }
+
+        let product_blind = Blind(C::Scalar::random());
+        let product_commitment = params.commit_lagrange(&z, product_blind).to_affine();
+        let z = pk.vk.domain.lagrange_to_coeff(z);
+        let product_coset = pk
+            .vk
+            .domain
+            .coeff_to_extended(z.clone(), Rotation::default());
+        let product_next_coset = pk.vk.domain.coeff_to_extended(z.clone(), Rotation(1));
+
+        let product = Product::<C> {
+            product_poly: z.clone(),
+            product_coset,
+            product_next_coset,
+            product_commitment,
+            product_blind,
+        };
+
+        self.product = Some(product.clone());
+        product
+    }
 }
