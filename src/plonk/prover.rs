@@ -1,6 +1,6 @@
 use super::{
     circuit::{AdviceWire, Assignment, Circuit, ConstraintSystem, FixedWire},
-    hash_point, Error, Proof, ProvingKey,
+    hash_point, lookup, Error, Proof, ProvingKey,
 };
 use crate::arithmetic::{
     eval_polynomial, get_challenge_scalar, parallelize, BatchInvert, Challenge, Curve, CurveAffine,
@@ -20,7 +20,7 @@ impl<C: CurveAffine> Proof<C> {
     pub fn create<
         HBase: Hasher<C::Base>,
         HScalar: Hasher<C::Scalar>,
-        ConcreteCircuit: Circuit<C::Scalar>,
+        ConcreteCircuit: Circuit<C, C::Scalar>,
     >(
         params: &Params<C>,
         pk: &ProvingKey<C>,
@@ -33,6 +33,7 @@ impl<C: CurveAffine> Proof<C> {
 
         struct WitnessCollection<F: Field> {
             advice: Vec<Polynomial<F, LagrangeCoeff>>,
+            fixed: Vec<Polynomial<F, LagrangeCoeff>>,
             _marker: std::marker::PhantomData<F>,
         }
 
@@ -54,11 +55,15 @@ impl<C: CurveAffine> Proof<C> {
 
             fn assign_fixed(
                 &mut self,
-                _: FixedWire,
-                _: usize,
-                _: impl FnOnce() -> Result<F, Error>,
+                wire: FixedWire,
+                row: usize,
+                to: impl FnOnce() -> Result<F, Error>,
             ) -> Result<(), Error> {
-                // We only care about advice wires here
+                *self
+                    .fixed
+                    .get_mut(wire.0)
+                    .and_then(|v| v.get_mut(row))
+                    .ok_or(Error::BoundsFailure)? = to()?;
 
                 Ok(())
             }
@@ -83,6 +88,7 @@ impl<C: CurveAffine> Proof<C> {
 
         let mut witness = WitnessCollection {
             advice: vec![domain.empty_lagrange(); meta.num_advice_wires],
+            fixed: vec![domain.empty_lagrange(); meta.num_fixed_wires],
             _marker: std::marker::PhantomData,
         };
 
@@ -162,11 +168,48 @@ impl<C: CurveAffine> Proof<C> {
             })
             .collect();
 
+        let fixed_polys: Vec<_> = witness
+            .fixed
+            .clone()
+            .into_iter()
+            .map(|poly| domain.lagrange_to_coeff(poly))
+            .collect();
+
+        let fixed_cosets: Vec<_> = meta
+            .fixed_queries
+            .iter()
+            .map(|&(wire, at)| {
+                let poly = fixed_polys[wire.0].clone();
+                domain.coeff_to_extended(poly, at)
+            })
+            .collect();
+
+        // Sample theta challenge for keeping lookup columns linearly independent
+        let theta: C::Scalar =
+            get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        // Construct permuted values for each lookup
+        let mut lookups = pk.vk.cs.lookups.clone();
+
+        for lookup in lookups.iter_mut() {
+            let permuted = lookup.construct_permuted(
+                &pk,
+                &params,
+                &domain,
+                theta,
+                &witness.advice,
+                &witness.fixed,
+            );
+            hash_point(&mut transcript, &permuted.permuted_input_commitment)?;
+            hash_point(&mut transcript, &permuted.permuted_table_commitment)?;
+        }
+
         // Sample beta challenge
         let beta: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         // Sample gamma challenge
-        let gamma: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        let gamma: C::Scalar =
+            get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         // Compute permutation product polynomial commitment
         let mut permutation_product_polys = vec![];
@@ -280,6 +323,20 @@ impl<C: CurveAffine> Proof<C> {
             hash_point(&mut transcript, c)?;
         }
 
+        for lookup in lookups.iter_mut() {
+            let product = lookup.construct_product(
+                &pk,
+                &params,
+                beta,
+                gamma,
+                theta,
+                &witness.advice,
+                &witness.fixed,
+            );
+            // Hash each lookup product commitment
+            hash_point(&mut transcript, &product.product_commitment)?;
+        }
+
         // Obtain challenge for keeping all separate gates linearly independent
         let x_2: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
@@ -355,6 +412,25 @@ impl<C: CurveAffine> Proof<C> {
             h_poly = h_poly + &left - &right;
         }
 
+        // Lookups
+        let mut lookup_constraint_polys = Vec::new();
+        for lookup in lookups.iter_mut() {
+            let constraints = lookup.construct_constraints(
+                &pk,
+                beta,
+                gamma,
+                theta,
+                &advice_cosets,
+                &fixed_cosets,
+            );
+            lookup_constraint_polys.extend(constraints);
+        }
+
+        for lookup_constraint_poly in lookup_constraint_polys.iter() {
+            h_poly = h_poly * x_2;
+            h_poly = h_poly + &lookup_constraint_poly;
+        }
+
         // Divide by t(X) = X^{params.n} - 1.
         let h_poly = domain.divide_by_vanishing_poly(h_poly);
 
@@ -389,6 +465,12 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         let x_3: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+
+        let mut lookup_proofs: Vec<lookup::Proof<C>> = Vec::new();
+        for lookup in lookups.iter_mut() {
+            let proof = lookup.construct_proof(&domain, x_3);
+            lookup_proofs.push(proof);
+        }
 
         // Evaluate polynomials at omega^i x_3
         let advice_evals: Vec<_> = meta
@@ -551,6 +633,44 @@ impl<C: CurveAffine> Proof<C> {
             }
         }
 
+        // Handle lookup arguments, if any exist
+        let lookups_iter = lookups.iter();
+        let lookup_proofs_iter = lookup_proofs.iter();
+        for (lookup, proof) in lookups_iter.zip(lookup_proofs_iter) {
+            // Open lookup product commitments at x_3
+            instances.push(ProverQuery {
+                point: x_3,
+                poly: &lookup.product.as_ref().unwrap().product_poly,
+                blind: lookup.product.clone().unwrap().product_blind,
+                eval: proof.product_eval,
+            });
+
+            // Open lookup input commitments at x_3
+            instances.push(ProverQuery {
+                point: x_3,
+                poly: &lookup.permuted.as_ref().unwrap().permuted_input_poly,
+                blind: lookup.permuted.clone().unwrap().permuted_input_blind,
+                eval: proof.permuted_input_eval,
+            });
+
+            // Open lookup table commitments at x_3
+            instances.push(ProverQuery {
+                point: x_3,
+                poly: &lookup.permuted.as_ref().unwrap().permuted_table_poly,
+                blind: lookup.permuted.clone().unwrap().permuted_table_blind,
+                eval: proof.permuted_table_eval,
+            });
+
+            let x_3_next = domain.rotate_omega(x_3, Rotation(1));
+            // Open lookup product commitments at \omega x_3
+            instances.push(ProverQuery {
+                point: x_3_next,
+                poly: &lookup.product.as_ref().unwrap().product_poly,
+                blind: lookup.product.clone().unwrap().product_blind,
+                eval: proof.product_next_eval,
+            });
+        }
+
         let multiopening =
             multiopen::Proof::create(params, &mut transcript, &mut transcript_scalar, instances)
                 .map_err(|_| Error::OpeningError)?;
@@ -562,6 +682,7 @@ impl<C: CurveAffine> Proof<C> {
             permutation_product_evals,
             permutation_product_inv_evals,
             permutation_evals,
+            lookup_proofs,
             advice_evals,
             fixed_evals,
             aux_evals,
