@@ -24,9 +24,13 @@ pub enum TableWire {
 }
 
 #[derive(Clone, Debug)]
-pub struct Lookup<C: CurveAffine> {
+pub struct Lookup {
     pub input_wires: Vec<InputWire>,
     pub table_wires: Vec<TableWire>,
+}
+
+pub struct LookupData<C: CurveAffine> {
+    pub lookup: Lookup,
     pub permuted: Option<Permuted<C>>,
     pub product: Option<Product<C>>,
 }
@@ -67,12 +71,21 @@ pub struct Product<C: CurveAffine> {
     pub product_blind: Blind<C::Scalar>,
 }
 
-impl<C: CurveAffine> Lookup<C> {
+impl Lookup {
     pub fn new(input_wires: &[InputWire], table_wires: &[TableWire]) -> Self {
         assert_eq!(input_wires.len(), table_wires.len());
         Lookup {
             input_wires: input_wires.to_vec(),
             table_wires: table_wires.to_vec(),
+        }
+    }
+}
+
+impl<C: CurveAffine> LookupData<C> {
+    pub fn new(lookup: &Lookup) -> Self {
+        assert_eq!(lookup.input_wires.len(), lookup.table_wires.len());
+        LookupData {
+            lookup: lookup.clone(),
             permuted: None,
             product: None,
         }
@@ -89,6 +102,7 @@ impl<C: CurveAffine> Lookup<C> {
     ) -> Permuted<C> {
         // Values of input wires involved in the lookup
         let unpermuted_input_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>> = self
+            .lookup
             .input_wires
             .iter()
             .map(|&input| match input {
@@ -99,6 +113,7 @@ impl<C: CurveAffine> Lookup<C> {
 
         // Values of table wires involved in the lookup
         let unpermuted_table_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>> = self
+            .lookup
             .table_wires
             .iter()
             .map(|&input| match input {
@@ -112,7 +127,7 @@ impl<C: CurveAffine> Lookup<C> {
             .iter()
             .zip(unpermuted_table_values.iter())
             .map(|(unpermuted_input, unpermuted_table)| {
-                Lookup::<C>::permute_wire_pair(unpermuted_input, unpermuted_table)
+                LookupData::<C>::permute_wire_pair(unpermuted_input, unpermuted_table)
             })
             .collect();
 
@@ -225,6 +240,7 @@ impl<C: CurveAffine> Lookup<C> {
     ) -> Product<C> {
         let permuted = self.permuted.clone().unwrap();
         let unpermuted_input_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>> = self
+            .lookup
             .input_wires
             .iter()
             .map(|&input| match input {
@@ -234,6 +250,7 @@ impl<C: CurveAffine> Lookup<C> {
             .collect();
 
         let unpermuted_table_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>> = self
+            .lookup
             .table_wires
             .iter()
             .map(|&table| match table {

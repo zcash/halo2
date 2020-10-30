@@ -5,12 +5,12 @@ use crate::arithmetic::{CurveAffine, Field};
 impl<C: CurveAffine> Proof<C> {
     pub fn check_lookup_constraints(
         &self,
-        cs: &ConstraintSystem<C, C::Scalar>,
+        cs: &ConstraintSystem<C::Scalar>,
         beta: C::Scalar,
         gamma: C::Scalar,
         theta: C::Scalar,
         l_0: C::Scalar,
-        lookup: &Lookup<C>,
+        lookup: &Lookup,
         advice_evals: &[C::Scalar],
         fixed_evals: &[C::Scalar],
     ) -> Vec<C::Scalar> {

@@ -6,7 +6,7 @@ use super::{
     lookup::{InputWire, Lookup, TableWire},
     Error,
 };
-use crate::arithmetic::{CurveAffine, Field};
+use crate::arithmetic::Field;
 
 use crate::poly::Rotation;
 /// This represents a wire which has a fixed (permanent) value
@@ -54,13 +54,13 @@ pub trait Assignment<F: Field> {
 /// This is a trait that circuits provide implementations for so that the
 /// backend prover can ask the circuit to synthesize using some given
 /// [`ConstraintSystem`] implementation.
-pub trait Circuit<C: CurveAffine, F: Field> {
+pub trait Circuit<F: Field> {
     /// This is a configuration object that stores things like wires.
     type Config;
 
     /// The circuit is given an opportunity to describe the exact gate
     /// arrangement, wire arrangement, etc.
-    fn configure(meta: &mut ConstraintSystem<C, F>) -> Self::Config;
+    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config;
 
     /// Given the provided `cs`, synthesize the circuit. The concrete type of
     /// the caller will be different depending on the context, and they may or
@@ -160,7 +160,7 @@ pub(crate) struct PointIndex(pub usize);
 /// This is a description of the circuit environment, such as the gate, wire and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
-pub struct ConstraintSystem<C: CurveAffine, F> {
+pub struct ConstraintSystem<F> {
     pub(crate) num_fixed_wires: usize,
     pub(crate) num_advice_wires: usize,
     pub(crate) num_aux_wires: usize,
@@ -178,11 +178,11 @@ pub struct ConstraintSystem<C: CurveAffine, F> {
 
     // Vector of lookup arguments, where each corresponds to a set of advice
     // wires and a set of fixed wires involved in the lookup simultaneously.
-    pub(crate) lookups: Vec<Lookup<C>>,
+    pub(crate) lookups: Vec<Lookup>,
 }
 
-impl<C: CurveAffine, F: Field> Default for ConstraintSystem<C, F> {
-    fn default() -> ConstraintSystem<C, F> {
+impl<F: Field> Default for ConstraintSystem<F> {
+    fn default() -> ConstraintSystem<F> {
         let mut rotations = BTreeMap::new();
         rotations.insert(Rotation::default(), PointIndex(0));
 
@@ -201,7 +201,7 @@ impl<C: CurveAffine, F: Field> Default for ConstraintSystem<C, F> {
     }
 }
 
-impl<C: CurveAffine, F: Field> ConstraintSystem<C, F> {
+impl<F: Field> ConstraintSystem<F> {
     /// Add a permutation argument for some advice wires
     pub fn permutation(&mut self, wires: &[AdviceWire]) -> usize {
         let index = self.permutations.len();

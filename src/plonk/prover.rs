@@ -1,6 +1,8 @@
 use super::{
     circuit::{AdviceWire, Assignment, Circuit, ConstraintSystem, FixedWire},
-    hash_point, lookup, Error, Proof, ProvingKey,
+    hash_point,
+    lookup::{self, LookupData},
+    Error, Proof, ProvingKey,
 };
 use crate::arithmetic::{
     eval_polynomial, get_challenge_scalar, parallelize, BatchInvert, Challenge, Curve, CurveAffine,
@@ -20,7 +22,7 @@ impl<C: CurveAffine> Proof<C> {
     pub fn create<
         HBase: Hasher<C::Base>,
         HScalar: Hasher<C::Scalar>,
-        ConcreteCircuit: Circuit<C, C::Scalar>,
+        ConcreteCircuit: Circuit<C::Scalar>,
     >(
         params: &Params<C>,
         pk: &ProvingKey<C>,
@@ -189,7 +191,13 @@ impl<C: CurveAffine> Proof<C> {
             get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
         // Construct permuted values for each lookup
-        let mut lookups = pk.vk.cs.lookups.clone();
+        let mut lookups: Vec<LookupData<C>> = pk
+            .vk
+            .cs
+            .lookups
+            .iter()
+            .map(|lookup| LookupData::<C>::new(lookup))
+            .collect();
 
         for lookup in lookups.iter_mut() {
             let permuted = lookup.construct_permuted(

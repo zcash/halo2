@@ -1,9 +1,9 @@
 use super::super::ProvingKey;
-use super::{InputWire, Lookup, Proof, TableWire};
+use super::{InputWire, LookupData, Proof, TableWire};
 use crate::arithmetic::{eval_polynomial, parallelize, CurveAffine, Field};
 use crate::poly::{EvaluationDomain, ExtendedLagrangeCoeff, Polynomial, Rotation};
 
-impl<C: CurveAffine> Lookup<C> {
+impl<C: CurveAffine> LookupData<C> {
     pub fn construct_constraints(
         &self,
         pk: &ProvingKey<C>,
@@ -16,6 +16,7 @@ impl<C: CurveAffine> Lookup<C> {
         let permuted = self.permuted.clone().unwrap();
         let product = self.product.clone().unwrap();
         let unpermuted_input_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>> = self
+            .lookup
             .input_wires
             .iter()
             .map(|&input| match input {
@@ -29,6 +30,7 @@ impl<C: CurveAffine> Lookup<C> {
             .collect();
 
         let unpermuted_table_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>> = self
+            .lookup
             .table_wires
             .iter()
             .map(|&table| match table {

@@ -29,7 +29,7 @@ pub struct VerifyingKey<C: CurveAffine> {
     domain: EvaluationDomain<C::Scalar>,
     fixed_commitments: Vec<C>,
     permutation_commitments: Vec<Vec<C>>,
-    cs: ConstraintSystem<C, C::Scalar>,
+    cs: ConstraintSystem<C::Scalar>,
 }
 
 /// This is a proving key which allows for the creation of proofs for a
@@ -305,10 +305,10 @@ fn test_proving() {
         }
     }
 
-    impl<C: CurveAffine, F: Field> Circuit<C, F> for MyCircuit<F> {
+    impl<F: Field> Circuit<F> for MyCircuit<F> {
         type Config = PLONKConfig;
 
-        fn configure(meta: &mut ConstraintSystem<C, F>) -> PLONKConfig {
+        fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
             let e = meta.advice_wire();
             let a = meta.advice_wire();
             let b = meta.advice_wire();

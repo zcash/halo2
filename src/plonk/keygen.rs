@@ -15,7 +15,7 @@ pub fn keygen<C, ConcreteCircuit>(
 ) -> Result<ProvingKey<C>, Error>
 where
     C: CurveAffine,
-    ConcreteCircuit: Circuit<C, C::Scalar>,
+    ConcreteCircuit: Circuit<C::Scalar>,
 {
     struct Assembly<F: Field> {
         fixed: Vec<Polynomial<F, LagrangeCoeff>>,
