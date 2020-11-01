@@ -140,11 +140,10 @@ fn test_proving() {
         sm: FixedWire,
         sp: FixedWire,
         sl: FixedWire,
+        sl2: FixedWire,
 
         perm: usize,
         perm2: usize,
-
-        lookup: usize,
     }
 
     trait StandardCS<FF: Field> {
@@ -158,12 +157,12 @@ fn test_proving() {
         fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
         where
             F: FnOnce() -> Result<FF, Error>;
-        fn lookup_fixed(&mut self, values: Vec<FF>) -> Result<(), Error>;
+        fn lookup_table(&mut self, values: &[Vec<FF>]) -> Result<(), Error>;
     }
 
     struct MyCircuit<F: Field> {
         a: Option<F>,
-        lookup_array: Vec<F>,
+        lookup_arrays: Vec<Vec<F>>,
     }
 
     struct StandardPLONK<'a, F: Field, CS: Assignment<F> + 'a> {
@@ -228,7 +227,6 @@ fn test_proving() {
             F: FnOnce() -> Result<(FF, FF, FF), Error>,
         {
             let index = self.current_gate;
-
             self.current_gate += 1;
             let mut value = None;
             self.cs.assign_advice(self.config.a, index, || {
@@ -294,12 +292,18 @@ fn test_proving() {
 
             Ok(Variable(self.config.a, index))
         }
-        fn lookup_fixed(&mut self, values: Vec<FF>) -> Result<(), Error> {
-            for &value in values.iter() {
+        fn lookup_table(&mut self, values: &[Vec<FF>]) -> Result<(), Error> {
+            for &value in values[0].iter() {
                 let index = self.current_gate;
 
                 self.current_gate += 1;
                 self.cs.assign_fixed(self.config.sl, index, || Ok(value))?;
+            }
+            for &value in values[1].iter() {
+                let index = self.current_gate;
+
+                self.current_gate += 1;
+                self.cs.assign_fixed(self.config.sl2, index, || Ok(value))?;
             }
             Ok(())
         }
@@ -326,8 +330,10 @@ fn test_proving() {
             let sc = meta.fixed_wire();
             let sp = meta.fixed_wire();
             let sl = meta.fixed_wire();
+            let sl2 = meta.fixed_wire();
 
-            let lookup = meta.lookup(&[InputWire::Advice(a)], &[TableWire::Fixed(sl)]);
+            meta.lookup(&[InputWire::Advice(a)], &[TableWire::Fixed(sl)]);
+            meta.lookup(&[InputWire::Advice(b)], &[TableWire::Fixed(sl2)]);
 
             meta.create_gate(|meta| {
                 let d = meta.query_advice(d, 1);
@@ -365,9 +371,9 @@ fn test_proving() {
                 sm,
                 sp,
                 sl,
+                sl2,
                 perm,
                 perm2,
-                lookup,
             }
         }
 
@@ -402,24 +408,26 @@ fn test_proving() {
                 cs.copy(b1, c0)?;
             }
 
-            cs.lookup_fixed(self.lookup_array.clone())?;
+            cs.lookup_table(&self.lookup_arrays)?;
 
             Ok(())
         }
     }
 
     let a = Fp::random();
+    let a_squared = a * &a;
     let aux = Fp::one() + Fp::one();
     let lookup_array = vec![a, aux];
+    let lookup_array_2 = vec![a, a_squared];
 
     let empty_circuit: MyCircuit<Fp> = MyCircuit {
         a: None,
-        lookup_array: lookup_array.clone(),
+        lookup_arrays: vec![lookup_array.clone(), lookup_array_2.clone()],
     };
 
     let circuit: MyCircuit<Fp> = MyCircuit {
         a: Some(a),
-        lookup_array: lookup_array.clone(),
+        lookup_arrays: vec![lookup_array.clone(), lookup_array_2.clone()],
     };
 
     // Initialize the proving key

@@ -71,6 +71,8 @@ impl<C: CurveAffine> Proof<C> {
             constraints.push(left - &right);
         }
 
+        // Check that the first values in the permuted input wire and permuted
+        // fixed wire are the same.
         // l_0(X) * (a'(X) - s'(X)) = 0
         {
             let first_lookup_constraint =
@@ -78,6 +80,9 @@ impl<C: CurveAffine> Proof<C> {
             constraints.push(first_lookup_constraint);
         }
 
+        // Check that each value in the permuted lookup input wire is either
+        // equal to the value above it, or the value at the same index in the
+        // permuted table wire.
         // (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
         {
             let lookup_constraint = (self.permuted_input_eval - &self.permuted_table_eval)
