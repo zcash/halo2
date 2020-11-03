@@ -254,7 +254,6 @@ fn test_proving() {
                 .assign_fixed(self.config.sc, index, || Ok(FF::one()))?;
             self.cs
                 .assign_fixed(self.config.sm, index, || Ok(FF::zero()))?;
-
             Ok((
                 Variable(self.config.a, index),
                 Variable(self.config.b, index),
@@ -293,17 +292,14 @@ fn test_proving() {
             Ok(Variable(self.config.a, index))
         }
         fn lookup_table(&mut self, values: &[Vec<FF>]) -> Result<(), Error> {
-            for &value in values[0].iter() {
+            for (&value_0, &value_1) in values[0].iter().zip(values[1].iter()) {
                 let index = self.current_gate;
 
                 self.current_gate += 1;
-                self.cs.assign_fixed(self.config.sl, index, || Ok(value))?;
-            }
-            for &value in values[1].iter() {
-                let index = self.current_gate;
-
-                self.current_gate += 1;
-                self.cs.assign_fixed(self.config.sl2, index, || Ok(value))?;
+                self.cs
+                    .assign_fixed(self.config.sl, index, || Ok(value_0))?;
+                self.cs
+                    .assign_fixed(self.config.sl2, index, || Ok(value_1))?;
             }
             Ok(())
         }
@@ -333,7 +329,10 @@ fn test_proving() {
             let sl2 = meta.fixed_wire();
 
             meta.lookup(&[InputWire::Advice(a)], &[TableWire::Fixed(sl)]);
-            meta.lookup(&[InputWire::Advice(b)], &[TableWire::Fixed(sl2)]);
+            meta.lookup(
+                &[InputWire::Advice(a), InputWire::Advice(b)],
+                &[TableWire::Fixed(sl), TableWire::Fixed(sl2)],
+            );
 
             meta.create_gate(|meta| {
                 let d = meta.query_advice(d, 1);
@@ -417,8 +416,8 @@ fn test_proving() {
     let a = Fp::random();
     let a_squared = a * &a;
     let aux = Fp::one() + Fp::one();
-    let lookup_array = vec![a, aux];
-    let lookup_array_2 = vec![a, a_squared];
+    let lookup_array = vec![aux, a, a, Fp::zero()];
+    let lookup_array_2 = vec![Fp::zero(), a, a_squared, Fp::zero()];
 
     let empty_circuit: MyCircuit<Fp> = MyCircuit {
         a: None,

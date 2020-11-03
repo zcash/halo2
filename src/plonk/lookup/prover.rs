@@ -68,28 +68,26 @@ impl<C: CurveAffine> LookupData<C> {
             let mut input_terms = pk.vk.domain.empty_extended();
 
             // Compress the unpermuted Input wires
-            let mut theta_j = C::Scalar::one();
             for input in unpermuted_input_cosets.iter() {
                 // (a_1(X) + \theta a_2(X) + ...)
                 parallelize(&mut input_terms, |input_term, start| {
                     for (input_term, input) in input_term.iter_mut().zip(input[start..].iter()) {
-                        *input_term += &(*input * &theta_j);
+                        *input_term *= &theta;
+                        *input_term += input;
                     }
                 });
-                theta_j *= &theta;
             }
 
             let mut table_terms = pk.vk.domain.empty_extended();
             // Compress the unpermuted Table wires
-            let mut theta_j = C::Scalar::one();
             for table in unpermuted_table_cosets.iter() {
                 //  (s_1(X) + \theta s_2(X) + ...)
                 parallelize(&mut table_terms, |table_term, start| {
                     for (table_term, table) in table_term.iter_mut().zip(table[start..].iter()) {
-                        *table_term += &(*table * &theta_j);
+                        *table_term *= &theta;
+                        *table_term += table;
                     }
                 });
-                theta_j *= &theta;
             }
 
             // add \beta and \gamma blinding

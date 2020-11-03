@@ -111,6 +111,11 @@ impl<C: CurveAffine> LookupData<C> {
             })
             .collect();
 
+        // Compressed version of input wires
+        let compressed_input_value = unpermuted_input_values
+            .iter()
+            .fold(domain.empty_lagrange(), |acc, input| acc * theta + input);
+
         // Values of table wires involved in the lookup
         let unpermuted_table_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>> = self
             .lookup
@@ -122,26 +127,14 @@ impl<C: CurveAffine> LookupData<C> {
             })
             .collect();
 
-        // Permute each (InputWire, TableWire) pair
-        let permuted_values: Vec<(_, _)> = unpermuted_input_values
-            .iter()
-            .zip(unpermuted_table_values.iter())
-            .map(|(unpermuted_input, unpermuted_table)| {
-                LookupData::<C>::permute_wire_pair(unpermuted_input, unpermuted_table)
-            })
-            .collect();
-
-        // Compressed version of input wires
-        let permuted_input_value = permuted_values
-            .iter()
-            .map(|(input, _)| input)
-            .fold(domain.empty_lagrange(), |acc, input| acc * theta + input);
-
         // Compressed version of table wires
-        let permuted_table_value = permuted_values
+        let compressed_table_value = unpermuted_table_values
             .iter()
-            .map(|(_, table)| table)
             .fold(domain.empty_lagrange(), |acc, table| acc * theta + table);
+
+        // Permute compressed (InputWire, TableWire) pair
+        let (permuted_input_value, permuted_table_value) =
+            LookupData::<C>::permute_wire_pair(&compressed_input_value, &compressed_table_value);
 
         // Construct Permuted struct
         let permuted_input_poly = pk.vk.domain.lagrange_to_coeff(permuted_input_value.clone());
@@ -197,7 +190,7 @@ impl<C: CurveAffine> LookupData<C> {
         let mut input_coeffs = input_value.get_values().to_vec();
         let mut table_coeffs = table_value.get_values().to_vec();
 
-        // Sort advice lookup wire values
+        // Sort input lookup wire values
         input_coeffs.sort();
         input_coeffs.reverse();
         let permuted_input_value = Polynomial::new(input_coeffs.to_vec());
@@ -291,32 +284,30 @@ impl<C: CurveAffine> LookupData<C> {
         // (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
         // Compress unpermuted InputWires
         let mut input_term = vec![C::Scalar::zero(); params.n as usize];
-        let mut theta_j = C::Scalar::one();
         for unpermuted_input_value in unpermuted_input_values.iter() {
             parallelize(&mut input_term, |input_term, start| {
-                for (input_term, advice_value) in input_term
+                for (input_term, input_value) in input_term
                     .iter_mut()
                     .zip(unpermuted_input_value.get_values()[start..].iter())
                 {
-                    *input_term += &(*advice_value * &theta_j);
+                    *input_term *= &theta;
+                    *input_term += input_value;
                 }
             });
-            theta_j *= &theta;
         }
 
         // Compress unpermuted TableWires
         let mut table_term = vec![C::Scalar::zero(); params.n as usize];
-        let mut theta_j = C::Scalar::one();
         for unpermuted_table_value in unpermuted_table_values.iter() {
             parallelize(&mut table_term, |table_term, start| {
                 for (table_term, fixed_value) in table_term
                     .iter_mut()
                     .zip(unpermuted_table_value.get_values()[start..].iter())
                 {
-                    *table_term += &(*fixed_value * &theta_j);
+                    *table_term *= &theta;
+                    *table_term += fixed_value;
                 }
             });
-            theta_j *= &theta;
         }
 
         // Add blinding \beta and \gamma
@@ -361,21 +352,18 @@ impl<C: CurveAffine> LookupData<C> {
             let next_idx = (i + 1) % n;
 
             let mut left = z.get_values().clone()[i];
-            let mut input_term = C::Scalar::zero();
-            let mut theta_j = C::Scalar::one();
-            for unpermuted_input_value in unpermuted_input_values.iter() {
-                let input_value = unpermuted_input_value.get_values()[i];
-                input_term += &(theta_j * &input_value);
-                theta_j *= &theta;
-            }
 
-            let mut table_term = C::Scalar::zero();
-            let mut theta_j = C::Scalar::one();
-            for unpermuted_table_value in unpermuted_table_values.iter() {
-                let table_value = unpermuted_table_value.get_values()[i];
-                table_term += &(theta_j * &table_value);
-                theta_j *= &theta;
-            }
+            let mut input_term = unpermuted_input_values
+                .iter()
+                .fold(C::Scalar::zero(), |acc, input| {
+                    acc * &theta + &input.get_values()[i]
+                });
+
+            let mut table_term = unpermuted_table_values
+                .iter()
+                .fold(C::Scalar::zero(), |acc, table| {
+                    acc * &theta + &table.get_values()[i]
+                });
 
             input_term += &beta;
             table_term += &gamma;

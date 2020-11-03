@@ -26,40 +26,24 @@ impl<C: CurveAffine> Proof<C> {
         {
             let mut left = self.product_eval;
             let mut input_term = C::Scalar::zero();
-            for (theta_j, &input) in
-                lookup
-                    .input_wires
-                    .iter()
-                    .scan(C::Scalar::one(), |acc, input| {
-                        let tmp = (*acc, input);
-                        *acc *= &theta;
-                        Some(tmp)
-                    })
-            {
+            for &input in lookup.input_wires.iter() {
                 let eval = match input {
                     InputWire::Advice(wire) => advice_evals[cs.get_advice_query_index(wire, 0)],
                     InputWire::Fixed(wire) => fixed_evals[cs.get_fixed_query_index(wire, 0)],
                 };
-                input_term += &(eval * &theta_j);
+                input_term *= &theta;
+                input_term += &eval;
             }
             input_term += &beta;
 
             let mut table_term = C::Scalar::zero();
-            for (theta_j, &table) in
-                lookup
-                    .table_wires
-                    .iter()
-                    .scan(C::Scalar::one(), |acc, table| {
-                        let tmp = (*acc, table);
-                        *acc *= &theta;
-                        Some(tmp)
-                    })
-            {
+            for &table in lookup.table_wires.iter() {
                 let eval = match table {
                     TableWire::Advice(wire) => advice_evals[cs.get_advice_query_index(wire, 0)],
                     TableWire::Fixed(wire) => fixed_evals[cs.get_fixed_query_index(wire, 0)],
                 };
-                table_term += &(eval * &theta_j);
+                table_term *= &theta;
+                table_term += &eval;
             }
             table_term += &gamma;
 
