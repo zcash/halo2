@@ -35,7 +35,6 @@ impl<C: CurveAffine> Proof<C> {
 
         struct WitnessCollection<F: Field> {
             advice: Vec<Polynomial<F, LagrangeCoeff>>,
-            fixed: Vec<Polynomial<F, LagrangeCoeff>>,
             _marker: std::marker::PhantomData<F>,
         }
 
@@ -57,15 +56,11 @@ impl<C: CurveAffine> Proof<C> {
 
             fn assign_fixed(
                 &mut self,
-                wire: FixedWire,
-                row: usize,
-                to: impl FnOnce() -> Result<F, Error>,
+                _: FixedWire,
+                _: usize,
+                _: impl FnOnce() -> Result<F, Error>,
             ) -> Result<(), Error> {
-                *self
-                    .fixed
-                    .get_mut(wire.0)
-                    .and_then(|v| v.get_mut(row))
-                    .ok_or(Error::BoundsFailure)? = to()?;
+                // We only care about advice wires here
 
                 Ok(())
             }
@@ -90,7 +85,6 @@ impl<C: CurveAffine> Proof<C> {
 
         let mut witness = WitnessCollection {
             advice: vec![domain.empty_lagrange(); meta.num_advice_wires],
-            fixed: vec![domain.empty_lagrange(); meta.num_fixed_wires],
             _marker: std::marker::PhantomData,
         };
 
@@ -190,7 +184,7 @@ impl<C: CurveAffine> Proof<C> {
                 &domain,
                 theta,
                 &witness.advice,
-                &witness.fixed,
+                &pk.fixed_values,
             );
             hash_point(&mut transcript, &permuted.permuted_input_commitment)?;
             hash_point(&mut transcript, &permuted.permuted_table_commitment)?;
@@ -323,7 +317,7 @@ impl<C: CurveAffine> Proof<C> {
                 gamma,
                 theta,
                 &witness.advice,
-                &witness.fixed,
+                &pk.fixed_values,
             );
             // Hash each lookup product commitment
             hash_point(&mut transcript, &product.product_commitment)?;
