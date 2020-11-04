@@ -170,22 +170,6 @@ impl<C: CurveAffine> Proof<C> {
             })
             .collect();
 
-        let fixed_polys: Vec<_> = witness
-            .fixed
-            .clone()
-            .into_iter()
-            .map(|poly| domain.lagrange_to_coeff(poly))
-            .collect();
-
-        let fixed_cosets: Vec<_> = meta
-            .fixed_queries
-            .iter()
-            .map(|&(wire, at)| {
-                let poly = fixed_polys[wire.0].clone();
-                domain.coeff_to_extended(poly, at)
-            })
-            .collect();
-
         // Sample theta challenge for keeping lookup columns linearly independent
         let theta: C::Scalar =
             get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
@@ -429,7 +413,7 @@ impl<C: CurveAffine> Proof<C> {
                 gamma,
                 theta,
                 &advice_cosets,
-                &fixed_cosets,
+                &pk.fixed_cosets,
             );
             lookup_constraint_polys.extend(constraints);
         }
