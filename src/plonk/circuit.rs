@@ -176,8 +176,8 @@ pub struct ConstraintSystem<F> {
     // that are involved in a permutation argument.
     pub(crate) permutations: Vec<Vec<AdviceWire>>,
 
-    // Vector of lookup arguments, where each corresponds to a set of advice
-    // wires and a set of fixed wires involved in the lookup simultaneously.
+    // Vector of lookup arguments, where each corresponds to a sequence of
+    // input wires and a sequence of table wires involved in the lookup.
     pub(crate) lookups: Vec<Lookup>,
 }
 
@@ -219,7 +219,7 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
-    /// Add a lookup argument for some (advice wires, fixed wires) pairs
+    /// Add a lookup argument for some input wires and table wires.
     pub fn lookup(&mut self, input_wires: &[InputWire], table_wires: &[TableWire]) -> usize {
         let index = self.lookups.len();
         if self.lookups.is_empty() {
@@ -298,7 +298,7 @@ impl<F: Field> ConstraintSystem<F> {
             }
         }
 
-        panic!("get_fixed_query_index called for non-existant query");
+        panic!("get_fixed_query_index called for non-existent query");
     }
 
     pub(crate) fn query_advice_index(&mut self, wire: AdviceWire, at: i32) -> usize {

@@ -192,7 +192,6 @@ impl<C: CurveAffine> LookupData<C> {
 
         // Sort input lookup wire values
         input_coeffs.sort();
-        input_coeffs.reverse();
         let permuted_input_value = Polynomial::new(input_coeffs.to_vec());
 
         // Get the unique values that appear in the advice wire
