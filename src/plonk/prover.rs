@@ -1,7 +1,7 @@
 use super::{
     circuit::{AdviceWire, Assignment, Circuit, ConstraintSystem, FixedWire},
     hash_point,
-    lookup::{self, LookupData},
+    lookup::{self, prover::LookupData},
     Error, Proof, ProvingKey,
 };
 use crate::arithmetic::{
