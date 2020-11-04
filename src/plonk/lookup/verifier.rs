@@ -21,10 +21,14 @@ impl<C: CurveAffine> Proof<C> {
             constraints.push(first_product_constraint);
         }
 
-        // z'(X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
-        // - z'(omega X) (a'(X) + \beta) (s'(X) + \gamma)
+        // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
+        // - z'(\omega^{-1} X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
         {
-            let mut left = self.product_eval;
+            let left = self.product_eval
+                * &(self.permuted_input_eval + &beta)
+                * &(self.permuted_table_eval + &gamma);
+
+            let mut right = self.product_inv_eval;
             let mut input_term = C::Scalar::zero();
             for &input in lookup.input_wires.iter() {
                 let eval = match input {
@@ -47,11 +51,8 @@ impl<C: CurveAffine> Proof<C> {
             }
             table_term += &gamma;
 
-            left *= &(input_term * &table_term);
+            right *= &(input_term * &table_term);
 
-            let right = self.product_next_eval
-                * &(self.permuted_input_eval + &beta)
-                * &(self.permuted_table_eval + &gamma);
             constraints.push(left - &right);
         }
 

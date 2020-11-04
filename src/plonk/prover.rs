@@ -642,13 +642,13 @@ impl<C: CurveAffine> Proof<C> {
                 eval: proof.permuted_table_eval,
             });
 
-            let x_3_next = domain.rotate_omega(x_3, Rotation(1));
-            // Open lookup product commitments at \omega x_3
+            let x_3_inv = domain.rotate_omega(x_3, Rotation(-1));
+            // Open lookup product commitments at \omega^{-1} x_3
             instances.push(ProverQuery {
-                point: x_3_next,
+                point: x_3_inv,
                 poly: &lookup.product.as_ref().unwrap().product_poly,
                 blind: lookup.product.clone().unwrap().product_blind,
-                eval: proof.product_next_eval,
+                eval: proof.product_inv_eval,
             });
         }
 

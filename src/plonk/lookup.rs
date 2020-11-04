@@ -26,7 +26,7 @@ pub struct Lookup {
 pub struct Proof<C: CurveAffine> {
     pub product_commitment: C,
     pub product_eval: C::Scalar,
-    pub product_next_eval: C::Scalar,
+    pub product_inv_eval: C::Scalar,
     pub permuted_input_commitment: C,
     pub permuted_table_commitment: C,
     pub permuted_input_eval: C::Scalar,
@@ -53,7 +53,7 @@ pub struct Permuted<C: CurveAffine> {
 pub struct Product<C: CurveAffine> {
     pub product_poly: Polynomial<C::Scalar, Coeff>,
     pub product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
-    pub product_next_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    pub product_inv_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     pub product_commitment: C,
     pub product_blind: Blind<C::Scalar>,
 }

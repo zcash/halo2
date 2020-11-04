@@ -215,12 +215,12 @@ impl<'a, C: CurveAffine> Proof<C> {
                 eval: lookup.permuted_table_eval,
             });
 
-            // Open lookup product commitments at \omega x_3
-            let x_3_next = vk.domain.rotate_omega(x_3, Rotation(1));
+            // Open lookup product commitments at \omega^{-1} x_3
+            let x_3_inv = vk.domain.rotate_omega(x_3, Rotation(-1));
             queries.push(VerifierQuery {
-                point: x_3_next,
+                point: x_3_inv,
                 commitment: &lookup.product_commitment,
-                eval: lookup.product_next_eval,
+                eval: lookup.product_inv_eval,
             });
         }
 

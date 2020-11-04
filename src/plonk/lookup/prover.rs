@@ -270,21 +270,28 @@ impl<C: CurveAffine> LookupData<C> {
         let mut z = vec![C::Scalar::one()];
         for row in 1..(params.n as usize) {
             let mut tmp = z[row - 1];
-            tmp *= &lookup_product[row - 1];
+            tmp *= &lookup_product[row];
             z.push(tmp);
         }
         let z = pk.vk.domain.lagrange_from_vec(z);
 
         // Check lagrange form of product is correctly constructed over the domain
-        // z'(X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
-        // - z'(omega X) (a'(X) + \beta) (s'(X) + \gamma)
+        // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
+        // - z'(\omega^{-1} X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
         let n = params.n as usize;
 
         for i in 0..n {
-            let next_idx = (i + 1) % n;
+            let prev_idx = (n + i - 1) % n;
 
             let mut left = z.get_values().clone()[i];
+            let permuted_input_value = &permuted.permuted_input_value.get_values()[i];
 
+            let permuted_table_value = &permuted.permuted_table_value.get_values()[i];
+
+            left *= &(beta + permuted_input_value);
+            left *= &(gamma + permuted_table_value);
+
+            let mut right = z.get_values().clone()[prev_idx];
             let mut input_term = unpermuted_input_values
                 .iter()
                 .fold(C::Scalar::zero(), |acc, input| {
@@ -299,15 +306,7 @@ impl<C: CurveAffine> LookupData<C> {
 
             input_term += &beta;
             table_term += &gamma;
-            left *= &(input_term * &table_term);
-
-            let mut right = z.get_values().clone()[next_idx];
-            let permuted_input_value = &permuted.permuted_input_value.get_values()[i];
-
-            let permuted_table_value = &permuted.permuted_table_value.get_values()[i];
-
-            right *= &(beta + permuted_input_value);
-            right *= &(gamma + permuted_table_value);
+            right *= &(input_term * &table_term);
 
             assert_eq!(left, right);
         }
@@ -319,12 +318,12 @@ impl<C: CurveAffine> LookupData<C> {
             .vk
             .domain
             .coeff_to_extended(z.clone(), Rotation::default());
-        let product_next_coset = pk.vk.domain.coeff_to_extended(z.clone(), Rotation(1));
+        let product_inv_coset = pk.vk.domain.coeff_to_extended(z.clone(), Rotation(-1));
 
         let product = Product::<C> {
             product_poly: z.clone(),
             product_coset,
-            product_next_coset,
+            product_inv_coset,
             product_commitment,
             product_blind,
         };
@@ -390,10 +389,24 @@ impl<C: CurveAffine> LookupData<C> {
             constraints.push(first_product_poly);
         }
 
-        // z'(X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
-        // - z'(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
+        // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
+        // - z'(\omega^{-1} X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
         {
+            // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
             let mut left = product.product_coset.clone();
+            parallelize(&mut left, |left, start| {
+                for ((left, permuted_input), permuted_table) in left
+                    .iter_mut()
+                    .zip(permuted.permuted_input_coset[start..].iter())
+                    .zip(permuted.permuted_table_coset[start..].iter())
+                {
+                    *left *= &(*permuted_input + &beta);
+                    *left *= &(*permuted_table + &gamma);
+                }
+            });
+
+            //  z'(\omega^{-1} X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
+            let mut right = product.product_inv_coset.clone();
             let mut input_terms = pk.vk.domain.empty_extended();
 
             // Compress the unpermuted Input wires
@@ -420,29 +433,17 @@ impl<C: CurveAffine> LookupData<C> {
             }
 
             // add \beta and \gamma blinding
-            parallelize(&mut left, |left, start| {
-                for ((left, input_term), table_term) in left
+            parallelize(&mut right, |right, start| {
+                for ((right, input_term), table_term) in right
                     .iter_mut()
                     .zip(input_terms[start..].iter())
                     .zip(table_terms[start..].iter())
                 {
-                    *left *= &(*input_term + &beta);
-                    *left *= &(*table_term + &gamma);
+                    *right *= &(*input_term + &beta);
+                    *right *= &(*table_term + &gamma);
                 }
             });
 
-            //  z'(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
-            let mut right = product.product_next_coset.clone();
-            parallelize(&mut right, |right, start| {
-                for ((right, permuted_input), permuted_table) in right
-                    .iter_mut()
-                    .zip(permuted.permuted_input_coset[start..].iter())
-                    .zip(permuted.permuted_table_coset[start..].iter())
-                {
-                    *right *= &(*permuted_input + &beta);
-                    *right *= &(*permuted_table + &gamma);
-                }
-            });
             constraints.push(left - &right);
         }
 
@@ -489,9 +490,9 @@ impl<C: CurveAffine> LookupData<C> {
 
         let product_eval: C::Scalar = eval_polynomial(&product.product_poly.get_values(), point);
 
-        let product_next_eval: C::Scalar = eval_polynomial(
+        let product_inv_eval: C::Scalar = eval_polynomial(
             &product.product_poly.get_values(),
-            domain.rotate_omega(point, Rotation(1)),
+            domain.rotate_omega(point, Rotation(-1)),
         );
 
         let permuted_input_eval: C::Scalar = eval_polynomial(&permuted.permuted_input_poly, point);
@@ -504,7 +505,7 @@ impl<C: CurveAffine> LookupData<C> {
         Proof {
             product_commitment: product.product_commitment,
             product_eval,
-            product_next_eval,
+            product_inv_eval,
             permuted_input_commitment: permuted.permuted_input_commitment,
             permuted_table_commitment: permuted.permuted_table_commitment,
             permuted_input_eval,
