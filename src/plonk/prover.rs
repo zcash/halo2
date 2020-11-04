@@ -405,7 +405,6 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // Lookups
-        let mut lookup_constraint_polys = Vec::new();
         for lookup in lookups.iter_mut() {
             let constraints = lookup.construct_constraints(
                 &pk,
@@ -415,12 +414,10 @@ impl<C: CurveAffine> Proof<C> {
                 &advice_cosets,
                 &pk.fixed_cosets,
             );
-            lookup_constraint_polys.extend(constraints);
-        }
-
-        for lookup_constraint_poly in lookup_constraint_polys.iter() {
-            h_poly = h_poly * x_2;
-            h_poly = h_poly + &lookup_constraint_poly;
+            for lookup_constraint_poly in constraints.iter() {
+                h_poly = h_poly * x_2;
+                h_poly = h_poly + &lookup_constraint_poly;
+            }
         }
 
         // Divide by t(X) = X^{params.n} - 1.
@@ -626,9 +623,7 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // Handle lookup arguments, if any exist
-        let lookups_iter = lookups.iter();
-        let lookup_proofs_iter = lookup_proofs.iter();
-        for (lookup, proof) in lookups_iter.zip(lookup_proofs_iter) {
+        for (lookup, proof) in lookups.iter().zip(lookup_proofs.iter()) {
             // Open lookup product commitments at x_3
             instances.push(ProverQuery {
                 point: x_3,
