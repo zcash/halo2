@@ -4,19 +4,99 @@ use std::collections::BTreeMap;
 
 use super::Error;
 use crate::arithmetic::Field;
-
 use crate::poly::Rotation;
-/// This represents a column which has a fixed (permanent) value
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct FixedColumn(pub usize);
 
-/// This represents a column which has a witness-specific value
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct AdviceColumn(pub usize);
+/// A column type
+pub trait ColumnType: 'static + Sized {}
 
-/// This represents a column which has an externally assigned value
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct AuxColumn(pub usize);
+/// A column with an index and type
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Column<C: ColumnType> {
+    pub(crate) index: usize,
+    pub(crate) column_type: C,
+}
+
+/// An advice column
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Advice;
+
+/// A fixed column
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Fixed;
+
+/// An auxiliary column
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Aux;
+
+/// An enum over the Advice, Fixed, Aux structs
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Any {
+    /// An Advice variant
+    Advice,
+    /// A Fixed variant
+    Fixed,
+    /// An Auxiliary variant
+    Aux,
+}
+
+impl ColumnType for Advice {}
+impl ColumnType for Fixed {}
+impl ColumnType for Aux {}
+impl ColumnType for Any {}
+
+impl From<Column<Advice>> for Column<Any> {
+    fn from(advice: Column<Advice>) -> Column<Any> {
+        Column {
+            index: advice.index,
+            column_type: Any::Advice,
+        }
+    }
+}
+
+impl From<Column<Fixed>> for Column<Any> {
+    fn from(advice: Column<Fixed>) -> Column<Any> {
+        Column {
+            index: advice.index,
+            column_type: Any::Fixed,
+        }
+    }
+}
+
+impl From<Column<Aux>> for Column<Any> {
+    fn from(advice: Column<Aux>) -> Column<Any> {
+        Column {
+            index: advice.index,
+            column_type: Any::Aux,
+        }
+    }
+}
+
+impl From<Column<Any>> for Column<Advice> {
+    fn from(any: Column<Any>) -> Column<Advice> {
+        Column {
+            index: any.index,
+            column_type: Advice,
+        }
+    }
+}
+
+impl From<Column<Any>> for Column<Fixed> {
+    fn from(any: Column<Any>) -> Column<Fixed> {
+        Column {
+            index: any.index,
+            column_type: Fixed,
+        }
+    }
+}
+
+impl From<Column<Any>> for Column<Aux> {
+    fn from(any: Column<Any>) -> Column<Aux> {
+        Column {
+            index: any.index,
+            column_type: Aux,
+        }
+    }
+}
 
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
@@ -24,7 +104,7 @@ pub trait Assignment<F: Field> {
     /// Assign an advice column value (witness)
     fn assign_advice(
         &mut self,
-        column: AdviceColumn,
+        column: Column<Advice>,
         row: usize,
         to: impl FnOnce() -> Result<F, Error>,
     ) -> Result<(), Error>;
@@ -32,7 +112,7 @@ pub trait Assignment<F: Field> {
     /// Assign a fixed value
     fn assign_fixed(
         &mut self,
-        column: FixedColumn,
+        column: Column<Fixed>,
         row: usize,
         to: impl FnOnce() -> Result<F, Error>,
     ) -> Result<(), Error>;
@@ -197,16 +277,16 @@ pub struct ConstraintSystem<F> {
     pub(crate) num_advice_columns: usize,
     pub(crate) num_aux_columns: usize,
     pub(crate) gates: Vec<Expression<F>>,
-    pub(crate) advice_queries: Vec<(AdviceColumn, Rotation)>,
-    pub(crate) aux_queries: Vec<(AuxColumn, Rotation)>,
-    pub(crate) fixed_queries: Vec<(FixedColumn, Rotation)>,
+    pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
+    pub(crate) aux_queries: Vec<(Column<Aux>, Rotation)>,
+    pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
 
     // Mapping from a witness vector rotation to the index in the point vector.
     pub(crate) rotations: BTreeMap<Rotation, PointIndex>,
 
     // Vector of permutation arguments, where each corresponds to a set of columns
     // that are involved in a permutation argument.
-    pub(crate) permutations: Vec<Vec<AdviceColumn>>,
+    pub(crate) permutations: Vec<Vec<Column<Advice>>>,
 }
 
 impl<F: Field> Default for ConstraintSystem<F> {
@@ -230,7 +310,7 @@ impl<F: Field> Default for ConstraintSystem<F> {
 
 impl<F: Field> ConstraintSystem<F> {
     /// Add a permutation argument for some advice columns
-    pub fn permutation(&mut self, columns: &[AdviceColumn]) -> usize {
+    pub fn permutation(&mut self, columns: &[Column<Advice>]) -> usize {
         let index = self.permutations.len();
         if self.permutations.is_empty() {
             let at = Rotation(-1);
@@ -246,7 +326,7 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
-    fn query_fixed_index(&mut self, column: FixedColumn, at: i32) -> usize {
+    fn query_fixed_index(&mut self, column: Column<Fixed>, at: i32) -> usize {
         let at = Rotation(at);
         {
             let len = self.rotations.len();
@@ -268,22 +348,11 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Query a fixed column at a relative position
-    pub fn query_fixed(&mut self, column: FixedColumn, at: i32) -> Expression<F> {
+    pub fn query_fixed(&mut self, column: Column<Fixed>, at: i32) -> Expression<F> {
         Expression::Fixed(self.query_fixed_index(column, at))
     }
 
-    pub(crate) fn get_advice_query_index(&self, column: AdviceColumn, at: i32) -> usize {
-        let at = Rotation(at);
-        for (index, advice_query) in self.advice_queries.iter().enumerate() {
-            if advice_query == &(column, at) {
-                return index;
-            }
-        }
-
-        panic!("get_advice_query_index called for non-existant query");
-    }
-
-    pub(crate) fn query_advice_index(&mut self, column: AdviceColumn, at: i32) -> usize {
+    pub(crate) fn query_advice_index(&mut self, column: Column<Advice>, at: i32) -> usize {
         let at = Rotation(at);
         {
             let len = self.rotations.len();
@@ -305,11 +374,11 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Query an advice column at a relative position
-    pub fn query_advice(&mut self, column: AdviceColumn, at: i32) -> Expression<F> {
+    pub fn query_advice(&mut self, column: Column<Advice>, at: i32) -> Expression<F> {
         Expression::Advice(self.query_advice_index(column, at))
     }
 
-    fn query_aux_index(&mut self, column: AuxColumn, at: i32) -> usize {
+    fn query_aux_index(&mut self, column: Column<Aux>, at: i32) -> usize {
         let at = Rotation(at);
         {
             let len = self.rotations.len();
@@ -331,8 +400,30 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Query an auxiliary column at a relative position
-    pub fn query_aux(&mut self, column: AuxColumn, at: i32) -> Expression<F> {
+    pub fn query_aux(&mut self, column: Column<Aux>, at: i32) -> Expression<F> {
         Expression::Aux(self.query_aux_index(column, at))
+    }
+
+    pub(crate) fn get_advice_query_index(&self, column: Column<Advice>, at: i32) -> usize {
+        let at = Rotation(at);
+        for (index, advice_query) in self.advice_queries.iter().enumerate() {
+            if advice_query == &(column, at) {
+                return index;
+            }
+        }
+
+        panic!("get_advice_query_index called for non-existant query");
+    }
+
+    pub(crate) fn get_fixed_query_index(&self, column: Column<Fixed>, at: i32) -> usize {
+        let at = Rotation(at);
+        for (index, fixed_query) in self.fixed_queries.iter().enumerate() {
+            if fixed_query == &(column, at) {
+                return index;
+            }
+        }
+
+        panic!("get_fixed_query_index called for non-existent query");
     }
 
     /// Create a new gate
@@ -342,22 +433,31 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Allocate a new fixed column
-    pub fn fixed_column(&mut self) -> FixedColumn {
-        let tmp = FixedColumn(self.num_fixed_columns);
+    pub fn fixed_column(&mut self) -> Column<Fixed> {
+        let tmp = Column {
+            index: self.num_fixed_columns,
+            column_type: Fixed,
+        };
         self.num_fixed_columns += 1;
         tmp
     }
 
     /// Allocate a new advice column
-    pub fn advice_column(&mut self) -> AdviceColumn {
-        let tmp = AdviceColumn(self.num_advice_columns);
+    pub fn advice_column(&mut self) -> Column<Advice> {
+        let tmp = Column {
+            index: self.num_advice_columns,
+            column_type: Advice,
+        };
         self.num_advice_columns += 1;
         tmp
     }
 
     /// Allocate a new auxiliary column
-    pub fn aux_column(&mut self) -> AuxColumn {
-        let tmp = AuxColumn(self.num_aux_columns);
+    pub fn aux_column(&mut self) -> Column<Aux> {
+        let tmp = Column {
+            index: self.num_aux_columns,
+            column_type: Aux,
+        };
         self.num_aux_columns += 1;
         tmp
     }

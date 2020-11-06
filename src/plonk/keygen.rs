@@ -1,5 +1,5 @@
 use super::{
-    circuit::{AdviceColumn, Assignment, Circuit, ConstraintSystem, FixedColumn},
+    circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
     Error, ProvingKey, VerifyingKey,
 };
 use crate::arithmetic::{Curve, CurveAffine, Field};
@@ -28,7 +28,7 @@ where
     impl<F: Field> Assignment<F> for Assembly<F> {
         fn assign_advice(
             &mut self,
-            _: AdviceColumn,
+            _: Column<Advice>,
             _: usize,
             _: impl FnOnce() -> Result<F, Error>,
         ) -> Result<(), Error> {
@@ -38,13 +38,13 @@ where
 
         fn assign_fixed(
             &mut self,
-            column: FixedColumn,
+            column: Column<Fixed>,
             row: usize,
             to: impl FnOnce() -> Result<F, Error>,
         ) -> Result<(), Error> {
             *self
                 .fixed
-                .get_mut(column.0)
+                .get_mut(column.index)
                 .and_then(|v| v.get_mut(row))
                 .ok_or(Error::BoundsFailure)? = to()?;
 
@@ -230,7 +230,7 @@ where
         .fixed_queries
         .iter()
         .map(|&(column, at)| {
-            let poly = fixed_polys[column.0].clone();
+            let poly = fixed_polys[column.index].clone();
             domain.coeff_to_extended(poly, at)
         })
         .collect();

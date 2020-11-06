@@ -1,5 +1,5 @@
 use super::{
-    circuit::{AdviceColumn, Assignment, Circuit, ConstraintSystem, FixedColumn},
+    circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
     hash_point, Error, Proof, ProvingKey,
 };
 use crate::arithmetic::{
@@ -39,13 +39,13 @@ impl<C: CurveAffine> Proof<C> {
         impl<F: Field> Assignment<F> for WitnessCollection<F> {
             fn assign_advice(
                 &mut self,
-                column: AdviceColumn,
+                column: Column<Advice>,
                 row: usize,
                 to: impl FnOnce() -> Result<F, Error>,
             ) -> Result<(), Error> {
                 *self
                     .advice
-                    .get_mut(column.0)
+                    .get_mut(column.index)
                     .and_then(|v| v.get_mut(row))
                     .ok_or(Error::BoundsFailure)? = to()?;
 
@@ -54,7 +54,7 @@ impl<C: CurveAffine> Proof<C> {
 
             fn assign_fixed(
                 &mut self,
-                _: FixedColumn,
+                _: Column<Fixed>,
                 _: usize,
                 _: impl FnOnce() -> Result<F, Error>,
             ) -> Result<(), Error> {
@@ -120,7 +120,7 @@ impl<C: CurveAffine> Proof<C> {
             .aux_queries
             .iter()
             .map(|&(column, at)| {
-                let poly = aux_polys[column.0].clone();
+                let poly = aux_polys[column.index].clone();
                 domain.coeff_to_extended(poly, at)
             })
             .collect();
@@ -157,7 +157,7 @@ impl<C: CurveAffine> Proof<C> {
             .advice_queries
             .iter()
             .map(|&(column, at)| {
-                let poly = advice_polys[column.0].clone();
+                let poly = advice_polys[column.index].clone();
                 domain.coeff_to_extended(poly, at)
             })
             .collect();
@@ -192,7 +192,7 @@ impl<C: CurveAffine> Proof<C> {
                 parallelize(&mut modified_advice, |modified_advice, start| {
                     for ((modified_advice, advice_value), permuted_advice_value) in modified_advice
                         .iter_mut()
-                        .zip(witness.advice[column.0][start..].iter())
+                        .zip(witness.advice[column.index][start..].iter())
                         .zip(permuted_column_values[start..].iter())
                     {
                         *modified_advice *= &(x_0 * permuted_advice_value + &x_1 + advice_value);
@@ -226,7 +226,7 @@ impl<C: CurveAffine> Proof<C> {
                     let mut deltaomega = deltaomega * &omega.pow_vartime(&[start as u64, 0, 0, 0]);
                     for (modified_advice, advice_value) in modified_advice
                         .iter_mut()
-                        .zip(witness.advice[column.0][start..].iter())
+                        .zip(witness.advice[column.index][start..].iter())
                     {
                         // Multiply by p_j(\omega^i) + \delta^j \omega^i \beta
                         *modified_advice *= &(deltaomega * &x_0 + &x_1 + advice_value);
@@ -395,7 +395,7 @@ impl<C: CurveAffine> Proof<C> {
             .advice_queries
             .iter()
             .map(|&(column, at)| {
-                eval_polynomial(&advice_polys[column.0], domain.rotate_omega(x_3, at))
+                eval_polynomial(&advice_polys[column.index], domain.rotate_omega(x_3, at))
             })
             .collect();
 
@@ -403,7 +403,7 @@ impl<C: CurveAffine> Proof<C> {
             .aux_queries
             .iter()
             .map(|&(column, at)| {
-                eval_polynomial(&aux_polys[column.0], domain.rotate_omega(x_3, at))
+                eval_polynomial(&aux_polys[column.index], domain.rotate_omega(x_3, at))
             })
             .collect();
 
@@ -411,7 +411,7 @@ impl<C: CurveAffine> Proof<C> {
             .fixed_queries
             .iter()
             .map(|&(column, at)| {
-                eval_polynomial(&pk.fixed_polys[column.0], domain.rotate_omega(x_3, at))
+                eval_polynomial(&pk.fixed_polys[column.index], domain.rotate_omega(x_3, at))
             })
             .collect();
 
@@ -469,8 +469,8 @@ impl<C: CurveAffine> Proof<C> {
 
             instances.push(ProverQuery {
                 point,
-                poly: &advice_polys[column.0],
-                blind: advice_blinds[column.0],
+                poly: &advice_polys[column.index],
+                blind: advice_blinds[column.index],
                 eval: advice_evals[query_index],
             });
         }
@@ -480,7 +480,7 @@ impl<C: CurveAffine> Proof<C> {
 
             instances.push(ProverQuery {
                 point,
-                poly: &aux_polys[column.0],
+                poly: &aux_polys[column.index],
                 blind: Blind::default(),
                 eval: aux_evals[query_index],
             });
@@ -491,7 +491,7 @@ impl<C: CurveAffine> Proof<C> {
 
             instances.push(ProverQuery {
                 point,
-                poly: &pk.fixed_polys[column.0],
+                poly: &pk.fixed_polys[column.index],
                 blind: Blind::default(),
                 eval: fixed_evals[query_index],
             });

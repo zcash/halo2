@@ -114,28 +114,29 @@ fn test_proving() {
     use crate::arithmetic::{Curve, EqAffine, Field, Fp, Fq};
     use crate::poly::commitment::{Blind, Params};
     use crate::transcript::DummyHash;
+    use circuit::{Advice, Column, Fixed};
     use std::marker::PhantomData;
     const K: u32 = 5;
 
     /// This represents an advice column at a certain row in the ConstraintSystem
     #[derive(Copy, Clone, Debug)]
-    pub struct Variable(AdviceColumn, usize);
+    pub struct Variable(Column<Advice>, usize);
 
     // Initialize the polynomial commitment parameters
     let params: Params<EqAffine> = Params::new::<DummyHash<Fq>>(K);
 
     struct PLONKConfig {
-        a: AdviceColumn,
-        b: AdviceColumn,
-        c: AdviceColumn,
-        d: AdviceColumn,
-        e: AdviceColumn,
+        a: Column<Advice>,
+        b: Column<Advice>,
+        c: Column<Advice>,
+        d: Column<Advice>,
+        e: Column<Advice>,
 
-        sa: FixedColumn,
-        sb: FixedColumn,
-        sc: FixedColumn,
-        sm: FixedColumn,
-        sp: FixedColumn,
+        sa: Column<Fixed>,
+        sb: Column<Fixed>,
+        sc: Column<Fixed>,
+        sm: Column<Fixed>,
+        sp: Column<Fixed>,
 
         perm: usize,
         perm2: usize,

@@ -93,7 +93,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             let point = vk.domain.rotate_omega(x_3, at);
             queries.push(VerifierQuery {
                 point,
-                commitment: &self.advice_commitments[column.0],
+                commitment: &self.advice_commitments[column.index],
                 eval: self.advice_evals[query_index],
             });
         }
@@ -102,7 +102,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             let point = vk.domain.rotate_omega(x_3, at);
             queries.push(VerifierQuery {
                 point,
-                commitment: &aux_commitments[column.0],
+                commitment: &aux_commitments[column.index],
                 eval: self.aux_evals[query_index],
             });
         }
@@ -111,7 +111,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             let point = vk.domain.rotate_omega(x_3, at);
             queries.push(VerifierQuery {
                 point,
-                commitment: &vk.fixed_commitments[column.0],
+                commitment: &vk.fixed_commitments[column.index],
                 eval: self.fixed_evals[query_index],
             });
         }
