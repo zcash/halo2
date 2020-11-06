@@ -18,10 +18,10 @@ impl<'a, C: CurveAffine> Proof<C> {
     ) -> Result<Guard<'a, C>, Error> {
         self.check_lengths(vk, aux_commitments)?;
 
-        // Check that aux_commitments matches the expected number of aux_wires
+        // Check that aux_commitments matches the expected number of aux_columns
         // and self.aux_evals
-        if aux_commitments.len() != vk.cs.num_aux_wires
-            || self.aux_evals.len() != vk.cs.num_aux_wires
+        if aux_commitments.len() != vk.cs.num_aux_columns
+            || self.aux_evals.len() != vk.cs.num_aux_columns
         {
             return Err(Error::IncompatibleParams);
         }
@@ -89,29 +89,29 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         let mut queries: Vec<VerifierQuery<'a, C>> = Vec::new();
 
-        for (query_index, &(wire, at)) in vk.cs.advice_queries.iter().enumerate() {
+        for (query_index, &(column, at)) in vk.cs.advice_queries.iter().enumerate() {
             let point = vk.domain.rotate_omega(x_3, at);
             queries.push(VerifierQuery {
                 point,
-                commitment: &self.advice_commitments[wire.0],
+                commitment: &self.advice_commitments[column.0],
                 eval: self.advice_evals[query_index],
             });
         }
 
-        for (query_index, &(wire, at)) in vk.cs.aux_queries.iter().enumerate() {
+        for (query_index, &(column, at)) in vk.cs.aux_queries.iter().enumerate() {
             let point = vk.domain.rotate_omega(x_3, at);
             queries.push(VerifierQuery {
                 point,
-                commitment: &aux_commitments[wire.0],
+                commitment: &aux_commitments[column.0],
                 eval: self.aux_evals[query_index],
             });
         }
 
-        for (query_index, &(wire, at)) in vk.cs.fixed_queries.iter().enumerate() {
+        for (query_index, &(column, at)) in vk.cs.fixed_queries.iter().enumerate() {
             let point = vk.domain.rotate_omega(x_3, at);
             queries.push(VerifierQuery {
                 point,
-                commitment: &vk.fixed_commitments[wire.0],
+                commitment: &vk.fixed_commitments[column.0],
                 eval: self.fixed_evals[query_index],
             });
         }
@@ -193,10 +193,10 @@ impl<'a, C: CurveAffine> Proof<C> {
     /// Checks that the lengths of vectors are consistent with the constraint
     /// system
     fn check_lengths(&self, vk: &VerifyingKey<C>, aux_commitments: &[C]) -> Result<(), Error> {
-        // Check that aux_commitments matches the expected number of aux_wires
+        // Check that aux_commitments matches the expected number of aux_columns
         // and self.aux_evals
-        if aux_commitments.len() != vk.cs.num_aux_wires
-            || self.aux_evals.len() != vk.cs.num_aux_wires
+        if aux_commitments.len() != vk.cs.num_aux_columns
+            || self.aux_evals.len() != vk.cs.num_aux_columns
         {
             return Err(Error::IncompatibleParams);
         }
@@ -237,7 +237,7 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // TODO: check h_commitments
 
-        if self.advice_commitments.len() != vk.cs.num_advice_wires {
+        if self.advice_commitments.len() != vk.cs.num_advice_columns {
             return Err(Error::IncompatibleParams);
         }
 
@@ -293,12 +293,12 @@ impl<'a, C: CurveAffine> Proof<C> {
                     .zip(self.permutation_product_evals.iter())
                     .zip(self.permutation_product_inv_evals.iter())
                     .map(
-                        |(((wires, permutation_evals), product_eval), product_inv_eval)| {
+                        |(((columns, permutation_evals), product_eval), product_inv_eval)| {
                             let mut left = *product_eval;
-                            for (advice_eval, permutation_eval) in wires
+                            for (advice_eval, permutation_eval) in columns
                                 .iter()
-                                .map(|&wire| {
-                                    self.advice_evals[vk.cs.get_advice_query_index(wire, 0)]
+                                .map(|&column| {
+                                    self.advice_evals[vk.cs.get_advice_query_index(column, 0)]
                                 })
                                 .zip(permutation_evals.iter())
                             {
@@ -307,8 +307,8 @@ impl<'a, C: CurveAffine> Proof<C> {
 
                             let mut right = *product_inv_eval;
                             let mut current_delta = x_0 * &x_3;
-                            for advice_eval in wires.iter().map(|&wire| {
-                                self.advice_evals[vk.cs.get_advice_query_index(wire, 0)]
+                            for advice_eval in columns.iter().map(|&column| {
+                                self.advice_evals[vk.cs.get_advice_query_index(column, 0)]
                             }) {
                                 right *= &(advice_eval + &current_delta + &x_1);
                                 current_delta *= &C::Scalar::DELTA;

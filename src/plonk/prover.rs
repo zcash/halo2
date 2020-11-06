@@ -1,5 +1,5 @@
 use super::{
-    circuit::{AdviceWire, Assignment, Circuit, ConstraintSystem, FixedWire},
+    circuit::{AdviceColumn, Assignment, Circuit, ConstraintSystem, FixedColumn},
     hash_point, Error, Proof, ProvingKey,
 };
 use crate::arithmetic::{
@@ -27,7 +27,7 @@ impl<C: CurveAffine> Proof<C> {
         circuit: &ConcreteCircuit,
         aux: &[Polynomial<C::Scalar, LagrangeCoeff>],
     ) -> Result<Self, Error> {
-        if aux.len() != pk.vk.cs.num_aux_wires {
+        if aux.len() != pk.vk.cs.num_aux_columns {
             return Err(Error::IncompatibleParams);
         }
 
@@ -39,13 +39,13 @@ impl<C: CurveAffine> Proof<C> {
         impl<F: Field> Assignment<F> for WitnessCollection<F> {
             fn assign_advice(
                 &mut self,
-                wire: AdviceWire,
+                column: AdviceColumn,
                 row: usize,
                 to: impl FnOnce() -> Result<F, Error>,
             ) -> Result<(), Error> {
                 *self
                     .advice
-                    .get_mut(wire.0)
+                    .get_mut(column.0)
                     .and_then(|v| v.get_mut(row))
                     .ok_or(Error::BoundsFailure)? = to()?;
 
@@ -54,11 +54,11 @@ impl<C: CurveAffine> Proof<C> {
 
             fn assign_fixed(
                 &mut self,
-                _: FixedWire,
+                _: FixedColumn,
                 _: usize,
                 _: impl FnOnce() -> Result<F, Error>,
             ) -> Result<(), Error> {
-                // We only care about advice wires here
+                // We only care about advice columns here
 
                 Ok(())
             }
@@ -71,7 +71,7 @@ impl<C: CurveAffine> Proof<C> {
                 _: usize,
                 _: usize,
             ) -> Result<(), Error> {
-                // We only care about advice wires here
+                // We only care about advice columns here
 
                 Ok(())
             }
@@ -82,7 +82,7 @@ impl<C: CurveAffine> Proof<C> {
         let config = ConcreteCircuit::configure(&mut meta);
 
         let mut witness = WitnessCollection {
-            advice: vec![domain.empty_lagrange(); meta.num_advice_wires],
+            advice: vec![domain.empty_lagrange(); meta.num_advice_columns],
             _marker: std::marker::PhantomData,
         };
 
@@ -94,7 +94,7 @@ impl<C: CurveAffine> Proof<C> {
         // Create a transcript for obtaining Fiat-Shamir challenges.
         let mut transcript = HBase::init(C::Base::one());
 
-        // Compute commitments to aux wire polynomials
+        // Compute commitments to aux column polynomials
         let aux_commitments_projective: Vec<_> = aux
             .iter()
             .map(|poly| params.commit_lagrange(poly, Blind::default()))
@@ -119,13 +119,13 @@ impl<C: CurveAffine> Proof<C> {
         let aux_cosets: Vec<_> = meta
             .aux_queries
             .iter()
-            .map(|&(wire, at)| {
-                let poly = aux_polys[wire.0].clone();
+            .map(|&(column, at)| {
+                let poly = aux_polys[column.0].clone();
                 domain.coeff_to_extended(poly, at)
             })
             .collect();
 
-        // Compute commitments to advice wire polynomials
+        // Compute commitments to advice column polynomials
         let advice_blinds: Vec<_> = witness
             .advice
             .iter()
@@ -156,8 +156,8 @@ impl<C: CurveAffine> Proof<C> {
         let advice_cosets: Vec<_> = meta
             .advice_queries
             .iter()
-            .map(|&(wire, at)| {
-                let poly = advice_polys[wire.0].clone();
+            .map(|&(column, at)| {
+                let poly = advice_polys[column.0].clone();
                 domain.coeff_to_extended(poly, at)
             })
             .collect();
@@ -177,23 +177,23 @@ impl<C: CurveAffine> Proof<C> {
 
         // Iterate over each permutation
         let mut permutation_modified_advice = vec![];
-        for (wires, permuted_values) in pk.vk.cs.permutations.iter().zip(pk.permutations.iter()) {
+        for (columns, permuted_values) in pk.vk.cs.permutations.iter().zip(pk.permutations.iter()) {
             // Goal is to compute the products of fractions
             //
             // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
             // (p_j(\omega^i) + \beta s_j(\omega^i) + \gamma)
             //
-            // where p_j(X) is the jth advice wire in this permutation,
-            // and i is the ith row of the wire.
+            // where p_j(X) is the jth advice column in this permutation,
+            // and i is the ith row of the column.
             let mut modified_advice = vec![C::Scalar::one(); params.n as usize];
 
-            // Iterate over each wire of the permutation
-            for (&wire, permuted_wire_values) in wires.iter().zip(permuted_values.iter()) {
+            // Iterate over each column of the permutation
+            for (&column, permuted_column_values) in columns.iter().zip(permuted_values.iter()) {
                 parallelize(&mut modified_advice, |modified_advice, start| {
                     for ((modified_advice, advice_value), permuted_advice_value) in modified_advice
                         .iter_mut()
-                        .zip(witness.advice[wire.0][start..].iter())
-                        .zip(permuted_wire_values[start..].iter())
+                        .zip(witness.advice[column.0][start..].iter())
+                        .zip(permuted_column_values[start..].iter())
                     {
                         *modified_advice *= &(x_0 * permuted_advice_value + &x_1 + advice_value);
                     }
@@ -210,23 +210,23 @@ impl<C: CurveAffine> Proof<C> {
             .flat_map(|v| v.iter_mut())
             .batch_invert();
 
-        for (wires, mut modified_advice) in pk
+        for (columns, mut modified_advice) in pk
             .vk
             .cs
             .permutations
             .iter()
             .zip(permutation_modified_advice.into_iter())
         {
-            // Iterate over each wire again, this time finishing the computation
+            // Iterate over each column again, this time finishing the computation
             // of the entire fraction by computing the numerators
             let mut deltaomega = C::Scalar::one();
-            for &wire in wires.iter() {
+            for &column in columns.iter() {
                 let omega = domain.get_omega();
                 parallelize(&mut modified_advice, |modified_advice, start| {
                     let mut deltaomega = deltaomega * &omega.pow_vartime(&[start as u64, 0, 0, 0]);
                     for (modified_advice, advice_value) in modified_advice
                         .iter_mut()
-                        .zip(witness.advice[wire.0][start..].iter())
+                        .zip(witness.advice[column.0][start..].iter())
                     {
                         // Multiply by p_j(\omega^i) + \delta^j \omega^i \beta
                         *modified_advice *= &(deltaomega * &x_0 + &x_1 + advice_value);
@@ -242,7 +242,7 @@ impl<C: CurveAffine> Proof<C> {
             // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
             // (p_j(\omega^i) + \beta s_j(\omega^i) + \gamma)
             //
-            // where i is the index into modified_advice, for the jth wire in
+            // where i is the index into modified_advice, for the jth column in
             // the permutation
 
             // Compute the evaluations of the permutation product polynomial
@@ -315,13 +315,13 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
-        for (permutation_index, wires) in pk.vk.cs.permutations.iter().enumerate() {
+        for (permutation_index, columns) in pk.vk.cs.permutations.iter().enumerate() {
             h_poly = h_poly * x_2;
 
             let mut left = permutation_product_cosets[permutation_index].clone();
-            for (advice, permutation) in wires
+            for (advice, permutation) in columns
                 .iter()
-                .map(|&wire| &advice_cosets[pk.vk.cs.get_advice_query_index(wire, 0)])
+                .map(|&column| &advice_cosets[pk.vk.cs.get_advice_query_index(column, 0)])
                 .zip(pk.permutation_cosets[permutation_index].iter())
             {
                 parallelize(&mut left, |left, start| {
@@ -338,9 +338,9 @@ impl<C: CurveAffine> Proof<C> {
             let mut right = permutation_product_cosets_inv[permutation_index].clone();
             let mut current_delta = x_0 * &C::Scalar::ZETA;
             let step = domain.get_extended_omega();
-            for advice in wires
+            for advice in columns
                 .iter()
-                .map(|&wire| &advice_cosets[pk.vk.cs.get_advice_query_index(wire, 0)])
+                .map(|&column| &advice_cosets[pk.vk.cs.get_advice_query_index(column, 0)])
             {
                 parallelize(&mut right, move |right, start| {
                     let mut beta_term = current_delta * &step.pow_vartime(&[start as u64, 0, 0, 0]);
@@ -394,20 +394,24 @@ impl<C: CurveAffine> Proof<C> {
         let advice_evals: Vec<_> = meta
             .advice_queries
             .iter()
-            .map(|&(wire, at)| eval_polynomial(&advice_polys[wire.0], domain.rotate_omega(x_3, at)))
+            .map(|&(column, at)| {
+                eval_polynomial(&advice_polys[column.0], domain.rotate_omega(x_3, at))
+            })
             .collect();
 
         let aux_evals: Vec<_> = meta
             .aux_queries
             .iter()
-            .map(|&(wire, at)| eval_polynomial(&aux_polys[wire.0], domain.rotate_omega(x_3, at)))
+            .map(|&(column, at)| {
+                eval_polynomial(&aux_polys[column.0], domain.rotate_omega(x_3, at))
+            })
             .collect();
 
         let fixed_evals: Vec<_> = meta
             .fixed_queries
             .iter()
-            .map(|&(wire, at)| {
-                eval_polynomial(&pk.fixed_polys[wire.0], domain.rotate_omega(x_3, at))
+            .map(|&(column, at)| {
+                eval_polynomial(&pk.fixed_polys[column.0], domain.rotate_omega(x_3, at))
             })
             .collect();
 
@@ -460,34 +464,34 @@ impl<C: CurveAffine> Proof<C> {
 
         let mut instances: Vec<ProverQuery<C>> = Vec::new();
 
-        for (query_index, &(wire, at)) in pk.vk.cs.advice_queries.iter().enumerate() {
+        for (query_index, &(column, at)) in pk.vk.cs.advice_queries.iter().enumerate() {
             let point = domain.rotate_omega(x_3, at);
 
             instances.push(ProverQuery {
                 point,
-                poly: &advice_polys[wire.0],
-                blind: advice_blinds[wire.0],
+                poly: &advice_polys[column.0],
+                blind: advice_blinds[column.0],
                 eval: advice_evals[query_index],
             });
         }
 
-        for (query_index, &(wire, at)) in pk.vk.cs.aux_queries.iter().enumerate() {
+        for (query_index, &(column, at)) in pk.vk.cs.aux_queries.iter().enumerate() {
             let point = domain.rotate_omega(x_3, at);
 
             instances.push(ProverQuery {
                 point,
-                poly: &aux_polys[wire.0],
+                poly: &aux_polys[column.0],
                 blind: Blind::default(),
                 eval: aux_evals[query_index],
             });
         }
 
-        for (query_index, &(wire, at)) in pk.vk.cs.fixed_queries.iter().enumerate() {
+        for (query_index, &(column, at)) in pk.vk.cs.fixed_queries.iter().enumerate() {
             let point = domain.rotate_omega(x_3, at);
 
             instances.push(ProverQuery {
                 point,
-                poly: &pk.fixed_polys[wire.0],
+                poly: &pk.fixed_polys[column.0],
                 blind: Blind::default(),
                 eval: fixed_evals[query_index],
             });

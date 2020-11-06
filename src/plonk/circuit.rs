@@ -6,25 +6,25 @@ use super::Error;
 use crate::arithmetic::Field;
 
 use crate::poly::Rotation;
-/// This represents a wire which has a fixed (permanent) value
+/// This represents a column which has a fixed (permanent) value
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct FixedWire(pub usize);
+pub struct FixedColumn(pub usize);
 
-/// This represents a wire which has a witness-specific value
+/// This represents a column which has a witness-specific value
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct AdviceWire(pub usize);
+pub struct AdviceColumn(pub usize);
 
-/// This represents a wire which has an externally assigned value
+/// This represents a column which has an externally assigned value
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct AuxWire(pub usize);
+pub struct AuxColumn(pub usize);
 
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
 pub trait Assignment<F: Field> {
-    /// Assign an advice wire value (witness)
+    /// Assign an advice column value (witness)
     fn assign_advice(
         &mut self,
-        wire: AdviceWire,
+        column: AdviceColumn,
         row: usize,
         to: impl FnOnce() -> Result<F, Error>,
     ) -> Result<(), Error>;
@@ -32,18 +32,18 @@ pub trait Assignment<F: Field> {
     /// Assign a fixed value
     fn assign_fixed(
         &mut self,
-        wire: FixedWire,
+        column: FixedColumn,
         row: usize,
         to: impl FnOnce() -> Result<F, Error>,
     ) -> Result<(), Error>;
 
-    /// Assign two advice wires to have the same value
+    /// Assign two advice columns to have the same value
     fn copy(
         &mut self,
         permutation: usize,
-        left_wire: usize,
+        left_column: usize,
         left_row: usize,
-        right_wire: usize,
+        right_column: usize,
         right_row: usize,
     ) -> Result<(), Error>;
 }
@@ -52,11 +52,11 @@ pub trait Assignment<F: Field> {
 /// backend prover can ask the circuit to synthesize using some given
 /// [`ConstraintSystem`] implementation.
 pub trait Circuit<F: Field> {
-    /// This is a configuration object that stores things like wires.
+    /// This is a configuration object that stores things like columns.
     type Config;
 
     /// The circuit is given an opportunity to describe the exact gate
-    /// arrangement, wire arrangement, etc.
+    /// arrangement, column arrangement, etc.
     fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config;
 
     /// Given the provided `cs`, synthesize the circuit. The concrete type of
@@ -65,14 +65,14 @@ pub trait Circuit<F: Field> {
     fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error>;
 }
 
-/// Low-degree expression representing an identity that must hold over the committed wires.
+/// Low-degree expression representing an identity that must hold over the committed columns.
 #[derive(Clone, Debug)]
 pub enum Expression<F> {
-    /// This is a fixed wire queried at a certain relative location
+    /// This is a fixed column queried at a certain relative location
     Fixed(usize),
-    /// This is an advice (witness) wire queried at a certain relative location
+    /// This is an advice (witness) column queried at a certain relative location
     Advice(usize),
-    /// This is an auxiliary (external) wire queried at a certain relative location
+    /// This is an auxiliary (external) column queried at a certain relative location
     Aux(usize),
     /// This is the sum of two polynomials
     Sum(Box<Expression<F>>, Box<Expression<F>>),
@@ -87,29 +87,64 @@ impl<F: Field> Expression<F> {
     /// operations.
     pub fn evaluate<T>(
         &self,
-        fixed_wire: &impl Fn(usize) -> T,
-        advice_wire: &impl Fn(usize) -> T,
-        aux_wire: &impl Fn(usize) -> T,
+        fixed_column: &impl Fn(usize) -> T,
+        advice_column: &impl Fn(usize) -> T,
+        aux_column: &impl Fn(usize) -> T,
         sum: &impl Fn(T, T) -> T,
         product: &impl Fn(T, T) -> T,
         scaled: &impl Fn(T, F) -> T,
     ) -> T {
         match self {
-            Expression::Fixed(index) => fixed_wire(*index),
-            Expression::Advice(index) => advice_wire(*index),
-            Expression::Aux(index) => aux_wire(*index),
+            Expression::Fixed(index) => fixed_column(*index),
+            Expression::Advice(index) => advice_column(*index),
+            Expression::Aux(index) => aux_column(*index),
             Expression::Sum(a, b) => {
-                let a = a.evaluate(fixed_wire, advice_wire, aux_wire, sum, product, scaled);
-                let b = b.evaluate(fixed_wire, advice_wire, aux_wire, sum, product, scaled);
+                let a = a.evaluate(
+                    fixed_column,
+                    advice_column,
+                    aux_column,
+                    sum,
+                    product,
+                    scaled,
+                );
+                let b = b.evaluate(
+                    fixed_column,
+                    advice_column,
+                    aux_column,
+                    sum,
+                    product,
+                    scaled,
+                );
                 sum(a, b)
             }
             Expression::Product(a, b) => {
-                let a = a.evaluate(fixed_wire, advice_wire, aux_wire, sum, product, scaled);
-                let b = b.evaluate(fixed_wire, advice_wire, aux_wire, sum, product, scaled);
+                let a = a.evaluate(
+                    fixed_column,
+                    advice_column,
+                    aux_column,
+                    sum,
+                    product,
+                    scaled,
+                );
+                let b = b.evaluate(
+                    fixed_column,
+                    advice_column,
+                    aux_column,
+                    sum,
+                    product,
+                    scaled,
+                );
                 product(a, b)
             }
             Expression::Scaled(a, f) => {
-                let a = a.evaluate(fixed_wire, advice_wire, aux_wire, sum, product, scaled);
+                let a = a.evaluate(
+                    fixed_column,
+                    advice_column,
+                    aux_column,
+                    sum,
+                    product,
+                    scaled,
+                );
                 scaled(a, *f)
             }
         }
@@ -154,24 +189,24 @@ impl<F> Mul<F> for Expression<F> {
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct PointIndex(pub usize);
 
-/// This is a description of the circuit environment, such as the gate, wire and
+/// This is a description of the circuit environment, such as the gate, column and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
 pub struct ConstraintSystem<F> {
-    pub(crate) num_fixed_wires: usize,
-    pub(crate) num_advice_wires: usize,
-    pub(crate) num_aux_wires: usize,
+    pub(crate) num_fixed_columns: usize,
+    pub(crate) num_advice_columns: usize,
+    pub(crate) num_aux_columns: usize,
     pub(crate) gates: Vec<Expression<F>>,
-    pub(crate) advice_queries: Vec<(AdviceWire, Rotation)>,
-    pub(crate) aux_queries: Vec<(AuxWire, Rotation)>,
-    pub(crate) fixed_queries: Vec<(FixedWire, Rotation)>,
+    pub(crate) advice_queries: Vec<(AdviceColumn, Rotation)>,
+    pub(crate) aux_queries: Vec<(AuxColumn, Rotation)>,
+    pub(crate) fixed_queries: Vec<(FixedColumn, Rotation)>,
 
     // Mapping from a witness vector rotation to the index in the point vector.
     pub(crate) rotations: BTreeMap<Rotation, PointIndex>,
 
-    // Vector of permutation arguments, where each corresponds to a set of wires
+    // Vector of permutation arguments, where each corresponds to a set of columns
     // that are involved in a permutation argument.
-    pub(crate) permutations: Vec<Vec<AdviceWire>>,
+    pub(crate) permutations: Vec<Vec<AdviceColumn>>,
 }
 
 impl<F: Field> Default for ConstraintSystem<F> {
@@ -180,9 +215,9 @@ impl<F: Field> Default for ConstraintSystem<F> {
         rotations.insert(Rotation::default(), PointIndex(0));
 
         ConstraintSystem {
-            num_fixed_wires: 0,
-            num_advice_wires: 0,
-            num_aux_wires: 0,
+            num_fixed_columns: 0,
+            num_advice_columns: 0,
+            num_aux_columns: 0,
             gates: vec![],
             fixed_queries: Vec::new(),
             advice_queries: Vec::new(),
@@ -194,8 +229,8 @@ impl<F: Field> Default for ConstraintSystem<F> {
 }
 
 impl<F: Field> ConstraintSystem<F> {
-    /// Add a permutation argument for some advice wires
-    pub fn permutation(&mut self, wires: &[AdviceWire]) -> usize {
+    /// Add a permutation argument for some advice columns
+    pub fn permutation(&mut self, columns: &[AdviceColumn]) -> usize {
         let index = self.permutations.len();
         if self.permutations.is_empty() {
             let at = Rotation(-1);
@@ -203,15 +238,15 @@ impl<F: Field> ConstraintSystem<F> {
             self.rotations.entry(at).or_insert(PointIndex(len));
         }
 
-        for wire in wires {
-            self.query_advice_index(*wire, 0);
+        for column in columns {
+            self.query_advice_index(*column, 0);
         }
-        self.permutations.push(wires.to_vec());
+        self.permutations.push(columns.to_vec());
 
         index
     }
 
-    fn query_fixed_index(&mut self, wire: FixedWire, at: i32) -> usize {
+    fn query_fixed_index(&mut self, column: FixedColumn, at: i32) -> usize {
         let at = Rotation(at);
         {
             let len = self.rotations.len();
@@ -220,27 +255,27 @@ impl<F: Field> ConstraintSystem<F> {
 
         // Return existing query, if it exists
         for (index, fixed_query) in self.fixed_queries.iter().enumerate() {
-            if fixed_query == &(wire, at) {
+            if fixed_query == &(column, at) {
                 return index;
             }
         }
 
         // Make a new query
         let index = self.fixed_queries.len();
-        self.fixed_queries.push((wire, at));
+        self.fixed_queries.push((column, at));
 
         index
     }
 
-    /// Query a fixed wire at a relative position
-    pub fn query_fixed(&mut self, wire: FixedWire, at: i32) -> Expression<F> {
-        Expression::Fixed(self.query_fixed_index(wire, at))
+    /// Query a fixed column at a relative position
+    pub fn query_fixed(&mut self, column: FixedColumn, at: i32) -> Expression<F> {
+        Expression::Fixed(self.query_fixed_index(column, at))
     }
 
-    pub(crate) fn get_advice_query_index(&self, wire: AdviceWire, at: i32) -> usize {
+    pub(crate) fn get_advice_query_index(&self, column: AdviceColumn, at: i32) -> usize {
         let at = Rotation(at);
         for (index, advice_query) in self.advice_queries.iter().enumerate() {
-            if advice_query == &(wire, at) {
+            if advice_query == &(column, at) {
                 return index;
             }
         }
@@ -248,7 +283,7 @@ impl<F: Field> ConstraintSystem<F> {
         panic!("get_advice_query_index called for non-existant query");
     }
 
-    pub(crate) fn query_advice_index(&mut self, wire: AdviceWire, at: i32) -> usize {
+    pub(crate) fn query_advice_index(&mut self, column: AdviceColumn, at: i32) -> usize {
         let at = Rotation(at);
         {
             let len = self.rotations.len();
@@ -257,24 +292,24 @@ impl<F: Field> ConstraintSystem<F> {
 
         // Return existing query, if it exists
         for (index, advice_query) in self.advice_queries.iter().enumerate() {
-            if advice_query == &(wire, at) {
+            if advice_query == &(column, at) {
                 return index;
             }
         }
 
         // Make a new query
         let index = self.advice_queries.len();
-        self.advice_queries.push((wire, at));
+        self.advice_queries.push((column, at));
 
         index
     }
 
-    /// Query an advice wire at a relative position
-    pub fn query_advice(&mut self, wire: AdviceWire, at: i32) -> Expression<F> {
-        Expression::Advice(self.query_advice_index(wire, at))
+    /// Query an advice column at a relative position
+    pub fn query_advice(&mut self, column: AdviceColumn, at: i32) -> Expression<F> {
+        Expression::Advice(self.query_advice_index(column, at))
     }
 
-    fn query_aux_index(&mut self, wire: AuxWire, at: i32) -> usize {
+    fn query_aux_index(&mut self, column: AuxColumn, at: i32) -> usize {
         let at = Rotation(at);
         {
             let len = self.rotations.len();
@@ -283,21 +318,21 @@ impl<F: Field> ConstraintSystem<F> {
 
         // Return existing query, if it exists
         for (index, aux_query) in self.aux_queries.iter().enumerate() {
-            if aux_query == &(wire, at) {
+            if aux_query == &(column, at) {
                 return index;
             }
         }
 
         // Make a new query
         let index = self.aux_queries.len();
-        self.aux_queries.push((wire, at));
+        self.aux_queries.push((column, at));
 
         index
     }
 
-    /// Query an auxiliary wire at a relative position
-    pub fn query_aux(&mut self, wire: AuxWire, at: i32) -> Expression<F> {
-        Expression::Aux(self.query_aux_index(wire, at))
+    /// Query an auxiliary column at a relative position
+    pub fn query_aux(&mut self, column: AuxColumn, at: i32) -> Expression<F> {
+        Expression::Aux(self.query_aux_index(column, at))
     }
 
     /// Create a new gate
@@ -306,24 +341,24 @@ impl<F: Field> ConstraintSystem<F> {
         self.gates.push(poly);
     }
 
-    /// Allocate a new fixed wire
-    pub fn fixed_wire(&mut self) -> FixedWire {
-        let tmp = FixedWire(self.num_fixed_wires);
-        self.num_fixed_wires += 1;
+    /// Allocate a new fixed column
+    pub fn fixed_column(&mut self) -> FixedColumn {
+        let tmp = FixedColumn(self.num_fixed_columns);
+        self.num_fixed_columns += 1;
         tmp
     }
 
-    /// Allocate a new advice wire
-    pub fn advice_wire(&mut self) -> AdviceWire {
-        let tmp = AdviceWire(self.num_advice_wires);
-        self.num_advice_wires += 1;
+    /// Allocate a new advice column
+    pub fn advice_column(&mut self) -> AdviceColumn {
+        let tmp = AdviceColumn(self.num_advice_columns);
+        self.num_advice_columns += 1;
         tmp
     }
 
-    /// Allocate a new auxiliary wire
-    pub fn aux_wire(&mut self) -> AuxWire {
-        let tmp = AuxWire(self.num_aux_wires);
-        self.num_aux_wires += 1;
+    /// Allocate a new auxiliary column
+    pub fn aux_column(&mut self) -> AuxColumn {
+        let tmp = AuxColumn(self.num_aux_columns);
+        self.num_aux_columns += 1;
         tmp
     }
 }
