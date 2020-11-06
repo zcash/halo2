@@ -399,6 +399,17 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
+    /// Query an Any column at a relative position
+    fn query_any_index(&mut self, column: Column<Any>, at: i32) -> usize {
+        let index = match column.column_type {
+            Any::Advice => self.query_advice_index(Column::<Advice>::from(column), at),
+            Any::Fixed => self.query_fixed_index(Column::<Fixed>::from(column), at),
+            Any::Aux => self.query_aux_index(Column::<Aux>::from(column), at),
+        };
+
+        index
+    }
+
     /// Query an auxiliary column at a relative position
     pub fn query_aux(&mut self, column: Column<Aux>, at: i32) -> Expression<F> {
         Expression::Aux(self.query_aux_index(column, at))
@@ -412,7 +423,7 @@ impl<F: Field> ConstraintSystem<F> {
             }
         }
 
-        panic!("get_advice_query_index called for non-existant query");
+        panic!("get_advice_query_index called for non-existent query");
     }
 
     pub(crate) fn get_fixed_query_index(&self, column: Column<Fixed>, at: i32) -> usize {
@@ -424,6 +435,27 @@ impl<F: Field> ConstraintSystem<F> {
         }
 
         panic!("get_fixed_query_index called for non-existent query");
+    }
+
+    pub(crate) fn get_aux_query_index(&self, column: Column<Aux>, at: i32) -> usize {
+        let at = Rotation(at);
+        for (index, aux_query) in self.aux_queries.iter().enumerate() {
+            if aux_query == &(column, at) {
+                return index;
+            }
+        }
+
+        panic!("get_aux_query_index called for non-existent query");
+    }
+
+    pub(crate) fn get_any_query_index(&self, column: Column<Any>, at: i32) -> usize {
+        let index = match column.column_type {
+            Any::Advice => self.get_advice_query_index(Column::<Advice>::from(column), at),
+            Any::Fixed => self.get_fixed_query_index(Column::<Fixed>::from(column), at),
+            Any::Aux => self.get_aux_query_index(Column::<Aux>::from(column), at),
+        };
+
+        index
     }
 
     /// Create a new gate
