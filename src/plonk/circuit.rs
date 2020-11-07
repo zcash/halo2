@@ -284,7 +284,7 @@ pub struct ConstraintSystem<F> {
     // Mapping from a witness vector rotation to the index in the point vector.
     pub(crate) rotations: BTreeMap<Rotation, PointIndex>,
 
-    // Vector of permutation arguments, where each corresponds to a set of columns
+    // Vector of permutation arguments, where each corresponds to a sequence of columns
     // that are involved in a permutation argument.
     pub(crate) permutations: Vec<Vec<Column<Advice>>>,
 }
@@ -399,7 +399,11 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
-    /// Query an Any column at a relative position
+    /// Query an auxiliary column at a relative position
+    pub fn query_aux(&mut self, column: Column<Aux>, at: i32) -> Expression<F> {
+        Expression::Aux(self.query_aux_index(column, at))
+    }
+
     fn query_any_index(&mut self, column: Column<Any>, at: i32) -> usize {
         let index = match column.column_type {
             Any::Advice => self.query_advice_index(Column::<Advice>::from(column), at),
@@ -410,9 +414,17 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
-    /// Query an auxiliary column at a relative position
-    pub fn query_aux(&mut self, column: Column<Aux>, at: i32) -> Expression<F> {
-        Expression::Aux(self.query_aux_index(column, at))
+    /// Query an Any column at a relative position
+    pub fn query_any(&mut self, column: Column<Any>, at: i32) -> Expression<F> {
+        match column.column_type {
+            Any::Advice => {
+                Expression::Advice(self.query_advice_index(Column::<Advice>::from(column), at))
+            }
+            Any::Fixed => {
+                Expression::Fixed(self.query_fixed_index(Column::<Fixed>::from(column), at))
+            }
+            Any::Aux => Expression::Aux(self.query_aux_index(Column::<Aux>::from(column), at)),
+        }
     }
 
     pub(crate) fn get_advice_query_index(&self, column: Column<Advice>, at: i32) -> usize {
