@@ -4,6 +4,7 @@ version = "0.0.1"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
     "Ying Tong Lai <yingtong@electriccoin.co>",
+    "Daira Hopwood <daira@electriccoin.co>",
 ]
 edition = "2018"
 description = """
