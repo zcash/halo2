@@ -13,8 +13,18 @@ pub trait ColumnType: 'static + Sized {}
 /// A column with an index and type
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Column<C: ColumnType> {
-    pub(crate) index: usize,
-    pub(crate) column_type: C,
+    index: usize,
+    column_type: C,
+}
+
+impl<C: ColumnType> Column<C> {
+    pub(crate) fn index(&self) -> usize {
+        self.index
+    }
+
+    pub(crate) fn column_type(&self) -> &C {
+        &self.column_type
+    }
 }
 
 /// An advice column
@@ -48,7 +58,7 @@ impl ColumnType for Any {}
 impl From<Column<Advice>> for Column<Any> {
     fn from(advice: Column<Advice>) -> Column<Any> {
         Column {
-            index: advice.index,
+            index: advice.index(),
             column_type: Any::Advice,
         }
     }
@@ -57,7 +67,7 @@ impl From<Column<Advice>> for Column<Any> {
 impl From<Column<Fixed>> for Column<Any> {
     fn from(advice: Column<Fixed>) -> Column<Any> {
         Column {
-            index: advice.index,
+            index: advice.index(),
             column_type: Any::Fixed,
         }
     }
@@ -66,7 +76,7 @@ impl From<Column<Fixed>> for Column<Any> {
 impl From<Column<Aux>> for Column<Any> {
     fn from(advice: Column<Aux>) -> Column<Any> {
         Column {
-            index: advice.index,
+            index: advice.index(),
             column_type: Any::Aux,
         }
     }
@@ -76,10 +86,10 @@ impl TryFrom<Column<Any>> for Column<Advice> {
     type Error = &'static str;
 
     fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
-        match any.column_type {
+        match any.column_type() {
             Any::Advice => {
                 return Ok(Column {
-                    index: any.index,
+                    index: any.index(),
                     column_type: Advice,
                 })
             }
@@ -92,10 +102,10 @@ impl TryFrom<Column<Any>> for Column<Fixed> {
     type Error = &'static str;
 
     fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
-        match any.column_type {
+        match any.column_type() {
             Any::Fixed => {
                 return Ok(Column {
-                    index: any.index,
+                    index: any.index(),
                     column_type: Fixed,
                 })
             }
@@ -108,10 +118,10 @@ impl TryFrom<Column<Any>> for Column<Aux> {
     type Error = &'static str;
 
     fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
-        match any.column_type {
+        match any.column_type() {
             Any::Aux => {
                 return Ok(Column {
-                    index: any.index,
+                    index: any.index(),
                     column_type: Aux,
                 })
             }
@@ -427,7 +437,7 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     fn query_any_index(&mut self, column: Column<Any>, at: i32) -> usize {
-        let index = match column.column_type {
+        let index = match column.column_type() {
             Any::Advice => self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
             Any::Fixed => self.query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
             Any::Aux => self.query_aux_index(Column::<Aux>::try_from(column).unwrap(), at),
@@ -438,7 +448,7 @@ impl<F: Field> ConstraintSystem<F> {
 
     /// Query an Any column at a relative position
     pub fn query_any(&mut self, column: Column<Any>, at: i32) -> Expression<F> {
-        match column.column_type {
+        match column.column_type() {
             Any::Advice => Expression::Advice(
                 self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
             ),
@@ -485,7 +495,7 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     pub(crate) fn get_any_query_index(&self, column: Column<Any>, at: i32) -> usize {
-        let index = match column.column_type {
+        let index = match column.column_type() {
             Any::Advice => {
                 self.get_advice_query_index(Column::<Advice>::try_from(column).unwrap(), at)
             }

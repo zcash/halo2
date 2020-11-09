@@ -44,7 +44,7 @@ where
         ) -> Result<(), Error> {
             *self
                 .fixed
-                .get_mut(column.index)
+                .get_mut(column.index())
                 .and_then(|v| v.get_mut(row))
                 .ok_or(Error::BoundsFailure)? = to()?;
 
@@ -230,7 +230,7 @@ where
         .fixed_queries
         .iter()
         .map(|&(column, at)| {
-            let poly = fixed_polys[column.index].clone();
+            let poly = fixed_polys[column.index()].clone();
             domain.coeff_to_extended(poly, at)
         })
         .collect();
