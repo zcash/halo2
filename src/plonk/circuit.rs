@@ -1,6 +1,7 @@
 use core::cmp::max;
 use core::ops::{Add, Mul};
 use std::collections::BTreeMap;
+use std::convert::TryFrom;
 
 use super::Error;
 use crate::arithmetic::Field;
@@ -71,29 +72,50 @@ impl From<Column<Aux>> for Column<Any> {
     }
 }
 
-impl From<Column<Any>> for Column<Advice> {
-    fn from(any: Column<Any>) -> Column<Advice> {
-        Column {
-            index: any.index,
-            column_type: Advice,
+impl TryFrom<Column<Any>> for Column<Advice> {
+    type Error = &'static str;
+
+    fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
+        match any.column_type {
+            Any::Advice => {
+                return Ok(Column {
+                    index: any.index,
+                    column_type: Advice,
+                })
+            }
+            _ => Err("Cannot convert into Column<Advice>"),
         }
     }
 }
 
-impl From<Column<Any>> for Column<Fixed> {
-    fn from(any: Column<Any>) -> Column<Fixed> {
-        Column {
-            index: any.index,
-            column_type: Fixed,
+impl TryFrom<Column<Any>> for Column<Fixed> {
+    type Error = &'static str;
+
+    fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
+        match any.column_type {
+            Any::Fixed => {
+                return Ok(Column {
+                    index: any.index,
+                    column_type: Fixed,
+                })
+            }
+            _ => Err("Cannot convert into Column<Fixed>"),
         }
     }
 }
 
-impl From<Column<Any>> for Column<Aux> {
-    fn from(any: Column<Any>) -> Column<Aux> {
-        Column {
-            index: any.index,
-            column_type: Aux,
+impl TryFrom<Column<Any>> for Column<Aux> {
+    type Error = &'static str;
+
+    fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
+        match any.column_type {
+            Any::Aux => {
+                return Ok(Column {
+                    index: any.index,
+                    column_type: Aux,
+                })
+            }
+            _ => Err("Cannot convert into Column<Aux>"),
         }
     }
 }
@@ -406,9 +428,9 @@ impl<F: Field> ConstraintSystem<F> {
 
     fn query_any_index(&mut self, column: Column<Any>, at: i32) -> usize {
         let index = match column.column_type {
-            Any::Advice => self.query_advice_index(Column::<Advice>::from(column), at),
-            Any::Fixed => self.query_fixed_index(Column::<Fixed>::from(column), at),
-            Any::Aux => self.query_aux_index(Column::<Aux>::from(column), at),
+            Any::Advice => self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
+            Any::Fixed => self.query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
+            Any::Aux => self.query_aux_index(Column::<Aux>::try_from(column).unwrap(), at),
         };
 
         index
@@ -417,13 +439,15 @@ impl<F: Field> ConstraintSystem<F> {
     /// Query an Any column at a relative position
     pub fn query_any(&mut self, column: Column<Any>, at: i32) -> Expression<F> {
         match column.column_type {
-            Any::Advice => {
-                Expression::Advice(self.query_advice_index(Column::<Advice>::from(column), at))
+            Any::Advice => Expression::Advice(
+                self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
+            ),
+            Any::Fixed => Expression::Fixed(
+                self.query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
+            ),
+            Any::Aux => {
+                Expression::Aux(self.query_aux_index(Column::<Aux>::try_from(column).unwrap(), at))
             }
-            Any::Fixed => {
-                Expression::Fixed(self.query_fixed_index(Column::<Fixed>::from(column), at))
-            }
-            Any::Aux => Expression::Aux(self.query_aux_index(Column::<Aux>::from(column), at)),
         }
     }
 
@@ -462,9 +486,13 @@ impl<F: Field> ConstraintSystem<F> {
 
     pub(crate) fn get_any_query_index(&self, column: Column<Any>, at: i32) -> usize {
         let index = match column.column_type {
-            Any::Advice => self.get_advice_query_index(Column::<Advice>::from(column), at),
-            Any::Fixed => self.get_fixed_query_index(Column::<Fixed>::from(column), at),
-            Any::Aux => self.get_aux_query_index(Column::<Aux>::from(column), at),
+            Any::Advice => {
+                self.get_advice_query_index(Column::<Advice>::try_from(column).unwrap(), at)
+            }
+            Any::Fixed => {
+                self.get_fixed_query_index(Column::<Fixed>::try_from(column).unwrap(), at)
+            }
+            Any::Aux => self.get_aux_query_index(Column::<Aux>::try_from(column).unwrap(), at),
         };
 
         index
