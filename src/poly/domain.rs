@@ -45,38 +45,50 @@ impl<G: Group> EvaluationDomain<G> {
         // quotient_poly_degree * params.n - 1 is the degree of the quotient polynomial
         let quotient_poly_degree = (j - 1) as u64;
 
+        // n = 2^k
         let n = 1u64 << k;
 
-        // We need to work within an extended domain, not params.k but params.k + j
-        // such that 2^(params.k + j) is sufficiently large to describe the quotient
-        // polynomial.
+        // We need to work within an extended domain, not params.k but params.k + i
+        // for some integer i such that 2^(params.k + i) is sufficiently large to
+        // describe the quotient polynomial.
         let mut extended_k = k;
         while (1 << extended_k) < (n * quotient_poly_degree) {
             extended_k += 1;
         }
 
         let mut extended_omega = G::Scalar::ROOT_OF_UNITY;
+
+        // Get extended_omega, the 2^{extended_k}'th root of unity
+        // The loop computes extended_omega = omega^{2 ^ (S - extended_k)}
+        // Notice that extended_omega ^ {2 ^ extended_k} = omega ^ {2^S} = 1.
         for _ in extended_k..G::Scalar::S {
             extended_omega = extended_omega.square();
         }
-        let extended_omega = extended_omega; // 2^{j+k}'th root of unity
+        let extended_omega = extended_omega;
         let mut extended_omega_inv = extended_omega; // Inversion computed later
 
+        // Get omega, the 2^{k}'th root of unity (i.e. n'th root of unity)
+        // The loop computes omega = extended_omega ^ {2 ^ (extended_k - k)}
+        //           = (omega^{2 ^ (S - extended_k)})  ^ {2 ^ (extended_k - k)}
+        //           = omega ^ {2 ^ (S - k)}.
+        // Notice that omega ^ {2^k} = omega ^ {2^S} = 1.
         let mut omega = extended_omega;
         for _ in k..extended_k {
             omega = omega.square();
         }
-        let omega = omega; // 2^{k}'th root of unity
+        let omega = omega;
         let mut omega_inv = omega; // Inversion computed later
 
         // We use zeta here because we know it generates a coset, and it's available
         // already.
+        // The coset evaluation domain is:
+        // zeta {1, extended_omega, extended_omega^2, ..., extended_omega^{(2^extended_k) - 1}}
         let g_coset = G::Scalar::ZETA;
         let g_coset_inv = g_coset.square();
 
         let mut t_evaluations = Vec::with_capacity(1 << (extended_k - k));
         {
-            // Compute the evaluations of t(X) in the coset evaluation domain.
+            // Compute the evaluations of t(X) = X^n - 1 in the coset evaluation domain.
             // We don't have to compute all of them, because it will repeat.
             let orig = G::Scalar::ZETA.pow_vartime(&[n as u64, 0, 0, 0]);
             let step = extended_omega.pow_vartime(&[n as u64, 0, 0, 0]);
@@ -199,7 +211,7 @@ impl<G: Group> EvaluationDomain<G> {
         }
     }
 
-    /// This takes us from an n-length coefficient vector into the extended
+    /// This takes us from an n-length coefficient vector into a coset of the extended
     /// evaluation domain, rotating by `rotation` if desired.
     pub fn coeff_to_extended(
         &self,
@@ -212,9 +224,9 @@ impl<G: Group> EvaluationDomain<G> {
         if rotation.0 == 0 {
             // In this special case, the powers of zeta repeat so we do not need
             // to compute them.
-            Self::distribute_powers_zeta(&mut a.values, self.g_coset);
+            Self::distribute_powers_zeta(&mut a.values);
         } else {
-            let mut g = G::Scalar::ZETA;
+            let mut g = self.g_coset;
             if rotation.0 > 0 {
                 g *= &self.omega.pow_vartime(&[rotation.0 as u64, 0, 0, 0]);
             } else {
@@ -286,8 +298,12 @@ impl<G: Group> EvaluationDomain<G> {
         }
     }
 
-    fn distribute_powers_zeta(mut a: &mut [G], g: G::Scalar) {
-        let coset_powers = [g, g.square()];
+    // Given a slice of group elements `[a_0, a_1, a_2, ...]`, this returns
+    // `[a_0, [zeta]a_1, [zeta^2]a_2, a_3, [zeta]a_4, [zeta^2]a_5, a_6, ...]`,
+    // where zeta is a cube root of unity in the multiplicative subgroup with
+    // order (p - 1), i.e. zeta^3 = 1.
+    fn distribute_powers_zeta(mut a: &mut [G]) {
+        let coset_powers = [G::Scalar::ZETA, G::Scalar::ZETA.square()];
         parallelize(&mut a, |a, mut index| {
             for a in a {
                 // Distribute powers to move into coset
@@ -300,6 +316,8 @@ impl<G: Group> EvaluationDomain<G> {
         });
     }
 
+    // Given a length-`n` slice of group elements `a` and a scalar `g`, this
+    // returns `[a_0, [g]a_1, [g^2]a_2, [g^3]a_3, ..., [g^n-1] a_{n-1}]`.
     fn distribute_powers(mut a: &mut [G], g: G::Scalar) {
         parallelize(&mut a, |a, index| {
             let mut cur = g.pow_vartime(&[index as u64, 0, 0, 0]);
