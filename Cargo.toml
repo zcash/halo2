@@ -35,5 +35,6 @@ harness = false
 [dependencies]
 subtle = "2.2.1"
 crossbeam-utils = "0.7"
+metrics = "0.13.0-alpha.8"
 num_cpus = "1.13"
 rand = "0.7"
