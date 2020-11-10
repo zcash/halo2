@@ -141,6 +141,7 @@ impl<C: CurveAffine> Proof<C> {
         C::Projective::batch_to_affine(&advice_commitments_projective, &mut advice_commitments);
         let advice_commitments = advice_commitments;
         drop(advice_commitments_projective);
+        metrics::counter!("advice_commitments", advice_commitments.len() as u64);
 
         for commitment in &advice_commitments {
             hash_point(&mut transcript, commitment)?;
