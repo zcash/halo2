@@ -1,5 +1,5 @@
 use super::{
-    circuit::{AdviceWire, Assignment, Circuit, ConstraintSystem, FixedWire},
+    circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
     Error, ProvingKey, VerifyingKey,
 };
 use crate::arithmetic::{Curve, CurveAffine, Field};
@@ -28,23 +28,23 @@ where
     impl<F: Field> Assignment<F> for Assembly<F> {
         fn assign_advice(
             &mut self,
-            _: AdviceWire,
+            _: Column<Advice>,
             _: usize,
             _: impl FnOnce() -> Result<F, Error>,
         ) -> Result<(), Error> {
-            // We only care about fixed wires here
+            // We only care about fixed columns here
             Ok(())
         }
 
         fn assign_fixed(
             &mut self,
-            wire: FixedWire,
+            column: Column<Fixed>,
             row: usize,
             to: impl FnOnce() -> Result<F, Error>,
         ) -> Result<(), Error> {
             *self
                 .fixed
-                .get_mut(wire.0)
+                .get_mut(column.index())
                 .and_then(|v| v.get_mut(row))
                 .ok_or(Error::BoundsFailure)? = to()?;
 
@@ -54,23 +54,23 @@ where
         fn copy(
             &mut self,
             permutation: usize,
-            left_wire: usize,
+            left_column: usize,
             left_row: usize,
-            right_wire: usize,
+            right_column: usize,
             right_row: usize,
         ) -> Result<(), Error> {
             // Check bounds first
             if permutation >= self.mapping.len()
-                || left_wire >= self.mapping[permutation].len()
-                || left_row >= self.mapping[permutation][left_wire].len()
-                || right_wire >= self.mapping[permutation].len()
-                || right_row >= self.mapping[permutation][right_wire].len()
+                || left_column >= self.mapping[permutation].len()
+                || left_row >= self.mapping[permutation][left_column].len()
+                || right_column >= self.mapping[permutation].len()
+                || right_row >= self.mapping[permutation][right_column].len()
             {
                 return Err(Error::BoundsFailure);
             }
 
-            let mut left_cycle = self.aux[permutation][left_wire][left_row];
-            let mut right_cycle = self.aux[permutation][right_wire][right_row];
+            let mut left_cycle = self.aux[permutation][left_column][left_row];
+            let mut right_cycle = self.aux[permutation][right_column][right_row];
 
             if left_cycle == right_cycle {
                 return Ok(());
@@ -93,10 +93,10 @@ where
                 }
             }
 
-            let tmp = self.mapping[permutation][left_wire][left_row];
-            self.mapping[permutation][left_wire][left_row] =
-                self.mapping[permutation][right_wire][right_row];
-            self.mapping[permutation][right_wire][right_row] = tmp;
+            let tmp = self.mapping[permutation][left_column][left_row];
+            self.mapping[permutation][left_column][left_row] =
+                self.mapping[permutation][right_column][right_row];
+            self.mapping[permutation][right_column][right_row] = tmp;
 
             Ok(())
         }
@@ -106,7 +106,7 @@ where
     let config = ConcreteCircuit::configure(&mut cs);
 
     // Get the largest permutation argument length in terms of the number of
-    // advice wires involved.
+    // advice columns involved.
     let mut largest_permutation_length = 0;
     for permutation in &cs.permutations {
         largest_permutation_length = std::cmp::max(permutation.len(), largest_permutation_length);
@@ -151,7 +151,7 @@ where
     }
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
-        fixed: vec![domain.empty_lagrange(); cs.num_fixed_wires],
+        fixed: vec![domain.empty_lagrange(); cs.num_fixed_columns],
         mapping: vec![],
         aux: vec![],
         sizes: vec![],
@@ -161,13 +161,13 @@ where
     // Initialize the copy vector to keep track of copy constraints in all
     // the permutation arguments.
     for permutation in &cs.permutations {
-        let mut wires = vec![];
+        let mut columns = vec![];
         for i in 0..permutation.len() {
             // Computes [(i, 0), (i, 1), ..., (i, n - 1)]
-            wires.push((0..params.n).map(|j| (i, j as usize)).collect());
+            columns.push((0..params.n).map(|j| (i, j as usize)).collect());
         }
-        assembly.mapping.push(wires.clone());
-        assembly.aux.push(wires);
+        assembly.mapping.push(columns.clone());
+        assembly.aux.push(columns);
         assembly
             .sizes
             .push(vec![vec![1usize; params.n as usize]; permutation.len()]);
@@ -229,8 +229,8 @@ where
     let fixed_cosets = cs
         .fixed_queries
         .iter()
-        .map(|&(wire, at)| {
-            let poly = fixed_polys[wire.0].clone();
+        .map(|&(column, at)| {
+            let poly = fixed_polys[column.index()].clone();
             domain.coeff_to_extended(poly, at)
         })
         .collect();

@@ -114,28 +114,29 @@ fn test_proving() {
     use crate::arithmetic::{Curve, EqAffine, Field, Fp, Fq};
     use crate::poly::commitment::{Blind, Params};
     use crate::transcript::DummyHash;
+    use circuit::{Advice, Column, Fixed};
     use std::marker::PhantomData;
     const K: u32 = 5;
 
-    /// This represents an advice wire at a certain row in the ConstraintSystem
+    /// This represents an advice column at a certain row in the ConstraintSystem
     #[derive(Copy, Clone, Debug)]
-    pub struct Variable(AdviceWire, usize);
+    pub struct Variable(Column<Advice>, usize);
 
     // Initialize the polynomial commitment parameters
     let params: Params<EqAffine> = Params::new::<DummyHash<Fq>>(K);
 
     struct PLONKConfig {
-        a: AdviceWire,
-        b: AdviceWire,
-        c: AdviceWire,
-        d: AdviceWire,
-        e: AdviceWire,
+        a: Column<Advice>,
+        b: Column<Advice>,
+        c: Column<Advice>,
+        d: Column<Advice>,
+        e: Column<Advice>,
 
-        sa: FixedWire,
-        sb: FixedWire,
-        sc: FixedWire,
-        sm: FixedWire,
-        sp: FixedWire,
+        sa: Column<Fixed>,
+        sb: Column<Fixed>,
+        sc: Column<Fixed>,
+        sm: Column<Fixed>,
+        sp: Column<Fixed>,
 
         perm: usize,
         perm2: usize,
@@ -254,13 +255,13 @@ fn test_proving() {
             ))
         }
         fn copy(&mut self, left: Variable, right: Variable) -> Result<(), Error> {
-            let left_wire = match left.0 {
+            let left_column = match left.0 {
                 x if x == self.config.a => 0,
                 x if x == self.config.b => 1,
                 x if x == self.config.c => 2,
                 _ => unreachable!(),
             };
-            let right_wire = match right.0 {
+            let right_column = match right.0 {
                 x if x == self.config.a => 0,
                 x if x == self.config.b => 1,
                 x if x == self.config.c => 2,
@@ -268,9 +269,14 @@ fn test_proving() {
             };
 
             self.cs
-                .copy(self.config.perm, left_wire, left.1, right_wire, right.1)?;
-            self.cs
-                .copy(self.config.perm2, left_wire, left.1, right_wire, right.1)
+                .copy(self.config.perm, left_column, left.1, right_column, right.1)?;
+            self.cs.copy(
+                self.config.perm2,
+                left_column,
+                left.1,
+                right_column,
+                right.1,
+            )
         }
         fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
         where
@@ -290,22 +296,22 @@ fn test_proving() {
         type Config = PLONKConfig;
 
         fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
-            let e = meta.advice_wire();
-            let a = meta.advice_wire();
-            let b = meta.advice_wire();
-            let sf = meta.fixed_wire();
-            let c = meta.advice_wire();
-            let d = meta.advice_wire();
-            let p = meta.aux_wire();
+            let e = meta.advice_column();
+            let a = meta.advice_column();
+            let b = meta.advice_column();
+            let sf = meta.fixed_column();
+            let c = meta.advice_column();
+            let d = meta.advice_column();
+            let p = meta.aux_column();
 
             let perm = meta.permutation(&[a, b, c]);
             let perm2 = meta.permutation(&[a, b, c]);
 
-            let sm = meta.fixed_wire();
-            let sa = meta.fixed_wire();
-            let sb = meta.fixed_wire();
-            let sc = meta.fixed_wire();
-            let sp = meta.fixed_wire();
+            let sm = meta.fixed_column();
+            let sa = meta.fixed_column();
+            let sb = meta.fixed_column();
+            let sc = meta.fixed_column();
+            let sp = meta.fixed_column();
 
             meta.create_gate(|meta| {
                 let d = meta.query_advice(d, 1);
