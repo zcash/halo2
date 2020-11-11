@@ -281,7 +281,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             .chain(
                 self.permutation_product_evals
                     .iter()
-                    .map(|product_eval| l_0 * &(C::Scalar::one() - &product_eval)),
+                    .map(|product_eval| l_0 * &(C::Scalar::one() - product_eval)),
             )
             // z(X) \prod (p(X) + \beta s_i(X) + \gamma)
             // - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)

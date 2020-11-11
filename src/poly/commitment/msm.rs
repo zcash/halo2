@@ -55,7 +55,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         assert_eq!(scalars.len(), self.params.n as usize);
         if let Some(g_scalars) = &mut self.g_scalars {
             for (g_scalar, scalar) in g_scalars.iter_mut().zip(scalars.iter()) {
-                *g_scalar += &scalar;
+                *g_scalar += scalar;
             }
         } else {
             self.g_scalars = Some(scalars.to_vec());
