@@ -87,12 +87,10 @@ impl TryFrom<Column<Any>> for Column<Advice> {
 
     fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
         match any.column_type() {
-            Any::Advice => {
-                return Ok(Column {
-                    index: any.index(),
-                    column_type: Advice,
-                })
-            }
+            Any::Advice => Ok(Column {
+                index: any.index(),
+                column_type: Advice,
+            }),
             _ => Err("Cannot convert into Column<Advice>"),
         }
     }
@@ -103,12 +101,10 @@ impl TryFrom<Column<Any>> for Column<Fixed> {
 
     fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
         match any.column_type() {
-            Any::Fixed => {
-                return Ok(Column {
-                    index: any.index(),
-                    column_type: Fixed,
-                })
-            }
+            Any::Fixed => Ok(Column {
+                index: any.index(),
+                column_type: Fixed,
+            }),
             _ => Err("Cannot convert into Column<Fixed>"),
         }
     }
@@ -119,12 +115,10 @@ impl TryFrom<Column<Any>> for Column<Aux> {
 
     fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
         match any.column_type() {
-            Any::Aux => {
-                return Ok(Column {
-                    index: any.index(),
-                    column_type: Aux,
-                })
-            }
+            Any::Aux => Ok(Column {
+                index: any.index(),
+                column_type: Aux,
+            }),
             _ => Err("Cannot convert into Column<Aux>"),
         }
     }
@@ -495,7 +489,7 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     pub(crate) fn get_any_query_index(&self, column: Column<Any>, at: i32) -> usize {
-        let index = match column.column_type() {
+        match column.column_type() {
             Any::Advice => {
                 self.get_advice_query_index(Column::<Advice>::try_from(column).unwrap(), at)
             }
@@ -503,9 +497,7 @@ impl<F: Field> ConstraintSystem<F> {
                 self.get_fixed_query_index(Column::<Fixed>::try_from(column).unwrap(), at)
             }
             Any::Aux => self.get_aux_query_index(Column::<Aux>::try_from(column).unwrap(), at),
-        };
-
-        index
+        }
     }
 
     /// Create a new gate
