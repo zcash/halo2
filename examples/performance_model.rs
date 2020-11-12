@@ -227,6 +227,9 @@ fn main() {
     // Initialize the proving key
     let pk = keygen(&params, &empty_circuit).expect("keygen should not fail");
 
+    println!("[Keygen] {}", recorder);
+    recorder.clear();
+
     let circuit: MyCircuit<Fp> = MyCircuit {
         a: Some(Fp::random()),
         k,
