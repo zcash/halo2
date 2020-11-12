@@ -6,5 +6,8 @@ mod macros;
 mod curves;
 mod fields;
 
+pub mod dee;
+pub mod dum;
+
 pub use curves::*;
 pub use fields::*;
