@@ -293,7 +293,7 @@ fn test_opening_proof() {
             let opening_proof = opening_proof.unwrap();
             // Verify the opening proof
             let mut commitment_msm = params.empty_msm();
-            commitment_msm.add_term(Field::one(), p);
+            commitment_msm.append_term(Field::one(), p);
             let guard = opening_proof
                 .verify(
                     &params,
@@ -320,7 +320,7 @@ fn test_opening_proof() {
             // Check another proof to populate `msm.g_scalars`
             let msm = guard.use_challenges();
             let mut commitment_msm = params.empty_msm();
-            commitment_msm.add_term(Field::one(), p);
+            commitment_msm.append_term(Field::one(), p);
             let guard = opening_proof
                 .verify(
                     &params,

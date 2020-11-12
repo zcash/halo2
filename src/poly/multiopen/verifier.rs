@@ -54,7 +54,7 @@ impl<C: CurveAffine> Proof<C> {
         {
             let mut accumulate = |set_idx: usize, new_commitment, evals: Vec<C::Scalar>| {
                 q_commitments[set_idx].scale(x_4);
-                q_commitments[set_idx].add_term(C::Scalar::one(), new_commitment);
+                q_commitments[set_idx].append_term(C::Scalar::one(), new_commitment);
                 for (eval, set_eval) in evals.iter().zip(q_eval_sets[set_idx].iter_mut()) {
                     *set_eval *= &x_4;
                     *set_eval += eval;
@@ -109,7 +109,7 @@ impl<C: CurveAffine> Proof<C> {
 
         // Compute the final commitment that has to be opened
         let mut commitment_msm = params.empty_msm();
-        commitment_msm.add_term(C::Scalar::one(), self.f_commitment);
+        commitment_msm.append_term(C::Scalar::one(), self.f_commitment);
         let (commitment_msm, msm_eval) = q_commitments.into_iter().zip(self.q_evals.iter()).fold(
             (commitment_msm, msm_eval),
             |(mut commitment_msm, msm_eval), (q_commitment, q_eval)| {
