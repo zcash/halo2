@@ -2,7 +2,7 @@ use super::{Field, Group};
 
 use core::convert::TryInto;
 use core::fmt;
-use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use core::ops::{Add, Mul, Neg, Sub};
 
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
