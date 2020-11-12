@@ -3,8 +3,6 @@
 
 use crossbeam_utils::thread;
 
-#[macro_use]
-mod macros;
 mod curves;
 mod fields;
 
@@ -488,6 +486,9 @@ pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
         final_poly
     }
 }
+
+#[cfg(test)]
+use crate::tweedle::Fp;
 
 #[test]
 fn test_lagrange_interpolate() {
