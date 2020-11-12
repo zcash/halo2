@@ -283,14 +283,10 @@ fn test_opening_proof() {
     let mut transcript = Transcript::init_with_hashers(&hasher, &scalar_hasher);
 
     loop {
-        let transcript_dup = transcript.clone();
+        let mut transcript_dup = transcript.clone();
 
         let opening_proof = Proof::create(&params, &mut transcript, &px, blind, x);
-        if opening_proof.is_err() {
-            transcript = transcript_dup;
-            transcript.absorb_base(Field::one());
-        } else {
-            let opening_proof = opening_proof.unwrap();
+        if let Ok(opening_proof) = opening_proof {
             // Verify the opening proof
             let mut commitment_msm = params.empty_msm();
             commitment_msm.append_term(Field::one(), p);
@@ -298,7 +294,7 @@ fn test_opening_proof() {
                 .verify(
                     &params,
                     params.empty_msm(),
-                    &mut transcript_dup.clone(),
+                    &mut transcript_dup,
                     x,
                     commitment_msm,
                     v,
@@ -315,33 +311,12 @@ fn test_opening_proof() {
                 let g = guard.compute_g();
                 let (msm_g, _accumulator) = guard.clone().use_g(g);
                 assert!(msm_g.eval());
+
+                break;
             }
-
-            // Check another proof to populate `msm.g_scalars`
-            let msm = guard.use_challenges();
-            let mut commitment_msm = params.empty_msm();
-            commitment_msm.append_term(Field::one(), p);
-            let guard = opening_proof
-                .verify(
-                    &params,
-                    msm,
-                    &mut transcript_dup.clone(),
-                    x,
-                    commitment_msm,
-                    v,
-                )
-                .unwrap();
-
-            // Test use_challenges()
-            let msm_challenges = guard.clone().use_challenges();
-            assert!(msm_challenges.eval());
-
-            // Test use_g()
-            let g = guard.compute_g();
-            let (msm_g, _accumulator) = guard.clone().use_g(g);
-            assert!(msm_g.eval());
-
-            break;
+        } else {
+            transcript = transcript_dup;
+            transcript.absorb_base(Field::one());
         }
     }
 }

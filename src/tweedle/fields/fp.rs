@@ -658,11 +658,11 @@ fn test_zeta() {
     );
 
     let a = Fp::ZETA;
-    assert!(bool::from(a != Fp::one()));
+    assert!(a != Fp::one());
     let b = a * a;
-    assert!(bool::from(b != Fp::one()));
+    assert!(b != Fp::one());
     let c = b * a;
-    assert!(bool::from(c == Fp::one()));
+    assert!(c == Fp::one());
 }
 
 #[test]
