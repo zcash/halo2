@@ -1,6 +1,5 @@
-//! This module contains implementations for the two finite fields of the
-//! Tweedledum and Tweedledee curves. The `Field` abstraction allows us to write
-//! code that generalizes over these two fields.
+//! This module contains the `Field` abstraction that allows us to write
+//! code that generalizes over a pair of fields.
 
 use std::fmt::Debug;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
@@ -261,41 +260,23 @@ pub trait Field:
     }
 }
 
-mod fp;
-mod fq;
-
 /// Compute a + b + carry, returning the result and the new carry over.
 #[inline(always)]
-const fn adc(a: u64, b: u64, carry: u64) -> (u64, u64) {
+pub(crate) const fn adc(a: u64, b: u64, carry: u64) -> (u64, u64) {
     let ret = (a as u128) + (b as u128) + (carry as u128);
     (ret as u64, (ret >> 64) as u64)
 }
 
 /// Compute a - (b + borrow), returning the result and the new borrow.
 #[inline(always)]
-const fn sbb(a: u64, b: u64, borrow: u64) -> (u64, u64) {
+pub(crate) const fn sbb(a: u64, b: u64, borrow: u64) -> (u64, u64) {
     let ret = (a as u128).wrapping_sub((b as u128) + ((borrow >> 63) as u128));
     (ret as u64, (ret >> 64) as u64)
 }
 
 /// Compute a + (b * c) + carry, returning the result and the new carry over.
 #[inline(always)]
-const fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
+pub(crate) const fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
     let ret = (a as u128) + ((b as u128) * (c as u128)) + (carry as u128);
     (ret as u64, (ret >> 64) as u64)
-}
-
-pub use fp::*;
-pub use fq::*;
-
-#[test]
-fn test_extract() {
-    let a = Fq::random();
-    let a = a.square();
-    let (t, s) = a.extract_radix2_vartime().unwrap();
-    assert_eq!(
-        t.pow_vartime(&[1 << Fq::S, 0, 0, 0]) * Fq::ROOT_OF_UNITY.pow_vartime(&[s, 0, 0, 0]),
-        a
-    );
-    assert_eq!(a.deterministic_sqrt().unwrap().square(), a);
 }

@@ -222,8 +222,8 @@ impl<F: Field> MulAssign<F> for Blind<F> {
 fn test_commit_lagrange() {
     const K: u32 = 6;
 
-    use crate::arithmetic::{EpAffine, Fp, Fq};
     use crate::transcript::DummyHash;
+    use crate::tweedle::{EpAffine, Fp, Fq};
     let params = Params::<EpAffine>::new::<DummyHash<Fp>>(K);
     let domain = super::EvaluationDomain::new(1, K);
 
@@ -248,10 +248,9 @@ fn test_opening_proof() {
         commitment::{Blind, Params},
         EvaluationDomain,
     };
-    use crate::arithmetic::{
-        eval_polynomial, get_challenge_scalar, Challenge, Curve, EpAffine, Field, Fp, Fq,
-    };
+    use crate::arithmetic::{eval_polynomial, get_challenge_scalar, Challenge, Curve, Field};
     use crate::transcript::{DummyHash, Hasher};
+    use crate::tweedle::{EpAffine, Fp, Fq};
 
     let params = Params::<EpAffine>::new::<DummyHash<Fp>>(K);
     let domain = EvaluationDomain::new(1, K);

@@ -111,9 +111,10 @@ pub fn hash_point<C: CurveAffine, H: Hasher<C::Base>>(
 
 #[test]
 fn test_proving() {
-    use crate::arithmetic::{Curve, EqAffine, Field, Fp, Fq};
+    use crate::arithmetic::{Curve, Field};
     use crate::poly::commitment::{Blind, Params};
     use crate::transcript::DummyHash;
+    use crate::tweedle::{EqAffine, Fp, Fq};
     use circuit::{Advice, Column, Fixed};
     use std::marker::PhantomData;
     const K: u32 = 5;

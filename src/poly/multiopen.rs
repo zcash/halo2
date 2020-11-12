@@ -191,7 +191,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::{construct_intermediate_sets, Query};
-    use crate::arithmetic::{Field, Fp};
+    use crate::arithmetic::Field;
+    use crate::tweedle::Fp;
 
     #[derive(Clone)]
     struct MyQuery<F> {
