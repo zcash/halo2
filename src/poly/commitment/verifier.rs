@@ -38,8 +38,8 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
         self.msm
     }
 
-    /// Lets caller supply the purported G point and simply appends it to
-    /// return an updated MSM.
+    /// Lets caller supply the purported G point and simply appends
+    /// [-z1] G to return an updated MSM.
     pub fn use_g(mut self, g: C) -> (MSM<'a, C>, Accumulator<C>) {
         self.msm.add_term(self.neg_z1, g);
 
@@ -51,7 +51,7 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
         (self.msm, accumulator)
     }
 
-    /// Computes the g value when given a potential scalar as input.
+    /// Computes G + H, where G = ⟨s, params.g⟩ and H is used for blinding
     pub fn compute_g(&self) -> C {
         let s = compute_s(&self.challenges_sq, self.allinv);
 
@@ -162,9 +162,9 @@ impl<C: CurveAffine> Proof<C> {
         let c_packed = transcript.squeeze().get_lower_128();
         let c: C::Scalar = get_challenge_scalar(Challenge(c_packed));
 
-        // Check
-        // [c] P + [c * v] U + [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2) + delta - [z1] G - [z1 * b] U - [z1 - z2] H
-        // = 0
+        // Construct
+        // [c] P + [c * v] U + [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2) + delta - [z1 * b] U + [z1 - z2] H
+        // = [z1] (G + H)
 
         let b = compute_b(x, &challenges, &challenges_inv);
 
@@ -174,6 +174,7 @@ impl<C: CurveAffine> Proof<C> {
         commitment_msm.scale(c);
         msm.add_msm(&commitment_msm);
 
+        // [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2)
         for scalar in &mut extra_scalars {
             *scalar *= &c;
         }
@@ -188,7 +189,7 @@ impl<C: CurveAffine> Proof<C> {
         // delta
         msm.add_term(Field::one(), self.delta);
 
-        // - [z1 - z2] H
+        // + [z1 - z2] H
         msm.add_to_h(self.z1 - &self.z2);
 
         let guard = Guard {
