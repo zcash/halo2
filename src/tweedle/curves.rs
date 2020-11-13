@@ -4,10 +4,11 @@
 use core::cmp;
 use core::fmt::Debug;
 use core::ops::{Add, Mul, Neg, Sub};
+use ff::Field;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use super::{Fp, Fq};
-use crate::arithmetic::{Curve, CurveAffine, Field, Group};
+use crate::arithmetic::{Curve, CurveAffine, FieldExt, Group};
 
 macro_rules! new_curve_impl {
     ($name:ident, $name_affine:ident, $base:ident, $scalar:ident) => {
@@ -62,7 +63,7 @@ macro_rules! new_curve_impl {
             }
 
             fn is_zero(&self) -> Choice {
-                self.z.is_zero()
+                self.z.ct_is_zero()
             }
 
             fn to_affine(&self) -> Self::Affine {
@@ -78,7 +79,7 @@ macro_rules! new_curve_impl {
                     infinity: Choice::from(0u8),
                 };
 
-                $name_affine::conditional_select(&tmp, &$name_affine::zero(), zinv.is_zero())
+                $name_affine::conditional_select(&tmp, &$name_affine::zero(), zinv.ct_is_zero())
             }
 
             fn double(&self) -> Self {
@@ -131,7 +132,7 @@ macro_rules! new_curve_impl {
 
                 (self.y.square() - (self.x.square() * self.x))
                     .ct_eq(&((self.z.square() * self.z).square() * $name::curve_constant_b()))
-                    | self.z.is_zero()
+                    | self.z.ct_is_zero()
             }
 
             fn batch_to_affine(p: &[Self], q: &mut [Self::Affine]) {
@@ -552,7 +553,7 @@ macro_rules! new_curve_impl {
                 tmp[31] &= 0b0111_1111;
 
                 $base::from_bytes(&tmp).and_then(|x| {
-                    CtOption::new(Self::zero(), x.is_zero() & (!ysign)).or_else(|| {
+                    CtOption::new(Self::zero(), x.ct_is_zero() & (!ysign)).or_else(|| {
                         let x3 = x.square() * x;
                         (x3 + $name::curve_constant_b()).sqrt().and_then(|y| {
                             let sign = Choice::from(y.to_bytes()[0] & 1);
@@ -593,7 +594,7 @@ macro_rules! new_curve_impl {
 
                 $base::from_bytes(&xbytes).and_then(|x| {
                     $base::from_bytes(&ybytes).and_then(|y| {
-                        CtOption::new(Self::zero(), x.is_zero() & y.is_zero()).or_else(|| {
+                        CtOption::new(Self::zero(), x.ct_is_zero() & y.ct_is_zero()).or_else(|| {
                             let on_curve =
                                 (x * x.square() + $name::curve_constant_b()).ct_eq(&y.square());
 

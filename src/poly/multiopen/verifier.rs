@@ -1,10 +1,12 @@
+use ff::Field;
+
 use super::super::{
     commitment::{Guard, Params, MSM},
     Error,
 };
 use super::{construct_intermediate_sets, Proof, Query, VerifierQuery};
 use crate::arithmetic::{
-    eval_polynomial, get_challenge_scalar, lagrange_interpolate, Challenge, CurveAffine, Field,
+    eval_polynomial, get_challenge_scalar, lagrange_interpolate, Challenge, CurveAffine, FieldExt,
 };
 use crate::transcript::{Hasher, Transcript};
 
@@ -30,7 +32,7 @@ impl<C: CurveAffine> Proof<C> {
         // Scale the MSM by a random factor to ensure that if the existing MSM
         // has is_zero() == false then this argument won't be able to interfere
         // with it to make it true, with high probability.
-        msm.scale(C::Scalar::random());
+        msm.scale(C::Scalar::rand());
 
         // Sample x_4 for compressing openings at the same point sets together
         let x_4: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));

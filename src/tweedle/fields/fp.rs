@@ -1,10 +1,11 @@
+use bitvec::{array::BitArray, order::Lsb0};
 use core::convert::TryInto;
 use core::fmt;
 use core::ops::{Add, Mul, Neg, Sub};
-
+use rand::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
-use crate::arithmetic::{adc, mac, sbb, Field, Group};
+use crate::arithmetic::{adc, mac, sbb, FieldExt, Group};
 
 /// This represents an element of $\mathbb{F}_p$ where
 ///
@@ -101,6 +102,19 @@ const MODULUS: Fp = Fp([
     0x4000000000000000,
 ]);
 
+/// The modulus as u32 limbs.
+#[cfg(not(target_pointer_width = "64"))]
+const MODULUS_LIMBS_32: [u32; 8] = [
+    0x0000_0001,
+    0xa140_64e2,
+    0x6c3f_59b9,
+    0x038a_a127,
+    0x0000_0000,
+    0x0000_0000,
+    0x0000_0000,
+    0x4000_0000,
+];
+
 impl<'a> Neg for &'a Fp {
     type Output = Fp;
 
@@ -174,6 +188,15 @@ const R3: Fp = Fp([
     0xf9fdbeb55b7eb87c,
     0x63f75cb999eafa89,
     0x217cb214ebb8fc72,
+]);
+
+/// `GENERATOR = 5 mod p` is a generator of the `p - 1` order multiplicative subgroup, and
+/// is also a quadratic non-residue.
+const GENERATOR: Fp = Fp::from_raw([
+    0x0000_0000_0000_0005,
+    0x0000_0000_0000_0000,
+    0x0000_0000_0000_0000,
+    0x0000_0000_0000_0000,
 ]);
 
 const S: u32 = 33;
@@ -416,6 +439,12 @@ impl Fp {
     }
 }
 
+impl From<Fp> for [u8; 32] {
+    fn from(value: Fp) -> [u8; 32] {
+        value.to_bytes()
+    }
+}
+
 impl<'a> From<&'a Fp> for [u8; 32] {
     fn from(value: &'a Fp) -> [u8; 32] {
         value.to_bytes()
@@ -439,53 +468,12 @@ impl Group for Fp {
     }
 }
 
-impl Field for Fp {
-    const NUM_BITS: u32 = 255;
-    const CAPACITY: u32 = 254;
-    const S: u32 = S;
-    const ROOT_OF_UNITY: Self = ROOT_OF_UNITY;
-    const ROOT_OF_UNITY_INV: Self = Fp::from_raw([
-        0x9246674078fa45bb,
-        0xd822ebd60888c5ea,
-        0x56d579133a11731f,
-        0x1c88fa9e942120bb,
-    ]);
-    const UNROLL_T_EXPONENT: [u64; 4] = [
-        0x3b3a6633d1897d83,
-        0x0000000000c93d5b,
-        0xf000000000000000,
-        0xe34ab16,
-    ];
-    const T_EXPONENT: [u64; 4] = [
-        0xb61facdcd0a03271,
-        0x0000000001c55093,
-        0x0000000000000000,
-        0x20000000,
-    ];
-    const DELTA: Self = DELTA;
-    const UNROLL_S_EXPONENT: u64 = 0x11cb54e91;
-    const TWO_INV: Self = Fp::from_raw([
-        0xd0a0327100000001,
-        0x01c55093b61facdc,
-        0x0000000000000000,
-        0x2000000000000000,
-    ]);
-    const RESCUE_ALPHA: u64 = 5;
-    const RESCUE_INVALPHA: [u64; 4] = [
-        0x810050b4cccccccd,
-        0x360880ec56991494,
-        0x3333333333333333,
-        0x3333333333333333,
-    ];
-    const ZETA: Self = Fp::from_raw([
-        0x8598abb3a410c9c8,
-        0x7881fb239ba41a26,
-        0x9bebc9146ef83d9a,
-        0x1508415ab5e97c94,
-    ]);
+impl ff::Field for Fp {
+    fn random(mut rng: impl RngCore) -> Self {
+        let mut random_bytes = [0; 64];
+        rng.fill_bytes(&mut random_bytes[..]);
 
-    fn is_zero(&self) -> Choice {
-        self.ct_eq(&Self::zero())
+        Self::from_bytes_wide(&random_bytes)
     }
 
     fn zero() -> Self {
@@ -496,12 +484,8 @@ impl Field for Fp {
         Self::one()
     }
 
-    fn from_u64(v: u64) -> Self {
-        Fp::from_raw([v as u64, 0, 0, 0])
-    }
-
-    fn from_u128(v: u128) -> Self {
-        Fp::from_raw([v as u64, (v >> 64) as u64, 0, 0])
+    fn is_zero(&self) -> bool {
+        self.ct_is_zero().into()
     }
 
     fn double(&self) -> Self {
@@ -569,6 +553,150 @@ impl Field for Fp {
         CtOption::new(tmp, !self.ct_eq(&Self::zero()))
     }
 
+    fn pow_vartime<S: AsRef<[u64]>>(&self, exp: S) -> Self {
+        let mut res = Self::one();
+        let mut found_one = false;
+        for e in exp.as_ref().iter().rev() {
+            for i in (0..64).rev() {
+                if found_one {
+                    res = res.square();
+                }
+
+                if ((*e >> i) & 1) == 1 {
+                    found_one = true;
+                    res *= self;
+                }
+            }
+        }
+        res
+    }
+}
+
+#[cfg(not(target_pointer_width = "64"))]
+type ReprBits = [u32; 8];
+
+#[cfg(target_pointer_width = "64")]
+type ReprBits = [u64; 4];
+
+impl ff::PrimeField for Fp {
+    type Repr = [u8; 32];
+    type ReprBits = ReprBits;
+
+    const NUM_BITS: u32 = 255;
+    const CAPACITY: u32 = 254;
+    const S: u32 = S;
+
+    fn from_repr(repr: Self::Repr) -> Option<Self> {
+        Self::from_bytes(&repr).into()
+    }
+
+    fn to_repr(&self) -> Self::Repr {
+        self.to_bytes()
+    }
+
+    fn to_le_bits(&self) -> BitArray<Lsb0, Self::ReprBits> {
+        let bytes = self.to_bytes();
+
+        #[cfg(not(target_pointer_width = "64"))]
+        let limbs = [
+            u32::from_le_bytes(bytes[0..4].try_into().unwrap()),
+            u32::from_le_bytes(bytes[4..8].try_into().unwrap()),
+            u32::from_le_bytes(bytes[8..12].try_into().unwrap()),
+            u32::from_le_bytes(bytes[12..16].try_into().unwrap()),
+            u32::from_le_bytes(bytes[16..20].try_into().unwrap()),
+            u32::from_le_bytes(bytes[20..24].try_into().unwrap()),
+            u32::from_le_bytes(bytes[24..28].try_into().unwrap()),
+            u32::from_le_bytes(bytes[28..32].try_into().unwrap()),
+        ];
+
+        #[cfg(target_pointer_width = "64")]
+        let limbs = [
+            u64::from_le_bytes(bytes[0..8].try_into().unwrap()),
+            u64::from_le_bytes(bytes[8..16].try_into().unwrap()),
+            u64::from_le_bytes(bytes[16..24].try_into().unwrap()),
+            u64::from_le_bytes(bytes[24..32].try_into().unwrap()),
+        ];
+
+        BitArray::new(limbs)
+    }
+
+    fn is_odd(&self) -> bool {
+        self.to_bytes()[0] & 1 == 1
+    }
+
+    fn char_le_bits() -> BitArray<Lsb0, Self::ReprBits> {
+        #[cfg(not(target_pointer_width = "64"))]
+        {
+            BitArray::new(MODULUS_LIMBS_32)
+        }
+
+        #[cfg(target_pointer_width = "64")]
+        BitArray::new(MODULUS.0)
+    }
+
+    fn multiplicative_generator() -> Self {
+        GENERATOR
+    }
+
+    fn root_of_unity() -> Self {
+        Self::ROOT_OF_UNITY
+    }
+}
+
+impl FieldExt for Fp {
+    const ROOT_OF_UNITY: Self = ROOT_OF_UNITY;
+    const ROOT_OF_UNITY_INV: Self = Fp::from_raw([
+        0x9246674078fa45bb,
+        0xd822ebd60888c5ea,
+        0x56d579133a11731f,
+        0x1c88fa9e942120bb,
+    ]);
+    const UNROLL_T_EXPONENT: [u64; 4] = [
+        0x3b3a6633d1897d83,
+        0x0000000000c93d5b,
+        0xf000000000000000,
+        0xe34ab16,
+    ];
+    const T_EXPONENT: [u64; 4] = [
+        0xb61facdcd0a03271,
+        0x0000000001c55093,
+        0x0000000000000000,
+        0x20000000,
+    ];
+    const DELTA: Self = DELTA;
+    const UNROLL_S_EXPONENT: u64 = 0x11cb54e91;
+    const TWO_INV: Self = Fp::from_raw([
+        0xd0a0327100000001,
+        0x01c55093b61facdc,
+        0x0000000000000000,
+        0x2000000000000000,
+    ]);
+    const RESCUE_ALPHA: u64 = 5;
+    const RESCUE_INVALPHA: [u64; 4] = [
+        0x810050b4cccccccd,
+        0x360880ec56991494,
+        0x3333333333333333,
+        0x3333333333333333,
+    ];
+    const ZETA: Self = Fp::from_raw([
+        0x8598abb3a410c9c8,
+        0x7881fb239ba41a26,
+        0x9bebc9146ef83d9a,
+        0x1508415ab5e97c94,
+    ]);
+
+    fn ct_is_zero(&self) -> Choice {
+        self.ct_eq(&Self::zero())
+    }
+
+    fn from_u64(v: u64) -> Self {
+        Fp::from_raw([v as u64, 0, 0, 0])
+    }
+
+    fn from_u128(v: u128) -> Self {
+        Fp::from_raw([v as u64, (v >> 64) as u64, 0, 0])
+    }
+
     /// Attempts to convert a little-endian byte representation of
     /// a scalar into a `Fp`, failing if the input is not canonical.
     fn from_bytes(bytes: &[u8; 32]) -> CtOption<Fp> {
@@ -634,6 +762,9 @@ impl Field for Fp {
         u128::from(tmp.0[0]) | (u128::from(tmp.0[1]) << 64)
     }
 }
+
+#[cfg(test)]
+use ff::{Field, PrimeField};
 
 #[test]
 fn test_inv() {

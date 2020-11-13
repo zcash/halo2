@@ -1,9 +1,11 @@
+use ff::Field;
+
 use super::super::Error;
 use super::{Params, Proof, MSM};
 use crate::transcript::{Hasher, Transcript};
 
 use crate::arithmetic::{
-    best_multiexp, get_challenge_scalar, Challenge, Curve, CurveAffine, Field,
+    best_multiexp, get_challenge_scalar, Challenge, Curve, CurveAffine, FieldExt,
 };
 
 /// A guard returned by the verifier

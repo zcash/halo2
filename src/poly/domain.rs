@@ -1,9 +1,11 @@
 //! Contains utilities for performing polynomial arithmetic over an evaluation
 //! domain that is of a suitable size for the application.
 
-use crate::arithmetic::{best_fft, parallelize, BatchInvert, Field, Group};
+use crate::arithmetic::{best_fft, parallelize, BatchInvert, FieldExt, Group};
 
 use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial};
+
+use ff::{Field, PrimeField};
 use std::marker::PhantomData;
 
 /// Describes a relative location in the evaluation domain; applying a rotation

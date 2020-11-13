@@ -4,8 +4,10 @@
 //! [halo]: https://eprint.iacr.org/2019/1021
 
 use super::{Coeff, LagrangeCoeff, Polynomial};
-use crate::arithmetic::{best_fft, best_multiexp, parallelize, Curve, CurveAffine, Field};
+use crate::arithmetic::{best_fft, best_multiexp, parallelize, Curve, CurveAffine, FieldExt};
 use crate::transcript::Hasher;
+
+use ff::{Field, PrimeField};
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 
 mod msm;
@@ -237,7 +239,7 @@ fn test_commit_lagrange() {
 
     let b = domain.lagrange_to_coeff(a.clone());
 
-    let alpha = Blind(Fq::random());
+    let alpha = Blind(Fq::rand());
 
     assert_eq!(params.commit(&b, alpha), params.commit_lagrange(&a, alpha));
 }
@@ -246,12 +248,14 @@ fn test_commit_lagrange() {
 fn test_opening_proof() {
     const K: u32 = 6;
 
+    use ff::Field;
+
     use super::{
         commitment::{Blind, Params},
         EvaluationDomain,
     };
     use crate::arithmetic::{
-        eval_polynomial, get_challenge_scalar, Challenge, Curve, CurveAffine, Field,
+        eval_polynomial, get_challenge_scalar, Challenge, Curve, CurveAffine, FieldExt,
     };
     use crate::transcript::{DummyHash, Hasher, Transcript};
     use crate::tweedle::{EpAffine, Fp, Fq};
@@ -265,7 +269,7 @@ fn test_opening_proof() {
         *a = Fq::from(i as u64);
     }
 
-    let blind = Blind(Fq::random());
+    let blind = Blind(Fq::rand());
 
     let p = params.commit(&px, blind).to_affine();
 

@@ -1,12 +1,14 @@
 //! This module contains utilities and traits for dealing with Fiat-Shamir
 //! transcripts.
 
-use crate::arithmetic::{CurveAffine, Field};
+use ff::Field;
 use std::marker::PhantomData;
+
+use crate::arithmetic::{CurveAffine, FieldExt};
 
 /// This is a generic interface for a sponge function that can be used for
 /// Fiat-Shamir transformations.
-pub trait Hasher<F: Field>: Clone + Send + Sync + 'static {
+pub trait Hasher<F: FieldExt>: Clone + Send + Sync + 'static {
     /// Initialize the sponge with some key.
     fn init(key: F) -> Self;
     /// Absorb a field element into the sponge.
@@ -18,12 +20,12 @@ pub trait Hasher<F: Field>: Clone + Send + Sync + 'static {
 /// This is just a simple (and completely broken) hash function, standing in for
 /// some algebraic hash function that we'll switch to later.
 #[derive(Debug, Clone)]
-pub struct DummyHash<F: Field> {
+pub struct DummyHash<F: FieldExt> {
     power: F,
     state: F,
 }
 
-impl<F: Field> Hasher<F> for DummyHash<F> {
+impl<F: FieldExt> Hasher<F> for DummyHash<F> {
     fn init(key: F) -> Self {
         DummyHash {
             power: F::ZETA + F::one() + key,

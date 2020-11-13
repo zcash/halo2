@@ -1,7 +1,8 @@
+use ff::Field;
 use std::iter;
 
 use super::{Error, Proof, VerifyingKey};
-use crate::arithmetic::{get_challenge_scalar, Challenge, CurveAffine, Field};
+use crate::arithmetic::{get_challenge_scalar, Challenge, CurveAffine, FieldExt};
 use crate::poly::{
     commitment::{Guard, Params, MSM},
     multiopen::VerifierQuery,

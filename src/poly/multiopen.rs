@@ -3,10 +3,11 @@
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
 
+use ff::Field;
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::*;
-use crate::arithmetic::CurveAffine;
+use crate::arithmetic::{CurveAffine, FieldExt};
 
 mod prover;
 mod verifier;
@@ -74,7 +75,7 @@ trait Query<F>: Sized {
     fn get_commitment(&self) -> Self::Commitment;
 }
 
-fn construct_intermediate_sets<F: Field, I, Q: Query<F>>(
+fn construct_intermediate_sets<F: FieldExt, I, Q: Query<F>>(
     queries: I,
 ) -> (Vec<CommitmentData<F, Q::Commitment>>, Vec<Vec<F>>)
 where
@@ -191,7 +192,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::{construct_intermediate_sets, Query};
-    use crate::arithmetic::Field;
+    use crate::arithmetic::FieldExt;
     use crate::tweedle::Fp;
 
     #[derive(Clone)]
@@ -217,65 +218,59 @@ mod tests {
 
     #[test]
     fn test_coherence() {
-        let points = &[
-            Fp::random(),
-            Fp::random(),
-            Fp::random(),
-            Fp::random(),
-            Fp::random(),
-        ];
+        let points = &[Fp::rand(), Fp::rand(), Fp::rand(), Fp::rand(), Fp::rand()];
 
         let build_queries = || {
             vec![
                 MyQuery {
                     commitment: 0,
                     point: points[0],
-                    eval: Fp::random(),
+                    eval: Fp::rand(),
                 },
                 MyQuery {
                     commitment: 0,
                     point: points[1],
-                    eval: Fp::random(),
+                    eval: Fp::rand(),
                 },
                 MyQuery {
                     commitment: 1,
                     point: points[0],
-                    eval: Fp::random(),
+                    eval: Fp::rand(),
                 },
                 MyQuery {
                     commitment: 1,
                     point: points[1],
-                    eval: Fp::random(),
+                    eval: Fp::rand(),
                 },
                 MyQuery {
                     commitment: 2,
                     point: points[0],
-                    eval: Fp::random(),
+                    eval: Fp::rand(),
                 },
                 MyQuery {
                     commitment: 2,
                     point: points[1],
-                    eval: Fp::random(),
+                    eval: Fp::rand(),
                 },
                 MyQuery {
                     commitment: 2,
                     point: points[2],
-                    eval: Fp::random(),
+                    eval: Fp::rand(),
                 },
                 MyQuery {
                     commitment: 3,
                     point: points[0],
-                    eval: Fp::random(),
+                    eval: Fp::rand(),
                 },
                 MyQuery {
                     commitment: 3,
                     point: points[3],
-                    eval: Fp::random(),
+                    eval: Fp::rand(),
                 },
                 MyQuery {
                     commitment: 4,
                     point: points[4],
-                    eval: Fp::random(),
+                    eval: Fp::rand(),
                 },
             ]
         };

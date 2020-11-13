@@ -1,55 +1,15 @@
 //! This module contains the `Field` abstraction that allows us to write
 //! code that generalizes over a pair of fields.
 
-use std::fmt::Debug;
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use subtle::{Choice, ConstantTimeEq, CtOption};
 
 use super::Group;
 
 /// This trait is a common interface for dealing with elements of a finite
 /// field.
-pub trait Field:
-    Sized
-    + Default
-    + Copy
-    + Clone
-    + Send
-    + Sync
-    + 'static
-    + Debug
-    + From<bool>
-    + From<u64>
-    + Add<Output = Self>
-    + Sub<Output = Self>
-    + Mul<Output = Self>
-    + Neg<Output = Self>
-    + for<'a> Add<&'a Self, Output = Self>
-    + for<'a> Mul<&'a Self, Output = Self>
-    + for<'a> Sub<&'a Self, Output = Self>
-    + MulAssign
-    + AddAssign
-    + SubAssign
-    + for<'a> MulAssign<&'a Self>
-    + for<'a> AddAssign<&'a Self>
-    + for<'a> SubAssign<&'a Self>
-    + PartialEq
-    + Eq
-    + PartialOrd
-    + Ord
-    + ConditionallySelectable
-    + ConstantTimeEq
-    + Group<Scalar = Self>
+pub trait FieldExt:
+    ff::PrimeField + From<bool> + Ord + ConstantTimeEq + Group<Scalar = Self>
 {
-    /// How many bits needed to express the modulus $p$?
-    const NUM_BITS: u32;
-
-    /// How many bits of information can be stored reliably?
-    const CAPACITY: u32;
-
-    /// Represents $S$ where $p - 1 = 2^S \cdot t$ with $t$ odd.
-    const S: u32;
-
     /// Generator of the $2^S$ multiplicative subgroup
     const ROOT_OF_UNITY: Self;
 
@@ -82,41 +42,18 @@ pub trait Field:
     const ZETA: Self;
 
     /// This computes a random element of the field using system randomness.
-    fn random() -> Self {
-        use rand::{thread_rng, RngCore};
-
-        let mut random_bytes = [0; 64];
-        thread_rng().fill_bytes(&mut random_bytes[..]);
-
-        Self::from_bytes_wide(&random_bytes)
+    fn rand() -> Self {
+        Self::random(rand::rngs::OsRng)
     }
 
     /// Returns whether or not this element is zero.
-    fn is_zero(&self) -> Choice;
-
-    /// Doubles this element in the field.
-    fn double(&self) -> Self;
+    fn ct_is_zero(&self) -> Choice;
 
     /// Obtains a field element congruent to the integer `v`.
     fn from_u64(v: u64) -> Self;
 
     /// Obtains a field element congruent to the integer `v`.
     fn from_u128(v: u128) -> Self;
-
-    /// Attempts to obtain the square root of this field element.
-    fn sqrt(&self) -> CtOption<Self>;
-
-    /// Attempts to find the multiplicative inverse of this field element.
-    fn invert(&self) -> CtOption<Self>;
-
-    /// Returns zero, the additive identity.
-    fn zero() -> Self;
-
-    /// Returns one, the multiplicative identity.
-    fn one() -> Self;
-
-    /// Squares this element in the field.
-    fn square(&self) -> Self;
 
     /// Converts this field element to its normalized, little endian byte
     /// representation.
@@ -152,7 +89,7 @@ pub trait Field:
     /// integer `s` such that `self` is the square of $a \cdot \omega^{s}$ if
     /// indeed `self` is a square.
     fn extract_radix2_vartime(&self) -> Option<(Self, u64)> {
-        if bool::from(self.is_zero()) {
+        if bool::from(self.ct_is_zero()) {
             return None;
         }
 
@@ -207,29 +144,6 @@ pub trait Field:
         res
     }
 
-    /// Exponentiates `self` by `by`, where `by` is a little-endian order
-    /// integer exponent.
-    ///
-    /// **This operation is variable time with respect to the exponent.** If the
-    /// exponent is fixed, this operation is effectively constant time.
-    fn pow_vartime(&self, by: &[u64; 4]) -> Self {
-        let mut res = Self::one();
-        let mut found_one = false;
-        for e in by.iter().rev() {
-            for i in (0..64).rev() {
-                if found_one {
-                    res = res.square();
-                }
-
-                if ((*e >> i) & 1) == 1 {
-                    found_one = true;
-                    res.mul_assign(self);
-                }
-            }
-        }
-        res
-    }
-
     /// Gets the lower 128 bits of this field element when expressed
     /// canonically.
     fn get_lower_128(&self) -> u128;
@@ -242,14 +156,14 @@ pub trait Field:
         let mut acc = Self::one();
         for p in v.iter() {
             tmp.push(acc);
-            acc = Self::conditional_select(&(acc * p), &acc, p.is_zero());
+            acc = Self::conditional_select(&(acc * p), &acc, p.ct_is_zero());
         }
 
         acc = acc.invert().unwrap();
         let allinv = acc;
 
         for (p, tmp) in v.iter_mut().rev().zip(tmp.into_iter().rev()) {
-            let skip = p.is_zero();
+            let skip = p.ct_is_zero();
 
             let tmp = tmp * acc;
             acc = Self::conditional_select(&(acc * *p), &acc, skip);

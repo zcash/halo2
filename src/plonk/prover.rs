@@ -1,3 +1,4 @@
+use ff::Field;
 use std::iter;
 
 use super::{
@@ -6,7 +7,7 @@ use super::{
 };
 use crate::arithmetic::{
     eval_polynomial, get_challenge_scalar, parallelize, BatchInvert, Challenge, Curve, CurveAffine,
-    Field,
+    FieldExt,
 };
 use crate::poly::{
     commitment::{Blind, Params},
@@ -134,7 +135,7 @@ impl<C: CurveAffine> Proof<C> {
         let advice_blinds: Vec<_> = witness
             .advice
             .iter()
-            .map(|_| Blind(C::Scalar::random()))
+            .map(|_| Blind(C::Scalar::rand()))
             .collect();
         let advice_commitments_projective: Vec<_> = witness
             .advice
@@ -273,7 +274,7 @@ impl<C: CurveAffine> Proof<C> {
             }
             let z = domain.lagrange_from_vec(z);
 
-            let blind = Blind(C::Scalar::random());
+            let blind = Blind(C::Scalar::rand());
 
             permutation_product_commitments_projective.push(params.commit_lagrange(&z, blind));
             permutation_product_blinds.push(blind);
@@ -380,10 +381,7 @@ impl<C: CurveAffine> Proof<C> {
             .map(|v| domain.coeff_from_vec(v.to_vec()))
             .collect::<Vec<_>>();
         drop(h_poly);
-        let h_blinds: Vec<_> = h_pieces
-            .iter()
-            .map(|_| Blind(C::Scalar::random()))
-            .collect();
+        let h_blinds: Vec<_> = h_pieces.iter().map(|_| Blind(C::Scalar::rand())).collect();
 
         // Compute commitments to each h(X) piece
         let h_commitments_projective: Vec<_> = h_pieces

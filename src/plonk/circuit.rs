@@ -1,10 +1,10 @@
 use core::cmp::max;
 use core::ops::{Add, Mul};
+use ff::Field;
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 
 use super::Error;
-use crate::arithmetic::Field;
 use crate::poly::Rotation;
 
 /// A column type

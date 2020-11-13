@@ -6,9 +6,11 @@ use super::{construct_intermediate_sets, Proof, ProverQuery, Query};
 
 use crate::arithmetic::{
     eval_polynomial, get_challenge_scalar, kate_division, lagrange_interpolate, Challenge, Curve,
-    CurveAffine, Field,
+    CurveAffine, FieldExt,
 };
 use crate::transcript::{Hasher, Transcript};
+
+use ff::Field;
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone)]
@@ -103,7 +105,7 @@ impl<C: CurveAffine> Proof<C> {
             })
             .unwrap();
 
-        let mut f_blind = Blind(C::Scalar::random());
+        let mut f_blind = Blind(C::Scalar::rand());
         let mut f_commitment = params.commit(&f_poly, f_blind).to_affine();
 
         let (opening, q_evals) = loop {

@@ -2,7 +2,7 @@
 extern crate criterion;
 
 extern crate halo2;
-use crate::arithmetic::{small_multiexp, Field};
+use crate::arithmetic::{small_multiexp, FieldExt};
 use crate::poly::commitment::Params;
 use crate::transcript::DummyHash;
 use crate::tweedle::{EqAffine, Fp, Fq};
@@ -18,8 +18,8 @@ fn criterion_benchmark(c: &mut Criterion) {
         let len = g.len() / 2;
         let (g_lo, g_hi) = g.split_at_mut(len);
 
-        let coeff_1 = Fp::random();
-        let coeff_2 = Fp::random();
+        let coeff_1 = Fp::rand();
+        let coeff_2 = Fp::rand();
 
         c.bench_function("double-and-add", |b| {
             b.iter(|| {

@@ -6,7 +6,7 @@ use core::fmt::Debug;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
-use super::{Field, Group};
+use super::{FieldExt, Group};
 
 /// This trait is a common interface for dealing with elements of an elliptic
 /// curve group in the "projective" form, where that arithmetic is usually more
@@ -51,9 +51,9 @@ pub trait Curve:
         + Neg<Output = <Self as Curve>::Affine>
         + From<Self>;
     /// The scalar field of this elliptic curve.
-    type Scalar: Field;
+    type Scalar: FieldExt;
     /// The base field over which this elliptic curve is constructed.
-    type Base: Field;
+    type Base: FieldExt;
 
     /// Obtains the additive identity.
     fn zero() -> Self;
@@ -118,9 +118,9 @@ pub trait CurveAffine:
         + SubAssign<Self>
         + From<Self>;
     /// The scalar field of this elliptic curve.
-    type Scalar: Field;
+    type Scalar: FieldExt;
     /// The base field over which this elliptic curve is constructed.
-    type Base: Field;
+    type Base: FieldExt;
 
     /// Obtains the additive identity.
     fn zero() -> Self;
