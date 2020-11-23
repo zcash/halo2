@@ -239,11 +239,8 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             };
 
             // Create a proof
-            let proof =
-                Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &pk, &circuit, &[])
-                    .expect("proof generation should not fail");
-
-            proof
+            Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &pk, &circuit, &[])
+                .expect("proof generation should not fail")
         });
     });
 

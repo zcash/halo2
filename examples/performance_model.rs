@@ -1,8 +1,8 @@
 use halo2::{
-    arithmetic::Field,
+    arithmetic::{Curve, Field},
     model::ModelRecorder,
     plonk::*,
-    poly::commitment::Params,
+    poly::commitment::{Blind, Params},
     transcript::DummyHash,
     tweedle::{EqAffine, Fp, Fq},
 };
@@ -22,6 +22,7 @@ struct PLONKConfig {
     sb: Column<Fixed>,
     sc: Column<Fixed>,
     sm: Column<Fixed>,
+    sp: Column<Fixed>,
 
     perm: usize,
 }
@@ -34,6 +35,9 @@ trait StandardCS<FF: Field> {
     where
         F: FnOnce() -> Result<(FF, FF, FF), Error>;
     fn copy(&mut self, a: Variable, b: Variable) -> Result<(), Error>;
+    fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
+    where
+        F: FnOnce() -> Result<FF, Error>;
 }
 
 struct MyCircuit<F: Field> {
@@ -141,6 +145,18 @@ impl<'a, FF: Field, CS: Assignment<FF>> StandardCS<FF> for StandardPLONK<'a, FF,
         self.cs
             .copy(self.config.perm, left_column, left.1, right_column, right.1)
     }
+    fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
+    where
+        F: FnOnce() -> Result<FF, Error>,
+    {
+        let index = self.current_gate;
+        self.current_gate += 1;
+        self.cs.assign_advice(self.config.a, index, || f())?;
+        self.cs
+            .assign_fixed(self.config.sp, index, || Ok(FF::one()))?;
+
+        Ok(Variable(self.config.a, index))
+    }
 }
 
 impl<F: Field> Circuit<F> for MyCircuit<F> {
@@ -150,6 +166,7 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
         let a = meta.advice_column();
         let b = meta.advice_column();
         let c = meta.advice_column();
+        let p = meta.aux_column();
 
         let perm = meta.permutation(&[a, b, c]);
 
@@ -157,6 +174,7 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
         let sa = meta.fixed_column();
         let sb = meta.fixed_column();
         let sc = meta.fixed_column();
+        let sp = meta.fixed_column();
 
         meta.create_gate(|meta| {
             let a = meta.query_advice(a, 0);
@@ -171,6 +189,14 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
             a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))
         });
 
+        meta.create_gate(|meta| {
+            let a = meta.query_advice(a, 0);
+            let p = meta.query_aux(p, 0);
+            let sp = meta.query_fixed(sp, 0);
+
+            sp * (a + p * (-F::one()))
+        });
+
         PLONKConfig {
             a,
             b,
@@ -179,6 +205,7 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
             sb,
             sc,
             sm,
+            sp,
             perm,
         }
     }
@@ -186,7 +213,9 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
     fn synthesize(&self, cs: &mut impl Assignment<F>, config: PLONKConfig) -> Result<(), Error> {
         let mut cs = StandardPLONK::new(cs, config);
 
-        for _ in 0..(1 << (self.k - 1)) {
+        let _ = cs.public_input(|| Ok(F::one() + F::one()))?;
+
+        for _ in 0..((1 << (self.k - 1)) - 1) {
             let mut a_squared = None;
             let (a0, _, c0) = cs.raw_multiply(|| {
                 a_squared = self.a.map(|a| a.square());
@@ -230,21 +259,31 @@ fn main() {
     println!("[Keygen] {}", recorder);
     recorder.clear();
 
+    let mut pubinputs = pk.get_vk().get_domain().empty_lagrange();
+    pubinputs[0] = Fp::one();
+    pubinputs[0] += Fp::one();
+    let pubinput = params
+        .commit_lagrange(&pubinputs, Blind::default())
+        .to_affine();
+    recorder.clear();
+
     let circuit: MyCircuit<Fp> = MyCircuit {
         a: Some(Fp::random()),
         k,
     };
 
     // Create a proof
-    let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &pk, &circuit, &[])
-        .expect("proof generation should not fail");
+    let proof =
+        Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &pk, &circuit, &[pubinputs])
+            .expect("proof generation should not fail");
 
     println!("[Prover] {}", recorder);
     recorder.clear();
 
+    let pubinput_slice = &[pubinput];
     let msm = params.empty_msm();
     let guard = proof
-        .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, pk.get_vk(), msm, &[])
+        .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, pk.get_vk(), msm, pubinput_slice)
         .unwrap();
     let msm = guard.clone().use_challenges();
     assert!(msm.eval());
