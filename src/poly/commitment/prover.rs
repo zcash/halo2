@@ -78,12 +78,14 @@ impl<C: CurveAffine> Proof<C> {
             //
             // TODO: If we modify multiexp to take "extra" bases, we could speed
             // this piece up a bit by combining the multiexps.
+            metrics::counter!("multiexp", 2, "val" => "l/r", "size" => format!("{}", half));
             let l = best_multiexp(&a[0..half], &g[half..]);
             let r = best_multiexp(&a[half..], &g[0..half]);
             let value_l = compute_inner_product(&a[0..half], &b[half..]);
             let value_r = compute_inner_product(&a[half..], &b[0..half]);
             let mut l_randomness = C::Scalar::random();
             let r_randomness = C::Scalar::random();
+            metrics::counter!("multiexp", 2, "val" => "l/r", "size" => "2");
             let l = l + &best_multiexp(&[value_l, l_randomness], &[u, params.h]);
             let r = r + &best_multiexp(&[value_r, r_randomness], &[u, params.h]);
             let mut l = l.to_affine();
@@ -173,6 +175,7 @@ impl<C: CurveAffine> Proof<C> {
         let d = C::Scalar::random();
         let s = C::Scalar::random();
 
+        metrics::increment!("multiexp", "val" => "delta", "size" => "3");
         let delta = best_multiexp(&[d, d * &b, s], &[g, u, params.h]).to_affine();
 
         // Feed delta into the transcript
@@ -204,6 +207,7 @@ fn parallel_generator_collapse<C: CurveAffine>(
 ) {
     let len = g.len() / 2;
     let (mut g_lo, g_hi) = g.split_at_mut(len);
+    metrics::counter!("multiexp", len as u64, "size" => "2", "fn" => "parallel_generator_collapse");
 
     parallelize(&mut g_lo, |g_lo, start| {
         let g_hi = &g_hi[start..];

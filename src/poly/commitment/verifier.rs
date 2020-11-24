@@ -55,6 +55,7 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
     pub fn compute_g(&self) -> C {
         let s = compute_s(&self.challenges_sq, self.allinv);
 
+        metrics::increment!("multiexp", "size" => format!("{}", s.len()), "fn" => "compute_g");
         let mut tmp = best_multiexp(&s, &self.msm.params.g);
         tmp += self.msm.params.h;
         tmp.to_affine()

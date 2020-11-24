@@ -103,6 +103,7 @@ impl<C: CurveAffine> Proof<C> {
         C::Projective::batch_to_affine(&aux_commitments_projective, &mut aux_commitments);
         let aux_commitments = aux_commitments;
         drop(aux_commitments_projective);
+        metrics::counter!("aux_commitments", aux_commitments.len() as u64);
 
         for commitment in &aux_commitments {
             transcript
@@ -143,6 +144,7 @@ impl<C: CurveAffine> Proof<C> {
         C::Projective::batch_to_affine(&advice_commitments_projective, &mut advice_commitments);
         let advice_commitments = advice_commitments;
         drop(advice_commitments_projective);
+        metrics::counter!("advice_commitments", advice_commitments.len() as u64);
 
         for commitment in &advice_commitments {
             transcript
