@@ -9,7 +9,6 @@ use crate::arithmetic::CurveAffine;
 use crate::poly::{
     multiopen, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
 };
-use crate::transcript::Hasher;
 
 mod circuit;
 mod keygen;
@@ -78,6 +77,8 @@ pub enum Error {
     BoundsFailure,
     /// Opening error
     OpeningError,
+    /// Transcript error
+    TranscriptError,
 }
 
 impl<C: CurveAffine> ProvingKey<C> {
@@ -92,21 +93,6 @@ impl<C: CurveAffine> VerifyingKey<C> {
     pub fn get_domain(&self) -> &EvaluationDomain<C::Scalar> {
         &self.domain
     }
-}
-
-/// Hash a point into transcript
-pub fn hash_point<C: CurveAffine, H: Hasher<C::Base>>(
-    transcript: &mut H,
-    point: &C,
-) -> Result<(), Error> {
-    let tmp = point.get_xy();
-    if bool::from(tmp.is_none()) {
-        return Err(Error::SynthesisError);
-    };
-    let tmp = tmp.unwrap();
-    transcript.absorb(tmp.0);
-    transcript.absorb(tmp.1);
-    Ok(())
 }
 
 #[test]

@@ -1,11 +1,11 @@
-use super::{hash_point, Error, Proof, VerifyingKey};
+use super::{Error, Proof, VerifyingKey};
 use crate::arithmetic::{get_challenge_scalar, Challenge, CurveAffine, Field};
 use crate::poly::{
     commitment::{Guard, Params, MSM},
     multiopen::VerifierQuery,
     Rotation,
 };
-use crate::transcript::Hasher;
+use crate::transcript::{Hasher, Transcript};
 
 impl<'a, C: CurveAffine> Proof<C> {
     /// Returns a boolean indicating whether or not the proof is valid
@@ -27,16 +27,20 @@ impl<'a, C: CurveAffine> Proof<C> {
         }
 
         // Create a transcript for obtaining Fiat-Shamir challenges.
-        let mut transcript = HBase::init(C::Base::one());
+        let mut transcript = Transcript::<C, HBase, HScalar>::new();
 
         // Hash the aux (external) commitments into the transcript
         for commitment in aux_commitments {
-            hash_point(&mut transcript, commitment)?;
+            transcript
+                .absorb_point(commitment)
+                .map_err(|_| Error::TranscriptError)?;
         }
 
         // Hash the prover's advice commitments into the transcript
         for commitment in &self.advice_commitments {
-            hash_point(&mut transcript, commitment)?;
+            transcript
+                .absorb_point(commitment)
+                .map_err(|_| Error::TranscriptError)?;
         }
 
         // Sample x_0 challenge
@@ -47,7 +51,9 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Hash each permutation product commitment
         for c in &self.permutation_product_commitments {
-            hash_point(&mut transcript, c)?;
+            transcript
+                .absorb_point(c)
+                .map_err(|_| Error::TranscriptError)?;
         }
 
         // Sample x_2 challenge, which keeps the gates linearly independent.
@@ -55,7 +61,9 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // Obtain a commitment to h(X) in the form of multiple pieces of degree n - 1
         for c in &self.h_commitments {
-            hash_point(&mut transcript, c)?;
+            transcript
+                .absorb_point(c)
+                .map_err(|_| Error::TranscriptError)?;
         }
 
         // Sample x_3 challenge, which is used to ensure the circuit is
@@ -65,10 +73,6 @@ impl<'a, C: CurveAffine> Proof<C> {
         // This check ensures the circuit is satisfied so long as the polynomial
         // commitments open to the correct values.
         self.check_hx(params, vk, x_0, x_1, x_2, x_3)?;
-
-        // Hash together all the openings provided by the prover into a new
-        // transcript on the scalar field.
-        let mut transcript_scalar = HScalar::init(C::Scalar::one());
 
         for eval in self
             .advice_evals
@@ -80,12 +84,8 @@ impl<'a, C: CurveAffine> Proof<C> {
             .chain(self.permutation_product_inv_evals.iter())
             .chain(self.permutation_evals.iter().flat_map(|evals| evals.iter()))
         {
-            transcript_scalar.absorb(*eval);
+            transcript.absorb_scalar(*eval);
         }
-
-        let transcript_scalar_point =
-            C::Base::from_bytes(&(transcript_scalar.squeeze()).to_bytes()).unwrap();
-        transcript.absorb(transcript_scalar_point);
 
         let mut queries: Vec<VerifierQuery<'a, C>> = Vec::new();
 
@@ -180,13 +180,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         // We are now convinced the circuit is satisfied so long as the
         // polynomial commitments open to the correct values.
         self.multiopening
-            .verify(
-                params,
-                &mut transcript,
-                &mut transcript_scalar,
-                queries,
-                msm,
-            )
+            .verify(params, &mut transcript, queries, msm)
             .map_err(|_| Error::OpeningError)
     }
 
