@@ -14,14 +14,15 @@ use metrics::{Key, Recorder, Unit};
 /// ```
 /// use halo2::model::ModelRecorder;
 ///
-/// fn main() {
-///     let recorder = Box::leak(Box::new(ModelRecorder::default()));
-///     metrics::set_recorder(recorder).unwrap();
+/// let recorder = Box::leak(Box::new(ModelRecorder::default()));
+/// metrics::set_recorder(recorder).unwrap();
 ///
-///     // Create circuit, build and/or verify proof.
+/// // Create circuit, build and/or verify proof.
 ///
-///     println!("{}", recorder);
-/// }
+/// println!("{}", recorder);
+/// recorder.clear();
+///
+/// // Perform another operation to collect separate metrics.
 /// ```
 #[derive(Debug)]
 pub struct ModelRecorder {
