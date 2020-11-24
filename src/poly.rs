@@ -127,6 +127,18 @@ impl<F, B> Polynomial<F, B> {
     }
 }
 
+impl<F: Field> Polynomial<F, ExtendedLagrangeCoeff> {
+    /// Maps every coefficient `c` in `p` to `1 - c`.
+    pub fn one_minus(mut p: Self) -> Self {
+        parallelize(&mut p.values, |p, _start| {
+            for term in p {
+                *term = F::one() - *term;
+            }
+        });
+        p
+    }
+}
+
 impl<'a, F: Field, B: Basis> Add<&'a Polynomial<F, B>> for Polynomial<F, B> {
     type Output = Polynomial<F, B>;
 

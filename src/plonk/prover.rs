@@ -302,77 +302,71 @@ impl<C: CurveAffine> Proof<C> {
         // Obtain challenge for keeping all separate gates linearly independent
         let x_2: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
 
-        // Evaluate the circuit using the custom gates provided
-        let mut h_poly = domain.empty_extended();
-        for poly in meta.gates.iter() {
-            h_poly = h_poly * x_2;
+        // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
+        let h_poly =
+            iter::empty()
+                // Custom constraints
+                .chain(meta.gates.iter().map(|poly| {
+                    poly.evaluate(
+                        &|index| pk.fixed_cosets[index].clone(),
+                        &|index| advice_cosets[index].clone(),
+                        &|index| aux_cosets[index].clone(),
+                        &|a, b| a + &b,
+                        &|a, b| a * &b,
+                        &|a, scalar| a * scalar,
+                    )
+                }))
+                // l_0(X) * (1 - z(X)) = 0
+                .chain(
+                    permutation_product_cosets
+                        .iter()
+                        .cloned()
+                        .map(|coset| Polynomial::one_minus(coset) * &pk.l0),
+                )
+                // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
+                .chain(pk.vk.cs.permutations.iter().enumerate().map(
+                    |(permutation_index, columns)| {
+                        let mut left = permutation_product_cosets[permutation_index].clone();
+                        for (advice, permutation) in columns
+                            .iter()
+                            .map(|&column| {
+                                &advice_cosets[pk.vk.cs.get_advice_query_index(column, 0)]
+                            })
+                            .zip(pk.permutation_cosets[permutation_index].iter())
+                        {
+                            parallelize(&mut left, |left, start| {
+                                for ((left, advice), permutation) in left
+                                    .iter_mut()
+                                    .zip(advice[start..].iter())
+                                    .zip(permutation[start..].iter())
+                                {
+                                    *left *= &(*advice + &(x_0 * permutation) + &x_1);
+                                }
+                            });
+                        }
 
-            let evaluation = poly.evaluate(
-                &|index| pk.fixed_cosets[index].clone(),
-                &|index| advice_cosets[index].clone(),
-                &|index| aux_cosets[index].clone(),
-                &|a, b| a + &b,
-                &|a, b| a * &b,
-                &|a, scalar| a * scalar,
-            );
+                        let mut right = permutation_product_cosets_inv[permutation_index].clone();
+                        let mut current_delta = x_0 * &C::Scalar::ZETA;
+                        let step = domain.get_extended_omega();
+                        for advice in columns.iter().map(|&column| {
+                            &advice_cosets[pk.vk.cs.get_advice_query_index(column, 0)]
+                        }) {
+                            parallelize(&mut right, move |right, start| {
+                                let mut beta_term =
+                                    current_delta * &step.pow_vartime(&[start as u64, 0, 0, 0]);
+                                for (right, advice) in right.iter_mut().zip(advice[start..].iter())
+                                {
+                                    *right *= &(*advice + &beta_term + &x_1);
+                                    beta_term *= &step;
+                                }
+                            });
+                            current_delta *= &C::Scalar::DELTA;
+                        }
 
-            h_poly = h_poly + &evaluation;
-        }
-
-        // l_0(X) * (1 - z(X)) = 0
-        for coset in permutation_product_cosets.iter() {
-            parallelize(&mut h_poly, |h, start| {
-                for ((h, c), l0) in h
-                    .iter_mut()
-                    .zip(coset[start..].iter())
-                    .zip(pk.l0[start..].iter())
-                {
-                    *h *= &x_2;
-                    *h += &(*l0 * &(C::Scalar::one() - c));
-                }
-            });
-        }
-
-        // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
-        for (permutation_index, columns) in pk.vk.cs.permutations.iter().enumerate() {
-            h_poly = h_poly * x_2;
-
-            let mut left = permutation_product_cosets[permutation_index].clone();
-            for (advice, permutation) in columns
-                .iter()
-                .map(|&column| &advice_cosets[pk.vk.cs.get_advice_query_index(column, 0)])
-                .zip(pk.permutation_cosets[permutation_index].iter())
-            {
-                parallelize(&mut left, |left, start| {
-                    for ((left, advice), permutation) in left
-                        .iter_mut()
-                        .zip(advice[start..].iter())
-                        .zip(permutation[start..].iter())
-                    {
-                        *left *= &(*advice + &(x_0 * permutation) + &x_1);
-                    }
-                });
-            }
-
-            let mut right = permutation_product_cosets_inv[permutation_index].clone();
-            let mut current_delta = x_0 * &C::Scalar::ZETA;
-            let step = domain.get_extended_omega();
-            for advice in columns
-                .iter()
-                .map(|&column| &advice_cosets[pk.vk.cs.get_advice_query_index(column, 0)])
-            {
-                parallelize(&mut right, move |right, start| {
-                    let mut beta_term = current_delta * &step.pow_vartime(&[start as u64, 0, 0, 0]);
-                    for (right, advice) in right.iter_mut().zip(advice[start..].iter()) {
-                        *right *= &(*advice + &beta_term + &x_1);
-                        beta_term *= &step;
-                    }
-                });
-                current_delta *= &C::Scalar::DELTA;
-            }
-
-            h_poly = h_poly + &left - &right;
-        }
+                        left - &right
+                    },
+                ))
+                .fold(domain.empty_extended(), |h_poly, v| h_poly * x_2 + &v);
 
         // Divide by t(X) = X^{params.n} - 1.
         let h_poly = domain.divide_by_vanishing_poly(h_poly);
