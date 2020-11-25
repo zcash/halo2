@@ -257,7 +257,7 @@ fn test_opening_proof() {
     use crate::arithmetic::{
         eval_polynomial, get_challenge_scalar, Challenge, Curve, CurveAffine, FieldExt,
     };
-    use crate::transcript::{DummyHash, Hasher, Transcript};
+    use crate::transcript::{DummyHash, Transcript};
     use crate::tweedle::{EpAffine, Fp, Fq};
 
     let params = Params::<EpAffine>::new::<DummyHash<Fp>>(K);
@@ -273,18 +273,14 @@ fn test_opening_proof() {
 
     let p = params.commit(&px, blind).to_affine();
 
-    let mut hasher = DummyHash::init(Field::one());
-    let (p_x, p_y) = p.get_xy().unwrap();
-    hasher.absorb(p_x);
-    hasher.absorb(p_y);
-    let x_packed = hasher.squeeze().get_lower_128();
+    let mut transcript = Transcript::<_, DummyHash<_>, DummyHash<_>>::new();
+    transcript.absorb_point(&p).unwrap();
+    let x_packed = transcript.squeeze().get_lower_128();
     let x: Fq = get_challenge_scalar(Challenge(x_packed));
     // Evaluate the polynomial
     let v = eval_polynomial(&px, x);
 
-    hasher.absorb(Fp::from_bytes(&v.to_bytes()).unwrap()); // unlikely to fail since p ~ q
-    let scalar_hasher = DummyHash::init(Fq::one());
-    let mut transcript = Transcript::init_with_hashers(&hasher, &scalar_hasher);
+    transcript.absorb_base(Fp::from_bytes(&v.to_bytes()).unwrap()); // unlikely to fail since p ~ q
 
     loop {
         let mut transcript_dup = transcript.clone();

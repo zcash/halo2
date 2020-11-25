@@ -81,18 +81,6 @@ impl<C: CurveAffine, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>
         }
     }
 
-    /// Initialise a new transcript with some given base_hasher and
-    /// scalar_hasher
-    #[cfg(test)]
-    pub(crate) fn init_with_hashers(base_hasher: &HBase, scalar_hasher: &HScalar) -> Self {
-        Transcript {
-            base_hasher: base_hasher.clone(),
-            scalar_hasher: scalar_hasher.clone(),
-            scalar_needs_squeezing: false,
-            _marker: PhantomData,
-        }
-    }
-
     fn conditional_scalar_squeeze(&mut self) {
         if self.scalar_needs_squeezing {
             let transcript_scalar_point =
