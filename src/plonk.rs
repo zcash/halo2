@@ -12,6 +12,7 @@ use crate::poly::{
 
 mod circuit;
 mod keygen;
+mod permutation;
 mod prover;
 mod verifier;
 
@@ -50,10 +51,7 @@ pub struct ProvingKey<C: CurveAffine> {
 pub struct Proof<C: CurveAffine> {
     advice_commitments: Vec<C>,
     h_commitments: Vec<C>,
-    permutation_product_commitments: Vec<C>,
-    permutation_product_evals: Vec<C::Scalar>,
-    permutation_product_inv_evals: Vec<C::Scalar>,
-    permutation_evals: Vec<Vec<C::Scalar>>,
+    permutations: Option<permutation::Proof<C>>,
     advice_evals: Vec<C::Scalar>,
     aux_evals: Vec<C::Scalar>,
     fixed_evals: Vec<C::Scalar>,
