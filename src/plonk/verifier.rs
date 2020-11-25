@@ -1,3 +1,5 @@
+use std::iter;
+
 use super::{Error, Proof, VerifyingKey};
 use crate::arithmetic::{get_challenge_scalar, Challenge, CurveAffine, Field};
 use crate::poly::{
@@ -69,6 +71,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         // Sample x_3 challenge, which is used to ensure the circuit is
         // satisfied with high probability.
         let x_3: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        let x_3_inv = vk.domain.rotate_omega(x_3, Rotation(-1));
 
         // This check ensures the circuit is satisfied so long as the polynomial
         // commitments open to the correct values.
@@ -87,100 +90,100 @@ impl<'a, C: CurveAffine> Proof<C> {
             transcript.absorb_scalar(*eval);
         }
 
-        let mut queries: Vec<VerifierQuery<'a, C>> = Vec::new();
-
-        for (query_index, &(column, at)) in vk.cs.advice_queries.iter().enumerate() {
-            let point = vk.domain.rotate_omega(x_3, at);
-            queries.push(VerifierQuery {
-                point,
-                commitment: &self.advice_commitments[column.index()],
-                eval: self.advice_evals[query_index],
-            });
-        }
-
-        for (query_index, &(column, at)) in vk.cs.aux_queries.iter().enumerate() {
-            let point = vk.domain.rotate_omega(x_3, at);
-            queries.push(VerifierQuery {
-                point,
-                commitment: &aux_commitments[column.index()],
-                eval: self.aux_evals[query_index],
-            });
-        }
-
-        for (query_index, &(column, at)) in vk.cs.fixed_queries.iter().enumerate() {
-            let point = vk.domain.rotate_omega(x_3, at);
-            queries.push(VerifierQuery {
-                point,
-                commitment: &vk.fixed_commitments[column.index()],
-                eval: self.fixed_evals[query_index],
-            });
-        }
-
-        for ((idx, _), &eval) in self
-            .h_commitments
-            .iter()
-            .enumerate()
-            .zip(self.h_evals.iter())
-        {
-            let commitment = &self.h_commitments[idx];
-            queries.push(VerifierQuery {
-                point: x_3,
-                commitment,
-                eval,
-            });
-        }
+        let queries =
+            iter::empty()
+                .chain(vk.cs.advice_queries.iter().enumerate().map(
+                    |(query_index, &(column, at))| VerifierQuery {
+                        point: vk.domain.rotate_omega(x_3, at),
+                        commitment: &self.advice_commitments[column.index()],
+                        eval: self.advice_evals[query_index],
+                    },
+                ))
+                .chain(
+                    vk.cs
+                        .aux_queries
+                        .iter()
+                        .enumerate()
+                        .map(|(query_index, &(column, at))| VerifierQuery {
+                            point: vk.domain.rotate_omega(x_3, at),
+                            commitment: &aux_commitments[column.index()],
+                            eval: self.aux_evals[query_index],
+                        }),
+                )
+                .chain(vk.cs.fixed_queries.iter().enumerate().map(
+                    |(query_index, &(column, at))| VerifierQuery {
+                        point: vk.domain.rotate_omega(x_3, at),
+                        commitment: &vk.fixed_commitments[column.index()],
+                        eval: self.fixed_evals[query_index],
+                    },
+                ))
+                .chain(
+                    self.h_commitments
+                        .iter()
+                        .enumerate()
+                        .zip(self.h_evals.iter())
+                        .map(|((idx, _), &eval)| VerifierQuery {
+                            point: x_3,
+                            commitment: &self.h_commitments[idx],
+                            eval,
+                        }),
+                );
 
         // Handle permutation arguments, if any exist
-        if !vk.cs.permutations.is_empty() {
-            // Open permutation product commitments at x_3
-            for ((idx, _), &eval) in self
-                .permutation_product_commitments
-                .iter()
-                .enumerate()
-                .zip(self.permutation_product_evals.iter())
-            {
-                let commitment = &self.permutation_product_commitments[idx];
-                queries.push(VerifierQuery {
-                    point: x_3,
-                    commitment,
-                    eval,
-                });
-            }
-            // Open permutation commitments for each permutation argument at x_3
-            for outer_idx in 0..vk.permutation_commitments.len() {
-                let inner_len = vk.permutation_commitments[outer_idx].len();
-                for inner_idx in 0..inner_len {
-                    let commitment = &vk.permutation_commitments[outer_idx][inner_idx];
-                    let eval = self.permutation_evals[outer_idx][inner_idx];
-                    queries.push(VerifierQuery {
-                        point: x_3,
-                        commitment,
-                        eval,
-                    });
-                }
-            }
-
-            // Open permutation product commitments at \omega^{-1} x_3
-            let x_3_inv = vk.domain.rotate_omega(x_3, Rotation(-1));
-            for ((idx, _), &eval) in self
-                .permutation_product_commitments
-                .iter()
-                .enumerate()
-                .zip(self.permutation_product_inv_evals.iter())
-            {
-                let commitment = &self.permutation_product_commitments[idx];
-                queries.push(VerifierQuery {
-                    point: x_3_inv,
-                    commitment,
-                    eval,
-                });
-            }
-        }
+        let permutation_queries = if !vk.cs.permutations.is_empty() {
+            Some(
+                iter::empty()
+                    // Open permutation product commitments at x_3
+                    .chain(
+                        self.permutation_product_commitments
+                            .iter()
+                            .enumerate()
+                            .zip(self.permutation_product_evals.iter())
+                            .map(|((idx, _), &eval)| VerifierQuery {
+                                point: x_3,
+                                commitment: &self.permutation_product_commitments[idx],
+                                eval,
+                            }),
+                    )
+                    // Open permutation commitments for each permutation argument at x_3
+                    .chain(
+                        (0..vk.permutation_commitments.len())
+                            .map(|outer_idx| {
+                                let inner_len = vk.permutation_commitments[outer_idx].len();
+                                (0..inner_len).map(move |inner_idx| VerifierQuery {
+                                    point: x_3,
+                                    commitment: &vk.permutation_commitments[outer_idx][inner_idx],
+                                    eval: self.permutation_evals[outer_idx][inner_idx],
+                                })
+                            })
+                            .flatten(),
+                    )
+                    // Open permutation product commitments at \omega^{-1} x_3
+                    .chain(
+                        self.permutation_product_commitments
+                            .iter()
+                            .enumerate()
+                            .zip(self.permutation_product_inv_evals.iter())
+                            .map(|((idx, _), &eval)| VerifierQuery {
+                                point: x_3_inv,
+                                commitment: &self.permutation_product_commitments[idx],
+                                eval,
+                            }),
+                    ),
+            )
+        } else {
+            None
+        };
 
         // We are now convinced the circuit is satisfied so long as the
         // polynomial commitments open to the correct values.
         self.multiopening
-            .verify(params, &mut transcript, queries, msm)
+            .verify(
+                params,
+                &mut transcript,
+                queries.chain(permutation_queries.into_iter().flatten()),
+                msm,
+            )
             .map_err(|_| Error::OpeningError)
     }
 
@@ -315,12 +318,11 @@ impl<'a, C: CurveAffine> Proof<C> {
             .fold(C::Scalar::zero(), |h_eval, v| h_eval * &x_2 + &v);
 
         // Compute h(x_3) from the prover
-        let (_, h_eval) = self
+        let h_eval = self
             .h_evals
             .iter()
-            .fold((C::Scalar::one(), C::Scalar::zero()), |(cur, acc), eval| {
-                (cur * &x_3n, acc + &(cur * eval))
-            });
+            .rev()
+            .fold(C::Scalar::zero(), |acc, eval| acc * &x_3n + eval);
 
         // Did the prover commit to the correct polynomial?
         if expected_h_eval != (h_eval * &(x_3n - &C::Scalar::one())) {

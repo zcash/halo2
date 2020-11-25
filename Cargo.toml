@@ -5,6 +5,7 @@ authors = [
     "Sean Bowe <sean@electriccoin.co>",
     "Ying Tong Lai <yingtong@electriccoin.co>",
     "Daira Hopwood <daira@electriccoin.co>",
+    "Jack Grigg <jack@electriccoin.co>",
 ]
 edition = "2018"
 description = """
