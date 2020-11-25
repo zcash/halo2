@@ -7,7 +7,8 @@
 
 use crate::arithmetic::CurveAffine;
 use crate::poly::{
-    multiopen, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
+    commitment::ChallengeScalar, multiopen, Coeff, EvaluationDomain, ExtendedLagrangeCoeff,
+    LagrangeCoeff, Polynomial,
 };
 
 mod circuit;
@@ -92,6 +93,22 @@ impl<C: CurveAffine> VerifyingKey<C> {
         &self.domain
     }
 }
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Beta;
+pub(crate) type ChallengeBeta<F> = ChallengeScalar<F, Beta>;
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Gamma;
+pub(crate) type ChallengeGamma<F> = ChallengeScalar<F, Gamma>;
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Y;
+pub(crate) type ChallengeY<F> = ChallengeScalar<F, Y>;
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct X;
+pub(crate) type ChallengeX<F> = ChallengeScalar<F, X>;
 
 #[test]
 fn test_proving() {

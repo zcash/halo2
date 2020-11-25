@@ -3,11 +3,9 @@ use std::iter;
 
 use super::{
     circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    permutation, Error, Proof, ProvingKey,
+    permutation, ChallengeBeta, ChallengeGamma, ChallengeX, ChallengeY, Error, Proof, ProvingKey,
 };
-use crate::arithmetic::{
-    eval_polynomial, get_challenge_scalar, Challenge, Curve, CurveAffine, FieldExt,
-};
+use crate::arithmetic::{eval_polynomial, Curve, CurveAffine, FieldExt};
 use crate::poly::{
     commitment::{Blind, Params},
     multiopen::{self, ProverQuery},
@@ -170,11 +168,11 @@ impl<C: CurveAffine> Proof<C> {
             })
             .collect();
 
-        // Sample x_0 challenge
-        let x_0: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        // Sample beta challenge
+        let beta = ChallengeBeta::get(&mut transcript);
 
-        // Sample x_1 challenge
-        let x_1: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        // Sample gamma challenge
+        let gamma = ChallengeGamma::get(&mut transcript);
 
         // Commit to permutations, if any.
         let permutations = if !pk.vk.cs.permutations.is_empty() {
@@ -182,8 +180,8 @@ impl<C: CurveAffine> Proof<C> {
                 params,
                 pk,
                 &witness.advice,
-                x_0,
-                x_1,
+                beta,
+                gamma,
                 &mut transcript,
             )?)
         } else {
@@ -191,11 +189,11 @@ impl<C: CurveAffine> Proof<C> {
         };
 
         // Obtain challenge for keeping all separate gates linearly independent
-        let x_2: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        let y = ChallengeY::<C::Scalar>::get(&mut transcript);
 
         // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints, if any.
         let (permutations, permutation_expressions) = permutations
-            .map(|p| p.construct(pk, &advice_cosets, x_0, x_1))
+            .map(|p| p.construct(pk, &advice_cosets, beta, gamma))
             .transpose()?
             .map(|(p, expressions)| (Some(p), Some(expressions)))
             .unwrap_or_default();
@@ -215,7 +213,7 @@ impl<C: CurveAffine> Proof<C> {
             }))
             // Permutation constraints, if any.
             .chain(permutation_expressions.into_iter().flatten())
-            .fold(domain.empty_extended(), |h_poly, v| h_poly * x_2 + &v);
+            .fold(domain.empty_extended(), |h_poly, v| h_poly * *y + &v);
 
         // Divide by t(X) = X^{params.n} - 1.
         let h_poly = domain.divide_by_vanishing_poly(h_poly);
@@ -249,14 +247,14 @@ impl<C: CurveAffine> Proof<C> {
                 .map_err(|_| Error::TranscriptError)?;
         }
 
-        let x_3: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        let x = ChallengeX::get(&mut transcript);
 
-        // Evaluate polynomials at omega^i x_3
+        // Evaluate polynomials at omega^i x
         let advice_evals: Vec<_> = meta
             .advice_queries
             .iter()
             .map(|&(column, at)| {
-                eval_polynomial(&advice_polys[column.index()], domain.rotate_omega(x_3, at))
+                eval_polynomial(&advice_polys[column.index()], domain.rotate_omega(*x, at))
             })
             .collect();
 
@@ -264,7 +262,7 @@ impl<C: CurveAffine> Proof<C> {
             .aux_queries
             .iter()
             .map(|&(column, at)| {
-                eval_polynomial(&aux_polys[column.index()], domain.rotate_omega(x_3, at))
+                eval_polynomial(&aux_polys[column.index()], domain.rotate_omega(*x, at))
             })
             .collect();
 
@@ -272,16 +270,13 @@ impl<C: CurveAffine> Proof<C> {
             .fixed_queries
             .iter()
             .map(|&(column, at)| {
-                eval_polynomial(
-                    &pk.fixed_polys[column.index()],
-                    domain.rotate_omega(x_3, at),
-                )
+                eval_polynomial(&pk.fixed_polys[column.index()], domain.rotate_omega(*x, at))
             })
             .collect();
 
         let h_evals: Vec<_> = h_pieces
             .iter()
-            .map(|poly| eval_polynomial(poly, x_3))
+            .map(|poly| eval_polynomial(poly, *x))
             .collect();
 
         // Hash each advice evaluation
@@ -294,14 +289,14 @@ impl<C: CurveAffine> Proof<C> {
             transcript.absorb_scalar(*eval);
         }
 
-        // Evaluate the permutations, if any, at omega^i x_3.
-        let permutations = permutations.map(|p| p.evaluate(pk, x_3, &mut transcript));
+        // Evaluate the permutations, if any, at omega^i x.
+        let permutations = permutations.map(|p| p.evaluate(pk, x, &mut transcript));
 
         let instances =
             iter::empty()
                 .chain(pk.vk.cs.advice_queries.iter().enumerate().map(
                     |(query_index, &(column, at))| ProverQuery {
-                        point: domain.rotate_omega(x_3, at),
+                        point: domain.rotate_omega(*x, at),
                         poly: &advice_polys[column.index()],
                         blind: advice_blinds[column.index()],
                         eval: advice_evals[query_index],
@@ -309,7 +304,7 @@ impl<C: CurveAffine> Proof<C> {
                 ))
                 .chain(pk.vk.cs.aux_queries.iter().enumerate().map(
                     |(query_index, &(column, at))| ProverQuery {
-                        point: domain.rotate_omega(x_3, at),
+                        point: domain.rotate_omega(*x, at),
                         poly: &aux_polys[column.index()],
                         blind: Blind::default(),
                         eval: aux_evals[query_index],
@@ -317,20 +312,20 @@ impl<C: CurveAffine> Proof<C> {
                 ))
                 .chain(pk.vk.cs.fixed_queries.iter().enumerate().map(
                     |(query_index, &(column, at))| ProverQuery {
-                        point: domain.rotate_omega(x_3, at),
+                        point: domain.rotate_omega(*x, at),
                         poly: &pk.fixed_polys[column.index()],
                         blind: Blind::default(),
                         eval: fixed_evals[query_index],
                     },
                 ))
-                // We query the h(X) polynomial at x_3
+                // We query the h(X) polynomial at x
                 .chain(
                     h_pieces
                         .iter()
                         .zip(h_blinds.iter())
                         .zip(h_evals.iter())
                         .map(|((h_poly, h_blind), h_eval)| ProverQuery {
-                            point: x_3,
+                            point: *x,
                             poly: h_poly,
                             blind: *h_blind,
                             eval: *h_eval,
@@ -343,7 +338,7 @@ impl<C: CurveAffine> Proof<C> {
             instances.chain(
                 permutations
                     .as_ref()
-                    .map(|p| p.open(pk, x_3))
+                    .map(|p| p.open(pk, x))
                     .into_iter()
                     .flatten(),
             ),

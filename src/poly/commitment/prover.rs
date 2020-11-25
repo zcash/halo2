@@ -1,10 +1,9 @@
 use ff::Field;
 
 use super::super::{Coeff, Error, Polynomial};
-use super::{Blind, Params, Proof};
+use super::{Blind, Challenge, ChallengeScalar, ChallengeX6, Params, Proof};
 use crate::arithmetic::{
-    best_multiexp, compute_inner_product, get_challenge_scalar, parallelize, small_multiexp,
-    Challenge, Curve, CurveAffine, FieldExt,
+    best_multiexp, compute_inner_product, parallelize, small_multiexp, Curve, CurveAffine, FieldExt,
 };
 use crate::transcript::{Hasher, Transcript};
 
@@ -22,12 +21,12 @@ impl<C: CurveAffine> Proof<C> {
     /// opening v, and the point x. It's probably also nice for the transcript
     /// to have seen the elliptic curve description and the SRS, if you want to
     /// be rigorous.
-    pub fn create<HBase, HScalar>(
+    pub(crate) fn create<HBase, HScalar>(
         params: &Params<C>,
         transcript: &mut Transcript<C, HBase, HScalar>,
         px: &Polynomial<C::Scalar, Coeff>,
         blind: Blind<C::Scalar>,
-        x: C::Scalar,
+        x: ChallengeX6<C::Scalar>,
     ) -> Result<Self, Error>
     where
         HBase: Hasher<C::Base>,
@@ -108,8 +107,8 @@ impl<C: CurveAffine> Proof<C> {
                     .map_err(|_| Error::SamplingError)?;
 
                 // ... and get the squared challenge.
-                let challenge_sq_packed = transcript.squeeze().get_lower_128();
-                let challenge_sq: C::Scalar = get_challenge_scalar(Challenge(challenge_sq_packed));
+                let challenge_sq_packed = Challenge::get(&mut transcript);
+                let challenge_sq: C::Scalar = *ChallengeScalar::<_, ()>::from(challenge_sq_packed);
 
                 // There might be no square root, in which case we'll fork the
                 // transcript.
@@ -139,9 +138,8 @@ impl<C: CurveAffine> Proof<C> {
             // And obtain the challenge, even though we already have it, since
             // squeezing affects the transcript.
             {
-                let challenge_sq_packed = transcript.squeeze().get_lower_128();
-                let challenge_sq_expected = get_challenge_scalar(Challenge(challenge_sq_packed));
-                assert_eq!(challenge_sq, challenge_sq_expected);
+                let challenge_sq_expected = ChallengeScalar::<_, ()>::get(transcript);
+                assert_eq!(challenge_sq, *challenge_sq_expected);
             }
 
             // Done with this round.
@@ -186,12 +184,11 @@ impl<C: CurveAffine> Proof<C> {
             .map_err(|_| Error::SamplingError)?;
 
         // Obtain the challenge c.
-        let c_packed = transcript.squeeze().get_lower_128();
-        let c: C::Scalar = get_challenge_scalar(Challenge(c_packed));
+        let c = ChallengeScalar::<_, ()>::get(transcript);
 
         // Compute z1 and z2 as described in the Halo paper.
         let z1 = a * &c + &d;
-        let z2 = c * &blind + &s;
+        let z2 = *c * &blind + &s;
 
         Ok(Proof {
             rounds,

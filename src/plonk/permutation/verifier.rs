@@ -4,7 +4,7 @@ use std::iter;
 use super::Proof;
 use crate::{
     arithmetic::{CurveAffine, FieldExt},
-    plonk::{Error, VerifyingKey},
+    plonk::{ChallengeBeta, ChallengeGamma, ChallengeX, Error, VerifyingKey},
     poly::{multiopen::VerifierQuery, Rotation},
     transcript::{Hasher, Transcript},
 };
@@ -55,9 +55,9 @@ impl<C: CurveAffine> Proof<C> {
         vk: &'a VerifyingKey<C>,
         advice_evals: &'a [C::Scalar],
         l_0: C::Scalar,
-        x_0: C::Scalar,
-        x_1: C::Scalar,
-        x_3: C::Scalar,
+        beta: ChallengeBeta<C::Scalar>,
+        gamma: ChallengeGamma<C::Scalar>,
+        x: ChallengeX<C::Scalar>,
     ) -> impl Iterator<Item = C::Scalar> + 'a {
         iter::empty()
             // l_0(X) * (1 - z(X)) = 0
@@ -85,15 +85,15 @@ impl<C: CurveAffine> Proof<C> {
                                 })
                                 .zip(permutation_evals.iter())
                             {
-                                left *= &(advice_eval + &(x_0 * permutation_eval) + &x_1);
+                                left *= &(advice_eval + &(*beta * permutation_eval) + &gamma);
                             }
 
                             let mut right = *product_inv_eval;
-                            let mut current_delta = x_0 * &x_3;
+                            let mut current_delta = *beta * &x;
                             for advice_eval in columns.iter().map(|&column| {
                                 advice_evals[vk.cs.get_advice_query_index(column, 0)]
                             }) {
-                                right *= &(advice_eval + &current_delta + &x_1);
+                                right *= &(advice_eval + &current_delta + &gamma);
                                 current_delta *= &C::Scalar::DELTA;
                             }
 
@@ -113,44 +113,44 @@ impl<C: CurveAffine> Proof<C> {
     pub(crate) fn queries<'a>(
         &'a self,
         vk: &'a VerifyingKey<C>,
-        x_3: C::Scalar,
+        x: ChallengeX<C::Scalar>,
     ) -> impl Iterator<Item = VerifierQuery<'a, C>> + Clone {
-        let x_3_inv = vk.domain.rotate_omega(x_3, Rotation(-1));
+        let x_inv = vk.domain.rotate_omega(*x, Rotation(-1));
 
         iter::empty()
-            // Open permutation product commitments at x_3
+            // Open permutation product commitments at x
             .chain(
                 self.permutation_product_commitments
                     .iter()
                     .enumerate()
                     .zip(self.permutation_product_evals.iter())
                     .map(move |((idx, _), &eval)| VerifierQuery {
-                        point: x_3,
+                        point: *x,
                         commitment: &self.permutation_product_commitments[idx],
                         eval,
                     }),
             )
-            // Open permutation commitments for each permutation argument at x_3
+            // Open permutation commitments for each permutation argument at x
             .chain(
                 (0..vk.permutation_commitments.len())
                     .map(move |outer_idx| {
                         let inner_len = vk.permutation_commitments[outer_idx].len();
                         (0..inner_len).map(move |inner_idx| VerifierQuery {
-                            point: x_3,
+                            point: *x,
                             commitment: &vk.permutation_commitments[outer_idx][inner_idx],
                             eval: self.permutation_evals[outer_idx][inner_idx],
                         })
                     })
                     .flatten(),
             )
-            // Open permutation product commitments at \omega^{-1} x_3
+            // Open permutation product commitments at \omega^{-1} x
             .chain(
                 self.permutation_product_commitments
                     .iter()
                     .enumerate()
                     .zip(self.permutation_product_inv_evals.iter())
                     .map(move |((idx, _), &eval)| VerifierQuery {
-                        point: x_3_inv,
+                        point: x_inv,
                         commitment: &self.permutation_product_commitments[idx],
                         eval,
                     }),

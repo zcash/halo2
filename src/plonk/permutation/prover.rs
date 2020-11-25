@@ -4,7 +4,7 @@ use std::iter;
 use super::Proof;
 use crate::{
     arithmetic::{eval_polynomial, parallelize, BatchInvert, Curve, CurveAffine, FieldExt},
-    plonk::{Error, ProvingKey},
+    plonk::{ChallengeBeta, ChallengeGamma, ChallengeX, Error, ProvingKey},
     poly::{
         commitment::{Blind, Params},
         multiopen::ProverQuery,
@@ -40,8 +40,8 @@ impl<C: CurveAffine> Proof<C> {
         params: &Params<C>,
         pk: &ProvingKey<C>,
         advice: &[Polynomial<C::Scalar, LagrangeCoeff>],
-        x_0: C::Scalar,
-        x_1: C::Scalar,
+        beta: ChallengeBeta<C::Scalar>,
+        gamma: ChallengeGamma<C::Scalar>,
         transcript: &mut Transcript<C, HBase, HScalar>,
     ) -> Result<Committed<C>, Error> {
         let domain = &pk.vk.domain;
@@ -81,7 +81,7 @@ impl<C: CurveAffine> Proof<C> {
                                 .zip(permuted_column_values[start..].iter())
                         {
                             *modified_advice *=
-                                &(x_0 * permuted_advice_value + &x_1 + advice_value);
+                                &(*beta * permuted_advice_value + &gamma + advice_value);
                         }
                     });
                 }
@@ -116,7 +116,7 @@ impl<C: CurveAffine> Proof<C> {
                         .zip(advice[column.index()][start..].iter())
                     {
                         // Multiply by p_j(\omega^i) + \delta^j \omega^i \beta
-                        *modified_advice *= &(deltaomega * &x_0 + &x_1 + advice_value);
+                        *modified_advice *= &(deltaomega * &beta + &gamma + advice_value);
                         deltaomega *= &omega;
                     }
                 });
@@ -184,8 +184,8 @@ impl<C: CurveAffine> Committed<C> {
         self,
         pk: &'a ProvingKey<C>,
         advice_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
-        x_0: C::Scalar,
-        x_1: C::Scalar,
+        beta: ChallengeBeta<C::Scalar>,
+        gamma: ChallengeGamma<C::Scalar>,
     ) -> Result<
         (
             Constructed<C>,
@@ -220,13 +220,13 @@ impl<C: CurveAffine> Committed<C> {
                                 .zip(advice[start..].iter())
                                 .zip(permutation[start..].iter())
                             {
-                                *left *= &(*advice + &(x_0 * permutation) + &x_1);
+                                *left *= &(*advice + &(*beta * permutation) + &gamma);
                             }
                         });
                     }
 
                     let mut right = permutation_product_cosets_inv[permutation_index].clone();
-                    let mut current_delta = x_0 * &C::Scalar::ZETA;
+                    let mut current_delta = *beta * &C::Scalar::ZETA;
                     let step = domain.get_extended_omega();
                     for advice in columns
                         .iter()
@@ -236,7 +236,7 @@ impl<C: CurveAffine> Committed<C> {
                             let mut beta_term =
                                 current_delta * &step.pow_vartime(&[start as u64, 0, 0, 0]);
                             for (right, advice) in right.iter_mut().zip(advice[start..].iter()) {
-                                *right *= &(*advice + &beta_term + &x_1);
+                                *right *= &(*advice + &beta_term + &gamma);
                                 beta_term *= &step;
                             }
                         });
@@ -262,7 +262,7 @@ impl<C: CurveAffine> Constructed<C> {
     pub(crate) fn evaluate<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
         self,
         pk: &ProvingKey<C>,
-        x_3: C::Scalar,
+        x: ChallengeX<C::Scalar>,
         transcript: &mut Transcript<C, HBase, HScalar>,
     ) -> Evaluated<C> {
         let domain = &pk.vk.domain;
@@ -270,24 +270,19 @@ impl<C: CurveAffine> Constructed<C> {
         let permutation_product_evals: Vec<C::Scalar> = self
             .permutation_product_polys
             .iter()
-            .map(|poly| eval_polynomial(poly, x_3))
+            .map(|poly| eval_polynomial(poly, *x))
             .collect();
 
         let permutation_product_inv_evals: Vec<C::Scalar> = self
             .permutation_product_polys
             .iter()
-            .map(|poly| eval_polynomial(poly, domain.rotate_omega(x_3, Rotation(-1))))
+            .map(|poly| eval_polynomial(poly, domain.rotate_omega(*x, Rotation(-1))))
             .collect();
 
         let permutation_evals: Vec<Vec<C::Scalar>> = pk
             .permutation_polys
             .iter()
-            .map(|polys| {
-                polys
-                    .iter()
-                    .map(|poly| eval_polynomial(poly, x_3))
-                    .collect()
-            })
+            .map(|polys| polys.iter().map(|poly| eval_polynomial(poly, *x)).collect())
             .collect();
 
         // Hash each advice evaluation
@@ -312,12 +307,12 @@ impl<C: CurveAffine> Evaluated<C> {
     pub fn open<'a>(
         &'a self,
         pk: &'a ProvingKey<C>,
-        x_3: C::Scalar,
+        x: ChallengeX<C::Scalar>,
     ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
-        let x_3_inv = pk.vk.domain.rotate_omega(x_3, Rotation(-1));
+        let x_inv = pk.vk.domain.rotate_omega(*x, Rotation(-1));
 
         iter::empty()
-            // Open permutation product commitments at x_3
+            // Open permutation product commitments at x
             .chain(
                 self.constructed
                     .permutation_product_polys
@@ -325,26 +320,26 @@ impl<C: CurveAffine> Evaluated<C> {
                     .zip(self.constructed.permutation_product_blinds.iter())
                     .zip(self.permutation_product_evals.iter())
                     .map(move |((poly, blind), eval)| ProverQuery {
-                        point: x_3,
+                        point: *x,
                         poly,
                         blind: *blind,
                         eval: *eval,
                     }),
             )
-            // Open permutation polynomial commitments at x_3
+            // Open permutation polynomial commitments at x
             .chain(
                 pk.permutation_polys
                     .iter()
                     .zip(self.permutation_evals.iter())
                     .flat_map(|(polys, evals)| polys.iter().zip(evals.iter()))
                     .map(move |(poly, eval)| ProverQuery {
-                        point: x_3,
+                        point: *x,
                         poly,
                         blind: Blind::default(),
                         eval: *eval,
                     }),
             )
-            // Open permutation product commitments at \omega^{-1} x_3
+            // Open permutation product commitments at \omega^{-1} x
             .chain(
                 self.constructed
                     .permutation_product_polys
@@ -352,7 +347,7 @@ impl<C: CurveAffine> Evaluated<C> {
                     .zip(self.constructed.permutation_product_blinds.iter())
                     .zip(self.permutation_product_inv_evals.iter())
                     .map(move |((poly, blind), eval)| ProverQuery {
-                        point: x_3_inv,
+                        point: x_inv,
                         poly,
                         blind: *blind,
                         eval: *eval,
