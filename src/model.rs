@@ -49,13 +49,13 @@ impl fmt::Display for ModelRecorder {
 
         counters.sort_by(|(k1, _), (k2, _)| {
             let key1 = (
-                k1.name(),
+                k1.name().to_string(),
                 k1.labels()
                     .map(|l| (l.key(), l.value()))
                     .collect::<Vec<_>>(),
             );
             let key2 = (
-                k2.name(),
+                k2.name().to_string(),
                 k2.labels()
                     .map(|l| (l.key(), l.value()))
                     .collect::<Vec<_>>(),
