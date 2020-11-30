@@ -32,16 +32,16 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
     /// scalars and points.
     pub fn use_challenges(mut self) -> MSM<'a, C> {
         let s = compute_s(&self.challenges_sq, self.allinv * &self.neg_z1);
-        self.msm.add_to_g(&s);
-        self.msm.add_to_h(self.neg_z1);
+        self.msm.add_to_g_scalars(&s);
+        self.msm.add_to_h_scalar(self.neg_z1);
 
         self.msm
     }
 
-    /// Lets caller supply the purported G point and simply appends it to
-    /// return an updated MSM.
+    /// Lets caller supply the purported G point and simply appends
+    /// [-z1] G to return an updated MSM.
     pub fn use_g(mut self, g: C) -> (MSM<'a, C>, Accumulator<C>) {
-        self.msm.add_term(self.neg_z1, g);
+        self.msm.append_term(self.neg_z1, g);
 
         let accumulator = Accumulator {
             g,
@@ -51,7 +51,7 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
         (self.msm, accumulator)
     }
 
-    /// Computes the g value when given a potential scalar as input.
+    /// Computes G + H, where G = ⟨s, params.g⟩ and H is used for blinding
     pub fn compute_g(&self) -> C {
         let s = compute_s(&self.challenges_sq, self.allinv);
 
@@ -159,9 +159,11 @@ impl<C: CurveAffine> Proof<C> {
         let c_packed = transcript.squeeze().get_lower_128();
         let c: C::Scalar = get_challenge_scalar(Challenge(c_packed));
 
-        // Check
-        // [c] P + [c * v] U + [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2) + delta - [z1] G - [z1 * b] U - [z1 - z2] H
-        // = 0
+        // Construct
+        // [c] P + [c * v] U + [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2) + delta - [z1 * b] U + [z1 - z2] H
+        // = [z1] (G + H)
+        // The computation of [z1] (G + H) happens in either Guard::use_challenges()
+        // or Guard::use_g().
 
         let b = compute_b(x, &challenges, &challenges_inv);
 
@@ -171,22 +173,23 @@ impl<C: CurveAffine> Proof<C> {
         commitment_msm.scale(c);
         msm.add_msm(&commitment_msm);
 
+        // [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2)
         for scalar in &mut extra_scalars {
             *scalar *= &c;
         }
 
         for (scalar, base) in extra_scalars.iter().zip(extra_bases.iter()) {
-            msm.add_term(*scalar, *base);
+            msm.append_term(*scalar, *base);
         }
 
         // [c * v] U - [z1 * b] U
-        msm.add_term((c * &v) + &(neg_z1 * &b), u);
+        msm.append_term((c * &v) + &(neg_z1 * &b), u);
 
         // delta
-        msm.add_term(Field::one(), self.delta);
+        msm.append_term(Field::one(), self.delta);
 
-        // - [z1 - z2] H
-        msm.add_to_h(self.z1 - &self.z2);
+        // + [z1 - z2] H
+        msm.add_to_h_scalar(self.z1 - &self.z2);
 
         let guard = Guard {
             msm,

@@ -672,11 +672,11 @@ fn test_zeta() {
         "0x36c66d3a1e049a5887ad8b5ff9731ffe69cf8de720e52ec14394c2bd148fa4fd"
     );
     let a = Fq::ZETA;
-    assert!(bool::from(a != Fq::one()));
+    assert!(a != Fq::one());
     let b = a * a;
-    assert!(bool::from(b != Fq::one()));
+    assert!(b != Fq::one());
     let c = b * a;
-    assert!(bool::from(c == Fq::one()));
+    assert!(c == Fq::one());
 }
 
 #[test]
