@@ -4,7 +4,7 @@ use super::super::{
     commitment::{ChallengeScalar, ChallengeZ, Guard, Params, MSM},
     Error,
 };
-use super::{construct_intermediate_sets, Proof, Query, VerifierQuery};
+use super::{construct_intermediate_sets, ChallengeX1, ChallengeX2, Proof, Query, VerifierQuery};
 use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine, FieldExt};
 use crate::transcript::{Hasher, Transcript};
 
@@ -32,17 +32,17 @@ impl<C: CurveAffine> Proof<C> {
         // with it to make it true, with high probability.
         msm.scale(C::Scalar::rand());
 
-        // Sample x_4 for compressing openings at the same point sets together
-        let x_4 = ChallengeScalar::<_, ()>::get(transcript);
+        // Sample x_1 for compressing openings at the same point sets together
+        let x_1 = ChallengeX1::get(transcript);
 
-        // Sample a challenge x_5 for keeping the multi-point quotient
+        // Sample a challenge x_2 for keeping the multi-point quotient
         // polynomial terms linearly independent.
-        let x_5 = ChallengeScalar::<_, ()>::get(transcript);
+        let x_2 = ChallengeX2::get(transcript);
 
         let (commitment_map, point_sets) = construct_intermediate_sets(queries);
 
         // Compress the commitments and expected evaluations at x together.
-        // using the challenge x_4
+        // using the challenge x_1
         let mut q_commitments: Vec<_> = vec![params.empty_msm(); point_sets.len()];
 
         // A vec of vecs of evals. The outer vec corresponds to the point set,
@@ -53,10 +53,10 @@ impl<C: CurveAffine> Proof<C> {
         }
         {
             let mut accumulate = |set_idx: usize, new_commitment, evals: Vec<C::Scalar>| {
-                q_commitments[set_idx].scale(*x_4);
+                q_commitments[set_idx].scale(*x_1);
                 q_commitments[set_idx].append_term(C::Scalar::one(), new_commitment);
                 for (eval, set_eval) in evals.iter().zip(q_eval_sets[set_idx].iter_mut()) {
-                    *set_eval *= &x_4;
+                    *set_eval *= &x_1;
                     *set_eval += eval;
                 }
             };
@@ -86,7 +86,7 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // We can compute the expected msm_eval at z using the q_evals provided
-        // by the prover and from x_5
+        // by the prover and from x_2
         let msm_eval = point_sets
             .iter()
             .zip(q_eval_sets.iter())
@@ -99,7 +99,7 @@ impl<C: CurveAffine> Proof<C> {
                     let eval = points.iter().fold(*proof_eval - &r_eval, |eval, point| {
                         eval * &(*z - point).invert().unwrap()
                     });
-                    msm_eval * &x_5 + &eval
+                    msm_eval * &x_2 + &eval
                 },
             );
 

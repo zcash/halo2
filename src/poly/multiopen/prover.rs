@@ -2,7 +2,7 @@ use super::super::{
     commitment::{self, Blind, ChallengeScalar, ChallengeZ, Params},
     Coeff, Error, Polynomial,
 };
-use super::{construct_intermediate_sets, Proof, ProverQuery, Query};
+use super::{construct_intermediate_sets, ChallengeX1, ChallengeX2, Proof, ProverQuery, Query};
 
 use crate::arithmetic::{
     eval_polynomial, kate_division, lagrange_interpolate, Curve, CurveAffine, FieldExt,
@@ -30,13 +30,13 @@ impl<C: CurveAffine> Proof<C> {
     where
         I: IntoIterator<Item = ProverQuery<'a, C>> + Clone,
     {
-        let x_4 = ChallengeScalar::<_, ()>::get(transcript);
-        let x_5 = ChallengeScalar::<_, ()>::get(transcript);
+        let x_1 = ChallengeX1::get(transcript);
+        let x_2 = ChallengeX2::get(transcript);
 
         let (poly_map, point_sets) = construct_intermediate_sets(queries);
 
         // Collapse openings at same point sets together into single openings using
-        // x_4 challenge.
+        // x_1 challenge.
         let mut q_polys: Vec<Option<Polynomial<C::Scalar, Coeff>>> = vec![None; point_sets.len()];
         let mut q_blinds = vec![Blind(C::Scalar::zero()); point_sets.len()];
 
@@ -53,16 +53,16 @@ impl<C: CurveAffine> Proof<C> {
                                   blind: Blind<C::Scalar>,
                                   evals: Vec<C::Scalar>| {
                 if let Some(poly) = &q_polys[set_idx] {
-                    q_polys[set_idx] = Some(poly.clone() * *x_4 + new_poly);
+                    q_polys[set_idx] = Some(poly.clone() * *x_1 + new_poly);
                 } else {
                     q_polys[set_idx] = Some(new_poly.clone());
                 }
-                q_blinds[set_idx] *= *x_4;
+                q_blinds[set_idx] *= *x_1;
                 q_blinds[set_idx] += blind;
                 // Each polynomial is evaluated at a set of points. For each set,
                 // we collapse each polynomial's evals pointwise.
                 for (eval, set_eval) in evals.iter().zip(q_eval_sets[set_idx].iter_mut()) {
-                    *set_eval *= &x_4;
+                    *set_eval *= &x_1;
                     *set_eval += eval;
                 }
             };
@@ -99,7 +99,7 @@ impl<C: CurveAffine> Proof<C> {
                 if f_poly.is_none() {
                     Some(poly)
                 } else {
-                    f_poly.map(|f_poly| f_poly * *x_5 + &poly)
+                    f_poly.map(|f_poly| f_poly * *x_2 + &poly)
                 }
             })
             .unwrap();

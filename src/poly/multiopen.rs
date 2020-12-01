@@ -12,6 +12,16 @@ use crate::arithmetic::{CurveAffine, FieldExt};
 mod prover;
 mod verifier;
 
+#[derive(Clone, Copy, Debug)]
+struct X1 {}
+/// Challenge for compressing openings at the same point sets together.
+type ChallengeX1<F> = commitment::ChallengeScalar<F, X1>;
+
+#[derive(Clone, Copy, Debug)]
+struct X2 {}
+/// Challenge for keeping the multi-point quotient polynomial terms linearly independent.
+type ChallengeX2<F> = commitment::ChallengeScalar<F, X2>;
+
 /// This is a multi-point opening proof used in the polynomial commitment scheme opening.
 #[derive(Debug, Clone)]
 pub struct Proof<C: CurveAffine> {
