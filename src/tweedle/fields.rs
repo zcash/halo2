@@ -8,11 +8,14 @@ pub use fp::*;
 pub use fq::*;
 
 #[cfg(test)]
-use crate::arithmetic::Field;
+use ff::{Field, PrimeField};
+
+#[cfg(test)]
+use crate::arithmetic::FieldExt;
 
 #[test]
 fn test_extract() {
-    let a = Fq::random();
+    let a = Fq::rand();
     let a = a.square();
     let (t, s) = a.extract_radix2_vartime().unwrap();
     assert_eq!(

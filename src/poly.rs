@@ -2,8 +2,9 @@
 //! various forms, including computing commitments to them and provably opening
 //! the committed polynomials at arbitrary points.
 
-use crate::arithmetic::{parallelize, Field};
+use crate::arithmetic::parallelize;
 
+use ff::Field;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, RangeFrom, RangeFull, Sub};

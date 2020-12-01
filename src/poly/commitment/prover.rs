@@ -1,8 +1,10 @@
+use ff::Field;
+
 use super::super::{Coeff, Error, Polynomial};
 use super::{Blind, Params, Proof};
 use crate::arithmetic::{
     best_multiexp, compute_inner_product, get_challenge_scalar, parallelize, small_multiexp,
-    Challenge, Curve, CurveAffine, Field,
+    Challenge, Curve, CurveAffine, FieldExt,
 };
 use crate::transcript::{Hasher, Transcript};
 
@@ -83,8 +85,8 @@ impl<C: CurveAffine> Proof<C> {
             let r = best_multiexp(&a[half..], &g[0..half]);
             let value_l = compute_inner_product(&a[0..half], &b[half..]);
             let value_r = compute_inner_product(&a[half..], &b[0..half]);
-            let mut l_randomness = C::Scalar::random();
-            let r_randomness = C::Scalar::random();
+            let mut l_randomness = C::Scalar::rand();
+            let r_randomness = C::Scalar::rand();
             metrics::counter!("multiexp", 2, "val" => "l/r", "size" => "2");
             let l = l + &best_multiexp(&[value_l, l_randomness], &[u, params.h]);
             let r = r + &best_multiexp(&[value_r, r_randomness], &[u, params.h]);
@@ -172,8 +174,8 @@ impl<C: CurveAffine> Proof<C> {
         let g = g[0];
 
         // Random nonces for the zero-knowledge opening
-        let d = C::Scalar::random();
-        let s = C::Scalar::random();
+        let d = C::Scalar::rand();
+        let s = C::Scalar::rand();
 
         metrics::increment!("multiexp", "val" => "delta", "size" => "3");
         let delta = best_multiexp(&[d, d * &b, s], &[g, u, params.h]).to_affine();

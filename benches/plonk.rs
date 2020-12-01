@@ -2,7 +2,7 @@
 extern crate criterion;
 
 extern crate halo2;
-use halo2::arithmetic::Field;
+use halo2::arithmetic::FieldExt;
 use halo2::plonk::*;
 use halo2::poly::commitment::Params;
 use halo2::transcript::DummyHash;
@@ -33,7 +33,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         perm: usize,
     }
 
-    trait StandardCS<FF: Field> {
+    trait StandardCS<FF: FieldExt> {
         fn raw_multiply<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
         where
             F: FnOnce() -> Result<(FF, FF, FF), Error>;
@@ -43,19 +43,19 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         fn copy(&mut self, a: Variable, b: Variable) -> Result<(), Error>;
     }
 
-    struct MyCircuit<F: Field> {
+    struct MyCircuit<F: FieldExt> {
         a: Option<F>,
         k: u32,
     }
 
-    struct StandardPLONK<'a, F: Field, CS: Assignment<F> + 'a> {
+    struct StandardPLONK<'a, F: FieldExt, CS: Assignment<F> + 'a> {
         cs: &'a mut CS,
         config: PLONKConfig,
         current_gate: usize,
         _marker: PhantomData<F>,
     }
 
-    impl<'a, FF: Field, CS: Assignment<FF>> StandardPLONK<'a, FF, CS> {
+    impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardPLONK<'a, FF, CS> {
         fn new(cs: &'a mut CS, config: PLONKConfig) -> Self {
             StandardPLONK {
                 cs,
@@ -66,7 +66,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         }
     }
 
-    impl<'a, FF: Field, CS: Assignment<FF>> StandardCS<FF> for StandardPLONK<'a, FF, CS> {
+    impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardCS<FF> for StandardPLONK<'a, FF, CS> {
         fn raw_multiply<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
         where
             F: FnOnce() -> Result<(FF, FF, FF), Error>,
@@ -150,7 +150,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         }
     }
 
-    impl<F: Field> Circuit<F> for MyCircuit<F> {
+    impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         type Config = PLONKConfig;
 
         fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
@@ -234,7 +234,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     c.bench_function(&prover_name, |b| {
         b.iter(|| {
             let circuit: MyCircuit<Fp> = MyCircuit {
-                a: Some(Fp::random()),
+                a: Some(Fp::rand()),
                 k,
             };
 
@@ -245,7 +245,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     });
 
     let circuit: MyCircuit<Fp> = MyCircuit {
-        a: Some(Fp::random()),
+        a: Some(Fp::rand()),
         k,
     };
 

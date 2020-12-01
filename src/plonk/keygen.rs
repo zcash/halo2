@@ -1,8 +1,10 @@
+use ff::Field;
+
 use super::{
     circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
     Error, ProvingKey, VerifyingKey,
 };
-use crate::arithmetic::{Curve, CurveAffine, Field};
+use crate::arithmetic::{Curve, CurveAffine, FieldExt};
 use crate::poly::{
     commitment::{Blind, Params},
     EvaluationDomain, LagrangeCoeff, Polynomial, Rotation,

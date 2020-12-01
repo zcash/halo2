@@ -2,6 +2,7 @@
 //! field and polynomial arithmetic.
 
 use crossbeam_utils::thread;
+use ff::Field;
 
 mod curves;
 mod fields;
@@ -15,7 +16,7 @@ pub use fields::*;
 pub trait Group: Copy + Clone + Send + Sync + 'static {
     /// The group is assumed to be of prime order $p$. `Scalar` is the
     /// associated scalar field of size $p$.
-    type Scalar: Field;
+    type Scalar: FieldExt;
 
     /// Returns the additive identity of the group.
     fn group_zero() -> Self;
@@ -40,7 +41,7 @@ pub trait BatchInvert<F: Field> {
 
 impl<'a, F, I> BatchInvert<F> for I
 where
-    F: Field,
+    F: FieldExt,
     I: IntoIterator<Item = &'a mut F>,
 {
     fn batch_invert(self) -> F {
@@ -50,13 +51,13 @@ where
         for p in iter {
             let q = *p;
             tmp.push((acc, p));
-            acc = F::conditional_select(&(acc * q), &acc, q.is_zero());
+            acc = F::conditional_select(&(acc * q), &acc, q.ct_is_zero());
         }
         acc = acc.invert().unwrap();
         let allinv = acc;
 
         for (tmp, p) in tmp.into_iter().rev() {
-            let skip = p.is_zero();
+            let skip = p.ct_is_zero();
 
             let tmp = tmp * acc;
             acc = F::conditional_select(&(acc * *p), &acc, skip);
@@ -73,7 +74,7 @@ pub struct Challenge(pub(crate) u128);
 
 /// This algorithm applies the mapping of Algorithm 1 from the
 /// [Halo](https://eprint.iacr.org/2019/1021) paper.
-pub fn get_challenge_scalar<F: Field>(challenge: Challenge) -> F {
+pub fn get_challenge_scalar<F: FieldExt>(challenge: Challenge) -> F {
     let mut acc = (F::ZETA + F::one()).double();
 
     for i in (0..64).rev() {
@@ -432,7 +433,7 @@ fn log2_floor(num: usize) -> u32 {
 /// Returns coefficients of an n - 1 degree polynomial given a set of n points
 /// and their evaluations. This function will panic if two values in `points`
 /// are the same.
-pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
+pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
     assert_eq!(points.len(), evals.len());
     if points.len() == 1 {
         // Constant polynomial
@@ -492,8 +493,8 @@ use crate::tweedle::Fp;
 
 #[test]
 fn test_lagrange_interpolate() {
-    let points = (0..5).map(|_| Fp::random()).collect::<Vec<_>>();
-    let evals = (0..5).map(|_| Fp::random()).collect::<Vec<_>>();
+    let points = (0..5).map(|_| Fp::rand()).collect::<Vec<_>>();
+    let evals = (0..5).map(|_| Fp::rand()).collect::<Vec<_>>();
 
     for coeffs in 0..5 {
         let points = &points[0..coeffs];

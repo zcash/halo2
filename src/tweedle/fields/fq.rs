@@ -1,10 +1,11 @@
+use bitvec::{array::BitArray, order::Lsb0};
 use core::convert::TryInto;
 use core::fmt;
 use core::ops::{Add, Mul, Neg, Sub};
-
+use rand::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
-use crate::arithmetic::{adc, mac, sbb, Field, Group};
+use crate::arithmetic::{adc, mac, sbb, FieldExt, Group};
 
 /// This represents an element of $\mathbb{F}_q$ where
 ///
@@ -101,6 +102,19 @@ const MODULUS: Fq = Fq([
     0x4000000000000000,
 ]);
 
+/// The modulus as u32 limbs.
+#[cfg(not(target_pointer_width = "64"))]
+const MODULUS_LIMBS_32: [u32; 8] = [
+    0x0000_0001,
+    0x842c_afd4,
+    0x6962_86c9,
+    0x038a_a127,
+    0x0000_0000,
+    0x0000_0000,
+    0x0000_0000,
+    0x4000_0000,
+];
+
 impl<'a> Neg for &'a Fq {
     type Output = Fq;
 
@@ -174,6 +188,15 @@ const R3: Fq = Fq([
     0x57964eacb8fe21f2,
     0xcb266d18c0413bc2,
     0xa42cdf95f959577,
+]);
+
+/// `GENERATOR = 5 mod q` is a generator of the `q - 1` order multiplicative subgroup, and
+/// is also a quadratic non-residue.
+const GENERATOR: Fq = Fq::from_raw([
+    0x0000_0000_0000_0005,
+    0x0000_0000_0000_0000,
+    0x0000_0000_0000_0000,
+    0x0000_0000_0000_0000,
 ]);
 
 const S: u32 = 34;
@@ -431,6 +454,12 @@ impl Fq {
     }
 }
 
+impl From<Fq> for [u8; 32] {
+    fn from(value: Fq) -> [u8; 32] {
+        value.to_bytes()
+    }
+}
+
 impl<'a> From<&'a Fq> for [u8; 32] {
     fn from(value: &'a Fq) -> [u8; 32] {
         value.to_bytes()
@@ -454,53 +483,12 @@ impl Group for Fq {
     }
 }
 
-impl Field for Fq {
-    const NUM_BITS: u32 = 255;
-    const CAPACITY: u32 = 254;
-    const S: u32 = S;
-    const ROOT_OF_UNITY: Self = ROOT_OF_UNITY;
-    const ROOT_OF_UNITY_INV: Self = Fq::from_raw([
-        0x824860d3eb30de02,
-        0xad9f0afd0ea63acc,
-        0xd250318c11a16fe1,
-        0x12a9f5e1dd62dabc,
-    ]);
-    const UNROLL_T_EXPONENT: [u64; 4] = [
-        0x9b71de17e6d2d5a0,
-        0x0000000000296ee0,
-        0x8c00000000000000,
-        0x2ecc05e,
-    ];
-    const T_EXPONENT: [u64; 4] = [
-        0xda58a1b2610b2bf5,
-        0x0000000000e2a849,
-        0x0000000000000000,
-        0x10000000,
-    ];
-    const DELTA: Self = DELTA;
-    const UNROLL_S_EXPONENT: u64 = 0x344cfe85d;
-    const TWO_INV: Self = Fq::from_raw([
-        0xc21657ea00000001,
-        0x01c55093b4b14364,
-        0x0000000000000000,
-        0x2000000000000000,
-    ]);
-    const RESCUE_ALPHA: u64 = 5;
-    const RESCUE_INVALPHA: [u64; 4] = [
-        0xd023bfdccccccccd,
-        0x360880ec544ed23a,
-        0x3333333333333333,
-        0x3333333333333333,
-    ];
-    const ZETA: Self = Fq::from_raw([
-        0x4394c2bd148fa4fd,
-        0x69cf8de720e52ec1,
-        0x87ad8b5ff9731ffe,
-        0x36c66d3a1e049a58,
-    ]);
+impl ff::Field for Fq {
+    fn random(mut rng: impl RngCore) -> Self {
+        let mut random_bytes = [0; 64];
+        rng.fill_bytes(&mut random_bytes[..]);
 
-    fn is_zero(&self) -> Choice {
-        self.ct_eq(&Self::zero())
+        Self::from_bytes_wide(&random_bytes)
     }
 
     fn zero() -> Self {
@@ -511,12 +499,8 @@ impl Field for Fq {
         Self::one()
     }
 
-    fn from_u64(v: u64) -> Self {
-        Fq::from_raw([v as u64, 0, 0, 0])
-    }
-
-    fn from_u128(v: u128) -> Self {
-        Fq::from_raw([v as u64, (v >> 64) as u64, 0, 0])
+    fn is_zero(&self) -> bool {
+        self.ct_is_zero().into()
     }
 
     fn double(&self) -> Self {
@@ -584,6 +568,150 @@ impl Field for Fq {
         CtOption::new(tmp, !self.ct_eq(&Self::zero()))
     }
 
+    fn pow_vartime<S: AsRef<[u64]>>(&self, exp: S) -> Self {
+        let mut res = Self::one();
+        let mut found_one = false;
+        for e in exp.as_ref().iter().rev() {
+            for i in (0..64).rev() {
+                if found_one {
+                    res = res.square();
+                }
+
+                if ((*e >> i) & 1) == 1 {
+                    found_one = true;
+                    res *= self;
+                }
+            }
+        }
+        res
+    }
+}
+
+#[cfg(not(target_pointer_width = "64"))]
+type ReprBits = [u32; 8];
+
+#[cfg(target_pointer_width = "64")]
+type ReprBits = [u64; 4];
+
+impl ff::PrimeField for Fq {
+    type Repr = [u8; 32];
+    type ReprBits = ReprBits;
+
+    const NUM_BITS: u32 = 255;
+    const CAPACITY: u32 = 254;
+    const S: u32 = S;
+
+    fn from_repr(repr: Self::Repr) -> Option<Self> {
+        Self::from_bytes(&repr).into()
+    }
+
+    fn to_repr(&self) -> Self::Repr {
+        self.to_bytes()
+    }
+
+    fn to_le_bits(&self) -> BitArray<Lsb0, Self::ReprBits> {
+        let bytes = self.to_bytes();
+
+        #[cfg(not(target_pointer_width = "64"))]
+        let limbs = [
+            u32::from_le_bytes(bytes[0..4].try_into().unwrap()),
+            u32::from_le_bytes(bytes[4..8].try_into().unwrap()),
+            u32::from_le_bytes(bytes[8..12].try_into().unwrap()),
+            u32::from_le_bytes(bytes[12..16].try_into().unwrap()),
+            u32::from_le_bytes(bytes[16..20].try_into().unwrap()),
+            u32::from_le_bytes(bytes[20..24].try_into().unwrap()),
+            u32::from_le_bytes(bytes[24..28].try_into().unwrap()),
+            u32::from_le_bytes(bytes[28..32].try_into().unwrap()),
+        ];
+
+        #[cfg(target_pointer_width = "64")]
+        let limbs = [
+            u64::from_le_bytes(bytes[0..8].try_into().unwrap()),
+            u64::from_le_bytes(bytes[8..16].try_into().unwrap()),
+            u64::from_le_bytes(bytes[16..24].try_into().unwrap()),
+            u64::from_le_bytes(bytes[24..32].try_into().unwrap()),
+        ];
+
+        BitArray::new(limbs)
+    }
+
+    fn is_odd(&self) -> bool {
+        self.to_bytes()[0] & 1 == 1
+    }
+
+    fn char_le_bits() -> BitArray<Lsb0, Self::ReprBits> {
+        #[cfg(not(target_pointer_width = "64"))]
+        {
+            BitArray::new(MODULUS_LIMBS_32)
+        }
+
+        #[cfg(target_pointer_width = "64")]
+        BitArray::new(MODULUS.0)
+    }
+
+    fn multiplicative_generator() -> Self {
+        GENERATOR
+    }
+
+    fn root_of_unity() -> Self {
+        Self::ROOT_OF_UNITY
+    }
+}
+
+impl FieldExt for Fq {
+    const ROOT_OF_UNITY: Self = ROOT_OF_UNITY;
+    const ROOT_OF_UNITY_INV: Self = Fq::from_raw([
+        0x824860d3eb30de02,
+        0xad9f0afd0ea63acc,
+        0xd250318c11a16fe1,
+        0x12a9f5e1dd62dabc,
+    ]);
+    const UNROLL_T_EXPONENT: [u64; 4] = [
+        0x9b71de17e6d2d5a0,
+        0x0000000000296ee0,
+        0x8c00000000000000,
+        0x2ecc05e,
+    ];
+    const T_EXPONENT: [u64; 4] = [
+        0xda58a1b2610b2bf5,
+        0x0000000000e2a849,
+        0x0000000000000000,
+        0x10000000,
+    ];
+    const DELTA: Self = DELTA;
+    const UNROLL_S_EXPONENT: u64 = 0x344cfe85d;
+    const TWO_INV: Self = Fq::from_raw([
+        0xc21657ea00000001,
+        0x01c55093b4b14364,
+        0x0000000000000000,
+        0x2000000000000000,
+    ]);
+    const RESCUE_ALPHA: u64 = 5;
+    const RESCUE_INVALPHA: [u64; 4] = [
+        0xd023bfdccccccccd,
+        0x360880ec544ed23a,
+        0x3333333333333333,
+        0x3333333333333333,
+    ];
+    const ZETA: Self = Fq::from_raw([
+        0x4394c2bd148fa4fd,
+        0x69cf8de720e52ec1,
+        0x87ad8b5ff9731ffe,
+        0x36c66d3a1e049a58,
+    ]);
+
+    fn ct_is_zero(&self) -> Choice {
+        self.ct_eq(&Self::zero())
+    }
+
+    fn from_u64(v: u64) -> Self {
+        Fq::from_raw([v as u64, 0, 0, 0])
+    }
+
+    fn from_u128(v: u128) -> Self {
+        Fq::from_raw([v as u64, (v >> 64) as u64, 0, 0])
+    }
+
     /// Attempts to convert a little-endian byte representation of
     /// a scalar into a `Fq`, failing if the input is not canonical.
     fn from_bytes(bytes: &[u8; 32]) -> CtOption<Fq> {
@@ -649,6 +777,9 @@ impl Field for Fq {
         u128::from(tmp.0[0]) | (u128::from(tmp.0[1]) << 64)
     }
 }
+
+#[cfg(test)]
+use ff::{Field, PrimeField};
 
 #[test]
 fn test_inv() {

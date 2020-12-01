@@ -1,5 +1,5 @@
 use halo2::{
-    arithmetic::{Curve, Field},
+    arithmetic::{Curve, FieldExt},
     model::ModelRecorder,
     plonk::*,
     poly::commitment::{Blind, Params},
@@ -27,7 +27,7 @@ struct PLONKConfig {
     perm: usize,
 }
 
-trait StandardCS<FF: Field> {
+trait StandardCS<FF: FieldExt> {
     fn raw_multiply<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
     where
         F: FnOnce() -> Result<(FF, FF, FF), Error>;
@@ -40,19 +40,19 @@ trait StandardCS<FF: Field> {
         F: FnOnce() -> Result<FF, Error>;
 }
 
-struct MyCircuit<F: Field> {
+struct MyCircuit<F: FieldExt> {
     a: Option<F>,
     k: u32,
 }
 
-struct StandardPLONK<'a, F: Field, CS: Assignment<F> + 'a> {
+struct StandardPLONK<'a, F: FieldExt, CS: Assignment<F> + 'a> {
     cs: &'a mut CS,
     config: PLONKConfig,
     current_gate: usize,
     _marker: PhantomData<F>,
 }
 
-impl<'a, FF: Field, CS: Assignment<FF>> StandardPLONK<'a, FF, CS> {
+impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardPLONK<'a, FF, CS> {
     fn new(cs: &'a mut CS, config: PLONKConfig) -> Self {
         StandardPLONK {
             cs,
@@ -63,7 +63,7 @@ impl<'a, FF: Field, CS: Assignment<FF>> StandardPLONK<'a, FF, CS> {
     }
 }
 
-impl<'a, FF: Field, CS: Assignment<FF>> StandardCS<FF> for StandardPLONK<'a, FF, CS> {
+impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardCS<FF> for StandardPLONK<'a, FF, CS> {
     fn raw_multiply<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
     where
         F: FnOnce() -> Result<(FF, FF, FF), Error>,
@@ -159,7 +159,7 @@ impl<'a, FF: Field, CS: Assignment<FF>> StandardCS<FF> for StandardPLONK<'a, FF,
     }
 }
 
-impl<F: Field> Circuit<F> for MyCircuit<F> {
+impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
     type Config = PLONKConfig;
 
     fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
@@ -268,7 +268,7 @@ fn main() {
     recorder.clear();
 
     let circuit: MyCircuit<Fp> = MyCircuit {
-        a: Some(Fp::random()),
+        a: Some(Fp::rand()),
         k,
     };
 
