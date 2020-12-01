@@ -1,7 +1,7 @@
 use ff::Field;
 
 use super::super::{Coeff, Error, Polynomial};
-use super::{Blind, Challenge, ChallengeScalar, ChallengeX6, Params, Proof};
+use super::{Blind, Challenge, ChallengeScalar, ChallengeZ, Params, Proof};
 use crate::arithmetic::{
     best_multiexp, compute_inner_product, parallelize, small_multiexp, Curve, CurveAffine, FieldExt,
 };
@@ -26,7 +26,7 @@ impl<C: CurveAffine> Proof<C> {
         transcript: &mut Transcript<C, HBase, HScalar>,
         px: &Polynomial<C::Scalar, Coeff>,
         blind: Blind<C::Scalar>,
-        x: ChallengeX6<C::Scalar>,
+        z: ChallengeZ<C::Scalar>,
     ) -> Result<Self, Error>
     where
         HBase: Hasher<C::Base>,
@@ -61,7 +61,7 @@ impl<C: CurveAffine> Proof<C> {
             let mut cur = C::Scalar::one();
             for _ in 0..(1 << params.k) {
                 b.push(cur);
-                cur *= &x;
+                cur *= &z;
             }
         }
 

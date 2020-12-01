@@ -87,8 +87,8 @@ impl<F: FieldExt, T> Deref for ChallengeScalar<F, T> {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct X6 {}
-pub(crate) type ChallengeX6<F> = ChallengeScalar<F, X6>;
+pub(crate) struct Z {}
+pub(crate) type ChallengeZ<F> = ChallengeScalar<F, Z>;
 
 /// These are the public parameters for the polynomial commitment scheme.
 #[derive(Debug)]
@@ -346,16 +346,16 @@ fn test_opening_proof() {
 
     let mut transcript = Transcript::<_, DummyHash<_>, DummyHash<_>>::new();
     transcript.absorb_point(&p).unwrap();
-    let x = ChallengeX6::get(&mut transcript);
+    let z = ChallengeZ::get(&mut transcript);
     // Evaluate the polynomial
-    let v = eval_polynomial(&px, *x);
+    let v = eval_polynomial(&px, *z);
 
     transcript.absorb_base(Fp::from_bytes(&v.to_bytes()).unwrap()); // unlikely to fail since p ~ q
 
     loop {
         let mut transcript_dup = transcript.clone();
 
-        let opening_proof = Proof::create(&params, &mut transcript, &px, blind, x);
+        let opening_proof = Proof::create(&params, &mut transcript, &px, blind, z);
         if let Ok(opening_proof) = opening_proof {
             // Verify the opening proof
             let mut commitment_msm = params.empty_msm();
@@ -365,7 +365,7 @@ fn test_opening_proof() {
                     &params,
                     params.empty_msm(),
                     &mut transcript_dup,
-                    x,
+                    z,
                     commitment_msm,
                     v,
                 )

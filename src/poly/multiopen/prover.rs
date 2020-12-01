@@ -1,5 +1,5 @@
 use super::super::{
-    commitment::{self, Blind, ChallengeScalar, ChallengeX6, Params},
+    commitment::{self, Blind, ChallengeScalar, ChallengeZ, Params},
     Coeff, Error, Polynomial,
 };
 use super::{construct_intermediate_sets, Proof, ProverQuery, Query};
@@ -113,11 +113,11 @@ impl<C: CurveAffine> Proof<C> {
                 .absorb_point(&f_commitment)
                 .map_err(|_| Error::SamplingError)?;
 
-            let x_6 = ChallengeX6::get(&mut transcript);
+            let z = ChallengeZ::get(&mut transcript);
 
             let q_evals: Vec<C::Scalar> = q_polys
                 .iter()
-                .map(|poly| eval_polynomial(poly.as_ref().unwrap(), *x_6))
+                .map(|poly| eval_polynomial(poly.as_ref().unwrap(), *z))
                 .collect();
 
             for eval in q_evals.iter() {
@@ -137,7 +137,7 @@ impl<C: CurveAffine> Proof<C> {
             );
 
             if let Ok(opening) =
-                commitment::Proof::create(&params, &mut transcript, &f_poly, f_blind_try, x_6)
+                commitment::Proof::create(&params, &mut transcript, &f_poly, f_blind_try, z)
             {
                 break (opening, q_evals);
             } else {

@@ -1,7 +1,7 @@
 use ff::Field;
 
 use super::super::Error;
-use super::{Challenge, ChallengeScalar, ChallengeX6, Params, Proof, MSM};
+use super::{Challenge, ChallengeScalar, ChallengeZ, Params, Proof, MSM};
 use crate::transcript::{Hasher, Transcript};
 
 use crate::arithmetic::{best_multiexp, Curve, CurveAffine, FieldExt};
@@ -71,7 +71,7 @@ impl<C: CurveAffine> Proof<C> {
         params: &'a Params<C>,
         mut msm: MSM<'a, C>,
         transcript: &mut Transcript<C, HBase, HScalar>,
-        x: ChallengeX6<C::Scalar>,
+        z: ChallengeZ<C::Scalar>,
         mut commitment_msm: MSM<'a, C>,
         v: C::Scalar,
     ) -> Result<Guard<'a, C>, Error>
@@ -164,7 +164,7 @@ impl<C: CurveAffine> Proof<C> {
         // The computation of [z1] (G + H) happens in either Guard::use_challenges()
         // or Guard::use_g().
 
-        let b = compute_b(*x, &challenges, &challenges_inv);
+        let b = compute_b(*z, &challenges, &challenges_inv);
 
         let neg_z1 = -self.z1;
 
