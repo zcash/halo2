@@ -1,8 +1,8 @@
 use ff::Field;
 
 use super::super::Error;
-use super::{Challenge, ChallengeScalar, Params, Proof, MSM};
-use crate::transcript::{Hasher, Transcript};
+use super::{Params, Proof, MSM};
+use crate::transcript::{Challenge, ChallengeScalar, Hasher, Transcript};
 
 use crate::arithmetic::{best_multiexp, Curve, CurveAffine, FieldExt};
 

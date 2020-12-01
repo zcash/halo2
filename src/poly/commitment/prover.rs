@@ -1,11 +1,11 @@
 use ff::Field;
 
 use super::super::{Coeff, Error, Polynomial};
-use super::{Blind, Challenge, ChallengeScalar, Params, Proof};
+use super::{Blind, Params, Proof};
 use crate::arithmetic::{
     best_multiexp, compute_inner_product, parallelize, small_multiexp, Curve, CurveAffine, FieldExt,
 };
-use crate::transcript::{Hasher, Transcript};
+use crate::transcript::{Challenge, ChallengeScalar, Hasher, Transcript};
 
 impl<C: CurveAffine> Proof<C> {
     /// Create a polynomial commitment opening proof for the polynomial defined

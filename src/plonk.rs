@@ -6,10 +6,8 @@
 //! [plonk]: https://eprint.iacr.org/2019/953
 
 use crate::arithmetic::CurveAffine;
-use crate::poly::{
-    commitment::ChallengeScalar, multiopen, Coeff, EvaluationDomain, ExtendedLagrangeCoeff,
-    Polynomial,
-};
+use crate::poly::{multiopen, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial};
+use crate::transcript::ChallengeScalar;
 
 mod circuit;
 mod keygen;
