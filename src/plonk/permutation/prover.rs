@@ -307,13 +307,13 @@ impl<C: CurveAffine> Constructed<C> {
     ) -> Evaluated<C> {
         let domain = &pk.vk.domain;
 
-        let permutation_product_evals: Vec<C::Scalar> = self
+        let permutation_product_evals: Vec<_> = self
             .permutation_product_polys
             .iter()
             .map(|poly| eval_polynomial(poly, *x))
             .collect();
 
-        let permutation_product_inv_evals: Vec<C::Scalar> = self
+        let permutation_product_inv_evals: Vec<_> = self
             .permutation_product_polys
             .iter()
             .map(|poly| eval_polynomial(poly, domain.rotate_omega(*x, Rotation(-1))))
