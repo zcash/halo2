@@ -117,16 +117,25 @@ impl<C: CurveAffine> Proof<C> {
         let x_inv = vk.domain.rotate_omega(*x, Rotation(-1));
 
         iter::empty()
-            // Open permutation product commitments at x
+            // Open permutation product commitments at x and \omega^{-1} x
             .chain(
                 self.permutation_product_commitments
                     .iter()
                     .enumerate()
                     .zip(self.permutation_product_evals.iter())
-                    .map(move |((idx, _), &eval)| VerifierQuery {
-                        point: *x,
-                        commitment: &self.permutation_product_commitments[idx],
-                        eval,
+                    .zip(self.permutation_product_inv_evals.iter())
+                    .flat_map(move |(((idx, _), &eval), &inv_eval)| {
+                        iter::empty()
+                            .chain(Some(VerifierQuery {
+                                point: *x,
+                                commitment: &self.permutation_product_commitments[idx],
+                                eval,
+                            }))
+                            .chain(Some(VerifierQuery {
+                                point: x_inv,
+                                commitment: &self.permutation_product_commitments[idx],
+                                eval: inv_eval,
+                            }))
                     }),
             )
             // Open permutation commitments for each permutation argument at x
@@ -141,18 +150,6 @@ impl<C: CurveAffine> Proof<C> {
                         })
                     })
                     .flatten(),
-            )
-            // Open permutation product commitments at \omega^{-1} x
-            .chain(
-                self.permutation_product_commitments
-                    .iter()
-                    .enumerate()
-                    .zip(self.permutation_product_inv_evals.iter())
-                    .map(move |((idx, _), &eval)| VerifierQuery {
-                        point: x_inv,
-                        commitment: &self.permutation_product_commitments[idx],
-                        eval,
-                    }),
             )
     }
 }

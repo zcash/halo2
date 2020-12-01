@@ -348,18 +348,28 @@ impl<C: CurveAffine> Evaluated<C> {
         let x_inv = pk.vk.domain.rotate_omega(*x, Rotation(-1));
 
         iter::empty()
-            // Open permutation product commitments at x
+            // Open permutation product commitments at x and \omega^{-1} x
             .chain(
                 self.constructed
                     .permutation_product_polys
                     .iter()
                     .zip(self.constructed.permutation_product_blinds.iter())
                     .zip(self.permutation_product_evals.iter())
-                    .map(move |((poly, blind), eval)| ProverQuery {
-                        point: *x,
-                        poly,
-                        blind: *blind,
-                        eval: *eval,
+                    .zip(self.permutation_product_inv_evals.iter())
+                    .flat_map(move |(((poly, blind), eval), inv_eval)| {
+                        iter::empty()
+                            .chain(Some(ProverQuery {
+                                point: *x,
+                                poly,
+                                blind: *blind,
+                                eval: *eval,
+                            }))
+                            .chain(Some(ProverQuery {
+                                point: x_inv,
+                                poly,
+                                blind: *blind,
+                                eval: *inv_eval,
+                            }))
                     }),
             )
             // Open permutation polynomial commitments at x
@@ -368,20 +378,6 @@ impl<C: CurveAffine> Evaluated<C> {
                     .iter()
                     .zip(self.permutation_evals.iter())
                     .flat_map(move |(permutation, evals)| permutation.open(evals, x)),
-            )
-            // Open permutation product commitments at \omega^{-1} x
-            .chain(
-                self.constructed
-                    .permutation_product_polys
-                    .iter()
-                    .zip(self.constructed.permutation_product_blinds.iter())
-                    .zip(self.permutation_product_inv_evals.iter())
-                    .map(move |((poly, blind), eval)| ProverQuery {
-                        point: x_inv,
-                        poly,
-                        blind: *blind,
-                        eval: *eval,
-                    }),
             )
     }
 
