@@ -432,13 +432,11 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     fn query_any_index(&mut self, column: Column<Any>, at: i32) -> usize {
-        let index = match column.column_type() {
+        match column.column_type() {
             Any::Advice => self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
             Any::Fixed => self.query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
             Any::Aux => self.query_aux_index(Column::<Aux>::try_from(column).unwrap(), at),
-        };
-
-        index
+        }
     }
 
     /// Query an Any column at a relative position

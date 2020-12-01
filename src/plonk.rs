@@ -6,7 +6,7 @@
 //! [plonk]: https://eprint.iacr.org/2019/953
 
 use crate::arithmetic::CurveAffine;
-use crate::poly::{multiopen, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial};
+use crate::poly::{multiopen, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial};
 use crate::transcript::ChallengeScalar;
 
 mod circuit;
@@ -37,6 +37,7 @@ pub struct ProvingKey<C: CurveAffine> {
     vk: VerifyingKey<C>,
     // TODO: get rid of this?
     l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    fixed_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
     fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
     fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     permutations: Vec<permutation::ProvingKey<C>>,
