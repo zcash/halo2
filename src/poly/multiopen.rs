@@ -22,6 +22,17 @@ struct X2 {}
 /// Challenge for keeping the multi-point quotient polynomial terms linearly independent.
 type ChallengeX2<F> = commitment::ChallengeScalar<F, X2>;
 
+#[derive(Clone, Copy, Debug)]
+struct X3 {}
+/// Challenge point at which the commitments are opened.
+type ChallengeX3<F> = commitment::ChallengeScalar<F, X3>;
+
+#[derive(Clone, Copy, Debug)]
+struct X4 {}
+/// Challenge for collapsing the openings of the various remaining polynomials at x_3
+/// together.
+type ChallengeX4<F> = commitment::ChallengeScalar<F, X4>;
+
 /// This is a multi-point opening proof used in the polynomial commitment scheme opening.
 #[derive(Debug, Clone)]
 pub struct Proof<C: CurveAffine> {

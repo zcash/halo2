@@ -1,7 +1,7 @@
 use ff::Field;
 
 use super::super::{Coeff, Error, Polynomial};
-use super::{Blind, Challenge, ChallengeScalar, ChallengeZ, Params, Proof};
+use super::{Blind, Challenge, ChallengeScalar, Params, Proof};
 use crate::arithmetic::{
     best_multiexp, compute_inner_product, parallelize, small_multiexp, Curve, CurveAffine, FieldExt,
 };
@@ -21,12 +21,12 @@ impl<C: CurveAffine> Proof<C> {
     /// opening v, and the point x. It's probably also nice for the transcript
     /// to have seen the elliptic curve description and the SRS, if you want to
     /// be rigorous.
-    pub(crate) fn create<HBase, HScalar>(
+    pub fn create<HBase, HScalar>(
         params: &Params<C>,
         transcript: &mut Transcript<C, HBase, HScalar>,
         px: &Polynomial<C::Scalar, Coeff>,
         blind: Blind<C::Scalar>,
-        z: ChallengeZ<C::Scalar>,
+        x: C::Scalar,
     ) -> Result<Self, Error>
     where
         HBase: Hasher<C::Base>,
@@ -61,7 +61,7 @@ impl<C: CurveAffine> Proof<C> {
             let mut cur = C::Scalar::one();
             for _ in 0..(1 << params.k) {
                 b.push(cur);
-                cur *= &z;
+                cur *= &x;
             }
         }
 

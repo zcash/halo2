@@ -1,8 +1,11 @@
 use super::super::{
-    commitment::{self, Blind, ChallengeScalar, ChallengeZ, Params},
+    commitment::{self, Blind, Params},
     Coeff, Error, Polynomial,
 };
-use super::{construct_intermediate_sets, ChallengeX1, ChallengeX2, Proof, ProverQuery, Query};
+use super::{
+    construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4, Proof,
+    ProverQuery, Query,
+};
 
 use crate::arithmetic::{
     eval_polynomial, kate_division, lagrange_interpolate, Curve, CurveAffine, FieldExt,
@@ -113,31 +116,31 @@ impl<C: CurveAffine> Proof<C> {
                 .absorb_point(&f_commitment)
                 .map_err(|_| Error::SamplingError)?;
 
-            let z = ChallengeZ::get(&mut transcript);
+            let x_3 = ChallengeX3::get(&mut transcript);
 
             let q_evals: Vec<C::Scalar> = q_polys
                 .iter()
-                .map(|poly| eval_polynomial(poly.as_ref().unwrap(), *z))
+                .map(|poly| eval_polynomial(poly.as_ref().unwrap(), *x_3))
                 .collect();
 
             for eval in q_evals.iter() {
                 transcript.absorb_scalar(*eval);
             }
 
-            let x_7 = ChallengeScalar::<_, ()>::get(&mut transcript);
+            let x_4 = ChallengeX4::get(&mut transcript);
 
             let (f_poly, f_blind_try) = q_polys.iter().zip(q_blinds.iter()).fold(
                 (f_poly.clone(), f_blind),
                 |(f_poly, f_blind), (poly, blind)| {
                     (
-                        f_poly * *x_7 + poly.as_ref().unwrap(),
-                        Blind((f_blind.0 * &x_7) + &blind.0),
+                        f_poly * *x_4 + poly.as_ref().unwrap(),
+                        Blind((f_blind.0 * &x_4) + &blind.0),
                     )
                 },
             );
 
             if let Ok(opening) =
-                commitment::Proof::create(&params, &mut transcript, &f_poly, f_blind_try, z)
+                commitment::Proof::create(&params, &mut transcript, &f_poly, f_blind_try, *x_3)
             {
                 break (opening, q_evals);
             } else {
