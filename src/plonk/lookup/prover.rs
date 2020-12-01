@@ -1,6 +1,6 @@
 use super::super::{
     circuit::{Advice, Any, Aux, Column, Fixed},
-    Error, ProvingKey,
+    ChallengeX, Error, ProvingKey,
 };
 use super::Argument;
 use crate::{
@@ -534,6 +534,44 @@ impl<C: CurveAffine> Committed<C> {
             },
             expressions,
         ))
+    }
+}
+
+impl<C: CurveAffine> Constructed<C> {
+    pub(in crate::plonk) fn evaluate<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
+        self,
+        pk: &ProvingKey<C>,
+        x: ChallengeX<C::Scalar>,
+        transcript: &mut Transcript<C, HBase, HScalar>,
+    ) -> Evaluated<C> {
+        let domain = &pk.vk.domain;
+        let x_inv = domain.rotate_omega(*x, Rotation(-1));
+
+        let product_eval = eval_polynomial(&self.product_poly, *x);
+        let product_inv_eval = eval_polynomial(&self.product_poly, x_inv);
+        let permuted_input_eval = eval_polynomial(&self.permuted_input_poly, *x);
+        let permuted_input_inv_eval = eval_polynomial(&self.permuted_input_poly, x_inv);
+        let permuted_table_eval = eval_polynomial(&self.permuted_table_poly, *x);
+
+        // Hash each advice evaluation
+        for eval in iter::empty()
+            .chain(Some(product_eval))
+            .chain(Some(product_inv_eval))
+            .chain(Some(permuted_input_eval))
+            .chain(Some(permuted_input_inv_eval))
+            .chain(Some(permuted_table_eval))
+        {
+            transcript.absorb_scalar(eval);
+        }
+
+        Evaluated {
+            constructed: self,
+            product_eval,
+            product_inv_eval,
+            permuted_input_eval,
+            permuted_input_inv_eval,
+            permuted_table_eval,
+        }
     }
 }
 
