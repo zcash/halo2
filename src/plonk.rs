@@ -93,20 +93,20 @@ impl<C: CurveAffine> VerifyingKey<C> {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct Beta;
-pub(crate) type ChallengeBeta<F> = ChallengeScalar<F, Beta>;
+struct Beta;
+type ChallengeBeta<F> = ChallengeScalar<F, Beta>;
 
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct Gamma;
-pub(crate) type ChallengeGamma<F> = ChallengeScalar<F, Gamma>;
+struct Gamma;
+type ChallengeGamma<F> = ChallengeScalar<F, Gamma>;
 
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct Y;
-pub(crate) type ChallengeY<F> = ChallengeScalar<F, Y>;
+struct Y;
+type ChallengeY<F> = ChallengeScalar<F, Y>;
 
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct X;
-pub(crate) type ChallengeX<F> = ChallengeScalar<F, X>;
+struct X;
+type ChallengeX<F> = ChallengeScalar<F, X>;
 
 #[test]
 fn test_proving() {

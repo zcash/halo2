@@ -48,7 +48,7 @@ impl<C: CurveAffine> Proof<C> {
         Ok(())
     }
 
-    pub(crate) fn expressions<'a>(
+    pub(in crate::plonk) fn expressions<'a>(
         &'a self,
         vk: &'a VerifyingKey<C>,
         advice_evals: &'a [C::Scalar],
@@ -109,7 +109,7 @@ impl<C: CurveAffine> Proof<C> {
             .chain(self.permutation_evals.iter().flat_map(|evals| evals.iter()))
     }
 
-    pub(crate) fn queries<'a>(
+    pub(in crate::plonk) fn queries<'a>(
         &'a self,
         vk: &'a VerifyingKey<C>,
         x: ChallengeX<C::Scalar>,

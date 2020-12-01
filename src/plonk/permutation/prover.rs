@@ -36,7 +36,11 @@ pub(crate) struct Evaluated<C: CurveAffine> {
 }
 
 impl Argument {
-    pub(crate) fn commit<C: CurveAffine, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
+    pub(in crate::plonk) fn commit<
+        C: CurveAffine,
+        HBase: Hasher<C::Base>,
+        HScalar: Hasher<C::Scalar>,
+    >(
         params: &Params<C>,
         pk: &ProvingKey<C>,
         advice: &[Polynomial<C::Scalar, LagrangeCoeff>],
@@ -181,7 +185,7 @@ impl Argument {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(crate) fn construct<'a>(
+    pub(in crate::plonk) fn construct<'a>(
         self,
         pk: &'a ProvingKey<C>,
         advice_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
@@ -295,7 +299,7 @@ impl<C: CurveAffine> super::ProvingKey<C> {
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(crate) fn evaluate<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
+    pub(in crate::plonk) fn evaluate<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
         self,
         pk: &ProvingKey<C>,
         x: ChallengeX<C::Scalar>,
@@ -336,7 +340,7 @@ impl<C: CurveAffine> Constructed<C> {
 }
 
 impl<C: CurveAffine> Evaluated<C> {
-    pub fn open<'a>(
+    pub(in crate::plonk) fn open<'a>(
         &'a self,
         pk: &'a ProvingKey<C>,
         x: ChallengeX<C::Scalar>,
