@@ -92,6 +92,10 @@ impl<C: CurveAffine> VerifyingKey<C> {
 }
 
 #[derive(Clone, Copy, Debug)]
+struct Theta;
+type ChallengeTheta<F> = ChallengeScalar<F, Theta>;
+
+#[derive(Clone, Copy, Debug)]
 struct Beta;
 type ChallengeBeta<F> = ChallengeScalar<F, Beta>;
 

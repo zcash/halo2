@@ -1,7 +1,10 @@
 use ff::Field;
 use std::iter;
 
-use super::{ChallengeBeta, ChallengeGamma, ChallengeX, ChallengeY, Error, Proof, VerifyingKey};
+use super::{
+    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error, Proof,
+    VerifyingKey,
+};
 use crate::arithmetic::{CurveAffine, FieldExt};
 use crate::poly::{
     commitment::{Guard, Params, MSM},
@@ -45,6 +48,9 @@ impl<'a, C: CurveAffine> Proof<C> {
                 .map_err(|_| Error::TranscriptError)?;
         }
 
+        // Sample theta challenge for keeping lookup columns linearly independent
+        let theta = ChallengeTheta::get(&mut transcript);
+
         // Sample beta challenge
         let beta = ChallengeBeta::get(&mut transcript);
 
@@ -72,7 +78,7 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // This check ensures the circuit is satisfied so long as the polynomial
         // commitments open to the correct values.
-        self.check_hx(params, vk, beta, gamma, y, x)?;
+        self.check_hx(params, vk, theta, beta, gamma, y, x)?;
 
         for eval in self
             .advice_evals
@@ -189,6 +195,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         &self,
         params: &'a Params<C>,
         vk: &VerifyingKey<C>,
+        theta: ChallengeTheta<C::Scalar>,
         beta: ChallengeBeta<C::Scalar>,
         gamma: ChallengeGamma<C::Scalar>,
         y: ChallengeY<C::Scalar>,

@@ -3,7 +3,8 @@ use std::iter;
 
 use super::{
     circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    permutation, ChallengeBeta, ChallengeGamma, ChallengeX, ChallengeY, Error, Proof, ProvingKey,
+    permutation, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
+    Proof, ProvingKey,
 };
 use crate::arithmetic::{eval_polynomial, Curve, CurveAffine, FieldExt};
 use crate::poly::{
@@ -167,6 +168,9 @@ impl<C: CurveAffine> Proof<C> {
                 domain.coeff_to_extended(poly, at)
             })
             .collect();
+
+        // Sample theta challenge for keeping lookup columns linearly independent
+        let theta = ChallengeTheta::<C::Scalar>::get(&mut transcript);
 
         // Sample beta challenge
         let beta = ChallengeBeta::get(&mut transcript);
