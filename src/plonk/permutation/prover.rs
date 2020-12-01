@@ -67,11 +67,12 @@ impl<C: CurveAffine> Proof<C> {
             //
             // where p_j(X) is the jth advice column in this permutation,
             // and i is the ith row of the column.
-            .map(|(columns, permuted_values)| {
+            .map(|(p, pkey)| {
                 let mut modified_advice = vec![C::Scalar::one(); params.n as usize];
 
                 // Iterate over each column of the permutation
-                for (&column, permuted_column_values) in columns.iter().zip(permuted_values.iter())
+                for (&column, permuted_column_values) in
+                    p.columns.iter().zip(pkey.permutations.iter())
                 {
                     parallelize(&mut modified_advice, |modified_advice, start| {
                         for ((modified_advice, advice_value), permuted_advice_value) in
@@ -97,7 +98,7 @@ impl<C: CurveAffine> Proof<C> {
             .flat_map(|v| v.iter_mut())
             .batch_invert();
 
-        for (columns, mut modified_advice) in pk
+        for (p, mut modified_advice) in pk
             .vk
             .cs
             .permutations
@@ -107,7 +108,7 @@ impl<C: CurveAffine> Proof<C> {
             // Iterate over each column again, this time finishing the computation
             // of the entire fraction by computing the numerators
             let mut deltaomega = C::Scalar::one();
-            for &column in columns.iter() {
+            for &column in p.columns.iter() {
                 let omega = domain.get_omega();
                 parallelize(&mut modified_advice, |modified_advice, start| {
                     let mut deltaomega = deltaomega * &omega.pow_vartime(&[start as u64, 0, 0, 0]);
@@ -195,8 +196,8 @@ impl<C: CurveAffine> Committed<C> {
     > {
         let domain = &pk.vk.domain;
         let permutation_product_cosets_owned = self.permutation_product_cosets.clone();
-        let permutation_product_cosets = self.permutation_product_cosets;
-        let permutation_product_cosets_inv = self.permutation_product_cosets_inv;
+        let permutation_product_cosets = self.permutation_product_cosets.clone();
+        let permutation_product_cosets_inv = self.permutation_product_cosets_inv.clone();
 
         let expressions = iter::empty()
             // l_0(X) * (1 - z(X)) = 0
@@ -206,46 +207,56 @@ impl<C: CurveAffine> Committed<C> {
                     .map(move |coset| Polynomial::one_minus(coset) * &pk.l0),
             )
             // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
-            .chain(pk.vk.cs.permutations.iter().enumerate().map(
-                move |(permutation_index, columns)| {
-                    let mut left = permutation_product_cosets[permutation_index].clone();
-                    for (advice, permutation) in columns
-                        .iter()
-                        .map(|&column| &advice_cosets[pk.vk.cs.get_advice_query_index(column, 0)])
-                        .zip(pk.permutation_cosets[permutation_index].iter())
-                    {
-                        parallelize(&mut left, |left, start| {
-                            for ((left, advice), permutation) in left
-                                .iter_mut()
-                                .zip(advice[start..].iter())
-                                .zip(permutation[start..].iter())
-                            {
-                                *left *= &(*advice + &(*beta * permutation) + &gamma);
-                            }
-                        });
-                    }
+            .chain(
+                pk.vk
+                    .cs
+                    .permutations
+                    .iter()
+                    .zip(pk.permutations.iter())
+                    .zip(permutation_product_cosets.into_iter())
+                    .zip(permutation_product_cosets_inv.into_iter())
+                    .map(move |(((p, pkey), cosets), cosets_inv)| {
+                        let mut left = cosets;
+                        for (advice, permutation) in p
+                            .columns
+                            .iter()
+                            .map(|&column| {
+                                &advice_cosets[pk.vk.cs.get_advice_query_index(column, 0)]
+                            })
+                            .zip(pkey.cosets.iter())
+                        {
+                            parallelize(&mut left, |left, start| {
+                                for ((left, advice), permutation) in left
+                                    .iter_mut()
+                                    .zip(advice[start..].iter())
+                                    .zip(permutation[start..].iter())
+                                {
+                                    *left *= &(*advice + &(*beta * permutation) + &gamma);
+                                }
+                            });
+                        }
 
-                    let mut right = permutation_product_cosets_inv[permutation_index].clone();
-                    let mut current_delta = *beta * &C::Scalar::ZETA;
-                    let step = domain.get_extended_omega();
-                    for advice in columns
-                        .iter()
-                        .map(|&column| &advice_cosets[pk.vk.cs.get_advice_query_index(column, 0)])
-                    {
-                        parallelize(&mut right, move |right, start| {
-                            let mut beta_term =
-                                current_delta * &step.pow_vartime(&[start as u64, 0, 0, 0]);
-                            for (right, advice) in right.iter_mut().zip(advice[start..].iter()) {
-                                *right *= &(*advice + &beta_term + &gamma);
-                                beta_term *= &step;
-                            }
-                        });
-                        current_delta *= &C::Scalar::DELTA;
-                    }
+                        let mut right = cosets_inv;
+                        let mut current_delta = *beta * &C::Scalar::ZETA;
+                        let step = domain.get_extended_omega();
+                        for advice in p.columns.iter().map(|&column| {
+                            &advice_cosets[pk.vk.cs.get_advice_query_index(column, 0)]
+                        }) {
+                            parallelize(&mut right, move |right, start| {
+                                let mut beta_term =
+                                    current_delta * &step.pow_vartime(&[start as u64, 0, 0, 0]);
+                                for (right, advice) in right.iter_mut().zip(advice[start..].iter())
+                                {
+                                    *right *= &(*advice + &beta_term + &gamma);
+                                    beta_term *= &step;
+                                }
+                            });
+                            current_delta *= &C::Scalar::DELTA;
+                        }
 
-                    left - &right
-                },
-            ));
+                        left - &right
+                    }),
+            );
 
         Ok((
             Constructed {
@@ -255,6 +266,31 @@ impl<C: CurveAffine> Committed<C> {
             },
             expressions,
         ))
+    }
+}
+
+impl<C: CurveAffine> super::ProvingKey<C> {
+    fn evaluate(&self, x: ChallengeX<C::Scalar>) -> Vec<C::Scalar> {
+        self.polys
+            .iter()
+            .map(|poly| eval_polynomial(poly, *x))
+            .collect()
+    }
+
+    fn open<'a>(
+        &'a self,
+        evals: &'a [C::Scalar],
+        x: ChallengeX<C::Scalar>,
+    ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
+        self.polys
+            .iter()
+            .zip(evals.iter())
+            .map(move |(poly, eval)| ProverQuery {
+                point: *x,
+                poly,
+                blind: Blind::default(),
+                eval: *eval,
+            })
     }
 }
 
@@ -279,11 +315,7 @@ impl<C: CurveAffine> Constructed<C> {
             .map(|poly| eval_polynomial(poly, domain.rotate_omega(*x, Rotation(-1))))
             .collect();
 
-        let permutation_evals: Vec<Vec<C::Scalar>> = pk
-            .permutation_polys
-            .iter()
-            .map(|polys| polys.iter().map(|poly| eval_polynomial(poly, *x)).collect())
-            .collect();
+        let permutation_evals: Vec<_> = pk.permutations.iter().map(|p| p.evaluate(x)).collect();
 
         // Hash each advice evaluation
         for eval in permutation_product_evals
@@ -328,16 +360,10 @@ impl<C: CurveAffine> Evaluated<C> {
             )
             // Open permutation polynomial commitments at x
             .chain(
-                pk.permutation_polys
+                pk.permutations
                     .iter()
                     .zip(self.permutation_evals.iter())
-                    .flat_map(|(polys, evals)| polys.iter().zip(evals.iter()))
-                    .map(move |(poly, eval)| ProverQuery {
-                        point: *x,
-                        poly,
-                        blind: Blind::default(),
-                        eval: *eval,
-                    }),
+                    .flat_map(move |(permutation, evals)| permutation.open(evals, x)),
             )
             // Open permutation product commitments at \omega^{-1} x
             .chain(

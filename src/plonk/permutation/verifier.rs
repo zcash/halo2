@@ -15,10 +15,8 @@ impl<C: CurveAffine> Proof<C> {
             return Err(Error::IncompatibleParams);
         }
 
-        for (permutation_evals, permutation) in
-            self.permutation_evals.iter().zip(vk.cs.permutations.iter())
-        {
-            if permutation_evals.len() != permutation.len() {
+        for (permutation_evals, p) in self.permutation_evals.iter().zip(vk.cs.permutations.iter()) {
+            if permutation_evals.len() != p.columns.len() {
                 return Err(Error::IncompatibleParams);
             }
         }
@@ -76,9 +74,10 @@ impl<C: CurveAffine> Proof<C> {
                     .zip(self.permutation_product_evals.iter())
                     .zip(self.permutation_product_inv_evals.iter())
                     .map(
-                        move |(((columns, permutation_evals), product_eval), product_inv_eval)| {
+                        move |(((p, permutation_evals), product_eval), product_inv_eval)| {
                             let mut left = *product_eval;
-                            for (advice_eval, permutation_eval) in columns
+                            for (advice_eval, permutation_eval) in p
+                                .columns
                                 .iter()
                                 .map(|&column| {
                                     advice_evals[vk.cs.get_advice_query_index(column, 0)]
@@ -90,7 +89,7 @@ impl<C: CurveAffine> Proof<C> {
 
                             let mut right = *product_inv_eval;
                             let mut current_delta = *beta * &x;
-                            for advice_eval in columns.iter().map(|&column| {
+                            for advice_eval in p.columns.iter().map(|&column| {
                                 advice_evals[vk.cs.get_advice_query_index(column, 0)]
                             }) {
                                 right *= &(advice_eval + &current_delta + &gamma);
@@ -132,12 +131,12 @@ impl<C: CurveAffine> Proof<C> {
             )
             // Open permutation commitments for each permutation argument at x
             .chain(
-                (0..vk.permutation_commitments.len())
+                (0..vk.permutations.len())
                     .map(move |outer_idx| {
-                        let inner_len = vk.permutation_commitments[outer_idx].len();
+                        let inner_len = vk.permutations[outer_idx].commitments.len();
                         (0..inner_len).map(move |inner_idx| VerifierQuery {
                             point: *x,
-                            commitment: &vk.permutation_commitments[outer_idx][inner_idx],
+                            commitment: &vk.permutations[outer_idx].commitments[inner_idx],
                             eval: self.permutation_evals[outer_idx][inner_idx],
                         })
                     })

@@ -8,7 +8,7 @@
 use crate::arithmetic::CurveAffine;
 use crate::poly::{
     commitment::ChallengeScalar, multiopen, Coeff, EvaluationDomain, ExtendedLagrangeCoeff,
-    LagrangeCoeff, Polynomial,
+    Polynomial,
 };
 
 mod circuit;
@@ -28,7 +28,7 @@ pub use verifier::*;
 pub struct VerifyingKey<C: CurveAffine> {
     domain: EvaluationDomain<C::Scalar>,
     fixed_commitments: Vec<C>,
-    permutation_commitments: Vec<Vec<C>>,
+    permutations: Vec<permutation::VerifyingKey<C>>,
     cs: ConstraintSystem<C::Scalar>,
 }
 
@@ -41,9 +41,7 @@ pub struct ProvingKey<C: CurveAffine> {
     l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
     fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
-    permutations: Vec<Vec<Polynomial<C::Scalar, LagrangeCoeff>>>,
-    permutation_polys: Vec<Vec<Polynomial<C::Scalar, Coeff>>>,
-    permutation_cosets: Vec<Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>>,
+    permutations: Vec<permutation::ProvingKey<C>>,
 }
 
 /// This is an object which represents a (Turbo)PLONK proof.
