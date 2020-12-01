@@ -41,7 +41,7 @@ impl<C: CurveAffine> Proof<C> {
         &'a self,
         vk: &'a VerifyingKey<C>,
         l_0: C::Scalar,
-        argument: Argument,
+        argument: &'a Argument,
         theta: ChallengeTheta<C::Scalar>,
         beta: ChallengeBeta<C::Scalar>,
         gamma: ChallengeGamma<C::Scalar>,
@@ -106,13 +106,13 @@ impl<C: CurveAffine> Proof<C> {
             ))
     }
 
-    pub(crate) fn evals(&self) -> impl Iterator<Item = C::Scalar> {
+    pub(crate) fn evals(&self) -> impl Iterator<Item = &C::Scalar> {
         iter::empty()
-            .chain(Some(self.product_eval))
-            .chain(Some(self.product_inv_eval))
-            .chain(Some(self.permuted_input_eval))
-            .chain(Some(self.permuted_input_inv_eval))
-            .chain(Some(self.permuted_table_eval))
+            .chain(Some(&self.product_eval))
+            .chain(Some(&self.product_inv_eval))
+            .chain(Some(&self.permuted_input_eval))
+            .chain(Some(&self.permuted_input_inv_eval))
+            .chain(Some(&self.permuted_table_eval))
     }
 
     pub(in crate::plonk) fn queries<'a>(

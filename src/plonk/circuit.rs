@@ -4,7 +4,7 @@ use ff::Field;
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 
-use super::{permutation, Error};
+use super::{lookup, permutation, Error};
 use crate::poly::Rotation;
 
 /// A column type
@@ -313,6 +313,10 @@ pub struct ConstraintSystem<F> {
     // Vector of permutation arguments, where each corresponds to a sequence of columns
     // that are involved in a permutation argument.
     pub(crate) permutations: Vec<permutation::Argument>,
+
+    // Vector of lookup arguments, where each corresponds to a sequence of
+    // input columns and a sequence of table columns involved in the lookup.
+    pub(crate) lookups: Vec<lookup::Argument>,
 }
 
 impl<F: Field> Default for ConstraintSystem<F> {
@@ -330,6 +334,7 @@ impl<F: Field> Default for ConstraintSystem<F> {
             aux_queries: Vec::new(),
             rotations,
             permutations: Vec::new(),
+            lookups: Vec::new(),
         }
     }
 }

@@ -1,6 +1,6 @@
 use super::super::{
     circuit::{Advice, Any, Aux, Column, Fixed},
-    ChallengeX, Error, ProvingKey,
+    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error, ProvingKey,
 };
 use super::{Argument, Proof};
 use crate::{
@@ -41,8 +41,8 @@ pub(crate) struct Product<C: CurveAffine> {
 
 #[derive(Clone, Debug)]
 pub(crate) struct Committed<C: CurveAffine> {
-    permuted: Permuted<C>,
-    product: Product<C>,
+    pub permuted: Permuted<C>,
+    pub product: Product<C>,
 }
 
 pub(crate) struct Constructed<C: CurveAffine> {
@@ -85,7 +85,7 @@ impl Argument {
         pk: &ProvingKey<C>,
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
-        theta: C::Scalar,
+        theta: ChallengeTheta<C::Scalar>,
         advice_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
         fixed_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
         aux_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
@@ -105,7 +105,7 @@ impl Argument {
         // Compressed version of input columns
         let compressed_input_value = unpermuted_input_values
             .iter()
-            .fold(domain.empty_lagrange(), |acc, input| acc * theta + input);
+            .fold(domain.empty_lagrange(), |acc, input| acc * *theta + input);
 
         // Values of table columns involved in the lookup
         let unpermuted_table_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>> = self
@@ -121,7 +121,7 @@ impl Argument {
         // Compressed version of table columns
         let compressed_table_value = unpermuted_table_values
             .iter()
-            .fold(domain.empty_lagrange(), |acc, table| acc * theta + table);
+            .fold(domain.empty_lagrange(), |acc, table| acc * *theta + table);
 
         // Permute compressed (InputColumn, TableColumn) pair
         let (permuted_input_value, permuted_table_value) =
@@ -192,9 +192,9 @@ impl Argument {
         permuted: &Permuted<C>,
         pk: &ProvingKey<C>,
         params: &Params<C>,
-        theta: C::Scalar,
-        beta: C::Scalar,
-        gamma: C::Scalar,
+        theta: ChallengeTheta<C::Scalar>,
+        beta: ChallengeBeta<C::Scalar>,
+        gamma: ChallengeGamma<C::Scalar>,
         advice_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
         fixed_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
         aux_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
@@ -240,8 +240,8 @@ impl Argument {
                 .zip(permuted.permuted_input_value[start..].iter())
                 .zip(permuted.permuted_table_value[start..].iter())
             {
-                *lookup_product *= &(beta + permuted_input_value);
-                *lookup_product *= &(gamma + permuted_table_value);
+                *lookup_product *= &(*beta + permuted_input_value);
+                *lookup_product *= &(*gamma + permuted_table_value);
             }
         });
 
@@ -382,10 +382,10 @@ impl<C: CurveAffine> Committed<C> {
     pub(in crate::plonk) fn construct<'a>(
         self,
         pk: &'a ProvingKey<C>,
-        theta: C::Scalar,
-        beta: C::Scalar,
-        gamma: C::Scalar,
-        argument: Argument,
+        theta: ChallengeTheta<C::Scalar>,
+        beta: ChallengeBeta<C::Scalar>,
+        gamma: ChallengeGamma<C::Scalar>,
+        argument: &'a Argument,
         advice_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         fixed_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         aux_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
@@ -458,8 +458,8 @@ impl<C: CurveAffine> Committed<C> {
                         .zip(permuted.permuted_input_coset[start..].iter())
                         .zip(permuted.permuted_table_coset[start..].iter())
                     {
-                        *left *= &(*permuted_input + &beta);
-                        *left *= &(*permuted_table + &gamma);
+                        *left *= &(*permuted_input + &(*beta));
+                        *left *= &(*permuted_table + &(*gamma));
                     }
                 });
 
@@ -473,7 +473,7 @@ impl<C: CurveAffine> Committed<C> {
                     parallelize(&mut input_terms, |input_term, start| {
                         for (input_term, input) in input_term.iter_mut().zip(input[start..].iter())
                         {
-                            *input_term *= &theta;
+                            *input_term *= &(*theta);
                             *input_term += input;
                         }
                     });
@@ -486,7 +486,7 @@ impl<C: CurveAffine> Committed<C> {
                     parallelize(&mut table_terms, |table_term, start| {
                         for (table_term, table) in table_term.iter_mut().zip(table[start..].iter())
                         {
-                            *table_term *= &theta;
+                            *table_term *= &(*theta);
                             *table_term += table;
                         }
                     });
@@ -499,8 +499,8 @@ impl<C: CurveAffine> Committed<C> {
                         .zip(input_terms[start..].iter())
                         .zip(table_terms[start..].iter())
                     {
-                        *right *= &(*input_term + &beta);
-                        *right *= &(*table_term + &gamma);
+                        *right *= &(*input_term + &(*beta));
+                        *right *= &(*table_term + &(*gamma));
                     }
                 });
 
