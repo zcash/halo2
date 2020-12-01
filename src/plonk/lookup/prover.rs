@@ -2,11 +2,12 @@ use super::super::{
     circuit::{Advice, Any, Aux, Column, Fixed},
     ChallengeX, Error, ProvingKey,
 };
-use super::Argument;
+use super::{Argument, Proof};
 use crate::{
     arithmetic::{eval_polynomial, parallelize, BatchInvert, Curve, CurveAffine, FieldExt},
     poly::{
         commitment::{Blind, Params},
+        multiopen::ProverQuery,
         Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
     },
     transcript::{Hasher, Transcript},
@@ -571,6 +572,66 @@ impl<C: CurveAffine> Constructed<C> {
             permuted_input_eval,
             permuted_input_inv_eval,
             permuted_table_eval,
+        }
+    }
+}
+
+impl<C: CurveAffine> Evaluated<C> {
+    pub(in crate::plonk) fn open<'a>(
+        &'a self,
+        pk: &'a ProvingKey<C>,
+        x: ChallengeX<C::Scalar>,
+    ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
+        let x_inv = pk.vk.domain.rotate_omega(*x, Rotation(-1));
+
+        iter::empty()
+            // Open lookup product commitments at x
+            .chain(Some(ProverQuery {
+                point: *x,
+                poly: &self.constructed.product_poly,
+                blind: self.constructed.product_blind,
+                eval: self.product_eval,
+            }))
+            // Open lookup input commitments at x
+            .chain(Some(ProverQuery {
+                point: *x,
+                poly: &self.constructed.permuted_input_poly,
+                blind: self.constructed.permuted_input_blind,
+                eval: self.permuted_input_eval,
+            }))
+            // Open lookup table commitments at x
+            .chain(Some(ProverQuery {
+                point: *x,
+                poly: &self.constructed.permuted_table_poly,
+                blind: self.constructed.permuted_table_blind,
+                eval: self.permuted_table_eval,
+            }))
+            // Open lookup input commitments at x_inv
+            .chain(Some(ProverQuery {
+                point: x_inv,
+                poly: &self.constructed.permuted_input_poly,
+                blind: self.constructed.permuted_input_blind,
+                eval: self.permuted_input_eval,
+            }))
+            // Open lookup product commitments at x_inv
+            .chain(Some(ProverQuery {
+                point: x_inv,
+                poly: &self.constructed.product_poly,
+                blind: self.constructed.product_blind,
+                eval: self.product_eval,
+            }))
+    }
+
+    pub(crate) fn build(self) -> Proof<C> {
+        Proof {
+            product_commitment: self.constructed.product_commitment,
+            product_eval: self.product_eval,
+            product_inv_eval: self.product_inv_eval,
+            permuted_input_commitment: self.constructed.permuted_input_commitment,
+            permuted_table_commitment: self.constructed.permuted_table_commitment,
+            permuted_input_eval: self.permuted_input_eval,
+            permuted_input_inv_eval: self.permuted_input_inv_eval,
+            permuted_table_eval: self.permuted_table_eval,
         }
     }
 }
