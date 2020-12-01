@@ -1,7 +1,7 @@
 use ff::Field;
 use std::iter;
 
-use super::Proof;
+use super::{Argument, Proof};
 use crate::{
     arithmetic::{eval_polynomial, parallelize, BatchInvert, Curve, CurveAffine, FieldExt},
     plonk::{ChallengeBeta, ChallengeGamma, ChallengeX, Error, ProvingKey},
@@ -35,8 +35,8 @@ pub(crate) struct Evaluated<C: CurveAffine> {
     permutation_evals: Vec<Vec<C::Scalar>>,
 }
 
-impl<C: CurveAffine> Proof<C> {
-    pub(crate) fn commit<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
+impl Argument {
+    pub(crate) fn commit<C: CurveAffine, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
         params: &Params<C>,
         pk: &ProvingKey<C>,
         advice: &[Polynomial<C::Scalar, LagrangeCoeff>],

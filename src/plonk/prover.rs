@@ -176,7 +176,7 @@ impl<C: CurveAffine> Proof<C> {
 
         // Commit to permutations, if any.
         let permutations = if !pk.vk.cs.permutations.is_empty() {
-            Some(permutation::Proof::commit(
+            Some(permutation::Argument::commit(
                 params,
                 pk,
                 &witness.advice,
