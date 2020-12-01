@@ -24,6 +24,29 @@ jobs:
           command: test
           args: --verbose --release --all --all-features
 
+  build:
+    name: Build target ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - wasm32-unknown-unknown
+          - wasm32-wasi
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Add target
+        run: rustup target add ${{ matrix.target }}
+      - name: cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all-features
+
   bitrot:
     name: Bitrot check
     runs-on: ubuntu-latest
