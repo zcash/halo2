@@ -358,6 +358,31 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
+    /// Add a lookup argument for some input columns and table columns.
+    pub fn lookup(
+        &mut self,
+        input_columns: &[Column<Any>],
+        table_columns: &[Column<Any>],
+    ) -> usize {
+        let index = self.lookups.len();
+        if self.lookups.is_empty() {
+            let at = Rotation(-1);
+            let len = self.rotations.len();
+            self.rotations.entry(at).or_insert(PointIndex(len));
+        }
+
+        for input in input_columns {
+            self.query_any_index(*input, 0);
+        }
+        for table in table_columns {
+            self.query_any_index(*table, 0);
+        }
+        self.lookups
+            .push(lookup::Argument::new(input_columns, table_columns));
+
+        index
+    }
+
     fn query_fixed_index(&mut self, column: Column<Fixed>, at: i32) -> usize {
         let at = Rotation(at);
         {
