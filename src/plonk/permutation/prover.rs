@@ -13,7 +13,6 @@ use crate::{
     transcript::{Hasher, Transcript},
 };
 
-#[derive(Clone)]
 pub(crate) struct Committed<C: CurveAffine> {
     permutation_product_polys: Vec<Polynomial<C::Scalar, Coeff>>,
     permutation_product_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
