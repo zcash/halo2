@@ -75,12 +75,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         // Sample y challenge, which keeps the gates linearly independent.
         let y = ChallengeY::get(&mut transcript);
 
-        // Obtain a commitment to h(X) in the form of multiple pieces of degree n - 1
-        for c in &self.h_commitments {
-            transcript
-                .absorb_point(c)
-                .map_err(|_| Error::TranscriptError)?;
-        }
+        self.vanishing.absorb_commitments(&mut transcript)?;
 
         // Sample x challenge, which is used to ensure the circuit is
         // satisfied with high probability.
@@ -95,7 +90,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             .iter()
             .chain(self.aux_evals.iter())
             .chain(self.fixed_evals.iter())
-            .chain(self.h_evals.iter())
+            .chain(self.vanishing.evals())
             .chain(
                 self.permutations
                     .as_ref()
@@ -135,17 +130,7 @@ impl<'a, C: CurveAffine> Proof<C> {
                         eval: self.fixed_evals[query_index],
                     },
                 ))
-                .chain(
-                    self.h_commitments
-                        .iter()
-                        .enumerate()
-                        .zip(self.h_evals.iter())
-                        .map(|((idx, _), &eval)| VerifierQuery {
-                            point: *x,
-                            commitment: &self.h_commitments[idx],
-                            eval,
-                        }),
-                );
+                .chain(self.vanishing.queries(x));
 
         // We are now convinced the circuit is satisfied so long as the
         // polynomial commitments open to the correct values.
@@ -184,8 +169,6 @@ impl<'a, C: CurveAffine> Proof<C> {
             return Err(Error::IncompatibleParams);
         }
 
-        // TODO: check h_evals
-
         if self.fixed_evals.len() != vk.cs.fixed_queries.len() {
             return Err(Error::IncompatibleParams);
         }
@@ -202,8 +185,6 @@ impl<'a, C: CurveAffine> Proof<C> {
         if self.lookups.len() != vk.cs.lookups.len() {
             return Err(Error::IncompatibleParams);
         }
-
-        // TODO: check h_commitments
 
         if self.advice_commitments.len() != vk.cs.num_advice_columns {
             return Err(Error::IncompatibleParams);
@@ -234,7 +215,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             * &vk.domain.get_barycentric_weight(); // l_0(x)
 
         // Compute the expected value of h(x)
-        let expected_h_eval = std::iter::empty()
+        let expressions = std::iter::empty()
             // Evaluate the circuit using the custom gates provided
             .chain(vk.cs.gates.iter().map(|poly| {
                 poly.evaluate(
@@ -272,21 +253,8 @@ impl<'a, C: CurveAffine> Proof<C> {
                     })
                     .into_iter()
                     .flatten(),
-            )
-            .fold(C::Scalar::zero(), |h_eval, v| h_eval * &y + &v);
+            );
 
-        // Compute h(x) from the prover
-        let h_eval = self
-            .h_evals
-            .iter()
-            .rev()
-            .fold(C::Scalar::zero(), |acc, eval| acc * &xn + eval);
-
-        // Did the prover commit to the correct polynomial?
-        if expected_h_eval != (h_eval * &(xn - &C::Scalar::one())) {
-            return Err(Error::ConstraintSystemFailure);
-        }
-
-        Ok(())
+        self.vanishing.verify(expressions, y, xn)
     }
 }

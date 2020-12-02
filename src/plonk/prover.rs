@@ -3,8 +3,8 @@ use std::iter;
 
 use super::{
     circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    permutation, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
-    Proof, ProvingKey,
+    permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY,
+    Error, Proof, ProvingKey,
 };
 use crate::arithmetic::{eval_polynomial, Curve, CurveAffine, FieldExt};
 use crate::poly::{
@@ -222,7 +222,7 @@ impl<C: CurveAffine> Proof<C> {
             .collect::<Result<Vec<_>, _>>()?;
 
         // Obtain challenge for keeping all separate gates linearly independent
-        let y = ChallengeY::<C::Scalar>::get(&mut transcript);
+        let y = ChallengeY::get(&mut transcript);
 
         // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints, if any.
         let (permutations, permutation_expressions) = permutations
@@ -242,7 +242,7 @@ impl<C: CurveAffine> Proof<C> {
         };
 
         // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
-        let h_poly = iter::empty()
+        let expressions = iter::empty()
             // Custom constraints
             .chain(meta.gates.iter().map(|poly| {
                 poly.evaluate(
@@ -257,40 +257,11 @@ impl<C: CurveAffine> Proof<C> {
             // Permutation constraints, if any.
             .chain(permutation_expressions.into_iter().flatten())
             // Lookup constraints, if any.
-            .chain(lookup_expressions.into_iter().flatten())
-            .fold(domain.empty_extended(), |h_poly, v| h_poly * *y + &v);
+            .chain(lookup_expressions.into_iter().flatten());
 
-        // Divide by t(X) = X^{params.n} - 1.
-        let h_poly = domain.divide_by_vanishing_poly(h_poly);
-
-        // Obtain final h(X) polynomial
-        let h_poly = domain.extended_to_coeff(h_poly);
-
-        // Split h(X) up into pieces
-        let h_pieces = h_poly
-            .chunks_exact(params.n as usize)
-            .map(|v| domain.coeff_from_vec(v.to_vec()))
-            .collect::<Vec<_>>();
-        drop(h_poly);
-        let h_blinds: Vec<_> = h_pieces.iter().map(|_| Blind(C::Scalar::rand())).collect();
-
-        // Compute commitments to each h(X) piece
-        let h_commitments_projective: Vec<_> = h_pieces
-            .iter()
-            .zip(h_blinds.iter())
-            .map(|(h_piece, blind)| params.commit(&h_piece, *blind))
-            .collect();
-        let mut h_commitments = vec![C::zero(); h_commitments_projective.len()];
-        C::Projective::batch_to_affine(&h_commitments_projective, &mut h_commitments);
-        let h_commitments = h_commitments;
-        drop(h_commitments_projective);
-
-        // Hash each h(X) piece
-        for c in h_commitments.iter() {
-            transcript
-                .absorb_point(c)
-                .map_err(|_| Error::TranscriptError)?;
-        }
+        // Construct the vanishing argument
+        let vanishing =
+            vanishing::Argument::construct(params, domain, expressions, y, &mut transcript)?;
 
         let x = ChallengeX::get(&mut transcript);
 
@@ -319,20 +290,16 @@ impl<C: CurveAffine> Proof<C> {
             })
             .collect();
 
-        let h_evals: Vec<_> = h_pieces
-            .iter()
-            .map(|poly| eval_polynomial(poly, *x))
-            .collect();
-
-        // Hash each advice evaluation
+        // Hash each column evaluation
         for eval in advice_evals
             .iter()
             .chain(aux_evals.iter())
             .chain(fixed_evals.iter())
-            .chain(h_evals.iter())
         {
             transcript.absorb_scalar(*eval);
         }
+
+        let vanishing = vanishing.evaluate(x, &mut transcript);
 
         // Evaluate the permutations, if any, at omega^i x.
         let permutations = permutations.map(|p| p.evaluate(pk, x, &mut transcript));
@@ -370,18 +337,7 @@ impl<C: CurveAffine> Proof<C> {
                     },
                 ))
                 // We query the h(X) polynomial at x
-                .chain(
-                    h_pieces
-                        .iter()
-                        .zip(h_blinds.iter())
-                        .zip(h_evals.iter())
-                        .map(|((h_poly, h_blind), h_eval)| ProverQuery {
-                            point: *x,
-                            poly: h_poly,
-                            blind: *h_blind,
-                            eval: *h_eval,
-                        }),
-                );
+                .chain(vanishing.open(x));
 
         let multiopening = multiopen::Proof::create(
             params,
@@ -400,13 +356,12 @@ impl<C: CurveAffine> Proof<C> {
 
         Ok(Proof {
             advice_commitments,
-            h_commitments,
             permutations: permutations.map(|p| p.build()),
             lookups: lookups.into_iter().map(|p| p.build()).collect(),
             advice_evals,
             fixed_evals,
             aux_evals,
-            h_evals,
+            vanishing: vanishing.build(),
             multiopening,
         })
     }
