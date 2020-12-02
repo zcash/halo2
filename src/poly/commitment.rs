@@ -176,13 +176,13 @@ impl<C: CurveAffine> Params<C> {
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Blind<F>(pub F);
 
-impl<F: Field> Default for Blind<F> {
+impl<F: FieldExt> Default for Blind<F> {
     fn default() -> Self {
         Blind(F::one())
     }
 }
 
-impl<F: Field> Add for Blind<F> {
+impl<F: FieldExt> Add for Blind<F> {
     type Output = Self;
 
     fn add(self, rhs: Blind<F>) -> Self {
@@ -190,7 +190,7 @@ impl<F: Field> Add for Blind<F> {
     }
 }
 
-impl<F: Field> Mul for Blind<F> {
+impl<F: FieldExt> Mul for Blind<F> {
     type Output = Self;
 
     fn mul(self, rhs: Blind<F>) -> Self {
@@ -198,25 +198,25 @@ impl<F: Field> Mul for Blind<F> {
     }
 }
 
-impl<F: Field> AddAssign for Blind<F> {
+impl<F: FieldExt> AddAssign for Blind<F> {
     fn add_assign(&mut self, rhs: Blind<F>) {
         self.0 += rhs.0;
     }
 }
 
-impl<F: Field> MulAssign for Blind<F> {
+impl<F: FieldExt> MulAssign for Blind<F> {
     fn mul_assign(&mut self, rhs: Blind<F>) {
         self.0 *= rhs.0;
     }
 }
 
-impl<F: Field> AddAssign<F> for Blind<F> {
+impl<F: FieldExt> AddAssign<F> for Blind<F> {
     fn add_assign(&mut self, rhs: F) {
         self.0 += rhs;
     }
 }
 
-impl<F: Field> MulAssign<F> for Blind<F> {
+impl<F: FieldExt> MulAssign<F> for Blind<F> {
     fn mul_assign(&mut self, rhs: F) {
         self.0 *= rhs;
     }
@@ -254,10 +254,8 @@ fn test_opening_proof() {
         commitment::{Blind, Params},
         EvaluationDomain,
     };
-    use crate::arithmetic::{
-        eval_polynomial, get_challenge_scalar, Challenge, Curve, CurveAffine, FieldExt,
-    };
-    use crate::transcript::{DummyHash, Hasher, Transcript};
+    use crate::arithmetic::{eval_polynomial, Curve, FieldExt};
+    use crate::transcript::{ChallengeScalar, DummyHash, Transcript};
     use crate::tweedle::{EpAffine, Fp, Fq};
 
     let params = Params::<EpAffine>::new::<DummyHash<Fp>>(K);
@@ -273,23 +271,18 @@ fn test_opening_proof() {
 
     let p = params.commit(&px, blind).to_affine();
 
-    let mut hasher = DummyHash::init(Field::one());
-    let (p_x, p_y) = p.get_xy().unwrap();
-    hasher.absorb(p_x);
-    hasher.absorb(p_y);
-    let x_packed = hasher.squeeze().get_lower_128();
-    let x: Fq = get_challenge_scalar(Challenge(x_packed));
+    let mut transcript = Transcript::<_, DummyHash<_>, DummyHash<_>>::new();
+    transcript.absorb_point(&p).unwrap();
+    let x = ChallengeScalar::<_, ()>::get(&mut transcript);
     // Evaluate the polynomial
-    let v = eval_polynomial(&px, x);
+    let v = eval_polynomial(&px, *x);
 
-    hasher.absorb(Fp::from_bytes(&v.to_bytes()).unwrap()); // unlikely to fail since p ~ q
-    let scalar_hasher = DummyHash::init(Fq::one());
-    let mut transcript = Transcript::init_with_hashers(&hasher, &scalar_hasher);
+    transcript.absorb_base(Fp::from_bytes(&v.to_bytes()).unwrap()); // unlikely to fail since p ~ q
 
     loop {
         let mut transcript_dup = transcript.clone();
 
-        let opening_proof = Proof::create(&params, &mut transcript, &px, blind, x);
+        let opening_proof = Proof::create(&params, &mut transcript, &px, blind, *x);
         if let Ok(opening_proof) = opening_proof {
             // Verify the opening proof
             let mut commitment_msm = params.empty_msm();
@@ -299,7 +292,7 @@ fn test_opening_proof() {
                     &params,
                     params.empty_msm(),
                     &mut transcript_dup,
-                    x,
+                    *x,
                     commitment_msm,
                     v,
                 )

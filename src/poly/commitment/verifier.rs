@@ -2,11 +2,9 @@ use ff::Field;
 
 use super::super::Error;
 use super::{Params, Proof, MSM};
-use crate::transcript::{Hasher, Transcript};
+use crate::transcript::{Challenge, ChallengeScalar, Hasher, Transcript};
 
-use crate::arithmetic::{
-    best_multiexp, get_challenge_scalar, Challenge, Curve, CurveAffine, FieldExt,
-};
+use crate::arithmetic::{best_multiexp, Curve, CurveAffine, FieldExt};
 
 /// A guard returned by the verifier
 #[derive(Debug, Clone)]
@@ -120,8 +118,8 @@ impl<C: CurveAffine> Proof<C> {
             transcript
                 .absorb_point(&r)
                 .map_err(|_| Error::OpeningError)?;
-            let challenge_sq_packed = transcript.squeeze().get_lower_128();
-            let challenge_sq: C::Scalar = get_challenge_scalar(Challenge(challenge_sq_packed));
+            let challenge_sq_packed = Challenge::get(transcript);
+            let challenge_sq: C::Scalar = *ChallengeScalar::<_, ()>::from(challenge_sq_packed);
 
             let challenge = challenge_sq.deterministic_sqrt();
             if challenge.is_none() {
@@ -149,7 +147,7 @@ impl<C: CurveAffine> Proof<C> {
             challenges.push(challenge);
             challenges_inv.push(challenge_inv);
             challenges_sq.push(challenge_sq);
-            challenges_sq_packed.push(Challenge(challenge_sq_packed));
+            challenges_sq_packed.push(challenge_sq_packed);
         }
 
         // Feed delta into the transcript
@@ -158,8 +156,7 @@ impl<C: CurveAffine> Proof<C> {
             .map_err(|_| Error::OpeningError)?;
 
         // Get the challenge `c`
-        let c_packed = transcript.squeeze().get_lower_128();
-        let c: C::Scalar = get_challenge_scalar(Challenge(c_packed));
+        let c = ChallengeScalar::<_, ()>::get(transcript);
 
         // Construct
         // [c] P + [c * v] U + [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2) + delta - [z1 * b] U + [z1 - z2] H
@@ -172,12 +169,12 @@ impl<C: CurveAffine> Proof<C> {
         let neg_z1 = -self.z1;
 
         // [c] P
-        commitment_msm.scale(c);
+        commitment_msm.scale(*c);
         msm.add_msm(&commitment_msm);
 
         // [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2)
         for scalar in &mut extra_scalars {
-            *scalar *= &c;
+            *scalar *= &(*c);
         }
 
         for (scalar, base) in extra_scalars.iter().zip(extra_bases.iter()) {
@@ -185,7 +182,7 @@ impl<C: CurveAffine> Proof<C> {
         }
 
         // [c * v] U - [z1 * b] U
-        msm.append_term((c * &v) + &(neg_z1 * &b), u);
+        msm.append_term((*c * &v) + &(neg_z1 * &b), u);
 
         // delta
         msm.append_term(Field::one(), self.delta);

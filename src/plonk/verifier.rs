@@ -1,12 +1,11 @@
 use ff::Field;
 use std::iter;
 
-use super::{Error, Proof, VerifyingKey};
-use crate::arithmetic::{get_challenge_scalar, Challenge, CurveAffine, FieldExt};
+use super::{ChallengeBeta, ChallengeGamma, ChallengeX, ChallengeY, Error, Proof, VerifyingKey};
+use crate::arithmetic::{CurveAffine, FieldExt};
 use crate::poly::{
     commitment::{Guard, Params, MSM},
     multiopen::VerifierQuery,
-    Rotation,
 };
 use crate::transcript::{Hasher, Transcript};
 
@@ -46,21 +45,19 @@ impl<'a, C: CurveAffine> Proof<C> {
                 .map_err(|_| Error::TranscriptError)?;
         }
 
-        // Sample x_0 challenge
-        let x_0: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        // Sample beta challenge
+        let beta = ChallengeBeta::get(&mut transcript);
 
-        // Sample x_1 challenge
-        let x_1: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        // Sample gamma challenge
+        let gamma = ChallengeGamma::get(&mut transcript);
 
         // Hash each permutation product commitment
-        for c in &self.permutation_product_commitments {
-            transcript
-                .absorb_point(c)
-                .map_err(|_| Error::TranscriptError)?;
+        if let Some(p) = &self.permutations {
+            p.absorb_commitments(&mut transcript)?;
         }
 
-        // Sample x_2 challenge, which keeps the gates linearly independent.
-        let x_2: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        // Sample y challenge, which keeps the gates linearly independent.
+        let y = ChallengeY::get(&mut transcript);
 
         // Obtain a commitment to h(X) in the form of multiple pieces of degree n - 1
         for c in &self.h_commitments {
@@ -69,14 +66,13 @@ impl<'a, C: CurveAffine> Proof<C> {
                 .map_err(|_| Error::TranscriptError)?;
         }
 
-        // Sample x_3 challenge, which is used to ensure the circuit is
+        // Sample x challenge, which is used to ensure the circuit is
         // satisfied with high probability.
-        let x_3: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
-        let x_3_inv = vk.domain.rotate_omega(x_3, Rotation(-1));
+        let x = ChallengeX::get(&mut transcript);
 
         // This check ensures the circuit is satisfied so long as the polynomial
         // commitments open to the correct values.
-        self.check_hx(params, vk, x_0, x_1, x_2, x_3)?;
+        self.check_hx(params, vk, beta, gamma, y, x)?;
 
         for eval in self
             .advice_evals
@@ -84,9 +80,13 @@ impl<'a, C: CurveAffine> Proof<C> {
             .chain(self.aux_evals.iter())
             .chain(self.fixed_evals.iter())
             .chain(self.h_evals.iter())
-            .chain(self.permutation_product_evals.iter())
-            .chain(self.permutation_product_inv_evals.iter())
-            .chain(self.permutation_evals.iter().flat_map(|evals| evals.iter()))
+            .chain(
+                self.permutations
+                    .as_ref()
+                    .map(|p| p.evals())
+                    .into_iter()
+                    .flatten(),
+            )
         {
             transcript.absorb_scalar(*eval);
         }
@@ -95,7 +95,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             iter::empty()
                 .chain(vk.cs.advice_queries.iter().enumerate().map(
                     |(query_index, &(column, at))| VerifierQuery {
-                        point: vk.domain.rotate_omega(x_3, at),
+                        point: vk.domain.rotate_omega(*x, at),
                         commitment: &self.advice_commitments[column.index()],
                         eval: self.advice_evals[query_index],
                     },
@@ -106,14 +106,14 @@ impl<'a, C: CurveAffine> Proof<C> {
                         .iter()
                         .enumerate()
                         .map(|(query_index, &(column, at))| VerifierQuery {
-                            point: vk.domain.rotate_omega(x_3, at),
+                            point: vk.domain.rotate_omega(*x, at),
                             commitment: &aux_commitments[column.index()],
                             eval: self.aux_evals[query_index],
                         }),
                 )
                 .chain(vk.cs.fixed_queries.iter().enumerate().map(
                     |(query_index, &(column, at))| VerifierQuery {
-                        point: vk.domain.rotate_omega(x_3, at),
+                        point: vk.domain.rotate_omega(*x, at),
                         commitment: &vk.fixed_commitments[column.index()],
                         eval: self.fixed_evals[query_index],
                     },
@@ -124,57 +124,11 @@ impl<'a, C: CurveAffine> Proof<C> {
                         .enumerate()
                         .zip(self.h_evals.iter())
                         .map(|((idx, _), &eval)| VerifierQuery {
-                            point: x_3,
+                            point: *x,
                             commitment: &self.h_commitments[idx],
                             eval,
                         }),
                 );
-
-        // Handle permutation arguments, if any exist
-        let permutation_queries = if !vk.cs.permutations.is_empty() {
-            Some(
-                iter::empty()
-                    // Open permutation product commitments at x_3
-                    .chain(
-                        self.permutation_product_commitments
-                            .iter()
-                            .enumerate()
-                            .zip(self.permutation_product_evals.iter())
-                            .map(|((idx, _), &eval)| VerifierQuery {
-                                point: x_3,
-                                commitment: &self.permutation_product_commitments[idx],
-                                eval,
-                            }),
-                    )
-                    // Open permutation commitments for each permutation argument at x_3
-                    .chain(
-                        (0..vk.permutation_commitments.len())
-                            .map(|outer_idx| {
-                                let inner_len = vk.permutation_commitments[outer_idx].len();
-                                (0..inner_len).map(move |inner_idx| VerifierQuery {
-                                    point: x_3,
-                                    commitment: &vk.permutation_commitments[outer_idx][inner_idx],
-                                    eval: self.permutation_evals[outer_idx][inner_idx],
-                                })
-                            })
-                            .flatten(),
-                    )
-                    // Open permutation product commitments at \omega^{-1} x_3
-                    .chain(
-                        self.permutation_product_commitments
-                            .iter()
-                            .enumerate()
-                            .zip(self.permutation_product_inv_evals.iter())
-                            .map(|((idx, _), &eval)| VerifierQuery {
-                                point: x_3_inv,
-                                commitment: &self.permutation_product_commitments[idx],
-                                eval,
-                            }),
-                    ),
-            )
-        } else {
-            None
-        };
 
         // We are now convinced the circuit is satisfied so long as the
         // polynomial commitments open to the correct values.
@@ -182,7 +136,13 @@ impl<'a, C: CurveAffine> Proof<C> {
             .verify(
                 params,
                 &mut transcript,
-                queries.chain(permutation_queries.into_iter().flatten()),
+                queries.chain(
+                    self.permutations
+                        .as_ref()
+                        .map(|p| p.queries(vk, x))
+                        .into_iter()
+                        .flatten(),
+                ),
                 msm,
             )
             .map_err(|_| Error::OpeningError)
@@ -209,29 +169,10 @@ impl<'a, C: CurveAffine> Proof<C> {
             return Err(Error::IncompatibleParams);
         }
 
-        if self.permutation_evals.len() != vk.cs.permutations.len() {
-            return Err(Error::IncompatibleParams);
-        }
-
-        for (permutation_evals, permutation) in
-            self.permutation_evals.iter().zip(vk.cs.permutations.iter())
-        {
-            if permutation_evals.len() != permutation.len() {
-                return Err(Error::IncompatibleParams);
-            }
-        }
-
-        if self.permutation_product_inv_evals.len() != vk.cs.permutations.len() {
-            return Err(Error::IncompatibleParams);
-        }
-
-        if self.permutation_product_evals.len() != vk.cs.permutations.len() {
-            return Err(Error::IncompatibleParams);
-        }
-
-        if self.permutation_product_commitments.len() != vk.cs.permutations.len() {
-            return Err(Error::IncompatibleParams);
-        }
+        self.permutations
+            .as_ref()
+            .map(|p| p.check_lengths(vk))
+            .transpose()?;
 
         // TODO: check h_commitments
 
@@ -248,21 +189,21 @@ impl<'a, C: CurveAffine> Proof<C> {
         &self,
         params: &'a Params<C>,
         vk: &VerifyingKey<C>,
-        x_0: C::Scalar,
-        x_1: C::Scalar,
-        x_2: C::Scalar,
-        x_3: C::Scalar,
+        beta: ChallengeBeta<C::Scalar>,
+        gamma: ChallengeGamma<C::Scalar>,
+        y: ChallengeY<C::Scalar>,
+        x: ChallengeX<C::Scalar>,
     ) -> Result<(), Error> {
-        // x_3^n
-        let x_3n = x_3.pow(&[params.n as u64, 0, 0, 0]);
+        // x^n
+        let xn = x.pow(&[params.n as u64, 0, 0, 0]);
 
         // TODO: bubble this error up
-        // l_0(x_3)
-        let l_0 = (x_3 - &C::Scalar::one()).invert().unwrap() // 1 / (x_3 - 1)
-            * &(x_3n - &C::Scalar::one()) // (x_3^n - 1) / (x_3 - 1)
-            * &vk.domain.get_barycentric_weight(); // l_0(x_3)
+        // l_0(x)
+        let l_0 = (*x - &C::Scalar::one()).invert().unwrap() // 1 / (x - 1)
+            * &(xn - &C::Scalar::one()) // (x^n - 1) / (x - 1)
+            * &vk.domain.get_barycentric_weight(); // l_0(x)
 
-        // Compute the expected value of h(x_3)
+        // Compute the expected value of h(x)
         let expected_h_eval = std::iter::empty()
             // Evaluate the circuit using the custom gates provided
             .chain(vk.cs.gates.iter().map(|poly| {
@@ -275,58 +216,24 @@ impl<'a, C: CurveAffine> Proof<C> {
                     &|a, scalar| a * &scalar,
                 )
             }))
-            // l_0(X) * (1 - z(X)) = 0
             .chain(
-                self.permutation_product_evals
-                    .iter()
-                    .map(|product_eval| l_0 * &(C::Scalar::one() - product_eval)),
+                self.permutations
+                    .as_ref()
+                    .map(|p| p.expressions(vk, &self.advice_evals, l_0, beta, gamma, x))
+                    .into_iter()
+                    .flatten(),
             )
-            // z(X) \prod (p(X) + \beta s_i(X) + \gamma)
-            // - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
-            .chain(
-                vk.cs
-                    .permutations
-                    .iter()
-                    .zip(self.permutation_evals.iter())
-                    .zip(self.permutation_product_evals.iter())
-                    .zip(self.permutation_product_inv_evals.iter())
-                    .map(
-                        |(((columns, permutation_evals), product_eval), product_inv_eval)| {
-                            let mut left = *product_eval;
-                            for (advice_eval, permutation_eval) in columns
-                                .iter()
-                                .map(|&column| {
-                                    self.advice_evals[vk.cs.get_advice_query_index(column, 0)]
-                                })
-                                .zip(permutation_evals.iter())
-                            {
-                                left *= &(advice_eval + &(x_0 * permutation_eval) + &x_1);
-                            }
+            .fold(C::Scalar::zero(), |h_eval, v| h_eval * &y + &v);
 
-                            let mut right = *product_inv_eval;
-                            let mut current_delta = x_0 * &x_3;
-                            for advice_eval in columns.iter().map(|&column| {
-                                self.advice_evals[vk.cs.get_advice_query_index(column, 0)]
-                            }) {
-                                right *= &(advice_eval + &current_delta + &x_1);
-                                current_delta *= &C::Scalar::DELTA;
-                            }
-
-                            left - &right
-                        },
-                    ),
-            )
-            .fold(C::Scalar::zero(), |h_eval, v| h_eval * &x_2 + &v);
-
-        // Compute h(x_3) from the prover
+        // Compute h(x) from the prover
         let h_eval = self
             .h_evals
             .iter()
             .rev()
-            .fold(C::Scalar::zero(), |acc, eval| acc * &x_3n + eval);
+            .fold(C::Scalar::zero(), |acc, eval| acc * &xn + eval);
 
         // Did the prover commit to the correct polynomial?
-        if expected_h_eval != (h_eval * &(x_3n - &C::Scalar::one())) {
+        if expected_h_eval != (h_eval * &(xn - &C::Scalar::one())) {
             return Err(Error::ConstraintSystemFailure);
         }
 

@@ -68,27 +68,6 @@ where
     }
 }
 
-/// This is a 128-bit verifier challenge.
-#[derive(Copy, Clone, Debug)]
-pub struct Challenge(pub(crate) u128);
-
-/// This algorithm applies the mapping of Algorithm 1 from the
-/// [Halo](https://eprint.iacr.org/2019/1021) paper.
-pub fn get_challenge_scalar<F: FieldExt>(challenge: Challenge) -> F {
-    let mut acc = (F::ZETA + F::one()).double();
-
-    for i in (0..64).rev() {
-        let should_negate = ((challenge.0 >> ((i << 1) + 1)) & 1) == 1;
-        let should_endo = ((challenge.0 >> (i << 1)) & 1) == 1;
-
-        let q = if should_negate { -F::one() } else { F::one() };
-        let q = if should_endo { q * F::ZETA } else { q };
-        acc = acc + q + acc;
-    }
-
-    acc
-}
-
 fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut C::Projective) {
     let coeffs: Vec<[u8; 32]> = coeffs.iter().map(|a| a.to_bytes()).collect();
 

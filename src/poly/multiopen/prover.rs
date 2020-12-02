@@ -2,11 +2,13 @@ use super::super::{
     commitment::{self, Blind, Params},
     Coeff, Error, Polynomial,
 };
-use super::{construct_intermediate_sets, Proof, ProverQuery, Query};
+use super::{
+    construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4, Proof,
+    ProverQuery, Query,
+};
 
 use crate::arithmetic::{
-    eval_polynomial, get_challenge_scalar, kate_division, lagrange_interpolate, Challenge, Curve,
-    CurveAffine, FieldExt,
+    eval_polynomial, kate_division, lagrange_interpolate, Curve, CurveAffine, FieldExt,
 };
 use crate::transcript::{Hasher, Transcript};
 
@@ -31,13 +33,13 @@ impl<C: CurveAffine> Proof<C> {
     where
         I: IntoIterator<Item = ProverQuery<'a, C>> + Clone,
     {
-        let x_4: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
-        let x_5: C::Scalar = get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+        let x_1 = ChallengeX1::get(transcript);
+        let x_2 = ChallengeX2::get(transcript);
 
         let (poly_map, point_sets) = construct_intermediate_sets(queries);
 
         // Collapse openings at same point sets together into single openings using
-        // x_4 challenge.
+        // x_1 challenge.
         let mut q_polys: Vec<Option<Polynomial<C::Scalar, Coeff>>> = vec![None; point_sets.len()];
         let mut q_blinds = vec![Blind(C::Scalar::zero()); point_sets.len()];
 
@@ -54,16 +56,16 @@ impl<C: CurveAffine> Proof<C> {
                                   blind: Blind<C::Scalar>,
                                   evals: Vec<C::Scalar>| {
                 if let Some(poly) = &q_polys[set_idx] {
-                    q_polys[set_idx] = Some(poly.clone() * x_4 + new_poly);
+                    q_polys[set_idx] = Some(poly.clone() * *x_1 + new_poly);
                 } else {
                     q_polys[set_idx] = Some(new_poly.clone());
                 }
-                q_blinds[set_idx] *= x_4;
+                q_blinds[set_idx] *= *x_1;
                 q_blinds[set_idx] += blind;
                 // Each polynomial is evaluated at a set of points. For each set,
                 // we collapse each polynomial's evals pointwise.
                 for (eval, set_eval) in evals.iter().zip(q_eval_sets[set_idx].iter_mut()) {
-                    *set_eval *= &x_4;
+                    *set_eval *= &x_1;
                     *set_eval += eval;
                 }
             };
@@ -100,7 +102,7 @@ impl<C: CurveAffine> Proof<C> {
                 if f_poly.is_none() {
                     Some(poly)
                 } else {
-                    f_poly.map(|f_poly| f_poly * x_5 + &poly)
+                    f_poly.map(|f_poly| f_poly * *x_2 + &poly)
                 }
             })
             .unwrap();
@@ -114,33 +116,31 @@ impl<C: CurveAffine> Proof<C> {
                 .absorb_point(&f_commitment)
                 .map_err(|_| Error::SamplingError)?;
 
-            let x_6: C::Scalar =
-                get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+            let x_3 = ChallengeX3::get(&mut transcript);
 
             let q_evals: Vec<C::Scalar> = q_polys
                 .iter()
-                .map(|poly| eval_polynomial(poly.as_ref().unwrap(), x_6))
+                .map(|poly| eval_polynomial(poly.as_ref().unwrap(), *x_3))
                 .collect();
 
             for eval in q_evals.iter() {
                 transcript.absorb_scalar(*eval);
             }
 
-            let x_7: C::Scalar =
-                get_challenge_scalar(Challenge(transcript.squeeze().get_lower_128()));
+            let x_4 = ChallengeX4::get(&mut transcript);
 
             let (f_poly, f_blind_try) = q_polys.iter().zip(q_blinds.iter()).fold(
                 (f_poly.clone(), f_blind),
                 |(f_poly, f_blind), (poly, blind)| {
                     (
-                        f_poly * x_7 + poly.as_ref().unwrap(),
-                        Blind((f_blind.0 * &x_7) + &blind.0),
+                        f_poly * *x_4 + poly.as_ref().unwrap(),
+                        Blind((f_blind.0 * &x_4) + &blind.0),
                     )
                 },
             );
 
             if let Ok(opening) =
-                commitment::Proof::create(&params, &mut transcript, &f_poly, f_blind_try, x_6)
+                commitment::Proof::create(&params, &mut transcript, &f_poly, f_blind_try, *x_3)
             {
                 break (opening, q_evals);
             } else {

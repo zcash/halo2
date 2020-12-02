@@ -7,10 +7,34 @@ use ff::Field;
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::*;
-use crate::arithmetic::{CurveAffine, FieldExt};
+use crate::{
+    arithmetic::{CurveAffine, FieldExt},
+    transcript::ChallengeScalar,
+};
 
 mod prover;
 mod verifier;
+
+#[derive(Clone, Copy, Debug)]
+struct X1 {}
+/// Challenge for compressing openings at the same point sets together.
+type ChallengeX1<F> = ChallengeScalar<F, X1>;
+
+#[derive(Clone, Copy, Debug)]
+struct X2 {}
+/// Challenge for keeping the multi-point quotient polynomial terms linearly independent.
+type ChallengeX2<F> = ChallengeScalar<F, X2>;
+
+#[derive(Clone, Copy, Debug)]
+struct X3 {}
+/// Challenge point at which the commitments are opened.
+type ChallengeX3<F> = ChallengeScalar<F, X3>;
+
+#[derive(Clone, Copy, Debug)]
+struct X4 {}
+/// Challenge for collapsing the openings of the various remaining polynomials at x_3
+/// together.
+type ChallengeX4<F> = ChallengeScalar<F, X4>;
 
 /// This is a multi-point opening proof used in the polynomial commitment scheme opening.
 #[derive(Debug, Clone)]

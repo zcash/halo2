@@ -6,12 +6,12 @@
 //! [plonk]: https://eprint.iacr.org/2019/953
 
 use crate::arithmetic::CurveAffine;
-use crate::poly::{
-    multiopen, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
-};
+use crate::poly::{multiopen, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial};
+use crate::transcript::ChallengeScalar;
 
 mod circuit;
 mod keygen;
+mod permutation;
 mod prover;
 mod verifier;
 
@@ -26,7 +26,7 @@ pub use verifier::*;
 pub struct VerifyingKey<C: CurveAffine> {
     domain: EvaluationDomain<C::Scalar>,
     fixed_commitments: Vec<C>,
-    permutation_commitments: Vec<Vec<C>>,
+    permutations: Vec<permutation::VerifyingKey<C>>,
     cs: ConstraintSystem<C::Scalar>,
 }
 
@@ -39,9 +39,7 @@ pub struct ProvingKey<C: CurveAffine> {
     l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
     fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
-    permutations: Vec<Vec<Polynomial<C::Scalar, LagrangeCoeff>>>,
-    permutation_polys: Vec<Vec<Polynomial<C::Scalar, Coeff>>>,
-    permutation_cosets: Vec<Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>>,
+    permutations: Vec<permutation::ProvingKey<C>>,
 }
 
 /// This is an object which represents a (Turbo)PLONK proof.
@@ -50,10 +48,7 @@ pub struct ProvingKey<C: CurveAffine> {
 pub struct Proof<C: CurveAffine> {
     advice_commitments: Vec<C>,
     h_commitments: Vec<C>,
-    permutation_product_commitments: Vec<C>,
-    permutation_product_evals: Vec<C::Scalar>,
-    permutation_product_inv_evals: Vec<C::Scalar>,
-    permutation_evals: Vec<Vec<C::Scalar>>,
+    permutations: Option<permutation::Proof<C>>,
     advice_evals: Vec<C::Scalar>,
     aux_evals: Vec<C::Scalar>,
     fixed_evals: Vec<C::Scalar>,
@@ -94,6 +89,22 @@ impl<C: CurveAffine> VerifyingKey<C> {
         &self.domain
     }
 }
+
+#[derive(Clone, Copy, Debug)]
+struct Beta;
+type ChallengeBeta<F> = ChallengeScalar<F, Beta>;
+
+#[derive(Clone, Copy, Debug)]
+struct Gamma;
+type ChallengeGamma<F> = ChallengeScalar<F, Gamma>;
+
+#[derive(Clone, Copy, Debug)]
+struct Y;
+type ChallengeY<F> = ChallengeScalar<F, Y>;
+
+#[derive(Clone, Copy, Debug)]
+struct X;
+type ChallengeX<F> = ChallengeScalar<F, X>;
 
 #[test]
 fn test_proving() {
