@@ -225,8 +225,8 @@ impl<F: FieldExt> MulAssign<F> for Blind<F> {
 fn test_commit_lagrange() {
     const K: u32 = 6;
 
-    use crate::transcript::DummyHash;
     use crate::pasta::{EpAffine, Fp, Fq};
+    use crate::transcript::DummyHash;
     let params = Params::<EpAffine>::new::<DummyHash<Fp>>(K);
     let domain = super::EvaluationDomain::new(1, K);
 
@@ -254,8 +254,8 @@ fn test_opening_proof() {
         EvaluationDomain,
     };
     use crate::arithmetic::{eval_polynomial, Curve, FieldExt};
-    use crate::transcript::{ChallengeScalar, DummyHash, Transcript};
     use crate::pasta::{EpAffine, Fp, Fq};
+    use crate::transcript::{ChallengeScalar, DummyHash, Transcript};
 
     let params = Params::<EpAffine>::new::<DummyHash<Fp>>(K);
     let domain = EvaluationDomain::new(1, K);

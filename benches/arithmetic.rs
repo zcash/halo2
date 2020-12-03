@@ -3,9 +3,9 @@ extern crate criterion;
 
 extern crate halo2;
 use crate::arithmetic::{small_multiexp, FieldExt};
+use crate::pasta::{EqAffine, Fp, Fq};
 use crate::poly::commitment::Params;
 use crate::transcript::DummyHash;
-use crate::pasta::{EqAffine, Fp, Fq};
 use halo2::*;
 
 use criterion::{black_box, Criterion};
