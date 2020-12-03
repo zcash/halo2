@@ -9,9 +9,9 @@ use crate::arithmetic::{adc, mac, sbb, FieldExt, Group};
 
 /// This represents an element of $\mathbb{F}_q$ where
 ///
-/// `q = 0x40000000000000000000000000000000038aa127696286c9842cafd400000001`
+/// `q = 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001`
 ///
-/// is the base field of the Tweedledee curve.
+/// is the base field of the Vesta curve.
 // The internal representation of this type is four 64-bit unsigned
 // integers in little-endian order. `Fq` values are always in
 // Montgomery form; i.e., Fq(a) = aR mod q, with R = 2^256.
@@ -94,10 +94,10 @@ impl ConditionallySelectable for Fq {
 }
 
 /// Constant representing the modulus
-/// q = 0x40000000000000000000000000000000038aa127696286c9842cafd400000001
+/// q = 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001
 const MODULUS: Fq = Fq([
-    0x842cafd400000001,
-    0x38aa127696286c9,
+    0x8c46eb2100000001,
+    0x224698fc0994a8dd,
     0x0,
     0x4000000000000000,
 ]);
@@ -106,9 +106,9 @@ const MODULUS: Fq = Fq([
 #[cfg(not(target_pointer_width = "64"))]
 const MODULUS_LIMBS_32: [u32; 8] = [
     0x0000_0001,
-    0x842c_afd4,
-    0x6962_86c9,
-    0x038a_a127,
+    0x8c46_eb21,
+    0x0994_a8dd,
+    0x2246_98fc,
     0x0000_0000,
     0x0000_0000,
     0x0000_0000,
@@ -164,30 +164,30 @@ impl_binops_additive!(Fq, Fq);
 impl_binops_multiplicative!(Fq, Fq);
 
 /// INV = -(q^{-1} mod 2^64) mod 2^64
-const INV: u64 = 0x842cafd3ffffffff;
+const INV: u64 = 0x8c46eb20ffffffff;
 
 /// R = 2^256 mod q
 const R: Fq = Fq([
-    0x7379f083fffffffd,
-    0xf5601c89c3d86ba3,
+    0x5b2b3e9cfffffffd,
+    0x992c350be3420567,
     0xffffffffffffffff,
     0x3fffffffffffffff,
 ]);
 
 /// R^2 = 2^512 mod q
 const R2: Fq = Fq([
-    0x8595fa8000000010,
-    0x7e16a565c6895230,
-    0xf4c0e6fcb03aa0a2,
-    0xc8ad9106886013,
+    0xfc9678ff0000000f,
+    0x67bb433d891a16e3,
+    0x7fae231004ccf590,
+    0x96d41af7ccfdaa9,
 ]);
 
 /// R^3 = 2^768 mod q
 const R3: Fq = Fq([
-    0xa624f338075cdb5e,
-    0x57964eacb8fe21f2,
-    0xcb266d18c0413bc2,
-    0xa42cdf95f959577,
+    0x008b421c249dae4c,
+    0xe13bda50dba41326,
+    0x88fececb8e15cb63,
+    0x7dd97a06e6792c8,
 ]);
 
 /// `GENERATOR = 5 mod q` is a generator of the `q - 1` order multiplicative subgroup, and
@@ -199,34 +199,26 @@ const GENERATOR: Fq = Fq::from_raw([
     0x0000_0000_0000_0000,
 ]);
 
-const S: u32 = 34;
+const S: u32 = 32;
 
 /// GENERATOR^t where t * 2^s + 1 = q
 /// with t odd. In other words, this
 /// is a 2^s root of unity.
-///
-/// `GENERATOR = 5 mod q` is a generator
-/// of the q - 1 order multiplicative
-/// subgroup.
 const ROOT_OF_UNITY: Fq = Fq::from_raw([
-    0x1cbd3234869d57ec,
-    0xa287dd1b8084fbf,
-    0xf1dbcb645a987293,
-    0x113efc510dc03c0b,
+    0xa70e2c1102b6d05f,
+    0x9bb97ea3c106f049,
+    0x9e5c4dfd492ae26e,
+    0x2de6a9b8746d3f58,
 ]);
 
 /// GENERATOR^{2^s} where t * 2^s + 1 = q
 /// with t odd. In other words, this
 /// is a t root of unity.
-///
-/// `GENERATOR = 5 mod q` is a generator
-/// of the q - 1 order multiplicative
-/// subgroup.
 const DELTA: Fq = Fq::from_raw([
-    0x83d2833d15f2bbf9,
-    0x5127e2ce24a8e69c,
-    0x4243423589e0a9b5,
-    0x20daec44973be920,
+    0x8494392472d1683c,
+    0xe3ac3376541d1140,
+    0x06f0a88e7f7949f8,
+    0x2237d54423724166,
 ]);
 
 impl Default for Fq {
@@ -518,7 +510,7 @@ impl ff::Field for Fq {
         // https://eprint.iacr.org/2012/685.pdf (page 12, algorithm 5)
 
         // w = self^((t - 1) // 2)
-        let w = self.pow_vartime(&[0xed2c50d9308595fa, 0x715424, 0x0, 0x8000000]);
+        let w = self.pow_vartime(&[0x04ca546ec6237590, 0x11234c7e, 0x0, 0x20000000]);
 
         let mut v = S;
         let mut x = self * w;
@@ -559,8 +551,8 @@ impl ff::Field for Fq {
     /// failing if the element is zero.
     fn invert(&self) -> CtOption<Self> {
         let tmp = self.pow_vartime(&[
-            0x842cafd3ffffffff,
-            0x38aa127696286c9,
+            0x8c46eb20ffffffff,
+            0x224698fc0994a8dd,
             0x0,
             0x4000000000000000,
         ]);
@@ -661,43 +653,43 @@ impl ff::PrimeField for Fq {
 impl FieldExt for Fq {
     const ROOT_OF_UNITY: Self = ROOT_OF_UNITY;
     const ROOT_OF_UNITY_INV: Self = Fq::from_raw([
-        0x824860d3eb30de02,
-        0xad9f0afd0ea63acc,
-        0xd250318c11a16fe1,
-        0x12a9f5e1dd62dabc,
+        0x57eecda0a84b6836,
+        0x4ad38b9084b8a80c,
+        0xf4c8f353124086c1,
+        0x2235e1a7415bf936,
     ]);
     const UNROLL_T_EXPONENT: [u64; 4] = [
-        0x9b71de17e6d2d5a0,
-        0x0000000000296ee0,
-        0x8c00000000000000,
-        0x2ecc05e,
+        0xcc771cc2ac1e1664,
+        0x00000000062dfe9e,
+        0xc000000000000000,
+        0xb89e9c7,
     ];
     const T_EXPONENT: [u64; 4] = [
-        0xda58a1b2610b2bf5,
-        0x0000000000e2a849,
+        0x0994a8dd8c46eb21,
+        0x00000000224698fc,
         0x0000000000000000,
-        0x10000000,
+        0x40000000,
     ];
     const DELTA: Self = DELTA;
-    const UNROLL_S_EXPONENT: u64 = 0x344cfe85d;
+    const UNROLL_S_EXPONENT: u64 = 0xd1d858e1;
     const TWO_INV: Self = Fq::from_raw([
-        0xc21657ea00000001,
-        0x01c55093b4b14364,
+        0xc623759080000001,
+        0x11234c7e04ca546e,
         0x0000000000000000,
         0x2000000000000000,
     ]);
     const RESCUE_ALPHA: u64 = 5;
     const RESCUE_INVALPHA: [u64; 4] = [
-        0xd023bfdccccccccd,
-        0x360880ec544ed23a,
+        0xd69f2280cccccccd,
+        0x4e9ee0c9a143ba4a,
         0x3333333333333333,
         0x3333333333333333,
     ];
     const ZETA: Self = Fq::from_raw([
-        0x4394c2bd148fa4fd,
-        0x69cf8de720e52ec1,
-        0x87ad8b5ff9731ffe,
-        0x36c66d3a1e049a58,
+        0x2aa9d2e050aa0e4f,
+        0x0fed467d47c033af,
+        0x511db4d81cf70f5a,
+        0x6819a58283e528e,
     ]);
 
     fn ct_is_zero(&self) -> Choice {
@@ -797,10 +789,35 @@ fn test_inv() {
 }
 
 #[test]
+fn test_rescue() {
+    // NB: TWO_INV is standing in as a "random" field element
+    assert_eq!(
+        Fq::TWO_INV
+            .pow_vartime(&[Fq::RESCUE_ALPHA, 0, 0, 0])
+            .pow_vartime(&Fq::RESCUE_INVALPHA),
+        Fq::TWO_INV
+    );
+}
+
+#[test]
+fn test_sqrt() {
+    // NB: TWO_INV is standing in as a "random" field element
+    let v = (Fq::TWO_INV).square().sqrt().unwrap();
+    assert!(v == Fq::TWO_INV || (-v) == Fq::TWO_INV);
+}
+
+#[test]
+fn test_deterministic_sqrt() {
+    // NB: TWO_INV is standing in as a "random" field element
+    let v = (Fq::TWO_INV).square().deterministic_sqrt().unwrap();
+    assert!(v == Fq::TWO_INV || (-v) == Fq::TWO_INV);
+}
+
+#[test]
 fn test_zeta() {
     assert_eq!(
         format!("{:?}", Fq::ZETA),
-        "0x36c66d3a1e049a5887ad8b5ff9731ffe69cf8de720e52ec14394c2bd148fa4fd"
+        "0x06819a58283e528e511db4d81cf70f5a0fed467d47c033af2aa9d2e050aa0e4f"
     );
     let a = Fq::ZETA;
     assert!(a != Fq::one());
@@ -808,6 +825,14 @@ fn test_zeta() {
     assert!(b != Fq::one());
     let c = b * a;
     assert!(c == Fq::one());
+}
+
+#[test]
+fn test_root_of_unity() {
+    assert_eq!(
+        Fq::ROOT_OF_UNITY.pow_vartime(&[1 << 32, 0, 0, 0]),
+        Fq::one()
+    );
 }
 
 #[test]
@@ -823,4 +848,43 @@ fn test_inv_2() {
 #[test]
 fn test_delta() {
     assert_eq!(Fq::DELTA, Fq::from(5).pow(&[1u64 << Fq::S, 0, 0, 0]));
+}
+
+#[cfg(not(target_pointer_width = "64"))]
+#[test]
+fn consistent_modulus_limbs() {
+    for (a, &b) in MODULUS
+        .0
+        .iter()
+        .flat_map(|&limb| {
+            Some(limb as u32)
+                .into_iter()
+                .chain(Some((limb >> 32) as u32))
+        })
+        .zip(MODULUS_LIMBS_32.iter())
+    {
+        assert_eq!(a, b);
+    }
+}
+
+#[test]
+fn test_from_u512() {
+    assert_eq!(
+        Fq::from_raw([
+            0xe22bd0d1b22cc43e,
+            0x6b84e5b52490a7c8,
+            0x264262941ac9e229,
+            0x27dcfdf361ce4254
+        ]),
+        Fq::from_u512([
+            0x64a80cce0b5a2369,
+            0x84f2ef0501bc783c,
+            0x696e5e63c86bbbde,
+            0x924072f52dc6cc62,
+            0x8288a507c8d61128,
+            0x3b2efb1ef697e3fe,
+            0x75a4998d06855f27,
+            0x52ea589e69712cc0
+        ])
+    );
 }

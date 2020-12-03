@@ -9,9 +9,9 @@ use crate::arithmetic::{adc, mac, sbb, FieldExt, Group};
 
 /// This represents an element of $\mathbb{F}_p$ where
 ///
-/// `p = 0x40000000000000000000000000000000038aa1276c3f59b9a14064e200000001`
+/// `p = 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001`
 ///
-/// is the base field of the Tweedledum curve.
+/// is the base field of the Pallas curve.
 // The internal representation of this type is four 64-bit unsigned
 // integers in little-endian order. `Fp` values are always in
 // Montgomery form; i.e., Fp(a) = aR mod p, with R = 2^256.
@@ -94,11 +94,11 @@ impl ConditionallySelectable for Fp {
 }
 
 /// Constant representing the modulus
-/// p = 0x40000000000000000000000000000000038aa1276c3f59b9a14064e200000001
+/// p = 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001
 const MODULUS: Fp = Fp([
-    0xa14064e200000001,
-    0x38aa1276c3f59b9,
-    0x0,
+    0x992d30ed00000001,
+    0x224698fc094cf91b,
+    0x0000000000000000,
     0x4000000000000000,
 ]);
 
@@ -106,9 +106,9 @@ const MODULUS: Fp = Fp([
 #[cfg(not(target_pointer_width = "64"))]
 const MODULUS_LIMBS_32: [u32; 8] = [
     0x0000_0001,
-    0xa140_64e2,
-    0x6c3f_59b9,
-    0x038a_a127,
+    0x992d_30ed,
+    0x094c_f91b,
+    0x2246_98fc,
     0x0000_0000,
     0x0000_0000,
     0x0000_0000,
@@ -164,34 +164,34 @@ impl_binops_additive!(Fp, Fp);
 impl_binops_multiplicative!(Fp, Fp);
 
 /// INV = -(p^{-1} mod 2^64) mod 2^64
-const INV: u64 = 0xa14064e1ffffffff;
+const INV: u64 = 0x992d30ecffffffff;
 
 /// R = 2^256 mod p
 const R: Fp = Fp([
-    0x1c3ed159fffffffd,
-    0xf5601c89bb41f2d3,
+    0x34786d38fffffffd,
+    0x992c350be41914ad,
     0xffffffffffffffff,
     0x3fffffffffffffff,
 ]);
 
 /// R^2 = 2^512 mod p
 const R2: Fp = Fp([
-    0x280c9c4000000010,
-    0x91a4409b5400af74,
-    0xdd7b28e19094c659,
-    0xc8ad9107ccca0e,
+    0x8c78ecb30000000f,
+    0xd7d30dbd8b0de0e7,
+    0x7797a99bc3c95d18,
+    0x96d41af7b9cb714,
 ]);
 
 /// R^3 = 2^768 mod p
 const R3: Fp = Fp([
-    0x98fb3d144380a737,
-    0xf9fdbeb55b7eb87c,
-    0x63f75cb999eafa89,
-    0x217cb214ebb8fc72,
+    0xf185a5993a9e10f9,
+    0xf6a68f3b6ac5b1d1,
+    0xdf8d1014353fd42c,
+    0x2ae309222d2d9910,
 ]);
 
-/// `GENERATOR = 5 mod p` is a generator of the `p - 1` order multiplicative subgroup, and
-/// is also a quadratic non-residue.
+/// `GENERATOR = 5 mod p` is a generator of the `p - 1` order multiplicative
+/// subgroup, or in other words a primitive root of the field.
 const GENERATOR: Fp = Fp::from_raw([
     0x0000_0000_0000_0005,
     0x0000_0000_0000_0000,
@@ -199,34 +199,26 @@ const GENERATOR: Fp = Fp::from_raw([
     0x0000_0000_0000_0000,
 ]);
 
-const S: u32 = 33;
+const S: u32 = 32;
 
 /// GENERATOR^t where t * 2^s + 1 = p
 /// with t odd. In other words, this
 /// is a 2^s root of unity.
-///
-/// `GENERATOR = 5 mod p` is a generator
-/// of the p - 1 order multiplicative
-/// subgroup.
 const ROOT_OF_UNITY: Fp = Fp::from_raw([
-    0x53de9f31b88837ce,
-    0xff46e8f3f3ea99d6,
-    0xf624f2eaaf8c2d57,
-    0x2ae45117890ee2fc,
+    0xbdad6fabd87ea32f,
+    0xea322bf2b7bb7584,
+    0x362120830561f81a,
+    0x2bce74deac30ebda,
 ]);
 
 /// GENERATOR^{2^s} where t * 2^s + 1 = p
 /// with t odd. In other words, this
 /// is a t root of unity.
-///
-/// `GENERATOR = 5 mod p` is a generator
-/// of the p - 1 order multiplicative
-/// subgroup.
 const DELTA: Fp = Fp::from_raw([
-    0x48796f6fde98a425,
-    0xa99d8b67e918805e,
-    0x671383de08b5fe3c,
-    0x1e9372724e80300d,
+    0x6a6ccd20dd7b9ba2,
+    0xf5e4f3f13eee5636,
+    0xbd455b7112a5049d,
+    0xa757d0f0006ab6c,
 ]);
 
 impl Default for Fp {
@@ -503,7 +495,7 @@ impl ff::Field for Fp {
         // https://eprint.iacr.org/2012/685.pdf (page 12, algorithm 5)
 
         // w = self^((t - 1) // 2)
-        let w = self.pow_vartime(&[0xdb0fd66e68501938, 0xe2a849, 0x0, 0x10000000]);
+        let w = self.pow_vartime(&[0x04a67c8dcc969876, 0x11234c7e, 0x0, 0x20000000]);
 
         let mut v = S;
         let mut x = self * w;
@@ -544,8 +536,8 @@ impl ff::Field for Fp {
     /// failing if the element is zero.
     fn invert(&self) -> CtOption<Self> {
         let tmp = self.pow_vartime(&[
-            0xa14064e1ffffffff,
-            0x38aa1276c3f59b9,
+            0x992d30ecffffffff,
+            0x224698fc094cf91b,
             0x0,
             0x4000000000000000,
         ]);
@@ -646,43 +638,43 @@ impl ff::PrimeField for Fp {
 impl FieldExt for Fp {
     const ROOT_OF_UNITY: Self = ROOT_OF_UNITY;
     const ROOT_OF_UNITY_INV: Self = Fp::from_raw([
-        0x9246674078fa45bb,
-        0xd822ebd60888c5ea,
-        0x56d579133a11731f,
-        0x1c88fa9e942120bb,
+        0xf0b87c7db2ce91f6,
+        0x84a0a1d8859f066f,
+        0xb4ed8e647196dad1,
+        0x2cd5282c53116b5c,
     ]);
     const UNROLL_T_EXPONENT: [u64; 4] = [
-        0x3b3a6633d1897d83,
-        0x0000000000c93d5b,
-        0xf000000000000000,
-        0xe34ab16,
+        0x955a0a417453113c,
+        0x0000000022016b89,
+        0xc000000000000000,
+        0x3f7ed4c6,
     ];
     const T_EXPONENT: [u64; 4] = [
-        0xb61facdcd0a03271,
-        0x0000000001c55093,
+        0x094cf91b992d30ed,
+        0x00000000224698fc,
         0x0000000000000000,
-        0x20000000,
+        0x40000000,
     ];
     const DELTA: Self = DELTA;
-    const UNROLL_S_EXPONENT: u64 = 0x11cb54e91;
+    const UNROLL_S_EXPONENT: u64 = 0x204ace5;
     const TWO_INV: Self = Fp::from_raw([
-        0xd0a0327100000001,
-        0x01c55093b61facdc,
+        0xcc96987680000001,
+        0x11234c7e04a67c8d,
         0x0000000000000000,
         0x2000000000000000,
     ]);
     const RESCUE_ALPHA: u64 = 5;
     const RESCUE_INVALPHA: [u64; 4] = [
-        0x810050b4cccccccd,
-        0x360880ec56991494,
+        0xe0f0f3f0cccccccd,
+        0x4e9ee0c9a10a60e2,
         0x3333333333333333,
         0x3333333333333333,
     ];
     const ZETA: Self = Fp::from_raw([
-        0x8598abb3a410c9c8,
-        0x7881fb239ba41a26,
-        0x9bebc9146ef83d9a,
-        0x1508415ab5e97c94,
+        0x7b7fd22f0201b547,
+        0x05270d29d19fc7d2,
+        0xd3552a23a8554e50,
+        0x2d33357cb532458e,
     ]);
 
     fn ct_is_zero(&self) -> Choice {
@@ -782,10 +774,35 @@ fn test_inv() {
 }
 
 #[test]
+fn test_rescue() {
+    // NB: TWO_INV is standing in as a "random" field element
+    assert_eq!(
+        Fp::TWO_INV
+            .pow_vartime(&[Fp::RESCUE_ALPHA, 0, 0, 0])
+            .pow_vartime(&Fp::RESCUE_INVALPHA),
+        Fp::TWO_INV
+    );
+}
+
+#[test]
+fn test_sqrt() {
+    // NB: TWO_INV is standing in as a "random" field element
+    let v = (Fp::TWO_INV).square().sqrt().unwrap();
+    assert!(v == Fp::TWO_INV || (-v) == Fp::TWO_INV);
+}
+
+#[test]
+fn test_deterministic_sqrt() {
+    // NB: TWO_INV is standing in as a "random" field element
+    let v = (Fp::TWO_INV).square().deterministic_sqrt().unwrap();
+    assert!(v == Fp::TWO_INV || (-v) == Fp::TWO_INV);
+}
+
+#[test]
 fn test_zeta() {
     assert_eq!(
         format!("{:?}", Fp::ZETA),
-        "0x1508415ab5e97c949bebc9146ef83d9a7881fb239ba41a268598abb3a410c9c8"
+        "0x2d33357cb532458ed3552a23a8554e5005270d29d19fc7d27b7fd22f0201b547"
     );
 
     let a = Fp::ZETA;
@@ -794,6 +811,14 @@ fn test_zeta() {
     assert!(b != Fp::one());
     let c = b * a;
     assert!(c == Fp::one());
+}
+
+#[test]
+fn test_root_of_unity() {
+    assert_eq!(
+        Fp::ROOT_OF_UNITY.pow_vartime(&[1 << 32, 0, 0, 0]),
+        Fp::one()
+    );
 }
 
 #[test]
@@ -809,4 +834,43 @@ fn test_inv_2() {
 #[test]
 fn test_delta() {
     assert_eq!(Fp::DELTA, Fp::from(5).pow(&[1u64 << Fp::S, 0, 0, 0]));
+}
+
+#[cfg(not(target_pointer_width = "64"))]
+#[test]
+fn consistent_modulus_limbs() {
+    for (a, &b) in MODULUS
+        .0
+        .iter()
+        .flat_map(|&limb| {
+            Some(limb as u32)
+                .into_iter()
+                .chain(Some((limb >> 32) as u32))
+        })
+        .zip(MODULUS_LIMBS_32.iter())
+    {
+        assert_eq!(a, b);
+    }
+}
+
+#[test]
+fn test_from_u512() {
+    assert_eq!(
+        Fp::from_raw([
+            0x3daec14d565241d9,
+            0x0b7af45b6073944b,
+            0xea5b8bd611a5bd4c,
+            0x150160330625db3d
+        ]),
+        Fp::from_u512([
+            0xee155641297678a1,
+            0xd83e156bdbfdbe65,
+            0xd9ccd834c68ba0b5,
+            0xf508ede312272758,
+            0x038df7cbf8228e89,
+            0x3505a1e4a3c74b41,
+            0xbfa46f775eb82db3,
+            0x26ebe27e262f471d
+        ])
+    );
 }
