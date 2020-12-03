@@ -192,12 +192,12 @@ impl Argument {
             .commit_lagrange(&permuted_table_value, permuted_table_blind)
             .to_affine();
 
-        // Hash each permuted input commitment
+        // Hash permuted input commitment
         transcript
             .absorb_point(&permuted_input_commitment)
             .map_err(|_| Error::TranscriptError)?;
 
-        // Hash each permuted table commitment
+        // Hash permuted table commitment
         transcript
             .absorb_point(&permuted_table_commitment)
             .map_err(|_| Error::TranscriptError)?;
@@ -239,16 +239,15 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
     ) -> Result<Committed<'a, C>, Error> {
         // Goal is to compute the products of fractions
         //
-        // (a_1(\omega^i) + \theta a_2(\omega^i) + ... + beta)(s_1(\omega^i) + \theta(\omega^i) + ... + \gamma) /
-        // (a'(\omega^i) + \beta)(s'(\omega^i) + \gamma)
+        // (\theta^{m-1} a_1(\omega^i) + \theta^{m-2} a_2(\omega^i) + ... + a_m(\omega^i) + \beta)(\theta^{m-1} s_1(\omega^i) + \theta^{m-2} s_2(\omega^i) + ... + s_m(\omega^i) + \gamma)/
+        // (a'(\omega^i) + \beta) (s'(\omega^i) + \gamma)
         //
         // where a_j(X) is the jth input column in this lookup,
         // where a'(X) is the compression of the permuted input columns,
         // s_j(X) is the jth table column in this lookup,
         // s'(X) is the compression of the permuted table columns,
         // and i is the ith row of the column.
-        let mut lookup_product = vec![C::Scalar::one(); params.n as usize];
-
+        let mut lookup_product = vec![C::Scalar::zero(); params.n as usize];
         // Denominator uses the permuted input column and permuted table column
         parallelize(&mut lookup_product, |lookup_product, start| {
             for ((lookup_product, permuted_input_value), permuted_table_value) in lookup_product
@@ -256,8 +255,7 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
                 .zip(self.permuted_input_value[start..].iter())
                 .zip(self.permuted_table_value[start..].iter())
             {
-                *lookup_product *= &(*beta + permuted_input_value);
-                *lookup_product *= &(*gamma + permuted_table_value);
+                *lookup_product = (*beta + permuted_input_value) * &(*gamma + permuted_table_value);
             }
         });
 
@@ -266,7 +264,7 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
         lookup_product.iter_mut().batch_invert();
 
         // Finish the computation of the entire fraction by computing the numerators
-        // (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
+        // (\theta^{m-1} a_1(\omega^i) + \theta^{m-2} a_2(\omega^i) + ... + \theta a_{m-1}(\omega^i) + a_m(\omega^i) + \beta)(\theta^{m-1} s_1(\omega^i) + \theta^{m-2} s_2(\omega^i) + ... + \theta s_{m-1}(\omega^i) + s_m(\omega^i) + \gamma)
         // Compress unpermuted input columns
         let mut input_term = vec![C::Scalar::zero(); params.n as usize];
         for unpermuted_input_value in self.unpermuted_input_values.iter() {
@@ -309,10 +307,10 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
 
         // The product vector is a vector of products of fractions of the form
         //
-        // (a_1(\omega^i) + \theta a_2(\omega^i) + ... + \beta)(s_1(\omega^i) + \theta s_2(\omega^i) + ... + \gamma)/
-        // (a'(\omega^i) + \beta) (s'(\omega^i) + \gamma)
+        // (\theta^{m-1} a_1(\omega^i) + \theta^{m-2} a_2(\omega^i) + ... + \theta a_{m-1}(\omega^i) + a_m(\omega^i) + \beta)(\theta^{m-1} s_1(\omega^i) + \theta^{m-2} s_2(\omega^i) + ... + \theta s_{m-1}(\omega^i) + s_m(\omega^i) + \gamma)
         //
-        // where a_j(\omega^i) is the jth input column in this lookup,
+        // where there are m input columns and m table columns,
+        // a_j(\omega^i) is the jth input column in this lookup,
         // a'j(\omega^i) is the permuted input column,
         // s_j(\omega^i) is the jth table column in this lookup,
         // s'(\omega^i) is the permuted table column,
@@ -320,12 +318,13 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
 
         // Compute the evaluations of the lookup product polynomial
         // over our domain, starting with z[0] = 1
-        let mut z = vec![C::Scalar::one()];
-        for row in 1..(params.n as usize) {
-            let mut tmp = z[row - 1];
-            tmp *= &lookup_product[row];
-            z.push(tmp);
-        }
+        let z = iter::once(C::Scalar::one())
+            .chain(lookup_product.into_iter().skip(1))
+            .scan(C::Scalar::one(), |state, cur| {
+                *state *= &cur;
+                Some(*state)
+            })
+            .collect::<Vec<_>>();
         let z = pk.vk.domain.lagrange_from_vec(z);
 
         #[cfg(feature = "sanity-checks")]
@@ -336,7 +335,7 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
             let n = params.n as usize;
 
             // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
-            // - z'(\omega^{-1} X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
+            // - z'(\omega^{-1} X) (\theta^m a_1(X) + \theta^{m-1} a_2(X) + ... + a_m(X) + \beta) (\theta^m s_1(X) + \theta^{m-1} s_2(X) + ... + s_m(X) + \gamma)
             for i in 0..n {
                 let prev_idx = (n + i - 1) % n;
 
@@ -374,7 +373,7 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
             .coeff_to_extended(z.clone(), Rotation::default());
         let product_inv_coset = pk.vk.domain.coeff_to_extended(z.clone(), Rotation(-1));
 
-        // Hash each product commitment
+        // Hash product commitment
         transcript
             .absorb_point(&product_commitment)
             .map_err(|_| Error::TranscriptError)?;
@@ -417,7 +416,7 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
                 Polynomial::one_minus(self.product_coset.clone()) * &pk.l0,
             ))
             // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
-            // - z'(\omega^{-1} X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
+            // - z'(\omega^{-1} X) (\theta^m a_1(X) + \theta^{m-1} a_2(X) + ... + a_m(X) + \beta) (\theta^m s_1(X) + \theta^{m-1} s_2(X) + ... + s_m(X) + \gamma)
             .chain({
                 // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
                 let mut left = self.product_coset.clone();
@@ -432,13 +431,13 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
                     }
                 });
 
-                //  z'(\omega^{-1} X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
+                //  z'(\omega^{-1} X) (\theta^m a_1(X) + \theta^{m-1} a_2(X) + ... + a_m(X) + \beta) (\theta^m s_1(X) + \theta^{m-1} s_2(X) + ... + s_m(X) + \gamma)
                 let mut right = self.product_inv_coset;
                 let mut input_terms = pk.vk.domain.empty_extended();
 
                 // Compress the unpermuted input columns
                 for input in permuted.unpermuted_input_cosets.iter() {
-                    // (a_1(X) + \theta a_2(X) + ...)
+                    // \theta^m a_1(X) + \theta^{m-1} a_2(X) + ... + a_m(X)
                     parallelize(&mut input_terms, |input_term, start| {
                         for (input_term, input) in input_term.iter_mut().zip(input[start..].iter())
                         {
@@ -451,7 +450,7 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
                 let mut table_terms = pk.vk.domain.empty_extended();
                 // Compress the unpermuted table columns
                 for table in permuted.unpermuted_table_cosets.iter() {
-                    //  (s_1(X) + \theta s_2(X) + ...)
+                    //  \theta^m s_1(X) + \theta^{m-1} s_2(X) + ... + s_m(X)
                     parallelize(&mut table_terms, |table_term, start| {
                         for (table_term, table) in table_term.iter_mut().zip(table[start..].iter())
                         {
@@ -633,28 +632,31 @@ fn permute_column_pair<C: CurveAffine>(
             *acc.entry(*coeff).or_insert(0) += 1;
             acc
         });
-    let mut repeated_input_rows = vec![];
     let mut permuted_table_coeffs = vec![C::Scalar::zero(); table_column.len()];
 
-    for row in 0..permuted_input_column.len() {
-        let input_value = permuted_input_column[row];
-
-        // If this is the first occurence of `input_value` in the input column
-        if row == 0 || input_value != permuted_input_column[row - 1] {
-            permuted_table_coeffs[row] = input_value;
-            // Remove one instance of input_value from leftover_table_map
-            if let Some(count) = leftover_table_map.get_mut(&input_value) {
-                assert!(*count > 0);
-                *count -= 1;
+    let mut repeated_input_rows = permuted_input_column
+        .iter()
+        .zip(permuted_table_coeffs.iter_mut())
+        .enumerate()
+        .filter_map(|(row, (input_value, table_value))| {
+            // If this is the first occurence of `input_value` in the input column
+            if row == 0 || *input_value != permuted_input_column[row - 1] {
+                *table_value = *input_value;
+                // Remove one instance of input_value from leftover_table_map
+                if let Some(count) = leftover_table_map.get_mut(&input_value) {
+                    assert!(*count > 0);
+                    *count -= 1;
+                    None
+                } else {
+                    // Return error if input_value not found
+                    Some(Err(Error::ConstraintSystemFailure))
+                }
+            // If input value is repeated
             } else {
-                // Return error if input_value not found
-                return Err(Error::ConstraintSystemFailure);
+                Some(Ok(row))
             }
-        // If input value is repeated
-        } else {
-            repeated_input_rows.push(row);
-        }
-    }
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     // Populate permuted table at unfilled rows with leftover table elements
     for (coeff, count) in leftover_table_map.iter() {

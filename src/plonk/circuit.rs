@@ -364,6 +364,9 @@ impl<F: Field> ConstraintSystem<F> {
         input_columns: &[Column<Any>],
         table_columns: &[Column<Any>],
     ) -> usize {
+        // The function will panic if the number of input columns and table columns are not the same.
+        assert_eq!(input_columns.len(), table_columns.len());
+
         let index = self.lookups.len();
         if self.lookups.is_empty() {
             let at = Rotation(-1);

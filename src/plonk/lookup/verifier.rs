@@ -23,8 +23,7 @@ impl<C: CurveAffine> Proof<C> {
             .map_err(|_| Error::TranscriptError)?;
         transcript
             .absorb_point(&self.permuted_table_commitment)
-            .map_err(|_| Error::TranscriptError)?;
-        Ok(())
+            .map_err(|_| Error::TranscriptError)
     }
 
     pub(crate) fn absorb_product_commitment<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
@@ -33,8 +32,7 @@ impl<C: CurveAffine> Proof<C> {
     ) -> Result<(), Error> {
         transcript
             .absorb_point(&self.product_commitment)
-            .map_err(|_| Error::TranscriptError)?;
-        Ok(())
+            .map_err(|_| Error::TranscriptError)
     }
 
     pub(in crate::plonk) fn expressions<'a>(
@@ -51,7 +49,7 @@ impl<C: CurveAffine> Proof<C> {
     ) -> impl Iterator<Item = C::Scalar> + 'a {
         let product_expression = || {
             // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
-            // - z'(\omega^{-1} X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
+            // - z'(\omega^{-1} X) (\theta^m a_1(X) + \theta^{m-1} a_2(X) + ... + a_m(X) + \beta) (\theta^m s_1(X) + \theta^{m-1} s_2(X) + ... + s_m(X) + \gamma)
             let left = self.product_eval
                 * &(self.permuted_input_eval + &beta)
                 * &(self.permuted_table_eval + &gamma);
@@ -94,13 +92,15 @@ impl<C: CurveAffine> Proof<C> {
             )
             .chain(
                 // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
-                // - z'(\omega^{-1} X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
+                // - z'(\omega^{-1} X) (\theta^m a_1(X) + \theta^{m-1} a_2(X) + ... + a_m(X) + \beta) (\theta^m s_1(X) + \theta^{m-1} s_2(X) + ... + s_m(X) + \gamma)
                 Some(product_expression()),
             )
             .chain(Some(
+                // l_0(X) * (a'(X) - s'(X)) = 0
                 l_0 * &(self.permuted_input_eval - &self.permuted_table_eval),
             ))
             .chain(Some(
+                // (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
                 (self.permuted_input_eval - &self.permuted_table_eval)
                     * &(self.permuted_input_eval - &self.permuted_input_inv_eval),
             ))

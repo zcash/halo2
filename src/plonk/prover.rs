@@ -179,23 +179,21 @@ impl<C: CurveAffine> Proof<C> {
             .lookups
             .iter()
             .map(|lookup| {
-                lookup
-                    .commit_permuted(
-                        &pk,
-                        &params,
-                        &domain,
-                        theta,
-                        &witness.advice,
-                        &pk.fixed_values,
-                        &aux,
-                        &advice_cosets,
-                        &pk.fixed_cosets,
-                        &aux_cosets,
-                        &mut transcript,
-                    )
-                    .unwrap()
+                lookup.commit_permuted(
+                    &pk,
+                    &params,
+                    &domain,
+                    theta,
+                    &witness.advice,
+                    &pk.fixed_values,
+                    &aux,
+                    &advice_cosets,
+                    &pk.fixed_cosets,
+                    &aux_cosets,
+                    &mut transcript,
+                )
             })
-            .collect::<Vec<_>>();
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Sample beta challenge
         let beta = ChallengeBeta::get(&mut transcript);
@@ -220,12 +218,8 @@ impl<C: CurveAffine> Proof<C> {
         // Construct and commit to products for each lookup
         let lookups = lookups
             .into_iter()
-            .map(|lookup| {
-                lookup
-                    .commit_product(&pk, &params, theta, beta, gamma, &mut transcript)
-                    .unwrap()
-            })
-            .collect::<Vec<_>>();
+            .map(|lookup| lookup.commit_product(&pk, &params, theta, beta, gamma, &mut transcript))
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Obtain challenge for keeping all separate gates linearly independent
         let y = ChallengeY::<C::Scalar>::get(&mut transcript);
@@ -238,10 +232,14 @@ impl<C: CurveAffine> Proof<C> {
             .unwrap_or_default();
 
         // Evaluate the h(X) polynomial's constraint system expressions for the lookup constraints, if any.
-        let (lookups, lookup_expressions): (Vec<_>, Vec<_>) = lookups
-            .into_iter()
-            .map(|p| p.construct(pk, theta, beta, gamma).unwrap())
-            .unzip();
+        let (lookups, lookup_expressions): (Vec<_>, Vec<_>) = {
+            let tmp = lookups
+                .into_iter()
+                .map(|p| p.construct(pk, theta, beta, gamma))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            tmp.into_iter().unzip()
+        };
 
         // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
         let h_poly = iter::empty()
