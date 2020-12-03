@@ -14,9 +14,9 @@
 #![deny(unsafe_code)]
 
 pub mod arithmetic;
+pub mod pasta;
 pub mod plonk;
 pub mod poly;
 pub mod transcript;
-pub mod tweedle;
 
 pub mod model;

@@ -111,7 +111,7 @@ fn test_proving() {
     use crate::arithmetic::{Curve, FieldExt};
     use crate::poly::commitment::{Blind, Params};
     use crate::transcript::DummyHash;
-    use crate::tweedle::{EqAffine, Fp, Fq};
+    use crate::pasta::{EqAffine, Fp, Fq};
     use circuit::{Advice, Column, Fixed};
     use std::marker::PhantomData;
     const K: u32 = 5;

@@ -4,7 +4,7 @@ use halo2::{
     plonk::*,
     poly::commitment::{Blind, Params},
     transcript::DummyHash,
-    tweedle::{EqAffine, Fp, Fq},
+    pasta::{EqAffine, Fp, Fq},
 };
 
 use std::marker::PhantomData;

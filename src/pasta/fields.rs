@@ -1,5 +1,5 @@
-//! This module contains implementations for the two finite fields of the
-//! Tweedledum and Tweedledee curves.
+//! This module contains implementations for the two finite fields of the Pallas
+//! and Vesta curves.
 
 mod fp;
 mod fq;
