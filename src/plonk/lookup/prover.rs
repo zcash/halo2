@@ -17,17 +17,17 @@ use std::{collections::BTreeMap, convert::TryFrom, iter};
 
 #[derive(Debug)]
 pub(crate) struct Permuted<'a, C: CurveAffine> {
-    unpermuted_input_values: Vec<&'a Polynomial<C::Scalar, LagrangeCoeff>>,
+    unpermuted_input_columns: Vec<&'a Polynomial<C::Scalar, LagrangeCoeff>>,
     unpermuted_input_cosets: Vec<&'a Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
-    permuted_input_value: Polynomial<C::Scalar, LagrangeCoeff>,
+    permuted_input_column: Polynomial<C::Scalar, LagrangeCoeff>,
     permuted_input_poly: Polynomial<C::Scalar, Coeff>,
     permuted_input_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permuted_input_inv_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permuted_input_blind: Blind<C::Scalar>,
     permuted_input_commitment: C,
-    unpermuted_table_values: Vec<&'a Polynomial<C::Scalar, LagrangeCoeff>>,
+    unpermuted_table_columns: Vec<&'a Polynomial<C::Scalar, LagrangeCoeff>>,
     unpermuted_table_cosets: Vec<&'a Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
-    permuted_table_value: Polynomial<C::Scalar, LagrangeCoeff>,
+    permuted_table_column: Polynomial<C::Scalar, LagrangeCoeff>,
     permuted_table_poly: Polynomial<C::Scalar, Coeff>,
     permuted_table_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permuted_table_blind: Blind<C::Scalar>,
@@ -73,7 +73,7 @@ impl Argument {
     /// - permutes A_compressed and S_compressed using permute_column_pair() helper,
     ///   obtaining A' and S', and
     /// - constructs Permuted<C> struct using permuted_input_value = A', and
-    ///   permuted_table_value = S'.
+    ///   permuted_table_column = S'.
     /// The Permuted<C> struct is used to update the Lookup, and is then returned.
     pub(in crate::plonk) fn commit_permuted<
         'a,
@@ -94,103 +94,71 @@ impl Argument {
         aux_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         transcript: &mut Transcript<C, HBase, HScalar>,
     ) -> Result<Permuted<'a, C>, Error> {
-        // Values of input columns involved in the lookup
-        let (unpermuted_input_values, unpermuted_input_cosets): (Vec<_>, Vec<_>) = self
-            .input_columns
-            .iter()
-            .map(|&input| match input.column_type() {
-                Any::Advice => (
-                    &advice_values[input.index()],
-                    &advice_cosets[pk
-                        .vk
-                        .cs
-                        .get_advice_query_index(Column::<Advice>::try_from(input).unwrap(), 0)],
-                ),
-                Any::Fixed => (
-                    &fixed_values[input.index()],
-                    &fixed_cosets[pk
-                        .vk
-                        .cs
-                        .get_fixed_query_index(Column::<Fixed>::try_from(input).unwrap(), 0)],
-                ),
-                Any::Aux => (
-                    &aux_values[input.index()],
-                    &aux_cosets[pk
-                        .vk
-                        .cs
-                        .get_aux_query_index(Column::<Aux>::try_from(input).unwrap(), 0)],
-                ),
-            })
-            .unzip();
+        // Closure to get values of columns and compress them
+        let compress_columns = |columns: &[Column<Any>]| {
+            // Values of input columns involved in the lookup
+            let (unpermuted_columns, unpermuted_cosets): (Vec<_>, Vec<_>) = columns
+                .iter()
+                .map(|&column| match column.column_type() {
+                    Any::Advice => (
+                        &advice_values[column.index()],
+                        &advice_cosets[pk.vk.cs.get_advice_query_index(
+                            Column::<Advice>::try_from(column).unwrap(),
+                            0,
+                        )],
+                    ),
+                    Any::Fixed => (
+                        &fixed_values[column.index()],
+                        &fixed_cosets[pk
+                            .vk
+                            .cs
+                            .get_fixed_query_index(Column::<Fixed>::try_from(column).unwrap(), 0)],
+                    ),
+                    Any::Aux => (
+                        &aux_values[column.index()],
+                        &aux_cosets[pk
+                            .vk
+                            .cs
+                            .get_aux_query_index(Column::<Aux>::try_from(column).unwrap(), 0)],
+                    ),
+                })
+                .unzip();
 
-        // Compressed version of input columns
-        let compressed_input_value = unpermuted_input_values
-            .iter()
-            .fold(domain.empty_lagrange(), |acc, input| acc * *theta + input);
+            // Compressed version of columns
+            let compressed_column = unpermuted_columns
+                .iter()
+                .fold(domain.empty_lagrange(), |acc, column| acc * *theta + column);
 
-        // Values of table columns involved in the lookup
-        let (unpermuted_table_values, unpermuted_table_cosets): (Vec<_>, Vec<_>) = self
-            .table_columns
-            .iter()
-            .map(|&table| match table.column_type() {
-                Any::Advice => (
-                    &advice_values[table.index()],
-                    &advice_cosets[pk
-                        .vk
-                        .cs
-                        .get_advice_query_index(Column::<Advice>::try_from(table).unwrap(), 0)],
-                ),
-                Any::Fixed => (
-                    &fixed_values[table.index()],
-                    &fixed_cosets[pk
-                        .vk
-                        .cs
-                        .get_fixed_query_index(Column::<Fixed>::try_from(table).unwrap(), 0)],
-                ),
-                Any::Aux => (
-                    &aux_values[table.index()],
-                    &aux_cosets[pk
-                        .vk
-                        .cs
-                        .get_aux_query_index(Column::<Aux>::try_from(table).unwrap(), 0)],
-                ),
-            })
-            .unzip();
+            (unpermuted_columns, unpermuted_cosets, compressed_column)
+        };
 
-        // Compressed version of table columns
-        let compressed_table_value = unpermuted_table_values
-            .iter()
-            .fold(domain.empty_lagrange(), |acc, table| acc * *theta + table);
+        // Closure to construct commitment to column of values
+        let commit_column = |column: &Polynomial<C::Scalar, LagrangeCoeff>| {
+            let poly = pk.vk.domain.lagrange_to_coeff(column.clone());
+            let blind = Blind(C::Scalar::rand());
+            let commitment = params.commit_lagrange(&column, blind).to_affine();
+            (poly, blind, commitment)
+        };
+
+        // Get values of input columns involved in the lookup and compress them
+        let (unpermuted_input_columns, unpermuted_input_cosets, compressed_input_column) =
+            compress_columns(&self.input_columns);
+
+        // Get values of table columns involved in the lookup and compress them
+        let (unpermuted_table_columns, unpermuted_table_cosets, compressed_table_column) =
+            compress_columns(&self.table_columns);
 
         // Permute compressed (InputColumn, TableColumn) pair
-        let (permuted_input_value, permuted_table_value) =
-            permute_column_pair::<C>(domain, &compressed_input_value, &compressed_table_value)?;
+        let (permuted_input_column, permuted_table_column) =
+            permute_column_pair::<C>(domain, &compressed_input_column, &compressed_table_column)?;
 
-        // Construct Permuted struct
-        let permuted_input_poly = pk.vk.domain.lagrange_to_coeff(permuted_input_value.clone());
-        let permuted_input_coset = pk
-            .vk
-            .domain
-            .coeff_to_extended(permuted_input_poly.clone(), Rotation::default());
-        let permuted_input_inv_coset = pk
-            .vk
-            .domain
-            .coeff_to_extended(permuted_input_poly.clone(), Rotation(-1));
+        // Commit to permuted input column
+        let (permuted_input_poly, permuted_input_blind, permuted_input_commitment) =
+            commit_column(&permuted_input_column);
 
-        let permuted_input_blind = Blind(C::Scalar::rand());
-        let permuted_input_commitment = params
-            .commit_lagrange(&permuted_input_value, permuted_input_blind)
-            .to_affine();
-
-        let permuted_table_poly = pk.vk.domain.lagrange_to_coeff(permuted_table_value.clone());
-        let permuted_table_coset = pk
-            .vk
-            .domain
-            .coeff_to_extended(permuted_table_poly.clone(), Rotation::default());
-        let permuted_table_blind = Blind(C::Scalar::rand());
-        let permuted_table_commitment = params
-            .commit_lagrange(&permuted_table_value, permuted_table_blind)
-            .to_affine();
+        // Commit to permuted table column
+        let (permuted_table_poly, permuted_table_blind, permuted_table_commitment) =
+            commit_column(&permuted_table_column);
 
         // Hash permuted input commitment
         transcript
@@ -202,18 +170,31 @@ impl Argument {
             .absorb_point(&permuted_table_commitment)
             .map_err(|_| Error::TranscriptError)?;
 
+        let permuted_input_coset = pk
+            .vk
+            .domain
+            .coeff_to_extended(permuted_input_poly.clone(), Rotation::default());
+        let permuted_input_inv_coset = pk
+            .vk
+            .domain
+            .coeff_to_extended(permuted_input_poly.clone(), Rotation(-1));
+        let permuted_table_coset = pk
+            .vk
+            .domain
+            .coeff_to_extended(permuted_table_poly.clone(), Rotation::default());
+
         Ok(Permuted {
-            unpermuted_input_values,
+            unpermuted_input_columns,
             unpermuted_input_cosets,
-            permuted_input_value,
+            permuted_input_column,
             permuted_input_poly,
             permuted_input_coset,
             permuted_input_inv_coset,
             permuted_input_blind,
             permuted_input_commitment,
-            unpermuted_table_values,
+            unpermuted_table_columns,
             unpermuted_table_cosets,
-            permuted_table_value,
+            permuted_table_column,
             permuted_table_poly,
             permuted_table_coset,
             permuted_table_blind,
@@ -252,8 +233,8 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
         parallelize(&mut lookup_product, |lookup_product, start| {
             for ((lookup_product, permuted_input_value), permuted_table_value) in lookup_product
                 .iter_mut()
-                .zip(self.permuted_input_value[start..].iter())
-                .zip(self.permuted_table_value[start..].iter())
+                .zip(self.permuted_input_column[start..].iter())
+                .zip(self.permuted_table_column[start..].iter())
             {
                 *lookup_product = (*beta + permuted_input_value) * &(*gamma + permuted_table_value);
             }
@@ -267,11 +248,11 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
         // (\theta^{m-1} a_1(\omega^i) + \theta^{m-2} a_2(\omega^i) + ... + \theta a_{m-1}(\omega^i) + a_m(\omega^i) + \beta)(\theta^{m-1} s_1(\omega^i) + \theta^{m-2} s_2(\omega^i) + ... + \theta s_{m-1}(\omega^i) + s_m(\omega^i) + \gamma)
         // Compress unpermuted input columns
         let mut input_term = vec![C::Scalar::zero(); params.n as usize];
-        for unpermuted_input_value in self.unpermuted_input_values.iter() {
+        for unpermuted_input_column in self.unpermuted_input_columns.iter() {
             parallelize(&mut input_term, |input_term, start| {
                 for (input_term, input_value) in input_term
                     .iter_mut()
-                    .zip(unpermuted_input_value[start..].iter())
+                    .zip(unpermuted_input_column[start..].iter())
                 {
                     *input_term *= &theta;
                     *input_term += input_value;
@@ -281,11 +262,11 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
 
         // Compress unpermuted table columns
         let mut table_term = vec![C::Scalar::zero(); params.n as usize];
-        for unpermuted_table_value in self.unpermuted_table_values.iter() {
+        for unpermuted_table_columns in self.unpermuted_table_columns.iter() {
             parallelize(&mut table_term, |table_term, start| {
                 for (table_term, fixed_value) in table_term
                     .iter_mut()
-                    .zip(unpermuted_table_value[start..].iter())
+                    .zip(unpermuted_table_columns[start..].iter())
                 {
                     *table_term *= &theta;
                     *table_term += fixed_value;
@@ -340,19 +321,19 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
                 let prev_idx = (n + i - 1) % n;
 
                 let mut left = z[i];
-                let permuted_input_value = &self.permuted_input_value[i];
+                let permuted_input_value = &self.permuted_input_column[i];
 
-                let permuted_table_value = &self.permuted_table_value[i];
+                let permuted_table_value = &self.permuted_table_column[i];
 
                 left *= &(*beta + permuted_input_value);
                 left *= &(*gamma + permuted_table_value);
 
                 let mut right = z[prev_idx];
-                let mut input_term = self.unpermuted_input_values
+                let mut input_term = self.unpermuted_input_columns
                     .iter()
                     .fold(C::Scalar::zero(), |acc, input| acc * &theta + &input[i]);
 
-                let mut table_term = self.unpermuted_table_values
+                let mut table_term = self.unpermuted_table_columns
                     .iter()
                     .fold(C::Scalar::zero(), |acc, table| acc * &theta + &table[i]);
 
