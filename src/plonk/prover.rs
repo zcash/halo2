@@ -3,8 +3,8 @@ use std::iter;
 
 use super::{
     circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    lookup, permutation, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY,
-    Error, Proof, ProvingKey,
+    permutation, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
+    Proof, ProvingKey,
 };
 use crate::arithmetic::{eval_polynomial, Curve, CurveAffine, FieldExt};
 use crate::poly::{
@@ -172,8 +172,8 @@ impl<C: CurveAffine> Proof<C> {
         // Sample theta challenge for keeping lookup columns linearly independent
         let theta = ChallengeTheta::<C::Scalar>::get(&mut transcript);
 
-        // Construct permuted values for each lookup
-        let lookups_permuted = pk
+        // Construct and commit to permuted values for each lookup
+        let lookups = pk
             .vk
             .cs
             .lookups
@@ -188,6 +188,9 @@ impl<C: CurveAffine> Proof<C> {
                         &witness.advice,
                         &pk.fixed_values,
                         &aux,
+                        &advice_cosets,
+                        &pk.fixed_cosets,
+                        &aux_cosets,
                         &mut transcript,
                     )
                     .unwrap()
@@ -214,37 +217,13 @@ impl<C: CurveAffine> Proof<C> {
             None
         };
 
-        // Construct products for each lookup
-        let lookups_products = pk
-            .vk
-            .cs
-            .lookups
-            .iter()
-            .zip(lookups_permuted.iter())
-            .map(|(lookup, permuted)| {
+        // Construct and commit to products for each lookup
+        let lookups = lookups
+            .into_iter()
+            .map(|lookup| {
                 lookup
-                    .commit_product(
-                        permuted,
-                        &pk,
-                        &params,
-                        theta,
-                        beta,
-                        gamma,
-                        &witness.advice,
-                        &pk.fixed_values,
-                        &aux,
-                        &mut transcript,
-                    )
+                    .commit_product(&pk, &params, theta, beta, gamma, &mut transcript)
                     .unwrap()
-            })
-            .collect::<Vec<_>>();
-
-        let lookups = lookups_permuted
-            .iter()
-            .zip(lookups_products.iter())
-            .map(|(permuted, product)| lookup::prover::Committed {
-                permuted: permuted.clone(),
-                product: product.clone(),
             })
             .collect::<Vec<_>>();
 
@@ -261,20 +240,7 @@ impl<C: CurveAffine> Proof<C> {
         // Evaluate the h(X) polynomial's constraint system expressions for the lookup constraints, if any.
         let (lookups, lookup_expressions): (Vec<_>, Vec<_>) = lookups
             .into_iter()
-            .zip(pk.vk.cs.lookups.iter())
-            .map(|(p, argument)| {
-                p.construct(
-                    pk,
-                    theta,
-                    beta,
-                    gamma,
-                    argument,
-                    &advice_cosets,
-                    &pk.fixed_cosets,
-                    &aux_cosets,
-                )
-                .unwrap()
-            })
+            .map(|p| p.construct(pk, theta, beta, gamma).unwrap())
             .unzip();
 
         // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided

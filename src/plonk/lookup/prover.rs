@@ -15,14 +15,18 @@ use crate::{
 use ff::Field;
 use std::{collections::BTreeMap, convert::TryFrom, iter};
 
-#[derive(Clone, Debug)]
-pub(crate) struct Permuted<C: CurveAffine> {
+#[derive(Debug)]
+pub(crate) struct Permuted<'a, C: CurveAffine> {
+    unpermuted_input_values: Vec<&'a Polynomial<C::Scalar, LagrangeCoeff>>,
+    unpermuted_input_cosets: Vec<&'a Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     permuted_input_value: Polynomial<C::Scalar, LagrangeCoeff>,
     permuted_input_poly: Polynomial<C::Scalar, Coeff>,
     permuted_input_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permuted_input_inv_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permuted_input_blind: Blind<C::Scalar>,
     permuted_input_commitment: C,
+    unpermuted_table_values: Vec<&'a Polynomial<C::Scalar, LagrangeCoeff>>,
+    unpermuted_table_cosets: Vec<&'a Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     permuted_table_value: Polynomial<C::Scalar, LagrangeCoeff>,
     permuted_table_poly: Polynomial<C::Scalar, Coeff>,
     permuted_table_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
@@ -30,19 +34,14 @@ pub(crate) struct Permuted<C: CurveAffine> {
     permuted_table_commitment: C,
 }
 
-#[derive(Clone, Debug)]
-pub(crate) struct Product<C: CurveAffine> {
+#[derive(Debug)]
+pub(crate) struct Committed<'a, C: CurveAffine> {
+    permuted: Permuted<'a, C>,
     product_poly: Polynomial<C::Scalar, Coeff>,
     product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     product_inv_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     product_blind: Blind<C::Scalar>,
     product_commitment: C,
-}
-
-#[derive(Clone, Debug)]
-pub(crate) struct Committed<C: CurveAffine> {
-    pub permuted: Permuted<C>,
-    pub product: Product<C>,
 }
 
 pub(crate) struct Constructed<C: CurveAffine> {
@@ -77,6 +76,7 @@ impl Argument {
     ///   permuted_table_value = S'.
     /// The Permuted<C> struct is used to update the Lookup, and is then returned.
     pub(in crate::plonk) fn commit_permuted<
+        'a,
         C: CurveAffine,
         HBase: Hasher<C::Base>,
         HScalar: Hasher<C::Scalar>,
@@ -86,21 +86,42 @@ impl Argument {
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
         theta: ChallengeTheta<C::Scalar>,
-        advice_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
-        fixed_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
-        aux_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
+        advice_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+        fixed_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+        aux_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+        advice_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
+        fixed_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
+        aux_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         transcript: &mut Transcript<C, HBase, HScalar>,
-    ) -> Result<Permuted<C>, Error> {
+    ) -> Result<Permuted<'a, C>, Error> {
         // Values of input columns involved in the lookup
-        let unpermuted_input_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>> = self
+        let (unpermuted_input_values, unpermuted_input_cosets): (Vec<_>, Vec<_>) = self
             .input_columns
             .iter()
             .map(|&input| match input.column_type() {
-                Any::Advice => advice_values[input.index()].clone(),
-                Any::Fixed => fixed_values[input.index()].clone(),
-                Any::Aux => aux_values[input.index()].clone(),
+                Any::Advice => (
+                    &advice_values[input.index()],
+                    &advice_cosets[pk
+                        .vk
+                        .cs
+                        .get_advice_query_index(Column::<Advice>::try_from(input).unwrap(), 0)],
+                ),
+                Any::Fixed => (
+                    &fixed_values[input.index()],
+                    &fixed_cosets[pk
+                        .vk
+                        .cs
+                        .get_fixed_query_index(Column::<Fixed>::try_from(input).unwrap(), 0)],
+                ),
+                Any::Aux => (
+                    &aux_values[input.index()],
+                    &aux_cosets[pk
+                        .vk
+                        .cs
+                        .get_aux_query_index(Column::<Aux>::try_from(input).unwrap(), 0)],
+                ),
             })
-            .collect();
+            .unzip();
 
         // Compressed version of input columns
         let compressed_input_value = unpermuted_input_values
@@ -108,15 +129,33 @@ impl Argument {
             .fold(domain.empty_lagrange(), |acc, input| acc * *theta + input);
 
         // Values of table columns involved in the lookup
-        let unpermuted_table_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>> = self
+        let (unpermuted_table_values, unpermuted_table_cosets): (Vec<_>, Vec<_>) = self
             .table_columns
             .iter()
             .map(|&table| match table.column_type() {
-                Any::Advice => advice_values[table.index()].clone(),
-                Any::Fixed => fixed_values[table.index()].clone(),
-                Any::Aux => aux_values[table.index()].clone(),
+                Any::Advice => (
+                    &advice_values[table.index()],
+                    &advice_cosets[pk
+                        .vk
+                        .cs
+                        .get_advice_query_index(Column::<Advice>::try_from(table).unwrap(), 0)],
+                ),
+                Any::Fixed => (
+                    &fixed_values[table.index()],
+                    &fixed_cosets[pk
+                        .vk
+                        .cs
+                        .get_fixed_query_index(Column::<Fixed>::try_from(table).unwrap(), 0)],
+                ),
+                Any::Aux => (
+                    &aux_values[table.index()],
+                    &aux_cosets[pk
+                        .vk
+                        .cs
+                        .get_aux_query_index(Column::<Aux>::try_from(table).unwrap(), 0)],
+                ),
             })
-            .collect();
+            .unzip();
 
         // Compressed version of table columns
         let compressed_table_value = unpermuted_table_values
@@ -164,12 +203,16 @@ impl Argument {
             .map_err(|_| Error::TranscriptError)?;
 
         Ok(Permuted {
+            unpermuted_input_values,
+            unpermuted_input_cosets,
             permuted_input_value,
             permuted_input_poly,
             permuted_input_coset,
             permuted_input_inv_coset,
             permuted_input_blind,
             permuted_input_commitment,
+            unpermuted_table_values,
+            unpermuted_table_cosets,
             permuted_table_value,
             permuted_table_poly,
             permuted_table_coset,
@@ -177,50 +220,23 @@ impl Argument {
             permuted_table_commitment,
         })
     }
+}
 
+impl<'a, C: CurveAffine> Permuted<'a, C> {
     /// Given a Lookup with input columns, table columns, and the permuted
     /// input column and permuted table column, this method constructs the
     /// grand product polynomial over the lookup. The grand product polynomial
     /// is used to populate the Product<C> struct. The Product<C> struct is
     /// added to the Lookup and finally returned by the method.
-    pub(in crate::plonk) fn commit_product<
-        C: CurveAffine,
-        HBase: Hasher<C::Base>,
-        HScalar: Hasher<C::Scalar>,
-    >(
-        &self,
-        permuted: &Permuted<C>,
+    pub(in crate::plonk) fn commit_product<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
+        self,
         pk: &ProvingKey<C>,
         params: &Params<C>,
         theta: ChallengeTheta<C::Scalar>,
         beta: ChallengeBeta<C::Scalar>,
         gamma: ChallengeGamma<C::Scalar>,
-        advice_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
-        fixed_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
-        aux_values: &[Polynomial<C::Scalar, LagrangeCoeff>],
         transcript: &mut Transcript<C, HBase, HScalar>,
-    ) -> Result<Product<C>, Error> {
-        let permuted = permuted.clone();
-        let unpermuted_input_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>> = self
-            .input_columns
-            .iter()
-            .map(|&input| match input.column_type() {
-                Any::Advice => advice_values[input.index()].clone(),
-                Any::Fixed => fixed_values[input.index()].clone(),
-                Any::Aux => aux_values[input.index()].clone(),
-            })
-            .collect();
-
-        let unpermuted_table_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>> = self
-            .table_columns
-            .iter()
-            .map(|&table| match table.column_type() {
-                Any::Advice => advice_values[table.index()].clone(),
-                Any::Fixed => fixed_values[table.index()].clone(),
-                Any::Aux => aux_values[table.index()].clone(),
-            })
-            .collect();
-
+    ) -> Result<Committed<'a, C>, Error> {
         // Goal is to compute the products of fractions
         //
         // (a_1(\omega^i) + \theta a_2(\omega^i) + ... + beta)(s_1(\omega^i) + \theta(\omega^i) + ... + \gamma) /
@@ -237,8 +253,8 @@ impl Argument {
         parallelize(&mut lookup_product, |lookup_product, start| {
             for ((lookup_product, permuted_input_value), permuted_table_value) in lookup_product
                 .iter_mut()
-                .zip(permuted.permuted_input_value[start..].iter())
-                .zip(permuted.permuted_table_value[start..].iter())
+                .zip(self.permuted_input_value[start..].iter())
+                .zip(self.permuted_table_value[start..].iter())
             {
                 *lookup_product *= &(*beta + permuted_input_value);
                 *lookup_product *= &(*gamma + permuted_table_value);
@@ -253,7 +269,7 @@ impl Argument {
         // (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
         // Compress unpermuted input columns
         let mut input_term = vec![C::Scalar::zero(); params.n as usize];
-        for unpermuted_input_value in unpermuted_input_values.iter() {
+        for unpermuted_input_value in self.unpermuted_input_values.iter() {
             parallelize(&mut input_term, |input_term, start| {
                 for (input_term, input_value) in input_term
                     .iter_mut()
@@ -267,7 +283,7 @@ impl Argument {
 
         // Compress unpermuted table columns
         let mut table_term = vec![C::Scalar::zero(); params.n as usize];
-        for unpermuted_table_value in unpermuted_table_values.iter() {
+        for unpermuted_table_value in self.unpermuted_table_values.iter() {
             parallelize(&mut table_term, |table_term, start| {
                 for (table_term, fixed_value) in table_term
                     .iter_mut()
@@ -325,19 +341,19 @@ impl Argument {
                 let prev_idx = (n + i - 1) % n;
 
                 let mut left = z[i];
-                let permuted_input_value = &permuted.permuted_input_value[i];
+                let permuted_input_value = &self.permuted_input_value[i];
 
-                let permuted_table_value = &permuted.permuted_table_value[i];
+                let permuted_table_value = &self.permuted_table_value[i];
 
                 left *= &(*beta + permuted_input_value);
                 left *= &(*gamma + permuted_table_value);
 
                 let mut right = z[prev_idx];
-                let mut input_term = unpermuted_input_values
+                let mut input_term = self.unpermuted_input_values
                     .iter()
                     .fold(C::Scalar::zero(), |acc, input| acc * &theta + &input[i]);
 
-                let mut table_term = unpermuted_table_values
+                let mut table_term = self.unpermuted_table_values
                     .iter()
                     .fold(C::Scalar::zero(), |acc, table| acc * &theta + &table[i]);
 
@@ -363,7 +379,8 @@ impl Argument {
             .absorb_point(&product_commitment)
             .map_err(|_| Error::TranscriptError)?;
 
-        Ok(Product::<C> {
+        Ok(Committed::<'a, C> {
+            permuted: self,
             product_poly: z,
             product_coset,
             product_inv_coset,
@@ -373,22 +390,18 @@ impl Argument {
     }
 }
 
-impl<C: CurveAffine> Committed<C> {
+impl<'a, C: CurveAffine> Committed<'a, C> {
     /// Given a Lookup with input columns, table columns, permuted input
     /// column, permuted table column, and grand product polynomial, this
     /// method constructs constraints that must hold between these values.
     /// This method returns the constraints as a vector of polynomials in
     /// the extended evaluation domain.
-    pub(in crate::plonk) fn construct<'a>(
+    pub(in crate::plonk) fn construct(
         self,
         pk: &'a ProvingKey<C>,
         theta: ChallengeTheta<C::Scalar>,
         beta: ChallengeBeta<C::Scalar>,
         gamma: ChallengeGamma<C::Scalar>,
-        argument: &'a Argument,
-        advice_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
-        fixed_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
-        aux_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
     ) -> Result<
         (
             Constructed<C>,
@@ -397,61 +410,17 @@ impl<C: CurveAffine> Committed<C> {
         Error,
     > {
         let permuted = self.permuted;
-        let product = self.product;
-        let unpermuted_input_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>> = argument
-            .input_columns
-            .iter()
-            .map(|&input| match input.column_type() {
-                Any::Advice => advice_cosets[pk
-                    .vk
-                    .cs
-                    .get_advice_query_index(Column::<Advice>::try_from(input).unwrap(), 0)]
-                .clone(),
-                Any::Fixed => fixed_cosets[pk
-                    .vk
-                    .cs
-                    .get_fixed_query_index(Column::<Fixed>::try_from(input).unwrap(), 0)]
-                .clone(),
-                Any::Aux => aux_cosets[pk
-                    .vk
-                    .cs
-                    .get_aux_query_index(Column::<Aux>::try_from(input).unwrap(), 0)]
-                .clone(),
-            })
-            .collect();
-
-        let unpermuted_table_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>> = argument
-            .table_columns
-            .iter()
-            .map(|&table| match table.column_type() {
-                Any::Advice => advice_cosets[pk
-                    .vk
-                    .cs
-                    .get_advice_query_index(Column::<Advice>::try_from(table).unwrap(), 0)]
-                .clone(),
-                Any::Fixed => fixed_cosets[pk
-                    .vk
-                    .cs
-                    .get_fixed_query_index(Column::<Fixed>::try_from(table).unwrap(), 0)]
-                .clone(),
-                Any::Aux => aux_cosets[pk
-                    .vk
-                    .cs
-                    .get_aux_query_index(Column::<Aux>::try_from(table).unwrap(), 0)]
-                .clone(),
-            })
-            .collect();
 
         let expressions = iter::empty()
             // l_0(X) * (1 - z'(X)) = 0
             .chain(Some(
-                Polynomial::one_minus(product.product_coset.clone()) * &pk.l0,
+                Polynomial::one_minus(self.product_coset.clone()) * &pk.l0,
             ))
             // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
             // - z'(\omega^{-1} X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
             .chain({
                 // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
-                let mut left = product.product_coset.clone();
+                let mut left = self.product_coset.clone();
                 parallelize(&mut left, |left, start| {
                     for ((left, permuted_input), permuted_table) in left
                         .iter_mut()
@@ -464,11 +433,11 @@ impl<C: CurveAffine> Committed<C> {
                 });
 
                 //  z'(\omega^{-1} X) (a_1(X) + \theta a_2(X) + ... + \beta) (s_1(X) + \theta s_2(X) + ... + \gamma)
-                let mut right = product.product_inv_coset;
+                let mut right = self.product_inv_coset;
                 let mut input_terms = pk.vk.domain.empty_extended();
 
                 // Compress the unpermuted input columns
-                for input in unpermuted_input_cosets.iter() {
+                for input in permuted.unpermuted_input_cosets.iter() {
                     // (a_1(X) + \theta a_2(X) + ...)
                     parallelize(&mut input_terms, |input_term, start| {
                         for (input_term, input) in input_term.iter_mut().zip(input[start..].iter())
@@ -481,7 +450,7 @@ impl<C: CurveAffine> Committed<C> {
 
                 let mut table_terms = pk.vk.domain.empty_extended();
                 // Compress the unpermuted table columns
-                for table in unpermuted_table_cosets.iter() {
+                for table in permuted.unpermuted_table_cosets.iter() {
                     //  (s_1(X) + \theta s_2(X) + ...)
                     parallelize(&mut table_terms, |table_term, start| {
                         for (table_term, table) in table_term.iter_mut().zip(table[start..].iter())
@@ -529,9 +498,9 @@ impl<C: CurveAffine> Committed<C> {
                 permuted_table_poly: permuted.permuted_table_poly,
                 permuted_table_blind: permuted.permuted_table_blind,
                 permuted_table_commitment: permuted.permuted_table_commitment,
-                product_poly: product.product_poly,
-                product_blind: product.product_blind,
-                product_commitment: product.product_commitment,
+                product_poly: self.product_poly,
+                product_blind: self.product_blind,
+                product_commitment: self.product_commitment,
             },
             expressions,
         ))
