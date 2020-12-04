@@ -190,8 +190,8 @@ const R3: Fq = Fq([
     0x7dd97a06e6792c8,
 ]);
 
-/// `GENERATOR = 5 mod q` is a generator of the `q - 1` order multiplicative subgroup, and
-/// is also a quadratic non-residue.
+/// `GENERATOR = 5 mod q` is a generator of the `q - 1` order multiplicative
+/// subgroup, or in other words a primitive root of the field.
 const GENERATOR: Fq = Fq::from_raw([
     0x0000_0000_0000_0005,
     0x0000_0000_0000_0000,
