@@ -1,5 +1,5 @@
 use super::super::{
-    circuit::{Advice, Any, Aux, Column, Fixed},
+    circuit::{Any, Column},
     ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error, ProvingKey,
 };
 use super::{Argument, Proof};
@@ -13,10 +13,10 @@ use crate::{
     transcript::{Hasher, Transcript},
 };
 use ff::Field;
-use std::{collections::BTreeMap, convert::TryFrom, iter};
+use std::{collections::BTreeMap, iter};
 
 #[derive(Debug)]
-pub(crate) struct Permuted<'a, C: CurveAffine> {
+pub(in crate::plonk) struct Permuted<'a, C: CurveAffine> {
     unpermuted_input_columns: Vec<&'a Polynomial<C::Scalar, LagrangeCoeff>>,
     unpermuted_input_cosets: Vec<&'a Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     permuted_input_column: Polynomial<C::Scalar, LagrangeCoeff>,
@@ -35,7 +35,7 @@ pub(crate) struct Permuted<'a, C: CurveAffine> {
 }
 
 #[derive(Debug)]
-pub(crate) struct Committed<'a, C: CurveAffine> {
+pub(in crate::plonk) struct Committed<'a, C: CurveAffine> {
     permuted: Permuted<'a, C>,
     product_poly: Polynomial<C::Scalar, Coeff>,
     product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
@@ -44,7 +44,7 @@ pub(crate) struct Committed<'a, C: CurveAffine> {
     product_commitment: C,
 }
 
-pub(crate) struct Constructed<C: CurveAffine> {
+pub(in crate::plonk) struct Constructed<C: CurveAffine> {
     permuted_input_poly: Polynomial<C::Scalar, Coeff>,
     permuted_input_blind: Blind<C::Scalar>,
     permuted_input_commitment: C,
@@ -56,13 +56,13 @@ pub(crate) struct Constructed<C: CurveAffine> {
     product_commitment: C,
 }
 
-pub(crate) struct Evaluated<C: CurveAffine> {
+pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
     constructed: Constructed<C>,
-    pub product_eval: C::Scalar,
-    pub product_inv_eval: C::Scalar,
-    pub permuted_input_eval: C::Scalar,
-    pub permuted_input_inv_eval: C::Scalar,
-    pub permuted_table_eval: C::Scalar,
+    product_eval: C::Scalar,
+    product_inv_eval: C::Scalar,
+    permuted_input_eval: C::Scalar,
+    permuted_input_inv_eval: C::Scalar,
+    permuted_table_eval: C::Scalar,
 }
 
 impl Argument {
@@ -99,28 +99,16 @@ impl Argument {
             // Values of input columns involved in the lookup
             let (unpermuted_columns, unpermuted_cosets): (Vec<_>, Vec<_>) = columns
                 .iter()
-                .map(|&column| match column.column_type() {
-                    Any::Advice => (
-                        &advice_values[column.index()],
-                        &advice_cosets[pk.vk.cs.get_advice_query_index(
-                            Column::<Advice>::try_from(column).unwrap(),
-                            0,
-                        )],
-                    ),
-                    Any::Fixed => (
-                        &fixed_values[column.index()],
-                        &fixed_cosets[pk
-                            .vk
-                            .cs
-                            .get_fixed_query_index(Column::<Fixed>::try_from(column).unwrap(), 0)],
-                    ),
-                    Any::Aux => (
-                        &aux_values[column.index()],
-                        &aux_cosets[pk
-                            .vk
-                            .cs
-                            .get_aux_query_index(Column::<Aux>::try_from(column).unwrap(), 0)],
-                    ),
+                .map(|&column| {
+                    let (values, cosets) = match column.column_type() {
+                        Any::Advice => (advice_values, advice_cosets),
+                        Any::Fixed => (fixed_values, fixed_cosets),
+                        Any::Aux => (aux_values, aux_cosets),
+                    };
+                    (
+                        &values[column.index()],
+                        &cosets[pk.vk.cs.get_any_query_index(column, 0)],
+                    )
                 })
                 .unzip();
 

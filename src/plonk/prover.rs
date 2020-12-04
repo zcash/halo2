@@ -170,7 +170,7 @@ impl<C: CurveAffine> Proof<C> {
             .collect();
 
         // Sample theta challenge for keeping lookup columns linearly independent
-        let theta = ChallengeTheta::<C::Scalar>::get(&mut transcript);
+        let theta = ChallengeTheta::get(&mut transcript);
 
         // Construct and commit to permuted values for each lookup
         let lookups = pk
@@ -402,7 +402,7 @@ impl<C: CurveAffine> Proof<C> {
             advice_commitments,
             h_commitments,
             permutations: permutations.map(|p| p.build()),
-            lookups: lookups.into_iter().map(|p| p.build()).collect::<Vec<_>>(),
+            lookups: lookups.into_iter().map(|p| p.build()).collect(),
             advice_evals,
             fixed_evals,
             aux_evals,

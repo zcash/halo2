@@ -1,6 +1,6 @@
 use std::iter;
 
-use super::super::circuit::Any;
+use super::super::circuit::{Any, Column};
 use super::{Argument, Proof};
 use crate::{
     arithmetic::CurveAffine,
@@ -11,7 +11,7 @@ use crate::{
 use ff::Field;
 
 impl<C: CurveAffine> Proof<C> {
-    pub(crate) fn absorb_permuted_commitments<
+    pub(in crate::plonk) fn absorb_permuted_commitments<
         HBase: Hasher<C::Base>,
         HScalar: Hasher<C::Scalar>,
     >(
@@ -26,7 +26,10 @@ impl<C: CurveAffine> Proof<C> {
             .map_err(|_| Error::TranscriptError)
     }
 
-    pub(crate) fn absorb_product_commitment<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
+    pub(in crate::plonk) fn absorb_product_commitment<
+        HBase: Hasher<C::Base>,
+        HScalar: Hasher<C::Scalar>,
+    >(
         &self,
         transcript: &mut Transcript<C, HBase, HScalar>,
     ) -> Result<(), Error> {
@@ -54,34 +57,23 @@ impl<C: CurveAffine> Proof<C> {
                 * &(self.permuted_input_eval + &beta)
                 * &(self.permuted_table_eval + &gamma);
 
-            let mut right = self.product_inv_eval;
-            let mut input_term = C::Scalar::zero();
-            for &input in argument.input_columns.iter() {
-                let index = vk.cs.get_any_query_index(input, 0);
-                let eval = match input.column_type() {
-                    Any::Advice => advice_evals[index],
-                    Any::Fixed => fixed_evals[index],
-                    Any::Aux => aux_evals[index],
-                };
-                input_term *= &theta;
-                input_term += &eval;
-            }
-            input_term += &beta;
+            let compress_columns = |columns: &[Column<Any>]| {
+                columns
+                    .iter()
+                    .map(|column| {
+                        let index = vk.cs.get_any_query_index(*column, 0);
+                        match column.column_type() {
+                            Any::Advice => advice_evals[index],
+                            Any::Fixed => fixed_evals[index],
+                            Any::Aux => aux_evals[index],
+                        }
+                    })
+                    .fold(C::Scalar::zero(), |acc, eval| acc * &theta + &eval)
+            };
+            let right = self.product_inv_eval
+                * &(compress_columns(&argument.input_columns) + &beta)
+                * &(compress_columns(&argument.table_columns) + &gamma);
 
-            let mut table_term = C::Scalar::zero();
-            for &table in argument.table_columns.iter() {
-                let index = vk.cs.get_any_query_index(table, 0);
-                let eval = match table.column_type() {
-                    Any::Advice => advice_evals[index],
-                    Any::Fixed => fixed_evals[index],
-                    Any::Aux => aux_evals[index],
-                };
-                table_term *= &theta;
-                table_term += &eval;
-            }
-            table_term += &gamma;
-
-            right *= &(input_term * &table_term);
             left - &right
         };
 
@@ -106,7 +98,7 @@ impl<C: CurveAffine> Proof<C> {
             ))
     }
 
-    pub(crate) fn evals(&self) -> impl Iterator<Item = &C::Scalar> {
+    pub(in crate::plonk) fn evals(&self) -> impl Iterator<Item = &C::Scalar> {
         iter::empty()
             .chain(Some(&self.product_eval))
             .chain(Some(&self.product_inv_eval))
