@@ -1,3 +1,7 @@
-# Summary
+# The halo2 Book
 
-- [Chapter 1](./chapter_1.md)
+[halo2](README.md)
+- [Concepts](concepts.md)
+- [User Documentation](user.md)
+  - [Gadgets](user/gadgets.md)
+- [Design](design.md)
