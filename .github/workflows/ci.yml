@@ -64,6 +64,18 @@ jobs:
           command: build
           args: --all --benches --all-features
 
+  book:
+    name: Book tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup mdBook
+        uses: peaceiris/actions-mdbook@v1
+        with:
+          mdbook-version: '0.4.4'
+      - name: Test halo2 book
+        run: mdbook test book/
+
   clippy:
     name: Clippy (stable)
     timeout-minutes: 30
