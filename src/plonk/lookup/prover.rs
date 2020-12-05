@@ -233,44 +233,28 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
         lookup_product.iter_mut().batch_invert();
 
         // Finish the computation of the entire fraction by computing the numerators
-        // (\theta^{m-1} a_1(\omega^i) + \theta^{m-2} a_2(\omega^i) + ... + \theta a_{m-1}(\omega^i) + a_m(\omega^i) + \beta)(\theta^{m-1} s_1(\omega^i) + \theta^{m-2} s_2(\omega^i) + ... + \theta s_{m-1}(\omega^i) + s_m(\omega^i) + \gamma)
-        // Compress unpermuted input columns
-        let mut input_term = vec![C::Scalar::zero(); params.n as usize];
-        for unpermuted_input_column in self.unpermuted_input_columns.iter() {
-            parallelize(&mut input_term, |input_term, start| {
-                for (input_term, input_value) in input_term
-                    .iter_mut()
-                    .zip(unpermuted_input_column[start..].iter())
-                {
-                    *input_term *= &theta;
-                    *input_term += input_value;
-                }
-            });
-        }
-
-        // Compress unpermuted table columns
-        let mut table_term = vec![C::Scalar::zero(); params.n as usize];
-        for unpermuted_table_columns in self.unpermuted_table_columns.iter() {
-            parallelize(&mut table_term, |table_term, start| {
-                for (table_term, fixed_value) in table_term
-                    .iter_mut()
-                    .zip(unpermuted_table_columns[start..].iter())
-                {
-                    *table_term *= &theta;
-                    *table_term += fixed_value;
-                }
-            });
-        }
-
-        // Add \beta and \gamma offsets
+        // (\theta^{m-1} a_1(\omega^i) + \theta^{m-2} a_2(\omega^i) + ... + \theta a_{m-1}(\omega^i) + a_m(\omega^i) + \beta)
+        // * (\theta^{m-1} s_1(\omega^i) + \theta^{m-2} s_2(\omega^i) + ... + \theta s_{m-1}(\omega^i) + s_m(\omega^i) + \gamma)
         parallelize(&mut lookup_product, |product, start| {
-            for ((product, input_term), table_term) in product
-                .iter_mut()
-                .zip(input_term[start..].iter())
-                .zip(table_term[start..].iter())
-            {
-                *product *= &(*input_term + &beta);
-                *product *= &(*table_term + &gamma);
+            for (i, product) in product.iter_mut().enumerate() {
+                let i = i + start;
+
+                // Compress unpermuted input columns
+                let mut input_term = C::Scalar::zero();
+                for unpermuted_input_column in self.unpermuted_input_columns.iter() {
+                    input_term *= &theta;
+                    input_term += &unpermuted_input_column[i];
+                }
+
+                // Compress unpermuted table columns
+                let mut table_term = C::Scalar::zero();
+                for unpermuted_table_column in self.unpermuted_table_columns.iter() {
+                    table_term *= &theta;
+                    table_term += &unpermuted_table_column[i];
+                }
+
+                *product *= &(input_term + &beta);
+                *product *= &(table_term + &gamma);
             }
         });
 
@@ -402,42 +386,27 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
 
                 //  z'(\omega^{-1} X) (\theta^m a_1(X) + \theta^{m-1} a_2(X) + ... + a_m(X) + \beta) (\theta^m s_1(X) + \theta^{m-1} s_2(X) + ... + s_m(X) + \gamma)
                 let mut right = self.product_inv_coset;
-                let mut input_terms = pk.vk.domain.empty_extended();
-
-                // Compress the unpermuted input columns
-                for input in permuted.unpermuted_input_cosets.iter() {
-                    // \theta^m a_1(X) + \theta^{m-1} a_2(X) + ... + a_m(X)
-                    parallelize(&mut input_terms, |input_term, start| {
-                        for (input_term, input) in input_term.iter_mut().zip(input[start..].iter())
-                        {
-                            *input_term *= &(*theta);
-                            *input_term += input;
-                        }
-                    });
-                }
-
-                let mut table_terms = pk.vk.domain.empty_extended();
-                // Compress the unpermuted table columns
-                for table in permuted.unpermuted_table_cosets.iter() {
-                    //  \theta^m s_1(X) + \theta^{m-1} s_2(X) + ... + s_m(X)
-                    parallelize(&mut table_terms, |table_term, start| {
-                        for (table_term, table) in table_term.iter_mut().zip(table[start..].iter())
-                        {
-                            *table_term *= &(*theta);
-                            *table_term += table;
-                        }
-                    });
-                }
-
-                // Add \beta and \gamma offsets
                 parallelize(&mut right, |right, start| {
-                    for ((right, input_term), table_term) in right
-                        .iter_mut()
-                        .zip(input_terms[start..].iter())
-                        .zip(table_terms[start..].iter())
-                    {
-                        *right *= &(*input_term + &(*beta));
-                        *right *= &(*table_term + &(*gamma));
+                    for (i, right) in right.iter_mut().enumerate() {
+                        let i = i + start;
+
+                        // Compress the unpermuted input columns
+                        let mut input_term = C::Scalar::zero();
+                        for input in permuted.unpermuted_input_cosets.iter() {
+                            input_term *= &theta;
+                            input_term += &input[i];
+                        }
+
+                        // Compress the unpermuted table columns
+                        let mut table_term = C::Scalar::zero();
+                        for table in permuted.unpermuted_table_cosets.iter() {
+                            table_term *= &theta;
+                            table_term += &table[i];
+                        }
+
+                        // Add \beta and \gamma offsets
+                        *right *= &(input_term + &beta);
+                        *right *= &(table_term + &gamma);
                     }
                 });
 

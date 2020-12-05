@@ -1,7 +1,7 @@
 use super::circuit::{Any, Column};
 use crate::arithmetic::CurveAffine;
 
-pub(crate) mod prover;
+mod prover;
 mod verifier;
 
 #[derive(Clone, Debug)]

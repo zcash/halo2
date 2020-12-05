@@ -359,12 +359,13 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Add a lookup argument for some input columns and table columns.
+    /// The function will panic if the number of input columns and table
+    /// columns are not the same.
     pub fn lookup(
         &mut self,
         input_columns: &[Column<Any>],
         table_columns: &[Column<Any>],
     ) -> usize {
-        // The function will panic if the number of input columns and table columns are not the same.
         assert_eq!(input_columns.len(), table_columns.len());
 
         let index = self.lookups.len();

@@ -121,7 +121,7 @@ fn test_proving() {
     use crate::poly::commitment::{Blind, Params};
     use crate::transcript::DummyHash;
     use crate::tweedle::{EqAffine, Fp, Fq};
-    use circuit::{Advice, Any, Column, Fixed};
+    use circuit::{Advice, Column, Fixed};
     use std::marker::PhantomData;
     const K: u32 = 5;
 
@@ -354,11 +354,8 @@ fn test_proving() {
              *
              * ]
              */
-            meta.lookup(&[Column::<Any>::from(a)], &[Column::<Any>::from(sl)]);
-            meta.lookup(
-                &[Column::<Any>::from(a), Column::<Any>::from(b)],
-                &[Column::<Any>::from(sl), Column::<Any>::from(sl2)],
-            );
+            meta.lookup(&[a.into()], &[sl.into()]);
+            meta.lookup(&[a.into(), b.into()], &[sl.into(), sl2.into()]);
 
             meta.create_gate(|meta| {
                 let d = meta.query_advice(d, 1);
