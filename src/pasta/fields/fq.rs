@@ -248,21 +248,6 @@ impl Fq {
         self.add(self)
     }
 
-    /// Converts a 512-bit little endian integer into
-    /// a `Fq` by reducing by the modulus.
-    pub fn from_bytes_wide(bytes: &[u8; 64]) -> Fq {
-        Fq::from_u512([
-            u64::from_le_bytes(bytes[0..8].try_into().unwrap()),
-            u64::from_le_bytes(bytes[8..16].try_into().unwrap()),
-            u64::from_le_bytes(bytes[16..24].try_into().unwrap()),
-            u64::from_le_bytes(bytes[24..32].try_into().unwrap()),
-            u64::from_le_bytes(bytes[32..40].try_into().unwrap()),
-            u64::from_le_bytes(bytes[40..48].try_into().unwrap()),
-            u64::from_le_bytes(bytes[48..56].try_into().unwrap()),
-            u64::from_le_bytes(bytes[56..64].try_into().unwrap()),
-        ])
-    }
-
     fn from_u512(limbs: [u64; 8]) -> Fq {
         // We reduce an arbitrary 512-bit number by decomposing it into two 256-bit digits
         // with the higher bits multiplied by 2^256. Thus, we perform two reductions
