@@ -344,9 +344,7 @@ impl<F: Field> ConstraintSystem<F> {
     pub fn permutation(&mut self, columns: &[Column<Advice>]) -> usize {
         let index = self.permutations.len();
         if self.permutations.is_empty() {
-            let at = Rotation(-1);
-            let len = self.rotations.len();
-            self.rotations.entry(at).or_insert(PointIndex(len));
+            self.add_rotation(Rotation(-1));
         }
 
         for column in columns {
@@ -370,9 +368,7 @@ impl<F: Field> ConstraintSystem<F> {
 
         let index = self.lookups.len();
         if self.lookups.is_empty() {
-            let at = Rotation(-1);
-            let len = self.rotations.len();
-            self.rotations.entry(at).or_insert(PointIndex(len));
+            self.add_rotation(Rotation(-1));
         }
 
         for input in input_columns {
@@ -389,10 +385,7 @@ impl<F: Field> ConstraintSystem<F> {
 
     fn query_fixed_index(&mut self, column: Column<Fixed>, at: i32) -> usize {
         let at = Rotation(at);
-        {
-            let len = self.rotations.len();
-            self.rotations.entry(at).or_insert(PointIndex(len));
-        }
+        self.add_rotation(at);
 
         // Return existing query, if it exists
         for (index, fixed_query) in self.fixed_queries.iter().enumerate() {
@@ -415,10 +408,7 @@ impl<F: Field> ConstraintSystem<F> {
 
     pub(crate) fn query_advice_index(&mut self, column: Column<Advice>, at: i32) -> usize {
         let at = Rotation(at);
-        {
-            let len = self.rotations.len();
-            self.rotations.entry(at).or_insert(PointIndex(len));
-        }
+        self.add_rotation(at);
 
         // Return existing query, if it exists
         for (index, advice_query) in self.advice_queries.iter().enumerate() {
@@ -441,10 +431,7 @@ impl<F: Field> ConstraintSystem<F> {
 
     fn query_aux_index(&mut self, column: Column<Aux>, at: i32) -> usize {
         let at = Rotation(at);
-        {
-            let len = self.rotations.len();
-            self.rotations.entry(at).or_insert(PointIndex(len));
-        }
+        self.add_rotation(at);
 
         // Return existing query, if it exists
         for (index, aux_query) in self.aux_queries.iter().enumerate() {
@@ -567,5 +554,10 @@ impl<F: Field> ConstraintSystem<F> {
         };
         self.num_aux_columns += 1;
         tmp
+    }
+
+    fn add_rotation(&mut self, at: Rotation) {
+        let len = self.rotations.len();
+        self.rotations.entry(at).or_insert(PointIndex(len));
     }
 }
