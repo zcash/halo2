@@ -66,10 +66,10 @@ pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
 }
 
 impl Argument {
-    /// Given a Lookup with input columns [A_0, A_1, ..., A_m] and table columns
-    /// [S_0, S_1, ..., S_m], this method
-    /// - constructs A_compressed = A_0 + theta A_1 + theta^2 A_2 + ... and
-    ///   S_compressed = S_0 + theta S_1 + theta^2 S_2 + ...,
+    /// Given a Lookup with input columns [A_0, A_1, ..., A_{m-1}] and table columns
+    /// [S_0, S_1, ..., S_{m-1}], this method
+    /// - constructs A_compressed = \theta^{m-1} A_0 + theta^{m-2} A_1 + ... + \theta A_{m-2} + A_{m-1}
+    ///   and S_compressed = \theta^{m-1} S_0 + theta^{m-2} S_1 + ... + \theta S_{m-2} + S_{m-1},
     /// - permutes A_compressed and S_compressed using permute_column_pair() helper,
     ///   obtaining A' and S', and
     /// - constructs Permuted<C> struct using permuted_input_value = A', and
@@ -208,8 +208,9 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
     ) -> Result<Committed<'a, C>, Error> {
         // Goal is to compute the products of fractions
         //
-        // (\theta^{m-1} a_1(\omega^i) + \theta^{m-2} a_2(\omega^i) + ... + a_m(\omega^i) + \beta)(\theta^{m-1} s_1(\omega^i) + \theta^{m-2} s_2(\omega^i) + ... + s_m(\omega^i) + \gamma)/
-        // (a'(\omega^i) + \beta) (s'(\omega^i) + \gamma)
+        // Numerator: (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
+        //            * (\theta^{m-1} s_0(\omega^i) + \theta^{m-2} s_1(\omega^i) + ... + \theta s_{m-2}(\omega^i) + s_{m-1}(\omega^i) + \gamma)
+        // Denominator: (a'(\omega^i) + \beta) (s'(\omega^i) + \gamma)
         //
         // where a_j(X) is the jth input column in this lookup,
         // where a'(X) is the compression of the permuted input columns,
@@ -233,8 +234,8 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
         lookup_product.iter_mut().batch_invert();
 
         // Finish the computation of the entire fraction by computing the numerators
-        // (\theta^{m-1} a_1(\omega^i) + \theta^{m-2} a_2(\omega^i) + ... + \theta a_{m-1}(\omega^i) + a_m(\omega^i) + \beta)
-        // * (\theta^{m-1} s_1(\omega^i) + \theta^{m-2} s_2(\omega^i) + ... + \theta s_{m-1}(\omega^i) + s_m(\omega^i) + \gamma)
+        // (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
+        // * (\theta^{m-1} s_0(\omega^i) + \theta^{m-2} s_1(\omega^i) + ... + \theta s_{m-2}(\omega^i) + s_{m-1}(\omega^i) + \gamma)
         parallelize(&mut lookup_product, |product, start| {
             for (i, product) in product.iter_mut().enumerate() {
                 let i = i + start;
@@ -260,7 +261,9 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
 
         // The product vector is a vector of products of fractions of the form
         //
-        // (\theta^{m-1} a_1(\omega^i) + \theta^{m-2} a_2(\omega^i) + ... + \theta a_{m-1}(\omega^i) + a_m(\omega^i) + \beta)(\theta^{m-1} s_1(\omega^i) + \theta^{m-2} s_2(\omega^i) + ... + \theta s_{m-1}(\omega^i) + s_m(\omega^i) + \gamma)
+        // Numerator: (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
+        //            * (\theta^{m-1} s_0(\omega^i) + \theta^{m-2} s_1(\omega^i) + ... + \theta s_{m-2}(\omega^i) + s_{m-1}(\omega^i) + \gamma)
+        // Denominator: (a'(\omega^i) + \beta) (s'(\omega^i) + \gamma)
         //
         // where there are m input columns and m table columns,
         // a_j(\omega^i) is the jth input column in this lookup,
@@ -288,7 +291,7 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
             let n = params.n as usize;
 
             // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
-            // - z'(\omega^{-1} X) (\theta^m a_1(X) + \theta^{m-1} a_2(X) + ... + a_m(X) + \beta) (\theta^m s_1(X) + \theta^{m-1} s_2(X) + ... + s_m(X) + \gamma)
+            // - z'(\omega^{-1} X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
             for i in 0..n {
                 let prev_idx = (n + i - 1) % n;
 
@@ -369,7 +372,7 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
                 Polynomial::one_minus(self.product_coset.clone()) * &pk.l0,
             ))
             // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
-            // - z'(\omega^{-1} X) (\theta^m a_1(X) + \theta^{m-1} a_2(X) + ... + a_m(X) + \beta) (\theta^m s_1(X) + \theta^{m-1} s_2(X) + ... + s_m(X) + \gamma)
+            // - z'(\omega^{-1} X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
             .chain({
                 // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
                 let mut left = self.product_coset.clone();
@@ -384,7 +387,7 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
                     }
                 });
 
-                //  z'(\omega^{-1} X) (\theta^m a_1(X) + \theta^{m-1} a_2(X) + ... + a_m(X) + \beta) (\theta^m s_1(X) + \theta^{m-1} s_2(X) + ... + s_m(X) + \gamma)
+                //  z'(\omega^{-1} X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
                 let mut right = self.product_inv_coset;
                 parallelize(&mut right, |right, start| {
                     for (i, right) in right.iter_mut().enumerate() {

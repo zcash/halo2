@@ -52,7 +52,7 @@ impl<C: CurveAffine> Proof<C> {
     ) -> impl Iterator<Item = C::Scalar> + 'a {
         let product_expression = || {
             // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
-            // - z'(\omega^{-1} X) (\theta^m a_1(X) + \theta^{m-1} a_2(X) + ... + a_m(X) + \beta) (\theta^m s_1(X) + \theta^{m-1} s_2(X) + ... + s_m(X) + \gamma)
+            // - z'(\omega^{-1} X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
             let left = self.product_eval
                 * &(self.permuted_input_eval + &beta)
                 * &(self.permuted_table_eval + &gamma);
@@ -84,7 +84,7 @@ impl<C: CurveAffine> Proof<C> {
             )
             .chain(
                 // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
-                // - z'(\omega^{-1} X) (\theta^m a_1(X) + \theta^{m-1} a_2(X) + ... + a_m(X) + \beta) (\theta^m s_1(X) + \theta^{m-1} s_2(X) + ... + s_m(X) + \gamma)
+                // - z'(\omega^{-1} X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
                 Some(product_expression()),
             )
             .chain(Some(
