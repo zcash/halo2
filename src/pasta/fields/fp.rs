@@ -671,10 +671,10 @@ impl FieldExt for Fp {
         0x3333333333333333,
     ];
     const ZETA: Self = Fp::from_raw([
-        0x7b7fd22f0201b547,
-        0x05270d29d19fc7d2,
-        0xd3552a23a8554e50,
-        0x2d33357cb532458e,
+        0x1dad5ebdfdfe4ab9,
+        0x1d1f8bd237ad3149,
+        0x2caad5dc57aab1b0,
+        0x12ccca834acdba71,
     ]);
 
     fn ct_is_zero(&self) -> Choice {
@@ -802,7 +802,7 @@ fn test_deterministic_sqrt() {
 fn test_zeta() {
     assert_eq!(
         format!("{:?}", Fp::ZETA),
-        "0x2d33357cb532458ed3552a23a8554e5005270d29d19fc7d27b7fd22f0201b547"
+        "0x12ccca834acdba712caad5dc57aab1b01d1f8bd237ad31491dad5ebdfdfe4ab9"
     );
 
     let a = Fp::ZETA;
