@@ -3,7 +3,8 @@ use std::iter;
 
 use super::{
     circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    permutation, ChallengeBeta, ChallengeGamma, ChallengeX, ChallengeY, Error, Proof, ProvingKey,
+    permutation, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
+    Proof, ProvingKey,
 };
 use crate::arithmetic::{eval_polynomial, Curve, CurveAffine, FieldExt};
 use crate::poly::{
@@ -168,6 +169,32 @@ impl<C: CurveAffine> Proof<C> {
             })
             .collect();
 
+        // Sample theta challenge for keeping lookup columns linearly independent
+        let theta = ChallengeTheta::get(&mut transcript);
+
+        // Construct and commit to permuted values for each lookup
+        let lookups = pk
+            .vk
+            .cs
+            .lookups
+            .iter()
+            .map(|lookup| {
+                lookup.commit_permuted(
+                    &pk,
+                    &params,
+                    &domain,
+                    theta,
+                    &witness.advice,
+                    &pk.fixed_values,
+                    &aux,
+                    &advice_cosets,
+                    &pk.fixed_cosets,
+                    &aux_cosets,
+                    &mut transcript,
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
         // Sample beta challenge
         let beta = ChallengeBeta::get(&mut transcript);
 
@@ -188,6 +215,12 @@ impl<C: CurveAffine> Proof<C> {
             None
         };
 
+        // Construct and commit to products for each lookup
+        let lookups = lookups
+            .into_iter()
+            .map(|lookup| lookup.commit_product(&pk, &params, theta, beta, gamma, &mut transcript))
+            .collect::<Result<Vec<_>, _>>()?;
+
         // Obtain challenge for keeping all separate gates linearly independent
         let y = ChallengeY::<C::Scalar>::get(&mut transcript);
 
@@ -197,6 +230,16 @@ impl<C: CurveAffine> Proof<C> {
             .transpose()?
             .map(|(p, expressions)| (Some(p), Some(expressions)))
             .unwrap_or_default();
+
+        // Evaluate the h(X) polynomial's constraint system expressions for the lookup constraints, if any.
+        let (lookups, lookup_expressions): (Vec<_>, Vec<_>) = {
+            let tmp = lookups
+                .into_iter()
+                .map(|p| p.construct(pk, theta, beta, gamma))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            tmp.into_iter().unzip()
+        };
 
         // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
         let h_poly = iter::empty()
@@ -213,6 +256,8 @@ impl<C: CurveAffine> Proof<C> {
             }))
             // Permutation constraints, if any.
             .chain(permutation_expressions.into_iter().flatten())
+            // Lookup constraints, if any.
+            .chain(lookup_expressions.into_iter().flatten())
             .fold(domain.empty_extended(), |h_poly, v| h_poly * *y + &v);
 
         // Divide by t(X) = X^{params.n} - 1.
@@ -292,6 +337,12 @@ impl<C: CurveAffine> Proof<C> {
         // Evaluate the permutations, if any, at omega^i x.
         let permutations = permutations.map(|p| p.evaluate(pk, x, &mut transcript));
 
+        // Evaluate the lookups, if any, at omega^i x.
+        let lookups = lookups
+            .into_iter()
+            .map(|p| p.evaluate(pk, x, &mut transcript))
+            .collect::<Vec<_>>();
+
         let instances =
             iter::empty()
                 .chain(pk.vk.cs.advice_queries.iter().enumerate().map(
@@ -335,13 +386,15 @@ impl<C: CurveAffine> Proof<C> {
         let multiopening = multiopen::Proof::create(
             params,
             &mut transcript,
-            instances.chain(
-                permutations
-                    .as_ref()
-                    .map(|p| p.open(pk, x))
-                    .into_iter()
-                    .flatten(),
-            ),
+            instances
+                .chain(
+                    permutations
+                        .as_ref()
+                        .map(|p| p.open(pk, x))
+                        .into_iter()
+                        .flatten(),
+                )
+                .chain(lookups.iter().map(|p| p.open(pk, x)).into_iter().flatten()),
         )
         .map_err(|_| Error::OpeningError)?;
 
@@ -349,6 +402,7 @@ impl<C: CurveAffine> Proof<C> {
             advice_commitments,
             h_commitments,
             permutations: permutations.map(|p| p.build()),
+            lookups: lookups.into_iter().map(|p| p.build()).collect(),
             advice_evals,
             fixed_evals,
             aux_evals,

@@ -4,7 +4,7 @@ use ff::Field;
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 
-use super::{permutation, Error};
+use super::{lookup, permutation, Error};
 use crate::poly::Rotation;
 
 /// A column type
@@ -313,6 +313,10 @@ pub struct ConstraintSystem<F> {
     // Vector of permutation arguments, where each corresponds to a sequence of columns
     // that are involved in a permutation argument.
     pub(crate) permutations: Vec<permutation::Argument>,
+
+    // Vector of lookup arguments, where each corresponds to a sequence of
+    // input columns and a sequence of table columns involved in the lookup.
+    pub(crate) lookups: Vec<lookup::Argument>,
 }
 
 impl<F: Field> Default for ConstraintSystem<F> {
@@ -330,6 +334,7 @@ impl<F: Field> Default for ConstraintSystem<F> {
             aux_queries: Vec::new(),
             rotations,
             permutations: Vec::new(),
+            lookups: Vec::new(),
         }
     }
 }
@@ -339,9 +344,7 @@ impl<F: Field> ConstraintSystem<F> {
     pub fn permutation(&mut self, columns: &[Column<Advice>]) -> usize {
         let index = self.permutations.len();
         if self.permutations.is_empty() {
-            let at = Rotation(-1);
-            let len = self.rotations.len();
-            self.rotations.entry(at).or_insert(PointIndex(len));
+            self.add_rotation(Rotation(-1));
         }
 
         for column in columns {
@@ -353,12 +356,36 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
+    /// Add a lookup argument for some input columns and table columns.
+    /// The function will panic if the number of input columns and table
+    /// columns are not the same.
+    pub fn lookup(
+        &mut self,
+        input_columns: &[Column<Any>],
+        table_columns: &[Column<Any>],
+    ) -> usize {
+        assert_eq!(input_columns.len(), table_columns.len());
+
+        let index = self.lookups.len();
+        if self.lookups.is_empty() {
+            self.add_rotation(Rotation(-1));
+        }
+
+        for input in input_columns {
+            self.query_any_index(*input, 0);
+        }
+        for table in table_columns {
+            self.query_any_index(*table, 0);
+        }
+        self.lookups
+            .push(lookup::Argument::new(input_columns, table_columns));
+
+        index
+    }
+
     fn query_fixed_index(&mut self, column: Column<Fixed>, at: i32) -> usize {
         let at = Rotation(at);
-        {
-            let len = self.rotations.len();
-            self.rotations.entry(at).or_insert(PointIndex(len));
-        }
+        self.add_rotation(at);
 
         // Return existing query, if it exists
         for (index, fixed_query) in self.fixed_queries.iter().enumerate() {
@@ -381,10 +408,7 @@ impl<F: Field> ConstraintSystem<F> {
 
     pub(crate) fn query_advice_index(&mut self, column: Column<Advice>, at: i32) -> usize {
         let at = Rotation(at);
-        {
-            let len = self.rotations.len();
-            self.rotations.entry(at).or_insert(PointIndex(len));
-        }
+        self.add_rotation(at);
 
         // Return existing query, if it exists
         for (index, advice_query) in self.advice_queries.iter().enumerate() {
@@ -407,10 +431,7 @@ impl<F: Field> ConstraintSystem<F> {
 
     fn query_aux_index(&mut self, column: Column<Aux>, at: i32) -> usize {
         let at = Rotation(at);
-        {
-            let len = self.rotations.len();
-            self.rotations.entry(at).or_insert(PointIndex(len));
-        }
+        self.add_rotation(at);
 
         // Return existing query, if it exists
         for (index, aux_query) in self.aux_queries.iter().enumerate() {
@@ -432,13 +453,11 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     fn query_any_index(&mut self, column: Column<Any>, at: i32) -> usize {
-        let index = match column.column_type() {
+        match column.column_type() {
             Any::Advice => self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
             Any::Fixed => self.query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
             Any::Aux => self.query_aux_index(Column::<Aux>::try_from(column).unwrap(), at),
-        };
-
-        index
+        }
     }
 
     /// Query an Any column at a relative position
@@ -535,5 +554,10 @@ impl<F: Field> ConstraintSystem<F> {
         };
         self.num_aux_columns += 1;
         tmp
+    }
+
+    fn add_rotation(&mut self, at: Rotation) {
+        let len = self.rotations.len();
+        self.rotations.entry(at).or_insert(PointIndex(len));
     }
 }

@@ -41,3 +41,6 @@ ff = "0.8"
 metrics = "=0.13.0-alpha.11"
 num_cpus = "1.13"
 rand = "0.7"
+
+[features]
+sanity-checks = []

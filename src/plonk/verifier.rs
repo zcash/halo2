@@ -1,7 +1,10 @@
 use ff::Field;
 use std::iter;
 
-use super::{ChallengeBeta, ChallengeGamma, ChallengeX, ChallengeY, Error, Proof, VerifyingKey};
+use super::{
+    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error, Proof,
+    VerifyingKey,
+};
 use crate::arithmetic::{CurveAffine, FieldExt};
 use crate::poly::{
     commitment::{Guard, Params, MSM},
@@ -45,6 +48,14 @@ impl<'a, C: CurveAffine> Proof<C> {
                 .map_err(|_| Error::TranscriptError)?;
         }
 
+        // Sample theta challenge for keeping lookup columns linearly independent
+        let theta = ChallengeTheta::get(&mut transcript);
+
+        // Hash each lookup permuted commitment
+        for lookup in &self.lookups {
+            lookup.absorb_permuted_commitments(&mut transcript)?;
+        }
+
         // Sample beta challenge
         let beta = ChallengeBeta::get(&mut transcript);
 
@@ -54,6 +65,11 @@ impl<'a, C: CurveAffine> Proof<C> {
         // Hash each permutation product commitment
         if let Some(p) = &self.permutations {
             p.absorb_commitments(&mut transcript)?;
+        }
+
+        // Hash each lookup product commitment
+        for lookup in &self.lookups {
+            lookup.absorb_product_commitment(&mut transcript)?;
         }
 
         // Sample y challenge, which keeps the gates linearly independent.
@@ -72,7 +88,7 @@ impl<'a, C: CurveAffine> Proof<C> {
 
         // This check ensures the circuit is satisfied so long as the polynomial
         // commitments open to the correct values.
-        self.check_hx(params, vk, beta, gamma, y, x)?;
+        self.check_hx(params, vk, theta, beta, gamma, y, x)?;
 
         for eval in self
             .advice_evals
@@ -87,6 +103,7 @@ impl<'a, C: CurveAffine> Proof<C> {
                     .into_iter()
                     .flatten(),
             )
+            .chain(self.lookups.iter().map(|p| p.evals()).into_iter().flatten())
         {
             transcript.absorb_scalar(*eval);
         }
@@ -136,13 +153,21 @@ impl<'a, C: CurveAffine> Proof<C> {
             .verify(
                 params,
                 &mut transcript,
-                queries.chain(
-                    self.permutations
-                        .as_ref()
-                        .map(|p| p.queries(vk, x))
-                        .into_iter()
-                        .flatten(),
-                ),
+                queries
+                    .chain(
+                        self.permutations
+                            .as_ref()
+                            .map(|p| p.queries(vk, x))
+                            .into_iter()
+                            .flatten(),
+                    )
+                    .chain(
+                        self.lookups
+                            .iter()
+                            .map(|p| p.queries(vk, x))
+                            .into_iter()
+                            .flatten(),
+                    ),
                 msm,
             )
             .map_err(|_| Error::OpeningError)
@@ -174,6 +199,10 @@ impl<'a, C: CurveAffine> Proof<C> {
             .map(|p| p.check_lengths(vk))
             .transpose()?;
 
+        if self.lookups.len() != vk.cs.lookups.len() {
+            return Err(Error::IncompatibleParams);
+        }
+
         // TODO: check h_commitments
 
         if self.advice_commitments.len() != vk.cs.num_advice_columns {
@@ -189,6 +218,7 @@ impl<'a, C: CurveAffine> Proof<C> {
         &self,
         params: &'a Params<C>,
         vk: &VerifyingKey<C>,
+        theta: ChallengeTheta<C::Scalar>,
         beta: ChallengeBeta<C::Scalar>,
         gamma: ChallengeGamma<C::Scalar>,
         y: ChallengeY<C::Scalar>,
@@ -220,6 +250,26 @@ impl<'a, C: CurveAffine> Proof<C> {
                 self.permutations
                     .as_ref()
                     .map(|p| p.expressions(vk, &self.advice_evals, l_0, beta, gamma, x))
+                    .into_iter()
+                    .flatten(),
+            )
+            .chain(
+                self.lookups
+                    .iter()
+                    .zip(vk.cs.lookups.iter())
+                    .map(|(p, argument)| {
+                        p.expressions(
+                            vk,
+                            l_0,
+                            argument,
+                            theta,
+                            beta,
+                            gamma,
+                            &self.advice_evals,
+                            &self.fixed_evals,
+                            &self.aux_evals,
+                        )
+                    })
                     .into_iter()
                     .flatten(),
             )
