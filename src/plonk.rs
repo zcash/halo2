@@ -15,6 +15,8 @@ mod circuit;
 mod keygen;
 mod lookup;
 mod permutation;
+mod vanishing;
+
 mod prover;
 mod verifier;
 
@@ -51,13 +53,12 @@ pub struct ProvingKey<C: CurveAffine> {
 #[derive(Debug, Clone)]
 pub struct Proof<C: CurveAffine> {
     advice_commitments: Vec<C>,
-    h_commitments: Vec<C>,
     permutations: Option<permutation::Proof<C>>,
     lookups: Vec<lookup::Proof<C>>,
     advice_evals: Vec<C::Scalar>,
     aux_evals: Vec<C::Scalar>,
     fixed_evals: Vec<C::Scalar>,
-    h_evals: Vec<C::Scalar>,
+    vanishing: vanishing::Proof<C>,
     multiopening: multiopen::Proof<C>,
 }
 
