@@ -1,5 +1,5 @@
 use core::cmp::max;
-use core::ops::{Add, Mul};
+use core::ops::{Add, Mul, Sub};
 use ff::Field;
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
@@ -273,6 +273,16 @@ impl<F> Add for Expression<F> {
     type Output = Expression<F>;
     fn add(self, rhs: Expression<F>) -> Expression<F> {
         Expression::Sum(Box::new(self), Box::new(rhs))
+    }
+}
+
+impl<F: Field> Sub for Expression<F> {
+    type Output = Expression<F>;
+    fn sub(self, rhs: Expression<F>) -> Expression<F> {
+        Expression::Sum(
+            Box::new(self),
+            Box::new(Expression::Scaled(Box::new(rhs), -F::one())),
+        )
     }
 }
 

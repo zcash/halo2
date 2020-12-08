@@ -12,6 +12,7 @@ use crate::poly::{
 use crate::transcript::ChallengeScalar;
 
 mod circuit;
+mod gadget;
 mod keygen;
 mod lookup;
 mod permutation;
