@@ -16,6 +16,12 @@ jobs:
         with:
           mdbook-version: '0.4.4'
 
+      - name: Install mdbook-katex
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: mdbook-katex
+
       - name: Build halo2 book
         run: mdbook build book/
 
