@@ -1,0 +1,25 @@
+# Tips and tricks
+
+This section contains various ideas and snippets that you might find useful while writing
+halo2 circuits.
+
+## Small range constraints
+
+A common constraint used in R1CS circuits is the boolean constraint: $b * (1 - b) = 0$.
+This constraint can only be satisfied by $b = 0$ or $b = 1$.
+
+In halo2 circuits, you can similarly constrain a cell to have one of a small set of
+values. For example, to constrain $a$ to the range $[0..5]$, you would create a gate of
+the form:
+
+$$a * (1 - a) * (2 - a) * (3 - a) * (4 - a) = 0$$
+
+while to constraint $c$ to be either 7 or 13, you would use:
+
+$$(7 - c) * (13 - c) = 0$$
+
+> The underlying principle here is that we create a polynomial constraint with roots at
+> each value in the set of possible values we want to allow. In R1CS circuits, the maximum
+> supported polynomial degree is 2 (due to all constraints being of the form $a * b = c$).
+> In halo2 circuits, you can use arbitrary-degree polynomials - with the proviso that
+> higher-degree constraints are more expensive to use.
