@@ -23,3 +23,5 @@ $$(7 - c) \cdot (13 - c) = 0$$
 > supported polynomial degree is 2 (due to all constraints being of the form $a * b = c$).
 > In halo2 circuits, you can use arbitrary-degree polynomials - with the proviso that
 > higher-degree constraints are more expensive to use.
+
+Note that the roots don't have to be constants; for example $(a - x) \cdot (a - y) \cdot (a - z) = 0$ will constrain $a$ to be equal to one of $\{ x, y, z \}$ where the latter can be arbitrary polynomials, as long as the whole expression stays within the maximum degree bound.
