@@ -179,7 +179,7 @@ const R2: Fp = Fp([
     0x8c78ecb30000000f,
     0xd7d30dbd8b0de0e7,
     0x7797a99bc3c95d18,
-    0x96d41af7b9cb714,
+    0x096d41af7b9cb714,
 ]);
 
 /// R^3 = 2^768 mod p
@@ -218,7 +218,7 @@ const DELTA: Fp = Fp::from_raw([
     0x6a6ccd20dd7b9ba2,
     0xf5e4f3f13eee5636,
     0xbd455b7112a5049d,
-    0xa757d0f0006ab6c,
+    0x0a757d0f0006ab6c,
 ]);
 
 impl Default for Fp {

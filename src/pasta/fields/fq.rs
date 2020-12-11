@@ -179,7 +179,7 @@ const R2: Fq = Fq([
     0xfc9678ff0000000f,
     0x67bb433d891a16e3,
     0x7fae231004ccf590,
-    0x96d41af7ccfdaa9,
+    0x096d41af7ccfdaa9,
 ]);
 
 /// R^3 = 2^768 mod q
@@ -187,7 +187,7 @@ const R3: Fq = Fq([
     0x008b421c249dae4c,
     0xe13bda50dba41326,
     0x88fececb8e15cb63,
-    0x7dd97a06e6792c8,
+    0x07dd97a06e6792c8,
 ]);
 
 /// `GENERATOR = 5 mod q` is a generator of the `q - 1` order multiplicative
@@ -674,7 +674,7 @@ impl FieldExt for Fq {
         0x2aa9d2e050aa0e4f,
         0x0fed467d47c033af,
         0x511db4d81cf70f5a,
-        0x6819a58283e528e,
+        0x06819a58283e528e,
     ]);
 
     fn ct_is_zero(&self) -> Choice {
