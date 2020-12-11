@@ -816,7 +816,7 @@ fn test_zeta() {
 #[test]
 fn test_root_of_unity() {
     assert_eq!(
-        Fp::ROOT_OF_UNITY.pow_vartime(&[1 << 32, 0, 0, 0]),
+        Fp::ROOT_OF_UNITY.pow_vartime(&[1 << Fp::S, 0, 0, 0]),
         Fp::one()
     );
 }
@@ -833,7 +833,8 @@ fn test_inv_2() {
 
 #[test]
 fn test_delta() {
-    assert_eq!(Fp::DELTA, Fp::from(5).pow(&[1u64 << Fp::S, 0, 0, 0]));
+    assert_eq!(Fp::DELTA, GENERATOR.pow(&[1u64 << Fp::S, 0, 0, 0]));
+    assert_eq!(Fp::DELTA, Fp::multiplicative_generator().pow(&[1u64 << Fp::S, 0, 0, 0]));
 }
 
 #[cfg(not(target_pointer_width = "64"))]
