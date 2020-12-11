@@ -4,7 +4,7 @@ Let's start with a simple circuit, to introduce you to the common APIs and how t
 used. The circuit will take a public input $c$, and will prove knowledge of two private
 inputs $a$ and $b$ such that
 
-$$a * b = c.$$
+$$a \cdot b = c.$$
 
 ```rust
 # extern crate halo2;
