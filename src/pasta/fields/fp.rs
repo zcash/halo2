@@ -834,7 +834,10 @@ fn test_inv_2() {
 #[test]
 fn test_delta() {
     assert_eq!(Fp::DELTA, GENERATOR.pow(&[1u64 << Fp::S, 0, 0, 0]));
-    assert_eq!(Fp::DELTA, Fp::multiplicative_generator().pow(&[1u64 << Fp::S, 0, 0, 0]));
+    assert_eq!(
+        Fp::DELTA,
+        Fp::multiplicative_generator().pow(&[1u64 << Fp::S, 0, 0, 0])
+    );
 }
 
 #[cfg(not(target_pointer_width = "64"))]
