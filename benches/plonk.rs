@@ -3,10 +3,10 @@ extern crate criterion;
 
 extern crate halo2;
 use halo2::arithmetic::FieldExt;
+use halo2::pasta::{EqAffine, Fp, Fq};
 use halo2::plonk::*;
 use halo2::poly::commitment::Params;
 use halo2::transcript::DummyHash;
-use halo2::tweedle::{EqAffine, Fp, Fq};
 
 use std::marker::PhantomData;
 

@@ -1,10 +1,10 @@
 use halo2::{
     arithmetic::{Curve, FieldExt},
     model::ModelRecorder,
+    pasta::{EqAffine, Fp, Fq},
     plonk::*,
     poly::commitment::{Blind, Params},
     transcript::DummyHash,
-    tweedle::{EqAffine, Fp, Fq},
 };
 
 use std::marker::PhantomData;

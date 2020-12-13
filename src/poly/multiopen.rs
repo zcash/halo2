@@ -217,7 +217,7 @@ where
 mod tests {
     use super::{construct_intermediate_sets, Query};
     use crate::arithmetic::FieldExt;
-    use crate::tweedle::Fp;
+    use crate::pasta::Fp;
 
     #[derive(Clone)]
     struct MyQuery<F> {

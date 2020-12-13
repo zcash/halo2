@@ -468,7 +468,7 @@ pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
 }
 
 #[cfg(test)]
-use crate::tweedle::Fp;
+use crate::pasta::Fp;
 
 #[test]
 fn test_lagrange_interpolate() {

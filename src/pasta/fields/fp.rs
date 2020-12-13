@@ -7,18 +7,18 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use crate::arithmetic::{adc, mac, sbb, FieldExt, Group};
 
-/// This represents an element of $\mathbb{F}_q$ where
+/// This represents an element of $\mathbb{F}_p$ where
 ///
-/// `q = 0x40000000000000000000000000000000038aa127696286c9842cafd400000001`
+/// `p = 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001`
 ///
-/// is the base field of the Tweedledee curve.
+/// is the base field of the Pallas curve.
 // The internal representation of this type is four 64-bit unsigned
-// integers in little-endian order. `Fq` values are always in
-// Montgomery form; i.e., Fq(a) = aR mod q, with R = 2^256.
+// integers in little-endian order. `Fp` values are always in
+// Montgomery form; i.e., Fp(a) = aR mod p, with R = 2^256.
 #[derive(Clone, Copy, Eq)]
-pub struct Fq(pub(crate) [u64; 4]);
+pub struct Fp(pub(crate) [u64; 4]);
 
-impl fmt::Debug for Fq {
+impl fmt::Debug for Fp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let tmp = self.to_bytes();
         write!(f, "0x")?;
@@ -29,23 +29,23 @@ impl fmt::Debug for Fq {
     }
 }
 
-impl From<bool> for Fq {
-    fn from(bit: bool) -> Fq {
+impl From<bool> for Fp {
+    fn from(bit: bool) -> Fp {
         if bit {
-            Fq::one()
+            Fp::one()
         } else {
-            Fq::zero()
+            Fp::zero()
         }
     }
 }
 
-impl From<u64> for Fq {
-    fn from(val: u64) -> Fq {
-        Fq([val, 0, 0, 0]) * R2
+impl From<u64> for Fp {
+    fn from(val: u64) -> Fp {
+        Fp([val, 0, 0, 0]) * R2
     }
 }
 
-impl ConstantTimeEq for Fq {
+impl ConstantTimeEq for Fp {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.0[0].ct_eq(&other.0[0])
             & self.0[1].ct_eq(&other.0[1])
@@ -54,14 +54,14 @@ impl ConstantTimeEq for Fq {
     }
 }
 
-impl PartialEq for Fq {
+impl PartialEq for Fp {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.ct_eq(other).unwrap_u8() == 1
     }
 }
 
-impl std::cmp::Ord for Fq {
+impl std::cmp::Ord for Fp {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         let left = self.to_bytes();
         let right = other.to_bytes();
@@ -76,15 +76,15 @@ impl std::cmp::Ord for Fq {
     }
 }
 
-impl std::cmp::PartialOrd for Fq {
+impl std::cmp::PartialOrd for Fp {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl ConditionallySelectable for Fq {
+impl ConditionallySelectable for Fp {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
-        Fq([
+        Fp([
             u64::conditional_select(&a.0[0], &b.0[0], choice),
             u64::conditional_select(&a.0[1], &b.0[1], choice),
             u64::conditional_select(&a.0[2], &b.0[2], choice),
@@ -94,11 +94,11 @@ impl ConditionallySelectable for Fq {
 }
 
 /// Constant representing the modulus
-/// q = 0x40000000000000000000000000000000038aa127696286c9842cafd400000001
-const MODULUS: Fq = Fq([
-    0x842cafd400000001,
-    0x38aa127696286c9,
-    0x0,
+/// p = 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001
+const MODULUS: Fp = Fp([
+    0x992d30ed00000001,
+    0x224698fc094cf91b,
+    0x0000000000000000,
     0x4000000000000000,
 ]);
 
@@ -106,172 +106,149 @@ const MODULUS: Fq = Fq([
 #[cfg(not(target_pointer_width = "64"))]
 const MODULUS_LIMBS_32: [u32; 8] = [
     0x0000_0001,
-    0x842c_afd4,
-    0x6962_86c9,
-    0x038a_a127,
+    0x992d_30ed,
+    0x094c_f91b,
+    0x2246_98fc,
     0x0000_0000,
     0x0000_0000,
     0x0000_0000,
     0x4000_0000,
 ];
 
-impl<'a> Neg for &'a Fq {
-    type Output = Fq;
+impl<'a> Neg for &'a Fp {
+    type Output = Fp;
 
     #[inline]
-    fn neg(self) -> Fq {
+    fn neg(self) -> Fp {
         self.neg()
     }
 }
 
-impl Neg for Fq {
-    type Output = Fq;
+impl Neg for Fp {
+    type Output = Fp;
 
     #[inline]
-    fn neg(self) -> Fq {
+    fn neg(self) -> Fp {
         -&self
     }
 }
 
-impl<'a, 'b> Sub<&'b Fq> for &'a Fq {
-    type Output = Fq;
+impl<'a, 'b> Sub<&'b Fp> for &'a Fp {
+    type Output = Fp;
 
     #[inline]
-    fn sub(self, rhs: &'b Fq) -> Fq {
+    fn sub(self, rhs: &'b Fp) -> Fp {
         self.sub(rhs)
     }
 }
 
-impl<'a, 'b> Add<&'b Fq> for &'a Fq {
-    type Output = Fq;
+impl<'a, 'b> Add<&'b Fp> for &'a Fp {
+    type Output = Fp;
 
     #[inline]
-    fn add(self, rhs: &'b Fq) -> Fq {
+    fn add(self, rhs: &'b Fp) -> Fp {
         self.add(rhs)
     }
 }
 
-impl<'a, 'b> Mul<&'b Fq> for &'a Fq {
-    type Output = Fq;
+impl<'a, 'b> Mul<&'b Fp> for &'a Fp {
+    type Output = Fp;
 
     #[inline]
-    fn mul(self, rhs: &'b Fq) -> Fq {
+    fn mul(self, rhs: &'b Fp) -> Fp {
         self.mul(rhs)
     }
 }
 
-impl_binops_additive!(Fq, Fq);
-impl_binops_multiplicative!(Fq, Fq);
+impl_binops_additive!(Fp, Fp);
+impl_binops_multiplicative!(Fp, Fp);
 
-/// INV = -(q^{-1} mod 2^64) mod 2^64
-const INV: u64 = 0x842cafd3ffffffff;
+/// INV = -(p^{-1} mod 2^64) mod 2^64
+const INV: u64 = 0x992d30ecffffffff;
 
-/// R = 2^256 mod q
-const R: Fq = Fq([
-    0x7379f083fffffffd,
-    0xf5601c89c3d86ba3,
+/// R = 2^256 mod p
+const R: Fp = Fp([
+    0x34786d38fffffffd,
+    0x992c350be41914ad,
     0xffffffffffffffff,
     0x3fffffffffffffff,
 ]);
 
-/// R^2 = 2^512 mod q
-const R2: Fq = Fq([
-    0x8595fa8000000010,
-    0x7e16a565c6895230,
-    0xf4c0e6fcb03aa0a2,
-    0xc8ad9106886013,
+/// R^2 = 2^512 mod p
+const R2: Fp = Fp([
+    0x8c78ecb30000000f,
+    0xd7d30dbd8b0de0e7,
+    0x7797a99bc3c95d18,
+    0x096d41af7b9cb714,
 ]);
 
-/// R^3 = 2^768 mod q
-const R3: Fq = Fq([
-    0xa624f338075cdb5e,
-    0x57964eacb8fe21f2,
-    0xcb266d18c0413bc2,
-    0xa42cdf95f959577,
+/// R^3 = 2^768 mod p
+const R3: Fp = Fp([
+    0xf185a5993a9e10f9,
+    0xf6a68f3b6ac5b1d1,
+    0xdf8d1014353fd42c,
+    0x2ae309222d2d9910,
 ]);
 
-/// `GENERATOR = 5 mod q` is a generator of the `q - 1` order multiplicative subgroup, and
-/// is also a quadratic non-residue.
-const GENERATOR: Fq = Fq::from_raw([
+/// `GENERATOR = 5 mod p` is a generator of the `p - 1` order multiplicative
+/// subgroup, or in other words a primitive root of the field.
+const GENERATOR: Fp = Fp::from_raw([
     0x0000_0000_0000_0005,
     0x0000_0000_0000_0000,
     0x0000_0000_0000_0000,
     0x0000_0000_0000_0000,
 ]);
 
-const S: u32 = 34;
+const S: u32 = 32;
 
-/// GENERATOR^t where t * 2^s + 1 = q
+/// GENERATOR^t where t * 2^s + 1 = p
 /// with t odd. In other words, this
 /// is a 2^s root of unity.
-///
-/// `GENERATOR = 5 mod q` is a generator
-/// of the q - 1 order multiplicative
-/// subgroup.
-const ROOT_OF_UNITY: Fq = Fq::from_raw([
-    0x1cbd3234869d57ec,
-    0xa287dd1b8084fbf,
-    0xf1dbcb645a987293,
-    0x113efc510dc03c0b,
+const ROOT_OF_UNITY: Fp = Fp::from_raw([
+    0xbdad6fabd87ea32f,
+    0xea322bf2b7bb7584,
+    0x362120830561f81a,
+    0x2bce74deac30ebda,
 ]);
 
-/// GENERATOR^{2^s} where t * 2^s + 1 = q
+/// GENERATOR^{2^s} where t * 2^s + 1 = p
 /// with t odd. In other words, this
 /// is a t root of unity.
-///
-/// `GENERATOR = 5 mod q` is a generator
-/// of the q - 1 order multiplicative
-/// subgroup.
-const DELTA: Fq = Fq::from_raw([
-    0x83d2833d15f2bbf9,
-    0x5127e2ce24a8e69c,
-    0x4243423589e0a9b5,
-    0x20daec44973be920,
+const DELTA: Fp = Fp::from_raw([
+    0x6a6ccd20dd7b9ba2,
+    0xf5e4f3f13eee5636,
+    0xbd455b7112a5049d,
+    0x0a757d0f0006ab6c,
 ]);
 
-impl Default for Fq {
+impl Default for Fp {
     #[inline]
     fn default() -> Self {
         Self::zero()
     }
 }
 
-impl Fq {
+impl Fp {
     /// Returns zero, the additive identity.
     #[inline]
-    pub const fn zero() -> Fq {
-        Fq([0, 0, 0, 0])
+    pub const fn zero() -> Fp {
+        Fp([0, 0, 0, 0])
     }
 
     /// Returns one, the multiplicative identity.
     #[inline]
-    pub const fn one() -> Fq {
+    pub const fn one() -> Fp {
         R
     }
 
     /// Doubles this field element.
     #[inline]
-    pub const fn double(&self) -> Fq {
+    pub const fn double(&self) -> Fp {
         // TODO: This can be achieved more efficiently with a bitshift.
         self.add(self)
     }
 
-    /// Converts a 512-bit little endian integer into
-    /// a `Fq` by reducing by the modulus.
-    pub fn from_bytes_wide(bytes: &[u8; 64]) -> Fq {
-        Fq::from_u512([
-            u64::from_le_bytes(bytes[0..8].try_into().unwrap()),
-            u64::from_le_bytes(bytes[8..16].try_into().unwrap()),
-            u64::from_le_bytes(bytes[16..24].try_into().unwrap()),
-            u64::from_le_bytes(bytes[24..32].try_into().unwrap()),
-            u64::from_le_bytes(bytes[32..40].try_into().unwrap()),
-            u64::from_le_bytes(bytes[40..48].try_into().unwrap()),
-            u64::from_le_bytes(bytes[48..56].try_into().unwrap()),
-            u64::from_le_bytes(bytes[56..64].try_into().unwrap()),
-        ])
-    }
-
-    fn from_u512(limbs: [u64; 8]) -> Fq {
+    fn from_u512(limbs: [u64; 8]) -> Fp {
         // We reduce an arbitrary 512-bit number by decomposing it into two 256-bit digits
         // with the higher bits multiplied by 2^256. Thus, we perform two reductions
         //
@@ -285,21 +262,21 @@ impl Fq {
         // that (2^256 - 1)*c is an acceptable product for the reduction. Therefore, the
         // reduction always works so long as `c` is in the field; in this case it is either the
         // constant `R2` or `R3`.
-        let d0 = Fq([limbs[0], limbs[1], limbs[2], limbs[3]]);
-        let d1 = Fq([limbs[4], limbs[5], limbs[6], limbs[7]]);
+        let d0 = Fp([limbs[0], limbs[1], limbs[2], limbs[3]]);
+        let d1 = Fp([limbs[4], limbs[5], limbs[6], limbs[7]]);
         // Convert to Montgomery form
         d0 * R2 + d1 * R3
     }
 
     /// Converts from an integer represented in little endian
-    /// into its (congruent) `Fq` representation.
+    /// into its (congruent) `Fp` representation.
     pub const fn from_raw(val: [u64; 4]) -> Self {
-        (&Fq(val)).mul(&R2)
+        (&Fp(val)).mul(&R2)
     }
 
     /// Squares this element.
     #[inline]
-    pub const fn square(&self) -> Fq {
+    pub const fn square(&self) -> Fp {
         let (r1, carry) = mac(0, self.0[0], self.0[1], 0);
         let (r2, carry) = mac(0, self.0[0], self.0[2], carry);
         let (r3, r4) = mac(0, self.0[0], self.0[3], carry);
@@ -326,7 +303,7 @@ impl Fq {
         let (r6, carry) = mac(r6, self.0[3], self.0[3], carry);
         let (r7, _) = adc(0, r7, carry);
 
-        Fq::montgomery_reduce(r0, r1, r2, r3, r4, r5, r6, r7)
+        Fp::montgomery_reduce(r0, r1, r2, r3, r4, r5, r6, r7)
     }
 
     #[inline(always)]
@@ -373,7 +350,7 @@ impl Fq {
         let (r7, _) = adc(r7, carry2, carry);
 
         // Result may be within MODULUS of the correct value
-        (&Fq([r4, r5, r6, r7])).sub(&MODULUS)
+        (&Fp([r4, r5, r6, r7])).sub(&MODULUS)
     }
 
     /// Multiplies `rhs` by `self`, returning the result.
@@ -401,7 +378,7 @@ impl Fq {
         let (r5, carry) = mac(r5, self.0[3], rhs.0[2], carry);
         let (r6, r7) = mac(r6, self.0[3], rhs.0[3], carry);
 
-        Fq::montgomery_reduce(r0, r1, r2, r3, r4, r5, r6, r7)
+        Fp::montgomery_reduce(r0, r1, r2, r3, r4, r5, r6, r7)
     }
 
     /// Subtracts `rhs` from `self`, returning the result.
@@ -419,7 +396,7 @@ impl Fq {
         let (d2, carry) = adc(d2, MODULUS.0[2] & borrow, carry);
         let (d3, _) = adc(d3, MODULUS.0[3] & borrow, carry);
 
-        Fq([d0, d1, d2, d3])
+        Fp([d0, d1, d2, d3])
     }
 
     /// Adds `rhs` to `self`, returning the result.
@@ -432,7 +409,7 @@ impl Fq {
 
         // Attempt to subtract the modulus, to ensure the value
         // is smaller than the modulus.
-        (&Fq([d0, d1, d2, d3])).sub(&MODULUS)
+        (&Fp([d0, d1, d2, d3])).sub(&MODULUS)
     }
 
     /// Negates `self`.
@@ -450,24 +427,24 @@ impl Fq {
         // zero if `self` was zero, and `u64::max_value()` if self was nonzero.
         let mask = (((self.0[0] | self.0[1] | self.0[2] | self.0[3]) == 0) as u64).wrapping_sub(1);
 
-        Fq([d0 & mask, d1 & mask, d2 & mask, d3 & mask])
+        Fp([d0 & mask, d1 & mask, d2 & mask, d3 & mask])
     }
 }
 
-impl From<Fq> for [u8; 32] {
-    fn from(value: Fq) -> [u8; 32] {
+impl From<Fp> for [u8; 32] {
+    fn from(value: Fp) -> [u8; 32] {
         value.to_bytes()
     }
 }
 
-impl<'a> From<&'a Fq> for [u8; 32] {
-    fn from(value: &'a Fq) -> [u8; 32] {
+impl<'a> From<&'a Fp> for [u8; 32] {
+    fn from(value: &'a Fp) -> [u8; 32] {
         value.to_bytes()
     }
 }
 
-impl Group for Fq {
-    type Scalar = Fq;
+impl Group for Fp {
+    type Scalar = Fp;
 
     fn group_zero() -> Self {
         Self::zero()
@@ -483,7 +460,7 @@ impl Group for Fq {
     }
 }
 
-impl ff::Field for Fq {
+impl ff::Field for Fp {
     fn random(mut rng: impl RngCore) -> Self {
         let mut random_bytes = [0; 64];
         rng.fill_bytes(&mut random_bytes[..]);
@@ -514,11 +491,11 @@ impl ff::Field for Fq {
 
     /// Computes the square root of this element, if it exists.
     fn sqrt(&self) -> CtOption<Self> {
-        // Tonelli-Shank's algorithm for q mod 16 = 1
+        // Tonelli-Shank's algorithm for p mod 16 = 1
         // https://eprint.iacr.org/2012/685.pdf (page 12, algorithm 5)
 
         // w = self^((t - 1) // 2)
-        let w = self.pow_vartime(&[0xed2c50d9308595fa, 0x715424, 0x0, 0x8000000]);
+        let w = self.pow_vartime(&[0x04a67c8dcc969876, 0x11234c7e, 0x0, 0x20000000]);
 
         let mut v = S;
         let mut x = self * w;
@@ -533,17 +510,17 @@ impl ff::Field for Fq {
             let mut j_less_than_v: Choice = 1.into();
 
             for j in 2..max_v {
-                let tmp_is_one = tmp.ct_eq(&Fq::one());
-                let squared = Fq::conditional_select(&tmp, &z, tmp_is_one).square();
-                tmp = Fq::conditional_select(&squared, &tmp, tmp_is_one);
-                let new_z = Fq::conditional_select(&z, &squared, tmp_is_one);
+                let tmp_is_one = tmp.ct_eq(&Fp::one());
+                let squared = Fp::conditional_select(&tmp, &z, tmp_is_one).square();
+                tmp = Fp::conditional_select(&squared, &tmp, tmp_is_one);
+                let new_z = Fp::conditional_select(&z, &squared, tmp_is_one);
                 j_less_than_v &= !j.ct_eq(&v);
                 k = u32::conditional_select(&j, &k, tmp_is_one);
-                z = Fq::conditional_select(&z, &new_z, j_less_than_v);
+                z = Fp::conditional_select(&z, &new_z, j_less_than_v);
             }
 
             let result = x * z;
-            x = Fq::conditional_select(&result, &x, b.ct_eq(&Fq::one()));
+            x = Fp::conditional_select(&result, &x, b.ct_eq(&Fp::one()));
             z = z.square();
             b *= z;
             v = k;
@@ -559,8 +536,8 @@ impl ff::Field for Fq {
     /// failing if the element is zero.
     fn invert(&self) -> CtOption<Self> {
         let tmp = self.pow_vartime(&[
-            0x842cafd3ffffffff,
-            0x38aa127696286c9,
+            0x992d30ecffffffff,
+            0x224698fc094cf91b,
             0x0,
             0x4000000000000000,
         ]);
@@ -593,7 +570,7 @@ type ReprBits = [u32; 8];
 #[cfg(target_pointer_width = "64")]
 type ReprBits = [u64; 4];
 
-impl ff::PrimeField for Fq {
+impl ff::PrimeField for Fp {
     type Repr = [u8; 32];
     type ReprBits = ReprBits;
 
@@ -658,46 +635,46 @@ impl ff::PrimeField for Fq {
     }
 }
 
-impl FieldExt for Fq {
+impl FieldExt for Fp {
     const ROOT_OF_UNITY: Self = ROOT_OF_UNITY;
-    const ROOT_OF_UNITY_INV: Self = Fq::from_raw([
-        0x824860d3eb30de02,
-        0xad9f0afd0ea63acc,
-        0xd250318c11a16fe1,
-        0x12a9f5e1dd62dabc,
+    const ROOT_OF_UNITY_INV: Self = Fp::from_raw([
+        0xf0b87c7db2ce91f6,
+        0x84a0a1d8859f066f,
+        0xb4ed8e647196dad1,
+        0x2cd5282c53116b5c,
     ]);
     const UNROLL_T_EXPONENT: [u64; 4] = [
-        0x9b71de17e6d2d5a0,
-        0x0000000000296ee0,
-        0x8c00000000000000,
-        0x2ecc05e,
+        0x955a0a417453113c,
+        0x0000000022016b89,
+        0xc000000000000000,
+        0x3f7ed4c6,
     ];
     const T_EXPONENT: [u64; 4] = [
-        0xda58a1b2610b2bf5,
-        0x0000000000e2a849,
+        0x094cf91b992d30ed,
+        0x00000000224698fc,
         0x0000000000000000,
-        0x10000000,
+        0x40000000,
     ];
     const DELTA: Self = DELTA;
-    const UNROLL_S_EXPONENT: u64 = 0x344cfe85d;
-    const TWO_INV: Self = Fq::from_raw([
-        0xc21657ea00000001,
-        0x01c55093b4b14364,
+    const UNROLL_S_EXPONENT: u64 = 0x204ace5;
+    const TWO_INV: Self = Fp::from_raw([
+        0xcc96987680000001,
+        0x11234c7e04a67c8d,
         0x0000000000000000,
         0x2000000000000000,
     ]);
     const RESCUE_ALPHA: u64 = 5;
     const RESCUE_INVALPHA: [u64; 4] = [
-        0xd023bfdccccccccd,
-        0x360880ec544ed23a,
+        0xe0f0f3f0cccccccd,
+        0x4e9ee0c9a10a60e2,
         0x3333333333333333,
         0x3333333333333333,
     ];
-    const ZETA: Self = Fq::from_raw([
-        0x4394c2bd148fa4fd,
-        0x69cf8de720e52ec1,
-        0x87ad8b5ff9731ffe,
-        0x36c66d3a1e049a58,
+    const ZETA: Self = Fp::from_raw([
+        0x1dad5ebdfdfe4ab9,
+        0x1d1f8bd237ad3149,
+        0x2caad5dc57aab1b0,
+        0x12ccca834acdba71,
     ]);
 
     fn ct_is_zero(&self) -> Choice {
@@ -705,17 +682,17 @@ impl FieldExt for Fq {
     }
 
     fn from_u64(v: u64) -> Self {
-        Fq::from_raw([v as u64, 0, 0, 0])
+        Fp::from_raw([v as u64, 0, 0, 0])
     }
 
     fn from_u128(v: u128) -> Self {
-        Fq::from_raw([v as u64, (v >> 64) as u64, 0, 0])
+        Fp::from_raw([v as u64, (v >> 64) as u64, 0, 0])
     }
 
     /// Attempts to convert a little-endian byte representation of
-    /// a scalar into a `Fq`, failing if the input is not canonical.
-    fn from_bytes(bytes: &[u8; 32]) -> CtOption<Fq> {
-        let mut tmp = Fq([0, 0, 0, 0]);
+    /// a scalar into a `Fp`, failing if the input is not canonical.
+    fn from_bytes(bytes: &[u8; 32]) -> CtOption<Fp> {
+        let mut tmp = Fp([0, 0, 0, 0]);
 
         tmp.0[0] = u64::from_le_bytes(bytes[0..8].try_into().unwrap());
         tmp.0[1] = u64::from_le_bytes(bytes[8..16].try_into().unwrap());
@@ -740,12 +717,12 @@ impl FieldExt for Fq {
         CtOption::new(tmp, Choice::from(is_some))
     }
 
-    /// Converts an element of `Fq` into a byte representation in
+    /// Converts an element of `Fp` into a byte representation in
     /// little-endian byte order.
     fn to_bytes(&self) -> [u8; 32] {
         // Turn into canonical form by computing
         // (a.R) / R = a
-        let tmp = Fq::montgomery_reduce(self.0[0], self.0[1], self.0[2], self.0[3], 0, 0, 0, 0);
+        let tmp = Fp::montgomery_reduce(self.0[0], self.0[1], self.0[2], self.0[3], 0, 0, 0, 0);
 
         let mut res = [0; 32];
         res[0..8].copy_from_slice(&tmp.0[0].to_le_bytes());
@@ -757,9 +734,9 @@ impl FieldExt for Fq {
     }
 
     /// Converts a 512-bit little endian integer into
-    /// a `Fq` by reducing by the modulus.
-    fn from_bytes_wide(bytes: &[u8; 64]) -> Fq {
-        Fq::from_u512([
+    /// a `Fp` by reducing by the modulus.
+    fn from_bytes_wide(bytes: &[u8; 64]) -> Fp {
+        Fp::from_u512([
             u64::from_le_bytes(bytes[0..8].try_into().unwrap()),
             u64::from_le_bytes(bytes[8..16].try_into().unwrap()),
             u64::from_le_bytes(bytes[16..24].try_into().unwrap()),
@@ -772,7 +749,7 @@ impl FieldExt for Fq {
     }
 
     fn get_lower_128(&self) -> u128 {
-        let tmp = Fq::montgomery_reduce(self.0[0], self.0[1], self.0[2], self.0[3], 0, 0, 0, 0);
+        let tmp = Fp::montgomery_reduce(self.0[0], self.0[1], self.0[2], self.0[3], 0, 0, 0, 0);
 
         u128::from(tmp.0[0]) | (u128::from(tmp.0[1]) << 64)
     }
@@ -797,30 +774,104 @@ fn test_inv() {
 }
 
 #[test]
+fn test_rescue() {
+    // NB: TWO_INV is standing in as a "random" field element
+    assert_eq!(
+        Fp::TWO_INV
+            .pow_vartime(&[Fp::RESCUE_ALPHA, 0, 0, 0])
+            .pow_vartime(&Fp::RESCUE_INVALPHA),
+        Fp::TWO_INV
+    );
+}
+
+#[test]
+fn test_sqrt() {
+    // NB: TWO_INV is standing in as a "random" field element
+    let v = (Fp::TWO_INV).square().sqrt().unwrap();
+    assert!(v == Fp::TWO_INV || (-v) == Fp::TWO_INV);
+}
+
+#[test]
+fn test_deterministic_sqrt() {
+    // NB: TWO_INV is standing in as a "random" field element
+    let v = (Fp::TWO_INV).square().deterministic_sqrt().unwrap();
+    assert!(v == Fp::TWO_INV || (-v) == Fp::TWO_INV);
+}
+
+#[test]
 fn test_zeta() {
     assert_eq!(
-        format!("{:?}", Fq::ZETA),
-        "0x36c66d3a1e049a5887ad8b5ff9731ffe69cf8de720e52ec14394c2bd148fa4fd"
+        format!("{:?}", Fp::ZETA),
+        "0x12ccca834acdba712caad5dc57aab1b01d1f8bd237ad31491dad5ebdfdfe4ab9"
     );
-    let a = Fq::ZETA;
-    assert!(a != Fq::one());
+
+    let a = Fp::ZETA;
+    assert!(a != Fp::one());
     let b = a * a;
-    assert!(b != Fq::one());
+    assert!(b != Fp::one());
     let c = b * a;
-    assert!(c == Fq::one());
+    assert!(c == Fp::one());
+}
+
+#[test]
+fn test_root_of_unity() {
+    assert_eq!(
+        Fp::ROOT_OF_UNITY.pow_vartime(&[1 << Fp::S, 0, 0, 0]),
+        Fp::one()
+    );
 }
 
 #[test]
 fn test_inv_root_of_unity() {
-    assert_eq!(Fq::ROOT_OF_UNITY_INV, Fq::ROOT_OF_UNITY.invert().unwrap());
+    assert_eq!(Fp::ROOT_OF_UNITY_INV, Fp::ROOT_OF_UNITY.invert().unwrap());
 }
 
 #[test]
 fn test_inv_2() {
-    assert_eq!(Fq::TWO_INV, Fq::from(2).invert().unwrap());
+    assert_eq!(Fp::TWO_INV, Fp::from(2).invert().unwrap());
 }
 
 #[test]
 fn test_delta() {
-    assert_eq!(Fq::DELTA, Fq::from(5).pow(&[1u64 << Fq::S, 0, 0, 0]));
+    assert_eq!(Fp::DELTA, GENERATOR.pow(&[1u64 << Fp::S, 0, 0, 0]));
+    assert_eq!(Fp::DELTA, Fp::multiplicative_generator().pow(&[1u64 << Fp::S, 0, 0, 0]));
+}
+
+#[cfg(not(target_pointer_width = "64"))]
+#[test]
+fn consistent_modulus_limbs() {
+    for (a, &b) in MODULUS
+        .0
+        .iter()
+        .flat_map(|&limb| {
+            Some(limb as u32)
+                .into_iter()
+                .chain(Some((limb >> 32) as u32))
+        })
+        .zip(MODULUS_LIMBS_32.iter())
+    {
+        assert_eq!(a, b);
+    }
+}
+
+#[test]
+fn test_from_u512() {
+    assert_eq!(
+        Fp::from_raw([
+            0x3daec14d565241d9,
+            0x0b7af45b6073944b,
+            0xea5b8bd611a5bd4c,
+            0x150160330625db3d
+        ]),
+        Fp::from_u512([
+            0xee155641297678a1,
+            0xd83e156bdbfdbe65,
+            0xd9ccd834c68ba0b5,
+            0xf508ede312272758,
+            0x038df7cbf8228e89,
+            0x3505a1e4a3c74b41,
+            0xbfa46f775eb82db3,
+            0x26ebe27e262f471d
+        ])
+    );
 }

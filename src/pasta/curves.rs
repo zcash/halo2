@@ -1,5 +1,5 @@
-//! This module contains implementations for the Tweedledum and Tweedledee
-//! elliptic curve groups.
+//! This module contains implementations for the Pallas and Vesta elliptic curve
+//! groups.
 
 use core::cmp;
 use core::fmt::Debug;

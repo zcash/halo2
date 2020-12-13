@@ -103,7 +103,6 @@ impl<C: CurveAffine> Params<C> {
 
         let h = {
             let mut hasher = H::init(C::Base::zero());
-            hasher.absorb(-C::Base::one());
             let x = hasher.squeeze().to_bytes();
             let p = C::from_bytes(&x);
             p.unwrap()
@@ -226,8 +225,8 @@ impl<F: FieldExt> MulAssign<F> for Blind<F> {
 fn test_commit_lagrange() {
     const K: u32 = 6;
 
+    use crate::pasta::{EpAffine, Fp, Fq};
     use crate::transcript::DummyHash;
-    use crate::tweedle::{EpAffine, Fp, Fq};
     let params = Params::<EpAffine>::new::<DummyHash<Fp>>(K);
     let domain = super::EvaluationDomain::new(1, K);
 
@@ -255,8 +254,8 @@ fn test_opening_proof() {
         EvaluationDomain,
     };
     use crate::arithmetic::{eval_polynomial, Curve, FieldExt};
+    use crate::pasta::{EpAffine, Fp, Fq};
     use crate::transcript::{ChallengeScalar, DummyHash, Transcript};
-    use crate::tweedle::{EpAffine, Fp, Fq};
 
     let params = Params::<EpAffine>::new::<DummyHash<Fp>>(K);
     let domain = EvaluationDomain::new(1, K);
