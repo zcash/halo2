@@ -4,3 +4,5 @@ language = "en"
 multilingual = false
 src = "src"
 title = "The halo2 Book"
+
+[preprocessor.katex]
