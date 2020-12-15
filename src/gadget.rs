@@ -7,6 +7,8 @@ use crate::{
     plonk::{Advice, Any, Column, ConstraintSystem, Error, Fixed},
 };
 
+pub mod sha256;
+
 /// Handles the configuration of a chip
 pub trait FloorPlanner {}
 
