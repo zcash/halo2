@@ -4,3 +4,5 @@ language = "en"
 multilingual = false
 src = "src"
 title = "The Orchard Book"
+
+[preprocessor.katex]
