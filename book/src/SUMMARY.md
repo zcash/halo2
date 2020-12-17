@@ -2,6 +2,7 @@
 
 [halo2](README.md)
 - [Concepts](concepts.md)
+  - [Multipoint opening argument](concepts/multipoint-opening.md)
 - [User Documentation](user.md)
   - [A simple example](user/simple-example.md)
   - [Lookup tables](user/lookup-tables.md)
