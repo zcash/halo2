@@ -15,6 +15,9 @@ use crate::{
 mod prover;
 mod verifier;
 
+pub use prover::create_proof;
+pub use verifier::verify_proof;
+
 #[derive(Clone, Copy, Debug)]
 struct X1 {}
 /// Challenge for compressing openings at the same point sets together.
@@ -35,19 +38,6 @@ struct X4 {}
 /// Challenge for collapsing the openings of the various remaining polynomials at x_3
 /// together.
 type ChallengeX4<F> = ChallengeScalar<F, X4>;
-
-/// This is a multi-point opening proof used in the polynomial commitment scheme opening.
-#[derive(Debug, Clone)]
-pub struct Proof<C: CurveAffine> {
-    // A vector of evaluations at each set of query points
-    q_evals: Vec<C::Scalar>,
-
-    // Commitment to final polynomial
-    f_commitment: C,
-
-    // Commitment proof
-    opening: commitment::Proof<C>,
-}
 
 /// A polynomial query at a point
 #[derive(Debug, Clone)]
