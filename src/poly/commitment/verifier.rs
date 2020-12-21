@@ -1,16 +1,18 @@
 use ff::Field;
 
 use super::super::Error;
-use super::{Params, Proof, MSM};
-use crate::transcript::{Challenge, ChallengeScalar, Hasher, Transcript};
+use super::{Params, MSM};
+use crate::transcript::{Challenge, ChallengeScalar, TranscriptRead};
 
 use crate::arithmetic::{best_multiexp, Curve, CurveAffine, FieldExt};
+
+use std::io::Read;
 
 /// A guard returned by the verifier
 #[derive(Debug, Clone)]
 pub struct Guard<'a, C: CurveAffine> {
     msm: MSM<'a, C>,
-    neg_z1: C::Scalar,
+    neg_a: C::Scalar,
     allinv: C::Scalar,
     challenges_sq: Vec<C::Scalar>,
     challenges_sq_packed: Vec<Challenge>,
@@ -31,17 +33,17 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
     /// Lets caller supply the challenges and obtain an MSM with updated
     /// scalars and points.
     pub fn use_challenges(mut self) -> MSM<'a, C> {
-        let s = compute_s(&self.challenges_sq, self.allinv * &self.neg_z1);
+        let s = compute_s(&self.challenges_sq, self.allinv * &self.neg_a);
         self.msm.add_to_g_scalars(&s);
-        self.msm.add_to_h_scalar(self.neg_z1);
+        self.msm.add_to_h_scalar(self.neg_a);
 
         self.msm
     }
 
     /// Lets caller supply the purported G point and simply appends
-    /// [-z1] G to return an updated MSM.
+    /// [-a] G to return an updated MSM.
     pub fn use_g(mut self, g: C) -> (MSM<'a, C>, Accumulator<C>) {
-        self.msm.append_term(self.neg_z1, g);
+        self.msm.append_term(self.neg_a, g);
 
         let accumulator = Accumulator {
             g,
@@ -62,144 +64,104 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
     }
 }
 
-impl<C: CurveAffine> Proof<C> {
-    /// Checks to see if an [`Proof`] is valid given the current `transcript`,
-    /// and a point `x` that the polynomial commitment `p` opens purportedly to
-    /// the value `v`.
-    pub fn verify<'a, HBase, HScalar>(
-        &self,
-        params: &'a Params<C>,
-        mut msm: MSM<'a, C>,
-        transcript: &mut Transcript<C, HBase, HScalar>,
-        x: C::Scalar,
-        mut commitment_msm: MSM<'a, C>,
-        v: C::Scalar,
-    ) -> Result<Guard<'a, C>, Error>
-    where
-        HBase: Hasher<C::Base>,
-        HScalar: Hasher<C::Scalar>,
-    {
-        // Check for well-formedness
-        if self.rounds.len() != params.k as usize {
+/// Checks to see if an [`Proof`] is valid given the current `transcript`, and a
+/// point `x` that the polynomial commitment `P` opens purportedly to the value
+/// `v`. The provided `commitment_msm` should evaluate to the commitment `P`
+/// being opened.
+pub fn verify_proof<'a, C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
+    params: &'a Params<C>,
+    mut msm: MSM<'a, C>,
+    transcript: &mut T,
+    x: C::Scalar,
+    mut commitment_msm: MSM<'a, C>,
+    v: C::Scalar,
+) -> Result<Guard<'a, C>, Error> {
+    let k = params.k as usize;
+
+    //     P - [v] G_0 + S * iota
+    //   + \sum(L_i * u_i^2) + \sum(R_i * u_i^-2)
+    commitment_msm.add_constant_term(-v);
+    let s_poly_commitment = transcript.read_point().map_err(|_| Error::OpeningError)?;
+
+    let iota = *ChallengeScalar::<C, ()>::get(transcript);
+    commitment_msm.append_term(iota, s_poly_commitment);
+
+    let z = *ChallengeScalar::<C, ()>::get(transcript);
+
+    // Data about the challenges from each of the rounds.
+    let mut challenges = Vec::with_capacity(k);
+    let mut challenges_inv = Vec::with_capacity(k);
+    let mut challenges_sq = Vec::with_capacity(k);
+    let mut challenges_sq_packed: Vec<Challenge> = Vec::with_capacity(k);
+    let mut allinv = C::Scalar::one();
+
+    for _ in 0..k {
+        // Read L and R from the proof and write them to the transcript
+        let l = transcript.read_point().map_err(|_| Error::OpeningError)?;
+        let r = transcript.read_point().map_err(|_| Error::OpeningError)?;
+
+        let challenge_sq_packed = Challenge::get(transcript);
+        let challenge_sq = *ChallengeScalar::<C, ()>::from(challenge_sq_packed);
+
+        let challenge = challenge_sq.deterministic_sqrt();
+        if challenge.is_none() {
+            // We didn't sample a square.
             return Err(Error::OpeningError);
         }
+        let challenge = challenge.unwrap();
 
-        // Compute U
-        let u = {
-            let u_x = transcript.squeeze();
-            // y^2 = x^3 + B
-            let u_y2 = u_x.square() * &u_x + &C::b();
-            let u_y = u_y2.deterministic_sqrt();
-            if u_y.is_none() {
-                return Err(Error::OpeningError);
-            }
-            let u_y = u_y.unwrap();
-
-            C::from_xy(u_x, u_y).unwrap()
-        };
-
-        let mut extra_scalars = Vec::with_capacity(self.rounds.len() * 2 + 4 + params.n as usize);
-        let mut extra_bases = Vec::with_capacity(self.rounds.len() * 2 + 4 + params.n as usize);
-
-        // Data about the challenges from each of the rounds.
-        let mut challenges = Vec::with_capacity(self.rounds.len());
-        let mut challenges_inv = Vec::with_capacity(self.rounds.len());
-        let mut challenges_sq = Vec::with_capacity(self.rounds.len());
-        let mut challenges_sq_packed: Vec<Challenge> = Vec::with_capacity(self.rounds.len());
-        let mut allinv = C::Scalar::one();
-
-        for round in &self.rounds {
-            // Feed L and R into the transcript.
-            let l = round.0;
-            let r = round.1;
-            transcript
-                .absorb_point(&l)
-                .map_err(|_| Error::OpeningError)?;
-            transcript
-                .absorb_point(&r)
-                .map_err(|_| Error::OpeningError)?;
-            let challenge_sq_packed = Challenge::get(transcript);
-            let challenge_sq: C::Scalar = *ChallengeScalar::<_, ()>::from(challenge_sq_packed);
-
-            let challenge = challenge_sq.deterministic_sqrt();
-            if challenge.is_none() {
-                // We didn't sample a square.
-                return Err(Error::OpeningError);
-            }
-            let challenge = challenge.unwrap();
-
-            let challenge_inv = challenge.invert();
-            if bool::from(challenge_inv.is_none()) {
-                // We sampled zero for some reason, unlikely to happen by
-                // chance.
-                return Err(Error::OpeningError);
-            }
-            let challenge_inv = challenge_inv.unwrap();
-            allinv *= &challenge_inv;
-
-            let challenge_sq_inv = challenge_inv.square();
-
-            extra_scalars.push(challenge_sq);
-            extra_bases.push(round.0);
-            extra_scalars.push(challenge_sq_inv);
-            extra_bases.push(round.1);
-
-            challenges.push(challenge);
-            challenges_inv.push(challenge_inv);
-            challenges_sq.push(challenge_sq);
-            challenges_sq_packed.push(challenge_sq_packed);
+        let challenge_inv = challenge.invert();
+        if bool::from(challenge_inv.is_none()) {
+            // We sampled zero for some reason, unlikely to happen by
+            // chance.
+            return Err(Error::OpeningError);
         }
+        let challenge_inv = challenge_inv.unwrap();
+        allinv *= &challenge_inv;
 
-        // Feed delta into the transcript
-        transcript
-            .absorb_point(&self.delta)
-            .map_err(|_| Error::OpeningError)?;
+        let challenge_sq_inv = challenge_inv.square();
 
-        // Get the challenge `c`
-        let c = ChallengeScalar::<_, ()>::get(transcript);
+        commitment_msm.append_term(challenge_sq, l);
+        commitment_msm.append_term(challenge_sq_inv, r);
 
-        // Construct
-        // [c] P + [c * v] U + [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2) + delta - [z1 * b] U + [z1 - z2] H
-        // = [z1] (G + H)
-        // The computation of [z1] (G + H) happens in either Guard::use_challenges()
-        // or Guard::use_g().
-
-        let b = compute_b(x, &challenges, &challenges_inv);
-
-        let neg_z1 = -self.z1;
-
-        // [c] P
-        commitment_msm.scale(*c);
-        msm.add_msm(&commitment_msm);
-
-        // [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2)
-        for scalar in &mut extra_scalars {
-            *scalar *= &(*c);
-        }
-
-        for (scalar, base) in extra_scalars.iter().zip(extra_bases.iter()) {
-            msm.append_term(*scalar, *base);
-        }
-
-        // [c * v] U - [z1 * b] U
-        msm.append_term((*c * &v) + &(neg_z1 * &b), u);
-
-        // delta
-        msm.append_term(Field::one(), self.delta);
-
-        // + [z1 - z2] H
-        msm.add_to_h_scalar(self.z1 - &self.z2);
-
-        let guard = Guard {
-            msm,
-            neg_z1,
-            allinv,
-            challenges_sq,
-            challenges_sq_packed,
-        };
-
-        Ok(guard)
+        challenges.push(challenge);
+        challenges_inv.push(challenge_inv);
+        challenges_sq.push(challenge_sq);
+        challenges_sq_packed.push(challenge_sq_packed);
     }
+
+    // Our goal is to open
+    //     commitment_msm - [v] G_0 + random_poly_commitment * iota
+    //   + \sum(L_i * u_i^2) + \sum(R_i * u_i^-2)
+    // at x to 0, by asking the prover to supply (a, h) such that it equals
+    //   = [a] (G + [b * z] U) + [h] H
+    // except that we wish for the prover to supply G as Commit(g(X); 1) so
+    // we must substitute to get
+    //   = [a] ((G - H) + [b * z] U) + [h] H
+    //   = [a] G + [-a] H + [abz] U + [h] H
+    //   = [a] G + [abz] U + [h - a] H
+    // but subtracting to get the desired equality
+    //   ... + [-a] G + [-abz] U + [a - h] H = 0
+
+    let a = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
+    let neg_a = -a;
+    let h = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
+    let b = compute_b(x, &challenges, &challenges_inv);
+
+    commitment_msm.add_to_u_scalar(neg_a * &b * &z);
+    commitment_msm.add_to_h_scalar(a - &h);
+
+    msm.add_msm(&commitment_msm);
+
+    let guard = Guard {
+        msm,
+        neg_a,
+        allinv,
+        challenges_sq,
+        challenges_sq_packed,
+    };
+
+    Ok(guard)
 }
 
 fn compute_b<F: Field>(x: F, challenges: &[F], challenges_inv: &[F]) -> F {
