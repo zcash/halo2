@@ -20,3 +20,6 @@ pub mod poly;
 pub mod transcript;
 
 pub mod model;
+
+#[cfg(test)]
+mod dev;
