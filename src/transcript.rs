@@ -2,125 +2,221 @@
 //! transcripts.
 
 use ff::Field;
-use std::marker::PhantomData;
 use std::ops::Deref;
 
 use crate::arithmetic::{CurveAffine, FieldExt};
 
-/// This is a generic interface for a sponge function that can be used for
-/// Fiat-Shamir transformations.
-pub trait Hasher<F: FieldExt>: Clone + Send + Sync + 'static {
-    /// Initialize the sponge with some key.
-    fn init(key: F) -> Self;
-    /// Absorb a field element into the sponge.
-    fn absorb(&mut self, value: F);
-    /// Square a field element out of the sponge.
-    fn squeeze(&mut self) -> F;
+use std::io::{self, Read, Write};
+use std::marker::PhantomData;
+
+/// Generic transcript view (from either the prover or verifier's perspective)
+pub trait Transcript<C: CurveAffine> {
+    /// Squeeze a challenge (in the base field) from the transcript.
+    fn squeeze_challenge(&mut self) -> C::Base;
+
+    /// Writing the point to the transcript without writing it to the proof,
+    /// treating it as a common input.
+    fn common_point(&mut self, point: C) -> io::Result<()>;
 }
 
-/// This is just a simple (and completely broken) hash function, standing in for
-/// some algebraic hash function that we'll switch to later.
+/// Transcript view from the perspective of a verifier that has access to an
+/// input stream of data from the prover to the verifier.
+pub trait TranscriptRead<R: Read, C: CurveAffine>: Transcript<C> {
+    /// Initialize the transcript with a key and an input stream.
+    fn init(reader: R, key: C::Base) -> Self;
+
+    /// Read a curve point from the prover.
+    fn read_point(&mut self) -> io::Result<C>;
+
+    /// Read a curve scalar from the prover.
+    fn read_scalar(&mut self) -> io::Result<C::Scalar>;
+}
+
+/// Transcript view from the perspective of a prover that has access to an
+/// output stream of messages from the prover to the verifier.
+pub trait TranscriptWrite<W: Write, C: CurveAffine>: Transcript<C> {
+    /// Forked transcript that does not write to the proof structure.
+    type ForkedTranscript: TranscriptWrite<io::Sink, C>;
+
+    /// Initialize the transcript with a key and an output stream.
+    fn init(writer: W, key: C::Base) -> Self;
+
+    /// Write a curve point to the proof and the transcript.
+    fn write_point(&mut self, point: C) -> io::Result<()>;
+
+    /// Write a scalar to the proof and the transcript.
+    fn write_scalar(&mut self, scalar: C::Scalar) -> io::Result<()>;
+
+    /// Fork the transcript, creating a variant of this `TranscriptWrite` which
+    /// does not output anything to the writer.
+    fn fork(&self) -> Self::ForkedTranscript;
+
+    /// Return the writer to conclude the interaction and take possession of the
+    /// proof.
+    fn finalize(self) -> W;
+}
+
+/// This is just a simple (and completely broken) transcript reader
+/// implementation, standing in for some algebraic hash function that we'll
+/// switch to later.
 #[derive(Debug, Clone)]
-pub struct DummyHash<F: FieldExt> {
-    power: F,
-    state: F,
+pub struct DummyHashReader<R: Read, C: CurveAffine> {
+    base_state: C::Base,
+    scalar_state: C::Scalar,
+    read_scalar: bool,
+    reader: R,
 }
 
-impl<F: FieldExt> Hasher<F> for DummyHash<F> {
-    fn init(key: F) -> Self {
-        DummyHash {
-            power: F::ZETA + F::one() + key,
-            state: F::ZETA,
+impl<R: Read, C: CurveAffine> TranscriptRead<R, C> for DummyHashReader<R, C> {
+    fn init(reader: R, key: C::Base) -> Self {
+        DummyHashReader {
+            base_state: key + &C::Base::from_u64(1013),
+            scalar_state: C::Scalar::from_u64(1013),
+            read_scalar: false,
+            reader,
         }
     }
-    fn absorb(&mut self, value: F) {
-        for _ in 0..10 {
-            self.state += value;
-            self.state *= self.power;
-            self.power += self.power.square();
-            self.state += self.power;
-        }
+
+    fn read_point(&mut self) -> io::Result<C> {
+        let mut compressed = [0u8; 32];
+        self.reader.read_exact(&mut compressed[..])?;
+        let point: C = Option::from(C::from_bytes(&compressed)).ok_or(io::Error::new(
+            io::ErrorKind::Other,
+            "invalid point encoding in proof",
+        ))?;
+        self.common_point(point)?;
+
+        Ok(point)
     }
-    fn squeeze(&mut self) -> F {
-        let tmp = self.state;
-        self.absorb(tmp);
+
+    fn read_scalar(&mut self) -> io::Result<C::Scalar> {
+        let mut data = [0u8; 32];
+        self.reader.read_exact(&mut data)?;
+        let scalar = Option::from(C::Scalar::from_bytes(&data)).ok_or(io::Error::new(
+            io::ErrorKind::Other,
+            "invalid field element encoding in proof",
+        ))?;
+        self.scalar_state += &(scalar * &C::Scalar::ZETA);
+        self.scalar_state = self.scalar_state.square();
+        self.read_scalar = true;
+
+        Ok(scalar)
+    }
+}
+
+impl<R: Read, C: CurveAffine> Transcript<C> for DummyHashReader<R, C> {
+    fn common_point(&mut self, point: C) -> io::Result<()> {
+        let (x, y) = Option::from(point.get_xy()).ok_or(io::Error::new(
+            io::ErrorKind::Other,
+            "cannot write points at infinity to the transcript",
+        ))?;
+        self.base_state += &(x * &C::Base::ZETA);
+        self.base_state = self.base_state.square();
+        self.base_state += &(y * &C::Base::ZETA);
+        self.base_state = self.base_state.square();
+
+        Ok(())
+    }
+
+    fn squeeze_challenge(&mut self) -> C::Base {
+        if self.read_scalar {
+            let x = C::Base::from_bytes(&self.scalar_state.to_bytes()).unwrap();
+            self.base_state += &(x * &C::Base::ZETA);
+            self.base_state = self.base_state.square();
+            self.scalar_state = self.scalar_state.square();
+            self.read_scalar = false;
+        }
+
+        let tmp = self.base_state;
+        for _ in 0..5 {
+            self.base_state *= &(C::Base::ZETA + &C::Base::ZETA);
+            self.base_state += &C::Base::ZETA;
+            self.base_state = self.base_state.square();
+        }
+
         tmp
     }
 }
 
-/// A transcript that can absorb points from both the base field and scalar
-/// field of a curve
+/// This is just a simple (and completely broken) transcript writer
+/// implementation, standing in for some algebraic hash function that we'll
+/// switch to later.
 #[derive(Debug, Clone)]
-pub struct Transcript<C: CurveAffine, HBase, HScalar>
-where
-    HBase: Hasher<C::Base>,
-    HScalar: Hasher<C::Scalar>,
-{
-    // Hasher over the base field
-    base_hasher: HBase,
-    // Hasher over the scalar field
-    scalar_hasher: HScalar,
-    // Indicates if scalar(s) has been hashed but not squeezed
-    scalar_needs_squeezing: bool,
-    // PhantomData
-    _marker: PhantomData<C>,
+pub struct DummyHashWriter<W: Write, C: CurveAffine> {
+    base_state: C::Base,
+    scalar_state: C::Scalar,
+    written_scalar: bool,
+    writer: W,
 }
 
-impl<C: CurveAffine, HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>
-    Transcript<C, HBase, HScalar>
-{
-    /// Initialise a new transcript with Field::one() as keys
-    /// in both the base_hasher and scalar_hasher
-    pub fn new() -> Self {
-        let base_hasher = HBase::init(C::Base::one());
-        let scalar_hasher = HScalar::init(C::Scalar::one());
-        Transcript {
-            base_hasher,
-            scalar_hasher,
-            scalar_needs_squeezing: false,
-            _marker: PhantomData,
+impl<W: Write, C: CurveAffine> TranscriptWrite<W, C> for DummyHashWriter<W, C> {
+    type ForkedTranscript = DummyHashWriter<io::Sink, C>;
+
+    fn init(writer: W, key: C::Base) -> Self {
+        DummyHashWriter {
+            base_state: key + &C::Base::from_u64(1013),
+            scalar_state: C::Scalar::from_u64(1013),
+            written_scalar: false,
+            writer,
         }
     }
-
-    fn conditional_scalar_squeeze(&mut self) {
-        if self.scalar_needs_squeezing {
-            let transcript_scalar_point =
-                C::Base::from_bytes(&(self.scalar_hasher.squeeze()).to_bytes()).unwrap();
-            self.base_hasher.absorb(transcript_scalar_point);
-            self.scalar_needs_squeezing = false;
+    fn write_point(&mut self, point: C) -> io::Result<()> {
+        self.common_point(point)?;
+        let compressed = point.to_bytes();
+        self.writer.write_all(&compressed[..])
+    }
+    fn write_scalar(&mut self, scalar: C::Scalar) -> io::Result<()> {
+        self.scalar_state += &(scalar * &C::Scalar::ZETA);
+        self.scalar_state = self.scalar_state.square();
+        self.written_scalar = true;
+        let data = scalar.to_bytes();
+        self.writer.write_all(&data[..])
+    }
+    fn fork(&self) -> Self::ForkedTranscript {
+        DummyHashWriter {
+            base_state: self.base_state,
+            scalar_state: self.scalar_state,
+            written_scalar: self.written_scalar,
+            writer: io::sink(),
         }
     }
+    fn finalize(self) -> W {
+        // TODO: handle outstanding scalars?
+        self.writer
+    }
+}
 
-    /// Absorb a curve point into the transcript by absorbing
-    /// its x and y coordinates
-    pub fn absorb_point(&mut self, point: &C) -> Result<(), ()> {
-        self.conditional_scalar_squeeze();
-        let tmp = point.get_xy();
-        if bool::from(tmp.is_none()) {
-            return Err(());
-        };
-        let tmp = tmp.unwrap();
-        self.base_hasher.absorb(tmp.0);
-        self.base_hasher.absorb(tmp.1);
+impl<W: Write, C: CurveAffine> Transcript<C> for DummyHashWriter<W, C> {
+    fn common_point(&mut self, point: C) -> io::Result<()> {
+        let (x, y) = Option::from(point.get_xy()).ok_or(io::Error::new(
+            io::ErrorKind::Other,
+            "cannot write points at infinity to the transcript",
+        ))?;
+        self.base_state += &(x * &C::Base::ZETA);
+        self.base_state = self.base_state.square();
+        self.base_state += &(y * &C::Base::ZETA);
+        self.base_state = self.base_state.square();
+
         Ok(())
     }
 
-    /// Absorb a base into the base_hasher
-    pub fn absorb_base(&mut self, base: C::Base) {
-        self.conditional_scalar_squeeze();
-        self.base_hasher.absorb(base);
-    }
+    fn squeeze_challenge(&mut self) -> C::Base {
+        if self.written_scalar {
+            let x = C::Base::from_bytes(&self.scalar_state.to_bytes()).unwrap();
+            self.base_state += &(x * &C::Base::ZETA);
+            self.base_state = self.base_state.square();
+            self.scalar_state = self.scalar_state.square();
+            self.written_scalar = false;
+        }
 
-    /// Absorb a scalar into the scalar_hasher
-    pub fn absorb_scalar(&mut self, scalar: C::Scalar) {
-        self.scalar_hasher.absorb(scalar);
-        self.scalar_needs_squeezing = true;
-    }
+        let tmp = self.base_state;
+        for _ in 0..5 {
+            self.base_state *= &(C::Base::ZETA + &C::Base::ZETA);
+            self.base_state += &C::Base::ZETA;
+            self.base_state = self.base_state.square();
+        }
 
-    /// Squeeze the transcript to obtain a C::Base value.
-    pub fn squeeze(&mut self) -> C::Base {
-        self.conditional_scalar_squeeze();
-        self.base_hasher.squeeze()
+        tmp
     }
 }
 
@@ -130,64 +226,61 @@ pub struct Challenge(pub(crate) u128);
 
 impl Challenge {
     /// Obtains a new challenge from the transcript.
-    pub fn get<C, HBase, HScalar>(transcript: &mut Transcript<C, HBase, HScalar>) -> Challenge
-    where
-        C: CurveAffine,
-        HBase: Hasher<C::Base>,
-        HScalar: Hasher<C::Scalar>,
-    {
-        Challenge(transcript.squeeze().get_lower_128())
+    pub fn get<C: CurveAffine, T: Transcript<C>>(transcript: &mut T) -> Challenge {
+        Challenge(transcript.squeeze_challenge().get_lower_128())
     }
 }
 
 /// The scalar representation of a verifier challenge.
 ///
-/// The `T` type can be used to scope the challenge to a specific context, or set to `()`
-/// if no context is required.
+/// The `Type` type can be used to scope the challenge to a specific context, or
+/// set to `()` if no context is required.
 #[derive(Copy, Clone, Debug)]
-pub struct ChallengeScalar<F: FieldExt, T> {
-    inner: F,
-    _marker: PhantomData<T>,
+pub struct ChallengeScalar<C: CurveAffine, Type> {
+    inner: C::Scalar,
+    _marker: PhantomData<Type>,
 }
 
-impl<F: FieldExt, T> From<Challenge> for ChallengeScalar<F, T> {
+impl<C: CurveAffine, Type> From<Challenge> for ChallengeScalar<C, Type> {
     /// This algorithm applies the mapping of Algorithm 1 from the
     /// [Halo](https://eprint.iacr.org/2019/1021) paper.
     fn from(challenge: Challenge) -> Self {
-        let mut acc = (F::ZETA + F::one()).double();
+        let mut acc = (C::Scalar::ZETA + &C::Scalar::one()).double();
 
         for i in (0..64).rev() {
             let should_negate = ((challenge.0 >> ((i << 1) + 1)) & 1) == 1;
             let should_endo = ((challenge.0 >> (i << 1)) & 1) == 1;
 
-            let q = if should_negate { -F::one() } else { F::one() };
-            let q = if should_endo { q * F::ZETA } else { q };
-            acc = acc + q + acc;
+            let q = if should_negate {
+                -C::Scalar::one()
+            } else {
+                C::Scalar::one()
+            };
+            let q = if should_endo { q * &C::Scalar::ZETA } else { q };
+            acc = acc + &q + &acc;
         }
 
         ChallengeScalar {
             inner: acc,
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 }
 
-impl<F: FieldExt, T> ChallengeScalar<F, T> {
+impl<C: CurveAffine, Type> ChallengeScalar<C, Type> {
     /// Obtains a new challenge from the transcript.
-    pub fn get<C, HBase, HScalar>(transcript: &mut Transcript<C, HBase, HScalar>) -> Self
+    pub fn get<T: Transcript<C>>(transcript: &mut T) -> Self
     where
         C: CurveAffine,
-        HBase: Hasher<C::Base>,
-        HScalar: Hasher<C::Scalar>,
     {
         Challenge::get(transcript).into()
     }
 }
 
-impl<F: FieldExt, T> Deref for ChallengeScalar<F, T> {
-    type Target = F;
+impl<C: CurveAffine, Type> Deref for ChallengeScalar<C, Type> {
+    type Target = C::Scalar;
 
-    fn deref(&self) -> &F {
+    fn deref(&self) -> &C::Scalar {
         &self.inner
     }
 }
