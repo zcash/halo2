@@ -8,3 +8,4 @@
   - [Gadgets](user/gadgets.md)
   - [Tips and tricks](user/tips-and-tricks.md)
 - [Design](design.md)
+  - [Permutation argument](design/permutation.md)
