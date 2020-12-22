@@ -24,8 +24,18 @@ impl Argument {
 
     pub(crate) fn required_degree(&self) -> usize {
         // The permutation argument will serve alongside the gates, so must be
-        // accounted for.
-        self.columns.len() + 1
+        // accounted for. There are constraints of degree 2 regardless of the
+        // number of columns involved. (It doesn't make sense to make a
+        // permutation argument with zero columns but to be rigorous we account
+        // for it here.)
+
+        // degree 2:
+        // l_0(X) * (1 - z(X)) = 0
+        //
+        // degree columns + 1
+        // z(X) \prod (p(X) + \beta s_i(X) + \gamma)
+        // - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
+        std::cmp::max(self.columns.len() + 1, 2)
     }
 }
 

@@ -382,4 +382,9 @@ impl<G: Group> EvaluationDomain<G> {
     pub fn get_barycentric_weight(&self) -> G::Scalar {
         self.barycentric_weight
     }
+
+    /// Gets the quotient polynomial's degree (as a multiple of n)
+    pub fn get_quotient_poly_degree(&self) -> usize {
+        self.quotient_poly_degree as usize
+    }
 }

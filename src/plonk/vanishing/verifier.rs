@@ -9,10 +9,14 @@ use crate::{
 };
 
 impl<C: CurveAffine> Proof<C> {
-    pub(in crate::plonk) fn check_lengths(&self, _vk: &VerifyingKey<C>) -> Result<(), Error> {
-        // TODO: check h_evals
+    pub(in crate::plonk) fn check_lengths(&self, vk: &VerifyingKey<C>) -> Result<(), Error> {
+        if self.h_commitments.len() != self.h_evals.len() {
+            return Err(Error::IncompatibleParams);
+        }
 
-        // TODO: check h_commitments
+        if self.h_commitments.len() != vk.domain.get_quotient_poly_degree() {
+            return Err(Error::IncompatibleParams);
+        }
 
         Ok(())
     }

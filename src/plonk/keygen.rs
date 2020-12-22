@@ -76,6 +76,17 @@ where
         .max()
         .unwrap_or(1);
 
+    // The lookup argument also serves alongside the gates and must be accounted
+    // for.
+    degree = std::cmp::max(
+        degree,
+        cs.lookups
+            .iter()
+            .map(|l| l.required_degree())
+            .max()
+            .unwrap_or(1),
+    );
+
     // Account for each gate to ensure our quotient polynomial is the
     // correct degree and that our extended domain is the right size.
     for poly in cs.gates.iter() {
