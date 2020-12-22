@@ -38,7 +38,7 @@ bitvec = "0.18"
 subtle = "2.3"
 crossbeam-utils = "0.7"
 ff = "0.8"
-metrics = "=0.13.0-alpha.11"
+metrics = "=0.13.0-alpha.13"
 num_cpus = "1.13"
 rand = "0.7"
 

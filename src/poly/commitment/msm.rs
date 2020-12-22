@@ -112,7 +112,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
 
         assert_eq!(scalars.len(), len);
 
-        metrics::increment!("multiexp", "size" => format!("{}", len), "fn" => "MSM::eval");
+        metrics::increment_counter!("multiexp", "size" => format!("{}", len), "fn" => "MSM::eval");
         bool::from(best_multiexp(&scalars, &bases).is_zero())
     }
 }
