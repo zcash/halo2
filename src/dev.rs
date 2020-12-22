@@ -1,11 +1,10 @@
 //! Tools for developing circuits.
 
 use ff::Field;
-use std::collections::HashMap;
 
 use crate::{
     arithmetic::{FieldExt, Group},
-    plonk::{Any, Assignment, Circuit, Column, ConstraintSystem, Error},
+    plonk::{permutation, Any, Assignment, Circuit, Column, ConstraintSystem, Error},
     poly::{EvaluationDomain, LagrangeCoeff, Polynomial},
 };
 
@@ -19,6 +18,12 @@ pub enum VerifyFailure {
     Gate { gate_index: usize, row: usize },
     /// A lookup input did not exist in its corresponding table.
     Lookup { lookup_index: usize, row: usize },
+    /// A permutation did not preserve the original value of a cell.
+    Permutation {
+        perm_index: usize,
+        column: usize,
+        row: usize,
+    },
 }
 
 /// A test
@@ -34,7 +39,7 @@ pub struct MockProver<F: Group> {
     // The aux cells in the circuit, arranged as [column][row].
     aux: Vec<Polynomial<F, LagrangeCoeff>>,
 
-    permutations: HashMap<usize, Vec<(Cell, Cell)>>,
+    permutations: Vec<permutation::keygen::Assembly>,
 }
 
 impl<F: Field + Group> Assignment<F> for MockProver<F> {
@@ -76,11 +81,12 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         right_column: usize,
         right_row: usize,
     ) -> Result<(), crate::plonk::Error> {
-        self.permutations
-            .entry(permutation)
-            .or_default()
-            .push((Cell(left_column, left_row), Cell(right_column, right_row)));
-        Ok(())
+        // Check bounds first
+        if permutation >= self.permutations.len() {
+            return Err(Error::BoundsFailure);
+        }
+
+        self.permutations[permutation].copy(left_column, left_row, right_column, right_row)
     }
 }
 
@@ -90,6 +96,8 @@ impl<F: FieldExt> MockProver<F> {
         circuit: &ConcreteCircuit,
         aux: Vec<Polynomial<F, LagrangeCoeff>>,
     ) -> Result<Self, Error> {
+        let n = 1 << k;
+
         let mut cs = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut cs);
 
@@ -112,15 +120,20 @@ impl<F: FieldExt> MockProver<F> {
 
         let fixed = vec![domain.empty_lagrange(); cs.num_fixed_columns];
         let advice = vec![domain.empty_lagrange(); cs.num_advice_columns];
+        let permutations = cs
+            .permutations
+            .iter()
+            .map(|p| permutation::keygen::Assembly::new(n as usize, p))
+            .collect();
 
         let mut prover = MockProver {
-            n: 1 << k,
+            n,
             domain,
             cs,
             fixed,
             advice,
             aux,
-            permutations: HashMap::default(),
+            permutations,
         };
 
         circuit.synthesize(&mut prover, config)?;
@@ -188,6 +201,33 @@ impl<F: FieldExt> MockProver<F> {
                         lookup_index,
                         row: input_row as usize,
                     });
+                }
+            }
+        }
+
+        // Check that permutations preserve the original values of the cells.
+        for (perm_index, assembly) in self.permutations.iter().enumerate() {
+            // Original values of columns involved in the permutation
+            let original = self.cs.permutations[perm_index]
+                .get_columns()
+                .iter()
+                .map(|c| self.advice[c.index()].clone())
+                .collect::<Vec<_>>();
+
+            // Iterate over each column of the permutation
+            for (column, values) in assembly.mapping.iter().enumerate() {
+                // Iterate over each row of the column to check that the cell's
+                // value is preserved by the mapping.
+                for (row, cell) in values.iter().enumerate() {
+                    let original_cell = original[column][row];
+                    let permuted_cell = original[cell.0][cell.1];
+                    if original_cell != permuted_cell {
+                        return Err(VerifyFailure::Permutation {
+                            perm_index,
+                            column,
+                            row,
+                        });
+                    }
                 }
             }
         }

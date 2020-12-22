@@ -14,7 +14,7 @@ use crate::transcript::ChallengeScalar;
 mod circuit;
 mod keygen;
 mod lookup;
-mod permutation;
+pub(crate) mod permutation;
 mod vanishing;
 
 mod prover;

@@ -15,19 +15,19 @@ pub(crate) struct AssemblyHelper<C: CurveAffine> {
 }
 
 pub(crate) struct Assembly {
-    mapping: Vec<Vec<(usize, usize)>>,
+    pub(crate) mapping: Vec<Vec<(usize, usize)>>,
     aux: Vec<Vec<(usize, usize)>>,
     sizes: Vec<Vec<usize>>,
 }
 
 impl Assembly {
-    pub(crate) fn new<C: CurveAffine>(params: &Params<C>, p: &Argument) -> Self {
+    pub(crate) fn new(n: usize, p: &Argument) -> Self {
         // Initialize the copy vector to keep track of copy constraints in all
         // the permutation arguments.
         let mut columns = vec![];
         for i in 0..p.columns.len() {
             // Computes [(i, 0), (i, 1), ..., (i, n - 1)]
-            columns.push((0..params.n).map(|j| (i, j as usize)).collect());
+            columns.push((0..n).map(|j| (i, j)).collect());
         }
 
         // Before any equality constraints are applied, every cell in the permutation is
@@ -36,7 +36,7 @@ impl Assembly {
         Assembly {
             mapping: columns.clone(),
             aux: columns,
-            sizes: vec![vec![1usize; params.n as usize]; p.columns.len()],
+            sizes: vec![vec![1usize; n]; p.columns.len()],
         }
     }
 
