@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
-use metrics::{Key, Recorder, Unit};
+use metrics::{GaugeValue, Key, Recorder, Unit};
 
 /// A [`metrics`] recorder for examining halo2 metrics.
 ///
@@ -94,11 +94,11 @@ impl Recorder for ModelRecorder {
             .or_default() += value;
     }
 
-    fn update_gauge(&self, _key: Key, _value: f64) {
+    fn update_gauge(&self, _key: Key, _value: GaugeValue) {
         unimplemented!()
     }
 
-    fn record_histogram(&self, _key: Key, _value: u64) {
+    fn record_histogram(&self, _key: Key, _value: f64) {
         unimplemented!()
     }
 }

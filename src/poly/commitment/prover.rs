@@ -175,7 +175,7 @@ impl<C: CurveAffine> Proof<C> {
         let d = C::Scalar::rand();
         let s = C::Scalar::rand();
 
-        metrics::increment!("multiexp", "val" => "delta", "size" => "3");
+        metrics::increment_counter!("multiexp", "val" => "delta", "size" => "3");
         let delta = best_multiexp(&[d, d * &b, s], &[g, u, params.h]).to_affine();
 
         // Feed delta into the transcript
