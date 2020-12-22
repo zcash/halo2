@@ -4,13 +4,10 @@ _By Sean Bowe and Daira Hopwood_
 
 ## Note on Language
 
-We use slightly different language than others, here's the overview.
+In addition to the [general notes on language](../design.md#note-on-language):
 
-1. We like to think of PLONK-like arguments as tables, where each column corresponds to a "wire".
-2. We like to call "selector polynomials" and so on "fixed columns" instead.
-3. We call the others "advice columns" usually, when they're populated by the prover.
-4. We call the $Z(X)$ polynomial (the grand product argument polynomial for the permutation argument) the "permutation product" column.
-5. We use the term "rule" to refer to a "gate" like $A(X) \cdot q_A(X) + B(X) \cdot q_B(X) + A(X) \cdot B(X) \cdot q_M(X) + C(X) \cdot q_C(X) = 0.$
+- We call the $Z(X)$ polynomial (the grand product argument polynomial for the permutation
+  argument) the "permutation product" column.
 
 ## Technique Description
 
