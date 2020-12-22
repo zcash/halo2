@@ -182,11 +182,11 @@ where $\{R^{even}_i\}_{i=0..1}$ is the $\Sigma_1$ function output.
 
 For each block $M \in \{0,1\}^{512}$ of the padded message, $64$ words of $32$ bits each
 are constructed as follows:
-- The first $16$ are obtained by splitting $M$ into $32$-bit blocks $$M = W_1 || W_2 || \cdots || W_{15} || W_{16};$$
+- The first $16$ are obtained by splitting $M$ into $32$-bit blocks $$M = W_0 || W_1 || \cdots || W_{14} || W_{15};$$
 - The remaining $48$ words are constructed using the formula:
 $$W_i = \sigma_1(W_{i-2}) \boxplus W_{i-7} \boxplus \sigma_0(W_{i-15}) \boxplus W_{i-16},$$ for $i = 17, \ldots, 64$.
 
-> Note: $1$-based numbering is used for the $W$ word indices.
+> Note: $0$-based numbering is used for the $W$ word indices.
 
 $$
 \begin{array}{ccc}
@@ -246,9 +246,9 @@ $$
 
 ### Message scheduling
 
-We apply $\sigma_0$ to $W_{2..49}$, and $\sigma_1$ to $W_{15..62}$. In order to avoid
+We apply $\sigma_0$ to $W_{1..48}$, and $\sigma_1$ to $W_{14..61}$. In order to avoid
 redundant applications of $\mathtt{spread}$, we can merge the splitting into pieces for
-$\sigma_0$ and $\sigma_1$ in the case of $W_{15..49}$. Merging the piece lengths
+$\sigma_0$ and $\sigma_1$ in the case of $W_{14..48}$. Merging the piece lengths
 $(3, 4, 11, 14)$ and $(10, 7, 2, 13)$ gives pieces of lengths $(3, 4, 3, 7, 1, 1, 13)$.
 
 ![](./bit_reassignment.png)
@@ -259,27 +259,27 @@ splitting for $\sigma_0$ and $\sigma_1$ separately), we save $35$ rows.
 > These might even be doable in $2$ rows; not sure.
 > [name=Daira]
 
-We can merge the reduction mod $2^{32}$ of $W_{17..62}$ into their splitting when they are
+We can merge the reduction mod $2^{32}$ of $W_{16..61}$ into their splitting when they are
 used to compute subsequent words, similarly to what we did for $A$ and $E$ in the round
 function.
 
-We will still need to reduce $W_{63..64}$ since they are not split. (Technically we could
+We will still need to reduce $W_{62..63}$ since they are not split. (Technically we could
 leave them unreduced since they will be reduced later when they are used to compute
 $A_{new}$ and $E_{new}$ -- but that would require handling a carry of up to $10$ rather
 than $6$, so it's not worth the complexity.)
 
 The resulting message schedule cost is:
-- $2$ rows to constrain $W_1$ to $32$ bits
+- $2$ rows to constrain $W_0$ to $32$ bits
   - This is technically optional, but let's do it for robustness, since the rest of the
     input is constrained for free.
-- $13*2$ rows to split $W_{2..14}$ into $(3, 4, 11, 14)$-bit pieces
-- $35*3$ rows to split $W_{15..49}$ into $(3, 4, 3, 7, 1, 1, 13)$-bit pieces (merged with
-  a reduction for $W_{17..49}$)
-- $13*2$ rows to split $W_{50..62}$ into $(10, 7, 2, 13)$-bit pieces (merged with a
+- $13*2$ rows to split $W_{1..13}$ into $(3, 4, 11, 14)$-bit pieces
+- $35*3$ rows to split $W_{14..48}$ into $(3, 4, 3, 7, 1, 1, 13)$-bit pieces (merged with
+  a reduction for $W_{16..48}$)
+- $13*2$ rows to split $W_{49..61}$ into $(10, 7, 2, 13)$-bit pieces (merged with a
   reduction)
-- $4*48$ rows to extract the results of $\sigma_0$ for $W_{2..49}$
-- $4*48$ rows to extract the results of $\sigma_1$ for $W_{15..62}$
-- $2*2$ rows to reduce $W_{63..64}$
+- $4*48$ rows to extract the results of $\sigma_0$ for $W_{1..48}$
+- $4*48$ rows to extract the results of $\sigma_1$ for $W_{14..61}$
+- $2*2$ rows to reduce $W_{62..63}$
 - $= 547$ rows.
 
 ## Overall cost
