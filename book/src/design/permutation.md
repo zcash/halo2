@@ -80,7 +80,7 @@ To add an equality constraint $\mathit{left} \equiv \mathit{right}$:
 
 For example, given two disjoint cycles $(A\ B\ C\ D)$ and $(E\ F\ G\ H)$:
 
-```
+```plaintext
 A +---> B
 ^       +
 |       |
@@ -94,7 +94,7 @@ D <---+ C       E +---> F
 
 After adding constraint $B \equiv E$ the above algorithm produces the cycle:
 
-```
+```plaintext
 A +---> B +-------------+
 ^                       |
 |                       |
