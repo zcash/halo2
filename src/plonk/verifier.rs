@@ -182,6 +182,8 @@ impl<'a, C: CurveAffine> Proof<C> {
             .map(|p| p.check_lengths(vk))
             .transpose()?;
 
+        self.vanishing.check_lengths(vk)?;
+
         if self.lookups.len() != vk.cs.lookups.len() {
             return Err(Error::IncompatibleParams);
         }
