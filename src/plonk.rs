@@ -53,7 +53,7 @@ pub struct ProvingKey<C: CurveAffine> {
 #[derive(Debug, Clone)]
 pub struct Proof<C: CurveAffine> {
     advice_commitments: Vec<C>,
-    permutations: Option<permutation::Proof<C>>,
+    permutations: Vec<permutation::Proof<C>>,
     lookups: Vec<lookup::Proof<C>>,
     advice_evals: Vec<C::Scalar>,
     aux_evals: Vec<C::Scalar>,

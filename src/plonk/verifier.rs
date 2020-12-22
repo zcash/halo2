@@ -63,8 +63,8 @@ impl<'a, C: CurveAffine> Proof<C> {
         let gamma = ChallengeGamma::get(&mut transcript);
 
         // Hash each permutation product commitment
-        if let Some(p) = &self.permutations {
-            p.absorb_commitments(&mut transcript)?;
+        for permutation in &self.permutations {
+            permutation.absorb_commitments(&mut transcript)?;
         }
 
         // Hash each lookup product commitment
@@ -93,7 +93,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             .chain(self.vanishing.evals())
             .chain(
                 self.permutations
-                    .as_ref()
+                    .iter()
                     .map(|p| p.evals())
                     .into_iter()
                     .flatten(),
@@ -141,8 +141,9 @@ impl<'a, C: CurveAffine> Proof<C> {
                 queries
                     .chain(
                         self.permutations
-                            .as_ref()
-                            .map(|p| p.queries(vk, x))
+                            .iter()
+                            .zip(vk.permutations.iter())
+                            .map(|(p, vkey)| p.queries(vk, vkey, x))
                             .into_iter()
                             .flatten(),
                     )
@@ -177,10 +178,13 @@ impl<'a, C: CurveAffine> Proof<C> {
             return Err(Error::IncompatibleParams);
         }
 
-        self.permutations
-            .as_ref()
-            .map(|p| p.check_lengths(vk))
-            .transpose()?;
+        if self.permutations.len() != vk.cs.permutations.len() {
+            return Err(Error::IncompatibleParams);
+        }
+
+        for (permutation, p) in self.permutations.iter().zip(vk.cs.permutations.iter()) {
+            permutation.check_lengths(p)?;
+        }
 
         self.vanishing.check_lengths(vk)?;
 
@@ -231,8 +235,11 @@ impl<'a, C: CurveAffine> Proof<C> {
             }))
             .chain(
                 self.permutations
-                    .as_ref()
-                    .map(|p| p.expressions(vk, &self.advice_evals, l_0, beta, gamma, x))
+                    .iter()
+                    .zip(vk.cs.permutations.iter())
+                    .map(|(p, argument)| {
+                        p.expressions(vk, argument, &self.advice_evals, l_0, beta, gamma, x)
+                    })
                     .into_iter()
                     .flatten(),
             )
