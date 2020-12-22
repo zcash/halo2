@@ -21,7 +21,7 @@ where
 {
     struct Assembly<F: Field> {
         fixed: Vec<Polynomial<F, LagrangeCoeff>>,
-        permutations: permutation::keygen::Assembly,
+        permutations: Vec<permutation::keygen::Assembly>,
         _marker: std::marker::PhantomData<F>,
     }
 
@@ -59,8 +59,12 @@ where
             right_column: usize,
             right_row: usize,
         ) -> Result<(), Error> {
-            self.permutations
-                .copy(permutation, left_column, left_row, right_column, right_row)
+            // Check bounds first
+            if permutation >= self.permutations.len() {
+                return Err(Error::BoundsFailure);
+            }
+
+            self.permutations[permutation].copy(left_column, left_row, right_column, right_row)
         }
     }
 
@@ -97,14 +101,25 @@ where
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
         fixed: vec![domain.empty_lagrange(); cs.num_fixed_columns],
-        permutations: permutation::keygen::Assembly::new(params, &cs),
+        permutations: cs
+            .permutations
+            .iter()
+            .map(|p| permutation::keygen::Assembly::new(params, p))
+            .collect(),
         _marker: std::marker::PhantomData,
     };
 
     // Synthesize the circuit to obtain SRS
     circuit.synthesize(&mut assembly, config)?;
 
-    let (permutation_pks, permutation_vks) = assembly.permutations.build_keys(params, &cs, &domain);
+    let permutation_helper = permutation::keygen::Assembly::build_helper(params, &cs, &domain);
+
+    let (permutation_pks, permutation_vks) = cs
+        .permutations
+        .iter()
+        .zip(assembly.permutations.into_iter())
+        .map(|(p, assembly)| assembly.build_keys(params, &domain, &permutation_helper, p))
+        .unzip();
 
     let fixed_commitments = assembly
         .fixed
