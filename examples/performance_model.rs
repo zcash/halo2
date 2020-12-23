@@ -4,7 +4,7 @@ use halo2::{
     pasta::{EqAffine, Fp, Fq},
     plonk::*,
     poly::commitment::{Blind, Params},
-    transcript::{DummyHashReader, DummyHashWriter, TranscriptRead, TranscriptWrite},
+    transcript::{DummyHashRead, DummyHashWrite, TranscriptRead, TranscriptWrite},
 };
 
 use std::io;
@@ -250,7 +250,7 @@ fn main() {
     let k = 11;
 
     // Initialize the polynomial commitment parameters
-    let params: Params<EqAffine> = Params::new::<DummyHashWriter<io::Sink, _>>(k);
+    let params: Params<EqAffine> = Params::new::<DummyHashWrite<io::Sink, _>>(k);
 
     let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None, k };
 
@@ -274,7 +274,7 @@ fn main() {
     };
 
     // Create a proof
-    let mut transcript = DummyHashWriter::init(vec![], Fq::one());
+    let mut transcript = DummyHashWrite::init(vec![], Fq::one());
     create_proof(&params, &pk, &circuit, &[pubinputs], &mut transcript)
         .expect("proof generation should not fail");
     let proof: Vec<u8> = transcript.finalize();
@@ -284,7 +284,7 @@ fn main() {
 
     let pubinput_slice = &[pubinput];
     let msm = params.empty_msm();
-    let mut transcript = DummyHashReader::init(&proof[..], Fq::one());
+    let mut transcript = DummyHashRead::init(&proof[..], Fq::one());
     let guard = verify_proof(&params, pk.get_vk(), msm, pubinput_slice, &mut transcript).unwrap();
     let msm = guard.clone().use_challenges();
     assert!(msm.eval());

@@ -6,7 +6,7 @@ use halo2::arithmetic::FieldExt;
 use halo2::pasta::{EqAffine, Fp, Fq};
 use halo2::plonk::*;
 use halo2::poly::commitment::Params;
-use halo2::transcript::{DummyHashReader, DummyHashWriter, TranscriptRead, TranscriptWrite};
+use halo2::transcript::{DummyHashRead, DummyHashWrite, TranscriptRead, TranscriptWrite};
 
 use std::marker::PhantomData;
 
@@ -18,7 +18,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     pub struct Variable(Column<Advice>, usize);
 
     // Initialize the polynomial commitment parameters
-    let params: Params<EqAffine> = Params::new::<DummyHashWriter<_, _>>(k);
+    let params: Params<EqAffine> = Params::new::<DummyHashWrite<_, _>>(k);
 
     struct PLONKConfig {
         a: Column<Advice>,
@@ -239,7 +239,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             };
 
             // Create a proof
-            let mut transcript = DummyHashWriter::init(vec![], Fq::one());
+            let mut transcript = DummyHashWrite::init(vec![], Fq::one());
             create_proof(&params, &pk, &circuit, &[], &mut transcript)
                 .expect("proof generation should not fail")
         });
@@ -251,7 +251,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     };
 
     // Create a proof
-    let mut transcript = DummyHashWriter::init(vec![], Fq::one());
+    let mut transcript = DummyHashWrite::init(vec![], Fq::one());
     create_proof(&params, &pk, &circuit, &[], &mut transcript)
         .expect("proof generation should not fail");
     let proof = transcript.finalize();
@@ -259,7 +259,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     c.bench_function(&verifier_name, |b| {
         b.iter(|| {
             let msm = params.empty_msm();
-            let mut transcript = DummyHashReader::init(&proof[..], Fq::one());
+            let mut transcript = DummyHashRead::init(&proof[..], Fq::one());
             let guard = verify_proof(&params, pk.get_vk(), msm, &[], &mut transcript).unwrap();
             let msm = guard.clone().use_challenges();
             assert!(msm.eval());

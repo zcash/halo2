@@ -5,7 +5,7 @@ extern crate halo2;
 use crate::arithmetic::{small_multiexp, FieldExt};
 use crate::pasta::{EqAffine, Fp};
 use crate::poly::commitment::Params;
-use crate::transcript::DummyHashWriter;
+use crate::transcript::DummyHashWrite;
 use halo2::*;
 
 use criterion::{black_box, Criterion};
@@ -13,7 +13,7 @@ use criterion::{black_box, Criterion};
 fn criterion_benchmark(c: &mut Criterion) {
     // small multiexp
     {
-        let params: Params<EqAffine> = Params::new::<DummyHashWriter<_, _>>(5);
+        let params: Params<EqAffine> = Params::new::<DummyHashWrite<_, _>>(5);
         let g = &mut params.get_g();
         let len = g.len() / 2;
         let (g_lo, g_hi) = g.split_at_mut(len);

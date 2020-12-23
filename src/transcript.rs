@@ -60,16 +60,16 @@ pub trait TranscriptWrite<W: Write, C: CurveAffine>: Transcript<C> {
 /// implementation, standing in for some algebraic hash function that we'll
 /// switch to later.
 #[derive(Debug, Clone)]
-pub struct DummyHashReader<R: Read, C: CurveAffine> {
+pub struct DummyHashRead<R: Read, C: CurveAffine> {
     base_state: C::Base,
     scalar_state: C::Scalar,
     read_scalar: bool,
     reader: R,
 }
 
-impl<R: Read, C: CurveAffine> TranscriptRead<R, C> for DummyHashReader<R, C> {
+impl<R: Read, C: CurveAffine> TranscriptRead<R, C> for DummyHashRead<R, C> {
     fn init(reader: R, key: C::Base) -> Self {
-        DummyHashReader {
+        DummyHashRead {
             base_state: key + &C::Base::from_u64(1013),
             scalar_state: C::Scalar::from_u64(1013),
             read_scalar: false,
@@ -104,7 +104,7 @@ impl<R: Read, C: CurveAffine> TranscriptRead<R, C> for DummyHashReader<R, C> {
     }
 }
 
-impl<R: Read, C: CurveAffine> Transcript<C> for DummyHashReader<R, C> {
+impl<R: Read, C: CurveAffine> Transcript<C> for DummyHashRead<R, C> {
     fn common_point(&mut self, point: C) -> io::Result<()> {
         let (x, y) = Option::from(point.get_xy()).ok_or(io::Error::new(
             io::ErrorKind::Other,
@@ -142,18 +142,18 @@ impl<R: Read, C: CurveAffine> Transcript<C> for DummyHashReader<R, C> {
 /// implementation, standing in for some algebraic hash function that we'll
 /// switch to later.
 #[derive(Debug, Clone)]
-pub struct DummyHashWriter<W: Write, C: CurveAffine> {
+pub struct DummyHashWrite<W: Write, C: CurveAffine> {
     base_state: C::Base,
     scalar_state: C::Scalar,
     written_scalar: bool,
     writer: W,
 }
 
-impl<W: Write, C: CurveAffine> TranscriptWrite<W, C> for DummyHashWriter<W, C> {
-    type ForkedTranscript = DummyHashWriter<io::Sink, C>;
+impl<W: Write, C: CurveAffine> TranscriptWrite<W, C> for DummyHashWrite<W, C> {
+    type ForkedTranscript = DummyHashWrite<io::Sink, C>;
 
     fn init(writer: W, key: C::Base) -> Self {
-        DummyHashWriter {
+        DummyHashWrite {
             base_state: key + &C::Base::from_u64(1013),
             scalar_state: C::Scalar::from_u64(1013),
             written_scalar: false,
@@ -173,7 +173,7 @@ impl<W: Write, C: CurveAffine> TranscriptWrite<W, C> for DummyHashWriter<W, C> {
         self.writer.write_all(&data[..])
     }
     fn fork(&self) -> Self::ForkedTranscript {
-        DummyHashWriter {
+        DummyHashWrite {
             base_state: self.base_state,
             scalar_state: self.scalar_state,
             written_scalar: self.written_scalar,
@@ -186,7 +186,7 @@ impl<W: Write, C: CurveAffine> TranscriptWrite<W, C> for DummyHashWriter<W, C> {
     }
 }
 
-impl<W: Write, C: CurveAffine> Transcript<C> for DummyHashWriter<W, C> {
+impl<W: Write, C: CurveAffine> Transcript<C> for DummyHashWrite<W, C> {
     fn common_point(&mut self, point: C) -> io::Result<()> {
         let (x, y) = Option::from(point.get_xy()).ok_or(io::Error::new(
             io::ErrorKind::Other,

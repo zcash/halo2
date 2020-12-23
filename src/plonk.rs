@@ -105,7 +105,7 @@ fn test_proving() {
     use crate::arithmetic::{Curve, FieldExt};
     use crate::pasta::{EqAffine, Fp, Fq};
     use crate::poly::commitment::{Blind, Params};
-    use crate::transcript::{DummyHashReader, DummyHashWriter, TranscriptRead, TranscriptWrite};
+    use crate::transcript::{DummyHashRead, DummyHashWrite, TranscriptRead, TranscriptWrite};
     use circuit::{Advice, Column, Fixed};
     use std::io;
     use std::marker::PhantomData;
@@ -116,7 +116,7 @@ fn test_proving() {
     pub struct Variable(Column<Advice>, usize);
 
     // Initialize the polynomial commitment parameters
-    let params: Params<EqAffine> = Params::new::<DummyHashWriter<io::Sink, _>>(K);
+    let params: Params<EqAffine> = Params::new::<DummyHashWrite<io::Sink, _>>(K);
 
     struct PLONKConfig {
         a: Column<Advice>,
@@ -448,7 +448,7 @@ fn test_proving() {
         .to_affine();
 
     for _ in 0..100 {
-        let mut transcript = DummyHashWriter::init(vec![], Fq::one());
+        let mut transcript = DummyHashWrite::init(vec![], Fq::one());
         // Create a proof
         create_proof(
             &params,
@@ -462,7 +462,7 @@ fn test_proving() {
 
         let pubinput_slice = &[pubinput];
         let msm = params.empty_msm();
-        let mut transcript = DummyHashReader::init(&proof[..], Fq::one());
+        let mut transcript = DummyHashRead::init(&proof[..], Fq::one());
         let guard =
             verify_proof(&params, pk.get_vk(), msm, pubinput_slice, &mut transcript).unwrap();
         {
@@ -476,7 +476,7 @@ fn test_proving() {
         }
         let msm = guard.clone().use_challenges();
         assert!(msm.clone().eval());
-        let mut transcript = DummyHashReader::init(&proof[..], Fq::one());
+        let mut transcript = DummyHashRead::init(&proof[..], Fq::one());
         let guard =
             verify_proof(&params, pk.get_vk(), msm, pubinput_slice, &mut transcript).unwrap();
         {

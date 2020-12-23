@@ -229,8 +229,8 @@ fn test_commit_lagrange_epaffine() {
     const K: u32 = 6;
 
     use crate::pasta::{EpAffine, Fq};
-    use crate::transcript::DummyHashWriter;
-    let params = Params::<EpAffine>::new::<DummyHashWriter<std::io::Sink, _>>(K);
+    use crate::transcript::DummyHashWrite;
+    let params = Params::<EpAffine>::new::<DummyHashWrite<std::io::Sink, _>>(K);
     let domain = super::EvaluationDomain::new(1, K);
 
     let mut a = domain.empty_lagrange();
@@ -251,8 +251,8 @@ fn test_commit_lagrange_eqaffine() {
     const K: u32 = 6;
 
     use crate::pasta::{EqAffine, Fp};
-    use crate::transcript::DummyHashWriter;
-    let params = Params::<EqAffine>::new::<DummyHashWriter<std::io::Sink, _>>(K);
+    use crate::transcript::DummyHashWrite;
+    let params = Params::<EqAffine>::new::<DummyHashWrite<std::io::Sink, _>>(K);
     let domain = super::EvaluationDomain::new(1, K);
 
     let mut a = domain.empty_lagrange();
@@ -281,11 +281,10 @@ fn test_opening_proof() {
     use crate::arithmetic::{eval_polynomial, Curve, FieldExt};
     use crate::pasta::{EpAffine, Fq};
     use crate::transcript::{
-        ChallengeScalar, DummyHashReader, DummyHashWriter, Transcript, TranscriptRead,
-        TranscriptWrite,
+        ChallengeScalar, DummyHashRead, DummyHashWrite, Transcript, TranscriptRead, TranscriptWrite,
     };
 
-    let params = Params::<EpAffine>::new::<DummyHashWriter<std::io::Sink, _>>(K);
+    let params = Params::<EpAffine>::new::<DummyHashWrite<std::io::Sink, _>>(K);
     let domain = EvaluationDomain::new(1, K);
 
     let mut px = domain.empty_coeff();
@@ -298,7 +297,7 @@ fn test_opening_proof() {
 
     let p = params.commit(&px, blind).to_affine();
 
-    let mut transcript = DummyHashWriter::<Vec<u8>, EpAffine>::init(vec![], Field::zero());
+    let mut transcript = DummyHashWrite::<Vec<u8>, EpAffine>::init(vec![], Field::zero());
     transcript.write_point(p).unwrap();
     let x = ChallengeScalar::<_, ()>::get(&mut transcript);
     // Evaluate the polynomial
@@ -312,7 +311,7 @@ fn test_opening_proof() {
     };
 
     // Verify the opening proof
-    let mut transcript = DummyHashReader::<&[u8], EpAffine>::init(&proof[..], Field::zero());
+    let mut transcript = DummyHashRead::<&[u8], EpAffine>::init(&proof[..], Field::zero());
     let p_prime = transcript.read_point().unwrap();
     assert_eq!(p, p_prime);
     let x_prime = ChallengeScalar::<_, ()>::get(&mut transcript);
