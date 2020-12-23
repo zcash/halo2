@@ -13,4 +13,4 @@
   - [Lookup argument](design/lookup-argument.md)
   - [Gadgets](design/gadgets.md)
     - [SHA-256](design/gadgets/sha256.md)
-      - [Chip using a 16-bit lookup table](design/gadgets/sha256/table16.md)
+      - [16-bit table chip](design/gadgets/sha256/table16.md)
