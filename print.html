@@ -561,7 +561,16 @@ gadget to consume input in 32-bit chunks.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>pub trait Sha256Instructions: Chip {
+</span><span class="boring">extern crate halo2;
+</span><span class="boring">use halo2::plonk::Error;
+</span><span class="boring">use std::fmt;
+</span><span class="boring">
+</span><span class="boring">trait Chip: Sized {}
+</span><span class="boring">trait Layouter&lt;C: Chip&gt; {}
+</span>const BLOCK_SIZE: usize = 16;
+const DIGEST_SIZE: usize = 8;
+
+pub trait Sha256Instructions: Chip {
     /// Variable representing the SHA-256 internal state.
     type State: Clone + fmt::Debug;
     /// Variable representing a 32-bit word of the input block to the SHA-256 compression
