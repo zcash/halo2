@@ -66,25 +66,23 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
 
 /// Checks to see if an [`Proof`] is valid given the current `transcript`, and a
 /// point `x` that the polynomial commitment `P` opens purportedly to the value
-/// `v`. The provided `commitment_msm` should evaluate to the commitment `P`
-/// being opened.
+/// `v`. The provided `msm` should evaluate to the commitment `P` being opened.
 pub fn verify_proof<'a, C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
     params: &'a Params<C>,
     mut msm: MSM<'a, C>,
     transcript: &mut T,
     x: C::Scalar,
-    mut commitment_msm: MSM<'a, C>,
     v: C::Scalar,
 ) -> Result<Guard<'a, C>, Error> {
     let k = params.k as usize;
 
     //     P - [v] G_0 + S * iota
     //   + \sum(L_i * u_i^2) + \sum(R_i * u_i^-2)
-    commitment_msm.add_constant_term(-v);
+    msm.add_constant_term(-v);
     let s_poly_commitment = transcript.read_point().map_err(|_| Error::OpeningError)?;
 
     let iota = *ChallengeScalar::<C, ()>::get(transcript);
-    commitment_msm.append_term(iota, s_poly_commitment);
+    msm.append_term(iota, s_poly_commitment);
 
     let z = *ChallengeScalar::<C, ()>::get(transcript);
 
@@ -121,8 +119,8 @@ pub fn verify_proof<'a, C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
 
         let challenge_sq_inv = challenge_inv.square();
 
-        commitment_msm.append_term(challenge_sq, l);
-        commitment_msm.append_term(challenge_sq_inv, r);
+        msm.append_term(challenge_sq, l);
+        msm.append_term(challenge_sq_inv, r);
 
         challenges.push(challenge);
         challenges_inv.push(challenge_inv);
@@ -131,7 +129,7 @@ pub fn verify_proof<'a, C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
     }
 
     // Our goal is to open
-    //     commitment_msm - [v] G_0 + random_poly_commitment * iota
+    //     msm - [v] G_0 + random_poly_commitment * iota
     //   + \sum(L_i * u_i^2) + \sum(R_i * u_i^-2)
     // at x to 0, by asking the prover to supply (a, h) such that it equals
     //   = [a] (G + [b * z] U) + [h] H
@@ -148,10 +146,8 @@ pub fn verify_proof<'a, C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
     let h = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
     let b = compute_b(x, &challenges, &challenges_inv);
 
-    commitment_msm.add_to_u_scalar(neg_a * &b * &z);
-    commitment_msm.add_to_h_scalar(a - &h);
-
-    msm.add_msm(&commitment_msm);
+    msm.add_to_u_scalar(neg_a * &b * &z);
+    msm.add_to_h_scalar(a - &h);
 
     let guard = Guard {
         msm,

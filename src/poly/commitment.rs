@@ -322,15 +322,7 @@ fn test_opening_proof() {
 
     let mut commitment_msm = params.empty_msm();
     commitment_msm.append_term(Field::one(), p);
-    let guard = verify_proof(
-        &params,
-        params.empty_msm(),
-        &mut transcript,
-        *x,
-        commitment_msm,
-        v,
-    )
-    .unwrap();
+    let guard = verify_proof(&params, commitment_msm, &mut transcript, *x, v).unwrap();
     let ch_verifier = transcript.squeeze_challenge();
     assert_eq!(ch_prover, ch_verifier);
 

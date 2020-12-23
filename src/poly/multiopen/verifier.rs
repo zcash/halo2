@@ -110,19 +110,18 @@ where
     let x_4 = ChallengeX4::get(transcript);
 
     // Compute the final commitment that has to be opened
-    let mut commitment_msm = params.empty_msm();
-    commitment_msm.append_term(C::Scalar::one(), f_commitment);
-    let (commitment_msm, msm_eval) = q_commitments.into_iter().zip(q_evals.iter()).fold(
-        (commitment_msm, msm_eval),
-        |(mut commitment_msm, msm_eval), (q_commitment, q_eval)| {
-            commitment_msm.scale(*x_4);
-            commitment_msm.add_msm(&q_commitment);
-            (commitment_msm, msm_eval * &x_4 + q_eval)
+    msm.append_term(C::Scalar::one(), f_commitment);
+    let (msm, msm_eval) = q_commitments.into_iter().zip(q_evals.iter()).fold(
+        (msm, msm_eval),
+        |(mut msm, msm_eval), (q_commitment, q_eval)| {
+            msm.scale(*x_4);
+            msm.add_msm(&q_commitment);
+            (msm, msm_eval * &x_4 + q_eval)
         },
     );
 
     // Verify the opening proof
-    super::commitment::verify_proof(params, msm, transcript, *x_3, commitment_msm, msm_eval)
+    super::commitment::verify_proof(params, msm, transcript, *x_3, msm_eval)
 }
 
 #[doc(hidden)]
