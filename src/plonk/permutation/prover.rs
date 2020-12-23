@@ -113,8 +113,8 @@ impl Argument {
         let permutation_product_blind = blind;
         let z = domain.lagrange_to_coeff(z);
         let permutation_product_poly = z.clone();
-        let permutation_product_coset = domain.coeff_to_extended(z.clone(), Rotation::default());
-        let permutation_product_coset_inv = domain.coeff_to_extended(z, Rotation(-1));
+        let permutation_product_coset = domain.coeff_to_extended(z.clone(), Rotation::cur());
+        let permutation_product_coset_inv = domain.coeff_to_extended(z, Rotation::prev());
 
         let permutation_product_commitment = permutation_product_commitment_projective.to_affine();
 
@@ -158,7 +158,9 @@ impl<C: CurveAffine> Committed<C> {
                 for (advice, permutation) in p
                     .columns
                     .iter()
-                    .map(|&column| &advice_cosets[pk.vk.cs.get_advice_query_index(column, 0)])
+                    .map(|&column| {
+                        &advice_cosets[pk.vk.cs.get_advice_query_index(column, Rotation::cur())]
+                    })
                     .zip(pkey.cosets.iter())
                 {
                     parallelize(&mut left, |left, start| {
@@ -175,11 +177,9 @@ impl<C: CurveAffine> Committed<C> {
                 let mut right = self.permutation_product_coset_inv.clone();
                 let mut current_delta = *beta * &C::Scalar::ZETA;
                 let step = domain.get_extended_omega();
-                for advice in p
-                    .columns
-                    .iter()
-                    .map(|&column| &advice_cosets[pk.vk.cs.get_advice_query_index(column, 0)])
-                {
+                for advice in p.columns.iter().map(|&column| {
+                    &advice_cosets[pk.vk.cs.get_advice_query_index(column, Rotation::cur())]
+                }) {
                     parallelize(&mut right, move |right, start| {
                         let mut beta_term =
                             current_delta * &step.pow_vartime(&[start as u64, 0, 0, 0]);

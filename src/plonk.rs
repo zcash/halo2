@@ -105,7 +105,10 @@ fn test_proving() {
     use crate::arithmetic::{Curve, FieldExt};
     use crate::dev::MockProver;
     use crate::pasta::{EqAffine, Fp, Fq};
-    use crate::poly::commitment::{Blind, Params};
+    use crate::poly::{
+        commitment::{Blind, Params},
+        Rotation,
+    };
     use crate::transcript::{DummyHashRead, DummyHashWrite};
     use circuit::{Advice, Column, Fixed};
     use std::marker::PhantomData;
@@ -344,25 +347,25 @@ fn test_proving() {
             meta.lookup(&[a.into(), b.into()], &[sl.into(), sl2.into()]);
 
             meta.create_gate(|meta| {
-                let d = meta.query_advice(d, 1);
-                let a = meta.query_advice(a, 0);
-                let sf = meta.query_fixed(sf, 0);
-                let e = meta.query_advice(e, -1);
-                let b = meta.query_advice(b, 0);
-                let c = meta.query_advice(c, 0);
+                let d = meta.query_advice(d, Rotation::next());
+                let a = meta.query_advice(a, Rotation::cur());
+                let sf = meta.query_fixed(sf, Rotation::cur());
+                let e = meta.query_advice(e, Rotation::prev());
+                let b = meta.query_advice(b, Rotation::cur());
+                let c = meta.query_advice(c, Rotation::cur());
 
-                let sa = meta.query_fixed(sa, 0);
-                let sb = meta.query_fixed(sb, 0);
-                let sc = meta.query_fixed(sc, 0);
-                let sm = meta.query_fixed(sm, 0);
+                let sa = meta.query_fixed(sa, Rotation::cur());
+                let sb = meta.query_fixed(sb, Rotation::cur());
+                let sc = meta.query_fixed(sc, Rotation::cur());
+                let sm = meta.query_fixed(sm, Rotation::cur());
 
                 a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one())) + sf * (d * e)
             });
 
             meta.create_gate(|meta| {
-                let a = meta.query_advice(a, 0);
-                let p = meta.query_aux(p, 0);
-                let sp = meta.query_fixed(sp, 0);
+                let a = meta.query_advice(a, Rotation::cur());
+                let p = meta.query_aux(p, Rotation::cur());
+                let sp = meta.query_fixed(sp, Rotation::cur());
 
                 sp * (a + p * (-F::one()))
             });

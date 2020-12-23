@@ -164,7 +164,7 @@ impl Assembly {
             permutations.push(permutation_poly.clone());
             let poly = domain.lagrange_to_coeff(permutation_poly);
             polys.push(poly.clone());
-            cosets.push(domain.coeff_to_extended(poly, Rotation::default()));
+            cosets.push(domain.coeff_to_extended(poly, Rotation::cur()));
         }
         (
             ProvingKey {

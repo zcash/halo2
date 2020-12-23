@@ -3,21 +3,10 @@
 
 use crate::arithmetic::{best_fft, parallelize, BatchInvert, FieldExt, Group};
 
-use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial};
+use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation};
 
 use ff::{Field, PrimeField};
 use std::marker::PhantomData;
-
-/// Describes a relative location in the evaluation domain; applying a rotation
-/// by i will rotate the vector in the evaluation domain by i.
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Ord, PartialOrd)]
-pub struct Rotation(pub i32);
-
-impl Default for Rotation {
-    fn default() -> Rotation {
-        Rotation(0)
-    }
-}
 
 /// This structure contains precomputed constants and other details needed for
 /// performing operations on an evaluation domain of size $2^k$ and an extended

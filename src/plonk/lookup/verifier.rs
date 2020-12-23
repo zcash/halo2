@@ -120,7 +120,7 @@ impl<C: CurveAffine> Evaluated<C> {
                 columns
                     .iter()
                     .map(|column| {
-                        let index = vk.cs.get_any_query_index(*column, 0);
+                        let index = vk.cs.get_any_query_index(*column, Rotation::cur());
                         match column.column_type() {
                             Any::Advice => advice_evals[index],
                             Any::Fixed => fixed_evals[index],
