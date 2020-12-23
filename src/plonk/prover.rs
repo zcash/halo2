@@ -3,8 +3,8 @@ use std::iter;
 
 use super::{
     circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY,
-    Error, Proof, ProvingKey,
+    vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error, Proof,
+    ProvingKey,
 };
 use crate::arithmetic::{eval_polynomial, Curve, CurveAffine, FieldExt};
 use crate::poly::{
@@ -202,18 +202,24 @@ impl<C: CurveAffine> Proof<C> {
         let gamma = ChallengeGamma::get(&mut transcript);
 
         // Commit to permutations, if any.
-        let permutations = if !pk.vk.cs.permutations.is_empty() {
-            Some(permutation::Argument::commit(
-                params,
-                pk,
-                &witness.advice,
-                beta,
-                gamma,
-                &mut transcript,
-            )?)
-        } else {
-            None
-        };
+        let permutations = pk
+            .vk
+            .cs
+            .permutations
+            .iter()
+            .zip(pk.permutations.iter())
+            .map(|(p, pkey)| {
+                p.commit(
+                    params,
+                    pk,
+                    pkey,
+                    &witness.advice,
+                    beta,
+                    gamma,
+                    &mut transcript,
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Construct and commit to products for each lookup
         let lookups = lookups
@@ -225,11 +231,18 @@ impl<C: CurveAffine> Proof<C> {
         let y = ChallengeY::get(&mut transcript);
 
         // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints, if any.
-        let (permutations, permutation_expressions) = permutations
-            .map(|p| p.construct(pk, &advice_cosets, beta, gamma))
-            .transpose()?
-            .map(|(p, expressions)| (Some(p), Some(expressions)))
-            .unwrap_or_default();
+        let (permutations, permutation_expressions): (Vec<_>, Vec<_>) = {
+            let tmp = permutations
+                .into_iter()
+                .zip(pk.vk.cs.permutations.iter())
+                .zip(pk.permutations.iter())
+                .map(|((p, argument), pkey)| {
+                    p.construct(pk, argument, pkey, &advice_cosets, beta, gamma)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+            tmp.into_iter().unzip()
+        };
 
         // Evaluate the h(X) polynomial's constraint system expressions for the lookup constraints, if any.
         let (lookups, lookup_expressions): (Vec<_>, Vec<_>) = {
@@ -302,7 +315,11 @@ impl<C: CurveAffine> Proof<C> {
         let vanishing = vanishing.evaluate(x, &mut transcript);
 
         // Evaluate the permutations, if any, at omega^i x.
-        let permutations = permutations.map(|p| p.evaluate(pk, x, &mut transcript));
+        let permutations = permutations
+            .into_iter()
+            .zip(pk.permutations.iter())
+            .map(|(p, pkey)| p.evaluate(pk, pkey, x, &mut transcript))
+            .collect::<Vec<_>>();
 
         // Evaluate the lookups, if any, at omega^i x.
         let lookups = lookups
@@ -337,26 +354,23 @@ impl<C: CurveAffine> Proof<C> {
                     },
                 ))
                 // We query the h(X) polynomial at x
-                .chain(vanishing.open(x));
-
-        let multiopening = multiopen::Proof::create(
-            params,
-            &mut transcript,
-            instances
+                .chain(vanishing.open(x))
                 .chain(
                     permutations
-                        .as_ref()
-                        .map(|p| p.open(pk, x))
+                        .iter()
+                        .zip(pk.permutations.iter())
+                        .map(|(p, pkey)| p.open(pk, pkey, x))
                         .into_iter()
                         .flatten(),
                 )
-                .chain(lookups.iter().map(|p| p.open(pk, x)).into_iter().flatten()),
-        )
-        .map_err(|_| Error::OpeningError)?;
+                .chain(lookups.iter().map(|p| p.open(pk, x)).into_iter().flatten());
+
+        let multiopening = multiopen::Proof::create(params, &mut transcript, instances)
+            .map_err(|_| Error::OpeningError)?;
 
         Ok(Proof {
             advice_commitments,
-            permutations: permutations.map(|p| p.build()),
+            permutations: permutations.into_iter().map(|p| p.build()).collect(),
             lookups: lookups.into_iter().map(|p| p.build()).collect(),
             advice_evals,
             fixed_evals,

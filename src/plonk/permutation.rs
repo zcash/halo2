@@ -55,8 +55,8 @@ pub(crate) struct ProvingKey<C: CurveAffine> {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Proof<C: CurveAffine> {
-    permutation_product_commitments: Vec<C>,
-    permutation_product_evals: Vec<C::Scalar>,
-    permutation_product_inv_evals: Vec<C::Scalar>,
-    permutation_evals: Vec<Vec<C::Scalar>>,
+    permutation_product_commitment: C,
+    permutation_product_eval: C::Scalar,
+    permutation_product_inv_eval: C::Scalar,
+    permutation_evals: Vec<C::Scalar>,
 }
