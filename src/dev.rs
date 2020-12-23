@@ -52,6 +52,82 @@ pub enum VerifyFailure {
 /// other than "something is invalid". `MockProver` can be used to figure out _why_ these
 /// are invalid: it stores all the private inputs along with the circuit internals, and
 /// then checks every constraint manually.
+///
+/// # Examples
+///
+/// ```
+/// use halo2::{
+///     arithmetic::FieldExt,
+///     dev::{MockProver, VerifyFailure},
+///     pasta::Fp,
+///     plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error},
+/// };
+/// const K: u32 = 5;
+///
+/// struct MyConfig {
+///     a: Column<Advice>,
+///     b: Column<Advice>,
+///     c: Column<Advice>,
+/// }
+///
+/// struct MyCircuit {
+///     a: Option<u64>,
+///     b: Option<u64>,
+/// }
+///
+/// impl<F: FieldExt> Circuit<F> for MyCircuit {
+///     type Config = MyConfig;
+///
+///     fn configure(meta: &mut ConstraintSystem<F>) -> MyConfig {
+///         let a = meta.advice_column();
+///         let b = meta.advice_column();
+///         let c = meta.advice_column();
+///
+///         meta.create_gate(|meta| {
+///             let a = meta.query_advice(a, 0);
+///             let b = meta.query_advice(b, 0);
+///             let c = meta.query_advice(c, 0);
+///
+///             // BUG: Should be a * b - c
+///             a * b + c
+///         });
+///
+///         MyConfig { a, b, c }
+///     }
+///
+///     fn synthesize(&self, cs: &mut impl Assignment<F>, config: MyConfig) -> Result<(), Error> {
+///         cs.assign_advice(config.a, 0, || {
+///             self.a.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
+///         })?;
+///         cs.assign_advice(config.b, 0, || {
+///             self.b.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
+///         })?;
+///         cs.assign_advice(config.c, 0, || {
+///             self.a
+///                 .and_then(|a| self.b.map(|b| F::from_u64(a * b)))
+///                 .ok_or(Error::SynthesisError)
+///         })
+///     }
+/// }
+///
+/// // Assemble the private inputs to the circuit.
+/// let circuit = MyCircuit {
+///     a: Some(2),
+///     b: Some(4),
+/// };
+///
+/// // This circuit has no public inputs.
+/// let aux = vec![];
+///
+/// let prover = MockProver::<Fp>::run(K, &circuit, aux).unwrap();
+/// assert_eq!(
+///     prover.verify(),
+///     Err(VerifyFailure::Gate {
+///         gate_index: 0,
+///         row: 0
+///     })
+/// );
+/// ```
 #[derive(Debug)]
 pub struct MockProver<F: Group> {
     n: u32,
@@ -201,7 +277,7 @@ impl<F: FieldExt> MockProver<F> {
                 {
                     return Err(VerifyFailure::Gate {
                         gate_index,
-                        row: row as usize,
+                        row: (row - n) as usize,
                     });
                 }
             }
