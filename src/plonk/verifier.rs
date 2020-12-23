@@ -16,9 +16,9 @@ use crate::transcript::{read_n_points, read_n_scalars, TranscriptRead};
 /// Returns a boolean indicating whether or not the proof is valid
 pub fn verify_proof<'a, C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
     params: &'a Params<C>,
-    vk: &'a VerifyingKey<C>,
+    vk: &VerifyingKey<C>,
     msm: MSM<'a, C>,
-    aux_commitments: &'a [C],
+    aux_commitments: &[C],
     transcript: &mut T,
 ) -> Result<Guard<'a, C>, Error> {
     // Check that aux_commitments matches the expected number of aux columns
