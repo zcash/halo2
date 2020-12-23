@@ -1,19 +1,9 @@
 # 16-bit table chip for SHA-256
 
-The main chip implementation for SHA-256 in halo2 is based around a 16-bit lookup table.
-This requires a minimum of $2^{16}$ circuit rows, and is therefore suitable for use in
-larger circuits.
+This chip implementation is based around a single 16-bit lookup table. It requires a
+minimum of $2^{16}$ circuit rows, and is therefore suitable for use in larger circuits.
 
-## Specification
-
-SHA-256 is specified in [NIST FIPS PUB 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
-
-Unlike the specification, we use $\boxplus$ for addition modulo $2^{32}$, and $+$ for
-field addition.
-
-$\oplus$ is used for XOR.
-
-Let's target a max constraint degree of $9$. That will allow us to handle constraining
+We target a maximum constraint degree of $9$. That will allow us to handle constraining
 carries and "small pieces" to a range of up to $\{0..7\}$ in one row.
 
 ## Compression round
