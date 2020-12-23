@@ -13,7 +13,6 @@ use crate::{
     transcript::TranscriptWrite,
 };
 use ff::Field;
-use std::io::Write;
 use std::{collections::BTreeMap, iter};
 
 #[derive(Debug)]
@@ -73,12 +72,7 @@ impl Argument {
     /// - constructs Permuted<C> struct using permuted_input_value = A', and
     ///   permuted_table_column = S'.
     /// The Permuted<C> struct is used to update the Lookup, and is then returned.
-    pub(in crate::plonk) fn commit_permuted<
-        'a,
-        C: CurveAffine,
-        W: Write,
-        T: TranscriptWrite<W, C>,
-    >(
+    pub(in crate::plonk) fn commit_permuted<'a, C: CurveAffine, T: TranscriptWrite<C>>(
         &self,
         pk: &ProvingKey<C>,
         params: &Params<C>,
@@ -195,7 +189,7 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
     /// grand product polynomial over the lookup. The grand product polynomial
     /// is used to populate the Product<C> struct. The Product<C> struct is
     /// added to the Lookup and finally returned by the method.
-    pub(in crate::plonk) fn commit_product<W: Write, T: TranscriptWrite<W, C>>(
+    pub(in crate::plonk) fn commit_product<T: TranscriptWrite<C>>(
         self,
         pk: &ProvingKey<C>,
         params: &Params<C>,
@@ -443,7 +437,7 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(in crate::plonk) fn evaluate<W: Write, T: TranscriptWrite<W, C>>(
+    pub(in crate::plonk) fn evaluate<T: TranscriptWrite<C>>(
         self,
         pk: &ProvingKey<C>,
         x: ChallengeX<C>,

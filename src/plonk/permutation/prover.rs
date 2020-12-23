@@ -1,5 +1,4 @@
 use ff::Field;
-use std::io::Write;
 use std::iter;
 
 use super::{Argument, ProvingKey};
@@ -34,7 +33,7 @@ pub(crate) struct Evaluated<C: CurveAffine> {
 }
 
 impl Argument {
-    pub(in crate::plonk) fn commit<C: CurveAffine, W: Write, T: TranscriptWrite<W, C>>(
+    pub(in crate::plonk) fn commit<C: CurveAffine, T: TranscriptWrite<C>>(
         &self,
         params: &Params<C>,
         pk: &plonk::ProvingKey<C>,
@@ -237,7 +236,7 @@ impl<C: CurveAffine> super::ProvingKey<C> {
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(in crate::plonk) fn evaluate<W: Write, T: TranscriptWrite<W, C>>(
+    pub(in crate::plonk) fn evaluate<T: TranscriptWrite<C>>(
         self,
         pk: &plonk::ProvingKey<C>,
         pkey: &ProvingKey<C>,

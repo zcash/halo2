@@ -10,9 +10,6 @@ use super::{
 };
 use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine, FieldExt};
 use crate::transcript::TranscriptRead;
-
-use std::io::Read;
-
 #[derive(Debug, Clone)]
 struct CommitmentData<C: CurveAffine> {
     set_index: usize,
@@ -21,7 +18,7 @@ struct CommitmentData<C: CurveAffine> {
 }
 
 /// Verify a multi-opening proof
-pub fn verify_proof<'b, 'a: 'b, I, C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
+pub fn verify_proof<'b, 'a: 'b, I, C: CurveAffine, T: TranscriptRead<C>>(
     params: &'a Params<C>,
     transcript: &mut T,
     queries: I,

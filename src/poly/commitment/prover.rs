@@ -7,7 +7,7 @@ use crate::arithmetic::{
     CurveAffine, FieldExt,
 };
 use crate::transcript::{Challenge, ChallengeScalar, TranscriptWrite};
-use std::io::{self, Write};
+use std::io;
 
 /// Create a polynomial commitment opening proof for the polynomial defined
 /// by the coefficients `px`, the blinding factor `blind` used for the
@@ -22,7 +22,7 @@ use std::io::{self, Write};
 /// opening v, and the point x. It's probably also nice for the transcript
 /// to have seen the elliptic curve description and the SRS, if you want to
 /// be rigorous.
-pub fn create_proof<C: CurveAffine, W: Write, T: TranscriptWrite<W, C>>(
+pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>>(
     params: &Params<C>,
     transcript: &mut T,
     px: &Polynomial<C::Scalar, Coeff>,

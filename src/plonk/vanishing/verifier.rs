@@ -1,5 +1,4 @@
 use ff::Field;
-use std::io::Read;
 
 use crate::{
     arithmetic::CurveAffine,
@@ -20,7 +19,7 @@ pub struct Evaluated<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Argument<C> {
-    pub(in crate::plonk) fn absorb_commitments<R: Read, T: TranscriptRead<R, C>>(
+    pub(in crate::plonk) fn absorb_commitments<T: TranscriptRead<C>>(
         vk: &VerifyingKey<C>,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
@@ -33,7 +32,7 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(in crate::plonk) fn evaluate<R: Read, T: TranscriptRead<R, C>>(
+    pub(in crate::plonk) fn evaluate<T: TranscriptRead<C>>(
         self,
         transcript: &mut T,
     ) -> Result<Evaluated<C>, Error> {

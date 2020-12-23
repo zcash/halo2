@@ -21,10 +21,7 @@ pub trait Transcript<C: CurveAffine> {
 
 /// Transcript view from the perspective of a verifier that has access to an
 /// input stream of data from the prover to the verifier.
-pub trait TranscriptRead<R: Read, C: CurveAffine>: Transcript<C> {
-    /// Initialize the transcript with a key and an input stream.
-    fn init(reader: R, key: C::Base) -> Self;
-
+pub trait TranscriptRead<C: CurveAffine>: Transcript<C> {
     /// Read a curve point from the prover.
     fn read_point(&mut self) -> io::Result<C>;
 
@@ -34,12 +31,9 @@ pub trait TranscriptRead<R: Read, C: CurveAffine>: Transcript<C> {
 
 /// Transcript view from the perspective of a prover that has access to an
 /// output stream of messages from the prover to the verifier.
-pub trait TranscriptWrite<W: Write, C: CurveAffine>: Transcript<C> {
+pub trait TranscriptWrite<C: CurveAffine>: Transcript<C> {
     /// Forked transcript that does not write to the proof structure.
-    type ForkedTranscript: TranscriptWrite<io::Sink, C>;
-
-    /// Initialize the transcript with a key and an output stream.
-    fn init(writer: W, key: C::Base) -> Self;
+    type ForkedTranscript: TranscriptWrite<C>;
 
     /// Write a curve point to the proof and the transcript.
     fn write_point(&mut self, point: C) -> io::Result<()>;
@@ -50,10 +44,6 @@ pub trait TranscriptWrite<W: Write, C: CurveAffine>: Transcript<C> {
     /// Fork the transcript, creating a variant of this `TranscriptWrite` which
     /// does not output anything to the writer.
     fn fork(&self) -> Self::ForkedTranscript;
-
-    /// Return the writer to conclude the interaction and take possession of the
-    /// proof.
-    fn finalize(self) -> W;
 }
 
 /// This is just a simple (and completely broken) transcript reader
@@ -67,8 +57,9 @@ pub struct DummyHashRead<R: Read, C: CurveAffine> {
     reader: R,
 }
 
-impl<R: Read, C: CurveAffine> TranscriptRead<R, C> for DummyHashRead<R, C> {
-    fn init(reader: R, key: C::Base) -> Self {
+impl<R: Read, C: CurveAffine> DummyHashRead<R, C> {
+    /// Initialize a transcript given an input buffer and a key.
+    pub fn init(reader: R, key: C::Base) -> Self {
         DummyHashRead {
             base_state: key + &C::Base::from_u64(1013),
             scalar_state: C::Scalar::from_u64(1013),
@@ -76,7 +67,9 @@ impl<R: Read, C: CurveAffine> TranscriptRead<R, C> for DummyHashRead<R, C> {
             reader,
         }
     }
+}
 
+impl<R: Read, C: CurveAffine> TranscriptRead<C> for DummyHashRead<R, C> {
     fn read_point(&mut self) -> io::Result<C> {
         let mut compressed = [0u8; 32];
         self.reader.read_exact(&mut compressed[..])?;
@@ -149,10 +142,9 @@ pub struct DummyHashWrite<W: Write, C: CurveAffine> {
     writer: W,
 }
 
-impl<W: Write, C: CurveAffine> TranscriptWrite<W, C> for DummyHashWrite<W, C> {
-    type ForkedTranscript = DummyHashWrite<io::Sink, C>;
-
-    fn init(writer: W, key: C::Base) -> Self {
+impl<W: Write, C: CurveAffine> DummyHashWrite<W, C> {
+    /// Initialize a transcript given an output buffer and a key.
+    pub fn init(writer: W, key: C::Base) -> Self {
         DummyHashWrite {
             base_state: key + &C::Base::from_u64(1013),
             scalar_state: C::Scalar::from_u64(1013),
@@ -160,6 +152,17 @@ impl<W: Write, C: CurveAffine> TranscriptWrite<W, C> for DummyHashWrite<W, C> {
             writer,
         }
     }
+
+    /// Conclude the interaction and return the output buffer (writer).
+    pub fn finalize(self) -> W {
+        // TODO: handle outstanding scalars?
+        self.writer
+    }
+}
+
+impl<W: Write, C: CurveAffine> TranscriptWrite<C> for DummyHashWrite<W, C> {
+    type ForkedTranscript = DummyHashWrite<io::Sink, C>;
+
     fn write_point(&mut self, point: C) -> io::Result<()> {
         self.common_point(point)?;
         let compressed = point.to_bytes();
@@ -179,10 +182,6 @@ impl<W: Write, C: CurveAffine> TranscriptWrite<W, C> for DummyHashWrite<W, C> {
             written_scalar: self.written_scalar,
             writer: io::sink(),
         }
-    }
-    fn finalize(self) -> W {
-        // TODO: handle outstanding scalars?
-        self.writer
     }
 }
 
@@ -285,7 +284,7 @@ impl<C: CurveAffine, Type> Deref for ChallengeScalar<C, Type> {
     }
 }
 
-pub(crate) fn read_n_points<C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
+pub(crate) fn read_n_points<C: CurveAffine, T: TranscriptRead<C>>(
     transcript: &mut T,
     n: usize,
 ) -> io::Result<Vec<C>> {
@@ -296,7 +295,7 @@ pub(crate) fn read_n_points<C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
     Ok(v)
 }
 
-pub(crate) fn read_n_scalars<C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
+pub(crate) fn read_n_scalars<C: CurveAffine, T: TranscriptRead<C>>(
     transcript: &mut T,
     n: usize,
 ) -> io::Result<Vec<C::Scalar>> {

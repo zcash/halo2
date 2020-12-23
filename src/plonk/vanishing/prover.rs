@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use super::Argument;
 use crate::{
     arithmetic::{eval_polynomial, Curve, CurveAffine, FieldExt},
@@ -23,7 +21,7 @@ pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Argument<C> {
-    pub(in crate::plonk) fn construct<W: Write, T: TranscriptWrite<W, C>>(
+    pub(in crate::plonk) fn construct<T: TranscriptWrite<C>>(
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
         expressions: impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
@@ -69,7 +67,7 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(in crate::plonk) fn evaluate<W: Write, T: TranscriptWrite<W, C>>(
+    pub(in crate::plonk) fn evaluate<T: TranscriptWrite<C>>(
         self,
         x: ChallengeX<C>,
         transcript: &mut T,

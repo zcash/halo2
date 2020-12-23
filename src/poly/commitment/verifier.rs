@@ -6,8 +6,6 @@ use crate::transcript::{Challenge, ChallengeScalar, TranscriptRead};
 
 use crate::arithmetic::{best_multiexp, Curve, CurveAffine, FieldExt};
 
-use std::io::Read;
-
 /// A guard returned by the verifier
 #[derive(Debug, Clone)]
 pub struct Guard<'a, C: CurveAffine> {
@@ -67,7 +65,7 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
 /// Checks to see if an [`Proof`] is valid given the current `transcript`, and a
 /// point `x` that the polynomial commitment `P` opens purportedly to the value
 /// `v`. The provided `msm` should evaluate to the commitment `P` being opened.
-pub fn verify_proof<'a, C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
+pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
     params: &'a Params<C>,
     mut msm: MSM<'a, C>,
     transcript: &mut T,

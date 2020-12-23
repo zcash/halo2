@@ -1,5 +1,4 @@
 use ff::Field;
-use std::io::Write;
 use std::iter;
 
 use super::{
@@ -18,12 +17,7 @@ use crate::transcript::TranscriptWrite;
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
 /// generated previously for the same circuit.
-pub fn create_proof<
-    C: CurveAffine,
-    W: Write,
-    T: TranscriptWrite<W, C>,
-    ConcreteCircuit: Circuit<C::Scalar>,
->(
+pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circuit<C::Scalar>>(
     params: &Params<C>,
     pk: &ProvingKey<C>,
     circuit: &ConcreteCircuit,

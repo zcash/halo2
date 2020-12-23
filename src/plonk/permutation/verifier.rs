@@ -1,5 +1,4 @@
 use ff::Field;
-use std::io::Read;
 use std::iter;
 
 use super::{Argument, VerifyingKey};
@@ -22,7 +21,7 @@ pub struct Evaluated<C: CurveAffine> {
 }
 
 impl Argument {
-    pub(crate) fn absorb_product_commitment<C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
+    pub(crate) fn absorb_product_commitment<C: CurveAffine, T: TranscriptRead<C>>(
         &self,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
@@ -37,7 +36,7 @@ impl Argument {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(crate) fn evaluate<R: Read, T: TranscriptRead<R, C>>(
+    pub(crate) fn evaluate<T: TranscriptRead<C>>(
         self,
         vkey: &VerifyingKey<C>,
         transcript: &mut T,

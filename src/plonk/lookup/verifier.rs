@@ -9,7 +9,6 @@ use crate::{
     transcript::TranscriptRead,
 };
 use ff::Field;
-use std::io::Read;
 
 pub struct PermutationCommitments<C: CurveAffine> {
     permuted_input_commitment: C,
@@ -32,11 +31,7 @@ pub struct Evaluated<C: CurveAffine> {
 }
 
 impl Argument {
-    pub(in crate::plonk) fn absorb_permuted_commitments<
-        C: CurveAffine,
-        R: Read,
-        T: TranscriptRead<R, C>,
-    >(
+    pub(in crate::plonk) fn absorb_permuted_commitments<C: CurveAffine, T: TranscriptRead<C>>(
         &self,
         transcript: &mut T,
     ) -> Result<PermutationCommitments<C>, Error> {
@@ -55,7 +50,7 @@ impl Argument {
 }
 
 impl<C: CurveAffine> PermutationCommitments<C> {
-    pub(in crate::plonk) fn absorb_product_commitment<R: Read, T: TranscriptRead<R, C>>(
+    pub(in crate::plonk) fn absorb_product_commitment<T: TranscriptRead<C>>(
         self,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
@@ -72,7 +67,7 @@ impl<C: CurveAffine> PermutationCommitments<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(crate) fn evaluate<R: Read, T: TranscriptRead<R, C>>(
+    pub(crate) fn evaluate<T: TranscriptRead<C>>(
         self,
         transcript: &mut T,
     ) -> Result<Evaluated<C>, Error> {

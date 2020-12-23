@@ -105,7 +105,7 @@ fn test_proving() {
     use crate::arithmetic::{Curve, FieldExt};
     use crate::pasta::{EqAffine, Fp, Fq};
     use crate::poly::commitment::{Blind, Params};
-    use crate::transcript::{DummyHashRead, DummyHashWrite, TranscriptRead, TranscriptWrite};
+    use crate::transcript::{DummyHashRead, DummyHashWrite};
     use circuit::{Advice, Column, Fixed};
     use std::marker::PhantomData;
     const K: u32 = 5;

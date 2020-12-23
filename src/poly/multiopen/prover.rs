@@ -13,7 +13,7 @@ use crate::arithmetic::{
 use crate::transcript::TranscriptWrite;
 
 use ff::Field;
-use std::io::{self, Write};
+use std::io;
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone)]
@@ -25,7 +25,7 @@ struct CommitmentData<C: CurveAffine> {
 }
 
 /// Create a multi-opening proof
-pub fn create_proof<'a, I, C: CurveAffine, W: Write, T: TranscriptWrite<W, C>>(
+pub fn create_proof<'a, I, C: CurveAffine, T: TranscriptWrite<C>>(
     params: &Params<C>,
     transcript: &mut T,
     queries: I,

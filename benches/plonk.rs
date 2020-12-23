@@ -6,7 +6,7 @@ use halo2::arithmetic::FieldExt;
 use halo2::pasta::{EqAffine, Fp, Fq};
 use halo2::plonk::*;
 use halo2::poly::commitment::Params;
-use halo2::transcript::{DummyHashRead, DummyHashWrite, TranscriptRead, TranscriptWrite};
+use halo2::transcript::{DummyHashRead, DummyHashWrite};
 
 use std::marker::PhantomData;
 

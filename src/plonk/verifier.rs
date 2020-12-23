@@ -1,5 +1,4 @@
 use ff::Field;
-use std::io::Read;
 use std::iter;
 
 use super::{
@@ -14,7 +13,7 @@ use crate::poly::{
 use crate::transcript::{read_n_points, read_n_scalars, TranscriptRead};
 
 /// Returns a boolean indicating whether or not the proof is valid
-pub fn verify_proof<'a, C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
+pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
     params: &'a Params<C>,
     vk: &VerifyingKey<C>,
     msm: MSM<'a, C>,
