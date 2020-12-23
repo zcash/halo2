@@ -107,7 +107,6 @@ fn test_proving() {
     use crate::poly::commitment::{Blind, Params};
     use crate::transcript::{DummyHashRead, DummyHashWrite, TranscriptRead, TranscriptWrite};
     use circuit::{Advice, Column, Fixed};
-    use std::io;
     use std::marker::PhantomData;
     const K: u32 = 5;
 
@@ -116,7 +115,7 @@ fn test_proving() {
     pub struct Variable(Column<Advice>, usize);
 
     // Initialize the polynomial commitment parameters
-    let params: Params<EqAffine> = Params::new::<DummyHashWrite<io::Sink, _>>(K);
+    let params: Params<EqAffine> = Params::new(K);
 
     struct PLONKConfig {
         a: Column<Advice>,

@@ -7,7 +7,6 @@ use halo2::{
     transcript::{DummyHashRead, DummyHashWrite, TranscriptRead, TranscriptWrite},
 };
 
-use std::io;
 use std::marker::PhantomData;
 
 /// This represents an advice column at a certain row in the ConstraintSystem
@@ -250,7 +249,7 @@ fn main() {
     let k = 11;
 
     // Initialize the polynomial commitment parameters
-    let params: Params<EqAffine> = Params::new::<DummyHashWrite<io::Sink, _>>(k);
+    let params: Params<EqAffine> = Params::new(k);
 
     let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None, k };
 

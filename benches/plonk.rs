@@ -18,7 +18,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     pub struct Variable(Column<Advice>, usize);
 
     // Initialize the polynomial commitment parameters
-    let params: Params<EqAffine> = Params::new::<DummyHashWrite<_, _>>(k);
+    let params: Params<EqAffine> = Params::new(k);
 
     struct PLONKConfig {
         a: Column<Advice>,

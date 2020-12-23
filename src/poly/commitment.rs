@@ -3,12 +3,12 @@
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
 
+use blake2b_simd::{Params as Blake2bParams, State as Blake2bState};
+
 use super::{Coeff, LagrangeCoeff, Polynomial};
 use crate::arithmetic::{best_fft, best_multiexp, parallelize, Curve, CurveAffine, FieldExt};
-use crate::transcript::{Transcript, TranscriptWrite};
 
 use ff::{Field, PrimeField};
-use std::io;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 
 mod msm;
@@ -33,7 +33,7 @@ pub struct Params<C: CurveAffine> {
 impl<C: CurveAffine> Params<C> {
     /// Initializes parameters for the curve, given a random oracle to draw
     /// points from.
-    pub fn new<T: TranscriptWrite<io::Sink, C> + Sync>(k: u32) -> Self {
+    pub fn new(k: u32) -> Self {
         // This is usually a limitation on the curve, but we also want 32-bit
         // architectures to be supported.
         assert!(k < 32);
@@ -42,27 +42,38 @@ impl<C: CurveAffine> Params<C> {
 
         let n: u64 = 1 << k;
 
-        let g = {
-            let hasher = &T::init(io::sink(), C::Base::one());
+        let try_and_increment = |hasher: &Blake2bState| {
+            let mut trial = 0u64;
+            loop {
+                let mut hasher = hasher.clone();
+                hasher.update(&(trial.to_le_bytes())[..]);
+                let mut hash = [0u8; 32];
+                hash[..].copy_from_slice(hasher.finalize().as_bytes());
+                let p = C::from_bytes(&hash);
+                if bool::from(p.is_some()) {
+                    break p.unwrap();
+                }
+                trial += 1;
+            }
+        };
 
+        let g = {
             let mut g = Vec::with_capacity(n as usize);
             g.resize(n as usize, C::zero());
 
             parallelize(&mut g, move |g, start| {
-                let mut cur_value = C::Scalar::from(start as u64);
-                for g in g.iter_mut() {
-                    let mut hasher = hasher.fork();
-                    hasher.write_scalar(cur_value).unwrap();
-                    cur_value += &C::Scalar::one();
-                    loop {
-                        let x: C::Base = hasher.squeeze_challenge();
-                        let x = x.to_bytes();
-                        let p = C::from_bytes(&x);
-                        if bool::from(p.is_some()) {
-                            *g = p.unwrap();
-                            break;
-                        }
-                    }
+                let mut hasher = Blake2bParams::new()
+                    .hash_length(32)
+                    .personal(C::BLAKE2B_PERSONALIZATION)
+                    .to_state();
+                hasher.update(b"G vector");
+
+                for (i, g) in g.iter_mut().enumerate() {
+                    let i = (i + start) as u64;
+                    let mut hasher = hasher.clone();
+                    hasher.update(&(i.to_le_bytes())[..]);
+
+                    *g = try_and_increment(&hasher);
                 }
             });
 
@@ -97,17 +108,23 @@ impl<C: CurveAffine> Params<C> {
         };
 
         let h = {
-            let mut hasher = T::init(io::sink(), C::Base::from_u64(2));
-            let x = hasher.squeeze_challenge().to_bytes();
-            let p = C::from_bytes(&x);
-            p.unwrap()
+            let mut hasher = Blake2bParams::new()
+                .hash_length(32)
+                .personal(C::BLAKE2B_PERSONALIZATION)
+                .to_state();
+            hasher.update(b"H");
+
+            try_and_increment(&hasher)
         };
 
         let u = {
-            let mut hasher = T::init(io::sink(), C::Base::from_u64(3));
-            let x = hasher.squeeze_challenge().to_bytes();
-            let p = C::from_bytes(&x);
-            p.unwrap()
+            let mut hasher = Blake2bParams::new()
+                .hash_length(32)
+                .personal(C::BLAKE2B_PERSONALIZATION)
+                .to_state();
+            hasher.update(b"U");
+
+            try_and_increment(&hasher)
         };
 
         Params {
@@ -229,8 +246,7 @@ fn test_commit_lagrange_epaffine() {
     const K: u32 = 6;
 
     use crate::pasta::{EpAffine, Fq};
-    use crate::transcript::DummyHashWrite;
-    let params = Params::<EpAffine>::new::<DummyHashWrite<std::io::Sink, _>>(K);
+    let params = Params::<EpAffine>::new(K);
     let domain = super::EvaluationDomain::new(1, K);
 
     let mut a = domain.empty_lagrange();
@@ -251,8 +267,7 @@ fn test_commit_lagrange_eqaffine() {
     const K: u32 = 6;
 
     use crate::pasta::{EqAffine, Fp};
-    use crate::transcript::DummyHashWrite;
-    let params = Params::<EqAffine>::new::<DummyHashWrite<std::io::Sink, _>>(K);
+    let params = Params::<EqAffine>::new(K);
     let domain = super::EvaluationDomain::new(1, K);
 
     let mut a = domain.empty_lagrange();
@@ -284,7 +299,7 @@ fn test_opening_proof() {
         ChallengeScalar, DummyHashRead, DummyHashWrite, Transcript, TranscriptRead, TranscriptWrite,
     };
 
-    let params = Params::<EpAffine>::new::<DummyHashWrite<std::io::Sink, _>>(K);
+    let params = Params::<EpAffine>::new(K);
     let domain = EvaluationDomain::new(1, K);
 
     let mut px = domain.empty_coeff();
