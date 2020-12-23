@@ -14,6 +14,7 @@ pub(crate) struct AssemblyHelper<C: CurveAffine> {
     deltaomega: Vec<Vec<C::Scalar>>,
 }
 
+#[derive(Debug)]
 pub(crate) struct Assembly {
     pub(crate) mapping: Vec<Vec<(usize, usize)>>,
     aux: Vec<Vec<(usize, usize)>>,

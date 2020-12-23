@@ -19,7 +19,5 @@ pub mod plonk;
 pub mod poly;
 pub mod transcript;
 
+pub mod dev;
 pub mod model;
-
-#[cfg(test)]
-mod dev;

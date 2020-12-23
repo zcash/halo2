@@ -15,18 +15,44 @@ struct Cell(usize, usize);
 #[derive(Debug, PartialEq)]
 pub enum VerifyFailure {
     /// A gate was not satisfied for a particular row.
-    Gate { gate_index: usize, row: usize },
+    Gate {
+        /// The index of the gate that is not satisfied. These indices are assigned in the
+        /// order in which `ConstraintSystem::create_gate` is called during
+        /// `Circuit::configure`.
+        gate_index: usize,
+        /// The row on which this gate is not satisfied.
+        row: usize,
+    },
     /// A lookup input did not exist in its corresponding table.
-    Lookup { lookup_index: usize, row: usize },
+    Lookup {
+        /// The index of the lookup that is not satisfied. These indices are assigned in
+        /// the order in which `ConstraintSystem::lookup` is called during
+        /// `Circuit::configure`.
+        lookup_index: usize,
+        /// The row on which this lookup is not satisfied.
+        row: usize,
+    },
     /// A permutation did not preserve the original value of a cell.
     Permutation {
+        /// The index of the permutation that is not satisfied. These indices are assigned
+        /// in the order in which `ConstraintSystem::lookup` is called during
+        /// `Circuit::configure`.
         perm_index: usize,
+        /// The column in which this permutation is not satisfied.
         column: usize,
+        /// The row on which this permutation is not satisfied.
         row: usize,
     },
 }
 
-/// A test
+/// A test prover for debugging circuits.
+///
+/// The normal proving process, when applied to a buggy circuit implementation, might
+/// return proofs that do not validate when they should, but it can't indicate anything
+/// other than "something is invalid". `MockProver` can be used to figure out _why_ these
+/// are invalid: it stores all the private inputs along with the circuit internals, and
+/// then checks every constraint manually.
+#[derive(Debug)]
 pub struct MockProver<F: Group> {
     n: u32,
     domain: EvaluationDomain<F>,
@@ -91,6 +117,8 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
 }
 
 impl<F: FieldExt> MockProver<F> {
+    /// Runs a synthetic keygen-and-prove operation on the given circuit, collecting data
+    /// about the constraints and their assignments.
     pub fn run<ConcreteCircuit: Circuit<F>>(
         k: u32,
         circuit: &ConcreteCircuit,
@@ -142,7 +170,7 @@ impl<F: FieldExt> MockProver<F> {
     }
 
     /// Returns `Ok(())` if this `MockProver` is satisfied, or an error indicating the
-    /// reason that the circuit is not satisfied.
+    /// first encountered reason that the circuit is not satisfied.
     pub fn verify(&self) -> Result<(), VerifyFailure> {
         let n = self.n as i32;
 
