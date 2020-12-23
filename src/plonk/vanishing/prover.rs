@@ -1,4 +1,6 @@
-use super::{Argument, Proof};
+use std::io::Write;
+
+use super::Argument;
 use crate::{
     arithmetic::{eval_polynomial, Curve, CurveAffine, FieldExt},
     plonk::{ChallengeX, ChallengeY, Error},
@@ -7,13 +9,12 @@ use crate::{
         multiopen::ProverQuery,
         Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial,
     },
-    transcript::{Hasher, Transcript},
+    transcript::TranscriptWrite,
 };
 
 pub(in crate::plonk) struct Constructed<C: CurveAffine> {
     h_pieces: Vec<Polynomial<C::Scalar, Coeff>>,
     h_blinds: Vec<Blind<C::Scalar>>,
-    h_commitments: Vec<C>,
 }
 
 pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
@@ -22,12 +23,12 @@ pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Argument<C> {
-    pub(in crate::plonk) fn construct<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
+    pub(in crate::plonk) fn construct<W: Write, T: TranscriptWrite<W, C>>(
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
         expressions: impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
-        y: ChallengeY<C::Scalar>,
-        transcript: &mut Transcript<C, HBase, HScalar>,
+        y: ChallengeY<C>,
+        transcript: &mut T,
     ) -> Result<Constructed<C>, Error> {
         // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
         let h_poly = expressions.fold(domain.empty_extended(), |h_poly, v| h_poly * *y + &v);
@@ -59,24 +60,20 @@ impl<C: CurveAffine> Argument<C> {
         // Hash each h(X) piece
         for c in h_commitments.iter() {
             transcript
-                .absorb_point(c)
+                .write_point(*c)
                 .map_err(|_| Error::TranscriptError)?;
         }
 
-        Ok(Constructed {
-            h_pieces,
-            h_blinds,
-            h_commitments,
-        })
+        Ok(Constructed { h_pieces, h_blinds })
     }
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(in crate::plonk) fn evaluate<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
+    pub(in crate::plonk) fn evaluate<W: Write, T: TranscriptWrite<W, C>>(
         self,
-        x: ChallengeX<C::Scalar>,
-        transcript: &mut Transcript<C, HBase, HScalar>,
-    ) -> Evaluated<C> {
+        x: ChallengeX<C>,
+        transcript: &mut T,
+    ) -> Result<Evaluated<C>, Error> {
         let h_evals: Vec<_> = self
             .h_pieces
             .iter()
@@ -85,20 +82,22 @@ impl<C: CurveAffine> Constructed<C> {
 
         // Hash each advice evaluation
         for eval in &h_evals {
-            transcript.absorb_scalar(*eval);
+            transcript
+                .write_scalar(*eval)
+                .map_err(|_| Error::TranscriptError)?;
         }
 
-        Evaluated {
+        Ok(Evaluated {
             constructed: self,
             h_evals,
-        }
+        })
     }
 }
 
 impl<C: CurveAffine> Evaluated<C> {
     pub(in crate::plonk) fn open<'a>(
         &'a self,
-        x: ChallengeX<C::Scalar>,
+        x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
         self.constructed
             .h_pieces
@@ -111,12 +110,5 @@ impl<C: CurveAffine> Evaluated<C> {
                 blind: *h_blind,
                 eval: *h_eval,
             })
-    }
-
-    pub(in crate::plonk) fn build(self) -> Proof<C> {
-        Proof {
-            h_commitments: self.constructed.h_commitments,
-            h_evals: self.h_evals,
-        }
     }
 }

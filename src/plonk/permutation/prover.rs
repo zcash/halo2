@@ -1,7 +1,8 @@
 use ff::Field;
+use std::io::Write;
 use std::iter;
 
-use super::{Argument, Proof, ProvingKey};
+use super::{Argument, ProvingKey};
 use crate::{
     arithmetic::{eval_polynomial, parallelize, BatchInvert, Curve, CurveAffine, FieldExt},
     plonk::{self, ChallengeBeta, ChallengeGamma, ChallengeX, Error},
@@ -10,7 +11,7 @@ use crate::{
         multiopen::ProverQuery,
         Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
     },
-    transcript::{Hasher, Transcript},
+    transcript::TranscriptWrite,
 };
 
 pub(crate) struct Committed<C: CurveAffine> {
@@ -18,13 +19,11 @@ pub(crate) struct Committed<C: CurveAffine> {
     permutation_product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permutation_product_coset_inv: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permutation_product_blind: Blind<C::Scalar>,
-    permutation_product_commitment: C,
 }
 
 pub(crate) struct Constructed<C: CurveAffine> {
     permutation_product_poly: Polynomial<C::Scalar, Coeff>,
     permutation_product_blind: Blind<C::Scalar>,
-    permutation_product_commitment: C,
 }
 
 pub(crate) struct Evaluated<C: CurveAffine> {
@@ -35,19 +34,15 @@ pub(crate) struct Evaluated<C: CurveAffine> {
 }
 
 impl Argument {
-    pub(in crate::plonk) fn commit<
-        C: CurveAffine,
-        HBase: Hasher<C::Base>,
-        HScalar: Hasher<C::Scalar>,
-    >(
+    pub(in crate::plonk) fn commit<C: CurveAffine, W: Write, T: TranscriptWrite<W, C>>(
         &self,
         params: &Params<C>,
         pk: &plonk::ProvingKey<C>,
         pkey: &ProvingKey<C>,
         advice: &[Polynomial<C::Scalar, LagrangeCoeff>],
-        beta: ChallengeBeta<C::Scalar>,
-        gamma: ChallengeGamma<C::Scalar>,
-        transcript: &mut Transcript<C, HBase, HScalar>,
+        beta: ChallengeBeta<C>,
+        gamma: ChallengeGamma<C>,
+        transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
         let domain = &pk.vk.domain;
 
@@ -129,7 +124,7 @@ impl Argument {
 
         // Hash the permutation product commitment
         transcript
-            .absorb_point(&permutation_product_commitment)
+            .write_point(permutation_product_commitment)
             .map_err(|_| Error::TranscriptError)?;
 
         Ok(Committed {
@@ -137,7 +132,6 @@ impl Argument {
             permutation_product_coset,
             permutation_product_coset_inv,
             permutation_product_blind,
-            permutation_product_commitment,
         })
     }
 }
@@ -149,8 +143,8 @@ impl<C: CurveAffine> Committed<C> {
         p: &'a Argument,
         pkey: &'a ProvingKey<C>,
         advice_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
-        beta: ChallengeBeta<C::Scalar>,
-        gamma: ChallengeGamma<C::Scalar>,
+        beta: ChallengeBeta<C>,
+        gamma: ChallengeGamma<C>,
     ) -> Result<
         (
             Constructed<C>,
@@ -211,7 +205,6 @@ impl<C: CurveAffine> Committed<C> {
             Constructed {
                 permutation_product_poly: self.permutation_product_poly,
                 permutation_product_blind: self.permutation_product_blind,
-                permutation_product_commitment: self.permutation_product_commitment,
             },
             expressions,
         ))
@@ -219,7 +212,7 @@ impl<C: CurveAffine> Committed<C> {
 }
 
 impl<C: CurveAffine> super::ProvingKey<C> {
-    fn evaluate(&self, x: ChallengeX<C::Scalar>) -> Vec<C::Scalar> {
+    fn evaluate(&self, x: ChallengeX<C>) -> Vec<C::Scalar> {
         self.polys
             .iter()
             .map(|poly| eval_polynomial(poly, *x))
@@ -229,7 +222,7 @@ impl<C: CurveAffine> super::ProvingKey<C> {
     fn open<'a>(
         &'a self,
         evals: &'a [C::Scalar],
-        x: ChallengeX<C::Scalar>,
+        x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
         self.polys
             .iter()
@@ -244,13 +237,13 @@ impl<C: CurveAffine> super::ProvingKey<C> {
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(in crate::plonk) fn evaluate<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
+    pub(in crate::plonk) fn evaluate<W: Write, T: TranscriptWrite<W, C>>(
         self,
         pk: &plonk::ProvingKey<C>,
         pkey: &ProvingKey<C>,
-        x: ChallengeX<C::Scalar>,
-        transcript: &mut Transcript<C, HBase, HScalar>,
-    ) -> Evaluated<C> {
+        x: ChallengeX<C>,
+        transcript: &mut T,
+    ) -> Result<Evaluated<C>, Error> {
         let domain = &pk.vk.domain;
 
         let permutation_product_eval = eval_polynomial(&self.permutation_product_poly, *x);
@@ -268,15 +261,17 @@ impl<C: CurveAffine> Constructed<C> {
             .chain(Some(&permutation_product_inv_eval))
             .chain(permutation_evals.iter())
         {
-            transcript.absorb_scalar(*eval);
+            transcript
+                .write_scalar(*eval)
+                .map_err(|_| Error::TranscriptError)?;
         }
 
-        Evaluated {
+        Ok(Evaluated {
             constructed: self,
             permutation_product_eval,
             permutation_product_inv_eval,
             permutation_evals,
-        }
+        })
     }
 }
 
@@ -285,7 +280,7 @@ impl<C: CurveAffine> Evaluated<C> {
         &'a self,
         pk: &'a plonk::ProvingKey<C>,
         pkey: &'a ProvingKey<C>,
-        x: ChallengeX<C::Scalar>,
+        x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
         let x_inv = pk.vk.domain.rotate_omega(*x, Rotation(-1));
 
@@ -305,14 +300,5 @@ impl<C: CurveAffine> Evaluated<C> {
             }))
             // Open permutation polynomial commitments at x
             .chain(pkey.open(&self.permutation_evals, x))
-    }
-
-    pub(crate) fn build(self) -> Proof<C> {
-        Proof {
-            permutation_product_commitment: self.constructed.permutation_product_commitment,
-            permutation_product_eval: self.permutation_product_eval,
-            permutation_product_inv_eval: self.permutation_product_inv_eval,
-            permutation_evals: self.permutation_evals,
-        }
     }
 }

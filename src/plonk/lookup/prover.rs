@@ -2,7 +2,7 @@ use super::super::{
     circuit::{Any, Column},
     ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error, ProvingKey,
 };
-use super::{Argument, Proof};
+use super::Argument;
 use crate::{
     arithmetic::{eval_polynomial, parallelize, BatchInvert, Curve, CurveAffine, FieldExt},
     poly::{
@@ -10,9 +10,10 @@ use crate::{
         multiopen::ProverQuery,
         Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
     },
-    transcript::{Hasher, Transcript},
+    transcript::TranscriptWrite,
 };
 use ff::Field;
+use std::io::Write;
 use std::{collections::BTreeMap, iter};
 
 #[derive(Debug)]
@@ -47,13 +48,10 @@ pub(in crate::plonk) struct Committed<'a, C: CurveAffine> {
 pub(in crate::plonk) struct Constructed<C: CurveAffine> {
     permuted_input_poly: Polynomial<C::Scalar, Coeff>,
     permuted_input_blind: Blind<C::Scalar>,
-    permuted_input_commitment: C,
     permuted_table_poly: Polynomial<C::Scalar, Coeff>,
     permuted_table_blind: Blind<C::Scalar>,
-    permuted_table_commitment: C,
     product_poly: Polynomial<C::Scalar, Coeff>,
     product_blind: Blind<C::Scalar>,
-    product_commitment: C,
 }
 
 pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
@@ -78,21 +76,21 @@ impl Argument {
     pub(in crate::plonk) fn commit_permuted<
         'a,
         C: CurveAffine,
-        HBase: Hasher<C::Base>,
-        HScalar: Hasher<C::Scalar>,
+        W: Write,
+        T: TranscriptWrite<W, C>,
     >(
         &self,
         pk: &ProvingKey<C>,
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
-        theta: ChallengeTheta<C::Scalar>,
+        theta: ChallengeTheta<C>,
         advice_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
         fixed_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
         aux_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
         advice_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         fixed_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         aux_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
-        transcript: &mut Transcript<C, HBase, HScalar>,
+        transcript: &mut T,
     ) -> Result<Permuted<'a, C>, Error> {
         // Closure to get values of columns and compress them
         let compress_columns = |columns: &[Column<Any>]| {
@@ -150,12 +148,12 @@ impl Argument {
 
         // Hash permuted input commitment
         transcript
-            .absorb_point(&permuted_input_commitment)
+            .write_point(permuted_input_commitment)
             .map_err(|_| Error::TranscriptError)?;
 
         // Hash permuted table commitment
         transcript
-            .absorb_point(&permuted_table_commitment)
+            .write_point(permuted_table_commitment)
             .map_err(|_| Error::TranscriptError)?;
 
         let permuted_input_coset = pk
@@ -197,14 +195,14 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
     /// grand product polynomial over the lookup. The grand product polynomial
     /// is used to populate the Product<C> struct. The Product<C> struct is
     /// added to the Lookup and finally returned by the method.
-    pub(in crate::plonk) fn commit_product<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
+    pub(in crate::plonk) fn commit_product<W: Write, T: TranscriptWrite<W, C>>(
         self,
         pk: &ProvingKey<C>,
         params: &Params<C>,
-        theta: ChallengeTheta<C::Scalar>,
-        beta: ChallengeBeta<C::Scalar>,
-        gamma: ChallengeGamma<C::Scalar>,
-        transcript: &mut Transcript<C, HBase, HScalar>,
+        theta: ChallengeTheta<C>,
+        beta: ChallengeBeta<C>,
+        gamma: ChallengeGamma<C>,
+        transcript: &mut T,
     ) -> Result<Committed<'a, C>, Error> {
         // Goal is to compute the products of fractions
         //
@@ -331,7 +329,7 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
 
         // Hash product commitment
         transcript
-            .absorb_point(&product_commitment)
+            .write_point(product_commitment)
             .map_err(|_| Error::TranscriptError)?;
 
         Ok(Committed::<'a, C> {
@@ -354,9 +352,9 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
     pub(in crate::plonk) fn construct(
         self,
         pk: &'a ProvingKey<C>,
-        theta: ChallengeTheta<C::Scalar>,
-        beta: ChallengeBeta<C::Scalar>,
-        gamma: ChallengeGamma<C::Scalar>,
+        theta: ChallengeTheta<C>,
+        beta: ChallengeBeta<C>,
+        gamma: ChallengeGamma<C>,
     ) -> Result<
         (
             Constructed<C>,
@@ -434,13 +432,10 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
             Constructed {
                 permuted_input_poly: permuted.permuted_input_poly,
                 permuted_input_blind: permuted.permuted_input_blind,
-                permuted_input_commitment: permuted.permuted_input_commitment,
                 permuted_table_poly: permuted.permuted_table_poly,
                 permuted_table_blind: permuted.permuted_table_blind,
-                permuted_table_commitment: permuted.permuted_table_commitment,
                 product_poly: self.product_poly,
                 product_blind: self.product_blind,
-                product_commitment: self.product_commitment,
             },
             expressions,
         ))
@@ -448,12 +443,12 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(in crate::plonk) fn evaluate<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
+    pub(in crate::plonk) fn evaluate<W: Write, T: TranscriptWrite<W, C>>(
         self,
         pk: &ProvingKey<C>,
-        x: ChallengeX<C::Scalar>,
-        transcript: &mut Transcript<C, HBase, HScalar>,
-    ) -> Evaluated<C> {
+        x: ChallengeX<C>,
+        transcript: &mut T,
+    ) -> Result<Evaluated<C>, Error> {
         let domain = &pk.vk.domain;
         let x_inv = domain.rotate_omega(*x, Rotation(-1));
 
@@ -471,17 +466,19 @@ impl<C: CurveAffine> Constructed<C> {
             .chain(Some(permuted_input_inv_eval))
             .chain(Some(permuted_table_eval))
         {
-            transcript.absorb_scalar(eval);
+            transcript
+                .write_scalar(eval)
+                .map_err(|_| Error::TranscriptError)?;
         }
 
-        Evaluated {
+        Ok(Evaluated {
             constructed: self,
             product_eval,
             product_inv_eval,
             permuted_input_eval,
             permuted_input_inv_eval,
             permuted_table_eval,
-        }
+        })
     }
 }
 
@@ -489,7 +486,7 @@ impl<C: CurveAffine> Evaluated<C> {
     pub(in crate::plonk) fn open<'a>(
         &'a self,
         pk: &'a ProvingKey<C>,
-        x: ChallengeX<C::Scalar>,
+        x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
         let x_inv = pk.vk.domain.rotate_omega(*x, Rotation(-1));
 
@@ -520,28 +517,15 @@ impl<C: CurveAffine> Evaluated<C> {
                 point: x_inv,
                 poly: &self.constructed.permuted_input_poly,
                 blind: self.constructed.permuted_input_blind,
-                eval: self.permuted_input_eval,
+                eval: self.permuted_input_inv_eval,
             }))
             // Open lookup product commitments at x_inv
             .chain(Some(ProverQuery {
                 point: x_inv,
                 poly: &self.constructed.product_poly,
                 blind: self.constructed.product_blind,
-                eval: self.product_eval,
+                eval: self.product_inv_eval,
             }))
-    }
-
-    pub(crate) fn build(self) -> Proof<C> {
-        Proof {
-            product_commitment: self.constructed.product_commitment,
-            product_eval: self.product_eval,
-            product_inv_eval: self.product_inv_eval,
-            permuted_input_commitment: self.constructed.permuted_input_commitment,
-            permuted_table_commitment: self.constructed.permuted_table_commitment,
-            permuted_input_eval: self.permuted_input_eval,
-            permuted_input_inv_eval: self.permuted_input_inv_eval,
-            permuted_table_eval: self.permuted_table_eval,
-        }
     }
 }
 

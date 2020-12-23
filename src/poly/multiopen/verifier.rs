@@ -21,14 +21,14 @@ struct CommitmentData<C: CurveAffine> {
 }
 
 /// Verify a multi-opening proof
-pub fn verify_proof<'a, I, C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
+pub fn verify_proof<'b, 'a: 'b, I, C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
     params: &'a Params<C>,
     transcript: &mut T,
     queries: I,
     mut msm: MSM<'a, C>,
 ) -> Result<Guard<'a, C>, Error>
 where
-    I: IntoIterator<Item = VerifierQuery<'a, C>> + Clone,
+    I: IntoIterator<Item = VerifierQuery<'b, C>> + Clone,
 {
     // Scale the MSM by a random factor to ensure that if the existing MSM
     // has is_zero() == false then this argument won't be able to interfere

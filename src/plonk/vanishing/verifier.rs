@@ -1,46 +1,57 @@
 use ff::Field;
+use std::io::Read;
 
-use super::Proof;
 use crate::{
     arithmetic::CurveAffine,
     plonk::{ChallengeX, ChallengeY, Error, VerifyingKey},
     poly::multiopen::VerifierQuery,
-    transcript::{Hasher, Transcript},
+    transcript::{read_n_points, read_n_scalars, TranscriptRead},
 };
 
-impl<C: CurveAffine> Proof<C> {
-    pub(in crate::plonk) fn check_lengths(&self, vk: &VerifyingKey<C>) -> Result<(), Error> {
-        if self.h_commitments.len() != self.h_evals.len() {
-            return Err(Error::IncompatibleParams);
-        }
+use super::Argument;
 
-        if self.h_commitments.len() != vk.domain.get_quotient_poly_degree() {
-            return Err(Error::IncompatibleParams);
-        }
+pub struct Committed<C: CurveAffine> {
+    h_commitments: Vec<C>,
+}
 
-        Ok(())
-    }
+pub struct Evaluated<C: CurveAffine> {
+    h_commitments: Vec<C>,
+    h_evals: Vec<C::Scalar>,
+}
 
-    pub(in crate::plonk) fn absorb_commitments<
-        HBase: Hasher<C::Base>,
-        HScalar: Hasher<C::Scalar>,
-    >(
-        &self,
-        transcript: &mut Transcript<C, HBase, HScalar>,
-    ) -> Result<(), Error> {
+impl<C: CurveAffine> Argument<C> {
+    pub(in crate::plonk) fn absorb_commitments<R: Read, T: TranscriptRead<R, C>>(
+        vk: &VerifyingKey<C>,
+        transcript: &mut T,
+    ) -> Result<Committed<C>, Error> {
         // Obtain a commitment to h(X) in the form of multiple pieces of degree n - 1
-        for c in &self.h_commitments {
-            transcript
-                .absorb_point(c)
-                .map_err(|_| Error::TranscriptError)?;
-        }
-        Ok(())
-    }
+        let h_commitments = read_n_points(transcript, vk.domain.get_quotient_poly_degree())
+            .map_err(|_| Error::TranscriptError)?;
 
+        Ok(Committed { h_commitments })
+    }
+}
+
+impl<C: CurveAffine> Committed<C> {
+    pub(in crate::plonk) fn evaluate<R: Read, T: TranscriptRead<R, C>>(
+        self,
+        transcript: &mut T,
+    ) -> Result<Evaluated<C>, Error> {
+        let h_evals = read_n_scalars(transcript, self.h_commitments.len())
+            .map_err(|_| Error::TranscriptError)?;
+
+        Ok(Evaluated {
+            h_commitments: self.h_commitments,
+            h_evals,
+        })
+    }
+}
+
+impl<C: CurveAffine> Evaluated<C> {
     pub(in crate::plonk) fn verify(
         &self,
         expressions: impl Iterator<Item = C::Scalar>,
-        y: ChallengeY<C::Scalar>,
+        y: ChallengeY<C>,
         xn: C::Scalar,
     ) -> Result<(), Error> {
         let expected_h_eval = expressions.fold(C::Scalar::zero(), |h_eval, v| h_eval * &*y + &v);
@@ -60,13 +71,9 @@ impl<C: CurveAffine> Proof<C> {
         Ok(())
     }
 
-    pub(in crate::plonk) fn evals(&self) -> impl Iterator<Item = &C::Scalar> {
-        self.h_evals.iter()
-    }
-
     pub(in crate::plonk) fn queries<'a>(
         &'a self,
-        x: ChallengeX<C::Scalar>,
+        x: ChallengeX<C>,
     ) -> impl Iterator<Item = VerifierQuery<'a, C>> + Clone {
         self.h_commitments
             .iter()

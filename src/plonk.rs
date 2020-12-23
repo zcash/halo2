@@ -6,9 +6,7 @@
 //! [plonk]: https://eprint.iacr.org/2019/953
 
 use crate::arithmetic::CurveAffine;
-use crate::poly::{
-    multiopen, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
-};
+use crate::poly::{Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial};
 use crate::transcript::ChallengeScalar;
 
 mod circuit;
@@ -46,20 +44,6 @@ pub struct ProvingKey<C: CurveAffine> {
     fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
     fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     permutations: Vec<permutation::ProvingKey<C>>,
-}
-
-/// This is an object which represents a (Turbo)PLONK proof.
-// This structure must never allow points at infinity.
-#[derive(Debug, Clone)]
-pub struct Proof<C: CurveAffine> {
-    advice_commitments: Vec<C>,
-    permutations: Vec<permutation::Proof<C>>,
-    lookups: Vec<lookup::Proof<C>>,
-    advice_evals: Vec<C::Scalar>,
-    aux_evals: Vec<C::Scalar>,
-    fixed_evals: Vec<C::Scalar>,
-    vanishing: vanishing::Proof<C>,
-    multiopening: multiopen::Proof<C>,
 }
 
 /// This is an error that could occur during proving or circuit synthesis.
@@ -121,8 +105,9 @@ fn test_proving() {
     use crate::arithmetic::{Curve, FieldExt};
     use crate::pasta::{EqAffine, Fp, Fq};
     use crate::poly::commitment::{Blind, Params};
-    use crate::transcript::DummyHash;
+    use crate::transcript::{DummyHashReader, DummyHashWriter, TranscriptRead, TranscriptWrite};
     use circuit::{Advice, Column, Fixed};
+    use std::io;
     use std::marker::PhantomData;
     const K: u32 = 5;
 
@@ -131,7 +116,7 @@ fn test_proving() {
     pub struct Variable(Column<Advice>, usize);
 
     // Initialize the polynomial commitment parameters
-    let params: Params<EqAffine> = Params::new::<DummyHash<Fq>>(K);
+    let params: Params<EqAffine> = Params::new::<DummyHashWriter<io::Sink, _>>(K);
 
     struct PLONKConfig {
         a: Column<Advice>,
@@ -463,20 +448,23 @@ fn test_proving() {
         .to_affine();
 
     for _ in 0..100 {
+        let mut transcript = DummyHashWriter::init(vec![], Fq::one());
         // Create a proof
-        let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(
+        create_proof(
             &params,
             &pk,
             &circuit,
             &[pubinputs.clone()],
+            &mut transcript,
         )
         .expect("proof generation should not fail");
+        let proof: Vec<u8> = transcript.finalize();
 
         let pubinput_slice = &[pubinput];
         let msm = params.empty_msm();
-        let guard = proof
-            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, pk.get_vk(), msm, pubinput_slice)
-            .unwrap();
+        let mut transcript = DummyHashReader::init(&proof[..], Fq::one());
+        let guard =
+            verify_proof(&params, pk.get_vk(), msm, pubinput_slice, &mut transcript).unwrap();
         {
             let msm = guard.clone().use_challenges();
             assert!(msm.eval());
@@ -488,9 +476,9 @@ fn test_proving() {
         }
         let msm = guard.clone().use_challenges();
         assert!(msm.clone().eval());
-        let guard = proof
-            .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, pk.get_vk(), msm, pubinput_slice)
-            .unwrap();
+        let mut transcript = DummyHashReader::init(&proof[..], Fq::one());
+        let guard =
+            verify_proof(&params, pk.get_vk(), msm, pubinput_slice, &mut transcript).unwrap();
         {
             let msm = guard.clone().use_challenges();
             assert!(msm.eval());

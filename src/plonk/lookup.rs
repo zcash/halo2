@@ -1,5 +1,4 @@
 use super::circuit::{Any, Column};
-use crate::arithmetic::CurveAffine;
 
 mod prover;
 mod verifier;
@@ -36,16 +35,4 @@ impl Argument {
         // (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
         3
     }
-}
-
-#[derive(Clone, Debug)]
-pub(crate) struct Proof<C: CurveAffine> {
-    product_commitment: C,
-    product_eval: C::Scalar,
-    product_inv_eval: C::Scalar,
-    permuted_input_commitment: C,
-    permuted_table_commitment: C,
-    permuted_input_eval: C::Scalar,
-    permuted_input_inv_eval: C::Scalar,
-    permuted_table_eval: C::Scalar,
 }

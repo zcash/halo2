@@ -284,3 +284,25 @@ impl<C: CurveAffine, Type> Deref for ChallengeScalar<C, Type> {
         &self.inner
     }
 }
+
+pub(crate) fn read_n_points<C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
+    transcript: &mut T,
+    n: usize,
+) -> io::Result<Vec<C>> {
+    let mut v = Vec::with_capacity(n);
+    for _ in 0..n {
+        v.push(transcript.read_point()?);
+    }
+    Ok(v)
+}
+
+pub(crate) fn read_n_scalars<C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
+    transcript: &mut T,
+    n: usize,
+) -> io::Result<Vec<C::Scalar>> {
+    let mut v = Vec::with_capacity(n);
+    for _ in 0..n {
+        v.push(transcript.read_scalar()?);
+    }
+    Ok(v)
+}

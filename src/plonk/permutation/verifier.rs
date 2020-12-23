@@ -1,41 +1,81 @@
 use ff::Field;
+use std::io::Read;
 use std::iter;
 
-use super::{Argument, Proof, VerifyingKey};
+use super::{Argument, VerifyingKey};
 use crate::{
     arithmetic::{CurveAffine, FieldExt},
     plonk::{self, ChallengeBeta, ChallengeGamma, ChallengeX, Error},
     poly::{multiopen::VerifierQuery, Rotation},
-    transcript::{Hasher, Transcript},
+    transcript::TranscriptRead,
 };
 
-impl<C: CurveAffine> Proof<C> {
-    pub(crate) fn check_lengths(&self, p: &Argument) -> Result<(), Error> {
-        if self.permutation_evals.len() != p.columns.len() {
-            return Err(Error::IncompatibleParams);
+pub struct Committed<C: CurveAffine> {
+    permutation_product_commitment: C,
+}
+
+pub struct Evaluated<C: CurveAffine> {
+    permutation_product_commitment: C,
+    permutation_product_eval: C::Scalar,
+    permutation_product_inv_eval: C::Scalar,
+    permutation_evals: Vec<C::Scalar>,
+}
+
+impl Argument {
+    pub(crate) fn absorb_product_commitment<C: CurveAffine, R: Read, T: TranscriptRead<R, C>>(
+        &self,
+        transcript: &mut T,
+    ) -> Result<Committed<C>, Error> {
+        let permutation_product_commitment = transcript
+            .read_point()
+            .map_err(|_| Error::TranscriptError)?;
+
+        Ok(Committed {
+            permutation_product_commitment,
+        })
+    }
+}
+
+impl<C: CurveAffine> Committed<C> {
+    pub(crate) fn evaluate<R: Read, T: TranscriptRead<R, C>>(
+        self,
+        vkey: &VerifyingKey<C>,
+        transcript: &mut T,
+    ) -> Result<Evaluated<C>, Error> {
+        let permutation_product_eval = transcript
+            .read_scalar()
+            .map_err(|_| Error::TranscriptError)?;
+        let permutation_product_inv_eval = transcript
+            .read_scalar()
+            .map_err(|_| Error::TranscriptError)?;
+        let mut permutation_evals = Vec::with_capacity(vkey.commitments.len());
+        for _ in 0..vkey.commitments.len() {
+            permutation_evals.push(
+                transcript
+                    .read_scalar()
+                    .map_err(|_| Error::TranscriptError)?,
+            );
         }
 
-        Ok(())
+        Ok(Evaluated {
+            permutation_product_commitment: self.permutation_product_commitment,
+            permutation_product_eval,
+            permutation_product_inv_eval,
+            permutation_evals,
+        })
     }
+}
 
-    pub(crate) fn absorb_commitments<HBase: Hasher<C::Base>, HScalar: Hasher<C::Scalar>>(
-        &self,
-        transcript: &mut Transcript<C, HBase, HScalar>,
-    ) -> Result<(), Error> {
-        transcript
-            .absorb_point(&self.permutation_product_commitment)
-            .map_err(|_| Error::TranscriptError)
-    }
-
+impl<C: CurveAffine> Evaluated<C> {
     pub(in crate::plonk) fn expressions<'a>(
         &'a self,
         vk: &'a plonk::VerifyingKey<C>,
         p: &'a Argument,
         advice_evals: &'a [C::Scalar],
         l_0: C::Scalar,
-        beta: ChallengeBeta<C::Scalar>,
-        gamma: ChallengeGamma<C::Scalar>,
-        x: ChallengeX<C::Scalar>,
+        beta: ChallengeBeta<C>,
+        gamma: ChallengeGamma<C>,
+        x: ChallengeX<C>,
     ) -> impl Iterator<Item = C::Scalar> + 'a {
         iter::empty()
             // l_0(X) * (1 - z(X)) = 0
@@ -70,18 +110,11 @@ impl<C: CurveAffine> Proof<C> {
             }))
     }
 
-    pub(crate) fn evals(&self) -> impl Iterator<Item = &C::Scalar> {
-        iter::empty()
-            .chain(Some(&self.permutation_product_eval))
-            .chain(Some(&self.permutation_product_inv_eval))
-            .chain(self.permutation_evals.iter())
-    }
-
     pub(in crate::plonk) fn queries<'a>(
         &'a self,
         vk: &'a plonk::VerifyingKey<C>,
         vkey: &'a VerifyingKey<C>,
-        x: ChallengeX<C::Scalar>,
+        x: ChallengeX<C>,
     ) -> impl Iterator<Item = VerifierQuery<'a, C>> + Clone {
         let x_inv = vk.domain.rotate_omega(*x, Rotation(-1));
 
