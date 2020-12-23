@@ -439,7 +439,7 @@ $$
 - `s23`:
     - `sr2` (2-bit range check) and `sr3` (3-bit range check)
     - `ss2` (2-bit spread) and `ss3` (3-bit spread)
-(see section [Helper gates](#Helper-gates))
+(see section [Helper gates](#helper-gates))
 
 Output: $\Sigma_0(A) = R^{even} = R_0^{even} + 2^{16} R_1^{even}$
 
@@ -487,7 +487,7 @@ $$
 - `s33`:
     - `sr3` and `sr3` (two 3-bit range checks)
     - `ss3` and `ss3` (two 3-bit spreads)
-(see section [Helper gates](#Helper-gates))
+(see section [Helper gates](#helper-gates))
 
 Output: $\Sigma_1(E) = R^{even} = R_0^{even} + 2^{16} R_1^{even}$
 
@@ -528,7 +528,7 @@ $$
 - `s3`:
     - `sr3` (3-bit range check)
     - `ss3` (3-bit spread)
-(see section [Helper gates](#Helper-gates))
+(see section [Helper gates](#helper-gates))
 
 #### v2
 v2 of the $\sigma_0$ gate takes in a word that's split into $(3, 4, 3, 7, 1, 1, 13)$-bit chunks (already constrained by message scheduling). We refer to these chunks respectively as $(a, b, c, d, e, f, g).$ We already have $\mathtt{spread}(e), \mathtt{spread}(g)$ from the message scheduling. The 1-bit $e,f$ remain unchanged by the spread operation and can be used directly. We further split $b$ into two 2-bit chunks $b_0, b_1.$ $a', b'_0, b'_1, c'$ are the spread versions of the small chunks.
