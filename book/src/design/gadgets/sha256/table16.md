@@ -641,12 +641,14 @@ Let $constrain_n(x) = \prod_{i=0}^n (x-i)$. Constraining this expression to equa
 
 #### 2-bit range check
 `sr2`: $(a - 3)(a - 2)(a - 1)(a) = 0$
+
 sr2| $a_0$ |
 ---|-------|
  1 |   a   |
 
 #### 2-bit spread
 `ss2`: $l_1(a) + 4*l_2(a) + 5*l_3(a) - a' = 0$
+
 ss2| $a_0$ | $a_1$
 ---|-------|------
  1 |   a   |   a'
@@ -659,12 +661,14 @@ with interpolation polynomials:
 
 #### 3-bit range check
 `sr3`: $(a - 7)(a - 6)(a - 5)(a - 4)(a - 3)(a - 2)(a - 1)(a) = 0$
+
 sr3| $a_0$ |
 ---|-------|
  1 |   a   |
 
 #### 3-bit spread
 `ss3`: $l_1(a) + 4*l_2(a) + 5*l_3(a) + 16*l_4(a) + 17*l_5(a) + 20*l_6(a) + 21*l_7(a) - a' = 0$
+
 ss3| $a_0$ | $a_1$
 ---|-------|------
  1 |   a   |   a'
