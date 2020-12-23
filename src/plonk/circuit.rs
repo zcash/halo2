@@ -1,7 +1,6 @@
 use core::cmp::max;
 use core::ops::{Add, Mul};
 use ff::Field;
-use std::collections::BTreeMap;
 use std::convert::TryFrom;
 
 use super::{lookup, permutation, Error};
@@ -307,9 +306,6 @@ pub struct ConstraintSystem<F> {
     pub(crate) aux_queries: Vec<(Column<Aux>, Rotation)>,
     pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
 
-    // Mapping from a witness vector rotation to the index in the point vector.
-    pub(crate) rotations: BTreeMap<Rotation, PointIndex>,
-
     // Vector of permutation arguments, where each corresponds to a sequence of columns
     // that are involved in a permutation argument.
     pub(crate) permutations: Vec<permutation::Argument>,
@@ -321,9 +317,6 @@ pub struct ConstraintSystem<F> {
 
 impl<F: Field> Default for ConstraintSystem<F> {
     fn default() -> ConstraintSystem<F> {
-        let mut rotations = BTreeMap::new();
-        rotations.insert(Rotation::default(), PointIndex(0));
-
         ConstraintSystem {
             num_fixed_columns: 0,
             num_advice_columns: 0,
@@ -332,7 +325,6 @@ impl<F: Field> Default for ConstraintSystem<F> {
             fixed_queries: Vec::new(),
             advice_queries: Vec::new(),
             aux_queries: Vec::new(),
-            rotations,
             permutations: Vec::new(),
             lookups: Vec::new(),
         }
@@ -343,9 +335,6 @@ impl<F: Field> ConstraintSystem<F> {
     /// Add a permutation argument for some advice columns
     pub fn permutation(&mut self, columns: &[Column<Advice>]) -> usize {
         let index = self.permutations.len();
-        if self.permutations.is_empty() {
-            self.add_rotation(Rotation(-1));
-        }
 
         for column in columns {
             self.query_advice_index(*column, 0);
@@ -367,9 +356,6 @@ impl<F: Field> ConstraintSystem<F> {
         assert_eq!(input_columns.len(), table_columns.len());
 
         let index = self.lookups.len();
-        if self.lookups.is_empty() {
-            self.add_rotation(Rotation(-1));
-        }
 
         for input in input_columns {
             self.query_any_index(*input, 0);
@@ -385,7 +371,6 @@ impl<F: Field> ConstraintSystem<F> {
 
     fn query_fixed_index(&mut self, column: Column<Fixed>, at: i32) -> usize {
         let at = Rotation(at);
-        self.add_rotation(at);
 
         // Return existing query, if it exists
         for (index, fixed_query) in self.fixed_queries.iter().enumerate() {
@@ -408,7 +393,6 @@ impl<F: Field> ConstraintSystem<F> {
 
     pub(crate) fn query_advice_index(&mut self, column: Column<Advice>, at: i32) -> usize {
         let at = Rotation(at);
-        self.add_rotation(at);
 
         // Return existing query, if it exists
         for (index, advice_query) in self.advice_queries.iter().enumerate() {
@@ -431,7 +415,6 @@ impl<F: Field> ConstraintSystem<F> {
 
     fn query_aux_index(&mut self, column: Column<Aux>, at: i32) -> usize {
         let at = Rotation(at);
-        self.add_rotation(at);
 
         // Return existing query, if it exists
         for (index, aux_query) in self.aux_queries.iter().enumerate() {
@@ -554,10 +537,5 @@ impl<F: Field> ConstraintSystem<F> {
         };
         self.num_aux_columns += 1;
         tmp
-    }
-
-    fn add_rotation(&mut self, at: Rotation) {
-        let len = self.rotations.len();
-        self.rotations.entry(at).or_insert(PointIndex(len));
     }
 }
