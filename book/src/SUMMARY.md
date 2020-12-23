@@ -11,3 +11,6 @@
   - [Multipoint opening argument](design/multipoint-opening.md)
   - [Permutation argument](design/permutation.md)
   - [Lookup argument](design/lookup-argument.md)
+  - [Gadgets](design/gadgets.md)
+    - [SHA-256](design/gadgets/sha256.md)
+      - [16-bit table chip](design/gadgets/sha256/table16.md)
