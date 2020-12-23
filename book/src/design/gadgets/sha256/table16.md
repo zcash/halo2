@@ -8,6 +8,9 @@ carries and "small pieces" to a range of up to $\{0..7\}$ in one row.
 
 ## Compression round
 
+There are $64$ compression rounds. Each round takes 32-bit values $A, B, C, D, E, F, G, H$
+as input, and performs the following operations:
+
 $$
 \begin{array}{rcl}
 Ch(E, F, G)  &=& (E \wedge F) \oplus (¬E \wedge G) \\
@@ -23,28 +26,43 @@ $$
 
 where $reduce_i$ must handle a carry in $\{0, \ldots, i-1\}$.
 
-There are $64$ compression rounds. $A, B, C, D, E, F, G, H$ are $32$ bits each. Note that
-we will rely on having each of these words in both "dense" and "spread" forms; this is
-explained below.
-
 ![The SHA-256 compression function](./compression.png)
-
-$(a_L, a_H) \boxplus (b_L, b_H) = (c_L, c_H)$, where
-$\hspace{3em}\_ \cdot 2^{32} + (c_H : \mathbb{Z}_{2^{16}}) \cdot 2^{16} + (c_L : \mathbb{Z}_{2^{16}}) = (a_H + b_H) \cdot 2^{16} + a_L + b_L$
-
-Note that this correctly handles the carry from $a_L + b_L$.
-
-More generally any bit-decomposition of the output can be used, not just a decomposition
-into $16$-bit chunks.
 
 Define $\mathtt{spread}$ as a table mapping a $16$-bit input to an output interleaved with
 zero bits. We do not require a separate table for range checks because $\mathtt{spread}$
 can be used.
 
-In fact, this way we additionally get the "spread" form of the output for free; in
-particular this is true for the output of the bottom-right $\boxplus$ which becomes
-$A_{new}$, and the output of the leftmost $\boxplus$ which becomes $E_{new}$. We will use
-this below to optimize $Maj$ and $Ch$.
+### Modular addition
+
+To implement addition modulo $2^{32}$, we note that this is equivalent to adding the
+operands using field addition, and then masking away all but the lowest 32 bits of the
+result. For example, if we have two operands $a$ and $b$:
+
+$$a \boxplus b = c,$$
+
+we decompose each operand (along with the result) into 16-bit chunks:
+
+$$(a_L : \mathbb{Z}_{2^{16}}, a_H : \mathbb{Z}_{2^{16}}) \boxplus (b_L : \mathbb{Z}_{2^{16}}, b_H : \mathbb{Z}_{2^{16}}) = (c_L : \mathbb{Z}_{2^{16}}, c_H : \mathbb{Z}_{2^{16}}),$$
+
+and then reformulate the constraint using field addition:
+
+$$\mathsf{carry} \cdot 2^{32} + c_H \cdot 2^{16} + c_L = (a_H + b_H) \cdot 2^{16} + a_L + b_L.$$
+
+More generally, any bit-decomposition of the output can be used, not just a decomposition
+into 16-bit chunks. Note that this correctly handles the carry from $a_L + b_L$.
+
+This constraint requires that each chunk is correctly range-checked (or else an assignment
+could overflow the field).
+
+- The operand and result chunks can be constrained using $\mathtt{spread}$, by looking up
+  each chunk in the "dense" column within a subset of the table. This way we additionally
+  get the "spread" form of the output for free; in particular this is true for the output
+  of the bottom-right $\boxplus$ which becomes $A_{new}$, and the output of the leftmost
+  $\boxplus$ which becomes $E_{new}$. We will use this below to optimize $Maj$ and $Ch$.
+
+- $\mathsf{carry}$ must be constrained to the precise range of allowed carry values for
+  the number of operands. We do this with a
+  [small range constraint](../../../user/tips-and-tricks.md#small-range-constraints).
 
 ### Maj function
 
