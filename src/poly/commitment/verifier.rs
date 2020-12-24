@@ -4,16 +4,15 @@ use super::super::Error;
 use super::{Params, MSM};
 use crate::transcript::{Challenge, ChallengeScalar, TranscriptRead};
 
-use crate::arithmetic::{best_multiexp, Curve, CurveAffine, FieldExt};
+use crate::arithmetic::{best_multiexp, BatchInvert, Curve, CurveAffine};
 
 /// A guard returned by the verifier
 #[derive(Debug, Clone)]
 pub struct Guard<'a, C: CurveAffine> {
     msm: MSM<'a, C>,
     neg_a: C::Scalar,
-    allinv: C::Scalar,
-    challenges_sq: Vec<C::Scalar>,
-    challenges_sq_packed: Vec<Challenge>,
+    challenges: Vec<C::Scalar>,
+    challenges_packed: Vec<Challenge>,
 }
 
 /// An accumulator instance consisting of an evaluation claim and a proof.
@@ -24,14 +23,14 @@ pub struct Accumulator<C: CurveAffine> {
 
     /// A vector of 128-bit challenges sampled by the verifier, to be used in
     /// computing g.
-    pub challenges_sq_packed: Vec<Challenge>,
+    pub challenges_packed: Vec<Challenge>,
 }
 
 impl<'a, C: CurveAffine> Guard<'a, C> {
     /// Lets caller supply the challenges and obtain an MSM with updated
     /// scalars and points.
     pub fn use_challenges(mut self) -> MSM<'a, C> {
-        let s = compute_s(&self.challenges_sq, self.allinv * &self.neg_a);
+        let s = compute_s(&self.challenges, self.neg_a);
         self.msm.add_to_g_scalars(&s);
         self.msm.add_to_h_scalar(self.neg_a);
 
@@ -45,7 +44,7 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
 
         let accumulator = Accumulator {
             g,
-            challenges_sq_packed: self.challenges_sq_packed,
+            challenges_packed: self.challenges_packed,
         };
 
         (self.msm, accumulator)
@@ -53,7 +52,7 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
 
     /// Computes G + H, where G = ⟨s, params.g⟩ and H is used for blinding
     pub fn compute_g(&self) -> C {
-        let s = compute_s(&self.challenges_sq, self.allinv);
+        let s = compute_s(&self.challenges, C::Scalar::one());
 
         metrics::increment_counter!("multiexp", "size" => format!("{}", s.len()), "fn" => "compute_g");
         let mut tmp = best_multiexp(&s, &self.msm.params.g);
@@ -84,46 +83,37 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
 
     let z = *ChallengeScalar::<C, ()>::get(transcript);
 
-    // Data about the challenges from each of the rounds.
-    let mut challenges = Vec::with_capacity(k);
-    let mut challenges_inv = Vec::with_capacity(k);
-    let mut challenges_sq = Vec::with_capacity(k);
-    let mut challenges_sq_packed: Vec<Challenge> = Vec::with_capacity(k);
-    let mut allinv = C::Scalar::one();
-
+    let mut rounds = vec![];
     for _ in 0..k {
         // Read L and R from the proof and write them to the transcript
         let l = transcript.read_point().map_err(|_| Error::OpeningError)?;
         let r = transcript.read_point().map_err(|_| Error::OpeningError)?;
 
-        let challenge_sq_packed = Challenge::get(transcript);
-        let challenge_sq = *ChallengeScalar::<C, ()>::from(challenge_sq_packed);
+        let challenge_packed = Challenge::get(transcript);
+        let challenge = *ChallengeScalar::<C, ()>::from(challenge_packed);
 
-        let challenge = challenge_sq.deterministic_sqrt();
-        if challenge.is_none() {
-            // We didn't sample a square.
-            return Err(Error::OpeningError);
-        }
-        let challenge = challenge.unwrap();
+        rounds.push((
+            l,
+            r,
+            challenge,
+            /* to be inverted */ challenge,
+            challenge_packed,
+        ));
+    }
 
-        let challenge_inv = challenge.invert();
-        if bool::from(challenge_inv.is_none()) {
-            // We sampled zero for some reason, unlikely to happen by
-            // chance.
-            return Err(Error::OpeningError);
-        }
-        let challenge_inv = challenge_inv.unwrap();
-        allinv *= &challenge_inv;
+    rounds
+        .iter_mut()
+        .map(|&mut (_, _, _, ref mut challenge, _)| challenge)
+        .batch_invert();
 
-        let challenge_sq_inv = challenge_inv.square();
-
-        msm.append_term(challenge_sq, l);
-        msm.append_term(challenge_sq_inv, r);
+    let mut challenges = Vec::with_capacity(k);
+    let mut challenges_packed: Vec<Challenge> = Vec::with_capacity(k);
+    for (l, r, challenge, challenge_inv, challenge_packed) in rounds {
+        msm.append_term(challenge_inv, l);
+        msm.append_term(challenge, r);
 
         challenges.push(challenge);
-        challenges_inv.push(challenge_inv);
-        challenges_sq.push(challenge_sq);
-        challenges_sq_packed.push(challenge_sq_packed);
+        challenges_packed.push(challenge_packed);
     }
 
     // Our goal is to open
@@ -142,7 +132,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
     let a = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
     let neg_a = -a;
     let h = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
-    let b = compute_b(x, &challenges, &challenges_inv);
+    let b = compute_b(x, &challenges);
 
     msm.add_to_u_scalar(neg_a * &b * &z);
     msm.add_to_h_scalar(a - &h);
@@ -150,42 +140,43 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
     let guard = Guard {
         msm,
         neg_a,
-        allinv,
-        challenges_sq,
-        challenges_sq_packed,
+        challenges,
+        challenges_packed,
     };
 
     Ok(guard)
 }
 
-fn compute_b<F: Field>(x: F, challenges: &[F], challenges_inv: &[F]) -> F {
-    assert!(!challenges.is_empty());
-    assert_eq!(challenges.len(), challenges_inv.len());
-    if challenges.len() == 1 {
-        *challenges_inv.last().unwrap() + *challenges.last().unwrap() * x
-    } else {
-        (*challenges_inv.last().unwrap() + *challenges.last().unwrap() * x)
-            * compute_b(
-                x.square(),
-                &challenges[0..(challenges.len() - 1)],
-                &challenges_inv[0..(challenges.len() - 1)],
-            )
+/// Computes $\prod\limits_{i=0}^{k-1} (1 + u_i x^{2^i})$.
+fn compute_b<F: Field>(x: F, challenges: &[F]) -> F {
+    let mut tmp = F::one();
+    let mut cur = x;
+    for challenge in challenges.iter().rev() {
+        tmp *= F::one() + &(*challenge * &cur);
+        cur *= cur;
     }
+    tmp
 }
 
-// TODO: parallelize
-fn compute_s<F: Field>(challenges_sq: &[F], allinv: F) -> Vec<F> {
-    let lg_n = challenges_sq.len();
-    let n = 1 << lg_n;
+/// Computes the coefficients of $g(X) = \prod\limits_{i=0}^{k-1} (1 + u_i X^{2^i})$.
+fn compute_s<F: Field>(challenges: &[F], init: F) -> Vec<F> {
+    assert!(challenges.len() > 0);
+    let mut v = vec![F::zero(); 1 << challenges.len()];
+    v[0] = init;
 
-    let mut s = Vec::with_capacity(n);
-    s.push(allinv);
-    for i in 1..n {
-        let lg_i = (32 - 1 - (i as u32).leading_zeros()) as usize;
-        let k = 1 << lg_i;
-        let u_lg_i_sq = challenges_sq[(lg_n - 1) - lg_i];
-        s.push(s[i - k] * u_lg_i_sq);
+    for (len, challenge) in challenges
+        .iter()
+        .rev()
+        .enumerate()
+        .map(|(i, challenge)| (1 << i, challenge))
+    {
+        let (left, right) = v.split_at_mut(len);
+        let right = &mut right[0..len];
+        right.copy_from_slice(&left);
+        for v in right {
+            *v *= challenge;
+        }
     }
 
-    s
+    v
 }
