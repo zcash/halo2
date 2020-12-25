@@ -1,6 +1,6 @@
 # Cores
 
-The above is a fairly low-level description of a circuit. When implementing circuits we will
+The previous section gives a fairly low-level description of a circuit. When implementing circuits we will
 typically use a higher-level API which aims for the desirable characteristics of auditability,
 efficiency, modularity, and expressiveness.
 
@@ -44,7 +44,7 @@ In R1CS (which may be more familiar to some readers, but don't worry if it isn't
 consists of a "sea of gates" with no semantically significant ordering. Because of offset
 references, the order of rows in a UPA circuit, on the other hand, *is* significant. We're
 going to make some simplifying assumptions and define some abstractions to tame the resulting
-complexity: the aim will be that, [at the gadget level](#Gadgets) where we do most of our
+complexity: the aim will be that, [at the gadget level](gadgets.md) where we do most of our
 circuit construction, we will not have to deal with relative references or with gate layout
 explicitly.
 
