@@ -1,4 +1,4 @@
-# Background
+# Proof systems
 
 The aim of any ***proof system*** is to be able to prove ***instances*** of ***statements***.
 
@@ -9,6 +9,10 @@ these public inputs.
 Normally the statement will also have ***private inputs***. The private inputs and any
 intermediate values that make an instance of a statement hold, are collectively called a
 ***witness*** for that instance.
+
+> The intermediate values depend on how we express the statement. We assume that we can
+> compute them efficiently from the private and public inputs (if that were not the case
+> then we would consider them part of the private inputs).
 
 A ***Non-interactive Argument of Knowledge*** allows a ***prover*** to create a ***proof***
 for a given instance and witness. The proof is data that can be used to convince a
