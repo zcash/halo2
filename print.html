@@ -97,7 +97,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">halo2</a></li><li class="chapter-item expanded "><a href="concepts.html"><strong aria-hidden="true">1.</strong> Concepts</a></li><li class="chapter-item expanded "><a href="user.html"><strong aria-hidden="true">2.</strong> User Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="user/simple-example.html"><strong aria-hidden="true">2.1.</strong> A simple example</a></li><li class="chapter-item expanded "><a href="user/lookup-tables.html"><strong aria-hidden="true">2.2.</strong> Lookup tables</a></li><li class="chapter-item expanded "><a href="user/gadgets.html"><strong aria-hidden="true">2.3.</strong> Gadgets</a></li><li class="chapter-item expanded "><a href="user/tips-and-tricks.html"><strong aria-hidden="true">2.4.</strong> Tips and tricks</a></li></ol></li><li class="chapter-item expanded "><a href="design.html"><strong aria-hidden="true">3.</strong> Design</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="design/multipoint-opening.html"><strong aria-hidden="true">3.1.</strong> Multipoint opening argument</a></li><li class="chapter-item expanded "><a href="design/permutation.html"><strong aria-hidden="true">3.2.</strong> Permutation argument</a></li><li class="chapter-item expanded "><a href="design/lookup-argument.html"><strong aria-hidden="true">3.3.</strong> Lookup argument</a></li><li class="chapter-item expanded "><a href="design/gadgets.html"><strong aria-hidden="true">3.4.</strong> Gadgets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="design/gadgets/sha256.html"><strong aria-hidden="true">3.4.1.</strong> SHA-256</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="design/gadgets/sha256/table16.html"><strong aria-hidden="true">3.4.1.1.</strong> 16-bit table chip</a></li></ol></li></ol></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">halo2</a></li><li class="chapter-item expanded "><a href="concepts.html"><strong aria-hidden="true">1.</strong> Concepts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="concepts/proofs.html"><strong aria-hidden="true">1.1.</strong> Proof systems</a></li><li class="chapter-item expanded "><a href="concepts/arithmetization.html"><strong aria-hidden="true">1.2.</strong> UltraPLONK Arithmetization</a></li><li class="chapter-item expanded "><a href="concepts/cores.html"><strong aria-hidden="true">1.3.</strong> Cores</a></li><li class="chapter-item expanded "><a href="concepts/chips.html"><strong aria-hidden="true">1.4.</strong> Chips</a></li><li class="chapter-item expanded "><a href="concepts/gadgets.html"><strong aria-hidden="true">1.5.</strong> Gadgets</a></li></ol></li><li class="chapter-item expanded "><a href="user.html"><strong aria-hidden="true">2.</strong> User Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="user/simple-example.html"><strong aria-hidden="true">2.1.</strong> A simple example</a></li><li class="chapter-item expanded "><a href="user/lookup-tables.html"><strong aria-hidden="true">2.2.</strong> Lookup tables</a></li><li class="chapter-item expanded "><a href="user/gadgets.html"><strong aria-hidden="true">2.3.</strong> Gadgets</a></li><li class="chapter-item expanded "><a href="user/tips-and-tricks.html"><strong aria-hidden="true">2.4.</strong> Tips and tricks</a></li></ol></li><li class="chapter-item expanded "><a href="design.html"><strong aria-hidden="true">3.</strong> Design</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="design/multipoint-opening.html"><strong aria-hidden="true">3.1.</strong> Multipoint opening argument</a></li><li class="chapter-item expanded "><a href="design/permutation.html"><strong aria-hidden="true">3.2.</strong> Permutation argument</a></li><li class="chapter-item expanded "><a href="design/lookup-argument.html"><strong aria-hidden="true">3.3.</strong> Lookup argument</a></li><li class="chapter-item expanded "><a href="design/gadgets.html"><strong aria-hidden="true">3.4.</strong> Gadgets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="design/gadgets/sha256.html"><strong aria-hidden="true">3.4.1.</strong> SHA-256</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="design/gadgets/sha256/table16.html"><strong aria-hidden="true">3.4.1.1.</strong> 16-bit table chip</a></li></ol></li></ol></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -181,6 +181,213 @@ while ensuring that all improvements are eventually open source. See
 graphically illustrated on three slides.</p>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
 <h1><a class="header" href="#concepts" id="concepts">Concepts</a></h1>
+<p>First we'll describe the concepts behind zero-knowledge proof systems; the
+<em>arithmetization</em> (kind of circuit description) used by Halo 2; and the
+abstractions we use to build circuit implementations.</p>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
+<h1><a class="header" href="#proof-systems" id="proof-systems">Proof systems</a></h1>
+<p>The aim of any <em><strong>proof system</strong></em> is to be able to prove <em><strong>instances</strong></em> of <em><strong>statements</strong></em>.</p>
+<p>A statement is a high-level description of what is to be proven, parameterized by
+<em><strong>public inputs</strong></em> of given types. An instance is a statement with particular values for
+these public inputs.</p>
+<p>Normally the statement will also have <em><strong>private inputs</strong></em>. The private inputs and any
+intermediate values that make an instance of a statement hold, are collectively called a
+<em><strong>witness</strong></em> for that instance.</p>
+<blockquote>
+<p>The intermediate values depend on how we express the statement. We assume that we can
+compute them efficiently from the private and public inputs (if that were not the case
+then we would consider them part of the private inputs).</p>
+</blockquote>
+<p>A <em><strong>Non-interactive Argument of Knowledge</strong></em> allows a <em><strong>prover</strong></em> to create a <em><strong>proof</strong></em>
+for a given instance and witness. The proof is data that can be used to convince a
+<em><strong>verifier</strong></em> that the creator of the proof knew a witness for which the statement holds on
+this instance. The security property that such proofs cannot falsely convince a verifier is
+called <em><strong>knowledge soundness</strong></em>.</p>
+<blockquote>
+<p>This property is subtle given that proofs can be <em><strong>malleable</strong></em>. That is, depending on the
+proof system it may be possible to take an existing proof (or set of proofs) and, without
+knowing the witness(es), modify it/them to produce a distinct proof of the same or a related
+statement. Higher-level protocols that use malleable proof systems need to take this into
+account.</p>
+</blockquote>
+<p>If a proof yields no information about the witness (other than that a witness exists and was
+known to the prover), then we say that the proof system is <em><strong>zero knowledge</strong></em>.</p>
+<p>A proof system will define an <em><strong>arithmetization</strong></em>, which is a way of describing statements
+--- typically in terms of polynomial constraints on variables over a field. An arithmetized
+statement is called a <em><strong>circuit</strong></em>.</p>
+<p>If the proof is short ---i.e. it has length polylogarithmic in the circuit size--- then
+we say that the proof system is <em><strong>succinct</strong></em>, and call it a <em><strong>SNARK</strong></em>
+(<em><strong>Succinct Non-Interactive Argument of Knowledge</strong></em>).</p>
+<blockquote>
+<p>By this definition, a SNARK need not have verification time polylogarithmic in the circuit
+size. Some papers use the term <em><strong>efficient</strong></em> to describe a SNARK with that property, but
+we'll avoid that term since it's ambiguous for SNARKs that support amortized or recursive
+verification, which we'll get to later.</p>
+</blockquote>
+<p>A <em><strong>zk-SNARK</strong></em> is a zero-knowledge SNARK.</p>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
+<h1><a class="header" href="#ultraplonk-arithmetization" id="ultraplonk-arithmetization">UltraPLONK Arithmetization</a></h1>
+<p>The arithmetization used by Halo 2 comes from <a href="https://eprint.iacr.org/2019/953">PLONK</a>, or
+more precisely its extension UltraPLONK that supports custom gates and lookup arguments. We'll
+call it <em><strong>UPA</strong></em> (<em><strong>UltraPLONK arithmetization</strong></em>).</p>
+<blockquote>
+<p>The term UPA and some of the other terms we use to describe it are not used in the PLONK
+paper.</p>
+</blockquote>
+<p><em><strong>UPA circuits</strong></em> are defined in terms of a rectangular matrix of values. We refer to
+<em><strong>rows</strong></em>, <em><strong>columns</strong></em>, and <em><strong>cells</strong></em> of this matrix with the conventional meanings.</p>
+<p>A UPA circuit depends on a <em><strong>configuration</strong></em>:</p>
+<ul>
+<li>
+<p>A finite field <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68889em;vertical-align:0em;"></span><span class="mord"><span class="mord mathbb">F</span></span></span></span></span>, where cell values (for a given instance and witness) will be
+elements of <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68889em;vertical-align:0em;"></span><span class="mord"><span class="mord mathbb">F</span></span></span></span></span>.</p>
+</li>
+<li>
+<p>The number of columns in the matrix, and a specification of each column as being
+<em><strong>fixed</strong></em>, <em><strong>advice</strong></em>, or <em><strong>auxiliary</strong></em>. Fixed columns are fixed by the circuit;
+advice columns correspond to witness values; and auxiliary columns are used for public inputs.</p>
+</li>
+<li>
+<p>A subset of the columns that can participate in equality constraints.</p>
+</li>
+<li>
+<p>A <em><strong>polynomial degree bound</strong></em>.</p>
+</li>
+<li>
+<p>A sequence of <em><strong>polynomial constraints</strong></em>. These are multivariate polynomials over
+<span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68889em;vertical-align:0em;"></span><span class="mord"><span class="mord mathbb">F</span></span></span></span></span> that must evaluate to zero <em>for each row</em>. The variables in a polynomial
+constraint may refer to a cell in a given column of the current row, or a given column of
+another row relative to this one (with wrap-around, i.e. taken modulo <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">n</span></span></span></span>). The maximum
+degree of each polynomial is given by the polynomial degree bound.</p>
+</li>
+<li>
+<p>A sequence of <em><strong>lookup arguments</strong></em> defined over tuples of <em><strong>input columns</strong></em> and
+<em><strong>table columns</strong></em>.</p>
+</li>
+</ul>
+<p>A UPA circuit also defines:</p>
+<ul>
+<li>
+<p>The number of rows <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">n</span></span></span></span> in the matrix. <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">n</span></span></span></span> must correspond to the size of a multiplicative
+subgroup of <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.771331em;vertical-align:0em;"></span><span class="mord"><span class="mord"><span class="mord mathbb">F</span></span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.771331em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mbin mtight">×</span></span></span></span></span></span></span></span></span></span></span>; typically a power of two.</p>
+</li>
+<li>
+<p>A sequence of <em><strong>equality constraints</strong></em>, which specify that two given cells must have equal
+values.</p>
+</li>
+<li>
+<p>The values of the fixed columns at each row.</p>
+</li>
+</ul>
+<p>From a circuit description we can generate a <em><strong>proving key</strong></em> and a <em><strong>verification key</strong></em>,
+which are needed for the operations of proving and verification for that circuit.</p>
+<blockquote>
+<p>Note that we specify the ordering of columns, polynomial constraints, lookup arguments, and
+equality constraints, even though these do not affect the meaning of the circuit. This makes
+it easier to define the generation of proving and verification keys as a deterministic
+process.</p>
+</blockquote>
+<p>Typically, a configuration will define polynomial constraints that are switched off and on by
+<em><strong>selectors</strong></em> defined in fixed columns. For example, a constraint <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.63889em;vertical-align:-0.19444em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">p</span><span class="mopen">(</span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span></span></span></span> can
+be switched off for a particular row <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.65952em;vertical-align:0em;"></span><span class="mord mathnormal">i</span></span></span></span> by setting <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">0</span></span></span></span>. In this case we sometimes refer
+to a set of constraints controlled by a set of selector columns that are designed to be used
+together, as a <em><strong>gate</strong></em>. Typically there will be a <em><strong>standard gate</strong></em> that supports generic
+operations like field multiplication and division, and possibly also <em><strong>custom gates</strong></em> that
+support more specialized operations.</p>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
+<h1><a class="header" href="#cores" id="cores">Cores</a></h1>
+<p>The previous section gives a fairly low-level description of a circuit. When implementing circuits we will
+typically use a higher-level API which aims for the desirable characteristics of auditability,
+efficiency, modularity, and expressiveness.</p>
+<p>Some of the terminology and concepts used in this API are taken from an analogy with
+integrated circuit design and layout. <a href="https://opencores.org/">As for integrated circuits</a>,
+the above desirable characteristics are easier to obtain by composing <em><strong>cores</strong></em> that provide
+efficient pre-built implementations of particular functionality.</p>
+<p>For example, we might have cores that implement particular cryptographic primitives such as a
+hash function or cipher, or algorithms like scalar multiplication or pairings.</p>
+<p>In UPA, it is possible to build up arbitrary logic just from standard gates that do field
+multiplication and addition. However, very significant efficiency gains can be obtained by
+using custom gates.</p>
+<p>Using our API, we define cores that &quot;know&quot; how to use particular sets of custom gates. This
+creates an abstraction layer that isolates the implementation of a high-level circuit from the
+complexity of using custom gates directly.</p>
+<blockquote>
+<p>Even if we sometimes need to &quot;wear two hats&quot;, by implementing both a high-level circuit and
+the cores that it uses, the intention is that this separation will result in code that is
+easier to understand, audit, and maintain/reuse. This is partly because some potential
+implementation errors are ruled out by construction.</p>
+</blockquote>
+<p>Gates in UPA refer to cells by <em><strong>relative references</strong></em>, i.e. to the cell in a given column,
+and the row at a given offset relative to the one in which the gate's selector is set. We call
+this an <em><strong>offset reference</strong></em> when the offset is nonzero (i.e. offset references are a subset
+of relative references).</p>
+<p>Relative references contrast with <em><strong>absolute references</strong></em> used in equality constraints,
+which can point to any cell.</p>
+<p>The motivation for offset references is to reduce the number of columns needed in the
+configuration, which reduces proof size. If we did not have offset references then we would
+need a column to hold each value referred to by a custom gate, and we would need to use
+equality constraints to copy values from other cells of the circuit into that column. With
+offset references, we not only need fewer columns; we also do not need equality constraints to
+be supported for all of those columns, which improves efficiency.</p>
+<p>In R1CS (which may be more familiar to some readers, but don't worry if it isn't), a circuit
+consists of a &quot;sea of gates&quot; with no semantically significant ordering. Because of offset
+references, the order of rows in a UPA circuit, on the other hand, <em>is</em> significant. We're
+going to make some simplifying assumptions and define some abstractions to tame the resulting
+complexity: the aim will be that, <a href="concepts/gadgets.html">at the gadget level</a> where we do most of our
+circuit construction, we will not have to deal with relative references or with gate layout
+explicitly.</p>
+<p>We will partition a circuit into <em><strong>regions</strong></em>, where each region contains a disjoint subset
+of cells, and relative references only ever point <em>within</em> a region. Part of the responsibility
+of a core implementation is to ensure that gates that make offset references are laid out in
+the correct positions in a region.</p>
+<p>Given the set of regions and their <em><strong>shapes</strong></em>, we will use a separate <em><strong>floor planner</strong></em>
+to decide where (i.e. at what starting row) each region is placed. There is a default floor
+planner that implements a very general algorithm, but you can write your own floor planner if
+you need to.</p>
+<p>Floor planning will in general leave gaps in the matrix, because the gates in a given row did
+not use all available columns. These are filled in ---as far as possible--- by gates that do
+not require offset references, which allows them to be placed on any row.</p>
+<p>Cores can also define lookup tables. If more than one table is defined for the same lookup
+argument, we can use a <em><strong>tag column</strong></em> to specify which table is used on each row. It is also
+possible to perform a lookup in the union of several tables (limited by the polynomial degree
+bound).</p>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
+<h1><a class="header" href="#chips" id="chips">Chips</a></h1>
+<p>In order to combine functionality from several cores, we use a <em><strong>chip</strong></em>. To implement a
+chip, we define a set of fixed, advice, and auxiliary columns, and then specify how they
+should be distributed between cores.</p>
+<p>In the simplest case, each core will use columns disjoint from the other cores. However, it
+is allowed to share a column between cores. It is important to optimize the number of advice
+columns in particular, because that affects proof size.</p>
+<p>The result (possibly after optimization) is a UPA configuration. Our circuit implementation
+will be parameterized on a chip, and can use any features of the supported cores via the chip.</p>
+<p>Our hope is that less expert users will normally be able to find an existing chip that
+supports the operations they need, or only have to make minor modifications to an existing
+chip. Expert users will have full control to do the kind of
+<a href="https://zips.z.cash/protocol/canopy.pdf#circuitdesign">circuit optimizations</a>
+<a href="https://electriccoin.co/blog/cultivating-sapling-faster-zksnarks/">that ECC is famous  for</a> 🙂.</p>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
+<h1><a class="header" href="#gadgets" id="gadgets">Gadgets</a></h1>
+<p>When implementing a circuit, we could use the features of the cores we've selected directly
+via the chip. Typically, though, we will use them via <em><strong>gadgets</strong></em>. This indirection is
+useful because, for reasons of efficiency and limitations imposed by UPA, the core interfaces
+will often be dependent on low-level implementation details. The gadget interface can provide
+a more convenient and stable API that abstracts away from extraneous detail.</p>
+<p>For example, consider a hash function such as SHA-256. The interface of a core supporting
+SHA-256 might be dependent on internals of the hash function design such as the separation
+between message schedule and compression function. The corresponding gadget interface can
+provide a more convenient and familiar <code>update</code>/<code>finalize</code> API, and can also handle parts
+of the hash function that do not need core support, such as padding. This is similar to how
+<a href="https://software.intel.com/content/www/us/en/develop/articles/intel-sha-extensions.html">accelerated</a>
+<a href="https://developer.arm.com/documentation/ddi0514/g/introduction/about-the-cortex-a57-processor-cryptography-engine">instructions</a>
+for cryptographic primitives on CPUs are typically accessed via software libraries, rather
+than directly.</p>
+<p>Gadgets can also provide modular and reusable abstractions for circuit programming
+at a higher level, similar to their use in libraries such as
+<a href="https://github.com/christianlundkvist/libsnark-tutorial">libsnark</a> and
+<a href="https://electriccoin.co/blog/bellman-zksnarks-in-rust/">bellman</a>. As well as abstracting
+<em>functions</em>, they can also abstract <em>types</em>, such as elliptic curve points or integers of
+specific sizes.</p>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
 <h1><a class="header" href="#user-documentation" id="user-documentation">User Documentation</a></h1>
 <p>You're probably here because you want to write circuits? Excellent!</p>
@@ -214,7 +421,7 @@ Assuming we have only one lookup argument in our constraint system, the total si
 each table entry costs one row, and it also costs one row to do each lookup.</p>
 <p>TODO</p>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
-<h1><a class="header" href="#gadgets" id="gadgets">Gadgets</a></h1>
+<h1><a class="header" href="#gadgets-1" id="gadgets-1">Gadgets</a></h1>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
 <h1><a class="header" href="#tips-and-tricks" id="tips-and-tricks">Tips and tricks</a></h1>
 <p>This section contains various ideas and snippets that you might find useful while writing
@@ -544,7 +751,7 @@ Plookup are in the subset argument. This argument can then be used in all the sa
 for instance, the optimized range check technique in section 5 of the Plookup paper can
 also be used with this subset argument.</p>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
-<h1><a class="header" href="#gadgets-1" id="gadgets-1">Gadgets</a></h1>
+<h1><a class="header" href="#gadgets-2" id="gadgets-2">Gadgets</a></h1>
 <p>In this section we document the gadgets and chip designs provided by halo2.</p>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
 <h1><a class="header" href="#sha-256" id="sha-256">SHA-256</a></h1>

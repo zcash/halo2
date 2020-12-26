@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>A simple example - The halo2 Book</title>
+        <title>Cores - The halo2 Book</title>
         
         
 
@@ -95,7 +95,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">halo2</a></li><li class="chapter-item expanded "><a href="../concepts.html"><strong aria-hidden="true">1.</strong> Concepts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../concepts/proofs.html"><strong aria-hidden="true">1.1.</strong> Proof systems</a></li><li class="chapter-item expanded "><a href="../concepts/arithmetization.html"><strong aria-hidden="true">1.2.</strong> UltraPLONK Arithmetization</a></li><li class="chapter-item expanded "><a href="../concepts/cores.html"><strong aria-hidden="true">1.3.</strong> Cores</a></li><li class="chapter-item expanded "><a href="../concepts/chips.html"><strong aria-hidden="true">1.4.</strong> Chips</a></li><li class="chapter-item expanded "><a href="../concepts/gadgets.html"><strong aria-hidden="true">1.5.</strong> Gadgets</a></li></ol></li><li class="chapter-item expanded "><a href="../user.html"><strong aria-hidden="true">2.</strong> User Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../user/simple-example.html" class="active"><strong aria-hidden="true">2.1.</strong> A simple example</a></li><li class="chapter-item expanded "><a href="../user/lookup-tables.html"><strong aria-hidden="true">2.2.</strong> Lookup tables</a></li><li class="chapter-item expanded "><a href="../user/gadgets.html"><strong aria-hidden="true">2.3.</strong> Gadgets</a></li><li class="chapter-item expanded "><a href="../user/tips-and-tricks.html"><strong aria-hidden="true">2.4.</strong> Tips and tricks</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">3.</strong> Design</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/multipoint-opening.html"><strong aria-hidden="true">3.1.</strong> Multipoint opening argument</a></li><li class="chapter-item expanded "><a href="../design/permutation.html"><strong aria-hidden="true">3.2.</strong> Permutation argument</a></li><li class="chapter-item expanded "><a href="../design/lookup-argument.html"><strong aria-hidden="true">3.3.</strong> Lookup argument</a></li><li class="chapter-item expanded "><a href="../design/gadgets.html"><strong aria-hidden="true">3.4.</strong> Gadgets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sha256.html"><strong aria-hidden="true">3.4.1.</strong> SHA-256</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sha256/table16.html"><strong aria-hidden="true">3.4.1.1.</strong> 16-bit table chip</a></li></ol></li></ol></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">halo2</a></li><li class="chapter-item expanded "><a href="../concepts.html"><strong aria-hidden="true">1.</strong> Concepts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../concepts/proofs.html"><strong aria-hidden="true">1.1.</strong> Proof systems</a></li><li class="chapter-item expanded "><a href="../concepts/arithmetization.html"><strong aria-hidden="true">1.2.</strong> UltraPLONK Arithmetization</a></li><li class="chapter-item expanded "><a href="../concepts/cores.html" class="active"><strong aria-hidden="true">1.3.</strong> Cores</a></li><li class="chapter-item expanded "><a href="../concepts/chips.html"><strong aria-hidden="true">1.4.</strong> Chips</a></li><li class="chapter-item expanded "><a href="../concepts/gadgets.html"><strong aria-hidden="true">1.5.</strong> Gadgets</a></li></ol></li><li class="chapter-item expanded "><a href="../user.html"><strong aria-hidden="true">2.</strong> User Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../user/simple-example.html"><strong aria-hidden="true">2.1.</strong> A simple example</a></li><li class="chapter-item expanded "><a href="../user/lookup-tables.html"><strong aria-hidden="true">2.2.</strong> Lookup tables</a></li><li class="chapter-item expanded "><a href="../user/gadgets.html"><strong aria-hidden="true">2.3.</strong> Gadgets</a></li><li class="chapter-item expanded "><a href="../user/tips-and-tricks.html"><strong aria-hidden="true">2.4.</strong> Tips and tricks</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">3.</strong> Design</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/multipoint-opening.html"><strong aria-hidden="true">3.1.</strong> Multipoint opening argument</a></li><li class="chapter-item expanded "><a href="../design/permutation.html"><strong aria-hidden="true">3.2.</strong> Permutation argument</a></li><li class="chapter-item expanded "><a href="../design/lookup-argument.html"><strong aria-hidden="true">3.3.</strong> Lookup argument</a></li><li class="chapter-item expanded "><a href="../design/gadgets.html"><strong aria-hidden="true">3.4.</strong> Gadgets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sha256.html"><strong aria-hidden="true">3.4.1.</strong> SHA-256</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sha256/table16.html"><strong aria-hidden="true">3.4.1.1.</strong> 16-bit table chip</a></li></ol></li></ol></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -164,37 +164,75 @@
                 <div id="content" class="content">
                     <main>
                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
-<h1><a class="header" href="#a-simple-example" id="a-simple-example">A simple example</a></h1>
-<p>Let's start with a simple circuit, to introduce you to the common APIs and how they are
-used. The circuit will take a public input <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">c</span></span></span></span>, and will prove knowledge of two private
-inputs <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">a</span></span></span></span> and <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">b</span></span></span></span> such that</p>
-<p><span class="katex-display"><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.44445em;vertical-align:0em;"></span><span class="mord mathnormal">a</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">b</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">c</span><span class="mord">.</span></span></span></span></span></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span><span class="boring">extern crate halo2;
-</span>use halo2::arithmetic::FieldExt;
-
-struct MyCircuit&lt;F: FieldExt&gt; {
-    a: F,
-    b: F,
-}
-<span class="boring">}
-</span></code></pre></pre>
-<p>TODO</p>
+<h1><a class="header" href="#cores" id="cores">Cores</a></h1>
+<p>The previous section gives a fairly low-level description of a circuit. When implementing circuits we will
+typically use a higher-level API which aims for the desirable characteristics of auditability,
+efficiency, modularity, and expressiveness.</p>
+<p>Some of the terminology and concepts used in this API are taken from an analogy with
+integrated circuit design and layout. <a href="https://opencores.org/">As for integrated circuits</a>,
+the above desirable characteristics are easier to obtain by composing <em><strong>cores</strong></em> that provide
+efficient pre-built implementations of particular functionality.</p>
+<p>For example, we might have cores that implement particular cryptographic primitives such as a
+hash function or cipher, or algorithms like scalar multiplication or pairings.</p>
+<p>In UPA, it is possible to build up arbitrary logic just from standard gates that do field
+multiplication and addition. However, very significant efficiency gains can be obtained by
+using custom gates.</p>
+<p>Using our API, we define cores that &quot;know&quot; how to use particular sets of custom gates. This
+creates an abstraction layer that isolates the implementation of a high-level circuit from the
+complexity of using custom gates directly.</p>
+<blockquote>
+<p>Even if we sometimes need to &quot;wear two hats&quot;, by implementing both a high-level circuit and
+the cores that it uses, the intention is that this separation will result in code that is
+easier to understand, audit, and maintain/reuse. This is partly because some potential
+implementation errors are ruled out by construction.</p>
+</blockquote>
+<p>Gates in UPA refer to cells by <em><strong>relative references</strong></em>, i.e. to the cell in a given column,
+and the row at a given offset relative to the one in which the gate's selector is set. We call
+this an <em><strong>offset reference</strong></em> when the offset is nonzero (i.e. offset references are a subset
+of relative references).</p>
+<p>Relative references contrast with <em><strong>absolute references</strong></em> used in equality constraints,
+which can point to any cell.</p>
+<p>The motivation for offset references is to reduce the number of columns needed in the
+configuration, which reduces proof size. If we did not have offset references then we would
+need a column to hold each value referred to by a custom gate, and we would need to use
+equality constraints to copy values from other cells of the circuit into that column. With
+offset references, we not only need fewer columns; we also do not need equality constraints to
+be supported for all of those columns, which improves efficiency.</p>
+<p>In R1CS (which may be more familiar to some readers, but don't worry if it isn't), a circuit
+consists of a &quot;sea of gates&quot; with no semantically significant ordering. Because of offset
+references, the order of rows in a UPA circuit, on the other hand, <em>is</em> significant. We're
+going to make some simplifying assumptions and define some abstractions to tame the resulting
+complexity: the aim will be that, <a href="gadgets.html">at the gadget level</a> where we do most of our
+circuit construction, we will not have to deal with relative references or with gate layout
+explicitly.</p>
+<p>We will partition a circuit into <em><strong>regions</strong></em>, where each region contains a disjoint subset
+of cells, and relative references only ever point <em>within</em> a region. Part of the responsibility
+of a core implementation is to ensure that gates that make offset references are laid out in
+the correct positions in a region.</p>
+<p>Given the set of regions and their <em><strong>shapes</strong></em>, we will use a separate <em><strong>floor planner</strong></em>
+to decide where (i.e. at what starting row) each region is placed. There is a default floor
+planner that implements a very general algorithm, but you can write your own floor planner if
+you need to.</p>
+<p>Floor planning will in general leave gaps in the matrix, because the gates in a given row did
+not use all available columns. These are filled in ---as far as possible--- by gates that do
+not require offset references, which allows them to be placed on any row.</p>
+<p>Cores can also define lookup tables. If more than one table is defined for the same lookup
+argument, we can use a <em><strong>tag column</strong></em> to specify which table is used on each row. It is also
+possible to perform a lookup in the union of several tables (limited by the polynomial degree
+bound).</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../user.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../concepts/arithmetization.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="../user/lookup-tables.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../concepts/chips.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -206,13 +244,13 @@ struct MyCircuit&lt;F: FieldExt&gt; {
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a rel="prev" href="../user.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../concepts/arithmetization.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a rel="next" href="../user/lookup-tables.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="../concepts/chips.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
