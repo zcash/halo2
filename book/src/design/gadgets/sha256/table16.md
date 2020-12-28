@@ -358,7 +358,7 @@ sn|sc|   $a_0$     |    $a_1$    |           $a_2$             |                
 1 |0 |{0,1,2,3,4,5}|$Q_0^{even}$ |$\texttt{spread}(Q_0^{even})$|$\mathtt{spread}(E^{lo})$           |      $\mathtt{spread}(E^{hi})$     |
 0 |0 |{0,1,2,3,4,5}|$Q_0^{odd}$  |$\texttt{spread}(Q_0^{odd})$ |$evens_0 - \mathtt{spread}(E^{lo})$ |$evens_1 - \mathtt{spread}(E^{hi})$ |
 0 |1 |{0,1,2,3,4,5}|$Q_1^{even}$ |$\texttt{spread}(Q_1^{even})$|$\texttt{spread}(Q_1^{odd})$        |                                    |
-0 |0 |{0,1,2,3,4,5}|$Q_1^{odd}$  |$\texttt{spread}(Q_1^{odd})$ |$\mathtt{spread}(G^{lo})$          |      $\mathtt{spread}(G^{hi})$     |
+0 |0 |{0,1,2,3,4,5}|$Q_1^{odd}$  |$\texttt{spread}(Q_1^{odd})$ |$\mathtt{spread}(G^{lo})$           |      $\mathtt{spread}(G^{hi})$     |
 
 Constraints:
 - `sc` (choice): $LHS - RHS = 0$
@@ -396,7 +396,7 @@ Output: $Maj(A,B,C) = M^{odd} = M_0^{odd} + 2^{16} M_1^{odd}$
 
 ### Σ_0 gate
 
-$A$ is a 32-bit word split into $(2,11,9,10)$-bit chunks, starting from the little end. We refer to these chunks as $(a,b,c,d)$ respectively, and further split $c$ into three 3-bit chunks $c_0, c_1, c_2$. $a'$ and $\{c'_i\}_{i=0}^2$ are the spread versions of the small chunks.
+$A$ is a 32-bit word split into $(2,11,9,10)$-bit chunks, starting from the little end. We refer to these chunks as $(a(2), b(11), c(9), d(10))$ respectively, and further split $c(9)$ into three 3-bit chunks $c(9)^{lo}, c(9)^{mid}, c(9)^{hi}$. We witness the spread versions of the small chunks.
 
 $$
 \begin{array}{ccc}
@@ -405,14 +405,14 @@ $$
 \end{array}
 $$
 
-ss|s23|s33|    $a_0$    |   $a_1$    |           $a_2$             |   $a_3$    |   $a_4$    |   $a_5$    |   $a_6$    |
---|---|---|-------------|------------|-----------------------------|------------|------------|------------|------------|
-0 | 1 | 0 |    {0,1}    |    $d$     |  $\texttt{spread}(d)$       |    $a$     |   $a'$     |   $c_0$    |   $c'_0$   |
+ss|s23|s33|    $a_0$    |   $a_1$    |           $a_2$             |   $a_3$    |   $a_4$                     |   $a_5$                     |   $a_6$                     |
+--|---|---|-------------|------------|-----------------------------|------------|-----------------------------|-----------------------------|-----------------------------|
+0 | 1 | 0 |    {0,1}    |  $d(10)$   |  $\texttt{spread}(d(10))$   |    $a(2)$  | $\texttt{spread}(a(2))$     |   $c(9)^{lo}$               | $\texttt{spread}(c(9)^{lo})$|
 1 | 0 | 0 |{0,1,2,3,4,5}|$R_0^{even}$|$\texttt{spread}(R_0^{even})$|    $A$     | $\texttt{spread}(R_0^{odd})$|$\texttt{spread}(R_1^{even})$| $\texttt{spread}(R_1^{odd})$|
-0 | 0 | 1 |   {0,1,2}   |    $b$     |  $\texttt{spread}(b)$       |   $c_1$    |  $c'_1$    |   $c_2$    |   $c'_2$   |
-0 | 0 | 0 |{0,1,2,3,4,5}|$R_0^{odd}$ |$\texttt{spread}(R_0^{odd})$ |            |            |            |            |
-0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{even}$|$\texttt{spread}(R_1^{even})$|            |            |            |            |
-0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{odd}$ |$\texttt{spread}(R_1^{odd})$ |            |            |            |            |
+0 | 0 | 1 |   {0,1,2}   |  $b(11)$   |  $\texttt{spread}(b(11))$   |$c(9)^{mid}$|$\texttt{spread}(c(9)^{mid})$|   $c(9)^{hi}$               | $\texttt{spread}(c(9)^{hi})$|
+0 | 0 | 0 |{0,1,2,3,4,5}|$R_0^{odd}$ |$\texttt{spread}(R_0^{odd})$ |            |                             |                             |                             |
+0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{even}$|$\texttt{spread}(R_1^{even})$|            |                             |                             |                             |
+0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{odd}$ |$\texttt{spread}(R_1^{odd})$ |            |                             |                             |                             |
 
 Constraints:
 - `ss` ($\Sigma_0$ constraint): $LHS - RHS + tag + decompose = 0$
@@ -420,15 +420,15 @@ Constraints:
 $$
 \begin{array}{ccc}
 tag &=& constrain_1(a_0\omega^{-1}) + constrain_2(a_0\omega) \\
-decompose &=& a + 2^2 b + 2^{13} c_0 + 2^{16} c_1 + 2^{19} c_2 + 2^{22} d- A\\
+decompose &=& a(2) + 2^2 b(11) + 2^{13} c(9)^{lo} + 2^{16} c(9)^{mid} + 2^{19} c(9)^{hi} + 2^{22} d(10) - A\\
 LHS &=& \mathtt{spread}(R^{even}_0) + 2 \cdot \mathtt{spread}(R^{odd}_0) + 2^{32} \cdot \mathtt{spread}(R^{even}_1) + 2^{33} \cdot \mathtt{spread}(R^{odd}_1)
 \end{array}
 $$
 $$
 \begin{array}{rcccccccccl}
-RHS = & 4^{30} a' &+& 4^{20} \texttt{spread}(d) &+& 4^{17} c'_2 &+& 4^{14} c'_1 &+& 4^{11} c'_0 &+&   \texttt{spread}(b)\;&+ \\
-     & 4^{21} \texttt{spread}(b) &+& 4^{19} a' &+& 4^{9} \texttt{spread}(d) &+&   4^{6} c'_2 &+& 4^{3} c'_1 &+& c'_0\;&+ \\
-     & 4^{29} c'_2 &+& 4^{26} c'_1 &+& 4^{23} c'_0 &+& 4^{12} \texttt{spread}(b) &+& 4^{10} a' &+&   \texttt{spread}(d)\;&
+RHS = & 4^{30} \texttt{spread}(a(2)) &+& 4^{20} \texttt{spread}(d(10)) &+& 4^{17} \texttt{spread}(c(9)^{hi}) &+& 4^{14} \texttt{spread}(c(9)^{mid}) &+& 4^{11} \texttt{spread}(c(9)^{lo})  &+&   \texttt{spread}(b(11))\;&+ \\
+     & 4^{21} \texttt{spread}(b(11)) &+& 4^{19} \texttt{spread}(a(2)) &+& 4^{9} \texttt{spread}(d(10)) &+&   4^{6} \texttt{spread}(c(9)^{hi}) &+& 4^{3} \texttt{spread}(c(9)^{mid}) &+& \texttt{spread}(c(9)^{lo}) \;&+ \\
+     & 4^{29} \texttt{spread}(c(9)^{hi}) &+& 4^{26} \texttt{spread}(c(9)^{mid}) &+& 4^{23} \texttt{spread}(c(9)^{lo})  &+& 4^{12} \texttt{spread}(b(11)) &+& 4^{10} \texttt{spread}(a(2)) &+&   \texttt{spread}(d(10))\;&
 \end{array}
 $$
 
@@ -444,7 +444,7 @@ $$
 Output: $\Sigma_0(A) = R^{even} = R_0^{even} + 2^{16} R_1^{even}$
 
 ### Σ_1 gate
-$E$ is a 32-bit word split into $(6,5,14,7)$-bit chunks, starting from the little end. We refer to these chunks as $(a,b,c,d)$ respectively, and further split $a$ into two 3-bit chunks $a_0, a_1$ and $b$ into (2,3)-bit chunks $b_0, b_1$. $\{a'_i\}_{i=0}^1,\{b'_j\}_{j=0}^1$ are the spread versions of the small chunks.
+$E$ is a 32-bit word split into $(6,5,14,7)$-bit chunks, starting from the little end. We refer to these chunks as $(a(6), b(5), c(14), d(7))$ respectively, and further split $a(6)$ into two 3-bit chunks $a(6)^{lo}, a(6)^{hi}$ and $b$ into (2,3)-bit chunks $b(5)^{lo}, b(5)^{hi}$. We witness the spread versions of the small chunks.
 
 $$
 \begin{array}{ccc}
@@ -453,14 +453,14 @@ $$
 \end{array}
 $$
 
-ss|s23|s33|    $a_0$    |   $a_1$    |           $a_2$             |   $a_3$    |   $a_4$    |   $a_5$    |   $a_6$    |
---|---|---|-------------|------------|-----------------------------|------------|------------|------------|------------|
-0 | 1 | 0 |      0      |    $d$     |  $\texttt{spread}(d)$       |   $b_0$    |   $b'_0$   |   $b_1$    |   $b'_1$   |
+ss|s23|s33|    $a_0$    |   $a_1$    |           $a_2$             |   $a_3$    |   $a_4$                     |   $a_5$                     |   $a_6$                     |
+--|---|---|-------------|------------|-----------------------------|------------|-----------------------------|-----------------------------|-----------------------------|
+0 | 1 | 0 |      0      |    $d(7)$  |  $\texttt{spread}(d(7))$    | $b(5)^{lo}$| $\texttt{spread}(b(5)^{lo})$|   $b(5)^{hi}$               | $\texttt{spread}(b(5)^{hi})$|
 1 | 0 | 0 |{0,1,2,3,4,5}|$R_0^{even}$|$\texttt{spread}(R_0^{even})$|    $E$     | $\texttt{spread}(R_0^{odd})$|$\texttt{spread}(R_1^{even})$| $\texttt{spread}(R_1^{odd})$|
-0 | 0 | 1 | {0,1,2,3,4} |    $c$     |  $\texttt{spread}(c)$       |   $a_0$    |  $a'_0$    |   $a_1$    |   $a'_1$   |
-0 | 0 | 0 |{0,1,2,3,4,5}|$R_0^{odd}$ |$\texttt{spread}(R_0^{odd})$ |            |            |            |            |
-0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{even}$|$\texttt{spread}(R_1^{even})$|            |            |            |            |
-0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{odd}$ |$\texttt{spread}(R_1^{odd})$ |            |            |            |            |
+0 | 0 | 1 | {0,1,2,3,4} |    $c(14)$ |  $\texttt{spread}(c(14))$   | $a(6)^{lo}$| $\texttt{spread}(a(6)^{lo})$|   $a(6)^{hi}$               | $\texttt{spread}(a(6)^{hi})$|
+0 | 0 | 0 |{0,1,2,3,4,5}|$R_0^{odd}$ |$\texttt{spread}(R_0^{odd})$ |            |                             |                             |                             |
+0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{even}$|$\texttt{spread}(R_1^{even})$|            |                             |                             |                             |
+0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{odd}$ |$\texttt{spread}(R_1^{odd})$ |            |                             |                             |                             |
 
 Constraints:
 - `ss` ($\Sigma_1$ constraint): $LHS - RHS + tag + decompose = 0$
@@ -468,15 +468,15 @@ Constraints:
 $$
 \begin{array}{ccc}
 tag &=& a_0\omega^{-1} + constrain_4(a_0\omega) \\
-decompose &=& a_0 + 2^3 a_1 + 2^6 b_0 + 2^8 b_1 + 2^{11} c + 2^{25} d - E \\
+decompose &=& a(6)^{lo} + 2^3 a(6)^{hi} + 2^6 b(5)^{lo} + 2^8 b(5)^{hi} + 2^{11} c(14) + 2^{25} d(7) - E \\
 LHS &=& \mathtt{spread}(R^{even}_0) + 2 \cdot \mathtt{spread}(R^{odd}_0) + 2^{32} \cdot \mathtt{spread}(R^{even}_1) + 2^{33} \cdot \mathtt{spread}(R^{odd}_1)
 \end{array}
 $$
 $$
 \begin{array}{rcccccccccl}
-RHS = & 4^{29} a'_1 &+& 4^{26} a'_0 &+& 4^{19} \texttt{spread}(d) &+& 4^{ 5} \texttt{spread}(c) &+&  4^{2} b'_1 &+& b'_0\;&+ \\
-     & 4^{29} b'_1 &+& 4^{27} b'_0 &+& 4^{24} a'_1 &+& 4^{21} a'_0 &+& 4^{14} \texttt{spread}(d) &+&   \texttt{spread}(c)\;&+ \\
-     & 4^{18} \texttt{spread}(c) &+& 4^{15} b'_1 &+& 4^{13} b'_0 &+& 4^{10} a'_1 &+& 4^{7} a'_0 &+&   \texttt{spread}(d)\;&
+RHS = & 4^{29} \texttt{spread}(a(6)^{hi}) &+& 4^{26} \texttt{spread}(a(6)^{lo}) &+& 4^{19} \texttt{spread}(d(7)) &+& 4^{ 5} \texttt{spread}(c(14)) &+&  4^{2} \texttt{spread}(b(5)^{hi}) &+& \texttt{spread}(b(5)^{lo})\;&+ \\
+     & 4^{29} \texttt{spread}(b(5)^{hi}) &+& 4^{27} \texttt{spread}(b(5)^{lo}) &+& 4^{24} \texttt{spread}(a(6)^{hi}) &+& 4^{21} \texttt{spread}(a(6)^{lo}) &+& 4^{14} \texttt{spread}(d(7)) &+&   \texttt{spread}(c(14))\;&+ \\
+     & 4^{18} \texttt{spread}(c(14)) &+& 4^{15} \texttt{spread}(b(5)^{hi}) &+& 4^{13} \texttt{spread}(b(5)^{lo}) &+& 4^{10} \texttt{spread}(a(6)^{hi}) &+& 4^{7} \texttt{spread}(a(6)^{lo}) &+&   \texttt{spread}(d(7))\;&
 \end{array}
 $$
 
@@ -493,17 +493,17 @@ Output: $\Sigma_1(E) = R^{even} = R_0^{even} + 2^{16} R_1^{even}$
 
 ### σ_0 gate
 #### v1
-v1 of the $\sigma_0$ gate takes in a word that's split into $(3, 4, 11, 14)$-bit chunks (already constrained by message scheduling). We refer to these chunks respectively as $(a, b, c, d).$  $b$ is further split into two 2-bit chunks $b_0,b_1.$ $a',\{b'_i\}_{i=0}^1$ are the spread versions of the small chunks. We already have $\texttt{spread}(c)$ and $\texttt{spread}(d)$ from the message scheduling.
+v1 of the $\sigma_0$ gate takes in a word that's split into $(3, 4, 11, 14)$-bit chunks (already constrained by message scheduling). We refer to these chunks respectively as $(a(3), b(4), c(11), d(14)).$  $b(4$ is further split into two 2-bit chunks $b(4)^{lo},b(4)^{hi}.$ We witness the spread versions of the small chunks. We already have $\texttt{spread}(c(11))$ and $\texttt{spread}(d(14))$ from the message scheduling.
 
 $(X ⋙ 7) \oplus (X ⋙ 18) \oplus (X ≫ 3)$ is equivalent to
 $(X ⋙ 7) \oplus (X ⋘ 14) \oplus (X ≫ 3)$.
 
-sr|ss|s22|s23|    $a_0$    |   $a_1$    |            $a_2$            |    $a_3$     |    $a_4$     |    $a_5$     |    $a_6$     |
---|--|---|---|-------------|------------|-----------------------------|--------------|--------------|--------------|--------------|
- 0| 0| 1 | 0 |{0,1,2,3,4,5}|$R_0^{even}$|$\texttt{spread}(R_0^{even})$|    $b_0$     |    $b'_0$    |    $b_1$     |    $b'_1$    |
- 0| 1| 0 | 0 |{0,1,2,3,4,5}|$R_0^{odd}$ |$\texttt{spread}(R_0^{odd})$ |$\texttt{spread}(R_1^{odd})$ |$\texttt{spread}(c)$|$\texttt{spread}(d)$|
- 0| 0| 0 | 1 |{0,1,2,3,4,5}|$R_1^{even}$|$\texttt{spread}(R_1^{even})$|    $b_1$     |    $b'_1$    |    $a$       |    $a'$      |
- 1| 0| 0 | 0 |{0,1,2,3,4,5}|$R_1^{odd}$ |$\texttt{spread}(R_1^{odd})$ |    $R_0$     |    $R_1$     | $R_0^{even}$ |  $R_0^{odd}$ |
+sr|ss|s22|s33|    $a_0$    |   $a_1$    |            $a_2$            |    $a_3$                    |    $a_4$                   |    $a_5$           |    $a_6$                   |
+--|--|---|---|-------------|------------|-----------------------------|-----------------------------|----------------------------|--------------------|----------------------------|
+ 0| 0| 1 | 0 |{0,1,2,3,4,5}|$R_0^{even}$|$\texttt{spread}(R_0^{even})$|    $b(4)^{lo}$              |$\texttt{spread}(b(4)^{lo})$|    $b(4)^{hi}$     |$\texttt{spread}(b(4)^{hi})$|
+ 0| 1| 0 | 0 |{0,1,2,3,4,5}|$R_0^{odd}$ |$\texttt{spread}(R_0^{odd})$ |$\texttt{spread}(R_1^{odd})$ |$\texttt{spread}(c)$        |$\texttt{spread}(d)$|                            |
+ 0| 0| 0 | 1 |{0,1,2,3,4,5}|$R_1^{even}$|$\texttt{spread}(R_1^{even})$|    $0$                      |    $0$                     |    $a$             |    $\texttt{spread}(a)$    |
+ 1| 0| 0 | 0 |{0,1,2,3,4,5}|$R_1^{odd}$ |$\texttt{spread}(R_1^{odd})$ |    $R_0$                    |    $R_1$                   | $R_0^{even}$       |  $R_0^{odd}$               |
 
 Constraints:
 - `ss` ($\sigma_0$ v1 constraint): $LHS - RHS = 0$
@@ -515,9 +515,9 @@ LHS &=& \mathtt{spread}(R^{even}_0) + 2 \cdot \mathtt{spread}(R^{odd}_0) + 2^{32
 $$
 $$
 \begin{array}{rccccccccl}
-RHS = &         & & 4^{15} d &+& 4^{ 4} c &+&  4^2 b_1 &+&   b_0\;&+ \\
-     & 4^{30} b_1 &+& 4^{28} b_0 &+& 4^{25} a &+& 4^{11} d &+&   c\;&+ \\
-     & 4^{21} c &+& 4^{19} b_1 &+& 4^{17} b_0 &+& 4^{14} a &+&   d\;&
+RHS = &         & & 4^{15} d(14) &+& 4^{ 4} c(11) &+&  4^2 b(4)^{hi} &+&   b(4)^{lo}\;&+ \\
+     & 4^{30} b(4)^{hi} &+& 4^{28} b(4)^{lo} &+& 4^{25} a(3) &+& 4^{11} d(14) &+&   c(11)\;&+ \\
+     & 4^{21} c(11) &+& 4^{19} b(4)^{hi} &+& 4^{17} b(4)^{lo} &+& 4^{14} a(3) &+&   d(14)\;&
 \end{array}
 $$
 
@@ -525,26 +525,26 @@ $$
     - $R_1^{even} + 2*R_1^{odd} - R_1 = 0$
     - $R_0^{even} + 2*R_0^{odd} - R_0 = 0$
 - $\mathtt{spread}$ lookup on $a_0, a_1, a_2$
-- `s2`:
+- `s22` on $a_3, a_4, a_5, a_6$:
     - `sr2` (2-bit range check)
     - `ss2` (2-bit spread)
-- `s3`:
+- `s33` on $a_3, a_4, a_5, a_6$:
     - `sr3` (3-bit range check)
     - `ss3` (3-bit spread)
 (see section [Helper gates](#helper-gates))
 
 #### v2
-v2 of the $\sigma_0$ gate takes in a word that's split into $(3, 4, 3, 7, 1, 1, 13)$-bit chunks (already constrained by message scheduling). We refer to these chunks respectively as $(a, b, c, d, e, f, g).$ We already have $\mathtt{spread}(e), \mathtt{spread}(g)$ from the message scheduling. The 1-bit $e,f$ remain unchanged by the spread operation and can be used directly. We further split $b$ into two 2-bit chunks $b_0, b_1.$ $a', b'_0, b'_1, c'$ are the spread versions of the small chunks.
+v2 of the $\sigma_0$ gate takes in a word that's split into $(3, 4, 3, 7, 1, 1, 13)$-bit chunks (already constrained by message scheduling). We refer to these chunks respectively as $(a(3), b(4), c(3), d(7), e(1), f(1), g(13)).$ We already have $\mathtt{spread}(d(7)), \mathtt{spread}(g(13))$ from the message scheduling. The 1-bit $e(1), f(1)$ remain unchanged by the spread operation and can be used directly. We further split $b(4)$ into two 2-bit chunks $b(4)^{lo}, b(4)^{hi}.$ We witness the spread versions of the small chunks.
 
 $(X ⋙ 7) \oplus (X ⋙ 18) \oplus (X ≫ 3)$ is equivalent to
 $(X ⋙ 7) \oplus (X ⋘ 14) \oplus (X ≫ 3)$.
 
-sr|ss|s23|    $a_0$    |   $a_1$    |           $a_2$             |   $a_3$    |   $a_4$    |   $a_5$    |   $a_6$    |   $a_7$    |
---|--|---|-------------|------------|-----------------------------|------------|------------|------------|------------|------------|
-0 |0 | 1 |{0,1,2,3,4,5}|$R_0^{even}$|$\texttt{spread}(R_0^{even})$|   $b_0$    |   $b'_0$   |    $a$     |    $a'$    | $e$        |
-0 |1 | 0 |{0,1,2,3,4,5}|$R_0^{odd}$ |$\texttt{spread}(R_0^{odd})$ | $\texttt{spread}(R_1^{odd})$| $\texttt{spread}(d)$| $\texttt{spread}(g)$ |
-0 |0 | 1 |{0,1,2,3,4,5}|$R_1^{even}$|$\texttt{spread}(R_1^{even})$|   $b_1$    |  $b'_1$    |    $c$     |    $c'$    | $f$        |
-1 |0 | 0 |{0,1,2,3,4,5}|$R_1^{odd}$ |$\texttt{spread}(R_1^{odd})$ |  $R_0$     |  $R_1$     |$R_0^{even}$|$R_0^{odd}$ |            |
+sr|ss|s22|s33|    $a_0$    |   $a_1$    |           $a_2$             |   $a_3$                     |   $a_4$                    |   $a_5$                |   $a_6$                    |   $a_7$    |
+--|--|---|---|-------------|------------|-----------------------------|-----------------------------|----------------------------|------------------------|----------------------------|------------|
+0 |0 | 1 | 0 |{0,1,2,3,4,5}|$R_0^{even}$|$\texttt{spread}(R_0^{even})$|   $b(4)^{lo}$               |$\texttt{spread}(b(4)^{lo})$| $b(4)^{hi}$            |$\texttt{spread}(b(4)^{hi})$| $e(1)$     |
+0 |1 | 0 | 0 |{0,1,2,3,4,5}|$R_0^{odd}$ |$\texttt{spread}(R_0^{odd})$ | $\texttt{spread}(R_1^{odd})$| $\texttt{spread}(d(7))$    |$\texttt{spread}(g(13))$|                            |            |
+0 |0 | 0 | 1 |{0,1,2,3,4,5}|$R_1^{even}$|$\texttt{spread}(R_1^{even})$|    $a(3)$                   |$\texttt{spread}(a(3))$     |    $c(3)$              |$\texttt{spread}(c(3))$     | $f(1)$     |
+1 |0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{odd}$ |$\texttt{spread}(R_1^{odd})$ |  $R_0$                      |  $R_1$                     |$R_0^{even}$            |$R_0^{odd}$                 |            |
 
 Constraints:
 - `ss` ($\sigma_0$ v2 constraint): $LHS - RHS = 0$
@@ -556,32 +556,35 @@ LHS &=& \mathtt{spread}(R^{even}_0) + 2 \cdot \mathtt{spread}(R^{odd}_0) + 2^{32
 $$
 $$
 \begin{array}{rcccccccccccl}
-RHS = &         & & 4^{16} g &+& 4^{15} f &+& 4^{ 14} e &+& 4^{ 7} d &+& 4^{ 4} c &+&  4^2 b_1 &+&   b_0\;&+ \\
-     & 4^{30} b_1 &+& 4^{28} b_0 &+& 4^{25} a &+& 4^{12} g &+& 4^{11} f &+&  4^{10} e &+&   4^{3} d &+&   c\;&+ \\
-     & 4^{31} e &+& 4^{24} d &+& 4^{21} c &+& 4^{19} b_1 &+& 4^{17} b_0 &+& 4^{14} a &+&   4^{1} g &+&   f\;&
+RHS = &         & & 4^{16} g(13) &+& 4^{15} f(1) &+& 4^{ 14} e(1) &+& 4^{ 7} d(7) &+& 4^{ 4} c(3) &+&  4^2 b(4)^{hi} &+&   b(4)^{lo}\;&+ \\
+     & 4^{30} b(4)^{hi} &+& 4^{28} b(4)^{lo} &+& 4^{25} a(3) &+& 4^{12} g(13) &+& 4^{11} f(1) &+&  4^{10} e(1) &+&   4^{3} d(7) &+&   c(3)\;&+ \\
+     & 4^{31} e(1) &+& 4^{24} d(7) &+& 4^{21} c(3) &+& 4^{19} b(4)^{hi} &+& 4^{17} b(4)^{lo} &+& 4^{14} a(3) &+&   4^{1} g(13) &+&   f(1)\;&
 \end{array}
 $$
 
 - `sr` (reduce):
     - $R_1^{even} + 2*R_1^{odd} - R_1 = 0$
     - $R_0^{even} + 2*R_0^{odd} - R_0 = 0$
-- `s23`:
-    - `sr2` (2-bit range check) and `sr3` (3-bit range check)
-    - `ss2` (2-bit spread) and `ss3` (3-bit spread)
+- `s22` on $a_3, a_4, a_5, a_6$:
+    - `sr2` (2-bit range check)
+    - `ss2` (2-bit spread)
+- `s33` on $a_3, a_4, a_5, a_6$:
+    - `sr3` (3-bit range check)
+    - `ss3` (3-bit spread)
 
 ### σ_1 gate
 #### v1
-v1 of the $\sigma_1$ gate takes in a word that's split into $(10,7,2,13)$-bit chunks (already constrained by message scheduling). We refer to these chunks respectively as $(a, b, c, d).$  $b$ is further split into (2,2,3)-bit chunks $b_0,b_1,b_2.$ $\{b'_i\}_{i=0}^2, c'$ are the spread versions of the small chunks. We already have $\texttt{spread}(a)$ and $\texttt{spread}(d)$ from the message scheduling.
+v1 of the $\sigma_1$ gate takes in a word that's split into $(10, 7, 2, 13)$-bit chunks (already constrained by message scheduling). We refer to these chunks respectively as $(a(10), b(7), c(2), d(13)).$  $b(7)$ is further split into $(2, 2, 3)$-bit chunks $b(7)^{lo}, b(7)^{mid}, b(7)^{hi}.$ We witness the spread versions of the small chunks. We already have $\texttt{spread}(a(10))$ and $\texttt{spread}(d(13))$ from the message scheduling.
 
 $(X ⋙ 17) \oplus (X ⋙ 19) \oplus (X ≫ 10)$ is equivalent to
 $(X ⋘ 15) \oplus (X ⋘ 13) \oplus (X ≫ 10)$.
 
-sr|ss|s22|s23|    $a_0$    |   $a_1$    |           $a_2$             |   $a_3$    |   $a_4$    |   $a_5$    |   $a_6$    |
---|--|---|---|-------------|------------|-----------------------------|------------|------------|------------|------------|
-0 |0 | 1 | 0 |{0,1,2,3,4,5}|$R_0^{even}$|$\texttt{spread}(R_0^{even})$|   $b_0$    |   $b'_0$   |   $b_1$    |   $b'_1$   |
-0 |1 | 0 | 0 |{0,1,2,3,4,5}|$R_0^{odd}$ |$\texttt{spread}(R_0^{odd})$ | $\texttt{spread}(R_1^{odd})$| $\texttt{spread}(a)$| $\texttt{spread}(d)$ |
-0 |0 | 0 | 1 |{0,1,2,3,4,5}|$R_1^{even}$|$\texttt{spread}(R_1^{even})$|   $b_2$    |  $b'_2$    |    $c$     |    $c'$    |
-1 |0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{odd}$ |$\texttt{spread}(R_1^{odd})$ |  $R_0$     |  $R_1$     |$R_0^{even}$|$R_0^{odd}$ |
+sr|ss|s22|s23|    $a_0$    |   $a_1$    |           $a_2$             |   $a_3$                      |   $a_4$                    |   $a_5$                |   $a_6$                     |
+--|--|---|---|-------------|------------|-----------------------------|------------------------------|----------------------------|------------------------|-----------------------------|
+0 |0 | 1 | 0 |{0,1,2,3,4,5}|$R_0^{even}$|$\texttt{spread}(R_0^{even})$|   $b(7)^{lo}$                |$\texttt{spread}(b(7)^{lo})$|   $b(7)^{mid}$         |$\texttt{spread}(b(7)^{mid})$|
+0 |1 | 0 | 0 |{0,1,2,3,4,5}|$R_0^{odd}$ |$\texttt{spread}(R_0^{odd})$ | $\texttt{spread}(R_1^{odd})$ | $\texttt{spread}(a(10))$   |$\texttt{spread}(d(13))$|                             |
+0 |0 | 0 | 1 |{0,1,2,3,4,5}|$R_1^{even}$|$\texttt{spread}(R_1^{even})$|    $c(2)$                    |$\texttt{spread}(c(2))$     |   $b(7)^{hi}$          |$\texttt{spread}(b(7)^{hi})$ |
+1 |0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{odd}$ |$\texttt{spread}(R_1^{odd})$ |  $R_0$                       |  $R_1$                     |$R_0^{even}$            |$R_0^{odd}$                  |
 
 Constraints:
 - `ss` ($\sigma_1$ v1 constraint): $LHS - RHS = 0$
@@ -593,34 +596,34 @@ LHS &=& \mathtt{spread}(R^{even}_0) + 2 \cdot \mathtt{spread}(R^{odd}_0) + 2^{32
 $$
 $$
 \begin{array}{rcccccccccl}
-RHS = &          & & 4^{ 9} d &+& 4^{ 7} c &+& 4^{4} b_2 &+& 4^{2} b_1 &+&   b_0\;&+ \\
-     & 4^{29} b_2 &+& 4^{27} b_1 &+& 4^{25} b_0 &+& 4^{15} a &+& 4^{ 2} d &+&   c\;&+ \\
-     & 4^{30} c &+& 4^{27} b_2 &+& 4^{25} b_1 &+& 4^{23} b_0 &+& 4^{13} a &+&   d\;&
+RHS = &          & & 4^{ 9} d(13) &+& 4^{ 7} c(2) &+& 4^{4} b(7)^{hi} &+& 4^{2} b(7)^{mid} &+&   b(7)^{lo}\;&+ \\
+     & 4^{29} b(7)^{hi} &+& 4^{27} b(7)^{mid} &+& 4^{25} b(7)^{lo} &+& 4^{15} a(10) &+& 4^{ 2} d(13) &+&   c(2)\;&+ \\
+     & 4^{30} c(2) &+& 4^{27} b(7)^{hi} &+& 4^{25} b(7)^{mid} &+& 4^{23} b(7)^{lo} &+& 4^{13} a(10) &+&   d(13)\;&
 \end{array}
 $$
 
 - `sr` (reduce):
     - $R_1^{even} + 2*R_1^{odd} - R_1 = 0$
     - $R_0^{even} + 2*R_0^{odd} - R_0 = 0$
-- `s23`:
-    - `sr2` (2-bit range check) and `sr3` (3-bit range check)
-    - `ss2` (2-bit spread) and `ss3` (3-bit spread)
-- `s22`:
-    - `sr2` and `sr2` (two 2-bit range checks)
-    - `ss2` and `ss2` (two 2-bit spreads)
+- `s22` on $a_3, a_4, a_5, a_6$:
+    - `sr2` (2-bit range check)
+    - `ss2` (2-bit spread)
+- `s33` on $a_3, a_4, a_5, a_6$:
+    - `sr3` (3-bit range check)
+    - `ss3` (3-bit spread)
 
 #### v2
-v2 of the $\sigma_1$ gate takes in a word that's split into $(3, 4, 3, 7, 1, 1, 13)$-bit chunks (already constrained by message scheduling). We refer to these chunks respectively as $(a, b, c, d, e, f, g).$ We already have $\mathtt{spread}(e), \mathtt{spread}(g)$ from the message scheduling. The 1-bit $e,f$ remain unchanged by the spread operation and can be used directly. We further split $b$ into two 2-bit chunks $b_0, b_1.$ $a', b'_0, b'_1, c'$ are the spread versions of the small chunks.
+v2 of the $\sigma_1$ gate takes in a word that's split into $(3, 4, 3, 7, 1, 1, 13)$-bit chunks (already constrained by message scheduling). We refer to these chunks respectively as $(a(3), b(4), c(3), d(7), e(1), f(1), g(13)).$ We already have $\mathtt{spread}(d(7)), \mathtt{spread}(g(13))$ from the message scheduling. The 1-bit $e(1), f(1)$ remain unchanged by the spread operation and can be used directly. We further split $b(4)$ into two 2-bit chunks $b(4)^{lo}, b(4)^{hi}.$ We witness the spread versions of the small chunks.
 
 $(X ⋙ 17) \oplus (X ⋙ 19) \oplus (X ≫ 10)$ is equivalent to
 $(X ⋘ 15) \oplus (X ⋘ 13) \oplus (X ≫ 10)$.
 
-sr|ss|s23|    $a_0$    |   $a_1$    |           $a_2$             |   $a_3$    |   $a_4$    |   $a_5$    |   $a_6$    |   $a_7$    |
---|--|---|-------------|------------|-----------------------------|------------|------------|------------|------------|------------|
-0 |0 | 1 |{0,1,2,3,4,5}|$R_0^{even}$|$\texttt{spread}(R_0^{even})$|   $b_0$    |   $b'_0$   |    $a$     |    $a'$    | $e$
-0 |1 | 0 |{0,1,2,3,4,5}|$R_0^{odd}$ |$\texttt{spread}(R_0^{odd})$ | $\texttt{spread}(R_1^{odd})$| $\texttt{spread}(d)$| $\texttt{spread}(g)$ |
-0 |0 | 1 |{0,1,2,3,4,5}|$R_1^{even}$|$\texttt{spread}(R_1^{even})$|   $b_1$    |  $b'_1$    |    $c$     |    $c'$    | $f$
-1 |0 | 0 |{0,1,2,3,4,5}|$R_1^{odd}$ |$\texttt{spread}(R_1^{odd})$ |  $R_0$     |  $R_1$     |$R_0^{even}$|$R_0^{odd}$ |
+sr|ss|s22|s33|    $a_0$    |   $a_1$    |           $a_2$             |   $a_3$                     |   $a_4$                    |   $a_5$                 |   $a_6$                    |   $a_7$    |
+--|--|---|---|-------------|------------|-----------------------------|-----------------------------|----------------------------|-------------------------|----------------------------|------------|
+0 |0 | 1 | 0 |{0,1,2,3,4,5}|$R_0^{even}$|$\texttt{spread}(R_0^{even})$|   $b(4)^{lo}$               |$\texttt{spread}(b(4)^{lo})$|   $b(4)^{hi}$           |$\texttt{spread}(b(4)^{hi})$| $e(1)$     |
+0 |1 | 0 | 0 |{0,1,2,3,4,5}|$R_0^{odd}$ |$\texttt{spread}(R_0^{odd})$ | $\texttt{spread}(R_1^{odd})$| $\texttt{spread}(d(7))$    | $\texttt{spread}(g(13))$|                            |            |
+0 |0 | 0 | 1 |{0,1,2,3,4,5}|$R_1^{even}$|$\texttt{spread}(R_1^{even})$|    $a(3)$                   |$\texttt{spread}(a(3))$     |    $c(3)$               |$\texttt{spread}(c(3))$     | $f(1)$     |
+1 |0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{odd}$ |$\texttt{spread}(R_1^{odd})$ |  $R_0$                      |  $R_1$                     |$R_0^{even}$             |$R_0^{odd}$                 |            |
 
 Constraints:
 - `ss` ($\sigma_1$ v2 constraint): $LHS - RHS = 0$
@@ -632,16 +635,19 @@ LHS &=& \mathtt{spread}(R^{even}_0) + 2 \cdot \mathtt{spread}(R^{odd}_0) + 2^{32
 $$
 $$
 \begin{array}{rccccccccccccl}
-RHS = &        &&&&  & & 4^{ 9} g &+& 4^{ 8} f &+& 4^{ 7} e &+& d\;&+ \\
-     & 4^{25} d &+& 4^{22} c  &+& 4^{20} b_1  &+& 4^{18} b_0  &+& 4^{15} a &+& 4^{ 2} g &+&  4^{1}f  &+&   e\;&+ \\
-     & 4^{31} f &+& 4^{30} e &+&  4^{23} d &+& 4^{20} c  &+& 4^{18} b_1  &+& 4^{16} b_0  &+& 4^{13} a &+&   g\;&
+RHS = &        &&&&  & & 4^{ 9} g(13) &+& 4^{ 8} f(1) &+& 4^{ 7} e(1) &+& d(7)\;&+ \\
+     & 4^{25} d(7) &+& 4^{22} c(3)  &+& 4^{20} b(4)^{hi}  &+& 4^{18} b(4)^{lo}  &+& 4^{15} a &+& 4^{ 2} g(13) &+&  4^{1}f(1)  &+&   e(1)\;&+ \\
+     & 4^{31} f(1) &+& 4^{30} e(1) &+&  4^{23} d(7) &+& 4^{20} c(3)  &+& 4^{18} b(4)^{hi}  &+& 4^{16} b(4)^{lo}  &+& 4^{13} a &+&   g(13)\;&
 \end{array}
 $$
 
 - `sr` (reduce):
     - $R_1^{even} + 2*R_1^{odd} - R_1 = 0$
     - $R_0^{even} + 2*R_0^{odd} - R_0 = 0$
-- `s23`:
+- `s22` on $a_3, a_4, a_5, a_6$:
+    - `sr2` (2-bit range check)
+    - `ss2` (2-bit spread)
+- `s23` on $a_3, a_4, a_5, a_6$:
     - `sr2` (2-bit range check) and `sr3` (3-bit range check)
     - `ss2` (2-bit spread) and `ss3` (3-bit spread)
 
@@ -758,51 +764,53 @@ For each block $M \in \{0,1\}^{512}$ of the padded message, $64$ words of $32$ b
 - the remaining $48$ words are constructed using the formula:
 $$W_i = \sigma_1(W_{i-2}) \boxplus W_{i-7} \boxplus \sigma_0(W_{i-15}) \boxplus W_{i-16},$$ for $i = 16, \ldots, 63$.
 
-sw|sd0|sd1|sd2|sd3|sr |ss0|ss0_v2|ss1|ss1_v2|s22|s23|     $a_0$     |     $a_1$        |             $a_2$                 |    $a_3$                     |    $a_4$                         |    $a_5$                        |         $a_6$                     |         $a_7$          |         $a_8$          |    $a_9$     |
---|---|---|---|---|---|---|------|---|------|---|---|---------------|------------------|-----------------------------------|------------------------------|----------------------------------|---------------------------------|---------------------------------  |------------------------|------------------------|--------------|
-0 | 1 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | {0,1,2,3,4,5} | $W_{0}^{lo}$     | $\texttt{spread}(W_{0}^{lo})$     | $W_{0}^{lo}$                 | $W_{0}^{hi}$                     |   $W_{0}$                       |$\sigma_0(W_1)^{lo}$               |$\sigma_1(W_{14})^{lo}$ |      $W_{9}^{lo}$      |              |
-1 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | {0,1,2,3,4,5} | $W_{0}^{hi}$     | $\texttt{spread}(W_{0}^{hi})$     |                              |                                  |   $W_{16}$                      |$\sigma_0(W_1)^{hi}$               |$\sigma_1(W_{14})^{hi}$ |      $W_{9}^{hi}$      | $carry_{16}$ |
-0 | 1 | 1 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | {0,1,2,3,4}   |  $W_{1}^{d(14)}$ | $\texttt{spread}(W_{1}^{d(14)})$  | $W_{1}^{lo}$                 | $W_{1}^{hi}$                     |   $W_{1}$                       |$\sigma_0(W_2)^{lo}$               |$\sigma_1(W_{15})^{lo}$ |      $W_{10}^{lo}$     |              |
-1 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | {0,1,2}       |  $W_{1}^{c(11)}$ | $\texttt{spread}(W_{1}^{c(11)})$  | $W_{1}^{a(3)}$               | $W_{1}^{b(4)}$                   |   $W_{17}$                      |$\sigma_0(W_2)^{hi}$               |$\sigma_1(W_{15})^{hi}$ |      $W_{10}^{hi}$     | $carry_{17}$ |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 1 | 0 | {0,1,2,3,4,5} |  $R_0^{even}$    | $\texttt{spread}(R_0^{even})$     | $W_{1}^{b(4)lo}$             |$\texttt{spread}(W_{1}^{b(4)lo})$ |   $W_{1}^{b(4) hi}$             |$\texttt{spread}(W_{1}^{b(4)hi})$  |                        |                        |              |
-0 | 0 | 0 | 0 | 0 | 1 | 0 | 0    | 0 | 0    | 0 | 0 | {0,1,2,3,4,5} |  $R_1^{odd}$     | $\texttt{spread}(R_0^{odd})$      | $\texttt{spread}(R_1^{odd})$ |$\texttt{spread}(W_{1}^{c(11)})$  |$\texttt{spread}(W_{1}^{d(14)})$ |                                   |                        |                        |              |
-0 | 0 | 0 | 0 | 0 | 0 | 1 | 0    | 0 | 0    | 0 | 0 | {0,1,2,3,4,5} |  $R_0^{odd}$     | $\texttt{spread}(R_1^{even})$     | $W_{1}^{b(4)hi}$             |$\texttt{spread}(W_{1}^{b(4)hi})$ |    $W_{1}^{a(3)}$               |$\texttt{spread}(W_{1}^{a(3)})$    |                        |                        |              |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 1 | {0,1,2,3,4,5} |  $R_1^{even}$    | $\texttt{spread}(R_1^{odd})$      |    $\sigma_0 v1 R_0$         |    $\sigma_0 v1 R_1$             | $\sigma_0 v1 R_0^{even}$        |  $\sigma_0 v1 R_0^{odd}$          |                        |                        |              |
-..|...|...|...|...|...|...|...   |...|...   |...|...|      ...      |      ...         |              ...                  |     ...                      |     ...                          |    ...                          |         ...                       |         ...            |          ...           |              |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | {0,1,2,3}     | $W_{14}^{g(13)}$ | $\texttt{spread}(W_{14}^{g(13)})$ | $W_{14}^{a(3)}$              | $W_{14}^{c(3)}$                  |                                 |                                   |                        |                        |              |
-0 | 1 | 0 | 1 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 |       0       | $W_{14}^{d(7)}$  | $\texttt{spread}(W_{14}^{d(7)})$  | $W_{14}^{lo}$                | $W_{14}^{hi}$                    |   $W_{14}$                      |$\sigma_0(W_{15})^{lo}$            |$\sigma_1(W_{28})^{lo}$ |      $W_{23}^{lo}$     |              |
-1 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 |       0       | $W_{14}^{b(4)}$  | $\texttt{spread}(W_{14}^{b(4)})$  | $W_{14}^{e(1)}$              | $W_{14}^{f(1)}$                  |   $W_{30}$                      |$\sigma_0(W_{15})^{hi}$            |$\sigma_1(W_{28})^{hi}$ |      $W_{23}^{hi}$     | $carry_{30}$ |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 1 | {0,1,2,3,4,5} | $R_0^{even}$     | $\texttt{spread}(R_0^{even})$     | $W_{14}^{b(4)lo}$            |$\texttt{spread}(W_{14}^{b(4)lo})$|    $W_{14}^{a(3)}$              |$\texttt{spread}(W_{14}^{a(3)})$   | $W_{14}^{e(1)}$        |                        |              |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 1    | 0 | 0    | 0 | 0 | {0,1,2,3,4,5} | $R_0^{odd}$      | $\texttt{spread}(R_0^{odd})$      | $\texttt{spread}(R_1^{odd})$ |$\texttt{spread}(W_{14}^{d(7)})$  |$\texttt{spread}(W_{14}^{g(13)})$|                                   |                        |                        |              |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 1 | {0,1,2,3,4,5} | $R_1^{even}$     | $\texttt{spread}(R_1^{even})$     |   $W_{14}^{b(4) hi}$         |$\texttt{spread}(W_{14}^{b(4)hi})$|    $W_{14}^{c(3)}$              |$\texttt{spread}(W_{14}^{c(3)})$   | $W_{14}^{f(1)}$        |                        |              |
-0 | 0 | 0 | 0 | 0 | 1 | 0 | 0    | 0 | 0    | 0 | 0 | {0,1,2,3,4,5} | $R_1^{odd}$      | $\texttt{spread}(R_1^{odd})$      |  $\sigma_0 v2 R_0$           |  $\sigma_0 v2 R_1$               |$\sigma_0 v2 R_0^{even}$         |$\sigma_0 v2 R_0^{odd}$            |                        |                        |              |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 1 | {0,1,2,3,4,5} | $R_0^{even}$     | $\texttt{spread}(R_0^{even})$     | $W_{14}^{b(4)lo}$            |$\texttt{spread}(W_{14}^{b(4)lo})$|    $W_{14}^{a(3)}$              |$\texttt{spread}(W_{14}^{a(3)})$   | $W_{14}^{e(1)}$        |                        |              |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 1    | 0 | 0 | {0,1,2,3,4,5} | $R_0^{odd}$      | $\texttt{spread}(R_0^{odd})$      | $\texttt{spread}(R_1^{odd})$ | $\texttt{spread}(d)$             | $\texttt{spread}(g)$            |                                   |                        |                        |              |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 1 | {0,1,2,3,4,5} | $R_1^{even}$     | $\texttt{spread}(R_1^{even})$     |   $W_{14}^{b(4) hi}$         |$\texttt{spread}(W_{14}^{b(4)hi})$|    $W_{14}^{c(3)}$              |$\texttt{spread}(W_{14}^{c(3)})$   | $W_{14}^{f(1)}$        |                        |              |
-0 | 0 | 0 | 0 | 0 | 1 | 0 | 0    | 0 | 0    | 0 | 0 | {0,1,2,3,4,5} | $R_1^{odd}$      | $\texttt{spread}(R_1^{odd})$      |  $\sigma_1 v2 R_0$           |  $\sigma_1 v2 R_1$               |$\sigma_1 v2 R_0^{even}$         |$\sigma_1 v2 R_0^{odd}$            |                        |                        |              |
-..|...|...|...|...|...|...|...   |...|...   |...|...|      ...      |      ...         |              ...                  |     ...                      |     ...                          |    ...                          |         ...                       |         ...            |          ...           |              |
-0 | 1 | 0 | 0 | 1 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | {0,1,2,3}     | $W_{49}^{d(13)}$ | $\texttt{spread}(W_{49}^{d(13)})$ | $W_{49}^{lo}$                | $W_{49}^{hi}$                    |   $W_{49}$                      |                                   |                        |                        |              |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | {0,1}         | $W_{49}^{a(10)}$ | $\texttt{spread}(W_{49}^{a(10)})$ | $W_{49}^{c(2)}$              | $W_{49}^{b(7)}$                  |                                 |                                   |                        |                        |              |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 1 | 0 |{0,1,2,3,4,5}  | $R_0^{even}$     | $\texttt{spread}(R_0^{even})$     | $W_{49}^{b(7)lo}$            |$\texttt{spread}(W_{49}^{b(7)lo})$| $W_{49}^{b(7)mid}$              |$\texttt{spread}(W_{49}^{b(7)mid})$|                        |                        |              |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 1 | 0    | 0 | 0 |{0,1,2,3,4,5}  | $R_0^{odd}$      | $\texttt{spread}(R_0^{odd})$      | $\texttt{spread}(R_1^{odd})$ | $\texttt{spread}(a)$             | $\texttt{spread}(d)$            |                                   |                        |                        |              |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 1 |{0,1,2,3,4,5}  | $R_1^{even}$     | $\texttt{spread}(R_1^{even})$     | $W_{49}^{b(7)hi}$            |$\texttt{spread}(W_{49}^{b(7)hi})$|    $W_{49}^{c(2)}$              |$\texttt{spread}(W_{49}^{c(2)})$   |                        |                        |              |
-0 | 0 | 0 | 0 | 0 | 1 | 0 | 0    | 1 | 0    | 0 | 0 |{0,1,2,3,4,5}  | $R_1^{odd}$      | $\texttt{spread}(R_1^{odd})$      |  $\sigma_1 v1 R_0$           |  $\sigma_1 v1 R_1$               |$\sigma_1 v1 R_0^{even}$         |$\sigma_1 v1 R_0^{odd}$            |                        |                        |              |
-..|...|...|...|...|...|...|...   |...|...   |...|...|      ...      |      ...         |              ...                  |     ...                      |     ...                          |    ...                          |         ...                       |         ...            |          ...           |              |
-0 | 1 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | {0,1,2,3,4,5} | $W_{62}^{lo}$    | $\texttt{spread}(W_{62}^{lo})$    | $W_{62}^{lo}$                | $W_{62}^{hi}$                    |   $W_{62}$                      |                                   |                        |                        |              |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | {0,1,2,3,4,5} | $W_{62}^{hi}$    | $\texttt{spread}(W_{62}^{hi})$    |                              |                                  |                                 |                                   |                        |                        |              |
-0 | 1 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | {0,1,2,3,4,5} | $W_{63}^{lo}$    | $\texttt{spread}(W_{63}^{lo})$    | $W_{63}^{lo}$                | $W_{63}^{hi}$                    |   $W_{63}$                      |                                   |                        |                        |              |
-0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | {0,1,2,3,4,5} | $W_{63}^{hi}$    | $\texttt{spread}(W_{63}^{hi})$    |                              |                                  |                                 |                                   |                        |                        |              |
+sw|sd0|sd1|sd2|sd3|sb |ss0|ss0_v2|ss1|ss1_v2|s22|s23|s33|     $a_0$     |     $a_1$        |             $a_2$                 |    $a_3$                     |    $a_4$                         |    $a_5$                        |         $a_6$                     |         $a_7$          |         $a_8$          |    $a_9$     |
+--|---|---|---|---|---|---|------|---|------|---|---|---|---------------|------------------|-----------------------------------|------------------------------|----------------------------------|---------------------------------|---------------------------------  |------------------------|------------------------|--------------|
+0 | 1 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3,4,5} | $W_{0}^{lo}$     | $\texttt{spread}(W_{0}^{lo})$     | $W_{0}^{lo}$                 | $W_{0}^{hi}$                     |   $W_{0}$                       |$\sigma_0(W_1)^{lo}$               |$\sigma_1(W_{14})^{lo}$ |      $W_{9}^{lo}$      |              |
+1 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3,4,5} | $W_{0}^{hi}$     | $\texttt{spread}(W_{0}^{hi})$     |                              |                                  |   $W_{16}$                      |$\sigma_0(W_1)^{hi}$               |$\sigma_1(W_{14})^{hi}$ |      $W_{9}^{hi}$      | $carry_{16}$ |
+0 | 1 | 1 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3,4}   |  $W_{1}^{d(14)}$ | $\texttt{spread}(W_{1}^{d(14)})$  | $W_{1}^{lo}$                 | $W_{1}^{hi}$                     |   $W_{1}$                       |$\sigma_0(W_2)^{lo}$               |$\sigma_1(W_{15})^{lo}$ |      $W_{10}^{lo}$     |              |
+1 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2}       |  $W_{1}^{c(11)}$ | $\texttt{spread}(W_{1}^{c(11)})$  | $W_{1}^{a(3)}$               | $W_{1}^{b(4)}$                   |   $W_{17}$                      |$\sigma_0(W_2)^{hi}$               |$\sigma_1(W_{15})^{hi}$ |      $W_{10}^{hi}$     | $carry_{17}$ |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 1 | 0 | 0 | {0,1,2,3,4,5} |  $R_0^{even}$    | $\texttt{spread}(R_0^{even})$     | $W_{1}^{b(4)lo}$             |$\texttt{spread}(W_{1}^{b(4)lo})$ | $W_{1}^{b(4)hi}$                |$\texttt{spread}(W_{1}^{b(4)hi})$  |                        |                        |              |
+0 | 0 | 0 | 0 | 0 | 1 | 1 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3,4,5} |  $R_1^{odd}$     | $\texttt{spread}(R_0^{odd})$      | $\texttt{spread}(R_1^{odd})$ |$\texttt{spread}(W_{1}^{c(11)})$  |$\texttt{spread}(W_{1}^{d(14)})$ | $W_{1}^{b(4)}$                    |                        |                        |              |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 1 | {0,1,2,3,4,5} |  $R_0^{odd}$     | $\texttt{spread}(R_1^{even})$     |  $0$                         |   $0$                            |    $W_{1}^{a(3)}$               |$\texttt{spread}(W_{1}^{a(3)})$    |                        |                        |              |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3,4,5} |  $R_1^{even}$    | $\texttt{spread}(R_1^{odd})$      |    $\sigma_0 v1 R_0$         |    $\sigma_0 v1 R_1$             | $\sigma_0 v1 R_0^{even}$        |  $\sigma_0 v1 R_0^{odd}$          |                        |                        |              |
+..|...|...|...|...|...|...|...   |...|...   |...|...|...|      ...      |      ...         |              ...                  |     ...                      |     ...                          |    ...                          |         ...                       |         ...            |          ...           |              |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3}     | $W_{14}^{g(13)}$ | $\texttt{spread}(W_{14}^{g(13)})$ | $W_{14}^{a(3)}$              | $W_{14}^{c(3)}$                  |                                 |                                   |                        |                        |              |
+0 | 1 | 0 | 1 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 |       0       | $W_{14}^{d(7)}$  | $\texttt{spread}(W_{14}^{d(7)})$  | $W_{14}^{lo}$                | $W_{14}^{hi}$                    |   $W_{14}$                      |$\sigma_0(W_{15})^{lo}$            |$\sigma_1(W_{28})^{lo}$ |      $W_{23}^{lo}$     |              |
+1 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 |       0       | $W_{14}^{b(4)}$  | $\texttt{spread}(W_{14}^{b(4)})$  | $W_{14}^{e(1)}$              | $W_{14}^{f(1)}$                  |   $W_{30}$                      |$\sigma_0(W_{15})^{hi}$            |$\sigma_1(W_{28})^{hi}$ |      $W_{23}^{hi}$     | $carry_{30}$ |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 1 | 0 | 0 | {0,1,2,3,4,5} | $R_0^{even}$     | $\texttt{spread}(R_0^{even})$     | $W_{14}^{b(4)lo}$            |$\texttt{spread}(W_{14}^{b(4)lo})$|   $W_{14}^{b(4) hi}$            |$\texttt{spread}(W_{14}^{b(4)hi})$ | $W_{14}^{e(1)}$        |                        |              |
+0 | 0 | 0 | 0 | 0 | 1 | 0 | 1    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3,4,5} | $R_0^{odd}$      | $\texttt{spread}(R_0^{odd})$      | $\texttt{spread}(R_1^{odd})$ |$\texttt{spread}(W_{14}^{d(7)})$  |$\texttt{spread}(W_{14}^{g(13)})$| $W_{1}^{b(14)}$                   |                        |                        |              |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 1 | {0,1,2,3,4,5} | $R_1^{even}$     | $\texttt{spread}(R_1^{even})$     |    $W_{14}^{a(3)}$           |$\texttt{spread}(W_{14}^{a(3)})$  |    $W_{14}^{c(3)}$              |$\texttt{spread}(W_{14}^{c(3)})$   | $W_{14}^{f(1)}$        |                        |              |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3,4,5} | $R_1^{odd}$      | $\texttt{spread}(R_1^{odd})$      |  $\sigma_0 v2 R_0$           |  $\sigma_0 v2 R_1$               |$\sigma_0 v2 R_0^{even}$         |$\sigma_0 v2 R_0^{odd}$            |                        |                        |              |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3,4,5} | $R_0^{even}$     | $\texttt{spread}(R_0^{even})$     | $W_{14}^{b(4)lo}$            |$\texttt{spread}(W_{14}^{b(4)lo})$|   $W_{14}^{b(4) hi}$            |$\texttt{spread}(W_{14}^{b(4)hi})$ | $W_{14}^{e(1)}$        |                        |              |
+0 | 0 | 0 | 0 | 0 | 1 | 0 | 0    | 0 | 1    | 0 | 0 | 0 | {0,1,2,3,4,5} | $R_0^{odd}$      | $\texttt{spread}(R_0^{odd})$      | $\texttt{spread}(R_1^{odd})$ | $\texttt{spread}(d)$             | $\texttt{spread}(g)$            |                                   |                        |                        |              |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3,4,5} | $R_1^{even}$     | $\texttt{spread}(R_1^{even})$     |    $W_{14}^{a(3)}$           |$\texttt{spread}(W_{14}^{a(3)})$  |    $W_{14}^{c(3)}$              |$\texttt{spread}(W_{14}^{c(3)})$   | $W_{14}^{f(1)}$        |                        |              |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3,4,5} | $R_1^{odd}$      | $\texttt{spread}(R_1^{odd})$      |  $\sigma_1 v2 R_0$           |  $\sigma_1 v2 R_1$               |$\sigma_1 v2 R_0^{even}$         |$\sigma_1 v2 R_0^{odd}$            |                        |                        |              |
+..|...|...|...|...|...|...|...   |...|...   |...|...|...|      ...      |      ...         |              ...                  |     ...                      |     ...                          |    ...                          |         ...                       |         ...            |          ...           |              |
+0 | 1 | 0 | 0 | 1 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3}     | $W_{49}^{d(13)}$ | $\texttt{spread}(W_{49}^{d(13)})$ | $W_{49}^{lo}$                | $W_{49}^{hi}$                    |   $W_{49}$                      |                                   |                        |                        |              |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1}         | $W_{49}^{a(10)}$ | $\texttt{spread}(W_{49}^{a(10)})$ | $W_{49}^{c(2)}$              | $W_{49}^{b(7)}$                  |                                 |                                   |                        |                        |              |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 1 | 0 | 0 |{0,1,2,3,4,5}  | $R_0^{even}$     | $\texttt{spread}(R_0^{even})$     | $W_{49}^{b(7)lo}$            |$\texttt{spread}(W_{49}^{b(7)lo})$| $W_{49}^{b(7)mid}$              |$\texttt{spread}(W_{49}^{b(7)mid})$|                        |                        |              |
+0 | 0 | 0 | 0 | 0 | 1 | 0 | 0    | 0 | 1    | 0 | 0 | 0 |{0,1,2,3,4,5}  | $R_0^{odd}$      | $\texttt{spread}(R_0^{odd})$      | $\texttt{spread}(R_1^{odd})$ | $\texttt{spread}(a)$             | $\texttt{spread}(d)$            | $W_{1}^{b(49)}$                   |                        |                        |              |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 1 | 0 |{0,1,2,3,4,5}  | $R_1^{even}$     | $\texttt{spread}(R_1^{even})$     |    $W_{49}^{c(2)}$           |$\texttt{spread}(W_{49}^{c(2)})$  | $W_{49}^{b(7)hi}$               |$\texttt{spread}(W_{49}^{b(7)hi})$ |                        |                        |              |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 |{0,1,2,3,4,5}  | $R_1^{odd}$      | $\texttt{spread}(R_1^{odd})$      |  $\sigma_1 v1 R_0$           |  $\sigma_1 v1 R_1$               |$\sigma_1 v1 R_0^{even}$         |$\sigma_1 v1 R_0^{odd}$            |                        |                        |              |
+..|...|...|...|...|...|...|...   |...|...   |...|...|...|      ...      |      ...         |              ...                  |     ...                      |     ...                          |    ...                          |         ...                       |         ...            |          ...           |              |
+0 | 1 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3,4,5} | $W_{62}^{lo}$    | $\texttt{spread}(W_{62}^{lo})$    | $W_{62}^{lo}$                | $W_{62}^{hi}$                    |   $W_{62}$                      |                                   |                        |                        |              |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3,4,5} | $W_{62}^{hi}$    | $\texttt{spread}(W_{62}^{hi})$    |                              |                                  |                                 |                                   |                        |                        |              |
+0 | 1 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3,4,5} | $W_{63}^{lo}$    | $\texttt{spread}(W_{63}^{lo})$    | $W_{63}^{lo}$                | $W_{63}^{hi}$                    |   $W_{63}$                      |                                   |                        |                        |              |
+0 | 0 | 0 | 0 | 0 | 0 | 0 | 0    | 0 | 0    | 0 | 0 | 0 | {0,1,2,3,4,5} | $W_{63}^{hi}$    | $\texttt{spread}(W_{63}^{hi})$    |                              |                                  |                                 |                                   |                        |                        |              |
 
 Constraints:
 - `sw`: construct word using $reduce_4$
 - `sd0`: decomposition gate for $W_0, W_{62}, W_{63}$
     - $W^{lo} + 2^{16} W^{hi} - W = 0$
 - `sd1`: decomposition gate for $W_{1..13}$ (split into $(3,4,11,14)$-bit pieces)
-    - $W^{3b} + 2^3 W^{4b} + 2^7 W^{11b} + 2^{18} W^{14b} - W = 0$
-    - $W^{lo} + 2^{16} W^{hi} - W = 0$
-- `sd2`: decomposition gate for $W_{14..48}$ (split into $(3,4,3,7,1,1 ,13)$-bit pieces)
+    - $W^{a(3)} + 2^3 W^{b(4) lo} + 2^5 W^{b(4) hi} + 2^7 W^{c(11)} + 2^{18} W^{d(14)} - W = 0$
+- `sd2`: decomposition gate for $W_{14..48}$ (split into $(3,4,3,7,1,1,13)$-bit pieces)
+    - $W^{a(3)} + 2^3 W^{b(4) lo} + 2^5 W^{b(4) hi} + 2^7 W^{c(11)} + 2^{10} W^{d(14)} + 2^{17} W^{e(1)} + 2^{18} W^{f(1)} + 2^{19} W^{g(13)} - W = 0$
 - `sd3`: decomposition gate for $W_{49..61}$ (split into $(10,7,2,13)$-bit pieces)
-
+    - $W^{a(10)} + 2^{10} W^{b(7) lo} + 2^{12} W^{b(7) mid} + 2^{15} W^{b(7) hi} + 2^{17} W^{c(2)} + 2^{19} W^{d(13)} - W = 0$
+- `sb`: check that `b` was properly split into subsections. This gate for both 4-bit and 7-bit `b` pieces: for the 4-bit piece, rename $b^{mid} \rightarrow b^{hi}$ and set $b^{hi} = 0$.
+    - $W^{b(7)lo} + 2^2 W^{b(7)mid} + 2^4 W^{b(7)hi} - W = 0$
 
 ### Compression region
 
