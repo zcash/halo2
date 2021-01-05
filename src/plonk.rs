@@ -464,7 +464,7 @@ fn test_proving() {
         .to_affine();
 
     // Check this circuit is satisfied.
-    let prover = match MockProver::run(K, &circuit, vec![pubinputs.clone()]) {
+    let prover = match MockProver::run(K, &circuit, vec![pubinputs.to_vec()]) {
         Ok(prover) => prover,
         Err(e) => panic!("{:?}", e),
     };

@@ -5,11 +5,7 @@ use ff::Field;
 use crate::{
     arithmetic::{FieldExt, Group},
     plonk::{permutation, Any, Assignment, Circuit, Column, ConstraintSystem, Error},
-    poly::{EvaluationDomain, LagrangeCoeff, Polynomial},
 };
-
-#[derive(Debug)]
-struct Cell(usize, usize);
 
 /// The reasons why a particular circuit is not satisfied.
 #[derive(Debug, PartialEq)]
@@ -131,15 +127,14 @@ pub enum VerifyFailure {
 #[derive(Debug)]
 pub struct MockProver<F: Group> {
     n: u32,
-    domain: EvaluationDomain<F>,
     cs: ConstraintSystem<F>,
 
     // The fixed cells in the circuit, arranged as [column][row].
-    fixed: Vec<Polynomial<F, LagrangeCoeff>>,
+    fixed: Vec<Vec<F>>,
     // The advice cells in the circuit, arranged as [column][row].
-    advice: Vec<Polynomial<F, LagrangeCoeff>>,
+    advice: Vec<Vec<F>>,
     // The aux cells in the circuit, arranged as [column][row].
-    aux: Vec<Polynomial<F, LagrangeCoeff>>,
+    aux: Vec<Vec<F>>,
 
     permutations: Vec<permutation::keygen::Assembly>,
 }
@@ -198,32 +193,15 @@ impl<F: FieldExt> MockProver<F> {
     pub fn run<ConcreteCircuit: Circuit<F>>(
         k: u32,
         circuit: &ConcreteCircuit,
-        aux: Vec<Polynomial<F, LagrangeCoeff>>,
+        aux: Vec<Vec<F>>,
     ) -> Result<Self, Error> {
         let n = 1 << k;
 
         let mut cs = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut cs);
 
-        // The permutation argument will serve alongside the gates, so must be
-        // accounted for.
-        let mut degree = cs
-            .permutations
-            .iter()
-            .map(|p| p.required_degree())
-            .max()
-            .unwrap_or(1);
-
-        // Account for each gate to ensure our quotient polynomial is the
-        // correct degree and that our extended domain is the right size.
-        for poly in cs.gates.iter() {
-            degree = std::cmp::max(degree, poly.degree());
-        }
-
-        let domain = EvaluationDomain::new(degree as u32, k);
-
-        let fixed = vec![domain.empty_lagrange(); cs.num_fixed_columns];
-        let advice = vec![domain.empty_lagrange(); cs.num_advice_columns];
+        let fixed = vec![vec![F::zero(); n as usize]; cs.num_fixed_columns];
+        let advice = vec![vec![F::zero(); n as usize]; cs.num_advice_columns];
         let permutations = cs
             .permutations
             .iter()
@@ -232,7 +210,6 @@ impl<F: FieldExt> MockProver<F> {
 
         let mut prover = MockProver {
             n,
-            domain,
             cs,
             fixed,
             advice,
@@ -335,8 +312,6 @@ impl<F: FieldExt> MockProver<F> {
                 }
             }
         }
-
-        // TODO: Implement the rest of the verification checks.
 
         Ok(())
     }
