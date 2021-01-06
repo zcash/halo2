@@ -259,6 +259,7 @@ impl<C: CurveAffine> Proof<C> {
             // Custom constraints
             .chain(meta.gates.iter().map(|poly| {
                 poly.evaluate(
+                    &|| domain.ones_extended(),
                     &|index| pk.fixed_cosets[index].clone(),
                     &|index| advice_cosets[index].clone(),
                     &|index| aux_cosets[index].clone(),

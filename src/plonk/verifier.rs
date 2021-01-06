@@ -225,6 +225,7 @@ impl<'a, C: CurveAffine> Proof<C> {
             // Evaluate the circuit using the custom gates provided
             .chain(vk.cs.gates.iter().map(|poly| {
                 poly.evaluate(
+                    &|| C::Scalar::one(),
                     &|index| self.fixed_evals[index],
                     &|index| self.advice_evals[index],
                     &|index| self.aux_evals[index],
