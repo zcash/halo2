@@ -444,3 +444,264 @@ impl MessageSchedule {
         Ok(w.try_into().unwrap())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::cmp;
+    use std::fmt;
+    use std::marker::PhantomData;
+
+    use super::super::{
+        super::BLOCK_SIZE, util::*, BlockWord, SpreadInputs, SpreadTable, Table16Chip,
+        Table16Config,
+    };
+    use super::MessageSchedule;
+    use crate::{
+        arithmetic::FieldExt,
+        dev::MockProver,
+        gadget::{Cell, DynRegion, Layouter, Permutation, Region},
+        pasta::Fp,
+        plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed},
+    };
+
+    #[test]
+    fn message_schedule() {
+        /// This represents an advice column at a certain row in the ConstraintSystem
+        #[derive(Copy, Clone, Debug)]
+        pub struct Variable(Column<Advice>, usize);
+
+        #[derive(Debug)]
+        struct MyConfig {
+            lookup_inputs: SpreadInputs,
+            sha256: Table16Config,
+        }
+
+        struct MyCircuit {}
+
+        struct MyLayouter<'a, F: FieldExt, CS: Assignment<F> + 'a> {
+            cs: &'a mut CS,
+            config: MyConfig,
+            regions: Vec<usize>,
+            current_gate: usize,
+            _marker: PhantomData<F>,
+        }
+
+        impl<'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for MyLayouter<'a, F, CS> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.debug_struct("MyLayouter")
+                    .field("config", &self.config)
+                    .field("regions", &self.regions)
+                    .field("current_gate", &self.current_gate)
+                    .finish()
+            }
+        }
+
+        impl<'a, FF: FieldExt, CS: Assignment<FF>> MyLayouter<'a, FF, CS> {
+            fn new(cs: &'a mut CS, config: MyConfig) -> Result<Self, Error> {
+                let mut res = MyLayouter {
+                    cs,
+                    config,
+                    regions: vec![],
+                    current_gate: 0,
+                    _marker: PhantomData,
+                };
+
+                let table = res.config.sha256.lookup_table.clone();
+                table.load(&mut res)?;
+
+                Ok(res)
+            }
+        }
+
+        impl<'a, F: FieldExt, CS: Assignment<F> + 'a> Layouter<Table16Chip<F>> for MyLayouter<'a, F, CS> {
+            fn config(&self) -> &Table16Config {
+                &self.config.sha256
+            }
+
+            fn assign_region(
+                &mut self,
+                assignment: impl FnOnce(Region<'_, Table16Chip<F>>) -> Result<(), Error>,
+            ) -> Result<(), Error> {
+                let region_index = self.regions.len();
+                self.regions.push(self.current_gate);
+
+                let mut region = MyRegion::new(self, region_index);
+                assignment(Region {
+                    region: &mut region,
+                })?;
+                self.current_gate += region.row_count;
+
+                Ok(())
+            }
+        }
+
+        struct MyRegion<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> {
+            layouter: &'r mut MyLayouter<'a, F, CS>,
+            region_index: usize,
+            row_count: usize,
+            _marker: PhantomData<F>,
+        }
+
+        impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for MyRegion<'r, 'a, F, CS> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.debug_struct("MyRegion")
+                    .field("layouter", &self.layouter)
+                    .field("region_index", &self.region_index)
+                    .field("row_count", &self.row_count)
+                    .finish()
+            }
+        }
+
+        impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> MyRegion<'r, 'a, F, CS> {
+            fn new(layouter: &'r mut MyLayouter<'a, F, CS>, region_index: usize) -> Self {
+                MyRegion {
+                    layouter,
+                    region_index,
+                    row_count: 0,
+                    _marker: PhantomData::default(),
+                }
+            }
+        }
+
+        impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> DynRegion<Table16Chip<F>>
+            for MyRegion<'r, 'a, F, CS>
+        {
+            fn assign_advice<'v>(
+                &'v mut self,
+                column: Column<Advice>,
+                offset: usize,
+                to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+            ) -> Result<Cell, Error> {
+                self.layouter.cs.assign_advice(
+                    column,
+                    self.layouter.regions[self.region_index] + offset,
+                    to,
+                )?;
+                self.row_count = cmp::max(self.row_count, offset);
+
+                Ok(Cell {
+                    region_index: self.region_index,
+                    row_offset: offset,
+                    column: column.into(),
+                })
+            }
+
+            fn assign_fixed<'v>(
+                &'v mut self,
+                column: Column<Fixed>,
+                offset: usize,
+                to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+            ) -> Result<Cell, Error> {
+                self.layouter.cs.assign_fixed(
+                    column,
+                    self.layouter.regions[self.region_index] + offset,
+                    to,
+                )?;
+                self.row_count = cmp::max(self.row_count, offset);
+                Ok(Cell {
+                    region_index: self.region_index,
+                    row_offset: offset,
+                    column: column.into(),
+                })
+            }
+
+            fn constrain_equal(
+                &mut self,
+                permutation: &Permutation,
+                left: Cell,
+                right: Cell,
+            ) -> Result<(), Error> {
+                let left_column = permutation
+                    .mapping
+                    .iter()
+                    .position(|c| c == &left.column)
+                    .ok_or(Error::SynthesisError)?;
+                let right_column = permutation
+                    .mapping
+                    .iter()
+                    .position(|c| c == &right.column)
+                    .ok_or(Error::SynthesisError)?;
+
+                self.layouter.cs.copy(
+                    permutation.index,
+                    left_column,
+                    self.layouter.regions[left.region_index] + left.row_offset,
+                    right_column,
+                    self.layouter.regions[right.region_index] + right.row_offset,
+                )?;
+
+                Ok(())
+            }
+        }
+
+        impl<F: FieldExt> Circuit<F> for MyCircuit {
+            type Config = MyConfig;
+
+            fn configure(meta: &mut ConstraintSystem<F>) -> MyConfig {
+                let a = meta.advice_column();
+                let b = meta.advice_column();
+                let c = meta.advice_column();
+
+                let (lookup_inputs, lookup_table) = SpreadTable::configure(meta, a, b, c);
+
+                let message_schedule = meta.advice_column();
+                let extras = [
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                ];
+
+                let message_schedule = MessageSchedule::configure(
+                    meta,
+                    lookup_inputs.clone(),
+                    message_schedule,
+                    extras,
+                );
+
+                MyConfig {
+                    lookup_inputs,
+                    sha256: Table16Config {
+                        lookup_table,
+                        message_schedule,
+                    },
+                }
+            }
+
+            fn synthesize(
+                &self,
+                cs: &mut impl Assignment<F>,
+                config: MyConfig,
+            ) -> Result<(), Error> {
+                let lookup = config.lookup_inputs.clone();
+                let mut layouter = MyLayouter::new(cs, config)?;
+
+                // layouter.assign_region()
+
+                // Provide input
+                // Test vector: "abc"
+                let inputs: [BlockWord; BLOCK_SIZE] = get_msg_schedule_test_input();
+
+                // Run message_scheduler to get W_[0..64]
+                let message_schedule = layouter.config.sha256.message_schedule.clone();
+                let w = message_schedule.process(&mut layouter, inputs)?;
+                for (word, test_word) in w.iter().zip(MSG_SCHEDULE_TEST_OUTPUT.iter()) {
+                    let word = word.value.unwrap();
+                    assert_eq!(word, *test_word);
+                }
+                Ok(())
+            }
+        }
+
+        let circuit: MyCircuit = MyCircuit {};
+
+        // Use k = 17 because the current layouter doesn't place tables next to regions.
+        let prover = match MockProver::<Fp>::run(17, &circuit, vec![]) {
+            Ok(prover) => prover,
+            Err(e) => panic!("{:?}", e),
+        };
+        assert_eq!(prover.verify(), Ok(()));
+    }
+}
