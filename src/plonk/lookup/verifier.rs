@@ -54,8 +54,8 @@ impl<C: CurveAffine> Proof<C> {
             // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
             // - z'(\omega^{-1} X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
             let left = self.product_eval
-                * &(self.permuted_input_eval + &beta)
-                * &(self.permuted_table_eval + &gamma);
+                * &(self.permuted_input_eval + &*beta)
+                * &(self.permuted_table_eval + &*gamma);
 
             let compress_columns = |columns: &[Column<Any>]| {
                 columns
@@ -68,11 +68,11 @@ impl<C: CurveAffine> Proof<C> {
                             Any::Aux => aux_evals[index],
                         }
                     })
-                    .fold(C::Scalar::zero(), |acc, eval| acc * &theta + &eval)
+                    .fold(C::Scalar::zero(), |acc, eval| acc * &*theta + &eval)
             };
             let right = self.product_inv_eval
-                * &(compress_columns(&argument.input_columns) + &beta)
-                * &(compress_columns(&argument.table_columns) + &gamma);
+                * &(compress_columns(&argument.input_columns) + &*beta)
+                * &(compress_columns(&argument.table_columns) + &*gamma);
 
             left - &right
         };

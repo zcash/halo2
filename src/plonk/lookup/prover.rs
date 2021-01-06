@@ -243,19 +243,19 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
                 // Compress unpermuted input columns
                 let mut input_term = C::Scalar::zero();
                 for unpermuted_input_column in self.unpermuted_input_columns.iter() {
-                    input_term *= &theta;
+                    input_term *= &*theta;
                     input_term += &unpermuted_input_column[i];
                 }
 
                 // Compress unpermuted table columns
                 let mut table_term = C::Scalar::zero();
                 for unpermuted_table_column in self.unpermuted_table_columns.iter() {
-                    table_term *= &theta;
+                    table_term *= &*theta;
                     table_term += &unpermuted_table_column[i];
                 }
 
-                *product *= &(input_term + &beta);
-                *product *= &(table_term + &gamma);
+                *product *= &(input_term + &*beta);
+                *product *= &(table_term + &*gamma);
             }
         });
 
@@ -306,11 +306,11 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
                 let mut right = z[prev_idx];
                 let mut input_term = self.unpermuted_input_columns
                     .iter()
-                    .fold(C::Scalar::zero(), |acc, input| acc * &theta + &input[i]);
+                    .fold(C::Scalar::zero(), |acc, input| acc * &*theta + &input[i]);
 
                 let mut table_term = self.unpermuted_table_columns
                     .iter()
-                    .fold(C::Scalar::zero(), |acc, table| acc * &theta + &table[i]);
+                    .fold(C::Scalar::zero(), |acc, table| acc * &*theta + &table[i]);
 
                 input_term += &(*beta);
                 table_term += &(*gamma);
@@ -396,20 +396,20 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
                         // Compress the unpermuted input columns
                         let mut input_term = C::Scalar::zero();
                         for input in permuted.unpermuted_input_cosets.iter() {
-                            input_term *= &theta;
+                            input_term *= &*theta;
                             input_term += &input[i];
                         }
 
                         // Compress the unpermuted table columns
                         let mut table_term = C::Scalar::zero();
                         for table in permuted.unpermuted_table_cosets.iter() {
-                            table_term *= &theta;
+                            table_term *= &*theta;
                             table_term += &table[i];
                         }
 
                         // Add \beta and \gamma offsets
-                        *right *= &(input_term + &beta);
-                        *right *= &(table_term + &gamma);
+                        *right *= &(input_term + &*beta);
+                        *right *= &(table_term + &*gamma);
                     }
                 });
 

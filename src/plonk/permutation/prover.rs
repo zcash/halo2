@@ -69,7 +69,7 @@ impl Argument {
                     .zip(advice[column.index()][start..].iter())
                     .zip(permuted_column_values[start..].iter())
                 {
-                    *modified_advice *= &(*beta * permuted_advice_value + &gamma + advice_value);
+                    *modified_advice *= &(*beta * permuted_advice_value + &*gamma + advice_value);
                 }
             });
         }
@@ -89,7 +89,7 @@ impl Argument {
                     .zip(advice[column.index()][start..].iter())
                 {
                     // Multiply by p_j(\omega^i) + \delta^j \omega^i \beta
-                    *modified_advice *= &(deltaomega * &beta + &gamma + advice_value);
+                    *modified_advice *= &(deltaomega * &*beta + &*gamma + advice_value);
                     deltaomega *= &omega;
                 }
             });
@@ -180,7 +180,7 @@ impl<C: CurveAffine> Committed<C> {
                             .zip(advice[start..].iter())
                             .zip(permutation[start..].iter())
                         {
-                            *left *= &(*advice + &(*beta * permutation) + &gamma);
+                            *left *= &(*advice + &(*beta * permutation) + &*gamma);
                         }
                     });
                 }
@@ -197,7 +197,7 @@ impl<C: CurveAffine> Committed<C> {
                         let mut beta_term =
                             current_delta * &step.pow_vartime(&[start as u64, 0, 0, 0]);
                         for (right, advice) in right.iter_mut().zip(advice[start..].iter()) {
-                            *right *= &(*advice + &beta_term + &gamma);
+                            *right *= &(*advice + &beta_term + &*gamma);
                             beta_term *= &step;
                         }
                     });

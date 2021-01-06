@@ -40,7 +40,7 @@ impl<C: CurveAffine> Proof<C> {
 
         // Sample a challenge x_2 for keeping the multi-point quotient
         // polynomial terms linearly independent.
-        let x_2 = ChallengeX2::get(transcript);
+        let x_2 = ChallengeX2::<C::Scalar>::get(transcript);
 
         let (commitment_map, point_sets) = construct_intermediate_sets(queries);
 
@@ -59,7 +59,7 @@ impl<C: CurveAffine> Proof<C> {
                 q_commitments[set_idx].scale(*x_1);
                 q_commitments[set_idx].append_term(C::Scalar::one(), new_commitment);
                 for (eval, set_eval) in evals.iter().zip(q_eval_sets[set_idx].iter_mut()) {
-                    *set_eval *= &x_1;
+                    *set_eval *= &*x_1;
                     *set_eval += eval;
                 }
             };
@@ -102,7 +102,7 @@ impl<C: CurveAffine> Proof<C> {
                     let eval = points.iter().fold(*proof_eval - &r_eval, |eval, point| {
                         eval * &(*x_3 - point).invert().unwrap()
                     });
-                    msm_eval * &x_2 + &eval
+                    msm_eval * &*x_2 + &eval
                 },
             );
 
@@ -118,7 +118,7 @@ impl<C: CurveAffine> Proof<C> {
             |(mut commitment_msm, msm_eval), (q_commitment, q_eval)| {
                 commitment_msm.scale(*x_4);
                 commitment_msm.add_msm(&q_commitment);
-                (commitment_msm, msm_eval * &x_4 + q_eval)
+                (commitment_msm, msm_eval * &*x_4 + q_eval)
             },
         );
 
