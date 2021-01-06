@@ -56,7 +56,7 @@ where
             q_commitments[set_idx].scale(*x_1);
             q_commitments[set_idx].append_term(C::Scalar::one(), new_commitment);
             for (eval, set_eval) in evals.iter().zip(q_eval_sets[set_idx].iter_mut()) {
-                *set_eval *= &x_1;
+                *set_eval *= &(*x_1);
                 *set_eval += eval;
             }
         };
@@ -98,7 +98,7 @@ where
                 let eval = points.iter().fold(*proof_eval - &r_eval, |eval, point| {
                     eval * &(*x_3 - point).invert().unwrap()
                 });
-                msm_eval * &x_2 + &eval
+                msm_eval * &(*x_2) + &eval
             },
         );
 
@@ -113,7 +113,7 @@ where
         |(mut msm, msm_eval), (q_commitment, q_eval)| {
             msm.scale(*x_4);
             msm.add_msm(&q_commitment);
-            (msm, msm_eval * &x_4 + q_eval)
+            (msm, msm_eval * &(*x_4) + q_eval)
         },
     );
 
