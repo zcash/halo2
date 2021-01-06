@@ -429,7 +429,7 @@ mod tests {
 
                 let perm = Permutation::new(meta, &[a_1, a_2, a_3, a_4, a_5, a_6, a_7, a_8]);
 
-                let message_schedule = MessageSchedule::configure(
+                let message_schedule = MessageSchedule::empty_configure(
                     meta,
                     lookup_inputs.clone(),
                     message_schedule,

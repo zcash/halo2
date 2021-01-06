@@ -271,6 +271,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         // Custom constraints
         .chain(meta.gates.iter().map(|(_, poly)| {
             poly.evaluate(
+                &|| domain.ones_extended(),
                 &|index| pk.fixed_cosets[index].clone(),
                 &|index| advice_cosets[index].clone(),
                 &|index| aux_cosets[index].clone(),

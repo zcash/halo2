@@ -186,6 +186,15 @@ impl<G: Group> EvaluationDomain<G> {
         }
     }
 
+    /// Returns a polynomial of all ones in the extended Lagrange coefficient
+    /// basis
+    pub fn ones_extended(&self) -> Polynomial<G::Scalar, ExtendedLagrangeCoeff> {
+        Polynomial {
+            values: vec![G::Scalar::one(); self.extended_len()],
+            _marker: PhantomData,
+        }
+    }
+
     /// This takes us from an n-length vector into the coefficient form.
     ///
     /// This function will panic if the provided vector is not the correct

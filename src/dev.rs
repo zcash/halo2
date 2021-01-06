@@ -294,6 +294,7 @@ impl<F: FieldExt> MockProver<F> {
                 }
 
                 if gate.evaluate(
+                    &|| F::one(),
                     &load(n, row, &self.cs.fixed_queries, &self.fixed),
                     &load(n, row, &self.cs.advice_queries, &self.advice),
                     &load(n, row, &self.cs.aux_queries, &self.aux),
