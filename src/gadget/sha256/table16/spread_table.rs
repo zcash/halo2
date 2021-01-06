@@ -197,7 +197,7 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::{
-        super::{util::*, Table16Chip, Table16Config},
+        super::{util::*, MessageSchedule, Table16Chip, Table16Config},
         SpreadInputs, SpreadTable,
     };
     use crate::{
@@ -415,9 +415,34 @@ mod tests {
                     meta.advice_column(),
                 ];
 
+                // Rename these here for ease of matching the gates to the specification.
+                let _a_0 = lookup_inputs.tag;
+                let a_1 = lookup_inputs.dense;
+                let a_2 = lookup_inputs.spread;
+                let a_3 = extras[0];
+                let a_4 = extras[1];
+                let a_5 = message_schedule;
+                let a_6 = extras[2];
+                let a_7 = extras[3];
+                let a_8 = extras[4];
+                let _a_9 = extras[5];
+
+                let perm = Permutation::new(meta, &[a_1, a_2, a_3, a_4, a_5, a_6, a_7, a_8]);
+
+                let message_schedule = MessageSchedule::configure(
+                    meta,
+                    lookup_inputs.clone(),
+                    message_schedule,
+                    extras,
+                    perm.clone(),
+                );
+
                 MyConfig {
                     lookup_inputs,
-                    sha256: Table16Config { lookup_table },
+                    sha256: Table16Config {
+                        lookup_table,
+                        message_schedule,
+                    },
                 }
             }
 
