@@ -170,7 +170,7 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::{
-        super::{util::*, Table16Chip, Table16Config},
+        super::{util::*, MessageSchedule, Table16Chip, Table16Config},
         SpreadInputs, SpreadTable,
     };
     use crate::{
@@ -371,18 +371,18 @@ mod tests {
                     meta.advice_column(),
                 ];
 
-                // let message_schedule = MessageSchedule::configure(
-                //     meta,
-                //     lookup_inputs.clone(),
-                //     message_schedule,
-                //     extras,
-                // );
+                let message_schedule = MessageSchedule::configure(
+                    meta,
+                    lookup_inputs.clone(),
+                    message_schedule,
+                    extras,
+                );
 
                 MyConfig {
                     lookup_inputs,
                     sha256: Table16Config {
                         lookup_table,
-                        // message_schedule,
+                        message_schedule,
                     },
                 }
             }

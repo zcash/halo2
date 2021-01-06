@@ -8,12 +8,12 @@ use crate::{
 };
 
 // mod gates;
-// mod message_schedule;
+mod message_schedule;
 mod spread_table;
 mod util;
 
 // use gates::*;
-// use message_schedule::*;
+use message_schedule::*;
 use spread_table::*;
 
 const ROUNDS: usize = 64;
@@ -108,7 +108,7 @@ struct HPrime {}
 #[derive(Clone, Debug)]
 pub struct Table16Config {
     lookup_table: SpreadTable,
-    // message_schedule: MessageSchedule,
+    message_schedule: MessageSchedule,
 }
 
 impl ChipConfig for Table16Config {}
@@ -150,19 +150,14 @@ impl<F: FieldExt> Table16Chip<F> {
         let s_lower_sigma_0_v2 = meta.fixed_column();
         let s_lower_sigma_1_v2 = meta.fixed_column();
 
-        // Helper gates
-        let s_22 = meta.fixed_column();
-        let s_23 = meta.fixed_column();
-        let s_33 = meta.fixed_column();
-
         let (lookup_inputs, lookup_table) = SpreadTable::configure(meta, tag, dense, spread);
 
-        // let message_schedule =
-        //     MessageSchedule::configure(meta, lookup_inputs, message_schedule, extras);
+        let message_schedule =
+            MessageSchedule::configure(meta, lookup_inputs, message_schedule, extras);
 
         Table16Config {
             lookup_table,
-            // message_schedule,
+            message_schedule,
         }
     }
 }
@@ -191,7 +186,7 @@ impl<F: FieldExt> Sha256Instructions for Table16Chip<F> {
         input: [Self::BlockWord; super::BLOCK_SIZE],
     ) -> Result<Self::State, Error> {
         let config = layouter.config().clone();
-        // let w = config.message_schedule.process(layouter, input)?;
+        let w = config.message_schedule.process(layouter, input)?;
 
         todo!()
     }
