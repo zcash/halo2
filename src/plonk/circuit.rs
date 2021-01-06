@@ -198,7 +198,9 @@ impl Selector {
 /// A permutation.
 #[derive(Clone, Debug)]
 pub struct Permutation {
+    /// The index of this permutation.
     index: usize,
+    /// The mapping between columns involved in this permutation.
     mapping: Vec<Column<Any>>,
 }
 

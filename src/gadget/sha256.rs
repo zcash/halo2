@@ -11,6 +11,10 @@ use crate::{
     plonk::Error,
 };
 
+mod table16;
+
+pub use table16::Table16Chip;
+
 /// The size of a SHA-256 block, in 32-bit words.
 const BLOCK_SIZE: usize = 16;
 /// The size of a SHA-256 digest, in 32-bit words.
