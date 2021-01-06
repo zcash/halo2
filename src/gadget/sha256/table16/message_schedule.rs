@@ -12,7 +12,7 @@ use crate::{
 
 mod schedule_gates;
 mod schedule_util;
-// mod subregion1;
+mod subregion1;
 // mod subregion2;
 // mod subregion3;
 
@@ -51,6 +51,8 @@ pub(super) struct MessageSchedule {
     s_lower_sigma_1_v2: Column<Fixed>,
     perm: Permutation,
 }
+
+impl<F: FieldExt> Table16Assignment<F> for MessageSchedule {}
 
 impl MessageSchedule {
     /// Configures the message schedule.
@@ -395,7 +397,21 @@ impl MessageSchedule {
                     )?;
                 }
 
-                // TODO: Assign advice columns
+                // Assign W[0..16]
+                for i in 0..16 {
+                    let (var, halves) =
+                        self.assign_word_and_halves(&mut region, input[i].value.unwrap(), i)?;
+                    w.push(MessageWord {
+                        var,
+                        value: input[i].value,
+                    });
+                    w_halves.push(halves);
+                }
+
+                // Returns the output of sigma_0 on W_[1..14]
+                let lower_sigma_0_output = self.assign_subregion1(&mut region, &input[1..14])?;
+
+                // TODO: Assign subregion2 and subregion3
 
                 Ok(())
             },
