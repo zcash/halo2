@@ -32,16 +32,20 @@ pub trait Chip: Sized {
 #[derive(Clone, Copy, Debug)]
 pub struct Cell {
     /// Identifies the region in which this cell resides.
-    region_index: usize,
-    row_offset: usize,
-    column: Column<Any>,
+    pub region_index: usize,
+    /// The relative offset of this cell within its region.
+    pub row_offset: usize,
+    /// The column of this cell.
+    pub column: Column<Any>,
 }
 
 /// A permutation configured by a chip.
 #[derive(Clone, Debug)]
 pub struct Permutation {
-    index: usize,
-    mapping: Vec<Column<Any>>,
+    /// The index of this permutation.
+    pub index: usize,
+    /// The mapping between columns involved in this permutation.
+    pub mapping: Vec<Column<Any>>,
 }
 
 impl Permutation {
