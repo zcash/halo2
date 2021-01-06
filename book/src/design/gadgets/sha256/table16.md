@@ -819,105 +819,74 @@ Constraints:
 ```plaintext
 +----------------------------------------------------------+
 |                                                          |
-|                                                          |
-|                                                          |
-|          Σ_0(A)                                          |
-|                                                          |
-|                                                          |
-|                                                          |
-|                  +---------------------------------------+
-|                  |                                       |
-|                  |                                       |
-|                  |                                       |
-|                  |        reduce_7() to get A            |
-|                  |                                       |
-|                  |                                       |
-|                  |                                       |
-+------------------+---------------------------------------+
-|                                                          |
-|                       Maj(A,B,C)                         |
-|                                                          |
-+----------------------------------------------------------+
-|                                                          |
-|                                                          |
-|                                                          |
+|          decompose E,                                    |
 |          Σ_1(E)                                          |
 |                                                          |
-|                                                          |
-|                                                          |
 |                  +---------------------------------------+
 |                  |                                       |
+|                  |        reduce_5() to get H'           |
 |                  |                                       |
-|                  |                                       |
-|                  |        reduce_6() to get E            |
-|                  |                                       |
-|                  |                                       |
-|                  |                                       |
-+------------------+---------------------------------------+
++----------------------------------------------------------+
+|          decompose F, decompose G                        |
 |                                                          |
 |                        Ch(E,F,G)                         |
 |                                                          |
 +----------------------------------------------------------+
+|                                                          |
+|          decompose A,                                    |
+|          Σ_0(A)                                          |
+|                                                          |
+|                                                          |
+|                  +---------------------------------------+
+|                  |                                       |
+|                  |        reduce_7() to get A_new,       |
+|                  |              using H'                 |
+|                  |                                       |
++------------------+---------------------------------------+
+|          decompose B, decompose C                        |
+|                                                          |
+|          Maj(A,B,C)                                      |
+|                                                          |
+|                  +---------------------------------------+
+|                  |        reduce_6() to get E_new,       |
+|                  |              using H'                 |
++------------------+---------------------------------------+
+
 ```
 
 
-#### Round 1
+sd_abcd|sd_efgh|ss0|ss1|sm |sn |sc |s23|s33|    $a_0$    |   $a_1$    |           $a_2$             |               $a_3$                 |              $a_4$                  |               $a_5$                    |               $a_6$                |               $a_7$                |
+-------|-------|---|---|---|---|---|---|---|-------------|------------|-----------------------------|-------------------------------------|-------------------------------------|----------------------------------------|------------------------------------|------------------------------------|
+   0   |   1   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |   {0,1,2}   |$IV[4]d(7)$ |$\texttt{spread}(IV[4]d(7)) $|          $IV[4]b(5)^{lo}$           | $\texttt{spread}(IV[4]b(5)^{lo})$   |          $IV[4]b(5)^{hi}$              | $\texttt{spread}(IV[4]b(5)^{hi}) $ |  $\mathtt{spread}(E_0^{lo})$       |
+   0   |   0   | 0 | 1 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$R_0^{odd}$ |$\texttt{spread}(R_0^{odd})$ |    $\texttt{spread}(R_1^{odd})$     |    $\texttt{spread}(R_0^{even})$    |    $\texttt{spread}(R_1^{even})$       |                                    |  $\mathtt{spread}(E_0^{hi})$       |
+       |       |   |   |   |   |   |   |   |    {0,1}    |$IV[4]c(14)$|$\texttt{spread}(IV[4]c(14))$|          $IV[4]a(6)^{lo}$           | $\texttt{spread}(IV[4]a(6)^{lo})$   |          $IV[4]a(6)^{hi}$              | $\texttt{spread}(IV[4]a(6)^{hi}) $ |                                    |
+   0   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{odd}$ |$\texttt{spread}(R_1^{odd})$ |  $\mathtt{spread}(K_0^{lo})$        |  $\mathtt{spread}(W_0^{lo})$        |$\texttt{spread}(Ch(E_0,F_0,G_0)_{lo})$ |  $\mathtt{spread}(Hprime_0^{lo})$  |  $\mathtt{spread}(H_0^{lo})$       |
+   0   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$R_0^{even}$|$\texttt{spread}(R_0^{even})$|  $\mathtt{spread}(K_0^{hi})$        |  $\mathtt{spread}(W_0^{hi})$        |$\texttt{spread}(Ch(E_0,F_0,G_0)_{hi})$ |  $\mathtt{spread}(Hprime_0^{hi})$  |  $\mathtt{spread}(H_0^{hi})$       |
+   0   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{even}$|$\texttt{spread}(R_1^{even})$|                                     |                                     |                                        |           $Hprime_0 carry$         |                                    |
+   0   |   1   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |   {0,1,2}   |$IV[5]d(7)$ |$\texttt{spread}(IV[5]d(7)) $|          $IV[5]b(5)^{lo}$           | $\texttt{spread}(IV[5]b(5)^{lo})$   |          $IV[5]b(5)^{hi}$              | $\texttt{spread}(IV[5]b(5)^{hi}) $ |  $\mathtt{spread}(F_0^{lo})$       |
+       |       |   |   |   |   |   |   |   |    {0,1}    |$IV[5]c(14)$|$\texttt{spread}(IV[5]c(14))$|          $IV[5]a(6)^{lo}$           | $\texttt{spread}(IV[5]a(6)^{lo})$   |          $IV[5]a(6)^{hi}$              | $\texttt{spread}(IV[5]a(6)^{hi}) $ |  $\mathtt{spread}(F_0^{hi})$       |
+   0   |   1   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |   {0,1,2}   |$IV[6]d(7)$ |$\texttt{spread}(IV[6]d(7)) $|          $IV[6]b(5)^{lo}$           | $\texttt{spread}(IV[6]b(5)^{lo})$   |          $IV[6]b(5)^{hi}$              | $\texttt{spread}(IV[6]b(5)^{hi}) $ |  $\mathtt{spread}(G_0^{lo})$       |
+       |       |   |   |   |   |   |   |   |    {0,1}    |$IV[6]c(14)$|$\texttt{spread}(IV[6]c(14))$|          $IV[6]a(6)^{lo}$           | $\texttt{spread}(IV[6]a(6)^{lo})$   |          $IV[6]a(6)^{hi}$              | $\texttt{spread}(IV[6]a(6)^{hi}) $ |  $\mathtt{spread}(G_0^{hi})$       |
+   0   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$P_0^{even}$|$\texttt{spread}(P_0^{even})$|  $\mathtt{spread}(E_0^{lo})$        |       $\mathtt{spread}(E_0^{hi})$   |     $\texttt{spread}(Q_0^{odd})$       |                                    |                                    |
+   0   |   0   | 0 | 0 | 0 | 0 | 1 | 0 | 0 |{0,1,2,3,4,5}|$P_0^{odd}$ |$\texttt{spread}(P_0^{odd})$ | $\texttt{spread}(P_1^{odd})$        |                                     |     $\texttt{spread}(Ch(E,F,G)_0)$     |                                    |                                    |
+   0   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$P_1^{even}$|$\texttt{spread}(P_1^{even})$|  $\mathtt{spread}(F^{lo})$          |       $\mathtt{spread}(F^{hi})$     |     $\texttt{spread}(Q_1^{odd})$       |                                    |                                    |
+   0   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$P_1^{odd}$ |$\texttt{spread}(P_1^{odd})$ |           $evens_0$                 |      $evens_1$                      |     $\texttt{spread}(Ch(E,F,G)_1)$     |                                    |                                    |
+   0   |   0   | 0 | 0 | 0 | 1 | 0 | 0 | 0 |{0,1,2,3,4,5}|$Q_0^{even}$|$\texttt{spread}(Q_0^{even})$| $\mathtt{spread}(E_0^{lo})$         |       $\mathtt{spread}(E_0^{hi})$   |                                        |                                    |                                    |
+   0   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$Q_0^{odd}$ |$\texttt{spread}(Q_0^{odd})$ |$evens_0 - \mathtt{spread}(E_0^{lo})$|$evens_1 - \mathtt{spread}(E_0^{hi})$|                                        |                                    |                                    |
+   0   |   0   | 0 | 0 | 0 | 0 | 1 | 0 | 0 |{0,1,2,3,4,5}|$Q_1^{even}$|$\texttt{spread}(Q_1^{even})$| $\texttt{spread}(Q_1^{odd})$        |                                     |                                        |                                    |                                    |
+   0   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$Q_1^{odd}$ |$\texttt{spread}(Q_1^{odd})$ | $\mathtt{spread}(G^{lo})$           |       $\mathtt{spread}(G^{hi})$     |                                        |                                    |                                    |
+   1   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |   {0,1,2}   |$IV[0]b(11)$|$\texttt{spread}(IV[0]b(11))$|          $IV[0]c(9)^{lo}$           | $\texttt{spread}(IV[0]c(9)^{lo})$   |          $IV[0]c(9)^{mid}$             | $\texttt{spread}(IV[0]c(9)^{mid})$ |  $\mathtt{spread}(A_0^{lo})$       |
+   0   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$R_0^{odd}$ |$\texttt{spread}(R_0^{odd})$ |    $\texttt{spread}(R_1^{odd})$     |    $\texttt{spread}(R_0^{even})$    |    $\texttt{spread}(R_1^{even})$       |                                    |  $\mathtt{spread}(A_0^{hi})$       |
+       |       |   |   |   |   |   |   |   |    {0,1}    |$IV[0]d(10)$|$\texttt{spread}(IV[0]d(10))$|              $IV[0]a(2)$            | $\texttt{spread}(IV[0]a(2))$        |          $IV[0]c(9)^{hi}$              | $\texttt{spread}(IV[0]c(9)^{hi})$  |                                    |
+   0   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{odd}$ |$\texttt{spread}(R_1^{odd})$ |                                     |                                     |$\texttt{spread}(Maj(A_0,B_0,C_0)_{lo})$|  $\mathtt{spread}(Hprime_0^{lo})$  |  $\mathtt{spread}(A_1^{lo})$       |
+   0   |   0   | 1 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$R_0^{even}$|$\texttt{spread}(R_0^{even})$|                                     |                                     |$\texttt{spread}(Maj(A_0,B_0,C_0)_{hi})$|  $\mathtt{spread}(Hprime_0^{hi})$  |  $\mathtt{spread}(A_1^{hi})$       |
+   0   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$R_1^{even}$|$\texttt{spread}(R_1^{even})$|                                     |                                     |              $A_1 carry$               |           $Hprime_0 carry$         |                                    |
+   1   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |   {0,1,2}   |$IV[1]b(11)$|$\texttt{spread}(IV[1]b(11))$|          $IV[1]c(9)^{lo}$           | $\texttt{spread}(IV[1]c(9)^{lo})$   |          $IV[1]c(9)^{mid}$             | $\texttt{spread}(IV[1]c(9)^{mid})$ |  $\mathtt{spread}(B_0^{lo})$       |
+       |       |   |   |   |   |   |   |   |    {0,1}    |$IV[1]d(10)$|$\texttt{spread}(IV[1]d(10))$|              $IV[1]a(2)$            | $\texttt{spread}(IV[1]a(2))$        |          $IV[1]c(9)^{hi}$              | $\texttt{spread}(IV[1]c(9)^{hi})$  |  $\mathtt{spread}(B_0^{hi})$       |
+   1   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |   {0,1,2}   |$IV[2]b(11)$|$\texttt{spread}(IV[2]b(11))$|          $IV[2]c(9)^{lo}$           | $\texttt{spread}(IV[2]c(9)^{lo})$   |          $IV[2]c(9)^{mid}$             | $\texttt{spread}(IV[2]c(9)^{mid})$ |  $\mathtt{spread}(C_0^{lo})$       |
+       |       |   |   |   |   |   |   |   |    {0,1}    |$IV[2]d(10)$|$\texttt{spread}(IV[2]d(10))$|              $IV[2]a(2)$            | $\texttt{spread}(IV[2]a(2))$        |          $IV[2]c(9)^{hi}$              | $\texttt{spread}(IV[2]c(9)^{hi})$  |  $\mathtt{spread}(C_0^{hi})$       |
+   0   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$M_0^{even}$|$\texttt{spread}(M_0^{even})$|  $\mathtt{spread}(A^{lo})$          |  $\mathtt{spread}(A^{hi})$          |    $\mathtt{spread}(E_1^{lo})$         |  $\mathtt{spread}(Hprime_0^{lo})$  |  $\mathtt{spread}(D_0^{lo})$       |
+   0   |   0   | 0 | 0 | 1 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$M_0^{odd}$ |$\texttt{spread}(M_0^{odd})$ |  $\mathtt{spread}(B^{lo})$          |  $\mathtt{spread}(B^{hi})$          |    $\mathtt{spread}(E_1^{hi})$         |  $\mathtt{spread}(Hprime_0^{hi})$  |  $\mathtt{spread}(D_0^{hi})$       |
+   0   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$M_1^{even}$|$\texttt{spread}(M_1^{even})$|  $\mathtt{spread}(C^{lo})$          |  $\mathtt{spread}(C^{hi})$          |              $E_1 carry$               |           $Hprime_0 carry$         |                                    |
+   0   |   0   | 0 | 0 | 0 | 0 | 0 | 0 | 0 |{0,1,2,3,4,5}|$M_1^{odd}$ |$\texttt{spread}(M_1^{odd})$ |                                     |                                     |                                        |                                    |                                    |
 
-1. decompose $A$ into $A_0, A_1$ 16-bit subpieces
-2. $\Sigma_0(A)$
-    - decomposes $A$ into $(2, 11, 3, 3, 3, 10)$-bit subpieces
-    - spreads each of the subpieces
-    - outputs $R_0^{even}, R_1^{even}$
-3. decompose $B$
-    - into $16$-bit subpieces
-    - spread each of the subpieces
-4. decompose $C$
-    - into $16$-bit subpieces
-    - spread each of the subpieces
-5. $Maj(A,B,C)$
-    - takes in the 16-bit spread subpieces of $A,B,C$
-    - outputs $M_0^{odd}, M_1^{odd}$
-6. decompose $E$ into $E_0, E_1$ 16-bit subpieces
-7. $\Sigma_1(E)$
-    - decomposes $E$ into $(3, 3, 2, 3, 13, 7)$-bit subpieces
-    - spreads each of the subpieces
-    - outputs $R_0^{even}, R_1^{even}$
-8. decompose $F$
-    - into $16$-bit subpieces
-    - spread each of the subpieces
-9. decompose $G$
-    - into $16$-bit subpieces
-    - spread each of the subpieces
-10. $Ch(E,F,G)$
-    - takes in the 16-bit spread subpieces of $E,F,G$
-    - outputs $P_0^{odd}, Q_0^{odd}, P_1^{odd}, Q_1^{odd}$
-11. decompose $H$ into $16$-bit subpieces
-
-#### Round 2 (steady-state)
-1. $reduce_7$ to get $A$
-    - $H' = H_{prev} + Ch(E_{prev}, F_{prev}, G_{prev}) + \Sigma_1(E_{prev}) + K_1 + W_1$
-    - $reduce_7(H' + Maj(A_{prev}, B_{prev}, C_{prev}) + \Sigma_0(A_{prev}))$
-    - outputs $A_0, A_1$ 16-bit subpieces
-2. $\Sigma_0(A)$
-    - decomposes $A$ into $(2, 11, 3, 3, 3, 10)$-bit subpieces
-    - spreads each of the subpieces
-    - outputs $R_0^{even}, R_1^{even}$
-3. $B = A_{prev}$
-4. $C = B_{prev}$
-5. $Maj(A,B,C)$
-    - takes in the 16-bit spread subpieces of $A,B,C$
-    - outputs $M_0^{odd}, M_1^{odd}$
-6. $reduce_6$ to get $E$
-    - $H' = H_{prev} + Ch(E_{prev}, F_{prev}, G_{prev}) + \Sigma_1(E_{prev}) + K_1 + W_1$
-    - $reduce_6(H' + D_{prev})$
-    - outputs $E_0, E_1$ 16-bit subpieces
-7. $\Sigma_1(E)$
-    - decomposes $E$ into $(3, 3, 2, 3, 13, 7)$-bit subpieces
-    - spreads each of the subpieces
-    - outputs $R_0^{even}, R_1^{even}$
-8. $F = E_{prev}$
-9. $G = F_{prev}$
-10. $Ch(E,F,G)$
-    - takes in the 16-bit spread subpieces of $E,F,G$
-    - outputs $P_0^{odd}, Q_0^{odd}, P_1^{odd}, Q_1^{odd}$
-11. $H = G_{prev}$
