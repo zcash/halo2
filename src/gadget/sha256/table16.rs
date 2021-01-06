@@ -7,10 +7,12 @@ use crate::{
     plonk::{Advice, Column, ConstraintSystem, Error, Permutation},
 };
 
+mod gates;
 mod message_schedule;
 mod spread_table;
 mod util;
 
+use gates::*;
 use message_schedule::*;
 use spread_table::*;
 

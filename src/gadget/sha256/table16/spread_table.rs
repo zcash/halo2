@@ -514,7 +514,7 @@ mod tests {
                     ],
                 );
 
-                let message_schedule = MessageSchedule::configure(
+                let message_schedule = MessageSchedule::empty_configure(
                     meta,
                     lookup_inputs.clone(),
                     message_schedule,
