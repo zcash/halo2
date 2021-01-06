@@ -12,7 +12,7 @@ use crate::{
 mod schedule_gates;
 mod subregion1;
 mod subregion2;
-// mod subregion3;
+mod subregion3;
 
 use schedule_gates::ScheduleGate;
 
@@ -435,7 +435,8 @@ impl MessageSchedule {
             let lower_sigma_0_v2_output =
                 self.assign_subregion2(&mut region, lower_sigma_0_output, &mut w, &mut w_halves)?;
 
-            // TODO: Assign subregion3
+            // sigma_1 v1 on W[49..62]
+            self.assign_subregion3(&mut region, lower_sigma_0_v2_output, &mut w, &mut w_halves)?;
 
             Ok(())
         })?;
