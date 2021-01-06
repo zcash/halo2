@@ -10,7 +10,7 @@ use crate::{
 };
 
 mod schedule_gates;
-// mod subregion1;
+mod subregion1;
 // mod subregion2;
 // mod subregion3;
 
@@ -308,6 +308,68 @@ impl MessageSchedule {
         }
     }
 
+    // Assign a word and its hi and lo halves
+    pub fn assign_word_and_halves<F: FieldExt>(
+        &self,
+        region: &mut Region<'_, Table16Chip<F>>,
+        word: u32,
+        word_idx: usize,
+    ) -> Result<(Cell, MessagePiece, MessagePiece), Error> {
+        // Rename these here for ease of matching the gates to the specification.
+        let a_3 = self.extras[0];
+        let a_4 = self.extras[1];
+
+        let row = get_word_row(word_idx);
+
+        let var =
+            region.assign_advice(self.message_schedule, row, || Ok(F::from_u64(word as u64)))?;
+
+        let w_lo = word as u16;
+        let w_hi = (word >> 16) as u16;
+
+        let w_lo_cell = region.assign_advice(a_3, row, || Ok(F::from_u64(w_lo as u64)))?;
+        let w_hi_cell = region.assign_advice(a_4, row, || Ok(F::from_u64(w_hi as u64)))?;
+
+        Ok((
+            var,
+            MessagePiece::new(w_lo_cell, w_lo as u32),
+            MessagePiece::new(w_hi_cell, w_hi as u32),
+        ))
+    }
+
+    // Assign a spread lookup
+    pub fn assign_lookup<F: FieldExt>(
+        &self,
+        region: &mut Region<'_, Table16Chip<F>>,
+        spread_word: &SpreadWord,
+        row: usize,
+    ) -> Result<(Cell, Cell), Error> {
+        // Rename these here for ease of matching the gates to the specification.
+        let a_0 = self.lookup.tag;
+        let a_1 = self.lookup.dense;
+        let a_2 = self.lookup.spread;
+
+        region.assign_advice(a_0, row, || Ok(F::from_u64(spread_word.tag as u64)))?;
+        let dense = region.assign_advice(a_1, row, || Ok(F::from_u64(spread_word.dense as u64)))?;
+        let spread =
+            region.assign_advice(a_2, row, || Ok(F::from_u64(spread_word.spread as u64)))?;
+        Ok((dense, spread))
+    }
+
+    // Assign a cell the same value as another cell and set up a copy constraint between them
+    pub fn assign_and_constrain<F: FieldExt>(
+        &self,
+        region: &mut Region<'_, Table16Chip<F>>,
+        column: Column<Advice>,
+        row: usize,
+        copy: &MessagePiece,
+        perm: &Permutation,
+    ) -> Result<(), Error> {
+        let cell =
+            region.assign_advice(column, row, || Ok(F::from_u64(copy.value.unwrap() as u64)))?;
+        region.constrain_equal(perm, cell, copy.var)
+    }
+
     pub(super) fn process<F: FieldExt>(
         &self,
         layouter: &mut impl Layouter<Table16Chip<F>>,
@@ -354,7 +416,21 @@ impl MessageSchedule {
                 region.assign_fixed(self.s_decompose_0, row, || Ok(F::one()))?;
             }
 
-            // TODO: Assign advice columns
+            // Assign W[0..16]
+            for i in 0..16 {
+                let (var, lo, hi) =
+                    self.assign_word_and_halves(&mut region, input[i].value.unwrap(), i)?;
+                w.push(MessageWord {
+                    var,
+                    value: input[i].value,
+                });
+                w_halves.push((lo, hi));
+            }
+
+            // Returns the output of sigma_0 on W_[1..14]
+            let lower_sigma_0_output = self.assign_subregion1(&mut region, &input[1..14])?;
+
+            // TODO: Assign subregion2 and subregion3
 
             Ok(())
         })?;
