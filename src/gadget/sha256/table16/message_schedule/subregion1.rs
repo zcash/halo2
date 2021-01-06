@@ -1,5 +1,5 @@
 use super::super::{util::*, BlockWord, SpreadWord, Table16Chip};
-use super::{MessagePiece, MessageSchedule};
+use super::{schedule_util::*, MessagePiece, MessageSchedule};
 use crate::{arithmetic::FieldExt, gadget::Region, plonk::Error};
 
 // A word in subregion 1

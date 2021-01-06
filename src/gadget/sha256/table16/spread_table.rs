@@ -170,7 +170,7 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::{
-        super::{util::*, MessageSchedule, Table16Chip, Table16Config},
+        super::{util::*, Compression, MessageSchedule, Table16Chip, Table16Config},
         SpreadInputs, SpreadTable,
     };
     use crate::{
@@ -371,6 +371,9 @@ mod tests {
                     meta.advice_column(),
                 ];
 
+                let compression =
+                    Compression::configure(meta, lookup_inputs.clone(), message_schedule, extras);
+
                 let message_schedule = MessageSchedule::configure(
                     meta,
                     lookup_inputs.clone(),
@@ -383,6 +386,7 @@ mod tests {
                     sha256: Table16Config {
                         lookup_table,
                         message_schedule,
+                        compression,
                     },
                 }
             }

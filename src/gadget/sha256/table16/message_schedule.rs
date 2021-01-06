@@ -1,8 +1,6 @@
 use std::convert::TryInto;
 
-use super::{
-    super::BLOCK_SIZE, util::*, BlockWord, Gate, SpreadInputs, SpreadWord, Table16Chip, ROUNDS,
-};
+use super::{super::BLOCK_SIZE, BlockWord, Gate, SpreadInputs, SpreadWord, Table16Chip, ROUNDS};
 use crate::{
     arithmetic::FieldExt,
     gadget::{Cell, Layouter, Permutation, Region},
@@ -10,11 +8,13 @@ use crate::{
 };
 
 mod schedule_gates;
+mod schedule_util;
 mod subregion1;
 mod subregion2;
 mod subregion3;
 
 use schedule_gates::ScheduleGate;
+use schedule_util::*;
 
 #[derive(Clone, Debug)]
 pub(super) struct MessageWord {
@@ -374,7 +374,13 @@ impl MessageSchedule {
         &self,
         layouter: &mut impl Layouter<Table16Chip<F>>,
         input: [BlockWord; BLOCK_SIZE],
-    ) -> Result<[MessageWord; ROUNDS], Error> {
+    ) -> Result<
+        (
+            [MessageWord; ROUNDS],
+            [(MessagePiece, MessagePiece); ROUNDS],
+        ),
+        Error,
+    > {
         let mut w = Vec::<MessageWord>::with_capacity(ROUNDS);
         let mut w_halves = Vec::<(MessagePiece, MessagePiece)>::with_capacity(ROUNDS);
 
@@ -441,7 +447,7 @@ impl MessageSchedule {
             Ok(())
         })?;
 
-        Ok(w.try_into().unwrap())
+        Ok((w.try_into().unwrap(), w_halves.try_into().unwrap()))
     }
 }
 
@@ -452,10 +458,10 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::super::{
-        super::BLOCK_SIZE, util::*, BlockWord, SpreadInputs, SpreadTable, Table16Chip,
+        super::BLOCK_SIZE, BlockWord, Compression, SpreadInputs, SpreadTable, Table16Chip,
         Table16Config,
     };
-    use super::MessageSchedule;
+    use super::{schedule_util::*, MessageSchedule};
     use crate::{
         arithmetic::FieldExt,
         dev::MockProver,
@@ -654,6 +660,9 @@ mod tests {
                     meta.advice_column(),
                 ];
 
+                let compression =
+                    Compression::configure(meta, lookup_inputs.clone(), message_schedule, extras);
+
                 let message_schedule = MessageSchedule::configure(
                     meta,
                     lookup_inputs.clone(),
@@ -666,6 +675,7 @@ mod tests {
                     sha256: Table16Config {
                         lookup_table,
                         message_schedule,
+                        compression,
                     },
                 }
             }
@@ -686,7 +696,7 @@ mod tests {
 
                 // Run message_scheduler to get W_[0..64]
                 let message_schedule = layouter.config.sha256.message_schedule.clone();
-                let w = message_schedule.process(&mut layouter, inputs)?;
+                let (w, w_halves) = message_schedule.process(&mut layouter, inputs)?;
                 for (word, test_word) in w.iter().zip(MSG_SCHEDULE_TEST_OUTPUT.iter()) {
                     let word = word.value.unwrap();
                     assert_eq!(word, *test_word);

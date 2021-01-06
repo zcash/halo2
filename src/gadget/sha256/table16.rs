@@ -3,15 +3,17 @@ use std::marker::PhantomData;
 use super::{Chip, Layouter, Sha256Instructions};
 use crate::{
     arithmetic::FieldExt,
-    gadget::ChipConfig,
+    gadget::{ChipConfig, Permutation},
     plonk::{ConstraintSystem, Error},
 };
 
+mod compression;
 mod gates;
 mod message_schedule;
 mod spread_table;
 mod util;
 
+use compression::*;
 use gates::*;
 use message_schedule::*;
 use spread_table::*;
@@ -69,10 +71,12 @@ impl BlockWord {
 ///   are needed.
 #[derive(Clone, Debug)]
 struct AbcdVar {
-    chunk_0: SpreadVar,
-    chunk_1: SpreadVar,
-    chunk_2: SpreadVar,
-    chunk_3: SpreadVar,
+    a: SpreadVar,
+    b: SpreadVar,
+    c_lo: SpreadVar,
+    c_mid: SpreadVar,
+    c_hi: SpreadVar,
+    d: SpreadVar,
 }
 
 /// A variable that represents the `[E,F,G,H]` words of the SHA-256 internal state.
@@ -86,7 +90,14 @@ struct AbcdVar {
 ///   We align the columns to make it efficient to copy-constrain these forms where they
 ///   are needed.
 #[derive(Clone, Debug)]
-struct EfghVar {}
+struct EfghVar {
+    a_lo: SpreadVar,
+    a_hi: SpreadVar,
+    b_lo: SpreadVar,
+    b_hi: SpreadVar,
+    c: SpreadVar,
+    d: SpreadVar,
+}
 
 /// The internal state for SHA-256.
 #[derive(Clone, Debug)]
@@ -109,6 +120,7 @@ struct HPrime {}
 pub struct Table16Config {
     lookup_table: SpreadTable,
     message_schedule: MessageSchedule,
+    compression: Compression,
 }
 
 impl ChipConfig for Table16Config {}
@@ -129,8 +141,8 @@ impl<F: FieldExt> Table16Chip<F> {
         let tag = meta.advice_column();
         let dense = meta.advice_column();
         let spread = meta.advice_column();
-
         let message_schedule = meta.advice_column();
+
         let extras = [
             meta.advice_column(),
             meta.advice_column(),
@@ -140,17 +152,37 @@ impl<F: FieldExt> Table16Chip<F> {
             meta.advice_column(),
         ];
 
+        // Rename these here for ease of matching the gates to the specification.
+        let a_0 = tag;
+        let a_1 = dense;
+        let a_2 = spread;
+        let a_3 = extras[0];
+        let a_4 = extras[1];
+        let a_5 = message_schedule;
+        let a_6 = extras[2];
+        let a_7 = extras[3];
+        let a_8 = extras[4];
+        let a_9 = extras[5];
+
         // - N selector columns.
         let s_ch = meta.fixed_column();
         let s_maj = meta.fixed_column();
+        let s_h_prime = meta.fixed_column();
+        let s_a_new = meta.fixed_column();
+        let s_e_new = meta.fixed_column();
+
         let s_upper_sigma_0 = meta.fixed_column();
         let s_upper_sigma_1 = meta.fixed_column();
-        let s_lower_sigma_0 = meta.fixed_column();
-        let s_lower_sigma_1 = meta.fixed_column();
-        let s_lower_sigma_0_v2 = meta.fixed_column();
-        let s_lower_sigma_1_v2 = meta.fixed_column();
+
+        // Decomposition gate for AbcdVar
+        let s_decompose_abcd = meta.fixed_column();
+        // Decomposition gate for EfghVar
+        let s_decompose_efgh = meta.fixed_column();
 
         let (lookup_inputs, lookup_table) = SpreadTable::configure(meta, tag, dense, spread);
+
+        let compression =
+            Compression::configure(meta, lookup_inputs.clone(), message_schedule, extras);
 
         let message_schedule =
             MessageSchedule::configure(meta, lookup_inputs, message_schedule, extras);
@@ -158,6 +190,7 @@ impl<F: FieldExt> Table16Chip<F> {
         Table16Config {
             lookup_table,
             message_schedule,
+            compression,
         }
     }
 }
@@ -183,12 +216,20 @@ impl<F: FieldExt> Sha256Instructions for Table16Chip<F> {
     fn compress(
         layouter: &mut impl Layouter<Self>,
         initial_state: &Self::State,
-        input: [Self::BlockWord; super::BLOCK_SIZE],
+        input: [Self::BlockWord; super::BLOCK_SIZE], // 512-bit block
     ) -> Result<Self::State, Error> {
         let config = layouter.config().clone();
-        let w = config.message_schedule.process(layouter, input)?;
 
-        todo!()
+        // Get message schedule
+        let (w, w_halves) = config.message_schedule.process(layouter, input)?;
+
+        let state = config
+            .compression
+            .process(layouter, initial_state, w_halves);
+
+        state
+
+        // todo!()
     }
 
     fn digest(
