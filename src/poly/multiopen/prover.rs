@@ -65,7 +65,7 @@ impl<C: CurveAffine> Proof<C> {
                 // Each polynomial is evaluated at a set of points. For each set,
                 // we collapse each polynomial's evals pointwise.
                 for (eval, set_eval) in evals.iter().zip(q_eval_sets[set_idx].iter_mut()) {
-                    *set_eval *= &x_1;
+                    *set_eval *= &*x_1;
                     *set_eval += eval;
                 }
             };
@@ -134,7 +134,7 @@ impl<C: CurveAffine> Proof<C> {
                 |(f_poly, f_blind), (poly, blind)| {
                     (
                         f_poly * *x_4 + poly.as_ref().unwrap(),
-                        Blind((f_blind.0 * &x_4) + &blind.0),
+                        Blind((f_blind.0 * &*x_4) + &blind.0),
                     )
                 },
             );

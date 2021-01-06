@@ -43,7 +43,7 @@ impl<C: CurveAffine> Proof<C> {
         y: ChallengeY<C::Scalar>,
         xn: C::Scalar,
     ) -> Result<(), Error> {
-        let expected_h_eval = expressions.fold(C::Scalar::zero(), |h_eval, v| h_eval * &y + &v);
+        let expected_h_eval = expressions.fold(C::Scalar::zero(), |h_eval, v| h_eval * &*y + &v);
 
         // Compute h(x) from the prover
         let h_eval = self

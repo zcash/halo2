@@ -184,10 +184,10 @@ impl<C: CurveAffine> Proof<C> {
             .map_err(|_| Error::SamplingError)?;
 
         // Obtain the challenge c.
-        let c = ChallengeScalar::<_, ()>::get(transcript);
+        let c = ChallengeScalar::<C::Scalar, ()>::get(transcript);
 
         // Compute z1 and z2 as described in the Halo paper.
-        let z1 = a * &c + &d;
+        let z1 = a * &*c + &d;
         let z2 = *c * &blind + &s;
 
         Ok(Proof {

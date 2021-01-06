@@ -52,17 +52,17 @@ impl<C: CurveAffine> Proof<C> {
                     .map(|&column| advice_evals[vk.cs.get_advice_query_index(column, 0)])
                     .zip(self.permutation_evals.iter())
                 {
-                    left *= &(advice_eval + &(*beta * permutation_eval) + &gamma);
+                    left *= &(advice_eval + &(*beta * permutation_eval) + &*gamma);
                 }
 
                 let mut right = self.permutation_product_inv_eval;
-                let mut current_delta = *beta * &x;
+                let mut current_delta = *beta * &*x;
                 for advice_eval in p
                     .columns
                     .iter()
                     .map(|&column| advice_evals[vk.cs.get_advice_query_index(column, 0)])
                 {
-                    right *= &(advice_eval + &current_delta + &gamma);
+                    right *= &(advice_eval + &current_delta + &*gamma);
                     current_delta *= &C::Scalar::DELTA;
                 }
 
