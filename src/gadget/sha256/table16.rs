@@ -7,9 +7,11 @@ use crate::{
     plonk::{Advice, Column, ConstraintSystem, Error, Permutation},
 };
 
+mod message_schedule;
 mod spread_table;
 mod util;
 
+use message_schedule::*;
 use spread_table::*;
 
 const ROUNDS: usize = 64;
@@ -153,6 +155,7 @@ struct HPrime {}
 #[derive(Clone, Debug)]
 pub struct Table16Config {
     lookup_table: SpreadTable,
+    message_schedule: MessageSchedule,
 }
 
 /// A chip that implements SHA-256 with a maximum lookup table size of $2^16$.
@@ -183,7 +186,7 @@ impl<F: FieldExt> Table16Chip<F> {
         let (lookup_inputs, lookup_table) = SpreadTable::configure(meta, tag, dense, spread);
 
         // Rename these here for ease of matching the gates to the specification.
-        let a_0 = lookup_inputs.tag;
+        let _a_0 = lookup_inputs.tag;
         let a_1 = lookup_inputs.dense;
         let a_2 = lookup_inputs.spread;
         let a_3 = extras[0];
@@ -192,7 +195,7 @@ impl<F: FieldExt> Table16Chip<F> {
         let a_6 = extras[2];
         let a_7 = extras[3];
         let a_8 = extras[4];
-        let a_9 = extras[5];
+        let _a_9 = extras[5];
 
         let perm = Permutation::new(
             meta,
@@ -208,7 +211,13 @@ impl<F: FieldExt> Table16Chip<F> {
             ],
         );
 
-        Table16Config { lookup_table }
+        let message_schedule =
+            MessageSchedule::configure(meta, lookup_inputs, message_schedule, extras, perm.clone());
+
+        Table16Config {
+            lookup_table,
+            message_schedule,
+        }
     }
 }
 
@@ -248,6 +257,7 @@ impl<F: FieldExt> Sha256Instructions for Table16Chip<F> {
         input: [Self::BlockWord; super::BLOCK_SIZE],
     ) -> Result<Self::State, Error> {
         let config = layouter.config().clone();
+        let (_, w_halves) = config.message_schedule.process(layouter, input)?;
 
         todo!()
     }
