@@ -4,7 +4,8 @@ use ff::Field;
 
 use crate::{
     arithmetic::{FieldExt, Group},
-    plonk::{permutation, Any, Assignment, Circuit, Column, ConstraintSystem, Error},
+    plonk::{permutation, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error},
+    poly::Rotation,
 };
 
 /// The reasons why a particular circuit is not satisfied.
@@ -231,22 +232,23 @@ impl<F: FieldExt> MockProver<F> {
         for (gate_index, gate) in self.cs.gates.iter().enumerate() {
             // We iterate from n..2n so we can just reduce to handle wrapping.
             for row in n..(2 * n) {
+                fn load<'a, F: FieldExt, T: ColumnType>(
+                    n: i32,
+                    row: i32,
+                    queries: &'a [(Column<T>, Rotation)],
+                    cells: &'a [Vec<F>],
+                ) -> impl Fn(usize) -> F + 'a {
+                    move |index| {
+                        let (column, at) = &queries[index];
+                        let resolved_row = (row + at.0) % n;
+                        cells[column.index()][resolved_row as usize]
+                    }
+                };
+
                 if gate.evaluate(
-                    &|index| {
-                        let (column, at) = self.cs.fixed_queries[index];
-                        let resolved_row = (row + at.0) % n;
-                        self.fixed[column.index()][resolved_row as usize].clone()
-                    },
-                    &|index| {
-                        let (column, at) = self.cs.advice_queries[index];
-                        let resolved_row = (row + at.0) % n;
-                        self.advice[column.index()][resolved_row as usize].clone()
-                    },
-                    &|index| {
-                        let (column, at) = self.cs.aux_queries[index];
-                        let resolved_row = (row + at.0) % n;
-                        self.aux[column.index()][resolved_row as usize].clone()
-                    },
+                    &load(n, row, &self.cs.fixed_queries, &self.fixed),
+                    &load(n, row, &self.cs.advice_queries, &self.advice),
+                    &load(n, row, &self.cs.aux_queries, &self.aux),
                     &|a, b| a + &b,
                     &|a, b| a * &b,
                     &|a, scalar| a * scalar,
