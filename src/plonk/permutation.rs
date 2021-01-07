@@ -37,6 +37,10 @@ impl Argument {
         // - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
         std::cmp::max(self.columns.len() + 1, 2)
     }
+
+    pub(crate) fn get_columns(&self) -> Vec<Column<Advice>> {
+        self.columns.clone()
+    }
 }
 
 /// The verifying key for a single permutation argument.

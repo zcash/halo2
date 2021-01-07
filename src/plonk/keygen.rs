@@ -104,7 +104,7 @@ where
         permutations: cs
             .permutations
             .iter()
-            .map(|p| permutation::keygen::Assembly::new(params, p))
+            .map(|p| permutation::keygen::Assembly::new(params.n as usize, p))
             .collect(),
         _marker: std::marker::PhantomData,
     };
