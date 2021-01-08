@@ -474,7 +474,9 @@ impl MessageSchedule {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{super::BLOCK_SIZE, BlockWord, SpreadTable, Table16Chip, Table16Config};
+    use super::super::{
+        super::BLOCK_SIZE, BlockWord, Compression, SpreadTable, Table16Chip, Table16Config,
+    };
     use super::{schedule_util::*, MessageSchedule};
     use crate::{
         arithmetic::FieldExt,
@@ -534,12 +536,21 @@ mod tests {
                     ],
                 );
 
+                let compression = Compression::empty_configure(
+                    meta,
+                    lookup_inputs.clone(),
+                    message_schedule,
+                    extras,
+                    perm.clone(),
+                );
+
                 let message_schedule =
                     MessageSchedule::configure(meta, lookup_inputs, message_schedule, extras, perm);
 
                 Table16Config {
                     lookup_table,
                     message_schedule,
+                    compression,
                 }
             }
 
@@ -553,8 +564,6 @@ mod tests {
                 // Load table
                 let table = layouter.config().lookup_table.clone();
                 table.load(&mut layouter)?;
-
-                // layouter.assign_region()
 
                 // Provide input
                 // Test vector: "abc"

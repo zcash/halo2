@@ -7,11 +7,13 @@ use crate::{
     plonk::{Advice, Column, ConstraintSystem, Error, Permutation},
 };
 
+mod compression;
 mod gates;
 mod message_schedule;
 mod spread_table;
 mod util;
 
+use compression::*;
 use gates::*;
 use message_schedule::*;
 use spread_table::*;
@@ -93,71 +95,12 @@ impl Into<CellValue32> for CellValue16 {
     }
 }
 
-/// A variable that represents the `[A,B,C,D]` words of the SHA-256 internal state.
-///
-/// The structure of this variable is influenced by the following factors:
-/// - In `Σ_0(A)` we need `A` to be split into pieces `(a,b,c,d)` of lengths `(2,11,9,10)`
-///   bits respectively (counting from the little end), as well as their spread forms.
-/// - `Maj(A,B,C)` requires having the bits of each input in spread form. For `A` we can
-///   reuse the pieces from `Σ_0(A)`. Since `B` and `C` are assigned from `A` and `B`
-///   respectively in each round, we therefore also have the same pieces in earlier rows.
-///   We align the columns to make it efficient to copy-constrain these forms where they
-///   are needed.
-#[derive(Copy, Clone, Debug)]
-pub struct AbcdVar {
-    idx: i32,
-    val: u32,
-    a: SpreadVar,
-    b: SpreadVar,
-    c_lo: SpreadVar,
-    c_mid: SpreadVar,
-    c_hi: SpreadVar,
-    d: SpreadVar,
-}
-
-/// A variable that represents the `[E,F,G,H]` words of the SHA-256 internal state.
-///
-/// The structure of this variable is influenced by the following factors:
-/// - In `Σ_1(E)` we need `E` to be split into pieces `(a,b,c,d)` of lengths `(6,5,14,7)`
-///   bits respectively (counting from the little end), as well as their spread forms.
-/// - `Ch(E,F,G)` requires having the bits of each input in spread form. For `E` we can
-///   reuse the pieces from `Σ_1(E)`. Since `F` and `G` are assigned from `E` and `F`
-///   respectively in each round, we therefore also have the same pieces in earlier rows.
-///   We align the columns to make it efficient to copy-constrain these forms where they
-///   are needed.
-#[derive(Copy, Clone, Debug)]
-pub struct EfghVar {
-    idx: i32,
-    val: u32,
-    a_lo: SpreadVar,
-    a_hi: SpreadVar,
-    b_lo: SpreadVar,
-    b_hi: SpreadVar,
-    c: SpreadVar,
-    d: SpreadVar,
-}
-
-/// The internal state for SHA-256.
-#[derive(Clone, Debug)]
-pub struct State {
-    h_0: AbcdVar,
-    h_1: AbcdVar,
-    h_2: AbcdVar,
-    h_3: AbcdVar,
-    h_4: EfghVar,
-    h_5: EfghVar,
-    h_6: EfghVar,
-    h_7: EfghVar,
-}
-
-#[derive(Clone, Debug)]
-struct HPrime {}
-
 /// Configuration for a [`Table16Chip`].
 #[derive(Clone, Debug)]
 pub struct Table16Config {
     lookup_table: SpreadTable,
     message_schedule: MessageSchedule,
+    compression: Compression,
 }
 
 /// A chip that implements SHA-256 with a maximum lookup table size of $2^16$.
@@ -213,12 +156,21 @@ impl<F: FieldExt> Table16Chip<F> {
             ],
         );
 
+        let compression = Compression::configure(
+            meta,
+            lookup_inputs.clone(),
+            message_schedule,
+            extras,
+            perm.clone(),
+        );
+
         let message_schedule =
             MessageSchedule::configure(meta, lookup_inputs, message_schedule, extras, perm.clone());
 
         Table16Config {
             lookup_table,
             message_schedule,
+            compression,
         }
     }
 }
@@ -243,16 +195,22 @@ impl<F: FieldExt> Sha256Instructions for Table16Chip<F> {
     }
 
     fn initialization_vector(layouter: &mut impl Layouter<Self>) -> Result<State, Error> {
-        todo!()
+        let config = layouter.config().clone();
+        config.compression.initialize_with_iv(layouter, IV)
     }
 
     fn initialization(
         layouter: &mut impl Layouter<Table16Chip<F>>,
         init_state: &Self::State,
     ) -> Result<Self::State, Error> {
-        todo!()
+        let config = layouter.config().clone();
+        config
+            .compression
+            .initialize_with_state(layouter, init_state.clone())
     }
 
+    // Given an initialized state and an input message block, compress the
+    // message block and return the final state.
     fn compress(
         layouter: &mut impl Layouter<Self>,
         initialized_state: &Self::State,
@@ -261,7 +219,9 @@ impl<F: FieldExt> Sha256Instructions for Table16Chip<F> {
         let config = layouter.config().clone();
         let (_, w_halves) = config.message_schedule.process(layouter, input)?;
 
-        todo!()
+        config
+            .compression
+            .compress(layouter, initialized_state.clone(), w_halves)
     }
 
     fn digest(
@@ -270,7 +230,8 @@ impl<F: FieldExt> Sha256Instructions for Table16Chip<F> {
     ) -> Result<[Self::BlockWord; super::DIGEST_SIZE], Error> {
         // Copy the dense forms of the state variable chunks down to this gate.
         // Reconstruct the 32-bit dense words.
-        todo!()
+        let config = layouter.config().clone();
+        config.compression.digest(layouter, state.clone())
     }
 }
 
