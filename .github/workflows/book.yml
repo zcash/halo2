@@ -1,4 +1,4 @@
-name: Pollard book
+name: Orchard book
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
         with:
           mdbook-version: '0.4.4'
 
-      - name: Build Pollard book
+      - name: Build Orchard book
         run: mdbook build book/
 
       - name: Deploy to GitHub Pages

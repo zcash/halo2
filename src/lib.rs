@@ -1,4 +1,4 @@
-//! # pollard
+//! # orchard
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 // Catch documentation errors caused by code changes.
