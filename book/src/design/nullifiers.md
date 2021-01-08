@@ -7,23 +7,19 @@ $$\mathsf{nf} = [Hash_{\mathsf{nk}}(\rho) + \psi \pmod{p}] \mathcal{G} + \mathsf
 where:
 - $Hash$ is a keyed circuit-efficient hash (such as Rescue).
 - $\rho$ is unique to this output. As with $\mathsf{h_{Sig}}$ in Sprout, $\rho$ includes
-  the nullifiers of any Orchard notes being spent.
-  - If spends and outputs are merged / combined, then we always have a nullifier
-    (internally derived from a real or dummy note), and can rely on the nullifier
-    derivation process to prevent an adversary from choosing dummy nullifiers arbitrarily.
-  - If spends and outputs are *not* merged, then $\rho$ should probably also include
-    unique information from other parts of the transaction as well.
-  - TODO: Decide which of the above two cases will be used, and update this.
+  the nullifiers of any Orchard notes being spent in the same action. Given that an action
+  consists of a single spend and a single output, we set $\rho$ to be the nullifier of the
+  spent note.
 - $\psi$ is sender-controlled randomness. It is not required to be unique, and in practice
-  is derived from a sender-selected random value $\mathsf{rseed}$.
-- $\mathcal{G}$ is an fixed independent base.
+  is derived from both $\rho$ and a sender-selected random value $\mathsf{rseed}$:
+  $\psi = KDF^\psi(\rho, \mathsf{rseed})$.
+- $\mathcal{G}$ is a fixed independent base.
 
 This gives a note structure of
 
 $$(addr, v, \rho, \psi, \mathsf{rcm}).$$
 
-The nullifier commits to the note value via $\mathsf{cm}$ in order to domain-separate
-nullifiers for zero-valued notes from other notes.
+The note plaintext includes $\mathsf{rseed}$ in place of $\psi$ and $\mathsf{rcm}$.
 
 ## Security properties
 
@@ -76,9 +72,9 @@ We omit $RO_{GH}$ as a security assumption because we only rely on the random or
 applied to fixed inputs defined by the protocol, i.e. to generate the fixed base
 $\mathcal{G}$, not to attacker-specified inputs.
 
-> $\dagger$ We additionally assume that for any input $x$, $\{Hash_{\mathsf{nk}}(x) :
-> \mathsf{nk} \in E\}$ gives a scalar in an adequate range for $DDH_E$. (Otherwise, $Hash$
-> could be trivial, e.g. independent of $\mathsf{nk}$.)
+> $\dagger$ We additionally assume that for any input $x$,
+> $\{Hash_{\mathsf{nk}}(x) : \mathsf{nk} \in E\}$ gives a scalar in an adequate range for
+> $DDH_E$. (Otherwise, $Hash$ could be trivial, e.g. independent of $\mathsf{nk}$.)
 >
 > $\ddagger$ Statistical distance $< 2^{-167.8}$ from perfect.
 
