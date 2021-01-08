@@ -243,7 +243,7 @@ impl<F: FieldExt> MockProver<F> {
                         let resolved_row = (row + at.0) % n;
                         cells[column.index()][resolved_row as usize]
                     }
-                };
+                }
 
                 if gate.evaluate(
                     &load(n, row, &self.cs.fixed_queries, &self.fixed),
