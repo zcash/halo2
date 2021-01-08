@@ -471,3 +471,112 @@ impl MessageSchedule {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::{super::BLOCK_SIZE, BlockWord, SpreadTable, Table16Chip, Table16Config};
+    use super::{schedule_util::*, MessageSchedule};
+    use crate::{
+        arithmetic::FieldExt,
+        circuit::{layouter, Layouter},
+        dev::MockProver,
+        pasta::Fp,
+        plonk::{Assignment, Circuit, ConstraintSystem, Error, Permutation},
+    };
+
+    #[test]
+    fn message_schedule() {
+        struct MyCircuit {}
+
+        impl<F: FieldExt> Circuit<F> for MyCircuit {
+            type Config = Table16Config;
+
+            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+                let a = meta.advice_column();
+                let b = meta.advice_column();
+                let c = meta.advice_column();
+
+                let (lookup_inputs, lookup_table) = SpreadTable::configure(meta, a, b, c);
+
+                let message_schedule = meta.advice_column();
+                let extras = [
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                ];
+
+                // Rename these here for ease of matching the gates to the specification.
+                let _a_0 = lookup_inputs.tag;
+                let a_1 = lookup_inputs.dense;
+                let a_2 = lookup_inputs.spread;
+                let a_3 = extras[0];
+                let a_4 = extras[1];
+                let a_5 = message_schedule;
+                let a_6 = extras[2];
+                let a_7 = extras[3];
+                let a_8 = extras[4];
+                let _a_9 = extras[5];
+
+                let perm = Permutation::new(
+                    meta,
+                    &[
+                        a_1.into(),
+                        a_2.into(),
+                        a_3.into(),
+                        a_4.into(),
+                        a_5.into(),
+                        a_6.into(),
+                        a_7.into(),
+                        a_8.into(),
+                    ],
+                );
+
+                let message_schedule =
+                    MessageSchedule::configure(meta, lookup_inputs, message_schedule, extras, perm);
+
+                Table16Config {
+                    lookup_table,
+                    message_schedule,
+                }
+            }
+
+            fn synthesize(
+                &self,
+                cs: &mut impl Assignment<F>,
+                config: Self::Config,
+            ) -> Result<(), Error> {
+                let mut layouter = layouter::SingleChip::<Table16Chip<F>, _>::new(cs, config)?;
+
+                // Load table
+                let table = layouter.config().lookup_table.clone();
+                table.load(&mut layouter)?;
+
+                // layouter.assign_region()
+
+                // Provide input
+                // Test vector: "abc"
+                let inputs: [BlockWord; BLOCK_SIZE] = get_msg_schedule_test_input();
+
+                // Run message_scheduler to get W_[0..64]
+                let message_schedule = layouter.config().message_schedule.clone();
+                let (w, _) = message_schedule.process(&mut layouter, inputs)?;
+                for (word, test_word) in w.iter().zip(MSG_SCHEDULE_TEST_OUTPUT.iter()) {
+                    let word = word.value.unwrap();
+                    assert_eq!(word, *test_word);
+                }
+                Ok(())
+            }
+        }
+
+        let circuit: MyCircuit = MyCircuit {};
+
+        let prover = match MockProver::<Fp>::run(16, &circuit, vec![]) {
+            Ok(prover) => prover,
+            Err(e) => panic!("{:?}", e),
+        };
+        assert_eq!(prover.verify(), Ok(()));
+    }
+}
