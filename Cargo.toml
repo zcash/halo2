@@ -1,5 +1,5 @@
 [package]
-name = "pollard"
+name = "orchard"
 version = "0.0.0"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
@@ -8,8 +8,8 @@ authors = [
 edition = "2018"
 description = "Sapling on stilts!"
 license = "TGPPL"
-repository = "https://github.com/zcash/pollard"
-documentation = "https://docs.rs/pollard"
+repository = "https://github.com/zcash/orchard"
+documentation = "https://docs.rs/orchard"
 readme = "README.md"
 
 # We can't publish to crates.io under TGPPL yet.

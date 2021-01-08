@@ -1,11 +1,11 @@
-# pollard [![Crates.io](https://img.shields.io/crates/v/pollard.svg)](https://crates.io/crates/pollard) #
+# orchard [![Crates.io](https://img.shields.io/crates/v/orchard.svg)](https://crates.io/crates/orchard) #
 
 **IMPORTANT**: This library is being actively developed and should not be used in production software.
 
 ## Documentation
 
-- [The Pollard Book](https://zcash.github.io/pollard/)
-- [Crate documentation](https://docs.rs/pollard)
+- [The Orchard Book](https://zcash.github.io/orchard/)
+- [Crate documentation](https://docs.rs/orchard)
 
 ## License
 

@@ -1,6 +1,6 @@
-# The Pollard Book
+# The Orchard Book
 
-[Pollard](README.md)
+[Orchard](README.md)
 - [Concepts](concepts.md)
   - [Preliminaries](concepts/preliminaries.md)
 - [User Documentation](user.md)
