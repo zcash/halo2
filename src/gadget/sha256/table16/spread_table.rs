@@ -197,7 +197,7 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::{
-        super::{util::*, MessageSchedule, Table16Chip, Table16Config},
+        super::{util::*, Compression, MessageSchedule, Table16Chip, Table16Config},
         SpreadInputs, SpreadTable,
     };
     use crate::{
@@ -429,6 +429,14 @@ mod tests {
 
                 let perm = Permutation::new(meta, &[a_1, a_2, a_3, a_4, a_5, a_6, a_7, a_8]);
 
+                let compression = Compression::empty_configure(
+                    meta,
+                    lookup_inputs.clone(),
+                    message_schedule,
+                    extras,
+                    perm.clone(),
+                );
+
                 let message_schedule = MessageSchedule::empty_configure(
                     meta,
                     lookup_inputs.clone(),
@@ -442,6 +450,7 @@ mod tests {
                     sha256: Table16Config {
                         lookup_table,
                         message_schedule,
+                        compression,
                     },
                 }
             }

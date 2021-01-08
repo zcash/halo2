@@ -424,7 +424,8 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::super::{
-        super::BLOCK_SIZE, BlockWord, SpreadInputs, SpreadTable, Table16Chip, Table16Config,
+        super::BLOCK_SIZE, BlockWord, Compression, SpreadInputs, SpreadTable, Table16Chip,
+        Table16Config,
     };
     use super::{schedule_util::*, MessageSchedule};
     use crate::{
@@ -656,6 +657,14 @@ mod tests {
 
                 let perm = Permutation::new(meta, &[a_1, a_2, a_3, a_4, a_5, a_6, a_7, a_8]);
 
+                let compression = Compression::empty_configure(
+                    meta,
+                    lookup_inputs.clone(),
+                    message_schedule,
+                    extras,
+                    perm.clone(),
+                );
+
                 let message_schedule = MessageSchedule::configure(
                     meta,
                     lookup_inputs.clone(),
@@ -669,6 +678,7 @@ mod tests {
                     sha256: Table16Config {
                         lookup_table,
                         message_schedule,
+                        compression,
                     },
                 }
             }
@@ -678,10 +688,7 @@ mod tests {
                 cs: &mut impl Assignment<F>,
                 config: MyConfig,
             ) -> Result<(), Error> {
-                let lookup = config.lookup_inputs.clone();
                 let mut layouter = MyLayouter::new(cs, config)?;
-
-                // layouter.assign_region()
 
                 // Provide input
                 // Test vector: "abc"
