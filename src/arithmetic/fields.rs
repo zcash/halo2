@@ -103,6 +103,12 @@ pub trait FieldExt:
     /// canonically.
     fn get_lower_32(&self) -> u32;
 
+    /// Raise this field element to the power T_MINUS1_OVER2.
+    /// Field implementations may override this to use an efficient addition chain.
+    fn pow_by_t_minus1_over2(&self) -> Self {
+        ff::Field::pow_vartime(&self, &Self::T_MINUS1_OVER2)
+    }
+
     /// Performs a batch inversion using Montgomery's trick, returns the product
     /// of every inverse. Zero inputs are ignored.
     fn batch_invert(v: &mut [Self]) -> Self {
@@ -244,8 +250,8 @@ impl<F: FieldExt> SqrtTables<F> {
         // t == div^(2^(S+1) - 1)
         let t = s.square() * div;
 
-        // TODO: replace this with an addition chain.
-        let w = ff::Field::pow_vartime(&(t * num), &F::T_MINUS1_OVER2) * s;
+        // w = (num * t)^((T-1)/2) * s
+        let w = (t * num).pow_by_t_minus1_over2() * s;
 
         // v == u^((T-1)/2)
         let v = w * div;

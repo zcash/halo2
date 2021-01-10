@@ -762,6 +762,39 @@ impl FieldExt for Fq {
 
         tmp.0[0] as u32
     }
+
+    fn pow_by_t_minus1_over2(&self) -> Self {
+        let sqr = |x: Fq, i: u32| (0..i).fold(x, |x, _| x.square());
+
+        let s10 = self.square();
+        let s11 = s10 * self;
+        let s111 = s11.square() * self;
+        let s1001 = s111 * s10;
+        let s1011 = s1001 * s10;
+        let s1101 = s1011 * s10;
+        let sa = sqr(*self, 129) * self;
+        let sb = sqr(sa, 7) * s1001;
+        let sc = sqr(sb, 7) * s1101;
+        let sd = sqr(sc, 4) * s11;
+        let se = sqr(sd, 6) * s111;
+        let sf = sqr(se, 3) * s111;
+        let sg = sqr(sf, 10) * s1001;
+        let sh = sqr(sg, 4) * s1001;
+        let si = sqr(sh, 5) * s1001;
+        let sj = sqr(si, 5) * s1001;
+        let sk = sqr(sj, 3) * s1001;
+        let sl = sqr(sk, 4) * s1011;
+        let sm = sqr(sl, 4) * s1011;
+        let sn = sqr(sm, 5) * s11;
+        let so = sqr(sn, 4) * self;
+        let sp = sqr(so, 5) * s11;
+        let sq = sqr(sp, 4) * s111;
+        let sr = sqr(sq, 5) * s1011;
+        let ss = sqr(sr, 3) * self;
+        let st = sqr(ss, 4);
+        //assert!(st == ff::Field::pow_vartime(&self, &Fq::T_MINUS1_OVER2));
+        st
+    }
 }
 
 #[cfg(test)]
