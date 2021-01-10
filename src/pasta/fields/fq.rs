@@ -636,6 +636,10 @@ impl ff::PrimeField for Fq {
     }
 }
 
+lazy_static! {
+    static ref FQ_TABLES: SqrtTables<Fq> = SqrtTables::new(0x116A9E, 1206);
+}
+
 impl FieldExt for Fq {
     const ROOT_OF_UNITY: Self = ROOT_OF_UNITY;
     const ROOT_OF_UNITY_INV: Self = Fq::from_raw([
@@ -671,14 +675,8 @@ impl FieldExt for Fq {
         0x06819a58283e528e,
     ]);
 
-    const HASH_XOR: u32 = 0x116A9E;
-    const HASH_MOD: usize = 1206;
-
-    fn get_tables() -> &'static SqrtTables<Self> {
-        lazy_static! {
-            static ref FQ_TABLES: SqrtTables<Fq> = SqrtTables::init();
-        }
-        &FQ_TABLES
+    fn sqrt_ratio(num: &Self, div: &Self) -> (Choice, Self) {
+        FQ_TABLES.sqrt_ratio(num, div)
     }
 
     fn ct_is_zero(&self) -> Choice {
