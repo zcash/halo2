@@ -54,6 +54,11 @@ pub trait FieldExt:
     /// The choice of root from sqrt is unspecified.
     fn sqrt_ratio(num: &Self, div: &Self) -> (Choice, Self);
 
+    /// Equivalent to sqrt_ratio(self, one()).
+    fn sqrt_alt(&self) -> (Choice, Self) {
+        Self::sqrt_ratio(self, &Self::one())
+    }
+
     /// This computes a random element of the field using system randomness.
     fn rand() -> Self {
         Self::random(rand::rngs::OsRng)
@@ -259,13 +264,35 @@ impl<F: FieldExt> SqrtTables<F> {
         // uv = u * v
         let uv = w * num;
 
-        self.sqrt_common(num, div, &uv, &v)
+        let res = self.sqrt_common(&uv, &v);
+
+        let sqdiv = res.square() * div;
+        let is_square = (sqdiv - num).ct_is_zero();
+        let is_nonsquare = (sqdiv - F::ROOT_OF_UNITY * num).ct_is_zero();
+        assert!(bool::from(
+            num.ct_is_zero() | div.ct_is_zero() | (is_square ^ is_nonsquare)
+        ));
+
+        (is_square, res)
     }
 
-    /// Same as sqrt_ratio but given num, div, v = u^((T-1)/2), and uv = u * v as input.
-    ///
-    /// The choice of root from sqrt is unspecified.
-    fn sqrt_common(&self, num: &F, div: &F, uv: &F, v: &F) -> (Choice, F) {
+    /// Same as sqrt_ratio(u, one()) but more efficient.
+    pub fn sqrt_alt(&self, u: &F) -> (Choice, F) {
+        let v = u.pow_by_t_minus1_over2();
+        let uv = *u * v;
+
+        let res = self.sqrt_common(&uv, &v);
+
+        let sq = res.square();
+        let is_square = (sq - u).ct_is_zero();
+        let is_nonsquare = (sq - F::ROOT_OF_UNITY * u).ct_is_zero();
+        assert!(bool::from(u.ct_is_zero() | (is_square ^ is_nonsquare)));
+
+        (is_square, res)
+    }
+
+    /// Common part of sqrt_ratio and sqrt_alt: return res given v = u^((T-1)/2) and uv = u * v.
+    fn sqrt_common(&self, uv: &F, v: &F) -> F {
         let sqr = |x: F, i: u32| (0..i).fold(x, |x, _| x.square());
         let inv = |x: F| self.inv[self.hasher.hash(&x)] as usize;
 
@@ -296,20 +323,11 @@ impl<F: FieldExt> SqrtTables<F> {
                                 // 1 == x3 * ROOT_OF_UNITY^t_
         t_ = (t_ + 1) >> 1;
         assert!(t_ <= 0x80000000);
-        let res = *uv
-            * self.g0[t_ & 0xFF]
+
+        *uv * self.g0[t_ & 0xFF]
             * self.g1[(t_ >> 8) & 0xFF]
             * self.g2[(t_ >> 16) & 0xFF]
-            * self.g3[t_ >> 24];
-
-        let sqdiv = res.square() * div;
-        let is_square = (sqdiv - num).ct_is_zero();
-        let is_nonsquare = (sqdiv - F::ROOT_OF_UNITY * num).ct_is_zero();
-        assert!(bool::from(
-            num.ct_is_zero() | div.ct_is_zero() | (is_square ^ is_nonsquare)
-        ));
-
-        (is_square, res)
+            * self.g3[t_ >> 24]
     }
 }
 

@@ -679,6 +679,10 @@ impl FieldExt for Fp {
         FP_TABLES.sqrt_ratio(num, div)
     }
 
+    fn sqrt_alt(&self) -> (Choice, Self) {
+        FP_TABLES.sqrt_alt(self)
+    }
+
     fn ct_is_zero(&self) -> Choice {
         self.ct_eq(&Self::zero())
     }
@@ -834,14 +838,19 @@ fn test_sqrt() {
 }
 
 #[test]
-fn test_sqrt_ratio() {
+fn test_sqrt_ratio_and_alt() {
     // (true, sqrt(num/div)), if num and div are nonzero and num/div is a square in the field
     let num = (Fp::TWO_INV).square();
     let div = Fp::from_u64(25);
+    let div_inverse = div.invert().unwrap();
     let expected = Fp::TWO_INV * Fp::from_u64(5).invert().unwrap();
     let (is_square, v) = Fp::sqrt_ratio(&num, &div);
     assert!(bool::from(is_square));
     assert!(v == expected || (-v) == expected);
+
+    let (is_square_alt, v_alt) = Fp::sqrt_alt(&(num * div_inverse));
+    assert!(bool::from(is_square_alt));
+    assert!(v_alt == v);
 
     // (false, sqrt(ROOT_OF_UNITY * num/div)), if num and div are nonzero and num/div is a nonsquare in the field
     let num = num * Fp::ROOT_OF_UNITY;
@@ -850,12 +859,20 @@ fn test_sqrt_ratio() {
     assert!(!bool::from(is_square));
     assert!(v == expected || (-v) == expected);
 
+    let (is_square_alt, v_alt) = Fp::sqrt_alt(&(num * div_inverse));
+    assert!(!bool::from(is_square_alt));
+    assert!(v_alt == v);
+
     // (true, 0), if num is zero
     let num = Fp::zero();
     let expected = Fp::zero();
     let (is_square, v) = Fp::sqrt_ratio(&num, &div);
     assert!(bool::from(is_square));
     assert!(v == expected);
+
+    let (is_square_alt, v_alt) = Fp::sqrt_alt(&(num * div_inverse));
+    assert!(bool::from(is_square_alt));
+    assert!(v_alt == v);
 
     // (false, 0), if num is nonzero and div is zero
     let num = (Fp::TWO_INV).square();
