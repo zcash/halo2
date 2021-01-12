@@ -14,6 +14,8 @@
 #![deny(unsafe_code)]
 
 pub mod arithmetic;
+pub mod circuit;
+pub mod gadget;
 pub mod pasta;
 pub mod plonk;
 pub mod poly;
