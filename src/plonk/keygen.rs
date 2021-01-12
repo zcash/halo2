@@ -10,6 +10,51 @@ use crate::poly::{
     EvaluationDomain, LagrangeCoeff, Polynomial, Rotation,
 };
 
+pub(crate) fn create_domain<C, ConcreteCircuit>(
+    params: &Params<C>,
+) -> (
+    EvaluationDomain<C::Scalar>,
+    ConstraintSystem<C::Scalar>,
+    ConcreteCircuit::Config,
+)
+where
+    C: CurveAffine,
+    ConcreteCircuit: Circuit<C::Scalar>,
+{
+    let mut cs = ConstraintSystem::default();
+    let config = ConcreteCircuit::configure(&mut cs);
+
+    // The permutation argument will serve alongside the gates, so must be
+    // accounted for.
+    let mut degree = cs
+        .permutations
+        .iter()
+        .map(|p| p.required_degree())
+        .max()
+        .unwrap_or(1);
+
+    // The lookup argument also serves alongside the gates and must be accounted
+    // for.
+    degree = std::cmp::max(
+        degree,
+        cs.lookups
+            .iter()
+            .map(|l| l.required_degree())
+            .max()
+            .unwrap_or(1),
+    );
+
+    // Account for each gate to ensure our quotient polynomial is the
+    // correct degree and that our extended domain is the right size.
+    for poly in cs.gates.iter() {
+        degree = std::cmp::max(degree, poly.degree());
+    }
+
+    let domain = EvaluationDomain::new(degree as u32, params.k);
+
+    (domain, cs, config)
+}
+
 /// Generate a `ProvingKey` from an instance of `Circuit`.
 pub fn keygen<C, ConcreteCircuit>(
     params: &Params<C>,
@@ -68,36 +113,7 @@ where
         }
     }
 
-    let mut cs = ConstraintSystem::default();
-    let config = ConcreteCircuit::configure(&mut cs);
-
-    // The permutation argument will serve alongside the gates, so must be
-    // accounted for.
-    let mut degree = cs
-        .permutations
-        .iter()
-        .map(|p| p.required_degree())
-        .max()
-        .unwrap_or(1);
-
-    // The lookup argument also serves alongside the gates and must be accounted
-    // for.
-    degree = std::cmp::max(
-        degree,
-        cs.lookups
-            .iter()
-            .map(|l| l.required_degree())
-            .max()
-            .unwrap_or(1),
-    );
-
-    // Account for each gate to ensure our quotient polynomial is the
-    // correct degree and that our extended domain is the right size.
-    for poly in cs.gates.iter() {
-        degree = std::cmp::max(degree, poly.degree());
-    }
-
-    let domain = EvaluationDomain::new(degree as u32, params.k);
+    let (domain, cs, config) = create_domain::<C, ConcreteCircuit>(params);
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
         fixed: vec![domain.empty_lagrange(); cs.num_fixed_columns],
