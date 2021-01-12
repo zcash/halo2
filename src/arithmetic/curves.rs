@@ -8,6 +8,8 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use super::{FieldExt, Group};
 
+use std::io::{self, Read, Write};
+
 /// This trait is a common interface for dealing with elements of an elliptic
 /// curve group in the "projective" form, where that arithmetic is usually more
 /// efficient.
@@ -153,9 +155,26 @@ pub trait CurveAffine:
     /// endian representation.
     fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self>;
 
+    /// Reads a compressed element from the buffer and attempts to parse it
+    /// using `from_bytes`.
+    fn read<R: Read>(reader: &mut R) -> io::Result<Self> {
+        let mut compressed = [0u8; 32];
+        reader.read_exact(&mut compressed[..])?;
+        Option::from(Self::from_bytes(&compressed)).ok_or(io::Error::new(
+            io::ErrorKind::Other,
+            "invalid point encoding in proof",
+        ))
+    }
+
     /// Obtains the compressed, 32-byte little endian representation of this
     /// element.
     fn to_bytes(&self) -> [u8; 32];
+
+    /// Writes an element in compressed form to the buffer.
+    fn write<W: Write>(&self, writer: &mut W) -> io::Result<()> {
+        let compressed = self.to_bytes();
+        writer.write_all(&compressed[..])
+    }
 
     /// Attempts to obtain a group element from its uncompressed 64-byte little
     /// endian representation.

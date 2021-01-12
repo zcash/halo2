@@ -10,6 +10,8 @@ use subtle::{Choice, ConstantTimeEq, CtOption};
 
 use super::Group;
 
+use std::io::{self, Read, Write};
+
 const_assert!(size_of::<usize>() >= 4);
 
 /// This trait is a common interface for dealing with elements of a finite
@@ -77,9 +79,26 @@ pub trait FieldExt:
     /// representation.
     fn to_bytes(&self) -> [u8; 32];
 
+    /// Writes this element in its normalized, little endian form into a buffer.
+    fn write<W: Write>(&self, writer: &mut W) -> io::Result<()> {
+        let compressed = self.to_bytes();
+        writer.write_all(&compressed[..])
+    }
+
     /// Attempts to obtain a field element from its normalized, little endian
     /// byte representation.
     fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self>;
+
+    /// Reads a normalized, little endian represented field element from a
+    /// buffer.
+    fn read<R: Read>(reader: &mut R) -> io::Result<Self> {
+        let mut compressed = [0u8; 32];
+        reader.read_exact(&mut compressed[..])?;
+        Option::from(Self::from_bytes(&compressed)).ok_or(io::Error::new(
+            io::ErrorKind::Other,
+            "invalid point encoding in proof",
+        ))
+    }
 
     /// Obtains a field element that is congruent to the provided little endian
     /// byte representation of an integer.
