@@ -10,6 +10,8 @@ pub(crate) mod keygen;
 mod prover;
 mod verifier;
 
+use std::io;
+
 /// A permutation argument.
 #[derive(Debug, Clone)]
 pub(crate) struct Argument {
@@ -47,6 +49,25 @@ impl Argument {
 #[derive(Debug)]
 pub(crate) struct VerifyingKey<C: CurveAffine> {
     commitments: Vec<C>,
+}
+
+impl<C: CurveAffine> VerifyingKey<C> {
+    pub(crate) fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+        for commitment in &self.commitments {
+            commitment.write(writer)?;
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn read<R: io::Read>(reader: &mut R, argument: &Argument) -> io::Result<Self> {
+        let mut commitments = Vec::with_capacity(argument.columns.len());
+        for _ in 0..argument.columns.len() {
+            commitments.push(C::read(reader)?);
+        }
+
+        Ok(VerifyingKey { commitments })
+    }
 }
 
 /// The proving key for a single permutation argument.
