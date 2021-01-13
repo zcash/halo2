@@ -31,6 +31,10 @@ name = "arithmetic"
 harness = false
 
 [[bench]]
+name = "hashtocurve"
+harness = false
+
+[[bench]]
 name = "plonk"
 harness = false
 
@@ -43,8 +47,10 @@ metrics = "0.14.2"
 num_cpus = "1.13"
 rand = "0.8"
 blake2b_simd = "0.5"
+sha3 = "0.9.1"
 lazy_static = "1.4.0"
 static_assertions = "1.1.0"
+byteorder = "1.4.2"
 
 # Temporary workaround for https://github.com/myrrlyn/funty/issues/3
 funty = "=1.1.0"

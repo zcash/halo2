@@ -6,9 +6,11 @@ use ff::Field;
 
 mod curves;
 mod fields;
+mod hashtocurve;
 
 pub use curves::*;
 pub use fields::*;
+pub use hashtocurve::*;
 
 /// This represents an element of a group with basic operations that can be
 /// performed. This allows an FFT implementation (for example) to operate

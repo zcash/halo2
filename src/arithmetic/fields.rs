@@ -315,7 +315,7 @@ impl<F: FieldExt> SqrtTables<F> {
         (is_square, res)
     }
 
-    /// Common part of sqrt_ratio and sqrt_alt: return res given v = u^((T-1)/2) and uv = u * v.
+    /// Common part of sqrt_ratio and sqrt_alt: return their result given v = u^((T-1)/2) and uv = u * v.
     fn sqrt_common(&self, uv: &F, v: &F) -> F {
         let sqr = |x: F, i: u32| (0..i).fold(x, |x, _| x.square());
         let inv = |x: F| self.inv[self.hasher.hash(&x)] as usize;
