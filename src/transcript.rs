@@ -271,20 +271,12 @@ pub(crate) fn read_n_points<C: CurveAffine, T: TranscriptRead<C>>(
     transcript: &mut T,
     n: usize,
 ) -> io::Result<Vec<C>> {
-    let mut v = Vec::with_capacity(n);
-    for _ in 0..n {
-        v.push(transcript.read_point()?);
-    }
-    Ok(v)
+    (0..n).map(|_| transcript.read_point()).collect()
 }
 
 pub(crate) fn read_n_scalars<C: CurveAffine, T: TranscriptRead<C>>(
     transcript: &mut T,
     n: usize,
 ) -> io::Result<Vec<C::Scalar>> {
-    let mut v = Vec::with_capacity(n);
-    for _ in 0..n {
-        v.push(transcript.read_scalar()?);
-    }
-    Ok(v)
+    (0..n).map(|_| transcript.read_scalar()).collect()
 }

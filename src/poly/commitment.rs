@@ -9,6 +9,7 @@ use super::{Coeff, LagrangeCoeff, Polynomial};
 use crate::arithmetic::{best_fft, best_multiexp, parallelize, Curve, CurveAffine, FieldExt};
 
 use ff::{Field, PrimeField};
+use std::convert::TryInto;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 
 mod msm;
@@ -47,9 +48,7 @@ impl<C: CurveAffine> Params<C> {
             loop {
                 let mut hasher = hasher.clone();
                 hasher.update(&(trial.to_le_bytes())[..]);
-                let mut hash = [0u8; 32];
-                hash[..].copy_from_slice(hasher.finalize().as_bytes());
-                let p = C::from_bytes(&hash);
+                let p = C::from_bytes(&hasher.finalize().as_bytes().try_into().unwrap());
                 if bool::from(p.is_some()) {
                     break p.unwrap();
                 }
