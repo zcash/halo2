@@ -44,7 +44,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         .cs
         .lookups
         .iter()
-        .map(|argument| argument.absorb_permuted_commitments(transcript))
+        .map(|argument| argument.read_permuted_commitments(transcript))
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample beta challenge
@@ -58,19 +58,19 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         .cs
         .permutations
         .iter()
-        .map(|argument| argument.absorb_product_commitment(transcript))
+        .map(|argument| argument.read_product_commitment(transcript))
         .collect::<Result<Vec<_>, _>>()?;
 
     // Hash each lookup product commitment
     let lookups = lookups
         .into_iter()
-        .map(|lookup| lookup.absorb_product_commitment(transcript))
+        .map(|lookup| lookup.read_product_commitment(transcript))
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample y challenge, which keeps the gates linearly independent.
     let y = ChallengeY::get(transcript);
 
-    let vanishing = vanishing::Argument::absorb_commitments(vk, transcript)?;
+    let vanishing = vanishing::Argument::read_commitments(vk, transcript)?;
 
     // Sample x challenge, which is used to ensure the circuit is
     // satisfied with high probability.

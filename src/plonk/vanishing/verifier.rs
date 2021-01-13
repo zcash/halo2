@@ -19,7 +19,7 @@ pub struct Evaluated<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Argument<C> {
-    pub(in crate::plonk) fn absorb_commitments<T: TranscriptRead<C>>(
+    pub(in crate::plonk) fn read_commitments<T: TranscriptRead<C>>(
         vk: &VerifyingKey<C>,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {

@@ -21,7 +21,7 @@ pub struct Evaluated<C: CurveAffine> {
 }
 
 impl Argument {
-    pub(crate) fn absorb_product_commitment<C: CurveAffine, T: TranscriptRead<C>>(
+    pub(crate) fn read_product_commitment<C: CurveAffine, T: TranscriptRead<C>>(
         &self,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {

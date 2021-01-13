@@ -30,7 +30,7 @@ pub struct Evaluated<C: CurveAffine> {
 }
 
 impl Argument {
-    pub(in crate::plonk) fn absorb_permuted_commitments<C: CurveAffine, T: TranscriptRead<C>>(
+    pub(in crate::plonk) fn read_permuted_commitments<C: CurveAffine, T: TranscriptRead<C>>(
         &self,
         transcript: &mut T,
     ) -> Result<PermutationCommitments<C>, Error> {
@@ -49,7 +49,7 @@ impl Argument {
 }
 
 impl<C: CurveAffine> PermutationCommitments<C> {
-    pub(in crate::plonk) fn absorb_product_commitment<T: TranscriptRead<C>>(
+    pub(in crate::plonk) fn read_product_commitment<T: TranscriptRead<C>>(
         self,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
