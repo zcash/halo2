@@ -485,7 +485,8 @@ fn test_proving() {
     };
 
     // Initialize the proving key
-    let pk = keygen(&params, &empty_circuit).expect("keygen should not fail");
+    let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
+    let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
 
     let mut pubinputs = pk.get_vk().get_domain().empty_lagrange();
     pubinputs[0] = aux;

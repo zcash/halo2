@@ -14,7 +14,7 @@ pub(crate) struct AssemblyHelper<C: CurveAffine> {
     deltaomega: Vec<Vec<C::Scalar>>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct Assembly {
     pub(crate) mapping: Vec<Vec<(usize, usize)>>,
     aux: Vec<Vec<(usize, usize)>>,
@@ -132,19 +132,15 @@ impl Assembly {
         AssemblyHelper { deltaomega }
     }
 
-    pub(crate) fn build_keys<C: CurveAffine>(
+    pub(crate) fn build_vk<C: CurveAffine>(
         self,
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
         helper: &AssemblyHelper<C>,
         p: &Argument,
-    ) -> (ProvingKey<C>, VerifyingKey<C>) {
-        // Compute permutation polynomials, convert to coset form and
-        // pre-compute commitments for the SRS.
+    ) -> VerifyingKey<C> {
+        // Pre-compute commitments for the SRS.
         let mut commitments = vec![];
-        let mut permutations = vec![];
-        let mut polys = vec![];
-        let mut cosets = vec![];
         for i in 0..p.columns.len() {
             // Computes the permutation polynomial based on the permutation
             // description in the assembly.
@@ -160,19 +156,39 @@ impl Assembly {
                     .commit_lagrange(&permutation_poly, Blind::default())
                     .to_affine(),
             );
+        }
+        VerifyingKey { commitments }
+    }
+
+    pub(crate) fn build_pk<C: CurveAffine>(
+        self,
+        domain: &EvaluationDomain<C::Scalar>,
+        helper: &AssemblyHelper<C>,
+        p: &Argument,
+    ) -> ProvingKey<C> {
+        // Compute permutation polynomials, convert to coset form.
+        let mut permutations = vec![];
+        let mut polys = vec![];
+        let mut cosets = vec![];
+        for i in 0..p.columns.len() {
+            // Computes the permutation polynomial based on the permutation
+            // description in the assembly.
+            let mut permutation_poly = domain.empty_lagrange();
+            for (j, p) in permutation_poly.iter_mut().enumerate() {
+                let (permuted_i, permuted_j) = self.mapping[i][j];
+                *p = helper.deltaomega[permuted_i][permuted_j];
+            }
+
             // Store permutation polynomial and precompute its coset evaluation
             permutations.push(permutation_poly.clone());
             let poly = domain.lagrange_to_coeff(permutation_poly);
             polys.push(poly.clone());
             cosets.push(domain.coeff_to_extended(poly, Rotation::cur()));
         }
-        (
-            ProvingKey {
-                permutations,
-                polys,
-                cosets,
-            },
-            VerifyingKey { commitments },
-        )
+        ProvingKey {
+            permutations,
+            polys,
+            cosets,
+        }
     }
 }
