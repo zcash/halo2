@@ -140,7 +140,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>>(
     let a = a[0];
 
     transcript.write_scalar(a)?;
-    transcript.write_scalar(blind)?;
+    transcript.write_scalar(blind)?; // \xi
 
     Ok(())
 }

@@ -119,23 +119,23 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
     // Our goal is to open
     //     msm - [v] G_0 + random_poly_commitment * iota
     //   + \sum(L_i * u_i^2) + \sum(R_i * u_i^-2)
-    // at x to 0, by asking the prover to supply (a, h) such that it equals
-    //   = [a] (G + [b * z] U) + [h] H
+    // at x to 0, by asking the prover to supply (a, \xi) such that it equals
+    //   = [a] (G + [b * z] U) + [\xi] H
     // except that we wish for the prover to supply G as Commit(g(X); 1) so
     // we must substitute to get
-    //   = [a] ((G - H) + [b * z] U) + [h] H
-    //   = [a] G + [-a] H + [abz] U + [h] H
-    //   = [a] G + [abz] U + [h - a] H
+    //   = [a] ((G - H) + [b * z] U) + [\xi] H
+    //   = [a] G + [-a] H + [abz] U + [\xi] H
+    //   = [a] G + [abz] U + [\xi - a] H
     // but subtracting to get the desired equality
-    //   ... + [-a] G + [-abz] U + [a - h] H = 0
+    //   ... + [-a] G + [-abz] U + [a - \xi] H = 0
 
     let a = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
     let neg_a = -a;
-    let h = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
+    let xi = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
     let b = compute_b(x, &challenges);
 
     msm.add_to_u_scalar(neg_a * &b * &z);
-    msm.add_to_h_scalar(a - &h);
+    msm.add_to_h_scalar(a - &xi);
 
     let guard = Guard {
         msm,
