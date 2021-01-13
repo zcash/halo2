@@ -11,7 +11,7 @@ use super::{Fp, Fq};
 use crate::arithmetic::{Curve, CurveAffine, FieldExt, Group};
 
 macro_rules! new_curve_impl {
-    ($name:ident, $name_affine:ident, $base:ident, $scalar:ident) => {
+    ($name:ident, $name_affine:ident, $base:ident, $scalar:ident, $blake2b_personalization:literal) => {
         /// Represents a point in the projective coordinate space.
         #[derive(Copy, Clone, Debug)]
         pub struct $name {
@@ -497,6 +497,8 @@ macro_rules! new_curve_impl {
             type Scalar = $scalar;
             type Base = $base;
 
+            const BLAKE2B_PERSONALIZATION: &'static [u8; 16] = $blake2b_personalization;
+
             fn zero() -> Self {
                 Self {
                     x: $base::zero(),
@@ -700,5 +702,5 @@ macro_rules! new_curve_impl {
     };
 }
 
-new_curve_impl!(Ep, EpAffine, Fp, Fq);
-new_curve_impl!(Eq, EqAffine, Fq, Fp);
+new_curve_impl!(Ep, EpAffine, Fp, Fq, b"halo2_____pallas");
+new_curve_impl!(Eq, EqAffine, Fq, Fp, b"halo2______vesta");

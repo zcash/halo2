@@ -56,11 +56,3 @@ pub(crate) struct ProvingKey<C: CurveAffine> {
     polys: Vec<Polynomial<C::Scalar, Coeff>>,
     cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
 }
-
-#[derive(Debug, Clone)]
-pub(crate) struct Proof<C: CurveAffine> {
-    permutation_product_commitment: C,
-    permutation_product_eval: C::Scalar,
-    permutation_product_inv_eval: C::Scalar,
-    permutation_evals: Vec<C::Scalar>,
-}

@@ -1,51 +1,110 @@
 use std::iter;
 
 use super::super::circuit::{Any, Column};
-use super::{Argument, Proof};
+use super::Argument;
 use crate::{
     arithmetic::CurveAffine,
     plonk::{ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error, VerifyingKey},
     poly::{multiopen::VerifierQuery, Rotation},
-    transcript::{Hasher, Transcript},
+    transcript::TranscriptRead,
 };
 use ff::Field;
 
-impl<C: CurveAffine> Proof<C> {
-    pub(in crate::plonk) fn absorb_permuted_commitments<
-        HBase: Hasher<C::Base>,
-        HScalar: Hasher<C::Scalar>,
-    >(
+pub struct PermutationCommitments<C: CurveAffine> {
+    permuted_input_commitment: C,
+    permuted_table_commitment: C,
+}
+
+pub struct Committed<C: CurveAffine> {
+    permuted: PermutationCommitments<C>,
+    product_commitment: C,
+}
+
+pub struct Evaluated<C: CurveAffine> {
+    committed: Committed<C>,
+    product_eval: C::Scalar,
+    product_inv_eval: C::Scalar,
+    permuted_input_eval: C::Scalar,
+    permuted_input_inv_eval: C::Scalar,
+    permuted_table_eval: C::Scalar,
+}
+
+impl Argument {
+    pub(in crate::plonk) fn read_permuted_commitments<C: CurveAffine, T: TranscriptRead<C>>(
         &self,
-        transcript: &mut Transcript<C, HBase, HScalar>,
-    ) -> Result<(), Error> {
-        transcript
-            .absorb_point(&self.permuted_input_commitment)
+        transcript: &mut T,
+    ) -> Result<PermutationCommitments<C>, Error> {
+        let permuted_input_commitment = transcript
+            .read_point()
             .map_err(|_| Error::TranscriptError)?;
-        transcript
-            .absorb_point(&self.permuted_table_commitment)
-            .map_err(|_| Error::TranscriptError)
-    }
+        let permuted_table_commitment = transcript
+            .read_point()
+            .map_err(|_| Error::TranscriptError)?;
 
-    pub(in crate::plonk) fn absorb_product_commitment<
-        HBase: Hasher<C::Base>,
-        HScalar: Hasher<C::Scalar>,
-    >(
-        &self,
-        transcript: &mut Transcript<C, HBase, HScalar>,
-    ) -> Result<(), Error> {
-        transcript
-            .absorb_point(&self.product_commitment)
-            .map_err(|_| Error::TranscriptError)
+        Ok(PermutationCommitments {
+            permuted_input_commitment,
+            permuted_table_commitment,
+        })
     }
+}
 
+impl<C: CurveAffine> PermutationCommitments<C> {
+    pub(in crate::plonk) fn read_product_commitment<T: TranscriptRead<C>>(
+        self,
+        transcript: &mut T,
+    ) -> Result<Committed<C>, Error> {
+        let product_commitment = transcript
+            .read_point()
+            .map_err(|_| Error::TranscriptError)?;
+
+        Ok(Committed {
+            permuted: self,
+            product_commitment,
+        })
+    }
+}
+
+impl<C: CurveAffine> Committed<C> {
+    pub(crate) fn evaluate<T: TranscriptRead<C>>(
+        self,
+        transcript: &mut T,
+    ) -> Result<Evaluated<C>, Error> {
+        let product_eval = transcript
+            .read_scalar()
+            .map_err(|_| Error::TranscriptError)?;
+        let product_inv_eval = transcript
+            .read_scalar()
+            .map_err(|_| Error::TranscriptError)?;
+        let permuted_input_eval = transcript
+            .read_scalar()
+            .map_err(|_| Error::TranscriptError)?;
+        let permuted_input_inv_eval = transcript
+            .read_scalar()
+            .map_err(|_| Error::TranscriptError)?;
+        let permuted_table_eval = transcript
+            .read_scalar()
+            .map_err(|_| Error::TranscriptError)?;
+
+        Ok(Evaluated {
+            committed: self,
+            product_eval,
+            product_inv_eval,
+            permuted_input_eval,
+            permuted_input_inv_eval,
+            permuted_table_eval,
+        })
+    }
+}
+
+impl<C: CurveAffine> Evaluated<C> {
     pub(in crate::plonk) fn expressions<'a>(
         &'a self,
         vk: &'a VerifyingKey<C>,
         l_0: C::Scalar,
         argument: &'a Argument,
-        theta: ChallengeTheta<C::Scalar>,
-        beta: ChallengeBeta<C::Scalar>,
-        gamma: ChallengeGamma<C::Scalar>,
+        theta: ChallengeTheta<C>,
+        beta: ChallengeBeta<C>,
+        gamma: ChallengeGamma<C>,
         advice_evals: &[C::Scalar],
         fixed_evals: &[C::Scalar],
         aux_evals: &[C::Scalar],
@@ -98,19 +157,10 @@ impl<C: CurveAffine> Proof<C> {
             ))
     }
 
-    pub(in crate::plonk) fn evals(&self) -> impl Iterator<Item = &C::Scalar> {
-        iter::empty()
-            .chain(Some(&self.product_eval))
-            .chain(Some(&self.product_inv_eval))
-            .chain(Some(&self.permuted_input_eval))
-            .chain(Some(&self.permuted_input_inv_eval))
-            .chain(Some(&self.permuted_table_eval))
-    }
-
     pub(in crate::plonk) fn queries<'a>(
         &'a self,
         vk: &'a VerifyingKey<C>,
-        x: ChallengeX<C::Scalar>,
+        x: ChallengeX<C>,
     ) -> impl Iterator<Item = VerifierQuery<'a, C>> + Clone {
         let x_inv = vk.domain.rotate_omega(*x, Rotation(-1));
 
@@ -118,31 +168,31 @@ impl<C: CurveAffine> Proof<C> {
             // Open lookup product commitments at x
             .chain(Some(VerifierQuery {
                 point: *x,
-                commitment: &self.product_commitment,
+                commitment: &self.committed.product_commitment,
                 eval: self.product_eval,
             }))
             // Open lookup input commitments at x
             .chain(Some(VerifierQuery {
                 point: *x,
-                commitment: &self.permuted_input_commitment,
+                commitment: &self.committed.permuted.permuted_input_commitment,
                 eval: self.permuted_input_eval,
             }))
             // Open lookup table commitments at x
             .chain(Some(VerifierQuery {
                 point: *x,
-                commitment: &self.permuted_table_commitment,
+                commitment: &self.committed.permuted.permuted_table_commitment,
                 eval: self.permuted_table_eval,
             }))
             // Open lookup input commitments at \omega^{-1} x
             .chain(Some(VerifierQuery {
                 point: x_inv,
-                commitment: &self.permuted_input_commitment,
+                commitment: &self.committed.permuted.permuted_input_commitment,
                 eval: self.permuted_input_inv_eval,
             }))
             // Open lookup product commitments at \omega^{-1} x
             .chain(Some(VerifierQuery {
                 point: x_inv,
-                commitment: &self.product_commitment,
+                commitment: &self.committed.product_commitment,
                 eval: self.product_inv_eval,
             }))
     }

@@ -6,7 +6,7 @@ use halo2::arithmetic::FieldExt;
 use halo2::pasta::{EqAffine, Fp, Fq};
 use halo2::plonk::*;
 use halo2::poly::commitment::Params;
-use halo2::transcript::DummyHash;
+use halo2::transcript::{DummyHashRead, DummyHashWrite};
 
 use std::marker::PhantomData;
 
@@ -18,7 +18,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     pub struct Variable(Column<Advice>, usize);
 
     // Initialize the polynomial commitment parameters
-    let params: Params<EqAffine> = Params::new::<DummyHash<Fq>>(k);
+    let params: Params<EqAffine> = Params::new(k);
 
     struct PLONKConfig {
         a: Column<Advice>,
@@ -239,7 +239,8 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             };
 
             // Create a proof
-            Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &pk, &circuit, &[])
+            let mut transcript = DummyHashWrite::init(vec![], Fq::one());
+            create_proof(&params, &pk, &circuit, &[], &mut transcript)
                 .expect("proof generation should not fail")
         });
     });
@@ -250,15 +251,16 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     };
 
     // Create a proof
-    let proof = Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &pk, &circuit, &[])
+    let mut transcript = DummyHashWrite::init(vec![], Fq::one());
+    create_proof(&params, &pk, &circuit, &[], &mut transcript)
         .expect("proof generation should not fail");
+    let proof = transcript.finalize();
 
     c.bench_function(&verifier_name, |b| {
         b.iter(|| {
             let msm = params.empty_msm();
-            let guard = proof
-                .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, pk.get_vk(), msm, &[])
-                .unwrap();
+            let mut transcript = DummyHashRead::init(&proof[..], Fq::one());
+            let guard = verify_proof(&params, pk.get_vk(), msm, &[], &mut transcript).unwrap();
             let msm = guard.clone().use_challenges();
             assert!(msm.eval());
         });

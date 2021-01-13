@@ -1,5 +1,6 @@
 use super::Params;
 use crate::arithmetic::{best_multiexp, parallelize, Curve, CurveAffine};
+use ff::Field;
 
 /// A multiscalar multiplication in the polynomial commitment scheme
 #[derive(Debug, Clone)]
@@ -7,6 +8,7 @@ pub struct MSM<'a, C: CurveAffine> {
     pub(crate) params: &'a Params<C>,
     g_scalars: Option<Vec<C::Scalar>>,
     h_scalar: Option<C::Scalar>,
+    u_scalar: Option<C::Scalar>,
     other_scalars: Vec<C::Scalar>,
     other_bases: Vec<C>,
 }
@@ -16,6 +18,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
     pub fn new(params: &'a Params<C>) -> Self {
         let g_scalars = None;
         let h_scalar = None;
+        let u_scalar = None;
         let other_scalars = vec![];
         let other_bases = vec![];
 
@@ -23,6 +26,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
             params,
             g_scalars,
             h_scalar,
+            u_scalar,
             other_scalars,
             other_bases,
         }
@@ -40,12 +44,27 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         if let Some(h_scalar) = &other.h_scalar {
             self.add_to_h_scalar(*h_scalar);
         }
+
+        if let Some(u_scalar) = &other.u_scalar {
+            self.add_to_u_scalar(*u_scalar);
+        }
     }
 
     /// Add arbitrary term (the scalar and the point)
     pub fn append_term(&mut self, scalar: C::Scalar, point: C) {
         self.other_scalars.push(scalar);
         self.other_bases.push(point);
+    }
+
+    /// Add a value to the first entry of `g_scalars`.
+    pub fn add_constant_term(&mut self, constant: C::Scalar) {
+        if let Some(g_scalars) = self.g_scalars.as_mut() {
+            g_scalars[0] += &constant;
+        } else {
+            let mut g_scalars = vec![C::Scalar::zero(); self.params.n as usize];
+            g_scalars[0] += &constant;
+            self.g_scalars = Some(g_scalars);
+        }
     }
 
     /// Add a vector of scalars to `g_scalars`. This function will panic if the
@@ -68,6 +87,11 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         self.h_scalar = self.h_scalar.map_or(Some(scalar), |a| Some(a + &scalar));
     }
 
+    /// Add to `u_scalar`
+    pub fn add_to_u_scalar(&mut self, scalar: C::Scalar) {
+        self.u_scalar = self.u_scalar.map_or(Some(scalar), |a| Some(a + &scalar));
+    }
+
     /// Scale all scalars in the MSM by some scaling factor
     pub fn scale(&mut self, factor: C::Scalar) {
         if let Some(g_scalars) = &mut self.g_scalars {
@@ -87,12 +111,14 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         }
 
         self.h_scalar = self.h_scalar.map(|a| a * &factor);
+        self.u_scalar = self.u_scalar.map(|a| a * &factor);
     }
 
     /// Perform multiexp and check that it results in zero
     pub fn eval(self) -> bool {
         let len = self.g_scalars.as_ref().map(|v| v.len()).unwrap_or(0)
             + self.h_scalar.map(|_| 1).unwrap_or(0)
+            + self.u_scalar.map(|_| 1).unwrap_or(0)
             + self.other_scalars.len();
         let mut scalars: Vec<C::Scalar> = Vec::with_capacity(len);
         let mut bases: Vec<C> = Vec::with_capacity(len);
@@ -103,6 +129,11 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         if let Some(h_scalar) = self.h_scalar {
             scalars.push(h_scalar);
             bases.push(self.params.h);
+        }
+
+        if let Some(u_scalar) = self.u_scalar {
+            scalars.push(u_scalar);
+            bases.push(self.params.u);
         }
 
         if let Some(g_scalars) = &self.g_scalars {

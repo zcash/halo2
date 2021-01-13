@@ -3,11 +3,13 @@
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
 
+use blake2b_simd::{Params as Blake2bParams, State as Blake2bState};
+
 use super::{Coeff, LagrangeCoeff, Polynomial};
 use crate::arithmetic::{best_fft, best_multiexp, parallelize, Curve, CurveAffine, FieldExt};
-use crate::transcript::Hasher;
 
 use ff::{Field, PrimeField};
+use std::convert::TryInto;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 
 mod msm;
@@ -15,7 +17,8 @@ mod prover;
 mod verifier;
 
 pub use msm::MSM;
-pub use verifier::{Accumulator, Guard};
+pub use prover::create_proof;
+pub use verifier::{verify_proof, Accumulator, Guard};
 
 /// These are the public parameters for the polynomial commitment scheme.
 #[derive(Debug)]
@@ -25,21 +28,13 @@ pub struct Params<C: CurveAffine> {
     pub(crate) g: Vec<C>,
     pub(crate) g_lagrange: Vec<C>,
     pub(crate) h: C,
-}
-
-/// This is a proof object for the polynomial commitment scheme opening.
-#[derive(Debug, Clone)]
-pub struct Proof<C: CurveAffine> {
-    rounds: Vec<(C, C)>,
-    delta: C,
-    z1: C::Scalar,
-    z2: C::Scalar,
+    pub(crate) u: C,
 }
 
 impl<C: CurveAffine> Params<C> {
     /// Initializes parameters for the curve, given a random oracle to draw
     /// points from.
-    pub fn new<H: Hasher<C::Base>>(k: u32) -> Self {
+    pub fn new(k: u32) -> Self {
         // This is usually a limitation on the curve, but we also want 32-bit
         // architectures to be supported.
         assert!(k < 32);
@@ -48,26 +43,36 @@ impl<C: CurveAffine> Params<C> {
 
         let n: u64 = 1 << k;
 
-        let g = {
-            let hasher = &H::init(C::Base::zero());
+        let try_and_increment = |hasher: &Blake2bState| {
+            let mut trial = 0u64;
+            loop {
+                let mut hasher = hasher.clone();
+                hasher.update(&(trial.to_le_bytes())[..]);
+                let p = C::from_bytes(&hasher.finalize().as_bytes().try_into().unwrap());
+                if bool::from(p.is_some()) {
+                    break p.unwrap();
+                }
+                trial += 1;
+            }
+        };
 
+        let g = {
             let mut g = Vec::with_capacity(n as usize);
             g.resize(n as usize, C::zero());
 
             parallelize(&mut g, move |g, start| {
-                let mut cur_value = C::Base::from(start as u64);
-                for g in g.iter_mut() {
+                let mut hasher = Blake2bParams::new()
+                    .hash_length(32)
+                    .personal(C::BLAKE2B_PERSONALIZATION)
+                    .to_state();
+                hasher.update(b"G vector");
+
+                for (i, g) in g.iter_mut().enumerate() {
+                    let i = (i + start) as u64;
                     let mut hasher = hasher.clone();
-                    hasher.absorb(cur_value);
-                    cur_value += &C::Base::one();
-                    loop {
-                        let x = hasher.squeeze().to_bytes();
-                        let p = C::from_bytes(&x);
-                        if bool::from(p.is_some()) {
-                            *g = p.unwrap();
-                            break;
-                        }
-                    }
+                    hasher.update(&(i.to_le_bytes())[..]);
+
+                    *g = try_and_increment(&hasher);
                 }
             });
 
@@ -102,10 +107,23 @@ impl<C: CurveAffine> Params<C> {
         };
 
         let h = {
-            let mut hasher = H::init(C::Base::zero());
-            let x = hasher.squeeze().to_bytes();
-            let p = C::from_bytes(&x);
-            p.unwrap()
+            let mut hasher = Blake2bParams::new()
+                .hash_length(32)
+                .personal(C::BLAKE2B_PERSONALIZATION)
+                .to_state();
+            hasher.update(b"H");
+
+            try_and_increment(&hasher)
+        };
+
+        let u = {
+            let mut hasher = Blake2bParams::new()
+                .hash_length(32)
+                .personal(C::BLAKE2B_PERSONALIZATION)
+                .to_state();
+            hasher.update(b"U");
+
+            try_and_increment(&hasher)
         };
 
         Params {
@@ -114,6 +132,7 @@ impl<C: CurveAffine> Params<C> {
             g,
             g_lagrange,
             h,
+            u,
         }
     }
 
@@ -222,12 +241,11 @@ impl<F: FieldExt> MulAssign<F> for Blind<F> {
 }
 
 #[test]
-fn test_commit_lagrange() {
+fn test_commit_lagrange_epaffine() {
     const K: u32 = 6;
 
-    use crate::pasta::{EpAffine, Fp, Fq};
-    use crate::transcript::DummyHash;
-    let params = Params::<EpAffine>::new::<DummyHash<Fp>>(K);
+    use crate::pasta::{EpAffine, Fq};
+    let params = Params::<EpAffine>::new(K);
     let domain = super::EvaluationDomain::new(1, K);
 
     let mut a = domain.empty_lagrange();
@@ -244,6 +262,27 @@ fn test_commit_lagrange() {
 }
 
 #[test]
+fn test_commit_lagrange_eqaffine() {
+    const K: u32 = 6;
+
+    use crate::pasta::{EqAffine, Fp};
+    let params = Params::<EqAffine>::new(K);
+    let domain = super::EvaluationDomain::new(1, K);
+
+    let mut a = domain.empty_lagrange();
+
+    for (i, a) in a.iter_mut().enumerate() {
+        *a = Fp::from(i as u64);
+    }
+
+    let b = domain.lagrange_to_coeff(a.clone());
+
+    let alpha = Blind(Fp::rand());
+
+    assert_eq!(params.commit(&b, alpha), params.commit_lagrange(&a, alpha));
+}
+
+#[test]
 fn test_opening_proof() {
     const K: u32 = 6;
 
@@ -254,10 +293,12 @@ fn test_opening_proof() {
         EvaluationDomain,
     };
     use crate::arithmetic::{eval_polynomial, Curve, FieldExt};
-    use crate::pasta::{EpAffine, Fp, Fq};
-    use crate::transcript::{ChallengeScalar, DummyHash, Transcript};
+    use crate::pasta::{EpAffine, Fq};
+    use crate::transcript::{
+        ChallengeScalar, DummyHashRead, DummyHashWrite, Transcript, TranscriptRead, TranscriptWrite,
+    };
 
-    let params = Params::<EpAffine>::new::<DummyHash<Fp>>(K);
+    let params = Params::<EpAffine>::new(K);
     let domain = EvaluationDomain::new(1, K);
 
     let mut px = domain.empty_coeff();
@@ -270,49 +311,43 @@ fn test_opening_proof() {
 
     let p = params.commit(&px, blind).to_affine();
 
-    let mut transcript = Transcript::<_, DummyHash<_>, DummyHash<_>>::new();
-    transcript.absorb_point(&p).unwrap();
+    let mut transcript = DummyHashWrite::<Vec<u8>, EpAffine>::init(vec![], Field::zero());
+    transcript.write_point(p).unwrap();
     let x = ChallengeScalar::<_, ()>::get(&mut transcript);
     // Evaluate the polynomial
     let v = eval_polynomial(&px, *x);
+    transcript.write_scalar(v).unwrap();
 
-    transcript.absorb_base(Fp::from_bytes(&v.to_bytes()).unwrap()); // unlikely to fail since p ~ q
+    let (proof, ch_prover) = {
+        create_proof(&params, &mut transcript, &px, blind, *x).unwrap();
+        let ch_prover = transcript.squeeze_challenge();
+        (transcript.finalize(), ch_prover)
+    };
 
-    loop {
-        let mut transcript_dup = transcript.clone();
+    // Verify the opening proof
+    let mut transcript = DummyHashRead::<&[u8], EpAffine>::init(&proof[..], Field::zero());
+    let p_prime = transcript.read_point().unwrap();
+    assert_eq!(p, p_prime);
+    let x_prime = ChallengeScalar::<_, ()>::get(&mut transcript);
+    assert_eq!(*x, *x_prime);
+    let v_prime = transcript.read_scalar().unwrap();
+    assert_eq!(v, v_prime);
 
-        let opening_proof = Proof::create(&params, &mut transcript, &px, blind, *x);
-        if let Ok(opening_proof) = opening_proof {
-            // Verify the opening proof
-            let mut commitment_msm = params.empty_msm();
-            commitment_msm.append_term(Field::one(), p);
-            let guard = opening_proof
-                .verify(
-                    &params,
-                    params.empty_msm(),
-                    &mut transcript_dup,
-                    *x,
-                    commitment_msm,
-                    v,
-                )
-                .unwrap();
+    let mut commitment_msm = params.empty_msm();
+    commitment_msm.append_term(Field::one(), p);
+    let guard = verify_proof(&params, commitment_msm, &mut transcript, *x, v).unwrap();
+    let ch_verifier = transcript.squeeze_challenge();
+    assert_eq!(ch_prover, ch_verifier);
 
-            // Test guard behavior prior to checking another proof
-            {
-                // Test use_challenges()
-                let msm_challenges = guard.clone().use_challenges();
-                assert!(msm_challenges.eval());
+    // Test guard behavior prior to checking another proof
+    {
+        // Test use_challenges()
+        let msm_challenges = guard.clone().use_challenges();
+        assert!(msm_challenges.eval());
 
-                // Test use_g()
-                let g = guard.compute_g();
-                let (msm_g, _accumulator) = guard.clone().use_g(g);
-                assert!(msm_g.eval());
-
-                break;
-            }
-        } else {
-            transcript = transcript_dup;
-            transcript.absorb_base(Field::one());
-        }
+        // Test use_g()
+        let g = guard.compute_g();
+        let (msm_g, _accumulator) = guard.clone().use_g(g);
+        assert!(msm_g.eval());
     }
 }

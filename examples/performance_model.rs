@@ -4,7 +4,7 @@ use halo2::{
     pasta::{EqAffine, Fp, Fq},
     plonk::*,
     poly::commitment::{Blind, Params},
-    transcript::DummyHash,
+    transcript::{DummyHashRead, DummyHashWrite},
 };
 
 use std::marker::PhantomData;
@@ -249,7 +249,7 @@ fn main() {
     let k = 11;
 
     // Initialize the polynomial commitment parameters
-    let params: Params<EqAffine> = Params::new::<DummyHash<Fq>>(k);
+    let params: Params<EqAffine> = Params::new(k);
 
     let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None, k };
 
@@ -273,18 +273,18 @@ fn main() {
     };
 
     // Create a proof
-    let proof =
-        Proof::create::<DummyHash<Fq>, DummyHash<Fp>, _>(&params, &pk, &circuit, &[pubinputs])
-            .expect("proof generation should not fail");
+    let mut transcript = DummyHashWrite::init(vec![], Fq::one());
+    create_proof(&params, &pk, &circuit, &[pubinputs], &mut transcript)
+        .expect("proof generation should not fail");
+    let proof: Vec<u8> = transcript.finalize();
 
     println!("[Prover] {}", recorder);
     recorder.clear();
 
     let pubinput_slice = &[pubinput];
     let msm = params.empty_msm();
-    let guard = proof
-        .verify::<DummyHash<Fq>, DummyHash<Fp>>(&params, pk.get_vk(), msm, pubinput_slice)
-        .unwrap();
+    let mut transcript = DummyHashRead::init(&proof[..], Fq::one());
+    let guard = verify_proof(&params, pk.get_vk(), msm, pubinput_slice, &mut transcript).unwrap();
     let msm = guard.clone().use_challenges();
     assert!(msm.eval());
 

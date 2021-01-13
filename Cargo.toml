@@ -42,6 +42,7 @@ metrics = "=0.13.0-alpha.13"
 metrics-macros = "=0.1.0-alpha.9"
 num_cpus = "1.13"
 rand = "0.7"
+blake2b_simd = "0.5"
 
 [features]
 sanity-checks = []

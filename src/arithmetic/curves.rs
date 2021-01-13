@@ -122,6 +122,10 @@ pub trait CurveAffine:
     /// The base field over which this elliptic curve is constructed.
     type Base: FieldExt;
 
+    /// Personalization of BLAKE2b hasher used to generate the uniform
+    /// random string.
+    const BLAKE2B_PERSONALIZATION: &'static [u8; 16];
+
     /// Obtains the additive identity.
     fn zero() -> Self;
 

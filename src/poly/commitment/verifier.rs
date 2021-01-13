@@ -1,19 +1,18 @@
 use ff::Field;
 
 use super::super::Error;
-use super::{Params, Proof, MSM};
-use crate::transcript::{Challenge, ChallengeScalar, Hasher, Transcript};
+use super::{Params, MSM};
+use crate::transcript::{Challenge, ChallengeScalar, TranscriptRead};
 
-use crate::arithmetic::{best_multiexp, Curve, CurveAffine, FieldExt};
+use crate::arithmetic::{best_multiexp, BatchInvert, Curve, CurveAffine};
 
 /// A guard returned by the verifier
 #[derive(Debug, Clone)]
 pub struct Guard<'a, C: CurveAffine> {
     msm: MSM<'a, C>,
-    neg_z1: C::Scalar,
-    allinv: C::Scalar,
-    challenges_sq: Vec<C::Scalar>,
-    challenges_sq_packed: Vec<Challenge>,
+    neg_a: C::Scalar,
+    challenges: Vec<C::Scalar>,
+    challenges_packed: Vec<Challenge>,
 }
 
 /// An accumulator instance consisting of an evaluation claim and a proof.
@@ -24,28 +23,28 @@ pub struct Accumulator<C: CurveAffine> {
 
     /// A vector of 128-bit challenges sampled by the verifier, to be used in
     /// computing g.
-    pub challenges_sq_packed: Vec<Challenge>,
+    pub challenges_packed: Vec<Challenge>,
 }
 
 impl<'a, C: CurveAffine> Guard<'a, C> {
     /// Lets caller supply the challenges and obtain an MSM with updated
     /// scalars and points.
     pub fn use_challenges(mut self) -> MSM<'a, C> {
-        let s = compute_s(&self.challenges_sq, self.allinv * &self.neg_z1);
+        let s = compute_s(&self.challenges, self.neg_a);
         self.msm.add_to_g_scalars(&s);
-        self.msm.add_to_h_scalar(self.neg_z1);
+        self.msm.add_to_h_scalar(self.neg_a);
 
         self.msm
     }
 
     /// Lets caller supply the purported G point and simply appends
-    /// [-z1] G to return an updated MSM.
+    /// [-a] G to return an updated MSM.
     pub fn use_g(mut self, g: C) -> (MSM<'a, C>, Accumulator<C>) {
-        self.msm.append_term(self.neg_z1, g);
+        self.msm.append_term(self.neg_a, g);
 
         let accumulator = Accumulator {
             g,
-            challenges_sq_packed: self.challenges_sq_packed,
+            challenges_packed: self.challenges_packed,
         };
 
         (self.msm, accumulator)
@@ -53,7 +52,7 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
 
     /// Computes G + H, where G = ⟨s, params.g⟩ and H is used for blinding
     pub fn compute_g(&self) -> C {
-        let s = compute_s(&self.challenges_sq, self.allinv);
+        let s = compute_s(&self.challenges, C::Scalar::one());
 
         metrics::increment_counter!("multiexp", "size" => format!("{}", s.len()), "fn" => "compute_g");
         let mut tmp = best_multiexp(&s, &self.msm.params.g);
@@ -62,174 +61,122 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
     }
 }
 
-impl<C: CurveAffine> Proof<C> {
-    /// Checks to see if an [`Proof`] is valid given the current `transcript`,
-    /// and a point `x` that the polynomial commitment `p` opens purportedly to
-    /// the value `v`.
-    pub fn verify<'a, HBase, HScalar>(
-        &self,
-        params: &'a Params<C>,
-        mut msm: MSM<'a, C>,
-        transcript: &mut Transcript<C, HBase, HScalar>,
-        x: C::Scalar,
-        mut commitment_msm: MSM<'a, C>,
-        v: C::Scalar,
-    ) -> Result<Guard<'a, C>, Error>
-    where
-        HBase: Hasher<C::Base>,
-        HScalar: Hasher<C::Scalar>,
+/// Checks to see if an [`Proof`] is valid given the current `transcript`, and a
+/// point `x` that the polynomial commitment `P` opens purportedly to the value
+/// `v`. The provided `msm` should evaluate to the commitment `P` being opened.
+pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
+    params: &'a Params<C>,
+    mut msm: MSM<'a, C>,
+    transcript: &mut T,
+    x: C::Scalar,
+    v: C::Scalar,
+) -> Result<Guard<'a, C>, Error> {
+    let k = params.k as usize;
+
+    //     P - [v] G_0 + S * iota
+    //   + \sum(L_i * u_i^2) + \sum(R_i * u_i^-2)
+    msm.add_constant_term(-v);
+    let s_poly_commitment = transcript.read_point().map_err(|_| Error::OpeningError)?;
+
+    let iota = *ChallengeScalar::<C, ()>::get(transcript);
+    msm.append_term(iota, s_poly_commitment);
+
+    let z = *ChallengeScalar::<C, ()>::get(transcript);
+
+    let mut rounds = vec![];
+    for _ in 0..k {
+        // Read L and R from the proof and write them to the transcript
+        let l = transcript.read_point().map_err(|_| Error::OpeningError)?;
+        let r = transcript.read_point().map_err(|_| Error::OpeningError)?;
+
+        let challenge_packed = Challenge::get(transcript);
+        let challenge = *ChallengeScalar::<C, ()>::from(challenge_packed);
+
+        rounds.push((
+            l,
+            r,
+            challenge,
+            /* to be inverted */ challenge,
+            challenge_packed,
+        ));
+    }
+
+    rounds
+        .iter_mut()
+        .map(|&mut (_, _, _, ref mut challenge, _)| challenge)
+        .batch_invert();
+
+    let mut challenges = Vec::with_capacity(k);
+    let mut challenges_packed: Vec<Challenge> = Vec::with_capacity(k);
+    for (l, r, challenge, challenge_inv, challenge_packed) in rounds {
+        msm.append_term(challenge_inv, l);
+        msm.append_term(challenge, r);
+
+        challenges.push(challenge);
+        challenges_packed.push(challenge_packed);
+    }
+
+    // Our goal is to open
+    //     msm - [v] G_0 + random_poly_commitment * iota
+    //   + \sum(L_i * u_i^2) + \sum(R_i * u_i^-2)
+    // at x to 0, by asking the prover to supply (a, \xi) such that it equals
+    //   = [a] (G + [b * z] U) + [\xi] H
+    // except that we wish for the prover to supply G as Commit(g(X); 1) so
+    // we must substitute to get
+    //   = [a] ((G - H) + [b * z] U) + [\xi] H
+    //   = [a] G + [-a] H + [abz] U + [\xi] H
+    //   = [a] G + [abz] U + [\xi - a] H
+    // but subtracting to get the desired equality
+    //   ... + [-a] G + [-abz] U + [a - \xi] H = 0
+
+    let a = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
+    let neg_a = -a;
+    let xi = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
+    let b = compute_b(x, &challenges);
+
+    msm.add_to_u_scalar(neg_a * &b * &z);
+    msm.add_to_h_scalar(a - &xi);
+
+    let guard = Guard {
+        msm,
+        neg_a,
+        challenges,
+        challenges_packed,
+    };
+
+    Ok(guard)
+}
+
+/// Computes $\prod\limits_{i=0}^{k-1} (1 + u_i x^{2^i})$.
+fn compute_b<F: Field>(x: F, challenges: &[F]) -> F {
+    let mut tmp = F::one();
+    let mut cur = x;
+    for challenge in challenges.iter().rev() {
+        tmp *= F::one() + &(*challenge * &cur);
+        cur *= cur;
+    }
+    tmp
+}
+
+/// Computes the coefficients of $g(X) = \prod\limits_{i=0}^{k-1} (1 + u_i X^{2^i})$.
+fn compute_s<F: Field>(challenges: &[F], init: F) -> Vec<F> {
+    assert!(challenges.len() > 0);
+    let mut v = vec![F::zero(); 1 << challenges.len()];
+    v[0] = init;
+
+    for (len, challenge) in challenges
+        .iter()
+        .rev()
+        .enumerate()
+        .map(|(i, challenge)| (1 << i, challenge))
     {
-        // Check for well-formedness
-        if self.rounds.len() != params.k as usize {
-            return Err(Error::OpeningError);
+        let (left, right) = v.split_at_mut(len);
+        let right = &mut right[0..len];
+        right.copy_from_slice(&left);
+        for v in right {
+            *v *= challenge;
         }
-
-        // Compute U
-        let u = {
-            let u_x = transcript.squeeze();
-            // y^2 = x^3 + B
-            let u_y2 = u_x.square() * &u_x + &C::b();
-            let u_y = u_y2.deterministic_sqrt();
-            if u_y.is_none() {
-                return Err(Error::OpeningError);
-            }
-            let u_y = u_y.unwrap();
-
-            C::from_xy(u_x, u_y).unwrap()
-        };
-
-        let mut extra_scalars = Vec::with_capacity(self.rounds.len() * 2 + 4 + params.n as usize);
-        let mut extra_bases = Vec::with_capacity(self.rounds.len() * 2 + 4 + params.n as usize);
-
-        // Data about the challenges from each of the rounds.
-        let mut challenges = Vec::with_capacity(self.rounds.len());
-        let mut challenges_inv = Vec::with_capacity(self.rounds.len());
-        let mut challenges_sq = Vec::with_capacity(self.rounds.len());
-        let mut challenges_sq_packed: Vec<Challenge> = Vec::with_capacity(self.rounds.len());
-        let mut allinv = C::Scalar::one();
-
-        for round in &self.rounds {
-            // Feed L and R into the transcript.
-            let l = round.0;
-            let r = round.1;
-            transcript
-                .absorb_point(&l)
-                .map_err(|_| Error::OpeningError)?;
-            transcript
-                .absorb_point(&r)
-                .map_err(|_| Error::OpeningError)?;
-            let challenge_sq_packed = Challenge::get(transcript);
-            let challenge_sq: C::Scalar = *ChallengeScalar::<_, ()>::from(challenge_sq_packed);
-
-            let challenge = challenge_sq.deterministic_sqrt();
-            if challenge.is_none() {
-                // We didn't sample a square.
-                return Err(Error::OpeningError);
-            }
-            let challenge = challenge.unwrap();
-
-            let challenge_inv = challenge.invert();
-            if bool::from(challenge_inv.is_none()) {
-                // We sampled zero for some reason, unlikely to happen by
-                // chance.
-                return Err(Error::OpeningError);
-            }
-            let challenge_inv = challenge_inv.unwrap();
-            allinv *= &challenge_inv;
-
-            let challenge_sq_inv = challenge_inv.square();
-
-            extra_scalars.push(challenge_sq);
-            extra_bases.push(round.0);
-            extra_scalars.push(challenge_sq_inv);
-            extra_bases.push(round.1);
-
-            challenges.push(challenge);
-            challenges_inv.push(challenge_inv);
-            challenges_sq.push(challenge_sq);
-            challenges_sq_packed.push(challenge_sq_packed);
-        }
-
-        // Feed delta into the transcript
-        transcript
-            .absorb_point(&self.delta)
-            .map_err(|_| Error::OpeningError)?;
-
-        // Get the challenge `c`
-        let c = ChallengeScalar::<_, ()>::get(transcript);
-
-        // Construct
-        // [c] P + [c * v] U + [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2) + delta - [z1 * b] U + [z1 - z2] H
-        // = [z1] (G + H)
-        // The computation of [z1] (G + H) happens in either Guard::use_challenges()
-        // or Guard::use_g().
-
-        let b = compute_b(x, &challenges, &challenges_inv);
-
-        let neg_z1 = -self.z1;
-
-        // [c] P
-        commitment_msm.scale(*c);
-        msm.add_msm(&commitment_msm);
-
-        // [c] sum(L_i * u_i^2) + [c] sum(R_i * u_i^-2)
-        for scalar in &mut extra_scalars {
-            *scalar *= &(*c);
-        }
-
-        for (scalar, base) in extra_scalars.iter().zip(extra_bases.iter()) {
-            msm.append_term(*scalar, *base);
-        }
-
-        // [c * v] U - [z1 * b] U
-        msm.append_term((*c * &v) + &(neg_z1 * &b), u);
-
-        // delta
-        msm.append_term(Field::one(), self.delta);
-
-        // + [z1 - z2] H
-        msm.add_to_h_scalar(self.z1 - &self.z2);
-
-        let guard = Guard {
-            msm,
-            neg_z1,
-            allinv,
-            challenges_sq,
-            challenges_sq_packed,
-        };
-
-        Ok(guard)
-    }
-}
-
-fn compute_b<F: Field>(x: F, challenges: &[F], challenges_inv: &[F]) -> F {
-    assert!(!challenges.is_empty());
-    assert_eq!(challenges.len(), challenges_inv.len());
-    if challenges.len() == 1 {
-        *challenges_inv.last().unwrap() + *challenges.last().unwrap() * x
-    } else {
-        (*challenges_inv.last().unwrap() + *challenges.last().unwrap() * x)
-            * compute_b(
-                x.square(),
-                &challenges[0..(challenges.len() - 1)],
-                &challenges_inv[0..(challenges.len() - 1)],
-            )
-    }
-}
-
-// TODO: parallelize
-fn compute_s<F: Field>(challenges_sq: &[F], allinv: F) -> Vec<F> {
-    let lg_n = challenges_sq.len();
-    let n = 1 << lg_n;
-
-    let mut s = Vec::with_capacity(n);
-    s.push(allinv);
-    for i in 1..n {
-        let lg_i = (32 - 1 - (i as u32).leading_zeros()) as usize;
-        let k = 1 << lg_i;
-        let u_lg_i_sq = challenges_sq[(lg_n - 1) - lg_i];
-        s.push(s[i - k] * u_lg_i_sq);
     }
 
-    s
+    v
 }
