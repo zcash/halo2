@@ -3,6 +3,7 @@
 
 use core::cmp;
 use core::fmt::Debug;
+use core::hash::{Hash, Hasher};
 use core::ops::{Add, Mul, Neg, Sub};
 use ff::Field;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
@@ -11,7 +12,8 @@ use super::{Fp, Fq};
 use crate::arithmetic::{Curve, CurveAffine, FieldExt, Group};
 
 macro_rules! new_curve_impl {
-    ($name:ident, $name_affine:ident, $base:ident, $scalar:ident, $blake2b_personalization:literal) => {
+    ($name:ident, $name_affine:ident, $base:ident, $scalar:ident, $blake2b_personalization:literal,
+     $curve_id:literal, $a_raw:expr, $b_raw:expr, $curve_type:ident) => {
         /// Represents a point in the projective coordinate space.
         #[derive(Copy, Clone, Debug)]
         pub struct $name {
@@ -21,9 +23,12 @@ macro_rules! new_curve_impl {
         }
 
         impl $name {
+            const fn curve_constant_a() -> $base {
+                $base::from_raw($a_raw)
+            }
+
             const fn curve_constant_b() -> $base {
-                // NOTE: this is specific to b = 5
-                $base::from_raw([5, 0, 0, 0])
+                $base::from_raw($b_raw)
             }
         }
 
@@ -41,24 +46,13 @@ macro_rules! new_curve_impl {
             type Scalar = $scalar;
             type Base = $base;
 
+            impl_projective_curve_specific!($name, $base, $curve_type);
+
             fn zero() -> Self {
                 Self {
                     x: $base::zero(),
                     y: $base::zero(),
                     z: $base::zero(),
-                }
-            }
-
-            fn one() -> Self {
-                // NOTE: This is specific to b = 5
-
-                const NEGATIVE_ONE: $base = $base::neg(&$base::one());
-                const TWO: $base = $base::from_raw([2, 0, 0, 0]);
-
-                Self {
-                    x: NEGATIVE_ONE,
-                    y: TWO,
-                    z: $base::one(),
                 }
             }
 
@@ -82,56 +76,27 @@ macro_rules! new_curve_impl {
                 $name_affine::conditional_select(&tmp, &$name_affine::zero(), zinv.ct_is_zero())
             }
 
-            fn double(&self) -> Self {
-                // http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#doubling-dbl-2009-l
-                //
-                // There are no points of order 2.
-
-                let a = self.x.square();
-                let b = self.y.square();
-                let c = b.square();
-                let d = self.x + b;
-                let d = d.square();
-                let d = d - a - c;
-                let d = d + d;
-                let e = a + a + a;
-                let f = e.square();
-                let z3 = self.z * self.y;
-                let z3 = z3 + z3;
-                let x3 = f - (d + d);
-                let c = c + c;
-                let c = c + c;
-                let c = c + c;
-                let y3 = e * (d - x3) - c;
-
-                let tmp = $name {
-                    x: x3,
-                    y: y3,
-                    z: z3,
-                };
-
-                $name::conditional_select(&tmp, &$name::zero(), self.is_zero())
-            }
-
-            /// Apply the curve endomorphism by multiplying the x-coordinate
-            /// by an element of multiplicative order 3.
-            fn endo(&self) -> Self {
-                $name {
-                    x: self.x * $base::ZETA,
-                    y: self.y,
-                    z: self.z,
-                }
+            fn a() -> Self::Base {
+                $name::curve_constant_a()
             }
 
             fn b() -> Self::Base {
                 $name::curve_constant_b()
             }
 
-            fn is_on_curve(&self) -> Choice {
-                // Y^2 - X^3 = 5(Z^6)
+            fn jacobian_coordinates(&self) -> ($base, $base, $base) {
+               (self.x, self.y, self.z)
+            }
 
-                (self.y.square() - (self.x.square() * self.x))
-                    .ct_eq(&((self.z.square() * self.z).square() * $name::curve_constant_b()))
+            fn is_on_curve(&self) -> Choice {
+                // Y^2 = X^3 + AX(Z^4) + b(Z^6)
+                // Y^2 - (X^2 + A(Z^4))X = b(Z^6)
+
+                let z2 = self.z.square();
+                let z4 = z2.square();
+                let z6 = z4 * z2;
+                (self.y.square() - (self.x.square() + $name::curve_constant_a() * z4) * self.x)
+                    .ct_eq(&(z6 * $name::curve_constant_b()))
                     | self.z.ct_is_zero()
             }
 
@@ -171,6 +136,11 @@ macro_rules! new_curve_impl {
 
                     *q = $name_affine::conditional_select(&q, &$name_affine::zero(), skip);
                 }
+            }
+
+            fn new_jacobian(x: Self::Base, y: Self::Base, z: Self::Base) -> CtOption<Self> {
+                let p = $name { x, y, z };
+                CtOption::new(p, p.is_on_curve())
             }
         }
 
@@ -498,6 +468,9 @@ macro_rules! new_curve_impl {
             type Base = $base;
 
             const BLAKE2B_PERSONALIZATION: &'static [u8; 16] = $blake2b_personalization;
+            const CURVE_ID: &'static str = $curve_id;
+
+            impl_affine_curve_specific!($name, $base, $curve_type);
 
             fn zero() -> Self {
                 Self {
@@ -507,26 +480,13 @@ macro_rules! new_curve_impl {
                 }
             }
 
-            fn one() -> Self {
-                // NOTE: This is specific to b = 5
-
-                const NEGATIVE_ONE: $base = $base::neg(&$base::from_raw([1, 0, 0, 0]));
-                const TWO: $base = $base::from_raw([2, 0, 0, 0]);
-
-                Self {
-                    x: NEGATIVE_ONE,
-                    y: TWO,
-                    infinity: Choice::from(0u8),
-                }
-            }
-
             fn is_zero(&self) -> Choice {
                 self.infinity
             }
 
             fn is_on_curve(&self) -> Choice {
-                // y^2 - x^3 ?= b
-                (self.y.square() - (self.x.square() * self.x)).ct_eq(&$name::curve_constant_b())
+                // y^2 - x^3 - ax ?= b
+                (self.y.square() - (self.x.square() + &$name::curve_constant_a()) * self.x).ct_eq(&$name::curve_constant_b())
                     | self.infinity
             }
 
@@ -626,6 +586,10 @@ macro_rules! new_curve_impl {
                 }
             }
 
+            fn a() -> Self::Base {
+                $name::curve_constant_a()
+            }
+
             fn b() -> Self::Base {
                 $name::curve_constant_b()
             }
@@ -676,6 +640,14 @@ macro_rules! new_curve_impl {
             }
         }
 
+        impl Hash for $name_affine {
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                self.x.hash(state);
+                self.y.hash(state);
+                bool::from(self.infinity).hash(state)
+            }
+        }
+
         impl_binops_additive!($name, $name);
         impl_binops_additive!($name, $name_affine);
         impl_binops_additive_specify_output!($name_affine, $name_affine, $name);
@@ -702,5 +674,177 @@ macro_rules! new_curve_impl {
     };
 }
 
-new_curve_impl!(Ep, EpAffine, Fp, Fq, b"halo2_____pallas");
-new_curve_impl!(Eq, EqAffine, Fq, Fp, b"halo2______vesta");
+macro_rules! impl_projective_curve_specific {
+    ($name:ident, $base:ident, special_a0_b5) => {
+        fn one() -> Self {
+            // NOTE: This is specific to b = 5
+
+            const NEGATIVE_ONE: $base = $base::neg(&$base::one());
+            const TWO: $base = $base::from_raw([2, 0, 0, 0]);
+
+            Self {
+                x: NEGATIVE_ONE,
+                y: TWO,
+                z: $base::one(),
+            }
+        }
+
+        /// Apply the curve endomorphism by multiplying the x-coordinate
+        /// by an element of multiplicative order 3.
+        fn endo(&self) -> Self {
+            $name {
+                x: self.x * $base::ZETA,
+                y: self.y,
+                z: self.z,
+            }
+        }
+
+        fn double(&self) -> Self {
+            // http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#doubling-dbl-2009-l
+            //
+            // There are no points of order 2.
+
+            let a = self.x.square();
+            let b = self.y.square();
+            let c = b.square();
+            let d = self.x + b;
+            let d = d.square();
+            let d = d - a - c;
+            let d = d + d;
+            let e = a + a + a;
+            let f = e.square();
+            let z3 = self.z * self.y;
+            let z3 = z3 + z3;
+            let x3 = f - (d + d);
+            let c = c + c;
+            let c = c + c;
+            let c = c + c;
+            let y3 = e * (d - x3) - c;
+
+            let tmp = $name {
+                x: x3,
+                y: y3,
+                z: z3,
+            };
+
+            $name::conditional_select(&tmp, &$name::zero(), self.is_zero())
+        }
+    };
+    ($name:ident, $base:ident, general) => {
+        /// Unimplemented: there is no standard generator for this curve.
+        fn one() -> Self {
+            unimplemented!()
+        }
+
+        /// Unimplemented: no endomorphism is supported for this curve.
+        fn endo(&self) -> Self {
+            unimplemented!()
+        }
+
+        fn double(&self) -> Self {
+            // http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#doubling-dbl-2007-bl
+            //
+            // There are no points of order 2.
+
+            let xx = self.x.square();
+            let yy = self.y.square();
+            let a = yy.square();
+            let zz = self.z.square();
+            let s = (self.x + yy).square() - xx - a;
+            let s = s + s;
+            let m = xx + xx + xx + $name::curve_constant_a() * zz.square();
+            let x3 = m.square() - (s + s);
+            let a = a + a;
+            let a = a + a;
+            let a = a + a;
+            let y3 = m * (s - x3) - a;
+            let z3 = (self.x + self.y).square() - yy - zz;
+
+            let tmp = $name {
+                x: x3,
+                y: y3,
+                z: z3,
+            };
+
+            $name::conditional_select(&tmp, &$name::zero(), self.is_zero())
+        }
+    };
+}
+
+macro_rules! impl_affine_curve_specific {
+    ($name:ident, $base:ident, special_a0_b5) => {
+        fn one() -> Self {
+            // NOTE: This is specific to b = 5
+
+            const NEGATIVE_ONE: $base = $base::neg(&$base::from_raw([1, 0, 0, 0]));
+            const TWO: $base = $base::from_raw([2, 0, 0, 0]);
+
+            Self {
+                x: NEGATIVE_ONE,
+                y: TWO,
+                infinity: Choice::from(0u8),
+            }
+        }
+    };
+    ($name:ident, $base:ident, general) => {
+        /// Unimplemented: there is no standard generator for this curve.
+        fn one() -> Self {
+            unimplemented!()
+        }
+    };
+}
+
+new_curve_impl!(
+    Ep,
+    EpAffine,
+    Fp,
+    Fq,
+    b"halo2_____pallas",
+    "pallas",
+    [0, 0, 0, 0],
+    [5, 0, 0, 0],
+    special_a0_b5
+);
+new_curve_impl!(
+    Eq,
+    EqAffine,
+    Fq,
+    Fp,
+    b"halo2______vesta",
+    "vesta",
+    [0, 0, 0, 0],
+    [5, 0, 0, 0],
+    special_a0_b5
+);
+new_curve_impl!(
+    IsoEp,
+    IsoEpAffine,
+    Fp,
+    Fq,
+    b"halo2_iso_pallas",
+    "iso-pallas",
+    [
+        0x92bb4b0b657a014b,
+        0xb74134581a27a59f,
+        0x49be2d7258370742,
+        0x18354a2eb0ea8c9c,
+    ],
+    [1265, 0, 0, 0],
+    general
+);
+new_curve_impl!(
+    IsoEq,
+    IsoEqAffine,
+    Fq,
+    Fp,
+    b"halo2__iso_vesta",
+    "iso-vesta",
+    [
+        0xc515ad7242eaa6b1,
+        0x9673928c7d01b212,
+        0x81639c4d96f78773,
+        0x267f9b2ee592271a,
+    ],
+    [1265, 0, 0, 0],
+    general
+);
