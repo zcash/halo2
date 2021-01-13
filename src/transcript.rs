@@ -148,7 +148,7 @@ impl<W: Write, C: CurveAffine> DummyHashWrite<W, C> {
 
     /// Conclude the interaction and return the output buffer (writer).
     pub fn finalize(self) -> W {
-        // TODO: handle outstanding scalars?
+        // TODO: handle outstanding scalars? see issue #138
         self.writer
     }
 }
