@@ -16,8 +16,7 @@ pub struct PermutationCommitments<C: CurveAffine> {
 }
 
 pub struct Committed<C: CurveAffine> {
-    permuted_input_commitment: C,
-    permuted_table_commitment: C,
+    permuted: PermutationCommitments<C>,
     product_commitment: C,
 }
 
@@ -59,8 +58,7 @@ impl<C: CurveAffine> PermutationCommitments<C> {
             .map_err(|_| Error::TranscriptError)?;
 
         Ok(Committed {
-            permuted_input_commitment: self.permuted_input_commitment,
-            permuted_table_commitment: self.permuted_table_commitment,
+            permuted: self,
             product_commitment,
         })
     }
@@ -176,19 +174,19 @@ impl<C: CurveAffine> Evaluated<C> {
             // Open lookup input commitments at x
             .chain(Some(VerifierQuery {
                 point: *x,
-                commitment: &self.committed.permuted_input_commitment,
+                commitment: &self.committed.permuted.permuted_input_commitment,
                 eval: self.permuted_input_eval,
             }))
             // Open lookup table commitments at x
             .chain(Some(VerifierQuery {
                 point: *x,
-                commitment: &self.committed.permuted_table_commitment,
+                commitment: &self.committed.permuted.permuted_table_commitment,
                 eval: self.permuted_table_eval,
             }))
             // Open lookup input commitments at \omega^{-1} x
             .chain(Some(VerifierQuery {
                 point: x_inv,
-                commitment: &self.committed.permuted_input_commitment,
+                commitment: &self.committed.permuted.permuted_input_commitment,
                 eval: self.permuted_input_inv_eval,
             }))
             // Open lookup product commitments at \omega^{-1} x
