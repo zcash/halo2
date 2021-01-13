@@ -492,45 +492,8 @@ impl ff::Field for Fp {
 
     /// Computes the square root of this element, if it exists.
     fn sqrt(&self) -> CtOption<Self> {
-        // Tonelli-Shank's algorithm for p mod 16 = 1
-        // https://eprint.iacr.org/2012/685.pdf (page 12, algorithm 5)
-
-        // w = self^((t - 1) // 2)
-        let w = self.pow_vartime(&[0x04a67c8dcc969876, 0x11234c7e, 0x0, 0x20000000]);
-
-        let mut v = S;
-        let mut x = self * w;
-        let mut b = x * w;
-
-        // Initialize z as the 2^S root of unity.
-        let mut z = ROOT_OF_UNITY;
-
-        for max_v in (1..=S).rev() {
-            let mut k = 1;
-            let mut tmp = b.square();
-            let mut j_less_than_v: Choice = 1.into();
-
-            for j in 2..max_v {
-                let tmp_is_one = tmp.ct_eq(&Fp::one());
-                let squared = Fp::conditional_select(&tmp, &z, tmp_is_one).square();
-                tmp = Fp::conditional_select(&squared, &tmp, tmp_is_one);
-                let new_z = Fp::conditional_select(&z, &squared, tmp_is_one);
-                j_less_than_v &= !j.ct_eq(&v);
-                k = u32::conditional_select(&j, &k, tmp_is_one);
-                z = Fp::conditional_select(&z, &new_z, j_less_than_v);
-            }
-
-            let result = x * z;
-            x = Fp::conditional_select(&result, &x, b.ct_eq(&Fp::one()));
-            z = z.square();
-            b *= z;
-            v = k;
-        }
-
-        CtOption::new(
-            x,
-            (x * x).ct_eq(self), // Only return Some if it's the square root.
-        )
+        let (is_square, res) = self.sqrt_alt();
+        CtOption::new(res, is_square)
     }
 
     /// Computes the multiplicative inverse of this element,
