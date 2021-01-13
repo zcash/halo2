@@ -796,7 +796,6 @@ impl FieldExt for Fq {
         let sr = sqr(sq, 5) * s1011;
         let ss = sqr(sr, 3) * self;
         let st = sqr(ss, 4);
-        //assert!(st == ff::Field::pow_vartime(&self, &Fq::T_MINUS1_OVER2));
         st
     }
 }
@@ -835,6 +834,13 @@ fn test_sqrt() {
     // NB: TWO_INV is standing in as a "random" field element
     let v = (Fq::TWO_INV).square().sqrt().unwrap();
     assert!(v == Fq::TWO_INV || (-v) == Fq::TWO_INV);
+}
+
+#[test]
+fn test_pow_by_t_minus1_over2() {
+    // NB: TWO_INV is standing in as a "random" field element
+    let v = (Fq::TWO_INV).pow_by_t_minus1_over2();
+    assert!(v == ff::Field::pow_vartime(&Fq::TWO_INV, &Fq::T_MINUS1_OVER2));
 }
 
 #[test]

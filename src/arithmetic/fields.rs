@@ -160,10 +160,10 @@ impl<F: FieldExt> SqrtHasher<F> {
 pub struct SqrtTables<F: FieldExt> {
     hasher: SqrtHasher<F>,
     inv: Vec<u8>,
-    g0: [F; 256],
-    g1: [F; 256],
-    g2: [F; 256],
-    g3: [F; 129],
+    g0: Box<[F; 256]>,
+    g1: Box<[F; 256]>,
+    g2: Box<[F; 256]>,
+    g3: Box<[F; 129]>,
 }
 
 impl<F: FieldExt> SqrtTables<F> {
@@ -202,10 +202,10 @@ impl<F: FieldExt> SqrtTables<F> {
         SqrtTables::<F> {
             hasher,
             inv,
-            g0: gtab[0][..].try_into().unwrap(),
-            g1: gtab[1][..].try_into().unwrap(),
-            g2: gtab[2][..].try_into().unwrap(),
-            g3: gtab[3][0..129].try_into().unwrap(),
+            g0: Box::new(gtab[0][..].try_into().unwrap()),
+            g1: Box::new(gtab[1][..].try_into().unwrap()),
+            g2: Box::new(gtab[2][..].try_into().unwrap()),
+            g3: Box::new(gtab[3][0..129].try_into().unwrap()),
         }
     }
 

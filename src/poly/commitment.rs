@@ -38,8 +38,8 @@ impl<C: CurveAffine> Params<C> {
         // This is usually a limitation on the curve, but we also want 32-bit
         // architectures to be supported.
         assert!(k < 32);
-        // No goofy hardware please.
-        assert!(core::mem::size_of::<usize>() >= 4);
+
+        // In src/arithmetic/fields.rs we ensure that usize is at least 32 bits.
 
         let n: u64 = 1 << k;
 
