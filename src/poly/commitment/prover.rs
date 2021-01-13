@@ -3,8 +3,8 @@ use ff::Field;
 use super::super::{Coeff, Polynomial};
 use super::{Blind, Params};
 use crate::arithmetic::{
-    best_multiexp, compute_inner_product, eval_polynomial, parallelize, small_multiexp, Curve,
-    CurveAffine, FieldExt,
+    best_multiexp, compute_inner_product, eval_polynomial, parallelize, Curve, CurveAffine,
+    FieldExt,
 };
 use crate::transcript::{Challenge, ChallengeScalar, TranscriptWrite};
 use std::io;
@@ -84,9 +84,8 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>>(
         }
     }
 
-    // Initialize the vector `G` from the SRS. We'll be progressively
-    // collapsing this vector into smaller and smaller vectors until it is
-    // of length 1.
+    // Initialize the vector `G` from the SRS. We'll be progressively collapsing
+    // this vector into smaller and smaller vectors until it is of length 1.
     let mut g = params.g.clone();
 
     // Perform the inner product argument, round by round.
@@ -98,76 +97,42 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>>(
         // TODO: If we modify multiexp to take "extra" bases, we could speed
         // this piece up a bit by combining the multiexps.
         metrics::counter!("multiexp", 2, "val" => "l/r", "size" => format!("{}", half));
-        let l = best_multiexp(&a[0..half], &g[half..]);
-        let r = best_multiexp(&a[half..], &g[0..half]);
-        let value_l = compute_inner_product(&a[0..half], &b[half..]);
-        let value_r = compute_inner_product(&a[half..], &b[0..half]);
-        let mut l_randomness = C::Scalar::rand();
+        let l = best_multiexp(&a[half..], &g[0..half]);
+        let r = best_multiexp(&a[0..half], &g[half..]);
+        let value_l = compute_inner_product(&a[half..], &b[0..half]);
+        let value_r = compute_inner_product(&a[0..half], &b[half..]);
+        let l_randomness = C::Scalar::rand();
         let r_randomness = C::Scalar::rand();
         metrics::counter!("multiexp", 2, "val" => "l/r", "size" => "2");
         let l = l + &best_multiexp(&[value_l * &z, l_randomness], &[params.u, params.h]);
         let r = r + &best_multiexp(&[value_r * &z, r_randomness], &[params.u, params.h]);
-        let mut l = l.to_affine();
+        let l = l.to_affine();
         let r = r.to_affine();
-
-        let challenge = loop {
-            // We'll fork the transcript and adjust our randomness
-            // until the challenge is a square.
-            let mut transcript = transcript.fork();
-
-            // Feed L and R into the cloned transcript.
-            // We expect these to not be points at infinity due to the randomness.
-            transcript.write_point(l)?;
-            transcript.write_point(r)?;
-
-            // ... and get the squared challenge.
-            let challenge_sq_packed = Challenge::get(&mut transcript);
-            let challenge_sq = *ChallengeScalar::<C, ()>::from(challenge_sq_packed);
-
-            // There might be no square root, in which case we'll fork the
-            // transcript.
-            let challenge = challenge_sq.deterministic_sqrt();
-            if let Some(challenge) = challenge {
-                break challenge;
-            } else {
-                // Try again, with slightly different randomness
-                l = (l + params.h).to_affine();
-                l_randomness += &C::Scalar::one();
-            }
-        };
-
-        // Challenge is unlikely to be zero.
-        let challenge_inv = challenge.invert().unwrap();
-        let challenge_sq_inv = challenge_inv.square();
-        let challenge_sq = challenge.square();
 
         // Feed L and R into the real transcript
         transcript.write_point(l)?;
         transcript.write_point(r)?;
 
-        // And obtain the challenge, even though we already have it, since
-        // squeezing affects the transcript.
-        {
-            let challenge_sq_expected = ChallengeScalar::<_, ()>::get(transcript);
-            assert_eq!(challenge_sq, *challenge_sq_expected);
-        }
+        let challenge_packed = Challenge::get(transcript);
+        let challenge = *ChallengeScalar::<C, ()>::from(challenge_packed);
+        let challenge_inv = challenge.invert().unwrap(); // TODO, bubble this up
 
         // Collapse `a` and `b`.
         // TODO: parallelize
         for i in 0..half {
-            a[i] = (a[i] * &challenge) + &(a[i + half] * &challenge_inv);
-            b[i] = (b[i] * &challenge_inv) + &(b[i + half] * &challenge);
+            a[i] = a[i] + &(a[i + half] * &challenge_inv);
+            b[i] = b[i] + &(b[i + half] * &challenge);
         }
         a.truncate(half);
         b.truncate(half);
 
         // Collapse `G`
-        parallel_generator_collapse(&mut g, challenge, challenge_inv);
+        parallel_generator_collapse(&mut g, challenge);
         g.truncate(half);
 
         // Update randomness (the synthetic blinding factor at the end)
-        blind += &(l_randomness * &challenge_sq);
-        blind += &(r_randomness * &challenge_sq_inv);
+        blind += &(l_randomness * &challenge_inv);
+        blind += &(r_randomness * &challenge);
     }
 
     // We have fully collapsed `a`, `b`, `G`
@@ -180,20 +145,16 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>>(
     Ok(())
 }
 
-fn parallel_generator_collapse<C: CurveAffine>(
-    g: &mut [C],
-    challenge: C::Scalar,
-    challenge_inv: C::Scalar,
-) {
+fn parallel_generator_collapse<C: CurveAffine>(g: &mut [C], challenge: C::Scalar) {
     let len = g.len() / 2;
     let (mut g_lo, g_hi) = g.split_at_mut(len);
-    metrics::counter!("multiexp", len as u64, "size" => "2", "fn" => "parallel_generator_collapse");
+    metrics::counter!("scalar_multiplication", len as u64, "fn" => "parallel_generator_collapse");
 
     parallelize(&mut g_lo, |g_lo, start| {
         let g_hi = &g_hi[start..];
         let mut tmp = Vec::with_capacity(g_lo.len());
         for (g_lo, g_hi) in g_lo.iter().zip(g_hi.iter()) {
-            tmp.push(small_multiexp(&[challenge_inv, challenge], &[*g_lo, *g_hi]));
+            tmp.push(g_lo.to_projective() + &(*g_hi * challenge));
         }
         C::Projective::batch_to_affine(&tmp, g_lo);
     });

@@ -16,15 +16,6 @@ pub trait FieldExt:
     /// Inverse of `ROOT_OF_UNITY`
     const ROOT_OF_UNITY_INV: Self;
 
-    /// The value $(2^S)^{-1} \mod t$.
-    const UNROLL_T_EXPONENT: [u64; 4];
-
-    /// Represents $t$ where $2^S \cdot t = p - 1$ with $t$ odd.
-    const T_EXPONENT: [u64; 4];
-
-    /// The value $t^{-1} \mod 2^S$.
-    const UNROLL_S_EXPONENT: u64;
-
     /// Generator of the $t-order$ multiplicative subgroup
     const DELTA: Self;
 
@@ -66,68 +57,6 @@ pub trait FieldExt:
     /// Obtains a field element that is congruent to the provided little endian
     /// byte representation of an integer.
     fn from_bytes_wide(bytes: &[u8; 64]) -> Self;
-
-    /// Returns a square root of this element, if it exists and this element is
-    /// nonzero. Always returns the same square root, and it is efficient to
-    /// check that it has done so using `extract_radix2_vartime`.
-    fn deterministic_sqrt(&self) -> Option<Self> {
-        let sqrt = self.sqrt();
-        if bool::from(sqrt.is_none()) {
-            return None;
-        }
-        let sqrt = sqrt.unwrap();
-        let extracted = sqrt.extract_radix2_vartime()?;
-
-        if extracted.1 >> (Self::S - 1) == 1 {
-            Some(-sqrt)
-        } else {
-            Some(sqrt)
-        }
-    }
-
-    /// Returns an element $a$ of multiplicative order $t$ together with an
-    /// integer `s` such that `self` is the square of $a \cdot \omega^{s}$ if
-    /// indeed `self` is a square.
-    fn extract_radix2_vartime(&self) -> Option<(Self, u64)> {
-        if bool::from(self.ct_is_zero()) {
-            return None;
-        }
-
-        // TODO: these can probably be simplified
-        let t = self.pow_vartime(&[1 << Self::S, 0, 0, 0]);
-        let t = t.pow_vartime(&Self::UNROLL_T_EXPONENT);
-        let t = t.pow_vartime(&Self::UNROLL_T_EXPONENT);
-        let s = self.pow_vartime(&Self::T_EXPONENT);
-        let mut s = s.pow_vartime(&[Self::UNROLL_S_EXPONENT, 0, 0, 0]);
-
-        let mut m = Self::S;
-        let mut c = Self::ROOT_OF_UNITY_INV;
-
-        let mut extract: u64 = 0;
-
-        let mut cur = 1;
-        while s != Self::one() {
-            let mut i = 1;
-            {
-                let mut s2i = s;
-                s2i = s2i.square();
-                while s2i != Self::one() {
-                    i += 1;
-                    s2i = s2i.square();
-                }
-            }
-
-            for _ in 0..(m - i) {
-                c = c.square();
-                cur <<= 1;
-            }
-            extract |= cur;
-            s *= c;
-            m = i;
-        }
-
-        Some((t, extract))
-    }
 
     /// Exponentiates `self` by `by`, where `by` is a little-endian order
     /// integer exponent.

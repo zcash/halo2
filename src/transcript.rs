@@ -32,18 +32,11 @@ pub trait TranscriptRead<C: CurveAffine>: Transcript<C> {
 /// Transcript view from the perspective of a prover that has access to an
 /// output stream of messages from the prover to the verifier.
 pub trait TranscriptWrite<C: CurveAffine>: Transcript<C> {
-    /// Forked transcript that does not write to the proof structure.
-    type ForkedTranscript: TranscriptWrite<C>;
-
     /// Write a curve point to the proof and the transcript.
     fn write_point(&mut self, point: C) -> io::Result<()>;
 
     /// Write a scalar to the proof and the transcript.
     fn write_scalar(&mut self, scalar: C::Scalar) -> io::Result<()>;
-
-    /// Fork the transcript, creating a variant of this `TranscriptWrite` which
-    /// does not output anything to the writer.
-    fn fork(&self) -> Self::ForkedTranscript;
 }
 
 /// This is just a simple (and completely broken) transcript reader
@@ -161,8 +154,6 @@ impl<W: Write, C: CurveAffine> DummyHashWrite<W, C> {
 }
 
 impl<W: Write, C: CurveAffine> TranscriptWrite<C> for DummyHashWrite<W, C> {
-    type ForkedTranscript = DummyHashWrite<io::Sink, C>;
-
     fn write_point(&mut self, point: C) -> io::Result<()> {
         self.common_point(point)?;
         let compressed = point.to_bytes();
@@ -174,14 +165,6 @@ impl<W: Write, C: CurveAffine> TranscriptWrite<C> for DummyHashWrite<W, C> {
         self.written_scalar = true;
         let data = scalar.to_bytes();
         self.writer.write_all(&data[..])
-    }
-    fn fork(&self) -> Self::ForkedTranscript {
-        DummyHashWrite {
-            base_state: self.base_state,
-            scalar_state: self.scalar_state,
-            written_scalar: self.written_scalar,
-            writer: io::sink(),
-        }
     }
 }
 

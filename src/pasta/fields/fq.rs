@@ -643,20 +643,7 @@ impl FieldExt for Fq {
         0xf4c8f353124086c1,
         0x2235e1a7415bf936,
     ]);
-    const UNROLL_T_EXPONENT: [u64; 4] = [
-        0xcc771cc2ac1e1664,
-        0x00000000062dfe9e,
-        0xc000000000000000,
-        0xb89e9c7,
-    ];
-    const T_EXPONENT: [u64; 4] = [
-        0x0994a8dd8c46eb21,
-        0x00000000224698fc,
-        0x0000000000000000,
-        0x40000000,
-    ];
     const DELTA: Self = DELTA;
-    const UNROLL_S_EXPONENT: u64 = 0xd1d858e1;
     const TWO_INV: Self = Fq::from_raw([
         0xc623759080000001,
         0x11234c7e04ca546e,
@@ -788,13 +775,6 @@ fn test_rescue() {
 fn test_sqrt() {
     // NB: TWO_INV is standing in as a "random" field element
     let v = (Fq::TWO_INV).square().sqrt().unwrap();
-    assert!(v == Fq::TWO_INV || (-v) == Fq::TWO_INV);
-}
-
-#[test]
-fn test_deterministic_sqrt() {
-    // NB: TWO_INV is standing in as a "random" field element
-    let v = (Fq::TWO_INV).square().deterministic_sqrt().unwrap();
     assert!(v == Fq::TWO_INV || (-v) == Fq::TWO_INV);
 }
 
