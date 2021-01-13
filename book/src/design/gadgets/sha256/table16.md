@@ -24,7 +24,7 @@ A_{new} &=& reduce_7(H' + Maj(A, B, C) + \Sigma_0(A))
 \end{array}
 $$
 
-where $reduce_i$ must handle a carry in $\{0, \ldots, i-1\}$.
+where $reduce_i$ must handle a carry $0 \leq \mathit{carry} < i$.
 
 ![The SHA-256 compression function](./compression.png)
 
@@ -117,7 +117,7 @@ in each row. The spread forms of these small pieces are found by interpolation.
 
 Note that the splitting into pieces can be combined with the reduction of $A_{new}$, i.e.
 no extra lookups are needed for the latter. In the last round we reduce $A_{new}$ after
-adding the feedforward (requiring a carry of $\{0, \ldots, 7\}$ which is fine).
+adding the feedforward (requiring a carry of up to $7$ which is fine).
 
 $(A ⋙ 2) \oplus (A ⋙ 13) \oplus (A ⋙ 22)$ is equivalent to
 $(A ⋙ 2) \oplus (A ⋙ 13) \oplus (A ⋘ 10)$:
@@ -159,7 +159,7 @@ small pieces are found by interpolation.
 
 Note that the splitting into pieces can be combined with the reduction of $E_{new}$, i.e.
 no extra lookups are needed for the latter. In the last round we reduce $E_{new}$ after
-adding the feedforward (requiring a carry of $\{0, \ldots, 6\}$ which is fine).
+adding the feedforward (requiring a carry of up to $6$ which is fine).
 
 $(E ⋙ 6) \oplus (E ⋙ 11) \oplus (E ⋙ 25)$ is equivalent to
 $(E ⋙ 6) \oplus (E ⋙ 11) \oplus (E ⋘ 7)$.
@@ -192,7 +192,7 @@ For each block $M \in \{0,1\}^{512}$ of the padded message, $64$ words of $32$ b
 are constructed as follows:
 - The first $16$ are obtained by splitting $M$ into $32$-bit blocks $$M = W_0 || W_1 || \cdots || W_{14} || W_{15};$$
 - The remaining $48$ words are constructed using the formula:
-$$W_i = \sigma_1(W_{i-2}) \boxplus W_{i-7} \boxplus \sigma_0(W_{i-15}) \boxplus W_{i-16},$$ for $i = 17, \ldots, 64$.
+$$W_i = \sigma_1(W_{i-2}) \boxplus W_{i-7} \boxplus \sigma_0(W_{i-15}) \boxplus W_{i-16},$$ for $16 \leq i < 64$.
 
 > Note: $0$-based numbering is used for the $W$ word indices.
 
@@ -265,7 +265,7 @@ If we can do the merged split in $3$ rows (as opposed to a total of $4$ rows whe
 splitting for $\sigma_0$ and $\sigma_1$ separately), we save $35$ rows.
 
 > These might even be doable in $2$ rows; not sure.
-> [name=Daira]
+> —Daira
 
 We can merge the reduction mod $2^{32}$ of $W_{16..61}$ into their splitting when they are
 used to compute subsequent words, similarly to what we did for $A$ and $E$ in the round
@@ -736,7 +736,7 @@ sa|sc|  $a_0$   |  $a_1$   |$a_2$     |$a_3$     |$a_4$     |$a_5$     |$a_6$   
 For each block $M \in \{0,1\}^{512}$ of the padded message, $64$ words of $32$ bits each are constructed as follows:
 - the first $16$ are obtained by splitting $M$ into $32$-bit blocks $$M = W_0 || W_1 || \cdots || W_{14} || W_{15};$$
 - the remaining $48$ words are constructed using the formula:
-$$W_i = \sigma_1(W_{i-2}) \boxplus W_{i-7} \boxplus \sigma_0(W_{i-15}) \boxplus W_{i-16},$$ for $i = 16, \ldots, 63$.
+$$W_i = \sigma_1(W_{i-2}) \boxplus W_{i-7} \boxplus \sigma_0(W_{i-15}) \boxplus W_{i-16},$$ for $16 \leq i < 64$.
 
 sw|sd0|sd1|sd2|sd3|ss0|ss0_v2|ss1|ss1_v2|     $a_0$     |     $a_1$        |             $a_2$                 |    $a_3$                     |    $a_4$                         |    $a_5$                        |         $a_6$                     |         $a_7$          |     $a_8$      |    $a_9$     |
 --|---|---|---|---|---|------|---|------|---------------|------------------|-----------------------------------|------------------------------|----------------------------------|---------------------------------|---------------------------------  |------------------------|----------------|--------------|
