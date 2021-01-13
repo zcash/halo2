@@ -20,6 +20,8 @@ pub use msm::MSM;
 pub use prover::create_proof;
 pub use verifier::{verify_proof, Accumulator, Guard};
 
+use std::io;
+
 /// These are the public parameters for the polynomial commitment scheme.
 #[derive(Debug)]
 pub struct Params<C: CurveAffine> {
@@ -188,6 +190,55 @@ impl<C: CurveAffine> Params<C> {
     pub fn get_g(&self) -> Vec<C> {
         self.g.clone()
     }
+
+    /// Writes params to a buffer.
+    pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+        writer.write_all(&self.k.to_le_bytes())?;
+        writer.write_all(&self.n.to_le_bytes())?;
+        for g_element in &self.g {
+            writer.write_all(&g_element.to_bytes())?;
+        }
+        for g_lagrange_element in &self.g_lagrange {
+            writer.write_all(&g_lagrange_element.to_bytes())?;
+        }
+        writer.write(&self.h.to_bytes())?;
+        writer.write(&self.u.to_bytes())?;
+
+        Ok(())
+    }
+
+    /// Reads params from a buffer.
+    pub fn read<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+        let mut k = [0u8; 4];
+        reader.read_exact(&mut k[..])?;
+        let k = u32::from_le_bytes(k);
+
+        let mut n = [0u8; 8];
+        reader.read_exact(&mut n[..])?;
+        let n = u64::from_le_bytes(n);
+
+        let mut g = Vec::with_capacity(n as usize);
+        for _ in 0..n {
+            g.push(C::read(reader)?);
+        }
+
+        let mut g_lagrange = Vec::with_capacity(n as usize);
+        for _ in 0..n {
+            g_lagrange.push(C::read(reader)?);
+        }
+
+        let h = C::read(reader)?;
+        let u = C::read(reader)?;
+
+        Ok(Params {
+            k,
+            n,
+            g,
+            g_lagrange,
+            h,
+            u,
+        })
+    }
 }
 
 /// Wrapper type around a blinding factor.
@@ -292,13 +343,17 @@ fn test_opening_proof() {
         commitment::{Blind, Params},
         EvaluationDomain,
     };
-    use crate::arithmetic::{eval_polynomial, Curve, FieldExt};
+    use crate::arithmetic::{eval_polynomial, FieldExt};
     use crate::pasta::{EpAffine, Fq};
     use crate::transcript::{
         ChallengeScalar, DummyHashRead, DummyHashWrite, Transcript, TranscriptRead, TranscriptWrite,
     };
 
     let params = Params::<EpAffine>::new(K);
+    let mut params_buffer = vec![];
+    params.write(&mut params_buffer).unwrap();
+    let params: Params<EpAffine> = Params::read::<_>(&mut &params_buffer[..]).unwrap();
+
     let domain = EvaluationDomain::new(1, K);
 
     let mut px = domain.empty_coeff();
