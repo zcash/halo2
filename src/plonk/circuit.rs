@@ -10,7 +10,7 @@ use crate::poly::Rotation;
 pub trait ColumnType: 'static + Sized {}
 
 /// A column with an index and type
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Column<C: ColumnType> {
     index: usize,
     column_type: C,
@@ -27,19 +27,19 @@ impl<C: ColumnType> Column<C> {
 }
 
 /// An advice column
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Advice;
 
 /// A fixed column
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Fixed;
 
 /// An auxiliary column
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Aux;
 
 /// An enum over the Advice, Fixed, Aux structs
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum Any {
     /// An Advice variant
     Advice,

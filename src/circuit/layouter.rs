@@ -1,11 +1,12 @@
 //! Implementations of common circuit layouters.
 
 use std::cmp;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::marker::PhantomData;
 
 use super::{Cell, Chip, Layouter, Permutation, Region};
-use crate::plonk::{Advice, Assignment, Column, Error, Fixed};
+use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed};
 
 /// Helper trait for implementing a custom [`Layouter`].
 ///
@@ -68,7 +69,8 @@ pub struct SingleChip<'a, C: Chip, CS: Assignment<C::Field> + 'a> {
     cs: &'a mut CS,
     config: C::Config,
     regions: Vec<usize>,
-    current_gate: usize,
+    /// Stores the first empty row for each column.
+    columns: HashMap<Column<Any>, usize>,
     _marker: PhantomData<C>,
 }
 
@@ -77,7 +79,7 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> fmt::Debug for SingleChip<'a, C
         f.debug_struct("SingleChip")
             .field("config", &self.config)
             .field("regions", &self.regions)
-            .field("current_gate", &self.current_gate)
+            .field("columns", &self.columns)
             .finish()
     }
 }
@@ -89,7 +91,7 @@ impl<'a, C: Chip, CS: Assignment<C::Field>> SingleChip<'a, C, CS> {
             cs,
             config,
             regions: vec![],
-            current_gate: 0,
+            columns: HashMap::default(),
             _marker: PhantomData,
         }
     }
@@ -102,18 +104,97 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
 
     fn assign_region(
         &mut self,
-        assignment: impl FnOnce(Region<'_, C>) -> Result<(), Error>,
+        mut assignment: impl FnMut(Region<'_, C>) -> Result<(), Error>,
     ) -> Result<(), Error> {
         let region_index = self.regions.len();
-        self.regions.push(self.current_gate);
+
+        // Get shape of the region.
+        let mut shape = RegionShape::new(region_index);
+        {
+            let region: &mut dyn RegionLayouter<C> = &mut shape;
+            assignment(region.into())?;
+        }
+
+        // Lay out this region. We implement the simplest approach here: position the
+        // region starting at the earliest row for which none of the columns are in use.
+        let mut region_start = 0;
+        for column in &shape.columns {
+            region_start = cmp::max(region_start, self.columns.get(column).cloned().unwrap_or(0));
+        }
+        self.regions.push(region_start);
+
+        // Update column usage information.
+        for column in shape.columns {
+            self.columns.insert(column, region_start + shape.row_count);
+        }
 
         let mut region = SingleChipRegion::new(self, region_index);
         {
             let region: &mut dyn RegionLayouter<C> = &mut region;
             assignment(region.into())?;
         }
-        self.current_gate += region.row_count;
 
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+struct RegionShape {
+    region_index: usize,
+    columns: HashSet<Column<Any>>,
+    row_count: usize,
+}
+
+impl RegionShape {
+    fn new(region_index: usize) -> Self {
+        RegionShape {
+            region_index,
+            columns: HashSet::default(),
+            row_count: 0,
+        }
+    }
+}
+
+impl<C: Chip> RegionLayouter<C> for RegionShape {
+    fn assign_advice<'v>(
+        &'v mut self,
+        column: Column<Advice>,
+        offset: usize,
+        _to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
+    ) -> Result<Cell, Error> {
+        self.columns.insert(column.into());
+        self.row_count = cmp::max(self.row_count, offset + 1);
+
+        Ok(Cell {
+            region_index: self.region_index,
+            row_offset: offset,
+            column: column.into(),
+        })
+    }
+
+    fn assign_fixed<'v>(
+        &'v mut self,
+        column: Column<Fixed>,
+        offset: usize,
+        _to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
+    ) -> Result<Cell, Error> {
+        self.columns.insert(column.into());
+        self.row_count = cmp::max(self.row_count, offset + 1);
+
+        Ok(Cell {
+            region_index: self.region_index,
+            row_offset: offset,
+            column: column.into(),
+        })
+    }
+
+    fn constrain_equal(
+        &mut self,
+        _permutation: &Permutation,
+        _left: Cell,
+        _right: Cell,
+    ) -> Result<(), Error> {
+        // Equality constraints don't affect the region shape.
         Ok(())
     }
 }
@@ -121,7 +202,6 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
 struct SingleChipRegion<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> {
     layouter: &'r mut SingleChip<'a, C, CS>,
     region_index: usize,
-    row_count: usize,
 }
 
 impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> fmt::Debug
@@ -131,7 +211,6 @@ impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> fmt::Debug
         f.debug_struct("SingleChipRegion")
             .field("layouter", &self.layouter)
             .field("region_index", &self.region_index)
-            .field("row_count", &self.row_count)
             .finish()
     }
 }
@@ -141,7 +220,6 @@ impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> SingleChipRegion<'r, 'a, C,
         SingleChipRegion {
             layouter,
             region_index,
-            row_count: 0,
         }
     }
 }
@@ -160,7 +238,6 @@ impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> RegionLayouter<C>
             self.layouter.regions[self.region_index] + offset,
             to,
         )?;
-        self.row_count = cmp::max(self.row_count, offset);
 
         Ok(Cell {
             region_index: self.region_index,
@@ -180,7 +257,7 @@ impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> RegionLayouter<C>
             self.layouter.regions[self.region_index] + offset,
             to,
         )?;
-        self.row_count = cmp::max(self.row_count, offset);
+
         Ok(Cell {
             region_index: self.region_index,
             row_offset: offset,

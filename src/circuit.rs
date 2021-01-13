@@ -138,6 +138,6 @@ pub trait Layouter<C: Chip> {
     /// ```
     fn assign_region(
         &mut self,
-        assignment: impl FnOnce(Region<'_, C>) -> Result<(), Error>,
+        assignment: impl FnMut(Region<'_, C>) -> Result<(), Error>,
     ) -> Result<(), Error>;
 }
