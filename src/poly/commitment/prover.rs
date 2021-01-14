@@ -63,10 +63,8 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>>(
     let mut final_poly = s_poly * iota + px;
     let v = eval_polynomial(&final_poly, x);
     final_poly[0] = final_poly[0] - &v;
-    drop(px);
     let blind = s_poly_blind * Blind(iota) + blind;
     let mut blind = blind.0;
-    drop(s_poly_blind);
 
     // Initialize the vector `a` as the coefficients of the polynomial,
     // rounding up to the parameters.

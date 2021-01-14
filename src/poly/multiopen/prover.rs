@@ -104,7 +104,7 @@ where
     let x_4 = ChallengeX4::get(transcript);
 
     let (f_poly, f_blind_try) = q_polys.iter().zip(q_blinds.iter()).fold(
-        (f_poly.clone(), f_blind),
+        (f_poly, f_blind),
         |(f_poly, f_blind), (poly, blind)| {
             (
                 f_poly * *x_4 + poly.as_ref().unwrap(),
