@@ -89,10 +89,10 @@ impl<C: CurveAffine> Constructed<C> {
 }
 
 impl<C: CurveAffine> Evaluated<C> {
-    pub(in crate::plonk) fn open<'a>(
-        &'a self,
+    pub(in crate::plonk) fn open(
+        &self,
         x: ChallengeX<C>,
-    ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
+    ) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
         self.constructed
             .h_pieces
             .iter()

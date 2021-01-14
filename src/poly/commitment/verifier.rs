@@ -160,7 +160,7 @@ fn compute_b<F: Field>(x: F, challenges: &[F]) -> F {
 
 /// Computes the coefficients of $g(X) = \prod\limits_{i=0}^{k-1} (1 + u_i X^{2^i})$.
 fn compute_s<F: Field>(challenges: &[F], init: F) -> Vec<F> {
-    assert!(challenges.len() > 0);
+    assert!(!challenges.is_empty());
     let mut v = vec![F::zero(); 1 << challenges.len()];
     v[0] = init;
 
