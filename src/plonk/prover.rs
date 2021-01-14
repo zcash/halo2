@@ -208,24 +208,24 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
 
     // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints, if any.
     let (permutations, permutation_expressions): (Vec<_>, Vec<_>) = {
-        let tmp = permutations
+        let tmp: Vec<_> = permutations
             .into_iter()
             .zip(pk.vk.cs.permutations.iter())
             .zip(pk.permutations.iter())
             .map(|((p, argument), pkey)| {
                 p.construct(pk, argument, pkey, &advice_cosets, beta, gamma)
             })
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect();
 
         tmp.into_iter().unzip()
     };
 
     // Evaluate the h(X) polynomial's constraint system expressions for the lookup constraints, if any.
     let (lookups, lookup_expressions): (Vec<_>, Vec<_>) = {
-        let tmp = lookups
+        let tmp: Vec<_> = lookups
             .into_iter()
             .map(|p| p.construct(pk, theta, beta, gamma))
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect();
 
         tmp.into_iter().unzip()
     };

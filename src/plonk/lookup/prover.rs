@@ -344,13 +344,10 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
         theta: ChallengeTheta<C>,
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
-    ) -> Result<
-        (
-            Constructed<C>,
-            impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>> + 'a,
-        ),
-        Error,
-    > {
+    ) -> (
+        Constructed<C>,
+        impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>> + 'a,
+    ) {
         let permuted = self.permuted;
 
         let expressions = iter::empty()
@@ -417,7 +414,7 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
                     * &(permuted.permuted_input_coset.clone() - &permuted.permuted_input_inv_coset),
             ));
 
-        Ok((
+        (
             Constructed {
                 permuted_input_poly: permuted.permuted_input_poly,
                 permuted_input_blind: permuted.permuted_input_blind,
@@ -427,7 +424,7 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
                 product_blind: self.product_blind,
             },
             expressions,
-        ))
+        )
     }
 }
 
