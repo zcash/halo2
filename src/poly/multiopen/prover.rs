@@ -7,9 +7,7 @@ use super::{
     Query,
 };
 
-use crate::arithmetic::{
-    eval_polynomial, kate_division, lagrange_interpolate, Curve, CurveAffine, FieldExt,
-};
+use crate::arithmetic::{eval_polynomial, kate_division, Curve, CurveAffine, FieldExt};
 use crate::transcript::TranscriptWrite;
 
 use ff::Field;
@@ -43,56 +41,36 @@ where
     let mut q_polys: Vec<Option<Polynomial<C::Scalar, Coeff>>> = vec![None; point_sets.len()];
     let mut q_blinds = vec![Blind(C::Scalar::zero()); point_sets.len()];
 
-    // A vec of vecs of evals. The outer vec corresponds to the point set,
-    // while the inner vec corresponds to the points in a particular set.
-    let mut q_eval_sets = Vec::with_capacity(point_sets.len());
-    for point_set in point_sets.iter() {
-        q_eval_sets.push(vec![C::Scalar::zero(); point_set.len()]);
-    }
-
     {
-        let mut accumulate = |set_idx: usize,
-                              new_poly: &Polynomial<C::Scalar, Coeff>,
-                              blind: Blind<C::Scalar>,
-                              evals: Vec<C::Scalar>| {
-            if let Some(poly) = &q_polys[set_idx] {
-                q_polys[set_idx] = Some(poly.clone() * *x_1 + new_poly);
-            } else {
-                q_polys[set_idx] = Some(new_poly.clone());
-            }
-            q_blinds[set_idx] *= *x_1;
-            q_blinds[set_idx] += blind;
-            // Each polynomial is evaluated at a set of points. For each set,
-            // we collapse each polynomial's evals pointwise.
-            for (eval, set_eval) in evals.iter().zip(q_eval_sets[set_idx].iter_mut()) {
-                *set_eval *= &(*x_1);
-                *set_eval += eval;
-            }
-        };
+        let mut accumulate =
+            |set_idx: usize, new_poly: &Polynomial<C::Scalar, Coeff>, blind: Blind<C::Scalar>| {
+                if let Some(poly) = &q_polys[set_idx] {
+                    q_polys[set_idx] = Some(poly.clone() * *x_1 + new_poly);
+                } else {
+                    q_polys[set_idx] = Some(new_poly.clone());
+                }
+                q_blinds[set_idx] *= *x_1;
+                q_blinds[set_idx] += blind;
+            };
 
         for commitment_data in poly_map.into_iter() {
             accumulate(
                 commitment_data.set_index,        // set_idx,
                 commitment_data.commitment.poly,  // poly,
                 commitment_data.commitment.blind, // blind,
-                commitment_data.evals,            // evals
             );
         }
     }
 
     let f_poly = point_sets
         .iter()
-        .zip(q_eval_sets.iter())
         .zip(q_polys.iter())
-        .fold(None, |f_poly, ((points, evals), poly)| {
-            let mut poly = poly.clone().unwrap().values;
-            // TODO: makes implicit asssumption that poly degree is smaller than interpolation poly degree
-            for (p, r) in poly.iter_mut().zip(lagrange_interpolate(points, evals)) {
-                *p -= &r;
-            }
+        .fold(None, |f_poly, (points, poly)| {
             let mut poly = points
                 .iter()
-                .fold(poly, |poly, point| kate_division(&poly, *point));
+                .fold(poly.clone().unwrap().values, |poly, point| {
+                    kate_division(&poly, *point)
+                });
             poly.resize(params.n as usize, C::Scalar::zero());
             let poly = Polynomial {
                 values: poly,
@@ -153,13 +131,12 @@ impl<'a, C: CurveAffine> PartialEq for PolynomialPointer<'a, C> {
 
 impl<'a, C: CurveAffine> Query<C::Scalar> for ProverQuery<'a, C> {
     type Commitment = PolynomialPointer<'a, C>;
+    type Eval = ();
 
     fn get_point(&self) -> C::Scalar {
         self.point
     }
-    fn get_eval(&self) -> C::Scalar {
-        self.eval
-    }
+    fn get_eval(&self) -> () {}
     fn get_commitment(&self) -> Self::Commitment {
         PolynomialPointer {
             poly: self.poly,

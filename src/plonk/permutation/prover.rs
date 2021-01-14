@@ -27,9 +27,6 @@ pub(crate) struct Constructed<C: CurveAffine> {
 
 pub(crate) struct Evaluated<C: CurveAffine> {
     constructed: Constructed<C>,
-    permutation_product_eval: C::Scalar,
-    permutation_product_inv_eval: C::Scalar,
-    permutation_evals: Vec<C::Scalar>,
 }
 
 impl Argument {
@@ -218,20 +215,12 @@ impl<C: CurveAffine> super::ProvingKey<C> {
             .collect()
     }
 
-    fn open<'a>(
-        &'a self,
-        evals: &'a [C::Scalar],
-        x: ChallengeX<C>,
-    ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
-        self.polys
-            .iter()
-            .zip(evals.iter())
-            .map(move |(poly, eval)| ProverQuery {
-                point: *x,
-                poly,
-                blind: Blind::default(),
-                eval: *eval,
-            })
+    fn open<'a>(&'a self, x: ChallengeX<C>) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
+        self.polys.iter().map(move |poly| ProverQuery {
+            point: *x,
+            poly,
+            blind: Blind::default(),
+        })
     }
 }
 
@@ -265,12 +254,7 @@ impl<C: CurveAffine> Constructed<C> {
                 .map_err(|_| Error::TranscriptError)?;
         }
 
-        Ok(Evaluated {
-            constructed: self,
-            permutation_product_eval,
-            permutation_product_inv_eval,
-            permutation_evals,
-        })
+        Ok(Evaluated { constructed: self })
     }
 }
 
@@ -289,15 +273,13 @@ impl<C: CurveAffine> Evaluated<C> {
                 point: *x,
                 poly: &self.constructed.permutation_product_poly,
                 blind: self.constructed.permutation_product_blind,
-                eval: self.permutation_product_eval,
             }))
             .chain(Some(ProverQuery {
                 point: x_inv,
                 poly: &self.constructed.permutation_product_poly,
                 blind: self.constructed.permutation_product_blind,
-                eval: self.permutation_product_inv_eval,
             }))
             // Open permutation polynomial commitments at x
-            .chain(pkey.open(&self.permutation_evals, x))
+            .chain(pkey.open(x))
     }
 }

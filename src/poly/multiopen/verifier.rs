@@ -133,6 +133,7 @@ impl<'a, C> PartialEq for CommitmentPointer<'a, C> {
 
 impl<'a, C: CurveAffine> Query<C::Scalar> for VerifierQuery<'a, C> {
     type Commitment = CommitmentPointer<'a, C>;
+    type Eval = C::Scalar;
 
     fn get_point(&self) -> C::Scalar {
         self.point

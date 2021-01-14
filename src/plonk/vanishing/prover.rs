@@ -17,7 +17,6 @@ pub(in crate::plonk) struct Constructed<C: CurveAffine> {
 
 pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
     constructed: Constructed<C>,
-    h_evals: Vec<C::Scalar>,
 }
 
 impl<C: CurveAffine> Argument<C> {
@@ -85,10 +84,7 @@ impl<C: CurveAffine> Constructed<C> {
                 .map_err(|_| Error::TranscriptError)?;
         }
 
-        Ok(Evaluated {
-            constructed: self,
-            h_evals,
-        })
+        Ok(Evaluated { constructed: self })
     }
 }
 
@@ -101,12 +97,10 @@ impl<C: CurveAffine> Evaluated<C> {
             .h_pieces
             .iter()
             .zip(self.constructed.h_blinds.iter())
-            .zip(self.h_evals.iter())
-            .map(move |((h_poly, h_blind), h_eval)| ProverQuery {
+            .map(move |(h_poly, h_blind)| ProverQuery {
                 point: *x,
                 poly: h_poly,
                 blind: *h_blind,
-                eval: *h_eval,
             })
     }
 }
