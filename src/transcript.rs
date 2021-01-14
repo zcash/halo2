@@ -66,10 +66,9 @@ impl<R: Read, C: CurveAffine> TranscriptRead<C> for DummyHashRead<R, C> {
     fn read_point(&mut self) -> io::Result<C> {
         let mut compressed = [0u8; 32];
         self.reader.read_exact(&mut compressed[..])?;
-        let point: C = Option::from(C::from_bytes(&compressed)).ok_or(io::Error::new(
-            io::ErrorKind::Other,
-            "invalid point encoding in proof",
-        ))?;
+        let point: C = Option::from(C::from_bytes(&compressed)).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::Other, "invalid point encoding in proof")
+        })?;
         self.common_point(point)?;
 
         Ok(point)
@@ -78,10 +77,12 @@ impl<R: Read, C: CurveAffine> TranscriptRead<C> for DummyHashRead<R, C> {
     fn read_scalar(&mut self) -> io::Result<C::Scalar> {
         let mut data = [0u8; 32];
         self.reader.read_exact(&mut data)?;
-        let scalar = Option::from(C::Scalar::from_bytes(&data)).ok_or(io::Error::new(
-            io::ErrorKind::Other,
-            "invalid field element encoding in proof",
-        ))?;
+        let scalar = Option::from(C::Scalar::from_bytes(&data)).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                "invalid field element encoding in proof",
+            )
+        })?;
         self.scalar_state += &(scalar * &C::Scalar::ZETA);
         self.scalar_state = self.scalar_state.square();
         self.read_scalar = true;
@@ -92,10 +93,12 @@ impl<R: Read, C: CurveAffine> TranscriptRead<C> for DummyHashRead<R, C> {
 
 impl<R: Read, C: CurveAffine> Transcript<C> for DummyHashRead<R, C> {
     fn common_point(&mut self, point: C) -> io::Result<()> {
-        let (x, y) = Option::from(point.get_xy()).ok_or(io::Error::new(
-            io::ErrorKind::Other,
-            "cannot write points at infinity to the transcript",
-        ))?;
+        let (x, y) = Option::from(point.get_xy()).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                "cannot write points at infinity to the transcript",
+            )
+        })?;
         self.base_state += &(x * &C::Base::ZETA);
         self.base_state = self.base_state.square();
         self.base_state += &(y * &C::Base::ZETA);
@@ -170,10 +173,12 @@ impl<W: Write, C: CurveAffine> TranscriptWrite<C> for DummyHashWrite<W, C> {
 
 impl<W: Write, C: CurveAffine> Transcript<C> for DummyHashWrite<W, C> {
     fn common_point(&mut self, point: C) -> io::Result<()> {
-        let (x, y) = Option::from(point.get_xy()).ok_or(io::Error::new(
-            io::ErrorKind::Other,
-            "cannot write points at infinity to the transcript",
-        ))?;
+        let (x, y) = Option::from(point.get_xy()).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                "cannot write points at infinity to the transcript",
+            )
+        })?;
         self.base_state += &(x * &C::Base::ZETA);
         self.base_state = self.base_state.square();
         self.base_state += &(y * &C::Base::ZETA);
