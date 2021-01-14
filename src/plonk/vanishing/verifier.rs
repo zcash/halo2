@@ -70,10 +70,10 @@ impl<C: CurveAffine> Evaluated<C> {
         Ok(())
     }
 
-    pub(in crate::plonk) fn queries<'a>(
-        &'a self,
+    pub(in crate::plonk) fn queries(
+        &self,
         x: ChallengeX<C>,
-    ) -> impl Iterator<Item = VerifierQuery<'a, C>> + Clone {
+    ) -> impl Iterator<Item = VerifierQuery<'_, C>> + Clone {
         self.h_commitments
             .iter()
             .zip(self.h_evals.iter())

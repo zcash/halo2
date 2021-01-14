@@ -344,13 +344,10 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
         theta: ChallengeTheta<C>,
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
-    ) -> Result<
-        (
-            Constructed<C>,
-            impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>> + 'a,
-        ),
-        Error,
-    > {
+    ) -> (
+        Constructed<C>,
+        impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>> + 'a,
+    ) {
         let permuted = self.permuted;
 
         let expressions = iter::empty()
@@ -417,7 +414,7 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
                     * &(permuted.permuted_input_coset.clone() - &permuted.permuted_input_inv_coset),
             ));
 
-        Ok((
+        (
             Constructed {
                 permuted_input_poly: permuted.permuted_input_poly,
                 permuted_input_blind: permuted.permuted_input_blind,
@@ -427,7 +424,7 @@ impl<'a, C: CurveAffine> Committed<'a, C> {
                 product_blind: self.product_blind,
             },
             expressions,
-        ))
+        )
     }
 }
 
@@ -506,6 +503,8 @@ impl<C: CurveAffine> Evaluated<C> {
     }
 }
 
+type ColumnPair<F> = (Polynomial<F, LagrangeCoeff>, Polynomial<F, LagrangeCoeff>);
+
 /// Given a column of input values A and a column of table values S,
 /// this method permutes A and S to produce A' and S', such that:
 /// - like values in A' are vertically adjacent to each other; and
@@ -516,13 +515,7 @@ fn permute_column_pair<C: CurveAffine>(
     domain: &EvaluationDomain<C::Scalar>,
     input_column: &Polynomial<C::Scalar, LagrangeCoeff>,
     table_column: &Polynomial<C::Scalar, LagrangeCoeff>,
-) -> Result<
-    (
-        Polynomial<C::Scalar, LagrangeCoeff>,
-        Polynomial<C::Scalar, LagrangeCoeff>,
-    ),
-    Error,
-> {
+) -> Result<ColumnPair<C::Scalar>, Error> {
     let mut permuted_input_column = input_column.clone();
 
     // Sort input lookup column values

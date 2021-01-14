@@ -141,13 +141,10 @@ impl<C: CurveAffine> Committed<C> {
         advice_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
-    ) -> Result<
-        (
-            Constructed<C>,
-            impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>> + 'a,
-        ),
-        Error,
-    > {
+    ) -> (
+        Constructed<C>,
+        impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>> + 'a,
+    ) {
         let domain = &pk.vk.domain;
 
         let expressions = iter::empty()
@@ -197,13 +194,13 @@ impl<C: CurveAffine> Committed<C> {
                 left - &right
             }));
 
-        Ok((
+        (
             Constructed {
                 permutation_product_poly: self.permutation_product_poly,
                 permutation_product_blind: self.permutation_product_blind,
             },
             expressions,
-        ))
+        )
     }
 }
 

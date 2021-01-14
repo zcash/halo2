@@ -87,9 +87,12 @@ trait Query<F>: Sized {
     fn get_commitment(&self) -> Self::Commitment;
 }
 
-fn construct_intermediate_sets<F: FieldExt, I, Q: Query<F>>(
-    queries: I,
-) -> (Vec<CommitmentData<Q::Eval, Q::Commitment>>, Vec<Vec<F>>)
+type IntermediateSets<F, Q> = (
+    Vec<CommitmentData<<Q as Query<F>>::Eval, <Q as Query<F>>::Commitment>>,
+    Vec<Vec<F>>,
+);
+
+fn construct_intermediate_sets<F: FieldExt, I, Q: Query<F>>(queries: I) -> IntermediateSets<F, Q>
 where
     I: IntoIterator<Item = Q> + Clone,
 {

@@ -61,7 +61,7 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
     }
 }
 
-/// Checks to see if an [`Proof`] is valid given the current `transcript`, and a
+/// Checks to see if the proof represented within `transcript` is valid, and a
 /// point `x` that the polynomial commitment `P` opens purportedly to the value
 /// `v`. The provided `msm` should evaluate to the commitment `P` being opened.
 pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
@@ -160,7 +160,7 @@ fn compute_b<F: Field>(x: F, challenges: &[F]) -> F {
 
 /// Computes the coefficients of $g(X) = \prod\limits_{i=0}^{k-1} (1 + u_i X^{2^i})$.
 fn compute_s<F: Field>(challenges: &[F], init: F) -> Vec<F> {
-    assert!(challenges.len() > 0);
+    assert!(!challenges.is_empty());
     let mut v = vec![F::zero(); 1 << challenges.len()];
     v[0] = init;
 
