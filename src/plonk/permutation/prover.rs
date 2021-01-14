@@ -212,7 +212,7 @@ impl<C: CurveAffine> super::ProvingKey<C> {
             .collect()
     }
 
-    fn open<'a>(&'a self, x: ChallengeX<C>) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
+    fn open(&self, x: ChallengeX<C>) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
         self.polys.iter().map(move |poly| ProverQuery {
             point: *x,
             poly,
