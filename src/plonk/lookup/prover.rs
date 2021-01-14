@@ -55,11 +55,6 @@ pub(in crate::plonk) struct Constructed<C: CurveAffine> {
 
 pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
     constructed: Constructed<C>,
-    product_eval: C::Scalar,
-    product_inv_eval: C::Scalar,
-    permuted_input_eval: C::Scalar,
-    permuted_input_inv_eval: C::Scalar,
-    permuted_table_eval: C::Scalar,
 }
 
 impl Argument {
@@ -465,14 +460,7 @@ impl<C: CurveAffine> Constructed<C> {
                 .map_err(|_| Error::TranscriptError)?;
         }
 
-        Ok(Evaluated {
-            constructed: self,
-            product_eval,
-            product_inv_eval,
-            permuted_input_eval,
-            permuted_input_inv_eval,
-            permuted_table_eval,
-        })
+        Ok(Evaluated { constructed: self })
     }
 }
 
@@ -490,35 +478,30 @@ impl<C: CurveAffine> Evaluated<C> {
                 point: *x,
                 poly: &self.constructed.product_poly,
                 blind: self.constructed.product_blind,
-                eval: self.product_eval,
             }))
             // Open lookup input commitments at x
             .chain(Some(ProverQuery {
                 point: *x,
                 poly: &self.constructed.permuted_input_poly,
                 blind: self.constructed.permuted_input_blind,
-                eval: self.permuted_input_eval,
             }))
             // Open lookup table commitments at x
             .chain(Some(ProverQuery {
                 point: *x,
                 poly: &self.constructed.permuted_table_poly,
                 blind: self.constructed.permuted_table_blind,
-                eval: self.permuted_table_eval,
             }))
             // Open lookup input commitments at x_inv
             .chain(Some(ProverQuery {
                 point: x_inv,
                 poly: &self.constructed.permuted_input_poly,
                 blind: self.constructed.permuted_input_blind,
-                eval: self.permuted_input_inv_eval,
             }))
             // Open lookup product commitments at x_inv
             .chain(Some(ProverQuery {
                 point: x_inv,
                 poly: &self.constructed.product_poly,
                 blind: self.constructed.product_blind,
-                eval: self.product_inv_eval,
             }))
     }
 }

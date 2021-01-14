@@ -3,7 +3,6 @@
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
 
-use ff::Field;
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::*;
@@ -48,8 +47,6 @@ pub struct ProverQuery<'a, C: CurveAffine> {
     pub poly: &'a Polynomial<C::Scalar, Coeff>,
     /// blinding factor of polynomial
     pub blind: commitment::Blind<C::Scalar>,
-    /// evaluation of polynomial at query point
-    pub eval: C::Scalar,
 }
 
 /// A polynomial query at a point
@@ -63,14 +60,14 @@ pub struct VerifierQuery<'a, C: CurveAffine> {
     pub eval: C::Scalar,
 }
 
-struct CommitmentData<F: Field, T: PartialEq> {
+struct CommitmentData<F, T: PartialEq> {
     commitment: T,
     set_index: usize,
     point_indices: Vec<usize>,
     evals: Vec<F>,
 }
 
-impl<F: Field, T: PartialEq> CommitmentData<F, T> {
+impl<F, T: PartialEq> CommitmentData<F, T> {
     fn new(commitment: T) -> Self {
         CommitmentData {
             commitment,
@@ -83,21 +80,22 @@ impl<F: Field, T: PartialEq> CommitmentData<F, T> {
 
 trait Query<F>: Sized {
     type Commitment: PartialEq + Copy;
+    type Eval: Clone + Default;
 
     fn get_point(&self) -> F;
-    fn get_eval(&self) -> F;
+    fn get_eval(&self) -> Self::Eval;
     fn get_commitment(&self) -> Self::Commitment;
 }
 
 fn construct_intermediate_sets<F: FieldExt, I, Q: Query<F>>(
     queries: I,
-) -> (Vec<CommitmentData<F, Q::Commitment>>, Vec<Vec<F>>)
+) -> (Vec<CommitmentData<Q::Eval, Q::Commitment>>, Vec<Vec<F>>)
 where
     I: IntoIterator<Item = Q> + Clone,
 {
     // Construct sets of unique commitments and corresponding information about
     // their queries.
-    let mut commitment_map: Vec<CommitmentData<F, Q::Commitment>> = vec![];
+    let mut commitment_map: Vec<CommitmentData<Q::Eval, Q::Commitment>> = vec![];
 
     // Also construct mapping from a unique point to a point_index. This defines
     // an ordering on the points.
@@ -151,7 +149,7 @@ where
     // Initialise empty evals vec for each unique commitment
     for commitment_data in commitment_map.iter_mut() {
         let len = commitment_data.point_indices.len();
-        commitment_data.evals = vec![F::zero(); len];
+        commitment_data.evals = vec![Q::Eval::default(); len];
     }
 
     // Populate set_index, evals and points for each commitment using point_idx_sets
@@ -203,6 +201,134 @@ where
     (commitment_map, point_sets)
 }
 
+#[test]
+fn test_roundtrip() {
+    use super::commitment::{Blind, Params};
+    use crate::arithmetic::{eval_polynomial, Curve, FieldExt};
+    use crate::pasta::{EqAffine, Fp};
+
+    const K: u32 = 4;
+
+    let params: Params<EqAffine> = Params::new(K);
+    let domain = EvaluationDomain::new(1, K);
+
+    let mut ax = domain.empty_coeff();
+    for (i, a) in ax.iter_mut().enumerate() {
+        *a = Fp::from(10 + i as u64);
+    }
+
+    let mut bx = domain.empty_coeff();
+    for (i, a) in bx.iter_mut().enumerate() {
+        *a = Fp::from(100 + i as u64);
+    }
+
+    let mut cx = domain.empty_coeff();
+    for (i, a) in cx.iter_mut().enumerate() {
+        *a = Fp::from(100 + i as u64);
+    }
+
+    let blind = Blind(Fp::rand());
+
+    let a = params.commit(&ax, blind).to_affine();
+    let b = params.commit(&bx, blind).to_affine();
+    let c = params.commit(&cx, blind).to_affine();
+
+    let x = Fp::rand();
+    let y = Fp::rand();
+    let avx = eval_polynomial(&ax, x);
+    let bvx = eval_polynomial(&bx, x);
+    let cvy = eval_polynomial(&cx, y);
+
+    let mut transcript = crate::transcript::DummyHashWrite::init(vec![], Field::one());
+    create_proof(
+        &params,
+        &mut transcript,
+        std::iter::empty()
+            .chain(Some(ProverQuery {
+                point: x,
+                poly: &ax,
+                blind,
+            }))
+            .chain(Some(ProverQuery {
+                point: x,
+                poly: &bx,
+                blind,
+            }))
+            .chain(Some(ProverQuery {
+                point: y,
+                poly: &cx,
+                blind,
+            })),
+    )
+    .unwrap();
+    let proof = transcript.finalize();
+
+    {
+        let mut proof = &proof[..];
+        let mut transcript = crate::transcript::DummyHashRead::init(&mut proof, Field::one());
+        let msm = params.empty_msm();
+
+        let guard = verify_proof(
+            &params,
+            &mut transcript,
+            std::iter::empty()
+                .chain(Some(VerifierQuery {
+                    point: x,
+                    commitment: &a,
+                    eval: avx,
+                }))
+                .chain(Some(VerifierQuery {
+                    point: x,
+                    commitment: &b,
+                    eval: avx, // NB: wrong!
+                }))
+                .chain(Some(VerifierQuery {
+                    point: y,
+                    commitment: &c,
+                    eval: cvy,
+                })),
+            msm,
+        )
+        .unwrap();
+
+        // Should fail.
+        assert!(!guard.use_challenges().eval());
+    }
+
+    {
+        let mut proof = &proof[..];
+
+        let mut transcript = crate::transcript::DummyHashRead::init(&mut proof, Field::one());
+        let msm = params.empty_msm();
+
+        let guard = verify_proof(
+            &params,
+            &mut transcript,
+            std::iter::empty()
+                .chain(Some(VerifierQuery {
+                    point: x,
+                    commitment: &a,
+                    eval: avx,
+                }))
+                .chain(Some(VerifierQuery {
+                    point: x,
+                    commitment: &b,
+                    eval: bvx,
+                }))
+                .chain(Some(VerifierQuery {
+                    point: y,
+                    commitment: &c,
+                    eval: cvy,
+                })),
+            msm,
+        )
+        .unwrap();
+
+        // Should succeed.
+        assert!(guard.use_challenges().eval());
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{construct_intermediate_sets, Query};
@@ -216,14 +342,15 @@ mod tests {
         eval: F,
     }
 
-    impl<F: Copy> Query<F> for MyQuery<F> {
+    impl<F: Clone + Default> Query<F> for MyQuery<F> {
         type Commitment = usize;
+        type Eval = F;
 
         fn get_point(&self) -> F {
-            self.point
+            self.point.clone()
         }
-        fn get_eval(&self) -> F {
-            self.eval
+        fn get_eval(&self) -> Self::Eval {
+            self.eval.clone()
         }
         fn get_commitment(&self) -> Self::Commitment {
             self.commitment

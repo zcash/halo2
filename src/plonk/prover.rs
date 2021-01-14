@@ -304,53 +304,51 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         .map(|p| p.evaluate(pk, x, transcript))
         .collect::<Result<Vec<_>, _>>()?;
 
-    let instances =
-        iter::empty()
-            .chain(pk.vk.cs.advice_queries.iter().enumerate().map(
-                |(query_index, &(column, at))| ProverQuery {
+    let instances = iter::empty()
+        .chain(
+            pk.vk
+                .cs
+                .advice_queries
+                .iter()
+                .map(|&(column, at)| ProverQuery {
                     point: domain.rotate_omega(*x, at),
                     poly: &advice_polys[column.index()],
                     blind: advice_blinds[column.index()],
-                    eval: advice_evals[query_index],
-                },
-            ))
-            .chain(
-                pk.vk
-                    .cs
-                    .aux_queries
-                    .iter()
-                    .enumerate()
-                    .map(|(query_index, &(column, at))| ProverQuery {
-                        point: domain.rotate_omega(*x, at),
-                        poly: &aux_polys[column.index()],
-                        blind: Blind::default(),
-                        eval: aux_evals[query_index],
-                    }),
-            )
-            .chain(
-                pk.vk
-                    .cs
-                    .fixed_queries
-                    .iter()
-                    .enumerate()
-                    .map(|(query_index, &(column, at))| ProverQuery {
-                        point: domain.rotate_omega(*x, at),
-                        poly: &pk.fixed_polys[column.index()],
-                        blind: Blind::default(),
-                        eval: fixed_evals[query_index],
-                    }),
-            )
-            // We query the h(X) polynomial at x
-            .chain(vanishing.open(x))
-            .chain(
-                permutations
-                    .iter()
-                    .zip(pk.permutations.iter())
-                    .map(|(p, pkey)| p.open(pk, pkey, x))
-                    .into_iter()
-                    .flatten(),
-            )
-            .chain(lookups.iter().map(|p| p.open(pk, x)).into_iter().flatten());
+                }),
+        )
+        .chain(
+            pk.vk
+                .cs
+                .aux_queries
+                .iter()
+                .map(|&(column, at)| ProverQuery {
+                    point: domain.rotate_omega(*x, at),
+                    poly: &aux_polys[column.index()],
+                    blind: Blind::default(),
+                }),
+        )
+        .chain(
+            pk.vk
+                .cs
+                .fixed_queries
+                .iter()
+                .map(|&(column, at)| ProverQuery {
+                    point: domain.rotate_omega(*x, at),
+                    poly: &pk.fixed_polys[column.index()],
+                    blind: Blind::default(),
+                }),
+        )
+        // We query the h(X) polynomial at x
+        .chain(vanishing.open(x))
+        .chain(
+            permutations
+                .iter()
+                .zip(pk.permutations.iter())
+                .map(|(p, pkey)| p.open(pk, pkey, x))
+                .into_iter()
+                .flatten(),
+        )
+        .chain(lookups.iter().map(|p| p.open(pk, x)).into_iter().flatten());
 
     multiopen::create_proof(params, transcript, instances).map_err(|_| Error::OpeningError)
 }
