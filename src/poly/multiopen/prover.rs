@@ -136,7 +136,7 @@ impl<'a, C: CurveAffine> Query<C::Scalar> for ProverQuery<'a, C> {
     fn get_point(&self) -> C::Scalar {
         self.point
     }
-    fn get_eval(&self) -> () {}
+    fn get_eval(&self) {}
     fn get_commitment(&self) -> Self::Commitment {
         PolynomialPointer {
             poly: self.poly,
