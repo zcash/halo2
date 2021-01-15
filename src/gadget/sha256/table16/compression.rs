@@ -13,7 +13,7 @@ mod compression_gates;
 mod compression_util;
 // mod subregion_digest;
 mod subregion_initial;
-// mod subregion_main;
+mod subregion_main;
 
 use compression_gates::CompressionGate;
 
@@ -717,7 +717,18 @@ impl Compression {
         w_halves: [(CellValue16, CellValue16); ROUNDS],
     ) -> Result<State, Error> {
         let mut state = State::empty_state();
-        todo!()
+        layouter.assign_region(
+            || "compress",
+            |mut region| {
+                state = initialized_state.clone();
+                for idx in 0..64 {
+                    state =
+                        self.assign_round(&mut region, idx, state.clone(), w_halves[idx as usize])?;
+                }
+                Ok(())
+            },
+        )?;
+        Ok(state)
     }
 
     /// After the final round, convert the state into the final digest.
