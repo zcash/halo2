@@ -11,7 +11,7 @@ use crate::{
 
 mod compression_gates;
 mod compression_util;
-// mod subregion_digest;
+mod subregion_digest;
 mod subregion_initial;
 mod subregion_main;
 
@@ -738,7 +738,15 @@ impl Compression {
         state: State,
     ) -> Result<[BlockWord; DIGEST_SIZE], Error> {
         let mut digest = [BlockWord::new(0); DIGEST_SIZE];
-        todo!()
+        layouter.assign_region(
+            || "digest",
+            |mut region| {
+                digest = self.assign_digest(&mut region, state.clone())?;
+
+                Ok(())
+            },
+        )?;
+        Ok(digest)
     }
 
     pub(super) fn empty_configure<F: FieldExt>(
