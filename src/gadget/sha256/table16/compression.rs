@@ -792,3 +792,138 @@ impl Compression {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::{
+        super::BLOCK_SIZE, get_msg_schedule_test_input, BlockWord, MessageSchedule, SpreadTable,
+        Table16Chip, Table16Config, IV,
+    };
+    use super::Compression;
+    use crate::{
+        arithmetic::FieldExt,
+        circuit::{layouter, Layouter},
+        dev::MockProver,
+        pasta::Fp,
+        plonk::{Assignment, Circuit, ConstraintSystem, Error, Permutation},
+    };
+
+    #[test]
+    fn compress() {
+        struct MyCircuit {}
+
+        impl<F: FieldExt> Circuit<F> for MyCircuit {
+            type Config = Table16Config;
+
+            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+                let a = meta.advice_column();
+                let b = meta.advice_column();
+                let c = meta.advice_column();
+
+                let (lookup_inputs, lookup_table) = SpreadTable::configure(meta, a, b, c);
+
+                let message_schedule = meta.advice_column();
+                let extras = [
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                ];
+
+                // Rename these here for ease of matching the gates to the specification.
+                let _a_0 = lookup_inputs.tag;
+                let a_1 = lookup_inputs.dense;
+                let a_2 = lookup_inputs.spread;
+                let a_3 = extras[0];
+                let a_4 = extras[1];
+                let a_5 = message_schedule;
+                let a_6 = extras[2];
+                let a_7 = extras[3];
+                let a_8 = extras[4];
+                let _a_9 = extras[5];
+
+                let perm = Permutation::new(
+                    meta,
+                    &[
+                        a_1.into(),
+                        a_2.into(),
+                        a_3.into(),
+                        a_4.into(),
+                        a_5.into(),
+                        a_6.into(),
+                        a_7.into(),
+                        a_8.into(),
+                    ],
+                );
+
+                let compression = Compression::configure(
+                    meta,
+                    lookup_inputs.clone(),
+                    message_schedule,
+                    extras,
+                    perm.clone(),
+                );
+
+                let message_schedule = MessageSchedule::configure(
+                    meta,
+                    lookup_inputs.clone(),
+                    message_schedule,
+                    extras,
+                    perm.clone(),
+                );
+
+                Table16Config {
+                    lookup_table,
+                    message_schedule,
+                    compression,
+                }
+            }
+
+            fn synthesize(
+                &self,
+                cs: &mut impl Assignment<F>,
+                config: Self::Config,
+            ) -> Result<(), Error> {
+                let mut layouter = layouter::SingleChip::<Table16Chip<F>, _>::new(cs, config)?;
+
+                // Load table
+                let table = layouter.config().lookup_table.clone();
+                table.load(&mut layouter)?;
+
+                // Test vector: "abc"
+                let input: [BlockWord; BLOCK_SIZE] = get_msg_schedule_test_input();
+
+                let config = layouter.config().clone();
+                let (_, w_halves) = config.message_schedule.process(&mut layouter, input)?;
+
+                let compression = config.compression.clone();
+                let initial_state = compression.initialize_with_iv(&mut layouter, IV)?;
+
+                let state =
+                    config
+                        .compression
+                        .compress(&mut layouter, initial_state.clone(), w_halves)?;
+
+                let digest = config.compression.digest(&mut layouter, state)?;
+                for (idx, digest_word) in digest.iter().enumerate() {
+                    assert_eq!(
+                        (digest_word.value.unwrap() as u64 + IV[idx] as u64) as u32,
+                        super::compression_util::COMPRESSION_OUTPUT[idx]
+                    );
+                }
+
+                Ok(())
+            }
+        }
+
+        let circuit: MyCircuit = MyCircuit {};
+
+        let prover = match MockProver::<Fp>::run(16, &circuit, vec![]) {
+            Ok(prover) => prover,
+            Err(e) => panic!("{:?}", e),
+        };
+        assert_eq!(prover.verify(), Ok(()));
+    }
+}
