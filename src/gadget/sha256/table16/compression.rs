@@ -8,13 +8,13 @@ use crate::{
     plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
 };
 
-// mod compression_gates;
+mod compression_gates;
 // mod compression_util;
 // mod subregion_digest;
 // mod subregion_initial;
 // mod subregion_main;
 
-// use compression_gates::CompressionGate;
+use compression_gates::CompressionGate;
 
 /// A variable that represents the `[A,B,C,D]` words of the SHA-256 internal state.
 ///
@@ -292,7 +292,366 @@ impl Compression {
         let a_8 = extras[4];
         let a_9 = extras[5];
 
-        // TODO: Create gates.
+        // Decompose `A,B,C,D` words into (2, 11, 9, 10)-bit chunks.
+        // `c` is split into (3, 3, 3)-bit c_lo, c_mid, c_hi.
+        meta.create_gate(|meta| {
+            let s_decompose_abcd = meta.query_fixed(s_decompose_abcd, 0);
+            let a = meta.query_advice(a_3, 1); // 2-bit chunk
+            let spread_a = meta.query_advice(a_4, 1);
+            let b = meta.query_advice(a_1, 0); // 11-bit chunk
+            let spread_b = meta.query_advice(a_2, 0);
+            let tag_b = meta.query_advice(a_0, 0);
+            let c_lo = meta.query_advice(a_3, 0); // 3-bit chunk
+            let spread_c_lo = meta.query_advice(a_4, 0);
+            let c_mid = meta.query_advice(a_5, 0); // 3-bit chunk
+            let spread_c_mid = meta.query_advice(a_6, 0);
+            let c_hi = meta.query_advice(a_5, 1); // 3-bit chunk
+            let spread_c_hi = meta.query_advice(a_6, 1);
+            let d = meta.query_advice(a_1, 1); // 7-bit chunk
+            let spread_d = meta.query_advice(a_2, 1);
+            let tag_d = meta.query_advice(a_0, 1);
+            let word_lo = meta.query_advice(a_7, 0);
+            let spread_word_lo = meta.query_advice(a_8, 0);
+            let word_hi = meta.query_advice(a_7, 1);
+            let spread_word_hi = meta.query_advice(a_8, 1);
+
+            CompressionGate::s_decompose_abcd(
+                s_decompose_abcd,
+                a,
+                spread_a,
+                b,
+                spread_b,
+                tag_b,
+                c_lo,
+                spread_c_lo,
+                c_mid,
+                spread_c_mid,
+                c_hi,
+                spread_c_hi,
+                d,
+                spread_d,
+                tag_d,
+                word_lo,
+                spread_word_lo,
+                word_hi,
+                spread_word_hi,
+            )
+            .0
+        });
+
+        // Decompose `E,F,G,H` words into (6, 5, 14, 7)-bit chunks.
+        // `a` is split into (3, 3)-bit a_lo, a_hi
+        // `b` is split into (2, 3)-bit b_lo, b_hi
+        meta.create_gate(|meta| {
+            let s_decompose_efgh = meta.query_fixed(s_decompose_efgh, 0);
+            let a_lo = meta.query_advice(a_3, 1); // 3-bit chunk
+            let spread_a_lo = meta.query_advice(a_4, 1);
+            let a_hi = meta.query_advice(a_5, 1); // 3-bit chunk
+            let spread_a_hi = meta.query_advice(a_6, 1);
+            let b_lo = meta.query_advice(a_3, 0); // 2-bit chunk
+            let spread_b_lo = meta.query_advice(a_4, 0);
+            let b_hi = meta.query_advice(a_5, 0); // 3-bit chunk
+            let spread_b_hi = meta.query_advice(a_6, 0);
+            let c = meta.query_advice(a_1, 1); // 14-bit chunk
+            let spread_c = meta.query_advice(a_2, 1);
+            let tag_c = meta.query_advice(a_0, 1);
+            let d = meta.query_advice(a_1, 0); // 7-bit chunk
+            let spread_d = meta.query_advice(a_2, 0);
+            let tag_d = meta.query_advice(a_0, 0);
+            let word_lo = meta.query_advice(a_7, 0);
+            let spread_word_lo = meta.query_advice(a_8, 0);
+            let word_hi = meta.query_advice(a_7, 1);
+            let spread_word_hi = meta.query_advice(a_8, 1);
+
+            CompressionGate::s_decompose_efgh(
+                s_decompose_efgh,
+                a_lo,
+                spread_a_lo,
+                a_hi,
+                spread_a_hi,
+                b_lo,
+                spread_b_lo,
+                b_hi,
+                spread_b_hi,
+                c,
+                spread_c,
+                tag_c,
+                d,
+                spread_d,
+                tag_d,
+                word_lo,
+                spread_word_lo,
+                word_hi,
+                spread_word_hi,
+            )
+            .0
+        });
+
+        // s_upper_sigma_0 on abcd words
+        // (2, 11, 9, 10)-bit chunks
+        meta.create_gate(|meta| {
+            let s_upper_sigma_0 = meta.query_fixed(s_upper_sigma_0, 0);
+            let spread_r0_even = meta.query_advice(a_2, -1);
+            let spread_r0_odd = meta.query_advice(a_2, 0);
+            let spread_r1_even = meta.query_advice(a_2, 1);
+            let spread_r1_odd = meta.query_advice(a_3, 0);
+
+            let spread_a = meta.query_advice(a_3, 1);
+            let spread_b = meta.query_advice(a_5, 0);
+            let spread_c_lo = meta.query_advice(a_3, -1);
+            let spread_c_mid = meta.query_advice(a_4, -1);
+            let spread_c_hi = meta.query_advice(a_4, 1);
+            let spread_d = meta.query_advice(a_4, 0);
+
+            CompressionGate::s_upper_sigma_0(
+                s_upper_sigma_0,
+                spread_r0_even,
+                spread_r0_odd,
+                spread_r1_even,
+                spread_r1_odd,
+                spread_a,
+                spread_b,
+                spread_c_lo,
+                spread_c_mid,
+                spread_c_hi,
+                spread_d,
+            )
+            .0
+        });
+
+        // s_upper_sigma_1 on efgh words
+        // (6, 5, 14, 7)-bit chunks
+        meta.create_gate(|meta| {
+            let s_upper_sigma_1 = meta.query_fixed(s_upper_sigma_1, 0);
+            let spread_r0_even = meta.query_advice(a_2, -1);
+            let spread_r0_odd = meta.query_advice(a_2, 0);
+            let spread_r1_even = meta.query_advice(a_2, 1);
+            let spread_r1_odd = meta.query_advice(a_3, 0);
+            let spread_a_lo = meta.query_advice(a_3, 1);
+            let spread_a_hi = meta.query_advice(a_4, 1);
+            let spread_b_lo = meta.query_advice(a_3, -1);
+            let spread_b_hi = meta.query_advice(a_4, -1);
+            let spread_c = meta.query_advice(a_5, 0);
+            let spread_d = meta.query_advice(a_4, 0);
+
+            CompressionGate::s_upper_sigma_1(
+                s_upper_sigma_1,
+                spread_r0_even,
+                spread_r0_odd,
+                spread_r1_even,
+                spread_r1_odd,
+                spread_a_lo,
+                spread_a_hi,
+                spread_b_lo,
+                spread_b_hi,
+                spread_c,
+                spread_d,
+            )
+            .0
+        });
+
+        // s_ch on efgh words
+        // First part of choice gate on (E, F, G), E ∧ F
+        meta.create_gate(|meta| {
+            let s_ch = meta.query_fixed(s_ch, 0);
+            let spread_p0_even = meta.query_advice(a_2, -1);
+            let spread_p0_odd = meta.query_advice(a_2, 0);
+            let spread_p1_even = meta.query_advice(a_2, 1);
+            let spread_p1_odd = meta.query_advice(a_3, 0);
+            let spread_e_lo = meta.query_advice(a_3, -1);
+            let spread_e_hi = meta.query_advice(a_4, -1);
+            let spread_f_lo = meta.query_advice(a_3, 1);
+            let spread_f_hi = meta.query_advice(a_4, 1);
+
+            CompressionGate::s_ch(
+                s_ch,
+                spread_p0_even,
+                spread_p0_odd,
+                spread_p1_even,
+                spread_p1_odd,
+                spread_e_lo,
+                spread_e_hi,
+                spread_f_lo,
+                spread_f_hi,
+            )
+            .0
+        });
+
+        // s_ch_neg on efgh words
+        // Second part of Choice gate on (E, F, G), ¬E ∧ G
+        meta.create_gate(|meta| {
+            let s_ch_neg = meta.query_fixed(s_ch_neg, 0);
+            let spread_q0_even = meta.query_advice(a_2, -1);
+            let spread_q0_odd = meta.query_advice(a_2, 0);
+            let spread_q1_even = meta.query_advice(a_2, 1);
+            let spread_q1_odd = meta.query_advice(a_3, 0);
+            let spread_e_lo = meta.query_advice(a_5, -1);
+            let spread_e_hi = meta.query_advice(a_5, 0);
+            let spread_e_neg_lo = meta.query_advice(a_3, -1);
+            let spread_e_neg_hi = meta.query_advice(a_4, -1);
+            let spread_g_lo = meta.query_advice(a_3, 1);
+            let spread_g_hi = meta.query_advice(a_4, 1);
+
+            CompressionGate::s_ch_neg(
+                s_ch_neg,
+                spread_q0_even,
+                spread_q0_odd,
+                spread_q1_even,
+                spread_q1_odd,
+                spread_e_lo,
+                spread_e_hi,
+                spread_e_neg_lo,
+                spread_e_neg_hi,
+                spread_g_lo,
+                spread_g_hi,
+            )
+            .0
+        });
+
+        // s_maj on abcd words
+        meta.create_gate(|meta| {
+            let s_maj = meta.query_fixed(s_maj, 0);
+            let spread_m0_even = meta.query_advice(a_2, -1);
+            let spread_m0_odd = meta.query_advice(a_2, 0);
+            let spread_m1_even = meta.query_advice(a_2, 1);
+            let spread_m1_odd = meta.query_advice(a_3, 0);
+            let spread_a_lo = meta.query_advice(a_4, -1);
+            let spread_a_hi = meta.query_advice(a_5, -1);
+            let spread_b_lo = meta.query_advice(a_4, 0);
+            let spread_b_hi = meta.query_advice(a_5, 0);
+            let spread_c_lo = meta.query_advice(a_4, 1);
+            let spread_c_hi = meta.query_advice(a_5, 1);
+
+            CompressionGate::s_maj(
+                s_maj,
+                spread_m0_even,
+                spread_m0_odd,
+                spread_m1_even,
+                spread_m1_odd,
+                spread_a_lo,
+                spread_a_hi,
+                spread_b_lo,
+                spread_b_hi,
+                spread_c_lo,
+                spread_c_hi,
+            )
+            .0
+        });
+
+        // s_h_prime to compute H' = H + Ch(E, F, G) + s_upper_sigma_1(E) + K + W
+        meta.create_gate(|meta| {
+            let s_h_prime = meta.query_fixed(s_h_prime, 0);
+            let h_prime_lo = meta.query_advice(a_7, 1);
+            let h_prime_hi = meta.query_advice(a_8, 1);
+            let h_prime_carry = meta.query_advice(a_9, 1);
+            let sigma_e_lo = meta.query_advice(a_4, 0);
+            let sigma_e_hi = meta.query_advice(a_5, 0);
+            let ch_lo = meta.query_advice(a_1, 0);
+            let ch_hi = meta.query_advice(a_6, 1);
+            let ch_neg_lo = meta.query_advice(a_5, -1);
+            let ch_neg_hi = meta.query_advice(a_5, 1);
+            let h_lo = meta.query_advice(a_7, -1);
+            let h_hi = meta.query_advice(a_7, 0);
+            let k_lo = meta.query_advice(a_6, -1);
+            let k_hi = meta.query_advice(a_6, 0);
+            let w_lo = meta.query_advice(a_8, -1);
+            let w_hi = meta.query_advice(a_8, 0);
+
+            CompressionGate::s_h_prime(
+                s_h_prime,
+                h_prime_lo,
+                h_prime_hi,
+                h_prime_carry,
+                sigma_e_lo,
+                sigma_e_hi,
+                ch_lo,
+                ch_hi,
+                ch_neg_lo,
+                ch_neg_hi,
+                h_lo,
+                h_hi,
+                k_lo,
+                k_hi,
+                w_lo,
+                w_hi,
+            )
+            .0
+        });
+
+        // s_a_new
+        meta.create_gate(|meta| {
+            let s_a_new = meta.query_fixed(s_a_new, 0);
+            let a_new_lo = meta.query_advice(a_8, 0);
+            let a_new_hi = meta.query_advice(a_8, 1);
+            let a_new_carry = meta.query_advice(a_9, 0);
+            let sigma_a_lo = meta.query_advice(a_6, 0);
+            let sigma_a_hi = meta.query_advice(a_6, 1);
+            let maj_abc_lo = meta.query_advice(a_1, 0);
+            let maj_abc_hi = meta.query_advice(a_3, -1);
+            let h_prime_lo = meta.query_advice(a_7, -1);
+            let h_prime_hi = meta.query_advice(a_8, -1);
+
+            CompressionGate::s_a_new(
+                s_a_new,
+                a_new_lo,
+                a_new_hi,
+                a_new_carry,
+                sigma_a_lo,
+                sigma_a_hi,
+                maj_abc_lo,
+                maj_abc_hi,
+                h_prime_lo,
+                h_prime_hi,
+            )
+            .0
+        });
+
+        // s_e_new
+        meta.create_gate(|meta| {
+            let s_e_new = meta.query_fixed(s_e_new, 0);
+            let e_new_lo = meta.query_advice(a_8, 0);
+            let e_new_hi = meta.query_advice(a_8, 1);
+            let e_new_carry = meta.query_advice(a_9, 1);
+            let d_lo = meta.query_advice(a_7, 0);
+            let d_hi = meta.query_advice(a_7, 1);
+            let h_prime_lo = meta.query_advice(a_7, -1);
+            let h_prime_hi = meta.query_advice(a_8, -1);
+
+            CompressionGate::s_e_new(
+                s_e_new,
+                e_new_lo,
+                e_new_hi,
+                e_new_carry,
+                d_lo,
+                d_hi,
+                h_prime_lo,
+                h_prime_hi,
+            )
+            .0
+        });
+
+        // s_digest for final round
+        meta.create_gate(|meta| {
+            let s_digest = meta.query_fixed(s_digest, 0);
+            let lo_0 = meta.query_advice(a_3, 0);
+            let hi_0 = meta.query_advice(a_4, 0);
+            let word_0 = meta.query_advice(a_5, 0);
+            let lo_1 = meta.query_advice(a_6, 0);
+            let hi_1 = meta.query_advice(a_7, 0);
+            let word_1 = meta.query_advice(a_8, 0);
+            let lo_2 = meta.query_advice(a_3, 1);
+            let hi_2 = meta.query_advice(a_4, 1);
+            let word_2 = meta.query_advice(a_5, 1);
+            let lo_3 = meta.query_advice(a_6, 1);
+            let hi_3 = meta.query_advice(a_7, 1);
+            let word_3 = meta.query_advice(a_8, 1);
+
+            CompressionGate::s_digest(
+                s_digest, lo_0, hi_0, word_0, lo_1, hi_1, word_1, lo_2, hi_2, word_2, lo_3, hi_3,
+                word_3,
+            )
+            .0
+        });
 
         Compression {
             lookup,
