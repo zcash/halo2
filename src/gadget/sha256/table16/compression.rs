@@ -12,7 +12,7 @@ use crate::{
 mod compression_gates;
 mod compression_util;
 // mod subregion_digest;
-// mod subregion_initial;
+mod subregion_initial;
 // mod subregion_main;
 
 use compression_gates::CompressionGate;
@@ -681,7 +681,14 @@ impl Compression {
         init_state: [u32; STATE],
     ) -> Result<State, Error> {
         let mut new_state = State::empty_state();
-        todo!()
+        layouter.assign_region(
+            || "initialize_with_iv",
+            |mut region| {
+                new_state = self.initialize_iv(&mut region, init_state)?;
+                Ok(())
+            },
+        )?;
+        Ok(new_state)
     }
 
     /// Initialize compression with some initialized state. This could be a state
@@ -692,7 +699,14 @@ impl Compression {
         init_state: State,
     ) -> Result<State, Error> {
         let mut new_state = State::empty_state();
-        todo!()
+        layouter.assign_region(
+            || "initialize_with_state",
+            |mut region| {
+                new_state = self.initialize_state(&mut region, init_state.clone())?;
+                Ok(())
+            },
+        )?;
+        Ok(new_state)
     }
 
     /// Given an initialized state and a message schedule, perform 64 compression rounds.
