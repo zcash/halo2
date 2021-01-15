@@ -38,6 +38,10 @@ harness = false
 name = "plonk"
 harness = false
 
+[[bench]]
+name = "sha256"
+harness = false
+
 [dependencies]
 backtrace = { version = "0.3", optional = true }
 subtle = "2.3"

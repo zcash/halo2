@@ -45,12 +45,14 @@ const IV: [u32; STATE] = [
 ];
 
 #[derive(Clone, Copy, Debug)]
+/// A word in a `Table16` message block.
 pub struct BlockWord {
     var: (),
     value: Option<u32>,
 }
 
 impl BlockWord {
+    /// Create a new `BlockWord`.
     pub fn new(value: u32) -> Self {
         BlockWord {
             var: (),
