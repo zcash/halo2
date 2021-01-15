@@ -13,10 +13,10 @@ use crate::{
 
 mod table16;
 
-pub use table16::Table16Chip;
+pub use table16::{BlockWord, Table16Chip, Table16Config};
 
 /// The size of a SHA-256 block, in 32-bit words.
-const BLOCK_SIZE: usize = 16;
+pub const BLOCK_SIZE: usize = 16;
 /// The size of a SHA-256 digest, in 32-bit words.
 const DIGEST_SIZE: usize = 8;
 
