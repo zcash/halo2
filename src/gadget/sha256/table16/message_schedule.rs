@@ -17,6 +17,7 @@ mod subregion2;
 mod subregion3;
 
 use schedule_gates::ScheduleGate;
+pub use schedule_util::get_msg_schedule_test_input;
 use schedule_util::*;
 
 #[derive(Clone, Debug)]

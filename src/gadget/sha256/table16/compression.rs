@@ -780,3 +780,314 @@ impl Compression {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::cmp;
+    use std::collections::HashMap;
+    use std::fmt;
+    use std::marker::PhantomData;
+
+    use super::super::{
+        super::BLOCK_SIZE, get_msg_schedule_test_input, BlockWord, MessageSchedule, SpreadInputs,
+        SpreadTable, Table16Chip, Table16Config, IV,
+    };
+    use super::Compression;
+    use crate::{
+        arithmetic::FieldExt,
+        circuit::{layouter, Cell, Layouter, Permutation, Region},
+        dev::MockProver,
+        pasta::Fp,
+        plonk::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed},
+    };
+
+    #[test]
+    fn compress() {
+        /// This represents an advice column at a certain row in the ConstraintSystem
+        #[derive(Copy, Clone, Debug)]
+        pub struct Variable(Column<Advice>, usize);
+
+        #[derive(Debug)]
+        struct MyConfig {
+            lookup_inputs: SpreadInputs,
+            sha256: Table16Config,
+        }
+
+        struct MyCircuit {}
+
+        struct MyLayouter<'a, F: FieldExt, CS: Assignment<F> + 'a> {
+            cs: &'a mut CS,
+            config: MyConfig,
+            regions: Vec<usize>,
+            /// Stores the first empty row for each column.
+            columns: HashMap<Column<Any>, usize>,
+            _marker: PhantomData<F>,
+        }
+
+        impl<'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for MyLayouter<'a, F, CS> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.debug_struct("MyLayouter")
+                    .field("config", &self.config)
+                    .field("regions", &self.regions)
+                    .field("columns", &self.columns)
+                    .finish()
+            }
+        }
+
+        impl<'a, FF: FieldExt, CS: Assignment<FF>> MyLayouter<'a, FF, CS> {
+            fn new(cs: &'a mut CS, config: MyConfig) -> Result<Self, Error> {
+                let mut res = MyLayouter {
+                    cs,
+                    config,
+                    regions: vec![],
+                    columns: HashMap::default(),
+                    _marker: PhantomData,
+                };
+
+                let table = res.config.sha256.lookup_table.clone();
+                table.load(&mut res)?;
+
+                Ok(res)
+            }
+        }
+
+        impl<'a, F: FieldExt, CS: Assignment<F> + 'a> Layouter<Table16Chip<F>> for MyLayouter<'a, F, CS> {
+            fn config(&self) -> &Table16Config {
+                &self.config.sha256
+            }
+
+            fn assign_region(
+                &mut self,
+                mut assignment: impl FnMut(Region<'_, Table16Chip<F>>) -> Result<(), Error>,
+            ) -> Result<(), Error> {
+                let region_index = self.regions.len();
+
+                // Get shape of the region.
+                let mut shape = layouter::RegionShape::new(region_index);
+                {
+                    let region: &mut dyn layouter::RegionLayouter<Table16Chip<F>> = &mut shape;
+                    assignment(region.into())?;
+                }
+
+                // Lay out this region. We implement the simplest approach here: position the
+                // region starting at the earliest row for which none of the columns are in use.
+                let mut region_start = 0;
+                for column in shape.columns() {
+                    region_start =
+                        cmp::max(region_start, self.columns.get(column).cloned().unwrap_or(0));
+                }
+                self.regions.push(region_start);
+
+                // Update column usage information.
+                for column in shape.columns() {
+                    self.columns
+                        .insert(*column, region_start + shape.row_count());
+                }
+
+                let mut region = MyRegion::new(self, region_index);
+                {
+                    let region: &mut dyn layouter::RegionLayouter<Table16Chip<F>> = &mut region;
+                    assignment(region.into())?;
+                }
+
+                Ok(())
+            }
+        }
+
+        struct MyRegion<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> {
+            layouter: &'r mut MyLayouter<'a, F, CS>,
+            region_index: usize,
+            _marker: PhantomData<F>,
+        }
+
+        impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for MyRegion<'r, 'a, F, CS> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.debug_struct("MyRegion")
+                    .field("layouter", &self.layouter)
+                    .field("region_index", &self.region_index)
+                    .finish()
+            }
+        }
+
+        impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> MyRegion<'r, 'a, F, CS> {
+            fn new(layouter: &'r mut MyLayouter<'a, F, CS>, region_index: usize) -> Self {
+                MyRegion {
+                    layouter,
+                    region_index,
+                    _marker: PhantomData::default(),
+                }
+            }
+        }
+
+        impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> layouter::RegionLayouter<Table16Chip<F>>
+            for MyRegion<'r, 'a, F, CS>
+        {
+            fn assign_advice<'v>(
+                &'v mut self,
+                column: Column<Advice>,
+                offset: usize,
+                to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+            ) -> Result<Cell, Error> {
+                self.layouter.cs.assign_advice(
+                    column,
+                    self.layouter.regions[self.region_index] + offset,
+                    to,
+                )?;
+
+                Ok(Cell {
+                    region_index: self.region_index,
+                    row_offset: offset,
+                    column: column.into(),
+                })
+            }
+
+            fn assign_fixed<'v>(
+                &'v mut self,
+                column: Column<Fixed>,
+                offset: usize,
+                to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+            ) -> Result<Cell, Error> {
+                self.layouter.cs.assign_fixed(
+                    column,
+                    self.layouter.regions[self.region_index] + offset,
+                    to,
+                )?;
+
+                Ok(Cell {
+                    region_index: self.region_index,
+                    row_offset: offset,
+                    column: column.into(),
+                })
+            }
+
+            fn constrain_equal(
+                &mut self,
+                permutation: &Permutation,
+                left: Cell,
+                right: Cell,
+            ) -> Result<(), Error> {
+                let left_column = permutation
+                    .mapping
+                    .iter()
+                    .position(|c| c == &left.column)
+                    .ok_or(Error::SynthesisError)?;
+                let right_column = permutation
+                    .mapping
+                    .iter()
+                    .position(|c| c == &right.column)
+                    .ok_or(Error::SynthesisError)?;
+
+                self.layouter.cs.copy(
+                    permutation.index,
+                    left_column,
+                    self.layouter.regions[left.region_index] + left.row_offset,
+                    right_column,
+                    self.layouter.regions[right.region_index] + right.row_offset,
+                )?;
+
+                Ok(())
+            }
+        }
+
+        impl<F: FieldExt> Circuit<F> for MyCircuit {
+            type Config = MyConfig;
+
+            fn configure(meta: &mut ConstraintSystem<F>) -> MyConfig {
+                let a = meta.advice_column();
+                let b = meta.advice_column();
+                let c = meta.advice_column();
+
+                let (lookup_inputs, lookup_table) = SpreadTable::configure(meta, a, b, c);
+
+                let message_schedule = meta.advice_column();
+                let extras = [
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                ];
+
+                // Rename these here for ease of matching the gates to the specification.
+                let _a_0 = lookup_inputs.tag;
+                let a_1 = lookup_inputs.dense;
+                let a_2 = lookup_inputs.spread;
+                let a_3 = extras[0];
+                let a_4 = extras[1];
+                let a_5 = message_schedule;
+                let a_6 = extras[2];
+                let a_7 = extras[3];
+                let a_8 = extras[4];
+                let _a_9 = extras[5];
+
+                let perm = Permutation::new(meta, &[a_1, a_2, a_3, a_4, a_5, a_6, a_7, a_8]);
+
+                let compression = Compression::configure(
+                    meta,
+                    lookup_inputs.clone(),
+                    message_schedule,
+                    extras,
+                    perm.clone(),
+                );
+
+                let message_schedule = MessageSchedule::configure(
+                    meta,
+                    lookup_inputs.clone(),
+                    message_schedule,
+                    extras,
+                    perm.clone(),
+                );
+
+                MyConfig {
+                    lookup_inputs,
+                    sha256: Table16Config {
+                        lookup_table,
+                        message_schedule,
+                        compression,
+                    },
+                }
+            }
+
+            fn synthesize(
+                &self,
+                cs: &mut impl Assignment<F>,
+                config: MyConfig,
+            ) -> Result<(), Error> {
+                let mut layouter = MyLayouter::new(cs, config)?;
+
+                // Test vector: "abc"
+                let input: [BlockWord; BLOCK_SIZE] = get_msg_schedule_test_input();
+
+                let config = layouter.config().clone();
+                let (_, w_halves) = config.message_schedule.process(&mut layouter, input)?;
+
+                let compression = config.compression.clone();
+                let initial_state = compression.initialize_with_iv(&mut layouter, IV)?;
+
+                let state =
+                    config
+                        .compression
+                        .compress(&mut layouter, initial_state.clone(), w_halves)?;
+
+                let digest = config.compression.digest(&mut layouter, state)?;
+                for (idx, digest_word) in digest.iter().enumerate() {
+                    assert_eq!(
+                        (digest_word.value.unwrap() as u64 + IV[idx] as u64) as u32,
+                        super::compression_util::COMPRESSION_OUTPUT[idx]
+                    );
+                }
+
+                Ok(())
+            }
+        }
+
+        let circuit: MyCircuit = MyCircuit {};
+
+        let prover = match MockProver::<Fp>::run(16, &circuit, vec![]) {
+            Ok(prover) => prover,
+            Err(e) => panic!("{:?}", e),
+        };
+        assert_eq!(prover.verify(), Ok(()));
+    }
+}
