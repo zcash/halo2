@@ -10,7 +10,7 @@ use crate::{
 };
 
 mod compression_gates;
-// mod compression_util;
+mod compression_util;
 // mod subregion_digest;
 // mod subregion_initial;
 // mod subregion_main;
