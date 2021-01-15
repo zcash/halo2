@@ -138,20 +138,38 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
     }
 }
 
+/// The shape of a region. For a region at a certain index, we track
+/// the set of columns it uses as well as the number of rows it uses.
 #[derive(Debug)]
-struct RegionShape {
+pub struct RegionShape {
     region_index: usize,
     columns: HashSet<Column<Any>>,
     row_count: usize,
 }
 
 impl RegionShape {
-    fn new(region_index: usize) -> Self {
+    /// Create a new `RegionShape` for a region at `region_index`.
+    pub fn new(region_index: usize) -> Self {
         RegionShape {
             region_index,
             columns: HashSet::default(),
             row_count: 0,
         }
+    }
+
+    /// Get the `region_index` of a `RegionShape`.
+    pub fn region_index(&self) -> usize {
+        self.region_index
+    }
+
+    /// Get a reference to the set of `columns` used in a `RegionShape`.
+    pub fn columns(&self) -> &HashSet<Column<Any>> {
+        &self.columns
+    }
+
+    /// Get the `row_count` of a `RegionShape`.
+    pub fn row_count(&self) -> usize {
+        self.row_count
     }
 }
 
