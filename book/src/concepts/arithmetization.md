@@ -12,7 +12,7 @@ call it ***UPA*** (***UltraPLONK arithmetization***).
 
 A UPA circuit depends on a ***configuration***:
 
-* A finite field $\mathbb{F}$, where cell values (for a given instance and witness) will be
+* A finite field $\mathbb{F}$, where cell values (for a given statement and witness) will be
   elements of $\mathbb{F}$.
 * The number of columns in the matrix, and a specification of each column as being
   ***fixed***, ***advice***, or ***auxiliary***. Fixed columns are fixed by the circuit;
