@@ -600,6 +600,7 @@ impl ff::PrimeField for Fq {
 }
 
 lazy_static! {
+    // The perfect hash parameters are found by `squareroottab.sage` in zcash/pasta.
     static ref FQ_TABLES: SqrtTables<Fq> = SqrtTables::new(0x116A9E, 1206);
 }
 
