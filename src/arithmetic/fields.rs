@@ -224,7 +224,7 @@ impl<F: FieldExt> SqrtTables<F> {
         // * [Sarkar2020](https://eprint.iacr.org/2020/1407)
         // * [BDLSY2012](https://cr.yp.to/papers.html#ed25519)
         //
-        // We need to calculate uv and v, where v = u^((m-1)/2), u = num/div, and p-1 = T * 2^S.
+        // We need to calculate uv and v, where v = u^((T-1)/2), u = num/div, and p-1 = T * 2^S.
         // We can rewrite as follows:
         //
         //      v = (num/div)^((T-1)/2)
