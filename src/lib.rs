@@ -8,8 +8,11 @@
 #![deny(unsafe_code)]
 
 mod address;
+pub mod bundle;
+mod circuit;
 pub mod keys;
 mod note;
+mod tree;
 pub mod value;
 
 pub use address::Address;
