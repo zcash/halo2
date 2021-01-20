@@ -12,6 +12,7 @@ pub mod bundle;
 mod circuit;
 pub mod keys;
 mod note;
+pub mod primitives;
 mod tree;
 pub mod value;
 

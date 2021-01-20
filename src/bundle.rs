@@ -5,6 +5,7 @@ use std::marker::PhantomData;
 use crate::{
     circuit::Proof,
     note::{EncryptedNote, NoteCommitment, Nullifier},
+    primitives::redpallas::{self, Binding, SpendAuth},
     tree::Anchor,
     value::{ValueCommitment, ValueSum},
     Chain,
@@ -23,7 +24,7 @@ pub struct Action {
     /// The nullifier of the note being spent.
     nf_old: Nullifier,
     /// The randomized verification key for the note being spent.
-    rk: (),
+    rk: redpallas::VerificationKey<SpendAuth>,
     /// A commitment to the new note being created.
     cm_new: NoteCommitment,
     /// The encrypted output note.
@@ -56,8 +57,8 @@ impl<C: Chain> Bundle<C> {
 #[derive(Debug)]
 pub struct SignedBundle<C: Chain> {
     bundle: Bundle<C>,
-    action_signatures: Vec<()>,
-    binding_signature: (),
+    action_signatures: Vec<redpallas::Signature<SpendAuth>>,
+    binding_signature: redpallas::Signature<Binding>,
 }
 
 impl<C: Chain> SignedBundle<C> {
