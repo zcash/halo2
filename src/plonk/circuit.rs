@@ -158,7 +158,7 @@ pub trait Assignment<F: Field> {
 /// [`ConstraintSystem`] implementation.
 pub trait Circuit<F: Field> {
     /// This is a configuration object that stores things like columns.
-    type Config;
+    type Config: Copy;
 
     /// The circuit is given an opportunity to describe the exact gate
     /// arrangement, column arrangement, etc.
