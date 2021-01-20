@@ -122,8 +122,103 @@ In the above alternatives:
   - For zero-valued notes, $H$ is constrained by the circuit to a fixed base independent
     of $\mathcal{I}$ and any others returned by $GH$.
 
-The $Commit^{\mathsf{nf}}$ variants enabled nullifier domain separation based on note
-value, without directly depending on $\mathsf{cm}$ (which in its native type is a base
-field element, not a group element). We decided instead to follow Sapling by defining an
-intermediate representation of $\mathsf{cm}$ as a group element, that is only used in
-nullifier computation.
+## Rationale
+
+In order to satisfy the **Balance** security property, we require that the circuit must be
+able to enforce that only one nullifier is accepted for a given note. As in Sprout and
+Sapling, we achieve this by ensuring that the nullifier deterministically depends only on
+values committed to (directly or indirectly) by the note commitment.
+
+### Use of $\rho$
+
+**Faerie Resistance** requires that nullifiers be unique. This is primarily achieved by
+taking a unique value (checked for uniqueness by the public consensus rules) as an input
+to the nullifier. However, it is also necessary to ensure that the transformations applied
+to this value preserve its uniqueness. Meanwhile, to achieve **Spend Unlinkability**, we
+require that the nullifier does not reveal any information about the unique value it is
+derived from.
+
+The design alternatives fall into two categories in terms of how they balance these
+requirements:
+
+- Publish a unique value $\rho$ at note creation time, and blind that value within the
+  nullifier computation.
+  - This is similar to the approach taken in Sprout and Sapling, which both implemented
+    nullifiers as PRF outputs; Sprout uses the compression function from SHA-256, while
+    Sapling uses BLAKE2s.
+- Derive a unique base $H$ from some unique value, publish that unique base at note
+  creation time, and then blind the base (either additively or multiplicatively) during
+  nullifier computation.
+
+For **Spend Unlinkability**, the only value unknown to the adversary is $\mathsf{nk}$, and
+the cryptographic assumptions only involve the first term (other terms like $\mathsf{cm}$
+or $[\mathsf{rnf}] \mathcal{I}$ cannot be extracted directly from the observed nullifiers,
+but can be subtracted from them). We therefore ensure that the first term does not commit
+directly to the note (to avoid a DL-breaking adversary from immediately breaking **SU**).
+
+We were considering using a design involving $H$ with the goal of eliminating all usages
+of a PRF inside the circuit, for two reasons:
+- Instantiating $PRF_F$ with a traditional hash function is expensive in the circuit.
+- We didn't want to solely rely on an algebraic hash function satisfying $PRF_F$ to
+  achieve **Spend Unlinkability**.
+
+However, those designs rely on both $RO_{GH}$ and $DL_E$ for **Faerie Resistance**, while
+still requiring $DDH_E$ for **Spend Unlinkability**. (There are two designs for which this
+is not the case, but they rely on $DDH_E^\dagger$ for **Note Privacy (OOB)** which was not
+acceptable).
+
+By contrast, several designs involving $\rho$ (including the chosen design) have weaker
+assumptions for **Faerie Resistance** (only relying on $DL_E$), and **Spend Unlinkability**
+does not require $PRF_F$ to hold: they can fall back on the same $DDH_E$ assumption as the
+$H$ designs (along with an additional assumption about the output of $F$ which is easily
+satisfied).
+
+### Use of $\psi$
+
+Most of the designs include either a multiplicative blinding term $[\theta] H$, or an
+additive blinding term $[\mathsf{rnf}] \mathcal{I}$, in order to achieve perfect
+**Note Privacy (OOB)** (to an adversary who does not know the note). The chosen design is
+effectively using $[\psi] \mathcal{G}$ for this purpose; a DL-breaking adversary only
+learns $F_{\mathsf{nk}}(\rho) + \psi \pmod{p}$. This reduces **Note Privacy (OOB)** from
+perfect to statistical, but given that $\psi$ is from a distribution statistically close
+to uniform on $[0, q)$, this is statistically close to better than $2^{-128}$. The benefit
+is that it does not require an additional scalar multiplication, making it more efficient
+inside the circuit.
+
+$\psi$'s derivation has two motivations:
+- Deriving from a random value $\mathsf{rseed}$ enables multiple derived values to be
+  conveyed to the recipient within an action (such as the ephemeral secret $\mathsf{esk}$,
+  per [ZIP 212](https://zips.z.cash/zip-0212)), while keeping the note plaintext short.
+- Mixing $\rho$ into the derivation ensures that the sender can't repeat $\psi$ across two
+  notes, which could have enabled spend linkability attacks in some designs.
+
+The note that is committed to, and which the circuit takes as input, only includes $\psi$
+(i.e. the circuit does not check the derivation from $\mathsf{rseed}$). However, an
+adversarial sender is still constrained by this derivation, because the recipient
+recomputes $\psi$ during note decryption. If an action were created using an arbitrary
+$\psi$ (for which the adversary did not have a corresponding $\mathsf{rseed}$), the
+recipient would derive a note commitment that did not match the action's commitment field,
+and reject it (as in Sapling).
+
+### Use of $\mathsf{cm}$
+
+The nullifier commits to the note value via $\mathsf{cm}$ for two reasons:
+- It domain-separates nullifiers for zero-valued notes from other notes. This is necessary
+  because we do not require zero-valued notes to exist in the commitment tree.
+- Designs that bind the nullifier to $F_{\mathsf{nk}}(\rho)$ require $Coll_F$ to achieve
+  **Faerie Resistance** (and similarly where $Hash$ is applied to a value derived from
+  $H$). Adding $\mathsf{cm}$ to the nullifier avoids this assumption: all of the bases
+  used to derive $\mathsf{cm}$ are fixed and independent of $\mathcal{G}$, and so the
+  nullifier can be viewed as a Pedersen hash where the input includes $\rho$ directly.
+
+The $Commit^{\mathsf{nf}}$ variants were considered to avoid directly depending on
+$\mathsf{cm}$ (which in its native type is a base field element, not a group element). We
+decided instead to follow Sapling by defining an intermediate representation of
+$\mathsf{cm}$ as a group element, that is only used in nullifier computation. The circuit
+already needs to compute $\mathsf{cm}$, so this improves performance by removing
+
+We also considered variants that used a choice of fixed bases $\mathcal{G_v}$ to provide
+domain separation for zero-valued notes. The most performant design (similar to the chosen
+design) does not achieve **Faerie Resistance** for an adversary that knows the recipient's
+full viewing key ($\psi$ could be brute-forced to cancel out $F_{\mathsf{nk}}(\rho)$,
+causing a collision), and the other variants require assuming $Coll_F$ as mentioned above.

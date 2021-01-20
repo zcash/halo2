@@ -29,7 +29,6 @@ Group hashing uses the isogeny.
 - nsk goes away; `nk` is now a field element
 - TODO: ak / nk split enables splitting the security argument, but could consider merging.
   Merging would help with ivk derivation perf (though as a commitment now it's pretty cheap)
-- TODO: nullifier computation
 
 ZIP 32 integration
 - Use same Sapling design?
