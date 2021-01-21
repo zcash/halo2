@@ -1,9 +1,8 @@
-use crate::{keys::Diversifier, Chain};
+use crate::keys::Diversifier;
 
 /// A shielded payment address.
 #[derive(Debug)]
-pub struct Address<C: Chain> {
-    chain: C,
-    d: Diversifier<C>,
+pub struct Address {
+    d: Diversifier,
     pk_d: (),
 }

@@ -1,14 +1,11 @@
 //! Structs related to bundles of Orchard actions.
 
-use std::marker::PhantomData;
-
 use crate::{
     circuit::Proof,
     note::{EncryptedNote, NoteCommitment, Nullifier},
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::Anchor,
     value::{ValueCommitment, ValueSum},
-    Chain,
 };
 
 /// An action applied to the global ledger.
@@ -37,15 +34,14 @@ pub struct Action {
 ///
 /// TODO: Will this ever exist independently of its signatures, outside of a builder?
 #[derive(Debug)]
-pub struct Bundle<C: Chain> {
+pub struct Bundle {
     anchor: Anchor,
     actions: Vec<Action>,
-    value_balance: ValueSum<C::Value>,
+    value_balance: ValueSum,
     proof: Proof,
-    _chain: PhantomData<C>,
 }
 
-impl<C: Chain> Bundle<C> {
+impl Bundle {
     /// Computes a commitment to the effects of this bundle, suitable for inclusion within
     /// a transaction ID.
     pub fn commitment(&self) -> BundleCommitment {
@@ -55,13 +51,13 @@ impl<C: Chain> Bundle<C> {
 
 /// An authorized bundle of actions, ready to be committed to the ledger.
 #[derive(Debug)]
-pub struct SignedBundle<C: Chain> {
-    bundle: Bundle<C>,
+pub struct SignedBundle {
+    bundle: Bundle,
     action_signatures: Vec<redpallas::Signature<SpendAuth>>,
     binding_signature: redpallas::Signature<Binding>,
 }
 
-impl<C: Chain> SignedBundle<C> {
+impl SignedBundle {
     /// Computes a commitment to the effects of this bundle, suitable for inclusion within
     /// a transaction ID.
     ///

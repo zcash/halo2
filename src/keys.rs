@@ -1,17 +1,6 @@
 //! Key structures for Orchard.
-//!
-//! TODO: Should we have the concept of a Network here? Or make these standalone without
-//! defined string encodings, and use newtypes in Zcash?
-//! - The latter might get messy, but would maintain the crate abstraction.
-//! - One approach might be to make all these types take a type parameter that provides
-//!   encoding and decoding support, and then instantiate it in Zcash inside newtypes.
-//! - We will need to encode some decisions here (like the size of the diversifier), which
-//!   depend on the encoding, so another alternative is we just require Bech32 and then
-//!   have the constrained type provide the HRP.
 
-use std::marker::PhantomData;
-
-use crate::{address::Address, Chain};
+use crate::address::Address;
 
 /// A spending key, from which all key material is derived.
 ///
@@ -20,32 +9,32 @@ use crate::{address::Address, Chain};
 /// derivation. If we decide that we don't actually require non-hardened derivation, then
 /// we could greatly simplify the HD structure and use this struct directly.
 #[derive(Debug)]
-pub struct SpendingKey<C: Chain>(PhantomData<C>);
+pub struct SpendingKey;
 
 #[derive(Debug)]
-pub(crate) struct SpendAuthorizingKey<C: Chain>(PhantomData<C>);
+pub(crate) struct SpendAuthorizingKey;
 
-impl<C: Chain> From<&SpendingKey<C>> for SpendAuthorizingKey<C> {
-    fn from(_: &SpendingKey<C>) -> Self {
+impl From<&SpendingKey> for SpendAuthorizingKey {
+    fn from(_: &SpendingKey) -> Self {
         todo!()
     }
 }
 
 /// TODO: This is its protocol spec name for Sapling, but I'd prefer a different name.
 #[derive(Debug)]
-pub(crate) struct AuthorizingKey<C: Chain>(PhantomData<C>);
+pub(crate) struct AuthorizingKey;
 
-impl<C: Chain> From<&SpendAuthorizingKey<C>> for AuthorizingKey<C> {
-    fn from(_: &SpendAuthorizingKey<C>) -> Self {
+impl From<&SpendAuthorizingKey> for AuthorizingKey {
+    fn from(_: &SpendAuthorizingKey) -> Self {
         todo!()
     }
 }
 
 #[derive(Debug)]
-pub(crate) struct NullifierDerivingKey<C: Chain>(PhantomData<C>);
+pub(crate) struct NullifierDerivingKey;
 
-impl<C: Chain> From<&SpendingKey<C>> for NullifierDerivingKey<C> {
-    fn from(_: &SpendingKey<C>) -> Self {
+impl From<&SpendingKey> for NullifierDerivingKey {
+    fn from(_: &SpendingKey) -> Self {
         todo!()
     }
 }
@@ -53,10 +42,10 @@ impl<C: Chain> From<&SpendingKey<C>> for NullifierDerivingKey<C> {
 /// A key that provides the capability to recover outgoing transaction information from
 /// the block chain.
 #[derive(Debug)]
-pub struct OutgoingViewingKey<C: Chain>(PhantomData<C>);
+pub struct OutgoingViewingKey;
 
-impl<C: Chain> From<&SpendingKey<C>> for OutgoingViewingKey<C> {
-    fn from(_: &SpendingKey<C>) -> Self {
+impl From<&SpendingKey> for OutgoingViewingKey {
+    fn from(_: &SpendingKey) -> Self {
         todo!()
     }
 }
@@ -71,21 +60,21 @@ impl<C: Chain> From<&SpendingKey<C>> for OutgoingViewingKey<C> {
 ///
 /// TODO: Should we just define the FVK to include extended stuff like the diversifier key?
 #[derive(Debug)]
-pub struct FullViewingKey<C: Chain> {
-    ak: AuthorizingKey<C>,
-    nk: NullifierDerivingKey<C>,
-    ovk: OutgoingViewingKey<C>,
+pub struct FullViewingKey {
+    ak: AuthorizingKey,
+    nk: NullifierDerivingKey,
+    ovk: OutgoingViewingKey,
 }
 
-impl<C: Chain> From<&SpendingKey<C>> for FullViewingKey<C> {
-    fn from(_: &SpendingKey<C>) -> Self {
+impl From<&SpendingKey> for FullViewingKey {
+    fn from(_: &SpendingKey) -> Self {
         todo!()
     }
 }
 
-impl<C: Chain> FullViewingKey<C> {
+impl FullViewingKey {
     /// Returns the payment address for this key corresponding to the given diversifier.
-    pub fn address(&self, d: Diversifier<C>) -> Address<C> {
+    pub fn address(&self, d: Diversifier) -> Address {
         IncomingViewingKey::from(self).address(d)
     }
 }
@@ -96,7 +85,7 @@ impl<C: Chain> FullViewingKey<C> {
 // This is a newtype around a `u128` for simplicity, and enforces the diversifier size
 // during all operations.
 #[derive(Debug)]
-pub struct Diversifier<C: Chain>(u128, PhantomData<C>);
+pub struct Diversifier(u128);
 
 /// A key that provides the capability to detect and decrypt incoming notes from the block
 /// chain, without being able to spend the notes or detect when they are spent.
@@ -107,17 +96,17 @@ pub struct Diversifier<C: Chain>(u128, PhantomData<C>);
 /// This key is not suitable for use in a wallet, as it cannot maintain accurate balance.
 /// You should use a [`FullViewingKey`] instead.
 #[derive(Debug)]
-pub struct IncomingViewingKey<C: Chain>(PhantomData<C>);
+pub struct IncomingViewingKey;
 
-impl<C: Chain> From<&FullViewingKey<C>> for IncomingViewingKey<C> {
-    fn from(_: &FullViewingKey<C>) -> Self {
+impl From<&FullViewingKey> for IncomingViewingKey {
+    fn from(_: &FullViewingKey) -> Self {
         todo!()
     }
 }
 
-impl<C: Chain> IncomingViewingKey<C> {
+impl IncomingViewingKey {
     /// Returns the payment address for this key corresponding to the given diversifier.
-    pub fn address(&self, _: Diversifier<C>) -> Address<C> {
+    pub fn address(&self, _: Diversifier) -> Address {
         todo!()
     }
 }

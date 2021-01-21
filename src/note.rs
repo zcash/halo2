@@ -1,22 +1,22 @@
-use crate::{keys::FullViewingKey, value::NoteValue, Address, Chain};
+use crate::{keys::FullViewingKey, value::NoteValue, Address};
 
 /// A discrete amount of funds received by an address.
 #[derive(Debug)]
-pub struct Note<C: Chain> {
+pub struct Note {
     /// The recipient of the funds.
-    recipient: Address<C>,
+    recipient: Address,
     /// The value of this note.
-    value: NoteValue<C::Value>,
+    value: NoteValue,
 }
 
-impl<C: Chain> Note<C> {
+impl Note {
     /// Derives the commitment to this note.
     pub fn commitment(&self) -> NoteCommitment {
         todo!()
     }
 
     /// Derives the nullifier for this note.
-    pub fn nullifier(&self, _: &FullViewingKey<C>) -> Nullifier {
+    pub fn nullifier(&self, _: &FullViewingKey) -> Nullifier {
         todo!()
     }
 }

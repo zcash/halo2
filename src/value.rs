@@ -13,19 +13,13 @@
 //! [`Action`]: crate::bundle::Action
 //! [`Bundle`]: crate::bundle::Bundle
 
-use std::fmt;
-use std::marker::PhantomData;
-
-/// The constraints applied to Orchard values.
-pub trait Constraint: fmt::Debug {}
-
 /// The value of an individual Orchard note.
 #[derive(Debug)]
-pub struct NoteValue<C: Constraint>(u64, PhantomData<C>);
+pub struct NoteValue(u64);
 
 /// A sum of Orchard note values.
 #[derive(Debug)]
-pub struct ValueSum<C: Constraint>(i64, PhantomData<C>);
+pub struct ValueSum(i64);
 
 /// A commitment to a [`ValueSum`].
 #[derive(Debug)]
