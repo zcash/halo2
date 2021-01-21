@@ -127,7 +127,17 @@ In the above alternatives:
 In order to satisfy the **Balance** security property, we require that the circuit must be
 able to enforce that only one nullifier is accepted for a given note. As in Sprout and
 Sapling, we achieve this by ensuring that the nullifier deterministically depends only on
-values committed to (directly or indirectly) by the note commitment.
+values committed to (directly or indirectly) by the note commitment. As in Sapling,
+this involves arguing that:
+
+- There can be only one $\mathsf{ivk}$ for a given $\mathit{addr}$. This is true because
+  the circuit checks that $\mathsf{pk_d} = [\mathsf{ivk}] \mathsf{g_d}$, and the mapping
+  $\mathsf{ivk} \mapsto [\mathsf{ivk}] \mathsf{g_d}$ is an injection for any $\mathsf{g_d}$.
+  ($\mathsf{ivk}$ is in the base field of $E$, which must be smaller than its scalar field,
+  as is the case for Pallas.)
+- There can be only one $\mathsf{nk}$ for a given $\mathsf{ivk}$. This is true because the
+  circuit checks that $\mathsf{ivk} = \mathit{ShortCommit}^{\mathsf{ivk}}_{\mathsf{rivk}}(\mathsf{ak}, \mathsf{nk})$
+  where $\mathit{ShortCommit}$ is binding (see [Commitments](commitments.html)).
 
 ### Use of $\rho$
 
