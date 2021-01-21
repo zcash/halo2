@@ -17,7 +17,7 @@ $$\mathsf{cv} = HomomorphicCommit^{\mathsf{cv}}_{\mathsf{rcv}}(v)$$
 We instantiate $Commit$ and $ShortCommit$ with Sinsemilla, and use them for all other
 commitments:
 
-$$\mathsf{ivk} = ShortCommit^{\mathsf{ivk}}_{\mathsf{rivk}}(\mathsf{nk}, \mathsf{ak})$$
+$$\mathsf{ivk} = \mathit{ShortCommit}^{\mathsf{ivk}}_{\mathsf{rivk}}(\mathsf{ak}, \mathsf{nk})$$
 $$\mathsf{cm} = Commit^{\mathsf{cm}}_{\mathsf{rcm}}(\text{rest of note})$$
 
 This is the same split (and rationale) as in Sapling, but using the more PLONK-efficient
