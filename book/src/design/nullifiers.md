@@ -5,7 +5,7 @@ The nullifier design we use for Orchard is
 $$\mathsf{nf} = [F_{\mathsf{nk}}(\rho) + \psi \pmod{p}] \mathcal{G} + \mathsf{cm},$$
 
 where:
-- $F$ is a keyed circuit-efficient PRF (such as Rescue).
+- $F$ is a keyed circuit-efficient PRF (such as Rescue or Poseidon).
 - $\rho$ is unique to this output. As with $\mathsf{h_{Sig}}$ in Sprout, $\rho$ includes
   the nullifiers of any Orchard notes being spent in the same action. Given that an action
   consists of a single spend and a single output, we set $\rho$ to be the nullifier of the
