@@ -135,7 +135,7 @@ where
     let permutation_vks = cs
         .permutations
         .iter()
-        .zip(assembly.clone().permutations.into_iter())
+        .zip(assembly.permutations.into_iter())
         .map(|(p, assembly)| assembly.build_vk(params, &domain, &permutation_helper, p))
         .collect();
 

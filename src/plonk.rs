@@ -57,15 +57,15 @@ impl<C: CurveAffine> VerifyingKey<C> {
     ) -> io::Result<Self> {
         let (domain, cs, _) = keygen::create_domain::<C, ConcreteCircuit>(params);
 
-        let mut fixed_commitments = Vec::with_capacity(cs.num_fixed_columns);
-        for _ in 0..cs.num_fixed_columns {
-            fixed_commitments.push(C::read(reader)?);
-        }
+        let fixed_commitments: Vec<_> = (0..cs.num_fixed_columns)
+            .map(|_| C::read(reader))
+            .collect::<Result<_, _>>()?;
 
-        let mut permutations = Vec::with_capacity(cs.permutations.len());
-        for argument in &cs.permutations {
-            permutations.push(permutation::VerifyingKey::read(reader, argument)?);
-        }
+        let permutations: Vec<_> = cs
+            .permutations
+            .iter()
+            .map(|argument| permutation::VerifyingKey::read(reader, argument))
+            .collect::<Result<_, _>>()?;
 
         Ok(VerifyingKey {
             domain,

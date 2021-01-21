@@ -160,10 +160,8 @@ pub trait CurveAffine:
     fn read<R: Read>(reader: &mut R) -> io::Result<Self> {
         let mut compressed = [0u8; 32];
         reader.read_exact(&mut compressed[..])?;
-        Option::from(Self::from_bytes(&compressed)).ok_or(io::Error::new(
-            io::ErrorKind::Other,
-            "invalid point encoding in proof",
-        ))
+        Option::from(Self::from_bytes(&compressed))
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "invalid point encoding in proof"))
     }
 
     /// Obtains the compressed, 32-byte little endian representation of this

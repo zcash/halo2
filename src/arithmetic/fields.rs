@@ -94,10 +94,8 @@ pub trait FieldExt:
     fn read<R: Read>(reader: &mut R) -> io::Result<Self> {
         let mut compressed = [0u8; 32];
         reader.read_exact(&mut compressed[..])?;
-        Option::from(Self::from_bytes(&compressed)).ok_or(io::Error::new(
-            io::ErrorKind::Other,
-            "invalid point encoding in proof",
-        ))
+        Option::from(Self::from_bytes(&compressed))
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "invalid point encoding in proof"))
     }
 
     /// Obtains a field element that is congruent to the provided little endian

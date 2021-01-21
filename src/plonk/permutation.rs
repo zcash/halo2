@@ -61,11 +61,9 @@ impl<C: CurveAffine> VerifyingKey<C> {
     }
 
     pub(crate) fn read<R: io::Read>(reader: &mut R, argument: &Argument) -> io::Result<Self> {
-        let mut commitments = Vec::with_capacity(argument.columns.len());
-        for _ in 0..argument.columns.len() {
-            commitments.push(C::read(reader)?);
-        }
-
+        let commitments = (0..argument.columns.len())
+            .map(|_| C::read(reader))
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(VerifyingKey { commitments })
     }
 }

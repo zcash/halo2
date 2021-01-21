@@ -201,8 +201,8 @@ impl<C: CurveAffine> Params<C> {
         for g_lagrange_element in &self.g_lagrange {
             writer.write_all(&g_lagrange_element.to_bytes())?;
         }
-        writer.write(&self.h.to_bytes())?;
-        writer.write(&self.u.to_bytes())?;
+        writer.write_all(&self.h.to_bytes())?;
+        writer.write_all(&self.u.to_bytes())?;
 
         Ok(())
     }
@@ -217,15 +217,8 @@ impl<C: CurveAffine> Params<C> {
         reader.read_exact(&mut n[..])?;
         let n = u64::from_le_bytes(n);
 
-        let mut g = Vec::with_capacity(n as usize);
-        for _ in 0..n {
-            g.push(C::read(reader)?);
-        }
-
-        let mut g_lagrange = Vec::with_capacity(n as usize);
-        for _ in 0..n {
-            g_lagrange.push(C::read(reader)?);
-        }
+        let g: Vec<_> = (0..n).map(|_| C::read(reader)).collect::<Result<_, _>>()?;
+        let g_lagrange: Vec<_> = (0..n).map(|_| C::read(reader)).collect::<Result<_, _>>()?;
 
         let h = C::read(reader)?;
         let u = C::read(reader)?;
