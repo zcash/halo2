@@ -81,25 +81,39 @@ impl<'r, C: Chip> Region<'r, C> {
     /// Assign an advice column value (witness).
     ///
     /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
-    pub fn assign_advice<'v>(
+    pub fn assign_advice<'v, V, A, AR>(
         &'v mut self,
+        annotation: A,
         column: Column<Advice>,
         offset: usize,
-        mut to: impl FnMut() -> Result<C::Field, Error> + 'v,
-    ) -> Result<Cell, Error> {
-        self.region.assign_advice(column, offset, &mut to)
+        mut to: V,
+    ) -> Result<Cell, Error>
+    where
+        V: FnMut() -> Result<C::Field, Error> + 'v,
+        A: Fn() -> AR,
+        AR: Into<String>,
+    {
+        self.region
+            .assign_advice(&|| annotation().into(), column, offset, &mut to)
     }
 
     /// Assign a fixed value.
     ///
     /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
-    pub fn assign_fixed<'v>(
+    pub fn assign_fixed<'v, V, A, AR>(
         &'v mut self,
+        annotation: A,
         column: Column<Fixed>,
         offset: usize,
-        mut to: impl FnMut() -> Result<C::Field, Error> + 'v,
-    ) -> Result<Cell, Error> {
-        self.region.assign_fixed(column, offset, &mut to)
+        mut to: V,
+    ) -> Result<Cell, Error>
+    where
+        V: FnMut() -> Result<C::Field, Error> + 'v,
+        A: Fn() -> AR,
+        AR: Into<String>,
+    {
+        self.region
+            .assign_fixed(&|| annotation().into(), column, offset, &mut to)
     }
 
     /// Constraint two cells to have the same value.
