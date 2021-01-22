@@ -1,6 +1,6 @@
 //! Traits and structs for implementing circuit components.
 
-use std::fmt;
+use std::{fmt, marker::PhantomData};
 
 use crate::{
     arithmetic::FieldExt,
@@ -136,6 +136,10 @@ impl<'r, C: Chip> Region<'r, C> {
 /// A particular concrete layout strategy will implement this trait for each chip it
 /// supports.
 pub trait Layouter<C: Chip> {
+    /// Represents the type of the "root" of this layouter, so that nested namespaces
+    /// can minimize indirection.
+    type Root: Layouter<C>;
+
     /// Provides access to the chip configuration.
     fn config(&self) -> &C::Config;
 
@@ -155,4 +159,104 @@ pub trait Layouter<C: Chip> {
         A: FnMut(Region<'_, C>) -> Result<(), Error>,
         N: Fn() -> NR,
         NR: Into<String>;
+
+    /// Gets the "root" of this assignment, bypassing the namespacing.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    fn get_root(&mut self) -> &mut Self::Root;
+
+    /// Creates a new (sub)namespace and enters into it.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    fn push_namespace<NR, N>(&mut self, name_fn: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR;
+
+    /// Exits out of the existing namespace.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    fn pop_namespace(&mut self, gadget_name: Option<String>);
+
+    /// Enters into a namespace.
+    fn namespace<NR, N>(&mut self, name_fn: N) -> NamespacedLayouter<'_, C, Self::Root>
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        self.get_root().push_namespace(name_fn);
+
+        NamespacedLayouter(self.get_root(), PhantomData)
+    }
+}
+
+/// This is a "namespaced" layouter which borrows a `Layouter` (pushing a namespace
+/// context) and, when dropped, pops out of the namespace context.
+#[derive(Debug)]
+pub struct NamespacedLayouter<'a, C: Chip, L: Layouter<C> + 'a>(&'a mut L, PhantomData<C>);
+
+impl<'a, C: Chip, L: Layouter<C> + 'a> Layouter<C> for NamespacedLayouter<'a, C, L> {
+    type Root = L::Root;
+
+    fn config(&self) -> &C::Config {
+        self.0.config()
+    }
+
+    fn assign_region<A, N, NR>(&mut self, name: N, assignment: A) -> Result<(), Error>
+    where
+        A: FnMut(Region<'_, C>) -> Result<(), Error>,
+        N: Fn() -> NR,
+        NR: Into<String>,
+    {
+        self.0.assign_region(name, assignment)
+    }
+
+    fn get_root(&mut self) -> &mut Self::Root {
+        self.0.get_root()
+    }
+
+    fn push_namespace<NR, N>(&mut self, _name_fn: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        panic!("Only the root's push_namespace should be called");
+    }
+
+    fn pop_namespace(&mut self, _gadget_name: Option<String>) {
+        panic!("Only the root's pop_namespace should be called");
+    }
+}
+
+impl<'a, C: Chip, L: Layouter<C> + 'a> Drop for NamespacedLayouter<'a, C, L> {
+    fn drop(&mut self) {
+        let gadget_name = {
+            #[cfg(feature = "gadget-traces")]
+            {
+                let mut gadget_name = None;
+                let mut is_second_frame = false;
+                backtrace::trace(|frame| {
+                    if is_second_frame {
+                        // Resolve this instruction pointer to a symbol name.
+                        backtrace::resolve_frame(frame, |symbol| {
+                            gadget_name = symbol.name().map(|name| format!("{:#}", name));
+                        });
+
+                        // We are done!
+                        false
+                    } else {
+                        // We want the next frame.
+                        is_second_frame = true;
+                        true
+                    }
+                });
+                gadget_name
+            }
+
+            #[cfg(not(feature = "gadget-traces"))]
+            None
+        };
+
+        self.get_root().pop_namespace(gadget_name);
+    }
 }

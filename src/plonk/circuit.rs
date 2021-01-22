@@ -182,6 +182,23 @@ pub trait Assignment<F: Field> {
         right_column: usize,
         right_row: usize,
     ) -> Result<(), Error>;
+
+    /// Creates a new (sub)namespace and enters into it.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    ///
+    /// [`Layouter::namespace`]: crate::circuit::Layouter#method.namespace
+    fn push_namespace<NR, N>(&mut self, name_fn: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR;
+
+    /// Exits out of the existing namespace.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    ///
+    /// [`Layouter::namespace`]: crate::circuit::Layouter#method.namespace
+    fn pop_namespace(&mut self, gadget_name: Option<String>);
 }
 
 /// This is a trait that circuits provide implementations for so that the
