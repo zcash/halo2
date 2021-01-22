@@ -66,9 +66,9 @@ pub struct Sha256<CS: Sha256Instructions> {
 
 impl<Sha256Chip: Sha256Instructions> Sha256<Sha256Chip> {
     /// Create a new hasher instance.
-    pub fn new(layouter: &mut impl Layouter<Sha256Chip>) -> Result<Self, Error> {
+    pub fn new(mut layouter: impl Layouter<Sha256Chip>) -> Result<Self, Error> {
         Ok(Sha256 {
-            state: Sha256Chip::initialization_vector(layouter)?,
+            state: Sha256Chip::initialization_vector(&mut layouter)?,
             cur_block: Vec::with_capacity(BLOCK_SIZE),
             length: 0,
         })
@@ -77,7 +77,7 @@ impl<Sha256Chip: Sha256Instructions> Sha256<Sha256Chip> {
     /// Digest data, updating the internal state.
     pub fn update(
         &mut self,
-        layouter: &mut impl Layouter<Sha256Chip>,
+        mut layouter: impl Layouter<Sha256Chip>,
         mut data: &[Sha256Chip::BlockWord],
     ) -> Result<(), Error> {
         self.length += data.len() * 32;
@@ -95,7 +95,7 @@ impl<Sha256Chip: Sha256Instructions> Sha256<Sha256Chip> {
 
         // Process the now-full current block.
         self.state = Sha256Chip::compress(
-            layouter,
+            &mut layouter,
             &self.state,
             self.cur_block[..]
                 .try_into()
@@ -106,9 +106,9 @@ impl<Sha256Chip: Sha256Instructions> Sha256<Sha256Chip> {
         // Process any additional full blocks.
         let mut chunks_iter = data.chunks_exact(BLOCK_SIZE);
         for chunk in &mut chunks_iter {
-            self.state = Sha256Chip::initialization(layouter, &self.state)?;
+            self.state = Sha256Chip::initialization(&mut layouter, &self.state)?;
             self.state = Sha256Chip::compress(
-                layouter,
+                &mut layouter,
                 &self.state,
                 chunk.try_into().expect("chunk.len() == BLOCK_SIZE"),
             )?;
@@ -124,32 +124,32 @@ impl<Sha256Chip: Sha256Instructions> Sha256<Sha256Chip> {
     /// Retrieve result and consume hasher instance.
     pub fn finalize(
         mut self,
-        layouter: &mut impl Layouter<Sha256Chip>,
+        mut layouter: impl Layouter<Sha256Chip>,
     ) -> Result<Sha256Digest<Sha256Chip::BlockWord>, Error> {
         // Pad the remaining block
         if !self.cur_block.is_empty() {
             let padding = vec![Sha256Chip::zero(); BLOCK_SIZE - self.cur_block.len()];
             self.cur_block.extend_from_slice(&padding);
-            self.state = Sha256Chip::initialization(layouter, &self.state)?;
+            self.state = Sha256Chip::initialization(&mut layouter, &self.state)?;
             self.state = Sha256Chip::compress(
-                layouter,
+                &mut layouter,
                 &self.state,
                 self.cur_block[..]
                     .try_into()
                     .expect("cur_block.len() == BLOCK_SIZE"),
             )?;
         }
-        Sha256Chip::digest(layouter, &self.state).map(Sha256Digest)
+        Sha256Chip::digest(&mut layouter, &self.state).map(Sha256Digest)
     }
 
     /// Convenience function to compute hash of the data. It will handle hasher creation,
     /// data feeding and finalization.
     pub fn digest(
-        layouter: &mut impl Layouter<Sha256Chip>,
+        mut layouter: impl Layouter<Sha256Chip>,
         data: &[Sha256Chip::BlockWord],
     ) -> Result<Sha256Digest<Sha256Chip::BlockWord>, Error> {
-        let mut hasher = Self::new(layouter)?;
-        hasher.update(layouter, data)?;
-        hasher.finalize(layouter)
+        let mut hasher = Self::new(layouter.namespace(|| "init"))?;
+        hasher.update(layouter.namespace(|| "update"), data)?;
+        hasher.finalize(layouter.namespace(|| "finalize"))
     }
 }
