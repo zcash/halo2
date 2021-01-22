@@ -349,7 +349,7 @@ pub struct ConstraintSystem<F> {
     pub(crate) num_fixed_columns: usize,
     pub(crate) num_advice_columns: usize,
     pub(crate) num_aux_columns: usize,
-    pub(crate) gates: Vec<Expression<F>>,
+    pub(crate) gates: Vec<(&'static str, Expression<F>)>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
     pub(crate) aux_queries: Vec<(Column<Aux>, Rotation)>,
     pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
@@ -543,9 +543,9 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Create a new gate
-    pub fn create_gate(&mut self, f: impl FnOnce(&mut Self) -> Expression<F>) {
+    pub fn create_gate(&mut self, name: &'static str, f: impl FnOnce(&mut Self) -> Expression<F>) {
         let poly = f(self);
-        self.gates.push(poly);
+        self.gates.push((name, poly));
     }
 
     /// Allocate a new fixed column
