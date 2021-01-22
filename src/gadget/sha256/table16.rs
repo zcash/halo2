@@ -320,3 +320,71 @@ trait Table16Assignment<F: FieldExt> {
         Ok(cell)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[cfg(feature = "dev-graph")]
+    use crate::{
+        arithmetic::FieldExt,
+        circuit::Chip,
+        circuit::{layouter, Layouter},
+        gadget::sha256::{BlockWord, Sha256, Table16Chip, Table16Config, BLOCK_SIZE},
+        pasta::Fq,
+        plonk::{Assignment, Circuit, ConstraintSystem, Error},
+    };
+
+    #[cfg(feature = "dev-graph")]
+    #[test]
+    fn print_sha256_circuit() {
+        struct MyCircuit {}
+
+        impl<F: FieldExt> Circuit<F> for MyCircuit {
+            type Config = Table16Config;
+
+            fn configure(meta: &mut ConstraintSystem<F>) -> Table16Config {
+                Table16Chip::configure(meta)
+            }
+
+            fn synthesize(
+                &self,
+                cs: &mut impl Assignment<F>,
+                config: Table16Config,
+            ) -> Result<(), Error> {
+                let mut layouter = layouter::SingleChip::<Table16Chip<F>, _>::new(cs, config)?;
+                Table16Chip::load(&mut layouter)?;
+
+                // Test vector: "abc"
+                let test_input = [
+                    BlockWord::new(0b01100001011000100110001110000000),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                ];
+
+                // Create a message of length 31 blocks
+                let mut input = Vec::with_capacity(31 * BLOCK_SIZE);
+                for _ in 0..31 {
+                    input.extend_from_slice(&test_input);
+                }
+
+                Sha256::digest(layouter.namespace(|| "'abc' * 31"), &input)?;
+
+                Ok(())
+            }
+        }
+
+        let circuit: MyCircuit = MyCircuit {};
+        eprintln!("{}", crate::dev::circuit_dot_graph::<Fq, _>(&circuit));
+    }
+}
