@@ -11,6 +11,13 @@ use crate::{
     poly::Rotation,
 };
 
+#[cfg(feature = "dev-graph")]
+mod graph;
+
+#[cfg(feature = "dev-graph")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dev-graph")))]
+pub use graph::circuit_dot_graph;
+
 /// The reasons why a particular circuit is not satisfied.
 #[derive(Debug, PartialEq)]
 pub enum VerifyFailure {
