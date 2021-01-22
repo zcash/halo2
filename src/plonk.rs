@@ -230,31 +230,48 @@ fn test_proving() {
             let index = self.current_gate;
             self.current_gate += 1;
             let mut value = None;
-            self.cs.assign_advice(self.config.a, index, || {
-                value = Some(f()?);
-                Ok(value.ok_or(Error::SynthesisError)?.0)
-            })?;
-            self.cs.assign_advice(self.config.d, index, || {
-                Ok(value.ok_or(Error::SynthesisError)?.0.square().square())
-            })?;
-            self.cs.assign_advice(self.config.b, index, || {
-                Ok(value.ok_or(Error::SynthesisError)?.1)
-            })?;
-            self.cs.assign_advice(self.config.e, index, || {
-                Ok(value.ok_or(Error::SynthesisError)?.1.square().square())
-            })?;
-            self.cs.assign_advice(self.config.c, index, || {
-                Ok(value.ok_or(Error::SynthesisError)?.2)
-            })?;
+            self.cs.assign_advice(
+                || "lhs",
+                self.config.a,
+                index,
+                || {
+                    value = Some(f()?);
+                    Ok(value.ok_or(Error::SynthesisError)?.0)
+                },
+            )?;
+            self.cs.assign_advice(
+                || "lhs^4",
+                self.config.d,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.0.square().square()),
+            )?;
+            self.cs.assign_advice(
+                || "rhs",
+                self.config.b,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.1),
+            )?;
+            self.cs.assign_advice(
+                || "rhs^4",
+                self.config.e,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.1.square().square()),
+            )?;
+            self.cs.assign_advice(
+                || "out",
+                self.config.c,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.2),
+            )?;
 
             self.cs
-                .assign_fixed(self.config.sa, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "a", self.config.sa, index, || Ok(FF::zero()))?;
             self.cs
-                .assign_fixed(self.config.sb, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "b", self.config.sb, index, || Ok(FF::zero()))?;
             self.cs
-                .assign_fixed(self.config.sc, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "c", self.config.sc, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(self.config.sm, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "a * b", self.config.sm, index, || Ok(FF::one()))?;
             Ok((
                 Variable(self.config.a, index),
                 Variable(self.config.b, index),
@@ -268,31 +285,48 @@ fn test_proving() {
             let index = self.current_gate;
             self.current_gate += 1;
             let mut value = None;
-            self.cs.assign_advice(self.config.a, index, || {
-                value = Some(f()?);
-                Ok(value.ok_or(Error::SynthesisError)?.0)
-            })?;
-            self.cs.assign_advice(self.config.d, index, || {
-                Ok(value.ok_or(Error::SynthesisError)?.0.square().square())
-            })?;
-            self.cs.assign_advice(self.config.b, index, || {
-                Ok(value.ok_or(Error::SynthesisError)?.1)
-            })?;
-            self.cs.assign_advice(self.config.e, index, || {
-                Ok(value.ok_or(Error::SynthesisError)?.1.square().square())
-            })?;
-            self.cs.assign_advice(self.config.c, index, || {
-                Ok(value.ok_or(Error::SynthesisError)?.2)
-            })?;
+            self.cs.assign_advice(
+                || "lhs",
+                self.config.a,
+                index,
+                || {
+                    value = Some(f()?);
+                    Ok(value.ok_or(Error::SynthesisError)?.0)
+                },
+            )?;
+            self.cs.assign_advice(
+                || "lhs^4",
+                self.config.d,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.0.square().square()),
+            )?;
+            self.cs.assign_advice(
+                || "rhs",
+                self.config.b,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.1),
+            )?;
+            self.cs.assign_advice(
+                || "rhs^4",
+                self.config.e,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.1.square().square()),
+            )?;
+            self.cs.assign_advice(
+                || "out",
+                self.config.c,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.2),
+            )?;
 
             self.cs
-                .assign_fixed(self.config.sa, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "a", self.config.sa, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(self.config.sb, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "b", self.config.sb, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(self.config.sc, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "c", self.config.sc, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(self.config.sm, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "a * b", self.config.sm, index, || Ok(FF::zero()))?;
             Ok((
                 Variable(self.config.a, index),
                 Variable(self.config.b, index),
@@ -329,9 +363,10 @@ fn test_proving() {
         {
             let index = self.current_gate;
             self.current_gate += 1;
-            self.cs.assign_advice(self.config.a, index, || f())?;
             self.cs
-                .assign_fixed(self.config.sp, index, || Ok(FF::one()))?;
+                .assign_advice(|| "value", self.config.a, index, || f())?;
+            self.cs
+                .assign_fixed(|| "public", self.config.sp, index, || Ok(FF::one()))?;
 
             Ok(Variable(self.config.a, index))
         }
@@ -341,9 +376,9 @@ fn test_proving() {
 
                 self.current_gate += 1;
                 self.cs
-                    .assign_fixed(self.config.sl, index, || Ok(value_0))?;
+                    .assign_fixed(|| "table col 1", self.config.sl, index, || Ok(value_0))?;
                 self.cs
-                    .assign_fixed(self.config.sl2, index, || Ok(value_1))?;
+                    .assign_fixed(|| "table col 2", self.config.sl2, index, || Ok(value_1))?;
             }
             Ok(())
         }

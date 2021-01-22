@@ -76,25 +76,36 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             let index = self.current_gate;
             self.current_gate += 1;
             let mut value = None;
-            self.cs.assign_advice(self.config.a, index, || {
-                value = Some(f()?);
-                Ok(value.ok_or(Error::SynthesisError)?.0)
-            })?;
-            self.cs.assign_advice(self.config.b, index, || {
-                Ok(value.ok_or(Error::SynthesisError)?.1)
-            })?;
-            self.cs.assign_advice(self.config.c, index, || {
-                Ok(value.ok_or(Error::SynthesisError)?.2)
-            })?;
+            self.cs.assign_advice(
+                || "lhs",
+                self.config.a,
+                index,
+                || {
+                    value = Some(f()?);
+                    Ok(value.ok_or(Error::SynthesisError)?.0)
+                },
+            )?;
+            self.cs.assign_advice(
+                || "rhs",
+                self.config.b,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.1),
+            )?;
+            self.cs.assign_advice(
+                || "out",
+                self.config.c,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.2),
+            )?;
 
             self.cs
-                .assign_fixed(self.config.sa, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "a", self.config.sa, index, || Ok(FF::zero()))?;
             self.cs
-                .assign_fixed(self.config.sb, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "b", self.config.sb, index, || Ok(FF::zero()))?;
             self.cs
-                .assign_fixed(self.config.sc, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "c", self.config.sc, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(self.config.sm, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "a * b", self.config.sm, index, || Ok(FF::one()))?;
             Ok((
                 Variable(self.config.a, index),
                 Variable(self.config.b, index),
@@ -108,25 +119,36 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             let index = self.current_gate;
             self.current_gate += 1;
             let mut value = None;
-            self.cs.assign_advice(self.config.a, index, || {
-                value = Some(f()?);
-                Ok(value.ok_or(Error::SynthesisError)?.0)
-            })?;
-            self.cs.assign_advice(self.config.b, index, || {
-                Ok(value.ok_or(Error::SynthesisError)?.1)
-            })?;
-            self.cs.assign_advice(self.config.c, index, || {
-                Ok(value.ok_or(Error::SynthesisError)?.2)
-            })?;
+            self.cs.assign_advice(
+                || "lhs",
+                self.config.a,
+                index,
+                || {
+                    value = Some(f()?);
+                    Ok(value.ok_or(Error::SynthesisError)?.0)
+                },
+            )?;
+            self.cs.assign_advice(
+                || "rhs",
+                self.config.b,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.1),
+            )?;
+            self.cs.assign_advice(
+                || "out",
+                self.config.c,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.2),
+            )?;
 
             self.cs
-                .assign_fixed(self.config.sa, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "a", self.config.sa, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(self.config.sb, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "b", self.config.sb, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(self.config.sc, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "c", self.config.sc, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(self.config.sm, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "a * b", self.config.sm, index, || Ok(FF::zero()))?;
             Ok((
                 Variable(self.config.a, index),
                 Variable(self.config.b, index),

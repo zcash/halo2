@@ -4,7 +4,10 @@ use ff::Field;
 
 use crate::{
     arithmetic::{FieldExt, Group},
-    plonk::{permutation, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error},
+    plonk::{
+        permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
+        Fixed,
+    },
     poly::Rotation,
 };
 
@@ -96,13 +99,13 @@ pub enum VerifyFailure {
 ///     }
 ///
 ///     fn synthesize(&self, cs: &mut impl Assignment<F>, config: MyConfig) -> Result<(), Error> {
-///         cs.assign_advice(config.a, 0, || {
+///         cs.assign_advice(|| "a", config.a, 0, || {
 ///             self.a.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
 ///         })?;
-///         cs.assign_advice(config.b, 0, || {
+///         cs.assign_advice(|| "b", config.b, 0, || {
 ///             self.b.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
 ///         })?;
-///         cs.assign_advice(config.c, 0, || {
+///         cs.assign_advice(|| "c", config.c, 0, || {
 ///             self.a
 ///                 .and_then(|a| self.b.map(|b| F::from_u64(a * b)))
 ///                 .ok_or(Error::SynthesisError)
@@ -144,12 +147,18 @@ pub struct MockProver<F: Group> {
 }
 
 impl<F: Field + Group> Assignment<F> for MockProver<F> {
-    fn assign_advice(
+    fn assign_advice<V, A, AR>(
         &mut self,
-        column: crate::plonk::Column<crate::plonk::Advice>,
+        _: A,
+        column: Column<Advice>,
         row: usize,
-        to: impl FnOnce() -> Result<F, crate::plonk::Error>,
-    ) -> Result<(), crate::plonk::Error> {
+        to: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Result<F, Error>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
         *self
             .advice
             .get_mut(column.index())
@@ -159,12 +168,18 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         Ok(())
     }
 
-    fn assign_fixed(
+    fn assign_fixed<V, A, AR>(
         &mut self,
-        column: crate::plonk::Column<crate::plonk::Fixed>,
+        _: A,
+        column: Column<Fixed>,
         row: usize,
-        to: impl FnOnce() -> Result<F, crate::plonk::Error>,
-    ) -> Result<(), crate::plonk::Error> {
+        to: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Result<F, Error>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
         *self
             .fixed
             .get_mut(column.index())

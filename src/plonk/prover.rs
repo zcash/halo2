@@ -100,12 +100,18 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
             }
 
             impl<F: Field> Assignment<F> for WitnessCollection<F> {
-                fn assign_advice(
+                fn assign_advice<V, A, AR>(
                     &mut self,
+                    _: A,
                     column: Column<Advice>,
                     row: usize,
-                    to: impl FnOnce() -> Result<F, Error>,
-                ) -> Result<(), Error> {
+                    to: V,
+                ) -> Result<(), Error>
+                where
+                    V: FnOnce() -> Result<F, Error>,
+                    A: FnOnce() -> AR,
+                    AR: Into<String>,
+                {
                     *self
                         .advice
                         .get_mut(column.index())
@@ -115,12 +121,18 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
                     Ok(())
                 }
 
-                fn assign_fixed(
+                fn assign_fixed<V, A, AR>(
                     &mut self,
+                    _: A,
                     _: Column<Fixed>,
                     _: usize,
-                    _: impl FnOnce() -> Result<F, Error>,
-                ) -> Result<(), Error> {
+                    _: V,
+                ) -> Result<(), Error>
+                where
+                    V: FnOnce() -> Result<F, Error>,
+                    A: FnOnce() -> AR,
+                    AR: Into<String>,
+                {
                     // We only care about advice columns here
 
                     Ok(())
