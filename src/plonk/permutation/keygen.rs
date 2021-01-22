@@ -14,7 +14,7 @@ pub(crate) struct AssemblyHelper<C: CurveAffine> {
     deltaomega: Vec<Vec<C::Scalar>>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub(crate) struct Assembly {
     pub(crate) mapping: Vec<Vec<(usize, usize)>>,
     aux: Vec<Vec<(usize, usize)>>,
@@ -139,7 +139,7 @@ impl Assembly {
         helper: &AssemblyHelper<C>,
         p: &Argument,
     ) -> VerifyingKey<C> {
-        // Pre-compute commitments for the SRS.
+        // Pre-compute commitments for the URS.
         let mut commitments = vec![];
         for i in 0..p.columns.len() {
             // Computes the permutation polynomial based on the permutation

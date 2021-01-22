@@ -56,7 +56,7 @@ where
 }
 
 /// Assembly to be used in circuit synthesis.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Assembly<F: Field> {
     fixed: Vec<Polynomial<F, LagrangeCoeff>>,
     permutations: Vec<permutation::keygen::Assembly>,
@@ -127,7 +127,7 @@ where
         _marker: std::marker::PhantomData,
     };
 
-    // Synthesize the circuit to obtain SRS
+    // Synthesize the circuit to obtain URS
     circuit.synthesize(&mut assembly, config)?;
 
     let permutation_helper = permutation::keygen::Assembly::build_helper(params, &cs, &domain);
@@ -177,7 +177,7 @@ where
         _marker: std::marker::PhantomData,
     };
 
-    // Synthesize the circuit to obtain SRS
+    // Synthesize the circuit to obtain URS
     circuit.synthesize(&mut assembly, config)?;
 
     let fixed_polys: Vec<_> = assembly

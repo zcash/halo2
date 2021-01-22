@@ -194,7 +194,6 @@ impl<C: CurveAffine> Params<C> {
     /// Writes params to a buffer.
     pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
         writer.write_all(&self.k.to_le_bytes())?;
-        writer.write_all(&self.n.to_le_bytes())?;
         for g_element in &self.g {
             writer.write_all(&g_element.to_bytes())?;
         }
@@ -213,9 +212,7 @@ impl<C: CurveAffine> Params<C> {
         reader.read_exact(&mut k[..])?;
         let k = u32::from_le_bytes(k);
 
-        let mut n = [0u8; 8];
-        reader.read_exact(&mut n[..])?;
-        let n = u64::from_le_bytes(n);
+        let n: u64 = 1 << k;
 
         let g: Vec<_> = (0..n).map(|_| C::read(reader)).collect::<Result<_, _>>()?;
         let g_lagrange: Vec<_> = (0..n).map(|_| C::read(reader)).collect::<Result<_, _>>()?;

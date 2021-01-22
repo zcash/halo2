@@ -20,7 +20,7 @@ use std::io;
 /// **Important:** This function assumes that the provided `transcript` has
 /// already seen the common inputs: the polynomial commitment P, the claimed
 /// opening v, and the point x. It's probably also nice for the transcript
-/// to have seen the elliptic curve description and the SRS, if you want to
+/// to have seen the elliptic curve description and the URS, if you want to
 /// be rigorous.
 pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>>(
     params: &Params<C>,
@@ -82,7 +82,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>>(
         }
     }
 
-    // Initialize the vector `G` from the SRS. We'll be progressively collapsing
+    // Initialize the vector `G` from the URS. We'll be progressively collapsing
     // this vector into smaller and smaller vectors until it is of length 1.
     let mut g = params.g.clone();
 
