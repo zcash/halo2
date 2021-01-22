@@ -20,7 +20,8 @@ readme = "README.md"
 publish = false
 
 [package.metadata.docs.rs]
-rustdoc-args = [ "--html-in-header", "katex-header.html" ]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 
 [dev-dependencies]
 criterion = "0.3"
@@ -47,6 +48,10 @@ blake2b_simd = "0.5"
 lazy_static = "1.4.0"
 static_assertions = "1.1.0"
 
+# Developer tooling dependencies
+tabbycat = { version = "0.1", features = ["attributes"], optional = true }
+
 [features]
+dev-graph = ["tabbycat"]
 gadget-traces = ["backtrace"]
 sanity-checks = []
