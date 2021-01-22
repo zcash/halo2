@@ -1,5 +1,6 @@
 //! # halo2
 
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(
     clippy::op_ref,
     clippy::assign_op_pattern,
