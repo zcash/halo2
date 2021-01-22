@@ -146,12 +146,13 @@ pub trait Layouter<C: Chip> {
     /// closure, the `Layouter` is allowed to optimise as it sees fit.
     ///
     /// ```ignore
-    /// fn assign_region(&mut self, |region| {
+    /// fn assign_region(&mut self, || "region name", |region| {
     ///     region.assign_advice(self.config.a, offset, || { Some(value)});
     /// });
     /// ```
-    fn assign_region(
-        &mut self,
-        assignment: impl FnMut(Region<'_, C>) -> Result<(), Error>,
-    ) -> Result<(), Error>;
+    fn assign_region<A, N, NR>(&mut self, name: N, assignment: A) -> Result<(), Error>
+    where
+        A: FnMut(Region<'_, C>) -> Result<(), Error>,
+        N: Fn() -> NR,
+        NR: Into<String>;
 }
