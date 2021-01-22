@@ -204,7 +204,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         let sc = meta.fixed_column();
         let sp = meta.fixed_column();
 
-        meta.create_gate(|meta| {
+        meta.create_gate("Combined add-mult", |meta| {
             let a = meta.query_advice(a, Rotation::cur());
             let b = meta.query_advice(b, Rotation::cur());
             let c = meta.query_advice(c, Rotation::cur());
@@ -217,7 +217,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
             a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))
         });
 
-        meta.create_gate(|meta| {
+        meta.create_gate("Public input", |meta| {
             let a = meta.query_advice(a, Rotation::cur());
             let p = meta.query_aux(p, Rotation::cur());
             let sp = meta.query_fixed(sp, Rotation::cur());

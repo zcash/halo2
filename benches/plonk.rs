@@ -189,7 +189,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             let sb = meta.fixed_column();
             let sc = meta.fixed_column();
 
-            meta.create_gate(|meta| {
+            meta.create_gate("Combined add-mult", |meta| {
                 let a = meta.query_advice(a, Rotation::cur());
                 let b = meta.query_advice(b, Rotation::cur());
                 let c = meta.query_advice(c, Rotation::cur());

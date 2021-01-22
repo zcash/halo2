@@ -426,7 +426,7 @@ fn test_proving() {
             meta.lookup(&[a.into()], &[sl.into()]);
             meta.lookup(&[a.into(), b.into()], &[sl.into(), sl2.into()]);
 
-            meta.create_gate(|meta| {
+            meta.create_gate("Combined add-mult", |meta| {
                 let d = meta.query_advice(d, Rotation::next());
                 let a = meta.query_advice(a, Rotation::cur());
                 let sf = meta.query_fixed(sf, Rotation::cur());
@@ -442,7 +442,7 @@ fn test_proving() {
                 a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one())) + sf * (d * e)
             });
 
-            meta.create_gate(|meta| {
+            meta.create_gate("Public input", |meta| {
                 let a = meta.query_advice(a, Rotation::cur());
                 let p = meta.query_aux(p, Rotation::cur());
                 let sp = meta.query_fixed(sp, Rotation::cur());

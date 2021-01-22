@@ -20,6 +20,9 @@ pub enum VerifyFailure {
         /// order in which `ConstraintSystem::create_gate` is called during
         /// `Circuit::configure`.
         gate_index: usize,
+        /// The name of the gate that is not satisfied. These are specified by the gate
+        /// creator (such as a chip implementation), and may not be unique.
+        gate_name: &'static str,
         /// The row on which this gate is not satisfied.
         row: usize,
     },
@@ -86,7 +89,7 @@ pub enum VerifyFailure {
 ///         let b = meta.advice_column();
 ///         let c = meta.advice_column();
 ///
-///         meta.create_gate(|meta| {
+///         meta.create_gate("R1CS constraint", |meta| {
 ///             let a = meta.query_advice(a, Rotation::cur());
 ///             let b = meta.query_advice(b, Rotation::cur());
 ///             let c = meta.query_advice(c, Rotation::cur());
@@ -127,6 +130,7 @@ pub enum VerifyFailure {
 ///     prover.verify(),
 ///     Err(VerifyFailure::Gate {
 ///         gate_index: 0,
+///         gate_name: "R1CS constraint",
 ///         row: 0
 ///     })
 /// );
@@ -268,7 +272,7 @@ impl<F: FieldExt> MockProver<F> {
         let n = self.n as i32;
 
         // Check that all gates are satisfied for all rows.
-        for (gate_index, gate) in self.cs.gates.iter().enumerate() {
+        for (gate_index, (gate_name, gate)) in self.cs.gates.iter().enumerate() {
             // We iterate from n..2n so we can just reduce to handle wrapping.
             for row in n..(2 * n) {
                 fn load<'a, F: FieldExt, T: ColumnType>(
@@ -295,6 +299,7 @@ impl<F: FieldExt> MockProver<F> {
                 {
                     return Err(VerifyFailure::Gate {
                         gate_index,
+                        gate_name,
                         row: (row - n) as usize,
                     });
                 }

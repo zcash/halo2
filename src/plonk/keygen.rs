@@ -46,7 +46,7 @@ where
 
     // Account for each gate to ensure our quotient polynomial is the
     // correct degree and that our extended domain is the right size.
-    for poly in cs.gates.iter() {
+    for (_, poly) in cs.gates.iter() {
         degree = std::cmp::max(degree, poly.degree());
     }
 

@@ -350,7 +350,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
             |(((advice, aux), permutation_expressions), lookup_expressions)| {
                 iter::empty()
                     // Custom constraints
-                    .chain(meta.gates.iter().map(move |poly| {
+                    .chain(meta.gates.iter().map(move |(_, poly)| {
                         poly.evaluate(
                             &|index| pk.fixed_cosets[index].clone(),
                             &|index| advice.advice_cosets[index].clone(),
