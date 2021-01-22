@@ -126,6 +126,27 @@ impl TryFrom<Column<Any>> for Column<Aux> {
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
 pub trait Assignment<F: Field> {
+    /// Creates a new region and enters into it.
+    ///
+    /// Panics if we are currently in a region (if `exit_region` was not called).
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::assign_region`] instead.
+    ///
+    /// [`Layouter::assign_region`]: crate::circuit::Layouter#method.assign_region
+    fn enter_region<NR, N>(&mut self, name_fn: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR;
+
+    /// Exits the current region.
+    ///
+    /// Panics if we are not currently in a region (if `enter_region` was not called).
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::assign_region`] instead.
+    ///
+    /// [`Layouter::assign_region`]: crate::circuit::Layouter#method.assign_region
+    fn exit_region(&mut self);
+
     /// Assign an advice column value (witness)
     fn assign_advice<V, A, AR>(
         &mut self,

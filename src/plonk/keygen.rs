@@ -64,6 +64,18 @@ struct Assembly<F: Field> {
 }
 
 impl<F: Field> Assignment<F> for Assembly<F> {
+    fn enter_region<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // Do nothing; we don't care about regions in this context.
+    }
+
+    fn exit_region(&mut self) {
+        // Do nothing; we don't care about regions in this context.
+    }
+
     fn assign_advice<V, A, AR>(
         &mut self,
         _: A,

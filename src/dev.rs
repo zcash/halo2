@@ -147,6 +147,15 @@ pub struct MockProver<F: Group> {
 }
 
 impl<F: Field + Group> Assignment<F> for MockProver<F> {
+    fn enter_region<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+    }
+
+    fn exit_region(&mut self) {}
+
     fn assign_advice<V, A, AR>(
         &mut self,
         _: A,

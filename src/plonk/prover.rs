@@ -100,6 +100,18 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
             }
 
             impl<F: Field> Assignment<F> for WitnessCollection<F> {
+                fn enter_region<NR, N>(&mut self, _: N)
+                where
+                    NR: Into<String>,
+                    N: FnOnce() -> NR,
+                {
+                    // Do nothing; we don't care about regions in this context.
+                }
+
+                fn exit_region(&mut self) {
+                    // Do nothing; we don't care about regions in this context.
+                }
+
                 fn assign_advice<V, A, AR>(
                     &mut self,
                     _: A,

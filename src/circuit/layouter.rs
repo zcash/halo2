@@ -104,10 +104,12 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
         &self.config
     }
 
-    fn assign_region(
-        &mut self,
-        mut assignment: impl FnMut(Region<'_, C>) -> Result<(), Error>,
-    ) -> Result<(), Error> {
+    fn assign_region<A, N, NR>(&mut self, name: N, mut assignment: A) -> Result<(), Error>
+    where
+        A: FnMut(Region<'_, C>) -> Result<(), Error>,
+        N: Fn() -> NR,
+        NR: Into<String>,
+    {
         let region_index = self.regions.len();
 
         // Get shape of the region.
@@ -130,11 +132,13 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
             self.columns.insert(column, region_start + shape.row_count);
         }
 
+        self.cs.enter_region(name);
         let mut region = SingleChipRegion::new(self, region_index);
         {
             let region: &mut dyn RegionLayouter<C> = &mut region;
             assignment(region.into())?;
         }
+        self.cs.exit_region();
 
         Ok(())
     }
