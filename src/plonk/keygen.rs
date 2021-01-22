@@ -26,22 +26,34 @@ where
     }
 
     impl<F: Field> Assignment<F> for Assembly<F> {
-        fn assign_advice(
+        fn assign_advice<V, A, AR>(
             &mut self,
+            _: A,
             _: Column<Advice>,
             _: usize,
-            _: impl FnOnce() -> Result<F, Error>,
-        ) -> Result<(), Error> {
+            _: V,
+        ) -> Result<(), Error>
+        where
+            V: FnOnce() -> Result<F, Error>,
+            A: FnOnce() -> AR,
+            AR: Into<String>,
+        {
             // We only care about fixed columns here
             Ok(())
         }
 
-        fn assign_fixed(
+        fn assign_fixed<V, A, AR>(
             &mut self,
+            _: A,
             column: Column<Fixed>,
             row: usize,
-            to: impl FnOnce() -> Result<F, Error>,
-        ) -> Result<(), Error> {
+            to: V,
+        ) -> Result<(), Error>
+        where
+            V: FnOnce() -> Result<F, Error>,
+            A: FnOnce() -> AR,
+            AR: Into<String>,
+        {
             *self
                 .fixed
                 .get_mut(column.index())

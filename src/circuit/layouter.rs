@@ -40,6 +40,7 @@ pub trait RegionLayouter<C: Chip>: fmt::Debug {
     /// Assign an advice column value (witness)
     fn assign_advice<'v>(
         &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
         to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
@@ -48,6 +49,7 @@ pub trait RegionLayouter<C: Chip>: fmt::Debug {
     /// Assign a fixed value
     fn assign_fixed<'v>(
         &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
         to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
@@ -176,6 +178,7 @@ impl RegionShape {
 impl<C: Chip> RegionLayouter<C> for RegionShape {
     fn assign_advice<'v>(
         &'v mut self,
+        _: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
         _to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
@@ -192,6 +195,7 @@ impl<C: Chip> RegionLayouter<C> for RegionShape {
 
     fn assign_fixed<'v>(
         &'v mut self,
+        _: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
         _to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
@@ -247,11 +251,13 @@ impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> RegionLayouter<C>
 {
     fn assign_advice<'v>(
         &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
         to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
     ) -> Result<Cell, Error> {
         self.layouter.cs.assign_advice(
+            annotation,
             column,
             self.layouter.regions[self.region_index] + offset,
             to,
@@ -266,11 +272,13 @@ impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> RegionLayouter<C>
 
     fn assign_fixed<'v>(
         &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
         to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
     ) -> Result<Cell, Error> {
         self.layouter.cs.assign_fixed(
+            annotation,
             column,
             self.layouter.regions[self.region_index] + offset,
             to,

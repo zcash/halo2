@@ -127,20 +127,30 @@ impl TryFrom<Column<Any>> for Column<Aux> {
 /// for a constraint system.
 pub trait Assignment<F: Field> {
     /// Assign an advice column value (witness)
-    fn assign_advice(
+    fn assign_advice<V, A, AR>(
         &mut self,
+        annotation: A,
         column: Column<Advice>,
         row: usize,
-        to: impl FnOnce() -> Result<F, Error>,
-    ) -> Result<(), Error>;
+        to: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Result<F, Error>,
+        A: FnOnce() -> AR,
+        AR: Into<String>;
 
     /// Assign a fixed value
-    fn assign_fixed(
+    fn assign_fixed<V, A, AR>(
         &mut self,
+        annotation: A,
         column: Column<Fixed>,
         row: usize,
-        to: impl FnOnce() -> Result<F, Error>,
-    ) -> Result<(), Error>;
+        to: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Result<F, Error>,
+        A: FnOnce() -> AR,
+        AR: Into<String>;
 
     /// Assign two advice columns to have the same value
     fn copy(
