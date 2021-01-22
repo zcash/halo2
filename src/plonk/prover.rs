@@ -162,6 +162,18 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
 
                     Ok(())
                 }
+
+                fn push_namespace<NR, N>(&mut self, _: N)
+                where
+                    NR: Into<String>,
+                    N: FnOnce() -> NR,
+                {
+                    // Do nothing; we don't care about namespaces in this context.
+                }
+
+                fn pop_namespace(&mut self, _: Option<String>) {
+                    // Do nothing; we don't care about namespaces in this context.
+                }
             }
 
             let mut witness = WitnessCollection {

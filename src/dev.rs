@@ -213,6 +213,18 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
 
         self.permutations[permutation].copy(left_column, left_row, right_column, right_row)
     }
+
+    fn push_namespace<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // TODO: Do something with namespaces :)
+    }
+
+    fn pop_namespace(&mut self, _: Option<String>) {
+        // TODO: Do something with namespaces :)
+    }
 }
 
 impl<F: FieldExt> MockProver<F> {

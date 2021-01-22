@@ -128,6 +128,18 @@ impl<F: Field> Assignment<F> for Assembly<F> {
 
         self.permutations[permutation].copy(left_column, left_row, right_column, right_row)
     }
+
+    fn push_namespace<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // Do nothing; we don't care about namespaces in this context.
+    }
+
+    fn pop_namespace(&mut self, _: Option<String>) {
+        // Do nothing; we don't care about namespaces in this context.
+    }
 }
 
 /// Generate a `VerifyingKey` from an instance of `Circuit`.

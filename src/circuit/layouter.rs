@@ -100,6 +100,8 @@ impl<'a, C: Chip, CS: Assignment<C::Field>> SingleChip<'a, C, CS> {
 }
 
 impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, C, CS> {
+    type Root = Self;
+
     fn config(&self) -> &C::Config {
         &self.config
     }
@@ -141,6 +143,22 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
         self.cs.exit_region();
 
         Ok(())
+    }
+
+    fn get_root(&mut self) -> &mut Self::Root {
+        self
+    }
+
+    fn push_namespace<NR, N>(&mut self, name_fn: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        self.cs.push_namespace(name_fn)
+    }
+
+    fn pop_namespace(&mut self, gadget_name: Option<String>) {
+        self.cs.pop_namespace(gadget_name)
     }
 }
 
