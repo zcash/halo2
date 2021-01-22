@@ -111,7 +111,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         // Compute the expected value of h(x)
         let expressions = std::iter::empty()
             // Evaluate the circuit using the custom gates provided
-            .chain(vk.cs.gates.iter().map(|poly| {
+            .chain(vk.cs.gates.iter().map(|(_, poly)| {
                 poly.evaluate(
                     &|index| fixed_evals[index],
                     &|index| advice_evals[index],

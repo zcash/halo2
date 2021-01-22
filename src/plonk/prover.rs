@@ -269,7 +269,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
     let expressions = iter::empty()
         // Custom constraints
-        .chain(meta.gates.iter().map(|poly| {
+        .chain(meta.gates.iter().map(|(_, poly)| {
             poly.evaluate(
                 &|index| pk.fixed_cosets[index].clone(),
                 &|index| advice_cosets[index].clone(),
