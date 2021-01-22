@@ -39,11 +39,11 @@ appended to the tree as a regular leaf.
 - For Sprout (and trees composed of the outputs of bit-twiddling hash functions), we use
   the all-zeroes array; the probability of a real note having a colliding note commitment
   is cryptographically negligible.
-- For Sapling (where leaves are u-coordinates of Jubjub points), we use the value $1$
-  (which is not the u-coordinate of any Jubjub point).
+- For Sapling, where leaves are $u$-coordinates of Jubjub points, we use the value $1$
+  which is not the $u$-coordinate of any Jubjub point.
 
-Orchard note commitments are the x-coordinates of Pallas points; thus we take the same
-approach as Sapling, using a value that is not the x-coordinate of any Pallas point as the
+Orchard note commitments are the $x$-coordinates of Pallas points; thus we take the same
+approach as Sapling, using a value that is not the $x$-coordinate of any Pallas point as the
 uncommitted leaf value. It happens that $0$ is the smallest such value for both Pallas and
 Vesta, because $0^3 + 5$ is not a square in either $F_p$ or $F_q$:
 
