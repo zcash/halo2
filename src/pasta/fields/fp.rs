@@ -2,10 +2,11 @@ use bitvec::{array::BitArray, order::Lsb0};
 use core::convert::TryInto;
 use core::fmt;
 use core::ops::{Add, Mul, Neg, Sub};
+use lazy_static::lazy_static;
 use rand::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
-use crate::arithmetic::{adc, mac, sbb, FieldExt, Group};
+use crate::arithmetic::{adc, mac, sbb, FieldExt, Group, SqrtTables};
 
 /// This represents an element of $\mathbb{F}_p$ where
 ///
@@ -491,45 +492,8 @@ impl ff::Field for Fp {
 
     /// Computes the square root of this element, if it exists.
     fn sqrt(&self) -> CtOption<Self> {
-        // Tonelli-Shank's algorithm for p mod 16 = 1
-        // https://eprint.iacr.org/2012/685.pdf (page 12, algorithm 5)
-
-        // w = self^((t - 1) // 2)
-        let w = self.pow_vartime(&[0x04a67c8dcc969876, 0x11234c7e, 0x0, 0x20000000]);
-
-        let mut v = S;
-        let mut x = self * w;
-        let mut b = x * w;
-
-        // Initialize z as the 2^S root of unity.
-        let mut z = ROOT_OF_UNITY;
-
-        for max_v in (1..=S).rev() {
-            let mut k = 1;
-            let mut tmp = b.square();
-            let mut j_less_than_v: Choice = 1.into();
-
-            for j in 2..max_v {
-                let tmp_is_one = tmp.ct_eq(&Fp::one());
-                let squared = Fp::conditional_select(&tmp, &z, tmp_is_one).square();
-                tmp = Fp::conditional_select(&squared, &tmp, tmp_is_one);
-                let new_z = Fp::conditional_select(&z, &squared, tmp_is_one);
-                j_less_than_v &= !j.ct_eq(&v);
-                k = u32::conditional_select(&j, &k, tmp_is_one);
-                z = Fp::conditional_select(&z, &new_z, j_less_than_v);
-            }
-
-            let result = x * z;
-            x = Fp::conditional_select(&result, &x, b.ct_eq(&Fp::one()));
-            z = z.square();
-            b *= z;
-            v = k;
-        }
-
-        CtOption::new(
-            x,
-            (x * x).ct_eq(self), // Only return Some if it's the square root.
-        )
+        let (is_square, res) = self.sqrt_alt();
+        CtOption::new(res, is_square)
     }
 
     /// Computes the multiplicative inverse of this element,
@@ -635,6 +599,11 @@ impl ff::PrimeField for Fp {
     }
 }
 
+lazy_static! {
+    // The perfect hash parameters are found by `squareroottab.sage` in zcash/pasta.
+    static ref FP_TABLES: SqrtTables<Fp> = SqrtTables::new(0x11BE, 1098);
+}
+
 impl FieldExt for Fp {
     const ROOT_OF_UNITY: Self = ROOT_OF_UNITY;
     const ROOT_OF_UNITY_INV: Self = Fp::from_raw([
@@ -643,6 +612,12 @@ impl FieldExt for Fp {
         0xb4ed8e647196dad1,
         0x2cd5282c53116b5c,
     ]);
+    const T_MINUS1_OVER2: [u64; 4] = [
+        0x04a67c8dcc969876,
+        0x0000000011234c7e,
+        0x0000000000000000,
+        0x20000000,
+    ];
     const DELTA: Self = DELTA;
     const TWO_INV: Self = Fp::from_raw([
         0xcc96987680000001,
@@ -663,6 +638,14 @@ impl FieldExt for Fp {
         0x2caad5dc57aab1b0,
         0x12ccca834acdba71,
     ]);
+
+    fn sqrt_ratio(num: &Self, div: &Self) -> (Choice, Self) {
+        FP_TABLES.sqrt_ratio(num, div)
+    }
+
+    fn sqrt_alt(&self) -> (Choice, Self) {
+        FP_TABLES.sqrt_alt(self)
+    }
 
     fn ct_is_zero(&self) -> Choice {
         self.ct_eq(&Self::zero())
@@ -740,6 +723,45 @@ impl FieldExt for Fp {
 
         u128::from(tmp.0[0]) | (u128::from(tmp.0[1]) << 64)
     }
+
+    fn get_lower_32(&self) -> u32 {
+        // TODO: don't reduce, just hash the Montgomery form. (Requires rebuilding perfect hash table.)
+        let tmp = Fp::montgomery_reduce(self.0[0], self.0[1], self.0[2], self.0[3], 0, 0, 0, 0);
+
+        tmp.0[0] as u32
+    }
+
+    fn pow_by_t_minus1_over2(&self) -> Self {
+        let sqr = |x: Fp, i: u32| (0..i).fold(x, |x, _| x.square());
+
+        let r10 = self.square();
+        let r11 = r10 * self;
+        let r110 = r11.square();
+        let r111 = r110 * self;
+        let r1001 = r111 * r10;
+        let r1101 = r111 * r110;
+        let ra = sqr(*self, 129) * self;
+        let rb = sqr(ra, 7) * r1001;
+        let rc = sqr(rb, 7) * r1101;
+        let rd = sqr(rc, 4) * r11;
+        let re = sqr(rd, 6) * r111;
+        let rf = sqr(re, 3) * r111;
+        let rg = sqr(rf, 10) * r1001;
+        let rh = sqr(rg, 5) * r1001;
+        let ri = sqr(rh, 4) * r1001;
+        let rj = sqr(ri, 3) * r111;
+        let rk = sqr(rj, 4) * r1001;
+        let rl = sqr(rk, 5) * r11;
+        let rm = sqr(rl, 4) * r111;
+        let rn = sqr(rm, 4) * r11;
+        let ro = sqr(rn, 6) * r1001;
+        let rp = sqr(ro, 5) * r1101;
+        let rq = sqr(rp, 4) * r11;
+        let rr = sqr(rq, 7) * r111;
+        let rs = sqr(rr, 3) * r11;
+        let rt = rs.square();
+        rt
+    }
 }
 
 #[cfg(test)]
@@ -776,6 +798,59 @@ fn test_sqrt() {
     // NB: TWO_INV is standing in as a "random" field element
     let v = (Fp::TWO_INV).square().sqrt().unwrap();
     assert!(v == Fp::TWO_INV || (-v) == Fp::TWO_INV);
+}
+
+#[test]
+fn test_pow_by_t_minus1_over2() {
+    // NB: TWO_INV is standing in as a "random" field element
+    let v = (Fp::TWO_INV).pow_by_t_minus1_over2();
+    assert!(v == ff::Field::pow_vartime(&Fp::TWO_INV, &Fp::T_MINUS1_OVER2));
+}
+
+#[test]
+fn test_sqrt_ratio_and_alt() {
+    // (true, sqrt(num/div)), if num and div are nonzero and num/div is a square in the field
+    let num = (Fp::TWO_INV).square();
+    let div = Fp::from_u64(25);
+    let div_inverse = div.invert().unwrap();
+    let expected = Fp::TWO_INV * Fp::from_u64(5).invert().unwrap();
+    let (is_square, v) = Fp::sqrt_ratio(&num, &div);
+    assert!(bool::from(is_square));
+    assert!(v == expected || (-v) == expected);
+
+    let (is_square_alt, v_alt) = Fp::sqrt_alt(&(num * div_inverse));
+    assert!(bool::from(is_square_alt));
+    assert!(v_alt == v);
+
+    // (false, sqrt(ROOT_OF_UNITY * num/div)), if num and div are nonzero and num/div is a nonsquare in the field
+    let num = num * Fp::ROOT_OF_UNITY;
+    let expected = Fp::TWO_INV * Fp::ROOT_OF_UNITY * Fp::from_u64(5).invert().unwrap();
+    let (is_square, v) = Fp::sqrt_ratio(&num, &div);
+    assert!(!bool::from(is_square));
+    assert!(v == expected || (-v) == expected);
+
+    let (is_square_alt, v_alt) = Fp::sqrt_alt(&(num * div_inverse));
+    assert!(!bool::from(is_square_alt));
+    assert!(v_alt == v);
+
+    // (true, 0), if num is zero
+    let num = Fp::zero();
+    let expected = Fp::zero();
+    let (is_square, v) = Fp::sqrt_ratio(&num, &div);
+    assert!(bool::from(is_square));
+    assert!(v == expected);
+
+    let (is_square_alt, v_alt) = Fp::sqrt_alt(&(num * div_inverse));
+    assert!(bool::from(is_square_alt));
+    assert!(v_alt == v);
+
+    // (false, 0), if num is nonzero and div is zero
+    let num = (Fp::TWO_INV).square();
+    let div = Fp::zero();
+    let expected = Fp::zero();
+    let (is_square, v) = Fp::sqrt_ratio(&num, &div);
+    assert!(!bool::from(is_square));
+    assert!(v == expected);
 }
 
 #[test]
