@@ -3,6 +3,8 @@ use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
 use crate::plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed};
 
+pub mod layout;
+
 /// Builds a dot graph string representing the given circuit.
 ///
 /// The graph is built from calls to [`Layouter::namespace`] both within the circuit, and
