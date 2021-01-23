@@ -88,7 +88,9 @@ impl<C: CurveAffine> Evaluated<C> {
                 for (advice_eval, permutation_eval) in p
                     .columns
                     .iter()
-                    .map(|&column| advice_evals[vk.cs.get_advice_query_index(column, 0)])
+                    .map(|&column| {
+                        advice_evals[vk.cs.get_advice_query_index(column, Rotation::cur())]
+                    })
                     .zip(self.permutation_evals.iter())
                 {
                     left *= &(advice_eval + &(*beta * permutation_eval) + &*gamma);
@@ -96,11 +98,9 @@ impl<C: CurveAffine> Evaluated<C> {
 
                 let mut right = self.permutation_product_inv_eval;
                 let mut current_delta = *beta * &*x;
-                for advice_eval in p
-                    .columns
-                    .iter()
-                    .map(|&column| advice_evals[vk.cs.get_advice_query_index(column, 0)])
-                {
+                for advice_eval in p.columns.iter().map(|&column| {
+                    advice_evals[vk.cs.get_advice_query_index(column, Rotation::cur())]
+                }) {
                     right *= &(advice_eval + &current_delta + &*gamma);
                     current_delta *= &C::Scalar::DELTA;
                 }

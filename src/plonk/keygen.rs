@@ -147,7 +147,7 @@ where
     let mut l0 = domain.empty_lagrange();
     l0[0] = C::Scalar::one();
     let l0 = domain.lagrange_to_coeff(l0);
-    let l0 = domain.coeff_to_extended(l0, Rotation::default());
+    let l0 = domain.coeff_to_extended(l0, Rotation::cur());
 
     Ok(ProvingKey {
         vk: VerifyingKey {

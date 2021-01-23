@@ -94,7 +94,7 @@ impl Argument {
                     };
                     (
                         &values[column.index()],
-                        &cosets[pk.vk.cs.get_any_query_index(column, 0)],
+                        &cosets[pk.vk.cs.get_any_query_index(column, Rotation::cur())],
                     )
                 })
                 .unzip();
@@ -148,7 +148,7 @@ impl Argument {
         let permuted_input_coset = pk
             .vk
             .domain
-            .coeff_to_extended(permuted_input_poly.clone(), Rotation::default());
+            .coeff_to_extended(permuted_input_poly.clone(), Rotation::cur());
         let permuted_input_inv_coset = pk
             .vk
             .domain
@@ -156,7 +156,7 @@ impl Argument {
         let permuted_table_coset = pk
             .vk
             .domain
-            .coeff_to_extended(permuted_table_poly.clone(), Rotation::default());
+            .coeff_to_extended(permuted_table_poly.clone(), Rotation::cur());
 
         Ok(Permuted {
             unpermuted_input_columns,
@@ -310,11 +310,8 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
         let product_blind = Blind(C::Scalar::rand());
         let product_commitment = params.commit_lagrange(&z, product_blind).to_affine();
         let z = pk.vk.domain.lagrange_to_coeff(z);
-        let product_coset = pk
-            .vk
-            .domain
-            .coeff_to_extended(z.clone(), Rotation::default());
-        let product_inv_coset = pk.vk.domain.coeff_to_extended(z.clone(), Rotation(-1));
+        let product_coset = pk.vk.domain.coeff_to_extended(z.clone(), Rotation::cur());
+        let product_inv_coset = pk.vk.domain.coeff_to_extended(z.clone(), Rotation::prev());
 
         // Hash product commitment
         transcript

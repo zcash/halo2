@@ -3,7 +3,10 @@ use halo2::{
     model::ModelRecorder,
     pasta::{EqAffine, Fp, Fq},
     plonk::*,
-    poly::commitment::{Blind, Params},
+    poly::{
+        commitment::{Blind, Params},
+        Rotation,
+    },
     transcript::{DummyHashRead, DummyHashWrite},
 };
 
@@ -177,22 +180,22 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         let sp = meta.fixed_column();
 
         meta.create_gate(|meta| {
-            let a = meta.query_advice(a, 0);
-            let b = meta.query_advice(b, 0);
-            let c = meta.query_advice(c, 0);
+            let a = meta.query_advice(a, Rotation::cur());
+            let b = meta.query_advice(b, Rotation::cur());
+            let c = meta.query_advice(c, Rotation::cur());
 
-            let sa = meta.query_fixed(sa, 0);
-            let sb = meta.query_fixed(sb, 0);
-            let sc = meta.query_fixed(sc, 0);
-            let sm = meta.query_fixed(sm, 0);
+            let sa = meta.query_fixed(sa, Rotation::cur());
+            let sb = meta.query_fixed(sb, Rotation::cur());
+            let sc = meta.query_fixed(sc, Rotation::cur());
+            let sm = meta.query_fixed(sm, Rotation::cur());
 
             a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))
         });
 
         meta.create_gate(|meta| {
-            let a = meta.query_advice(a, 0);
-            let p = meta.query_aux(p, 0);
-            let sp = meta.query_fixed(sp, 0);
+            let a = meta.query_advice(a, Rotation::cur());
+            let p = meta.query_aux(p, Rotation::cur());
+            let sp = meta.query_fixed(sp, Rotation::cur());
 
             sp * (a + p * (-F::one()))
         });

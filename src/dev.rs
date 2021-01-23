@@ -58,6 +58,7 @@ pub enum VerifyFailure {
 ///     dev::{MockProver, VerifyFailure},
 ///     pasta::Fp,
 ///     plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error},
+///     poly::Rotation,
 /// };
 /// const K: u32 = 5;
 ///
@@ -81,9 +82,9 @@ pub enum VerifyFailure {
 ///         let c = meta.advice_column();
 ///
 ///         meta.create_gate(|meta| {
-///             let a = meta.query_advice(a, 0);
-///             let b = meta.query_advice(b, 0);
-///             let c = meta.query_advice(c, 0);
+///             let a = meta.query_advice(a, Rotation::cur());
+///             let b = meta.query_advice(b, Rotation::cur());
+///             let c = meta.query_advice(c, Rotation::cur());
 ///
 ///             // BUG: Should be a * b - c
 ///             a * b + c
