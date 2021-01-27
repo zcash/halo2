@@ -3,10 +3,10 @@ extern crate criterion;
 
 extern crate halo2;
 use halo2::arithmetic::FieldExt;
-use halo2::pasta::{EqAffine, Fp, Fq};
+use halo2::pasta::{EqAffine, Fp};
 use halo2::plonk::*;
 use halo2::poly::{commitment::Params, Rotation};
-use halo2::transcript::{DummyHashRead, DummyHashWrite};
+use halo2::transcript::{Blake2bRead, Blake2bWrite};
 
 use std::marker::PhantomData;
 
@@ -242,7 +242,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             };
 
             // Create a proof
-            let mut transcript = DummyHashWrite::init(vec![], Fq::one());
+            let mut transcript = Blake2bWrite::init(vec![]);
             create_proof(&params, &pk, &[circuit], &[], &mut transcript)
                 .expect("proof generation should not fail")
         });
@@ -254,7 +254,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     };
 
     // Create a proof
-    let mut transcript = DummyHashWrite::init(vec![], Fq::one());
+    let mut transcript = Blake2bWrite::init(vec![]);
     create_proof(&params, &pk, &[circuit], &[], &mut transcript)
         .expect("proof generation should not fail");
     let proof = transcript.finalize();
@@ -262,7 +262,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     c.bench_function(&verifier_name, |b| {
         b.iter(|| {
             let msm = params.empty_msm();
-            let mut transcript = DummyHashRead::init(&proof[..], Fq::one());
+            let mut transcript = Blake2bRead::init(&proof[..]);
             let guard = verify_proof(&params, pk.get_vk(), msm, &[], &mut transcript).unwrap();
             let msm = guard.clone().use_challenges();
             assert!(msm.eval());

@@ -1,7 +1,9 @@
 //! This module contains utilities and traits for dealing with Fiat-Shamir
 //! transcripts.
 
+use blake2b_simd::{Params as Blake2bParams, State as Blake2bState};
 use ff::Field;
+use std::convert::TryInto;
 use std::ops::Deref;
 
 use crate::arithmetic::{CurveAffine, FieldExt};
@@ -39,30 +41,29 @@ pub trait TranscriptWrite<C: CurveAffine>: Transcript<C> {
     fn write_scalar(&mut self, scalar: C::Scalar) -> io::Result<()>;
 }
 
-/// This is just a simple (and completely broken) transcript reader
-/// implementation, standing in for some algebraic hash function that we'll
-/// switch to later.
+/// We will replace BLAKE2b with an algebraic hash function in a later version.
 #[derive(Debug, Clone)]
-pub struct DummyHashRead<R: Read, C: CurveAffine> {
-    base_state: C::Base,
-    scalar_state: C::Scalar,
-    read_scalar: bool,
+pub struct Blake2bRead<R: Read, C: CurveAffine> {
+    state: Blake2bState,
     reader: R,
+    _marker: PhantomData<C>,
 }
 
-impl<R: Read, C: CurveAffine> DummyHashRead<R, C> {
+impl<R: Read, C: CurveAffine> Blake2bRead<R, C> {
     /// Initialize a transcript given an input buffer and a key.
-    pub fn init(reader: R, key: C::Base) -> Self {
-        DummyHashRead {
-            base_state: key + &C::Base::from_u64(1013),
-            scalar_state: C::Scalar::from_u64(1013),
-            read_scalar: false,
+    pub fn init(reader: R) -> Self {
+        Blake2bRead {
+            state: Blake2bParams::new()
+                .hash_length(64)
+                .personal(C::BLAKE2B_PERSONALIZATION)
+                .to_state(),
             reader,
+            _marker: PhantomData,
         }
     }
 }
 
-impl<R: Read, C: CurveAffine> TranscriptRead<C> for DummyHashRead<R, C> {
+impl<R: Read, C: CurveAffine> TranscriptRead<C> for Blake2bRead<R, C> {
     fn read_point(&mut self) -> io::Result<C> {
         let mut compressed = [0u8; 32];
         self.reader.read_exact(&mut compressed[..])?;
@@ -77,21 +78,19 @@ impl<R: Read, C: CurveAffine> TranscriptRead<C> for DummyHashRead<R, C> {
     fn read_scalar(&mut self) -> io::Result<C::Scalar> {
         let mut data = [0u8; 32];
         self.reader.read_exact(&mut data)?;
-        let scalar = Option::from(C::Scalar::from_bytes(&data)).ok_or_else(|| {
+        let scalar: C::Scalar = Option::from(C::Scalar::from_bytes(&data)).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::Other,
                 "invalid field element encoding in proof",
             )
         })?;
-        self.scalar_state += &(scalar * &C::Scalar::ZETA);
-        self.scalar_state = self.scalar_state.square();
-        self.read_scalar = true;
+        self.state.update(&scalar.to_bytes());
 
         Ok(scalar)
     }
 }
 
-impl<R: Read, C: CurveAffine> Transcript<C> for DummyHashRead<R, C> {
+impl<R: Read, C: CurveAffine> Transcript<C> for Blake2bRead<R, C> {
     fn common_point(&mut self, point: C) -> io::Result<()> {
         let (x, y) = Option::from(point.get_xy()).ok_or_else(|| {
             io::Error::new(
@@ -99,53 +98,38 @@ impl<R: Read, C: CurveAffine> Transcript<C> for DummyHashRead<R, C> {
                 "cannot write points at infinity to the transcript",
             )
         })?;
-        self.base_state += &(x * &C::Base::ZETA);
-        self.base_state = self.base_state.square();
-        self.base_state += &(y * &C::Base::ZETA);
-        self.base_state = self.base_state.square();
+        self.state.update(&x.to_bytes());
+        self.state.update(&y.to_bytes());
 
         Ok(())
     }
 
     fn squeeze_challenge(&mut self) -> C::Base {
-        if self.read_scalar {
-            let x = C::Base::from_bytes(&self.scalar_state.to_bytes()).unwrap();
-            self.base_state += &(x * &C::Base::ZETA);
-            self.base_state = self.base_state.square();
-            self.scalar_state = self.scalar_state.square();
-            self.read_scalar = false;
-        }
-
-        let tmp = self.base_state;
-        for _ in 0..5 {
-            self.base_state *= &(C::Base::ZETA + &C::Base::ZETA);
-            self.base_state += &C::Base::ZETA;
-            self.base_state = self.base_state.square();
-        }
-
-        tmp
+        let hasher = self.state.clone();
+        let result: [u8; 64] = hasher.finalize().as_bytes().try_into().unwrap();
+        self.state.update(&result[..]);
+        C::Base::from_bytes_wide(&result)
     }
 }
 
-/// This is just a simple (and completely broken) transcript writer
-/// implementation, standing in for some algebraic hash function that we'll
-/// switch to later.
+/// We will replace BLAKE2b with an algebraic hash function in a later version.
 #[derive(Debug, Clone)]
-pub struct DummyHashWrite<W: Write, C: CurveAffine> {
-    base_state: C::Base,
-    scalar_state: C::Scalar,
-    written_scalar: bool,
+pub struct Blake2bWrite<W: Write, C: CurveAffine> {
+    state: Blake2bState,
     writer: W,
+    _marker: PhantomData<C>,
 }
 
-impl<W: Write, C: CurveAffine> DummyHashWrite<W, C> {
+impl<W: Write, C: CurveAffine> Blake2bWrite<W, C> {
     /// Initialize a transcript given an output buffer and a key.
-    pub fn init(writer: W, key: C::Base) -> Self {
-        DummyHashWrite {
-            base_state: key + &C::Base::from_u64(1013),
-            scalar_state: C::Scalar::from_u64(1013),
-            written_scalar: false,
+    pub fn init(writer: W) -> Self {
+        Blake2bWrite {
+            state: Blake2bParams::new()
+                .hash_length(64)
+                .personal(C::BLAKE2B_PERSONALIZATION)
+                .to_state(),
             writer,
+            _marker: PhantomData,
         }
     }
 
@@ -156,22 +140,20 @@ impl<W: Write, C: CurveAffine> DummyHashWrite<W, C> {
     }
 }
 
-impl<W: Write, C: CurveAffine> TranscriptWrite<C> for DummyHashWrite<W, C> {
+impl<W: Write, C: CurveAffine> TranscriptWrite<C> for Blake2bWrite<W, C> {
     fn write_point(&mut self, point: C) -> io::Result<()> {
         self.common_point(point)?;
         let compressed = point.to_bytes();
         self.writer.write_all(&compressed[..])
     }
     fn write_scalar(&mut self, scalar: C::Scalar) -> io::Result<()> {
-        self.scalar_state += &(scalar * &C::Scalar::ZETA);
-        self.scalar_state = self.scalar_state.square();
-        self.written_scalar = true;
+        self.state.update(&scalar.to_bytes());
         let data = scalar.to_bytes();
         self.writer.write_all(&data[..])
     }
 }
 
-impl<W: Write, C: CurveAffine> Transcript<C> for DummyHashWrite<W, C> {
+impl<W: Write, C: CurveAffine> Transcript<C> for Blake2bWrite<W, C> {
     fn common_point(&mut self, point: C) -> io::Result<()> {
         let (x, y) = Option::from(point.get_xy()).ok_or_else(|| {
             io::Error::new(
@@ -179,31 +161,17 @@ impl<W: Write, C: CurveAffine> Transcript<C> for DummyHashWrite<W, C> {
                 "cannot write points at infinity to the transcript",
             )
         })?;
-        self.base_state += &(x * &C::Base::ZETA);
-        self.base_state = self.base_state.square();
-        self.base_state += &(y * &C::Base::ZETA);
-        self.base_state = self.base_state.square();
+        self.state.update(&x.to_bytes());
+        self.state.update(&y.to_bytes());
 
         Ok(())
     }
 
     fn squeeze_challenge(&mut self) -> C::Base {
-        if self.written_scalar {
-            let x = C::Base::from_bytes(&self.scalar_state.to_bytes()).unwrap();
-            self.base_state += &(x * &C::Base::ZETA);
-            self.base_state = self.base_state.square();
-            self.scalar_state = self.scalar_state.square();
-            self.written_scalar = false;
-        }
-
-        let tmp = self.base_state;
-        for _ in 0..5 {
-            self.base_state *= &(C::Base::ZETA + &C::Base::ZETA);
-            self.base_state += &C::Base::ZETA;
-            self.base_state = self.base_state.square();
-        }
-
-        tmp
+        let hasher = self.state.clone();
+        let result: [u8; 64] = hasher.finalize().as_bytes().try_into().unwrap();
+        self.state.update(&result[..]);
+        C::Base::from_bytes_wide(&result)
     }
 }
 

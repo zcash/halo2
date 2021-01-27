@@ -147,12 +147,12 @@ type ChallengeX<F> = ChallengeScalar<F, X>;
 fn test_proving() {
     use crate::arithmetic::{Curve, FieldExt};
     use crate::dev::MockProver;
-    use crate::pasta::{EqAffine, Fp, Fq};
+    use crate::pasta::{EqAffine, Fp};
     use crate::poly::{
         commitment::{Blind, Params},
         Rotation,
     };
-    use crate::transcript::{DummyHashRead, DummyHashWrite};
+    use crate::transcript::{Blake2bRead, Blake2bWrite};
     use circuit::{Advice, Column, Fixed};
     use std::marker::PhantomData;
     const K: u32 = 5;
@@ -504,7 +504,7 @@ fn test_proving() {
     assert_eq!(prover.verify(), Ok(()));
 
     for _ in 0..100 {
-        let mut transcript = DummyHashWrite::init(vec![], Fq::one());
+        let mut transcript = Blake2bWrite::init(vec![]);
         // Create a proof
         create_proof(
             &params,
@@ -519,7 +519,7 @@ fn test_proving() {
         let pubinput_slice = &[pubinput];
         let pubinput_slice_copy = &[pubinput];
         let msm = params.empty_msm();
-        let mut transcript = DummyHashRead::init(&proof[..], Fq::one());
+        let mut transcript = Blake2bRead::init(&proof[..]);
         let guard = verify_proof(
             &params,
             pk.get_vk(),
@@ -539,7 +539,7 @@ fn test_proving() {
         }
         let msm = guard.clone().use_challenges();
         assert!(msm.clone().eval());
-        let mut transcript = DummyHashRead::init(&proof[..], Fq::one());
+        let mut transcript = Blake2bRead::init(&proof[..]);
         let mut vk_buffer = vec![];
         pk.get_vk().write(&mut vk_buffer).unwrap();
         let vk = VerifyingKey::<EqAffine>::read::<_, MyCircuit<Fp>>(&mut &vk_buffer[..], &params)
