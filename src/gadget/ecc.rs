@@ -3,13 +3,13 @@
 use std::fmt;
 
 use crate::{
-    arithmetic::Curve,
+    arithmetic::CurveAffine,
     circuit::{Chip, Layouter},
     plonk::Error,
 };
 
 /// The set of circuit instructions required to use the ECC gadgets.
-pub trait EccInstructions<C: Curve>: Chip<Field = C::Base> {
+pub trait EccInstructions<C: CurveAffine>: Chip<Field = C::Base> {
     /// Variable representing an elliptic curve point.
     type Point: Clone + fmt::Debug;
     /// Variable representing an element of the elliptic curve's scalar field.
@@ -35,17 +35,17 @@ pub trait EccInstructions<C: Curve>: Chip<Field = C::Base> {
 
 /// An element of the given elliptic curve's scalar field.
 #[derive(Debug)]
-pub struct Scalar<C: Curve, EccChip: EccInstructions<C>> {
+pub struct Scalar<C: CurveAffine, EccChip: EccInstructions<C>> {
     inner: EccChip::Scalar,
 }
 
 /// An elliptic curve point over the given curve.
 #[derive(Debug)]
-pub struct Point<C: Curve, EccChip: EccInstructions<C>> {
+pub struct Point<C: CurveAffine, EccChip: EccInstructions<C>> {
     inner: EccChip::Point,
 }
 
-impl<C: Curve, EccChip: EccInstructions<C>> Point<C, EccChip> {
+impl<C: CurveAffine, EccChip: EccInstructions<C>> Point<C, EccChip> {
     /// Returns `self + other`.
     pub fn add(&self, mut layouter: impl Layouter<EccChip>, other: &Self) -> Result<Self, Error> {
         EccChip::add(&mut layouter, &self.inner, &other.inner).map(|inner| Point { inner })
