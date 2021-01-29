@@ -154,9 +154,9 @@ pub trait Layouter<C: Chip> {
     ///     region.assign_advice(self.config.a, offset, || { Some(value)});
     /// });
     /// ```
-    fn assign_region<A, N, NR>(&mut self, name: N, assignment: A) -> Result<(), Error>
+    fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>
     where
-        A: FnMut(Region<'_, C>) -> Result<(), Error>,
+        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
         N: Fn() -> NR,
         NR: Into<String>;
 
@@ -202,9 +202,9 @@ impl<'a, C: Chip, L: Layouter<C> + 'a> Layouter<C> for NamespacedLayouter<'a, C,
         self.0.config()
     }
 
-    fn assign_region<A, N, NR>(&mut self, name: N, assignment: A) -> Result<(), Error>
+    fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>
     where
-        A: FnMut(Region<'_, C>) -> Result<(), Error>,
+        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
         N: Fn() -> NR,
         NR: Into<String>,
     {
