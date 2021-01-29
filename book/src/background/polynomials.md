@@ -208,9 +208,12 @@ $\frac{A(X) + B(X) - C(X)}{Z_H(X)} = H(X),$ we are satisfied that $A(X) + B(X) -
 over $\mathcal{H}.$
 
 ## Lagrange basis functions
+
+> TODO: explain what a basis is in general (briefly).
+
 Polynomials are commonly written in the monomial basis (e.g. $X, X^2, ... X^n$). However,
-when working over a multiplicative subgroup, we find a more natural expression in the
-Lagrange basis. 
+when working over a multiplicative subgroup of order $n$, we find a more natural expression
+in the Lagrange basis.
 
 Consider the order-$n$ multiplicative subgroup $\mathcal{H}$ with primitive root of unity
 $\omega$. The Lagrange basis corresponding to this subgroup is a set of functions
@@ -231,7 +234,7 @@ Now, we can write our polynomial as a linear combination of Lagrange basis funct
 $$A(X) = \sum_{i = 0}^{n-1} a_i\mathcal{L_i}(X), X \in \mathcal{H},$$
 
 which is equivalent to saying that $p(X)$ evaluates to $a_0$ at $\omega^0$,
-$p(\omega^1) = a_1, p(\omega^2) = a_2, \cdots,$ and so on.
+to $a_1$ at $\omega^1$, to $a_2$ at $\omega^2, \cdots,$ and so on.
 
 When working over a multiplicative subgroup, the Lagrange basis function has a convenient
 sparse representation of the form
@@ -244,9 +247,9 @@ where $c_i$ is the barycentric weight. (To understand how this form was derived,
 [^barycentric].) For $i = 0,$ we have
 $c = 1/n \implies \mathcal{L}_0(X) = \frac{1}{n} \frac{(X^{n} - 1)}{X - 1}$.
 
+Suppose we are given a set of evaluation points $\{x_0, x_1, \cdots, x_{n-1}\}$.
 Since we cannot assume that the $x_i$'s form a multiplicative subgroup, we consider also
-the Lagrange polynomials $\mathcal{L}_i$'s in the general case. Given a set of evaluation
-points $\{x_0, x_1, \cdots, x_{n-1}\},$ we can construct
+the Lagrange polynomials $\mathcal{L}_i$'s in the general case. Then we can construct:
 
 $$
 \mathcal{L}_i(X) = \prod_{j\neq i}\frac{X - x_j}{x_i - x_j}, i \in [0..n-1].
@@ -255,7 +258,8 @@ $$
 Here, every $X = x_j \neq x_i$ will produce a zero numerator term $(x_j - x_j),$ causing
 the whole product to evaluate to zero. On the other hand, $X= x_i$ will evaluate to
 $\frac{x_i - x_j}{x_i - x_j}$ at every term, resulting in an overall product of one. This
-gives the desired Kronecker delta behaviour $\mathcal{L_i}(x_j) = \delta_{ij}.$ 
+gives the desired Kronecker delta behaviour $\mathcal{L_i}(x_j) = \delta_{ij}$ on the
+set $\{x_0, x_1, \cdots, x_{n-1}\}$.
 
 ### Lagrange interpolation
 Given a polynomial in its evaluation representation

@@ -11,6 +11,7 @@ elements.
 
 Halo makes use of _finite fields_ which have a finite number of elements. Finite fields
 are fully classified as follows:
+
 - if $\mathbb{F}$ is a finite field, it contains $|\mathbb{F}| = p^k$ elements  for some
   integer $k \geq 1$ and some prime $p$;
 - any two finite fields with the same number of elements are isomorphic. In particular,
@@ -22,11 +23,12 @@ We'll write a field as $\mathbb{F}_q$ where $q = p^k$. The prime $p$ is called i
 _characteristic_. In the cases where $k \gt 1$ the field $\mathbb{F}_q$ is a $k$-degree
 extension of the field $\mathbb{F}_p$. (By analogy, the complex numbers
 $\mathbb{C} = \mathbb{R}(i)$ are an extension of the real numbers.) However, in Halo we do
-not care about extension fields. Whenever we write $\mathbb{F}_p$ we are referring to what
+not use extension fields. Whenever we write $\mathbb{F}_p$ we are referring to what
 we call a _prime field_ which has a prime $p$ number of elements, i.e. $k = 1$.
 
 Important notes:
-* There are two special elements in any field: $\mathcal{O}$, the additive identity, and
+
+* There are two special elements in any field: $0$, the additive identity, and
   $1$, the multiplicative identity.
 * The least significant bit of a field element, when represented as an integer in binary
   format, can be interpreted as its "sign" to help distinguish it from its additive
@@ -49,7 +51,7 @@ integer $a$. If $a$ is nonzero, we can divide by $a$ twice to get $a^{p-2} = a^{
 However, it may be more intuitive to understand the set of nonzero elements of
 $\mathbb{F}_p$ as a [group], where the group operation is given by multiplication on the
 field. We use the notation $\mathbb{F}_p^\times$ for the multiplicative group over the set
-$\mathbb{F}_p - \{\mathcal{O}\}$. Groups are simpler and more limited than fields; they
+$\mathbb{F}_p - \{0\}$. Groups are simpler and more limited than fields; they
 have only _one_ operator $\cdot$ and fewer axioms.
 
 [group]: https://en.wikipedia.org/wiki/Group_(mathematics)
@@ -123,8 +125,8 @@ inversion necessary.
 A _subgroup_ of a group $G$ with operation $\cdot$, is a subset of elements of $G$ that
 also form a group under $\cdot$.
 
-In the previous section we said that $\alpha$ is a generator of the $p - 1$ order
-multiplicative group $\mathbb{F}_p^\times$. This is a _composite_ order group, and so by
+In the previous section we said that $\alpha$ is a generator of the $(p - 1)$-order
+multiplicative group $\mathbb{F}_p^\times$. This group has _composite_ order, and so by
 the Chinese remainder theorem[^chinese-remainder] it has strict subgroups. As an example
 let's imagine that $p = 11$, and so $p - 1$ factors into $5 \cdot 2$. Thus, there is a
 generator $\beta$ of the $5$-order subgroup and a generator $\gamma$ of the $2$-order
@@ -153,10 +155,10 @@ of $\mathbb{F}_p^\times$ must divide $p-1.$
 
 In a field $\mathbb{F}_p$ exactly half of all nonzero elements are squares; the remainder
 are non-squares or "quadratic non-residues". In order to see why, consider an $\alpha$
-that generates the $2$-order multiplicative subgroup of $\mathbb{F}_p^\times$ (this always
-exists because $p - 1$ is divisible by $2$ since $p$ is prime) and $\beta$ that generates
-the $t$-order multiplicative subgroup of $\mathbb{F}_p^\times$ where $p - 1 = 2t$. Then
-every element $a \in \mathbb{F}_p^\times$ can be written uniquely as
+that generates the $2$-order multiplicative subgroup of $\mathbb{F}_p^\times$ (this exists
+because $p - 1$ is divisible by $2$ since $p$ is a prime greater than $2$) and $\beta$ that
+generates the $t$-order multiplicative subgroup of $\mathbb{F}_p^\times$ where $p - 1 = 2t$.
+Then every element $a \in \mathbb{F}_p^\times$ can be written uniquely as
 $\alpha^i \cdot \beta^j$ with $i \in \mathbb{Z}_2$ and $j \in \mathbb{Z}_t$. Half of all
 elements will have $i = 0$ and the other half will have $i = 1$.
 
@@ -226,10 +228,11 @@ The **primitive root of unity**, $\omega,$ is an $n$th root of unity such that
 $\omega^i \neq 1$ except when $i \equiv 0 \pmod{n}$.
 
 Important notes:
-- if $\alpha$ is an $n$th root of unity, $\alpha$ satisfies $\alpha^n - 1 = 0.$ If
+
+- If $\alpha$ is an $n$th root of unity, $\alpha$ satisfies $\alpha^n - 1 = 0.$ If
   $\alpha \neq 1,$ then
   $$1 + \alpha + \alpha^2 + \cdots + \alpha^{n-1} = 0.$$
-- equivalently, the roots of unity are solutions to the equation
+- Equivalently, the roots of unity are solutions to the equation
   $$X^n - 1 = (X - 1)(X - \alpha)(X - \alpha^2) \cdots (X - \alpha^{n-1}).$$
 - **$\boxed{\omega^{\frac{n}{2}+i} =  -\omega^i}$ ("Negation lemma")**. Proof:
   $$
@@ -245,7 +248,7 @@ Important notes:
   (\omega^{\frac{n}{2}+i})^2 = \omega^{n + 2i} = \omega^{n} \cdot \omega^{2i} = \omega^{2i} = (\omega^i)^2.
   $$
   In other words, if we square each element in the $n$th roots of unity, we would get back
-  only half the elements, $\{(\omega_n^i)^2\} = \{\omega_{n/2}\}$ (i.e. the $n/2$th roots
+  only half the elements, $\{(\omega_n^i)^2\} = \{\omega_{n/2}\}$ (i.e. the $\frac{n}{2}$th roots
   of unity). There is a two-to-one mapping between the elements and their squares.
 
 ## References

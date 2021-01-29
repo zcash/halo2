@@ -1,7 +1,11 @@
 # [WIP] UltraPLONK arithmetisation
-We work over a multiplicative subgroup
-$\mathcal{H} =\{1, \omega, \omega^2, \cdots, \omega^{n-1}\},$ where $\omega$ is primitive
-root of unity, in the Lagrange basis corresponding to these points.
+
+We call the field over which the circuit is defined $\mathbb{F} = \mathbb{F}_p$.
+
+Let $n = 2^k$, and assume that $\omega$ is a primitive root of unity of order $n$ in
+$\mathbb{F}^\times$, so that $\mathbb{F}^\times$ has a multiplicative subgroup
+$\mathcal{H} = \{1, \omega, \omega^2, \cdots, \omega^{n-1}\}$. This forms a Lagrange
+basis corresponding to the points in the subgroup.
 
 ## Polynomial rules
 A polynomial rule defines a constraint that must hold between its specified columns at
