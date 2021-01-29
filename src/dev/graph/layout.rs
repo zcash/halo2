@@ -10,6 +10,10 @@ use crate::plonk::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, E
 
 /// Renders the circuit layout on the given drawing area.
 ///
+/// Cells that have been assigned to by the circuit will be shaded. If any cells are
+/// assigned to more than once (which is usually a mistake), they will be shaded darker
+/// than the surrounding cells.
+///
 /// # Examples
 ///
 /// ```ignore
@@ -91,6 +95,13 @@ pub fn circuit_layout<F: Field, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>
         )
     };
 
+    let draw_cell = |root: &DrawingArea<_, _>, column, row| {
+        root.draw(&Rectangle::new(
+            [(column, row), (column + 1, row + 1)],
+            ShapeStyle::from(&BLACK.mix(0.1)).filled(),
+        ))
+    };
+
     // Render the regions!
     for region in layout.regions {
         if let Some(offset) = region.offset {
@@ -126,7 +137,17 @@ pub fn circuit_layout<F: Field, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>
                     region.name.clone(),
                 )?;
             }
+
+            // Darken the cells of the region that have been assigned to.
+            for (column, row) in region.cells {
+                draw_cell(&root, column_index(&column), row)?;
+            }
         }
+    }
+
+    // Darken any loose cells that have been assigned to.
+    for (column, row) in layout.loose_cells {
+        draw_cell(&root, column_index(&column), row)?;
     }
 
     Ok(())
@@ -142,6 +163,9 @@ struct Region {
     offset: Option<usize>,
     /// The number of rows that this region takes up.
     rows: usize,
+    /// The cells assigned in this region. We store this as a `Vec` so that if any cells
+    /// are double-assigned, they will be visibly darker.
+    cells: Vec<(Column<Any>, usize)>,
 }
 
 #[derive(Default)]
@@ -149,19 +173,24 @@ struct Layout {
     regions: Vec<Region>,
     current_region: Option<usize>,
     total_rows: usize,
+    /// Any cells assigned outside of a region. We store this as a `Vec` so that if any
+    /// cells are double-assigned, they will be visibly darker.
+    loose_cells: Vec<(Column<Any>, usize)>,
 }
 
 impl Layout {
     fn update(&mut self, column: Column<Any>, row: usize) {
         self.total_rows = cmp::max(self.total_rows, row + 1);
 
-        // TODO: Track assignments outside regions?
         if let Some(region) = self.current_region {
             let region = &mut self.regions[region];
             region.columns.insert(column);
             let offset = region.offset.unwrap_or(row);
             region.rows = cmp::max(region.rows, row - offset + 1);
             region.offset = Some(offset);
+            region.cells.push((column, row));
+        } else {
+            self.loose_cells.push((column, row));
         }
     }
 }
@@ -179,6 +208,7 @@ impl<F: Field> Assignment<F> for Layout {
             columns: HashSet::default(),
             offset: None,
             rows: 0,
+            cells: vec![],
         })
     }
 
