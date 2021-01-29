@@ -387,4 +387,67 @@ mod tests {
         let circuit: MyCircuit = MyCircuit {};
         eprintln!("{}", crate::dev::circuit_dot_graph::<Fq, _>(&circuit));
     }
+
+    #[cfg(feature = "dev-graph")]
+    #[test]
+    fn print_table16_chip() {
+        use plotters::prelude::*;
+        struct MyCircuit {}
+
+        impl<F: FieldExt> Circuit<F> for MyCircuit {
+            type Config = Table16Config;
+
+            fn configure(meta: &mut ConstraintSystem<F>) -> Table16Config {
+                Table16Chip::configure(meta)
+            }
+
+            fn synthesize(
+                &self,
+                cs: &mut impl Assignment<F>,
+                config: Table16Config,
+            ) -> Result<(), Error> {
+                let mut layouter = layouter::SingleChip::<Table16Chip<F>, _>::new(cs, config)?;
+                Table16Chip::load(&mut layouter)?;
+
+                // Test vector: "abc"
+                let test_input = [
+                    BlockWord::new(0b01100001011000100110001110000000),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                    BlockWord::new(0),
+                ];
+
+                // Create a message of length 2 blocks
+                let mut input = Vec::with_capacity(2 * BLOCK_SIZE);
+                for _ in 0..2 {
+                    input.extend_from_slice(&test_input);
+                }
+
+                Sha256::digest(layouter.namespace(|| "'abc' * 2"), &input)?;
+
+                Ok(())
+            }
+        }
+
+        let root =
+            SVGBackend::new("sha-256-table16-chip-layout.svg", (1024, 20480)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root
+            .titled("16-bit Table SHA-256 Chip", ("sans-serif", 60))
+            .unwrap();
+
+        let circuit = MyCircuit {};
+        crate::dev::circuit_layout::<Fq, _, _>(&circuit, &root).unwrap();
+    }
 }
