@@ -1,10 +1,13 @@
 use core::cmp::max;
 use core::ops::{Add, Mul};
 use ff::Field;
-use std::convert::TryFrom;
+use std::{
+    convert::TryFrom,
+    ops::{Neg, Sub},
+};
 
 use super::{lookup, permutation, Error};
-use crate::poly::Rotation;
+use crate::{arithmetic::FieldExt, poly::Rotation};
 
 /// A column type
 pub trait ColumnType: 'static + Sized {}
@@ -316,10 +319,24 @@ impl<F: Field> Expression<F> {
     }
 }
 
+impl<F: FieldExt> Neg for Expression<F> {
+    type Output = Expression<F>;
+    fn neg(self) -> Self::Output {
+        Expression::Scaled(Box::new(self), -F::one())
+    }
+}
+
 impl<F> Add for Expression<F> {
     type Output = Expression<F>;
     fn add(self, rhs: Expression<F>) -> Expression<F> {
         Expression::Sum(Box::new(self), Box::new(rhs))
+    }
+}
+
+impl<F: FieldExt> Sub for Expression<F> {
+    type Output = Expression<F>;
+    fn sub(self, rhs: Expression<F>) -> Expression<F> {
+        Expression::Sum(Box::new(self), Box::new(-rhs))
     }
 }
 
