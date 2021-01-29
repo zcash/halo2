@@ -7,6 +7,10 @@ use crate::{
     plonk::Error,
 };
 
+mod arity3;
+
+pub use arity3::{Arity3Chip, Arity3Config};
+
 /// The set of circuit instructions required to use the [`Poseidon`] gadget.
 pub trait PoseidonInstructions: Chip {
     /// Variable representing the state over which the Poseidon permutation operates.
