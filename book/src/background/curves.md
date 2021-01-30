@@ -1,6 +1,10 @@
 # Elliptic curves
 
 Elliptic curves constructed over finite fields are another important cryptographic tool.
+
+We use elliptic curves because they provide a cryptographic [group](fields.md#Inverses_and_groups),
+i.e. a group in which the [discrete logarithm problem](fields#) is hard.
+
 There are several ways to define the curve equation, but for our purposes, let
 $\mathbb{F}_p$ be a large (255-bit) field, and then let the set of solutions $(x, y)$ to
 $y^2 = x^3 + b$ for some constant $b$ define the $\mathbb{F}_p$-rational points on an
@@ -19,16 +23,39 @@ handling: we find the line tangent to the point, and then find the single other 
 intersects this line and then negate. Otherwise, in the event that a point is being
 "added" to its negation, the result is the point at infinity.
 
-The ability to add and double points naturally gives us a way to scale them by integers.
-The number of points on the curve is known as the "group order". If this number is prime
-$q$, we call the numbers that we scale curve points by "scalars" and consider that they
-are all elements of a scalar field $\mathbb{F}_q$.
+The ability to add and double points naturally gives us a way to scale them by integers,
+called _scalars_. The number of points on the curve is the group order. If this number
+is a prime $q$, then the scalars can be considered as elements of a _scalar field_,
+$\mathbb{F}_q$.
 
 Elliptic curves, when properly designed, have an important security property. Given two
 random elements $G, H \in E(\mathbb{F}_p)$ finding $a$ such that $[a] G = H$, otherwise
 known as the discrete log of $H$ with respect to $G$, is considered computationally
 infeasible with classical computers. This is called the elliptic curve discrete log
 assumption.
+
+If an elliptic curve group $\mathbb{G}$ has prime order $q$ (like the ones used in Halo),
+then it is a finite cyclic group. Recall from the section on [groups](fields.md#Groups)
+that this implies it is isomorphic to $\mathbb{Z}/q\mathbb{Z}$, or equivalently, to the
+scalar field $\mathbb{F}_q$. Each possible generator $G$ fixes the isomorphism; then
+an element on the scalar side is precisely the discrete log of the corresponding group
+element with respect to $G$. In the case of a cryptographically secure elliptic curve,
+the isomorphism is hard to compute in the $\mathbb{G} \rightarrow \mathbb{F}_q$ direction
+because the elliptic curve discrete log problem is hard.
+
+> It is sometimes helpful to make use of this isomorphism by thinking of group-based
+> cryptographic protocols and algorithms in terms of the scalars instead of in terms of
+> the group elements. This can make proofs and notation simpler.
+>
+> For instance, it has become common in papers on proof systems to use the notation $[x]$
+> to denote a group element with discrete log $x$, where the generator is implicit.
+>
+> We also used this idea in the
+> "[distinct-x theorem](https://zips.z.cash/protocol/protocol.pdf#thmdistinctx)",
+> in order to prove correctness of optimizations
+> [for elliptic curve scalar multiplication](https://github.com/zcash/zcash/issues/3924)
+> in Sapling, and an endomorphism-based optimization in Appendix C of the original
+> [Halo paper](https://eprint.iacr.org/2019/1021.pdf).
 
 ## Curve arithmetic
 
@@ -37,7 +64,7 @@ assumption.
 The simplest situation is doubling a point $(x_0, y_0)$. Continuing with our example
 $y^2 = x^3 + b$, this is done first by computing the derivative
 $$
-\lambda = \frac{dy}{dx} = \frac{3x^2}{2y}.
+\lambda = \frac{\mathrm{d}y}{\mathrm{d}x} = \frac{3x^2}{2y}.
 $$
 
 To obtain expressions for $(x_1, y_1) = (x_0, y_0) + (x_0, y_0),$ we consider 
