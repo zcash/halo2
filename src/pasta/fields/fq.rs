@@ -759,8 +759,7 @@ impl FieldExt for Fq {
         let sq = sqr(sp, 4) * s111;
         let sr = sqr(sq, 5) * s1011;
         let ss = sqr(sr, 3) * self;
-        let st = sqr(ss, 4);
-        st
+        sqr(ss, 4)
     }
 }
 
