@@ -105,7 +105,7 @@ pub trait MessageHasher<F: FieldExt> {
 /// It does not support domain separation tags longer than 128 bytes.
 #[derive(Debug, Default)]
 pub struct Shake128<F: FieldExt> {
-    marker: PhantomData<F>,
+    _marker: PhantomData<F>,
 }
 
 impl<F: FieldExt> MessageHasher<F> for Shake128<F> {
@@ -143,23 +143,6 @@ impl<F: FieldExt> MessageHasher<F> for Shake128<F> {
     }
 }
 
-/// A MessageHasher for BLAKE2b.
-#[derive(Debug, Default)]
-pub struct Blake2bXof<F: FieldExt> {
-    marker: PhantomData<F>,
-}
-
-impl<F: FieldExt> MessageHasher<F> for Blake2bXof<F> {
-    fn hash_name(&self) -> &str {
-        "XOF:BLAKE2b"
-    }
-
-    #[allow(unused_variables)]
-    fn hash_to_field(&self, message: &[u8], domain_separation_tag: &[u8], count: usize) -> Vec<F> {
-        todo!()
-    }
-}
-
 /// The simplified SWU hash-to-curve method, using an isogenous curve
 /// y^2 = x^3 + a*x + b. This currently only supports prime-order curves.
 #[derive(Debug)]
@@ -168,7 +151,7 @@ pub struct SimplifiedSWUWithDegree3Isogeny<
     I: CurveAffine<Base = F>,
     C: CurveAffine<Base = F>,
 > {
-    /// `Z` parameter (ξ in [WB2019]).
+    /// `Z` parameter (ξ in [WB2019](https://eprint.iacr.org/2019/403)).
     pub z: F,
 
     /// Precomputed -b/a for the isogenous curve.
@@ -268,8 +251,9 @@ impl<F: FieldExt, I: CurveAffine<Base = F>, C: CurveAffine<Base = F>> HashToCurv
         // This magic also comes from a generalization of [WB2019, section 4.2].
         //
         // The Sarkar square root algorithm with input s gives us a square root of
-        // ROOT_OF_UNITY * s for free when s is not square, where h is a fixed nonsquare.
-        // We know that Z / ROOT_OF_UNITY is a square since both Z and ROOT_OF_UNITY are
+        // h * s for free when s is not square, where h is a fixed nonsquare.
+        // In our implementation, h = ROOT_OF_UNITY.
+        // We know that Z / h is a square since both Z and h are
         // nonsquares. Precompute theta as a square root of Z / ROOT_OF_UNITY.
         //
         // We have gx2 = g(Z * u^2 * x1) = Z^3 * u^6 * gx1
