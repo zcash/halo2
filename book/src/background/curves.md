@@ -2,7 +2,7 @@
 
 Elliptic curves constructed over finite fields are another important cryptographic tool.
 
-We use elliptic curves because they provide a cryptographic [group](fields.md#Inverses_and_groups),
+We use elliptic curves because they provide a cryptographic [group](fields.md#Groups),
 i.e. a group in which the [discrete logarithm problem](fields#) is hard.
 
 There are several ways to define the curve equation, but for our purposes, let
@@ -34,7 +34,7 @@ known as the discrete log of $H$ with respect to $G$, is considered computationa
 infeasible with classical computers. This is called the elliptic curve discrete log
 assumption.
 
-If an elliptic curve group $\mathbb{G}$ has prime order $q$ (like the ones used in Halo),
+If an elliptic curve group $\mathbb{G}$ has prime order $q$ (like the ones used in Halo 2),
 then it is a finite cyclic group. Recall from the section on [groups](fields.md#Groups)
 that this implies it is isomorphic to $\mathbb{Z}/q\mathbb{Z}$, or equivalently, to the
 scalar field $\mathbb{F}_q$. Each possible generator $G$ fixes the isomorphism; then
