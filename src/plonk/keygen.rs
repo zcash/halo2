@@ -2,72 +2,25 @@ use ff::Field;
 
 use super::{
     circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    permutation, Error, ProvingKey, VerifyingKey,
+    permutation, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
 };
 use crate::arithmetic::{Curve, CurveAffine};
 use crate::poly::{
     commitment::{Blind, Params},
-    EvaluationDomain, LagrangeCoeff, Polynomial, Rotation,
+    EvaluationDomain, Rotation,
 };
 
-/// Generate a `ProvingKey` from an instance of `Circuit`.
-pub fn keygen<C, ConcreteCircuit>(
+pub(crate) fn create_domain<C, ConcreteCircuit>(
     params: &Params<C>,
-    circuit: &ConcreteCircuit,
-) -> Result<ProvingKey<C>, Error>
+) -> (
+    EvaluationDomain<C::Scalar>,
+    ConstraintSystem<C::Scalar>,
+    ConcreteCircuit::Config,
+)
 where
     C: CurveAffine,
     ConcreteCircuit: Circuit<C::Scalar>,
 {
-    struct Assembly<F: Field> {
-        fixed: Vec<Polynomial<F, LagrangeCoeff>>,
-        permutations: Vec<permutation::keygen::Assembly>,
-        _marker: std::marker::PhantomData<F>,
-    }
-
-    impl<F: Field> Assignment<F> for Assembly<F> {
-        fn assign_advice(
-            &mut self,
-            _: Column<Advice>,
-            _: usize,
-            _: impl FnOnce() -> Result<F, Error>,
-        ) -> Result<(), Error> {
-            // We only care about fixed columns here
-            Ok(())
-        }
-
-        fn assign_fixed(
-            &mut self,
-            column: Column<Fixed>,
-            row: usize,
-            to: impl FnOnce() -> Result<F, Error>,
-        ) -> Result<(), Error> {
-            *self
-                .fixed
-                .get_mut(column.index())
-                .and_then(|v| v.get_mut(row))
-                .ok_or(Error::BoundsFailure)? = to()?;
-
-            Ok(())
-        }
-
-        fn copy(
-            &mut self,
-            permutation: usize,
-            left_column: usize,
-            left_row: usize,
-            right_column: usize,
-            right_row: usize,
-        ) -> Result<(), Error> {
-            // Check bounds first
-            if permutation >= self.permutations.len() {
-                return Err(Error::BoundsFailure);
-            }
-
-            self.permutations[permutation].copy(left_column, left_row, right_column, right_row)
-        }
-    }
-
     let mut cs = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut cs);
 
@@ -99,6 +52,71 @@ where
 
     let domain = EvaluationDomain::new(degree as u32, params.k);
 
+    (domain, cs, config)
+}
+
+/// Assembly to be used in circuit synthesis.
+#[derive(Debug)]
+pub struct Assembly<F: Field> {
+    fixed: Vec<Polynomial<F, LagrangeCoeff>>,
+    permutations: Vec<permutation::keygen::Assembly>,
+    _marker: std::marker::PhantomData<F>,
+}
+
+impl<F: Field> Assignment<F> for Assembly<F> {
+    fn assign_advice(
+        &mut self,
+        _: Column<Advice>,
+        _: usize,
+        _: impl FnOnce() -> Result<F, Error>,
+    ) -> Result<(), Error> {
+        // We only care about fixed columns here
+        Ok(())
+    }
+
+    fn assign_fixed(
+        &mut self,
+        column: Column<Fixed>,
+        row: usize,
+        to: impl FnOnce() -> Result<F, Error>,
+    ) -> Result<(), Error> {
+        *self
+            .fixed
+            .get_mut(column.index())
+            .and_then(|v| v.get_mut(row))
+            .ok_or(Error::BoundsFailure)? = to()?;
+
+        Ok(())
+    }
+
+    fn copy(
+        &mut self,
+        permutation: usize,
+        left_column: usize,
+        left_row: usize,
+        right_column: usize,
+        right_row: usize,
+    ) -> Result<(), Error> {
+        // Check bounds first
+        if permutation >= self.permutations.len() {
+            return Err(Error::BoundsFailure);
+        }
+
+        self.permutations[permutation].copy(left_column, left_row, right_column, right_row)
+    }
+}
+
+/// Generate a `VerifyingKey` from an instance of `Circuit`.
+pub fn keygen_vk<C, ConcreteCircuit>(
+    params: &Params<C>,
+    circuit: &ConcreteCircuit,
+) -> Result<VerifyingKey<C>, Error>
+where
+    C: CurveAffine,
+    ConcreteCircuit: Circuit<C::Scalar>,
+{
+    let (domain, cs, config) = create_domain::<C, ConcreteCircuit>(params);
+
     let mut assembly: Assembly<C::Scalar> = Assembly {
         fixed: vec![domain.empty_lagrange(); cs.num_fixed_columns],
         permutations: cs
@@ -109,17 +127,17 @@ where
         _marker: std::marker::PhantomData,
     };
 
-    // Synthesize the circuit to obtain SRS
+    // Synthesize the circuit to obtain URS
     circuit.synthesize(&mut assembly, config)?;
 
     let permutation_helper = permutation::keygen::Assembly::build_helper(params, &cs, &domain);
 
-    let (permutation_pks, permutation_vks) = cs
+    let permutation_vks = cs
         .permutations
         .iter()
         .zip(assembly.permutations.into_iter())
-        .map(|(p, assembly)| assembly.build_keys(params, &domain, &permutation_helper, p))
-        .unzip();
+        .map(|(p, assembly)| assembly.build_vk(params, &domain, &permutation_helper, p))
+        .collect();
 
     let fixed_commitments = assembly
         .fixed
@@ -127,35 +145,77 @@ where
         .map(|poly| params.commit_lagrange(poly, Blind::default()).to_affine())
         .collect();
 
+    Ok(VerifyingKey {
+        domain,
+        fixed_commitments,
+        permutations: permutation_vks,
+        cs,
+    })
+}
+
+/// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `Circuit`.
+pub fn keygen_pk<C, ConcreteCircuit>(
+    params: &Params<C>,
+    vk: VerifyingKey<C>,
+    circuit: &ConcreteCircuit,
+) -> Result<ProvingKey<C>, Error>
+where
+    C: CurveAffine,
+    ConcreteCircuit: Circuit<C::Scalar>,
+{
+    let mut cs = ConstraintSystem::default();
+    let config = ConcreteCircuit::configure(&mut cs);
+
+    let mut assembly: Assembly<C::Scalar> = Assembly {
+        fixed: vec![vk.domain.empty_lagrange(); vk.cs.num_fixed_columns],
+        permutations: vk
+            .cs
+            .permutations
+            .iter()
+            .map(|p| permutation::keygen::Assembly::new(params.n as usize, p))
+            .collect(),
+        _marker: std::marker::PhantomData,
+    };
+
+    // Synthesize the circuit to obtain URS
+    circuit.synthesize(&mut assembly, config)?;
+
     let fixed_polys: Vec<_> = assembly
         .fixed
         .iter()
-        .map(|poly| domain.lagrange_to_coeff(poly.clone()))
+        .map(|poly| vk.domain.lagrange_to_coeff(poly.clone()))
         .collect();
 
-    let fixed_cosets = cs
+    let fixed_cosets = vk
+        .cs
         .fixed_queries
         .iter()
         .map(|&(column, at)| {
             let poly = fixed_polys[column.index()].clone();
-            domain.coeff_to_extended(poly, at)
+            vk.domain.coeff_to_extended(poly, at)
         })
+        .collect();
+
+    let permutation_helper =
+        permutation::keygen::Assembly::build_helper(params, &vk.cs, &vk.domain);
+
+    let permutation_pks = vk
+        .cs
+        .permutations
+        .iter()
+        .zip(assembly.permutations.into_iter())
+        .map(|(p, assembly)| assembly.build_pk(&vk.domain, &permutation_helper, p))
         .collect();
 
     // Compute l_0(X)
     // TODO: this can be done more efficiently
-    let mut l0 = domain.empty_lagrange();
+    let mut l0 = vk.domain.empty_lagrange();
     l0[0] = C::Scalar::one();
-    let l0 = domain.lagrange_to_coeff(l0);
-    let l0 = domain.coeff_to_extended(l0, Rotation::cur());
+    let l0 = vk.domain.lagrange_to_coeff(l0);
+    let l0 = vk.domain.coeff_to_extended(l0, Rotation::cur());
 
     Ok(ProvingKey {
-        vk: VerifyingKey {
-            domain,
-            fixed_commitments,
-            permutations: permutation_vks,
-            cs,
-        },
+        vk,
         l0,
         fixed_values: assembly.fixed,
         fixed_polys,

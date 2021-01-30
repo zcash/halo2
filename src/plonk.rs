@@ -6,7 +6,9 @@
 //! [plonk]: https://eprint.iacr.org/2019/953
 
 use crate::arithmetic::CurveAffine;
-use crate::poly::{Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial};
+use crate::poly::{
+    commitment::Params, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
+};
 use crate::transcript::ChallengeScalar;
 
 mod circuit;
@@ -23,6 +25,8 @@ pub use keygen::*;
 pub use prover::*;
 pub use verifier::*;
 
+use std::io;
+
 /// This is a verifying key which allows for the verification of proofs for a
 /// particular circuit.
 #[derive(Debug)]
@@ -31,6 +35,45 @@ pub struct VerifyingKey<C: CurveAffine> {
     fixed_commitments: Vec<C>,
     permutations: Vec<permutation::VerifyingKey<C>>,
     cs: ConstraintSystem<C::Scalar>,
+}
+
+impl<C: CurveAffine> VerifyingKey<C> {
+    /// Writes a verifying key to a buffer.
+    pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+        for commitment in &self.fixed_commitments {
+            writer.write_all(&commitment.to_bytes())?;
+        }
+        for permutation in &self.permutations {
+            permutation.write(writer)?;
+        }
+
+        Ok(())
+    }
+
+    /// Reads a verification key from a buffer.
+    pub fn read<R: io::Read, ConcreteCircuit: Circuit<C::Scalar>>(
+        reader: &mut R,
+        params: &Params<C>,
+    ) -> io::Result<Self> {
+        let (domain, cs, _) = keygen::create_domain::<C, ConcreteCircuit>(params);
+
+        let fixed_commitments: Vec<_> = (0..cs.num_fixed_columns)
+            .map(|_| C::read(reader))
+            .collect::<Result<_, _>>()?;
+
+        let permutations: Vec<_> = cs
+            .permutations
+            .iter()
+            .map(|argument| permutation::VerifyingKey::read(reader, argument))
+            .collect::<Result<_, _>>()?;
+
+        Ok(VerifyingKey {
+            domain,
+            fixed_commitments,
+            permutations,
+            cs,
+        })
+    }
 }
 
 /// This is a proving key which allows for the creation of proofs for a
@@ -442,7 +485,8 @@ fn test_proving() {
     };
 
     // Initialize the proving key
-    let pk = keygen(&params, &empty_circuit).expect("keygen should not fail");
+    let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
+    let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
 
     let mut pubinputs = pk.get_vk().get_domain().empty_lagrange();
     pubinputs[0] = aux;
@@ -487,8 +531,11 @@ fn test_proving() {
         let msm = guard.clone().use_challenges();
         assert!(msm.clone().eval());
         let mut transcript = DummyHashRead::init(&proof[..], Fq::one());
-        let guard =
-            verify_proof(&params, pk.get_vk(), msm, pubinput_slice, &mut transcript).unwrap();
+        let mut vk_buffer = vec![];
+        pk.get_vk().write(&mut vk_buffer).unwrap();
+        let vk = VerifyingKey::<EqAffine>::read::<_, MyCircuit<Fp>>(&mut &vk_buffer[..], &params)
+            .unwrap();
+        let guard = verify_proof(&params, &vk, msm, pubinput_slice, &mut transcript).unwrap();
         {
             let msm = guard.clone().use_challenges();
             assert!(msm.eval());

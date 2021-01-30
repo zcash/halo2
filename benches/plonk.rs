@@ -226,7 +226,8 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None, k };
 
     // Initialize the proving key
-    let pk = keygen(&params, &empty_circuit).expect("keygen should not fail");
+    let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
+    let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
 
     let prover_name = name.to_string() + "-prover";
     let verifier_name = name.to_string() + "-verifier";
