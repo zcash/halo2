@@ -3,7 +3,7 @@
 Elliptic curves constructed over finite fields are another important cryptographic tool.
 
 We use elliptic curves because they provide a cryptographic [group](fields.md#Groups),
-i.e. a group in which the [discrete logarithm problem](fields#) is hard.
+i.e. a group in which the discrete logarithm problem (discussed below) is hard.
 
 There are several ways to define the curve equation, but for our purposes, let
 $\mathbb{F}_p$ be a large (255-bit) field, and then let the set of solutions $(x, y)$ to
