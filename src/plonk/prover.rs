@@ -40,7 +40,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         pub aux_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     }
 
-    let aux_vec: Vec<AuxSingle<C>> = auxs
+    let aux: Vec<AuxSingle<C>> = auxs
         .iter()
         .map(|aux| -> Result<AuxSingle<C>, Error> {
             let aux_commitments_projective: Vec<_> = aux
@@ -91,7 +91,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         pub advice_blinds: Vec<Blind<C::Scalar>>,
     }
 
-    let advice_vec: Vec<AdviceSingle<C>> = circuits
+    let advice: Vec<AdviceSingle<C>> = circuits
         .iter()
         .map(|circuit| -> Result<AdviceSingle<C>, Error> {
             struct WitnessCollection<F: Field> {
@@ -202,9 +202,9 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta = ChallengeTheta::get(transcript);
 
-    let lookups_vec: Vec<Vec<lookup::prover::Permuted<'_, C>>> = aux_vec
+    let lookups: Vec<Vec<lookup::prover::Permuted<'_, C>>> = aux
         .iter()
-        .zip(advice_vec.iter())
+        .zip(advice.iter())
         .map(|(aux, advice)| -> Result<Vec<_>, Error> {
             // Construct and commit to permuted values for each lookup
             pk.vk
@@ -236,7 +236,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     // Sample gamma challenge
     let gamma = ChallengeGamma::get(transcript);
 
-    let permutations_vec: Vec<Vec<permutation::prover::Committed<C>>> = advice_vec
+    let permutations: Vec<Vec<permutation::prover::Committed<C>>> = advice
         .iter()
         .map(|advice| -> Result<Vec<_>, Error> {
             // Commit to permutations, if any.
@@ -260,7 +260,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let lookups_vec: Vec<Vec<lookup::prover::Committed<'_, C>>> = lookups_vec
+    let lookups: Vec<Vec<lookup::prover::Committed<'_, C>>> = lookups
         .into_iter()
         .map(|lookups| -> Result<Vec<_>, _> {
             // Construct and commit to products for each lookup
@@ -274,28 +274,25 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     // Obtain challenge for keeping all separate gates linearly independent
     let y = ChallengeY::get(transcript);
 
-    let (permutations_vec, permutation_expressions_vec): (Vec<Vec<_>>, Vec<Vec<_>>) =
-        permutations_vec
-            .into_iter()
-            .zip(advice_vec.iter())
-            .map(|(permutations, advice)| {
-                // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints, if any.
-                let tmp: Vec<_> = permutations
-                    .into_iter()
-                    .zip(pk.vk.cs.permutations.iter())
-                    .zip(pk.permutations.iter())
-                    .map(|((p, argument), pkey)| {
-                        p.construct(pk, argument, pkey, &advice.advice_cosets, beta, gamma)
-                    })
-                    .collect();
+    let (permutations, permutation_expressions): (Vec<Vec<_>>, Vec<Vec<_>>) = permutations
+        .into_iter()
+        .zip(advice.iter())
+        .map(|(permutations, advice)| {
+            // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints, if any.
+            let tmp: Vec<_> = permutations
+                .into_iter()
+                .zip(pk.vk.cs.permutations.iter())
+                .zip(pk.permutations.iter())
+                .map(|((p, argument), pkey)| {
+                    p.construct(pk, argument, pkey, &advice.advice_cosets, beta, gamma)
+                })
+                .collect();
 
-                tmp.into_iter().unzip()
-            })
-            .collect::<Vec<(Vec<_>, Vec<_>)>>()
-            .into_iter()
-            .unzip();
+            tmp.into_iter().unzip()
+        })
+        .unzip();
 
-    let (lookups_vec, lookup_expressions_vec): (Vec<Vec<_>>, Vec<Vec<_>>) = lookups_vec
+    let (lookups, lookup_expressions): (Vec<Vec<_>>, Vec<Vec<_>>) = lookups
         .into_iter()
         .map(|lookups| {
             // Evaluate the h(X) polynomial's constraint system expressions for the lookup constraints, if any.
@@ -306,15 +303,13 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
 
             tmp.into_iter().unzip()
         })
-        .collect::<Vec<(Vec<_>, Vec<_>)>>()
-        .into_iter()
         .unzip();
 
-    let expressions = advice_vec
+    let expressions = advice
         .iter()
-        .zip(aux_vec.iter())
-        .zip(permutation_expressions_vec.into_iter())
-        .zip(lookup_expressions_vec.into_iter())
+        .zip(aux.iter())
+        .zip(permutation_expressions.into_iter())
+        .zip(lookup_expressions.into_iter())
         .flat_map(
             |(((advice, aux), permutation_expressions), lookup_expressions)| {
                 iter::empty()
@@ -342,7 +337,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     let x = ChallengeX::get(transcript);
 
     // Compute and hash aux evals for each circuit instance
-    for aux in aux_vec.iter() {
+    for aux in aux.iter() {
         // Evaluate polynomials at omega^i x
         let aux_evals: Vec<_> = meta
             .aux_queries
@@ -361,7 +356,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     }
 
     // Compute and hash advice evals for each circuit instance
-    for advice in advice_vec.iter() {
+    for advice in advice.iter() {
         // Evaluate polynomials at omega^i x
         let advice_evals: Vec<_> = meta
             .advice_queries
@@ -401,7 +396,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     let vanishing = vanishing.evaluate(x, transcript)?;
 
     // Evaluate the permutations, if any, at omega^i x.
-    let permutations_vec: Vec<Vec<permutation::prover::Evaluated<C>>> = permutations_vec
+    let permutations: Vec<Vec<permutation::prover::Evaluated<C>>> = permutations
         .into_iter()
         .map(|permutations| -> Result<Vec<_>, _> {
             permutations
@@ -413,7 +408,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         .collect::<Result<Vec<_>, _>>()?;
 
     // Evaluate the lookups, if any, at omega^i x.
-    let lookups_vec: Vec<Vec<lookup::prover::Evaluated<C>>> = lookups_vec
+    let lookups: Vec<Vec<lookup::prover::Evaluated<C>>> = lookups
         .into_iter()
         .map(|lookups| -> Result<Vec<_>, _> {
             lookups
@@ -423,11 +418,11 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let instances = aux_vec
+    let instances = aux
         .iter()
-        .zip(advice_vec.iter())
-        .zip(permutations_vec.iter())
-        .zip(lookups_vec.iter())
+        .zip(advice.iter())
+        .zip(permutations.iter())
+        .zip(lookups.iter())
         .flat_map(|(((aux, advice), permutations), lookups)| {
             iter::empty()
                 .chain(
@@ -461,14 +456,12 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
                 )
                 .chain(lookups.iter().flat_map(move |p| p.open(pk, x)).into_iter())
         })
-        .collect::<Vec<_>>()
-        .into_iter()
         .chain(
             pk.vk
                 .cs
                 .fixed_queries
                 .iter()
-                .map(move |&(column, at)| ProverQuery {
+                .map(|&(column, at)| ProverQuery {
                     point: domain.rotate_omega(*x, at),
                     poly: &pk.fixed_polys[column.index()],
                     blind: Blind::default(),

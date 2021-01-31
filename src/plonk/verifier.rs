@@ -17,19 +17,19 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
     params: &'a Params<C>,
     vk: &VerifyingKey<C>,
     msm: MSM<'a, C>,
-    aux_commitments_vec: &[&[C]],
+    aux_commitments: &[&[C]],
     transcript: &mut T,
 ) -> Result<Guard<'a, C>, Error> {
     // Check that aux_commitments matches the expected number of aux columns
-    for aux_commitments in aux_commitments_vec.iter() {
+    for aux_commitments in aux_commitments.iter() {
         if aux_commitments.len() != vk.cs.num_aux_columns {
             return Err(Error::IncompatibleParams);
         }
     }
 
-    let num_proofs = aux_commitments_vec.len();
+    let num_proofs = aux_commitments.len();
 
-    for aux_commitments in aux_commitments_vec.iter() {
+    for aux_commitments in aux_commitments.iter() {
         // Hash the aux (external) commitments into the transcript
         for commitment in *aux_commitments {
             transcript
@@ -38,7 +38,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         }
     }
 
-    let advice_commitments_vec = (0..num_proofs)
+    let advice_commitments = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
             // Hash the prover's advice commitments into the transcript
             read_n_points(transcript, vk.cs.num_advice_columns).map_err(|_| Error::TranscriptError)
@@ -48,7 +48,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta = ChallengeTheta::get(transcript);
 
-    let lookups_permuted_vec = (0..num_proofs)
+    let lookups_permuted = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
             // Hash each lookup permuted commitment
             vk.cs
@@ -65,7 +65,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
     // Sample gamma challenge
     let gamma = ChallengeGamma::get(transcript);
 
-    let permutations_committed_vec = (0..num_proofs)
+    let permutations_committed = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
             // Hash each permutation product commitment
             vk.cs
@@ -76,7 +76,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let lookups_committed_vec = lookups_permuted_vec
+    let lookups_committed = lookups_permuted
         .into_iter()
         .map(|lookups| {
             // Hash each lookup product commitment
@@ -96,13 +96,13 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
     // satisfied with high probability.
     let x = ChallengeX::get(transcript);
 
-    let aux_evals_vec = (0..num_proofs)
+    let aux_evals = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
             read_n_scalars(transcript, vk.cs.aux_queries.len()).map_err(|_| Error::TranscriptError)
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let advice_evals_vec = (0..num_proofs)
+    let advice_evals = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
             read_n_scalars(transcript, vk.cs.advice_queries.len())
                 .map_err(|_| Error::TranscriptError)
@@ -114,7 +114,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
 
     let vanishing = vanishing.evaluate(transcript)?;
 
-    let permutations_evaluated_vec = permutations_committed_vec
+    let permutations_evaluated = permutations_committed
         .into_iter()
         .map(|permutations| -> Result<Vec<_>, _> {
             permutations
@@ -125,7 +125,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let lookups_evaluated_vec = lookups_committed_vec
+    let lookups_evaluated = lookups_committed
         .into_iter()
         .map(|lookups| -> Result<Vec<_>, _> {
             lookups
@@ -148,11 +148,11 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
             * &vk.domain.get_barycentric_weight(); // l_0(x)
 
         // Compute the expected value of h(x)
-        let expressions = advice_evals_vec
+        let expressions = advice_evals
             .iter()
-            .zip(aux_evals_vec.iter())
-            .zip(permutations_evaluated_vec.iter())
-            .zip(lookups_evaluated_vec.iter())
+            .zip(aux_evals.iter())
+            .zip(permutations_evaluated.iter())
+            .zip(lookups_evaluated.iter())
             .flat_map(|(((advice_evals, aux_evals), permutations), lookups)| {
                 let fixed_evals = fixed_evals.clone();
                 let fixed_evals_copy = fixed_evals.clone();
@@ -202,13 +202,13 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         vanishing.verify(expressions, y, xn)?;
     }
 
-    let queries = aux_commitments_vec
+    let queries = aux_commitments
         .iter()
-        .zip(aux_evals_vec.iter())
-        .zip(advice_commitments_vec.iter())
-        .zip(advice_evals_vec.iter())
-        .zip(permutations_evaluated_vec.iter())
-        .zip(lookups_evaluated_vec.iter())
+        .zip(aux_evals.iter())
+        .zip(advice_commitments.iter())
+        .zip(advice_evals.iter())
+        .zip(permutations_evaluated.iter())
+        .zip(lookups_evaluated.iter())
         .flat_map(
             |(
                 ((((aux_commitments, aux_evals), advice_commitments), advice_evals), permutations),
@@ -249,10 +249,10 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
                 .fixed_queries
                 .iter()
                 .enumerate()
-                .map(move |(query_index, &(column, at))| VerifierQuery {
+                .map(|(query_index, &(column, at))| VerifierQuery {
                     point: vk.domain.rotate_omega(*x, at),
                     commitment: &vk.fixed_commitments[column.index()],
-                    eval: fixed_evals.clone()[query_index],
+                    eval: fixed_evals[query_index],
                 }),
         )
         .chain(vanishing.queries(x));
