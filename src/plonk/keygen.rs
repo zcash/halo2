@@ -46,7 +46,7 @@ where
 
     // Account for each gate to ensure our quotient polynomial is the
     // correct degree and that our extended domain is the right size.
-    for poly in cs.gates.iter() {
+    for (_, poly) in cs.gates.iter() {
         degree = std::cmp::max(degree, poly.degree());
     }
 
@@ -57,29 +57,53 @@ where
 
 /// Assembly to be used in circuit synthesis.
 #[derive(Debug)]
-pub struct Assembly<F: Field> {
+struct Assembly<F: Field> {
     fixed: Vec<Polynomial<F, LagrangeCoeff>>,
     permutations: Vec<permutation::keygen::Assembly>,
     _marker: std::marker::PhantomData<F>,
 }
 
 impl<F: Field> Assignment<F> for Assembly<F> {
-    fn assign_advice(
+    fn enter_region<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // Do nothing; we don't care about regions in this context.
+    }
+
+    fn exit_region(&mut self) {
+        // Do nothing; we don't care about regions in this context.
+    }
+
+    fn assign_advice<V, A, AR>(
         &mut self,
+        _: A,
         _: Column<Advice>,
         _: usize,
-        _: impl FnOnce() -> Result<F, Error>,
-    ) -> Result<(), Error> {
+        _: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Result<F, Error>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
         // We only care about fixed columns here
         Ok(())
     }
 
-    fn assign_fixed(
+    fn assign_fixed<V, A, AR>(
         &mut self,
+        _: A,
         column: Column<Fixed>,
         row: usize,
-        to: impl FnOnce() -> Result<F, Error>,
-    ) -> Result<(), Error> {
+        to: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Result<F, Error>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
         *self
             .fixed
             .get_mut(column.index())
@@ -103,6 +127,18 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         }
 
         self.permutations[permutation].copy(left_column, left_row, right_column, right_row)
+    }
+
+    fn push_namespace<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // Do nothing; we don't care about namespaces in this context.
+    }
+
+    fn pop_namespace(&mut self, _: Option<String>) {
+        // Do nothing; we don't care about namespaces in this context.
     }
 }
 

@@ -100,12 +100,30 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
             }
 
             impl<F: Field> Assignment<F> for WitnessCollection<F> {
-                fn assign_advice(
+                fn enter_region<NR, N>(&mut self, _: N)
+                where
+                    NR: Into<String>,
+                    N: FnOnce() -> NR,
+                {
+                    // Do nothing; we don't care about regions in this context.
+                }
+
+                fn exit_region(&mut self) {
+                    // Do nothing; we don't care about regions in this context.
+                }
+
+                fn assign_advice<V, A, AR>(
                     &mut self,
+                    _: A,
                     column: Column<Advice>,
                     row: usize,
-                    to: impl FnOnce() -> Result<F, Error>,
-                ) -> Result<(), Error> {
+                    to: V,
+                ) -> Result<(), Error>
+                where
+                    V: FnOnce() -> Result<F, Error>,
+                    A: FnOnce() -> AR,
+                    AR: Into<String>,
+                {
                     *self
                         .advice
                         .get_mut(column.index())
@@ -115,12 +133,18 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
                     Ok(())
                 }
 
-                fn assign_fixed(
+                fn assign_fixed<V, A, AR>(
                     &mut self,
+                    _: A,
                     _: Column<Fixed>,
                     _: usize,
-                    _: impl FnOnce() -> Result<F, Error>,
-                ) -> Result<(), Error> {
+                    _: V,
+                ) -> Result<(), Error>
+                where
+                    V: FnOnce() -> Result<F, Error>,
+                    A: FnOnce() -> AR,
+                    AR: Into<String>,
+                {
                     // We only care about advice columns here
 
                     Ok(())
@@ -138,6 +162,18 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
 
                     Ok(())
                 }
+
+                fn push_namespace<NR, N>(&mut self, _: N)
+                where
+                    NR: Into<String>,
+                    N: FnOnce() -> NR,
+                {
+                    // Do nothing; we don't care about namespaces in this context.
+                }
+
+                fn pop_namespace(&mut self, _: Option<String>) {
+                    // Do nothing; we don't care about namespaces in this context.
+                }
             }
 
             let mut witness = WitnessCollection {
@@ -146,7 +182,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
             };
 
             // Synthesize the circuit to obtain the witness and other information.
-            circuit.synthesize(&mut witness, config)?;
+            circuit.synthesize(&mut witness, config.clone())?;
 
             let witness = witness;
 
@@ -314,7 +350,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
             |(((advice, aux), permutation_expressions), lookup_expressions)| {
                 iter::empty()
                     // Custom constraints
-                    .chain(meta.gates.iter().map(move |poly| {
+                    .chain(meta.gates.iter().map(move |(_, poly)| {
                         poly.evaluate(
                             &|index| pk.fixed_cosets[index].clone(),
                             &|index| advice.advice_cosets[index].clone(),

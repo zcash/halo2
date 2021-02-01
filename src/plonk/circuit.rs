@@ -126,21 +126,52 @@ impl TryFrom<Column<Any>> for Column<Aux> {
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
 pub trait Assignment<F: Field> {
+    /// Creates a new region and enters into it.
+    ///
+    /// Panics if we are currently in a region (if `exit_region` was not called).
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::assign_region`] instead.
+    ///
+    /// [`Layouter::assign_region`]: crate::circuit::Layouter#method.assign_region
+    fn enter_region<NR, N>(&mut self, name_fn: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR;
+
+    /// Exits the current region.
+    ///
+    /// Panics if we are not currently in a region (if `enter_region` was not called).
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::assign_region`] instead.
+    ///
+    /// [`Layouter::assign_region`]: crate::circuit::Layouter#method.assign_region
+    fn exit_region(&mut self);
+
     /// Assign an advice column value (witness)
-    fn assign_advice(
+    fn assign_advice<V, A, AR>(
         &mut self,
+        annotation: A,
         column: Column<Advice>,
         row: usize,
-        to: impl FnOnce() -> Result<F, Error>,
-    ) -> Result<(), Error>;
+        to: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Result<F, Error>,
+        A: FnOnce() -> AR,
+        AR: Into<String>;
 
     /// Assign a fixed value
-    fn assign_fixed(
+    fn assign_fixed<V, A, AR>(
         &mut self,
+        annotation: A,
         column: Column<Fixed>,
         row: usize,
-        to: impl FnOnce() -> Result<F, Error>,
-    ) -> Result<(), Error>;
+        to: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Result<F, Error>,
+        A: FnOnce() -> AR,
+        AR: Into<String>;
 
     /// Assign two advice columns to have the same value
     fn copy(
@@ -151,6 +182,23 @@ pub trait Assignment<F: Field> {
         right_column: usize,
         right_row: usize,
     ) -> Result<(), Error>;
+
+    /// Creates a new (sub)namespace and enters into it.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    ///
+    /// [`Layouter::namespace`]: crate::circuit::Layouter#method.namespace
+    fn push_namespace<NR, N>(&mut self, name_fn: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR;
+
+    /// Exits out of the existing namespace.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    ///
+    /// [`Layouter::namespace`]: crate::circuit::Layouter#method.namespace
+    fn pop_namespace(&mut self, gadget_name: Option<String>);
 }
 
 /// This is a trait that circuits provide implementations for so that the
@@ -158,7 +206,7 @@ pub trait Assignment<F: Field> {
 /// [`ConstraintSystem`] implementation.
 pub trait Circuit<F: Field> {
     /// This is a configuration object that stores things like columns.
-    type Config: Copy;
+    type Config: Clone;
 
     /// The circuit is given an opportunity to describe the exact gate
     /// arrangement, column arrangement, etc.
@@ -301,7 +349,7 @@ pub struct ConstraintSystem<F> {
     pub(crate) num_fixed_columns: usize,
     pub(crate) num_advice_columns: usize,
     pub(crate) num_aux_columns: usize,
-    pub(crate) gates: Vec<Expression<F>>,
+    pub(crate) gates: Vec<(&'static str, Expression<F>)>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
     pub(crate) aux_queries: Vec<(Column<Aux>, Rotation)>,
     pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
@@ -495,9 +543,9 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Create a new gate
-    pub fn create_gate(&mut self, f: impl FnOnce(&mut Self) -> Expression<F>) {
+    pub fn create_gate(&mut self, name: &'static str, f: impl FnOnce(&mut Self) -> Expression<F>) {
         let poly = f(self);
-        self.gates.push(poly);
+        self.gates.push((name, poly));
     }
 
     /// Allocate a new fixed column

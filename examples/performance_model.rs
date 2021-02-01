@@ -76,25 +76,36 @@ impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardCS<FF> for StandardPLONK<'a, 
         let index = self.current_gate;
         self.current_gate += 1;
         let mut value = None;
-        self.cs.assign_advice(self.config.a, index, || {
-            value = Some(f()?);
-            Ok(value.ok_or(Error::SynthesisError)?.0)
-        })?;
-        self.cs.assign_advice(self.config.b, index, || {
-            Ok(value.ok_or(Error::SynthesisError)?.1)
-        })?;
-        self.cs.assign_advice(self.config.c, index, || {
-            Ok(value.ok_or(Error::SynthesisError)?.2)
-        })?;
+        self.cs.assign_advice(
+            || "lhs",
+            self.config.a,
+            index,
+            || {
+                value = Some(f()?);
+                Ok(value.ok_or(Error::SynthesisError)?.0)
+            },
+        )?;
+        self.cs.assign_advice(
+            || "rhs",
+            self.config.b,
+            index,
+            || Ok(value.ok_or(Error::SynthesisError)?.1),
+        )?;
+        self.cs.assign_advice(
+            || "out",
+            self.config.c,
+            index,
+            || Ok(value.ok_or(Error::SynthesisError)?.2),
+        )?;
 
         self.cs
-            .assign_fixed(self.config.sa, index, || Ok(FF::zero()))?;
+            .assign_fixed(|| "a", self.config.sa, index, || Ok(FF::zero()))?;
         self.cs
-            .assign_fixed(self.config.sb, index, || Ok(FF::zero()))?;
+            .assign_fixed(|| "b", self.config.sb, index, || Ok(FF::zero()))?;
         self.cs
-            .assign_fixed(self.config.sc, index, || Ok(FF::one()))?;
+            .assign_fixed(|| "c", self.config.sc, index, || Ok(FF::one()))?;
         self.cs
-            .assign_fixed(self.config.sm, index, || Ok(FF::one()))?;
+            .assign_fixed(|| "a * b", self.config.sm, index, || Ok(FF::one()))?;
         Ok((
             Variable(self.config.a, index),
             Variable(self.config.b, index),
@@ -108,25 +119,36 @@ impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardCS<FF> for StandardPLONK<'a, 
         let index = self.current_gate;
         self.current_gate += 1;
         let mut value = None;
-        self.cs.assign_advice(self.config.a, index, || {
-            value = Some(f()?);
-            Ok(value.ok_or(Error::SynthesisError)?.0)
-        })?;
-        self.cs.assign_advice(self.config.b, index, || {
-            Ok(value.ok_or(Error::SynthesisError)?.1)
-        })?;
-        self.cs.assign_advice(self.config.c, index, || {
-            Ok(value.ok_or(Error::SynthesisError)?.2)
-        })?;
+        self.cs.assign_advice(
+            || "lhs",
+            self.config.a,
+            index,
+            || {
+                value = Some(f()?);
+                Ok(value.ok_or(Error::SynthesisError)?.0)
+            },
+        )?;
+        self.cs.assign_advice(
+            || "rhs",
+            self.config.b,
+            index,
+            || Ok(value.ok_or(Error::SynthesisError)?.1),
+        )?;
+        self.cs.assign_advice(
+            || "out",
+            self.config.c,
+            index,
+            || Ok(value.ok_or(Error::SynthesisError)?.2),
+        )?;
 
         self.cs
-            .assign_fixed(self.config.sa, index, || Ok(FF::one()))?;
+            .assign_fixed(|| "a", self.config.sa, index, || Ok(FF::one()))?;
         self.cs
-            .assign_fixed(self.config.sb, index, || Ok(FF::one()))?;
+            .assign_fixed(|| "b", self.config.sb, index, || Ok(FF::one()))?;
         self.cs
-            .assign_fixed(self.config.sc, index, || Ok(FF::one()))?;
+            .assign_fixed(|| "c", self.config.sc, index, || Ok(FF::one()))?;
         self.cs
-            .assign_fixed(self.config.sm, index, || Ok(FF::zero()))?;
+            .assign_fixed(|| "a * b", self.config.sm, index, || Ok(FF::zero()))?;
         Ok((
             Variable(self.config.a, index),
             Variable(self.config.b, index),
@@ -156,9 +178,10 @@ impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardCS<FF> for StandardPLONK<'a, 
     {
         let index = self.current_gate;
         self.current_gate += 1;
-        self.cs.assign_advice(self.config.a, index, || f())?;
         self.cs
-            .assign_fixed(self.config.sp, index, || Ok(FF::one()))?;
+            .assign_advice(|| "value", self.config.a, index, || f())?;
+        self.cs
+            .assign_fixed(|| "public", self.config.sp, index, || Ok(FF::one()))?;
 
         Ok(Variable(self.config.a, index))
     }
@@ -181,7 +204,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         let sc = meta.fixed_column();
         let sp = meta.fixed_column();
 
-        meta.create_gate(|meta| {
+        meta.create_gate("Combined add-mult", |meta| {
             let a = meta.query_advice(a, Rotation::cur());
             let b = meta.query_advice(b, Rotation::cur());
             let c = meta.query_advice(c, Rotation::cur());
@@ -194,7 +217,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
             a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))
         });
 
-        meta.create_gate(|meta| {
+        meta.create_gate("Public input", |meta| {
             let a = meta.query_advice(a, Rotation::cur());
             let p = meta.query_aux(p, Rotation::cur());
             let sp = meta.query_fixed(sp, Rotation::cur());

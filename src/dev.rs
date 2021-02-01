@@ -4,9 +4,19 @@ use ff::Field;
 
 use crate::{
     arithmetic::{FieldExt, Group},
-    plonk::{permutation, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error},
+    plonk::{
+        permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
+        Fixed,
+    },
     poly::Rotation,
 };
+
+#[cfg(feature = "dev-graph")]
+mod graph;
+
+#[cfg(feature = "dev-graph")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dev-graph")))]
+pub use graph::{circuit_dot_graph, layout::circuit_layout};
 
 /// The reasons why a particular circuit is not satisfied.
 #[derive(Debug, PartialEq)]
@@ -17,6 +27,9 @@ pub enum VerifyFailure {
         /// order in which `ConstraintSystem::create_gate` is called during
         /// `Circuit::configure`.
         gate_index: usize,
+        /// The name of the gate that is not satisfied. These are specified by the gate
+        /// creator (such as a chip implementation), and may not be unique.
+        gate_name: &'static str,
         /// The row on which this gate is not satisfied.
         row: usize,
     },
@@ -83,7 +96,7 @@ pub enum VerifyFailure {
 ///         let b = meta.advice_column();
 ///         let c = meta.advice_column();
 ///
-///         meta.create_gate(|meta| {
+///         meta.create_gate("R1CS constraint", |meta| {
 ///             let a = meta.query_advice(a, Rotation::cur());
 ///             let b = meta.query_advice(b, Rotation::cur());
 ///             let c = meta.query_advice(c, Rotation::cur());
@@ -96,13 +109,13 @@ pub enum VerifyFailure {
 ///     }
 ///
 ///     fn synthesize(&self, cs: &mut impl Assignment<F>, config: MyConfig) -> Result<(), Error> {
-///         cs.assign_advice(config.a, 0, || {
+///         cs.assign_advice(|| "a", config.a, 0, || {
 ///             self.a.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
 ///         })?;
-///         cs.assign_advice(config.b, 0, || {
+///         cs.assign_advice(|| "b", config.b, 0, || {
 ///             self.b.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
 ///         })?;
-///         cs.assign_advice(config.c, 0, || {
+///         cs.assign_advice(|| "c", config.c, 0, || {
 ///             self.a
 ///                 .and_then(|a| self.b.map(|b| F::from_u64(a * b)))
 ///                 .ok_or(Error::SynthesisError)
@@ -124,6 +137,7 @@ pub enum VerifyFailure {
 ///     prover.verify(),
 ///     Err(VerifyFailure::Gate {
 ///         gate_index: 0,
+///         gate_name: "R1CS constraint",
 ///         row: 0
 ///     })
 /// );
@@ -144,12 +158,27 @@ pub struct MockProver<F: Group> {
 }
 
 impl<F: Field + Group> Assignment<F> for MockProver<F> {
-    fn assign_advice(
+    fn enter_region<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+    }
+
+    fn exit_region(&mut self) {}
+
+    fn assign_advice<V, A, AR>(
         &mut self,
-        column: crate::plonk::Column<crate::plonk::Advice>,
+        _: A,
+        column: Column<Advice>,
         row: usize,
-        to: impl FnOnce() -> Result<F, crate::plonk::Error>,
-    ) -> Result<(), crate::plonk::Error> {
+        to: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Result<F, Error>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
         *self
             .advice
             .get_mut(column.index())
@@ -159,12 +188,18 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         Ok(())
     }
 
-    fn assign_fixed(
+    fn assign_fixed<V, A, AR>(
         &mut self,
-        column: crate::plonk::Column<crate::plonk::Fixed>,
+        _: A,
+        column: Column<Fixed>,
         row: usize,
-        to: impl FnOnce() -> Result<F, crate::plonk::Error>,
-    ) -> Result<(), crate::plonk::Error> {
+        to: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Result<F, Error>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
         *self
             .fixed
             .get_mut(column.index())
@@ -188,6 +223,18 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         }
 
         self.permutations[permutation].copy(left_column, left_row, right_column, right_row)
+    }
+
+    fn push_namespace<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // TODO: Do something with namespaces :)
+    }
+
+    fn pop_namespace(&mut self, _: Option<String>) {
+        // TODO: Do something with namespaces :)
     }
 }
 
@@ -232,7 +279,7 @@ impl<F: FieldExt> MockProver<F> {
         let n = self.n as i32;
 
         // Check that all gates are satisfied for all rows.
-        for (gate_index, gate) in self.cs.gates.iter().enumerate() {
+        for (gate_index, (gate_name, gate)) in self.cs.gates.iter().enumerate() {
             // We iterate from n..2n so we can just reduce to handle wrapping.
             for row in n..(2 * n) {
                 fn load<'a, F: FieldExt, T: ColumnType>(
@@ -259,6 +306,7 @@ impl<F: FieldExt> MockProver<F> {
                 {
                     return Err(VerifyFailure::Gate {
                         gate_index,
+                        gate_name,
                         row: (row - n) as usize,
                     });
                 }

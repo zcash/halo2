@@ -159,7 +159,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
 
                 std::iter::empty()
                     // Evaluate the circuit using the custom gates provided
-                    .chain(vk.cs.gates.iter().map(move |poly| {
+                    .chain(vk.cs.gates.iter().map(move |(_, poly)| {
                         poly.evaluate(
                             &|index| fixed_evals[index],
                             &|index| advice_evals[index],

@@ -1,37 +1,36 @@
-#[macro_use]
-extern crate criterion;
-
-extern crate halo2;
-use halo2::arithmetic::FieldExt;
-use halo2::pasta::{EqAffine, Fp};
-use halo2::plonk::*;
-use halo2::poly::{commitment::Params, Rotation};
-use halo2::transcript::{Blake2bRead, Blake2bWrite};
-
+use halo2::{
+    arithmetic::FieldExt,
+    dev::circuit_layout,
+    pasta::Fp,
+    plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed},
+    poly::Rotation,
+};
+use plotters::prelude::*;
 use std::marker::PhantomData;
 
-use criterion::Criterion;
-
-fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
+fn main() {
     /// This represents an advice column at a certain row in the ConstraintSystem
     #[derive(Copy, Clone, Debug)]
     pub struct Variable(Column<Advice>, usize);
 
-    // Initialize the polynomial commitment parameters
-    let params: Params<EqAffine> = Params::new(k);
-
-    #[derive(Copy, Clone)]
+    #[derive(Clone)]
     struct PLONKConfig {
         a: Column<Advice>,
         b: Column<Advice>,
         c: Column<Advice>,
+        d: Column<Advice>,
+        e: Column<Advice>,
 
         sa: Column<Fixed>,
         sb: Column<Fixed>,
         sc: Column<Fixed>,
         sm: Column<Fixed>,
+        sp: Column<Fixed>,
+        sl: Column<Fixed>,
+        sl2: Column<Fixed>,
 
         perm: usize,
+        perm2: usize,
     }
 
     trait StandardCS<FF: FieldExt> {
@@ -42,12 +41,15 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         where
             F: FnOnce() -> Result<(FF, FF, FF), Error>;
         fn copy(&mut self, a: Variable, b: Variable) -> Result<(), Error>;
+        fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
+        where
+            F: FnOnce() -> Result<FF, Error>;
+        fn lookup_table(&mut self, values: &[Vec<FF>]) -> Result<(), Error>;
     }
 
-    #[derive(Clone)]
     struct MyCircuit<F: FieldExt> {
         a: Option<F>,
-        k: u32,
+        lookup_tables: Vec<Vec<F>>,
     }
 
     struct StandardPLONK<'a, F: FieldExt, CS: Assignment<F> + 'a> {
@@ -65,6 +67,18 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
                 current_gate: 0,
                 _marker: PhantomData,
             }
+        }
+
+        fn enter_region<NR, N>(&mut self, name_fn: N)
+        where
+            NR: Into<String>,
+            N: FnOnce() -> NR,
+        {
+            self.cs.enter_region(name_fn);
+        }
+
+        fn exit_region(&mut self) {
+            self.cs.exit_region();
         }
     }
 
@@ -86,10 +100,22 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
                 },
             )?;
             self.cs.assign_advice(
+                || "lhs^4",
+                self.config.d,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.0.square().square()),
+            )?;
+            self.cs.assign_advice(
                 || "rhs",
                 self.config.b,
                 index,
                 || Ok(value.ok_or(Error::SynthesisError)?.1),
+            )?;
+            self.cs.assign_advice(
+                || "rhs^4",
+                self.config.e,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.1.square().square()),
             )?;
             self.cs.assign_advice(
                 || "out",
@@ -129,10 +155,22 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
                 },
             )?;
             self.cs.assign_advice(
+                || "lhs^4",
+                self.config.d,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.0.square().square()),
+            )?;
+            self.cs.assign_advice(
                 || "rhs",
                 self.config.b,
                 index,
                 || Ok(value.ok_or(Error::SynthesisError)?.1),
+            )?;
+            self.cs.assign_advice(
+                || "rhs^4",
+                self.config.e,
+                index,
+                || Ok(value.ok_or(Error::SynthesisError)?.1.square().square()),
             )?;
             self.cs.assign_advice(
                 || "out",
@@ -170,7 +208,39 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             };
 
             self.cs
-                .copy(self.config.perm, left_column, left.1, right_column, right.1)
+                .copy(self.config.perm, left_column, left.1, right_column, right.1)?;
+            self.cs.copy(
+                self.config.perm2,
+                left_column,
+                left.1,
+                right_column,
+                right.1,
+            )
+        }
+        fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
+        where
+            F: FnOnce() -> Result<FF, Error>,
+        {
+            let index = self.current_gate;
+            self.current_gate += 1;
+            self.cs
+                .assign_advice(|| "value", self.config.a, index, || f())?;
+            self.cs
+                .assign_fixed(|| "public", self.config.sp, index, || Ok(FF::one()))?;
+
+            Ok(Variable(self.config.a, index))
+        }
+        fn lookup_table(&mut self, values: &[Vec<FF>]) -> Result<(), Error> {
+            for (&value_0, &value_1) in values[0].iter().zip(values[1].iter()) {
+                let index = self.current_gate;
+
+                self.current_gate += 1;
+                self.cs
+                    .assign_fixed(|| "table col 1", self.config.sl, index, || Ok(value_0))?;
+                self.cs
+                    .assign_fixed(|| "table col 2", self.config.sl2, index, || Ok(value_1))?;
+            }
+            Ok(())
         }
     }
 
@@ -178,19 +248,49 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         type Config = PLONKConfig;
 
         fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
+            let e = meta.advice_column();
             let a = meta.advice_column();
             let b = meta.advice_column();
+            let sf = meta.fixed_column();
             let c = meta.advice_column();
+            let d = meta.advice_column();
+            let p = meta.aux_column();
 
             let perm = meta.permutation(&[a, b, c]);
+            let perm2 = meta.permutation(&[a, b, c]);
 
             let sm = meta.fixed_column();
             let sa = meta.fixed_column();
             let sb = meta.fixed_column();
             let sc = meta.fixed_column();
+            let sp = meta.fixed_column();
+            let sl = meta.fixed_column();
+            let sl2 = meta.fixed_column();
+
+            /*
+             *    A    B        ...  sl   sl2
+             * [
+             *   aux   0        ...  0    0
+             *   a     a        ...  0    0
+             *   a     a^2      ...  0    0
+             *   a     a        ...  0    0
+             *   a     a^2      ...  0    0
+             *   ...   ...      ...  ...  ...
+             *   ...   ...      ...  aux  0
+             *   ...   ...      ...  a    a
+             *   ...   ...      ...  a    a^2
+             *   ...   ...      ...  0    0
+             *
+             * ]
+             */
+            meta.lookup(&[a.into()], &[sl.into()]);
+            meta.lookup(&[a.into(), b.into()], &[sl.into(), sl2.into()]);
 
             meta.create_gate("Combined add-mult", |meta| {
+                let d = meta.query_advice(d, Rotation::next());
                 let a = meta.query_advice(a, Rotation::cur());
+                let sf = meta.query_fixed(sf, Rotation::cur());
+                let e = meta.query_advice(e, Rotation::prev());
                 let b = meta.query_advice(b, Rotation::cur());
                 let c = meta.query_advice(c, Rotation::cur());
 
@@ -199,18 +299,32 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
                 let sc = meta.query_fixed(sc, Rotation::cur());
                 let sm = meta.query_fixed(sm, Rotation::cur());
 
-                a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))
+                a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one())) + sf * (d * e)
+            });
+
+            meta.create_gate("Public input", |meta| {
+                let a = meta.query_advice(a, Rotation::cur());
+                let p = meta.query_aux(p, Rotation::cur());
+                let sp = meta.query_fixed(sp, Rotation::cur());
+
+                sp * (a + p * (-F::one()))
             });
 
             PLONKConfig {
                 a,
                 b,
                 c,
+                d,
+                e,
                 sa,
                 sb,
                 sc,
                 sm,
+                sp,
+                sl,
+                sl2,
                 perm,
+                perm2,
             }
         }
 
@@ -221,7 +335,12 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         ) -> Result<(), Error> {
             let mut cs = StandardPLONK::new(cs, config);
 
-            for _ in 0..(1 << (self.k - 1)) {
+            cs.enter_region(|| "input");
+            let _ = cs.public_input(|| Ok(F::one() + F::one()))?;
+            cs.exit_region();
+
+            for i in 0..10 {
+                cs.enter_region(|| format!("region_{}", i));
                 let mut a_squared = None;
                 let (a0, _, c0) = cs.raw_multiply(|| {
                     a_squared = self.a.map(|a| a.square());
@@ -241,68 +360,33 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
                 })?;
                 cs.copy(a0, a1)?;
                 cs.copy(b1, c0)?;
+                cs.exit_region();
             }
+
+            cs.enter_region(|| "lookup table");
+            cs.lookup_table(&self.lookup_tables)?;
+            cs.exit_region();
 
             Ok(())
         }
     }
 
-    let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None, k };
-
-    // Initialize the proving key
-    let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
-    let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
-
-    let prover_name = name.to_string() + "-prover";
-    let verifier_name = name.to_string() + "-verifier";
-
-    c.bench_function(&prover_name, |b| {
-        b.iter(|| {
-            let circuit: MyCircuit<Fp> = MyCircuit {
-                a: Some(Fp::rand()),
-                k,
-            };
-
-            // Create a proof
-            let mut transcript = Blake2bWrite::init(vec![]);
-            create_proof(&params, &pk, &[circuit], &[], &mut transcript)
-                .expect("proof generation should not fail")
-        });
-    });
+    let a = Fp::rand();
+    let a_squared = a * &a;
+    let aux = Fp::one() + Fp::one();
+    let lookup_table = vec![aux, a, a, Fp::zero()];
+    let lookup_table_2 = vec![Fp::zero(), a, a_squared, Fp::zero()];
 
     let circuit: MyCircuit<Fp> = MyCircuit {
-        a: Some(Fp::rand()),
-        k,
+        a: None,
+        lookup_tables: vec![lookup_table, lookup_table_2],
     };
 
-    // Create a proof
-    let mut transcript = Blake2bWrite::init(vec![]);
-    create_proof(&params, &pk, &[circuit], &[], &mut transcript)
-        .expect("proof generation should not fail");
-    let proof = transcript.finalize();
+    let root = BitMapBackend::new("example-circuit-layout.png", (1024, 768)).into_drawing_area();
+    root.fill(&WHITE).unwrap();
+    let root = root
+        .titled("Example Circuit Layout", ("sans-serif", 60))
+        .unwrap();
 
-    c.bench_function(&verifier_name, |b| {
-        b.iter(|| {
-            let msm = params.empty_msm();
-            let mut transcript = Blake2bRead::init(&proof[..]);
-            let guard = verify_proof(&params, pk.get_vk(), msm, &[], &mut transcript).unwrap();
-            let msm = guard.clone().use_challenges();
-            assert!(msm.eval());
-        });
-    });
+    circuit_layout(&circuit, &root).unwrap();
 }
-
-fn criterion_benchmark(c: &mut Criterion) {
-    bench_with_k("plonk-k=8", 8, c);
-    bench_with_k("plonk-k=9", 9, c);
-    bench_with_k("plonk-k=10", 10, c);
-    bench_with_k("plonk-k=11", 11, c);
-    bench_with_k("plonk-k=12", 12, c);
-    bench_with_k("plonk-k=13", 13, c);
-    bench_with_k("plonk-k=14", 14, c);
-    bench_with_k("plonk-k=15", 15, c);
-    bench_with_k("plonk-k=16", 16, c);
-}
-
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);
