@@ -242,7 +242,7 @@ fn test_roundtrip() {
     let bvx = eval_polynomial(&bx, x);
     let cvy = eval_polynomial(&cx, y);
 
-    let mut transcript = crate::transcript::DummyHashWrite::init(vec![], Field::one());
+    let mut transcript = crate::transcript::Blake2bWrite::init(vec![]);
     create_proof(
         &params,
         &mut transcript,
@@ -268,7 +268,7 @@ fn test_roundtrip() {
 
     {
         let mut proof = &proof[..];
-        let mut transcript = crate::transcript::DummyHashRead::init(&mut proof, Field::one());
+        let mut transcript = crate::transcript::Blake2bRead::init(&mut proof);
         let msm = params.empty_msm();
 
         let guard = verify_proof(
@@ -301,7 +301,7 @@ fn test_roundtrip() {
     {
         let mut proof = &proof[..];
 
-        let mut transcript = crate::transcript::DummyHashRead::init(&mut proof, Field::one());
+        let mut transcript = crate::transcript::Blake2bRead::init(&mut proof);
         let msm = params.empty_msm();
 
         let guard = verify_proof(

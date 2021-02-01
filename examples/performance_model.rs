@@ -1,13 +1,13 @@
 use halo2::{
     arithmetic::{Curve, FieldExt},
     model::ModelRecorder,
-    pasta::{EqAffine, Fp, Fq},
+    pasta::{EqAffine, Fp},
     plonk::*,
     poly::{
         commitment::{Blind, Params},
         Rotation,
     },
-    transcript::{DummyHashRead, DummyHashWrite},
+    transcript::{Blake2bRead, Blake2bWrite},
 };
 
 use std::marker::PhantomData;
@@ -279,7 +279,7 @@ fn main() {
     };
 
     // Create a proof
-    let mut transcript = DummyHashWrite::init(vec![], Fq::one());
+    let mut transcript = Blake2bWrite::init(vec![]);
     create_proof(&params, &pk, &[circuit], &[&[pubinputs]], &mut transcript)
         .expect("proof generation should not fail");
     let proof: Vec<u8> = transcript.finalize();
@@ -289,7 +289,7 @@ fn main() {
 
     let pubinput_slice = &[pubinput];
     let msm = params.empty_msm();
-    let mut transcript = DummyHashRead::init(&proof[..], Fq::one());
+    let mut transcript = Blake2bRead::init(&proof[..]);
     let guard = verify_proof(
         &params,
         pk.get_vk(),

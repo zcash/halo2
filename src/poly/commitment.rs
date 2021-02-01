@@ -336,7 +336,7 @@ fn test_opening_proof() {
     use crate::arithmetic::{eval_polynomial, FieldExt};
     use crate::pasta::{EpAffine, Fq};
     use crate::transcript::{
-        ChallengeScalar, DummyHashRead, DummyHashWrite, Transcript, TranscriptRead, TranscriptWrite,
+        Blake2bRead, Blake2bWrite, ChallengeScalar, Transcript, TranscriptRead, TranscriptWrite,
     };
 
     let params = Params::<EpAffine>::new(K);
@@ -356,7 +356,7 @@ fn test_opening_proof() {
 
     let p = params.commit(&px, blind).to_affine();
 
-    let mut transcript = DummyHashWrite::<Vec<u8>, EpAffine>::init(vec![], Field::zero());
+    let mut transcript = Blake2bWrite::<Vec<u8>, EpAffine>::init(vec![]);
     transcript.write_point(p).unwrap();
     let x = ChallengeScalar::<_, ()>::get(&mut transcript);
     // Evaluate the polynomial
@@ -370,7 +370,7 @@ fn test_opening_proof() {
     };
 
     // Verify the opening proof
-    let mut transcript = DummyHashRead::<&[u8], EpAffine>::init(&proof[..], Field::zero());
+    let mut transcript = Blake2bRead::<&[u8], EpAffine>::init(&proof[..]);
     let p_prime = transcript.read_point().unwrap();
     assert_eq!(p, p_prime);
     let x_prime = ChallengeScalar::<_, ()>::get(&mut transcript);
