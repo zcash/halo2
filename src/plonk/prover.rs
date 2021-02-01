@@ -182,7 +182,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
             };
 
             // Synthesize the circuit to obtain the witness and other information.
-            circuit.synthesize(&mut witness, config)?;
+            circuit.synthesize(&mut witness, config.clone())?;
 
             let witness = witness;
 

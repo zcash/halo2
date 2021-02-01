@@ -13,6 +13,7 @@ fn main() {
     #[derive(Copy, Clone, Debug)]
     pub struct Variable(Column<Advice>, usize);
 
+    #[derive(Clone)]
     struct PLONKConfig {
         a: Column<Advice>,
         b: Column<Advice>,
