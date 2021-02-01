@@ -3,14 +3,14 @@ use std::iter;
 
 use super::{
     circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
-    ProvingKey,
+    lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
+    ChallengeY, Error, ProvingKey,
 };
 use crate::arithmetic::{eval_polynomial, Curve, CurveAffine, FieldExt};
 use crate::poly::{
     commitment::{Blind, Params},
     multiopen::{self, ProverQuery},
-    LagrangeCoeff, Polynomial,
+    Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
 };
 use crate::transcript::TranscriptWrite;
 
@@ -20,50 +20,13 @@ use crate::transcript::TranscriptWrite;
 pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circuit<C::Scalar>>(
     params: &Params<C>,
     pk: &ProvingKey<C>,
-    circuit: &ConcreteCircuit,
-    aux: &[Polynomial<C::Scalar, LagrangeCoeff>],
+    circuits: &[ConcreteCircuit],
+    auxs: &[&[Polynomial<C::Scalar, LagrangeCoeff>]],
     transcript: &mut T,
 ) -> Result<(), Error> {
-    if aux.len() != pk.vk.cs.num_aux_columns {
-        return Err(Error::IncompatibleParams);
-    }
-
-    struct WitnessCollection<F: Field> {
-        advice: Vec<Polynomial<F, LagrangeCoeff>>,
-        _marker: std::marker::PhantomData<F>,
-    }
-
-    impl<F: Field> Assignment<F> for WitnessCollection<F> {
-        fn assign_advice(
-            &mut self,
-            column: Column<Advice>,
-            row: usize,
-            to: impl FnOnce() -> Result<F, Error>,
-        ) -> Result<(), Error> {
-            *self
-                .advice
-                .get_mut(column.index())
-                .and_then(|v| v.get_mut(row))
-                .ok_or(Error::BoundsFailure)? = to()?;
-
-            Ok(())
-        }
-
-        fn assign_fixed(
-            &mut self,
-            _: Column<Fixed>,
-            _: usize,
-            _: impl FnOnce() -> Result<F, Error>,
-        ) -> Result<(), Error> {
-            // We only care about advice columns here
-
-            Ok(())
-        }
-
-        fn copy(&mut self, _: usize, _: usize, _: usize, _: usize, _: usize) -> Result<(), Error> {
-            // We only care about advice columns here
-
-            Ok(())
+    for aux in auxs.iter() {
+        if aux.len() != pk.vk.cs.num_aux_columns {
+            return Err(Error::IncompatibleParams);
         }
     }
 
@@ -71,113 +34,199 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     let mut meta = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut meta);
 
-    let mut witness = WitnessCollection {
-        advice: vec![domain.empty_lagrange(); meta.num_advice_columns],
-        _marker: std::marker::PhantomData,
-    };
-
-    // Synthesize the circuit to obtain the witness and other information.
-    circuit.synthesize(&mut witness, config)?;
-
-    let witness = witness;
-
-    // Compute commitments to aux column polynomials
-    let aux_commitments_projective: Vec<_> = aux
-        .iter()
-        .map(|poly| params.commit_lagrange(poly, Blind::default()))
-        .collect();
-    let mut aux_commitments = vec![C::zero(); aux_commitments_projective.len()];
-    C::Projective::batch_to_affine(&aux_commitments_projective, &mut aux_commitments);
-    let aux_commitments = aux_commitments;
-    drop(aux_commitments_projective);
-    metrics::counter!("aux_commitments", aux_commitments.len() as u64);
-
-    for commitment in &aux_commitments {
-        transcript
-            .common_point(*commitment)
-            .map_err(|_| Error::TranscriptError)?;
+    struct AuxSingle<'a, C: CurveAffine> {
+        pub aux_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+        pub aux_polys: Vec<Polynomial<C::Scalar, Coeff>>,
+        pub aux_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     }
 
-    let aux_polys: Vec<_> = aux
+    let aux: Vec<AuxSingle<C>> = auxs
         .iter()
-        .map(|poly| {
-            let lagrange_vec = domain.lagrange_from_vec(poly.to_vec());
-            domain.lagrange_to_coeff(lagrange_vec)
+        .map(|aux| -> Result<AuxSingle<C>, Error> {
+            let aux_commitments_projective: Vec<_> = aux
+                .iter()
+                .map(|poly| params.commit_lagrange(poly, Blind::default()))
+                .collect();
+            let mut aux_commitments = vec![C::zero(); aux_commitments_projective.len()];
+            C::Projective::batch_to_affine(&aux_commitments_projective, &mut aux_commitments);
+            let aux_commitments = aux_commitments;
+            drop(aux_commitments_projective);
+            metrics::counter!("aux_commitments", aux_commitments.len() as u64);
+
+            for commitment in &aux_commitments {
+                transcript
+                    .common_point(*commitment)
+                    .map_err(|_| Error::TranscriptError)?;
+            }
+
+            let aux_polys: Vec<_> = aux
+                .iter()
+                .map(|poly| {
+                    let lagrange_vec = domain.lagrange_from_vec(poly.to_vec());
+                    domain.lagrange_to_coeff(lagrange_vec)
+                })
+                .collect();
+
+            let aux_cosets: Vec<_> = meta
+                .aux_queries
+                .iter()
+                .map(|&(column, at)| {
+                    let poly = aux_polys[column.index()].clone();
+                    domain.coeff_to_extended(poly, at)
+                })
+                .collect();
+
+            Ok(AuxSingle {
+                aux_values: *aux,
+                aux_polys,
+                aux_cosets,
+            })
         })
-        .collect();
+        .collect::<Result<Vec<_>, _>>()?;
 
-    let aux_cosets: Vec<_> = meta
-        .aux_queries
-        .iter()
-        .map(|&(column, at)| {
-            let poly = aux_polys[column.index()].clone();
-            domain.coeff_to_extended(poly, at)
-        })
-        .collect();
-
-    // Compute commitments to advice column polynomials
-    let advice_blinds: Vec<_> = witness
-        .advice
-        .iter()
-        .map(|_| Blind(C::Scalar::rand()))
-        .collect();
-    let advice_commitments_projective: Vec<_> = witness
-        .advice
-        .iter()
-        .zip(advice_blinds.iter())
-        .map(|(poly, blind)| params.commit_lagrange(poly, *blind))
-        .collect();
-    let mut advice_commitments = vec![C::zero(); advice_commitments_projective.len()];
-    C::Projective::batch_to_affine(&advice_commitments_projective, &mut advice_commitments);
-    let advice_commitments = advice_commitments;
-    drop(advice_commitments_projective);
-    metrics::counter!("advice_commitments", advice_commitments.len() as u64);
-
-    for commitment in &advice_commitments {
-        transcript
-            .write_point(*commitment)
-            .map_err(|_| Error::TranscriptError)?;
+    struct AdviceSingle<C: CurveAffine> {
+        pub advice_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
+        pub advice_polys: Vec<Polynomial<C::Scalar, Coeff>>,
+        pub advice_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
+        pub advice_blinds: Vec<Blind<C::Scalar>>,
     }
 
-    let advice_polys: Vec<_> = witness
-        .advice
-        .clone()
-        .into_iter()
-        .map(|poly| domain.lagrange_to_coeff(poly))
-        .collect();
-
-    let advice_cosets: Vec<_> = meta
-        .advice_queries
+    let advice: Vec<AdviceSingle<C>> = circuits
         .iter()
-        .map(|&(column, at)| {
-            let poly = advice_polys[column.index()].clone();
-            domain.coeff_to_extended(poly, at)
+        .map(|circuit| -> Result<AdviceSingle<C>, Error> {
+            struct WitnessCollection<F: Field> {
+                pub advice: Vec<Polynomial<F, LagrangeCoeff>>,
+                _marker: std::marker::PhantomData<F>,
+            }
+
+            impl<F: Field> Assignment<F> for WitnessCollection<F> {
+                fn assign_advice(
+                    &mut self,
+                    column: Column<Advice>,
+                    row: usize,
+                    to: impl FnOnce() -> Result<F, Error>,
+                ) -> Result<(), Error> {
+                    *self
+                        .advice
+                        .get_mut(column.index())
+                        .and_then(|v| v.get_mut(row))
+                        .ok_or(Error::BoundsFailure)? = to()?;
+
+                    Ok(())
+                }
+
+                fn assign_fixed(
+                    &mut self,
+                    _: Column<Fixed>,
+                    _: usize,
+                    _: impl FnOnce() -> Result<F, Error>,
+                ) -> Result<(), Error> {
+                    // We only care about advice columns here
+
+                    Ok(())
+                }
+
+                fn copy(
+                    &mut self,
+                    _: usize,
+                    _: usize,
+                    _: usize,
+                    _: usize,
+                    _: usize,
+                ) -> Result<(), Error> {
+                    // We only care about advice columns here
+
+                    Ok(())
+                }
+            }
+
+            let mut witness = WitnessCollection {
+                advice: vec![domain.empty_lagrange(); meta.num_advice_columns],
+                _marker: std::marker::PhantomData,
+            };
+
+            // Synthesize the circuit to obtain the witness and other information.
+            circuit.synthesize(&mut witness, config)?;
+
+            let witness = witness;
+
+            // Compute commitments to advice column polynomials
+            let advice_blinds: Vec<_> = witness
+                .advice
+                .iter()
+                .map(|_| Blind(C::Scalar::rand()))
+                .collect();
+            let advice_commitments_projective: Vec<_> = witness
+                .advice
+                .iter()
+                .zip(advice_blinds.iter())
+                .map(|(poly, blind)| params.commit_lagrange(poly, *blind))
+                .collect();
+            let mut advice_commitments = vec![C::zero(); advice_commitments_projective.len()];
+            C::Projective::batch_to_affine(&advice_commitments_projective, &mut advice_commitments);
+            let advice_commitments = advice_commitments;
+            drop(advice_commitments_projective);
+            metrics::counter!("advice_commitments", advice_commitments.len() as u64);
+
+            for commitment in &advice_commitments {
+                transcript
+                    .write_point(*commitment)
+                    .map_err(|_| Error::TranscriptError)?;
+            }
+
+            let advice_polys: Vec<_> = witness
+                .advice
+                .clone()
+                .into_iter()
+                .map(|poly| domain.lagrange_to_coeff(poly))
+                .collect();
+
+            let advice_cosets: Vec<_> = meta
+                .advice_queries
+                .iter()
+                .map(|&(column, at)| {
+                    let poly = advice_polys[column.index()].clone();
+                    domain.coeff_to_extended(poly, at)
+                })
+                .collect();
+
+            Ok(AdviceSingle {
+                advice_values: witness.advice,
+                advice_polys,
+                advice_cosets,
+                advice_blinds,
+            })
         })
-        .collect();
+        .collect::<Result<Vec<_>, _>>()?;
 
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta = ChallengeTheta::get(transcript);
 
-    // Construct and commit to permuted values for each lookup
-    let lookups = pk
-        .vk
-        .cs
-        .lookups
+    let lookups: Vec<Vec<lookup::prover::Permuted<'_, C>>> = aux
         .iter()
-        .map(|lookup| {
-            lookup.commit_permuted(
-                &pk,
-                &params,
-                &domain,
-                theta,
-                &witness.advice,
-                &pk.fixed_values,
-                &aux,
-                &advice_cosets,
-                &pk.fixed_cosets,
-                &aux_cosets,
-                transcript,
-            )
+        .zip(advice.iter())
+        .map(|(aux, advice)| -> Result<Vec<_>, Error> {
+            // Construct and commit to permuted values for each lookup
+            pk.vk
+                .cs
+                .lookups
+                .iter()
+                .map(|lookup| {
+                    lookup.commit_permuted(
+                        &pk,
+                        &params,
+                        &domain,
+                        theta,
+                        &advice.advice_values,
+                        &pk.fixed_values,
+                        &aux.aux_values,
+                        &advice.advice_cosets,
+                        &pk.fixed_cosets,
+                        &aux.aux_cosets,
+                        transcript,
+                    )
+                })
+                .collect()
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -187,89 +236,148 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     // Sample gamma challenge
     let gamma = ChallengeGamma::get(transcript);
 
-    // Commit to permutations, if any.
-    let permutations = pk
-        .vk
-        .cs
-        .permutations
+    let permutations: Vec<Vec<permutation::prover::Committed<C>>> = advice
         .iter()
-        .zip(pk.permutations.iter())
-        .map(|(p, pkey)| p.commit(params, pk, pkey, &witness.advice, beta, gamma, transcript))
+        .map(|advice| -> Result<Vec<_>, Error> {
+            // Commit to permutations, if any.
+            pk.vk
+                .cs
+                .permutations
+                .iter()
+                .zip(pk.permutations.iter())
+                .map(|(p, pkey)| {
+                    p.commit(
+                        params,
+                        pk,
+                        pkey,
+                        &advice.advice_values,
+                        beta,
+                        gamma,
+                        transcript,
+                    )
+                })
+                .collect()
+        })
         .collect::<Result<Vec<_>, _>>()?;
 
-    // Construct and commit to products for each lookup
-    let lookups = lookups
+    let lookups: Vec<Vec<lookup::prover::Committed<'_, C>>> = lookups
         .into_iter()
-        .map(|lookup| lookup.commit_product(&pk, &params, theta, beta, gamma, transcript))
+        .map(|lookups| -> Result<Vec<_>, _> {
+            // Construct and commit to products for each lookup
+            lookups
+                .into_iter()
+                .map(|lookup| lookup.commit_product(&pk, &params, theta, beta, gamma, transcript))
+                .collect::<Result<Vec<_>, _>>()
+        })
         .collect::<Result<Vec<_>, _>>()?;
 
     // Obtain challenge for keeping all separate gates linearly independent
     let y = ChallengeY::get(transcript);
 
-    // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints, if any.
-    let (permutations, permutation_expressions): (Vec<_>, Vec<_>) = {
-        let tmp: Vec<_> = permutations
-            .into_iter()
-            .zip(pk.vk.cs.permutations.iter())
-            .zip(pk.permutations.iter())
-            .map(|((p, argument), pkey)| {
-                p.construct(pk, argument, pkey, &advice_cosets, beta, gamma)
-            })
-            .collect();
+    let (permutations, permutation_expressions): (Vec<Vec<_>>, Vec<Vec<_>>) = permutations
+        .into_iter()
+        .zip(advice.iter())
+        .map(|(permutations, advice)| {
+            // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints, if any.
+            let tmp: Vec<_> = permutations
+                .into_iter()
+                .zip(pk.vk.cs.permutations.iter())
+                .zip(pk.permutations.iter())
+                .map(|((p, argument), pkey)| {
+                    p.construct(pk, argument, pkey, &advice.advice_cosets, beta, gamma)
+                })
+                .collect();
 
-        tmp.into_iter().unzip()
-    };
+            tmp.into_iter().unzip()
+        })
+        .unzip();
 
-    // Evaluate the h(X) polynomial's constraint system expressions for the lookup constraints, if any.
-    let (lookups, lookup_expressions): (Vec<_>, Vec<_>) = {
-        let tmp: Vec<_> = lookups
-            .into_iter()
-            .map(|p| p.construct(pk, theta, beta, gamma))
-            .collect();
+    let (lookups, lookup_expressions): (Vec<Vec<_>>, Vec<Vec<_>>) = lookups
+        .into_iter()
+        .map(|lookups| {
+            // Evaluate the h(X) polynomial's constraint system expressions for the lookup constraints, if any.
+            let tmp: Vec<_> = lookups
+                .into_iter()
+                .map(|p| p.construct(pk, theta, beta, gamma))
+                .collect();
 
-        tmp.into_iter().unzip()
-    };
+            tmp.into_iter().unzip()
+        })
+        .unzip();
 
-    // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
-    let expressions = iter::empty()
-        // Custom constraints
-        .chain(meta.gates.iter().map(|poly| {
-            poly.evaluate(
-                &|index| pk.fixed_cosets[index].clone(),
-                &|index| advice_cosets[index].clone(),
-                &|index| aux_cosets[index].clone(),
-                &|a, b| a + &b,
-                &|a, b| a * &b,
-                &|a, scalar| a * scalar,
-            )
-        }))
-        // Permutation constraints, if any.
-        .chain(permutation_expressions.into_iter().flatten())
-        // Lookup constraints, if any.
-        .chain(lookup_expressions.into_iter().flatten());
+    let expressions = advice
+        .iter()
+        .zip(aux.iter())
+        .zip(permutation_expressions.into_iter())
+        .zip(lookup_expressions.into_iter())
+        .flat_map(
+            |(((advice, aux), permutation_expressions), lookup_expressions)| {
+                iter::empty()
+                    // Custom constraints
+                    .chain(meta.gates.iter().map(move |poly| {
+                        poly.evaluate(
+                            &|index| pk.fixed_cosets[index].clone(),
+                            &|index| advice.advice_cosets[index].clone(),
+                            &|index| aux.aux_cosets[index].clone(),
+                            &|a, b| a + &b,
+                            &|a, b| a * &b,
+                            &|a, scalar| a * scalar,
+                        )
+                    }))
+                    // Permutation constraints, if any.
+                    .chain(permutation_expressions.into_iter().flatten())
+                    // Lookup constraints, if any.
+                    .chain(lookup_expressions.into_iter().flatten())
+            },
+        );
 
     // Construct the vanishing argument
     let vanishing = vanishing::Argument::construct(params, domain, expressions, y, transcript)?;
 
     let x = ChallengeX::get(transcript);
 
-    // Evaluate polynomials at omega^i x
-    let advice_evals: Vec<_> = meta
-        .advice_queries
-        .iter()
-        .map(|&(column, at)| {
-            eval_polynomial(&advice_polys[column.index()], domain.rotate_omega(*x, at))
-        })
-        .collect();
+    // Compute and hash aux evals for each circuit instance
+    for aux in aux.iter() {
+        // Evaluate polynomials at omega^i x
+        let aux_evals: Vec<_> = meta
+            .aux_queries
+            .iter()
+            .map(|&(column, at)| {
+                eval_polynomial(&aux.aux_polys[column.index()], domain.rotate_omega(*x, at))
+            })
+            .collect();
 
-    let aux_evals: Vec<_> = meta
-        .aux_queries
-        .iter()
-        .map(|&(column, at)| {
-            eval_polynomial(&aux_polys[column.index()], domain.rotate_omega(*x, at))
-        })
-        .collect();
+        // Hash each aux column evaluation
+        for eval in aux_evals.iter() {
+            transcript
+                .write_scalar(*eval)
+                .map_err(|_| Error::TranscriptError)?;
+        }
+    }
 
+    // Compute and hash advice evals for each circuit instance
+    for advice in advice.iter() {
+        // Evaluate polynomials at omega^i x
+        let advice_evals: Vec<_> = meta
+            .advice_queries
+            .iter()
+            .map(|&(column, at)| {
+                eval_polynomial(
+                    &advice.advice_polys[column.index()],
+                    domain.rotate_omega(*x, at),
+                )
+            })
+            .collect();
+
+        // Hash each advice column evaluation
+        for eval in advice_evals.iter() {
+            transcript
+                .write_scalar(*eval)
+                .map_err(|_| Error::TranscriptError)?;
+        }
+    }
+
+    // Compute and hash fixed evals (shared across all circuit instances)
     let fixed_evals: Vec<_> = meta
         .fixed_queries
         .iter()
@@ -278,12 +386,8 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         })
         .collect();
 
-    // Hash each column evaluation
-    for eval in advice_evals
-        .iter()
-        .chain(aux_evals.iter())
-        .chain(fixed_evals.iter())
-    {
+    // Hash each fixed column evaluation
+    for eval in fixed_evals.iter() {
         transcript
             .write_scalar(*eval)
             .map_err(|_| Error::TranscriptError)?;
@@ -292,41 +396,66 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     let vanishing = vanishing.evaluate(x, transcript)?;
 
     // Evaluate the permutations, if any, at omega^i x.
-    let permutations = permutations
+    let permutations: Vec<Vec<permutation::prover::Evaluated<C>>> = permutations
         .into_iter()
-        .zip(pk.permutations.iter())
-        .map(|(p, pkey)| p.evaluate(pk, pkey, x, transcript))
+        .map(|permutations| -> Result<Vec<_>, _> {
+            permutations
+                .into_iter()
+                .zip(pk.permutations.iter())
+                .map(|(p, pkey)| p.evaluate(pk, pkey, x, transcript))
+                .collect::<Result<Vec<_>, _>>()
+        })
         .collect::<Result<Vec<_>, _>>()?;
 
     // Evaluate the lookups, if any, at omega^i x.
-    let lookups = lookups
+    let lookups: Vec<Vec<lookup::prover::Evaluated<C>>> = lookups
         .into_iter()
-        .map(|p| p.evaluate(pk, x, transcript))
+        .map(|lookups| -> Result<Vec<_>, _> {
+            lookups
+                .into_iter()
+                .map(|p| p.evaluate(pk, x, transcript))
+                .collect::<Result<Vec<_>, _>>()
+        })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let instances = iter::empty()
-        .chain(
-            pk.vk
-                .cs
-                .advice_queries
-                .iter()
-                .map(|&(column, at)| ProverQuery {
-                    point: domain.rotate_omega(*x, at),
-                    poly: &advice_polys[column.index()],
-                    blind: advice_blinds[column.index()],
-                }),
-        )
-        .chain(
-            pk.vk
-                .cs
-                .aux_queries
-                .iter()
-                .map(|&(column, at)| ProverQuery {
-                    point: domain.rotate_omega(*x, at),
-                    poly: &aux_polys[column.index()],
-                    blind: Blind::default(),
-                }),
-        )
+    let instances = aux
+        .iter()
+        .zip(advice.iter())
+        .zip(permutations.iter())
+        .zip(lookups.iter())
+        .flat_map(|(((aux, advice), permutations), lookups)| {
+            iter::empty()
+                .chain(
+                    pk.vk
+                        .cs
+                        .aux_queries
+                        .iter()
+                        .map(move |&(column, at)| ProverQuery {
+                            point: domain.rotate_omega(*x, at),
+                            poly: &aux.aux_polys[column.index()],
+                            blind: Blind::default(),
+                        }),
+                )
+                .chain(
+                    pk.vk
+                        .cs
+                        .advice_queries
+                        .iter()
+                        .map(move |&(column, at)| ProverQuery {
+                            point: domain.rotate_omega(*x, at),
+                            poly: &advice.advice_polys[column.index()],
+                            blind: advice.advice_blinds[column.index()],
+                        }),
+                )
+                .chain(
+                    permutations
+                        .iter()
+                        .zip(pk.permutations.iter())
+                        .flat_map(move |(p, pkey)| p.open(pk, pkey, x))
+                        .into_iter(),
+                )
+                .chain(lookups.iter().flat_map(move |p| p.open(pk, x)).into_iter())
+        })
         .chain(
             pk.vk
                 .cs
@@ -339,16 +468,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
                 }),
         )
         // We query the h(X) polynomial at x
-        .chain(vanishing.open(x))
-        .chain(
-            permutations
-                .iter()
-                .zip(pk.permutations.iter())
-                .map(|(p, pkey)| p.open(pk, pkey, x))
-                .into_iter()
-                .flatten(),
-        )
-        .chain(lookups.iter().map(|p| p.open(pk, x)).into_iter().flatten());
+        .chain(vanishing.open(x));
 
     multiopen::create_proof(params, transcript, instances).map_err(|_| Error::OpeningError)
 }

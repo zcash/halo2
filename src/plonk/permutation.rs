@@ -7,8 +7,8 @@ use crate::{
 };
 
 pub(crate) mod keygen;
-mod prover;
-mod verifier;
+pub(crate) mod prover;
+pub(crate) mod verifier;
 
 use std::io;
 

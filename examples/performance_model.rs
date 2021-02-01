@@ -16,6 +16,7 @@ use std::marker::PhantomData;
 #[derive(Copy, Clone, Debug)]
 pub struct Variable(Column<Advice>, usize);
 
+#[derive(Copy, Clone)]
 struct PLONKConfig {
     a: Column<Advice>,
     b: Column<Advice>,
@@ -43,6 +44,7 @@ trait StandardCS<FF: FieldExt> {
         F: FnOnce() -> Result<FF, Error>;
 }
 
+#[derive(Clone)]
 struct MyCircuit<F: FieldExt> {
     a: Option<F>,
     k: u32,
@@ -278,7 +280,7 @@ fn main() {
 
     // Create a proof
     let mut transcript = DummyHashWrite::init(vec![], Fq::one());
-    create_proof(&params, &pk, &circuit, &[pubinputs], &mut transcript)
+    create_proof(&params, &pk, &[circuit], &[&[pubinputs]], &mut transcript)
         .expect("proof generation should not fail");
     let proof: Vec<u8> = transcript.finalize();
 
@@ -288,7 +290,14 @@ fn main() {
     let pubinput_slice = &[pubinput];
     let msm = params.empty_msm();
     let mut transcript = DummyHashRead::init(&proof[..], Fq::one());
-    let guard = verify_proof(&params, pk.get_vk(), msm, pubinput_slice, &mut transcript).unwrap();
+    let guard = verify_proof(
+        &params,
+        pk.get_vk(),
+        msm,
+        &[pubinput_slice],
+        &mut transcript,
+    )
+    .unwrap();
     let msm = guard.clone().use_challenges();
     assert!(msm.eval());
 

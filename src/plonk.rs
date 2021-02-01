@@ -164,6 +164,7 @@ fn test_proving() {
     // Initialize the polynomial commitment parameters
     let params: Params<EqAffine> = Params::new(K);
 
+    #[derive(Copy, Clone)]
     struct PLONKConfig {
         a: Column<Advice>,
         b: Column<Advice>,
@@ -197,6 +198,7 @@ fn test_proving() {
         fn lookup_table(&mut self, values: &[Vec<FF>]) -> Result<(), Error>;
     }
 
+    #[derive(Clone)]
     struct MyCircuit<F: FieldExt> {
         a: Option<F>,
         lookup_tables: Vec<Vec<F>>,
@@ -507,18 +509,25 @@ fn test_proving() {
         create_proof(
             &params,
             &pk,
-            &circuit,
-            &[pubinputs.clone()],
+            &[circuit.clone(), circuit.clone()],
+            &[&[pubinputs.clone()], &[pubinputs.clone()]],
             &mut transcript,
         )
         .expect("proof generation should not fail");
         let proof: Vec<u8> = transcript.finalize();
 
         let pubinput_slice = &[pubinput];
+        let pubinput_slice_copy = &[pubinput];
         let msm = params.empty_msm();
         let mut transcript = DummyHashRead::init(&proof[..], Fq::one());
-        let guard =
-            verify_proof(&params, pk.get_vk(), msm, pubinput_slice, &mut transcript).unwrap();
+        let guard = verify_proof(
+            &params,
+            pk.get_vk(),
+            msm,
+            &[pubinput_slice, pubinput_slice_copy],
+            &mut transcript,
+        )
+        .unwrap();
         {
             let msm = guard.clone().use_challenges();
             assert!(msm.eval());
@@ -535,7 +544,14 @@ fn test_proving() {
         pk.get_vk().write(&mut vk_buffer).unwrap();
         let vk = VerifyingKey::<EqAffine>::read::<_, MyCircuit<Fp>>(&mut &vk_buffer[..], &params)
             .unwrap();
-        let guard = verify_proof(&params, &vk, msm, pubinput_slice, &mut transcript).unwrap();
+        let guard = verify_proof(
+            &params,
+            &vk,
+            msm,
+            &[pubinput_slice, pubinput_slice_copy],
+            &mut transcript,
+        )
+        .unwrap();
         {
             let msm = guard.clone().use_challenges();
             assert!(msm.eval());

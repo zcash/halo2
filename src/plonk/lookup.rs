@@ -1,7 +1,7 @@
 use super::circuit::{Any, Column};
 
-mod prover;
-mod verifier;
+pub(crate) mod prover;
+pub(crate) mod verifier;
 
 #[derive(Clone, Debug)]
 pub(crate) struct Argument {

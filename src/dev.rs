@@ -62,12 +62,14 @@ pub enum VerifyFailure {
 /// };
 /// const K: u32 = 5;
 ///
+/// #[derive(Copy, Clone)]
 /// struct MyConfig {
 ///     a: Column<Advice>,
 ///     b: Column<Advice>,
 ///     c: Column<Advice>,
 /// }
 ///
+/// #[derive(Clone)]
 /// struct MyCircuit {
 ///     a: Option<u64>,
 ///     b: Option<u64>,

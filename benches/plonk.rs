@@ -20,6 +20,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     // Initialize the polynomial commitment parameters
     let params: Params<EqAffine> = Params::new(k);
 
+    #[derive(Copy, Clone)]
     struct PLONKConfig {
         a: Column<Advice>,
         b: Column<Advice>,
@@ -43,6 +44,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         fn copy(&mut self, a: Variable, b: Variable) -> Result<(), Error>;
     }
 
+    #[derive(Clone)]
     struct MyCircuit<F: FieldExt> {
         a: Option<F>,
         k: u32,
@@ -241,7 +243,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
 
             // Create a proof
             let mut transcript = DummyHashWrite::init(vec![], Fq::one());
-            create_proof(&params, &pk, &circuit, &[], &mut transcript)
+            create_proof(&params, &pk, &[circuit], &[], &mut transcript)
                 .expect("proof generation should not fail")
         });
     });
@@ -253,7 +255,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
 
     // Create a proof
     let mut transcript = DummyHashWrite::init(vec![], Fq::one());
-    create_proof(&params, &pk, &circuit, &[], &mut transcript)
+    create_proof(&params, &pk, &[circuit], &[], &mut transcript)
         .expect("proof generation should not fail");
     let proof = transcript.finalize();
 
