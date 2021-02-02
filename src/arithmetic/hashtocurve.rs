@@ -8,148 +8,8 @@ use subtle::ConstantTimeEq;
 
 use super::{Curve, CurveAffine, Field, FieldExt};
 
-/// A method of hashing to an elliptic curve.
-///
-/// This is intended to conform to the work-in-progress Internet Draft
-/// [IRTF-CFRG-Hash-to-Curve](https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html).
-pub trait HashToCurve<C: CurveAffine> {
-    /// Curve that may or may not be isogenous to the target curve C.
-    type IsogenousCurve: Curve;
-
-    /// The MAP_ID of this method as specified in
-    /// <https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html#name-suite-id-naming-conventions-2>.
-    fn map_id(&self) -> &str;
-
-    /// A non-uniform map from a field element to the isogenous curve.
-    fn map_to_curve(&self, u: &C::Base) -> Self::IsogenousCurve;
-
-    /// The isogeny map from curve I to curve C.
-    /// (If no isogeny is required, this should be the identity function.)
-    fn iso_map(&self, p: &Self::IsogenousCurve) -> C::Projective;
-
-    /// The random oracle map.
-    fn field_elements_to_curve(&self, u0: &C::Base, u1: &C::Base) -> C::Projective;
-
-    /// The full hash from an input message to a curve point.
-    ///
-    /// `domain_prefix` should identify the application protocol, usage
-    /// within that protocol, and version, e.g. "z.cash:Orchard-V1".
-    /// Other fields required to conform to [IRTF-CFRG-Hash-to-Curve]
-    /// will be added automatically. There may be a length limitation on
-    /// `domain_prefix`.
-    ///
-    /// For example, the resulting full domain separation tag for the
-    /// Pallas curve using `Shake128` and the simplified SWU map might be
-    /// b"z.cash:Orchard-V1-pallas_XOF:SHAKE128_SSWU_RO_".
-    fn hash_to_curve(
-        &self,
-        domain_prefix: &str,
-        hasher: impl MessageHasher<C::Base>,
-    ) -> Box<dyn Fn(&[u8]) -> C::Projective + '_> {
-        let domain_separation_tag: String = format!(
-            "{}-{}_{}_{}_RO_",
-            domain_prefix,
-            C::CURVE_ID,
-            hasher.hash_name(),
-            self.map_id()
-        );
-
-        Box::new(move |message| {
-            let mut us = [Field::zero(); 2];
-            hasher.hash_to_field(message, domain_separation_tag.as_bytes(), &mut us);
-            self.field_elements_to_curve(&us[0], &us[1])
-        })
-    }
-
-    /// A non-uniform hash from an input message to a curve point.
-    /// This is *not* suitable for applications requiring a random oracle.
-    /// Use `hash_to_curve` instead unless you are really sure that a
-    /// non-uniform map is sufficient.
-    ///
-    /// `domain_prefix` is as described for `hash_to_curve`.
-    ///
-    /// For example, the resulting full domain separation tag for the
-    /// Pallas curve using `Shake128` and the simplified SWU map might be
-    /// b"z.cash:Orchard-V1-pallas_XOF:SHAKE128_SSWU_NU_".
-    fn encode_to_curve(
-        &self,
-        domain_prefix: &str,
-        hasher: impl MessageHasher<C::Base>,
-    ) -> Box<dyn Fn(&[u8]) -> C::Projective + '_> {
-        let domain_separation_tag: String = format!(
-            "{}-{}_{}_{}_NU_",
-            domain_prefix,
-            C::CURVE_ID,
-            hasher.hash_name(),
-            self.map_id()
-        );
-
-        Box::new(move |message| {
-            let mut us = [Field::zero(); 1];
-            hasher.hash_to_field(message, domain_separation_tag.as_bytes(), &mut us);
-            let r = self.map_to_curve(&us[0]);
-            self.iso_map(&r)
-        })
-    }
-}
-
-/// Method of hashing a message and domain_separation_tag to field elements.
-pub trait MessageHasher<F: FieldExt>: 'static {
-    /// The HASH_NAME of this message hasher as specified in
-    /// <https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html#name-suite-id-naming-conventions-2>.
-    fn hash_name(&self) -> &str;
-
-    /// Hash the given message and domain separation tag to produce `buf.len()`
-    /// field elements, which are written to `buf`.
-    fn hash_to_field(&self, message: &[u8], domain_separation_tag: &[u8], buf: &mut [F]);
-}
-
-/// A MessageHasher for SHAKE128
-/// [FIPS202](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf).
-/// It does not support domain separation tags longer than 128 bytes.
-#[derive(Debug, Default)]
-pub struct Shake128<F: FieldExt> {
-    _marker: PhantomData<F>,
-}
-
-impl<F: FieldExt> MessageHasher<F> for Shake128<F> {
-    fn hash_name(&self) -> &str {
-        "XOF:SHAKE128"
-    }
-
-    fn hash_to_field(&self, message: &[u8], domain_separation_tag: &[u8], buf: &mut [F]) {
-        use sha3::digest::{ExtendableOutput, Update};
-        assert!(domain_separation_tag.len() < 256);
-
-        // Assume that the field size is 32 bytes and k is 256, where k is defined in
-        // <https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html#name-security-considerations-3>.
-        const CHUNKLEN: usize = 64;
-
-        let outlen = buf.len() * CHUNKLEN;
-        let mut outlen_enc = vec![];
-        outlen_enc.write_u32::<BigEndian>(outlen as u32).unwrap();
-
-        let mut xof = sha3::Shake128::default();
-        xof.update(message);
-        xof.update(outlen_enc);
-        xof.update([domain_separation_tag.len() as u8]);
-        xof.update(domain_separation_tag);
-
-        for (big, buf) in xof
-            .finalize_boxed(outlen)
-            .chunks(CHUNKLEN)
-            .zip(buf.iter_mut())
-        {
-            let mut little = [0u8; CHUNKLEN];
-            little.copy_from_slice(big);
-            little.reverse();
-            *buf = F::from_bytes_wide(&little);
-        }
-    }
-}
-
-/// The simplified SWU hash-to-curve method, using an isogenous curve
-/// y^2 = x^3 + a*x + b. This currently only supports prime-order curves.
+/// Implementation of the "simplified SWU" hashing to short Weierstrass curves
+/// with a = 0. Internally uses SHAKE128.
 #[derive(Debug)]
 pub struct SimplifiedSWUWithDegree3Isogeny<
     F: FieldExt,
@@ -182,7 +42,7 @@ impl<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAffine<Base = F>>
     ///
     /// # Panics
     /// Panics if z is square.
-    pub fn new(z: &F, isogeny_constants: &[F; 13]) -> Self {
+    pub fn new(z: &F, isogeny_constants: [F; 13]) -> Self {
         let a = I::a();
         let b = I::b();
 
@@ -191,23 +51,99 @@ impl<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAffine<Base = F>>
             minus_b_over_a: (-b) * &(a.invert().unwrap()),
             b_over_za: b * &((*z * a).invert().unwrap()),
             theta: (F::ROOT_OF_UNITY.invert().unwrap() * z).sqrt().unwrap(),
-            isogeny_constants: *isogeny_constants,
+            isogeny_constants: isogeny_constants,
             _marker_c: PhantomData,
             _marker_i: PhantomData,
         }
     }
-}
 
-impl<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAffine<Base = F>> HashToCurve<C>
-    for SimplifiedSWUWithDegree3Isogeny<F, C, I>
-{
-    type IsogenousCurve = I::Projective;
+    /// The full hash from an input message to a curve point.
+    ///
+    /// `domain_prefix` should identify the application protocol, usage
+    /// within that protocol, and version, e.g. "z.cash:Orchard-V1".
+    /// Other fields required to conform to [IRTF-CFRG-Hash-to-Curve]
+    /// will be added automatically. There may be a length limitation on
+    /// `domain_prefix`.
+    ///
+    /// For example, the resulting full domain separation tag for the
+    /// Pallas curve using `Shake128` and the simplified SWU map might be
+    /// b"z.cash:Orchard-V1-pallas_XOF:SHAKE128_SSWU_RO_".
+    pub fn hash_to_curve(&self, domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> C::Projective + '_> {
+        let domain_separation_tag: String = format!(
+            "{}-{}_{}_{}_RO_",
+            domain_prefix,
+            C::CURVE_ID,
+            "XOF:SHAKE128",
+            "SSWU"
+        );
 
-    fn map_id(&self) -> &str {
-        "SSWU"
+        Box::new(move |message| {
+            let mut us = [Field::zero(); 2];
+            Self::hash_to_field(message, domain_separation_tag.as_bytes(), &mut us);
+            self.field_elements_to_curve(&us[0], &us[1])
+        })
     }
 
-    fn map_to_curve(&self, u: &F) -> Self::IsogenousCurve {
+    /// A non-uniform hash from an input message to a curve point.
+    /// This is *not* suitable for applications requiring a random oracle.
+    /// Use `hash_to_curve` instead unless you are really sure that a
+    /// non-uniform map is sufficient.
+    ///
+    /// `domain_prefix` is as described for `hash_to_curve`.
+    ///
+    /// For example, the resulting full domain separation tag for the
+    /// Pallas curve using `Shake128` and the simplified SWU map might be
+    /// b"z.cash:Orchard-V1-pallas_XOF:SHAKE128_SSWU_NU_".
+    pub fn encode_to_curve(&self, domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> C::Projective + '_> {
+        let domain_separation_tag: String = format!(
+            "{}-{}_{}_{}_NU_",
+            domain_prefix,
+            C::CURVE_ID,
+            "XOF:SHAKE128",
+            "SSWU"
+        );
+
+        Box::new(move |message| {
+            let mut us = [Field::zero(); 1];
+            Self::hash_to_field(message, domain_separation_tag.as_bytes(), &mut us);
+            let r = self.map_to_curve(&us[0]);
+            self.iso_map(&r)
+        })
+    }
+
+    /// Hashes over a message and writes the output to all of `buf`.
+    pub fn hash_to_field(message: &[u8], domain_separation_tag: &[u8], buf: &mut [F]) {
+        use sha3::digest::{ExtendableOutput, Update};
+        assert!(domain_separation_tag.len() < 256);
+
+        // Assume that the field size is 32 bytes and k is 256, where k is defined in
+        // <https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html#name-security-considerations-3>.
+        const CHUNKLEN: usize = 64;
+
+        let outlen = buf.len() * CHUNKLEN;
+        let mut outlen_enc = vec![];
+        outlen_enc.write_u32::<BigEndian>(outlen as u32).unwrap();
+
+        let mut xof = sha3::Shake128::default();
+        xof.update(message);
+        xof.update(outlen_enc);
+        xof.update([domain_separation_tag.len() as u8]);
+        xof.update(domain_separation_tag);
+
+        for (big, buf) in xof
+            .finalize_boxed(outlen)
+            .chunks(CHUNKLEN)
+            .zip(buf.iter_mut())
+        {
+            let mut little = [0u8; CHUNKLEN];
+            little.copy_from_slice(big);
+            little.reverse();
+            *buf = F::from_bytes_wide(&little);
+        }
+    }
+
+    /// Maps a field element to the isogenous curve.
+    pub fn map_to_curve(&self, u: &F) -> I::Projective {
         // 1. tv1 = inv0(Z^2 * u^4 + Z * u^2)
         // 2. x1 = (-B / A) * (1 + tv1)
         // 3. If tv1 == 0, set x1 = B / (Z * A)
@@ -285,7 +221,7 @@ impl<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAffine<Base = F>> HashToCurv
     }
 
     /// Implements a degree 3 isogeny map.
-    fn iso_map(&self, p: &I::Projective) -> C::Projective {
+    pub fn iso_map(&self, p: &I::Projective) -> C::Projective {
         // The input and output are in Jacobian coordinates, using the method
         // in "Avoiding inversions" [WB2019, section 4.3].
 
@@ -310,7 +246,8 @@ impl<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAffine<Base = F>> HashToCurv
         C::Projective::new_jacobian(xo, yo, zo).unwrap()
     }
 
-    fn field_elements_to_curve(&self, u0: &C::Base, u1: &C::Base) -> C::Projective {
+    /// Map two field elements to a curve point.
+    pub fn field_elements_to_curve(&self, u0: &C::Base, u1: &C::Base) -> C::Projective {
         let q0 = self.map_to_curve(u0);
         let q1 = self.map_to_curve(u1);
         let r: I::Projective = q0 + &q1;

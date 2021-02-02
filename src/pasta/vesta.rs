@@ -108,13 +108,13 @@ lazy_static! {
         ];
 
         let z = -Base::from_u64(13);
-        SimplifiedSWUWithDegree3Isogeny::new(&z, &isogeny_constants)
+        SimplifiedSWUWithDegree3Isogeny::new(&z, isogeny_constants)
     };
 }
 
 #[test]
 fn test_map_to_curve_vesta() {
-    use crate::arithmetic::{Curve, CurveAffine, HashToCurve, Shake128};
+    use crate::arithmetic::{Curve, CurveAffine};
     use std::collections::HashSet;
 
     assert!(MAP.minus_b_over_a * IsoAffine::a() == -IsoAffine::b());
@@ -126,7 +126,7 @@ fn test_map_to_curve_vesta() {
         .collect();
     assert!(set.len() == 10000);
 
-    let hash = MAP.hash_to_curve("z.cash:test", Shake128::default());
+    let hash = MAP.hash_to_curve("z.cash:test");
     let p: Point = hash(b"hello");
     let (x, y, z) = p.jacobian_coordinates();
     println!("{:?}", p);

@@ -108,13 +108,13 @@ lazy_static! {
         ];
 
         let z = -Base::from_u64(13);
-        SimplifiedSWUWithDegree3Isogeny::new(&z, &isogeny_constants)
+        SimplifiedSWUWithDegree3Isogeny::new(&z, isogeny_constants)
     };
 }
 
 #[test]
 fn test_iso_map() {
-    use crate::arithmetic::{Curve, HashToCurve};
+    use crate::arithmetic::Curve;
 
     // This is a regression test (it's the same input to iso_map as for hash_to_curve
     // with domain prefix "z.cash:test", Shake128, and input b"hello").
@@ -154,7 +154,7 @@ fn test_iso_map() {
 
 #[test]
 fn test_map_to_curve_pallas() {
-    use crate::arithmetic::{Curve, CurveAffine, HashToCurve, Shake128};
+    use crate::arithmetic::{Curve, CurveAffine};
     use std::collections::HashSet;
 
     assert!(MAP.minus_b_over_a * IsoAffine::a() == -IsoAffine::b());
@@ -166,7 +166,7 @@ fn test_map_to_curve_pallas() {
         .collect();
     assert!(set.len() == 10000);
 
-    let hash = MAP.hash_to_curve("z.cash:test", Shake128::default());
+    let hash = MAP.hash_to_curve("z.cash:test");
     let p: Point = hash(b"hello");
     let (x, y, z) = p.jacobian_coordinates();
     println!("{:?}", p);
