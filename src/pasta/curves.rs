@@ -687,16 +687,7 @@ macro_rules! new_curve_impl {
 macro_rules! impl_projective_curve_specific {
     ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, special_a0_b5) => {
         fn hasher(domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> Self + 'static> {
-            use super::hashtocurve::SimplifiedSWUWithDegree3Isogeny;
-
-            let swu: SimplifiedSWUWithDegree3Isogeny<$base, $name_affine, $iso_affine> =
-                SimplifiedSWUWithDegree3Isogeny::new(
-                    $name::Z,
-                    $name::ISOGENY_CONSTANTS,
-                    $name::MINUS_B_OVER_A,
-                    $name::B_OVER_ZA,
-                    $name::THETA,
-                );
+            use super::hashtocurve;
 
             let domain_separation_tag: String = format!(
                 "{}-{}_{}_{}_RO_",
@@ -708,12 +699,25 @@ macro_rules! impl_projective_curve_specific {
 
             Box::new(move |message| {
                 let mut us = [Field::zero(); 2];
-                SimplifiedSWUWithDegree3Isogeny::<$base, $name_affine, $iso_affine>::hash_to_field(
-                    message,
-                    domain_separation_tag.as_bytes(),
-                    &mut us,
+                hashtocurve::hash_to_field(message, domain_separation_tag.as_bytes(), &mut us);
+                let q0 = hashtocurve::map_to_curve::<$base, $name_affine, $iso_affine>(
+                    &us[0],
+                    $name::THETA,
+                    $name::Z,
+                    $name::B_OVER_ZA,
                 );
-                swu.field_elements_to_curve(&us[0], &us[1])
+                let q1 = hashtocurve::map_to_curve::<$base, $name_affine, $iso_affine>(
+                    &us[1],
+                    $name::THETA,
+                    $name::Z,
+                    $name::B_OVER_ZA,
+                );
+                let r = q0 + &q1;
+                assert!(bool::from(r.is_on_curve()));
+                hashtocurve::iso_map::<$base, $name_affine, $iso_affine>(
+                    &r,
+                    &$name::ISOGENY_CONSTANTS,
+                )
             })
         }
 

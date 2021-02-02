@@ -12,7 +12,6 @@ pub mod vesta;
 
 pub use curves::*;
 pub use fields::*;
-use hashtocurve::*;
 
 #[test]
 fn test_endo_consistency() {

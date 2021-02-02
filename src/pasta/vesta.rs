@@ -1,8 +1,5 @@
 //! The Vesta and iso-Vesta elliptic curve groups.
 
-use lazy_static::lazy_static;
-
-use super::SimplifiedSWUWithDegree3Isogeny;
 use super::{Eq, EqAffine, Fp, Fq, IsoEq, IsoEqAffine};
 
 /// The base field of the Vesta and iso-Vesta curves.
@@ -23,32 +20,9 @@ pub type IsoPoint = IsoEq;
 /// A iso-Vesta point in the affine coordinate space (or the point at infinity).
 pub type IsoAffine = IsoEqAffine;
 
-lazy_static! {
-    /// The iso-Vesta -> Vesta degree 3 isogeny map.
-    pub static ref MAP: SimplifiedSWUWithDegree3Isogeny<Base, Affine, IsoAffine> = {
-        SimplifiedSWUWithDegree3Isogeny::new(
-            Point::Z,
-            Point::ISOGENY_CONSTANTS,
-            Point::MINUS_B_OVER_A,
-            Point::B_OVER_ZA,
-            Point::THETA
-        )
-    };
-}
-
 #[test]
 fn test_map_to_curve_vesta() {
-    use crate::arithmetic::{Curve, CurveAffine, FieldExt};
-    use std::collections::HashSet;
-
-    assert!(MAP.minus_b_over_a * IsoAffine::a() == -IsoAffine::b());
-    assert!(MAP.b_over_za * MAP.z * IsoAffine::a() == IsoAffine::b());
-    assert!(MAP.theta.square() * Base::ROOT_OF_UNITY == MAP.z);
-
-    let set: HashSet<_> = (0..10000)
-        .map(|i| MAP.map_to_curve(&Base::from(i)).to_affine())
-        .collect();
-    assert!(set.len() == 10000);
+    use crate::arithmetic::Curve;
 
     let hash = Point::hasher("z.cash:test");
     let p: Point = hash(b"hello");
