@@ -80,9 +80,21 @@ pub trait Curve:
     fn jacobian_coordinates(&self) -> (Self::Base, Self::Base, Self::Base);
 
     /// Requests a hasher that accepts messages and returns near-uniformly
-    /// distributed elements in the group, given domain prefix `hasher`.
+    /// distributed elements in the group, given domain prefix `domain_prefix`.
     ///
     /// This method is suitable for use as a random oracle.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use halo2::arithmetic::{Curve, CurveAffine};
+    /// fn pedersen_commitment<C: CurveAffine>(x: C::Scalar, r: C::Scalar) -> C {
+    ///     let hasher = C::Projective::hash_to_curve("z.cash:example_pedersen_commitment");
+    ///     let g = hasher(b"g");
+    ///     let h = hasher(b"h");
+    ///     (g * x + h * r).to_affine()
+    /// }
+    /// ```
     fn hash_to_curve(domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> Self + 'static>;
 
     /// Returns whether or not this element is on the curve; should
