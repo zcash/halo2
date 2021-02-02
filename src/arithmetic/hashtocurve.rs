@@ -42,15 +42,18 @@ impl<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAffine<Base = F>>
     ///
     /// # Panics
     /// Panics if z is square.
-    pub fn new(z: &F, isogeny_constants: [F; 13]) -> Self {
-        let a = I::a();
-        let b = I::b();
-
+    pub fn new(
+        z: F,
+        isogeny_constants: [F; 13],
+        minus_b_over_a: F,
+        b_over_za: F,
+        theta: F,
+    ) -> Self {
         SimplifiedSWUWithDegree3Isogeny {
-            z: *z,
-            minus_b_over_a: (-b) * &(a.invert().unwrap()),
-            b_over_za: b * &((*z * a).invert().unwrap()),
-            theta: (F::ROOT_OF_UNITY.invert().unwrap() * z).sqrt().unwrap(),
+            z: z,
+            minus_b_over_a,
+            b_over_za,
+            theta,
             isogeny_constants: isogeny_constants,
             _marker_c: PhantomData,
             _marker_i: PhantomData,
