@@ -994,15 +994,6 @@ impl Ep {
         0x4000000000000000,
     ]);
 
-    /// `(-b) * &(a.invert().unwrap())` where a and b correspond with curve
-    /// constants for the isogenous curve.
-    pub const MINUS_B_OVER_A: Fp = Fp::from_raw([
-        0x1c3006d89470d7f8,
-        0x7612d2d7211b7b10,
-        0xd97cab452a13c1eb,
-        0x3d115d87af7b3324,
-    ]);
-
     /// `b * &((*z * a).invert().unwrap())` where a and b correspond with curve
     /// constants for the isogenous curve
     pub const B_OVER_ZA: Fp = Fp::from_raw([
@@ -1110,15 +1101,6 @@ impl Eq {
         0x224698fc0994a8dd,
         0x0000000000000000,
         0x4000000000000000,
-    ]);
-
-    /// `(-b) * &(a.invert().unwrap())` where a and b correspond with curve
-    /// constants for the isogenous curve.
-    pub const MINUS_B_OVER_A: Fq = Fq::from_raw([
-        0x6dab74e8ef9dc7d3,
-        0xbb4a015f2450502c,
-        0x5385df3f6207bb22,
-        0x23447efd3c451b98,
     ]);
 
     /// `b * &((*z * a).invert().unwrap())` where a and b correspond with curve
