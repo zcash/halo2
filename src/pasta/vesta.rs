@@ -25,7 +25,7 @@ pub type IsoAffine = IsoEqAffine;
 
 lazy_static! {
     /// The iso-Vesta -> Vesta degree 3 isogeny map.
-    pub static ref MAP: SimplifiedSWUWithDegree3Isogeny<Base, IsoAffine, Affine> = {
+    pub static ref MAP: SimplifiedSWUWithDegree3Isogeny<Base, Affine, IsoAffine> = {
         let isogeny_constants: [Base; 13] = [
             Base::from_raw([
                 0x43cd42c800000001,

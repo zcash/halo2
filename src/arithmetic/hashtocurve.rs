@@ -6,24 +6,26 @@ use core::fmt::Debug;
 use core::marker::PhantomData;
 use subtle::ConstantTimeEq;
 
-use super::{Curve, CurveAffine, FieldExt};
+use super::{Curve, CurveAffine, Field, FieldExt};
 
 /// A method of hashing to an elliptic curve.
-/// (If no isogeny is required, then C and I should be the same.)
 ///
 /// This is intended to conform to the work-in-progress Internet Draft
 /// [IRTF-CFRG-Hash-to-Curve](https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html).
-pub trait HashToCurve<F: FieldExt, I: CurveAffine<Base = F>, C: CurveAffine<Base = F>> {
+pub trait HashToCurve<C: CurveAffine> {
+    /// Curve that may or may not be isogenous to the target curve C.
+    type IsogenousCurve: Curve;
+
     /// The MAP_ID of this method as specified in
     /// <https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html#name-suite-id-naming-conventions-2>.
     fn map_id(&self) -> &str;
 
     /// A non-uniform map from a field element to the isogenous curve.
-    fn map_to_curve(&self, u: &C::Base) -> I::Projective;
+    fn map_to_curve(&self, u: &C::Base) -> Self::IsogenousCurve;
 
     /// The isogeny map from curve I to curve C.
     /// (If no isogeny is required, this should be the identity function.)
-    fn iso_map(&self, p: &I::Projective) -> C::Projective;
+    fn iso_map(&self, p: &Self::IsogenousCurve) -> C::Projective;
 
     /// The random oracle map.
     fn field_elements_to_curve(&self, u0: &C::Base, u1: &C::Base) -> C::Projective;
@@ -42,9 +44,9 @@ pub trait HashToCurve<F: FieldExt, I: CurveAffine<Base = F>, C: CurveAffine<Base
     fn hash_to_curve(
         &self,
         domain_prefix: &str,
-        hasher: impl MessageHasher<F> + 'static,
+        hasher: impl MessageHasher<C::Base>,
     ) -> Box<dyn Fn(&[u8]) -> C::Projective + '_> {
-        let domain_separation_tag = format!(
+        let domain_separation_tag: String = format!(
             "{}-{}_{}_{}_RO_",
             domain_prefix,
             C::CURVE_ID,
@@ -53,7 +55,8 @@ pub trait HashToCurve<F: FieldExt, I: CurveAffine<Base = F>, C: CurveAffine<Base
         );
 
         Box::new(move |message| {
-            let us = hasher.hash_to_field(message, domain_separation_tag.as_bytes(), 2);
+            let mut us = [Field::zero(); 2];
+            hasher.hash_to_field(message, domain_separation_tag.as_bytes(), &mut us);
             self.field_elements_to_curve(&us[0], &us[1])
         })
     }
@@ -71,9 +74,9 @@ pub trait HashToCurve<F: FieldExt, I: CurveAffine<Base = F>, C: CurveAffine<Base
     fn encode_to_curve(
         &self,
         domain_prefix: &str,
-        hasher: impl MessageHasher<F> + 'static,
+        hasher: impl MessageHasher<C::Base>,
     ) -> Box<dyn Fn(&[u8]) -> C::Projective + '_> {
-        let domain_separation_tag = format!(
+        let domain_separation_tag: String = format!(
             "{}-{}_{}_{}_NU_",
             domain_prefix,
             C::CURVE_ID,
@@ -82,7 +85,8 @@ pub trait HashToCurve<F: FieldExt, I: CurveAffine<Base = F>, C: CurveAffine<Base
         );
 
         Box::new(move |message| {
-            let us = hasher.hash_to_field(message, domain_separation_tag.as_bytes(), 1);
+            let mut us = [Field::zero(); 1];
+            hasher.hash_to_field(message, domain_separation_tag.as_bytes(), &mut us);
             let r = self.map_to_curve(&us[0]);
             self.iso_map(&r)
         })
@@ -90,14 +94,14 @@ pub trait HashToCurve<F: FieldExt, I: CurveAffine<Base = F>, C: CurveAffine<Base
 }
 
 /// Method of hashing a message and domain_separation_tag to field elements.
-pub trait MessageHasher<F: FieldExt> {
+pub trait MessageHasher<F: FieldExt>: 'static {
     /// The HASH_NAME of this message hasher as specified in
     /// <https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html#name-suite-id-naming-conventions-2>.
     fn hash_name(&self) -> &str;
 
-    /// Hash the given message and domain separation tag to give `count`
-    /// field elements.
-    fn hash_to_field(&self, message: &[u8], domain_separation_tag: &[u8], count: usize) -> Vec<F>;
+    /// Hash the given message and domain separation tag to produce `buf.len()`
+    /// field elements, which are written to `buf`.
+    fn hash_to_field(&self, message: &[u8], domain_separation_tag: &[u8], buf: &mut [F]);
 }
 
 /// A MessageHasher for SHAKE128
@@ -113,7 +117,7 @@ impl<F: FieldExt> MessageHasher<F> for Shake128<F> {
         "XOF:SHAKE128"
     }
 
-    fn hash_to_field(&self, message: &[u8], domain_separation_tag: &[u8], count: usize) -> Vec<F> {
+    fn hash_to_field(&self, message: &[u8], domain_separation_tag: &[u8], buf: &mut [F]) {
         use sha3::digest::{ExtendableOutput, Update};
         assert!(domain_separation_tag.len() < 256);
 
@@ -121,7 +125,7 @@ impl<F: FieldExt> MessageHasher<F> for Shake128<F> {
         // <https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html#name-security-considerations-3>.
         const CHUNKLEN: usize = 64;
 
-        let outlen = count * CHUNKLEN;
+        let outlen = buf.len() * CHUNKLEN;
         let mut outlen_enc = vec![];
         outlen_enc.write_u32::<BigEndian>(outlen as u32).unwrap();
 
@@ -131,15 +135,16 @@ impl<F: FieldExt> MessageHasher<F> for Shake128<F> {
         xof.update([domain_separation_tag.len() as u8]);
         xof.update(domain_separation_tag);
 
-        xof.finalize_boxed(outlen)
+        for (big, buf) in xof
+            .finalize_boxed(outlen)
             .chunks(CHUNKLEN)
-            .map(|big| {
-                let mut little = [0u8; CHUNKLEN];
-                little.copy_from_slice(big);
-                little.reverse();
-                F::from_bytes_wide(&little)
-            })
-            .collect()
+            .zip(buf.iter_mut())
+        {
+            let mut little = [0u8; CHUNKLEN];
+            little.copy_from_slice(big);
+            little.reverse();
+            *buf = F::from_bytes_wide(&little);
+        }
     }
 }
 
@@ -148,8 +153,8 @@ impl<F: FieldExt> MessageHasher<F> for Shake128<F> {
 #[derive(Debug)]
 pub struct SimplifiedSWUWithDegree3Isogeny<
     F: FieldExt,
-    I: CurveAffine<Base = F>,
     C: CurveAffine<Base = F>,
+    I: CurveAffine<Base = F>,
 > {
     /// `Z` parameter (ξ in [WB2019](https://eprint.iacr.org/2019/403)).
     pub z: F,
@@ -166,12 +171,12 @@ pub struct SimplifiedSWUWithDegree3Isogeny<
     /// Constants for the isogeny.
     pub isogeny_constants: [F; 13],
 
-    marker_curve: PhantomData<C>,
-    marker_iso: PhantomData<I>,
+    _marker_c: PhantomData<C>,
+    _marker_i: PhantomData<I>,
 }
 
-impl<F: FieldExt, I: CurveAffine<Base = F>, C: CurveAffine<Base = F>>
-    SimplifiedSWUWithDegree3Isogeny<F, I, C>
+impl<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAffine<Base = F>>
+    SimplifiedSWUWithDegree3Isogeny<F, C, I>
 {
     /// Create a SimplifiedSWUWithDegree3Isogeny method for the given parameters.
     ///
@@ -187,20 +192,22 @@ impl<F: FieldExt, I: CurveAffine<Base = F>, C: CurveAffine<Base = F>>
             b_over_za: b * &((*z * a).invert().unwrap()),
             theta: (F::ROOT_OF_UNITY.invert().unwrap() * z).sqrt().unwrap(),
             isogeny_constants: *isogeny_constants,
-            marker_curve: PhantomData,
-            marker_iso: PhantomData,
+            _marker_c: PhantomData,
+            _marker_i: PhantomData,
         }
     }
 }
 
-impl<F: FieldExt, I: CurveAffine<Base = F>, C: CurveAffine<Base = F>> HashToCurve<F, I, C>
-    for SimplifiedSWUWithDegree3Isogeny<F, I, C>
+impl<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAffine<Base = F>> HashToCurve<C>
+    for SimplifiedSWUWithDegree3Isogeny<F, C, I>
 {
+    type IsogenousCurve = I::Projective;
+
     fn map_id(&self) -> &str {
         "SSWU"
     }
 
-    fn map_to_curve(&self, u: &F) -> I::Projective {
+    fn map_to_curve(&self, u: &F) -> Self::IsogenousCurve {
         // 1. tv1 = inv0(Z^2 * u^4 + Z * u^2)
         // 2. x1 = (-B / A) * (1 + tv1)
         // 3. If tv1 == 0, set x1 = B / (Z * A)

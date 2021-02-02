@@ -25,7 +25,7 @@ pub type IsoAffine = IsoEpAffine;
 
 lazy_static! {
     /// The iso-Pallas -> Pallas degree 3 isogeny map.
-    pub static ref MAP: SimplifiedSWUWithDegree3Isogeny<Base, IsoAffine, Affine> = {
+    pub static ref MAP: SimplifiedSWUWithDegree3Isogeny<Base, Affine, IsoAffine> = {
         let isogeny_constants: [Base; 13] = [
             Base::from_raw([
                 0x775f6034aaaaaaab,
