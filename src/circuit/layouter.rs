@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::marker::PhantomData;
 
-use super::{Cell, Chip, Layouter, Permutation, Region};
+use super::{Cell, Chip, Layouter, Permutation, Region, Shape};
 use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed};
 
 /// Helper trait for implementing a custom [`Layouter`].
@@ -106,32 +106,42 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
         &self.config
     }
 
-    fn assign_region<A, AR, N, NR>(&mut self, name: N, mut assignment: A) -> Result<AR, Error>
+    fn assign_region<A, AR, S, N, NR>(
+        &mut self,
+        name: N,
+        shape: S,
+        mut assignment: A,
+    ) -> Result<AR, Error>
     where
         A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        S: Fn() -> Shape,
         N: Fn() -> NR,
         NR: Into<String>,
     {
         let region_index = self.regions.len();
 
         // Get shape of the region.
-        let mut shape = RegionShape::new(region_index);
-        {
-            let region: &mut dyn RegionLayouter<C> = &mut shape;
-            assignment(region.into())?;
-        }
+        let (columns, row_count) = match shape() {
+            Shape::Undefined => {
+                let mut shape = RegionShape::new(region_index);
+                let region: &mut dyn RegionLayouter<C> = &mut shape;
+                assignment(region.into())?;
+                (shape.columns, shape.row_count)
+            }
+            Shape::Rectangle { columns, row_count } => (columns, row_count),
+        };
 
         // Lay out this region. We implement the simplest approach here: position the
         // region starting at the earliest row for which none of the columns are in use.
         let mut region_start = 0;
-        for column in &shape.columns {
+        for column in &columns {
             region_start = cmp::max(region_start, self.columns.get(column).cloned().unwrap_or(0));
         }
         self.regions.push(region_start);
 
         // Update column usage information.
-        for column in shape.columns {
-            self.columns.insert(column, region_start + shape.row_count);
+        for column in columns {
+            self.columns.insert(column, region_start + row_count);
         }
 
         self.cs.enter_region(name);
@@ -162,8 +172,10 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
     }
 }
 
-/// The shape of a region. For a region at a certain index, we track
-/// the set of columns it uses as well as the number of rows it uses.
+/// A region layouter that measures the rectangular shape of a region.
+///
+/// For a region at a certain index, we track the set of columns it uses as well as the
+/// number of rows it uses.
 #[derive(Debug)]
 pub struct RegionShape {
     region_index: usize,

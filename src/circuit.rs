@@ -1,6 +1,6 @@
 //! Traits and structs for implementing circuit components.
 
-use std::{fmt, marker::PhantomData};
+use std::{collections::HashSet, fmt, marker::PhantomData};
 
 use crate::{
     arithmetic::FieldExt,
@@ -53,6 +53,21 @@ impl Permutation {
             mapping: columns.iter().map(|c| (*c).into()).collect(),
         }
     }
+}
+
+/// The shape of a region.
+#[derive(Debug)]
+pub enum Shape {
+    /// An undefined shape. A layouter must run the assignment logic to figure out the
+    /// region's shape.
+    Undefined,
+    /// A rectangular region.
+    Rectangle {
+        /// The columns used by the region.
+        columns: HashSet<Column<Any>>,
+        /// The number of contiguous rows the region occupies.
+        row_count: usize,
+    },
 }
 
 /// A region of the circuit in which a [`Chip`] can assign cells.
@@ -154,9 +169,15 @@ pub trait Layouter<C: Chip> {
     ///     region.assign_advice(self.config.a, offset, || { Some(value)});
     /// });
     /// ```
-    fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>
+    fn assign_region<A, AR, S, N, NR>(
+        &mut self,
+        name: N,
+        shape: S,
+        assignment: A,
+    ) -> Result<AR, Error>
     where
         A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        S: Fn() -> Shape,
         N: Fn() -> NR,
         NR: Into<String>;
 
@@ -202,13 +223,19 @@ impl<'a, C: Chip, L: Layouter<C> + 'a> Layouter<C> for NamespacedLayouter<'a, C,
         self.0.config()
     }
 
-    fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>
+    fn assign_region<A, AR, S, N, NR>(
+        &mut self,
+        name: N,
+        shape: S,
+        assignment: A,
+    ) -> Result<AR, Error>
     where
         A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        S: Fn() -> Shape,
         N: Fn() -> NR,
         NR: Into<String>,
     {
-        self.0.assign_region(name, assignment)
+        self.0.assign_region(name, shape, assignment)
     }
 
     fn get_root(&mut self) -> &mut Self::Root {
