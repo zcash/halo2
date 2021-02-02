@@ -79,6 +79,12 @@ pub trait Curve:
     /// Return the Jacobian coordinates of this point.
     fn jacobian_coordinates(&self) -> (Self::Base, Self::Base, Self::Base);
 
+    /// Requests a hasher that accepts messages and returns near-uniformly
+    /// distributed elements in the group, given domain prefix `hasher`.
+    ///
+    /// This method is suitable for use as a random oracle.
+    fn hasher(domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> Self + 'static>;
+
     /// Returns whether or not this element is on the curve; should
     /// always be true unless an "unchecked" API was used.
     fn is_on_curve(&self) -> Choice;

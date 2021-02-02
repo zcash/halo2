@@ -27,11 +27,11 @@ lazy_static! {
     /// The iso-Vesta -> Vesta degree 3 isogeny map.
     pub static ref MAP: SimplifiedSWUWithDegree3Isogeny<Base, Affine, IsoAffine> = {
         SimplifiedSWUWithDegree3Isogeny::new(
-            IsoAffine::Z,
-            IsoAffine::ISOGENY_CONSTANTS,
-            IsoAffine::MINUS_B_OVER_A,
-            IsoAffine::B_OVER_ZA,
-            IsoAffine::THETA
+            Point::Z,
+            Point::ISOGENY_CONSTANTS,
+            Point::MINUS_B_OVER_A,
+            Point::B_OVER_ZA,
+            Point::THETA
         )
     };
 }
@@ -50,7 +50,7 @@ fn test_map_to_curve_vesta() {
         .collect();
     assert!(set.len() == 10000);
 
-    let hash = MAP.hash_to_curve("z.cash:test");
+    let hash = Point::hasher("z.cash:test");
     let p: Point = hash(b"hello");
     let (x, y, z) = p.jacobian_coordinates();
     println!("{:?}", p);
