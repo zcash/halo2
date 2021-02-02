@@ -1,7 +1,6 @@
 //! This module implements "simplified SWU" hashing to short Weierstrass curves
 //! with a = 0.
 
-use byteorder::{BigEndian, WriteBytesExt};
 use subtle::ConstantTimeEq;
 
 use crate::arithmetic::{Curve, CurveAffine, FieldExt};
@@ -16,12 +15,10 @@ pub fn hash_to_field<F: FieldExt>(message: &[u8], domain_separation_tag: &[u8], 
     const CHUNKLEN: usize = 64;
 
     let outlen = buf.len() * CHUNKLEN;
-    let mut outlen_enc = vec![];
-    outlen_enc.write_u32::<BigEndian>(outlen as u32).unwrap();
 
     let mut xof = sha3::Shake128::default();
     xof.update(message);
-    xof.update(outlen_enc);
+    xof.update(&(outlen as u32).to_be_bytes());
     xof.update([domain_separation_tag.len() as u8]);
     xof.update(domain_separation_tag);
 
