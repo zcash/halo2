@@ -2,8 +2,8 @@
 
 use lazy_static::lazy_static;
 
+use super::SimplifiedSWUWithDegree3Isogeny;
 use super::{Eq, EqAffine, Fp, Fq, IsoEq, IsoEqAffine};
-use crate::arithmetic::SimplifiedSWUWithDegree3Isogeny;
 
 /// The base field of the Vesta and iso-Vesta curves.
 pub type Base = Fq;

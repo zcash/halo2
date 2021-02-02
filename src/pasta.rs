@@ -6,11 +6,13 @@ mod macros;
 mod curves;
 mod fields;
 
+mod hashtocurve;
 pub mod pallas;
 pub mod vesta;
 
 pub use curves::*;
 pub use fields::*;
+use hashtocurve::*;
 
 #[test]
 fn test_endo_consistency() {

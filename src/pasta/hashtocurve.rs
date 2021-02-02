@@ -6,7 +6,7 @@ use core::fmt::Debug;
 use core::marker::PhantomData;
 use subtle::ConstantTimeEq;
 
-use super::{Curve, CurveAffine, Field, FieldExt};
+use crate::arithmetic::{Curve, CurveAffine, Field, FieldExt};
 
 /// Implementation of the "simplified SWU" hashing to short Weierstrass curves
 /// with a = 0. Internally uses SHAKE128.

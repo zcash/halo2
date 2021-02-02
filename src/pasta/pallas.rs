@@ -2,8 +2,8 @@
 
 use lazy_static::lazy_static;
 
+use super::SimplifiedSWUWithDegree3Isogeny;
 use super::{Ep, EpAffine, Fp, Fq, IsoEp, IsoEpAffine};
-use crate::arithmetic::SimplifiedSWUWithDegree3Isogeny;
 
 /// The base field of the Pallas and iso-Pallas curves.
 pub type Base = Fp;
