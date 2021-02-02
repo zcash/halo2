@@ -24,7 +24,7 @@ pub type IsoAffine = IsoEqAffine;
 fn test_map_to_curve_vesta() {
     use crate::arithmetic::Curve;
 
-    let hash = Point::hasher("z.cash:test");
+    let hash = Point::hash_to_curve("z.cash:test");
     let p: Point = hash(b"hello");
     let (x, y, z) = p.jacobian_coordinates();
     println!("{:?}", p);

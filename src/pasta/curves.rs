@@ -686,7 +686,7 @@ macro_rules! new_curve_impl {
 
 macro_rules! impl_projective_curve_specific {
     ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, special_a0_b5) => {
-        fn hasher(domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> Self + 'static> {
+        fn hash_to_curve(domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> Self + 'static> {
             use super::hashtocurve;
 
             let domain_separation_tag: String = format!(
@@ -777,7 +777,7 @@ macro_rules! impl_projective_curve_specific {
     };
     ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, general) => {
         /// Unimplemented: hashing to this curve is not supported
-        fn hasher(_domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> Self + 'static> {
+        fn hash_to_curve(_domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> Self + 'static> {
             unimplemented!()
         }
 

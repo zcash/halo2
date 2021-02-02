@@ -83,7 +83,7 @@ pub trait Curve:
     /// distributed elements in the group, given domain prefix `hasher`.
     ///
     /// This method is suitable for use as a random oracle.
-    fn hasher(domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> Self + 'static>;
+    fn hash_to_curve(domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> Self + 'static>;
 
     /// Returns whether or not this element is on the curve; should
     /// always be true unless an "unchecked" API was used.
