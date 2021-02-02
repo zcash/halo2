@@ -1,6 +1,6 @@
 //! The Vesta and iso-Vesta elliptic curve groups.
 
-use super::{Eq, EqAffine, Fp, Fq, IsoEq, IsoEqAffine};
+use super::{Eq, EqAffine, Fp, Fq};
 
 /// The base field of the Vesta and iso-Vesta curves.
 pub type Base = Fq;
@@ -13,12 +13,6 @@ pub type Point = Eq;
 
 /// A Vesta point in the affine coordinate space (or the point at infinity).
 pub type Affine = EqAffine;
-
-/// An iso-Vesta point in the projective coordinate space.
-pub type IsoPoint = IsoEq;
-
-/// A iso-Vesta point in the affine coordinate space (or the point at infinity).
-pub type IsoAffine = IsoEqAffine;
 
 #[test]
 fn test_map_to_curve_vesta() {

@@ -12,11 +12,11 @@ use super::{Fp, Fq};
 use crate::arithmetic::{Curve, CurveAffine, FieldExt, Group};
 
 macro_rules! new_curve_impl {
-    ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, $scalar:ident, $blake2b_personalization:literal,
+    (($($privacy:tt)*), $name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, $scalar:ident, $blake2b_personalization:literal,
      $curve_id:literal, $a_raw:expr, $b_raw:expr, $curve_type:ident) => {
         /// Represents a point in the projective coordinate space.
         #[derive(Copy, Clone, Debug)]
-        pub struct $name {
+        $($privacy)* struct $name {
             x: $base,
             y: $base,
             z: $base,
@@ -35,7 +35,7 @@ macro_rules! new_curve_impl {
         /// Represents a point in the affine coordinate space (or the point at
         /// infinity).
         #[derive(Copy, Clone)]
-        pub struct $name_affine {
+        $($privacy)* struct $name_affine {
             x: $base,
             y: $base,
             infinity: Choice,
@@ -845,6 +845,7 @@ macro_rules! impl_affine_curve_specific {
 }
 
 new_curve_impl!(
+    (pub),
     Ep,
     EpAffine,
     IsoEpAffine,
@@ -857,6 +858,7 @@ new_curve_impl!(
     special_a0_b5
 );
 new_curve_impl!(
+    (pub),
     Eq,
     EqAffine,
     IsoEqAffine,
@@ -869,6 +871,7 @@ new_curve_impl!(
     special_a0_b5
 );
 new_curve_impl!(
+    (pub(crate)),
     IsoEp,
     IsoEpAffine,
     EpAffine,
@@ -886,6 +889,7 @@ new_curve_impl!(
     general
 );
 new_curve_impl!(
+    (pub(crate)),
     IsoEq,
     IsoEqAffine,
     EqAffine,

@@ -1,6 +1,6 @@
 //! The Pallas and iso-Pallas elliptic curve groups.
 
-use super::{Ep, EpAffine, Fp, Fq, IsoEp, IsoEpAffine};
+use super::{Ep, EpAffine, Fp, Fq};
 
 /// The base field of the Pallas and iso-Pallas curves.
 pub type Base = Fp;
@@ -13,12 +13,6 @@ pub type Point = Ep;
 
 /// A Pallas point in the affine coordinate space (or the point at infinity).
 pub type Affine = EpAffine;
-
-/// An iso-Pallas point in the projective coordinate space.
-pub type IsoPoint = IsoEp;
-
-/// A iso-Pallas point in the affine coordinate space (or the point at infinity).
-pub type IsoAffine = IsoEpAffine;
 
 #[test]
 fn test_map_to_curve_pallas() {
