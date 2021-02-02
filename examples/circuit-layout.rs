@@ -8,6 +8,7 @@ use halo2::{
 use plotters::prelude::*;
 use std::marker::PhantomData;
 
+#[allow(clippy::many_single_char_names)]
 fn main() {
     /// This represents an advice column at a certain row in the ConstraintSystem
     #[derive(Copy, Clone, Debug)]
@@ -372,7 +373,7 @@ fn main() {
     }
 
     let a = Fp::rand();
-    let a_squared = a * &a;
+    let a_squared = a * a;
     let aux = Fp::one() + Fp::one();
     let lookup_table = vec![aux, a, a, Fp::zero()];
     let lookup_table_2 = vec![Fp::zero(), a, a_squared, Fp::zero()];
