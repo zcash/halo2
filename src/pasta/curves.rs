@@ -800,15 +800,14 @@ macro_rules! impl_projective_curve_specific {
             let yy = self.y.square();
             let a = yy.square();
             let zz = self.z.square();
-            let s = (self.x + yy).square() - xx - a;
-            let s = s + s;
-            let m = xx + xx + xx + $name::curve_constant_a() * zz.square();
-            let x3 = m.square() - (s + s);
-            let a = a + a;
-            let a = a + a;
-            let a = a + a;
+            let s = ((self.x + yy).square() - xx - a).double();
+            let m = xx.double() + xx + $name::curve_constant_a() * zz.square();
+            let x3 = m.square() - s.double();
+            let a = a.double();
+            let a = a.double();
+            let a = a.double();
             let y3 = m * (s - x3) - a;
-            let z3 = (self.x + self.y).square() - yy - zz;
+            let z3 = (self.y + self.z).square() - yy - zz;
 
             let tmp = $name {
                 x: x3,
