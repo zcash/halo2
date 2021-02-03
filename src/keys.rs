@@ -52,11 +52,8 @@ impl From<&SpendingKey> for OutgoingViewingKey {
 
 /// A key that provides the capability to view incoming and outgoing transactions.
 ///
-/// This key is useful in situations where you only need the capability to detect inbound
-/// payments, such as merchant terminals.
-///
-/// This key is not suitable for use in a wallet, as it cannot maintain accurate balance.
-/// You should use a [`FullViewingKey`] instead.
+/// This key is useful anywhere you need to maintain accurate balance, but do not want the
+/// ability to spend funds (such as a view-only wallet).
 ///
 /// TODO: Should we just define the FVK to include extended stuff like the diversifier key?
 #[derive(Debug)]
