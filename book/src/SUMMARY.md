@@ -17,6 +17,7 @@
     - [Multipoint opening argument](design/proving-system/multipoint-opening.md)
     - [Permutation argument](design/proving-system/permutation.md)
     - [Lookup argument](design/proving-system/lookup-argument.md)
+    - [Comparison to other work](design/proving-system/comparison.md)
   - [Implementation](design/implementation.md)
   - [Gadgets](design/gadgets.md)
     - [SHA-256](design/gadgets/sha256.md)
