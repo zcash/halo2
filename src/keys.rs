@@ -81,11 +81,8 @@ impl FullViewingKey {
 
 /// A diversifier that can be used to derive a specific [`Address`] from a
 /// [`FullViewingKey`] or [`IncomingViewingKey`].
-//
-// This is a newtype around a `u128` for simplicity, and enforces the diversifier size
-// during all operations.
 #[derive(Debug)]
-pub struct Diversifier(u128);
+pub struct Diversifier([u8; 11]);
 
 /// A key that provides the capability to detect and decrypt incoming notes from the block
 /// chain, without being able to spend the notes or detect when they are spent.
