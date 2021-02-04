@@ -92,7 +92,7 @@ pub trait Curve:
     ///     let hasher = C::Projective::hash_to_curve("z.cash:example_pedersen_commitment");
     ///     let g = hasher(b"g");
     ///     let h = hasher(b"h");
-    ///     (g * x + h * r).to_affine()
+    ///     (g * x + &(h * r)).to_affine()
     /// }
     /// ```
     fn hash_to_curve(domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> Self + 'static>;
