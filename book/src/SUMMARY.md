@@ -25,6 +25,8 @@
   - [Gadgets](design/gadgets.md)
     - [SHA-256](design/gadgets/sha256.md)
       - [16-bit table chip](design/gadgets/sha256/table16.md)
+    - [Sinsemilla](design/gadgets/sinsemilla.md)
+      - [Sinsemilla chip](design/gadgets/sinsemilla/chip.md)
 - [Background Material](background.md)
   - [Fields](background/fields.md)
   - [Polynomials](background/polynomials.md)
