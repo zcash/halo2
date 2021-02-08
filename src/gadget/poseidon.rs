@@ -9,9 +9,11 @@ use crate::{
     plonk::Error,
 };
 
+mod arity3;
 mod grain;
 mod mds;
 
+pub use arity3::{Arity3Chip, Arity3Config};
 use grain::SboxType;
 
 /// A specification for a Poseidon permutation.
