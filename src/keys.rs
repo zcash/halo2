@@ -39,17 +39,6 @@ impl From<&SpendingKey> for NullifierDerivingKey {
     }
 }
 
-/// A key that provides the capability to recover outgoing transaction information from
-/// the block chain.
-#[derive(Debug)]
-pub struct OutgoingViewingKey;
-
-impl From<&SpendingKey> for OutgoingViewingKey {
-    fn from(_: &SpendingKey) -> Self {
-        todo!()
-    }
-}
-
 /// A key that provides the capability to view incoming and outgoing transactions.
 ///
 /// This key is useful anywhere you need to maintain accurate balance, but do not want the
@@ -60,7 +49,7 @@ impl From<&SpendingKey> for OutgoingViewingKey {
 pub struct FullViewingKey {
     ak: AuthorizingKey,
     nk: NullifierDerivingKey,
-    ovk: OutgoingViewingKey,
+    rivk: (),
 }
 
 impl From<&SpendingKey> for FullViewingKey {
@@ -87,8 +76,8 @@ pub struct Diversifier([u8; 11]);
 /// This key is useful in situations where you only need the capability to detect inbound
 /// payments, such as merchant terminals.
 ///
-/// This key is not suitable for use in a wallet, as it cannot maintain accurate balance.
-/// You should use a [`FullViewingKey`] instead.
+/// This key is not suitable for use on its own in a wallet, as it cannot maintain
+/// accurate balance. You should use a [`FullViewingKey`] instead.
 #[derive(Debug)]
 pub struct IncomingViewingKey;
 
@@ -101,6 +90,20 @@ impl From<&FullViewingKey> for IncomingViewingKey {
 impl IncomingViewingKey {
     /// Returns the payment address for this key corresponding to the given diversifier.
     pub fn address(&self, _: Diversifier) -> Address {
+        todo!()
+    }
+}
+
+/// A key that provides the capability to recover outgoing transaction information from
+/// the block chain.
+///
+/// This key is not suitable for use on its own in a wallet, as it cannot maintain
+/// accurate balance. You should use a [`FullViewingKey`] instead.
+#[derive(Debug)]
+pub struct OutgoingViewingKey;
+
+impl From<&FullViewingKey> for OutgoingViewingKey {
+    fn from(_: &FullViewingKey) -> Self {
         todo!()
     }
 }
