@@ -68,7 +68,7 @@ pub trait Spec<F: FieldExt, const T: usize, const RATE: usize> {
 }
 
 /// Runs the Poseidon permutation on the given state.
-fn permute<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
+pub(crate) fn permute<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
     state: &mut State<F, T>,
     mds: &Mds<F, T>,
     round_constants: &[[F; T]],
