@@ -20,21 +20,6 @@
   - Need to consider the privacy issue related to light clients requesting individual
     memos vs being able to fetch all memos.
 
-### Key structure
-
-Provisional proposal: exactly the same key structure as Sapling.
-
-Group hashing uses the isogeny.
-
-- nsk goes away; `nk` is now a field element
-- TODO: ak / nk split enables splitting the security argument, but could consider merging.
-  Merging would help with ivk derivation perf (though as a commitment now it's pretty cheap)
-
-ZIP 32 integration
-- Use same Sapling design?
-- Simpler "hardened-only" derivation structure?
-- Improve diversifier integration / documentation
-
 ### Note structure
 
 - TODO: UDAs: arbitrary vs whitelisted
