@@ -30,6 +30,9 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         }
     }
 
+    // Hash verification key into transcript
+    pk.vk.hash(transcript).map_err(|_| Error::TranscriptError)?;
+
     let domain = &pk.vk.domain;
     let mut meta = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut meta);

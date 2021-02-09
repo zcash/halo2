@@ -9,7 +9,7 @@ use crate::arithmetic::CurveAffine;
 use crate::poly::{
     commitment::Params, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
 };
-use crate::transcript::ChallengeScalar;
+use crate::transcript::{ChallengeScalar, Transcript};
 
 mod circuit;
 mod keygen;
@@ -73,6 +73,18 @@ impl<C: CurveAffine> VerifyingKey<C> {
             permutations,
             cs,
         })
+    }
+
+    /// Hashes a verification key into a transcript.
+    pub fn hash<T: Transcript<C>>(&self, transcript: &mut T) -> io::Result<()> {
+        for commitment in &self.fixed_commitments {
+            transcript.common_point(*commitment)?;
+        }
+        for permutation in &self.permutations {
+            permutation.hash(transcript)?;
+        }
+
+        Ok(())
     }
 }
 

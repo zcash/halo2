@@ -4,6 +4,7 @@ use super::circuit::{Any, Column};
 use crate::{
     arithmetic::CurveAffine,
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
+    transcript::Transcript,
 };
 
 pub(crate) mod keygen;
@@ -65,6 +66,14 @@ impl<C: CurveAffine> VerifyingKey<C> {
             .map(|_| C::read(reader))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(VerifyingKey { commitments })
+    }
+
+    pub(crate) fn hash<T: Transcript<C>>(&self, transcript: &mut T) -> io::Result<()> {
+        for commitment in &self.commitments {
+            transcript.common_point(*commitment)?;
+        }
+
+        Ok(())
     }
 }
 
