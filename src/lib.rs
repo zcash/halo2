@@ -6,3 +6,15 @@
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 #![deny(unsafe_code)]
+
+mod address;
+pub mod bundle;
+mod circuit;
+pub mod keys;
+mod note;
+pub mod primitives;
+mod tree;
+pub mod value;
+
+pub use address::Address;
+pub use note::{EncryptedNote, Note, NoteCommitment, Nullifier};
