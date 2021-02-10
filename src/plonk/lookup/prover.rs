@@ -1,5 +1,5 @@
 use super::super::{
-    circuit::{Any, Column},
+    circuit::{Advice, Aux, Column, Expression, Fixed},
     ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error, ProvingKey,
 };
 use super::Argument;
@@ -57,7 +57,7 @@ pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
     constructed: Constructed<C>,
 }
 
-impl Argument {
+impl<F: FieldExt> Argument<F> {
     /// Given a Lookup with input columns [A_0, A_1, ..., A_{m-1}] and table columns
     /// [S_0, S_1, ..., S_{m-1}], this method
     /// - constructs A_compressed = \theta^{m-1} A_0 + theta^{m-2} A_1 + ... + \theta A_{m-2} + A_{m-1}
@@ -82,20 +82,27 @@ impl Argument {
         transcript: &mut T,
     ) -> Result<Permuted<'a, C>, Error> {
         // Closure to get values of columns and compress them
-        let compress_columns = |columns: &[Column<Any>]| {
+        let compress_columns = |columns: &[Expression<F>]| {
             // Values of input columns involved in the lookup
             let (unpermuted_columns, unpermuted_cosets): (Vec<_>, Vec<_>) = columns
                 .iter()
-                .map(|&column| {
-                    let (values, cosets) = match column.column_type() {
-                        Any::Advice => (advice_values, advice_cosets),
-                        Any::Fixed => (fixed_values, fixed_cosets),
-                        Any::Instance => (instance_values, instance_cosets),
-                    };
-                    (
-                        &values[column.index()],
-                        &cosets[pk.vk.cs.get_any_query_index(column, Rotation::cur())],
-                    )
+                .map(|column| {
+                    match column {
+                        Expression::Advice(index) => {
+                            let column_index = pk.vk.cs.advice_queries[*index].0.index();
+                            (&advice_values[column_index], &advice_cosets[*index])
+                        }
+                        Expression::Fixed(index) => {
+                            let column_index = pk.vk.cs.fixed_queries[*index].0.index();
+                            (&fixed_values[column_index], &fixed_cosets[*index])
+                        }
+                        Expression::Instance(index) => {
+                            let column_index = pk.vk.cs.instance_queries[*index].0.index();
+                            (&instance_values[column_index], &instance_cosets[*index])
+                        }
+                        // TODO: other Expression variants
+                        _ => unreachable!(),
+                    }
                 })
                 .unzip();
 
