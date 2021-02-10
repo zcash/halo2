@@ -5,8 +5,8 @@ use ff::Field;
 use crate::{
     arithmetic::{FieldExt, Group},
     plonk::{
-        permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Fixed,
+        permutation, Advice, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
+        Expression, Fixed,
     },
     poly::Rotation,
 };
@@ -143,7 +143,7 @@ pub enum VerifyFailure {
 /// );
 /// ```
 #[derive(Debug)]
-pub struct MockProver<F: Group> {
+pub struct MockProver<F: Group + Field> {
     n: u32,
     cs: ConstraintSystem<F>,
 
@@ -316,10 +316,21 @@ impl<F: FieldExt> MockProver<F> {
         // Check that all lookups exist in their respective tables.
         for (lookup_index, lookup) in self.cs.lookups.iter().enumerate() {
             for input_row in 0..n {
-                let load = |column: &Column<Any>, row| match column.column_type() {
-                    Any::Fixed => self.fixed[column.index()][row as usize],
-                    Any::Advice => self.advice[column.index()][row as usize],
-                    Any::Instance => self.instance[column.index()][row as usize],
+                let load = |column: &Expression<F>, row| match column {
+                    Expression::Fixed(index) => {
+                        let column_index = self.cs.fixed_queries[*index].0.index();
+                        self.fixed[column_index][row as usize]
+                    }
+                    Expression::Advice(index) => {
+                        let column_index = self.cs.advice_queries[*index].0.index();
+                        self.advice[column_index][row as usize]
+                    }
+                    Expression::Instance(index) => {
+                        let column_index = self.cs.instance_queries[*index].0.index();
+                        self.instance[column_index][row as usize]
+                    }
+                    // TODO: other Expression variants
+                    _ => unreachable!(),
                 };
 
                 let inputs: Vec<_> = lookup

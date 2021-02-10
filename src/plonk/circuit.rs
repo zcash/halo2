@@ -15,8 +15,10 @@ pub trait ColumnType: 'static + Sized + std::fmt::Debug {}
 /// A column with an index and type
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Column<C: ColumnType> {
-    index: usize,
-    column_type: C,
+    /// Index of column
+    pub index: usize,
+    /// Type of column
+    pub column_type: C,
 }
 
 impl<C: ColumnType> Column<C> {
@@ -362,7 +364,7 @@ pub(crate) struct PointIndex(pub usize);
 /// This is a description of the circuit environment, such as the gate, column and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
-pub struct ConstraintSystem<F> {
+pub struct ConstraintSystem<F: Field> {
     pub(crate) num_fixed_columns: usize,
     pub(crate) num_advice_columns: usize,
     pub(crate) num_instance_columns: usize,
@@ -377,7 +379,7 @@ pub struct ConstraintSystem<F> {
 
     // Vector of lookup arguments, where each corresponds to a sequence of
     // input columns and a sequence of table columns involved in the lookup.
-    pub(crate) lookups: Vec<lookup::Argument>,
+    pub(crate) lookups: Vec<lookup::Argument<F>>,
 }
 
 /// Represents the minimal parameters that determine a `ConstraintSystem`.
@@ -456,19 +458,13 @@ impl<F: Field> ConstraintSystem<F> {
     /// columns are not the same.
     pub fn lookup(
         &mut self,
-        input_columns: &[Column<Any>],
-        table_columns: &[Column<Any>],
+        input_columns: &[Expression<F>],
+        table_columns: &[Expression<F>],
     ) -> usize {
         assert_eq!(input_columns.len(), table_columns.len());
 
         let index = self.lookups.len();
 
-        for input in input_columns {
-            self.query_any_index(*input, Rotation::cur());
-        }
-        for table in table_columns {
-            self.query_any_index(*table, Rotation::cur());
-        }
         self.lookups
             .push(lookup::Argument::new(input_columns, table_columns));
 

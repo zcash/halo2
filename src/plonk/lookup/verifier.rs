@@ -1,9 +1,9 @@
 use std::iter;
 
-use super::super::circuit::{Any, Column};
+use super::super::circuit::{Advice, Aux, Column, Expression, Fixed};
 use super::Argument;
 use crate::{
-    arithmetic::CurveAffine,
+    arithmetic::{CurveAffine, FieldExt},
     plonk::{ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error, VerifyingKey},
     poly::{multiopen::VerifierQuery, Rotation},
     transcript::TranscriptRead,
@@ -29,7 +29,7 @@ pub struct Evaluated<C: CurveAffine> {
     permuted_table_eval: C::Scalar,
 }
 
-impl Argument {
+impl<F: FieldExt> Argument<F> {
     pub(in crate::plonk) fn read_permuted_commitments<C: CurveAffine, T: TranscriptRead<C>>(
         &self,
         transcript: &mut T,
@@ -101,7 +101,7 @@ impl<C: CurveAffine> Evaluated<C> {
         &'a self,
         vk: &'a VerifyingKey<C>,
         l_0: C::Scalar,
-        argument: &'a Argument,
+        argument: &'a Argument<C::Scalar>,
         theta: ChallengeTheta<C>,
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
@@ -116,15 +116,16 @@ impl<C: CurveAffine> Evaluated<C> {
                 * &(self.permuted_input_eval + &*beta)
                 * &(self.permuted_table_eval + &*gamma);
 
-            let compress_columns = |columns: &[Column<Any>]| {
+            let compress_columns = |columns: &[Expression<C::Scalar>]| {
                 columns
                     .iter()
                     .map(|column| {
-                        let index = vk.cs.get_any_query_index(*column, Rotation::cur());
-                        match column.column_type() {
-                            Any::Advice => advice_evals[index],
-                            Any::Fixed => fixed_evals[index],
-                            Any::Instance => instance_evals[index],
+                        match column {
+                            Expression::Advice(index) => advice_evals[*index],
+                            Expression::Fixed(index) => fixed_evals[*index],
+                            Expression::Instance(index) => instance_evals[*index],
+                            // TODO: other Expression variants
+                            _ => unreachable!(),
                         }
                     })
                     .fold(C::Scalar::zero(), |acc, eval| acc * &*theta + &eval)

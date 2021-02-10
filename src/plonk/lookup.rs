@@ -1,16 +1,17 @@
-use super::circuit::{Any, Column};
+use super::circuit::Expression;
+use ff::Field;
 
 pub(crate) mod prover;
 pub(crate) mod verifier;
 
 #[derive(Clone, Debug)]
-pub(crate) struct Argument {
-    pub input_columns: Vec<Column<Any>>,
-    pub table_columns: Vec<Column<Any>>,
+pub(crate) struct Argument<F: Field> {
+    pub input_columns: Vec<Expression<F>>,
+    pub table_columns: Vec<Expression<F>>,
 }
 
-impl Argument {
-    pub fn new(input_columns: &[Column<Any>], table_columns: &[Column<Any>]) -> Self {
+impl<F: Field> Argument<F> {
+    pub fn new(input_columns: &[Expression<F>], table_columns: &[Expression<F>]) -> Self {
         assert_eq!(input_columns.len(), table_columns.len());
         Argument {
             input_columns: input_columns.to_vec(),
