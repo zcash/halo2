@@ -1,6 +1,6 @@
 use super::super::{
-    circuit::{Advice, Aux, Column, Expression, Fixed},
-    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error, ProvingKey,
+    circuit::Expression, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error,
+    ProvingKey,
 };
 use super::Argument;
 use crate::{
@@ -13,20 +13,24 @@ use crate::{
     transcript::TranscriptWrite,
 };
 use ff::Field;
-use std::{collections::BTreeMap, iter};
+use std::{
+    collections::BTreeMap,
+    iter,
+    ops::{Mul, MulAssign},
+};
 
 #[derive(Debug)]
-pub(in crate::plonk) struct Permuted<'a, C: CurveAffine> {
-    unpermuted_input_columns: Vec<&'a Polynomial<C::Scalar, LagrangeCoeff>>,
-    unpermuted_input_cosets: Vec<&'a Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
+pub(in crate::plonk) struct Permuted<C: CurveAffine> {
+    unpermuted_input_columns: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
+    unpermuted_input_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     permuted_input_column: Polynomial<C::Scalar, LagrangeCoeff>,
     permuted_input_poly: Polynomial<C::Scalar, Coeff>,
     permuted_input_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permuted_input_inv_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permuted_input_blind: Blind<C::Scalar>,
     permuted_input_commitment: C,
-    unpermuted_table_columns: Vec<&'a Polynomial<C::Scalar, LagrangeCoeff>>,
-    unpermuted_table_cosets: Vec<&'a Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
+    unpermuted_table_columns: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
+    unpermuted_table_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     permuted_table_column: Polynomial<C::Scalar, LagrangeCoeff>,
     permuted_table_poly: Polynomial<C::Scalar, Coeff>,
     permuted_table_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
@@ -35,8 +39,8 @@ pub(in crate::plonk) struct Permuted<'a, C: CurveAffine> {
 }
 
 #[derive(Debug)]
-pub(in crate::plonk) struct Committed<'a, C: CurveAffine> {
-    permuted: Permuted<'a, C>,
+pub(in crate::plonk) struct Committed<C: CurveAffine> {
+    permuted: Permuted<C>,
     product_poly: Polynomial<C::Scalar, Coeff>,
     product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     product_inv_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
@@ -67,7 +71,7 @@ impl<F: FieldExt> Argument<F> {
     /// - constructs Permuted<C> struct using permuted_input_value = A', and
     ///   permuted_table_column = S'.
     /// The Permuted<C> struct is used to update the Lookup, and is then returned.
-    pub(in crate::plonk) fn commit_permuted<'a, C: CurveAffine, T: TranscriptWrite<C>>(
+    pub(in crate::plonk) fn commit_permuted<'a, C, T: TranscriptWrite<C>>(
         &self,
         pk: &ProvingKey<C>,
         params: &Params<C>,
@@ -80,31 +84,56 @@ impl<F: FieldExt> Argument<F> {
         fixed_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         instance_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         transcript: &mut T,
-    ) -> Result<Permuted<'a, C>, Error> {
+    ) -> Result<Permuted<C>, Error>
+    where
+        C: CurveAffine<Scalar = F>,
+        C::Projective: Mul<F, Output = C::Projective> + MulAssign<F>,
+    {
         // Closure to get values of columns and compress them
-        let compress_columns = |columns: &[Expression<F>]| {
+        let compress_columns = |columns: &[Expression<C::Scalar>]| {
             // Values of input columns involved in the lookup
-            let (unpermuted_columns, unpermuted_cosets): (Vec<_>, Vec<_>) = columns
+            let unpermuted_columns: Vec<_> = columns
                 .iter()
                 .map(|column| {
-                    match column {
-                        Expression::Advice(index) => {
-                            let column_index = pk.vk.cs.advice_queries[*index].0.index();
-                            (&advice_values[column_index], &advice_cosets[*index])
-                        }
-                        Expression::Fixed(index) => {
-                            let column_index = pk.vk.cs.fixed_queries[*index].0.index();
-                            (&fixed_values[column_index], &fixed_cosets[*index])
-                        }
-                        Expression::Instance(index) => {
-                            let column_index = pk.vk.cs.instance_queries[*index].0.index();
-                            (&instance_values[column_index], &instance_cosets[*index])
-                        }
-                        // TODO: other Expression variants
-                        _ => unreachable!(),
-                    }
+                    column.evaluate(
+                        &|index| {
+                            let column_index = pk.vk.cs.fixed_queries[index].0.index();
+                            fixed_values[column_index].clone()
+                        },
+                        &|index| {
+                            let column_index = pk.vk.cs.advice_queries[index].0.index();
+                            advice_values[column_index].clone()
+                        },
+                        &|index| {
+                            let column_index = pk.vk.cs.instance_queries[index].0.index();
+                            instance_values[column_index].clone()
+                        },
+                        &|a, b| a + &b,
+                        &|a, b| {
+                            let a = &mut a.clone();
+                            for (a_, b_) in a.iter_mut().zip(b.iter()) {
+                                *a_ *= b_;
+                            }
+                            a.clone()
+                        },
+                        &|a, scalar| a * scalar,
+                    )
                 })
-                .unzip();
+                .collect();
+
+            let unpermuted_cosets: Vec<_> = columns
+                .iter()
+                .map(|column| {
+                    column.evaluate(
+                        &|index| fixed_cosets[index].clone(),
+                        &|index| advice_cosets[index].clone(),
+                        &|index| instance_cosets[index].clone(),
+                        &|a, b| a + &b,
+                        &|a, b| a * &b,
+                        &|a, scalar| a * scalar,
+                    )
+                })
+                .collect();
 
             // Compressed version of columns
             let compressed_column = unpermuted_columns
@@ -185,7 +214,7 @@ impl<F: FieldExt> Argument<F> {
     }
 }
 
-impl<'a, C: CurveAffine> Permuted<'a, C> {
+impl<C: CurveAffine> Permuted<C> {
     /// Given a Lookup with input columns, table columns, and the permuted
     /// input column and permuted table column, this method constructs the
     /// grand product polynomial over the lookup. The grand product polynomial
@@ -199,7 +228,7 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
         transcript: &mut T,
-    ) -> Result<Committed<'a, C>, Error> {
+    ) -> Result<Committed<C>, Error> {
         // Goal is to compute the products of fractions
         //
         // Numerator: (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
@@ -327,7 +356,7 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
             .write_point(product_commitment)
             .map_err(|_| Error::TranscriptError)?;
 
-        Ok(Committed::<'a, C> {
+        Ok(Committed::<C> {
             permuted: self,
             product_poly: z,
             product_coset,
@@ -338,7 +367,7 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
     }
 }
 
-impl<'a, C: CurveAffine> Committed<'a, C> {
+impl<'a, C: CurveAffine> Committed<C> {
     /// Given a Lookup with input columns, table columns, permuted input
     /// column, permuted table column, and grand product polynomial, this
     /// method constructs constraints that must hold between these values.
