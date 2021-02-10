@@ -472,7 +472,7 @@ fn test_proving() {
             let sl_ = meta.query_any(sl.into(), Rotation::cur());
             let sl2_ = meta.query_any(sl2.into(), Rotation::cur());
             meta.lookup(&[a_.clone()], &[sl_.clone()]);
-            meta.lookup(&[a_, b_], &[sl_, sl2_]);
+            meta.lookup(&[a_ + b_], &[sl_ + sl2_]);
 
             meta.create_gate("Combined add-mult", |meta| {
                 let d = meta.query_advice(d, Rotation::next());

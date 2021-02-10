@@ -15,10 +15,8 @@ pub trait ColumnType: 'static + Sized + std::fmt::Debug {}
 /// A column with an index and type
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Column<C: ColumnType> {
-    /// Index of column
-    pub index: usize,
-    /// Type of column
-    pub column_type: C,
+    index: usize,
+    column_type: C,
 }
 
 impl<C: ColumnType> Column<C> {

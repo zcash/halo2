@@ -201,7 +201,6 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
                                 .zip(vk.cs.lookups.iter())
                                 .flat_map(move |(p, argument)| {
                                     p.expressions(
-                                        vk,
                                         l_0,
                                         argument,
                                         theta,

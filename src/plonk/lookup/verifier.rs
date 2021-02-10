@@ -1,6 +1,6 @@
 use std::iter;
 
-use super::super::circuit::{Advice, Aux, Column, Expression, Fixed};
+use super::super::circuit::Expression;
 use super::Argument;
 use crate::{
     arithmetic::{CurveAffine, FieldExt},
@@ -99,7 +99,6 @@ impl<C: CurveAffine> Committed<C> {
 impl<C: CurveAffine> Evaluated<C> {
     pub(in crate::plonk) fn expressions<'a>(
         &'a self,
-        vk: &'a VerifyingKey<C>,
         l_0: C::Scalar,
         argument: &'a Argument<C::Scalar>,
         theta: ChallengeTheta<C>,
@@ -120,13 +119,14 @@ impl<C: CurveAffine> Evaluated<C> {
                 columns
                     .iter()
                     .map(|column| {
-                        match column {
-                            Expression::Advice(index) => advice_evals[*index],
-                            Expression::Fixed(index) => fixed_evals[*index],
-                            Expression::Instance(index) => instance_evals[*index],
-                            // TODO: other Expression variants
-                            _ => unreachable!(),
-                        }
+                        column.evaluate(
+                            &|index| fixed_evals[index],
+                            &|index| advice_evals[index],
+                            &|index| instance_evals[index],
+                            &|a, b| a + &b,
+                            &|a, b| a * &b,
+                            &|a, scalar| a * scalar,
+                        )
                     })
                     .fold(C::Scalar::zero(), |acc, eval| acc * &*theta + &eval)
             };
