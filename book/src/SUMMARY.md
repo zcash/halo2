@@ -19,6 +19,7 @@
     - [Circuit commitments](design/proving-system/circuit-commitments.md)
     - [Vanishing argument](design/proving-system/vanishing.md)
     - [Multipoint opening argument](design/proving-system/multipoint-opening.md)
+    - [Inner product argument](design/proving-system/inner-product.md)
     - [Comparison to other work](design/proving-system/comparison.md)
   - [Implementation](design/implementation.md)
   - [Gadgets](design/gadgets.md)
