@@ -9,6 +9,7 @@
   - [Spending notes](user/spending-notes.md)
   - [Integration into an existing chain](user/integration.md)
 - [Design](design.md)
+  - [Keys and addresses](design/keys.md)
   - [Actions](design/actions.md)
   - [Commitments](design/commitments.md)
   - [Commitment tree](design/commitment-tree.md)
