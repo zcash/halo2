@@ -5,11 +5,14 @@
 //! [halo]: https://eprint.iacr.org/2019/1021
 //! [plonk]: https://eprint.iacr.org/2019/953
 
-use crate::arithmetic::CurveAffine;
+use blake2b_simd::Params as Blake2bParams;
+
+use crate::arithmetic::{CurveAffine, FieldExt};
 use crate::poly::{
     commitment::Params, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
 };
 use crate::transcript::{ChallengeScalar, Transcript};
+use std::convert::TryInto;
 
 mod circuit;
 mod keygen;
@@ -77,12 +80,37 @@ impl<C: CurveAffine> VerifyingKey<C> {
 
     /// Hashes a verification key into a transcript.
     pub fn hash<T: Transcript<C>>(&self, transcript: &mut T) -> io::Result<()> {
+        let mut hasher = Blake2bParams::new()
+            .hash_length(64)
+            .personal(C::BLAKE2B_PERSONALIZATION)
+            .to_state();
+
+        // Hash in constants in the domain which influence the proof
+        let domain_hash = &self.domain.hash(&mut hasher);
+        transcript.common_scalar(C::Scalar::from_bytes_wide(domain_hash))?;
+
+        // Hash in `ConstraintSystem`
+        let cs_hash = &self.cs.hash(&mut hasher);
+        transcript.common_scalar(C::Scalar::from_bytes_wide(cs_hash))?;
+
+        // Hash in vector of fixed commitments
+        hasher.update(b"num_fixed_commitments");
+        hasher.update(&self.fixed_commitments.len().to_le_bytes());
         for commitment in &self.fixed_commitments {
             transcript.common_point(*commitment)?;
         }
+
+        // Hash in vector of permutation arguments
+        hasher.update(b"num_permutations");
+        hasher.update(&self.permutations.len().to_le_bytes());
         for permutation in &self.permutations {
             permutation.hash(transcript)?;
         }
+
+        // Hash in final Blake2bState
+        transcript.common_scalar(C::Scalar::from_bytes_wide(
+            hasher.finalize().as_bytes().try_into().unwrap(),
+        ))?;
 
         Ok(())
     }

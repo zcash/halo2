@@ -1,8 +1,9 @@
+use blake2b_simd::State as Blake2bState;
 use core::cmp::max;
 use core::ops::{Add, Mul};
 use ff::Field;
 use std::{
-    convert::TryFrom,
+    convert::{TryFrom, TryInto},
     ops::{Neg, Sub},
 };
 
@@ -10,7 +11,7 @@ use super::{lookup, permutation, Error};
 use crate::poly::Rotation;
 
 /// A column type
-pub trait ColumnType: 'static + Sized {}
+pub trait ColumnType: 'static + Sized + std::fmt::Debug {}
 
 /// A column with an index and type
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -26,6 +27,11 @@ impl<C: ColumnType> Column<C> {
 
     pub(crate) fn column_type(&self) -> &C {
         &self.column_type
+    }
+
+    pub(crate) fn hash(&self, hasher: &mut Blake2bState) -> [u8; 64] {
+        hasher.update(&format!("{:?}", self).as_bytes());
+        hasher.finalize().as_bytes().try_into().unwrap()
     }
 }
 
@@ -317,6 +323,12 @@ impl<F: Field> Expression<F> {
             Expression::Scaled(poly, _) => poly.degree(),
         }
     }
+
+    /// Hash an Expression into a Blake2bState
+    pub fn hash(&self, hasher: &mut Blake2bState) -> [u8; 64] {
+        hasher.update(&format!("{:?}", self).as_bytes());
+        hasher.finalize().as_bytes().try_into().unwrap()
+    }
 }
 
 impl<F: Field> Neg for Expression<F> {
@@ -597,5 +609,71 @@ impl<F: Field> ConstraintSystem<F> {
         };
         self.num_instance_columns += 1;
         tmp
+    }
+
+    /// Hashes the `ConstraintSystem` into a `u64`.
+    pub fn hash(&self, mut hasher: &mut Blake2bState) -> [u8; 64] {
+        hasher.update(b"num_fixed_columns");
+        hasher.update(&self.num_fixed_columns.to_le_bytes());
+
+        hasher.update(b"num_advice_columns");
+        hasher.update(&self.num_advice_columns.to_le_bytes());
+
+        hasher.update(b"num_aux_columns");
+        hasher.update(&self.num_aux_columns.to_le_bytes());
+
+        hasher.update(b"num_gates");
+        hasher.update(&self.gates.len().to_le_bytes());
+        for gate in self.gates.iter() {
+            hasher.update(gate.0.to_owned().as_bytes());
+            gate.1.hash(&mut hasher);
+        }
+
+        hasher.update(b"num_advice_queries");
+        hasher.update(&self.advice_queries.len().to_le_bytes());
+        for query in self.advice_queries.iter() {
+            query.0.hash(&mut hasher);
+            query.1.hash(&mut hasher);
+        }
+
+        hasher.update(b"num_aux_queries");
+        hasher.update(&self.aux_queries.len().to_le_bytes());
+        for query in self.aux_queries.iter() {
+            query.0.hash(&mut hasher);
+            query.1.hash(&mut hasher);
+        }
+
+        hasher.update(b"num_fixed_queries");
+        hasher.update(&self.fixed_queries.len().to_le_bytes());
+        for query in self.fixed_queries.iter() {
+            query.0.hash(&mut hasher);
+            query.1.hash(&mut hasher);
+        }
+
+        hasher.update(b"num_permutations");
+        hasher.update(&self.permutations.len().to_le_bytes());
+        for argument in self.permutations.iter() {
+            hasher.update(&argument.get_columns().len().to_le_bytes());
+            for column in argument.get_columns().iter() {
+                column.hash(&mut hasher);
+            }
+        }
+
+        hasher.update(b"num_lookups");
+        hasher.update(&self.lookups.len().to_le_bytes());
+        for argument in self.lookups.iter() {
+            hasher.update(&argument.input_columns.len().to_le_bytes());
+            hasher.update(&argument.table_columns.len().to_le_bytes());
+            for (input, table) in argument
+                .input_columns
+                .iter()
+                .zip(argument.table_columns.iter())
+            {
+                input.hash(&mut hasher);
+                table.hash(&mut hasher);
+            }
+        }
+
+        hasher.finalize().as_bytes().try_into().unwrap()
     }
 }
