@@ -18,26 +18,26 @@ $$
 
 The multipoint opening optimisation proceeds as such:
 
-1. Sample random $x_3$, at which we evaluate $a(X), b(X), c(X), d(X)$.
+1. Sample random $x$, at which we evaluate $a(X), b(X), c(X), d(X)$.
 2. The prover provides evaluations of each polynomial at each point of interest:
-   $a(x_3), b(x_3), c(x_3), d(x_3), c(\omega x_3), d(\omega x_3)$
-3. Sample random $x_4$, to keep $a, b, c, d$ linearly independent.
+   $a(x), b(x), c(x), d(x), c(\omega x), d(\omega x)$
+3. Sample random $x_1$, to keep $a, b, c, d$ linearly independent.
 4. Accumulate polynomials and their corresponding evaluations according
    to the point set at which they were queried:
     `q_polys`:
     $$
     \begin{array}{rccl}
-    q_1(X) &=& a(X) &+& x_4 b(X) \\
-    q_2(X) &=& c(X) &+& x_4 d(X)
+    q_1(X) &=& a(X) &+& x_1 b(X) \\
+    q_2(X) &=& c(X) &+& x_1 d(X)
     \end{array}
     $$
     `q_eval_sets`:
     ```math
             [
-                [a(x_3) + x_4 b(x_3)],
+                [a(x) + x_1 b(x)],
                 [
-                    c(x_3) + x_4 d(x_3),
-                    c(\omega x_3) + x_4 d(\omega x_3)
+                    c(x) + x_1 d(x),
+                    c(\omega x) + x_1 d(\omega x)
                 ]
             ]
     ```
@@ -48,33 +48,33 @@ The multipoint opening optimisation proceeds as such:
     $$
     \begin{array}{cccc}
     r_1(X) s.t.&&& \\
-        &r_1(x_3) &=& a(x_3) + x_4 b(x_3) \\
+        &r_1(x) &=& a(x) + x_1 b(x) \\
     r_2(X) s.t.&&& \\
-        &r_2(x_3) &=& c(x_3) + x_4 d(x_3) \\
-        &r_2(\omega x_3) &=& c(\omega x_3) + x_4 d(\omega x_3) \\
+        &r_2(x) &=& c(x) + x_1 d(x) \\
+        &r_2(\omega x) &=& c(\omega x) + x_1 d(\omega x) \\
     \end{array}
     $$
 6. Construct `f_polys` which check the correctness of `q_polys`:
     `f_polys`
     $$
     \begin{array}{rcl}
-    f_1(X) &=& \frac{ q_1(X) - r_1(X)}{X - x_3} \\
-    f_2(X) &=& \frac{ q_2(X) - r_2(X)}{(X - x_3)(X - \omega x_3)} \\
+    f_1(X) &=& \frac{ q_1(X) - r_1(X)}{X - x} \\
+    f_2(X) &=& \frac{ q_2(X) - r_2(X)}{(X - x)(X - \omega x)} \\
     \end{array}
     $$
 
-    If $q_1(x_3) = r_1(x_3)$, then $f_1(X)$ should be a polynomial.
-    If $q_2(x_3) = r_2(x_3)$ and $q_2(\omega x_3) = r_2(\omega x_3)$
+    If $q_1(x) = r_1(x)$, then $f_1(X)$ should be a polynomial.
+    If $q_2(x) = r_2(x)$ and $q_2(\omega x) = r_2(\omega x)$
     then $f_2(X)$ should be a polynomial.
-7. Sample random $x_5$ to keep the `f_polys` linearly independent.
-8. Construct $f(X) = f_1(X) + x_5 f_2(X)$.
-9. Sample random $x_6$, at which we evaluate $f(X)$:
+7. Sample random $x_2$ to keep the `f_polys` linearly independent.
+8. Construct $f(X) = f_1(X) + x_2 f_2(X)$.
+9.  Sample random $x_3$, at which we evaluate $f(X)$:
     $$
     \begin{array}{rcccl}
-    f(x_6) &=& f_1(x_6) &+& x_5 f_2(x_6) \\
-           &=& \frac{q_1(x_6) - r_1(x_6)}{x_6 - x_3} &+& x_5\frac{q_2(x_6) - r_2(x_6)}{(x_6 - x_3)(x_6 - \omega x_3)}
+    f(x_3) &=& f_1(x_3) &+& x_2 f_2(x_3) \\
+           &=& \frac{q_1(x_3) - r_1(x_3)}{x_3 - x} &+& x_2\frac{q_2(x_3) - r_2(x_3)}{(x_3 - x)(x_3 - \omega x)}
     \end{array}
     $$
-10. Sample random $x_7$ to keep $f(X)$ and `q_polys` linearly independent.
-11. Construct `final_poly`, $$final\_poly(X) = f(X) + x_7 q_1(X) + x_7^2 q_2(X),$$
+10. Sample random $x_4$ to keep $f(X)$ and `q_polys` linearly independent.
+11. Construct `final_poly`, $$final\_poly(X) = f(X) + x_4 q_1(X) + x_4^2 q_2(X),$$
     which is the polynomial we commit to in the inner product argument.
