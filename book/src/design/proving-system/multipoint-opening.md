@@ -6,8 +6,11 @@ were queried at both points $x$ and $\omega x$. (Here, $\omega$ is the primitive
 root of unity in the multiplicative subgroup over which we constructed the
 polynomials).
 
-We can group the commitments in terms of the sets of points at which they were
-queried:
+To open these commitments, we could create a polynomial $Q$ for each point that we queried
+at (corresponding to each relative rotation used in the circuit). But this would not be
+efficient in the circuit; for example, $c(X)$ would appear in multiple polynomials.
+
+Instead, we can group the commitments by the sets of points at which they were queried:
 $$
 \begin{array}{cccc}
 &\{x\}&     &\{x, \omega x\}& \\
@@ -16,13 +19,23 @@ $$
 \end{array}
 $$
 
+For each of these groups, we combine them into a polynomial set, and create a single $Q$
+for that set, which we open at each rotation.
+
+## Optimisation steps
+
+The multipoint opening optimisation takes as input:
+
+- A random $x$ sampled by the verifier, at which we evaluate $a(X), b(X), c(X), d(X)$.
+- Evaluations of each polynomial at each point of interest, provided by the prover:
+  $a(x), b(x), c(x), d(x), c(\omega x), d(\omega x)$
+
+These are the outputs of the [vanishing argument](vanishing.md#evaluating-the-polynomials).
+
 The multipoint opening optimisation proceeds as such:
 
-1. Sample random $x$, at which we evaluate $a(X), b(X), c(X), d(X)$.
-2. The prover provides evaluations of each polynomial at each point of interest:
-   $a(x), b(x), c(x), d(x), c(\omega x), d(\omega x)$
-3. Sample random $x_1$, to keep $a, b, c, d$ linearly independent.
-4. Accumulate polynomials and their corresponding evaluations according
+1. Sample random $x_1$, to keep $a, b, c, d$ linearly independent.
+2. Accumulate polynomials and their corresponding evaluations according
    to the point set at which they were queried:
     `q_polys`:
     $$
@@ -43,7 +56,7 @@ The multipoint opening optimisation proceeds as such:
     ```
     NB: `q_eval_sets` is a vector of sets of evaluations, where the outer vector
     goes over the point sets, and the inner vector goes over the points in each set.
-5. Interpolate each set of values in `q_eval_sets`:
+3. Interpolate each set of values in `q_eval_sets`:
     `r_polys`:
     $$
     \begin{array}{cccc}
@@ -54,7 +67,7 @@ The multipoint opening optimisation proceeds as such:
         &r_2(\omega x) &=& c(\omega x) + x_1 d(\omega x) \\
     \end{array}
     $$
-6. Construct `f_polys` which check the correctness of `q_polys`:
+4. Construct `f_polys` which check the correctness of `q_polys`:
     `f_polys`
     $$
     \begin{array}{rcl}
@@ -66,15 +79,15 @@ The multipoint opening optimisation proceeds as such:
     If $q_1(x) = r_1(x)$, then $f_1(X)$ should be a polynomial.
     If $q_2(x) = r_2(x)$ and $q_2(\omega x) = r_2(\omega x)$
     then $f_2(X)$ should be a polynomial.
-7. Sample random $x_2$ to keep the `f_polys` linearly independent.
-8. Construct $f(X) = f_1(X) + x_2 f_2(X)$.
-9.  Sample random $x_3$, at which we evaluate $f(X)$:
+5. Sample random $x_2$ to keep the `f_polys` linearly independent.
+6. Construct $f(X) = f_1(X) + x_2 f_2(X)$.
+7.  Sample random $x_3$, at which we evaluate $f(X)$:
     $$
     \begin{array}{rcccl}
     f(x_3) &=& f_1(x_3) &+& x_2 f_2(x_3) \\
            &=& \frac{q_1(x_3) - r_1(x_3)}{x_3 - x} &+& x_2\frac{q_2(x_3) - r_2(x_3)}{(x_3 - x)(x_3 - \omega x)}
     \end{array}
     $$
-10. Sample random $x_4$ to keep $f(X)$ and `q_polys` linearly independent.
-11. Construct `final_poly`, $$final\_poly(X) = f(X) + x_4 q_1(X) + x_4^2 q_2(X),$$
+8.  Sample random $x_4$ to keep $f(X)$ and `q_polys` linearly independent.
+9.  Construct `final_poly`, $$final\_poly(X) = f(X) + x_4 q_1(X) + x_4^2 q_2(X),$$
     which is the polynomial we commit to in the inner product argument.
