@@ -17,6 +17,7 @@
     - [Lookup argument](design/proving-system/lookup-argument.md)
     - [Permutation argument](design/proving-system/permutation.md)
     - [Circuit commitments](design/proving-system/circuit-commitments.md)
+    - [Vanishing argument](design/proving-system/vanishing.md)
     - [Multipoint opening argument](design/proving-system/multipoint-opening.md)
     - [Comparison to other work](design/proving-system/comparison.md)
   - [Implementation](design/implementation.md)
