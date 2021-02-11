@@ -2,11 +2,15 @@
 
 Orchard keys and payment addresses are structurally similar to Sapling. The main change is
 that Orchard keys use the Pallas curve instead of Jubjub, in order to enable the future
-use of the Pallas-Vesta curve cycle in the Orchard protocol. This involves corresponding
-changes to the key derivation process (such as using Sinsemilla for Pallas-efficient
-commitments).
+use of the Pallas-Vesta curve cycle in the Orchard protocol. (We already use Vesta as
+the curve on which Halo 2 proofs are computed, but this doesn't yet require a cycle.)
 
-We also make several structural changes, building on the lessons learned from Sapling:
+Using the Pallas curve and making the most efficient use of the Halo 2 proof system
+involves corresponding changes to the key derivation process, such as using Sinsemilla
+for Pallas-efficient commitments. We also take the opportunity to remove all uses of
+expensive general-purpose hashes (such as BLAKE2s) from the circuit.
+
+We make several structural changes, building on the lessons learned from Sapling:
 
 - The nullifier private key $\mathsf{nsk}$ is removed. Its purpose in Sapling was as
   defense-in-depth, in case RedDSA was found to have weaknesses; an adversary who could
@@ -31,8 +35,12 @@ We also make several structural changes, building on the lessons learned from Sa
   for diversified addresses.
 
 Other than the above, Orchard retains the same design rationale for its keys and addresses
-as Sapling. For example, diversifiers remain at 11 bytes, so that Orchard addresses are
-the same length as Sapling addresses.
+as Sapling, and the same bech32 encoding. For example, diversifiers remain at 11 bytes, so
+that Orchard addresses are the same length as Sapling addresses.
+
+The "human-readable part" for Orchard payment addresses is "zo", i.e. all addresses
+have the prefix "zo1". Other prefixes and key formats will be described in section 5.6
+of the protocol specification. 
 
 ## Hierarchical deterministic wallets
 
@@ -60,10 +68,10 @@ is HD wallets for transparent addresses, which use the following structure defin
         - (N) Change address 1...
     - (H) Account 1...
 
-Shielded accounts do not require separating change addresses from normal addresses, due to
-addresses not being revealed in transactions. Similarly, there is also no need to generate
-a fresh spending key for every transaction, and in fact this causes a linear slow-down in
-wallet scanning. But for users that do want to generate multiple addresses per account,
+Shielded accounts do not require separating change addresses from normal addresses, because
+addresses are not revealed in transactions. Similarly, there is also no need to generate
+a fresh spending key for every transaction, and in fact this would cause a linear slow-down
+in wallet scanning. But for users who do want to generate multiple addresses per account,
 they can generate the following structure, which does not use non-hardened derivation:
 
 - (H) ZIP 32
@@ -78,8 +86,11 @@ to derive more than one child layer of addresses. However, in the years since Sa
 deployed, we have not seen *any* such use cases appear.
 
 Therefore, for Orchard we only define hardened derivation, and do so with a much simpler
-design that ZIP 32. All derivations produce an opaque binary spending key, from which the
-keys and addresses are then derived.
+design than ZIP 32. All derivations produce an opaque binary spending key, from which the
+keys and addresses are then derived. As a side benefit, this makes key formats
+shorter. (The formats that will actually be used in practice for Orchard will correspond
+to the simpler Sapling formats in the protocol specification, rather than the longer
+and more complicated "extended" ones defined by ZIP 32.)
 
 [BIP 32]: https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
 [BIP 44]: https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki
