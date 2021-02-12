@@ -321,7 +321,7 @@ fn main() {
         b: Some(b),
     };
 
-    // Arrange the public input. We expose the multiplication result in row 4
+    // Arrange the public input. We expose the multiplication result in row 6
     // of the aux column, so we position it there in our public inputs.
     let mut public_inputs = vec![Fp::zero(); 1 << k];
     public_inputs[6] = c;
