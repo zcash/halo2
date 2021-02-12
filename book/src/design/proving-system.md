@@ -30,8 +30,8 @@ system:
 - One fixed column $f$.
 - Three custom gates:
   - $a \cdot b \cdot c_{-1} - d = 0$
-  - $f_{-1}(c) = 0$
-  - $f(d \cdot a) = 0$
+  - $f_{-1} \cdot c = 0$
+  - $f \cdot d \cdot a = 0$
 
 ## tl;dr
 
