@@ -8,7 +8,7 @@ The Halo 2 proving system can be broken down into five stages:
    - Equality constraint permutations.
    - Products for each lookup argument.
 2. Construct the vanishing argument to constrain all circuit relations to zero:
-   - Custom gates.
+   - Standard and custom gates.
    - Lookup argument rules.
    - Equality constraint permutation rules.
 3. Evaluate the above polynomials at all necessary points:
