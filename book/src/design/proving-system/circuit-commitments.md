@@ -41,7 +41,7 @@ follows:
   $$S_\text{compressed}(X) = \theta^{m-1} S_0(X) + \theta^{m-2} S_1(X) + \dots + \theta S_{m-2}(X) + S_{m-1}(X)$$
 
 - The prover then permutes $A_\text{compressed}(X)$ and $S_\text{compressed}(X)$ according
-  to the [rules of the lookup argument](lookup-argument.md), obtaining $A'(X)$ and $S'(X)$.
+  to the [rules of the lookup argument](lookup.md), obtaining $A'(X)$ and $S'(X)$.
 
 Finally, the prover creates blinding commitments for all of the lookups
 

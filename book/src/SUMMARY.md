@@ -14,7 +14,7 @@
   - [Tips and tricks](user/tips-and-tricks.md)
 - [Design](design.md)
   - [Proving system](design/proving-system.md)
-    - [Lookup argument](design/proving-system/lookup-argument.md)
+    - [Lookup argument](design/proving-system/lookup.md)
     - [Permutation argument](design/proving-system/permutation.md)
     - [Circuit commitments](design/proving-system/circuit-commitments.md)
     - [Vanishing argument](design/proving-system/vanishing.md)
