@@ -45,7 +45,7 @@ follows:
 
 Finally, the prover creates blinding commitments for all of the lookups
 
-$$\mathbf{L}_p = \left[ (\text{Commit}(A'(X))), \text{Commit}(S'(X))), \dots \right]$$
+$$\mathbf{L} = \left[ (\text{Commit}(A'(X))), \text{Commit}(S'(X))), \dots \right]$$
 
 and sends them to the verifier.
 
@@ -60,21 +60,21 @@ and sends them to the verifier.
 
   and sends them to the verifier.
 
-## Committing to the lookup permutations
+## Committing to the lookup permutation product columns
 
 In addition to committing to the individual permuted lookups, the prover needs to commit
-to constraint polynomials that enforce the correct relation between the permuted lookups
-and their un-permuted forms:
+to the permutation product column
 
-$$L(X) = \frac{(A_\text{compressed}(X) + \beta)(S_\text{compressed}(X) + \gamma)}{(A'(X) + \beta)(S'(X) + \gamma)}$$
+$$Z(X) = \frac{(A_\text{compressed}(X) + \beta)(S_\text{compressed}(X) + \gamma)}{(A'(X) + \beta)(S'(X) + \gamma)}$$
 
 $\beta$ and $\gamma$ are used to combine the permutation arguments for $A'(X)$ and $S'(X)$
 while keeping them independent. We can reuse $\beta$ and $\gamma$ from the equality
 constraint permutation here because they serve the same purpose in both places, and we
 aren't trying to combine the lookup and equality constraint permutation arguments.
 
-As before, the prover creates blinding commitments for every constraint polynomial
+As before, the prover creates blinding commitments to the permutation product column for
+every lookup
 
-$$\mathbf{L}_c = \left[\text{Commit}(L(X))), \dots \right]$$
+$$\mathbf{Z} = \left[\text{Commit}(Z(X))), \dots \right]$$
 
 and sends them to the verifier.
