@@ -21,17 +21,17 @@ use std::{
 
 #[derive(Debug)]
 pub(in crate::plonk) struct Permuted<C: CurveAffine> {
-    unpermuted_input_columns: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
+    unpermuted_input_expressions: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
     unpermuted_input_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
-    permuted_input_column: Polynomial<C::Scalar, LagrangeCoeff>,
+    permuted_input_expression: Polynomial<C::Scalar, LagrangeCoeff>,
     permuted_input_poly: Polynomial<C::Scalar, Coeff>,
     permuted_input_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permuted_input_inv_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permuted_input_blind: Blind<C::Scalar>,
     permuted_input_commitment: C,
-    unpermuted_table_columns: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
+    unpermuted_table_expressions: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
     unpermuted_table_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
-    permuted_table_column: Polynomial<C::Scalar, LagrangeCoeff>,
+    permuted_table_expression: Polynomial<C::Scalar, LagrangeCoeff>,
     permuted_table_poly: Polynomial<C::Scalar, Coeff>,
     permuted_table_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permuted_table_blind: Blind<C::Scalar>,
@@ -62,14 +62,14 @@ pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
 }
 
 impl<F: FieldExt> Argument<F> {
-    /// Given a Lookup with input columns [A_0, A_1, ..., A_{m-1}] and table columns
+    /// Given a Lookup with input expressions [A_0, A_1, ..., A_{m-1}] and table expressions
     /// [S_0, S_1, ..., S_{m-1}], this method
     /// - constructs A_compressed = \theta^{m-1} A_0 + theta^{m-2} A_1 + ... + \theta A_{m-2} + A_{m-1}
     ///   and S_compressed = \theta^{m-1} S_0 + theta^{m-2} S_1 + ... + \theta S_{m-2} + S_{m-1},
-    /// - permutes A_compressed and S_compressed using permute_column_pair() helper,
+    /// - permutes A_compressed and S_compressed using permute_expression_pair() helper,
     ///   obtaining A' and S', and
     /// - constructs Permuted<C> struct using permuted_input_value = A', and
-    ///   permuted_table_column = S'.
+    ///   permuted_table_expression = S'.
     /// The Permuted<C> struct is used to update the Lookup, and is then returned.
     pub(in crate::plonk) fn commit_permuted<'a, C, T: TranscriptWrite<C>>(
         &self,
@@ -89,13 +89,13 @@ impl<F: FieldExt> Argument<F> {
         C: CurveAffine<Scalar = F>,
         C::Projective: Mul<F, Output = C::Projective> + MulAssign<F>,
     {
-        // Closure to get values of columns and compress them
-        let compress_columns = |columns: &[Expression<C::Scalar>]| {
-            // Values of input columns involved in the lookup
-            let unpermuted_columns: Vec<_> = columns
+        // Closure to get values of expressions and compress them
+        let compress_expressions = |expressions: &[Expression<C::Scalar>]| {
+            // Values of input expressions involved in the lookup
+            let unpermuted_expressions: Vec<_> = expressions
                 .iter()
-                .map(|column| {
-                    column.evaluate(
+                .map(|expression| {
+                    expression.evaluate(
                         &|index| {
                             let column_index = pk.vk.cs.fixed_queries[index].0.index();
                             fixed_values[column_index].clone()
@@ -121,10 +121,10 @@ impl<F: FieldExt> Argument<F> {
                 })
                 .collect();
 
-            let unpermuted_cosets: Vec<_> = columns
+            let unpermuted_cosets: Vec<_> = expressions
                 .iter()
-                .map(|column| {
-                    column.evaluate(
+                .map(|expression| {
+                    expression.evaluate(
                         &|index| fixed_cosets[index].clone(),
                         &|index| advice_cosets[index].clone(),
                         &|index| instance_cosets[index].clone(),
@@ -135,41 +135,50 @@ impl<F: FieldExt> Argument<F> {
                 })
                 .collect();
 
-            // Compressed version of columns
-            let compressed_column = unpermuted_columns
+            // Compressed version of expressions
+            let compressed_expression = unpermuted_expressions
                 .iter()
-                .fold(domain.empty_lagrange(), |acc, column| acc * *theta + column);
+                .fold(domain.empty_lagrange(), |acc, expression| {
+                    acc * *theta + expression
+                });
 
-            (unpermuted_columns, unpermuted_cosets, compressed_column)
+            (
+                unpermuted_expressions,
+                unpermuted_cosets,
+                compressed_expression,
+            )
         };
 
-        // Closure to construct commitment to column of values
-        let commit_column = |column: &Polynomial<C::Scalar, LagrangeCoeff>| {
-            let poly = pk.vk.domain.lagrange_to_coeff(column.clone());
+        // Closure to construct commitment to vector of values
+        let commit_values = |values: &Polynomial<C::Scalar, LagrangeCoeff>| {
+            let poly = pk.vk.domain.lagrange_to_coeff(values.clone());
             let blind = Blind(C::Scalar::rand());
-            let commitment = params.commit_lagrange(&column, blind).to_affine();
+            let commitment = params.commit_lagrange(&values, blind).to_affine();
             (poly, blind, commitment)
         };
 
-        // Get values of input columns involved in the lookup and compress them
-        let (unpermuted_input_columns, unpermuted_input_cosets, compressed_input_column) =
-            compress_columns(&self.input_columns);
+        // Get values of input expressions involved in the lookup and compress them
+        let (unpermuted_input_expressions, unpermuted_input_cosets, compressed_input_expression) =
+            compress_expressions(&self.input_expressions);
 
-        // Get values of table columns involved in the lookup and compress them
-        let (unpermuted_table_columns, unpermuted_table_cosets, compressed_table_column) =
-            compress_columns(&self.table_columns);
+        // Get values of table expressions involved in the lookup and compress them
+        let (unpermuted_table_expressions, unpermuted_table_cosets, compressed_table_expression) =
+            compress_expressions(&self.table_expressions);
 
-        // Permute compressed (InputColumn, TableColumn) pair
-        let (permuted_input_column, permuted_table_column) =
-            permute_column_pair::<C>(domain, &compressed_input_column, &compressed_table_column)?;
+        // Permute compressed (InputExpression, TableExpression) pair
+        let (permuted_input_expression, permuted_table_expression) = permute_expression_pair::<C>(
+            domain,
+            &compressed_input_expression,
+            &compressed_table_expression,
+        )?;
 
-        // Commit to permuted input column
+        // Commit to permuted input expression
         let (permuted_input_poly, permuted_input_blind, permuted_input_commitment) =
-            commit_column(&permuted_input_column);
+            commit_values(&permuted_input_expression);
 
-        // Commit to permuted table column
+        // Commit to permuted table expression
         let (permuted_table_poly, permuted_table_blind, permuted_table_commitment) =
-            commit_column(&permuted_table_column);
+            commit_values(&permuted_table_expression);
 
         // Hash permuted input commitment
         transcript
@@ -195,17 +204,17 @@ impl<F: FieldExt> Argument<F> {
             .coeff_to_extended(permuted_table_poly.clone(), Rotation::cur());
 
         Ok(Permuted {
-            unpermuted_input_columns,
+            unpermuted_input_expressions,
             unpermuted_input_cosets,
-            permuted_input_column,
+            permuted_input_expression,
             permuted_input_poly,
             permuted_input_coset,
             permuted_input_inv_coset,
             permuted_input_blind,
             permuted_input_commitment,
-            unpermuted_table_columns,
+            unpermuted_table_expressions,
             unpermuted_table_cosets,
-            permuted_table_column,
+            permuted_table_expression,
             permuted_table_poly,
             permuted_table_coset,
             permuted_table_blind,
@@ -215,8 +224,8 @@ impl<F: FieldExt> Argument<F> {
 }
 
 impl<C: CurveAffine> Permuted<C> {
-    /// Given a Lookup with input columns, table columns, and the permuted
-    /// input column and permuted table column, this method constructs the
+    /// Given a Lookup with input expressions, table expressions, and the permuted
+    /// input expression and permuted table expression, this method constructs the
     /// grand product polynomial over the lookup. The grand product polynomial
     /// is used to populate the Product<C> struct. The Product<C> struct is
     /// added to the Lookup and finally returned by the method.
@@ -235,18 +244,18 @@ impl<C: CurveAffine> Permuted<C> {
         //            * (\theta^{m-1} s_0(\omega^i) + \theta^{m-2} s_1(\omega^i) + ... + \theta s_{m-2}(\omega^i) + s_{m-1}(\omega^i) + \gamma)
         // Denominator: (a'(\omega^i) + \beta) (s'(\omega^i) + \gamma)
         //
-        // where a_j(X) is the jth input column in this lookup,
-        // where a'(X) is the compression of the permuted input columns,
-        // s_j(X) is the jth table column in this lookup,
-        // s'(X) is the compression of the permuted table columns,
-        // and i is the ith row of the column.
+        // where a_j(X) is the jth input expression in this lookup,
+        // where a'(X) is the compression of the permuted input expressions,
+        // s_j(X) is the jth table expression in this lookup,
+        // s'(X) is the compression of the permuted table expressions,
+        // and i is the ith row of the expression.
         let mut lookup_product = vec![C::Scalar::zero(); params.n as usize];
-        // Denominator uses the permuted input column and permuted table column
+        // Denominator uses the permuted input expression and permuted table expression
         parallelize(&mut lookup_product, |lookup_product, start| {
             for ((lookup_product, permuted_input_value), permuted_table_value) in lookup_product
                 .iter_mut()
-                .zip(self.permuted_input_column[start..].iter())
-                .zip(self.permuted_table_column[start..].iter())
+                .zip(self.permuted_input_expression[start..].iter())
+                .zip(self.permuted_table_expression[start..].iter())
             {
                 *lookup_product = (*beta + permuted_input_value) * &(*gamma + permuted_table_value);
             }
@@ -263,18 +272,18 @@ impl<C: CurveAffine> Permuted<C> {
             for (i, product) in product.iter_mut().enumerate() {
                 let i = i + start;
 
-                // Compress unpermuted input columns
+                // Compress unpermuted input expressions
                 let mut input_term = C::Scalar::zero();
-                for unpermuted_input_column in self.unpermuted_input_columns.iter() {
+                for unpermuted_input_expression in self.unpermuted_input_expressions.iter() {
                     input_term *= &*theta;
-                    input_term += &unpermuted_input_column[i];
+                    input_term += &unpermuted_input_expression[i];
                 }
 
-                // Compress unpermuted table columns
+                // Compress unpermuted table expressions
                 let mut table_term = C::Scalar::zero();
-                for unpermuted_table_column in self.unpermuted_table_columns.iter() {
+                for unpermuted_table_expression in self.unpermuted_table_expressions.iter() {
                     table_term *= &*theta;
-                    table_term += &unpermuted_table_column[i];
+                    table_term += &unpermuted_table_expression[i];
                 }
 
                 *product *= &(input_term + &*beta);
@@ -288,12 +297,12 @@ impl<C: CurveAffine> Permuted<C> {
         //            * (\theta^{m-1} s_0(\omega^i) + \theta^{m-2} s_1(\omega^i) + ... + \theta s_{m-2}(\omega^i) + s_{m-1}(\omega^i) + \gamma)
         // Denominator: (a'(\omega^i) + \beta) (s'(\omega^i) + \gamma)
         //
-        // where there are m input columns and m table columns,
-        // a_j(\omega^i) is the jth input column in this lookup,
-        // a'j(\omega^i) is the permuted input column,
-        // s_j(\omega^i) is the jth table column in this lookup,
-        // s'(\omega^i) is the permuted table column,
-        // and i is the ith row of the column.
+        // where there are m input expressions and m table expressions,
+        // a_j(\omega^i) is the jth input expression in this lookup,
+        // a'j(\omega^i) is the permuted input expression,
+        // s_j(\omega^i) is the jth table expression in this lookup,
+        // s'(\omega^i) is the permuted table expression,
+        // and i is the ith row of the expression.
 
         // Compute the evaluations of the lookup product polynomial
         // over our domain, starting with z[0] = 1
@@ -319,21 +328,21 @@ impl<C: CurveAffine> Permuted<C> {
                 let prev_idx = (n + i - 1) % n;
 
                 let mut left = z[i];
-                let permuted_input_value = &self.permuted_input_column[i];
+                let permuted_input_value = &self.permuted_input_expression[i];
 
-                let permuted_table_value = &self.permuted_table_column[i];
+                let permuted_table_value = &self.permuted_table_expression[i];
 
                 left *= &(*beta + permuted_input_value);
                 left *= &(*gamma + permuted_table_value);
 
                 let mut right = z[prev_idx];
                 let mut input_term = self
-                    .unpermuted_input_columns
+                    .unpermuted_input_expressions
                     .iter()
                     .fold(C::Scalar::zero(), |acc, input| acc * &*theta + &input[i]);
 
                 let mut table_term = self
-                    .unpermuted_table_columns
+                    .unpermuted_table_expressions
                     .iter()
                     .fold(C::Scalar::zero(), |acc, table| acc * &*theta + &table[i]);
 
@@ -368,8 +377,8 @@ impl<C: CurveAffine> Permuted<C> {
 }
 
 impl<'a, C: CurveAffine> Committed<C> {
-    /// Given a Lookup with input columns, table columns, permuted input
-    /// column, permuted table column, and grand product polynomial, this
+    /// Given a Lookup with input expressions, table expressions, permuted input
+    /// expression, permuted table expression, and grand product polynomial, this
     /// method constructs constraints that must hold between these values.
     /// This method returns the constraints as a vector of polynomials in
     /// the extended evaluation domain.
@@ -412,14 +421,14 @@ impl<'a, C: CurveAffine> Committed<C> {
                     for (i, right) in right.iter_mut().enumerate() {
                         let i = i + start;
 
-                        // Compress the unpermuted input columns
+                        // Compress the unpermuted input expressions
                         let mut input_term = C::Scalar::zero();
                         for input in permuted.unpermuted_input_cosets.iter() {
                             input_term *= &*theta;
                             input_term += &input[i];
                         }
 
-                        // Compress the unpermuted table columns
+                        // Compress the unpermuted table expressions
                         let mut table_term = C::Scalar::zero();
                         for table in permuted.unpermuted_table_cosets.iter() {
                             table_term *= &*theta;
@@ -434,15 +443,15 @@ impl<'a, C: CurveAffine> Committed<C> {
 
                 Some(left - &right)
             })
-            // Check that the first values in the permuted input column and permuted
-            // fixed column are the same.
+            // Check that the first values in the permuted input expression and permuted
+            // fixed expression are the same.
             // l_0(X) * (a'(X) - s'(X)) = 0
             .chain(Some(
                 (permuted.permuted_input_coset.clone() - &permuted.permuted_table_coset) * &pk.l0,
             ))
-            // Check that each value in the permuted lookup input column is either
+            // Check that each value in the permuted lookup input expression is either
             // equal to the value above it, or the value at the same index in the
-            // permuted table column.
+            // permuted table expression.
             // (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
             .chain(Some(
                 (permuted.permuted_input_coset.clone() - &permuted.permuted_table_coset)
@@ -538,39 +547,41 @@ impl<C: CurveAffine> Evaluated<C> {
     }
 }
 
-type ColumnPair<F> = (Polynomial<F, LagrangeCoeff>, Polynomial<F, LagrangeCoeff>);
+type ExpressionPair<F> = (Polynomial<F, LagrangeCoeff>, Polynomial<F, LagrangeCoeff>);
 
-/// Given a column of input values A and a column of table values S,
+/// Given a vector of input values A and a vector of table values S,
 /// this method permutes A and S to produce A' and S', such that:
 /// - like values in A' are vertically adjacent to each other; and
 /// - the first row in a sequence of like values in A' is the row
 ///   that has the corresponding value in S'.
 /// This method returns (A', S') if no errors are encountered.
-fn permute_column_pair<C: CurveAffine>(
+fn permute_expression_pair<C: CurveAffine>(
     domain: &EvaluationDomain<C::Scalar>,
-    input_column: &Polynomial<C::Scalar, LagrangeCoeff>,
-    table_column: &Polynomial<C::Scalar, LagrangeCoeff>,
-) -> Result<ColumnPair<C::Scalar>, Error> {
-    let mut permuted_input_column = input_column.clone();
+    input_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
+    table_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
+) -> Result<ExpressionPair<C::Scalar>, Error> {
+    let mut permuted_input_expression = input_expression.clone();
 
-    // Sort input lookup column values
-    permuted_input_column.sort();
+    // Sort input lookup expression values
+    permuted_input_expression.sort();
 
-    // A BTreeMap of each unique element in the table column and its count
+    // A BTreeMap of each unique element in the table expression and its count
     let mut leftover_table_map: BTreeMap<C::Scalar, u32> =
-        table_column.iter().fold(BTreeMap::new(), |mut acc, coeff| {
-            *acc.entry(*coeff).or_insert(0) += 1;
-            acc
-        });
-    let mut permuted_table_coeffs = vec![C::Scalar::zero(); table_column.len()];
+        table_expression
+            .iter()
+            .fold(BTreeMap::new(), |mut acc, coeff| {
+                *acc.entry(*coeff).or_insert(0) += 1;
+                acc
+            });
+    let mut permuted_table_coeffs = vec![C::Scalar::zero(); table_expression.len()];
 
-    let mut repeated_input_rows = permuted_input_column
+    let mut repeated_input_rows = permuted_input_expression
         .iter()
         .zip(permuted_table_coeffs.iter_mut())
         .enumerate()
         .filter_map(|(row, (input_value, table_value))| {
-            // If this is the first occurence of `input_value` in the input column
-            if row == 0 || *input_value != permuted_input_column[row - 1] {
+            // If this is the first occurence of `input_value` in the input expression
+            if row == 0 || *input_value != permuted_input_expression[row - 1] {
                 *table_value = *input_value;
                 // Remove one instance of input_value from leftover_table_map
                 if let Some(count) = leftover_table_map.get_mut(&input_value) {
@@ -596,11 +607,11 @@ fn permute_column_pair<C: CurveAffine>(
     }
     assert!(repeated_input_rows.is_empty());
 
-    let mut permuted_table_column = domain.empty_lagrange();
+    let mut permuted_table_expression = domain.empty_lagrange();
     parallelize(
-        &mut permuted_table_column,
-        |permuted_table_column, start| {
-            for (permuted_table_value, permuted_table_coeff) in permuted_table_column
+        &mut permuted_table_expression,
+        |permuted_table_expression, start| {
+            for (permuted_table_value, permuted_table_coeff) in permuted_table_expression
                 .iter_mut()
                 .zip(permuted_table_coeffs[start..].iter())
             {
@@ -609,5 +620,5 @@ fn permute_column_pair<C: CurveAffine>(
         },
     );
 
-    Ok((permuted_input_column, permuted_table_column))
+    Ok((permuted_input_expression, permuted_table_expression))
 }
