@@ -59,12 +59,16 @@ now serves as a summary of the following sub-sections.
 | Constructs $h'(X)$ multipoint opening poly                                  |         |                                    |
 | $U = \text{Commit}(h'(X))$                                                  | $\rarr$ |                                    |
 |                                                                             | $\larr$ | $x_3$                              |
-| $q_\text{evals} = [Q_0(x_3), Q_1(x_3), \dots]$                              | $\rarr$ |                                    |
+| $\mathbf{q}_\text{evals} = [Q_0(x_3), Q_1(x_3), \dots]$                     | $\rarr$ |                                    |
 | $u_\text{eval} = U(x_3)$                                                    | $\rarr$ |                                    |
 |                                                                             | $\larr$ | $x_4$                              |
 
-Then the prover and verifier perform:
+Then the prover and verifier:
 
-$$\text{InnerProduct}(\text{LinCom}(Q, U, x_4), x_3, \text{LinCom}(q_\text{evals}, u_\text{eval}, x_4)).$$
+- Construct $\text{finalPoly}(X)$ as a linear combination of $\mathbf{Q}$ and $U$ using
+  powers of $x_4$;
+- Construct $\text{finalPolyEval}$ as the equivalent linear combination of
+  $\mathbf{q}_\text{evals}$ and $u_\text{eval}$; and
+- Perform $\text{InnerProduct}(\text{finalPoly}(X), x_3, \text{finalPolyEval}).$
 
 > TODO: Write up protocol components that provide zero-knowledge.
