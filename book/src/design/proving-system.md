@@ -4,9 +4,8 @@ The Halo 2 proving system can be broken down into five stages:
 
 1. Commit to polynomials encoding the main components of the circuit:
    - Cell assignments.
-   - Permuted values for each lookup argument.
+   - Permuted values and products for each lookup argument.
    - Equality constraint permutations.
-   - Products for each lookup argument.
 2. Construct the vanishing argument to constrain all circuit relations to zero:
    - Standard and custom gates.
    - Lookup argument rules.
