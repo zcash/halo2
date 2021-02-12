@@ -123,4 +123,12 @@ correct $(a\ b\ c\ d)$.
 
 ## Argument specification
 
-TODO: Document what we do with the permutation once we have it.
+Given a permutation between advice columns $[p_0(X), \dots, p_j(X)]$, the permutation is
+constrained by the rule
+
+$$p(X) = \prod_0^j \frac{p_j(X) + \beta \delta^j X + \gamma}{p_j(X) + \beta s_j(X) + \gamma}$$
+
+where:
+- $p_j(X)$ is the $j$th advice column in this permutation.
+- $s_j(X)$ is a pseudo-column containing the permutation of $p_j(X)$.
+- $\delta$ is a $t$ root of unity, where $t \cdot 2^s + 1 = p$ with t odd.
