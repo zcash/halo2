@@ -7,10 +7,10 @@ various circuit relations are satisfied:
 - The rules of the lookup arguments.
 - The rules of the equality constraint permutations.
 
-Each of these relations is inherently represented as a polynomial of degree $d$ (the
-maximum degree of any of the relations). Given that the degree of the assignment
-polynomials (over which these relations are built) is $n - 1$, the full polynomial
-representing each relation has degree $d(n - 1)$.
+Each of these relations is represented as a polynomial of degree $d$ (the maximum degree
+of any of the relations) with respect to the circuit columns. Given that the degree of the
+assignment polynomials for each column is $n - 1$, the relation polynomials have degree
+$d(n - 1)$ with respect to $X$.
 
 > In our [example](../proving-system.md#example), these would be the gate polynomials, of
 > degree $3n - 3$:
