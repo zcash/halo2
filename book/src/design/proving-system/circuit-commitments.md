@@ -8,8 +8,10 @@ auxiliary, and fixed columns. We define $F_{i,j}$ as the assignment in the $j$th
 the $i$th fixed column. Without loss of generality, we'll similarly define $A_{i,j}$ to
 represent the advice and auxiliary assignments.
 
-> The only difference between advice and auxiliary columns, is that the commitments to
-> auxiliary columns are not placed in the proof, and are instead computed by the verifier.
+> We separate fixed columns here because they are provided by the verifier, whereas the
+> advice and auxiliary columns are provided by the prover. In practice, the commitments to
+> auxiliary and fixed columns are computed by both the prover and verifier, and only the
+> advice commitments are stored in the proof.
 
 To commit to these assignments, we construct Lagrange polynomials of degree $n - 1$ for
 each column, over an evaluation domain of size $n$ (where $\omega$ is the $n$th primitive
@@ -23,9 +25,8 @@ We then create a blinding commitment to the polynomial for each column:
 $$\mathbf{A} = [\text{Commit}(a_0(X)), \dots, \text{Commit}(a_i(X))]$$
 $$\mathbf{F} = [\text{Commit}(f_0(X)), \dots, \text{Commit}(f_i(X))]$$
 
-$\mathbf{F}$ is constructed as part of key generation (pre-computed by both the prover and
-verifier, using a blinding factor of $1$). $\mathbf{A}$ is constructed by the prover and
-sent to the verifier.
+$\mathbf{F}$ is constructed as part of key generation, using a blinding factor of $1$.
+$\mathbf{A}$ is constructed by the prover and sent to the verifier.
 
 ## Committing to the lookup permutations
 
