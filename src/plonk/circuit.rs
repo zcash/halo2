@@ -7,7 +7,7 @@ use std::{
 };
 
 use super::{lookup, permutation, Error};
-use crate::{arithmetic::FieldExt, poly::Rotation};
+use crate::poly::Rotation;
 
 /// A column type
 pub trait ColumnType: 'static + Sized {}
@@ -319,7 +319,7 @@ impl<F: Field> Expression<F> {
     }
 }
 
-impl<F: FieldExt> Neg for Expression<F> {
+impl<F: Field> Neg for Expression<F> {
     type Output = Expression<F>;
     fn neg(self) -> Self::Output {
         Expression::Scaled(Box::new(self), -F::one())
@@ -333,7 +333,7 @@ impl<F> Add for Expression<F> {
     }
 }
 
-impl<F: FieldExt> Sub for Expression<F> {
+impl<F: Field> Sub for Expression<F> {
     type Output = Expression<F>;
     fn sub(self, rhs: Expression<F>) -> Expression<F> {
         Expression::Sum(Box::new(self), Box::new(-rhs))
