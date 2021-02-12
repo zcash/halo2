@@ -70,7 +70,10 @@ $$Z(X) = \frac{(A_\text{compressed}(X) + \beta)(S_\text{compressed}(X) + \gamma)
 $\beta$ and $\gamma$ are used to combine the permutation arguments for $A'(X)$ and $S'(X)$
 while keeping them independent. We can reuse $\beta$ and $\gamma$ from the equality
 constraint permutation here because they serve the same purpose in both places, and we
-aren't trying to combine the lookup and equality constraint permutation arguments.
+aren't trying to combine the lookup and equality constraint permutation arguments. The
+important thing here is that the verifier samples $\beta$ and $\gamma$ after the prover
+has created $\mathbf{A}$, $\mathbf{F}$, and $\mathbf{L}$ (and thus commited to all the
+cell values used in lookup columns, as well as $A'(X)$ and $S'(X)$ for each lookup).
 
 As before, the prover creates blinding commitments to the permutation product column for
 every lookup
