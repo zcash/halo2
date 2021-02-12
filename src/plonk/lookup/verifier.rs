@@ -115,11 +115,11 @@ impl<C: CurveAffine> Evaluated<C> {
                 * &(self.permuted_input_eval + &*beta)
                 * &(self.permuted_table_eval + &*gamma);
 
-            let compress_columns = |columns: &[Expression<C::Scalar>]| {
-                columns
+            let compress_expressions = |expressions: &[Expression<C::Scalar>]| {
+                expressions
                     .iter()
-                    .map(|column| {
-                        column.evaluate(
+                    .map(|expression| {
+                        expression.evaluate(
                             &|index| fixed_evals[index],
                             &|index| advice_evals[index],
                             &|index| instance_evals[index],
@@ -131,8 +131,8 @@ impl<C: CurveAffine> Evaluated<C> {
                     .fold(C::Scalar::zero(), |acc, eval| acc * &*theta + &eval)
             };
             let right = self.product_inv_eval
-                * &(compress_columns(&argument.input_columns) + &*beta)
-                * &(compress_columns(&argument.table_columns) + &*gamma);
+                * &(compress_expressions(&argument.input_expressions) + &*beta)
+                * &(compress_expressions(&argument.table_expressions) + &*gamma);
 
             left - &right
         };

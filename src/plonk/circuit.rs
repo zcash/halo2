@@ -376,7 +376,7 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) permutations: Vec<permutation::Argument>,
 
     // Vector of lookup arguments, where each corresponds to a sequence of
-    // input columns and a sequence of table columns involved in the lookup.
+    // input expressions and a sequence of table expressions involved in the lookup.
     pub(crate) lookups: Vec<lookup::Argument<F>>,
 }
 
@@ -451,20 +451,20 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
-    /// Add a lookup argument for some input columns and table columns.
-    /// The function will panic if the number of input columns and table
-    /// columns are not the same.
+    /// Add a lookup argument for some input expressions and table expressions.
+    /// The function will panic if the number of input expressions and table
+    /// expressions are not the same.
     pub fn lookup(
         &mut self,
-        input_columns: &[Expression<F>],
-        table_columns: &[Expression<F>],
+        input_expressions: &[Expression<F>],
+        table_expressions: &[Expression<F>],
     ) -> usize {
-        assert_eq!(input_columns.len(), table_columns.len());
+        assert_eq!(input_expressions.len(), table_expressions.len());
 
         let index = self.lookups.len();
 
         self.lookups
-            .push(lookup::Argument::new(input_columns, table_columns));
+            .push(lookup::Argument::new(input_expressions, table_expressions));
 
         index
     }
