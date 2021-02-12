@@ -107,7 +107,7 @@ pub fn circuit_layout<F: Field, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>
         if let Some(offset) = region.offset {
             // Sort the region's columns according to the defined ordering.
             let mut columns: Vec<_> = region.columns.into_iter().collect();
-            columns.sort_unstable_by(|a, b| column_index(a).cmp(&column_index(b)));
+            columns.sort_unstable_by_key(|a| column_index(a));
 
             // Render contiguous parts of the same region as a single box.
             let mut width = None;

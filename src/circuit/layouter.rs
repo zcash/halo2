@@ -106,9 +106,9 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
         &self.config
     }
 
-    fn assign_region<A, N, NR>(&mut self, name: N, mut assignment: A) -> Result<(), Error>
+    fn assign_region<A, AR, N, NR>(&mut self, name: N, mut assignment: A) -> Result<AR, Error>
     where
-        A: FnMut(Region<'_, C>) -> Result<(), Error>,
+        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
         N: Fn() -> NR,
         NR: Into<String>,
     {
@@ -136,13 +136,13 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
 
         self.cs.enter_region(name);
         let mut region = SingleChipRegion::new(self, region_index);
-        {
+        let result = {
             let region: &mut dyn RegionLayouter<C> = &mut region;
-            assignment(region.into())?;
-        }
+            assignment(region.into())
+        }?;
         self.cs.exit_region();
 
-        Ok(())
+        Ok(result)
     }
 
     fn get_root(&mut self) -> &mut Self::Root {
