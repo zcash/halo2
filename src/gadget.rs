@@ -2,3 +2,4 @@
 
 pub mod ecc;
 pub mod sha256;
+pub mod sinsemilla;
