@@ -120,6 +120,7 @@ impl<C: CurveAffine> Evaluated<C> {
                     .iter()
                     .map(|expression| {
                         expression.evaluate(
+                            &|scalar| scalar,
                             &|index| fixed_evals[index],
                             &|index| advice_evals[index],
                             &|index| instance_evals[index],
