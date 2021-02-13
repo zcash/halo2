@@ -296,6 +296,7 @@ impl<F: FieldExt> MockProver<F> {
                 }
 
                 if gate.evaluate(
+                    &|scalar| scalar,
                     &load(n, row, &self.cs.fixed_queries, &self.fixed),
                     &load(n, row, &self.cs.advice_queries, &self.advice),
                     &load(n, row, &self.cs.instance_queries, &self.instance),
@@ -318,6 +319,7 @@ impl<F: FieldExt> MockProver<F> {
             for input_row in 0..n {
                 let load = |expression: &Expression<F>, row| {
                     expression.evaluate(
+                        &|scalar| scalar,
                         &|index| {
                             let column_index = self.cs.fixed_queries[index].0.index();
                             self.fixed[column_index][row as usize]
