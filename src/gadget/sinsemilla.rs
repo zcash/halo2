@@ -10,6 +10,9 @@ use crate::{
     plonk::Error,
 };
 
+mod chip;
+pub use chip::{SinsemillaChip, SinsemillaColumns, SinsemillaConfig};
+
 /// Domain prefix used in SWU hash-to-curve to generate S_i's.
 pub const S_DOMAIN_PREFIX: &str = "z.cash:SinsemillaS";
 
