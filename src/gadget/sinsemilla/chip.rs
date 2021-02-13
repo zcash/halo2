@@ -105,7 +105,33 @@ impl<F: FieldExt, C: CurveAffine<Base = F>> SinsemillaChip<C> {
                 + (Expression::Constant(F::one()) - sinsemilla_cur.clone()) * y_p_init,
         );
 
-        // TODO: Create gate
+        let lambda1_next = meta.query_advice(columns.lambda1, Rotation::next());
+        let lambda2_next = meta.query_advice(columns.lambda2, Rotation::next());
+        let x_a_next = meta.query_advice(columns.x_a, Rotation::next());
+        let x_p_next = meta.query_advice(columns.x_p, Rotation::next());
+        let y_a_next = (lambda1_next.clone() + lambda2_next)
+            * (x_a_next.clone()
+                - (lambda1_next.clone() * lambda1_next - x_a_next.clone() - x_p_next))
+            * F::TWO_INV;
+
+        // Sinsemilla expr1 gate
+        meta.create_gate("Sinsemilla expr1", |_| {
+            // λ_{2,i}^2 − x_{A,i+1} −(λ_{1,i}^2 − x_{A,i} − x_{P,i}) − x_{A,i} = 0
+            let expr1 = lambda2_cur.clone() * lambda2_cur.clone()
+                - x_a_next.clone()
+                - (lambda1_cur.clone() * lambda1_cur)
+                + x_p_cur;
+
+            sinsemilla_cur.clone() * expr1
+        });
+
+        // Sinsemilla expr2 gate
+        meta.create_gate("Sinsemilla expr2", |_| {
+            // λ_{2,i}⋅(x_{A,i} − x_{A,i+1}) − y_{A,i} − y_{A,i+1} = 0
+            let expr2 = lambda2_cur * (x_a_cur - x_a_next) - y_a_cur - y_a_next;
+
+            sinsemilla_cur.clone() * expr2
+        });
 
         SinsemillaConfig {
             k,
