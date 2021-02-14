@@ -97,16 +97,22 @@ impl<F: FieldExt> Argument<F> {
                 .map(|expression| {
                     expression.evaluate(
                         &|index| {
-                            let column_index = pk.vk.cs.fixed_queries[index].0.index();
-                            fixed_values[column_index].clone()
+                            let query = pk.vk.cs.fixed_queries[index];
+                            let column_index = query.0.index();
+                            let rotation = query.1;
+                            fixed_values[column_index].clone().rotate(rotation)
                         },
                         &|index| {
-                            let column_index = pk.vk.cs.advice_queries[index].0.index();
-                            advice_values[column_index].clone()
+                            let query = pk.vk.cs.advice_queries[index];
+                            let column_index = query.0.index();
+                            let rotation = query.1;
+                            advice_values[column_index].clone().rotate(rotation)
                         },
                         &|index| {
-                            let column_index = pk.vk.cs.instance_queries[index].0.index();
-                            instance_values[column_index].clone()
+                            let query = pk.vk.cs.instance_queries[index];
+                            let column_index = query.0.index();
+                            let rotation = query.1;
+                            instance_values[column_index].clone().rotate(rotation)
                         },
                         &|a, b| a + &b,
                         &|a, b| {
