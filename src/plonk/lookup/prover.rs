@@ -96,7 +96,7 @@ impl<F: FieldExt> Argument<F> {
                 .iter()
                 .map(|expression| {
                     expression.evaluate(
-                        &|scalar| pk.vk.domain.const_lagrange(scalar),
+                        &|scalar| pk.vk.domain.constant_lagrange(scalar),
                         &|index| {
                             let query = pk.vk.cs.fixed_queries[index];
                             let column_index = query.0.index();
@@ -138,7 +138,7 @@ impl<F: FieldExt> Argument<F> {
                 .iter()
                 .map(|expression| {
                     expression.evaluate(
-                        &|scalar| pk.vk.domain.const_extended(scalar),
+                        &|scalar| pk.vk.domain.constant_extended(scalar),
                         &|index| fixed_cosets[index].clone(),
                         &|index| advice_cosets[index].clone(),
                         &|index| instance_cosets[index].clone(),
