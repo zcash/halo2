@@ -7,7 +7,8 @@
     clippy::too_many_arguments,
     clippy::suspicious_arithmetic_impl,
     clippy::many_single_char_names,
-    clippy::same_item_push
+    clippy::same_item_push,
+    clippy::upper_case_acronyms
 )]
 #![deny(broken_intra_doc_links)]
 #![deny(missing_debug_implementations)]
