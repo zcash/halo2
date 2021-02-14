@@ -107,7 +107,7 @@ impl<C: CurveAffine> Evaluated<C> {
         gamma: ChallengeGamma<C>,
         advice_evals: &[C::Scalar],
         fixed_evals: &[C::Scalar],
-        aux_evals: &[C::Scalar],
+        instance_evals: &[C::Scalar],
     ) -> impl Iterator<Item = C::Scalar> + 'a {
         let product_expression = || {
             // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
@@ -124,7 +124,7 @@ impl<C: CurveAffine> Evaluated<C> {
                         match column.column_type() {
                             Any::Advice => advice_evals[index],
                             Any::Fixed => fixed_evals[index],
-                            Any::Aux => aux_evals[index],
+                            Any::Instance => instance_evals[index],
                         }
                     })
                     .fold(C::Scalar::zero(), |acc, eval| acc * &*theta + &eval)

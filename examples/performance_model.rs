@@ -194,7 +194,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         let a = meta.advice_column();
         let b = meta.advice_column();
         let c = meta.advice_column();
-        let p = meta.aux_column();
+        let p = meta.instance_column();
 
         let perm = meta.permutation(&[a, b, c]);
 
@@ -219,7 +219,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
 
         meta.create_gate("Public input", |meta| {
             let a = meta.query_advice(a, Rotation::cur());
-            let p = meta.query_aux(p, Rotation::cur());
+            let p = meta.query_instance(p, Rotation::cur());
             let sp = meta.query_fixed(sp, Rotation::cur());
 
             sp * (a + p * (-F::one()))

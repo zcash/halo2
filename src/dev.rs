@@ -130,9 +130,9 @@ pub enum VerifyFailure {
 /// };
 ///
 /// // This circuit has no public inputs.
-/// let aux = vec![];
+/// let instance = vec![];
 ///
-/// let prover = MockProver::<Fp>::run(K, &circuit, aux).unwrap();
+/// let prover = MockProver::<Fp>::run(K, &circuit, instance).unwrap();
 /// assert_eq!(
 ///     prover.verify(),
 ///     Err(VerifyFailure::Gate {
@@ -151,8 +151,8 @@ pub struct MockProver<F: Group> {
     fixed: Vec<Vec<F>>,
     // The advice cells in the circuit, arranged as [column][row].
     advice: Vec<Vec<F>>,
-    // The aux cells in the circuit, arranged as [column][row].
-    aux: Vec<Vec<F>>,
+    // The instance cells in the circuit, arranged as [column][row].
+    instance: Vec<Vec<F>>,
 
     permutations: Vec<permutation::keygen::Assembly>,
 }
@@ -244,7 +244,7 @@ impl<F: FieldExt> MockProver<F> {
     pub fn run<ConcreteCircuit: Circuit<F>>(
         k: u32,
         circuit: &ConcreteCircuit,
-        aux: Vec<Vec<F>>,
+        instance: Vec<Vec<F>>,
     ) -> Result<Self, Error> {
         let n = 1 << k;
 
@@ -264,7 +264,7 @@ impl<F: FieldExt> MockProver<F> {
             cs,
             fixed,
             advice,
-            aux,
+            instance,
             permutations,
         };
 
@@ -298,7 +298,7 @@ impl<F: FieldExt> MockProver<F> {
                 if gate.evaluate(
                     &load(n, row, &self.cs.fixed_queries, &self.fixed),
                     &load(n, row, &self.cs.advice_queries, &self.advice),
-                    &load(n, row, &self.cs.aux_queries, &self.aux),
+                    &load(n, row, &self.cs.instance_queries, &self.instance),
                     &|a, b| a + &b,
                     &|a, b| a * &b,
                     &|a, scalar| a * scalar,
@@ -319,7 +319,7 @@ impl<F: FieldExt> MockProver<F> {
                 let load = |column: &Column<Any>, row| match column.column_type() {
                     Any::Fixed => self.fixed[column.index()][row as usize],
                     Any::Advice => self.advice[column.index()][row as usize],
-                    Any::Aux => self.aux[column.index()][row as usize],
+                    Any::Instance => self.instance[column.index()][row as usize],
                 };
 
                 let inputs: Vec<_> = lookup

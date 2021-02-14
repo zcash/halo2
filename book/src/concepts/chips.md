@@ -1,7 +1,7 @@
 # Chips
 
 In order to combine functionality from several cores, we use a ***chip***. To implement a
-chip, we define a set of fixed, advice, and auxiliary columns, and then specify how they
+chip, we define a set of fixed, advice, and instance columns, and then specify how they
 should be distributed between cores.
 
 In the simplest case, each core will use columns disjoint from the other cores. However, it

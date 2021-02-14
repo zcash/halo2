@@ -37,24 +37,24 @@ pub struct Advice;
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Fixed;
 
-/// An auxiliary column
+/// An instance column
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct Aux;
+pub struct Instance;
 
-/// An enum over the Advice, Fixed, Aux structs
+/// An enum over the Advice, Fixed, Instance structs
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum Any {
     /// An Advice variant
     Advice,
     /// A Fixed variant
     Fixed,
-    /// An Auxiliary variant
-    Aux,
+    /// An Instance variant
+    Instance,
 }
 
 impl ColumnType for Advice {}
 impl ColumnType for Fixed {}
-impl ColumnType for Aux {}
+impl ColumnType for Instance {}
 impl ColumnType for Any {}
 
 impl From<Column<Advice>> for Column<Any> {
@@ -75,11 +75,11 @@ impl From<Column<Fixed>> for Column<Any> {
     }
 }
 
-impl From<Column<Aux>> for Column<Any> {
-    fn from(advice: Column<Aux>) -> Column<Any> {
+impl From<Column<Instance>> for Column<Any> {
+    fn from(advice: Column<Instance>) -> Column<Any> {
         Column {
             index: advice.index(),
-            column_type: Any::Aux,
+            column_type: Any::Instance,
         }
     }
 }
@@ -112,16 +112,16 @@ impl TryFrom<Column<Any>> for Column<Fixed> {
     }
 }
 
-impl TryFrom<Column<Any>> for Column<Aux> {
+impl TryFrom<Column<Any>> for Column<Instance> {
     type Error = &'static str;
 
     fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
         match any.column_type() {
-            Any::Aux => Ok(Column {
+            Any::Instance => Ok(Column {
                 index: any.index(),
-                column_type: Aux,
+                column_type: Instance,
             }),
-            _ => Err("Cannot convert into Column<Aux>"),
+            _ => Err("Cannot convert into Column<Instance>"),
         }
     }
 }
@@ -228,8 +228,8 @@ pub enum Expression<F> {
     Fixed(usize),
     /// This is an advice (witness) column queried at a certain relative location
     Advice(usize),
-    /// This is an auxiliary (external) column queried at a certain relative location
-    Aux(usize),
+    /// This is an instance (external) column queried at a certain relative location
+    Instance(usize),
     /// This is the sum of two polynomials
     Sum(Box<Expression<F>>, Box<Expression<F>>),
     /// This is the product of two polynomials
@@ -245,7 +245,7 @@ impl<F: Field> Expression<F> {
         &self,
         fixed_column: &impl Fn(usize) -> T,
         advice_column: &impl Fn(usize) -> T,
-        aux_column: &impl Fn(usize) -> T,
+        instance_column: &impl Fn(usize) -> T,
         sum: &impl Fn(T, T) -> T,
         product: &impl Fn(T, T) -> T,
         scaled: &impl Fn(T, F) -> T,
@@ -253,12 +253,12 @@ impl<F: Field> Expression<F> {
         match self {
             Expression::Fixed(index) => fixed_column(*index),
             Expression::Advice(index) => advice_column(*index),
-            Expression::Aux(index) => aux_column(*index),
+            Expression::Instance(index) => instance_column(*index),
             Expression::Sum(a, b) => {
                 let a = a.evaluate(
                     fixed_column,
                     advice_column,
-                    aux_column,
+                    instance_column,
                     sum,
                     product,
                     scaled,
@@ -266,7 +266,7 @@ impl<F: Field> Expression<F> {
                 let b = b.evaluate(
                     fixed_column,
                     advice_column,
-                    aux_column,
+                    instance_column,
                     sum,
                     product,
                     scaled,
@@ -277,7 +277,7 @@ impl<F: Field> Expression<F> {
                 let a = a.evaluate(
                     fixed_column,
                     advice_column,
-                    aux_column,
+                    instance_column,
                     sum,
                     product,
                     scaled,
@@ -285,7 +285,7 @@ impl<F: Field> Expression<F> {
                 let b = b.evaluate(
                     fixed_column,
                     advice_column,
-                    aux_column,
+                    instance_column,
                     sum,
                     product,
                     scaled,
@@ -296,7 +296,7 @@ impl<F: Field> Expression<F> {
                 let a = a.evaluate(
                     fixed_column,
                     advice_column,
-                    aux_column,
+                    instance_column,
                     sum,
                     product,
                     scaled,
@@ -311,7 +311,7 @@ impl<F: Field> Expression<F> {
         match self {
             Expression::Fixed(_) => 1,
             Expression::Advice(_) => 1,
-            Expression::Aux(_) => 1,
+            Expression::Instance(_) => 1,
             Expression::Sum(a, b) => max(a.degree(), b.degree()),
             Expression::Product(a, b) => a.degree() + b.degree(),
             Expression::Scaled(poly, _) => poly.degree(),
@@ -365,10 +365,10 @@ pub(crate) struct PointIndex(pub usize);
 pub struct ConstraintSystem<F> {
     pub(crate) num_fixed_columns: usize,
     pub(crate) num_advice_columns: usize,
-    pub(crate) num_aux_columns: usize,
+    pub(crate) num_instance_columns: usize,
     pub(crate) gates: Vec<(&'static str, Expression<F>)>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
-    pub(crate) aux_queries: Vec<(Column<Aux>, Rotation)>,
+    pub(crate) instance_queries: Vec<(Column<Instance>, Rotation)>,
     pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
 
     // Vector of permutation arguments, where each corresponds to a sequence of columns
@@ -385,11 +385,11 @@ impl<F: Field> Default for ConstraintSystem<F> {
         ConstraintSystem {
             num_fixed_columns: 0,
             num_advice_columns: 0,
-            num_aux_columns: 0,
+            num_instance_columns: 0,
             gates: vec![],
             fixed_queries: Vec::new(),
             advice_queries: Vec::new(),
-            aux_queries: Vec::new(),
+            instance_queries: Vec::new(),
             permutations: Vec::new(),
             lookups: Vec::new(),
         }
@@ -474,31 +474,33 @@ impl<F: Field> ConstraintSystem<F> {
         Expression::Advice(self.query_advice_index(column, at))
     }
 
-    fn query_aux_index(&mut self, column: Column<Aux>, at: Rotation) -> usize {
+    fn query_instance_index(&mut self, column: Column<Instance>, at: Rotation) -> usize {
         // Return existing query, if it exists
-        for (index, aux_query) in self.aux_queries.iter().enumerate() {
-            if aux_query == &(column, at) {
+        for (index, instance_query) in self.instance_queries.iter().enumerate() {
+            if instance_query == &(column, at) {
                 return index;
             }
         }
 
         // Make a new query
-        let index = self.aux_queries.len();
-        self.aux_queries.push((column, at));
+        let index = self.instance_queries.len();
+        self.instance_queries.push((column, at));
 
         index
     }
 
-    /// Query an auxiliary column at a relative position
-    pub fn query_aux(&mut self, column: Column<Aux>, at: Rotation) -> Expression<F> {
-        Expression::Aux(self.query_aux_index(column, at))
+    /// Query an instance column at a relative position
+    pub fn query_instance(&mut self, column: Column<Instance>, at: Rotation) -> Expression<F> {
+        Expression::Instance(self.query_instance_index(column, at))
     }
 
     fn query_any_index(&mut self, column: Column<Any>, at: Rotation) -> usize {
         match column.column_type() {
             Any::Advice => self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
             Any::Fixed => self.query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
-            Any::Aux => self.query_aux_index(Column::<Aux>::try_from(column).unwrap(), at),
+            Any::Instance => {
+                self.query_instance_index(Column::<Instance>::try_from(column).unwrap(), at)
+            }
         }
     }
 
@@ -511,9 +513,9 @@ impl<F: Field> ConstraintSystem<F> {
             Any::Fixed => Expression::Fixed(
                 self.query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
             ),
-            Any::Aux => {
-                Expression::Aux(self.query_aux_index(Column::<Aux>::try_from(column).unwrap(), at))
-            }
+            Any::Instance => Expression::Instance(
+                self.query_instance_index(Column::<Instance>::try_from(column).unwrap(), at),
+            ),
         }
     }
 
@@ -537,14 +539,14 @@ impl<F: Field> ConstraintSystem<F> {
         panic!("get_fixed_query_index called for non-existent query");
     }
 
-    pub(crate) fn get_aux_query_index(&self, column: Column<Aux>, at: Rotation) -> usize {
-        for (index, aux_query) in self.aux_queries.iter().enumerate() {
-            if aux_query == &(column, at) {
+    pub(crate) fn get_instance_query_index(&self, column: Column<Instance>, at: Rotation) -> usize {
+        for (index, instance_query) in self.instance_queries.iter().enumerate() {
+            if instance_query == &(column, at) {
                 return index;
             }
         }
 
-        panic!("get_aux_query_index called for non-existent query");
+        panic!("get_instance_query_index called for non-existent query");
     }
 
     pub(crate) fn get_any_query_index(&self, column: Column<Any>, at: Rotation) -> usize {
@@ -555,7 +557,9 @@ impl<F: Field> ConstraintSystem<F> {
             Any::Fixed => {
                 self.get_fixed_query_index(Column::<Fixed>::try_from(column).unwrap(), at)
             }
-            Any::Aux => self.get_aux_query_index(Column::<Aux>::try_from(column).unwrap(), at),
+            Any::Instance => {
+                self.get_instance_query_index(Column::<Instance>::try_from(column).unwrap(), at)
+            }
         }
     }
 
@@ -585,13 +589,13 @@ impl<F: Field> ConstraintSystem<F> {
         tmp
     }
 
-    /// Allocate a new auxiliary column
-    pub fn aux_column(&mut self) -> Column<Aux> {
+    /// Allocate a new instance column
+    pub fn instance_column(&mut self) -> Column<Instance> {
         let tmp = Column {
-            index: self.num_aux_columns,
-            column_type: Aux,
+            index: self.num_instance_columns,
+            column_type: Instance,
         };
-        self.num_aux_columns += 1;
+        self.num_instance_columns += 1;
         tmp
     }
 }

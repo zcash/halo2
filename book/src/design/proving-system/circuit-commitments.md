@@ -4,14 +4,14 @@
 
 At the start of proof creation, the prover has a table of cell assignments that it claims
 satisfy the constraint system. The table has $n = 2^k$ rows, and is broken into advice,
-auxiliary, and fixed columns. We define $F_{i,j}$ as the assignment in the $j$th row of
+instance, and fixed columns. We define $F_{i,j}$ as the assignment in the $j$th row of
 the $i$th fixed column. Without loss of generality, we'll similarly define $A_{i,j}$ to
-represent the advice and auxiliary assignments.
+represent the advice and instance assignments.
 
 > We separate fixed columns here because they are provided by the verifier, whereas the
-> advice and auxiliary columns are provided by the prover. In practice, the commitments to
-> auxiliary and fixed columns are computed by both the prover and verifier, and only the
-> advice commitments are stored in the proof.
+> advice columns are provided by the prover. The instance columns are agreed between both
+> parties. In practice, the commitments to instance and fixed columns are computed by
+> both the prover and verifier, and only the advice commitments are stored in the proof.
 
 To commit to these assignments, we construct Lagrange polynomials of degree $n - 1$ for
 each column, over an evaluation domain of size $n$ (where $\omega$ is the $n$th primitive

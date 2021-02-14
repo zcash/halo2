@@ -17,21 +17,21 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
     params: &'a Params<C>,
     vk: &VerifyingKey<C>,
     msm: MSM<'a, C>,
-    aux_commitments: &[&[C]],
+    instance_commitments: &[&[C]],
     transcript: &mut T,
 ) -> Result<Guard<'a, C>, Error> {
-    // Check that aux_commitments matches the expected number of aux columns
-    for aux_commitments in aux_commitments.iter() {
-        if aux_commitments.len() != vk.cs.num_aux_columns {
+    // Check that instance_commitments matches the expected number of instance columns
+    for instance_commitments in instance_commitments.iter() {
+        if instance_commitments.len() != vk.cs.num_instance_columns {
             return Err(Error::IncompatibleParams);
         }
     }
 
-    let num_proofs = aux_commitments.len();
+    let num_proofs = instance_commitments.len();
 
-    for aux_commitments in aux_commitments.iter() {
-        // Hash the aux (external) commitments into the transcript
-        for commitment in *aux_commitments {
+    for instance_commitments in instance_commitments.iter() {
+        // Hash the instance (external) commitments into the transcript
+        for commitment in *instance_commitments {
             transcript
                 .common_point(*commitment)
                 .map_err(|_| Error::TranscriptError)?
@@ -96,9 +96,10 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
     // satisfied with high probability.
     let x = ChallengeX::get(transcript);
 
-    let aux_evals = (0..num_proofs)
+    let instance_evals = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
-            read_n_scalars(transcript, vk.cs.aux_queries.len()).map_err(|_| Error::TranscriptError)
+            read_n_scalars(transcript, vk.cs.instance_queries.len())
+                .map_err(|_| Error::TranscriptError)
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -150,76 +151,81 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         // Compute the expected value of h(x)
         let expressions = advice_evals
             .iter()
-            .zip(aux_evals.iter())
+            .zip(instance_evals.iter())
             .zip(permutations_evaluated.iter())
             .zip(lookups_evaluated.iter())
-            .flat_map(|(((advice_evals, aux_evals), permutations), lookups)| {
-                let fixed_evals = fixed_evals.clone();
-                let fixed_evals_copy = fixed_evals.clone();
+            .flat_map(
+                |(((advice_evals, instance_evals), permutations), lookups)| {
+                    let fixed_evals = fixed_evals.clone();
+                    let fixed_evals_copy = fixed_evals.clone();
 
-                std::iter::empty()
-                    // Evaluate the circuit using the custom gates provided
-                    .chain(vk.cs.gates.iter().map(move |(_, poly)| {
-                        poly.evaluate(
-                            &|index| fixed_evals[index],
-                            &|index| advice_evals[index],
-                            &|index| aux_evals[index],
-                            &|a, b| a + &b,
-                            &|a, b| a * &b,
-                            &|a, scalar| a * &scalar,
+                    std::iter::empty()
+                        // Evaluate the circuit using the custom gates provided
+                        .chain(vk.cs.gates.iter().map(move |(_, poly)| {
+                            poly.evaluate(
+                                &|index| fixed_evals[index],
+                                &|index| advice_evals[index],
+                                &|index| instance_evals[index],
+                                &|a, b| a + &b,
+                                &|a, b| a * &b,
+                                &|a, scalar| a * &scalar,
+                            )
+                        }))
+                        .chain(
+                            permutations
+                                .iter()
+                                .zip(vk.cs.permutations.iter())
+                                .flat_map(move |(p, argument)| {
+                                    p.expressions(vk, argument, &advice_evals, l_0, beta, gamma, x)
+                                })
+                                .into_iter(),
                         )
-                    }))
-                    .chain(
-                        permutations
-                            .iter()
-                            .zip(vk.cs.permutations.iter())
-                            .flat_map(move |(p, argument)| {
-                                p.expressions(vk, argument, &advice_evals, l_0, beta, gamma, x)
-                            })
-                            .into_iter(),
-                    )
-                    .chain(
-                        lookups
-                            .iter()
-                            .zip(vk.cs.lookups.iter())
-                            .flat_map(move |(p, argument)| {
-                                p.expressions(
-                                    vk,
-                                    l_0,
-                                    argument,
-                                    theta,
-                                    beta,
-                                    gamma,
-                                    &advice_evals,
-                                    &fixed_evals_copy,
-                                    &aux_evals,
-                                )
-                            })
-                            .into_iter(),
-                    )
-            });
+                        .chain(
+                            lookups
+                                .iter()
+                                .zip(vk.cs.lookups.iter())
+                                .flat_map(move |(p, argument)| {
+                                    p.expressions(
+                                        vk,
+                                        l_0,
+                                        argument,
+                                        theta,
+                                        beta,
+                                        gamma,
+                                        &advice_evals,
+                                        &fixed_evals_copy,
+                                        &instance_evals,
+                                    )
+                                })
+                                .into_iter(),
+                        )
+                },
+            );
 
         vanishing.verify(expressions, y, xn)?;
     }
 
-    let queries = aux_commitments
+    let queries = instance_commitments
         .iter()
-        .zip(aux_evals.iter())
+        .zip(instance_evals.iter())
         .zip(advice_commitments.iter())
         .zip(advice_evals.iter())
         .zip(permutations_evaluated.iter())
         .zip(lookups_evaluated.iter())
         .flat_map(
             |(
-                ((((aux_commitments, aux_evals), advice_commitments), advice_evals), permutations),
+                (
+                    (((instance_commitments, instance_evals), advice_commitments), advice_evals),
+                    permutations,
+                ),
                 lookups,
             )| {
                 iter::empty()
-                    .chain(vk.cs.aux_queries.iter().enumerate().map(
+                    .chain(vk.cs.instance_queries.iter().enumerate().map(
                         move |(query_index, &(column, at))| VerifierQuery {
                             point: vk.domain.rotate_omega(*x, at),
-                            commitment: &aux_commitments[column.index()],
-                            eval: aux_evals[query_index],
+                            commitment: &instance_commitments[column.index()],
+                            eval: instance_evals[query_index],
                         },
                     ))
                     .chain(vk.cs.advice_queries.iter().enumerate().map(

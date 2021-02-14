@@ -6,7 +6,7 @@ use halo2::{
     arithmetic::FieldExt,
     circuit::{layouter::SingleChip, Cell, Chip, Layouter, Permutation},
     dev::VerifyFailure,
-    plonk::{Advice, Assignment, Aux, Circuit, Column, ConstraintSystem, Error, Fixed},
+    plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Instance},
     poly::Rotation,
 };
 
@@ -71,7 +71,7 @@ impl<F: FieldExt> FieldChip<F> {
     fn configure(
         meta: &mut ConstraintSystem<F>,
         advice: [Column<Advice>; 2],
-        aux: Column<Aux>,
+        instance: Column<Instance>,
     ) -> FieldConfig {
         let perm = Permutation::new(meta, &advice);
         let s_mul = meta.fixed_column();
@@ -109,10 +109,10 @@ impl<F: FieldExt> FieldChip<F> {
             // We choose somewhat-arbitrarily that we will use the second advice
             // column for exposing numbers as public inputs.
             let a = meta.query_advice(advice[1], Rotation::cur());
-            let p = meta.query_aux(aux, Rotation::cur());
+            let p = meta.query_instance(instance, Rotation::cur());
             let s = meta.query_fixed(s_pub, Rotation::cur());
 
-            // We simply constrain the advice cell to be equal to the aux cell,
+            // We simply constrain the advice cell to be equal to the instance cell,
             // when the selector is enabled.
             s * (p + a * -F::one())
         });
@@ -243,7 +243,7 @@ impl<F: FieldExt> NumericInstructions for FieldChip<F> {
                 )?;
                 region.constrain_equal(&config.perm, num.cell, out)?;
 
-                // We don't assign to the auxiliary column inside the circuit;
+                // We don't assign to the instance column inside the circuit;
                 // the mapping of public inputs to cells is provided to the prover.
                 Ok(())
             },
@@ -271,10 +271,10 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         // We create the two advice columns that FieldChip uses for I/O.
         let advice = [meta.advice_column(), meta.advice_column()];
 
-        // We also need an auxiliary column to store public inputs.
-        let aux = meta.aux_column();
+        // We also need an instance column to store public inputs.
+        let instance = meta.instance_column();
 
-        FieldChip::configure(meta, advice, aux)
+        FieldChip::configure(meta, advice, instance)
     }
 
     fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error> {
@@ -322,7 +322,7 @@ fn main() {
     };
 
     // Arrange the public input. We expose the multiplication result in row 6
-    // of the aux column, so we position it there in our public inputs.
+    // of the instance column, so we position it there in our public inputs.
     let mut public_inputs = vec![Fp::zero(); 1 << k];
     public_inputs[6] = c;
 
