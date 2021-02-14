@@ -178,7 +178,7 @@ impl<G: Group> EvaluationDomain<G> {
     }
 
     /// Returns a constant polynomial in the Lagrange coefficient basis
-    pub fn const_lagrange(&self, scalar: G) -> Polynomial<G, LagrangeCoeff> {
+    pub fn constant_lagrange(&self, scalar: G) -> Polynomial<G, LagrangeCoeff> {
         Polynomial {
             values: vec![scalar; self.n as usize],
             _marker: PhantomData,
@@ -196,7 +196,7 @@ impl<G: Group> EvaluationDomain<G> {
 
     /// Returns a constant polynomial in the extended Lagrange coefficient
     /// basis
-    pub fn const_extended(&self, scalar: G) -> Polynomial<G, ExtendedLagrangeCoeff> {
+    pub fn constant_extended(&self, scalar: G) -> Polynomial<G, ExtendedLagrangeCoeff> {
         Polynomial {
             values: vec![scalar; self.extended_len()],
             _marker: PhantomData,

@@ -225,7 +225,7 @@ pub trait Circuit<F: Field> {
 #[derive(Clone, Debug)]
 pub enum Expression<F> {
     /// This is a constant polynomial
-    Const(F),
+    Constant(F),
     /// This is a fixed column queried at a certain relative location
     Fixed(usize),
     /// This is an advice (witness) column queried at a certain relative location
@@ -245,7 +245,7 @@ impl<F: Field> Expression<F> {
     /// operations.
     pub fn evaluate<T>(
         &self,
-        const_column: &impl Fn(F) -> T,
+        constant: &impl Fn(F) -> T,
         fixed_column: &impl Fn(usize) -> T,
         advice_column: &impl Fn(usize) -> T,
         instance_column: &impl Fn(usize) -> T,
@@ -254,13 +254,13 @@ impl<F: Field> Expression<F> {
         scaled: &impl Fn(T, F) -> T,
     ) -> T {
         match self {
-            Expression::Const(scalar) => const_column(*scalar),
+            Expression::Constant(scalar) => constant(*scalar),
             Expression::Fixed(index) => fixed_column(*index),
             Expression::Advice(index) => advice_column(*index),
             Expression::Instance(index) => instance_column(*index),
             Expression::Sum(a, b) => {
                 let a = a.evaluate(
-                    const_column,
+                    constant,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -269,7 +269,7 @@ impl<F: Field> Expression<F> {
                     scaled,
                 );
                 let b = b.evaluate(
-                    const_column,
+                    constant,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -281,7 +281,7 @@ impl<F: Field> Expression<F> {
             }
             Expression::Product(a, b) => {
                 let a = a.evaluate(
-                    const_column,
+                    constant,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -290,7 +290,7 @@ impl<F: Field> Expression<F> {
                     scaled,
                 );
                 let b = b.evaluate(
-                    const_column,
+                    constant,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -302,7 +302,7 @@ impl<F: Field> Expression<F> {
             }
             Expression::Scaled(a, f) => {
                 let a = a.evaluate(
-                    const_column,
+                    constant,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -318,7 +318,7 @@ impl<F: Field> Expression<F> {
     /// Compute the degree of this polynomial
     pub fn degree(&self) -> usize {
         match self {
-            Expression::Const(_) => 0,
+            Expression::Constant(_) => 0,
             Expression::Fixed(_) => 1,
             Expression::Advice(_) => 1,
             Expression::Instance(_) => 1,
