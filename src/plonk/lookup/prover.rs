@@ -291,11 +291,13 @@ impl<'a, C: CurveAffine> Permuted<'a, C> {
                 left *= &(*gamma + permuted_table_value);
 
                 let mut right = z[prev_idx];
-                let mut input_term = self.unpermuted_input_columns
+                let mut input_term = self
+                    .unpermuted_input_columns
                     .iter()
                     .fold(C::Scalar::zero(), |acc, input| acc * &*theta + &input[i]);
 
-                let mut table_term = self.unpermuted_table_columns
+                let mut table_term = self
+                    .unpermuted_table_columns
                     .iter()
                     .fold(C::Scalar::zero(), |acc, table| acc * &*theta + &table[i]);
 
