@@ -166,7 +166,7 @@
                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
 <h1><a class="header" href="#chips" id="chips">Chips</a></h1>
 <p>In order to combine functionality from several cores, we use a <em><strong>chip</strong></em>. To implement a
-chip, we define a set of fixed, advice, and auxiliary columns, and then specify how they
+chip, we define a set of fixed, advice, and instance columns, and then specify how they
 should be distributed between cores.</p>
 <p>In the simplest case, each core will use columns disjoint from the other cores. However, it
 is allowed to share a column between cores. It is important to optimize the number of advice

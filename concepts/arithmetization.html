@@ -182,8 +182,10 @@ elements of <span class="katex"><span class="katex-html" aria-hidden="true"><spa
 </li>
 <li>
 <p>The number of columns in the matrix, and a specification of each column as being
-<em><strong>fixed</strong></em>, <em><strong>advice</strong></em>, or <em><strong>auxiliary</strong></em>. Fixed columns are fixed by the circuit;
-advice columns correspond to witness values; and auxiliary columns are used for public inputs.</p>
+<em><strong>fixed</strong></em>, <em><strong>advice</strong></em>, or <em><strong>instance</strong></em>. Fixed columns are fixed by the circuit;
+advice columns correspond to witness values; and instance columns are normally used for
+public inputs (technically, they can be used for any elements shared between the prover
+and verifier).</p>
 </li>
 <li>
 <p>A subset of the columns that can participate in equality constraints.</p>

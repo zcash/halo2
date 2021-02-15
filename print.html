@@ -290,8 +290,10 @@ elements of <span class="katex"><span class="katex-html" aria-hidden="true"><spa
 </li>
 <li>
 <p>The number of columns in the matrix, and a specification of each column as being
-<em><strong>fixed</strong></em>, <em><strong>advice</strong></em>, or <em><strong>auxiliary</strong></em>. Fixed columns are fixed by the circuit;
-advice columns correspond to witness values; and auxiliary columns are used for public inputs.</p>
+<em><strong>fixed</strong></em>, <em><strong>advice</strong></em>, or <em><strong>instance</strong></em>. Fixed columns are fixed by the circuit;
+advice columns correspond to witness values; and instance columns are normally used for
+public inputs (technically, they can be used for any elements shared between the prover
+and verifier).</p>
 </li>
 <li>
 <p>A subset of the columns that can participate in equality constraints.</p>
@@ -400,7 +402,7 @@ bound).</p>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
 <h1><a class="header" href="#chips" id="chips">Chips</a></h1>
 <p>In order to combine functionality from several cores, we use a <em><strong>chip</strong></em>. To implement a
-chip, we define a set of fixed, advice, and auxiliary columns, and then specify how they
+chip, we define a set of fixed, advice, and instance columns, and then specify how they
 should be distributed between cores.</p>
 <p>In the simplest case, each core will use columns disjoint from the other cores. However, it
 is allowed to share a column between cores. It is important to optimize the number of advice
@@ -536,7 +538,7 @@ impl&lt;F: FieldExt&gt; FieldChip&lt;F&gt; {
     fn configure(
         meta: &amp;mut ConstraintSystem&lt;F&gt;,
         advice: [Column&lt;Advice&gt;; 2],
-        aux: Column&lt;Aux&gt;,
+        instance: Column&lt;Instance&gt;,
     ) -&gt; FieldConfig {
         let perm = Permutation::new(meta, &amp;advice);
         let s_mul = meta.fixed_column();
@@ -574,10 +576,10 @@ impl&lt;F: FieldExt&gt; FieldChip&lt;F&gt; {
             // We choose somewhat-arbitrarily that we will use the second advice
             // column for exposing numbers as public inputs.
             let a = meta.query_advice(advice[1], Rotation::cur());
-            let p = meta.query_aux(aux, Rotation::cur());
+            let p = meta.query_instance(instance, Rotation::cur());
             let s = meta.query_fixed(s_pub, Rotation::cur());
 
-            // We simply constrain the advice cell to be equal to the aux cell,
+            // We simply constrain the advice cell to be equal to the instance cell,
             // when the selector is enabled.
             s * (p + a * -F::one())
         });
@@ -694,7 +696,7 @@ impl&lt;F: FieldExt&gt; NumericInstructions for FieldChip&lt;F&gt; {
                 )?;
                 region.constrain_equal(&amp;config.perm, num.cell, out)?;
 
-                // We don't assign to the auxiliary column inside the circuit;
+                // We don't assign to the instance column inside the circuit;
                 // the mapping of public inputs to cells is provided to the prover.
                 Ok(())
             },
@@ -723,10 +725,10 @@ impl&lt;F: FieldExt&gt; Circuit&lt;F&gt; for MyCircuit&lt;F&gt; {
         // We create the two advice columns that FieldChip uses for I/O.
         let advice = [meta.advice_column(), meta.advice_column()];
 
-        // We also need an auxiliary column to store public inputs.
-        let aux = meta.aux_column();
+        // We also need an instance column to store public inputs.
+        let instance = meta.instance_column();
 
-        FieldChip::configure(meta, advice, aux)
+        FieldChip::configure(meta, advice, instance)
     }
 
     fn synthesize(&amp;self, cs: &amp;mut impl Assignment&lt;F&gt;, config: Self::Config) -&gt; Result&lt;(), Error&gt; {
@@ -774,7 +776,7 @@ in the circuit, and tell us exactly what is failing (if anything).</p>
     };
 
     // Arrange the public input. We expose the multiplication result in row 6
-    // of the aux column, so we position it there in our public inputs.
+    // of the instance column, so we position it there in our public inputs.
     let mut public_inputs = vec![Fp::zero(); 1 &lt;&lt; k];
     public_inputs[6] = c;
 
@@ -1162,13 +1164,13 @@ constrained by the rule</p>
 <h2><a class="header" href="#committing-to-the-circuit-assignments" id="committing-to-the-circuit-assignments">Committing to the circuit assignments</a></h2>
 <p>At the start of proof creation, the prover has a table of cell assignments that it claims
 satisfy the constraint system. The table has <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.849108em;vertical-align:0em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.849108em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span></span></span></span></span></span></span></span> rows, and is broken into advice,
-auxiliary, and fixed columns. We define <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.969438em;vertical-align:-0.286108em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">F</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.311664em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mpunct mtight">,</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span></span></span></span> as the assignment in the <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.85396em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.05724em;">j</span></span></span></span>th row of
+instance, and fixed columns. We define <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.969438em;vertical-align:-0.286108em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">F</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.311664em;"><span style="top:-2.5500000000000003em;margin-left:-0.13889em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mpunct mtight">,</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span></span></span></span> as the assignment in the <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.85396em;vertical-align:-0.19444em;"></span><span class="mord mathnormal" style="margin-right:0.05724em;">j</span></span></span></span>th row of
 the <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.65952em;vertical-align:0em;"></span><span class="mord mathnormal">i</span></span></span></span>th fixed column. Without loss of generality, we'll similarly define <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.969438em;vertical-align:-0.286108em;"></span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.311664em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mpunct mtight">,</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span></span></span></span> to
-represent the advice and auxiliary assignments.</p>
+represent the advice and instance assignments.</p>
 <blockquote>
 <p>We separate fixed columns here because they are provided by the verifier, whereas the
-advice and auxiliary columns are provided by the prover. In practice, the commitments to
-auxiliary and fixed columns are computed by both the prover and verifier, and only the
+advice and instance columns are provided by the prover. In practice, the commitments to
+instance and fixed columns are computed by both the prover and verifier, and only the
 advice commitments are stored in the proof.</p>
 </blockquote>
 <p>To commit to these assignments, we construct Lagrange polynomials of degree <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.66666em;vertical-align:-0.08333em;"></span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span></span></span></span> for
@@ -1419,7 +1421,7 @@ equivalent objects in Halo 2 (which builds on the nomenclature from the Halo pap
 <p>Step 8 of the <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8777699999999999em;vertical-align:-0.19444em;"></span><span class="mord text"><span class="mord">Open</span></span></span></span></span> algorithm computes a &quot;non-hiding&quot; commitment <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.751892em;vertical-align:0em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.751892em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">′</span></span></span></span></span></span></span></span></span></span></span></span> prior to
 the inner product argument, which opens to the same value as <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">C</span></span></span></span> but is a commitment to
 a randomly-drawn polynomial. The remainder of the protocol involves no blinding. By
-contrast, in Halo 2 we blind every single commitment that we make (even for auxiliary
+contrast, in Halo 2 we blind every single commitment that we make (even for instance
 and fixed polynomials, though using a blinding factor of 1 for the fixed polynomials);
 this makes the protocol simpler to reason about. As a consequence of this, the verifier
 needs to handle the cumulative blinding factor at the end of the protocol, and so there
