@@ -9,9 +9,9 @@ the $i$th fixed column. Without loss of generality, we'll similarly define $A_{i
 represent the advice and instance assignments.
 
 > We separate fixed columns here because they are provided by the verifier, whereas the
-> advice columns are provided by the prover. The instance columns are agreed between both
-> parties. In practice, the commitments to instance and fixed columns are computed by
-> both the prover and verifier, and only the advice commitments are stored in the proof.
+> advice and instance columns are provided by the prover. In practice, the commitments to
+> instance and fixed columns are computed by both the prover and verifier, and only the
+> advice commitments are stored in the proof.
 
 To commit to these assignments, we construct Lagrange polynomials of degree $n - 1$ for
 each column, over an evaluation domain of size $n$ (where $\omega$ is the $n$th primitive
