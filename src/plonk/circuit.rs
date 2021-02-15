@@ -3,7 +3,7 @@ use core::cmp::max;
 use core::ops::{Add, Mul};
 use ff::Field;
 use std::{
-    convert::{TryFrom, TryInto},
+    convert::TryFrom,
     ops::{Neg, Sub},
 };
 
@@ -29,9 +29,8 @@ impl<C: ColumnType> Column<C> {
         &self.column_type
     }
 
-    pub(crate) fn hash(&self, hasher: &mut Blake2bState) -> [u8; 64] {
+    pub(crate) fn hash(&self, hasher: &mut Blake2bState) {
         hasher.update(&format!("{:?}", self).as_bytes());
-        hasher.finalize().as_bytes().try_into().unwrap()
     }
 }
 
@@ -325,9 +324,8 @@ impl<F: Field> Expression<F> {
     }
 
     /// Hash an Expression into a Blake2bState
-    pub fn hash(&self, hasher: &mut Blake2bState) -> [u8; 64] {
+    pub fn hash(&self, hasher: &mut Blake2bState) {
         hasher.update(&format!("{:?}", self).as_bytes());
-        hasher.finalize().as_bytes().try_into().unwrap()
     }
 }
 
@@ -612,7 +610,7 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Hashes the `ConstraintSystem` into a `u64`.
-    pub fn hash(&self, mut hasher: &mut Blake2bState) -> [u8; 64] {
+    pub fn hash(&self, mut hasher: &mut Blake2bState) {
         hasher.update(b"num_fixed_columns");
         hasher.update(&self.num_fixed_columns.to_le_bytes());
 
@@ -625,7 +623,6 @@ impl<F: Field> ConstraintSystem<F> {
         hasher.update(b"num_gates");
         hasher.update(&self.gates.len().to_le_bytes());
         for gate in self.gates.iter() {
-            hasher.update(gate.0.to_owned().as_bytes());
             gate.1.hash(&mut hasher);
         }
 
@@ -663,7 +660,7 @@ impl<F: Field> ConstraintSystem<F> {
         hasher.update(&self.lookups.len().to_le_bytes());
         for argument in self.lookups.iter() {
             hasher.update(&argument.input_columns.len().to_le_bytes());
-            hasher.update(&argument.table_columns.len().to_le_bytes());
+            assert_eq!(argument.input_columns.len(), argument.table_columns.len());
             for (input, table) in argument
                 .input_columns
                 .iter()
@@ -673,7 +670,5 @@ impl<F: Field> ConstraintSystem<F> {
                 table.hash(&mut hasher);
             }
         }
-
-        hasher.finalize().as_bytes().try_into().unwrap()
     }
 }

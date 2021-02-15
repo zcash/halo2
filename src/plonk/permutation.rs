@@ -11,6 +11,7 @@ pub(crate) mod keygen;
 pub(crate) mod prover;
 pub(crate) mod verifier;
 
+use blake2b_simd::State as Blake2bState;
 use std::io;
 
 /// A permutation argument.
@@ -68,7 +69,13 @@ impl<C: CurveAffine> VerifyingKey<C> {
         Ok(VerifyingKey { commitments })
     }
 
-    pub(crate) fn hash<T: Transcript<C>>(&self, transcript: &mut T) -> io::Result<()> {
+    pub(crate) fn hash<T: Transcript<C>>(
+        &self,
+        hasher: &mut Blake2bState,
+        transcript: &mut T,
+    ) -> io::Result<()> {
+        hasher.update(b"num_commitments");
+        hasher.update(&self.commitments.len().to_le_bytes());
         for commitment in &self.commitments {
             transcript.common_point(*commitment)?;
         }

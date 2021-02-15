@@ -86,12 +86,10 @@ impl<C: CurveAffine> VerifyingKey<C> {
             .to_state();
 
         // Hash in constants in the domain which influence the proof
-        let domain_hash = &self.domain.hash(&mut hasher);
-        transcript.common_scalar(C::Scalar::from_bytes_wide(domain_hash))?;
+        self.domain.hash(&mut hasher);
 
         // Hash in `ConstraintSystem`
-        let cs_hash = &self.cs.hash(&mut hasher);
-        transcript.common_scalar(C::Scalar::from_bytes_wide(cs_hash))?;
+        self.cs.hash(&mut hasher);
 
         // Hash in vector of fixed commitments
         hasher.update(b"num_fixed_commitments");
@@ -104,7 +102,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
         hasher.update(b"num_permutations");
         hasher.update(&self.permutations.len().to_le_bytes());
         for permutation in &self.permutations {
-            permutation.hash(transcript)?;
+            permutation.hash(&mut hasher, transcript)?;
         }
 
         // Hash in final Blake2bState

@@ -380,8 +380,8 @@ impl<G: Group> EvaluationDomain<G> {
         self.quotient_poly_degree as usize
     }
 
-    /// Hashes the constants in the domain which influence the proof into a u64
-    pub fn hash(&self, hasher: &mut Blake2bState) -> [u8; 64] {
+    /// Hashes the constants in the domain which influence the proof into a Blake2bState
+    pub fn hash(&self, hasher: &mut Blake2bState) {
         hasher.update(b"k");
         hasher.update(&self.k.to_le_bytes());
 
@@ -390,7 +390,5 @@ impl<G: Group> EvaluationDomain<G> {
 
         hasher.update(b"omega");
         hasher.update(&self.omega.to_bytes());
-
-        hasher.finalize().as_bytes().try_into().unwrap()
     }
 }

@@ -6,7 +6,6 @@ use crate::arithmetic::parallelize;
 
 use blake2b_simd::State as Blake2bState;
 use ff::Field;
-use std::convert::TryInto;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, RangeFrom, RangeFull, Sub};
@@ -232,8 +231,7 @@ impl Rotation {
     }
 
     /// Hash Rotation into a Blake2bState
-    pub fn hash(&self, hasher: &mut Blake2bState) -> [u8; 64] {
+    pub fn hash(&self, hasher: &mut Blake2bState) {
         hasher.update(&format!("{:?}", self).as_bytes());
-        hasher.finalize().as_bytes().try_into().unwrap()
     }
 }
