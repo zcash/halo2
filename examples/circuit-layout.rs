@@ -255,7 +255,7 @@ fn main() {
             let sf = meta.fixed_column();
             let c = meta.advice_column();
             let d = meta.advice_column();
-            let p = meta.aux_column();
+            let p = meta.instance_column();
 
             let perm = meta.permutation(&[a, b, c]);
             let perm2 = meta.permutation(&[a, b, c]);
@@ -269,19 +269,18 @@ fn main() {
             let sl2 = meta.fixed_column();
 
             /*
-             *    A    B        ...  sl   sl2
+             *   A         B      ...  sl        sl2
              * [
-             *   aux   0        ...  0    0
-             *   a     a        ...  0    0
-             *   a     a^2      ...  0    0
-             *   a     a        ...  0    0
-             *   a     a^2      ...  0    0
-             *   ...   ...      ...  ...  ...
-             *   ...   ...      ...  aux  0
-             *   ...   ...      ...  a    a
-             *   ...   ...      ...  a    a^2
-             *   ...   ...      ...  0    0
-             *
+             *   instance  0      ...  0         0
+             *   a         a      ...  0         0
+             *   a         a^2    ...  0         0
+             *   a         a      ...  0         0
+             *   a         a^2    ...  0         0
+             *   ...       ...    ...  ...       ...
+             *   ...       ...    ...  instance  0
+             *   ...       ...    ...  a         a
+             *   ...       ...    ...  a         a^2
+             *   ...       ...    ...  0         0
              * ]
              */
             meta.lookup(&[a.into()], &[sl.into()]);
@@ -305,7 +304,7 @@ fn main() {
 
             meta.create_gate("Public input", |meta| {
                 let a = meta.query_advice(a, Rotation::cur());
-                let p = meta.query_aux(p, Rotation::cur());
+                let p = meta.query_instance(p, Rotation::cur());
                 let sp = meta.query_fixed(sp, Rotation::cur());
 
                 sp * (a + p * (-F::one()))
@@ -374,8 +373,8 @@ fn main() {
 
     let a = Fp::rand();
     let a_squared = a * a;
-    let aux = Fp::one() + Fp::one();
-    let lookup_table = vec![aux, a, a, Fp::zero()];
+    let instance = Fp::one() + Fp::one();
+    let lookup_table = vec![instance, a, a, Fp::zero()];
     let lookup_table_2 = vec![Fp::zero(), a, a_squared, Fp::zero()];
 
     let circuit: MyCircuit<Fp> = MyCircuit {

@@ -21,11 +21,11 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     params: &Params<C>,
     pk: &ProvingKey<C>,
     circuits: &[ConcreteCircuit],
-    auxs: &[&[Polynomial<C::Scalar, LagrangeCoeff>]],
+    instances: &[&[Polynomial<C::Scalar, LagrangeCoeff>]],
     transcript: &mut T,
 ) -> Result<(), Error> {
-    for aux in auxs.iter() {
-        if aux.len() != pk.vk.cs.num_aux_columns {
+    for instance in instances.iter() {
+        if instance.len() != pk.vk.cs.num_instance_columns {
             return Err(Error::IncompatibleParams);
         }
     }
@@ -34,32 +34,35 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     let mut meta = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut meta);
 
-    struct AuxSingle<'a, C: CurveAffine> {
-        pub aux_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
-        pub aux_polys: Vec<Polynomial<C::Scalar, Coeff>>,
-        pub aux_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
+    struct InstanceSingle<'a, C: CurveAffine> {
+        pub instance_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+        pub instance_polys: Vec<Polynomial<C::Scalar, Coeff>>,
+        pub instance_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     }
 
-    let aux: Vec<AuxSingle<C>> = auxs
+    let instance: Vec<InstanceSingle<C>> = instances
         .iter()
-        .map(|aux| -> Result<AuxSingle<C>, Error> {
-            let aux_commitments_projective: Vec<_> = aux
+        .map(|instance| -> Result<InstanceSingle<C>, Error> {
+            let instance_commitments_projective: Vec<_> = instance
                 .iter()
                 .map(|poly| params.commit_lagrange(poly, Blind::default()))
                 .collect();
-            let mut aux_commitments = vec![C::zero(); aux_commitments_projective.len()];
-            C::Projective::batch_to_affine(&aux_commitments_projective, &mut aux_commitments);
-            let aux_commitments = aux_commitments;
-            drop(aux_commitments_projective);
-            metrics::counter!("aux_commitments", aux_commitments.len() as u64);
+            let mut instance_commitments = vec![C::zero(); instance_commitments_projective.len()];
+            C::Projective::batch_to_affine(
+                &instance_commitments_projective,
+                &mut instance_commitments,
+            );
+            let instance_commitments = instance_commitments;
+            drop(instance_commitments_projective);
+            metrics::counter!("instance_commitments", instance_commitments.len() as u64);
 
-            for commitment in &aux_commitments {
+            for commitment in &instance_commitments {
                 transcript
                     .common_point(*commitment)
                     .map_err(|_| Error::TranscriptError)?;
             }
 
-            let aux_polys: Vec<_> = aux
+            let instance_polys: Vec<_> = instance
                 .iter()
                 .map(|poly| {
                     let lagrange_vec = domain.lagrange_from_vec(poly.to_vec());
@@ -67,19 +70,19 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
                 })
                 .collect();
 
-            let aux_cosets: Vec<_> = meta
-                .aux_queries
+            let instance_cosets: Vec<_> = meta
+                .instance_queries
                 .iter()
                 .map(|&(column, at)| {
-                    let poly = aux_polys[column.index()].clone();
+                    let poly = instance_polys[column.index()].clone();
                     domain.coeff_to_extended(poly, at)
                 })
                 .collect();
 
-            Ok(AuxSingle {
-                aux_values: *aux,
-                aux_polys,
-                aux_cosets,
+            Ok(InstanceSingle {
+                instance_values: *instance,
+                instance_polys,
+                instance_cosets,
             })
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -238,10 +241,10 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta = ChallengeTheta::get(transcript);
 
-    let lookups: Vec<Vec<lookup::prover::Permuted<'_, C>>> = aux
+    let lookups: Vec<Vec<lookup::prover::Permuted<'_, C>>> = instance
         .iter()
         .zip(advice.iter())
-        .map(|(aux, advice)| -> Result<Vec<_>, Error> {
+        .map(|(instance, advice)| -> Result<Vec<_>, Error> {
             // Construct and commit to permuted values for each lookup
             pk.vk
                 .cs
@@ -255,10 +258,10 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
                         theta,
                         &advice.advice_values,
                         &pk.fixed_values,
-                        &aux.aux_values,
+                        &instance.instance_values,
                         &advice.advice_cosets,
                         &pk.fixed_cosets,
-                        &aux.aux_cosets,
+                        &instance.instance_cosets,
                         transcript,
                     )
                 })
@@ -343,18 +346,18 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
 
     let expressions = advice
         .iter()
-        .zip(aux.iter())
+        .zip(instance.iter())
         .zip(permutation_expressions.into_iter())
         .zip(lookup_expressions.into_iter())
         .flat_map(
-            |(((advice, aux), permutation_expressions), lookup_expressions)| {
+            |(((advice, instance), permutation_expressions), lookup_expressions)| {
                 iter::empty()
                     // Custom constraints
                     .chain(meta.gates.iter().map(move |(_, poly)| {
                         poly.evaluate(
                             &|index| pk.fixed_cosets[index].clone(),
                             &|index| advice.advice_cosets[index].clone(),
-                            &|index| aux.aux_cosets[index].clone(),
+                            &|index| instance.instance_cosets[index].clone(),
                             &|a, b| a + &b,
                             &|a, b| a * &b,
                             &|a, scalar| a * scalar,
@@ -372,19 +375,22 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
 
     let x = ChallengeX::get(transcript);
 
-    // Compute and hash aux evals for each circuit instance
-    for aux in aux.iter() {
+    // Compute and hash instance evals for each circuit instance
+    for instance in instance.iter() {
         // Evaluate polynomials at omega^i x
-        let aux_evals: Vec<_> = meta
-            .aux_queries
+        let instance_evals: Vec<_> = meta
+            .instance_queries
             .iter()
             .map(|&(column, at)| {
-                eval_polynomial(&aux.aux_polys[column.index()], domain.rotate_omega(*x, at))
+                eval_polynomial(
+                    &instance.instance_polys[column.index()],
+                    domain.rotate_omega(*x, at),
+                )
             })
             .collect();
 
-        // Hash each aux column evaluation
-        for eval in aux_evals.iter() {
+        // Hash each instance column evaluation
+        for eval in instance_evals.iter() {
             transcript
                 .write_scalar(*eval)
                 .map_err(|_| Error::TranscriptError)?;
@@ -454,21 +460,21 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let instances = aux
+    let instances = instance
         .iter()
         .zip(advice.iter())
         .zip(permutations.iter())
         .zip(lookups.iter())
-        .flat_map(|(((aux, advice), permutations), lookups)| {
+        .flat_map(|(((instance, advice), permutations), lookups)| {
             iter::empty()
                 .chain(
                     pk.vk
                         .cs
-                        .aux_queries
+                        .instance_queries
                         .iter()
                         .map(move |&(column, at)| ProverQuery {
                             point: domain.rotate_omega(*x, at),
-                            poly: &aux.aux_polys[column.index()],
+                            poly: &instance.instance_polys[column.index()],
                             blind: Blind::default(),
                         }),
                 )

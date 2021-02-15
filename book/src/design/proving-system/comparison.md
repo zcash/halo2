@@ -36,7 +36,7 @@ Halo 2's polynomial commitment scheme differs from Appendix A.2 of BCMS20 in two
 1. Step 8 of the $\text{Open}$ algorithm computes a "non-hiding" commitment $C'$ prior to
    the inner product argument, which opens to the same value as $C$ but is a commitment to
    a randomly-drawn polynomial. The remainder of the protocol involves no blinding. By
-   contrast, in Halo 2 we blind every single commitment that we make (even for auxiliary
+   contrast, in Halo 2 we blind every single commitment that we make (even for instance
    and fixed polynomials, though using a blinding factor of 1 for the fixed polynomials);
    this makes the protocol simpler to reason about. As a consequence of this, the verifier
    needs to handle the cumulative blinding factor at the end of the protocol, and so there

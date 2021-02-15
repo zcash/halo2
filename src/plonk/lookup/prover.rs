@@ -75,10 +75,10 @@ impl Argument {
         theta: ChallengeTheta<C>,
         advice_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
         fixed_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
-        aux_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+        instance_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
         advice_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         fixed_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
-        aux_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
+        instance_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         transcript: &mut T,
     ) -> Result<Permuted<'a, C>, Error> {
         // Closure to get values of columns and compress them
@@ -90,7 +90,7 @@ impl Argument {
                     let (values, cosets) = match column.column_type() {
                         Any::Advice => (advice_values, advice_cosets),
                         Any::Fixed => (fixed_values, fixed_cosets),
-                        Any::Aux => (aux_values, aux_cosets),
+                        Any::Instance => (instance_values, instance_cosets),
                     };
                     (
                         &values[column.index()],
