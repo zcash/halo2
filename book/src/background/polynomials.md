@@ -7,7 +7,16 @@ A(X) = a_0 + a_1 X + a_2 X^2 + a_3 X^3
 $$
 
 defines a degree-$3$ polynomial. $a_0$ is referred to as the constant term. Polynomials of
-degree $n-1$ have $n$ coefficients.
+degree $n-1$ have $n$ coefficients. We will often want to compute the result of replacing
+the formal indeterminate $X$ with some concrete value $x$, which we denote by $A(x)$.
+
+> In mathematics this is commonly referred to as "evaluating $A(X)$ at a point $x$".
+> The word "point" here stems from the geometrical usage of polynomials in the form
+> $y = A(x)$, where $(x, y)$ is the coordinate of a point in two-dimensional space.
+> However, the polynomials we deal with are almost always constrained to equal zero, and
+> $x$ will be an [element of some group](fields.md#groups). This should not be confused
+> with points on an [elliptic curve](curves.md), which we also make use of, but never in
+> the context of polynomial evaluation.
 
 Important notes:
 
