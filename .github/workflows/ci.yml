@@ -103,8 +103,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features --all-targets -- -D warnings
 
-  clippy-nightly:
-    name: Clippy (nightly)
+  clippy-beta:
+    name: Clippy (beta)
     timeout-minutes: 30
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -113,14 +113,14 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: beta
           components: clippy
           override: true
-      - name: Run Clippy (nightly)
+      - name: Run Clippy (beta)
         uses: actions-rs/clippy-check@v1
         continue-on-error: true
         with:
-          name: Clippy (nightly)
+          name: Clippy (beta)
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features --all-targets -- -W clippy::all
 
