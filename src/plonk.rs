@@ -79,17 +79,17 @@ impl<C: CurveAffine> VerifyingKey<C> {
     }
 
     /// Hashes a verification key into a transcript.
-    pub fn hash<T: Transcript<C>>(&self, transcript: &mut T) -> io::Result<()> {
+    pub fn hash_into<T: Transcript<C>>(&self, transcript: &mut T) -> io::Result<()> {
         let mut hasher = Blake2bParams::new()
             .hash_length(64)
             .personal(C::BLAKE2B_PERSONALIZATION)
             .to_state();
 
         // Hash in constants in the domain which influence the proof
-        self.domain.hash(&mut hasher);
+        self.domain.hash_into(&mut hasher);
 
         // Hash in `ConstraintSystem`
-        self.cs.hash(&mut hasher);
+        self.cs.hash_into(&mut hasher);
 
         // Hash in vector of fixed commitments
         hasher.update(b"num_fixed_commitments");
@@ -102,7 +102,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
         hasher.update(b"num_permutations");
         hasher.update(&self.permutations.len().to_le_bytes());
         for permutation in &self.permutations {
-            permutation.hash(&mut hasher, transcript)?;
+            permutation.hash_into(&mut hasher, transcript)?;
         }
 
         // Hash in final Blake2bState

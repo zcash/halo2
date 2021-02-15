@@ -9,7 +9,6 @@ use ff::{Field, PrimeField};
 use std::marker::PhantomData;
 
 use blake2b_simd::State as Blake2bState;
-use std::convert::TryInto;
 
 /// This structure contains precomputed constants and other details needed for
 /// performing operations on an evaluation domain of size $2^k$ and an extended
@@ -381,7 +380,7 @@ impl<G: Group> EvaluationDomain<G> {
     }
 
     /// Hashes the constants in the domain which influence the proof into a Blake2bState
-    pub fn hash(&self, hasher: &mut Blake2bState) {
+    pub fn hash_into(&self, hasher: &mut Blake2bState) {
         hasher.update(b"k");
         hasher.update(&self.k.to_le_bytes());
 

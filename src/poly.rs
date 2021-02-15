@@ -231,7 +231,7 @@ impl Rotation {
     }
 
     /// Hash Rotation into a Blake2bState
-    pub fn hash(&self, hasher: &mut Blake2bState) {
+    pub fn hash_into(&self, hasher: &mut Blake2bState) {
         hasher.update(&format!("{:?}", self).as_bytes());
     }
 }

@@ -29,7 +29,7 @@ impl<C: ColumnType> Column<C> {
         &self.column_type
     }
 
-    pub(crate) fn hash(&self, hasher: &mut Blake2bState) {
+    pub(crate) fn hash_into(&self, hasher: &mut Blake2bState) {
         hasher.update(&format!("{:?}", self).as_bytes());
     }
 }
@@ -324,7 +324,7 @@ impl<F: Field> Expression<F> {
     }
 
     /// Hash an Expression into a Blake2bState
-    pub fn hash(&self, hasher: &mut Blake2bState) {
+    pub fn hash_into(&self, hasher: &mut Blake2bState) {
         hasher.update(&format!("{:?}", self).as_bytes());
     }
 }
@@ -610,7 +610,7 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Hashes the `ConstraintSystem` into a `u64`.
-    pub fn hash(&self, mut hasher: &mut Blake2bState) {
+    pub fn hash_into(&self, mut hasher: &mut Blake2bState) {
         hasher.update(b"num_fixed_columns");
         hasher.update(&self.num_fixed_columns.to_le_bytes());
 
@@ -623,28 +623,28 @@ impl<F: Field> ConstraintSystem<F> {
         hasher.update(b"num_gates");
         hasher.update(&self.gates.len().to_le_bytes());
         for gate in self.gates.iter() {
-            gate.1.hash(&mut hasher);
+            gate.1.hash_into(&mut hasher);
         }
 
         hasher.update(b"num_advice_queries");
         hasher.update(&self.advice_queries.len().to_le_bytes());
         for query in self.advice_queries.iter() {
-            query.0.hash(&mut hasher);
-            query.1.hash(&mut hasher);
+            query.0.hash_into(&mut hasher);
+            query.1.hash_into(&mut hasher);
         }
 
         hasher.update(b"num_instance_queries");
         hasher.update(&self.instance_queries.len().to_le_bytes());
         for query in self.instance_queries.iter() {
-            query.0.hash(&mut hasher);
-            query.1.hash(&mut hasher);
+            query.0.hash_into(&mut hasher);
+            query.1.hash_into(&mut hasher);
         }
 
         hasher.update(b"num_fixed_queries");
         hasher.update(&self.fixed_queries.len().to_le_bytes());
         for query in self.fixed_queries.iter() {
-            query.0.hash(&mut hasher);
-            query.1.hash(&mut hasher);
+            query.0.hash_into(&mut hasher);
+            query.1.hash_into(&mut hasher);
         }
 
         hasher.update(b"num_permutations");
@@ -652,7 +652,7 @@ impl<F: Field> ConstraintSystem<F> {
         for argument in self.permutations.iter() {
             hasher.update(&argument.get_columns().len().to_le_bytes());
             for column in argument.get_columns().iter() {
-                column.hash(&mut hasher);
+                column.hash_into(&mut hasher);
             }
         }
 
@@ -666,8 +666,8 @@ impl<F: Field> ConstraintSystem<F> {
                 .iter()
                 .zip(argument.table_columns.iter())
             {
-                input.hash(&mut hasher);
-                table.hash(&mut hasher);
+                input.hash_into(&mut hasher);
+                table.hash_into(&mut hasher);
             }
         }
     }

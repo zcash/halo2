@@ -69,7 +69,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
         Ok(VerifyingKey { commitments })
     }
 
-    pub(crate) fn hash<T: Transcript<C>>(
+    pub(crate) fn hash_into<T: Transcript<C>>(
         &self,
         hasher: &mut Blake2bState,
         transcript: &mut T,
