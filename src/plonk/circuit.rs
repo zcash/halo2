@@ -617,8 +617,8 @@ impl<F: Field> ConstraintSystem<F> {
         hasher.update(b"num_advice_columns");
         hasher.update(&self.num_advice_columns.to_le_bytes());
 
-        hasher.update(b"num_aux_columns");
-        hasher.update(&self.num_aux_columns.to_le_bytes());
+        hasher.update(b"num_instance_columns");
+        hasher.update(&self.num_instance_columns.to_le_bytes());
 
         hasher.update(b"num_gates");
         hasher.update(&self.gates.len().to_le_bytes());
@@ -633,9 +633,9 @@ impl<F: Field> ConstraintSystem<F> {
             query.1.hash(&mut hasher);
         }
 
-        hasher.update(b"num_aux_queries");
-        hasher.update(&self.aux_queries.len().to_le_bytes());
-        for query in self.aux_queries.iter() {
+        hasher.update(b"num_instance_queries");
+        hasher.update(&self.instance_queries.len().to_le_bytes());
+        for query in self.instance_queries.iter() {
             query.0.hash(&mut hasher);
             query.1.hash(&mut hasher);
         }
