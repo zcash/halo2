@@ -294,4 +294,4 @@ Important notes:
   of unity). There is a two-to-one mapping between the elements and their squares.
 
 ## References
-[^chinese-remainder]: Friedman, R. (n.d.) "Cyclic Groups and Elementary Number Theory II" (p. 5). http://www.math.columbia.edu/~rf/numbertheory2.pdf
+[^chinese-remainder]: [Friedman, R. (n.d.) "Cyclic Groups and Elementary Number Theory II" (p. 5).](http://www.math.columbia.edu/~rf/numbertheory2.pdf)

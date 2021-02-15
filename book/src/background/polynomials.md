@@ -282,8 +282,8 @@ $$A(X) = \sum_{i = 0}^{n-1} A(x_i)\mathcal{L_i}(X), $$
 where $X \in \{x_0, x_1,\cdots, x_{1-n}\}.$
 
 ## References
-[^master-thm]: Dasgupta, S., Papadimitriou, C. H., & Vazirani, U. V. (2008). "Algorithms" (ch. 2). New York: McGraw-Hill Higher Education. https://people.eecs.berkeley.edu/~vazirani/algorithms/chap2.pdf
+[^master-thm]: [Dasgupta, S., Papadimitriou, C. H., & Vazirani, U. V. (2008). "Algorithms" (ch. 2). New York: McGraw-Hill Higher Education.](https://people.eecs.berkeley.edu/~vazirani/algorithms/chap2.pdf)
 
-[^ifft]: http://www.cs.ust.hk/mjg_lib/Classes/COMP3711H_Fall16/lectures/FFT_Slides.pdf
+[^ifft]: [Golin, M. (2016). "The Fast Fourier Transform and Polynomial Multiplication" [lecture notes], COMP 3711H Design and Analysis of Algorithms, Hong Kong University of Science and Technology.](http://www.cs.ust.hk/mjg_lib/Classes/COMP3711H_Fall16/lectures/FFT_Slides.pdf)
 
-[^barycentric]: Berrut, J. and Trefethen, L. (2004). "Barycentric Lagrange Interpolation." https://people.maths.ox.ac.uk/trefethen/barycentric.pdf
+[^barycentric]: [Berrut, J. and Trefethen, L. (2004). "Barycentric Lagrange Interpolation."](https://people.maths.ox.ac.uk/trefethen/barycentric.pdf)
