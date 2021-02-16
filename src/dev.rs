@@ -341,15 +341,15 @@ impl<F: FieldExt> MockProver<F> {
                     .iter()
                     .map(|c| load(c, input_row))
                     .collect();
-                if !(0..n)
+                let lookup_passes = (0..n)
                     .map(|table_row| {
                         lookup
                             .table_expressions
                             .iter()
                             .map(move |c| load(c, table_row))
                     })
-                    .any(|table_row| table_row.eq(inputs.iter().cloned()))
-                {
+                    .any(|table_row| table_row.eq(inputs.iter().cloned()));
+                if !lookup_passes {
                     return Err(VerifyFailure::Lookup {
                         lookup_index,
                         row: input_row as usize,

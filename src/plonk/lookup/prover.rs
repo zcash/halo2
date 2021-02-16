@@ -116,11 +116,17 @@ impl<F: FieldExt> Argument<F> {
                         },
                         &|a, b| a + &b,
                         &|a, b| {
-                            let a = &mut a.clone();
-                            for (a_, b_) in a.iter_mut().zip(b.iter()) {
-                                *a_ *= b_;
-                            }
-                            a.clone()
+                            let mut modified_a = vec![C::Scalar::one(); params.n as usize];
+                            parallelize(&mut modified_a, |modified_a, start| {
+                                for ((modified_a, a), b) in modified_a
+                                    .iter_mut()
+                                    .zip(a[start..].iter())
+                                    .zip(b[start..].iter())
+                                {
+                                    *modified_a *= *a * b;
+                                }
+                            });
+                            pk.vk.domain.lagrange_from_vec(modified_a)
                         },
                         &|a, scalar| a * scalar,
                     )
