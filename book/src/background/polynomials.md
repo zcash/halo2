@@ -14,7 +14,7 @@ the formal indeterminate $X$ with some concrete value $x$, which we denote by $A
 > The word "point" here stems from the geometrical usage of polynomials in the form
 > $y = A(x)$, where $(x, y)$ is the coordinate of a point in two-dimensional space.
 > However, the polynomials we deal with are almost always constrained to equal zero, and
-> $x$ will be an [element of some group](fields.md#groups). This should not be confused
+> $x$ will be an [element of some field](fields.md). This should not be confused
 > with points on an [elliptic curve](curves.md), which we also make use of, but never in
 > the context of polynomial evaluation.
 
