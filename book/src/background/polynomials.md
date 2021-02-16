@@ -7,7 +7,16 @@ A(X) = a_0 + a_1 X + a_2 X^2 + a_3 X^3
 $$
 
 defines a degree-$3$ polynomial. $a_0$ is referred to as the constant term. Polynomials of
-degree $n-1$ have $n$ coefficients.
+degree $n-1$ have $n$ coefficients. We will often want to compute the result of replacing
+the formal indeterminate $X$ with some concrete value $x$, which we denote by $A(x)$.
+
+> In mathematics this is commonly referred to as "evaluating $A(X)$ at a point $x$".
+> The word "point" here stems from the geometrical usage of polynomials in the form
+> $y = A(x)$, where $(x, y)$ is the coordinate of a point in two-dimensional space.
+> However, the polynomials we deal with are almost always constrained to equal zero, and
+> $x$ will be an [element of some field](fields.md). This should not be confused
+> with points on an [elliptic curve](curves.md), which we also make use of, but never in
+> the context of polynomial evaluation.
 
 Important notes:
 
@@ -273,8 +282,8 @@ $$A(X) = \sum_{i = 0}^{n-1} A(x_i)\mathcal{L_i}(X), $$
 where $X \in \{x_0, x_1,\cdots, x_{1-n}\}.$
 
 ## References
-[^master-thm]: Dasgupta, S., Papadimitriou, C. H., & Vazirani, U. V. (2008). "Algorithms" (ch. 2). New York: McGraw-Hill Higher Education. https://people.eecs.berkeley.edu/~vazirani/algorithms/chap2.pdf
+[^master-thm]: [Dasgupta, S., Papadimitriou, C. H., & Vazirani, U. V. (2008). "Algorithms" (ch. 2). New York: McGraw-Hill Higher Education.](https://people.eecs.berkeley.edu/~vazirani/algorithms/chap2.pdf)
 
-[^ifft]: http://www.cs.ust.hk/mjg_lib/Classes/COMP3711H_Fall16/lectures/FFT_Slides.pdf
+[^ifft]: [Golin, M. (2016). "The Fast Fourier Transform and Polynomial Multiplication" [lecture notes], COMP 3711H Design and Analysis of Algorithms, Hong Kong University of Science and Technology.](http://www.cs.ust.hk/mjg_lib/Classes/COMP3711H_Fall16/lectures/FFT_Slides.pdf)
 
-[^barycentric]: Berrut, J. and Trefethen, L. (2004). "Barycentric Lagrange Interpolation." https://people.maths.ox.ac.uk/trefethen/barycentric.pdf
+[^barycentric]: [Berrut, J. and Trefethen, L. (2004). "Barycentric Lagrange Interpolation."](https://people.maths.ox.ac.uk/trefethen/barycentric.pdf)

@@ -5,11 +5,11 @@ We call the field over which the circuit is defined $\mathbb{F} = \mathbb{F}_p$.
 Let $n = 2^k$, and assume that $\omega$ is a primitive root of unity of order $n$ in
 $\mathbb{F}^\times$, so that $\mathbb{F}^\times$ has a multiplicative subgroup
 $\mathcal{H} = \{1, \omega, \omega^2, \cdots, \omega^{n-1}\}$. This forms a Lagrange
-basis corresponding to the points in the subgroup.
+basis corresponding to the elements in the subgroup.
 
 ## Polynomial rules
 A polynomial rule defines a constraint that must hold between its specified columns at
-every row (i.e. at every point in the multiplicative subgroup).
+every row (i.e. at every element in the multiplicative subgroup).
 
 e.g.
 
@@ -59,7 +59,7 @@ Reference: [Generic Lookups with PLONK (DRAFT)](/LTPc5f-3S0qNF6MtwD-Tdg?view)
 
 ### Vanishing argument
 We want to check that the expressions defined by the gate constraints, permutation
-constraints and loookup constraints evaluate to zero at all points in the multiplicative
+constraints and loookup constraints evaluate to zero at all elements in the multiplicative
 subgroup. To do this, the prover collapses all the expressions into one polynomial 
 $$H(X) = \sum_{i=0}^e y^i E_i(X),$$
 where $e$ is the number of expressions and $y$ is a random challenge used to keep the

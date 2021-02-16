@@ -249,4 +249,4 @@ framework used in the Internet Draft makes use of several functions:
 Reference: https://eprint.iacr.org/2019/403.pdf
 
 ## References
-[^complete-formulae]: Renes, J., Costello, C., & Batina, L. (2016, May). "Complete addition formulas for prime order elliptic curves." In Annual International Conference on the Theory and Applications of Cryptographic Techniques (pp. 403-428). Springer, Berlin, Heidelberg. https://eprint.iacr.org/2015/1060.pdf
+[^complete-formulae]: [Renes, J., Costello, C., & Batina, L. (2016, May). "Complete addition formulas for prime order elliptic curves." In Annual International Conference on the Theory and Applications of Cryptographic Techniques (pp. 403-428). Springer, Berlin, Heidelberg.](https://eprint.iacr.org/2015/1060)
