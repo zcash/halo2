@@ -575,7 +575,6 @@ fn test_proving() {
 
     // Initialize the proving key
     let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
-    assert_eq!(format!("{:?}", vk.pinned()), "PinnedVerificationKey { base_modulus: \"0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001\", scalar_modulus: \"0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001\", domain: PinnedEvaluationDomain { k: 5, extended_k: 7, omega: 0x0cc3380dc616f2e1daf29ad1560833ed3baea3393eceb7bc8fa36376929b78cc }, cs: PinnedConstraintSystem { num_fixed_columns: 8, num_advice_columns: 5, num_instance_columns: 1, gates: [Sum(Sum(Sum(Sum(Product(Advice(0), Fixed(3)), Product(Advice(1), Fixed(4))), Product(Product(Advice(0), Advice(1)), Fixed(6))), Scaled(Product(Advice(2), Fixed(5)), 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000000)), Product(Fixed(2), Product(Advice(3), Advice(4)))), Product(Fixed(7), Sum(Advice(0), Scaled(Instance(0), 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000000)))], advice_queries: [(Column { index: 1, column_type: Advice }, Rotation(0)), (Column { index: 2, column_type: Advice }, Rotation(0)), (Column { index: 3, column_type: Advice }, Rotation(0)), (Column { index: 4, column_type: Advice }, Rotation(1)), (Column { index: 0, column_type: Advice }, Rotation(-1))], instance_queries: [(Column { index: 0, column_type: Instance }, Rotation(0))], fixed_queries: [(Column { index: 6, column_type: Fixed }, Rotation(0)), (Column { index: 7, column_type: Fixed }, Rotation(0)), (Column { index: 0, column_type: Fixed }, Rotation(0)), (Column { index: 2, column_type: Fixed }, Rotation(0)), (Column { index: 3, column_type: Fixed }, Rotation(0)), (Column { index: 4, column_type: Fixed }, Rotation(0)), (Column { index: 1, column_type: Fixed }, Rotation(0)), (Column { index: 5, column_type: Fixed }, Rotation(0))], permutations: [Argument { columns: [Column { index: 1, column_type: Advice }, Column { index: 2, column_type: Advice }, Column { index: 3, column_type: Advice }] }, Argument { columns: [Column { index: 1, column_type: Advice }, Column { index: 2, column_type: Advice }, Column { index: 3, column_type: Advice }] }], lookups: [Argument { input_columns: [Column { index: 1, column_type: Advice }], table_columns: [Column { index: 6, column_type: Fixed }] }, Argument { input_columns: [Column { index: 1, column_type: Advice }, Column { index: 2, column_type: Advice }], table_columns: [Column { index: 6, column_type: Fixed }, Column { index: 7, column_type: Fixed }] }] }, fixed_commitments: [(0x3710f15f98bf0a7421343fdf390b9519506c67431a5c78678fbcc4db815c8547, 0x0a3c77f30ab2a2741b21cd45326c87dc7f7050b1a5e8c181a534b9c84a09cb02), (0x115235d6bd2467772db857d66e7f44837cd38bb6ac0c7b412c2997dd47cbbc3c, 0x0f339c20c40e10bed476699e2ddb88256092447582b250f329b0cbf6c3f66f17), (0x2a9ba245dcce53752e1de999b45c975472bb33b58aed8bcebdfcd185627895f0, 0x1252bf596b7acd19625f68845749f6672b99e71238cfabe91ca545103168d0f0), (0x2a9ba245dcce53752e1de999b45c975472bb33b58aed8bcebdfcd185627895f0, 0x1252bf596b7acd19625f68845749f6672b99e71238cfabe91ca545103168d0f0), (0x241d6d9c2060ce821d4b05ff2f9566c3947541f3d14a9aabcdb96c19158e8bc7, 0x39582cc6bdb1a4a88e89c050ad6db0ade34f45ec5791b07de6e694e9627ca66a), (0x1ee805e20232ba31eeae1fa345bd88ac7df81dc43ffb3967a218ea4defc9d17d, 0x2838c83c064d44e87e5c8d05a234ad24d2d4a502a370acb514b430f516c0f0bf), (0x37ead9904c760201ec4734ef398f0bdb5fe5a5e6e9db19c85e6b5483bdeb0a0b, 0x1dc08c38ed713b14f7a21a891a83b52160a3ffb0dccfbd70db7c7eb235dd193e), (0x2dc3d20553691216c988ecbb596c4bda329f27d50bd8a7c2fb0d84b423da3cb4, 0x025b40e800020458e15e3a57268562e6c08c6971d71262bd67c72437cfc60b4c)], permutations: [VerifyingKey { commitments: [(0x289f468bca3471a3d240169ec65047d0c4bb5e1135e81822523c74b596139fed, 0x1a585c821c71fb49c883859f1389bcae45f17593ddb5f9fee1781b27129e1b06), (0x096ef96a7725c636e7ca645dfe539694cf2a988da1ca50a468320f419d008054, 0x1ac0b48a254f8e2311081f81aa4a8ff39e37e40aa4c003325f1ac1219d231818), (0x254c9f0088599aba37607cfd1700c653ef3ec21bfd60b98c3d725678540bc4df, 0x134d9818929589052f3cd80d50140b851db26231b2b784a6b2528a64805598dc)] }, VerifyingKey { commitments: [(0x289f468bca3471a3d240169ec65047d0c4bb5e1135e81822523c74b596139fed, 0x1a585c821c71fb49c883859f1389bcae45f17593ddb5f9fee1781b27129e1b06), (0x096ef96a7725c636e7ca645dfe539694cf2a988da1ca50a468320f419d008054, 0x1ac0b48a254f8e2311081f81aa4a8ff39e37e40aa4c003325f1ac1219d231818), (0x254c9f0088599aba37607cfd1700c653ef3ec21bfd60b98c3d725678540bc4df, 0x134d9818929589052f3cd80d50140b851db26231b2b784a6b2528a64805598dc)] }] }");
     let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
 
     let mut pubinputs = pk.get_vk().get_domain().empty_lagrange();
@@ -649,5 +648,334 @@ fn test_proving() {
             let (msm, _) = guard.clone().use_g(g);
             assert!(msm.eval());
         }
+    }
+
+    // Check that the verification key has not changed unexpectedly
+    {
+        assert_eq!(
+            format!("{:#?}", pk.vk.pinned()),
+            r#####"PinnedVerificationKey {
+    base_modulus: "0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001",
+    scalar_modulus: "0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001",
+    domain: PinnedEvaluationDomain {
+        k: 5,
+        extended_k: 7,
+        omega: 0x0cc3380dc616f2e1daf29ad1560833ed3baea3393eceb7bc8fa36376929b78cc,
+    },
+    cs: PinnedConstraintSystem {
+        num_fixed_columns: 8,
+        num_advice_columns: 5,
+        num_instance_columns: 1,
+        gates: [
+            Sum(
+                Sum(
+                    Sum(
+                        Sum(
+                            Product(
+                                Advice(
+                                    0,
+                                ),
+                                Fixed(
+                                    3,
+                                ),
+                            ),
+                            Product(
+                                Advice(
+                                    1,
+                                ),
+                                Fixed(
+                                    4,
+                                ),
+                            ),
+                        ),
+                        Product(
+                            Product(
+                                Advice(
+                                    0,
+                                ),
+                                Advice(
+                                    1,
+                                ),
+                            ),
+                            Fixed(
+                                6,
+                            ),
+                        ),
+                    ),
+                    Scaled(
+                        Product(
+                            Advice(
+                                2,
+                            ),
+                            Fixed(
+                                5,
+                            ),
+                        ),
+                        0x40000000000000000000000000000000224698fc094cf91b992d30ed00000000,
+                    ),
+                ),
+                Product(
+                    Fixed(
+                        2,
+                    ),
+                    Product(
+                        Advice(
+                            3,
+                        ),
+                        Advice(
+                            4,
+                        ),
+                    ),
+                ),
+            ),
+            Product(
+                Fixed(
+                    7,
+                ),
+                Sum(
+                    Advice(
+                        0,
+                    ),
+                    Scaled(
+                        Instance(
+                            0,
+                        ),
+                        0x40000000000000000000000000000000224698fc094cf91b992d30ed00000000,
+                    ),
+                ),
+            ),
+        ],
+        advice_queries: [
+            (
+                Column {
+                    index: 1,
+                    column_type: Advice,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+            (
+                Column {
+                    index: 2,
+                    column_type: Advice,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+            (
+                Column {
+                    index: 3,
+                    column_type: Advice,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+            (
+                Column {
+                    index: 4,
+                    column_type: Advice,
+                },
+                Rotation(
+                    1,
+                ),
+            ),
+            (
+                Column {
+                    index: 0,
+                    column_type: Advice,
+                },
+                Rotation(
+                    -1,
+                ),
+            ),
+        ],
+        instance_queries: [
+            (
+                Column {
+                    index: 0,
+                    column_type: Instance,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+        ],
+        fixed_queries: [
+            (
+                Column {
+                    index: 6,
+                    column_type: Fixed,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+            (
+                Column {
+                    index: 7,
+                    column_type: Fixed,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+            (
+                Column {
+                    index: 0,
+                    column_type: Fixed,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+            (
+                Column {
+                    index: 2,
+                    column_type: Fixed,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+            (
+                Column {
+                    index: 3,
+                    column_type: Fixed,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+            (
+                Column {
+                    index: 4,
+                    column_type: Fixed,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+            (
+                Column {
+                    index: 1,
+                    column_type: Fixed,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+            (
+                Column {
+                    index: 5,
+                    column_type: Fixed,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+        ],
+        permutations: [
+            Argument {
+                columns: [
+                    Column {
+                        index: 1,
+                        column_type: Advice,
+                    },
+                    Column {
+                        index: 2,
+                        column_type: Advice,
+                    },
+                    Column {
+                        index: 3,
+                        column_type: Advice,
+                    },
+                ],
+            },
+            Argument {
+                columns: [
+                    Column {
+                        index: 1,
+                        column_type: Advice,
+                    },
+                    Column {
+                        index: 2,
+                        column_type: Advice,
+                    },
+                    Column {
+                        index: 3,
+                        column_type: Advice,
+                    },
+                ],
+            },
+        ],
+        lookups: [
+            Argument {
+                input_columns: [
+                    Column {
+                        index: 1,
+                        column_type: Advice,
+                    },
+                ],
+                table_columns: [
+                    Column {
+                        index: 6,
+                        column_type: Fixed,
+                    },
+                ],
+            },
+            Argument {
+                input_columns: [
+                    Column {
+                        index: 1,
+                        column_type: Advice,
+                    },
+                    Column {
+                        index: 2,
+                        column_type: Advice,
+                    },
+                ],
+                table_columns: [
+                    Column {
+                        index: 6,
+                        column_type: Fixed,
+                    },
+                    Column {
+                        index: 7,
+                        column_type: Fixed,
+                    },
+                ],
+            },
+        ],
+    },
+    fixed_commitments: [
+        (0x3710f15f98bf0a7421343fdf390b9519506c67431a5c78678fbcc4db815c8547, 0x0a3c77f30ab2a2741b21cd45326c87dc7f7050b1a5e8c181a534b9c84a09cb02),
+        (0x115235d6bd2467772db857d66e7f44837cd38bb6ac0c7b412c2997dd47cbbc3c, 0x0f339c20c40e10bed476699e2ddb88256092447582b250f329b0cbf6c3f66f17),
+        (0x2a9ba245dcce53752e1de999b45c975472bb33b58aed8bcebdfcd185627895f0, 0x1252bf596b7acd19625f68845749f6672b99e71238cfabe91ca545103168d0f0),
+        (0x2a9ba245dcce53752e1de999b45c975472bb33b58aed8bcebdfcd185627895f0, 0x1252bf596b7acd19625f68845749f6672b99e71238cfabe91ca545103168d0f0),
+        (0x241d6d9c2060ce821d4b05ff2f9566c3947541f3d14a9aabcdb96c19158e8bc7, 0x39582cc6bdb1a4a88e89c050ad6db0ade34f45ec5791b07de6e694e9627ca66a),
+        (0x1ee805e20232ba31eeae1fa345bd88ac7df81dc43ffb3967a218ea4defc9d17d, 0x2838c83c064d44e87e5c8d05a234ad24d2d4a502a370acb514b430f516c0f0bf),
+        (0x37ead9904c760201ec4734ef398f0bdb5fe5a5e6e9db19c85e6b5483bdeb0a0b, 0x1dc08c38ed713b14f7a21a891a83b52160a3ffb0dccfbd70db7c7eb235dd193e),
+        (0x2dc3d20553691216c988ecbb596c4bda329f27d50bd8a7c2fb0d84b423da3cb4, 0x025b40e800020458e15e3a57268562e6c08c6971d71262bd67c72437cfc60b4c),
+    ],
+    permutations: [
+        VerifyingKey {
+            commitments: [
+                (0x289f468bca3471a3d240169ec65047d0c4bb5e1135e81822523c74b596139fed, 0x1a585c821c71fb49c883859f1389bcae45f17593ddb5f9fee1781b27129e1b06),
+                (0x096ef96a7725c636e7ca645dfe539694cf2a988da1ca50a468320f419d008054, 0x1ac0b48a254f8e2311081f81aa4a8ff39e37e40aa4c003325f1ac1219d231818),
+                (0x254c9f0088599aba37607cfd1700c653ef3ec21bfd60b98c3d725678540bc4df, 0x134d9818929589052f3cd80d50140b851db26231b2b784a6b2528a64805598dc),
+            ],
+        },
+        VerifyingKey {
+            commitments: [
+                (0x289f468bca3471a3d240169ec65047d0c4bb5e1135e81822523c74b596139fed, 0x1a585c821c71fb49c883859f1389bcae45f17593ddb5f9fee1781b27129e1b06),
+                (0x096ef96a7725c636e7ca645dfe539694cf2a988da1ca50a468320f419d008054, 0x1ac0b48a254f8e2311081f81aa4a8ff39e37e40aa4c003325f1ac1219d231818),
+                (0x254c9f0088599aba37607cfd1700c653ef3ec21bfd60b98c3d725678540bc4df, 0x134d9818929589052f3cd80d50140b851db26231b2b784a6b2528a64805598dc),
+            ],
+        },
+    ],
+}"#####);
     }
 }
