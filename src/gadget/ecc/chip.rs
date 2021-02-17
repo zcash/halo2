@@ -8,6 +8,8 @@ use crate::{
     poly::Rotation,
 };
 
+use ff::Field;
+
 /// Configuration for the ECC chip
 #[derive(Clone, Debug)]
 pub struct EccConfig {
@@ -44,7 +46,25 @@ impl<C: CurveAffine> EccChip<C> {
         let q_mul = meta.fixed_column();
         let q_mul_fixed = meta.fixed_column();
 
-        // TODO: Create gates
+        // Create point doubling gate
+        meta.create_gate("point doubling", |meta| {
+            let q_double = meta.query_fixed(q_double, Rotation::cur());
+            let x_a = meta.query_advice(x_a, Rotation::cur());
+            let y_a = meta.query_advice(y_a, Rotation::cur());
+            let x_p = meta.query_advice(x_p, Rotation::cur());
+            let y_p = meta.query_advice(y_p, Rotation::cur());
+
+            let x_p_4 = x_p.clone() * x_p.clone() * x_p.clone() * x_p.clone();
+            let expr1 = y_p.clone()
+                * y_p.clone()
+                * (x_a.clone() + x_p.clone() * C::Base::from_u64(2))
+                * C::Base::from_u64(2)
+                - x_p_4 * C::Base::from_u64(9);
+            let expr2 = y_p.clone() * (y_a + y_p) * C::Base::from_u64(2)
+                - x_p.clone() * x_p.clone() * (x_p - x_a) * C::Base::from_u64(3);
+
+            q_double * (expr1 + expr2)
+        });
 
         EccConfig {
             num_bases,
@@ -107,7 +127,32 @@ impl<C: CurveAffine> EccInstructions<C> for EccChip<C> {
     }
 
     fn double(layouter: &mut impl Layouter<Self>, a: &Self::Point) -> Result<Self::Point, Error> {
-        todo!()
+        let config = layouter.config().clone();
+        let (x, y) = a.get_xy().unwrap();
+        let mut x_a = C::Base::zero();
+        let mut y_a = C::Base::zero();
+        layouter.assign_region(
+            || "point doubling",
+            |mut region| {
+                region.assign_fixed(|| "q_double", config.q_double, 0, || Ok(C::Base::one()))?;
+
+                region.assign_advice(|| "x_p", config.x_p, 0, || Ok(x))?;
+                region.assign_advice(|| "y_p", config.y_p, 0, || Ok(y))?;
+
+                let lambda1 =
+                    C::Base::from_u64(3) * x * x * (C::Base::from_u64(2) * y).invert().unwrap();
+
+                x_a = lambda1 * lambda1 * C::Base::from_u64(2) * x;
+                region.assign_advice(|| "x_a", config.x_a, 0, || Ok(x_a))?;
+
+                y_a = lambda1 * (x - x_a) - y;
+                region.assign_advice(|| "y_a", config.y_a, 0, || Ok(y_a))?;
+
+                Ok(())
+            },
+        )?;
+
+        Ok(C::from_xy(x_a, y_a).unwrap())
     }
 
     fn mul(
