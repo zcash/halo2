@@ -4,7 +4,6 @@
 
 use crate::arithmetic::parallelize;
 
-use blake2b_simd::State as Blake2bState;
 use ff::Field;
 use std::fmt::Debug;
 use std::marker::PhantomData;
