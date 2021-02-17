@@ -196,7 +196,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         let c = meta.advice_column();
         let p = meta.instance_column();
 
-        let perm = meta.permutation(&[a, b, c]);
+        let perm = meta.permutation(&[a.into(), b.into(), c.into()]);
 
         let sm = meta.fixed_column();
         let sa = meta.fixed_column();

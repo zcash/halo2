@@ -275,9 +275,10 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     // Sample gamma challenge
     let gamma = ChallengeGamma::get(transcript);
 
-    let permutations: Vec<Vec<permutation::prover::Committed<C>>> = advice
+    let permutations: Vec<Vec<permutation::prover::Committed<C>>> = instance
         .iter()
-        .map(|advice| -> Result<Vec<_>, Error> {
+        .zip(advice.iter())
+        .map(|(instance, advice)| -> Result<Vec<_>, Error> {
             // Commit to permutations, if any.
             pk.vk
                 .cs
@@ -290,6 +291,8 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
                         pk,
                         pkey,
                         &advice.advice_values,
+                        &pk.fixed_values,
+                        &instance.instance_values,
                         beta,
                         gamma,
                         transcript,
@@ -316,14 +319,24 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     let (permutations, permutation_expressions): (Vec<Vec<_>>, Vec<Vec<_>>) = permutations
         .into_iter()
         .zip(advice.iter())
-        .map(|(permutations, advice)| {
+        .zip(instance.iter())
+        .map(|((permutations, advice), instance)| {
             // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints, if any.
             let tmp: Vec<_> = permutations
                 .into_iter()
                 .zip(pk.vk.cs.permutations.iter())
                 .zip(pk.permutations.iter())
                 .map(|((p, argument), pkey)| {
-                    p.construct(pk, argument, pkey, &advice.advice_cosets, beta, gamma)
+                    p.construct(
+                        pk,
+                        argument,
+                        pkey,
+                        &advice.advice_cosets,
+                        &pk.fixed_cosets,
+                        &instance.instance_cosets,
+                        beta,
+                        gamma,
+                    )
                 })
                 .collect();
 
