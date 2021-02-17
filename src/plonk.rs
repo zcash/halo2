@@ -12,7 +12,6 @@ use crate::poly::{
     commitment::Params, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
 };
 use crate::transcript::{ChallengeScalar, Transcript};
-use std::convert::TryInto;
 
 mod circuit;
 mod keygen;
