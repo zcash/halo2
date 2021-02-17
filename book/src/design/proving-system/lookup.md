@@ -89,6 +89,9 @@ ways:
   - The commitments to the columns of $S$ can be precomputed, then combined cheaply once
     the challenge is known by taking advantage of the homomorphic property of Pedersen
     commitments.
+  - The columns of $A$ can be given as arbitrary polynomial expressions using relative
+    references. These will be substituted into the product column constraint, subject to
+    the maximum degree bound. This potentially saves one or more advice columns.
 - Then, a lookup argument for an arbitrary-width relation can be implemented in terms of a
   subset argument, i.e. to constrain $\mathcal{R}(x, y, ...)$ in each row, consider
   $\mathcal{R}$ as a set of tuples $S$ (using the method of the previous point), and check
