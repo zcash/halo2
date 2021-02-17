@@ -384,7 +384,7 @@ impl<F: PrimeField> std::fmt::Display for ConstraintSystem<F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
-            "ConstraintSystem {{\
+            "ConstraintSystem {{ \
              num_fixed_columns: {num_fixed_columns}, \
              num_advice_columns: {num_advice_columns}, \
              num_instance_columns: {num_instance_columns}, \

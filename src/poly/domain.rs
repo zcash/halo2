@@ -381,7 +381,7 @@ impl<G: Group> std::fmt::Display for EvaluationDomain<G> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
-            "Domain {{\
+            "Domain {{ \
             k = {k:?}, \
             extended_k = {extended_k:?}, \
             omega = {omega:?} \

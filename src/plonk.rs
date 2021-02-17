@@ -92,7 +92,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
 
         // Hash in final Blake2bState
         transcript.common_scalar(C::Scalar::from_bytes_wide(
-            hasher.finalize().as_bytes().try_into().unwrap(),
+            hasher.finalize().as_array(),
         ))?;
 
         Ok(())
@@ -103,7 +103,7 @@ impl<C: CurveAffine> std::fmt::Display for VerifyingKey<C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
-            "VerificationKey {{\
+            "VerificationKey {{ \
             base_modulus = {base_modulus}, \
             scalar_modulus = {scalar_modulus}, \
             domain = {domain}, \
