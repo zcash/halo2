@@ -90,9 +90,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
         hasher.update(s.as_bytes());
 
         // Hash in final Blake2bState
-        transcript.common_scalar(C::Scalar::from_bytes_wide(
-            hasher.finalize().as_array(),
-        ))?;
+        transcript.common_scalar(C::Scalar::from_bytes_wide(hasher.finalize().as_array()))?;
 
         Ok(())
     }
