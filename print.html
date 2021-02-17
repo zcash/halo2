@@ -540,7 +540,13 @@ impl&lt;F: FieldExt&gt; FieldChip&lt;F&gt; {
         advice: [Column&lt;Advice&gt;; 2],
         instance: Column&lt;Instance&gt;,
     ) -&gt; FieldConfig {
-        let perm = Permutation::new(meta, &amp;advice);
+        let perm = Permutation::new(
+            meta,
+            &amp;advice
+                .iter()
+                .map(|column| (*column).into())
+                .collect::&lt;Vec&lt;_&gt;&gt;(),
+        );
         let s_mul = meta.fixed_column();
         let s_pub = meta.fixed_column();
 
