@@ -158,6 +158,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
                 |(((advice_evals, instance_evals), permutations), lookups)| {
                     let fixed_evals = fixed_evals.clone();
                     let fixed_evals_copy = fixed_evals.clone();
+                    let fixed_evals_copy_copy = fixed_evals.clone();
 
                     std::iter::empty()
                         // Evaluate the circuit using the custom gates provided
@@ -176,7 +177,17 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
                                 .iter()
                                 .zip(vk.cs.permutations.iter())
                                 .flat_map(move |(p, argument)| {
-                                    p.expressions(vk, argument, &advice_evals, l_0, beta, gamma, x)
+                                    p.expressions(
+                                        vk,
+                                        argument,
+                                        &advice_evals,
+                                        &fixed_evals_copy,
+                                        &instance_evals,
+                                        l_0,
+                                        beta,
+                                        gamma,
+                                        x,
+                                    )
                                 })
                                 .into_iter(),
                         )
@@ -193,7 +204,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
                                         beta,
                                         gamma,
                                         &advice_evals,
-                                        &fixed_evals_copy,
+                                        &fixed_evals_copy_copy,
                                         &instance_evals,
                                     )
                                 })

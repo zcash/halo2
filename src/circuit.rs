@@ -46,11 +46,11 @@ pub struct Permutation {
 
 impl Permutation {
     /// Configures a new permutation for the given columns.
-    pub fn new<F: FieldExt>(meta: &mut ConstraintSystem<F>, columns: &[Column<Advice>]) -> Self {
+    pub fn new<F: FieldExt>(meta: &mut ConstraintSystem<F>, columns: &[Column<Any>]) -> Self {
         let index = meta.permutation(columns);
         Permutation {
             index,
-            mapping: columns.iter().map(|c| (*c).into()).collect(),
+            mapping: columns.iter().copied().collect(),
         }
     }
 }

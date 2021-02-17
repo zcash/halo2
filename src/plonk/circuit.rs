@@ -397,12 +397,12 @@ impl<F: Field> Default for ConstraintSystem<F> {
 }
 
 impl<F: Field> ConstraintSystem<F> {
-    /// Add a permutation argument for some advice columns
-    pub fn permutation(&mut self, columns: &[Column<Advice>]) -> usize {
+    /// Add a permutation argument for some columns
+    pub fn permutation(&mut self, columns: &[Column<Any>]) -> usize {
         let index = self.permutations.len();
 
         for column in columns {
-            self.query_advice_index(*column, Rotation::cur());
+            self.query_any_index(*column, Rotation::cur());
         }
         self.permutations
             .push(permutation::Argument::new(columns.to_vec()));

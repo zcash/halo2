@@ -257,8 +257,8 @@ fn main() {
             let d = meta.advice_column();
             let p = meta.instance_column();
 
-            let perm = meta.permutation(&[a, b, c]);
-            let perm2 = meta.permutation(&[a, b, c]);
+            let perm = meta.permutation(&[a.into(), b.into(), c.into()]);
+            let perm2 = meta.permutation(&[a.into(), b.into(), c.into()]);
 
             let sm = meta.fixed_column();
             let sa = meta.fixed_column();

@@ -182,7 +182,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             let b = meta.advice_column();
             let c = meta.advice_column();
 
-            let perm = meta.permutation(&[a, b, c]);
+            let perm = meta.permutation(&[a.into(), b.into(), c.into()]);
 
             let sm = meta.fixed_column();
             let sa = meta.fixed_column();

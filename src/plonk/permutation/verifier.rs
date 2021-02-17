@@ -1,6 +1,7 @@
 use ff::Field;
 use std::iter;
 
+use super::super::circuit::Any;
 use super::{Argument, VerifyingKey};
 use crate::{
     arithmetic::{CurveAffine, FieldExt},
@@ -71,6 +72,8 @@ impl<C: CurveAffine> Evaluated<C> {
         vk: &'a plonk::VerifyingKey<C>,
         p: &'a Argument,
         advice_evals: &'a [C::Scalar],
+        fixed_evals: &[C::Scalar],
+        instance_evals: &'a [C::Scalar],
         l_0: C::Scalar,
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
@@ -85,23 +88,35 @@ impl<C: CurveAffine> Evaluated<C> {
             // - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
             .chain(Some({
                 let mut left = self.permutation_product_eval;
-                for (advice_eval, permutation_eval) in p
+                for (eval, permutation_eval) in p
                     .columns
                     .iter()
-                    .map(|&column| {
-                        advice_evals[vk.cs.get_advice_query_index(column, Rotation::cur())]
+                    .map(|&column| match column.column_type() {
+                        Any::Advice => {
+                            advice_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
+                        }
+                        Any::Fixed => {
+                            fixed_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
+                        }
+                        Any::Instance => {
+                            instance_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
+                        }
                     })
                     .zip(self.permutation_evals.iter())
                 {
-                    left *= &(advice_eval + &(*beta * permutation_eval) + &*gamma);
+                    left *= &(eval + &(*beta * permutation_eval) + &*gamma);
                 }
 
                 let mut right = self.permutation_product_inv_eval;
                 let mut current_delta = *beta * &*x;
-                for advice_eval in p.columns.iter().map(|&column| {
-                    advice_evals[vk.cs.get_advice_query_index(column, Rotation::cur())]
+                for eval in p.columns.iter().map(|&column| match column.column_type() {
+                    Any::Advice => advice_evals[vk.cs.get_any_query_index(column, Rotation::cur())],
+                    Any::Fixed => fixed_evals[vk.cs.get_any_query_index(column, Rotation::cur())],
+                    Any::Instance => {
+                        instance_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
+                    }
                 }) {
-                    right *= &(advice_eval + &current_delta + &*gamma);
+                    right *= &(eval + &current_delta + &*gamma);
                     current_delta *= &C::Scalar::DELTA;
                 }
 

@@ -1,6 +1,6 @@
 //! Implementation of a PLONK permutation argument.
 
-use super::circuit::{Advice, Column};
+use super::circuit::{Any, Column};
 use crate::{
     arithmetic::CurveAffine,
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
@@ -16,11 +16,11 @@ use std::io;
 #[derive(Debug, Clone)]
 pub(crate) struct Argument {
     /// A sequence of columns involved in the argument.
-    columns: Vec<Column<Advice>>,
+    columns: Vec<Column<Any>>,
 }
 
 impl Argument {
-    pub(crate) fn new(columns: Vec<Column<Advice>>) -> Self {
+    pub(crate) fn new(columns: Vec<Column<Any>>) -> Self {
         Argument { columns }
     }
 
@@ -40,7 +40,7 @@ impl Argument {
         std::cmp::max(self.columns.len() + 1, 2)
     }
 
-    pub(crate) fn get_columns(&self) -> Vec<Column<Advice>> {
+    pub(crate) fn get_columns(&self) -> Vec<Column<Any>> {
         self.columns.clone()
     }
 }
