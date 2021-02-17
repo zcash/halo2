@@ -381,6 +381,11 @@ impl<G: Group> EvaluationDomain<G> {
 
     /// Hashes the constants in the domain which influence the proof into a Blake2bState
     pub fn hash_into(&self, hasher: &mut Blake2bState) {
+        // Hash in field modulus
+        let modulus = G::Scalar::char_le_bits();
+        hasher.update(&modulus.len().to_le_bytes());
+        hasher.update(format!("{:?}", modulus).as_bytes());
+
         hasher.update(b"k");
         hasher.update(&self.k.to_le_bytes());
 

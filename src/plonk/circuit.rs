@@ -30,6 +30,7 @@ impl<C: ColumnType> Column<C> {
     }
 
     pub(crate) fn hash_into(&self, hasher: &mut Blake2bState) {
+        hasher.update(&format!("{:?}", self).as_bytes().len().to_le_bytes());
         hasher.update(&format!("{:?}", self).as_bytes());
     }
 }
@@ -325,6 +326,7 @@ impl<F: Field> Expression<F> {
 
     /// Hash an Expression into a Blake2bState
     pub fn hash_into(&self, hasher: &mut Blake2bState) {
+        hasher.update(&format!("{:?}", self).as_bytes().len().to_le_bytes());
         hasher.update(&format!("{:?}", self).as_bytes());
     }
 }

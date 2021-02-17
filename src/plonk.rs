@@ -85,6 +85,53 @@ impl<C: CurveAffine> VerifyingKey<C> {
             .personal(C::BLAKE2B_PERSONALIZATION)
             .to_state();
 
+        // Hash in curve parameters
+        hasher.update(&C::Scalar::ROOT_OF_UNITY.to_bytes());
+        hasher.update(&C::Scalar::ROOT_OF_UNITY_INV.to_bytes());
+        hasher.update(
+            &(C::Scalar::T_MINUS1_OVER2
+                .iter()
+                .fold(Vec::new(), |mut res, word| {
+                    res.extend_from_slice(&word.to_le_bytes());
+                    res
+                })),
+        );
+        hasher.update(&C::Scalar::DELTA.to_bytes());
+        hasher.update(&C::Scalar::TWO_INV.to_bytes());
+        hasher.update(&C::Scalar::RESCUE_ALPHA.to_le_bytes());
+        hasher.update(
+            &(C::Scalar::RESCUE_INVALPHA
+                .iter()
+                .fold(Vec::new(), |mut res, word| {
+                    res.extend_from_slice(&word.to_le_bytes());
+                    res
+                })),
+        );
+        hasher.update(&C::Base::ZETA.to_bytes());
+
+        hasher.update(&C::Base::ROOT_OF_UNITY.to_bytes());
+        hasher.update(&C::Base::ROOT_OF_UNITY_INV.to_bytes());
+        hasher.update(
+            &(C::Base::T_MINUS1_OVER2
+                .iter()
+                .fold(Vec::new(), |mut res, word| {
+                    res.extend_from_slice(&word.to_le_bytes());
+                    res
+                })),
+        );
+        hasher.update(&C::Base::DELTA.to_bytes());
+        hasher.update(&C::Base::TWO_INV.to_bytes());
+        hasher.update(&C::Base::RESCUE_ALPHA.to_le_bytes());
+        hasher.update(
+            &(C::Base::RESCUE_INVALPHA
+                .iter()
+                .fold(Vec::new(), |mut res, word| {
+                    res.extend_from_slice(&word.to_le_bytes());
+                    res
+                })),
+        );
+        hasher.update(&C::Base::ZETA.to_bytes());
+
         // Hash in constants in the domain which influence the proof
         self.domain.hash_into(&mut hasher);
 
