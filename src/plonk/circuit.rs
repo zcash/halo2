@@ -399,7 +399,7 @@ struct PinnedGates<'a, F: Field>(&'a Vec<(&'static str, Expression<F>)>);
 impl<'a, F: Field> std::fmt::Debug for PinnedGates<'a, F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.debug_list()
-            .entries(self.0.iter().map(|&(_, ref expr)| expr))
+            .entries(self.0.iter().map(|(_, expr)| expr))
             .finish()
     }
 }
