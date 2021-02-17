@@ -7,9 +7,6 @@ use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation};
 
 use ff::{Field, PrimeField};
 use std::marker::PhantomData;
-
-use blake2b_simd::State as Blake2bState;
-
 /// This structure contains precomputed constants and other details needed for
 /// performing operations on an evaluation domain of size $2^k$ and an extended
 /// domain of size $2^{k} * j$ with $j \neq 0$.
@@ -378,21 +375,20 @@ impl<G: Group> EvaluationDomain<G> {
     pub fn get_quotient_poly_degree(&self) -> usize {
         self.quotient_poly_degree as usize
     }
+}
 
-    /// Hashes the constants in the domain which influence the proof into a Blake2bState
-    pub fn hash_into(&self, hasher: &mut Blake2bState) {
-        // Hash in field modulus
-        let modulus = G::Scalar::char_le_bits();
-        hasher.update(&modulus.len().to_le_bytes());
-        hasher.update(format!("{:?}", modulus).as_bytes());
-
-        hasher.update(b"k");
-        hasher.update(&self.k.to_le_bytes());
-
-        hasher.update(b"extended_k");
-        hasher.update(&self.extended_k.to_le_bytes());
-
-        hasher.update(b"omega");
-        hasher.update(&self.omega.to_bytes());
+impl<G: Group> std::fmt::Display for EvaluationDomain<G> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(
+            f,
+            "Domain {{\
+            k = {k:?}, \
+            extended_k = {extended_k:?}, \
+            omega = {omega:?} \
+        }}",
+            k = self.k,
+            extended_k = self.extended_k,
+            omega = self.omega
+        )
     }
 }

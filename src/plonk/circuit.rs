@@ -1,7 +1,6 @@
-use blake2b_simd::State as Blake2bState;
 use core::cmp::max;
 use core::ops::{Add, Mul};
-use ff::Field;
+use ff::{Field, PrimeField};
 use std::{
     convert::TryFrom,
     ops::{Neg, Sub},
@@ -27,11 +26,6 @@ impl<C: ColumnType> Column<C> {
 
     pub(crate) fn column_type(&self) -> &C {
         &self.column_type
-    }
-
-    pub(crate) fn hash_into(&self, hasher: &mut Blake2bState) {
-        hasher.update(&format!("{:?}", self).as_bytes().len().to_le_bytes());
-        hasher.update(&format!("{:?}", self).as_bytes());
     }
 }
 
@@ -323,12 +317,6 @@ impl<F: Field> Expression<F> {
             Expression::Scaled(poly, _) => poly.degree(),
         }
     }
-
-    /// Hash an Expression into a Blake2bState
-    pub fn hash_into(&self, hasher: &mut Blake2bState) {
-        hasher.update(&format!("{:?}", self).as_bytes().len().to_le_bytes());
-        hasher.update(&format!("{:?}", self).as_bytes());
-    }
 }
 
 impl<F: Field> Neg for Expression<F> {
@@ -390,6 +378,36 @@ pub struct ConstraintSystem<F> {
     // Vector of lookup arguments, where each corresponds to a sequence of
     // input columns and a sequence of table columns involved in the lookup.
     pub(crate) lookups: Vec<lookup::Argument>,
+}
+
+impl<F: PrimeField> std::fmt::Display for ConstraintSystem<F> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(
+            f,
+            "ConstraintSystem {{\
+             num_fixed_columns: {num_fixed_columns}, \
+             num_advice_columns: {num_advice_columns}, \
+             num_instance_columns: {num_instance_columns}, \
+             fixed_queries: {fixed_queries:?}, \
+             advice_queries: {advice_queries:?}, \
+             instance_queries: {instance_queries:?}, \
+             permutations: {permutations:?}, \
+             lookups: {lookups:?}, \
+             gates: [",
+            num_fixed_columns = self.num_fixed_columns,
+            num_advice_columns = self.num_advice_columns,
+            num_instance_columns = self.num_instance_columns,
+            fixed_queries = &self.fixed_queries,
+            advice_queries = &self.advice_queries,
+            instance_queries = &self.instance_queries,
+            lookups = &self.lookups,
+            permutations = &self.permutations
+        )?;
+        for (_, expr) in self.gates.iter() {
+            write!(f, "{:?}, ", expr)?;
+        }
+        write!(f, "]}}")
+    }
 }
 
 impl<F: Field> Default for ConstraintSystem<F> {
@@ -609,68 +627,5 @@ impl<F: Field> ConstraintSystem<F> {
         };
         self.num_instance_columns += 1;
         tmp
-    }
-
-    /// Hashes the `ConstraintSystem` into a `u64`.
-    pub fn hash_into(&self, mut hasher: &mut Blake2bState) {
-        hasher.update(b"num_fixed_columns");
-        hasher.update(&self.num_fixed_columns.to_le_bytes());
-
-        hasher.update(b"num_advice_columns");
-        hasher.update(&self.num_advice_columns.to_le_bytes());
-
-        hasher.update(b"num_instance_columns");
-        hasher.update(&self.num_instance_columns.to_le_bytes());
-
-        hasher.update(b"num_gates");
-        hasher.update(&self.gates.len().to_le_bytes());
-        for gate in self.gates.iter() {
-            gate.1.hash_into(&mut hasher);
-        }
-
-        hasher.update(b"num_advice_queries");
-        hasher.update(&self.advice_queries.len().to_le_bytes());
-        for query in self.advice_queries.iter() {
-            query.0.hash_into(&mut hasher);
-            query.1.hash_into(&mut hasher);
-        }
-
-        hasher.update(b"num_instance_queries");
-        hasher.update(&self.instance_queries.len().to_le_bytes());
-        for query in self.instance_queries.iter() {
-            query.0.hash_into(&mut hasher);
-            query.1.hash_into(&mut hasher);
-        }
-
-        hasher.update(b"num_fixed_queries");
-        hasher.update(&self.fixed_queries.len().to_le_bytes());
-        for query in self.fixed_queries.iter() {
-            query.0.hash_into(&mut hasher);
-            query.1.hash_into(&mut hasher);
-        }
-
-        hasher.update(b"num_permutations");
-        hasher.update(&self.permutations.len().to_le_bytes());
-        for argument in self.permutations.iter() {
-            hasher.update(&argument.get_columns().len().to_le_bytes());
-            for column in argument.get_columns().iter() {
-                column.hash_into(&mut hasher);
-            }
-        }
-
-        hasher.update(b"num_lookups");
-        hasher.update(&self.lookups.len().to_le_bytes());
-        for argument in self.lookups.iter() {
-            hasher.update(&argument.input_columns.len().to_le_bytes());
-            assert_eq!(argument.input_columns.len(), argument.table_columns.len());
-            for (input, table) in argument
-                .input_columns
-                .iter()
-                .zip(argument.table_columns.iter())
-            {
-                input.hash_into(&mut hasher);
-                table.hash_into(&mut hasher);
-            }
-        }
     }
 }

@@ -4,14 +4,12 @@ use super::circuit::{Any, Column};
 use crate::{
     arithmetic::CurveAffine,
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
-    transcript::Transcript,
 };
 
 pub(crate) mod keygen;
 pub(crate) mod prover;
 pub(crate) mod verifier;
 
-use blake2b_simd::State as Blake2bState;
 use std::io;
 
 /// A permutation argument.
@@ -67,20 +65,6 @@ impl<C: CurveAffine> VerifyingKey<C> {
             .map(|_| C::read(reader))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(VerifyingKey { commitments })
-    }
-
-    pub(crate) fn hash_into<T: Transcript<C>>(
-        &self,
-        hasher: &mut Blake2bState,
-        transcript: &mut T,
-    ) -> io::Result<()> {
-        hasher.update(b"num_commitments");
-        hasher.update(&self.commitments.len().to_le_bytes());
-        for commitment in &self.commitments {
-            transcript.common_point(*commitment)?;
-        }
-
-        Ok(())
     }
 }
 

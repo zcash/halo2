@@ -605,6 +605,8 @@ lazy_static! {
 }
 
 impl FieldExt for Fp {
+    const MODULUS: &'static str =
+        "0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001";
     const ROOT_OF_UNITY: Self = ROOT_OF_UNITY;
     const ROOT_OF_UNITY_INV: Self = Fp::from_raw([
         0xf0b87c7db2ce91f6,
