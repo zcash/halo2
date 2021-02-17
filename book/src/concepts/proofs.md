@@ -79,8 +79,8 @@ precisely how the proof is generated, must be able to compute the witness.
 If a proof yields no information about the witness (other than that a witness exists and was
 known to the prover), then we say that the proof system is ***zero knowledge***.
 
-If a proof system produces short proofs ---i.e. of length polylogarithmic in the circuit
-size--- then we say that it is ***succinct***. A succinct NARK is called a ***SNARK***
+If a proof system produces short proofs —i.e. of length polylogarithmic in the circuit
+size— then we say that it is ***succinct***. A succinct NARK is called a ***SNARK***
 (***Succinct Non-Interactive Argument of Knowledge***).
 
 > By this definition, a SNARK need not have verification time polylogarithmic in the circuit

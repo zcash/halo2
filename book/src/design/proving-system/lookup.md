@@ -105,7 +105,7 @@ ways:
     were implemented.
 
 These generalizations are similar to those in sections 4 and 5 of the
-[Plookup paper](https://eprint.iacr.org/2020/315.pdf) That is, the differences from
+[Plookup paper](https://eprint.iacr.org/2020/315.pdf). That is, the differences from
 Plookup are in the subset argument. This argument can then be used in all the same ways;
 for instance, the optimized range check technique in section 5 of the Plookup paper can
 also be used with this subset argument.

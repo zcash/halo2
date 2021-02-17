@@ -35,7 +35,7 @@ lookups independent. Then, the prover commits to the permutations for each looku
 follows:
 
 - Given a lookup with input column polynomials $[A_0(X), \dots, A_{m-1}(X)]$ and table
-  column polynomials $[S_0(X), \dots, S_{m-1}]$, the prover constructs two compressed
+  column polynomials $[S_0(X), \dots, S_{m-1}(X)]$, the prover constructs two compressed
   polynomials
 
   $$A_\text{compressed}(X) = \theta^{m-1} A_0(X) + \theta^{m-2} A_1(X) + \dots + \theta A_{m-2}(X) + A_{m-1}(X)$$
