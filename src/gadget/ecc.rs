@@ -8,6 +8,9 @@ use crate::{
     plonk::Error,
 };
 
+mod chip;
+pub use chip::{EccChip, EccConfig};
+
 /// The set of circuit instructions required to use the ECC gadgets.
 pub trait EccInstructions<C: CurveAffine>: Chip<Field = C::Base> {
     /// Variable representing an element of the elliptic curve's scalar field.
