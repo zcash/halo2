@@ -82,7 +82,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
     pub fn hash_into<T: Transcript<C>>(&self, transcript: &mut T) -> io::Result<()> {
         let mut hasher = Blake2bParams::new()
             .hash_length(64)
-            .personal(C::BLAKE2B_PERSONALIZATION)
+            .personal(b"Halo2-Verify-Key")
             .to_state();
 
         let s = format!("{:?}", self.pinned());
