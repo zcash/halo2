@@ -1,6 +1,6 @@
 use core::cmp::max;
 use core::ops::{Add, Mul};
-use ff::{Field, PrimeField};
+use ff::Field;
 use std::{
     convert::TryFrom,
     ops::{Neg, Sub},
@@ -380,33 +380,27 @@ pub struct ConstraintSystem<F> {
     pub(crate) lookups: Vec<lookup::Argument>,
 }
 
-impl<F: PrimeField> std::fmt::Display for ConstraintSystem<F> {
+/// Represents the minimal parameters that determine a `ConstraintSystem`.
+#[derive(Debug)]
+pub struct PinnedConstraintSystem<'a, F: Field> {
+    num_fixed_columns: &'a usize,
+    num_advice_columns: &'a usize,
+    num_instance_columns: &'a usize,
+    gates: PinnedGates<'a, F>,
+    advice_queries: &'a Vec<(Column<Advice>, Rotation)>,
+    instance_queries: &'a Vec<(Column<Instance>, Rotation)>,
+    fixed_queries: &'a Vec<(Column<Fixed>, Rotation)>,
+    permutations: &'a Vec<permutation::Argument>,
+    lookups: &'a Vec<lookup::Argument>,
+}
+
+struct PinnedGates<'a, F: Field>(&'a Vec<(&'static str, Expression<F>)>);
+
+impl<'a, F: Field> std::fmt::Debug for PinnedGates<'a, F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "ConstraintSystem {{ \
-             num_fixed_columns: {num_fixed_columns}, \
-             num_advice_columns: {num_advice_columns}, \
-             num_instance_columns: {num_instance_columns}, \
-             fixed_queries: {fixed_queries:?}, \
-             advice_queries: {advice_queries:?}, \
-             instance_queries: {instance_queries:?}, \
-             permutations: {permutations:?}, \
-             lookups: {lookups:?}, \
-             gates: [",
-            num_fixed_columns = self.num_fixed_columns,
-            num_advice_columns = self.num_advice_columns,
-            num_instance_columns = self.num_instance_columns,
-            fixed_queries = &self.fixed_queries,
-            advice_queries = &self.advice_queries,
-            instance_queries = &self.instance_queries,
-            lookups = &self.lookups,
-            permutations = &self.permutations
-        )?;
-        for (_, expr) in self.gates.iter() {
-            write!(f, "{:?}, ", expr)?;
-        }
-        write!(f, "]}}")
+        f.debug_list()
+            .entries(self.0.iter().map(|&(_, ref expr)| expr))
+            .finish()
     }
 }
 
@@ -427,7 +421,24 @@ impl<F: Field> Default for ConstraintSystem<F> {
 }
 
 impl<F: Field> ConstraintSystem<F> {
-    /// Add a permutation argument for some columns
+    /// Obtain a pinned version of this constraint system; a structure with the
+    /// minimal parameters needed to determine the rest of the constraint
+    /// system.
+    pub fn pinned(&self) -> PinnedConstraintSystem<'_, F> {
+        PinnedConstraintSystem {
+            num_fixed_columns: &self.num_fixed_columns,
+            num_advice_columns: &self.num_advice_columns,
+            num_instance_columns: &self.num_instance_columns,
+            gates: PinnedGates(&self.gates),
+            fixed_queries: &self.fixed_queries,
+            advice_queries: &self.advice_queries,
+            instance_queries: &self.instance_queries,
+            permutations: &self.permutations,
+            lookups: &self.lookups,
+        }
+    }
+
+    /// Add a permutation argument for some advice columns
     pub fn permutation(&mut self, columns: &[Column<Any>]) -> usize {
         let index = self.permutations.len();
 
