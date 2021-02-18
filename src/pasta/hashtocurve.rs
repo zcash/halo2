@@ -94,7 +94,7 @@ pub fn iso_map<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAffine<Base = F>>(
     C::Projective::new_jacobian(xo, yo, zo).unwrap()
 }
 
-pub fn map_to_curve<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAffine<Base = F>>(
+pub fn map_to_curve_simple_swu<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAffine<Base = F>>(
     u: &F,
     theta: F,
     z: F,

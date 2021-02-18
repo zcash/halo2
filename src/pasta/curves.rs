@@ -700,13 +700,13 @@ macro_rules! impl_projective_curve_specific {
             Box::new(move |message| {
                 let mut us = [Field::zero(); 2];
                 hashtocurve::hash_to_field(message, domain_separation_tag.as_bytes(), &mut us);
-                let q0 = hashtocurve::map_to_curve::<$base, $name_affine, $iso_affine>(
+                let q0 = hashtocurve::map_to_curve_simple_swu::<$base, $name_affine, $iso_affine>(
                     &us[0],
                     $name::THETA,
                     $name::Z,
                     $name::B_OVER_ZA,
                 );
-                let q1 = hashtocurve::map_to_curve::<$base, $name_affine, $iso_affine>(
+                let q1 = hashtocurve::map_to_curve_simple_swu::<$base, $name_affine, $iso_affine>(
                     &us[1],
                     $name::THETA,
                     $name::Z,
