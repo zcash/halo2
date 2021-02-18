@@ -36,14 +36,12 @@ harness = false
 
 [dependencies]
 backtrace = { version = "0.3", optional = true }
-bitvec = "0.18"
 subtle = "2.3"
-crossbeam-utils = "0.7"
-ff = "0.8"
-metrics = "=0.13.0-alpha.13"
-metrics-macros = "=0.1.0-alpha.9"
+crossbeam-utils = "0.8"
+ff = "0.9"
+metrics = "0.14.2"
 num_cpus = "1.13"
-rand = "0.7"
+rand = "0.8"
 blake2b_simd = "0.5"
 lazy_static = "1.4.0"
 static_assertions = "1.1.0"
