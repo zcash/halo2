@@ -29,11 +29,21 @@ macro_rules! new_curve_impl {
 
         /// Represents a point in the affine coordinate space (or the point at
         /// infinity).
-        #[derive(Copy, Clone, Debug)]
+        #[derive(Copy, Clone)]
         pub struct $name_affine {
             x: $base,
             y: $base,
             infinity: Choice,
+        }
+
+        impl std::fmt::Debug for $name_affine {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+                if self.infinity.into() {
+                    write!(f, "Infinity")
+                } else {
+                    write!(f, "({:?}, {:?})", self.x, self.y)
+                }
+            }
         }
 
         impl Curve for $name {

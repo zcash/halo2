@@ -376,4 +376,23 @@ impl<G: Group> EvaluationDomain<G> {
     pub fn get_quotient_poly_degree(&self) -> usize {
         self.quotient_poly_degree as usize
     }
+
+    /// Obtain a pinned version of this evaluation domain; a structure with the
+    /// minimal parameters needed to determine the rest of the evaluation
+    /// domain.
+    pub fn pinned(&self) -> PinnedEvaluationDomain<'_, G> {
+        PinnedEvaluationDomain {
+            k: &self.k,
+            extended_k: &self.extended_k,
+            omega: &self.omega,
+        }
+    }
+}
+
+/// Represents the minimal parameters that determine an `EvaluationDomain`.
+#[derive(Debug)]
+pub struct PinnedEvaluationDomain<'a, G: Group> {
+    k: &'a u32,
+    extended_k: &'a u32,
+    omega: &'a G::Scalar,
 }

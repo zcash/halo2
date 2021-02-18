@@ -19,6 +19,9 @@ const_assert!(size_of::<usize>() >= 4);
 pub trait FieldExt:
     ff::PrimeField + From<bool> + Ord + ConstantTimeEq + Group<Scalar = Self>
 {
+    /// Modulus of the field written as a string for display purposes
+    const MODULUS: &'static str;
+
     /// Generator of the $2^S$ multiplicative subgroup
     const ROOT_OF_UNITY: Self;
 
