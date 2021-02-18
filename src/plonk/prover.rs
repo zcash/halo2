@@ -246,7 +246,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta = ChallengeTheta::get(transcript);
 
-    let lookups: Vec<Vec<lookup::prover::Permuted<'_, C>>> = instance
+    let lookups: Vec<Vec<lookup::prover::Permuted<C>>> = instance
         .iter()
         .zip(advice.iter())
         .map(|(instance, advice)| -> Result<Vec<_>, Error> {
@@ -307,7 +307,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let lookups: Vec<Vec<lookup::prover::Committed<'_, C>>> = lookups
+    let lookups: Vec<Vec<lookup::prover::Committed<C>>> = lookups
         .into_iter()
         .map(|lookups| -> Result<Vec<_>, _> {
             // Construct and commit to products for each lookup
@@ -373,6 +373,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
                     // Custom constraints
                     .chain(meta.gates.iter().map(move |(_, poly)| {
                         poly.evaluate(
+                            &|scalar| pk.vk.domain.constant_extended(scalar),
                             &|index| pk.fixed_cosets[index].clone(),
                             &|index| advice.advice_cosets[index].clone(),
                             &|index| instance.instance_cosets[index].clone(),

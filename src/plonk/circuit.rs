@@ -224,6 +224,8 @@ pub trait Circuit<F: Field> {
 /// Low-degree expression representing an identity that must hold over the committed columns.
 #[derive(Clone, Debug)]
 pub enum Expression<F> {
+    /// This is a constant polynomial
+    Constant(F),
     /// This is a fixed column queried at a certain relative location
     Fixed(usize),
     /// This is an advice (witness) column queried at a certain relative location
@@ -243,6 +245,7 @@ impl<F: Field> Expression<F> {
     /// operations.
     pub fn evaluate<T>(
         &self,
+        constant: &impl Fn(F) -> T,
         fixed_column: &impl Fn(usize) -> T,
         advice_column: &impl Fn(usize) -> T,
         instance_column: &impl Fn(usize) -> T,
@@ -251,11 +254,13 @@ impl<F: Field> Expression<F> {
         scaled: &impl Fn(T, F) -> T,
     ) -> T {
         match self {
+            Expression::Constant(scalar) => constant(*scalar),
             Expression::Fixed(index) => fixed_column(*index),
             Expression::Advice(index) => advice_column(*index),
             Expression::Instance(index) => instance_column(*index),
             Expression::Sum(a, b) => {
                 let a = a.evaluate(
+                    constant,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -264,6 +269,7 @@ impl<F: Field> Expression<F> {
                     scaled,
                 );
                 let b = b.evaluate(
+                    constant,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -275,6 +281,7 @@ impl<F: Field> Expression<F> {
             }
             Expression::Product(a, b) => {
                 let a = a.evaluate(
+                    constant,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -283,6 +290,7 @@ impl<F: Field> Expression<F> {
                     scaled,
                 );
                 let b = b.evaluate(
+                    constant,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -294,6 +302,7 @@ impl<F: Field> Expression<F> {
             }
             Expression::Scaled(a, f) => {
                 let a = a.evaluate(
+                    constant,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -309,6 +318,7 @@ impl<F: Field> Expression<F> {
     /// Compute the degree of this polynomial
     pub fn degree(&self) -> usize {
         match self {
+            Expression::Constant(_) => 0,
             Expression::Fixed(_) => 1,
             Expression::Advice(_) => 1,
             Expression::Instance(_) => 1,
@@ -362,7 +372,7 @@ pub(crate) struct PointIndex(pub usize);
 /// This is a description of the circuit environment, such as the gate, column and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
-pub struct ConstraintSystem<F> {
+pub struct ConstraintSystem<F: Field> {
     pub(crate) num_fixed_columns: usize,
     pub(crate) num_advice_columns: usize,
     pub(crate) num_instance_columns: usize,
@@ -376,8 +386,8 @@ pub struct ConstraintSystem<F> {
     pub(crate) permutations: Vec<permutation::Argument>,
 
     // Vector of lookup arguments, where each corresponds to a sequence of
-    // input columns and a sequence of table columns involved in the lookup.
-    pub(crate) lookups: Vec<lookup::Argument>,
+    // input expressions and a sequence of table expressions involved in the lookup.
+    pub(crate) lookups: Vec<lookup::Argument<F>>,
 }
 
 /// Represents the minimal parameters that determine a `ConstraintSystem`.
@@ -391,7 +401,7 @@ pub struct PinnedConstraintSystem<'a, F: Field> {
     instance_queries: &'a Vec<(Column<Instance>, Rotation)>,
     fixed_queries: &'a Vec<(Column<Fixed>, Rotation)>,
     permutations: &'a Vec<permutation::Argument>,
-    lookups: &'a Vec<lookup::Argument>,
+    lookups: &'a Vec<lookup::Argument<F>>,
 }
 
 struct PinnedGates<'a, F: Field>(&'a Vec<(&'static str, Expression<F>)>);
@@ -451,26 +461,20 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
-    /// Add a lookup argument for some input columns and table columns.
-    /// The function will panic if the number of input columns and table
-    /// columns are not the same.
+    /// Add a lookup argument for some input expressions and table expressions.
+    /// The function will panic if the number of input expressions and table
+    /// expressions are not the same.
     pub fn lookup(
         &mut self,
-        input_columns: &[Column<Any>],
-        table_columns: &[Column<Any>],
+        input_expressions: &[Expression<F>],
+        table_expressions: &[Expression<F>],
     ) -> usize {
-        assert_eq!(input_columns.len(), table_columns.len());
+        assert_eq!(input_expressions.len(), table_expressions.len());
 
         let index = self.lookups.len();
 
-        for input in input_columns {
-            self.query_any_index(*input, Rotation::cur());
-        }
-        for table in table_columns {
-            self.query_any_index(*table, Rotation::cur());
-        }
         self.lookups
-            .push(lookup::Argument::new(input_columns, table_columns));
+            .push(lookup::Argument::new(input_expressions, table_expressions));
 
         index
     }

@@ -177,11 +177,28 @@ impl<G: Group> EvaluationDomain<G> {
         }
     }
 
+    /// Returns a constant polynomial in the Lagrange coefficient basis
+    pub fn constant_lagrange(&self, scalar: G) -> Polynomial<G, LagrangeCoeff> {
+        Polynomial {
+            values: vec![scalar; self.n as usize],
+            _marker: PhantomData,
+        }
+    }
+
     /// Returns an empty (zero) polynomial in the extended Lagrange coefficient
     /// basis
     pub fn empty_extended(&self) -> Polynomial<G, ExtendedLagrangeCoeff> {
         Polynomial {
             values: vec![G::group_zero(); self.extended_len()],
+            _marker: PhantomData,
+        }
+    }
+
+    /// Returns a constant polynomial in the extended Lagrange coefficient
+    /// basis
+    pub fn constant_extended(&self, scalar: G) -> Polynomial<G, ExtendedLagrangeCoeff> {
+        Polynomial {
+            values: vec![scalar; self.extended_len()],
             _marker: PhantomData,
         }
     }
@@ -395,4 +412,41 @@ pub struct PinnedEvaluationDomain<'a, G: Group> {
     k: &'a u32,
     extended_k: &'a u32,
     omega: &'a G::Scalar,
+}
+
+#[test]
+fn test_rotate() {
+    use crate::arithmetic::eval_polynomial;
+    use crate::pasta::pallas::Scalar;
+    let domain = EvaluationDomain::<Scalar>::new(1, 3);
+
+    let mut poly = domain.empty_lagrange();
+    assert_eq!(poly.len(), 8);
+    for value in poly.iter_mut() {
+        *value = Scalar::rand();
+    }
+
+    let poly_rotated_cur = poly.rotate(Rotation::cur());
+    let poly_rotated_next = poly.rotate(Rotation::next());
+    let poly_rotated_prev = poly.rotate(Rotation::prev());
+
+    let poly = domain.lagrange_to_coeff(poly);
+    let poly_rotated_cur = domain.lagrange_to_coeff(poly_rotated_cur);
+    let poly_rotated_next = domain.lagrange_to_coeff(poly_rotated_next);
+    let poly_rotated_prev = domain.lagrange_to_coeff(poly_rotated_prev);
+
+    let x = Scalar::rand();
+
+    assert_eq!(
+        eval_polynomial(&poly[..], x),
+        eval_polynomial(&poly_rotated_cur[..], x)
+    );
+    assert_eq!(
+        eval_polynomial(&poly[..], x * domain.omega),
+        eval_polynomial(&poly_rotated_next[..], x)
+    );
+    assert_eq!(
+        eval_polynomial(&poly[..], x * domain.omega_inv),
+        eval_polynomial(&poly_rotated_prev[..], x)
+    );
 }

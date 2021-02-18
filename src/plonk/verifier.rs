@@ -168,6 +168,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
                         // Evaluate the circuit using the custom gates provided
                         .chain(vk.cs.gates.iter().map(move |(_, poly)| {
                             poly.evaluate(
+                                &|scalar| scalar,
                                 &|index| fixed_evals[index],
                                 &|index| advice_evals[index],
                                 &|index| instance_evals[index],
@@ -201,7 +202,6 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
                                 .zip(vk.cs.lookups.iter())
                                 .flat_map(move |(p, argument)| {
                                     p.expressions(
-                                        vk,
                                         l_0,
                                         argument,
                                         theta,

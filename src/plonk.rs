@@ -467,8 +467,12 @@ fn test_proving() {
              *   ...       ...    ...  0         0
              * ]
              */
-            meta.lookup(&[a.into()], &[sl.into()]);
-            meta.lookup(&[a.into(), b.into()], &[sl.into(), sl2.into()]);
+            let a_ = meta.query_any(a.into(), Rotation::cur());
+            let b_ = meta.query_any(b.into(), Rotation::cur());
+            let sl_ = meta.query_any(sl.into(), Rotation::cur());
+            let sl2_ = meta.query_any(sl2.into(), Rotation::cur());
+            meta.lookup(&[a_.clone()], &[sl_.clone()]);
+            meta.lookup(&[a_ * b_], &[sl_ * sl2_]);
 
             meta.create_gate("Combined add-mult", |meta| {
                 let d = meta.query_advice(d, Rotation::next());
@@ -905,39 +909,37 @@ fn test_proving() {
         ],
         lookups: [
             Argument {
-                input_columns: [
-                    Column {
-                        index: 1,
-                        column_type: Advice,
-                    },
+                input_expressions: [
+                    Advice(
+                        0,
+                    ),
                 ],
-                table_columns: [
-                    Column {
-                        index: 6,
-                        column_type: Fixed,
-                    },
+                table_expressions: [
+                    Fixed(
+                        0,
+                    ),
                 ],
             },
             Argument {
-                input_columns: [
-                    Column {
-                        index: 1,
-                        column_type: Advice,
-                    },
-                    Column {
-                        index: 2,
-                        column_type: Advice,
-                    },
+                input_expressions: [
+                    Product(
+                        Advice(
+                            0,
+                        ),
+                        Advice(
+                            1,
+                        ),
+                    ),
                 ],
-                table_columns: [
-                    Column {
-                        index: 6,
-                        column_type: Fixed,
-                    },
-                    Column {
-                        index: 7,
-                        column_type: Fixed,
-                    },
+                table_expressions: [
+                    Product(
+                        Fixed(
+                            0,
+                        ),
+                        Fixed(
+                            1,
+                        ),
+                    ),
                 ],
             },
         ],

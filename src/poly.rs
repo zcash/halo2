@@ -187,6 +187,22 @@ impl<'a, F: Field> Mul<&'a Polynomial<F, ExtendedLagrangeCoeff>>
     }
 }
 
+impl<'a, F: Field> Polynomial<F, LagrangeCoeff> {
+    /// Rotates the values in a Lagrange basis polynomial by `Rotation`
+    pub fn rotate(&self, rotation: Rotation) -> Polynomial<F, LagrangeCoeff> {
+        let mut values = self.values.clone();
+        if rotation.0 < 0 {
+            values.rotate_right((-rotation.0) as usize);
+        } else {
+            values.rotate_left(rotation.0 as usize);
+        }
+        Polynomial {
+            values,
+            _marker: PhantomData,
+        }
+    }
+}
+
 impl<'a, F: Field, B: Basis> Mul<F> for Polynomial<F, B> {
     type Output = Polynomial<F, B>;
 
