@@ -413,3 +413,40 @@ pub struct PinnedEvaluationDomain<'a, G: Group> {
     extended_k: &'a u32,
     omega: &'a G::Scalar,
 }
+
+#[test]
+fn test_rotate() {
+    use crate::arithmetic::eval_polynomial;
+    use crate::pasta::pallas::Scalar;
+    let domain = EvaluationDomain::<Scalar>::new(1, 3);
+
+    let mut poly = domain.empty_lagrange();
+    assert_eq!(poly.len(), 8);
+    for value in poly.iter_mut() {
+        *value = Scalar::rand();
+    }
+
+    let poly_rotated_cur = poly.rotate(Rotation::cur());
+    let poly_rotated_next = poly.rotate(Rotation::next());
+    let poly_rotated_prev = poly.rotate(Rotation::prev());
+
+    let poly = domain.lagrange_to_coeff(poly);
+    let poly_rotated_cur = domain.lagrange_to_coeff(poly_rotated_cur);
+    let poly_rotated_next = domain.lagrange_to_coeff(poly_rotated_next);
+    let poly_rotated_prev = domain.lagrange_to_coeff(poly_rotated_prev);
+
+    let x = Scalar::rand();
+
+    assert_eq!(
+        eval_polynomial(&poly[..], x),
+        eval_polynomial(&poly_rotated_cur[..], x)
+    );
+    assert_eq!(
+        eval_polynomial(&poly[..], x * domain.omega),
+        eval_polynomial(&poly_rotated_next[..], x)
+    );
+    assert_eq!(
+        eval_polynomial(&poly[..], x * domain.omega_inv),
+        eval_polynomial(&poly_rotated_prev[..], x)
+    );
+}
