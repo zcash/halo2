@@ -66,6 +66,23 @@ impl<C: CurveAffine> EccChip<C> {
             q_double * (expr1 + expr2)
         });
 
+        // Create point addition gate
+        meta.create_gate("point addition", |meta| {
+            let q_add = meta.query_fixed(q_add, Rotation::cur());
+            let x_q = meta.query_advice(x_a, Rotation::cur());
+            let y_q = meta.query_advice(y_a, Rotation::cur());
+            let x_a = meta.query_advice(x_a, Rotation::next());
+            let y_a = meta.query_advice(y_a, Rotation::next());
+            let x_p = meta.query_advice(x_p, Rotation::cur());
+            let y_p = meta.query_advice(y_p, Rotation::cur());
+
+            let expr1 = x_a.clone() + x_q.clone() + x_p.clone()
+                - (y_p.clone() - y_q.clone()) * (y_p.clone() - y_q.clone());
+            let expr2 = (y_a + y_q.clone()) * (x_p - x_q.clone()) - (y_p - y_q) * (x_q - x_a);
+
+            q_add * (expr1 + expr2)
+        });
+
         EccConfig {
             num_bases,
             w,
@@ -123,7 +140,34 @@ impl<C: CurveAffine> EccInstructions<C> for EccChip<C> {
         a: &Self::Point,
         b: &Self::Point,
     ) -> Result<Self::Point, Error> {
-        todo!()
+        let config = layouter.config().clone();
+        let (x_q, y_q) = a.get_xy().unwrap();
+        let (x_p, y_p) = b.get_xy().unwrap();
+        let mut x_a = C::Base::zero();
+        let mut y_a = C::Base::zero();
+
+        layouter.assign_region(
+            || "point addition",
+            |mut region| {
+                region.assign_fixed(|| "q_add", config.q_add, 0, || Ok(C::Base::one()))?;
+
+                region.assign_advice(|| "x_a", config.x_a, 0, || Ok(x_q))?;
+                region.assign_advice(|| "y_a", config.y_a, 0, || Ok(y_q))?;
+                region.assign_advice(|| "x_p", config.x_p, 0, || Ok(x_p))?;
+                region.assign_advice(|| "y_p", config.y_p, 0, || Ok(y_p))?;
+
+                let lambda1 = (y_p - y_q) * (x_p - x_q).invert().unwrap();
+                x_a = lambda1 * lambda1 - x_q - x_p;
+                region.assign_advice(|| "x_a", config.x_a, 1, || Ok(x_a))?;
+
+                y_a = lambda1 * (x_q - x_a) - y_q;
+                region.assign_advice(|| "y_a", config.y_a, 1, || Ok(y_a))?;
+
+                Ok(())
+            },
+        )?;
+
+        Ok(C::from_xy(x_a, y_a).unwrap())
     }
 
     fn double(layouter: &mut impl Layouter<Self>, a: &Self::Point) -> Result<Self::Point, Error> {
