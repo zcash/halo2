@@ -7,7 +7,7 @@ use subtle::ConstantTimeEq;
 use crate::arithmetic::{Curve, CurveAffine, FieldExt};
 
 /// Hashes over a message and writes the output to all of `buf`.
-pub fn hash_to_field<F: FieldExt>(message: &[u8], domain_separation_tag: &[u8], buf: &mut [F]) {
+pub fn hash_to_field<F: FieldExt>(message: &[u8], domain_separation_tag: &[u8], buf: &mut [F; 2]) {
     use blake2b_simd::{Params as Blake2bParams, State as Blake2bState};
     assert!(domain_separation_tag.len() < 256);
 
