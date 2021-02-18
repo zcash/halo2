@@ -401,7 +401,7 @@ pub struct PinnedConstraintSystem<'a, F: Field> {
     instance_queries: &'a Vec<(Column<Instance>, Rotation)>,
     fixed_queries: &'a Vec<(Column<Fixed>, Rotation)>,
     permutations: &'a Vec<permutation::Argument>,
-    lookups: &'a Vec<lookup::Argument>,
+    lookups: &'a Vec<lookup::Argument<F>>,
 }
 
 struct PinnedGates<'a, F: Field>(&'a Vec<(&'static str, Expression<F>)>);
