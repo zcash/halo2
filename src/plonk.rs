@@ -100,6 +100,8 @@ impl<C: CurveAffine> VerifyingKey<C> {
     /// the minimal information necessary to reconstruct the verification key.
     pub fn pinned(&self) -> PinnedVerificationKey<'_, C> {
         PinnedVerificationKey {
+            base_modulus: C::Base::MODULUS,
+            scalar_modulus: C::Scalar::MODULUS,
             domain: self.domain.pinned(),
             fixed_commitments: &self.fixed_commitments,
             permutations: &self.permutations,
@@ -110,24 +112,14 @@ impl<C: CurveAffine> VerifyingKey<C> {
 
 /// Minimal representation of a verification key that can be used to identify
 /// its active contents.
+#[derive(Debug)]
 pub struct PinnedVerificationKey<'a, C: CurveAffine> {
+    base_modulus: &'static str,
+    scalar_modulus: &'static str,
     domain: PinnedEvaluationDomain<'a, C::Scalar>,
+    cs: PinnedConstraintSystem<'a, C::Scalar>,
     fixed_commitments: &'a Vec<C>,
     permutations: &'a Vec<permutation::VerifyingKey<C>>,
-    cs: PinnedConstraintSystem<'a, C::Scalar>,
-}
-
-impl<'a, C: CurveAffine> std::fmt::Debug for PinnedVerificationKey<'a, C> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        f.debug_struct("PinnedVerificationKey")
-            .field("base_modulus", &C::Base::MODULUS)
-            .field("scalar_modulus", &C::Scalar::MODULUS)
-            .field("domain", &self.domain)
-            .field("cs", &self.cs)
-            .field("fixed_commitments", self.fixed_commitments)
-            .field("permutations", self.permutations)
-            .finish()
-    }
 }
 /// This is a proving key which allows for the creation of proofs for a
 /// particular circuit.
