@@ -693,7 +693,7 @@ macro_rules! impl_projective_curve_specific {
                 "{}-{}_{}_{}_RO_",
                 domain_prefix,
                 $name_affine::CURVE_ID,
-                "XOF:SHAKE128",
+                "XMD:BLAKE2b",
                 "SSWU"
             );
 

@@ -1,32 +1,64 @@
 //! This module implements "simplified SWU" hashing to short Weierstrass curves
 //! with a = 0.
 
+use std::convert::TryInto;
 use subtle::ConstantTimeEq;
 
 use crate::arithmetic::{Curve, CurveAffine, FieldExt};
 
 /// Hashes over a message and writes the output to all of `buf`.
 pub fn hash_to_field<F: FieldExt>(message: &[u8], domain_separation_tag: &[u8], buf: &mut [F]) {
-    use sha3::digest::{ExtendableOutput, Update};
+    use blake2b_simd::{Params as Blake2bParams, State as Blake2bState};
     assert!(domain_separation_tag.len() < 256);
 
     // Assume that the field size is 32 bytes and k is 256, where k is defined in
     // <https://www.ietf.org/archive/id/draft-irtf-cfrg-hash-to-curve-10.html#name-security-considerations-3>.
     const CHUNKLEN: usize = 64;
 
-    let outlen = buf.len() * CHUNKLEN;
+    let mut dst_prime: Vec<u8> = domain_separation_tag.into();
+    dst_prime.extend_from_slice(&[domain_separation_tag.len() as u8]);
 
-    let mut xof = sha3::Shake128::default();
-    xof.update(message);
-    xof.update(&(outlen as u32).to_be_bytes());
-    xof.update([domain_separation_tag.len() as u8]);
-    xof.update(domain_separation_tag);
+    let personal = [0u8; 16];
+    let empty_hasher = Blake2bParams::new()
+        .hash_length(CHUNKLEN)
+        .personal(&personal)
+        .to_state();
 
-    for (big, buf) in xof
-        .finalize_boxed(outlen)
-        .chunks(CHUNKLEN)
-        .zip(buf.iter_mut())
-    {
+    let xor = |left: &[u8; CHUNKLEN], right: &[u8; CHUNKLEN]| -> Vec<u8> {
+        left.iter()
+            .zip(right.iter())
+            .map(|(&l, &r)| l ^ r)
+            .collect()
+    };
+
+    let finalize = |hasher: &Blake2bState| -> [u8; CHUNKLEN] {
+        hasher.finalize().as_bytes().try_into().unwrap()
+    };
+
+    let b_0 = finalize(
+        empty_hasher
+            .clone()
+            .update(&[0; CHUNKLEN])
+            .update(message)
+            .update(&[0, 128, 0])
+            .update(&dst_prime),
+    );
+    let b_1 = finalize(
+        empty_hasher
+            .clone()
+            .update(&b_0)
+            .update(&[1])
+            .update(&dst_prime),
+    );
+    let b_2 = finalize(
+        empty_hasher
+            .clone()
+            .update(&xor(&b_0, &b_1))
+            .update(&[2])
+            .update(&dst_prime),
+    );
+
+    for (big, buf) in [b_1, b_2].iter().zip(buf.iter_mut()) {
         let mut little = [0u8; CHUNKLEN];
         little.copy_from_slice(big);
         little.reverse();

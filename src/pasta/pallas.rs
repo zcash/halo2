@@ -19,7 +19,8 @@ fn test_iso_map() {
     use crate::arithmetic::Curve;
 
     // This is a regression test (it's the same input to iso_map as for hash_to_curve
-    // with domain prefix "z.cash:test", Shake128, and input b"hello").
+    // with domain prefix "z.cash:test", Shake128, and input b"hello"). We don't
+    // implement Shake128 any more but that's fine.
     let r = super::IsoEp::new_jacobian(
         Base::from_raw([
             0xc37f111df5c4419e,
