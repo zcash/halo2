@@ -265,7 +265,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
 
             // Create a proof
             let mut transcript = Blake2bWrite::init(vec![]);
-            create_proof(&params, &pk, &[circuit], &[], &mut transcript)
+            create_proof(&params, &pk, &[circuit], &[&[]], &mut transcript)
                 .expect("proof generation should not fail")
         });
     });
@@ -277,7 +277,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
 
     // Create a proof
     let mut transcript = Blake2bWrite::init(vec![]);
-    create_proof(&params, &pk, &[circuit], &[], &mut transcript)
+    create_proof(&params, &pk, &[circuit], &[&[]], &mut transcript)
         .expect("proof generation should not fail");
     let proof = transcript.finalize();
 
@@ -285,7 +285,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         b.iter(|| {
             let msm = params.empty_msm();
             let mut transcript = Blake2bRead::init(&proof[..]);
-            let guard = verify_proof(&params, pk.get_vk(), msm, &[], &mut transcript).unwrap();
+            let guard = verify_proof(&params, pk.get_vk(), msm, &[&[]], &mut transcript).unwrap();
             let msm = guard.clone().use_challenges();
             assert!(msm.eval());
         });
