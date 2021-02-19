@@ -210,7 +210,7 @@ fn test_proving() {
     // Initialize the polynomial commitment parameters
     let params: Params<EqAffine> = Params::new(K);
 
-    #[derive(Copy, Clone)]
+    #[derive(Clone)]
     struct PLONKConfig {
         a: Column<Advice>,
         b: Column<Advice>,
@@ -226,8 +226,8 @@ fn test_proving() {
         sl: Column<Fixed>,
         sl2: Column<Fixed>,
 
-        perm: usize,
-        perm2: usize,
+        perm: Permutation,
+        perm2: Permutation,
     }
 
     trait StandardCS<FF: FieldExt> {
@@ -393,10 +393,15 @@ fn test_proving() {
                 _ => unreachable!(),
             };
 
-            self.cs
-                .copy(self.config.perm, left_column, left.1, right_column, right.1)?;
             self.cs.copy(
-                self.config.perm2,
+                &self.config.perm,
+                left_column,
+                left.1,
+                right_column,
+                right.1,
+            )?;
+            self.cs.copy(
+                &self.config.perm2,
                 left_column,
                 left.1,
                 right_column,

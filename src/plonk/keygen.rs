@@ -3,7 +3,7 @@ use group::Curve;
 
 use super::{
     circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    permutation, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
+    permutation, Error, LagrangeCoeff, Permutation, Polynomial, ProvingKey, VerifyingKey,
 };
 use crate::arithmetic::CurveAffine;
 use crate::poly::{
@@ -116,18 +116,18 @@ impl<F: Field> Assignment<F> for Assembly<F> {
 
     fn copy(
         &mut self,
-        permutation: usize,
+        permutation: &Permutation,
         left_column: usize,
         left_row: usize,
         right_column: usize,
         right_row: usize,
     ) -> Result<(), Error> {
         // Check bounds first
-        if permutation >= self.permutations.len() {
+        if permutation.index() >= self.permutations.len() {
             return Err(Error::BoundsFailure);
         }
 
-        self.permutations[permutation].copy(left_column, left_row, right_column, right_row)
+        self.permutations[permutation.index()].copy(left_column, left_row, right_column, right_row)
     }
 
     fn push_namespace<NR, N>(&mut self, _: N)

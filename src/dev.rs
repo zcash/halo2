@@ -6,7 +6,7 @@ use crate::{
     arithmetic::{FieldExt, Group},
     plonk::{
         permutation, Advice, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Expression, Fixed,
+        Expression, Fixed, Permutation,
     },
     poly::Rotation,
 };
@@ -211,18 +211,18 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
 
     fn copy(
         &mut self,
-        permutation: usize,
+        permutation: &Permutation,
         left_column: usize,
         left_row: usize,
         right_column: usize,
         right_row: usize,
     ) -> Result<(), crate::plonk::Error> {
         // Check bounds first
-        if permutation >= self.permutations.len() {
+        if permutation.index() >= self.permutations.len() {
             return Err(Error::BoundsFailure);
         }
 
-        self.permutations[permutation].copy(left_column, left_row, right_column, right_row)
+        self.permutations[permutation.index()].copy(left_column, left_row, right_column, right_row)
     }
 
     fn push_namespace<NR, N>(&mut self, _: N)

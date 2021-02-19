@@ -17,7 +17,7 @@ use std::marker::PhantomData;
 #[derive(Copy, Clone, Debug)]
 pub struct Variable(Column<Advice>, usize);
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 struct PLONKConfig {
     a: Column<Advice>,
     b: Column<Advice>,
@@ -29,7 +29,7 @@ struct PLONKConfig {
     sm: Column<Fixed>,
     sp: Column<Fixed>,
 
-    perm: usize,
+    perm: Permutation,
 }
 
 trait StandardCS<FF: FieldExt> {
@@ -170,8 +170,13 @@ impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardCS<FF> for StandardPLONK<'a, 
             _ => unreachable!(),
         };
 
-        self.cs
-            .copy(self.config.perm, left_column, left.1, right_column, right.1)
+        self.cs.copy(
+            &self.config.perm,
+            left_column,
+            left.1,
+            right_column,
+            right.1,
+        )
     }
     fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
     where

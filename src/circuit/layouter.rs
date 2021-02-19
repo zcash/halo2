@@ -332,7 +332,7 @@ impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> RegionLayouter<C>
             .ok_or(Error::SynthesisError)?;
 
         self.layouter.cs.copy(
-            permutation.index(),
+            permutation,
             left_column,
             *self.layouter.regions[*left.region_index] + left.row_offset,
             right_column,

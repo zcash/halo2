@@ -5,7 +5,7 @@ use std::iter;
 use super::{
     circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
-    ChallengeY, Error, ProvingKey,
+    ChallengeY, Error, Permutation, ProvingKey,
 };
 use crate::arithmetic::{eval_polynomial, CurveAffine, FieldExt};
 use crate::poly::{
@@ -159,7 +159,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
 
                 fn copy(
                     &mut self,
-                    _: usize,
+                    _: &Permutation,
                     _: usize,
                     _: usize,
                     _: usize,

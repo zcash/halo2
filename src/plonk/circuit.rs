@@ -137,11 +137,7 @@ pub struct Permutation {
 impl Permutation {
     /// Configures a new permutation for the given columns.
     pub fn new<F: FieldExt>(meta: &mut ConstraintSystem<F>, columns: &[Column<Any>]) -> Self {
-        let index = meta.permutation(columns);
-        Permutation {
-            index,
-            mapping: columns.iter().copied().collect(),
-        }
+        meta.permutation(columns)
     }
 
     /// Returns index of permutation
@@ -208,7 +204,7 @@ pub trait Assignment<F: Field> {
     /// Assign two advice columns to have the same value
     fn copy(
         &mut self,
-        permutation: usize,
+        permutation: &Permutation,
         left_column: usize,
         left_row: usize,
         right_column: usize,
@@ -477,8 +473,8 @@ impl<F: Field> ConstraintSystem<F> {
         }
     }
 
-    /// Add a permutation argument for some advice columns
-    pub fn permutation(&mut self, columns: &[Column<Any>]) -> usize {
+    /// Add a permutation argument for some columns
+    pub fn permutation(&mut self, columns: &[Column<Any>]) -> Permutation {
         let index = self.permutations.len();
 
         for column in columns {
@@ -487,7 +483,10 @@ impl<F: Field> ConstraintSystem<F> {
         self.permutations
             .push(permutation::Argument::new(columns.to_vec()));
 
-        index
+        Permutation {
+            index,
+            mapping: columns.to_vec(),
+        }
     }
 
     /// Add a lookup argument for some input expressions and table expressions.
