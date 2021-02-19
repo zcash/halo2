@@ -157,24 +157,11 @@ impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardCS<FF> for StandardPLONK<'a, 
         ))
     }
     fn copy(&mut self, left: Variable, right: Variable) -> Result<(), Error> {
-        let left_column = match left.0 {
-            x if x == self.config.a => 0,
-            x if x == self.config.b => 1,
-            x if x == self.config.c => 2,
-            _ => unreachable!(),
-        };
-        let right_column = match right.0 {
-            x if x == self.config.a => 0,
-            x if x == self.config.b => 1,
-            x if x == self.config.c => 2,
-            _ => unreachable!(),
-        };
-
         self.cs.copy(
             &self.config.perm,
-            left_column,
+            left.0.into(),
             left.1,
-            right_column,
+            right.0.into(),
             right.1,
         )
     }

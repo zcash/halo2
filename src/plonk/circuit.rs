@@ -205,9 +205,9 @@ pub trait Assignment<F: Field> {
     fn copy(
         &mut self,
         permutation: &Permutation,
-        left_column: usize,
+        left_column: Column<Any>,
         left_row: usize,
-        right_column: usize,
+        right_column: Column<Any>,
         right_row: usize,
     ) -> Result<(), Error>;
 

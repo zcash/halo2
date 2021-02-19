@@ -320,22 +320,11 @@ impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> RegionLayouter<C>
         left: Cell,
         right: Cell,
     ) -> Result<(), Error> {
-        let left_column = permutation
-            .mapping()
-            .iter()
-            .position(|c| c == &left.column)
-            .ok_or(Error::SynthesisError)?;
-        let right_column = permutation
-            .mapping()
-            .iter()
-            .position(|c| c == &right.column)
-            .ok_or(Error::SynthesisError)?;
-
         self.layouter.cs.copy(
             permutation,
-            left_column,
+            left.column,
             *self.layouter.regions[*left.region_index] + left.row_offset,
-            right_column,
+            right.column,
             *self.layouter.regions[*right.region_index] + right.row_offset,
         )?;
 
