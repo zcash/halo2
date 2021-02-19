@@ -6,7 +6,9 @@ use plotters::{
 use std::cmp;
 use std::collections::HashSet;
 
-use crate::plonk::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed};
+use crate::plonk::{
+    Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation,
+};
 
 /// Renders the circuit layout on the given drawing area.
 ///
@@ -251,10 +253,10 @@ impl<F: Field> Assignment<F> for Layout {
 
     fn copy(
         &mut self,
+        _: &Permutation,
+        _: Column<Any>,
         _: usize,
-        _: usize,
-        _: usize,
-        _: usize,
+        _: Column<Any>,
         _: usize,
     ) -> Result<(), crate::plonk::Error> {
         // Do nothing; we don't care about permutations in this context.

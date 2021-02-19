@@ -201,7 +201,7 @@ pub trait Assignment<F: Field> {
         A: FnOnce() -> AR,
         AR: Into<String>;
 
-    /// Assign two advice columns to have the same value
+    /// Assign two cells to have the same value
     fn copy(
         &mut self,
         permutation: &Permutation,
