@@ -40,13 +40,13 @@ equality constraints to copy values from other cells of the circuit into that co
 offset references, we not only need fewer columns; we also do not need equality constraints to
 be supported for all of those columns, which improves efficiency.
 
-In R1CS (which may be more familiar to some readers, but don't worry if it isn't), a circuit
-consists of a "sea of gates" with no semantically significant ordering. Because of offset
-references, the order of rows in a UPA circuit, on the other hand, *is* significant. We're
-going to make some simplifying assumptions and define some abstractions to tame the resulting
-complexity: the aim will be that, [at the gadget level](gadgets.md) where we do most of our
-circuit construction, we will not have to deal with relative references or with gate layout
-explicitly.
+In R1CS (another arithmetization which may be more familiar to some readers, but don't worry
+if it isn't), a circuit consists of a "sea of gates" with no semantically significant ordering.
+Because of offset references, the order of rows in a UPA circuit, on the other hand, *is*
+significant. We're going to make some simplifying assumptions and define some abstractions to
+tame the resulting complexity: the aim will be that, [at the gadget level](gadgets.md) where
+we do most of our circuit construction, we will not have to deal with relative references or
+with gate layout explicitly.
 
 We will partition a circuit into ***regions***, where each region contains a disjoint subset
 of cells, and relative references only ever point *within* a region. Part of the responsibility
@@ -59,7 +59,7 @@ planner that implements a very general algorithm, but you can write your own flo
 you need to.
 
 Floor planning will in general leave gaps in the matrix, because the gates in a given row did
-not use all available columns. These are filled in ---as far as possible--- by gates that do
+not use all available columns. These are filled in —as far as possible— by gates that do
 not require offset references, which allows them to be placed on any row.
 
 Cores can also define lookup tables. If more than one table is defined for the same lookup

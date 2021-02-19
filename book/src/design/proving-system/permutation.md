@@ -123,12 +123,40 @@ correct $(a\ b\ c\ d)$.
 
 ## Argument specification
 
-Given a permutation between advice columns $[p_0(X), \dots, p_j(X)]$, the permutation is
-constrained by the rule
+We need to represent permutations over $m$ columns, represented by polynomials $p_0, \ldots, p_{m-1}$.
 
-$$p(X) = \prod_0^j \frac{p_j(X) + \beta \delta^j X + \gamma}{p_j(X) + \beta s_j(X) + \gamma}$$
+We first assign a unique element of $\mathbb{F}^\times$ as an "extended domain" element for each cell
+that can participate in the permutation argument.
 
-where:
-- $p_j(X)$ is the $j$th advice column in this permutation.
-- $s_j(X)$ is a pseudo-column containing the permutation of $p_j(X)$.
-- $\delta$ is a $t$ root of unity, where $t \cdot 2^s + 1 = p$ with t odd.
+Let $\omega$ be a $2^k$ root of unity and let $\delta$ be a $T$ root of unity, where
+$T \cdot 2^S + 1 = p$ with $T$ odd and $k \leq S$.
+We will use $\delta^i \cdot \omega^j \in \mathbb{F}^\times$ as the extended domain element for the
+cell in the $j$th row of the $i$th column of the permutation argument.
+
+If we have a permutation $\sigma(\mathsf{column}: i, \mathsf{row}: j) = (\mathsf{column}: i', \mathsf{row}: j')$,
+we can represent it as a vector of $m$ polynomials $s_i(X)$ such that $s_i(\omega^j) = \delta^{i'} \cdot \omega^{j'}$.
+
+Notice that the identity permutation can be represented by the vector of $m$ polynomials
+$\mathsf{ID}_i(X)$ such that $\mathsf{ID}_i(X) = \delta^i \cdot X$.
+
+Now given our permutation represented by $s_0, \ldots, s_{m-1}$, over advice columns represented by
+$p_0, \ldots, p_{m-1}$, we want to ensure that:
+$$
+\prod\limits_{i=0}^{m-1} \prod\limits_{j=0}^{n-1} \left(\frac{p_i(\omega^j) + \beta \cdot \delta^i \cdot \omega^j + \gamma}{p_i(\omega^j) + \beta \cdot s_i(\omega^j) + \gamma}\right) = 1
+$$
+
+Let $Z_P$ be such that $Z_P(\omega^0) = Z_P(\omega^n) = 1$ and for $0 \leq j < n$:
+$$\begin{array}{rl}
+Z_P(\omega^{j+1}) &= \prod\limits_{h=0}^{j} \prod\limits_{i=0}^{m-1} \frac{p_i(\omega^h) + \beta \cdot \delta^i \cdot \omega^h + \gamma}{p_i(\omega^h) + \beta \cdot s_i(\omega^h) + \gamma} \\
+                  &= Z_P(\omega^j) \prod\limits_{i=0}^{m-1} \frac{p_i(\omega^j) + \beta \cdot \delta^i \cdot \omega^j + \gamma}{p_i(\omega^j) + \beta \cdot s_i(\omega^j) + \gamma}
+\end{array}$$
+
+Then it is sufficient to enforce the constraints:
+$$
+l_0 \cdot (Z_P(X) - 1) = 0 \\
+Z_P(\omega X) \cdot \prod\limits_{i=0}^{m-1} \left(p_i(X) + \beta \cdot s_i(X) + \gamma\right) - Z_P(X) \cdot \prod\limits_{i=0}^{m-1} \left(p_i(X) + \beta \cdot \delta^i \cdot X + \gamma\right) = 0
+$$
+
+> The optimization used to obtain the simple representation of the identity permutation was suggested
+> by Vitalik Buterin for PLONK, and is described at the end of section 8 of the PLONK paper. Note that
+> the $\delta^i$ are all distinct quadratic non-residues.

@@ -35,7 +35,7 @@ lookups independent. Then, the prover commits to the permutations for each looku
 follows:
 
 - Given a lookup with input column polynomials $[A_0(X), \dots, A_{m-1}(X)]$ and table
-  column polynomials $[S_0(X), \dots, S_{m-1}]$, the prover constructs two compressed
+  column polynomials $[S_0(X), \dots, S_{m-1}(X)]$, the prover constructs two compressed
   polynomials
 
   $$A_\text{compressed}(X) = \theta^{m-1} A_0(X) + \theta^{m-2} A_1(X) + \dots + \theta A_{m-2}(X) + A_{m-1}(X)$$
@@ -52,21 +52,40 @@ and sends them to the verifier.
 
 ## Committing to the equality constraint permutations
 
-- The verifier samples $\beta$ and $\gamma$.
-- For each permutation, the prover constructs the corresponding
-  [constraint polynomial](permutation.md#argument-specification).
-- The prover creates blinding commitments to every constraint polynomial
+The verifier samples $\beta$ and $\gamma$.
 
-  $$\mathbf{P} = \left[\text{Commit}(p(X))), \dots \right]$$
+For each equality constraint argument:
 
-  and sends them to the verifier.
+- The prover constructs a vector $P$:
+
+$$
+P_j = \prod\limits_{i=0}^{m-1} \frac{p_i(\omega^j) + \beta \cdot \delta^i \cdot \omega^j + \gamma}{p_i(\omega^j) + \beta \cdot s_i(\omega^j) + \gamma}
+$$
+
+- The prover constructs a polynomial $Z_P$ which has a Lagrange basis representation
+  corresponding to a running product of $P$, starting at $Z_P(1) = 1$.
+
+See the [Permutation argument](permutation.md#argument-specification) section for more detail.
+
+The prover creates blinding commitments to each $Z_P$ polynomial:
+
+$$\mathbf{Z_P} = \left[\text{Commit}(Z_P(X)), \dots \right]$$
+
+and sends them to the verifier.
 
 ## Committing to the lookup permutation product columns
 
-In addition to committing to the individual permuted lookups, the prover needs to commit
-to the permutation product column
+In addition to committing to the individual permuted lookups, for each lookup,
+the prover needs to commit to the permutation product column:
 
-$$Z(X) = \frac{(A_\text{compressed}(X) + \beta)(S_\text{compressed}(X) + \gamma)}{(A'(X) + \beta)(S'(X) + \gamma)}$$
+- The prover constructs a vector $P$:
+
+$$
+P_j = \frac{(A_\text{compressed}(\omega^j) + \beta)(S_\text{compressed}(\omega^j) + \gamma)}{(A'(\omega^j) + \beta)(S'(\omega^j) + \gamma)}
+$$
+
+- The prover constructs a polynomial $Z_L$ which has a Lagrange basis representation
+  corresponding to a running product of $P$, starting at $Z_L(1) = 1$.
 
 $\beta$ and $\gamma$ are used to combine the permutation arguments for $A'(X)$ and $S'(X)$
 while keeping them independent. We can reuse $\beta$ and $\gamma$ from the equality
@@ -76,9 +95,8 @@ important thing here is that the verifier samples $\beta$ and $\gamma$ after the
 has created $\mathbf{A}$, $\mathbf{F}$, and $\mathbf{L}$ (and thus commited to all the
 cell values used in lookup columns, as well as $A'(X)$ and $S'(X)$ for each lookup).
 
-As before, the prover creates blinding commitments to the permutation product column for
-every lookup
+As before, the prover creates blinding commitments to each $Z_L$ polynomial:
 
-$$\mathbf{Z} = \left[\text{Commit}(Z(X))), \dots \right]$$
+$$\mathbf{Z_L} = \left[\text{Commit}(Z_L(X)), \dots \right]$$
 
 and sends them to the verifier.

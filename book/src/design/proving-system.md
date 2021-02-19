@@ -46,8 +46,8 @@ now serves as a summary of the following sub-sections.
 |                                                                             | $\larr$ | $\theta$                           |
 | $\mathbf{L} = [(A'_0, S'_0), \dots, (A'_{m - 1}, S'_{m - 1})]$              | $\rarr$ |                                    |
 |                                                                             | $\larr$ | $\beta, \gamma$                    |
-| $\mathbf{P} = [P_0, P_1, \dots, P_{m - 1}]$                                 | $\rarr$ |                                    |
-| $\mathbf{Z} = [Z_0, Z_1, \dots, Z_{m - 1}]$                                 | $\rarr$ |                                    |
+| $\mathbf{Z_P} = [Z_{P,0}, Z_{P,1}, \ldots]$                                 | $\rarr$ |                                    |
+| $\mathbf{Z_L} = [Z_{L,0}, Z_{L,1}, \ldots]$                                 | $\rarr$ |                                    |
 |                                                                             | $\larr$ | $y$                                |
 | $h(X) = \frac{\text{gate}_0(X) + \dots + y^i \cdot \text{gate}_i(X)}{t(X)}$ |         |                                    |
 | $h(X) = h_0(X) + \dots + X^{n(d-1)} h_{d-1}(X)$                             |         |                                    |

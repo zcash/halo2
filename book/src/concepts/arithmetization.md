@@ -30,8 +30,8 @@ A UPA circuit depends on a ***configuration***:
   another row relative to this one (with wrap-around, i.e. taken modulo $n$). The maximum
   degree of each polynomial is given by the polynomial degree bound.
 
-* A sequence of ***lookup arguments*** defined over tuples of ***input columns*** and
-  ***table columns***.
+* A sequence of ***lookup arguments*** defined over tuples of ***input expressions***
+  (which are multivariate polynomials as above) and ***table columns***.
 
 A UPA circuit also defines:
 
