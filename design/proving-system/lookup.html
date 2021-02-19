@@ -236,6 +236,9 @@ and <span class="katex"><span class="katex-html" aria-hidden="true"><span class=
 <li>The commitments to the columns of <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.05764em;">S</span></span></span></span> can be precomputed, then combined cheaply once
 the challenge is known by taking advantage of the homomorphic property of Pedersen
 commitments.</li>
+<li>The columns of <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal">A</span></span></span></span> can be given as arbitrary polynomial expressions using relative
+references. These will be substituted into the product column constraint, subject to
+the maximum degree bound. This potentially saves one or more advice columns.</li>
 </ul>
 </li>
 <li>Then, a lookup argument for an arbitrary-width relation can be implemented in terms of a
@@ -257,7 +260,7 @@ were implemented.</li>
 </li>
 </ul>
 <p>These generalizations are similar to those in sections 4 and 5 of the
-<a href="https://eprint.iacr.org/2020/315.pdf">Plookup paper</a> That is, the differences from
+<a href="https://eprint.iacr.org/2020/315.pdf">Plookup paper</a>. That is, the differences from
 Plookup are in the subset argument. This argument can then be used in all the same ways;
 for instance, the optimized range check technique in section 5 of the Plookup paper can
 also be used with this subset argument.</p>

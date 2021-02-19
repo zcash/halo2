@@ -198,13 +198,13 @@ need a column to hold each value referred to by a custom gate, and we would need
 equality constraints to copy values from other cells of the circuit into that column. With
 offset references, we not only need fewer columns; we also do not need equality constraints to
 be supported for all of those columns, which improves efficiency.</p>
-<p>In R1CS (which may be more familiar to some readers, but don't worry if it isn't), a circuit
-consists of a &quot;sea of gates&quot; with no semantically significant ordering. Because of offset
-references, the order of rows in a UPA circuit, on the other hand, <em>is</em> significant. We're
-going to make some simplifying assumptions and define some abstractions to tame the resulting
-complexity: the aim will be that, <a href="gadgets.html">at the gadget level</a> where we do most of our
-circuit construction, we will not have to deal with relative references or with gate layout
-explicitly.</p>
+<p>In R1CS (another arithmetization which may be more familiar to some readers, but don't worry
+if it isn't), a circuit consists of a &quot;sea of gates&quot; with no semantically significant ordering.
+Because of offset references, the order of rows in a UPA circuit, on the other hand, <em>is</em>
+significant. We're going to make some simplifying assumptions and define some abstractions to
+tame the resulting complexity: the aim will be that, <a href="gadgets.html">at the gadget level</a> where
+we do most of our circuit construction, we will not have to deal with relative references or
+with gate layout explicitly.</p>
 <p>We will partition a circuit into <em><strong>regions</strong></em>, where each region contains a disjoint subset
 of cells, and relative references only ever point <em>within</em> a region. Part of the responsibility
 of a core implementation is to ensure that gates that make offset references are laid out in
@@ -214,7 +214,7 @@ to decide where (i.e. at what starting row) each region is placed. There is a de
 planner that implements a very general algorithm, but you can write your own floor planner if
 you need to.</p>
 <p>Floor planning will in general leave gaps in the matrix, because the gates in a given row did
-not use all available columns. These are filled in ---as far as possible--- by gates that do
+not use all available columns. These are filled in —as far as possible— by gates that do
 not require offset references, which allows them to be placed on any row.</p>
 <p>Cores can also define lookup tables. If more than one table is defined for the same lookup
 argument, we can use a <em><strong>tag column</strong></em> to specify which table is used on each row. It is also
