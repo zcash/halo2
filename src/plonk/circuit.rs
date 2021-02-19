@@ -7,6 +7,7 @@ use std::{
 };
 
 use super::{lookup, permutation, Error};
+use crate::arithmetic::FieldExt;
 use crate::poly::Rotation;
 
 /// A column type
@@ -123,6 +124,34 @@ impl TryFrom<Column<Any>> for Column<Instance> {
             }),
             _ => Err("Cannot convert into Column<Instance>"),
         }
+    }
+}
+
+/// A permutation.
+#[derive(Clone, Debug)]
+pub struct Permutation {
+    index: usize,
+    mapping: Vec<Column<Any>>,
+}
+
+impl Permutation {
+    /// Configures a new permutation for the given columns.
+    pub fn new<F: FieldExt>(meta: &mut ConstraintSystem<F>, columns: &[Column<Any>]) -> Self {
+        let index = meta.permutation(columns);
+        Permutation {
+            index,
+            mapping: columns.iter().copied().collect(),
+        }
+    }
+
+    /// Returns index of permutation
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    /// Returns mapping of permutation
+    pub fn mapping(&self) -> &[Column<Any>] {
+        &self.mapping
     }
 }
 
