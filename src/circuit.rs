@@ -28,11 +28,47 @@ pub trait Chip: Sized {
     fn load(layouter: &mut impl Layouter<Self>) -> Result<(), Error>;
 }
 
+/// Index of a region in a layouter
+#[derive(Clone, Copy, Debug)]
+pub struct RegionIndex(usize);
+
+impl From<usize> for RegionIndex {
+    fn from(idx: usize) -> RegionIndex {
+        RegionIndex(idx)
+    }
+}
+
+impl std::ops::Deref for RegionIndex {
+    type Target = usize;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+/// Starting row of a region in a layouter
+#[derive(Clone, Copy, Debug)]
+pub struct RegionStart(usize);
+
+impl From<usize> for RegionStart {
+    fn from(idx: usize) -> RegionStart {
+        RegionStart(idx)
+    }
+}
+
+impl std::ops::Deref for RegionStart {
+    type Target = usize;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 /// A pointer to a cell within a circuit.
 #[derive(Clone, Copy, Debug)]
 pub struct Cell {
     /// Identifies the region in which this cell resides.
-    region_index: usize,
+    region_index: RegionIndex,
     row_offset: usize,
     column: Column<Any>,
 }
