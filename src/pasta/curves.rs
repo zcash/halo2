@@ -3,7 +3,6 @@
 
 use core::cmp;
 use core::fmt::Debug;
-use core::hash::{Hash, Hasher};
 use core::ops::{Add, Mul, Neg, Sub};
 use ff::Field;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
@@ -647,14 +646,6 @@ macro_rules! new_curve_impl {
                     y: $base::conditional_select(&a.y, &b.y, choice),
                     infinity: Choice::conditional_select(&a.infinity, &b.infinity, choice),
                 }
-            }
-        }
-
-        impl Hash for $name_affine {
-            fn hash<H: Hasher>(&self, state: &mut H) {
-                self.x.hash(state);
-                self.y.hash(state);
-                bool::from(self.infinity).hash(state)
             }
         }
 
