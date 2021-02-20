@@ -60,7 +60,7 @@ pub trait Curve:
     /// Obtains the additive identity.
     fn zero() -> Self;
 
-    /// Obtains the base point of the curve, if defined.
+    /// Obtains the base point of the curve.
     fn one() -> Self;
 
     /// Doubles this element.
@@ -162,7 +162,7 @@ pub trait CurveAffine:
     /// Obtains the additive identity.
     fn zero() -> Self;
 
-    /// Obtains the base point of the curve, if defined.
+    /// Obtains the base point of the curve.
     fn one() -> Self;
 
     /// Returns whether or not this element is the identity.
