@@ -61,7 +61,7 @@ fn test_iso_map() {
     let p2 =
         super::hashtocurve::iso_map::<_, Affine, super::IsoEpAffine>(&r2, &Ep::ISOGENY_CONSTANTS);
     assert!(bool::from(p2.is_on_curve()));
-    assert!(bool::from(p2 == p.double()));
+    assert!(p2 == p.double());
 }
 
 #[test]
