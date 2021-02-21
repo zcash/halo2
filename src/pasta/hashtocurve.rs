@@ -98,7 +98,6 @@ pub fn map_to_curve_simple_swu<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAf
     u: &F,
     theta: F,
     z: F,
-    b_over_za: F,
 ) -> I::Projective {
     // 1. tv1 = inv0(Z^2 * u^4 + Z * u^2)
     // 2. x1 = (-B / A) * (1 + tv1)
@@ -127,17 +126,11 @@ pub fn map_to_curve_simple_swu<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAf
     let z_u2 = z * u.square();
     let ta = z_u2.square() + z_u2;
     let num_x1 = b * (ta + F::one());
-    let div = -a * ta;
+    let div = a * F::conditional_select(&-ta, &z, ta.ct_is_zero());
     let num2_x1 = num_x1.square();
     let div2 = div.square();
     let div3 = div2 * div;
-    let ta_is_zero = ta.ct_is_zero();
-    let num_gx1 = F::conditional_select(
-        &((num2_x1 + a * div2) * num_x1 + b * div3),
-        &b_over_za,
-        ta_is_zero,
-    );
-    let div_gx1 = F::conditional_select(&div3, &F::one(), ta_is_zero);
+    let num_gx1 = (num2_x1 + a * div2) * num_x1 + b * div3;
 
     // 5. x2 = Z * u^2 * x1
     let num_x2 = z_u2 * num_x1; // same div
@@ -145,7 +138,7 @@ pub fn map_to_curve_simple_swu<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAf
     // 6. gx2 = x2^3 + A * x2 + B  [optimized out; see below]
     // 7. If is_square(gx1), set x = x1 and y = sqrt(gx1)
     // 8. Else set x = x2 and y = sqrt(gx2)
-    let (gx1_square, y1) = F::sqrt_ratio(&num_gx1, &div_gx1);
+    let (gx1_square, y1) = F::sqrt_ratio(&num_gx1, &div3);
 
     // This magic also comes from a generalization of [WB2019, section 4.2].
     //

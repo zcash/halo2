@@ -695,13 +695,11 @@ macro_rules! impl_projective_curve_specific {
                     &us[0],
                     $name::THETA,
                     $name::Z,
-                    $name::B_OVER_ZA,
                 );
                 let q1 = hashtocurve::map_to_curve_simple_swu::<$base, $name_affine, $iso_affine>(
                     &us[1],
                     $name::THETA,
                     $name::Z,
-                    $name::B_OVER_ZA,
                 );
                 let r = q0 + &q1;
                 assert!(bool::from(r.is_on_curve()));
@@ -988,15 +986,6 @@ impl Ep {
         0x4000000000000000,
     ]);
 
-    /// `b * &((*z * a).invert().unwrap())` where a and b correspond with curve
-    /// constants for the isogenous curve
-    pub const B_OVER_ZA: Fp = Fp::from_raw([
-        0xaf333253bca63800,
-        0xf6ca6e5ce0e2b674,
-        0xe9585bf1a0c67160,
-        0x2c150731d26bf03d,
-    ]);
-
     /// `(F::ROOT_OF_UNITY.invert().unwrap() * z).sqrt().unwrap()`
     pub const THETA: Fp = Fp::from_raw([
         0xca330bcc09ac318e,
@@ -1095,15 +1084,6 @@ impl Eq {
         0x224698fc0994a8dd,
         0x0000000000000000,
         0x4000000000000000,
-    ]);
-
-    /// `b * &((*z * a).invert().unwrap())` where a and b correspond with curve
-    /// constants for the isogenous curve
-    pub const B_OVER_ZA: Fq = Fq::from_raw([
-        0xb66e73e89c4736c2,
-        0x6fa1dc53f442887a,
-        0xcb59112c429e2216,
-        0x252ca74e8e7b7846,
     ]);
 
     /// `(F::ROOT_OF_UNITY.invert().unwrap() * z).sqrt().unwrap()`
