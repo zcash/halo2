@@ -15,20 +15,58 @@ pub type Point = Eq;
 pub type Affine = EqAffine;
 
 #[test]
-fn test_map_to_curve_vesta() {
+fn test_map_to_curve_simple_swu() {
+    use crate::arithmetic::Curve;
+    use crate::pasta::curves::{IsoEq, IsoEqAffine};
+    use crate::pasta::hashtocurve::map_to_curve_simple_swu;
+
+    // The zero input is a special case.
+    let p: IsoEq =
+        map_to_curve_simple_swu::<Fq, EqAffine, IsoEqAffine>(&Fq::zero(), Eq::THETA, Eq::Z);
+    let (x, y, z) = p.jacobian_coordinates();
+    println!("{:?}", p);
+    assert!(
+        format!("{:?}", x) == "0x2ccc4c6ec2660e5644305bc52527d904d408f92407f599df8f158d50646a2e78"
+    );
+    assert!(
+        format!("{:?}", y) == "0x29a34381321d13d72d50b6b462bb4ea6a9e47393fa28a47227bf35bc0ee7aa59"
+    );
+    assert!(
+        format!("{:?}", z) == "0x0b851e9e579403a76df1100f556e1f226e5656bdf38f3bf8601d8a3a9a15890b"
+    );
+
+    let p: IsoEq =
+        map_to_curve_simple_swu::<Fq, EqAffine, IsoEqAffine>(&Fq::one(), Eq::THETA, Eq::Z);
+    let (x, y, z) = p.jacobian_coordinates();
+    println!("{:?}", p);
+    assert!(
+        format!("{:?}", x) == "0x165f8b71841c5abc3d742ec13fb16f099d596b781e6f5c7d0b6682b1216a8258"
+    );
+    assert!(
+        format!("{:?}", y) == "0x0dadef21de74ed7337a37dd74f126a92e4df73c3a704da501e36eaf59cf03120"
+    );
+    assert!(
+        format!("{:?}", z) == "0x0a3d6f6c1af02bd9274cc0b80129759ce77edeef578d7de968d4a47d39026c82"
+    );
+}
+
+#[test]
+fn test_hash_to_curve() {
     use crate::arithmetic::Curve;
 
+    // This test vector is chosen so that the first map_to_curve_simple_swu takes the gx1 non-square
+    // "branch" and the second takes the gx1 square "branch" (opposite to the Pallas test vector).
     let hash = Point::hash_to_curve("z.cash:test");
     let p: Point = hash(b"hello");
     let (x, y, z) = p.jacobian_coordinates();
     println!("{:?}", p);
     assert!(
-        format!("{:?}", x) == "0x3984612258b3b43b4f6e046f7f796bbd35ffd8908804bcf47b9537d3ec7645c9"
+        format!("{:?}", x) == "0x24c3431db13111fcba2f214a0662ae48e675801988c5705877525750b65f7ad8"
     );
     assert!(
-        format!("{:?}", y) == "0x2573c035293d745a288a65a7a37709ef99bcf31b77cfb3a1126a61e3adeebc4b"
+        format!("{:?}", y) == "0x0df21621bf38070d79193ec5959fc2bb09468e71c0190d0217b0984fc92282f3"
     );
     assert!(
-        format!("{:?}", z) == "0x1cb99da94a634842b09a3ee1e5b462233e1fc23d0b357ec7fb0d1c409be30720"
+        format!("{:?}", z) == "0x3e95ef9cbe5a9978c0d82635b242cf773ecfbc764ae9b936aba64c43f67091c6"
     );
 }
