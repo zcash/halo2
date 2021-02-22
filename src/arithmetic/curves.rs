@@ -33,6 +33,9 @@ pub trait CurveExt:
         + Mul<Self::ScalarExt, Output = Self>
         + for<'r> Mul<Self::ScalarExt, Output = Self>;
 
+    /// CURVE_ID used for hash-to-curve.
+    const CURVE_ID: &'static str;
+
     /// Apply the curve endomorphism by multiplying the x-coordinate
     /// by an element of multiplicative order 3.
     fn endo(&self) -> Self;
@@ -95,9 +98,6 @@ pub trait CurveAffine:
     type Base: FieldExt;
     /// The projective form of the curve
     type CurveExt: CurveExt<AffineExt = Self, ScalarExt = <Self as CurveAffine>::ScalarExt>;
-
-    /// CURVE_ID used for hash-to-curve.
-    const CURVE_ID: &'static str;
 
     /// Gets the $(x, y)$ coordinates of this point.
     fn get_xy(&self) -> CtOption<(Self::Base, Self::Base)>;

@@ -92,7 +92,9 @@ macro_rules! new_curve_impl {
             type Base = $base;
             type AffineExt = $name_affine;
 
-            impl_projective_curve_ext!($name, $name_affine, $iso, $base, $curve_type);
+            const CURVE_ID: &'static str = $curve_id;
+
+            impl_projective_curve_ext!($name, $iso, $base, $curve_type);
 
             fn a() -> Self::Base {
                 $name::curve_constant_a()
@@ -615,8 +617,6 @@ macro_rules! new_curve_impl {
             type Base = $base;
             type CurveExt = $name;
 
-            const CURVE_ID: &'static str = $curve_id;
-
             fn is_on_curve(&self) -> Choice {
                 // y^2 - x^3 - ax ?= b
                 (self.y.square() - (self.x.square() + &$name::curve_constant_a()) * self.x).ct_eq(&$name::curve_constant_b())
@@ -834,13 +834,13 @@ macro_rules! impl_projective_curve_specific {
 }
 
 macro_rules! impl_projective_curve_ext {
-    ($name:ident, $name_affine:ident, $iso:ident, $base:ident, special_a0_b5) => {
+    ($name:ident, $iso:ident, $base:ident, special_a0_b5) => {
         fn hash_to_curve<'a>(domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
             use super::hashtocurve;
 
             Box::new(move |message| {
                 let mut us = [Field::zero(); 2];
-                hashtocurve::hash_to_field($name_affine::CURVE_ID, domain_prefix, message, &mut us);
+                hashtocurve::hash_to_field($name::CURVE_ID, domain_prefix, message, &mut us);
                 let q0 = hashtocurve::map_to_curve_simple_swu::<$base, $name, $iso>(
                     &us[0],
                     $name::THETA,
@@ -867,7 +867,7 @@ macro_rules! impl_projective_curve_ext {
             }
         }
     };
-    ($name:ident, $name_affine:ident, $iso:ident, $base:ident, general) => {
+    ($name:ident, $iso:ident, $base:ident, general) => {
         /// Unimplemented: hashing to this curve is not supported
         fn hash_to_curve<'a>(_domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
             unimplemented!()
