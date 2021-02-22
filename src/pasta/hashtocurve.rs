@@ -50,9 +50,9 @@ pub fn hash_to_field<F: FieldExt>(message: &[u8], domain_separation_tag: &[u8], 
             .update(&[1])
             .update(&dst_prime),
     );
+    let mut empty_hasher = empty_hasher;
     let b_2 = finalize(
         empty_hasher
-            .clone()
             .update(&xor(&b_0, &b_1))
             .update(&[2])
             .update(&dst_prime),
