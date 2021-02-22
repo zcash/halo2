@@ -84,9 +84,12 @@ pub trait Curve:
     /// # Example
     ///
     /// ```
-    /// use halo2::arithmetic::{Curve, CurveAffine};
-    /// fn pedersen_commitment<C: CurveAffine>(x: C::Scalar, r: C::Scalar) -> C {
-    ///     let hasher = C::Curve::hash_to_curve("z.cash:example_pedersen_commitment");
+    /// use halo2::arithmetic::Curve;
+    /// fn pedersen_commitment<C: Curve>(
+    ///     x: <C as Curve>::Scalar,
+    ///     r: <C as Curve>::Scalar,
+    /// ) -> C::Affine {
+    ///     let hasher = C::hash_to_curve("z.cash:example_pedersen_commitment");
     ///     let g = hasher(b"g");
     ///     let h = hasher(b"h");
     ///     (g * x + &(h * r)).to_affine()

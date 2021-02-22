@@ -11,7 +11,7 @@ use super::{Fp, Fq};
 use crate::arithmetic::{Curve, CurveAffine, FieldExt, Group};
 
 macro_rules! new_curve_impl {
-    (($($privacy:tt)*), $name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, $scalar:ident, $blake2b_personalization:literal,
+    (($($privacy:tt)*), $name:ident, $name_affine:ident, $iso:ident, $base:ident, $scalar:ident, $blake2b_personalization:literal,
      $curve_id:literal, $a_raw:expr, $b_raw:expr, $curve_type:ident) => {
         /// Represents a point in the projective coordinate space.
         #[derive(Copy, Clone, Debug)]
@@ -85,7 +85,7 @@ macro_rules! new_curve_impl {
                 $name_affine::conditional_select(&tmp, &$name_affine::identity(), zinv.ct_is_zero())
             }
 
-            impl_projective_curve_ext!($name, $name_affine, $iso_affine, $base, $curve_type);
+            impl_projective_curve_ext!($name, $name_affine, $iso, $base, $curve_type);
 
             fn a() -> Self::Base {
                 $name::curve_constant_a()
@@ -759,29 +759,26 @@ macro_rules! impl_projective_curve_specific {
 }
 
 macro_rules! impl_projective_curve_ext {
-    ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, special_a0_b5) => {
+    ($name:ident, $name_affine:ident, $iso:ident, $base:ident, special_a0_b5) => {
         fn hash_to_curve<'a>(domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
             use super::hashtocurve;
 
             Box::new(move |message| {
                 let mut us = [Field::zero(); 2];
                 hashtocurve::hash_to_field($name_affine::CURVE_ID, domain_prefix, message, &mut us);
-                let q0 = hashtocurve::map_to_curve_simple_swu::<$base, $name_affine, $iso_affine>(
+                let q0 = hashtocurve::map_to_curve_simple_swu::<$base, $name, $iso>(
                     &us[0],
                     $name::THETA,
                     $name::Z,
                 );
-                let q1 = hashtocurve::map_to_curve_simple_swu::<$base, $name_affine, $iso_affine>(
+                let q1 = hashtocurve::map_to_curve_simple_swu::<$base, $name, $iso>(
                     &us[1],
                     $name::THETA,
                     $name::Z,
                 );
                 let r = q0 + &q1;
                 debug_assert!(bool::from(r.is_on_curve()));
-                hashtocurve::iso_map::<$base, $name_affine, $iso_affine>(
-                    &r,
-                    &$name::ISOGENY_CONSTANTS,
-                )
+                hashtocurve::iso_map::<$base, $name, $iso>(&r, &$name::ISOGENY_CONSTANTS)
             })
         }
 
@@ -795,7 +792,7 @@ macro_rules! impl_projective_curve_ext {
             }
         }
     };
-    ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, general) => {
+    ($name:ident, $name_affine:ident, $iso:ident, $base:ident, general) => {
         /// Unimplemented: hashing to this curve is not supported
         fn hash_to_curve<'a>(_domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
             unimplemented!()
@@ -835,7 +832,7 @@ new_curve_impl!(
     (pub),
     Ep,
     EpAffine,
-    IsoEpAffine,
+    IsoEp,
     Fp,
     Fq,
     b"halo2_____pallas",
@@ -848,7 +845,7 @@ new_curve_impl!(
     (pub),
     Eq,
     EqAffine,
-    IsoEqAffine,
+    IsoEq,
     Fq,
     Fp,
     b"halo2______vesta",
@@ -861,7 +858,7 @@ new_curve_impl!(
     (pub(crate)),
     IsoEp,
     IsoEpAffine,
-    EpAffine,
+    Ep,
     Fp,
     Fq,
     b"halo2_iso_pallas",
@@ -879,7 +876,7 @@ new_curve_impl!(
     (pub(crate)),
     IsoEq,
     IsoEqAffine,
-    EqAffine,
+    Eq,
     Fq,
     Fp,
     b"halo2__iso_vesta",

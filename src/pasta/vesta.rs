@@ -17,12 +17,11 @@ pub type Affine = EqAffine;
 #[test]
 fn test_map_to_curve_simple_swu() {
     use crate::arithmetic::Curve;
-    use crate::pasta::curves::{IsoEq, IsoEqAffine};
+    use crate::pasta::curves::IsoEq;
     use crate::pasta::hashtocurve::map_to_curve_simple_swu;
 
     // The zero input is a special case.
-    let p: IsoEq =
-        map_to_curve_simple_swu::<Fq, EqAffine, IsoEqAffine>(&Fq::zero(), Eq::THETA, Eq::Z);
+    let p: IsoEq = map_to_curve_simple_swu::<Fq, Eq, IsoEq>(&Fq::zero(), Eq::THETA, Eq::Z);
     let (x, y, z) = p.jacobian_coordinates();
     println!("{:?}", p);
     assert!(
@@ -35,8 +34,7 @@ fn test_map_to_curve_simple_swu() {
         format!("{:?}", z) == "0x0b851e9e579403a76df1100f556e1f226e5656bdf38f3bf8601d8a3a9a15890b"
     );
 
-    let p: IsoEq =
-        map_to_curve_simple_swu::<Fq, EqAffine, IsoEqAffine>(&Fq::one(), Eq::THETA, Eq::Z);
+    let p: IsoEq = map_to_curve_simple_swu::<Fq, Eq, IsoEq>(&Fq::one(), Eq::THETA, Eq::Z);
     let (x, y, z) = p.jacobian_coordinates();
     println!("{:?}", p);
     assert!(
