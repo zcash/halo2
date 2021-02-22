@@ -1,5 +1,6 @@
+use group::Curve;
 use halo2::{
-    arithmetic::{Curve, FieldExt},
+    arithmetic::FieldExt,
     model::ModelRecorder,
     pasta::{EqAffine, Fp},
     plonk::*,

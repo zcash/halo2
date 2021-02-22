@@ -1,4 +1,5 @@
 use ff::Field;
+use group::Curve;
 use std::iter;
 
 use super::{
@@ -6,7 +7,7 @@ use super::{
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
     ChallengeY, Error, ProvingKey,
 };
-use crate::arithmetic::{eval_polynomial, Curve, CurveAffine, FieldExt};
+use crate::arithmetic::{eval_polynomial, CurveAffine, FieldExt};
 use crate::poly::{
     commitment::{Blind, Params},
     multiopen::{self, ProverQuery},

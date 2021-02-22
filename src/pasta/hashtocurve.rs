@@ -3,7 +3,7 @@
 
 use subtle::ConstantTimeEq;
 
-use crate::arithmetic::{Curve, FieldExt};
+use crate::arithmetic::{CurveExt, FieldExt};
 
 /// Hashes over a message and writes the output to all of `buf`.
 pub fn hash_to_field<F: FieldExt>(
@@ -72,7 +72,7 @@ pub fn hash_to_field<F: FieldExt>(
 }
 
 /// Implements a degree 3 isogeny map.
-pub fn iso_map<F: FieldExt, C: Curve<Base = F>, I: Curve<Base = F>>(
+pub fn iso_map<F: FieldExt, C: CurveExt<Base = F>, I: CurveExt<Base = F>>(
     p: &I,
     iso: &[C::Base; 13],
 ) -> C {
@@ -99,7 +99,7 @@ pub fn iso_map<F: FieldExt, C: Curve<Base = F>, I: Curve<Base = F>>(
     C::new_jacobian(xo, yo, zo).unwrap()
 }
 
-pub fn map_to_curve_simple_swu<F: FieldExt, C: Curve<Base = F>, I: Curve<Base = F>>(
+pub fn map_to_curve_simple_swu<F: FieldExt, C: CurveExt<Base = F>, I: CurveExt<Base = F>>(
     u: &F,
     theta: F,
     z: F,

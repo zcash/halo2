@@ -1,10 +1,11 @@
 use ff::Field;
+use group::Curve;
 use std::iter;
 
 use super::super::circuit::Any;
 use super::{Argument, ProvingKey};
 use crate::{
-    arithmetic::{eval_polynomial, parallelize, BatchInvert, Curve, CurveAffine, FieldExt},
+    arithmetic::{eval_polynomial, parallelize, BatchInvert, CurveAffine, FieldExt},
     plonk::{self, ChallengeBeta, ChallengeGamma, ChallengeX, Error},
     poly::{
         commitment::{Blind, Params},

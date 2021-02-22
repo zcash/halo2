@@ -1,6 +1,8 @@
+use group::Curve;
+
 use super::Argument;
 use crate::{
-    arithmetic::{eval_polynomial, Curve, CurveAffine, FieldExt},
+    arithmetic::{eval_polynomial, CurveAffine, FieldExt},
     plonk::{ChallengeX, ChallengeY, Error},
     poly::{
         commitment::{Blind, Params},

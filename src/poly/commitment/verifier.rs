@@ -1,10 +1,11 @@
 use ff::Field;
+use group::Curve;
 
 use super::super::Error;
 use super::{Params, MSM};
 use crate::transcript::{Challenge, ChallengeScalar, TranscriptRead};
 
-use crate::arithmetic::{best_multiexp, BatchInvert, Curve, CurveAffine};
+use crate::arithmetic::{best_multiexp, BatchInvert, CurveAffine};
 
 /// A guard returned by the verifier
 #[derive(Debug, Clone)]

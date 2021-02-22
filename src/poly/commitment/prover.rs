@@ -3,10 +3,11 @@ use ff::Field;
 use super::super::{Coeff, Polynomial};
 use super::{Blind, Params};
 use crate::arithmetic::{
-    best_multiexp, compute_inner_product, eval_polynomial, parallelize, Curve, CurveAffine,
-    FieldExt,
+    best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine, FieldExt,
 };
 use crate::transcript::{Challenge, ChallengeScalar, TranscriptWrite};
+
+use group::Curve;
 use std::io;
 
 /// Create a polynomial commitment opening proof for the polynomial defined

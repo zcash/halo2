@@ -3,6 +3,7 @@
 
 use crossbeam_utils::thread;
 pub use ff::Field;
+use group::Group as _;
 
 mod curves;
 mod fields;

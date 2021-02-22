@@ -16,7 +16,8 @@ pub type Affine = EpAffine;
 
 #[test]
 fn test_iso_map() {
-    use crate::arithmetic::Curve;
+    use crate::arithmetic::CurveExt;
+    use group::Group;
 
     // This is a regression test (it's the same input to iso_map as for hash_to_curve
     // with domain prefix "z.cash:test", Shake128, and input b"hello"). We don't
@@ -64,7 +65,8 @@ fn test_iso_map() {
 
 #[test]
 fn test_iso_map_identity() {
-    use crate::arithmetic::Curve;
+    use crate::arithmetic::CurveExt;
+    use group::Group;
 
     let r = super::IsoEp::new_jacobian(
         Base::from_raw([
@@ -97,7 +99,7 @@ fn test_iso_map_identity() {
 
 #[test]
 fn test_map_to_curve_simple_swu() {
-    use crate::arithmetic::Curve;
+    use crate::arithmetic::CurveExt;
     use crate::pasta::curves::IsoEp;
     use crate::pasta::hashtocurve::map_to_curve_simple_swu;
 
@@ -131,7 +133,8 @@ fn test_map_to_curve_simple_swu() {
 
 #[test]
 fn test_hash_to_curve() {
-    use crate::arithmetic::Curve;
+    use crate::arithmetic::CurveExt;
+    use group::Group;
 
     // This test vector is chosen so that the first map_to_curve_simple_swu takes the gx1 square
     // "branch" and the second takes the gx1 non-square "branch" (opposite to the Vesta test vector).

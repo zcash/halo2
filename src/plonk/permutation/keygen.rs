@@ -1,8 +1,9 @@
 use ff::Field;
+use group::Curve;
 
 use super::{Argument, ProvingKey, VerifyingKey};
 use crate::{
-    arithmetic::{Curve, CurveAffine, FieldExt},
+    arithmetic::{CurveAffine, FieldExt},
     plonk::{circuit::ConstraintSystem, Error},
     poly::{
         commitment::{Blind, Params},

@@ -1,6 +1,7 @@
 use super::Params;
-use crate::arithmetic::{best_multiexp, parallelize, Curve, CurveAffine};
+use crate::arithmetic::{best_multiexp, parallelize, CurveAffine};
 use ff::Field;
+use group::Group;
 
 /// A multiscalar multiplication in the polynomial commitment scheme
 #[derive(Debug, Clone)]

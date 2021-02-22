@@ -16,7 +16,7 @@ pub type Affine = EqAffine;
 
 #[test]
 fn test_map_to_curve_simple_swu() {
-    use crate::arithmetic::Curve;
+    use crate::arithmetic::CurveExt;
     use crate::pasta::curves::IsoEq;
     use crate::pasta::hashtocurve::map_to_curve_simple_swu;
 
@@ -50,7 +50,7 @@ fn test_map_to_curve_simple_swu() {
 
 #[test]
 fn test_hash_to_curve() {
-    use crate::arithmetic::Curve;
+    use crate::arithmetic::CurveExt;
 
     // This test vector is chosen so that the first map_to_curve_simple_swu takes the gx1 non-square
     // "branch" and the second takes the gx1 square "branch" (opposite to the Pallas test vector).

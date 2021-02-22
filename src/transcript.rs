@@ -69,8 +69,8 @@ impl<R: Read, C: CurveAffine> Blake2bRead<R, C> {
 
 impl<R: Read, C: CurveAffine> TranscriptRead<C> for Blake2bRead<R, C> {
     fn read_point(&mut self) -> io::Result<C> {
-        let mut compressed = [0u8; 32];
-        self.reader.read_exact(&mut compressed[..])?;
+        let mut compressed = C::Repr::default();
+        self.reader.read_exact(compressed.as_mut())?;
         let point: C = Option::from(C::from_bytes(&compressed)).ok_or_else(|| {
             io::Error::new(io::ErrorKind::Other, "invalid point encoding in proof")
         })?;
@@ -154,7 +154,7 @@ impl<W: Write, C: CurveAffine> TranscriptWrite<C> for Blake2bWrite<W, C> {
     fn write_point(&mut self, point: C) -> io::Result<()> {
         self.common_point(point)?;
         let compressed = point.to_bytes();
-        self.writer.write_all(&compressed[..])
+        self.writer.write_all(compressed.as_ref())
     }
     fn write_scalar(&mut self, scalar: C::Scalar) -> io::Result<()> {
         self.common_scalar(scalar)?;

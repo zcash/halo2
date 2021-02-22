@@ -4,7 +4,7 @@ use super::super::{
 };
 use super::Argument;
 use crate::{
-    arithmetic::{eval_polynomial, parallelize, BatchInvert, Curve, CurveAffine, FieldExt},
+    arithmetic::{eval_polynomial, parallelize, BatchInvert, CurveAffine, FieldExt},
     poly::{
         commitment::{Blind, Params},
         multiopen::ProverQuery,
@@ -13,6 +13,7 @@ use crate::{
     transcript::TranscriptWrite,
 };
 use ff::Field;
+use group::Curve;
 use std::{
     collections::BTreeMap,
     iter,
@@ -86,7 +87,7 @@ impl<F: FieldExt> Argument<F> {
         transcript: &mut T,
     ) -> Result<Permuted<C>, Error>
     where
-        C: CurveAffine<Scalar = F>,
+        C: CurveAffine<ScalarExt = F>,
         C::Curve: Mul<F, Output = C::Curve> + MulAssign<F>,
     {
         // Closure to get values of expressions and compress them

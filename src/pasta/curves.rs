@@ -3,12 +3,18 @@
 
 use core::cmp;
 use core::fmt::Debug;
+use core::iter::Sum;
 use core::ops::{Add, Mul, Neg, Sub};
 use ff::Field;
+use group::{
+    prime::{PrimeCurve, PrimeCurveAffine, PrimeGroup},
+    Curve as _, Group as _, GroupEncoding,
+};
+use rand::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use super::{Fp, Fq};
-use crate::arithmetic::{Curve, CurveAffine, FieldExt, Group};
+use crate::arithmetic::{CurveAffine, CurveExt, FieldExt, Group};
 
 macro_rules! new_curve_impl {
     (($($privacy:tt)*), $name:ident, $name_affine:ident, $iso:ident, $base:ident, $scalar:ident, $blake2b_personalization:literal,
@@ -50,10 +56,21 @@ macro_rules! new_curve_impl {
             }
         }
 
-        impl Curve for $name {
-            type Affine = $name_affine;
+        impl group::Group for $name {
             type Scalar = $scalar;
-            type Base = $base;
+
+            fn random(mut rng: impl RngCore) -> Self {
+                loop {
+                    let mut buf = [0; 64];
+                    rng.fill_bytes(&mut buf);
+                    let p: Option<$name_affine> = $name_affine::from_bytes_wide(&buf).into();
+                    if let Some(p) = p {
+                        if !bool::from(p.is_identity()) {
+                            break p.to_curve();
+                        }
+                    }
+                }
+            }
 
             impl_projective_curve_specific!($name, $base, $curve_type);
 
@@ -68,22 +85,11 @@ macro_rules! new_curve_impl {
             fn is_identity(&self) -> Choice {
                 self.z.ct_is_zero()
             }
+        }
 
-            fn to_affine(&self) -> Self::Affine {
-                let zinv = self.z.invert().unwrap_or($base::zero());
-                let zinv2 = zinv.square();
-                let x = self.x * zinv2;
-                let zinv3 = zinv2 * zinv;
-                let y = self.y * zinv3;
-
-                let tmp = $name_affine {
-                    x,
-                    y,
-                    infinity: Choice::from(0u8),
-                };
-
-                $name_affine::conditional_select(&tmp, &$name_affine::identity(), zinv.ct_is_zero())
-            }
+        impl CurveExt for $name {
+            type ScalarExt = $scalar;
+            type Base = $base;
 
             impl_projective_curve_ext!($name, $name_affine, $iso, $base, $curve_type);
 
@@ -115,8 +121,12 @@ macro_rules! new_curve_impl {
                     .ct_eq(&(z6 * $name::curve_constant_b()))
                     | self.z.ct_is_zero()
             }
+        }
 
-            fn batch_normalize(p: &[Self], q: &mut [Self::Affine]) {
+        impl group::Curve for $name {
+            type AffineRepr = $name_affine;
+
+            fn batch_normalize(p: &[Self], q: &mut [Self::AffineRepr]) {
                 assert_eq!(p.len(), q.len());
 
                 let mut acc = $base::one();
@@ -152,6 +162,45 @@ macro_rules! new_curve_impl {
 
                     *q = $name_affine::conditional_select(&q, &$name_affine::identity(), skip);
                 }
+            }
+
+            fn to_affine(&self) -> Self::AffineRepr {
+                let zinv = self.z.invert().unwrap_or($base::zero());
+                let zinv2 = zinv.square();
+                let x = self.x * zinv2;
+                let zinv3 = zinv2 * zinv;
+                let y = self.y * zinv3;
+
+                let tmp = $name_affine {
+                    x,
+                    y,
+                    infinity: Choice::from(0u8),
+                };
+
+                $name_affine::conditional_select(&tmp, &$name_affine::identity(), zinv.ct_is_zero())
+            }
+        }
+
+        impl PrimeGroup for $name {}
+
+        impl PrimeCurve for $name {
+            type Affine = $name_affine;
+        }
+
+        impl GroupEncoding for $name {
+            type Repr = [u8; 32];
+
+            fn from_bytes(bytes: &Self::Repr) -> CtOption<Self> {
+                $name_affine::from_bytes(bytes).map(Self::from)
+            }
+
+            fn from_bytes_unchecked(bytes: &Self::Repr) -> CtOption<Self> {
+                // We can't avoid curve checks when parsing a compressed encoding.
+                $name_affine::from_bytes(bytes).map(Self::from)
+            }
+
+            fn to_bytes(&self) -> Self::Repr {
+                $name_affine::from(self).to_bytes()
             }
         }
 
@@ -230,6 +279,18 @@ macro_rules! new_curve_impl {
 
             fn neg(self) -> $name {
                 -&self
+            }
+        }
+
+        impl<T> Sum<T> for $name
+        where
+            T: core::borrow::Borrow<$name>,
+        {
+            fn sum<I>(iter: I) -> Self
+            where
+                I: Iterator<Item = T>,
+            {
+                iter.fold(Self::identity(), |acc, item| acc + item.borrow())
             }
         }
 
@@ -473,13 +534,9 @@ macro_rules! new_curve_impl {
             }
         }
 
-        impl CurveAffine for $name_affine {
+        impl PrimeCurveAffine for $name_affine {
             type Curve = $name;
             type Scalar = $scalar;
-            type Base = $base;
-
-            const BLAKE2B_PERSONALIZATION: &'static [u8; 16] = $blake2b_personalization;
-            const CURVE_ID: &'static str = $curve_id;
 
             impl_affine_curve_specific!($name, $base, $curve_type);
 
@@ -495,12 +552,6 @@ macro_rules! new_curve_impl {
                 self.infinity
             }
 
-            fn is_on_curve(&self) -> Choice {
-                // y^2 - x^3 - ax ?= b
-                (self.y.square() - (self.x.square() + &$name::curve_constant_a()) * self.x).ct_eq(&$name::curve_constant_b())
-                    | self.infinity
-            }
-
             fn to_curve(&self) -> Self::Curve {
                 $name {
                     x: self.x,
@@ -508,17 +559,10 @@ macro_rules! new_curve_impl {
                     z: $base::conditional_select(&$base::one(), &$base::zero(), self.infinity),
                 }
             }
+        }
 
-            fn get_xy(&self) -> CtOption<(Self::Base, Self::Base)> {
-                CtOption::new((self.x, self.y), !self.is_identity())
-            }
-
-            fn from_xy(x: Self::Base, y: Self::Base) -> CtOption<Self> {
-                let p = $name_affine {
-                    x, y, infinity: 0u8.into()
-                };
-                CtOption::new(p, p.is_on_curve())
-            }
+        impl GroupEncoding for $name_affine {
+            type Repr = [u8; 32];
 
             fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
                 let mut tmp = *bytes;
@@ -546,6 +590,11 @@ macro_rules! new_curve_impl {
                 })
             }
 
+            fn from_bytes_unchecked(bytes: &Self::Repr) -> CtOption<Self> {
+                // We can't avoid curve checks when parsing a compressed encoding.
+                Self::from_bytes(bytes)
+            }
+
             fn to_bytes(&self) -> [u8; 32] {
                 // TODO: not constant time
                 if bool::from(self.is_identity()) {
@@ -557,6 +606,31 @@ macro_rules! new_curve_impl {
                     xbytes[31] |= sign;
                     xbytes
                 }
+            }
+        }
+
+        impl CurveAffine for $name_affine {
+            type ScalarExt = $scalar;
+            type Base = $base;
+
+            const BLAKE2B_PERSONALIZATION: &'static [u8; 16] = $blake2b_personalization;
+            const CURVE_ID: &'static str = $curve_id;
+
+            fn is_on_curve(&self) -> Choice {
+                // y^2 - x^3 - ax ?= b
+                (self.y.square() - (self.x.square() + &$name::curve_constant_a()) * self.x).ct_eq(&$name::curve_constant_b())
+                    | self.infinity
+            }
+
+            fn get_xy(&self) -> CtOption<(Self::Base, Self::Base)> {
+                CtOption::new((self.x, self.y), !self.is_identity())
+            }
+
+            fn from_xy(x: Self::Base, y: Self::Base) -> CtOption<Self> {
+                let p = $name_affine {
+                    x, y, infinity: 0u8.into()
+                };
+                CtOption::new(p, p.is_on_curve())
             }
 
             fn from_bytes_wide(bytes: &[u8; 64]) -> CtOption<Self> {
