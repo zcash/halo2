@@ -95,7 +95,7 @@ pub trait Curve:
     ///     (g * x + &(h * r)).to_affine()
     /// }
     /// ```
-    fn hash_to_curve(domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> Self + 'static>;
+    fn hash_to_curve<'a>(domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a>;
 
     /// Returns whether or not this element is on the curve; should
     /// always be true unless an "unchecked" API was used.

@@ -677,20 +677,12 @@ macro_rules! new_curve_impl {
 
 macro_rules! impl_projective_curve_specific {
     ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, special_a0_b5) => {
-        fn hash_to_curve(domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> Self + 'static> {
+        fn hash_to_curve<'a>(domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
             use super::hashtocurve;
-
-            let domain_separation_tag: String = format!(
-                "{}-{}_{}_{}_RO_",
-                domain_prefix,
-                $name_affine::CURVE_ID,
-                "XMD:BLAKE2b",
-                "SSWU"
-            );
 
             Box::new(move |message| {
                 let mut us = [Field::zero(); 2];
-                hashtocurve::hash_to_field(message, domain_separation_tag.as_bytes(), &mut us);
+                hashtocurve::hash_to_field($name_affine::CURVE_ID, domain_prefix, message, &mut us);
                 let q0 = hashtocurve::map_to_curve_simple_swu::<$base, $name_affine, $iso_affine>(
                     &us[0],
                     $name::THETA,
@@ -702,7 +694,7 @@ macro_rules! impl_projective_curve_specific {
                     $name::Z,
                 );
                 let r = q0 + &q1;
-                assert!(bool::from(r.is_on_curve()));
+                debug_assert!(bool::from(r.is_on_curve()));
                 hashtocurve::iso_map::<$base, $name_affine, $iso_affine>(
                     &r,
                     &$name::ISOGENY_CONSTANTS,
@@ -766,7 +758,7 @@ macro_rules! impl_projective_curve_specific {
     };
     ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, general) => {
         /// Unimplemented: hashing to this curve is not supported
-        fn hash_to_curve(_domain_prefix: &str) -> Box<dyn Fn(&[u8]) -> Self + 'static> {
+        fn hash_to_curve<'a>(_domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
             unimplemented!()
         }
 
