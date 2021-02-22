@@ -95,6 +95,11 @@ macro_rules! new_curve_impl {
                 $name::curve_constant_b()
             }
 
+            fn new_jacobian(x: Self::Base, y: Self::Base, z: Self::Base) -> CtOption<Self> {
+                let p = $name { x, y, z };
+                CtOption::new(p, p.is_on_curve())
+            }
+
             fn jacobian_coordinates(&self) -> ($base, $base, $base) {
                (self.x, self.y, self.z)
             }
@@ -147,11 +152,6 @@ macro_rules! new_curve_impl {
 
                     *q = $name_affine::conditional_select(&q, &$name_affine::identity(), skip);
                 }
-            }
-
-            fn new_jacobian(x: Self::Base, y: Self::Base, z: Self::Base) -> CtOption<Self> {
-                let p = $name { x, y, z };
-                CtOption::new(p, p.is_on_curve())
             }
         }
 
