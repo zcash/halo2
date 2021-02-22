@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::marker::PhantomData;
 
-use super::{Cell, Chip, Layouter, Permutation, Region};
+use super::{Cell, Chip, Layouter, Permutation, Region, Shape};
 use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed};
 
 /// Helper trait for implementing a custom [`Layouter`].
@@ -106,36 +106,46 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
         &self.config
     }
 
-    fn assign_region<A, AR, N, NR>(&mut self, name: N, mut assignment: A) -> Result<AR, Error>
+    fn assign_region<A, AR, S, N, NR>(
+        &mut self,
+        name: N,
+        shape: S,
+        mut assignment: A,
+    ) -> Result<AR, Error>
     where
         A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        S: Fn() -> Shape,
         N: Fn() -> NR,
         NR: Into<String>,
     {
         let region_index = self.regions.len();
 
         // Get shape of the region.
-        let mut shape = RegionShape::new(region_index);
-        {
-            let region: &mut dyn RegionLayouter<C> = &mut shape;
-            assignment(region.into())?;
-        }
+        let (columns, row_count) = match shape() {
+            Shape::Undefined => {
+                let mut shape = RegionShape::new(region_index);
+                let region: &mut dyn RegionLayouter<C> = &mut shape;
+                assignment(region.into())?;
+                (shape.columns, shape.row_count)
+            }
+            Shape::Rectangle { columns, row_count } => (columns, row_count),
+        };
 
         // Lay out this region. We implement the simplest approach here: position the
         // region starting at the earliest row for which none of the columns are in use.
         let mut region_start = 0;
-        for column in &shape.columns {
+        for column in &columns {
             region_start = cmp::max(region_start, self.columns.get(column).cloned().unwrap_or(0));
         }
         self.regions.push(region_start);
 
         // Update column usage information.
-        for column in shape.columns {
-            self.columns.insert(column, region_start + shape.row_count);
+        for column in &columns {
+            self.columns.insert(*column, region_start + row_count);
         }
 
         self.cs.enter_region(name);
-        let mut region = SingleChipRegion::new(self, region_index);
+        let mut region = SingleChipRegion::new(self, region_index, columns, row_count);
         let result = {
             let region: &mut dyn RegionLayouter<C> = &mut region;
             assignment(region.into())
@@ -162,8 +172,10 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
     }
 }
 
-/// The shape of a region. For a region at a certain index, we track
-/// the set of columns it uses as well as the number of rows it uses.
+/// A region layouter that measures the rectangular shape of a region.
+///
+/// For a region at a certain index, we track the set of columns it uses as well as the
+/// number of rows it uses.
 #[derive(Debug)]
 pub struct RegionShape {
     region_index: usize,
@@ -246,6 +258,8 @@ impl<C: Chip> RegionLayouter<C> for RegionShape {
 struct SingleChipRegion<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> {
     layouter: &'r mut SingleChip<'a, C, CS>,
     region_index: usize,
+    columns: HashSet<Column<Any>>,
+    row_count: usize,
 }
 
 impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> fmt::Debug
@@ -260,10 +274,17 @@ impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> fmt::Debug
 }
 
 impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> SingleChipRegion<'r, 'a, C, CS> {
-    fn new(layouter: &'r mut SingleChip<'a, C, CS>, region_index: usize) -> Self {
+    fn new(
+        layouter: &'r mut SingleChip<'a, C, CS>,
+        region_index: usize,
+        columns: HashSet<Column<Any>>,
+        row_count: usize,
+    ) -> Self {
         SingleChipRegion {
             layouter,
             region_index,
+            columns,
+            row_count,
         }
     }
 }
@@ -278,6 +299,10 @@ impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> RegionLayouter<C>
         offset: usize,
         to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
     ) -> Result<Cell, Error> {
+        if !self.columns.contains(&column.into()) || offset >= self.row_count {
+            return Err(Error::SynthesisError);
+        }
+
         self.layouter.cs.assign_advice(
             annotation,
             column,
@@ -299,6 +324,10 @@ impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> RegionLayouter<C>
         offset: usize,
         to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
     ) -> Result<Cell, Error> {
+        if !self.columns.contains(&column.into()) || offset >= self.row_count {
+            return Err(Error::SynthesisError);
+        }
+
         self.layouter.cs.assign_fixed(
             annotation,
             column,
@@ -339,5 +368,104 @@ impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> RegionLayouter<C>
         )?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SingleChip;
+    use crate::{
+        circuit::{Chip, Layouter, Shape},
+        dev::MockProver,
+        pasta::Fp,
+        plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed},
+    };
+
+    use std::iter;
+
+    #[test]
+    fn reject_misshapen_region() {
+        #[derive(Clone, Debug)]
+        struct MyConfig {
+            a: Column<Advice>,
+            f: Column<Fixed>,
+        }
+
+        struct MyChip {}
+
+        impl Chip for MyChip {
+            type Config = MyConfig;
+            type Field = Fp;
+            fn load(_: &mut impl Layouter<Self>) -> Result<(), Error> {
+                Ok(())
+            }
+        }
+
+        struct MyCircuit {
+            advice_offset: usize,
+            fixed_offset: usize,
+        }
+
+        impl Circuit<Fp> for MyCircuit {
+            type Config = MyConfig;
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> MyConfig {
+                let a = meta.advice_column();
+                let f = meta.fixed_column();
+                MyConfig { a, f }
+            }
+
+            fn synthesize(
+                &self,
+                cs: &mut impl Assignment<Fp>,
+                config: MyConfig,
+            ) -> Result<(), Error> {
+                let mut layouter = SingleChip::<MyChip, _>::new(cs, config.clone());
+
+                layouter.assign_region(
+                    || "region",
+                    || Shape::Rectangle {
+                        columns: iter::once(config.a.into())
+                            .chain(iter::once(config.f.into()))
+                            .collect(),
+                        row_count: 1,
+                    },
+                    |mut region| {
+                        region.assign_advice(
+                            || "advice",
+                            config.a,
+                            self.advice_offset,
+                            || Ok(Fp::one()),
+                        )?;
+                        region.assign_fixed(
+                            || "fixed",
+                            config.f,
+                            self.fixed_offset,
+                            || Ok(Fp::one()),
+                        )
+                    },
+                )?;
+
+                Ok(())
+            }
+        }
+
+        let good_circuit = MyCircuit {
+            advice_offset: 0,
+            fixed_offset: 0,
+        };
+        assert!(MockProver::run(2, &good_circuit, vec![]).is_ok());
+
+        let bad_advice = MyCircuit {
+            advice_offset: 1,
+            fixed_offset: 0,
+        };
+        assert!(MockProver::run(2, &bad_advice, vec![]).is_err());
+
+        let bad_fixed = MyCircuit {
+            advice_offset: 0,
+            fixed_offset: 1,
+        };
+        assert!(MockProver::run(2, &bad_fixed, vec![]).is_err());
     }
 }
