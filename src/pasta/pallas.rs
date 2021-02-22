@@ -91,11 +91,11 @@ fn test_iso_map_identity() {
     .unwrap();
     let r = (r * -Fq::one()) + r;
     assert!(bool::from(r.is_on_curve()));
-    assert!(bool::from(r.is_zero()));
+    assert!(bool::from(r.is_identity()));
     let p =
         super::hashtocurve::iso_map::<_, Affine, super::IsoEpAffine>(&r, &Ep::ISOGENY_CONSTANTS);
     assert!(bool::from(p.is_on_curve()));
-    assert!(bool::from(p.is_zero()));
+    assert!(bool::from(p.is_identity()));
 }
 
 #[test]
@@ -157,5 +157,5 @@ fn test_hash_to_curve() {
 
     let p = (p * -Fq::one()) + p;
     assert!(bool::from(p.is_on_curve()));
-    assert!(bool::from(p.is_zero()));
+    assert!(bool::from(p.is_identity()));
 }

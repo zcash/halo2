@@ -43,11 +43,8 @@ pub trait Curve:
     + Group<Scalar = <Self as Curve>::Scalar>
 {
     /// The representation of a point on this curve in the affine coordinate space.
-    type Affine: CurveAffine<
-            Projective = Self,
-            Scalar = <Self as Curve>::Scalar,
-            Base = <Self as Curve>::Base,
-        > + Add<Output = Self>
+    type Affine: CurveAffine<Curve = Self, Scalar = <Self as Curve>::Scalar, Base = <Self as Curve>::Base>
+        + Add<Output = Self>
         + Sub<Output = Self>
         + Mul<<Self as Curve>::Scalar, Output = Self>
         + Neg<Output = <Self as Curve>::Affine>
@@ -58,16 +55,16 @@ pub trait Curve:
     type Base: FieldExt;
 
     /// Obtains the additive identity.
-    fn zero() -> Self;
+    fn identity() -> Self;
 
     /// Obtains the base point of the curve.
-    fn one() -> Self;
+    fn generator() -> Self;
 
     /// Doubles this element.
     fn double(&self) -> Self;
 
     /// Returns whether or not this element is the identity.
-    fn is_zero(&self) -> Choice;
+    fn is_identity(&self) -> Choice;
 
     /// Apply the curve endomorphism by multiplying the x-coordinate
     /// by an element of multiplicative order 3.
@@ -89,7 +86,7 @@ pub trait Curve:
     /// ```
     /// use halo2::arithmetic::{Curve, CurveAffine};
     /// fn pedersen_commitment<C: CurveAffine>(x: C::Scalar, r: C::Scalar) -> C {
-    ///     let hasher = C::Projective::hash_to_curve("z.cash:example_pedersen_commitment");
+    ///     let hasher = C::Curve::hash_to_curve("z.cash:example_pedersen_commitment");
     ///     let g = hasher(b"g");
     ///     let h = hasher(b"h");
     ///     (g * x + &(h * r)).to_affine()
@@ -103,7 +100,7 @@ pub trait Curve:
 
     /// Converts many elements into their affine form. Panics if the
     /// sizes of the slices are different.
-    fn batch_to_affine(v: &[Self], target: &mut [Self::Affine]);
+    fn batch_normalize(v: &[Self], target: &mut [Self::Affine]);
 
     /// Returns the curve constant a.
     fn a() -> Self::Base;
@@ -127,22 +124,22 @@ pub trait CurveAffine:
     + Sync
     + 'static
     + Debug
-    + Add<Output = <Self as CurveAffine>::Projective>
-    + Sub<Output = <Self as CurveAffine>::Projective>
-    + Mul<<Self as CurveAffine>::Scalar, Output = <Self as CurveAffine>::Projective>
+    + Add<Output = <Self as CurveAffine>::Curve>
+    + Sub<Output = <Self as CurveAffine>::Curve>
+    + Mul<<Self as CurveAffine>::Scalar, Output = <Self as CurveAffine>::Curve>
     + Neg<Output = Self>
     + PartialEq
     + cmp::Eq
     + ConditionallySelectable
     + ConstantTimeEq
-    + From<<Self as CurveAffine>::Projective>
+    + From<<Self as CurveAffine>::Curve>
 {
     /// The representation of a point on this curve in the projective coordinate space.
-    type Projective: Curve<
+    type Curve: Curve<
             Affine = Self,
             Scalar = <Self as CurveAffine>::Scalar,
             Base = <Self as CurveAffine>::Base,
-        > + Mul<<Self as CurveAffine>::Scalar, Output = <Self as CurveAffine>::Projective>
+        > + Mul<<Self as CurveAffine>::Scalar, Output = <Self as CurveAffine>::Curve>
         + MulAssign<<Self as CurveAffine>::Scalar>
         + AddAssign<Self>
         + SubAssign<Self>
@@ -160,16 +157,16 @@ pub trait CurveAffine:
     const CURVE_ID: &'static str;
 
     /// Obtains the additive identity.
-    fn zero() -> Self;
+    fn identity() -> Self;
 
     /// Obtains the base point of the curve.
-    fn one() -> Self;
+    fn generator() -> Self;
 
     /// Returns whether or not this element is the identity.
-    fn is_zero(&self) -> Choice;
+    fn is_identity(&self) -> Choice;
 
     /// Converts this element into its projective form.
-    fn to_projective(&self) -> Self::Projective;
+    fn to_curve(&self) -> Self::Curve;
 
     /// Gets the $(x, y)$ coordinates of this point.
     fn get_xy(&self) -> CtOption<(Self::Base, Self::Base)>;

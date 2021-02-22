@@ -60,7 +60,7 @@ impl<C: CurveAffine> Params<C> {
 
         let g = {
             let mut g = Vec::with_capacity(n as usize);
-            g.resize(n as usize, C::zero());
+            g.resize(n as usize, C::identity());
 
             parallelize(&mut g, move |g, start| {
                 let mut hasher = Blake2bParams::new()
@@ -87,7 +87,7 @@ impl<C: CurveAffine> Params<C> {
         for _ in k..C::Scalar::S {
             alpha_inv = alpha_inv.square();
         }
-        let mut g_lagrange_projective = g.iter().map(|g| g.to_projective()).collect::<Vec<_>>();
+        let mut g_lagrange_projective = g.iter().map(|g| g.to_curve()).collect::<Vec<_>>();
         best_fft(&mut g_lagrange_projective, alpha_inv, k);
         let minv = C::Scalar::TWO_INV.pow_vartime(&[k as u64, 0, 0, 0]);
         parallelize(&mut g_lagrange_projective, |g, _| {
@@ -97,9 +97,9 @@ impl<C: CurveAffine> Params<C> {
         });
 
         let g_lagrange = {
-            let mut g_lagrange = vec![C::zero(); n as usize];
+            let mut g_lagrange = vec![C::identity(); n as usize];
             parallelize(&mut g_lagrange, |g_lagrange, starts| {
-                C::Projective::batch_to_affine(
+                C::Curve::batch_normalize(
                     &g_lagrange_projective[starts..(starts + g_lagrange.len())],
                     g_lagrange,
                 );
@@ -141,11 +141,7 @@ impl<C: CurveAffine> Params<C> {
     /// This computes a commitment to a polynomial described by the provided
     /// slice of coefficients. The commitment will be blinded by the blinding
     /// factor `r`.
-    pub fn commit(
-        &self,
-        poly: &Polynomial<C::Scalar, Coeff>,
-        r: Blind<C::Scalar>,
-    ) -> C::Projective {
+    pub fn commit(&self, poly: &Polynomial<C::Scalar, Coeff>, r: Blind<C::Scalar>) -> C::Curve {
         metrics::increment_counter!("multiexp", "size" => format!("{}", poly.len() + 1), "fn" => "commit");
         let mut tmp_scalars = Vec::with_capacity(poly.len() + 1);
         let mut tmp_bases = Vec::with_capacity(poly.len() + 1);
@@ -166,7 +162,7 @@ impl<C: CurveAffine> Params<C> {
         &self,
         poly: &Polynomial<C::Scalar, LagrangeCoeff>,
         r: Blind<C::Scalar>,
-    ) -> C::Projective {
+    ) -> C::Curve {
         metrics::increment_counter!("multiexp", "size" => format!("{}", poly.len() + 1), "fn" => "commit_lagrange");
         let mut tmp_scalars = Vec::with_capacity(poly.len() + 1);
         let mut tmp_bases = Vec::with_capacity(poly.len() + 1);

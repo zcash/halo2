@@ -73,9 +73,9 @@ pub fn hash_to_field<F: FieldExt>(
 
 /// Implements a degree 3 isogeny map.
 pub fn iso_map<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAffine<Base = F>>(
-    p: &I::Projective,
+    p: &I::Curve,
     iso: &[C::Base; 13],
-) -> C::Projective {
+) -> C::Curve {
     // The input and output are in Jacobian coordinates, using the method
     // in "Avoiding inversions" [WB2019, section 4.3].
 
@@ -96,14 +96,14 @@ pub fn iso_map<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAffine<Base = F>>(
     let xo = num_x * div_y * zo;
     let yo = num_y * div_x * zo.square();
 
-    C::Projective::new_jacobian(xo, yo, zo).unwrap()
+    C::Curve::new_jacobian(xo, yo, zo).unwrap()
 }
 
 pub fn map_to_curve_simple_swu<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAffine<Base = F>>(
     u: &F,
     theta: F,
     z: F,
-) -> I::Projective {
+) -> I::Curve {
     // 1. tv1 = inv0(Z^2 * u^4 + Z * u^2)
     // 2. x1 = (-B / A) * (1 + tv1)
     // 3. If tv1 == 0, set x1 = B / (Z * A)
@@ -171,5 +171,5 @@ pub fn map_to_curve_simple_swu<F: FieldExt, C: CurveAffine<Base = F>, I: CurveAf
         (u.get_lower_32() % 2).ct_eq(&(y.get_lower_32() % 2)),
     );
 
-    I::Projective::new_jacobian(num_x * div, y * div3, div).unwrap()
+    I::Curve::new_jacobian(num_x * div, y * div3, div).unwrap()
 }

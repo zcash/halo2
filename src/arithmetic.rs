@@ -68,7 +68,7 @@ where
     }
 }
 
-fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut C::Projective) {
+fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut C::Curve) {
     let coeffs: Vec<[u8; 32]> = coeffs.iter().map(|a| a.to_bytes()).collect();
 
     let c = if bases.len() < 4 {
@@ -110,7 +110,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
         enum Bucket<C: CurveAffine> {
             None,
             Affine(C),
-            Projective(C::Projective),
+            Projective(C::Curve),
         }
 
         impl<C: CurveAffine> Bucket<C> {
@@ -125,7 +125,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
                 }
             }
 
-            fn add(self, mut other: C::Projective) -> C::Projective {
+            fn add(self, mut other: C::Curve) -> C::Curve {
                 match self {
                     Bucket::None => other,
                     Bucket::Affine(a) => {
@@ -150,7 +150,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
         // e.g. 3a + 2b + 1c = a +
         //                    (a) + b +
         //                    ((a) + b) + c
-        let mut running_sum = C::Projective::zero();
+        let mut running_sum = C::Curve::identity();
         for exp in buckets.into_iter().rev() {
             running_sum = exp.add(running_sum);
             *acc = *acc + &running_sum;
@@ -160,9 +160,9 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
 
 /// Performs a small multi-exponentiation operation.
 /// Uses the double-and-add algorithm with doublings shared across points.
-pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Projective {
+pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
     let coeffs: Vec<[u8; 32]> = coeffs.iter().map(|a| a.to_bytes()).collect();
-    let mut acc = C::Projective::zero();
+    let mut acc = C::Curve::identity();
 
     // for byte idx
     for byte_idx in (0..32).rev() {
@@ -187,14 +187,14 @@ pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::P
 /// This function will panic if coeffs and bases have a different length.
 ///
 /// This will use multithreading if beneficial.
-pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Projective {
+pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
     assert_eq!(coeffs.len(), bases.len());
 
     let num_cpus = num_cpus::get();
     if coeffs.len() > num_cpus {
         let chunk = coeffs.len() / num_cpus;
         let num_chunks = coeffs.chunks(chunk).len();
-        let mut results = vec![C::Projective::zero(); num_chunks];
+        let mut results = vec![C::Curve::identity(); num_chunks];
         thread::scope(|scope| {
             let chunk = coeffs.len() / num_cpus;
 
@@ -209,9 +209,9 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Pr
             }
         })
         .unwrap();
-        results.iter().fold(C::Projective::zero(), |a, b| a + b)
+        results.iter().fold(C::Curve::identity(), |a, b| a + b)
     } else {
-        let mut acc = C::Projective::zero();
+        let mut acc = C::Curve::identity();
         multiexp_serial(coeffs, bases, &mut acc);
         acc
     }

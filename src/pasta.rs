@@ -17,8 +17,8 @@ pub use fields::*;
 fn test_endo_consistency() {
     use crate::arithmetic::{Curve, FieldExt};
 
-    let a = pallas::Point::one();
+    let a = pallas::Point::generator();
     assert_eq!(a * pallas::Scalar::ZETA, a.endo());
-    let a = vesta::Point::one();
+    let a = vesta::Point::generator();
     assert_eq!(a * vesta::Scalar::ZETA, a.endo());
 }

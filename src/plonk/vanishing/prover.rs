@@ -50,8 +50,8 @@ impl<C: CurveAffine> Argument<C> {
             .zip(h_blinds.iter())
             .map(|(h_piece, blind)| params.commit(&h_piece, *blind))
             .collect();
-        let mut h_commitments = vec![C::zero(); h_commitments_projective.len()];
-        C::Projective::batch_to_affine(&h_commitments_projective, &mut h_commitments);
+        let mut h_commitments = vec![C::identity(); h_commitments_projective.len()];
+        C::Curve::batch_normalize(&h_commitments_projective, &mut h_commitments);
         let h_commitments = h_commitments;
 
         // Hash each h(X) piece

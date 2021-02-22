@@ -152,8 +152,8 @@ fn parallel_generator_collapse<C: CurveAffine>(g: &mut [C], challenge: C::Scalar
         let g_hi = &g_hi[start..];
         let mut tmp = Vec::with_capacity(g_lo.len());
         for (g_lo, g_hi) in g_lo.iter().zip(g_hi.iter()) {
-            tmp.push(g_lo.to_projective() + &(*g_hi * challenge));
+            tmp.push(g_lo.to_curve() + &(*g_hi * challenge));
         }
-        C::Projective::batch_to_affine(&tmp, g_lo);
+        C::Curve::batch_normalize(&tmp, g_lo);
     });
 }

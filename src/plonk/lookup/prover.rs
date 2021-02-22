@@ -87,7 +87,7 @@ impl<F: FieldExt> Argument<F> {
     ) -> Result<Permuted<C>, Error>
     where
         C: CurveAffine<Scalar = F>,
-        C::Projective: Mul<F, Output = C::Projective> + MulAssign<F>,
+        C::Curve: Mul<F, Output = C::Curve> + MulAssign<F>,
     {
         // Closure to get values of expressions and compress them
         let compress_expressions = |expressions: &[Expression<C::Scalar>]| {
