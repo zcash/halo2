@@ -2,7 +2,7 @@
 //! write code that generalizes over a pair of groups.
 
 use core::cmp;
-use core::ops::{Add, Sub};
+use core::ops::{Add, Mul, Sub};
 use group::prime::{PrimeCurve, PrimeCurveAffine};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
@@ -14,7 +14,7 @@ use std::io::{self, Read, Write};
 /// curve group in a "projective" form, where that arithmetic is usually more
 /// efficient.
 pub trait CurveExt:
-    PrimeCurve
+    PrimeCurve<Affine = <Self as CurveExt>::AffineExt>
     + group::Group<Scalar = <Self as CurveExt>::ScalarExt>
     + Default
     + PartialEq
@@ -28,6 +28,13 @@ pub trait CurveExt:
     type ScalarExt: FieldExt;
     /// The base field over which this elliptic curve is constructed.
     type Base: FieldExt;
+    /// The affine version of the curve
+    type AffineExt: CurveAffine<CurveExt = Self, ScalarExt = <Self as CurveExt>::ScalarExt>
+        + Mul<Self::ScalarExt, Output = Self>
+        + for<'r> Mul<Self::ScalarExt, Output = Self>;
+
+    /// CURVE_ID used for hash-to-curve.
+    const CURVE_ID: &'static str;
 
     /// Apply the curve endomorphism by multiplying the x-coordinate
     /// by an element of multiplicative order 3.
@@ -75,8 +82,10 @@ pub trait CurveExt:
 /// This trait is the affine counterpart to `Curve` and is used for
 /// serialization, storage in memory, and inspection of $x$ and $y$ coordinates.
 pub trait CurveAffine:
-    PrimeCurveAffine<Scalar = <Self as CurveAffine>::ScalarExt>
-    + Default
+    PrimeCurveAffine<
+        Scalar = <Self as CurveAffine>::ScalarExt,
+        Curve = <Self as CurveAffine>::CurveExt,
+    > + Default
     + Add<Output = <Self as PrimeCurveAffine>::Curve>
     + Sub<Output = <Self as PrimeCurveAffine>::Curve>
     + ConditionallySelectable
@@ -87,13 +96,8 @@ pub trait CurveAffine:
     type ScalarExt: FieldExt;
     /// The base field over which this elliptic curve is constructed.
     type Base: FieldExt;
-
-    /// Personalization of BLAKE2b hasher used to generate the uniform
-    /// random string.
-    const BLAKE2B_PERSONALIZATION: &'static [u8; 16];
-
-    /// CURVE_ID used for hash-to-curve.
-    const CURVE_ID: &'static str;
+    /// The projective form of the curve
+    type CurveExt: CurveExt<AffineExt = Self, ScalarExt = <Self as CurveAffine>::ScalarExt>;
 
     /// Gets the $(x, y)$ coordinates of this point.
     fn get_xy(&self) -> CtOption<(Self::Base, Self::Base)>;
