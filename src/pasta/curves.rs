@@ -17,7 +17,7 @@ use super::{Fp, Fq};
 use crate::arithmetic::{CurveAffine, CurveExt, FieldExt, Group};
 
 macro_rules! new_curve_impl {
-    (($($privacy:tt)*), $name:ident, $name_affine:ident, $iso:ident, $base:ident, $scalar:ident, $blake2b_personalization:literal,
+    (($($privacy:tt)*), $name:ident, $name_affine:ident, $iso:ident, $base:ident, $scalar:ident,
      $curve_id:literal, $a_raw:expr, $b_raw:expr, $curve_type:ident) => {
         /// Represents a point in the projective coordinate space.
         #[derive(Copy, Clone, Debug)]
@@ -615,7 +615,6 @@ macro_rules! new_curve_impl {
             type Base = $base;
             type CurveExt = $name;
 
-            const BLAKE2B_PERSONALIZATION: &'static [u8; 16] = $blake2b_personalization;
             const CURVE_ID: &'static str = $curve_id;
 
             fn is_on_curve(&self) -> Choice {
@@ -911,7 +910,6 @@ new_curve_impl!(
     IsoEp,
     Fp,
     Fq,
-    b"halo2_____pallas",
     "pallas",
     [0, 0, 0, 0],
     [5, 0, 0, 0],
@@ -924,7 +922,6 @@ new_curve_impl!(
     IsoEq,
     Fq,
     Fp,
-    b"halo2______vesta",
     "vesta",
     [0, 0, 0, 0],
     [5, 0, 0, 0],
@@ -937,7 +934,6 @@ new_curve_impl!(
     Ep,
     Fp,
     Fq,
-    b"halo2_iso_pallas",
     "iso-pallas",
     [
         0x92bb4b0b657a014b,
@@ -955,7 +951,6 @@ new_curve_impl!(
     Eq,
     Fq,
     Fp,
-    b"halo2__iso_vesta",
     "iso-vesta",
     [
         0xc515ad7242eaa6b1,

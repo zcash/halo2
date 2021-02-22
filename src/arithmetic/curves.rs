@@ -96,10 +96,6 @@ pub trait CurveAffine:
     /// The projective form of the curve
     type CurveExt: CurveExt<AffineExt = Self, ScalarExt = <Self as CurveAffine>::ScalarExt>;
 
-    /// Personalization of BLAKE2b hasher used to generate the uniform
-    /// random string.
-    const BLAKE2B_PERSONALIZATION: &'static [u8; 16];
-
     /// CURVE_ID used for hash-to-curve.
     const CURVE_ID: &'static str;
 

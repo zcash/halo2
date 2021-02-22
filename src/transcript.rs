@@ -59,7 +59,7 @@ impl<R: Read, C: CurveAffine> Blake2bRead<R, C> {
         Blake2bRead {
             state: Blake2bParams::new()
                 .hash_length(64)
-                .personal(C::BLAKE2B_PERSONALIZATION)
+                .personal(b"Halo2-Transcript")
                 .to_state(),
             reader,
             _marker: PhantomData,
@@ -136,7 +136,7 @@ impl<W: Write, C: CurveAffine> Blake2bWrite<W, C> {
         Blake2bWrite {
             state: Blake2bParams::new()
                 .hash_length(64)
-                .personal(C::BLAKE2B_PERSONALIZATION)
+                .personal(b"Halo2-Transcript")
                 .to_state(),
             writer,
             _marker: PhantomData,
