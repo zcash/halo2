@@ -1,6 +1,7 @@
 use super::Params;
-use crate::arithmetic::{best_multiexp, parallelize, Curve, CurveAffine};
+use crate::arithmetic::{best_multiexp, parallelize, CurveAffine};
 use ff::Field;
+use group::Group;
 
 /// A multiscalar multiplication in the polynomial commitment scheme
 #[derive(Debug, Clone)]
@@ -144,6 +145,6 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         assert_eq!(scalars.len(), len);
 
         metrics::increment_counter!("multiexp", "size" => format!("{}", len), "fn" => "MSM::eval");
-        bool::from(best_multiexp(&scalars, &bases).is_zero())
+        bool::from(best_multiexp(&scalars, &bases).is_identity())
     }
 }

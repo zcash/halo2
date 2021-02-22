@@ -6,10 +6,10 @@
 use blake2b_simd::{Params as Blake2bParams, State as Blake2bState};
 
 use super::{Coeff, LagrangeCoeff, Polynomial};
-use crate::arithmetic::{best_fft, best_multiexp, parallelize, Curve, CurveAffine, FieldExt};
+use crate::arithmetic::{best_fft, best_multiexp, parallelize, CurveAffine, FieldExt, Group};
 
 use ff::{Field, PrimeField};
-use std::convert::TryInto;
+use group::{prime::PrimeCurveAffine, Curve};
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 
 mod msm;
@@ -36,7 +36,10 @@ pub struct Params<C: CurveAffine> {
 impl<C: CurveAffine> Params<C> {
     /// Initializes parameters for the curve, given a random oracle to draw
     /// points from.
-    pub fn new(k: u32) -> Self {
+    pub fn new(k: u32) -> Self
+    where
+        <C as PrimeCurveAffine>::Curve: Group,
+    {
         // This is usually a limitation on the curve, but we also want 32-bit
         // architectures to be supported.
         assert!(k < 32);
@@ -50,7 +53,9 @@ impl<C: CurveAffine> Params<C> {
             loop {
                 let mut hasher = hasher.clone();
                 hasher.update(&(trial.to_le_bytes())[..]);
-                let p = C::from_bytes(&hasher.finalize().as_bytes().try_into().unwrap());
+                let mut repr = C::Repr::default();
+                repr.as_mut().copy_from_slice(hasher.finalize().as_bytes());
+                let p = C::from_bytes(&repr);
                 if bool::from(p.is_some()) {
                     break p.unwrap();
                 }
@@ -60,7 +65,7 @@ impl<C: CurveAffine> Params<C> {
 
         let g = {
             let mut g = Vec::with_capacity(n as usize);
-            g.resize(n as usize, C::zero());
+            g.resize(n as usize, C::identity());
 
             parallelize(&mut g, move |g, start| {
                 let mut hasher = Blake2bParams::new()
@@ -83,11 +88,11 @@ impl<C: CurveAffine> Params<C> {
 
         // Let's evaluate all of the Lagrange basis polynomials
         // using an inverse FFT.
-        let mut alpha_inv = C::Scalar::ROOT_OF_UNITY_INV;
+        let mut alpha_inv = <<C as PrimeCurveAffine>::Curve as Group>::Scalar::ROOT_OF_UNITY_INV;
         for _ in k..C::Scalar::S {
             alpha_inv = alpha_inv.square();
         }
-        let mut g_lagrange_projective = g.iter().map(|g| g.to_projective()).collect::<Vec<_>>();
+        let mut g_lagrange_projective = g.iter().map(|g| g.to_curve()).collect::<Vec<_>>();
         best_fft(&mut g_lagrange_projective, alpha_inv, k);
         let minv = C::Scalar::TWO_INV.pow_vartime(&[k as u64, 0, 0, 0]);
         parallelize(&mut g_lagrange_projective, |g, _| {
@@ -97,9 +102,9 @@ impl<C: CurveAffine> Params<C> {
         });
 
         let g_lagrange = {
-            let mut g_lagrange = vec![C::zero(); n as usize];
+            let mut g_lagrange = vec![C::identity(); n as usize];
             parallelize(&mut g_lagrange, |g_lagrange, starts| {
-                C::Projective::batch_to_affine(
+                C::Curve::batch_normalize(
                     &g_lagrange_projective[starts..(starts + g_lagrange.len())],
                     g_lagrange,
                 );
@@ -141,11 +146,7 @@ impl<C: CurveAffine> Params<C> {
     /// This computes a commitment to a polynomial described by the provided
     /// slice of coefficients. The commitment will be blinded by the blinding
     /// factor `r`.
-    pub fn commit(
-        &self,
-        poly: &Polynomial<C::Scalar, Coeff>,
-        r: Blind<C::Scalar>,
-    ) -> C::Projective {
+    pub fn commit(&self, poly: &Polynomial<C::Scalar, Coeff>, r: Blind<C::Scalar>) -> C::Curve {
         metrics::increment_counter!("multiexp", "size" => format!("{}", poly.len() + 1), "fn" => "commit");
         let mut tmp_scalars = Vec::with_capacity(poly.len() + 1);
         let mut tmp_bases = Vec::with_capacity(poly.len() + 1);
@@ -166,7 +167,7 @@ impl<C: CurveAffine> Params<C> {
         &self,
         poly: &Polynomial<C::Scalar, LagrangeCoeff>,
         r: Blind<C::Scalar>,
-    ) -> C::Projective {
+    ) -> C::Curve {
         metrics::increment_counter!("multiexp", "size" => format!("{}", poly.len() + 1), "fn" => "commit_lagrange");
         let mut tmp_scalars = Vec::with_capacity(poly.len() + 1);
         let mut tmp_bases = Vec::with_capacity(poly.len() + 1);
@@ -195,13 +196,13 @@ impl<C: CurveAffine> Params<C> {
     pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
         writer.write_all(&self.k.to_le_bytes())?;
         for g_element in &self.g {
-            writer.write_all(&g_element.to_bytes())?;
+            writer.write_all(g_element.to_bytes().as_ref())?;
         }
         for g_lagrange_element in &self.g_lagrange {
-            writer.write_all(&g_lagrange_element.to_bytes())?;
+            writer.write_all(g_lagrange_element.to_bytes().as_ref())?;
         }
-        writer.write_all(&self.h.to_bytes())?;
-        writer.write_all(&self.u.to_bytes())?;
+        writer.write_all(self.h.to_bytes().as_ref())?;
+        writer.write_all(self.u.to_bytes().as_ref())?;
 
         Ok(())
     }

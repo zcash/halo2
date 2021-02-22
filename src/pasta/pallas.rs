@@ -16,7 +16,8 @@ pub type Affine = EpAffine;
 
 #[test]
 fn test_iso_map() {
-    use crate::arithmetic::Curve;
+    use crate::arithmetic::CurveExt;
+    use group::Group;
 
     // This is a regression test (it's the same input to iso_map as for hash_to_curve
     // with domain prefix "z.cash:test", Shake128, and input b"hello"). We don't
@@ -42,8 +43,7 @@ fn test_iso_map() {
         ]),
     )
     .unwrap();
-    let p =
-        super::hashtocurve::iso_map::<_, Affine, super::IsoEpAffine>(&r, &Ep::ISOGENY_CONSTANTS);
+    let p = super::hashtocurve::iso_map::<_, Point, super::IsoEp>(&r, &Ep::ISOGENY_CONSTANTS);
     let (x, y, z) = p.jacobian_coordinates();
     assert!(
         format!("{:?}", x) == "0x318cc15f281662b3f26d0175cab97b924870c837879cac647e877be51a85e898"
@@ -58,15 +58,15 @@ fn test_iso_map() {
     // check that iso_map([2] r) = [2] iso_map(r)
     let r2 = r.double();
     assert!(bool::from(r2.is_on_curve()));
-    let p2 =
-        super::hashtocurve::iso_map::<_, Affine, super::IsoEpAffine>(&r2, &Ep::ISOGENY_CONSTANTS);
+    let p2 = super::hashtocurve::iso_map::<_, Point, super::IsoEp>(&r2, &Ep::ISOGENY_CONSTANTS);
     assert!(bool::from(p2.is_on_curve()));
     assert!(p2 == p.double());
 }
 
 #[test]
 fn test_iso_map_identity() {
-    use crate::arithmetic::Curve;
+    use crate::arithmetic::CurveExt;
+    use group::Group;
 
     let r = super::IsoEp::new_jacobian(
         Base::from_raw([
@@ -91,22 +91,20 @@ fn test_iso_map_identity() {
     .unwrap();
     let r = (r * -Fq::one()) + r;
     assert!(bool::from(r.is_on_curve()));
-    assert!(bool::from(r.is_zero()));
-    let p =
-        super::hashtocurve::iso_map::<_, Affine, super::IsoEpAffine>(&r, &Ep::ISOGENY_CONSTANTS);
+    assert!(bool::from(r.is_identity()));
+    let p = super::hashtocurve::iso_map::<_, Point, super::IsoEp>(&r, &Ep::ISOGENY_CONSTANTS);
     assert!(bool::from(p.is_on_curve()));
-    assert!(bool::from(p.is_zero()));
+    assert!(bool::from(p.is_identity()));
 }
 
 #[test]
 fn test_map_to_curve_simple_swu() {
-    use crate::arithmetic::Curve;
-    use crate::pasta::curves::{IsoEp, IsoEpAffine};
+    use crate::arithmetic::CurveExt;
+    use crate::pasta::curves::IsoEp;
     use crate::pasta::hashtocurve::map_to_curve_simple_swu;
 
     // The zero input is a special case.
-    let p: IsoEp =
-        map_to_curve_simple_swu::<Fp, EpAffine, IsoEpAffine>(&Fp::zero(), Ep::THETA, Ep::Z);
+    let p: IsoEp = map_to_curve_simple_swu::<Fp, Ep, IsoEp>(&Fp::zero(), Ep::THETA, Ep::Z);
     let (x, y, z) = p.jacobian_coordinates();
     println!("{:?}", p);
     assert!(
@@ -119,8 +117,7 @@ fn test_map_to_curve_simple_swu() {
         format!("{:?}", z) == "0x054b3ba10416dc104157b1318534a19d5d115472da7d746f8a5f250cd8cdef36"
     );
 
-    let p: IsoEp =
-        map_to_curve_simple_swu::<Fp, EpAffine, IsoEpAffine>(&Fp::one(), Ep::THETA, Ep::Z);
+    let p: IsoEp = map_to_curve_simple_swu::<Fp, Ep, IsoEp>(&Fp::one(), Ep::THETA, Ep::Z);
     let (x, y, z) = p.jacobian_coordinates();
     println!("{:?}", p);
     assert!(
@@ -136,7 +133,8 @@ fn test_map_to_curve_simple_swu() {
 
 #[test]
 fn test_hash_to_curve() {
-    use crate::arithmetic::Curve;
+    use crate::arithmetic::CurveExt;
+    use group::Group;
 
     // This test vector is chosen so that the first map_to_curve_simple_swu takes the gx1 square
     // "branch" and the second takes the gx1 non-square "branch" (opposite to the Vesta test vector).
@@ -157,5 +155,5 @@ fn test_hash_to_curve() {
 
     let p = (p * -Fq::one()) + p;
     assert!(bool::from(p.is_on_curve()));
-    assert!(bool::from(p.is_zero()));
+    assert!(bool::from(p.is_identity()));
 }

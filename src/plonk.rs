@@ -44,7 +44,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
     /// Writes a verifying key to a buffer.
     pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
         for commitment in &self.fixed_commitments {
-            writer.write_all(&commitment.to_bytes())?;
+            writer.write_all(commitment.to_bytes().as_ref())?;
         }
         for permutation in &self.permutations {
             permutation.write(writer)?;
@@ -190,7 +190,7 @@ type ChallengeX<F> = ChallengeScalar<F, X>;
 
 #[test]
 fn test_proving() {
-    use crate::arithmetic::{Curve, FieldExt};
+    use crate::arithmetic::FieldExt;
     use crate::dev::MockProver;
     use crate::pasta::{EqAffine, Fp};
     use crate::poly::{
@@ -199,6 +199,7 @@ fn test_proving() {
     };
     use crate::transcript::{Blake2bRead, Blake2bWrite};
     use circuit::{Advice, Column, Fixed};
+    use group::Curve;
     use std::marker::PhantomData;
     const K: u32 = 5;
 

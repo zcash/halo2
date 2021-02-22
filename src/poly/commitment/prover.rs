@@ -3,10 +3,11 @@ use ff::Field;
 use super::super::{Coeff, Polynomial};
 use super::{Blind, Params};
 use crate::arithmetic::{
-    best_multiexp, compute_inner_product, eval_polynomial, parallelize, Curve, CurveAffine,
-    FieldExt,
+    best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine, FieldExt,
 };
 use crate::transcript::{Challenge, ChallengeScalar, TranscriptWrite};
+
+use group::Curve;
 use std::io;
 
 /// Create a polynomial commitment opening proof for the polynomial defined
@@ -152,8 +153,8 @@ fn parallel_generator_collapse<C: CurveAffine>(g: &mut [C], challenge: C::Scalar
         let g_hi = &g_hi[start..];
         let mut tmp = Vec::with_capacity(g_lo.len());
         for (g_lo, g_hi) in g_lo.iter().zip(g_hi.iter()) {
-            tmp.push(g_lo.to_projective() + &(*g_hi * challenge));
+            tmp.push(g_lo.to_curve() + &(*g_hi * challenge));
         }
-        C::Projective::batch_to_affine(&tmp, g_lo);
+        C::Curve::batch_normalize(&tmp, g_lo);
     });
 }

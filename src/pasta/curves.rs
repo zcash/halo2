@@ -3,15 +3,21 @@
 
 use core::cmp;
 use core::fmt::Debug;
+use core::iter::Sum;
 use core::ops::{Add, Mul, Neg, Sub};
 use ff::Field;
+use group::{
+    prime::{PrimeCurve, PrimeCurveAffine, PrimeGroup},
+    Curve as _, Group as _, GroupEncoding,
+};
+use rand::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 use super::{Fp, Fq};
-use crate::arithmetic::{Curve, CurveAffine, FieldExt, Group};
+use crate::arithmetic::{CurveAffine, CurveExt, FieldExt, Group};
 
 macro_rules! new_curve_impl {
-    (($($privacy:tt)*), $name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, $scalar:ident, $blake2b_personalization:literal,
+    (($($privacy:tt)*), $name:ident, $name_affine:ident, $iso:ident, $base:ident, $scalar:ident, $blake2b_personalization:literal,
      $curve_id:literal, $a_raw:expr, $b_raw:expr, $curve_type:ident) => {
         /// Represents a point in the projective coordinate space.
         #[derive(Copy, Clone, Debug)]
@@ -50,14 +56,25 @@ macro_rules! new_curve_impl {
             }
         }
 
-        impl Curve for $name {
-            type Affine = $name_affine;
+        impl group::Group for $name {
             type Scalar = $scalar;
-            type Base = $base;
 
-            impl_projective_curve_specific!($name, $name_affine, $iso_affine, $base, $curve_type);
+            fn random(mut rng: impl RngCore) -> Self {
+                loop {
+                    let mut buf = [0; 64];
+                    rng.fill_bytes(&mut buf);
+                    let p: Option<$name_affine> = $name_affine::from_bytes_wide(&buf).into();
+                    if let Some(p) = p {
+                        if !bool::from(p.is_identity()) {
+                            break p.to_curve();
+                        }
+                    }
+                }
+            }
 
-            fn zero() -> Self {
+            impl_projective_curve_specific!($name, $base, $curve_type);
+
+            fn identity() -> Self {
                 Self {
                     x: $base::zero(),
                     y: $base::zero(),
@@ -65,25 +82,16 @@ macro_rules! new_curve_impl {
                 }
             }
 
-            fn is_zero(&self) -> Choice {
+            fn is_identity(&self) -> Choice {
                 self.z.ct_is_zero()
             }
+        }
 
-            fn to_affine(&self) -> Self::Affine {
-                let zinv = self.z.invert().unwrap_or($base::zero());
-                let zinv2 = zinv.square();
-                let x = self.x * zinv2;
-                let zinv3 = zinv2 * zinv;
-                let y = self.y * zinv3;
+        impl CurveExt for $name {
+            type ScalarExt = $scalar;
+            type Base = $base;
 
-                let tmp = $name_affine {
-                    x,
-                    y,
-                    infinity: Choice::from(0u8),
-                };
-
-                $name_affine::conditional_select(&tmp, &$name_affine::zero(), zinv.ct_is_zero())
-            }
+            impl_projective_curve_ext!($name, $name_affine, $iso, $base, $curve_type);
 
             fn a() -> Self::Base {
                 $name::curve_constant_a()
@@ -91,6 +99,11 @@ macro_rules! new_curve_impl {
 
             fn b() -> Self::Base {
                 $name::curve_constant_b()
+            }
+
+            fn new_jacobian(x: Self::Base, y: Self::Base, z: Self::Base) -> CtOption<Self> {
+                let p = $name { x, y, z };
+                CtOption::new(p, p.is_on_curve())
             }
 
             fn jacobian_coordinates(&self) -> ($base, $base, $base) {
@@ -108,8 +121,12 @@ macro_rules! new_curve_impl {
                     .ct_eq(&(z6 * $name::curve_constant_b()))
                     | self.z.ct_is_zero()
             }
+        }
 
-            fn batch_to_affine(p: &[Self], q: &mut [Self::Affine]) {
+        impl group::Curve for $name {
+            type AffineRepr = $name_affine;
+
+            fn batch_normalize(p: &[Self], q: &mut [Self::AffineRepr]) {
                 assert_eq!(p.len(), q.len());
 
                 let mut acc = $base::one();
@@ -119,7 +136,7 @@ macro_rules! new_curve_impl {
                     q.x = acc;
 
                     // We will end up skipping all identities in p
-                    acc = $base::conditional_select(&(acc * p.z), &acc, p.is_zero());
+                    acc = $base::conditional_select(&(acc * p.z), &acc, p.is_identity());
                 }
 
                 // This is the inverse, as all z-coordinates are nonzero and the ones
@@ -127,7 +144,7 @@ macro_rules! new_curve_impl {
                 acc = acc.invert().unwrap();
 
                 for (p, q) in p.iter().rev().zip(q.iter_mut().rev()) {
-                    let skip = p.is_zero();
+                    let skip = p.is_identity();
 
                     // Compute tmp = 1/z
                     let tmp = q.x * acc;
@@ -143,31 +160,65 @@ macro_rules! new_curve_impl {
                     q.y = p.y * tmp3;
                     q.infinity = Choice::from(0u8);
 
-                    *q = $name_affine::conditional_select(&q, &$name_affine::zero(), skip);
+                    *q = $name_affine::conditional_select(&q, &$name_affine::identity(), skip);
                 }
             }
 
-            fn new_jacobian(x: Self::Base, y: Self::Base, z: Self::Base) -> CtOption<Self> {
-                let p = $name { x, y, z };
-                CtOption::new(p, p.is_on_curve())
+            fn to_affine(&self) -> Self::AffineRepr {
+                let zinv = self.z.invert().unwrap_or($base::zero());
+                let zinv2 = zinv.square();
+                let x = self.x * zinv2;
+                let zinv3 = zinv2 * zinv;
+                let y = self.y * zinv3;
+
+                let tmp = $name_affine {
+                    x,
+                    y,
+                    infinity: Choice::from(0u8),
+                };
+
+                $name_affine::conditional_select(&tmp, &$name_affine::identity(), zinv.ct_is_zero())
+            }
+        }
+
+        impl PrimeGroup for $name {}
+
+        impl PrimeCurve for $name {
+            type Affine = $name_affine;
+        }
+
+        impl GroupEncoding for $name {
+            type Repr = [u8; 32];
+
+            fn from_bytes(bytes: &Self::Repr) -> CtOption<Self> {
+                $name_affine::from_bytes(bytes).map(Self::from)
+            }
+
+            fn from_bytes_unchecked(bytes: &Self::Repr) -> CtOption<Self> {
+                // We can't avoid curve checks when parsing a compressed encoding.
+                $name_affine::from_bytes(bytes).map(Self::from)
+            }
+
+            fn to_bytes(&self) -> Self::Repr {
+                $name_affine::from(self).to_bytes()
             }
         }
 
         impl<'a> From<&'a $name_affine> for $name {
             fn from(p: &'a $name_affine) -> $name {
-                p.to_projective()
+                p.to_curve()
             }
         }
 
         impl From<$name_affine> for $name {
             fn from(p: $name_affine) -> $name {
-                p.to_projective()
+                p.to_curve()
             }
         }
 
         impl Default for $name {
             fn default() -> $name {
-                $name::zero()
+                $name::identity()
             }
         }
 
@@ -184,8 +235,8 @@ macro_rules! new_curve_impl {
                 let z = z * self.z;
                 let y2 = other.y * z;
 
-                let self_is_zero = self.is_zero();
-                let other_is_zero = other.is_zero();
+                let self_is_zero = self.is_identity();
+                let other_is_zero = other.is_identity();
 
                 (self_is_zero & other_is_zero) // Both point at infinity
                             | ((!self_is_zero) & (!other_is_zero) & x1.ct_eq(&x2) & y1.ct_eq(&y2))
@@ -231,13 +282,25 @@ macro_rules! new_curve_impl {
             }
         }
 
+        impl<T> Sum<T> for $name
+        where
+            T: core::borrow::Borrow<$name>,
+        {
+            fn sum<I>(iter: I) -> Self
+            where
+                I: Iterator<Item = T>,
+            {
+                iter.fold(Self::identity(), |acc, item| acc + item.borrow())
+            }
+        }
+
         impl<'a, 'b> Add<&'a $name> for &'b $name {
             type Output = $name;
 
             fn add(self, rhs: &'a $name) -> $name {
-                if bool::from(self.is_zero()) {
+                if bool::from(self.is_identity()) {
                     *rhs
-                } else if bool::from(rhs.is_zero()) {
+                } else if bool::from(rhs.is_identity()) {
                     *self
                 } else {
                     let z1z1 = self.z.square();
@@ -251,7 +314,7 @@ macro_rules! new_curve_impl {
                         if s1 == s2 {
                             self.double()
                         } else {
-                            $name::zero()
+                            $name::identity()
                         }
                     } else {
                         let h = u2 - u1;
@@ -279,9 +342,9 @@ macro_rules! new_curve_impl {
             type Output = $name;
 
             fn add(self, rhs: &'a $name_affine) -> $name {
-                if bool::from(self.is_zero()) {
-                    rhs.to_projective()
-                } else if bool::from(rhs.is_zero()) {
+                if bool::from(self.is_identity()) {
+                    rhs.to_curve()
+                } else if bool::from(rhs.is_identity()) {
                     *self
                 } else {
                     let z1z1 = self.z.square();
@@ -292,7 +355,7 @@ macro_rules! new_curve_impl {
                         if self.y == s2 {
                             self.double()
                         } else {
-                            $name::zero()
+                            $name::identity()
                         }
                     } else {
                         let h = u2 - self.x;
@@ -339,7 +402,7 @@ macro_rules! new_curve_impl {
             fn mul(self, other: &'b $scalar) -> Self::Output {
                 // TODO: make this faster
 
-                let mut acc = $name::zero();
+                let mut acc = $name::identity();
 
                 // This is a simple double-and-add implementation of point
                 // multiplication, moving from most significant to least
@@ -393,16 +456,16 @@ macro_rules! new_curve_impl {
             type Output = $name;
 
             fn add(self, rhs: &'a $name_affine) -> $name {
-                if bool::from(self.is_zero()) {
-                    rhs.to_projective()
-                } else if bool::from(rhs.is_zero()) {
-                    self.to_projective()
+                if bool::from(self.is_identity()) {
+                    rhs.to_curve()
+                } else if bool::from(rhs.is_identity()) {
+                    self.to_curve()
                 } else {
                     if self.x == rhs.x {
                         if self.y == rhs.y {
-                            self.to_projective().double()
+                            self.to_curve().double()
                         } else {
-                            $name::zero()
+                            $name::identity()
                         }
                     } else {
                         let h = rhs.x - self.x;
@@ -449,7 +512,7 @@ macro_rules! new_curve_impl {
             fn mul(self, other: &'b $scalar) -> Self::Output {
                 // TODO: make this faster
 
-                let mut acc = $name::zero();
+                let mut acc = $name::identity();
 
                 // This is a simple double-and-add implementation of point
                 // multiplication, moving from most significant to least
@@ -471,17 +534,13 @@ macro_rules! new_curve_impl {
             }
         }
 
-        impl CurveAffine for $name_affine {
-            type Projective = $name;
+        impl PrimeCurveAffine for $name_affine {
+            type Curve = $name;
             type Scalar = $scalar;
-            type Base = $base;
-
-            const BLAKE2B_PERSONALIZATION: &'static [u8; 16] = $blake2b_personalization;
-            const CURVE_ID: &'static str = $curve_id;
 
             impl_affine_curve_specific!($name, $base, $curve_type);
 
-            fn zero() -> Self {
+            fn identity() -> Self {
                 Self {
                     x: $base::zero(),
                     y: $base::zero(),
@@ -489,34 +548,21 @@ macro_rules! new_curve_impl {
                 }
             }
 
-            fn is_zero(&self) -> Choice {
+            fn is_identity(&self) -> Choice {
                 self.infinity
             }
 
-            fn is_on_curve(&self) -> Choice {
-                // y^2 - x^3 - ax ?= b
-                (self.y.square() - (self.x.square() + &$name::curve_constant_a()) * self.x).ct_eq(&$name::curve_constant_b())
-                    | self.infinity
-            }
-
-            fn to_projective(&self) -> Self::Projective {
+            fn to_curve(&self) -> Self::Curve {
                 $name {
                     x: self.x,
                     y: self.y,
                     z: $base::conditional_select(&$base::one(), &$base::zero(), self.infinity),
                 }
             }
+        }
 
-            fn get_xy(&self) -> CtOption<(Self::Base, Self::Base)> {
-                CtOption::new((self.x, self.y), !self.is_zero())
-            }
-
-            fn from_xy(x: Self::Base, y: Self::Base) -> CtOption<Self> {
-                let p = $name_affine {
-                    x, y, infinity: 0u8.into()
-                };
-                CtOption::new(p, p.is_on_curve())
-            }
+        impl GroupEncoding for $name_affine {
+            type Repr = [u8; 32];
 
             fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
                 let mut tmp = *bytes;
@@ -524,7 +570,7 @@ macro_rules! new_curve_impl {
                 tmp[31] &= 0b0111_1111;
 
                 $base::from_bytes(&tmp).and_then(|x| {
-                    CtOption::new(Self::zero(), x.ct_is_zero() & (!ysign)).or_else(|| {
+                    CtOption::new(Self::identity(), x.ct_is_zero() & (!ysign)).or_else(|| {
                         let x3 = x.square() * x;
                         (x3 + $name::curve_constant_b()).sqrt().and_then(|y| {
                             let sign = Choice::from(y.to_bytes()[0] & 1);
@@ -544,9 +590,14 @@ macro_rules! new_curve_impl {
                 })
             }
 
+            fn from_bytes_unchecked(bytes: &Self::Repr) -> CtOption<Self> {
+                // We can't avoid curve checks when parsing a compressed encoding.
+                Self::from_bytes(bytes)
+            }
+
             fn to_bytes(&self) -> [u8; 32] {
                 // TODO: not constant time
-                if bool::from(self.is_zero()) {
+                if bool::from(self.is_identity()) {
                     [0; 32]
                 } else {
                     let (x, y) = (self.x, self.y);
@@ -555,6 +606,31 @@ macro_rules! new_curve_impl {
                     xbytes[31] |= sign;
                     xbytes
                 }
+            }
+        }
+
+        impl CurveAffine for $name_affine {
+            type ScalarExt = $scalar;
+            type Base = $base;
+
+            const BLAKE2B_PERSONALIZATION: &'static [u8; 16] = $blake2b_personalization;
+            const CURVE_ID: &'static str = $curve_id;
+
+            fn is_on_curve(&self) -> Choice {
+                // y^2 - x^3 - ax ?= b
+                (self.y.square() - (self.x.square() + &$name::curve_constant_a()) * self.x).ct_eq(&$name::curve_constant_b())
+                    | self.infinity
+            }
+
+            fn get_xy(&self) -> CtOption<(Self::Base, Self::Base)> {
+                CtOption::new((self.x, self.y), !self.is_identity())
+            }
+
+            fn from_xy(x: Self::Base, y: Self::Base) -> CtOption<Self> {
+                let p = $name_affine {
+                    x, y, infinity: 0u8.into()
+                };
+                CtOption::new(p, p.is_on_curve())
             }
 
             fn from_bytes_wide(bytes: &[u8; 64]) -> CtOption<Self> {
@@ -565,7 +641,7 @@ macro_rules! new_curve_impl {
 
                 $base::from_bytes(&xbytes).and_then(|x| {
                     $base::from_bytes(&ybytes).and_then(|y| {
-                        CtOption::new(Self::zero(), x.ct_is_zero() & y.ct_is_zero()).or_else(|| {
+                        CtOption::new(Self::identity(), x.ct_is_zero() & y.ct_is_zero()).or_else(|| {
                             let on_curve =
                                 (x * x.square() + $name::curve_constant_b()).ct_eq(&y.square());
 
@@ -584,7 +660,7 @@ macro_rules! new_curve_impl {
 
             fn to_bytes_wide(&self) -> [u8; 64] {
                 // TODO: not constant time
-                if bool::from(self.is_zero()) {
+                if bool::from(self.is_identity()) {
                     [0; 64]
                 } else {
                     let mut out = [0u8; 64];
@@ -606,7 +682,7 @@ macro_rules! new_curve_impl {
 
         impl Default for $name_affine {
             fn default() -> $name_affine {
-                $name_affine::zero()
+                $name_affine::identity()
             }
         }
 
@@ -660,7 +736,7 @@ macro_rules! new_curve_impl {
             type Scalar = $scalar;
 
             fn group_zero() -> Self {
-                Self::zero()
+                Self::identity()
             }
             fn group_add(&mut self, rhs: &Self) {
                 *self = *self + *rhs;
@@ -676,33 +752,8 @@ macro_rules! new_curve_impl {
 }
 
 macro_rules! impl_projective_curve_specific {
-    ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, special_a0_b5) => {
-        fn hash_to_curve<'a>(domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
-            use super::hashtocurve;
-
-            Box::new(move |message| {
-                let mut us = [Field::zero(); 2];
-                hashtocurve::hash_to_field($name_affine::CURVE_ID, domain_prefix, message, &mut us);
-                let q0 = hashtocurve::map_to_curve_simple_swu::<$base, $name_affine, $iso_affine>(
-                    &us[0],
-                    $name::THETA,
-                    $name::Z,
-                );
-                let q1 = hashtocurve::map_to_curve_simple_swu::<$base, $name_affine, $iso_affine>(
-                    &us[1],
-                    $name::THETA,
-                    $name::Z,
-                );
-                let r = q0 + &q1;
-                debug_assert!(bool::from(r.is_on_curve()));
-                hashtocurve::iso_map::<$base, $name_affine, $iso_affine>(
-                    &r,
-                    &$name::ISOGENY_CONSTANTS,
-                )
-            })
-        }
-
-        fn one() -> Self {
+    ($name:ident, $base:ident, special_a0_b5) => {
+        fn generator() -> Self {
             // NOTE: This is specific to b = 5
 
             const NEGATIVE_ONE: $base = $base::neg(&$base::one());
@@ -712,16 +763,6 @@ macro_rules! impl_projective_curve_specific {
                 x: NEGATIVE_ONE,
                 y: TWO,
                 z: $base::one(),
-            }
-        }
-
-        /// Apply the curve endomorphism by multiplying the x-coordinate
-        /// by an element of multiplicative order 3.
-        fn endo(&self) -> Self {
-            $name {
-                x: self.x * $base::ZETA,
-                y: self.y,
-                z: self.z,
             }
         }
 
@@ -753,22 +794,12 @@ macro_rules! impl_projective_curve_specific {
                 z: z3,
             };
 
-            $name::conditional_select(&tmp, &$name::zero(), self.is_zero())
+            $name::conditional_select(&tmp, &$name::identity(), self.is_identity())
         }
     };
-    ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, general) => {
-        /// Unimplemented: hashing to this curve is not supported
-        fn hash_to_curve<'a>(_domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
-            unimplemented!()
-        }
-
+    ($name:ident, $base:ident, general) => {
         /// Unimplemented: there is no standard generator for this curve.
-        fn one() -> Self {
-            unimplemented!()
-        }
-
-        /// Unimplemented: no endomorphism is supported for this curve.
-        fn endo(&self) -> Self {
+        fn generator() -> Self {
             unimplemented!()
         }
 
@@ -796,14 +827,61 @@ macro_rules! impl_projective_curve_specific {
                 z: z3,
             };
 
-            $name::conditional_select(&tmp, &$name::zero(), self.is_zero())
+            $name::conditional_select(&tmp, &$name::identity(), self.is_identity())
+        }
+    };
+}
+
+macro_rules! impl_projective_curve_ext {
+    ($name:ident, $name_affine:ident, $iso:ident, $base:ident, special_a0_b5) => {
+        fn hash_to_curve<'a>(domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
+            use super::hashtocurve;
+
+            Box::new(move |message| {
+                let mut us = [Field::zero(); 2];
+                hashtocurve::hash_to_field($name_affine::CURVE_ID, domain_prefix, message, &mut us);
+                let q0 = hashtocurve::map_to_curve_simple_swu::<$base, $name, $iso>(
+                    &us[0],
+                    $name::THETA,
+                    $name::Z,
+                );
+                let q1 = hashtocurve::map_to_curve_simple_swu::<$base, $name, $iso>(
+                    &us[1],
+                    $name::THETA,
+                    $name::Z,
+                );
+                let r = q0 + &q1;
+                debug_assert!(bool::from(r.is_on_curve()));
+                hashtocurve::iso_map::<$base, $name, $iso>(&r, &$name::ISOGENY_CONSTANTS)
+            })
+        }
+
+        /// Apply the curve endomorphism by multiplying the x-coordinate
+        /// by an element of multiplicative order 3.
+        fn endo(&self) -> Self {
+            $name {
+                x: self.x * $base::ZETA,
+                y: self.y,
+                z: self.z,
+            }
+        }
+    };
+    ($name:ident, $name_affine:ident, $iso:ident, $base:ident, general) => {
+        /// Unimplemented: hashing to this curve is not supported
+        fn hash_to_curve<'a>(_domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
+            unimplemented!()
+        }
+
+        /// Unimplemented: no endomorphism is supported for this curve.
+        fn endo(&self) -> Self {
+            unimplemented!()
         }
     };
 }
 
 macro_rules! impl_affine_curve_specific {
     ($name:ident, $base:ident, special_a0_b5) => {
-        fn one() -> Self {
+        fn generator() -> Self {
             // NOTE: This is specific to b = 5
 
             const NEGATIVE_ONE: $base = $base::neg(&$base::from_raw([1, 0, 0, 0]));
@@ -818,7 +896,7 @@ macro_rules! impl_affine_curve_specific {
     };
     ($name:ident, $base:ident, general) => {
         /// Unimplemented: there is no standard generator for this curve.
-        fn one() -> Self {
+        fn generator() -> Self {
             unimplemented!()
         }
     };
@@ -828,7 +906,7 @@ new_curve_impl!(
     (pub),
     Ep,
     EpAffine,
-    IsoEpAffine,
+    IsoEp,
     Fp,
     Fq,
     b"halo2_____pallas",
@@ -841,7 +919,7 @@ new_curve_impl!(
     (pub),
     Eq,
     EqAffine,
-    IsoEqAffine,
+    IsoEq,
     Fq,
     Fp,
     b"halo2______vesta",
@@ -854,7 +932,7 @@ new_curve_impl!(
     (pub(crate)),
     IsoEp,
     IsoEpAffine,
-    EpAffine,
+    Ep,
     Fp,
     Fq,
     b"halo2_iso_pallas",
@@ -872,7 +950,7 @@ new_curve_impl!(
     (pub(crate)),
     IsoEq,
     IsoEqAffine,
-    EqAffine,
+    Eq,
     Fq,
     Fp,
     b"halo2__iso_vesta",

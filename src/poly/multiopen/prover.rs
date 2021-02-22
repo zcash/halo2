@@ -7,10 +7,11 @@ use super::{
     Query,
 };
 
-use crate::arithmetic::{eval_polynomial, kate_division, Curve, CurveAffine, FieldExt};
+use crate::arithmetic::{eval_polynomial, kate_division, CurveAffine, FieldExt};
 use crate::transcript::TranscriptWrite;
 
 use ff::Field;
+use group::Curve;
 use std::io;
 use std::marker::PhantomData;
 

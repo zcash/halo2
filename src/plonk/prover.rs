@@ -1,4 +1,5 @@
 use ff::Field;
+use group::Curve;
 use std::iter;
 
 use super::{
@@ -6,7 +7,7 @@ use super::{
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
     ChallengeY, Error, ProvingKey,
 };
-use crate::arithmetic::{eval_polynomial, Curve, CurveAffine, FieldExt};
+use crate::arithmetic::{eval_polynomial, CurveAffine, FieldExt};
 use crate::poly::{
     commitment::{Blind, Params},
     multiopen::{self, ProverQuery},
@@ -52,11 +53,9 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
                 .iter()
                 .map(|poly| params.commit_lagrange(poly, Blind::default()))
                 .collect();
-            let mut instance_commitments = vec![C::zero(); instance_commitments_projective.len()];
-            C::Projective::batch_to_affine(
-                &instance_commitments_projective,
-                &mut instance_commitments,
-            );
+            let mut instance_commitments =
+                vec![C::identity(); instance_commitments_projective.len()];
+            C::Curve::batch_normalize(&instance_commitments_projective, &mut instance_commitments);
             let instance_commitments = instance_commitments;
             drop(instance_commitments_projective);
             metrics::counter!("instance_commitments", instance_commitments.len() as u64);
@@ -206,8 +205,8 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
                 .zip(advice_blinds.iter())
                 .map(|(poly, blind)| params.commit_lagrange(poly, *blind))
                 .collect();
-            let mut advice_commitments = vec![C::zero(); advice_commitments_projective.len()];
-            C::Projective::batch_to_affine(&advice_commitments_projective, &mut advice_commitments);
+            let mut advice_commitments = vec![C::identity(); advice_commitments_projective.len()];
+            C::Curve::batch_normalize(&advice_commitments_projective, &mut advice_commitments);
             let advice_commitments = advice_commitments;
             drop(advice_commitments_projective);
             metrics::counter!("advice_commitments", advice_commitments.len() as u64);

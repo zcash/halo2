@@ -206,8 +206,10 @@ where
 
 #[test]
 fn test_roundtrip() {
+    use group::Curve;
+
     use super::commitment::{Blind, Params};
-    use crate::arithmetic::{eval_polynomial, Curve, FieldExt};
+    use crate::arithmetic::{eval_polynomial, FieldExt};
     use crate::pasta::{EqAffine, Fp};
 
     const K: u32 = 4;

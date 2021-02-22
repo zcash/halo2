@@ -2,7 +2,7 @@
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use halo2::arithmetic::Curve;
+use halo2::arithmetic::CurveExt;
 use halo2::pasta::{pallas, vesta};
 
 fn criterion_benchmark(c: &mut Criterion) {
