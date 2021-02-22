@@ -11,26 +11,30 @@ use super::{Fp, Fq};
 use crate::arithmetic::{Curve, CurveAffine, FieldExt, Group};
 
 macro_rules! new_curve_impl {
-    ($name:ident, $name_affine:ident, $base:ident, $scalar:ident, $blake2b_personalization:literal) => {
+    (($($privacy:tt)*), $name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, $scalar:ident, $blake2b_personalization:literal,
+     $curve_id:literal, $a_raw:expr, $b_raw:expr, $curve_type:ident) => {
         /// Represents a point in the projective coordinate space.
         #[derive(Copy, Clone, Debug)]
-        pub struct $name {
+        $($privacy)* struct $name {
             x: $base,
             y: $base,
             z: $base,
         }
 
         impl $name {
+            const fn curve_constant_a() -> $base {
+                $base::from_raw($a_raw)
+            }
+
             const fn curve_constant_b() -> $base {
-                // NOTE: this is specific to b = 5
-                $base::from_raw([5, 0, 0, 0])
+                $base::from_raw($b_raw)
             }
         }
 
         /// Represents a point in the affine coordinate space (or the point at
         /// infinity).
         #[derive(Copy, Clone)]
-        pub struct $name_affine {
+        $($privacy)* struct $name_affine {
             x: $base,
             y: $base,
             infinity: Choice,
@@ -51,24 +55,13 @@ macro_rules! new_curve_impl {
             type Scalar = $scalar;
             type Base = $base;
 
+            impl_projective_curve_specific!($name, $name_affine, $iso_affine, $base, $curve_type);
+
             fn zero() -> Self {
                 Self {
                     x: $base::zero(),
                     y: $base::zero(),
                     z: $base::zero(),
-                }
-            }
-
-            fn one() -> Self {
-                // NOTE: This is specific to b = 5
-
-                const NEGATIVE_ONE: $base = $base::neg(&$base::one());
-                const TWO: $base = $base::from_raw([2, 0, 0, 0]);
-
-                Self {
-                    x: NEGATIVE_ONE,
-                    y: TWO,
-                    z: $base::one(),
                 }
             }
 
@@ -92,56 +85,27 @@ macro_rules! new_curve_impl {
                 $name_affine::conditional_select(&tmp, &$name_affine::zero(), zinv.ct_is_zero())
             }
 
-            fn double(&self) -> Self {
-                // http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#doubling-dbl-2009-l
-                //
-                // There are no points of order 2.
-
-                let a = self.x.square();
-                let b = self.y.square();
-                let c = b.square();
-                let d = self.x + b;
-                let d = d.square();
-                let d = d - a - c;
-                let d = d + d;
-                let e = a + a + a;
-                let f = e.square();
-                let z3 = self.z * self.y;
-                let z3 = z3 + z3;
-                let x3 = f - (d + d);
-                let c = c + c;
-                let c = c + c;
-                let c = c + c;
-                let y3 = e * (d - x3) - c;
-
-                let tmp = $name {
-                    x: x3,
-                    y: y3,
-                    z: z3,
-                };
-
-                $name::conditional_select(&tmp, &$name::zero(), self.is_zero())
-            }
-
-            /// Apply the curve endomorphism by multiplying the x-coordinate
-            /// by an element of multiplicative order 3.
-            fn endo(&self) -> Self {
-                $name {
-                    x: self.x * $base::ZETA,
-                    y: self.y,
-                    z: self.z,
-                }
+            fn a() -> Self::Base {
+                $name::curve_constant_a()
             }
 
             fn b() -> Self::Base {
                 $name::curve_constant_b()
             }
 
-            fn is_on_curve(&self) -> Choice {
-                // Y^2 - X^3 = 5(Z^6)
+            fn jacobian_coordinates(&self) -> ($base, $base, $base) {
+               (self.x, self.y, self.z)
+            }
 
-                (self.y.square() - (self.x.square() * self.x))
-                    .ct_eq(&((self.z.square() * self.z).square() * $name::curve_constant_b()))
+            fn is_on_curve(&self) -> Choice {
+                // Y^2 = X^3 + AX(Z^4) + b(Z^6)
+                // Y^2 - (X^2 + A(Z^4))X = b(Z^6)
+
+                let z2 = self.z.square();
+                let z4 = z2.square();
+                let z6 = z4 * z2;
+                (self.y.square() - (self.x.square() + $name::curve_constant_a() * z4) * self.x)
+                    .ct_eq(&(z6 * $name::curve_constant_b()))
                     | self.z.ct_is_zero()
             }
 
@@ -181,6 +145,11 @@ macro_rules! new_curve_impl {
 
                     *q = $name_affine::conditional_select(&q, &$name_affine::zero(), skip);
                 }
+            }
+
+            fn new_jacobian(x: Self::Base, y: Self::Base, z: Self::Base) -> CtOption<Self> {
+                let p = $name { x, y, z };
+                CtOption::new(p, p.is_on_curve())
             }
         }
 
@@ -508,6 +477,9 @@ macro_rules! new_curve_impl {
             type Base = $base;
 
             const BLAKE2B_PERSONALIZATION: &'static [u8; 16] = $blake2b_personalization;
+            const CURVE_ID: &'static str = $curve_id;
+
+            impl_affine_curve_specific!($name, $base, $curve_type);
 
             fn zero() -> Self {
                 Self {
@@ -517,26 +489,13 @@ macro_rules! new_curve_impl {
                 }
             }
 
-            fn one() -> Self {
-                // NOTE: This is specific to b = 5
-
-                const NEGATIVE_ONE: $base = $base::neg(&$base::from_raw([1, 0, 0, 0]));
-                const TWO: $base = $base::from_raw([2, 0, 0, 0]);
-
-                Self {
-                    x: NEGATIVE_ONE,
-                    y: TWO,
-                    infinity: Choice::from(0u8),
-                }
-            }
-
             fn is_zero(&self) -> Choice {
                 self.infinity
             }
 
             fn is_on_curve(&self) -> Choice {
-                // y^2 - x^3 ?= b
-                (self.y.square() - (self.x.square() * self.x)).ct_eq(&$name::curve_constant_b())
+                // y^2 - x^3 - ax ?= b
+                (self.y.square() - (self.x.square() + &$name::curve_constant_a()) * self.x).ct_eq(&$name::curve_constant_b())
                     | self.infinity
             }
 
@@ -636,6 +595,10 @@ macro_rules! new_curve_impl {
                 }
             }
 
+            fn a() -> Self::Base {
+                $name::curve_constant_a()
+            }
+
             fn b() -> Self::Base {
                 $name::curve_constant_b()
             }
@@ -712,5 +675,414 @@ macro_rules! new_curve_impl {
     };
 }
 
-new_curve_impl!(Ep, EpAffine, Fp, Fq, b"halo2_____pallas");
-new_curve_impl!(Eq, EqAffine, Fq, Fp, b"halo2______vesta");
+macro_rules! impl_projective_curve_specific {
+    ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, special_a0_b5) => {
+        fn hash_to_curve<'a>(domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
+            use super::hashtocurve;
+
+            Box::new(move |message| {
+                let mut us = [Field::zero(); 2];
+                hashtocurve::hash_to_field($name_affine::CURVE_ID, domain_prefix, message, &mut us);
+                let q0 = hashtocurve::map_to_curve_simple_swu::<$base, $name_affine, $iso_affine>(
+                    &us[0],
+                    $name::THETA,
+                    $name::Z,
+                );
+                let q1 = hashtocurve::map_to_curve_simple_swu::<$base, $name_affine, $iso_affine>(
+                    &us[1],
+                    $name::THETA,
+                    $name::Z,
+                );
+                let r = q0 + &q1;
+                debug_assert!(bool::from(r.is_on_curve()));
+                hashtocurve::iso_map::<$base, $name_affine, $iso_affine>(
+                    &r,
+                    &$name::ISOGENY_CONSTANTS,
+                )
+            })
+        }
+
+        fn one() -> Self {
+            // NOTE: This is specific to b = 5
+
+            const NEGATIVE_ONE: $base = $base::neg(&$base::one());
+            const TWO: $base = $base::from_raw([2, 0, 0, 0]);
+
+            Self {
+                x: NEGATIVE_ONE,
+                y: TWO,
+                z: $base::one(),
+            }
+        }
+
+        /// Apply the curve endomorphism by multiplying the x-coordinate
+        /// by an element of multiplicative order 3.
+        fn endo(&self) -> Self {
+            $name {
+                x: self.x * $base::ZETA,
+                y: self.y,
+                z: self.z,
+            }
+        }
+
+        fn double(&self) -> Self {
+            // http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html#doubling-dbl-2009-l
+            //
+            // There are no points of order 2.
+
+            let a = self.x.square();
+            let b = self.y.square();
+            let c = b.square();
+            let d = self.x + b;
+            let d = d.square();
+            let d = d - a - c;
+            let d = d + d;
+            let e = a + a + a;
+            let f = e.square();
+            let z3 = self.z * self.y;
+            let z3 = z3 + z3;
+            let x3 = f - (d + d);
+            let c = c + c;
+            let c = c + c;
+            let c = c + c;
+            let y3 = e * (d - x3) - c;
+
+            let tmp = $name {
+                x: x3,
+                y: y3,
+                z: z3,
+            };
+
+            $name::conditional_select(&tmp, &$name::zero(), self.is_zero())
+        }
+    };
+    ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, general) => {
+        /// Unimplemented: hashing to this curve is not supported
+        fn hash_to_curve<'a>(_domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
+            unimplemented!()
+        }
+
+        /// Unimplemented: there is no standard generator for this curve.
+        fn one() -> Self {
+            unimplemented!()
+        }
+
+        /// Unimplemented: no endomorphism is supported for this curve.
+        fn endo(&self) -> Self {
+            unimplemented!()
+        }
+
+        fn double(&self) -> Self {
+            // http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#doubling-dbl-2007-bl
+            //
+            // There are no points of order 2.
+
+            let xx = self.x.square();
+            let yy = self.y.square();
+            let a = yy.square();
+            let zz = self.z.square();
+            let s = ((self.x + yy).square() - xx - a).double();
+            let m = xx.double() + xx + $name::curve_constant_a() * zz.square();
+            let x3 = m.square() - s.double();
+            let a = a.double();
+            let a = a.double();
+            let a = a.double();
+            let y3 = m * (s - x3) - a;
+            let z3 = (self.y + self.z).square() - yy - zz;
+
+            let tmp = $name {
+                x: x3,
+                y: y3,
+                z: z3,
+            };
+
+            $name::conditional_select(&tmp, &$name::zero(), self.is_zero())
+        }
+    };
+}
+
+macro_rules! impl_affine_curve_specific {
+    ($name:ident, $base:ident, special_a0_b5) => {
+        fn one() -> Self {
+            // NOTE: This is specific to b = 5
+
+            const NEGATIVE_ONE: $base = $base::neg(&$base::from_raw([1, 0, 0, 0]));
+            const TWO: $base = $base::from_raw([2, 0, 0, 0]);
+
+            Self {
+                x: NEGATIVE_ONE,
+                y: TWO,
+                infinity: Choice::from(0u8),
+            }
+        }
+    };
+    ($name:ident, $base:ident, general) => {
+        /// Unimplemented: there is no standard generator for this curve.
+        fn one() -> Self {
+            unimplemented!()
+        }
+    };
+}
+
+new_curve_impl!(
+    (pub),
+    Ep,
+    EpAffine,
+    IsoEpAffine,
+    Fp,
+    Fq,
+    b"halo2_____pallas",
+    "pallas",
+    [0, 0, 0, 0],
+    [5, 0, 0, 0],
+    special_a0_b5
+);
+new_curve_impl!(
+    (pub),
+    Eq,
+    EqAffine,
+    IsoEqAffine,
+    Fq,
+    Fp,
+    b"halo2______vesta",
+    "vesta",
+    [0, 0, 0, 0],
+    [5, 0, 0, 0],
+    special_a0_b5
+);
+new_curve_impl!(
+    (pub(crate)),
+    IsoEp,
+    IsoEpAffine,
+    EpAffine,
+    Fp,
+    Fq,
+    b"halo2_iso_pallas",
+    "iso-pallas",
+    [
+        0x92bb4b0b657a014b,
+        0xb74134581a27a59f,
+        0x49be2d7258370742,
+        0x18354a2eb0ea8c9c,
+    ],
+    [1265, 0, 0, 0],
+    general
+);
+new_curve_impl!(
+    (pub(crate)),
+    IsoEq,
+    IsoEqAffine,
+    EqAffine,
+    Fq,
+    Fp,
+    b"halo2__iso_vesta",
+    "iso-vesta",
+    [
+        0xc515ad7242eaa6b1,
+        0x9673928c7d01b212,
+        0x81639c4d96f78773,
+        0x267f9b2ee592271a,
+    ],
+    [1265, 0, 0, 0],
+    general
+);
+
+impl Ep {
+    /// Constants used for computing the isogeny from IsoEp to Ep.
+    pub const ISOGENY_CONSTANTS: [Fp; 13] = [
+        Fp::from_raw([
+            0x775f6034aaaaaaab,
+            0x4081775473d8375b,
+            0xe38e38e38e38e38e,
+            0x0e38e38e38e38e38,
+        ]),
+        Fp::from_raw([
+            0x8cf863b02814fb76,
+            0x0f93b82ee4b99495,
+            0x267c7ffa51cf412a,
+            0x3509afd51872d88e,
+        ]),
+        Fp::from_raw([
+            0x0eb64faef37ea4f7,
+            0x380af066cfeb6d69,
+            0x98c7d7ac3d98fd13,
+            0x17329b9ec5253753,
+        ]),
+        Fp::from_raw([
+            0xeebec06955555580,
+            0x8102eea8e7b06eb6,
+            0xc71c71c71c71c71c,
+            0x1c71c71c71c71c71,
+        ]),
+        Fp::from_raw([
+            0xc47f2ab668bcd71f,
+            0x9c434ac1c96b6980,
+            0x5a607fcce0494a79,
+            0x1d572e7ddc099cff,
+        ]),
+        Fp::from_raw([
+            0x2aa3af1eae5b6604,
+            0xb4abf9fb9a1fc81c,
+            0x1d13bf2a7f22b105,
+            0x325669becaecd5d1,
+        ]),
+        Fp::from_raw([
+            0x5ad985b5e38e38e4,
+            0x7642b01ad461bad2,
+            0x4bda12f684bda12f,
+            0x1a12f684bda12f68,
+        ]),
+        Fp::from_raw([
+            0xc67c31d8140a7dbb,
+            0x07c9dc17725cca4a,
+            0x133e3ffd28e7a095,
+            0x1a84d7ea8c396c47,
+        ]),
+        Fp::from_raw([
+            0x02e2be87d225b234,
+            0x1765e924f7459378,
+            0x303216cce1db9ff1,
+            0x3fb98ff0d2ddcadd,
+        ]),
+        Fp::from_raw([
+            0x93e53ab371c71c4f,
+            0x0ac03e8e134eb3e4,
+            0x7b425ed097b425ed,
+            0x025ed097b425ed09,
+        ]),
+        Fp::from_raw([
+            0x5a28279b1d1b42ae,
+            0x5941a3a4a97aa1b3,
+            0x0790bfb3506defb6,
+            0x0c02c5bcca0e6b7f,
+        ]),
+        Fp::from_raw([
+            0x4d90ab820b12320a,
+            0xd976bbfabbc5661d,
+            0x573b3d7f7d681310,
+            0x17033d3c60c68173,
+        ]),
+        Fp::from_raw([
+            0x992d30ecfffffde5,
+            0x224698fc094cf91b,
+            0x0000000000000000,
+            0x4000000000000000,
+        ]),
+    ];
+
+    /// Z = -13
+    pub const Z: Fp = Fp::from_raw([
+        0x992d30ecfffffff4,
+        0x224698fc094cf91b,
+        0x0000000000000000,
+        0x4000000000000000,
+    ]);
+
+    /// `(F::ROOT_OF_UNITY.invert().unwrap() * z).sqrt().unwrap()`
+    pub const THETA: Fp = Fp::from_raw([
+        0xca330bcc09ac318e,
+        0x51f64fc4dc888857,
+        0x4647aef782d5cdc8,
+        0x0f7bdb65814179b4,
+    ]);
+}
+
+impl Eq {
+    /// Constants used for computing the isogeny from IsoEq to Eq.
+    pub const ISOGENY_CONSTANTS: [Fq; 13] = [
+        Fq::from_raw([
+            0x43cd42c800000001,
+            0x0205dd51cfa0961a,
+            0x8e38e38e38e38e39,
+            0x38e38e38e38e38e3,
+        ]),
+        Fq::from_raw([
+            0x8b95c6aaf703bcc5,
+            0x216b8861ec72bd5d,
+            0xacecf10f5f7c09a2,
+            0x1d935247b4473d17,
+        ]),
+        Fq::from_raw([
+            0xaeac67bbeb586a3d,
+            0xd59d03d23b39cb11,
+            0xed7ee4a9cdf78f8f,
+            0x18760c7f7a9ad20d,
+        ]),
+        Fq::from_raw([
+            0xfb539a6f0000002b,
+            0xe1c521a795ac8356,
+            0x1c71c71c71c71c71,
+            0x31c71c71c71c71c7,
+        ]),
+        Fq::from_raw([
+            0xb7284f7eaf21a2e9,
+            0xa3ad678129b604d3,
+            0x1454798a5b5c56b2,
+            0x0a2de485568125d5,
+        ]),
+        Fq::from_raw([
+            0xf169c187d2533465,
+            0x30cd6d53df49d235,
+            0x0c621de8b91c242a,
+            0x14735171ee542778,
+        ]),
+        Fq::from_raw([
+            0x6bef1642aaaaaaab,
+            0x5601f4709a8adcb3,
+            0xda12f684bda12f68,
+            0x12f684bda12f684b,
+        ]),
+        Fq::from_raw([
+            0x8bee58e5fb81de63,
+            0x21d910aefb03b31d,
+            0xd6767887afbe04d1,
+            0x2ec9a923da239e8b,
+        ]),
+        Fq::from_raw([
+            0x4986913ab4443034,
+            0x97a3ca5c24e9ea63,
+            0x66d1466e9de10e64,
+            0x19b0d87e16e25788,
+        ]),
+        Fq::from_raw([
+            0x8f64842c55555533,
+            0x8bc32d36fb21a6a3,
+            0x425ed097b425ed09,
+            0x1ed097b425ed097b,
+        ]),
+        Fq::from_raw([
+            0x58dfecce86b2745e,
+            0x06a767bfc35b5bac,
+            0x9e7eb64f890a820c,
+            0x2f44d6c801c1b8bf,
+        ]),
+        Fq::from_raw([
+            0xd43d449776f99d2f,
+            0x926847fb9ddd76a1,
+            0x252659ba2b546c7e,
+            0x3d59f455cafc7668,
+        ]),
+        Fq::from_raw([
+            0x8c46eb20fffffde5,
+            0x224698fc0994a8dd,
+            0x0000000000000000,
+            0x4000000000000000,
+        ]),
+    ];
+
+    /// Z = -13
+    pub const Z: Fq = Fq::from_raw([
+        0x8c46eb20fffffff4,
+        0x224698fc0994a8dd,
+        0x0000000000000000,
+        0x4000000000000000,
+    ]);
+
+    /// `(F::ROOT_OF_UNITY.invert().unwrap() * z).sqrt().unwrap()`
+    pub const THETA: Fq = Fq::from_raw([
+        0x632cae9872df1b5d,
+        0x38578ccadf03ac27,
+        0x53c3808d9e2f2357,
+        0x2b3483a1ee9a382f,
+    ]);
+}

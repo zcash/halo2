@@ -11,7 +11,7 @@ use super::{FieldExt, Group};
 use std::io::{self, Read, Write};
 
 /// This trait is a common interface for dealing with elements of an elliptic
-/// curve group in the "projective" form, where that arithmetic is usually more
+/// curve group in a "projective" form, where that arithmetic is usually more
 /// efficient.
 pub trait Curve:
     Sized
@@ -76,6 +76,27 @@ pub trait Curve:
     /// Converts this element into its affine form.
     fn to_affine(&self) -> Self::Affine;
 
+    /// Return the Jacobian coordinates of this point.
+    fn jacobian_coordinates(&self) -> (Self::Base, Self::Base, Self::Base);
+
+    /// Requests a hasher that accepts messages and returns near-uniformly
+    /// distributed elements in the group, given domain prefix `domain_prefix`.
+    ///
+    /// This method is suitable for use as a random oracle.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use halo2::arithmetic::{Curve, CurveAffine};
+    /// fn pedersen_commitment<C: CurveAffine>(x: C::Scalar, r: C::Scalar) -> C {
+    ///     let hasher = C::Projective::hash_to_curve("z.cash:example_pedersen_commitment");
+    ///     let g = hasher(b"g");
+    ///     let h = hasher(b"h");
+    ///     (g * x + &(h * r)).to_affine()
+    /// }
+    /// ```
+    fn hash_to_curve<'a>(domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a>;
+
     /// Returns whether or not this element is on the curve; should
     /// always be true unless an "unchecked" API was used.
     fn is_on_curve(&self) -> Choice;
@@ -84,8 +105,15 @@ pub trait Curve:
     /// sizes of the slices are different.
     fn batch_to_affine(v: &[Self], target: &mut [Self::Affine]);
 
-    /// Returns the curve constant b
+    /// Returns the curve constant a.
+    fn a() -> Self::Base;
+
+    /// Returns the curve constant b.
     fn b() -> Self::Base;
+
+    /// Obtains a point given Jacobian coordinates $X : Y : Z$, failing
+    /// if the coordinates are not on the curve.
+    fn new_jacobian(x: Self::Base, y: Self::Base, z: Self::Base) -> CtOption<Self>;
 }
 
 /// This trait is the affine counterpart to `Curve` and is used for
@@ -127,6 +155,9 @@ pub trait CurveAffine:
     /// Personalization of BLAKE2b hasher used to generate the uniform
     /// random string.
     const BLAKE2B_PERSONALIZATION: &'static [u8; 16];
+
+    /// CURVE_ID used for hash-to-curve.
+    const CURVE_ID: &'static str;
 
     /// Obtains the additive identity.
     fn zero() -> Self;
@@ -182,6 +213,9 @@ pub trait CurveAffine:
     /// element.
     fn to_bytes_wide(&self) -> [u8; 64];
 
-    /// Returns the curve constant $b$
+    /// Returns the curve constant $a$.
+    fn a() -> Self::Base;
+
+    /// Returns the curve constant $b$.
     fn b() -> Self::Base;
 }

@@ -1,13 +1,72 @@
-//! The Vesta elliptic curve group.
+//! The Vesta and iso-Vesta elliptic curve groups.
+
+use super::{Eq, EqAffine, Fp, Fq};
+
+/// The base field of the Vesta and iso-Vesta curves.
+pub type Base = Fq;
+
+/// The scalar field of the Vesta and iso-Vesta curves.
+pub type Scalar = Fp;
 
 /// A Vesta point in the projective coordinate space.
-pub type Point = super::Eq;
+pub type Point = Eq;
 
 /// A Vesta point in the affine coordinate space (or the point at infinity).
-pub type Affine = super::EqAffine;
+pub type Affine = EqAffine;
 
-/// The base field of the Vesta group.
-pub type Base = super::Fq;
+#[test]
+fn test_map_to_curve_simple_swu() {
+    use crate::arithmetic::Curve;
+    use crate::pasta::curves::{IsoEq, IsoEqAffine};
+    use crate::pasta::hashtocurve::map_to_curve_simple_swu;
 
-/// The scalar field of the Vesta group.
-pub type Scalar = super::Fp;
+    // The zero input is a special case.
+    let p: IsoEq =
+        map_to_curve_simple_swu::<Fq, EqAffine, IsoEqAffine>(&Fq::zero(), Eq::THETA, Eq::Z);
+    let (x, y, z) = p.jacobian_coordinates();
+    println!("{:?}", p);
+    assert!(
+        format!("{:?}", x) == "0x2ccc4c6ec2660e5644305bc52527d904d408f92407f599df8f158d50646a2e78"
+    );
+    assert!(
+        format!("{:?}", y) == "0x29a34381321d13d72d50b6b462bb4ea6a9e47393fa28a47227bf35bc0ee7aa59"
+    );
+    assert!(
+        format!("{:?}", z) == "0x0b851e9e579403a76df1100f556e1f226e5656bdf38f3bf8601d8a3a9a15890b"
+    );
+
+    let p: IsoEq =
+        map_to_curve_simple_swu::<Fq, EqAffine, IsoEqAffine>(&Fq::one(), Eq::THETA, Eq::Z);
+    let (x, y, z) = p.jacobian_coordinates();
+    println!("{:?}", p);
+    assert!(
+        format!("{:?}", x) == "0x165f8b71841c5abc3d742ec13fb16f099d596b781e6f5c7d0b6682b1216a8258"
+    );
+    assert!(
+        format!("{:?}", y) == "0x0dadef21de74ed7337a37dd74f126a92e4df73c3a704da501e36eaf59cf03120"
+    );
+    assert!(
+        format!("{:?}", z) == "0x0a3d6f6c1af02bd9274cc0b80129759ce77edeef578d7de968d4a47d39026c82"
+    );
+}
+
+#[test]
+fn test_hash_to_curve() {
+    use crate::arithmetic::Curve;
+
+    // This test vector is chosen so that the first map_to_curve_simple_swu takes the gx1 non-square
+    // "branch" and the second takes the gx1 square "branch" (opposite to the Pallas test vector).
+    let hash = Point::hash_to_curve("z.cash:test");
+    let p: Point = hash(b"hello");
+    let (x, y, z) = p.jacobian_coordinates();
+    println!("{:?}", p);
+    assert!(
+        format!("{:?}", x) == "0x24c3431db13111fcba2f214a0662ae48e675801988c5705877525750b65f7ad8"
+    );
+    assert!(
+        format!("{:?}", y) == "0x0df21621bf38070d79193ec5959fc2bb09468e71c0190d0217b0984fc92282f3"
+    );
+    assert!(
+        format!("{:?}", z) == "0x3e95ef9cbe5a9978c0d82635b242cf773ecfbc764ae9b936aba64c43f67091c6"
+    );
+}

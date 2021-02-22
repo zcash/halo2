@@ -2,7 +2,7 @@
 //! field and polynomial arithmetic.
 
 use crossbeam_utils::thread;
-use ff::Field;
+pub use ff::Field;
 
 mod curves;
 mod fields;

@@ -31,6 +31,10 @@ name = "arithmetic"
 harness = false
 
 [[bench]]
+name = "hashtocurve"
+harness = false
+
+[[bench]]
 name = "plonk"
 harness = false
 

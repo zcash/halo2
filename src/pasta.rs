@@ -6,6 +6,7 @@ mod macros;
 mod curves;
 mod fields;
 
+mod hashtocurve;
 pub mod pallas;
 pub mod vesta;
 

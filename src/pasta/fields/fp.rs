@@ -761,7 +761,7 @@ impl FieldExt for Fp {
         let rq = sqr(rp, 4) * r11;
         let rr = sqr(rq, 7) * r111;
         let rs = sqr(rr, 3) * r11;
-        rs.square()
+        rs.square() // rt
     }
 }
 
