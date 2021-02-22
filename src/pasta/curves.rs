@@ -55,7 +55,7 @@ macro_rules! new_curve_impl {
             type Scalar = $scalar;
             type Base = $base;
 
-            impl_projective_curve_specific!($name, $name_affine, $iso_affine, $base, $curve_type);
+            impl_projective_curve_specific!($name, $base, $curve_type);
 
             fn zero() -> Self {
                 Self {
@@ -84,6 +84,8 @@ macro_rules! new_curve_impl {
 
                 $name_affine::conditional_select(&tmp, &$name_affine::zero(), zinv.ct_is_zero())
             }
+
+            impl_projective_curve_ext!($name, $name_affine, $iso_affine, $base, $curve_type);
 
             fn a() -> Self::Base {
                 $name::curve_constant_a()
@@ -676,32 +678,7 @@ macro_rules! new_curve_impl {
 }
 
 macro_rules! impl_projective_curve_specific {
-    ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, special_a0_b5) => {
-        fn hash_to_curve<'a>(domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
-            use super::hashtocurve;
-
-            Box::new(move |message| {
-                let mut us = [Field::zero(); 2];
-                hashtocurve::hash_to_field($name_affine::CURVE_ID, domain_prefix, message, &mut us);
-                let q0 = hashtocurve::map_to_curve_simple_swu::<$base, $name_affine, $iso_affine>(
-                    &us[0],
-                    $name::THETA,
-                    $name::Z,
-                );
-                let q1 = hashtocurve::map_to_curve_simple_swu::<$base, $name_affine, $iso_affine>(
-                    &us[1],
-                    $name::THETA,
-                    $name::Z,
-                );
-                let r = q0 + &q1;
-                debug_assert!(bool::from(r.is_on_curve()));
-                hashtocurve::iso_map::<$base, $name_affine, $iso_affine>(
-                    &r,
-                    &$name::ISOGENY_CONSTANTS,
-                )
-            })
-        }
-
+    ($name:ident, $base:ident, special_a0_b5) => {
         fn one() -> Self {
             // NOTE: This is specific to b = 5
 
@@ -712,16 +689,6 @@ macro_rules! impl_projective_curve_specific {
                 x: NEGATIVE_ONE,
                 y: TWO,
                 z: $base::one(),
-            }
-        }
-
-        /// Apply the curve endomorphism by multiplying the x-coordinate
-        /// by an element of multiplicative order 3.
-        fn endo(&self) -> Self {
-            $name {
-                x: self.x * $base::ZETA,
-                y: self.y,
-                z: self.z,
             }
         }
 
@@ -756,19 +723,9 @@ macro_rules! impl_projective_curve_specific {
             $name::conditional_select(&tmp, &$name::zero(), self.is_zero())
         }
     };
-    ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, general) => {
-        /// Unimplemented: hashing to this curve is not supported
-        fn hash_to_curve<'a>(_domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
-            unimplemented!()
-        }
-
+    ($name:ident, $base:ident, general) => {
         /// Unimplemented: there is no standard generator for this curve.
         fn one() -> Self {
-            unimplemented!()
-        }
-
-        /// Unimplemented: no endomorphism is supported for this curve.
-        fn endo(&self) -> Self {
             unimplemented!()
         }
 
@@ -797,6 +754,56 @@ macro_rules! impl_projective_curve_specific {
             };
 
             $name::conditional_select(&tmp, &$name::zero(), self.is_zero())
+        }
+    };
+}
+
+macro_rules! impl_projective_curve_ext {
+    ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, special_a0_b5) => {
+        fn hash_to_curve<'a>(domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
+            use super::hashtocurve;
+
+            Box::new(move |message| {
+                let mut us = [Field::zero(); 2];
+                hashtocurve::hash_to_field($name_affine::CURVE_ID, domain_prefix, message, &mut us);
+                let q0 = hashtocurve::map_to_curve_simple_swu::<$base, $name_affine, $iso_affine>(
+                    &us[0],
+                    $name::THETA,
+                    $name::Z,
+                );
+                let q1 = hashtocurve::map_to_curve_simple_swu::<$base, $name_affine, $iso_affine>(
+                    &us[1],
+                    $name::THETA,
+                    $name::Z,
+                );
+                let r = q0 + &q1;
+                debug_assert!(bool::from(r.is_on_curve()));
+                hashtocurve::iso_map::<$base, $name_affine, $iso_affine>(
+                    &r,
+                    &$name::ISOGENY_CONSTANTS,
+                )
+            })
+        }
+
+        /// Apply the curve endomorphism by multiplying the x-coordinate
+        /// by an element of multiplicative order 3.
+        fn endo(&self) -> Self {
+            $name {
+                x: self.x * $base::ZETA,
+                y: self.y,
+                z: self.z,
+            }
+        }
+    };
+    ($name:ident, $name_affine:ident, $iso_affine:ident, $base:ident, general) => {
+        /// Unimplemented: hashing to this curve is not supported
+        fn hash_to_curve<'a>(_domain_prefix: &'a str) -> Box<dyn Fn(&[u8]) -> Self + 'a> {
+            unimplemented!()
+        }
+
+        /// Unimplemented: no endomorphism is supported for this curve.
+        fn endo(&self) -> Self {
+            unimplemented!()
         }
     };
 }
