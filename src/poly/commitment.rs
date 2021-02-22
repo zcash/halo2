@@ -49,15 +49,16 @@ impl<C: CurveAffine> Params<C> {
             let mut g = Vec::with_capacity(n as usize);
             g.resize(n as usize, C::Curve::identity());
 
-            let domain_prefix = format!("Halo2-G-{}", n);
-
             parallelize(&mut g, move |g, start| {
-                let hasher = C::CurveExt::hash_to_curve(&domain_prefix);
+                let hasher = C::CurveExt::hash_to_curve("Halo2-Parameters");
 
                 for (i, g) in g.iter_mut().enumerate() {
-                    let i = (i + start) as u64;
+                    let i = (i + start) as u32;
 
-                    *g = hasher(&(i.to_le_bytes())[..]);
+                    let mut message = [0u8; 5];
+                    message[1..5].copy_from_slice(&i.to_le_bytes());
+
+                    *g = hasher(&message);
                 }
             });
 
@@ -99,8 +100,9 @@ impl<C: CurveAffine> Params<C> {
             g_lagrange
         };
 
-        let h = C::CurveExt::hash_to_curve("Halo2-H")(&[]).to_affine();
-        let u = C::CurveExt::hash_to_curve("Halo2-U")(&[]).to_affine();
+        let hasher = C::CurveExt::hash_to_curve("Halo2-Parameters");
+        let h = hasher(&[1]).to_affine();
+        let u = hasher(&[2]).to_affine();
 
         Params {
             k,
