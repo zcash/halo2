@@ -90,6 +90,7 @@ macro_rules! new_curve_impl {
         impl CurveExt for $name {
             type ScalarExt = $scalar;
             type Base = $base;
+            type AffineExt = $name_affine;
 
             impl_projective_curve_ext!($name, $name_affine, $iso, $base, $curve_type);
 
@@ -612,6 +613,7 @@ macro_rules! new_curve_impl {
         impl CurveAffine for $name_affine {
             type ScalarExt = $scalar;
             type Base = $base;
+            type CurveExt = $name;
 
             const BLAKE2B_PERSONALIZATION: &'static [u8; 16] = $blake2b_personalization;
             const CURVE_ID: &'static str = $curve_id;
