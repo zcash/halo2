@@ -10,11 +10,15 @@ use crate::{
 
 use ff::Field;
 
+mod window_table;
+use window_table::WindowTable;
+
 /// Configuration for the ECC chip
 #[derive(Clone, Debug)]
 pub struct EccConfig {
-    num_bases: usize, // number of fixed-base points
-    w: u32,           // width of windows for fixed-base window tables
+    num_bases: usize,        // number of fixed bases
+    num_loaded_bases: usize, // number of fixed bases that have been loaded
+    w: u32,                  // width of windows for fixed-base window tables
     x_a: Column<Advice>,
     y_a: Column<Advice>,
     x_p: Column<Advice>,
@@ -25,6 +29,7 @@ pub struct EccConfig {
     q_double: Column<Fixed>,
     q_mul: Column<Fixed>,
     q_mul_fixed: Column<Fixed>,
+    fixed_bases: Vec<WindowTable>,
 }
 
 /// A chip implementing EccInstructions
@@ -45,6 +50,10 @@ impl<C: CurveAffine> EccChip<C> {
         let q_double = meta.fixed_column();
         let q_mul = meta.fixed_column();
         let q_mul_fixed = meta.fixed_column();
+
+        let fixed_bases: Vec<_> = (0..num_bases)
+            .map(|_| WindowTable::configure(meta, w))
+            .collect();
 
         // Create point doubling gate
         meta.create_gate("point doubling", |meta| {
@@ -85,6 +94,7 @@ impl<C: CurveAffine> EccChip<C> {
 
         EccConfig {
             num_bases,
+            num_loaded_bases: 0,
             w,
             x_a,
             y_a,
@@ -96,6 +106,7 @@ impl<C: CurveAffine> EccChip<C> {
             q_double,
             q_mul,
             q_mul_fixed,
+            fixed_bases,
         }
     }
 }
@@ -112,7 +123,7 @@ impl<C: CurveAffine> Chip for EccChip<C> {
 impl<C: CurveAffine> EccInstructions<C> for EccChip<C> {
     type Scalar = C::Scalar;
     type Point = C;
-    type FixedPoint = C;
+    type FixedPoint = C::Curve;
 
     fn witness_scalar(
         layouter: &mut impl Layouter<Self>,
@@ -130,9 +141,20 @@ impl<C: CurveAffine> EccInstructions<C> for EccChip<C> {
 
     fn load_fixed(
         layouter: &mut impl Layouter<Self>,
-        value: Option<C>,
+        value: Option<C::Curve>,
     ) -> Result<Self::FixedPoint, Error> {
-        todo!()
+        let config = layouter.config().clone();
+
+        // Check that we do not exceed the number of bases in the config
+        if config.num_loaded_bases >= config.num_bases {
+            return Err(Error::ConstraintSystemFailure);
+        }
+
+        let table = config.fixed_bases[config.num_loaded_bases].clone();
+
+        // TODO: update num_loaded_bases
+        // layouter.config().num_loaded_bases += 1;
+        table.load(layouter, value.unwrap())
     }
 
     fn add(

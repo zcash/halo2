@@ -35,7 +35,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<Field = C::Base> {
     /// Loads a fixed point into the circuit.
     fn load_fixed(
         layouter: &mut impl Layouter<Self>,
-        value: Option<C>,
+        value: Option<C::Curve>,
     ) -> Result<Self::FixedPoint, Error>;
 
     /// Performs point addition, returning `a + b`.
@@ -120,7 +120,10 @@ pub struct FixedPoint<C: CurveAffine, EccChip: EccInstructions<C>> {
 
 impl<C: CurveAffine, EccChip: EccInstructions<C>> FixedPoint<C, EccChip> {
     /// Loads a fixed point with the given value into the circuit.
-    pub fn load(mut layouter: impl Layouter<EccChip>, value: Option<C>) -> Result<Self, Error> {
+    pub fn load(
+        mut layouter: impl Layouter<EccChip>,
+        value: Option<C::Curve>,
+    ) -> Result<Self, Error> {
         EccChip::load_fixed(&mut layouter, value).map(|inner| FixedPoint { inner })
     }
 
