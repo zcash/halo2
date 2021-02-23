@@ -8,6 +8,7 @@ use crate::{
     poly::Rotation,
 };
 
+use ff::Field;
 use group::Curve;
 
 mod generator_table;
@@ -62,10 +63,10 @@ pub struct SinsemillaChip<C: CurveAffine> {
     _marker_c: PhantomData<C>,
 }
 
-impl<F: FieldExt, C: CurveAffine<Base = F>> SinsemillaChip<C> {
+impl<C: CurveAffine> SinsemillaChip<C> {
     /// Configures this chip for use in a circuit.
     pub fn configure(
-        meta: &mut ConstraintSystem<F>,
+        meta: &mut ConstraintSystem<C::Base>,
         k: usize,
         rounds: usize,
         columns: SinsemillaColumns,
@@ -77,7 +78,7 @@ impl<F: FieldExt, C: CurveAffine<Base = F>> SinsemillaChip<C> {
         // m_i = z_{i + 1} - (z_i * 2^k)
         let z_cur = meta.query_advice(columns.z, Rotation::cur());
         let z_next = meta.query_advice(columns.z, Rotation::next());
-        let m = z_next - z_cur * F::from_u64((1 << k) as u64);
+        let m = z_next - z_cur * C::Base::from_u64((1 << k) as u64);
 
         // y_a = (1/2) ⋅ (lambda1 + lambda2) ⋅ (x_a - (lambda1^2 - x_a - x_p))
         let lambda1_cur = meta.query_advice(columns.lambda1, Rotation::cur());
@@ -87,22 +88,22 @@ impl<F: FieldExt, C: CurveAffine<Base = F>> SinsemillaChip<C> {
         let y_a_cur = (lambda1_cur.clone() + lambda2_cur.clone())
             * (x_a_cur.clone()
                 - (lambda1_cur.clone() * lambda1_cur.clone() - x_a_cur.clone() - x_p_cur.clone()))
-            * F::TWO_INV;
+            * C::Base::TWO_INV;
 
         // y_p = y_a - lambda1 ⋅ (x_a - x_p)
         let y_p = y_a_cur.clone() - lambda1_cur.clone() * (x_a_cur.clone() - x_p_cur.clone());
 
-        let (x_p_init, y_p_init) = get_s_by_idx::<F, C>(0).to_affine().get_xy().unwrap();
+        let (x_p_init, y_p_init) = get_s_by_idx::<C>(0).to_affine().get_xy().unwrap();
 
-        let lookup_table = GeneratorTable::configure::<F, C>(
+        let lookup_table = GeneratorTable::configure::<C>(
             meta,
             k,
             sinsemilla_cur.clone() * m
-                + (Expression::Constant(F::one()) - sinsemilla_cur.clone()) * F::zero(),
+                + (Expression::Constant(C::Base::one()) - sinsemilla_cur.clone()) * C::Base::zero(),
             sinsemilla_cur.clone() * x_p_cur.clone()
-                + (Expression::Constant(F::one()) - sinsemilla_cur.clone()) * x_p_init,
+                + (Expression::Constant(C::Base::one()) - sinsemilla_cur.clone()) * x_p_init,
             sinsemilla_cur.clone() * y_p
-                + (Expression::Constant(F::one()) - sinsemilla_cur.clone()) * y_p_init,
+                + (Expression::Constant(C::Base::one()) - sinsemilla_cur.clone()) * y_p_init,
         );
 
         let lambda1_next = meta.query_advice(columns.lambda1, Rotation::next());
@@ -112,7 +113,7 @@ impl<F: FieldExt, C: CurveAffine<Base = F>> SinsemillaChip<C> {
         let y_a_next = (lambda1_next.clone() + lambda2_next)
             * (x_a_next.clone()
                 - (lambda1_next.clone() * lambda1_next - x_a_next.clone() - x_p_next))
-            * F::TWO_INV;
+            * C::Base::TWO_INV;
 
         // Sinsemilla expr1 gate
         meta.create_gate("Sinsemilla expr1", |_| {
@@ -152,11 +153,11 @@ impl<C: CurveAffine> Chip for SinsemillaChip<C> {
     }
 }
 
-impl<F: FieldExt, C: CurveAffine<Base = F>> SinsemillaInstructions<F> for SinsemillaChip<C> {
+impl<C: CurveAffine> SinsemillaInstructions<C::Base> for SinsemillaChip<C> {
     type Message = Vec<bool>;
     type HashOutput = C;
 
-    fn q() -> (F, F) {
+    fn q() -> (C::Base, C::Base) {
         let hash = C::CurveExt::hash_to_curve(Q_DOMAIN_PREFIX);
         let q = hash(&Q_PERSONALIZATION).to_affine();
         q.get_xy().unwrap()
@@ -195,13 +196,12 @@ impl<F: FieldExt, C: CurveAffine<Base = F>> SinsemillaInstructions<F> for Sinsem
         let words = words;
 
         // Get (x_p, y_p) for each word. We precompute this here so that we can use `batch_normalize()`.
-        let generators_projective: Vec<_> = words
-            .iter()
-            .map(|word| get_s_by_idx::<F, C>(*word))
-            .collect();
+        let generators_projective: Vec<_> =
+            words.iter().map(|word| get_s_by_idx::<C>(*word)).collect();
         let mut generators = vec![C::default(); generators_projective.len()];
         C::Curve::batch_normalize(&generators_projective, &mut generators);
-        let generators: Vec<(F, F)> = generators.iter().map(|gen| gen.get_xy().unwrap()).collect();
+        let generators: Vec<(C::Base, C::Base)> =
+            generators.iter().map(|gen| gen.get_xy().unwrap()).collect();
 
         // Initialize `(x_a, y_a)` to be `(x_q, y_q)`
         let (mut x_a, mut y_a) = Self::q();
@@ -222,12 +222,12 @@ impl<F: FieldExt, C: CurveAffine<Base = F>> SinsemillaInstructions<F> for Sinsem
                         || "Sinsemilla expr1",
                         config.columns.sinsemilla,
                         row,
-                        || Ok(F::one()),
+                        || Ok(C::Base::one()),
                     )?;
                 }
 
                 // Assign initialized values
-                region.assign_advice(|| "z_0", config.columns.z, 0, || Ok(F::from_u64(z)))?;
+                region.assign_advice(|| "z_0", config.columns.z, 0, || Ok(C::Base::from_u64(z)))?;
                 region.assign_advice(|| "x_q", config.columns.x_a, 0, || Ok(x_a))?;
 
                 for row in 0..config.rounds {
@@ -245,13 +245,14 @@ impl<F: FieldExt, C: CurveAffine<Base = F>> SinsemillaInstructions<F> for Sinsem
                         || "z",
                         config.columns.z,
                         row + 1,
-                        || Ok(F::from_u64(z)),
+                        || Ok(C::Base::from_u64(z)),
                     )?;
 
                     // Compute and assign `lambda1, lambda2`
                     let lambda1 = (y_a - y_p) * (x_a - x_p).invert().unwrap();
                     let x_r = lambda1 * lambda1 - x_a - x_p;
-                    let lambda2 = F::from_u64(2) * y_a * (x_a - x_r).invert().unwrap() - lambda1;
+                    let lambda2 =
+                        C::Base::from_u64(2) * y_a * (x_a - x_r).invert().unwrap() - lambda1;
                     region.assign_advice(
                         || "lambda1",
                         config.columns.lambda1,

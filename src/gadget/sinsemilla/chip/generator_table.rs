@@ -7,6 +7,7 @@ use crate::{
     poly::Rotation,
 };
 
+use ff::Field;
 use group::Curve;
 
 /// Table containing independent generators P[0..2^k]
@@ -19,12 +20,12 @@ pub(super) struct GeneratorTable {
 }
 
 impl GeneratorTable {
-    pub(super) fn configure<F: FieldExt, C: CurveAffine<Base = F>>(
-        meta: &mut ConstraintSystem<F>,
+    pub(super) fn configure<C: CurveAffine>(
+        meta: &mut ConstraintSystem<C::Base>,
         k: usize,
-        m: Expression<F>,
-        x_p: Expression<F>,
-        y_p: Expression<F>,
+        m: Expression<C::Base>,
+        x_p: Expression<C::Base>,
+        y_p: Expression<C::Base>,
     ) -> Self {
         let table_idx = meta.fixed_column();
         let table_idx_cur = meta.query_fixed(table_idx, Rotation::cur());
@@ -46,17 +47,17 @@ impl GeneratorTable {
     // Generates P[0..2^k] as 2^k independent, verifiably random generators of the group.
     // Loads these generators into a lookup table along with their indices.
     // Uses SWU hash-to-curve.
-    fn generate<F: FieldExt, C: CurveAffine<Base = F>>(&self) -> impl Iterator<Item = (F, F, F)> {
-        let (init_x, init_y) = get_s_by_idx::<F, C>(0).to_affine().get_xy().unwrap();
+    fn generate<C: CurveAffine>(&self) -> impl Iterator<Item = (C::Base, C::Base, C::Base)> {
+        let (init_x, init_y) = get_s_by_idx::<C>(0).to_affine().get_xy().unwrap();
 
-        (1..=(1 << self.k)).scan((F::zero(), init_x, init_y), move |(idx, x, y), i| {
+        (1..=(1 << self.k)).scan((C::Base::zero(), init_x, init_y), move |(idx, x, y), i| {
             // We computed this table row in the previous iteration.
             let res = (*idx, *x, *y);
 
             // i holds the zero-indexed row number for the next table row.
-            *idx = F::from_u64(i as u64);
+            *idx = C::Base::from_u64(i as u64);
 
-            let (new_x, new_y) = get_s_by_idx::<F, C>(i).to_affine().get_xy().unwrap();
+            let (new_x, new_y) = get_s_by_idx::<C>(i).to_affine().get_xy().unwrap();
 
             *x = new_x;
             *y = new_y;
@@ -65,7 +66,7 @@ impl GeneratorTable {
         })
     }
 
-    pub(super) fn load<F: FieldExt, C: CurveAffine<Base = F>>(
+    pub(super) fn load<C: CurveAffine>(
         &self,
         layouter: &mut impl Layouter<SinsemillaChip<C>>,
     ) -> Result<(), Error> {
@@ -73,7 +74,7 @@ impl GeneratorTable {
             || "generator_table",
             |mut gate| {
                 // We generate the row values lazily (we only need them during keygen).
-                let mut rows = self.generate::<F, C>();
+                let mut rows = self.generate::<C>();
 
                 for index in 0..(1 << self.k) {
                     let mut row = None;
@@ -106,7 +107,7 @@ impl GeneratorTable {
 }
 
 /// Get generator S by index
-pub fn get_s_by_idx<F: FieldExt, C: CurveAffine<Base = F>>(idx: u64) -> C::Curve {
+pub fn get_s_by_idx<C: CurveAffine>(idx: u64) -> C::Curve {
     let hash = C::CurveExt::hash_to_curve(S_DOMAIN_PREFIX);
     hash(&idx.to_le_bytes())
 }
