@@ -4,6 +4,10 @@
 
 ## [Documentation](https://docs.rs/halo2)
 
+This crate currently has a Minimum Supported Rust Version of 1.49.0. When const generics
+are stabilized [in Rust 1.51.0](https://github.com/rust-lang/rust/pull/79135), we plan
+to require that version.
+
 ## License
 
 Copyright 2020 The Electric Coin Company.
