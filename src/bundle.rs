@@ -1,5 +1,7 @@
 //! Structs related to bundles of Orchard actions.
 
+use nonempty::NonEmpty;
+
 use crate::{
     circuit::Proof,
     note::{EncryptedNote, NoteCommitment, Nullifier},
@@ -36,7 +38,7 @@ pub struct Action {
 #[derive(Debug)]
 pub struct Bundle {
     anchor: Anchor,
-    actions: Vec<Action>,
+    actions: NonEmpty<Action>,
     value_balance: ValueSum,
 }
 
