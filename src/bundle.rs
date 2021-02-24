@@ -38,7 +38,6 @@ pub struct Bundle {
     anchor: Anchor,
     actions: Vec<Action>,
     value_balance: ValueSum,
-    proof: Proof,
 }
 
 impl Bundle {
@@ -51,13 +50,14 @@ impl Bundle {
 
 /// An authorized bundle of actions, ready to be committed to the ledger.
 #[derive(Debug)]
-pub struct SignedBundle {
+pub struct AuthorizedBundle {
     bundle: Bundle,
+    proof: Proof,
     action_signatures: Vec<redpallas::Signature<SpendAuth>>,
     binding_signature: redpallas::Signature<Binding>,
 }
 
-impl SignedBundle {
+impl AuthorizedBundle {
     /// Computes a commitment to the effects of this bundle, suitable for inclusion within
     /// a transaction ID.
     ///
@@ -68,7 +68,7 @@ impl SignedBundle {
 
     /// Computes a commitment to the authorizing data within for this bundle.
     ///
-    /// This together with `SignedBundle::commitment` bind the entire bundle.
+    /// This together with `AuthorizedBundle::commitment` bind the entire bundle.
     pub fn authorizing_commitment(&self) -> BundleAuthorizingCommitment {
         todo!()
     }
