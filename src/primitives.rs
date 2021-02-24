@@ -5,3 +5,4 @@
 //     - EphemeralSecretKey
 
 pub mod redpallas;
+pub(crate) mod sinsemilla;
