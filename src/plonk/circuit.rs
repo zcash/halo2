@@ -753,4 +753,36 @@ impl<F: Field> ConstraintSystem<F> {
         self.num_instance_columns += 1;
         tmp
     }
+
+    /// Compute the degree of the constraint system (the maximum degree of all
+    /// constraints).
+    pub fn degree(&self) -> usize {
+        // The permutation argument will serve alongside the gates, so must be
+        // accounted for.
+        let mut degree = self
+            .permutations
+            .iter()
+            .map(|p| p.required_degree())
+            .max()
+            .unwrap_or(1);
+
+        // The lookup argument also serves alongside the gates and must be accounted
+        // for.
+        degree = std::cmp::max(
+            degree,
+            self.lookups
+                .iter()
+                .map(|l| l.required_degree())
+                .max()
+                .unwrap_or(1),
+        );
+
+        // Account for each gate to ensure our quotient polynomial is the
+        // correct degree and that our extended domain is the right size.
+        for (_, poly) in self.gates.iter() {
+            degree = std::cmp::max(degree, poly.degree());
+        }
+
+        degree
+    }
 }
