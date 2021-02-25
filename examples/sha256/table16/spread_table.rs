@@ -1,5 +1,5 @@
 use super::{util::*, CellValue16, CellValue32, Table16Chip};
-use crate::{
+use halo2::{
     arithmetic::FieldExt,
     circuit::{Chip, Layouter, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
@@ -248,7 +248,7 @@ mod tests {
         super::{util::*, Compression, MessageSchedule, Table16Chip, Table16Config},
         SpreadInputs, SpreadTable,
     };
-    use crate::{
+    use halo2::{
         arithmetic::FieldExt,
         circuit::{layouter, Cell, Layouter, Region, RegionIndex},
         dev::MockProver,

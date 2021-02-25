@@ -1,6 +1,6 @@
 use super::super::{super::DIGEST_SIZE, BlockWord, CellValue16, Table16Assignment, Table16Chip};
 use super::{compression_util::*, Compression, State};
-use crate::{
+use halo2::{
     arithmetic::FieldExt,
     circuit::Region,
     plonk::{Advice, Column, Error},

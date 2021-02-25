@@ -1,6 +1,5 @@
 use super::super::{util::*, Gate};
-use crate::arithmetic::FieldExt;
-use crate::plonk::Expression;
+use halo2::{arithmetic::FieldExt, plonk::Expression};
 
 pub struct CompressionGate<F: FieldExt>(pub Expression<F>);
 

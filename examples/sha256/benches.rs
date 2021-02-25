@@ -1,12 +1,7 @@
-#[macro_use]
-extern crate criterion;
-
-extern crate halo2;
 use halo2::{
     arithmetic::FieldExt,
     circuit::Chip,
     circuit::{layouter, Layouter},
-    gadget::sha256::{BlockWord, Sha256, Table16Chip, Table16Config, BLOCK_SIZE},
     pasta::EqAffine,
     plonk::{
         create_proof, keygen_pk, keygen_vk, verify_proof, Assignment, Circuit, ConstraintSystem,
@@ -22,7 +17,9 @@ use std::{
     path::Path,
 };
 
-use criterion::Criterion;
+use criterion::{criterion_group, criterion_main, Criterion};
+
+use crate::{BlockWord, Sha256, Table16Chip, Table16Config, BLOCK_SIZE};
 
 fn bench(name: &str, k: u32, c: &mut Criterion) {
     struct MyCircuit {}

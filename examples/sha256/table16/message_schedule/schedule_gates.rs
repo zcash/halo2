@@ -1,6 +1,5 @@
 use super::super::Gate;
-use crate::arithmetic::FieldExt;
-use crate::plonk::Expression;
+use halo2::{arithmetic::FieldExt, plonk::Expression};
 
 pub struct ScheduleGate<F: FieldExt>(pub Expression<F>);
 

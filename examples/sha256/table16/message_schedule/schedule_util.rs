@@ -1,6 +1,6 @@
 use super::super::{super::BLOCK_SIZE, BlockWord, CellValue16, Table16Chip, ROUNDS};
 use super::MessageSchedule;
-use crate::{
+use halo2::{
     arithmetic::FieldExt,
     circuit::{Cell, Region},
     plonk::Error,

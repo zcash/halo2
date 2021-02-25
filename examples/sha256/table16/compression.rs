@@ -2,7 +2,7 @@ use super::{
     super::DIGEST_SIZE, BlockWord, CellValue16, CellValue32, SpreadInputs, SpreadVar,
     Table16Assignment, Table16Chip, ROUNDS, STATE,
 };
-use crate::{
+use halo2::{
     arithmetic::FieldExt,
     circuit::Layouter,
     plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Permutation},
@@ -800,7 +800,7 @@ mod tests {
         Table16Chip, Table16Config, IV,
     };
     use super::Compression;
-    use crate::{
+    use halo2::{
         arithmetic::FieldExt,
         circuit::{layouter, Layouter},
         dev::MockProver,

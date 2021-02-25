@@ -1,5 +1,4 @@
-use crate::arithmetic::FieldExt;
-use crate::plonk::Expression;
+use halo2::{arithmetic::FieldExt, plonk::Expression};
 
 pub struct Gate<F: FieldExt>(pub Expression<F>);
 

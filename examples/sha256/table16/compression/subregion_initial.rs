@@ -1,6 +1,6 @@
 use super::super::{RoundWordDense, RoundWordSpread, StateWord, Table16Chip, STATE};
 use super::{compression_util::*, Compression, State};
-use crate::{arithmetic::FieldExt, circuit::Region, plonk::Error};
+use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
 
 impl Compression {
     pub fn initialize_iv<F: FieldExt>(

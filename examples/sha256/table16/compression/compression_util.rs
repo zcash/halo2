@@ -5,7 +5,7 @@ use super::super::{
 use super::{
     AbcdVar, Compression, EfghVar, RoundWordA, RoundWordDense, RoundWordE, RoundWordSpread, State,
 };
-use crate::{
+use halo2::{
     arithmetic::FieldExt,
     circuit::Region,
     plonk::{Advice, Column, Error},

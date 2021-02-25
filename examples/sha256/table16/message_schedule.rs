@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use super::{
     super::BLOCK_SIZE, BlockWord, CellValue16, SpreadInputs, Table16Assignment, Table16Chip, ROUNDS,
 };
-use crate::{
+use halo2::{
     arithmetic::FieldExt,
     circuit::{Cell, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Permutation},
@@ -479,7 +479,7 @@ mod tests {
         super::BLOCK_SIZE, BlockWord, Compression, SpreadTable, Table16Chip, Table16Config,
     };
     use super::{schedule_util::*, MessageSchedule};
-    use crate::{
+    use halo2::{
         arithmetic::FieldExt,
         circuit::{layouter, Layouter},
         dev::MockProver,

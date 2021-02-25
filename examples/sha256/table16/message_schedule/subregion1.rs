@@ -3,7 +3,7 @@ use super::super::{
     Table16Chip,
 };
 use super::{schedule_util::*, MessageSchedule};
-use crate::{arithmetic::FieldExt, circuit::Region, plonk::Error};
+use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
 
 // A word in subregion 1
 // (3, 4, 11, 14)-bit chunks

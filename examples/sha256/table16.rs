@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use super::Sha256Instructions;
-use crate::{
+use halo2::{
     arithmetic::FieldExt,
     circuit::{Cell, Chip, Layouter, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Permutation},
@@ -324,7 +324,7 @@ trait Table16Assignment<F: FieldExt> {
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "dev-graph")]
-    use crate::{
+    use halo2::{
         arithmetic::FieldExt,
         circuit::Chip,
         circuit::{layouter, Layouter},

@@ -2,7 +2,7 @@ use super::super::{
     CellValue16, RoundWordA, RoundWordE, StateWord, Table16Assignment, Table16Chip, ROUND_CONSTANTS,
 };
 use super::{compression_util::*, Compression, State};
-use crate::{arithmetic::FieldExt, circuit::Region, plonk::Error};
+use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
 
 impl Compression {
     pub fn assign_round<F: FieldExt>(
