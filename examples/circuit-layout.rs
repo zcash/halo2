@@ -1,8 +1,11 @@
+use ff::Field;
 use halo2::{
     arithmetic::FieldExt,
     dev::circuit_layout,
     pasta::Fp,
-    plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation},
+    plonk::{
+        Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Lookup, Permutation,
+    },
     poly::Rotation,
 };
 use plotters::prelude::*;
@@ -15,7 +18,7 @@ fn main() {
     pub struct Variable(Column<Advice>, usize);
 
     #[derive(Clone)]
-    struct PLONKConfig {
+    struct PLONKConfig<F: Field> {
         a: Column<Advice>,
         b: Column<Advice>,
         c: Column<Advice>,
@@ -29,6 +32,9 @@ fn main() {
         sp: Column<Fixed>,
         sl: Column<Fixed>,
         sl2: Column<Fixed>,
+
+        lookup: Lookup<F>,
+        lookup2: Lookup<F>,
 
         perm: Permutation,
         perm2: Permutation,
@@ -45,23 +51,24 @@ fn main() {
         fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
         where
             F: FnOnce() -> Result<FF, Error>;
-        fn lookup_table(&mut self, values: &[Vec<FF>]) -> Result<(), Error>;
+        fn assign_lookup_table(&mut self, values: &[Vec<Vec<FF>>]) -> Result<(), Error>;
     }
 
     struct MyCircuit<F: FieldExt> {
         a: Option<F>,
-        lookup_tables: Vec<Vec<F>>,
+        lookup: Vec<Vec<F>>,
+        lookup2: Vec<Vec<F>>,
     }
 
     struct StandardPLONK<'a, F: FieldExt, CS: Assignment<F> + 'a> {
         cs: &'a mut CS,
-        config: PLONKConfig,
+        config: PLONKConfig<F>,
         current_gate: usize,
         _marker: PhantomData<F>,
     }
 
     impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardPLONK<'a, FF, CS> {
-        fn new(cs: &'a mut CS, config: PLONKConfig) -> Self {
+        fn new(cs: &'a mut CS, config: PLONKConfig<FF>) -> Self {
             StandardPLONK {
                 cs,
                 config,
@@ -223,24 +230,19 @@ fn main() {
 
             Ok(Variable(self.config.a, index))
         }
-        fn lookup_table(&mut self, values: &[Vec<FF>]) -> Result<(), Error> {
-            for (&value_0, &value_1) in values[0].iter().zip(values[1].iter()) {
-                let index = self.current_gate;
-
-                self.current_gate += 1;
-                self.cs
-                    .assign_fixed(|| "table col 1", self.config.sl, index, || Ok(value_0))?;
-                self.cs
-                    .assign_fixed(|| "table col 2", self.config.sl2, index, || Ok(value_1))?;
-            }
-            Ok(())
+        fn assign_lookup_table(&mut self, values: &[Vec<Vec<FF>>]) -> Result<(), Error> {
+            let index = self.current_gate;
+            self.cs
+                .assign_lookup_table(&self.config.lookup, index, values[0].clone())?;
+            self.cs
+                .assign_lookup_table(&self.config.lookup2, index, values[1].clone())
         }
     }
 
     impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
-        type Config = PLONKConfig;
+        type Config = PLONKConfig<F>;
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
+        fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig<F> {
             let e = meta.advice_column();
             let a = meta.advice_column();
             let b = meta.advice_column();
@@ -279,8 +281,13 @@ fn main() {
             let b_ = meta.query_any(b.into(), Rotation::cur());
             let sl_ = meta.query_any(sl.into(), Rotation::cur());
             let sl2_ = meta.query_any(sl2.into(), Rotation::cur());
-            meta.lookup(&[a_.clone()], &[sl_.clone()]);
-            meta.lookup(&[a_, b_], &[sl_, sl2_]);
+            let lookup = meta.lookup(&[a.into()], &[a_.clone()], &[sl.into()], &[sl_.clone()]);
+            let lookup2 = meta.lookup(
+                &[a.into(), b.into()],
+                &[a_ * b_],
+                &[sl.into(), sl2.into()],
+                &[sl_ * sl2_],
+            );
 
             meta.create_gate("Combined add-mult", |meta| {
                 let d = meta.query_advice(d, Rotation::next());
@@ -319,6 +326,8 @@ fn main() {
                 sp,
                 sl,
                 sl2,
+                lookup,
+                lookup2,
                 perm,
                 perm2,
             }
@@ -327,7 +336,7 @@ fn main() {
         fn synthesize(
             &self,
             cs: &mut impl Assignment<F>,
-            config: PLONKConfig,
+            config: PLONKConfig<F>,
         ) -> Result<(), Error> {
             let mut cs = StandardPLONK::new(cs, config);
 
@@ -360,7 +369,7 @@ fn main() {
             }
 
             cs.enter_region(|| "lookup table");
-            cs.lookup_table(&self.lookup_tables)?;
+            cs.assign_lookup_table(&[self.lookup.clone(), self.lookup2.clone()])?;
             cs.exit_region();
 
             Ok(())
@@ -375,7 +384,8 @@ fn main() {
 
     let circuit: MyCircuit<Fp> = MyCircuit {
         a: None,
-        lookup_tables: vec![lookup_table, lookup_table_2],
+        lookup: vec![lookup_table.clone()],
+        lookup2: vec![lookup_table, lookup_table_2],
     };
 
     let root = BitMapBackend::new("example-circuit-layout.png", (1024, 768)).into_drawing_area();

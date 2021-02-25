@@ -7,7 +7,7 @@ use std::cmp;
 use std::collections::HashSet;
 
 use crate::plonk::{
-    Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation,
+    Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Lookup, Permutation,
 };
 
 /// Renders the circuit layout on the given drawing area.
@@ -260,6 +260,36 @@ impl<F: Field> Assignment<F> for Layout {
         _: usize,
     ) -> Result<(), crate::plonk::Error> {
         // Do nothing; we don't care about permutations in this context.
+        Ok(())
+    }
+
+    fn assign_lookup_table(
+        &mut self,
+        lookup: &Lookup<F>,
+        row: usize,
+        values: Vec<Vec<F>>,
+    ) -> Result<(), crate::plonk::Error> {
+        for (idx, column) in lookup.table_columns().iter().enumerate() {
+            match column.column_type() {
+                Any::Advice => {
+                    let values = &values[idx];
+                    let mut row = row;
+                    for _ in values.iter() {
+                        self.update(*column, row);
+                        row += 1;
+                    }
+                }
+                Any::Fixed => {
+                    let values = &values[idx];
+                    let mut row = row;
+                    for _ in values.iter() {
+                        self.update(*column, row);
+                        row += 1;
+                    }
+                }
+                _ => (),
+            }
+        }
         Ok(())
     }
 

@@ -2,7 +2,7 @@ use ff::Field;
 use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
 use crate::plonk::{
-    Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation,
+    Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Lookup, Permutation,
 };
 
 pub mod layout;
@@ -127,6 +127,16 @@ impl<F: Field> Assignment<F> for Graph {
         _: usize,
     ) -> Result<(), crate::plonk::Error> {
         // Do nothing; we don't care about permutations in this context.
+        Ok(())
+    }
+
+    fn assign_lookup_table(
+        &mut self,
+        _: &Lookup<F>,
+        _: usize,
+        _: Vec<Vec<F>>,
+    ) -> Result<(), crate::plonk::Error> {
+        // Do nothing; we don't care about lookups in this context.
         Ok(())
     }
 
