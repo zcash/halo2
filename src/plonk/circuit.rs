@@ -7,8 +7,11 @@ use std::{
 };
 
 use super::{lookup, permutation, Error};
-use crate::arithmetic::FieldExt;
-use crate::poly::Rotation;
+use crate::{
+    arithmetic::FieldExt,
+    circuit::{Chip, Region},
+    poly::Rotation,
+};
 
 /// A column type
 pub trait ColumnType: 'static + Sized + std::fmt::Debug {}
@@ -124,6 +127,71 @@ impl TryFrom<Column<Any>> for Column<Instance> {
             }),
             _ => Err("Cannot convert into Column<Instance>"),
         }
+    }
+}
+
+/// A selector, representing a fixed boolean value per row of the circuit.
+///
+/// Selectors can be used to conditionally enable (portions of) gates:
+/// ```
+/// use halo2::poly::Rotation;
+/// # use halo2::pasta::Fp;
+/// # use halo2::plonk::ConstraintSystem;
+///
+/// # let mut meta = ConstraintSystem::<Fp>::default();
+/// let a = meta.advice_column();
+/// let b = meta.advice_column();
+/// let s = meta.selector();
+///
+/// meta.create_gate("foo", |meta| {
+///     let a = meta.query_advice(a, Rotation::prev());
+///     let b = meta.query_advice(b, Rotation::cur());
+///     let s = meta.query_selector(s, Rotation::cur());
+///
+///     // On rows where the selector is enabled, a is constrained to equal b.
+///     // On rows where the selector is disabled, a and b can take any value.
+///     s * (a - b)
+/// });
+/// ```
+///
+/// Selectors are disabled on all rows by default, and must be explicitly enabled on each
+/// row when required:
+/// ```
+/// use halo2::{circuit::{Chip, Layouter}, plonk::{Advice, Column, Error, Selector}};
+/// # use ff::Field;
+/// # use halo2::plonk::Fixed;
+///
+/// struct Config {
+///     a: Column<Advice>,
+///     b: Column<Advice>,
+///     s: Selector,
+/// }
+///
+/// fn circuit_logic<C: Chip>(mut layouter: impl Layouter<C>) -> Result<(), Error> {
+///     let config = layouter.config().clone();
+///     # let config: Config = todo!();
+///     layouter.assign_region(|| "bar", |mut region| {
+///         region.assign_advice(|| "a", config.a, 0, || Ok(C::Field::one()))?;
+///         region.assign_advice(|| "a", config.b, 1, || Ok(C::Field::one()))?;
+///         config.s.enable(&mut region, 1)
+///     })?;
+///     Ok(())
+/// }
+/// ```
+#[derive(Clone, Copy, Debug)]
+pub struct Selector(Column<Fixed>);
+
+impl Selector {
+    /// Enable this selector at the given offset within the given region.
+    pub fn enable<C: Chip>(&self, region: &mut Region<C>, offset: usize) -> Result<(), Error> {
+        // TODO: Ensure that the default for a selector's cells is always zero, if we
+        // alter the proving system to change the global default.
+        // TODO: Add Region::enable_selector method to allow the layouter to control the
+        // selector's assignment.
+        // https://github.com/zcash/halo2/issues/116
+        region
+            .assign_fixed(|| "", self.0, offset, || Ok(C::Field::one()))
+            .map(|_| ())
     }
 }
 
@@ -507,6 +575,11 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
+    /// Query a selector at a relative position.
+    pub fn query_selector(&mut self, selector: Selector, at: Rotation) -> Expression<F> {
+        Expression::Fixed(self.query_fixed_index(selector.0, at))
+    }
+
     fn query_fixed_index(&mut self, column: Column<Fixed>, at: Rotation) -> usize {
         // Return existing query, if it exists
         for (index, fixed_query) in self.fixed_queries.iter().enumerate() {
@@ -640,6 +713,13 @@ impl<F: Field> ConstraintSystem<F> {
     pub fn create_gate(&mut self, name: &'static str, f: impl FnOnce(&mut Self) -> Expression<F>) {
         let poly = f(self);
         self.gates.push((name, poly));
+    }
+
+    /// Allocate a new selector.
+    pub fn selector(&mut self) -> Selector {
+        // TODO: Track selectors separately, and combine selectors where possible.
+        // https://github.com/zcash/halo2/issues/116
+        Selector(self.fixed_column())
     }
 
     /// Allocate a new fixed column

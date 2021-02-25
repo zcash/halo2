@@ -7,7 +7,8 @@ use halo2::{
     circuit::{layouter::SingleChip, Cell, Chip, Layouter},
     dev::VerifyFailure,
     plonk::{
-        Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Instance, Permutation,
+        Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Instance, Permutation,
+        Selector,
     },
     poly::Rotation,
 };
@@ -63,10 +64,10 @@ struct FieldConfig {
     // any constraints on cells where `NumericInstructions::mul` is not being used.
     // This is important when building larger circuits, where columns are used by
     // multiple sets of instructions.
-    s_mul: Column<Fixed>,
+    s_mul: Selector,
 
     // The selector for the public-input gate, which uses one of the advice columns.
-    s_pub: Column<Fixed>,
+    s_pub: Selector,
 }
 
 impl<F: FieldExt> FieldChip<F> {
@@ -82,8 +83,8 @@ impl<F: FieldExt> FieldChip<F> {
                 .map(|column| (*column).into())
                 .collect::<Vec<_>>(),
         );
-        let s_mul = meta.fixed_column();
-        let s_pub = meta.fixed_column();
+        let s_mul = meta.selector();
+        let s_pub = meta.selector();
 
         // Define our multiplication gate!
         meta.create_gate("mul", |meta| {
@@ -102,7 +103,7 @@ impl<F: FieldExt> FieldChip<F> {
             let lhs = meta.query_advice(advice[0], Rotation::cur());
             let rhs = meta.query_advice(advice[1], Rotation::cur());
             let out = meta.query_advice(advice[0], Rotation::next());
-            let s_mul = meta.query_fixed(s_mul, Rotation::cur());
+            let s_mul = meta.query_selector(s_mul, Rotation::cur());
 
             // The polynomial expression returned from `create_gate` will be
             // constrained by the proving system to equal zero. Our expression
@@ -118,7 +119,7 @@ impl<F: FieldExt> FieldChip<F> {
             // column for exposing numbers as public inputs.
             let a = meta.query_advice(advice[1], Rotation::cur());
             let p = meta.query_instance(instance, Rotation::cur());
-            let s = meta.query_fixed(s_pub, Rotation::cur());
+            let s = meta.query_selector(s_pub, Rotation::cur());
 
             // We simply constrain the advice cell to be equal to the instance cell,
             // when the selector is enabled.
@@ -195,7 +196,7 @@ impl<F: FieldExt> NumericInstructions for FieldChip<F> {
                 // We only want to use a single multiplication gate in this region,
                 // so we enable it at region offset 0; this means it will constrain
                 // cells at offsets 0 and 1.
-                region.assign_fixed(|| "example mul", config.s_mul, 0, || Ok(F::one()))?;
+                config.s_mul.enable(&mut region, 0)?;
 
                 // The inputs we've been given could be located anywhere in the circuit,
                 // but we can only rely on relative offsets inside this region. So we
@@ -241,7 +242,7 @@ impl<F: FieldExt> NumericInstructions for FieldChip<F> {
             || "expose public",
             |mut region| {
                 // Enable the public-input gate.
-                region.assign_fixed(|| "public result", config.s_pub, 0, || Ok(F::one()))?;
+                config.s_pub.enable(&mut region, 0)?;
 
                 // Load the output into the correct advice column.
                 let out = region.assign_advice(
