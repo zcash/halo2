@@ -2,7 +2,7 @@ use ff::Field;
 use group::Curve;
 use std::iter;
 
-use super::super::circuit::Any;
+use super::super::Any;
 use super::{Argument, ProvingKey};
 use crate::{
     arithmetic::{eval_polynomial, parallelize, BatchInvert, CurveAffine, FieldExt},

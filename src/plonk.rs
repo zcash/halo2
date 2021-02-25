@@ -15,20 +15,45 @@ use crate::poly::{
 use crate::transcript::{ChallengeScalar, Transcript};
 
 mod circuit;
+mod column;
+mod constraintsystem;
+mod expression;
 mod keygen;
 mod lookup;
 pub(crate) mod permutation;
-mod vanishing;
-
 mod prover;
+mod vanishing;
 mod verifier;
 
 pub use circuit::*;
+pub use column::*;
+pub use constraintsystem::*;
+pub use expression::*;
 pub use keygen::*;
 pub use prover::*;
 pub use verifier::*;
 
 use std::io;
+
+/// This is an error that could occur during proving or circuit synthesis.
+// TODO: these errors need to be cleaned up
+#[derive(Debug)]
+pub enum Error {
+    /// This is an error that can occur during synthesis of the circuit, for
+    /// example, when the witness is not present.
+    SynthesisError,
+    /// The structured reference string or the parameters are not compatible
+    /// with the circuit being synthesized.
+    IncompatibleParams,
+    /// The constraint system is not satisfied.
+    ConstraintSystemFailure,
+    /// Out of bounds index passed to a backend
+    BoundsFailure,
+    /// Opening error
+    OpeningError,
+    /// Transcript error
+    TranscriptError,
+}
 
 /// This is a verifying key which allows for the verification of proofs for a
 /// particular circuit.
@@ -38,6 +63,31 @@ pub struct VerifyingKey<C: CurveAffine> {
     fixed_commitments: Vec<C>,
     permutations: Vec<permutation::VerifyingKey<C>>,
     cs: ConstraintSystem<C::Scalar>,
+}
+
+/// Minimal representation of a verification key that can be used to identify
+/// its active contents.
+#[derive(Debug)]
+pub struct PinnedVerificationKey<'a, C: CurveAffine> {
+    base_modulus: &'static str,
+    scalar_modulus: &'static str,
+    domain: PinnedEvaluationDomain<'a, C::Scalar>,
+    cs: PinnedConstraintSystem<'a, C::Scalar>,
+    fixed_commitments: &'a Vec<C>,
+    permutations: &'a Vec<permutation::VerifyingKey<C>>,
+}
+
+/// This is a proving key which allows for the creation of proofs for a
+/// particular circuit.
+#[derive(Debug)]
+pub struct ProvingKey<C: CurveAffine> {
+    vk: VerifyingKey<C>,
+    // TODO: get rid of this?
+    l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    fixed_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
+    fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
+    fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
+    permutations: Vec<permutation::ProvingKey<C>>,
 }
 
 impl<C: CurveAffine> VerifyingKey<C> {
@@ -108,63 +158,17 @@ impl<C: CurveAffine> VerifyingKey<C> {
             cs: self.cs.pinned(),
         }
     }
-}
 
-/// Minimal representation of a verification key that can be used to identify
-/// its active contents.
-#[derive(Debug)]
-pub struct PinnedVerificationKey<'a, C: CurveAffine> {
-    base_modulus: &'static str,
-    scalar_modulus: &'static str,
-    domain: PinnedEvaluationDomain<'a, C::Scalar>,
-    cs: PinnedConstraintSystem<'a, C::Scalar>,
-    fixed_commitments: &'a Vec<C>,
-    permutations: &'a Vec<permutation::VerifyingKey<C>>,
-}
-/// This is a proving key which allows for the creation of proofs for a
-/// particular circuit.
-#[derive(Debug)]
-pub struct ProvingKey<C: CurveAffine> {
-    vk: VerifyingKey<C>,
-    // TODO: get rid of this?
-    l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
-    fixed_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
-    fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
-    fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
-    permutations: Vec<permutation::ProvingKey<C>>,
-}
-
-/// This is an error that could occur during proving or circuit synthesis.
-// TODO: these errors need to be cleaned up
-#[derive(Debug)]
-pub enum Error {
-    /// This is an error that can occur during synthesis of the circuit, for
-    /// example, when the witness is not present.
-    SynthesisError,
-    /// The structured reference string or the parameters are not compatible
-    /// with the circuit being synthesized.
-    IncompatibleParams,
-    /// The constraint system is not satisfied.
-    ConstraintSystemFailure,
-    /// Out of bounds index passed to a backend
-    BoundsFailure,
-    /// Opening error
-    OpeningError,
-    /// Transcript error
-    TranscriptError,
+    /// Get the underlying [`EvaluationDomain`].
+    pub fn get_domain(&self) -> &EvaluationDomain<C::Scalar> {
+        &self.domain
+    }
 }
 
 impl<C: CurveAffine> ProvingKey<C> {
     /// Get the underlying [`VerifyingKey`].
     pub fn get_vk(&self) -> &VerifyingKey<C> {
         &self.vk
-    }
-}
-
-impl<C: CurveAffine> VerifyingKey<C> {
-    /// Get the underlying [`EvaluationDomain`].
-    pub fn get_domain(&self) -> &EvaluationDomain<C::Scalar> {
-        &self.domain
     }
 }
 

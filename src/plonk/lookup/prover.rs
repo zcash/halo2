@@ -1,6 +1,5 @@
 use super::super::{
-    circuit::Expression, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error,
-    ProvingKey,
+    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error, Expression, ProvingKey,
 };
 use super::Argument;
 use crate::{

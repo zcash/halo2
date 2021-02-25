@@ -2,8 +2,8 @@ use ff::Field;
 use group::Curve;
 
 use super::{
-    circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    permutation, Error, LagrangeCoeff, Permutation, Polynomial, ProvingKey, VerifyingKey,
+    permutation, Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
+    LagrangeCoeff, Permutation, Polynomial, ProvingKey, VerifyingKey,
 };
 use crate::arithmetic::CurveAffine;
 use crate::poly::{

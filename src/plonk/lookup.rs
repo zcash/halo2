@@ -1,4 +1,4 @@
-use super::circuit::Expression;
+use super::Expression;
 use ff::Field;
 
 pub(crate) mod prover;
