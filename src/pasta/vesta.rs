@@ -23,7 +23,7 @@ fn test_map_to_curve_simple_swu() {
     // The zero input is a special case.
     let p: IsoEq = map_to_curve_simple_swu::<Fq, Eq, IsoEq>(&Fq::zero(), Eq::THETA, Eq::Z);
     let (x, y, z) = p.jacobian_coordinates();
-    println!("{:?}", p);
+
     assert!(
         format!("{:?}", x) == "0x2ccc4c6ec2660e5644305bc52527d904d408f92407f599df8f158d50646a2e78"
     );
@@ -36,7 +36,7 @@ fn test_map_to_curve_simple_swu() {
 
     let p: IsoEq = map_to_curve_simple_swu::<Fq, Eq, IsoEq>(&Fq::one(), Eq::THETA, Eq::Z);
     let (x, y, z) = p.jacobian_coordinates();
-    println!("{:?}", p);
+
     assert!(
         format!("{:?}", x) == "0x165f8b71841c5abc3d742ec13fb16f099d596b781e6f5c7d0b6682b1216a8258"
     );
@@ -57,7 +57,7 @@ fn test_hash_to_curve() {
     let hash = Point::hash_to_curve("z.cash:test");
     let p: Point = hash(b"hello");
     let (x, y, z) = p.jacobian_coordinates();
-    println!("{:?}", p);
+
     assert!(
         format!("{:?}", x) == "0x24c3431db13111fcba2f214a0662ae48e675801988c5705877525750b65f7ad8"
     );
