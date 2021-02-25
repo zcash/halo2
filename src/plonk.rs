@@ -20,6 +20,7 @@ mod constraintsystem;
 mod expression;
 mod keygen;
 mod lookup;
+pub mod mock;
 pub(crate) mod permutation;
 mod prover;
 mod vanishing;

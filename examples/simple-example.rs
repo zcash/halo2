@@ -5,8 +5,8 @@ use std::marker::PhantomData;
 use halo2::{
     arithmetic::FieldExt,
     circuit::{layouter::SingleChip, Cell, Chip, Layouter},
-    dev::VerifyFailure,
     plonk::{
+        mock::{MockProver, VerifyFailure},
         Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Instance, Permutation,
         Selector,
     },
@@ -313,7 +313,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
 // ANCHOR_END: circuit
 
 fn main() {
-    use halo2::{dev::MockProver, pasta::Fp};
+    use halo2::pasta::Fp;
 
     // ANCHOR: test-circuit
     // The number of rows in our circuit cannot exceed 2^k. Since our example

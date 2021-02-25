@@ -1,10 +1,9 @@
 use group::Curve;
 use halo2::arithmetic::FieldExt;
-use halo2::dev::MockProver;
 use halo2::pasta::{EqAffine, Fp};
 use halo2::plonk::{
-    create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Assignment, Circuit, Column,
-    ConstraintSystem, Error, Fixed, Permutation, VerifyingKey,
+    create_proof, keygen_pk, keygen_vk, mock::MockProver, verify_proof, Advice, Assignment,
+    Circuit, Column, ConstraintSystem, Error, Fixed, Permutation, VerifyingKey,
 };
 use halo2::poly::{
     commitment::{Blind, Params},
