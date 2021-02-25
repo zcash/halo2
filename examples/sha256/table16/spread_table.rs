@@ -1,8 +1,7 @@
 use super::{util::*, CellValue16, CellValue32, Table16Chip};
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Chip, Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
+    plonk::{Advice, Chip, Column, ConstraintSystem, Error, Fixed, Layouter, Region},
     poly::Rotation,
 };
 

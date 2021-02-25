@@ -2,8 +2,7 @@ use super::super::{CellValue16, Table16Chip};
 use super::MessageSchedule;
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Cell, Region},
-    plonk::Error,
+    plonk::{Cell, Error, Region},
 };
 
 #[cfg(test)]

@@ -5,8 +5,7 @@ use super::{
 };
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Cell, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Permutation},
+    plonk::{Advice, Cell, Column, ConstraintSystem, Error, Fixed, Layouter, Permutation},
     poly::Rotation,
 };
 

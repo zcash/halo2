@@ -18,7 +18,6 @@
 #![deny(unsafe_code)]
 
 pub mod arithmetic;
-pub mod circuit;
 pub mod model;
 pub mod pasta;
 pub mod plonk;

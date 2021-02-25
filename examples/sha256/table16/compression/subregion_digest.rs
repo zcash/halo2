@@ -2,8 +2,7 @@ use super::super::{super::DIGEST_SIZE, BlockWord, CellValue16, Table16Assignment
 use super::{compression_util::*, Compression, State};
 use halo2::{
     arithmetic::FieldExt,
-    circuit::Region,
-    plonk::{Advice, Column, Error},
+    plonk::{Advice, Column, Error, Region},
 };
 
 impl Compression {

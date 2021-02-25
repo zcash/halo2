@@ -1,12 +1,10 @@
 use ff::Field;
 use std::convert::TryFrom;
 
-use super::{lookup, permutation, Advice, Any, Column, Error, Expression, Fixed, Instance};
-use crate::{
-    arithmetic::FieldExt,
-    circuit::{Chip, Region},
-    poly::Rotation,
+use super::{
+    lookup, permutation, Advice, Any, Chip, Column, Error, Expression, Fixed, Instance, Region,
 };
+use crate::{arithmetic::FieldExt, poly::Rotation};
 
 /// This is a description of the circuit environment, such as the gate, column and
 /// permutation arrangements.
@@ -349,7 +347,7 @@ impl<F: Field> ConstraintSystem<F> {
 /// Selectors are disabled on all rows by default, and must be explicitly enabled on each
 /// row when required:
 /// ```
-/// use halo2::{circuit::{Chip, Layouter}, plonk::{Advice, Column, Error, Selector}};
+/// use halo2::plonk::{Chip, Layouter, Advice, Column, Error, Selector};
 /// # use ff::Field;
 /// # use halo2::plonk::Fixed;
 ///

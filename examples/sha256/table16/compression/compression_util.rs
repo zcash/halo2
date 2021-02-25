@@ -7,8 +7,7 @@ use super::{
 };
 use halo2::{
     arithmetic::FieldExt,
-    circuit::Region,
-    plonk::{Advice, Column, Error},
+    plonk::{Advice, Column, Error, Region},
 };
 
 // Test vector 'abc'

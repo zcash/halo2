@@ -4,11 +4,11 @@ use std::marker::PhantomData;
 
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{layouter::SingleChip, Cell, Chip, Layouter},
     plonk::{
+        layouter::SingleChip,
         mock::{MockProver, VerifyFailure},
-        Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Instance, Permutation,
-        Selector,
+        Advice, Assignment, Cell, Chip, Circuit, Column, ConstraintSystem, Error, Instance,
+        Layouter, Permutation, Selector,
     },
     poly::Rotation,
 };
