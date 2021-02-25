@@ -16,7 +16,7 @@ pub trait Assignment<F: Field> {
     ///
     /// Not intended for downstream consumption; use [`Layouter::assign_region`] instead.
     ///
-    /// [`Layouter::assign_region`]: crate::circuit::Layouter#method.assign_region
+    /// [`Layouter::assign_region`]: crate::plonk::Layouter#method.assign_region
     fn enter_region<NR, N>(&mut self, name_fn: N)
     where
         NR: Into<String>,
@@ -28,7 +28,7 @@ pub trait Assignment<F: Field> {
     ///
     /// Not intended for downstream consumption; use [`Layouter::assign_region`] instead.
     ///
-    /// [`Layouter::assign_region`]: crate::circuit::Layouter#method.assign_region
+    /// [`Layouter::assign_region`]: crate::plonk::Layouter#method.assign_region
     fn exit_region(&mut self);
 
     /// Assign an advice column value (witness)
@@ -71,7 +71,7 @@ pub trait Assignment<F: Field> {
     ///
     /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
     ///
-    /// [`Layouter::namespace`]: crate::circuit::Layouter#method.namespace
+    /// [`Layouter::namespace`]: crate::plonk::Layouter#method.namespace
     fn push_namespace<NR, N>(&mut self, name_fn: N)
     where
         NR: Into<String>,
@@ -81,7 +81,7 @@ pub trait Assignment<F: Field> {
     ///
     /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
     ///
-    /// [`Layouter::namespace`]: crate::circuit::Layouter#method.namespace
+    /// [`Layouter::namespace`]: crate::plonk::Layouter#method.namespace
     fn pop_namespace(&mut self, gadget_name: Option<String>);
 }
 
