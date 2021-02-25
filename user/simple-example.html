@@ -220,7 +220,6 @@ that a <code>Layouter</code> may rely on when synthesizing a circuit, as well as
 state that the chip requires to be loaded into the circuit.</p>
 <pre><code class="language-rust ignore no_run">impl&lt;F: FieldExt&gt; Chip for FieldChip&lt;F&gt; {
     type Config = FieldConfig;
-    type Loaded = ();
     type Field = F;
 
     fn load(_layouter: &amp;mut impl Layouter&lt;Self&gt;) -&gt; Result&lt;(), halo2::plonk::Error&gt; {
@@ -462,7 +461,7 @@ impl&lt;F: FieldExt&gt; Circuit&lt;F&gt; for MyCircuit&lt;F&gt; {
     }
 
     fn synthesize(&amp;self, cs: &amp;mut impl Assignment&lt;F&gt;, config: Self::Config) -&gt; Result&lt;(), Error&gt; {
-        let mut layouter = SingleChip::new(cs, config)?;
+        let mut layouter = SingleChip::new(cs, config);
 
         // Load our private values into the circuit.
         let a = FieldChip::load_private(&amp;mut layouter, self.a)?;
