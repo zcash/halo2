@@ -3,9 +3,9 @@ use group::Curve;
 use std::iter;
 
 use super::{
-    circuit::{Advice, Assignment, Circuit, Column, ConstraintSystem, Fixed},
+    circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed},
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
-    ChallengeY, Error, ProvingKey,
+    ChallengeY, Error, Permutation, ProvingKey,
 };
 use crate::arithmetic::{eval_polynomial, CurveAffine, FieldExt};
 use crate::poly::{
@@ -159,10 +159,10 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
 
                 fn copy(
                     &mut self,
+                    _: &Permutation,
+                    _: Column<Any>,
                     _: usize,
-                    _: usize,
-                    _: usize,
-                    _: usize,
+                    _: Column<Any>,
                     _: usize,
                 ) -> Result<(), Error> {
                     // We only care about advice columns here

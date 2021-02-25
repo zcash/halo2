@@ -1,7 +1,9 @@
 use ff::Field;
 use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
-use crate::plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed};
+use crate::plonk::{
+    Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation,
+};
 
 pub mod layout;
 
@@ -118,10 +120,10 @@ impl<F: Field> Assignment<F> for Graph {
 
     fn copy(
         &mut self,
+        _: &Permutation,
+        _: Column<Any>,
         _: usize,
-        _: usize,
-        _: usize,
-        _: usize,
+        _: Column<Any>,
         _: usize,
     ) -> Result<(), crate::plonk::Error> {
         // Do nothing; we don't care about permutations in this context.

@@ -7,6 +7,7 @@ use std::{
 };
 
 use super::{lookup, permutation, Error};
+use crate::arithmetic::FieldExt;
 use crate::poly::Rotation;
 
 /// A column type
@@ -126,6 +127,30 @@ impl TryFrom<Column<Any>> for Column<Instance> {
     }
 }
 
+/// A permutation.
+#[derive(Clone, Debug)]
+pub struct Permutation {
+    index: usize,
+    mapping: Vec<Column<Any>>,
+}
+
+impl Permutation {
+    /// Configures a new permutation for the given columns.
+    pub fn new<F: FieldExt>(meta: &mut ConstraintSystem<F>, columns: &[Column<Any>]) -> Self {
+        meta.permutation(columns)
+    }
+
+    /// Returns index of permutation
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    /// Returns mapping of permutation
+    pub fn mapping(&self) -> &[Column<Any>] {
+        &self.mapping
+    }
+}
+
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
 pub trait Assignment<F: Field> {
@@ -176,13 +201,13 @@ pub trait Assignment<F: Field> {
         A: FnOnce() -> AR,
         AR: Into<String>;
 
-    /// Assign two advice columns to have the same value
+    /// Assign two cells to have the same value
     fn copy(
         &mut self,
-        permutation: usize,
-        left_column: usize,
+        permutation: &Permutation,
+        left_column: Column<Any>,
         left_row: usize,
-        right_column: usize,
+        right_column: Column<Any>,
         right_row: usize,
     ) -> Result<(), Error>;
 
@@ -448,8 +473,8 @@ impl<F: Field> ConstraintSystem<F> {
         }
     }
 
-    /// Add a permutation argument for some advice columns
-    pub fn permutation(&mut self, columns: &[Column<Any>]) -> usize {
+    /// Add a permutation argument for some columns
+    pub fn permutation(&mut self, columns: &[Column<Any>]) -> Permutation {
         let index = self.permutations.len();
 
         for column in columns {
@@ -458,7 +483,10 @@ impl<F: Field> ConstraintSystem<F> {
         self.permutations
             .push(permutation::Argument::new(columns.to_vec()));
 
-        index
+        Permutation {
+            index,
+            mapping: columns.to_vec(),
+        }
     }
 
     /// Add a lookup argument for some input expressions and table expressions.

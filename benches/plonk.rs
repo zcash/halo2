@@ -20,7 +20,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     // Initialize the polynomial commitment parameters
     let params: Params<EqAffine> = Params::new(k);
 
-    #[derive(Copy, Clone)]
+    #[derive(Clone)]
     struct PLONKConfig {
         a: Column<Advice>,
         b: Column<Advice>,
@@ -31,7 +31,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         sc: Column<Fixed>,
         sm: Column<Fixed>,
 
-        perm: usize,
+        perm: Permutation,
     }
 
     trait StandardCS<FF: FieldExt> {
@@ -156,21 +156,13 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             ))
         }
         fn copy(&mut self, left: Variable, right: Variable) -> Result<(), Error> {
-            let left_column = match left.0 {
-                x if x == self.config.a => 0,
-                x if x == self.config.b => 1,
-                x if x == self.config.c => 2,
-                _ => unreachable!(),
-            };
-            let right_column = match right.0 {
-                x if x == self.config.a => 0,
-                x if x == self.config.b => 1,
-                x if x == self.config.c => 2,
-                _ => unreachable!(),
-            };
-
-            self.cs
-                .copy(self.config.perm, left_column, left.1, right_column, right.1)
+            self.cs.copy(
+                &self.config.perm,
+                left.0.into(),
+                left.1,
+                right.0.into(),
+                right.1,
+            )
         }
     }
 

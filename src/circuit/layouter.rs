@@ -5,8 +5,8 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::marker::PhantomData;
 
-use super::{Cell, Chip, Layouter, Permutation, Region, RegionIndex, RegionStart};
-use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed};
+use super::{Cell, Chip, Layouter, Region, RegionIndex, RegionStart};
+use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation};
 
 /// Helper trait for implementing a custom [`Layouter`].
 ///
@@ -320,22 +320,11 @@ impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> RegionLayouter<C>
         left: Cell,
         right: Cell,
     ) -> Result<(), Error> {
-        let left_column = permutation
-            .mapping
-            .iter()
-            .position(|c| c == &left.column)
-            .ok_or(Error::SynthesisError)?;
-        let right_column = permutation
-            .mapping
-            .iter()
-            .position(|c| c == &right.column)
-            .ok_or(Error::SynthesisError)?;
-
         self.layouter.cs.copy(
-            permutation.index,
-            left_column,
+            permutation,
+            left.column,
             *self.layouter.regions[*left.region_index] + left.row_offset,
-            right_column,
+            right.column,
             *self.layouter.regions[*right.region_index] + right.row_offset,
         )?;
 

@@ -5,8 +5,8 @@ use ff::Field;
 use crate::{
     arithmetic::{FieldExt, Group},
     plonk::{
-        permutation, Advice, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Expression, Fixed,
+        permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
+        Expression, Fixed, Permutation,
     },
     poly::Rotation,
 };
@@ -211,18 +211,34 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
 
     fn copy(
         &mut self,
-        permutation: usize,
-        left_column: usize,
+        permutation: &Permutation,
+        left_column: Column<Any>,
         left_row: usize,
-        right_column: usize,
+        right_column: Column<Any>,
         right_row: usize,
     ) -> Result<(), crate::plonk::Error> {
         // Check bounds first
-        if permutation >= self.permutations.len() {
+        if permutation.index() >= self.permutations.len() {
             return Err(Error::BoundsFailure);
         }
 
-        self.permutations[permutation].copy(left_column, left_row, right_column, right_row)
+        let left_column_index = permutation
+            .mapping()
+            .iter()
+            .position(|c| c == &left_column)
+            .ok_or(Error::SynthesisError)?;
+        let right_column_index = permutation
+            .mapping()
+            .iter()
+            .position(|c| c == &right_column)
+            .ok_or(Error::SynthesisError)?;
+
+        self.permutations[permutation.index()].copy(
+            left_column_index,
+            left_row,
+            right_column_index,
+            right_row,
+        )
     }
 
     fn push_namespace<NR, N>(&mut self, _: N)

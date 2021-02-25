@@ -4,7 +4,7 @@ use std::{fmt, marker::PhantomData};
 
 use crate::{
     arithmetic::FieldExt,
-    plonk::{Advice, Any, Column, ConstraintSystem, Error, Fixed},
+    plonk::{Advice, Any, Column, Error, Fixed, Permutation},
 };
 
 pub mod layouter;
@@ -71,24 +71,6 @@ pub struct Cell {
     region_index: RegionIndex,
     row_offset: usize,
     column: Column<Any>,
-}
-
-/// A permutation configured by a chip.
-#[derive(Clone, Debug)]
-pub struct Permutation {
-    index: usize,
-    mapping: Vec<Column<Any>>,
-}
-
-impl Permutation {
-    /// Configures a new permutation for the given columns.
-    pub fn new<F: FieldExt>(meta: &mut ConstraintSystem<F>, columns: &[Column<Any>]) -> Self {
-        let index = meta.permutation(columns);
-        Permutation {
-            index,
-            mapping: columns.iter().copied().collect(),
-        }
-    }
 }
 
 /// A region of the circuit in which a [`Chip`] can assign cells.
