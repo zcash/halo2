@@ -131,8 +131,10 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 #[derive(Clone, Debug)]
 pub struct Lookup<F: Field> {
     index: usize,
+    input_tag: Option<Column<Any>>,
     input_columns: Vec<Column<Any>>,
     input_expressions: Vec<Expression<F>>,
+    table_tag: Option<Column<Any>>,
     table_columns: Vec<Column<Any>>,
     table_expressions: Vec<Expression<F>>,
 }
@@ -141,14 +143,18 @@ impl<F: Field> Lookup<F> {
     /// Configures a new lookup for the given expressions.
     pub fn new(
         meta: &mut ConstraintSystem<F>,
+        input_tag: Option<Column<Any>>,
         input_columns: &[Column<Any>],
         input_expressions: &[Expression<F>],
+        table_tag: Option<Column<Any>>,
         table_columns: &[Column<Any>],
         table_expressions: &[Expression<F>],
     ) -> Self {
         meta.lookup(
+            input_tag,
             input_columns,
             input_expressions,
+            table_tag,
             table_columns,
             table_expressions,
         )
@@ -157,6 +163,16 @@ impl<F: Field> Lookup<F> {
     /// Returns index of lookup
     pub fn index(&self) -> usize {
         self.index
+    }
+
+    /// Returns input_tag of lookup, if any
+    pub fn input_tag(&self) -> Column<Any> {
+        self.input_tag.unwrap()
+    }
+
+    /// Returns table_tag of lookup, if any
+    pub fn table_tag(&self) -> Column<Any> {
+        self.table_tag.unwrap()
     }
 
     /// Returns input_columns of lookup
@@ -269,6 +285,7 @@ pub trait Assignment<F: Field> {
         &mut self,
         lookup: &Lookup<F>,
         starting_row: usize,
+        tag_values: Option<Vec<F>>,
         values: Vec<Vec<F>>,
     ) -> Result<(), Error>;
 
@@ -555,8 +572,10 @@ impl<F: Field> ConstraintSystem<F> {
     /// expressions are not the same.
     pub fn lookup(
         &mut self,
+        input_tag: Option<Column<Any>>,
         input_columns: &[Column<Any>],
         input_expressions: &[Expression<F>],
+        table_tag: Option<Column<Any>>,
         table_columns: &[Column<Any>],
         table_expressions: &[Expression<F>],
     ) -> Lookup<F> {
@@ -564,13 +583,29 @@ impl<F: Field> ConstraintSystem<F> {
 
         let index = self.lookups.len();
 
-        self.lookups
-            .push(lookup::Argument::new(input_expressions, table_expressions));
+        let mut input_tag_cur = None;
+        if let Some(tag) = input_tag {
+            input_tag_cur = Some(self.query_any(tag, Rotation::cur()));
+        }
+
+        let mut table_tag_cur = None;
+        if let Some(tag) = table_tag {
+            table_tag_cur = Some(self.query_any(tag, Rotation::cur()));
+        }
+
+        self.lookups.push(lookup::Argument::new(
+            input_tag_cur,
+            input_expressions,
+            table_tag_cur,
+            table_expressions,
+        ));
 
         Lookup {
             index,
+            input_tag,
             input_columns: input_columns.to_vec(),
             input_expressions: input_expressions.to_vec(),
+            table_tag,
             table_columns: table_columns.to_vec(),
             table_expressions: table_expressions.to_vec(),
         }

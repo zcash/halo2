@@ -134,6 +134,7 @@ impl<F: Field> Assignment<F> for Graph {
         &mut self,
         _: &Lookup<F>,
         _: usize,
+        _: Option<Vec<F>>,
         _: Vec<Vec<F>>,
     ) -> Result<(), crate::plonk::Error> {
         // Do nothing; we don't care about lookups in this context.

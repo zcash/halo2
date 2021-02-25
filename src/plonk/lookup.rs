@@ -11,11 +11,24 @@ pub(crate) struct Argument<F: Field> {
 }
 
 impl<F: Field> Argument<F> {
-    pub fn new(input_expressions: &[Expression<F>], table_expressions: &[Expression<F>]) -> Self {
+    pub fn new(
+        input_tag: Option<Expression<F>>,
+        input_expressions: &[Expression<F>],
+        table_tag: Option<Expression<F>>,
+        table_expressions: &[Expression<F>],
+    ) -> Self {
         assert_eq!(input_expressions.len(), table_expressions.len());
+        let mut input_expressions = input_expressions.to_vec();
+        if let Some(tag) = input_tag {
+            input_expressions.push(tag);
+        }
+        let mut table_expressions = table_expressions.to_vec();
+        if let Some(tag) = table_tag {
+            table_expressions.push(tag);
+        }
         Argument {
-            input_expressions: input_expressions.to_vec(),
-            table_expressions: table_expressions.to_vec(),
+            input_expressions,
+            table_expressions,
         }
     }
 

@@ -19,6 +19,7 @@ fn main() {
 
     #[derive(Clone)]
     struct PLONKConfig<F: Field> {
+        tag: Column<Advice>,
         a: Column<Advice>,
         b: Column<Advice>,
         c: Column<Advice>,
@@ -51,11 +52,16 @@ fn main() {
         fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
         where
             F: FnOnce() -> Result<FF, Error>;
-        fn assign_lookup_table(&mut self, values: &[Vec<Vec<FF>>]) -> Result<(), Error>;
+        fn assign_lookup_table(
+            &mut self,
+            tag_values: &[Option<Vec<FF>>],
+            values: &[Vec<Vec<FF>>],
+        ) -> Result<(), Error>;
     }
 
     struct MyCircuit<F: FieldExt> {
         a: Option<F>,
+        lookup_tag: Vec<F>,
         lookup: Vec<Vec<F>>,
         lookup2: Vec<Vec<F>>,
     }
@@ -230,12 +236,24 @@ fn main() {
 
             Ok(Variable(self.config.a, index))
         }
-        fn assign_lookup_table(&mut self, values: &[Vec<Vec<FF>>]) -> Result<(), Error> {
+        fn assign_lookup_table(
+            &mut self,
+            tag_values: &[Option<Vec<FF>>],
+            values: &[Vec<Vec<FF>>],
+        ) -> Result<(), Error> {
             let index = self.current_gate;
-            self.cs
-                .assign_lookup_table(&self.config.lookup, index, values[0].clone())?;
-            self.cs
-                .assign_lookup_table(&self.config.lookup2, index, values[1].clone())
+            self.cs.assign_lookup_table(
+                &self.config.lookup,
+                index,
+                tag_values[0].clone(),
+                values[0].clone(),
+            )?;
+            self.cs.assign_lookup_table(
+                &self.config.lookup2,
+                index,
+                tag_values[1].clone(),
+                values[1].clone(),
+            )
         }
     }
 
@@ -243,6 +261,7 @@ fn main() {
         type Config = PLONKConfig<F>;
 
         fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig<F> {
+            let tag = meta.advice_column();
             let e = meta.advice_column();
             let a = meta.advice_column();
             let b = meta.advice_column();
@@ -254,6 +273,7 @@ fn main() {
             let perm = meta.permutation(&[a.into(), b.into(), c.into()]);
             let perm2 = meta.permutation(&[a.into(), b.into(), c.into()]);
 
+            let table_tag = meta.fixed_column();
             let sm = meta.fixed_column();
             let sa = meta.fixed_column();
             let sb = meta.fixed_column();
@@ -263,28 +283,37 @@ fn main() {
             let sl2 = meta.fixed_column();
 
             /*
-             *   A         B      ...  sl        sl2
+             *   input_tag    A         B      ...   table_tag   sl        sl2
              * [
-             *   instance  0      ...  0         0
-             *   a         a      ...  0         0
-             *   a         a^2    ...  0         0
-             *   a         a      ...  0         0
-             *   a         a^2    ...  0         0
-             *   ...       ...    ...  ...       ...
-             *   ...       ...    ...  instance  0
-             *   ...       ...    ...  a         a
-             *   ...       ...    ...  a         a^2
-             *   ...       ...    ...  0         0
+             *       0       instance  0      ...       0       0         0
+             *       1       a         a      ...       0       0         0
+             *       2       a         a^2    ...       0       0         0
+             *       1       a         a      ...       0       0         0
+             *       2       a         a^2    ...       0       0         0
+             *       0       ...       ...    ...       0       ...       ...
+             *       0       ...       ...    ...       0       instance  0
+             *       0       ...       ...    ...       1       a         a
+             *       0       ...       ...    ...       2       a         a^2
+             *       0       ...       ...    ...       0       0         0
              * ]
              */
             let a_ = meta.query_any(a.into(), Rotation::cur());
             let b_ = meta.query_any(b.into(), Rotation::cur());
             let sl_ = meta.query_any(sl.into(), Rotation::cur());
             let sl2_ = meta.query_any(sl2.into(), Rotation::cur());
-            let lookup = meta.lookup(&[a.into()], &[a_.clone()], &[sl.into()], &[sl_.clone()]);
+            let lookup = meta.lookup(
+                Some(tag.into()),
+                &[a.into()],
+                &[a_.clone()],
+                Some(table_tag.into()),
+                &[sl.into()],
+                &[sl_.clone()],
+            );
             let lookup2 = meta.lookup(
+                None,
                 &[a.into(), b.into()],
                 &[a_ * b_],
+                None,
                 &[sl.into(), sl2.into()],
                 &[sl_ * sl2_],
             );
@@ -314,6 +343,7 @@ fn main() {
             });
 
             PLONKConfig {
+                tag,
                 a,
                 b,
                 c,
@@ -369,7 +399,10 @@ fn main() {
             }
 
             cs.enter_region(|| "lookup table");
-            cs.assign_lookup_table(&[self.lookup.clone(), self.lookup2.clone()])?;
+            cs.assign_lookup_table(
+                &[Some(self.lookup_tag.clone()), None],
+                &[self.lookup.clone(), self.lookup2.clone()],
+            )?;
             cs.exit_region();
 
             Ok(())
@@ -379,11 +412,13 @@ fn main() {
     let a = Fp::rand();
     let a_squared = a * a;
     let instance = Fp::one() + Fp::one();
+    let lookup_tag = vec![Fp::zero(), Fp::one(), Fp::one() + Fp::one(), Fp::zero()];
     let lookup_table = vec![instance, a, a, Fp::zero()];
     let lookup_table_2 = vec![Fp::zero(), a, a_squared, Fp::zero()];
 
     let circuit: MyCircuit<Fp> = MyCircuit {
-        a: None,
+        a: Some(a),
+        lookup_tag,
         lookup: vec![lookup_table.clone()],
         lookup2: vec![lookup_table, lookup_table_2],
     };

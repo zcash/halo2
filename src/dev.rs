@@ -245,8 +245,36 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         &mut self,
         lookup: &Lookup<F>,
         row: usize,
+        tag_values: Option<Vec<F>>,
         values: Vec<Vec<F>>,
     ) -> Result<(), Error> {
+        if let Some(values) = tag_values {
+            match lookup.table_tag().column_type() {
+                Any::Advice => {
+                    let mut row = row;
+                    for value in values.iter() {
+                        *self
+                            .advice
+                            .get_mut(lookup.table_tag().index())
+                            .and_then(|v| v.get_mut(row))
+                            .ok_or(Error::BoundsFailure)? = *value;
+                        row += 1;
+                    }
+                }
+                Any::Fixed => {
+                    let mut row = row;
+                    for value in values.iter() {
+                        *self
+                            .fixed
+                            .get_mut(lookup.table_tag().index())
+                            .and_then(|v| v.get_mut(row))
+                            .ok_or(Error::BoundsFailure)? = *value;
+                        row += 1;
+                    }
+                }
+                _ => (),
+            }
+        }
         for (idx, column) in lookup.table_columns().iter().enumerate() {
             match column.column_type() {
                 Any::Advice => {

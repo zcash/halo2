@@ -174,8 +174,22 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
                     &mut self,
                     lookup: &Lookup<F>,
                     row: usize,
+                    tag_values: Option<Vec<F>>,
                     values: Vec<Vec<F>>,
                 ) -> Result<(), Error> {
+                    if let Some(values) = tag_values {
+                        if let Any::Advice = lookup.table_tag().column_type() {
+                            let mut row = row;
+                            for value in values.iter() {
+                                *self
+                                    .advice
+                                    .get_mut(lookup.table_tag().index())
+                                    .and_then(|v| v.get_mut(row))
+                                    .ok_or(Error::BoundsFailure)? = *value;
+                                row += 1;
+                            }
+                        }
+                    }
                     for (idx, column) in lookup.table_columns().iter().enumerate() {
                         // We only care about advice columns here
                         if let Any::Advice = column.column_type() {

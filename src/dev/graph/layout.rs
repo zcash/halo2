@@ -267,8 +267,28 @@ impl<F: Field> Assignment<F> for Layout {
         &mut self,
         lookup: &Lookup<F>,
         row: usize,
+        tag_values: Option<Vec<F>>,
         values: Vec<Vec<F>>,
     ) -> Result<(), crate::plonk::Error> {
+        if let Some(values) = tag_values {
+            match lookup.table_tag().column_type() {
+                Any::Advice => {
+                    let mut row = row;
+                    for _ in values.iter() {
+                        self.update(lookup.table_tag(), row);
+                        row += 1;
+                    }
+                }
+                Any::Fixed => {
+                    let mut row = row;
+                    for _ in values.iter() {
+                        self.update(lookup.table_tag(), row);
+                        row += 1;
+                    }
+                }
+                _ => (),
+            }
+        }
         for (idx, column) in lookup.table_columns().iter().enumerate() {
             match column.column_type() {
                 Any::Advice => {

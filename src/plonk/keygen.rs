@@ -150,8 +150,22 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         &mut self,
         lookup: &Lookup<F>,
         row: usize,
+        tag_values: Option<Vec<F>>,
         values: Vec<Vec<F>>,
     ) -> Result<(), Error> {
+        if let Some(values) = tag_values {
+            if let Any::Fixed = lookup.table_tag().column_type() {
+                let mut row = row;
+                for value in values.iter() {
+                    *self
+                        .fixed
+                        .get_mut(lookup.table_tag().index())
+                        .and_then(|v| v.get_mut(row))
+                        .ok_or(Error::BoundsFailure)? = *value;
+                    row += 1;
+                }
+            }
+        }
         for (idx, column) in lookup.table_columns().iter().enumerate() {
             // We only care about fixed columns here
             if let Any::Fixed = column.column_type() {
