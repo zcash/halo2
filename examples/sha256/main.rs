@@ -6,10 +6,7 @@ use std::cmp::min;
 use std::convert::TryInto;
 use std::fmt;
 
-use halo2::{
-    circuit::{Chip, Layouter},
-    plonk::Error,
-};
+use halo2::plonk::{Chip, Error, Layouter};
 
 mod benches;
 mod table16;

@@ -68,9 +68,9 @@ pub enum VerifyFailure {
 /// ```
 /// use halo2::{
 ///     arithmetic::FieldExt,
-///     dev::{MockProver, VerifyFailure},
 ///     pasta::Fp,
 ///     plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error},
+///     plonk::mock::{MockProver, VerifyFailure},
 ///     poly::Rotation,
 /// };
 /// const K: u32 = 5;

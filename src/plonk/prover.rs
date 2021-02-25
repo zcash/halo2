@@ -3,9 +3,9 @@ use group::Curve;
 use std::iter;
 
 use super::{
-    circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
-    ChallengeY, Error, Permutation, ProvingKey,
+    lookup, permutation, vanishing, Advice, Any, Assignment, ChallengeBeta, ChallengeGamma,
+    ChallengeTheta, ChallengeX, ChallengeY, Circuit, Column, ConstraintSystem, Error, Fixed,
+    Permutation, ProvingKey,
 };
 use crate::arithmetic::{eval_polynomial, CurveAffine, FieldExt};
 use crate::poly::{

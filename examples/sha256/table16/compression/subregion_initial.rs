@@ -1,6 +1,9 @@
 use super::super::{RoundWordDense, RoundWordSpread, StateWord, Table16Chip, STATE};
 use super::{compression_util::*, Compression, State};
-use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
+use halo2::{
+    arithmetic::FieldExt,
+    plonk::{Error, Region},
+};
 
 impl Compression {
     #[allow(clippy::many_single_char_names)]

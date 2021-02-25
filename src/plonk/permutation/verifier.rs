@@ -1,7 +1,7 @@
 use ff::Field;
 use std::iter;
 
-use super::super::circuit::Any;
+use super::super::Any;
 use super::{Argument, VerifyingKey};
 use crate::{
     arithmetic::{CurveAffine, FieldExt},

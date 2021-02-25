@@ -3,8 +3,7 @@ use std::marker::PhantomData;
 use super::Sha256Instructions;
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Cell, Chip, Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Permutation},
+    plonk::{Advice, Cell, Chip, Column, ConstraintSystem, Error, Layouter, Permutation, Region},
 };
 
 mod compression;

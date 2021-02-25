@@ -2,7 +2,10 @@ use super::super::{
     util::*, CellValue16, CellValue32, SpreadVar, SpreadWord, Table16Assignment, Table16Chip,
 };
 use super::{schedule_util::*, MessageSchedule, MessageWord};
-use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
+use halo2::{
+    arithmetic::FieldExt,
+    plonk::{Error, Region},
+};
 
 // A word in subregion 3
 // (10, 7, 2, 13)-bit chunks

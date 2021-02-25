@@ -1,11 +1,9 @@
 use halo2::{
     arithmetic::FieldExt,
-    circuit::Chip,
-    circuit::{layouter, Layouter},
     pasta::EqAffine,
     plonk::{
-        create_proof, keygen_pk, keygen_vk, verify_proof, Assignment, Circuit, ConstraintSystem,
-        Error, VerifyingKey,
+        create_proof, keygen_pk, keygen_vk, layouter, verify_proof, Assignment, Chip, Circuit,
+        ConstraintSystem, Error, Layouter, VerifyingKey,
     },
     poly::commitment::Params,
     transcript::{Blake2bRead, Blake2bWrite},

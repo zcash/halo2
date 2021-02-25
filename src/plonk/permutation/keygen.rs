@@ -4,7 +4,7 @@ use group::Curve;
 use super::{Argument, ProvingKey, VerifyingKey};
 use crate::{
     arithmetic::{CurveAffine, FieldExt},
-    plonk::{circuit::ConstraintSystem, Error},
+    plonk::{ConstraintSystem, Error},
     poly::{
         commitment::{Blind, Params},
         EvaluationDomain, Rotation,

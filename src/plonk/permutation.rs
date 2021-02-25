@@ -1,6 +1,6 @@
 //! Implementation of a PLONK permutation argument.
 
-use super::circuit::{Any, Column};
+use super::{Any, Column};
 use crate::{
     arithmetic::CurveAffine,
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},

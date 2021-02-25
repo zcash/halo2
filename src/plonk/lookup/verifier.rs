@@ -1,6 +1,6 @@
 use std::iter;
 
-use super::super::circuit::Expression;
+use super::super::Expression;
 use super::Argument;
 use crate::{
     arithmetic::{CurveAffine, FieldExt},
