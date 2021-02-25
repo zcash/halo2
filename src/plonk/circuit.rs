@@ -264,6 +264,14 @@ pub trait Assignment<F: Field> {
         right_row: usize,
     ) -> Result<(), Error>;
 
+    /// Assign cells used in a lookup table
+    fn assign_lookup_table(
+        &mut self,
+        lookup: &Lookup<F>,
+        starting_row: usize,
+        values: Vec<Vec<F>>,
+    ) -> Result<(), Error>;
+
     /// Creates a new (sub)namespace and enters into it.
     ///
     /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.

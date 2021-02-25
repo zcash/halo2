@@ -6,7 +6,7 @@ use crate::{
     arithmetic::{FieldExt, Group},
     plonk::{
         permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Expression, Fixed, Permutation,
+        Expression, Fixed, Lookup, Permutation,
     },
     poly::Rotation,
 };
@@ -239,6 +239,44 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             right_column_index,
             right_row,
         )
+    }
+
+    fn assign_lookup_table(
+        &mut self,
+        lookup: &Lookup<F>,
+        row: usize,
+        values: Vec<Vec<F>>,
+    ) -> Result<(), Error> {
+        for (idx, column) in lookup.table_columns().iter().enumerate() {
+            match column.column_type() {
+                Any::Advice => {
+                    let values = &values[idx];
+                    let mut row = row;
+                    for value in values.iter() {
+                        *self
+                            .advice
+                            .get_mut(column.index())
+                            .and_then(|v| v.get_mut(row))
+                            .ok_or(Error::BoundsFailure)? = *value;
+                        row += 1;
+                    }
+                }
+                Any::Fixed => {
+                    let values = &values[idx];
+                    let mut row = row;
+                    for value in values.iter() {
+                        *self
+                            .fixed
+                            .get_mut(column.index())
+                            .and_then(|v| v.get_mut(row))
+                            .ok_or(Error::BoundsFailure)? = *value;
+                        row += 1;
+                    }
+                }
+                _ => (),
+            }
+        }
+        Ok(())
     }
 
     fn push_namespace<NR, N>(&mut self, _: N)

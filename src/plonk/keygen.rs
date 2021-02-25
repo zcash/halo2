@@ -3,7 +3,7 @@ use group::Curve;
 
 use super::{
     circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    permutation, Error, LagrangeCoeff, Permutation, Polynomial, ProvingKey, VerifyingKey,
+    permutation, Error, LagrangeCoeff, Lookup, Permutation, Polynomial, ProvingKey, VerifyingKey,
 };
 use crate::arithmetic::CurveAffine;
 use crate::poly::{
@@ -144,6 +144,31 @@ impl<F: Field> Assignment<F> for Assembly<F> {
             right_column_index,
             right_row,
         )
+    }
+
+    fn assign_lookup_table(
+        &mut self,
+        lookup: &Lookup<F>,
+        row: usize,
+        values: Vec<Vec<F>>,
+    ) -> Result<(), Error> {
+        for (idx, column) in lookup.table_columns().iter().enumerate() {
+            // We only care about fixed columns here
+            if let Any::Fixed = column.column_type() {
+                let values = &values[idx];
+                let mut row = row;
+                for value in values.iter() {
+                    *self
+                        .fixed
+                        .get_mut(column.index())
+                        .and_then(|v| v.get_mut(row))
+                        .ok_or(Error::BoundsFailure)? = *value;
+                    row += 1;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     fn push_namespace<NR, N>(&mut self, _: N)

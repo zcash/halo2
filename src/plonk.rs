@@ -245,13 +245,14 @@ fn test_proving() {
         fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
         where
             F: FnOnce() -> Result<FF, Error>;
-        fn lookup_table(&mut self, values: &[Vec<FF>]) -> Result<(), Error>;
+        fn assign_lookup_table(&mut self, values: &[Vec<Vec<FF>>]) -> Result<(), Error>;
     }
 
     #[derive(Clone)]
     struct MyCircuit<F: FieldExt> {
         a: Option<F>,
-        lookup_tables: Vec<Vec<F>>,
+        lookup: Vec<Vec<F>>,
+        lookup2: Vec<Vec<F>>,
     }
 
     struct StandardPLONK<'a, F: FieldExt, CS: Assignment<F> + 'a> {
@@ -412,17 +413,13 @@ fn test_proving() {
 
             Ok(Variable(self.config.a, index))
         }
-        fn lookup_table(&mut self, values: &[Vec<FF>]) -> Result<(), Error> {
-            for (&value_0, &value_1) in values[0].iter().zip(values[1].iter()) {
-                let index = self.current_gate;
 
-                self.current_gate += 1;
-                self.cs
-                    .assign_fixed(|| "table col 1", self.config.sl, index, || Ok(value_0))?;
-                self.cs
-                    .assign_fixed(|| "table col 2", self.config.sl2, index, || Ok(value_1))?;
-            }
-            Ok(())
+        fn assign_lookup_table(&mut self, values: &[Vec<Vec<FF>>]) -> Result<(), Error> {
+            let index = self.current_gate;
+            self.cs
+                .assign_lookup_table(&self.config.lookup, index, values[0].clone())?;
+            self.cs
+                .assign_lookup_table(&self.config.lookup2, index, values[1].clone())
         }
     }
 
@@ -551,7 +548,7 @@ fn test_proving() {
                 cs.copy(b1, c0)?;
             }
 
-            cs.lookup_table(&self.lookup_tables)?;
+            cs.assign_lookup_table(&[self.lookup.clone(), self.lookup2.clone()])?;
 
             Ok(())
         }
@@ -565,12 +562,14 @@ fn test_proving() {
 
     let empty_circuit: MyCircuit<Fp> = MyCircuit {
         a: None,
-        lookup_tables: vec![lookup_table.clone(), lookup_table_2.clone()],
+        lookup: vec![lookup_table.clone()],
+        lookup2: vec![lookup_table.clone(), lookup_table_2.clone()],
     };
 
     let circuit: MyCircuit<Fp> = MyCircuit {
         a: Some(a),
-        lookup_tables: vec![lookup_table, lookup_table_2],
+        lookup: vec![lookup_table.clone()],
+        lookup2: vec![lookup_table, lookup_table_2],
     };
 
     // Initialize the proving key

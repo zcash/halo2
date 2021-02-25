@@ -5,7 +5,7 @@ use std::iter;
 use super::{
     circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed},
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
-    ChallengeY, Error, Permutation, ProvingKey,
+    ChallengeY, Error, Lookup, Permutation, ProvingKey,
 };
 use crate::arithmetic::{eval_polynomial, CurveAffine, FieldExt};
 use crate::poly::{
@@ -166,6 +166,31 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
                     _: usize,
                 ) -> Result<(), Error> {
                     // We only care about advice columns here
+
+                    Ok(())
+                }
+
+                fn assign_lookup_table(
+                    &mut self,
+                    lookup: &Lookup<F>,
+                    row: usize,
+                    values: Vec<Vec<F>>,
+                ) -> Result<(), Error> {
+                    for (idx, column) in lookup.table_columns().iter().enumerate() {
+                        // We only care about advice columns here
+                        if let Any::Advice = column.column_type() {
+                            let values = &values[idx];
+                            let mut row = row;
+                            for value in values.iter() {
+                                *self
+                                    .advice
+                                    .get_mut(column.index())
+                                    .and_then(|v| v.get_mut(row))
+                                    .ok_or(Error::BoundsFailure)? = *value;
+                                row += 1;
+                            }
+                        }
+                    }
 
                     Ok(())
                 }
