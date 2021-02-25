@@ -127,6 +127,59 @@ impl TryFrom<Column<Any>> for Column<Instance> {
     }
 }
 
+/// A lookup.
+#[derive(Clone, Debug)]
+pub struct Lookup<F: Field> {
+    index: usize,
+    input_columns: Vec<Column<Any>>,
+    input_expressions: Vec<Expression<F>>,
+    table_columns: Vec<Column<Any>>,
+    table_expressions: Vec<Expression<F>>,
+}
+
+impl<F: Field> Lookup<F> {
+    /// Configures a new lookup for the given expressions.
+    pub fn new(
+        meta: &mut ConstraintSystem<F>,
+        input_columns: &[Column<Any>],
+        input_expressions: &[Expression<F>],
+        table_columns: &[Column<Any>],
+        table_expressions: &[Expression<F>],
+    ) -> Self {
+        meta.lookup(
+            input_columns,
+            input_expressions,
+            table_columns,
+            table_expressions,
+        )
+    }
+
+    /// Returns index of lookup
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    /// Returns input_columns of lookup
+    pub fn input_columns(&self) -> &[Column<Any>] {
+        &self.input_columns
+    }
+
+    /// Returns table_columns of lookup
+    pub fn table_columns(&self) -> &[Column<Any>] {
+        &self.table_columns
+    }
+
+    /// Returns input_expressions of lookup
+    pub fn input_expressions(&self) -> &[Expression<F>] {
+        &self.input_expressions
+    }
+
+    /// Returns table_expressions of lookup
+    pub fn table_expressions(&self) -> &[Expression<F>] {
+        &self.table_expressions
+    }
+}
+
 /// A permutation.
 #[derive(Clone, Debug)]
 pub struct Permutation {
@@ -494,9 +547,11 @@ impl<F: Field> ConstraintSystem<F> {
     /// expressions are not the same.
     pub fn lookup(
         &mut self,
+        input_columns: &[Column<Any>],
         input_expressions: &[Expression<F>],
+        table_columns: &[Column<Any>],
         table_expressions: &[Expression<F>],
-    ) -> usize {
+    ) -> Lookup<F> {
         assert_eq!(input_expressions.len(), table_expressions.len());
 
         let index = self.lookups.len();
@@ -504,7 +559,13 @@ impl<F: Field> ConstraintSystem<F> {
         self.lookups
             .push(lookup::Argument::new(input_expressions, table_expressions));
 
-        index
+        Lookup {
+            index,
+            input_columns: input_columns.to_vec(),
+            input_expressions: input_expressions.to_vec(),
+            table_columns: table_columns.to_vec(),
+            table_expressions: table_expressions.to_vec(),
+        }
     }
 
     fn query_fixed_index(&mut self, column: Column<Fixed>, at: Rotation) -> usize {

@@ -199,6 +199,7 @@ fn test_proving() {
     };
     use crate::transcript::{Blake2bRead, Blake2bWrite};
     use circuit::{Advice, Column, Fixed};
+    use ff::Field;
     use group::Curve;
     use std::marker::PhantomData;
     const K: u32 = 5;
@@ -211,7 +212,7 @@ fn test_proving() {
     let params: Params<EqAffine> = Params::new(K);
 
     #[derive(Clone)]
-    struct PLONKConfig {
+    struct PLONKConfig<F: Field> {
         a: Column<Advice>,
         b: Column<Advice>,
         c: Column<Advice>,
@@ -225,6 +226,9 @@ fn test_proving() {
         sp: Column<Fixed>,
         sl: Column<Fixed>,
         sl2: Column<Fixed>,
+
+        lookup: Lookup<F>,
+        lookup2: Lookup<F>,
 
         perm: Permutation,
         perm2: Permutation,
@@ -252,13 +256,13 @@ fn test_proving() {
 
     struct StandardPLONK<'a, F: FieldExt, CS: Assignment<F> + 'a> {
         cs: &'a mut CS,
-        config: PLONKConfig,
+        config: PLONKConfig<F>,
         current_gate: usize,
         _marker: PhantomData<F>,
     }
 
     impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardPLONK<'a, FF, CS> {
-        fn new(cs: &'a mut CS, config: PLONKConfig) -> Self {
+        fn new(cs: &'a mut CS, config: PLONKConfig<FF>) -> Self {
             StandardPLONK {
                 cs,
                 config,
@@ -423,9 +427,9 @@ fn test_proving() {
     }
 
     impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
-        type Config = PLONKConfig;
+        type Config = PLONKConfig<F>;
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
+        fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig<F> {
             let e = meta.advice_column();
             let a = meta.advice_column();
             let b = meta.advice_column();
@@ -464,8 +468,13 @@ fn test_proving() {
             let b_ = meta.query_any(b.into(), Rotation::cur());
             let sl_ = meta.query_any(sl.into(), Rotation::cur());
             let sl2_ = meta.query_any(sl2.into(), Rotation::cur());
-            meta.lookup(&[a_.clone()], &[sl_.clone()]);
-            meta.lookup(&[a_ * b_], &[sl_ * sl2_]);
+            let lookup = meta.lookup(&[a.into()], &[a_.clone()], &[sl.into()], &[sl_.clone()]);
+            let lookup2 = meta.lookup(
+                &[a.into(), b.into()],
+                &[a_ * b_],
+                &[sl.into(), sl2.into()],
+                &[sl_ * sl2_],
+            );
 
             meta.create_gate("Combined add-mult", |meta| {
                 let d = meta.query_advice(d, Rotation::next());
@@ -504,6 +513,8 @@ fn test_proving() {
                 sp,
                 sl,
                 sl2,
+                lookup,
+                lookup2,
                 perm,
                 perm2,
             }
@@ -512,7 +523,7 @@ fn test_proving() {
         fn synthesize(
             &self,
             cs: &mut impl Assignment<F>,
-            config: PLONKConfig,
+            config: PLONKConfig<F>,
         ) -> Result<(), Error> {
             let mut cs = StandardPLONK::new(cs, config);
 
