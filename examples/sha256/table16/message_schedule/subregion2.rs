@@ -162,7 +162,7 @@ impl MessageSchedule {
 
         for i in 27..49 {
             tmp_lower_sigma_0_v2_results =
-                new_word(i, tmp_lower_sigma_0_v2_results[i + 2 - 15 - 14].clone())?;
+                new_word(i, tmp_lower_sigma_0_v2_results[i + 2 - 15 - 14])?;
         }
 
         // Return lower_sigma_0_v2 output for W_[36..49]
@@ -209,18 +209,19 @@ impl MessageSchedule {
 
         Ok(Subregion2Word {
             index,
-            a: CellValue32::new(a, pieces[0].into()),
+            a: CellValue32::new(a, pieces[0]),
             b: CellValue32::new(spread_b.dense.var, spread_b.dense.value.unwrap().into()),
-            c: CellValue32::new(c, pieces[2].into()),
+            c: CellValue32::new(c, pieces[2]),
             d: CellValue32::new(spread_d.dense.var, spread_d.dense.value.unwrap().into()),
-            e: CellValue32::new(e, pieces[4].into()),
-            f: CellValue32::new(f, pieces[5].into()),
+            e: CellValue32::new(e, pieces[4]),
+            f: CellValue32::new(f, pieces[5]),
             g: CellValue32::new(spread_g.dense.var, spread_g.dense.value.unwrap().into()),
-            spread_d: CellValue32::new(spread_d.spread.var, spread_d.spread.value.unwrap().into()),
-            spread_g: CellValue32::new(spread_g.spread.var, spread_g.spread.value.unwrap().into()),
+            spread_d: CellValue32::new(spread_d.spread.var, spread_d.spread.value.unwrap()),
+            spread_g: CellValue32::new(spread_g.spread.var, spread_g.spread.value.unwrap()),
         })
     }
 
+    #[allow(clippy::type_complexity)]
     fn assign_lower_sigma_v2_pieces<F: FieldExt>(
         &self,
         region: &mut Region<'_, Table16Chip<F>>,
@@ -384,7 +385,7 @@ impl MessageSchedule {
         let row = get_word_row(subregion2_word.index) + SIGMA_0_V2_ROWS + 3;
 
         let (spread_a, spread_b_lo, spread_b_hi, spread_c, spread_d, e, f, spread_g) =
-            self.assign_lower_sigma_v2_pieces(region, row, subregion2_word.clone())?;
+            self.assign_lower_sigma_v2_pieces(region, row, subregion2_word)?;
 
         // (3, 4, 3, 7, 1, 1, 13)
 

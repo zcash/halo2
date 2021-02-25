@@ -167,7 +167,7 @@ impl<F: FieldExt> Table16Chip<F> {
         );
 
         let message_schedule =
-            MessageSchedule::configure(meta, lookup_inputs, message_schedule, extras, perm.clone());
+            MessageSchedule::configure(meta, lookup_inputs, message_schedule, extras, perm);
 
         Table16Config {
             lookup_table,
@@ -240,6 +240,8 @@ impl<F: FieldExt> Sha256Instructions for Table16Chip<F> {
 /// Common assignment patterns used by Table16 regions.
 trait Table16Assignment<F: FieldExt> {
     // Assign cells for general spread computation used in sigma, ch, ch_neg, maj gates
+    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::type_complexity)]
     fn assign_spread_outputs(
         &self,
         region: &mut Region<'_, Table16Chip<F>>,
@@ -280,6 +282,7 @@ trait Table16Assignment<F: FieldExt> {
     }
 
     // Assign outputs of sigma gates
+    #[allow(clippy::too_many_arguments)]
     fn assign_sigma_outputs(
         &self,
         region: &mut Region<'_, Table16Chip<F>>,

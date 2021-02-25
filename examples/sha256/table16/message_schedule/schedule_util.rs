@@ -1,10 +1,13 @@
-use super::super::{super::BLOCK_SIZE, BlockWord, CellValue16, Table16Chip, ROUNDS};
+use super::super::{CellValue16, Table16Chip};
 use super::MessageSchedule;
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Cell, Region},
     plonk::Error,
 };
+
+#[cfg(test)]
+use super::super::{super::BLOCK_SIZE, BlockWord, ROUNDS};
 
 // Rows needed for each gate
 pub const DECOMPOSE_0_ROWS: usize = 2;
@@ -36,11 +39,11 @@ pub fn get_word_row(word_idx: usize) -> usize {
     assert!(word_idx <= 63);
     if word_idx == 0 {
         0
-    } else if word_idx >= 1 && word_idx <= 13 {
+    } else if (1..=13).contains(&word_idx) {
         SUBREGION_0_ROWS + SUBREGION_1_WORD * (word_idx - 1) as usize
-    } else if word_idx >= 14 && word_idx <= 48 {
-        SUBREGION_0_ROWS + SUBREGION_1_ROWS + SUBREGION_2_WORD * (word_idx - 14) + 1 as usize
-    } else if word_idx >= 49 && word_idx <= 61 {
+    } else if (14..=48).contains(&word_idx) {
+        SUBREGION_0_ROWS + SUBREGION_1_ROWS + SUBREGION_2_WORD * (word_idx - 14) + 1
+    } else if (49..=61).contains(&word_idx) {
         SUBREGION_0_ROWS
             + SUBREGION_1_ROWS
             + SUBREGION_2_ROWS
@@ -55,6 +58,7 @@ pub fn get_word_row(word_idx: usize) -> usize {
 }
 
 /// Test vector: "abc"
+#[cfg(test)]
 pub fn get_msg_schedule_test_input() -> [BlockWord; BLOCK_SIZE] {
     [
         BlockWord::new(0b01100001011000100110001110000000),
@@ -76,6 +80,7 @@ pub fn get_msg_schedule_test_input() -> [BlockWord; BLOCK_SIZE] {
     ]
 }
 
+#[cfg(test)]
 pub const MSG_SCHEDULE_TEST_OUTPUT: [u32; ROUNDS] = [
     0b01100001011000100110001110000000,
     0b00000000000000000000000000000000,

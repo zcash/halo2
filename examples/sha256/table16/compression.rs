@@ -180,6 +180,8 @@ pub struct State {
 }
 
 impl State {
+    #[allow(clippy::many_single_char_names)]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         a: StateWord,
         b: StateWord,
@@ -749,6 +751,7 @@ impl Compression {
         Ok(digest)
     }
 
+    #[cfg(test)]
     pub(super) fn empty_configure<F: FieldExt>(
         meta: &mut ConstraintSystem<F>,
         lookup: SpreadInputs,

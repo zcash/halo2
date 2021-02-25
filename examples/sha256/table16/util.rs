@@ -48,14 +48,14 @@ pub fn compress_u32(word: u32) -> u16 {
 // Chops a 32-bit word into pieces of given length. The lengths are specified
 // starting from the little end.
 pub fn chop_u32(word: u32, lengths: &[u8]) -> Vec<u32> {
-    assert_eq!(lengths.iter().sum::<u8>(), 32 as u8);
+    assert_eq!(lengths.iter().sum::<u8>(), 32u8);
     let mut pieces: Vec<u32> = Vec::with_capacity(lengths.len());
     for i in 0..lengths.len() {
         assert!(lengths[i] > 0);
         // lengths[i] bitstring of all 1's
         let mask: u32 = (1 << lengths[i]) as u32 - 1;
         // Shift mask by bits already shifted
-        let offset: u8 = lengths[0..i].into_iter().sum();
+        let offset: u8 = lengths[0..i].iter().sum();
         let mask: u32 = mask << offset;
         pieces.push((word & mask) >> offset as u32);
     }
@@ -65,14 +65,14 @@ pub fn chop_u32(word: u32, lengths: &[u8]) -> Vec<u32> {
 // Chops a 64-bit word into pieces of given length. The lengths are specified
 // starting from the little end.
 pub fn chop_u64(word: u64, lengths: &[u8]) -> Vec<u64> {
-    assert_eq!(lengths.iter().sum::<u8>(), 64 as u8);
+    assert_eq!(lengths.iter().sum::<u8>(), 64u8);
     let mut pieces: Vec<u64> = Vec::with_capacity(lengths.len());
     for i in 0..lengths.len() {
         assert!(lengths[i] > 0);
         // lengths[i] bitstring of all 1's
-        let mask: u64 = ((1 as u64) << lengths[i]) - 1;
+        let mask: u64 = (1u64 << lengths[i]) - 1;
         // Shift mask by bits already shifted
-        let offset: u8 = lengths[0..i].into_iter().sum();
+        let offset: u8 = lengths[0..i].iter().sum();
         let mask: u64 = mask << offset;
         pieces.push((word & mask) >> offset as u64);
     }

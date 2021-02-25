@@ -79,12 +79,12 @@ impl MessageSchedule {
 
         Ok(Subregion1Word {
             index,
-            a: CellValue32::new(a, pieces[0].into()),
-            b: CellValue32::new(b, pieces[1].into()),
+            a: CellValue32::new(a, pieces[0]),
+            b: CellValue32::new(b, pieces[1]),
             c: CellValue32::new(spread_c.dense.var, spread_c.dense.value.unwrap().into()),
             d: CellValue32::new(spread_d.dense.var, spread_d.dense.value.unwrap().into()),
-            spread_c: CellValue32::new(spread_c.spread.var, spread_c.spread.value.unwrap().into()),
-            spread_d: CellValue32::new(spread_d.spread.var, spread_d.spread.value.unwrap().into()),
+            spread_c: CellValue32::new(spread_c.spread.var, spread_c.spread.value.unwrap()),
+            spread_d: CellValue32::new(spread_d.spread.var, spread_d.spread.value.unwrap()),
         })
     }
 

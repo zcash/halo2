@@ -21,6 +21,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 use crate::{BlockWord, Sha256, Table16Chip, Table16Config, BLOCK_SIZE};
 
+#[allow(dead_code)]
 fn bench(name: &str, k: u32, c: &mut Criterion) {
     struct MyCircuit {}
 
@@ -72,7 +73,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
 
     // Initialize the polynomial commitment parameters
     let params_path = Path::new("./benches/sha256_assets/sha256_params");
-    if let Err(_) = File::open(&params_path) {
+    if File::open(&params_path).is_err() {
         let params: Params<EqAffine> = Params::new(k);
         let mut buf = Vec::new();
 
@@ -91,7 +92,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
 
     // Initialize the proving key
     let vk_path = Path::new("./benches/sha256_assets/sha256_vk");
-    if let Err(_) = File::open(&vk_path) {
+    if File::open(&vk_path).is_err() {
         let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
         let mut buf = Vec::new();
 
@@ -126,7 +127,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
 
     // Create a proof
     let proof_path = Path::new("./benches/sha256_assets/sha256_proof");
-    if let Err(_) = File::open(&proof_path) {
+    if File::open(&proof_path).is_err() {
         let mut transcript = Blake2bWrite::init(vec![]);
         create_proof(&params, &pk, &[circuit], &[], &mut transcript)
             .expect("proof generation should not fail");
@@ -152,6 +153,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     });
 }
 
+#[allow(dead_code)]
 fn criterion_benchmark(c: &mut Criterion) {
     bench("sha256", 16, c);
     // bench("sha256", 20, c);

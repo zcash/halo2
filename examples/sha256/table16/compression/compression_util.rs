@@ -12,6 +12,7 @@ use halo2::{
 };
 
 // Test vector 'abc'
+#[cfg(test)]
 pub const COMPRESSION_OUTPUT: [u32; 8] = [
     0b10111010011110000001011010111111,
     0b10001111000000011100111111101010,
@@ -767,6 +768,7 @@ impl Compression {
     }
 
     // s_h_prime to get H' = H + Ch(E, F, G) + s_upper_sigma_1(E) + K + W
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn assign_h_prime<F: FieldExt>(
         &self,
         region: &mut Region<'_, Table16Chip<F>>,
@@ -1051,6 +1053,7 @@ impl Compression {
     }
 
     // Assign hi and lo halves for both dense and spread versions of a word
+    #[allow(clippy::type_complexity)]
     pub fn assign_word_halves<F: FieldExt>(
         &self,
         region: &mut Region<'_, Table16Chip<F>>,
@@ -1081,6 +1084,7 @@ pub fn val_from_dense_halves(dense_halves: (CellValue16, CellValue16)) -> u32 {
     dense_halves.0.value.unwrap() as u32 + (1 << 16) * dense_halves.1.value.unwrap() as u32
 }
 
+#[allow(clippy::many_single_char_names)]
 pub fn match_state(
     state: State,
 ) -> (

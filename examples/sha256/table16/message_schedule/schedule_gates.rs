@@ -5,6 +5,7 @@ pub struct ScheduleGate<F: FieldExt>(pub Expression<F>);
 
 impl<F: FieldExt> ScheduleGate<F> {
     /// s_word for W_16 to W_63
+    #[allow(clippy::too_many_arguments)]
     pub fn s_word(
         s_word: Expression<F>,
         sigma_0_lo: Expression<F>,
@@ -42,6 +43,7 @@ impl<F: FieldExt> ScheduleGate<F> {
 
     /// s_decompose_1 for W_1 to W_13
     /// (3, 4, 11, 14)-bit chunks
+    #[allow(clippy::too_many_arguments)]
     pub fn s_decompose_1(
         s_decompose_1: Expression<F>,
         a: Expression<F>,
@@ -64,6 +66,8 @@ impl<F: FieldExt> ScheduleGate<F> {
 
     /// s_decompose_2 for W_14 to W_48
     /// (3, 4, 3, 7, 1, 1, 13)-bit chunks
+    #[allow(clippy::many_single_char_names)]
+    #[allow(clippy::too_many_arguments)]
     pub fn s_decompose_2(
         s_decompose_2: Expression<F>,
         a: Expression<F>,
@@ -92,6 +96,7 @@ impl<F: FieldExt> ScheduleGate<F> {
 
     /// s_decompose_3 for W_49 to W_61
     /// (10, 7, 2, 13)-bit chunks
+    #[allow(clippy::too_many_arguments)]
     pub fn s_decompose_3(
         s_decompose_3: Expression<F>,
         a: Expression<F>,
@@ -132,6 +137,7 @@ impl<F: FieldExt> ScheduleGate<F> {
 
     /// sigma_0 v1 on W_1 to W_13
     /// (3, 4, 11, 14)-bit chunks
+    #[allow(clippy::too_many_arguments)]
     pub fn s_lower_sigma_0(
         s_lower_sigma_0: Expression<F>,
         spread_r0_even: Expression<F>,
@@ -180,6 +186,7 @@ impl<F: FieldExt> ScheduleGate<F> {
 
     /// sigma_1 v1 on W_49 to W_61
     /// (10, 7, 2, 13)-bit chunks
+    #[allow(clippy::too_many_arguments)]
     pub fn s_lower_sigma_1(
         s_lower_sigma_1: Expression<F>,
         spread_r0_even: Expression<F>,
@@ -218,12 +225,12 @@ impl<F: FieldExt> ScheduleGate<F> {
             + spread_b_lo.clone() * F::from_u64(1 << 50)
             + spread_b_mid.clone() * F::from_u64(1 << 54)
             + spread_b_hi.clone() * F::from_u64(1 << 58);
-        let xor_2 = spread_d.clone()
-            + spread_a.clone() * F::from_u64(1 << 26)
-            + spread_b_lo.clone() * F::from_u64(1 << 46)
-            + spread_b_mid.clone() * F::from_u64(1 << 50)
-            + spread_b_hi.clone() * F::from_u64(1 << 54)
-            + spread_c.clone() * F::from_u64(1 << 60);
+        let xor_2 = spread_d
+            + spread_a * F::from_u64(1 << 26)
+            + spread_b_lo * F::from_u64(1 << 46)
+            + spread_b_mid * F::from_u64(1 << 50)
+            + spread_b_hi * F::from_u64(1 << 54)
+            + spread_c * F::from_u64(1 << 60);
         let xor = xor_0 + xor_1 + xor_2;
 
         ScheduleGate(
@@ -234,6 +241,7 @@ impl<F: FieldExt> ScheduleGate<F> {
 
     /// sigma_0 v2 on W_14 to W_48
     /// (3, 4, 3, 7, 1, 1, 13)-bit chunks
+    #[allow(clippy::too_many_arguments)]
     pub fn s_lower_sigma_0_v2(
         s_lower_sigma_0_v2: Expression<F>,
         spread_r0_even: Expression<F>,
@@ -296,6 +304,7 @@ impl<F: FieldExt> ScheduleGate<F> {
 
     /// sigma_1 v2 on W_14 to W_48
     /// (3, 4, 3, 7, 1, 1, 13)-bit chunks
+    #[allow(clippy::too_many_arguments)]
     pub fn s_lower_sigma_1_v2(
         s_lower_sigma_1_v2: Expression<F>,
         spread_r0_even: Expression<F>,

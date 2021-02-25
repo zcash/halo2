@@ -76,8 +76,8 @@ impl SpreadVar {
         })
     }
 
-    pub(super) fn without_lookup<'r, C: Chip>(
-        region: &mut Region<'r, C>,
+    pub(super) fn without_lookup<C: Chip>(
+        region: &mut Region<'_, C>,
         dense_col: Column<Advice>,
         dense_row: usize,
         spread_col: Column<Advice>,

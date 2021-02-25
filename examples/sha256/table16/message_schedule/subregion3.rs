@@ -8,9 +8,11 @@ use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
 // (10, 7, 2, 13)-bit chunks
 pub struct Subregion3Word {
     index: usize,
+    #[allow(dead_code)]
     a: CellValue32,
     b: CellValue32,
     c: CellValue32,
+    #[allow(dead_code)]
     d: CellValue32,
     spread_a: CellValue32,
     spread_d: CellValue32,
@@ -177,11 +179,11 @@ impl MessageSchedule {
         Ok(Subregion3Word {
             index,
             a: CellValue32::new(spread_a.dense.var, spread_a.dense.value.unwrap().into()),
-            b: CellValue32::new(b, pieces[1].into()),
-            c: CellValue32::new(c, pieces[2].into()),
+            b: CellValue32::new(b, pieces[1]),
+            c: CellValue32::new(c, pieces[2]),
             d: CellValue32::new(spread_d.dense.var, spread_d.dense.value.unwrap().into()),
-            spread_a: CellValue32::new(spread_a.spread.var, spread_a.spread.value.unwrap().into()),
-            spread_d: CellValue32::new(spread_d.spread.var, spread_d.spread.value.unwrap().into()),
+            spread_a: CellValue32::new(spread_a.spread.var, spread_a.spread.value.unwrap()),
+            spread_d: CellValue32::new(spread_d.spread.var, spread_d.spread.value.unwrap()),
         })
     }
 

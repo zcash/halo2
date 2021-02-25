@@ -7,6 +7,7 @@ use halo2::{
 };
 
 impl Compression {
+    #[allow(clippy::many_single_char_names)]
     pub fn assign_digest<F: FieldExt>(
         &self,
         region: &mut Region<'_, Table16Chip<F>>,

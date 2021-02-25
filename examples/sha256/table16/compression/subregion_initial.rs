@@ -3,6 +3,7 @@ use super::{compression_util::*, Compression, State};
 use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
 
 impl Compression {
+    #[allow(clippy::many_single_char_names)]
     pub fn initialize_iv<F: FieldExt>(
         &self,
         region: &mut Region<'_, Table16Chip<F>>,
@@ -48,6 +49,7 @@ impl Compression {
         ))
     }
 
+    #[allow(clippy::many_single_char_names)]
     pub fn initialize_state<F: FieldExt>(
         &self,
         region: &mut Region<'_, Table16Chip<F>>,

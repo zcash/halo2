@@ -5,6 +5,7 @@ use super::{compression_util::*, Compression, State};
 use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
 
 impl Compression {
+    #[allow(clippy::many_single_char_names)]
     pub fn assign_round<F: FieldExt>(
         &self,
         region: &mut Region<'_, Table16Chip<F>>,

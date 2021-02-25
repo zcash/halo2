@@ -10,6 +10,7 @@ impl<F: FieldExt> CompressionGate<F> {
 
     // Decompose `A,B,C,D` words
     // (2, 11, 9, 10)-bit chunks
+    #[allow(clippy::too_many_arguments)]
     pub fn s_decompose_abcd(
         s_decompose_abcd: Expression<F>,
         a: Expression<F>,
@@ -67,6 +68,7 @@ impl<F: FieldExt> CompressionGate<F> {
 
     // Decompose `E,F,G,H` words
     // (6, 5, 14, 7)-bit chunks
+    #[allow(clippy::too_many_arguments)]
     pub fn s_decompose_efgh(
         s_decompose_efgh: Expression<F>,
         a_lo: Expression<F>,
@@ -124,6 +126,7 @@ impl<F: FieldExt> CompressionGate<F> {
 
     // s_upper_sigma_0 on abcd words
     // (2, 11, 9, 10)-bit chunks
+    #[allow(clippy::too_many_arguments)]
     pub fn s_upper_sigma_0(
         s_upper_sigma_0: Expression<F>,
         spread_r0_even: Expression<F>,
@@ -165,6 +168,7 @@ impl<F: FieldExt> CompressionGate<F> {
 
     // s_upper_sigma_1 on efgh words
     // (6, 5, 14, 7)-bit chunks
+    #[allow(clippy::too_many_arguments)]
     pub fn s_upper_sigma_1(
         s_upper_sigma_1: Expression<F>,
         spread_r0_even: Expression<F>,
@@ -206,6 +210,7 @@ impl<F: FieldExt> CompressionGate<F> {
     }
 
     // First part of choice gate on (E, F, G), E ∧ F
+    #[allow(clippy::too_many_arguments)]
     pub fn s_ch(
         s_ch: Expression<F>,
         spread_p0_even: Expression<F>,
@@ -229,6 +234,7 @@ impl<F: FieldExt> CompressionGate<F> {
     }
 
     // Second part of Choice gate on (E, F, G), ¬E ∧ G
+    #[allow(clippy::too_many_arguments)]
     pub fn s_ch_neg(
         s_ch_neg: Expression<F>,
         spread_q0_even: Expression<F>,
@@ -260,6 +266,7 @@ impl<F: FieldExt> CompressionGate<F> {
     }
 
     // Majority gate on (A, B, C)
+    #[allow(clippy::too_many_arguments)]
     pub fn s_maj(
         s_maj: Expression<F>,
         spread_m_0_even: Expression<F>,
@@ -302,6 +309,7 @@ impl<F: FieldExt> CompressionGate<F> {
     }
 
     // s_h_prime to get H' = H + Ch(E, F, G) + s_upper_sigma_1(E) + K + W
+    #[allow(clippy::too_many_arguments)]
     pub fn s_h_prime(
         s_h_prime: Expression<F>,
         h_prime_lo: Expression<F>,
@@ -335,6 +343,7 @@ impl<F: FieldExt> CompressionGate<F> {
     }
 
     // s_a_new to get A_new = H' + Maj(A, B, C) + s_upper_sigma_0(A)
+    #[allow(clippy::too_many_arguments)]
     pub fn s_a_new(
         s_a_new: Expression<F>,
         a_new_lo: Expression<F>,
@@ -359,6 +368,7 @@ impl<F: FieldExt> CompressionGate<F> {
     }
 
     // s_e_new to get E_new = H' + D
+    #[allow(clippy::too_many_arguments)]
     pub fn s_e_new(
         s_e_new: Expression<F>,
         e_new_lo: Expression<F>,
@@ -385,6 +395,7 @@ impl<F: FieldExt> CompressionGate<F> {
     }
 
     // s_digest on final round
+    #[allow(clippy::too_many_arguments)]
     pub fn s_digest(
         s_digest: Expression<F>,
         lo_0: Expression<F>,

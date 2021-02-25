@@ -17,8 +17,10 @@ mod subregion2;
 mod subregion3;
 
 use schedule_gates::ScheduleGate;
-pub use schedule_util::get_msg_schedule_test_input;
 use schedule_util::*;
+
+#[cfg(test)]
+pub use schedule_util::get_msg_schedule_test_input;
 
 #[derive(Clone, Debug)]
 pub(super) struct MessageWord {
@@ -65,6 +67,7 @@ impl MessageSchedule {
     /// `extras` contains columns that the message schedule will only use for internal
     /// gates, and will not place any constraints on (such as lookup constraints) outside
     /// itself.
+    #[allow(clippy::many_single_char_names)]
     pub(super) fn configure<F: FieldExt>(
         meta: &mut ConstraintSystem<F>,
         lookup: SpreadInputs,
@@ -303,6 +306,7 @@ impl MessageSchedule {
         }
     }
 
+    #[allow(clippy::type_complexity)]
     pub(super) fn process<F: FieldExt>(
         &self,
         layouter: &mut impl Layouter<Table16Chip<F>>,
@@ -399,12 +403,12 @@ impl MessageSchedule {
                 }
 
                 // Assign W[0..16]
-                for i in 0..16 {
+                for (i, word) in input.iter().enumerate() {
                     let (var, halves) =
-                        self.assign_word_and_halves(&mut region, input[i].value.unwrap(), i)?;
+                        self.assign_word_and_halves(&mut region, word.value.unwrap(), i)?;
                     w.push(MessageWord {
                         var,
-                        value: input[i].value,
+                        value: word.value,
                     });
                     w_halves.push(halves);
                 }
@@ -437,6 +441,7 @@ impl MessageSchedule {
     }
 
     /// Empty configuration without gates. Useful for fast testing
+    #[cfg(test)]
     pub(super) fn empty_configure<F: FieldExt>(
         meta: &mut ConstraintSystem<F>,
         lookup: SpreadInputs,
