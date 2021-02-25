@@ -70,6 +70,7 @@ pub trait RegionLayouter<C: Chip>: fmt::Debug {
 pub struct SingleChip<'a, C: Chip, CS: Assignment<C::Field> + 'a> {
     cs: &'a mut CS,
     config: C::Config,
+    loaded: Option<C::Loaded>,
     /// Stores the starting row for each region.
     regions: Vec<RegionStart>,
     /// Stores the first empty row for each column.
@@ -89,14 +90,18 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> fmt::Debug for SingleChip<'a, C
 
 impl<'a, C: Chip, CS: Assignment<C::Field>> SingleChip<'a, C, CS> {
     /// Creates a new single-chip layouter.
-    pub fn new(cs: &'a mut CS, config: C::Config) -> Self {
-        SingleChip {
+    pub fn new(cs: &'a mut CS, config: C::Config) -> Result<Self, Error> {
+        let mut ret = SingleChip {
             cs,
             config,
+            loaded: None,
             regions: vec![],
             columns: HashMap::default(),
             _marker: PhantomData,
-        }
+        };
+        let loaded = C::load(&mut ret)?;
+        ret.loaded = Some(loaded);
+        Ok(ret)
     }
 }
 
@@ -105,6 +110,10 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
 
     fn config(&self) -> &C::Config {
         &self.config
+    }
+
+    fn loaded(&self) -> &C::Loaded {
+        self.loaded.as_ref().expect("We called C::load")
     }
 
     fn assign_region<A, AR, N, NR>(&mut self, name: N, mut assignment: A) -> Result<AR, Error>

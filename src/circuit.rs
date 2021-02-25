@@ -16,8 +16,16 @@ pub mod layouter;
 /// [`Layouter::config`].
 pub trait Chip: Sized {
     /// A type that holds the configuration for this chip, and any other state it may need
-    /// during circuit synthesis.
+    /// during circuit synthesis, that can be derived during [`Circuit::configure`].
+    ///
+    /// [`Circuit::configure`]: crate::plonk::Circuit::configure
     type Config: fmt::Debug;
+
+    /// A type that holds any general chip state that needs to be loaded at the start of
+    /// [`Circuit::synthesize`]. This might simply be `()` for some chips.
+    ///
+    /// [`Circuit::synthesize`]: crate::plonk::Circuit::synthesize
+    type Loaded: fmt::Debug;
 
     /// The field that the chip is defined over.
     ///
@@ -25,7 +33,9 @@ pub trait Chip: Sized {
     type Field: FieldExt;
 
     /// Load any fixed configuration for this chip into the circuit.
-    fn load(layouter: &mut impl Layouter<Self>) -> Result<(), Error>;
+    ///
+    /// `layouter.loaded()` will panic if called inside this function.
+    fn load(layouter: &mut impl Layouter<Self>) -> Result<Self::Loaded, Error>;
 }
 
 /// Index of a region in a layouter
@@ -161,6 +171,12 @@ pub trait Layouter<C: Chip> {
     /// Provides access to the chip configuration.
     fn config(&self) -> &C::Config;
 
+    /// Provides access to general chip state loaded at the beginning of circuit
+    /// synthesis.
+    ///
+    /// Panics if called inside `C::load`.
+    fn loaded(&self) -> &C::Loaded;
+
     /// Assign a region of gates to an absolute row number.
     ///
     /// Inside the closure, the chip may freely use relative offsets; the `Layouter` will
@@ -218,6 +234,10 @@ impl<'a, C: Chip, L: Layouter<C> + 'a> Layouter<C> for NamespacedLayouter<'a, C,
 
     fn config(&self) -> &C::Config {
         self.0.config()
+    }
+
+    fn loaded(&self) -> &C::Loaded {
+        self.0.loaded()
     }
 
     fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>

@@ -138,6 +138,7 @@ impl<F: FieldExt> FieldChip<F> {
 // ANCHOR: chip-impl
 impl<F: FieldExt> Chip for FieldChip<F> {
     type Config = FieldConfig;
+    type Loaded = ();
     type Field = F;
 
     fn load(_layouter: &mut impl Layouter<Self>) -> Result<(), halo2::plonk::Error> {
@@ -286,7 +287,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
     }
 
     fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error> {
-        let mut layouter = SingleChip::new(cs, config);
+        let mut layouter = SingleChip::new(cs, config)?;
 
         // Load our private values into the circuit.
         let a = FieldChip::load_private(&mut layouter, self.a)?;

@@ -8,12 +8,17 @@ use crate::{
     plonk::Error,
 };
 
+/// Trait allowing circuit's fixed points to be enumerated.
+pub trait FixedPoints<C: CurveAffine>: Clone + fmt::Debug {}
+
 /// The set of circuit instructions required to use the ECC gadgets.
 pub trait EccInstructions<C: CurveAffine>: Chip<Field = C::Base> {
     /// Variable representing an element of the elliptic curve's scalar field.
     type Scalar: Clone + fmt::Debug;
     /// Variable representing an elliptic curve point.
     type Point: Clone + fmt::Debug;
+    /// Variable representing the set of fixed bases in the circuit.
+    type FixedPoints: FixedPoints<C>;
     /// Variable representing a fixed elliptic curve point (constant in the circuit).
     type FixedPoint: Clone + fmt::Debug;
 
@@ -29,10 +34,10 @@ pub trait EccInstructions<C: CurveAffine>: Chip<Field = C::Base> {
         value: Option<C>,
     ) -> Result<Self::Point, Error>;
 
-    /// Loads a fixed point into the circuit.
-    fn load_fixed(
+    /// Gets a fixed point into the circuit.
+    fn get_fixed(
         layouter: &mut impl Layouter<Self>,
-        value: Option<C>,
+        fixed_points: Self::FixedPoints,
     ) -> Result<Self::FixedPoint, Error>;
 
     /// Performs point addition, returning `a + b`.
@@ -116,9 +121,12 @@ pub struct FixedPoint<C: CurveAffine, EccChip: EccInstructions<C>> {
 }
 
 impl<C: CurveAffine, EccChip: EccInstructions<C>> FixedPoint<C, EccChip> {
-    /// Loads a fixed point with the given value into the circuit.
-    pub fn load(mut layouter: impl Layouter<EccChip>, value: Option<C>) -> Result<Self, Error> {
-        EccChip::load_fixed(&mut layouter, value).map(|inner| FixedPoint { inner })
+    /// Gets a reference to the specified fixed point in the circuit.
+    pub fn get(
+        mut layouter: impl Layouter<EccChip>,
+        point: EccChip::FixedPoints,
+    ) -> Result<Self, Error> {
+        EccChip::get_fixed(&mut layouter, point).map(|inner| FixedPoint { inner })
     }
 
     /// Returns `[by] self`.
