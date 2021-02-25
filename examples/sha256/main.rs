@@ -6,13 +6,18 @@ use std::cmp::min;
 use std::convert::TryInto;
 use std::fmt;
 
-use crate::{
+use halo2::{
     circuit::{Chip, Layouter},
     plonk::Error,
 };
 
+mod benches;
+mod table16;
+
+pub use table16::{BlockWord, Table16Chip, Table16Config};
+
 /// The size of a SHA-256 block, in 32-bit words.
-const BLOCK_SIZE: usize = 16;
+pub const BLOCK_SIZE: usize = 16;
 /// The size of a SHA-256 digest, in 32-bit words.
 const DIGEST_SIZE: usize = 8;
 
@@ -153,3 +158,5 @@ impl<Sha256Chip: Sha256Instructions> Sha256<Sha256Chip> {
         hasher.finalize(layouter.namespace(|| "finalize"))
     }
 }
+
+fn main() {}
