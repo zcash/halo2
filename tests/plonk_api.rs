@@ -1,3 +1,6 @@
+#![allow(clippy::many_single_char_names)]
+#![allow(clippy::op_ref)]
+
 use group::Curve;
 use halo2::arithmetic::FieldExt;
 use halo2::dev::MockProver;
