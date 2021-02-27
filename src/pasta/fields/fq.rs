@@ -390,11 +390,12 @@ impl Fq {
         let (d2, borrow) = sbb(self.0[2], rhs.0[2], borrow);
         let (d3, borrow) = sbb(self.0[3], rhs.0[3], borrow);
 
+        // If underflow occurred on the final limb, borrow = 0x1,
+        // otherwise borrow = 0x0.
         if borrow == 0 {
             return Fq([d0, d1, d2, d3]);
         }
-        // If underflow occurred on the final limb, borrow = 0xfff...fff, otherwise
-        // borrow = 0x000...000. Thus, we use it as a mask to conditionally add the modulus.
+
         let (d0, carry) = adc(d0, MODULUS.0[0], 0);
         let (d1, carry) = adc(d1, MODULUS.0[1], carry);
         let (d2, carry) = adc(d2, MODULUS.0[2], carry);
@@ -682,8 +683,8 @@ impl FieldExt for Fq {
 
         // If the element is smaller than MODULUS then the
         // subtraction will underflow, producing a borrow value
-        // of 0xffff...ffff. Otherwise, it'll be zero.
-        let is_some = (borrow as u8) & 1;
+        // of 0x1. Otherwise, it'll be zero.
+        let is_some = borrow as u8;
 
         // Convert to Montgomery form by computing
         // (a.R^0 * R^2) / R = a.R
