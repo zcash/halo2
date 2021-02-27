@@ -215,7 +215,7 @@ pub fn verify_proof<'params, C: CurveAffine, T: TranscriptRead<C>>(
                 },
             );
 
-        vanishing.verify(params, expressions, y, xn)?
+        vanishing.verify(params, expressions, y, xn)
     };
 
     let queries = instance_commitments
