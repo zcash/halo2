@@ -217,7 +217,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                 },
             );
 
-        vanishing.verify(params, expressions, y, xn)?
+        vanishing.verify(params, expressions, y, xn)
     };
 
     let queries = instance_commitments

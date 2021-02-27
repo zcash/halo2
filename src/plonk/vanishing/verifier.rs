@@ -36,13 +36,13 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(in crate::plonk) fn verify<'params>(
+    pub(in crate::plonk) fn verify(
         self,
-        params: &'params Params<C>,
+        params: &Params<C>,
         expressions: impl Iterator<Item = C::Scalar>,
         y: ChallengeY<C>,
         xn: C::Scalar,
-    ) -> Result<Evaluated<'params, C>, Error> {
+    ) -> Evaluated<C> {
         let expected_h_eval = expressions.fold(C::Scalar::zero(), |h_eval, v| h_eval * &*y + &v);
         let expected_h_eval = expected_h_eval * ((xn - C::Scalar::one()).invert().unwrap());
 
@@ -56,10 +56,10 @@ impl<C: CurveAffine> Committed<C> {
                     acc
                 });
 
-        Ok(Evaluated {
+        Evaluated {
             expected_h_eval,
             h_commitment,
-        })
+        }
     }
 }
 
