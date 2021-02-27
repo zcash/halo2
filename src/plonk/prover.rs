@@ -390,6 +390,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     let vanishing = vanishing::Argument::construct(params, domain, expressions, y, transcript)?;
 
     let x = ChallengeX::get(transcript);
+    let xn = x.pow(&[params.n as u64, 0, 0, 0]);
 
     // Compute and hash instance evals for each circuit instance
     for instance in instance.iter() {
@@ -451,7 +452,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
             .map_err(|_| Error::TranscriptError)?;
     }
 
-    let vanishing = vanishing.evaluate(x, transcript)?;
+    let vanishing = vanishing.evaluate(xn, domain);
 
     // Evaluate the permutations, if any, at omega^i x.
     let permutations: Vec<Vec<permutation::prover::Evaluated<C>>> = permutations
