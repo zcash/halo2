@@ -44,8 +44,8 @@ verifier samples $y$) linear combination of the circuit relations.
 $h(X)$ has degree $(d - 1)n - d$ (because the divisor $t(X)$ has degree $n$). However, the
 polynomial commitment scheme we use for Halo 2 only supports committing to polynomials of
 degree $n - 1$ (which is the maximum degree that the rest of the protocol needs to commit
-to). Instead of increasing the cost of the polynomial commitment scheme, the prover split
-$h(X)$ into pieces of degree $n - 1$
+to). Instead of increasing the cost of the polynomial commitment scheme, the prover splits
+$h(X)$ into pieces of degree at most $n - 1$
 
 $$h_0(X) + X^n h_1(X) + \dots + X^{n(d-1)} h_{d-1}(X),$$
 
@@ -58,7 +58,7 @@ $$\mathbf{H} = [\text{Commit}(h_0(X)), \text{Commit}(h_1(X)), \dots, \text{Commi
 At this point, all properties of the circuit have been committed to. The verifier now
 wants to see if the prover committed to the correct $h(X)$ polynomial. The verifier
 samples $x$, and the prover produces the purported evaluations of the various polynomials
-at $x$, for all the relative offsets used in the circuit, as well as $h(X)$.
+at $x$, for all the relative offsets used in the circuit.
 
 > In our [example](../proving-system.md#example), this would be:
 >
@@ -69,11 +69,12 @@ at $x$, for all the relative offsets used in the circuit, as well as $h(X)$.
 > - $f_0(x)$, $f_0(x \omega^{-1})$
 > - $h_0(x)$, ..., $h_{d-1}(x)$
 
-The verifier checks that these evaluations satisfy the form of $h(X)$:
+The verifier computes $\sum_{i=0}^{d-1} [x^{ni}] \mathbf{H}_i$ which should be a commitment to a polynomial
+that evaluates to the value
+$$\frac{\text{gate}_0(x) + \dots + y^i \cdot \text{gate}_i(x) + \dots}{t(x)}$$
+at $x$ if the prover was honest and the gate constraints are satisfied, with high probability.
 
-$$\frac{\text{gate}_0(x) + \dots + y^i \cdot \text{gate}_i(x) + \dots}{t(x)} = h_0(x) + \dots + x^{n(d-1)} h_{d-1}(x)$$
-
-Now content that the evaluations collectively satisfy the gate constraints, the verifier
-needs to check that the evaluations themselves are consistent with the original
-[circuit commitments](circuit-commitments.md), as well as $\mathbf{H}$. To implement this
-efficiently, we use a [multipoint opening argument](multipoint-opening.md).
+The verifier finally needs to check that the evaluations provided by the prover
+are consistent with the original [circuit commitments](circuit-commitments.md).
+To implement this efficiently, we use a [multipoint opening
+argument](multipoint-opening.md).
