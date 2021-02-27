@@ -390,12 +390,15 @@ impl Fp {
         let (d2, borrow) = sbb(self.0[2], rhs.0[2], borrow);
         let (d3, borrow) = sbb(self.0[3], rhs.0[3], borrow);
 
+        if borrow == 0 {
+            return Fp([d0, d1, d2, d3]);
+        }
         // If underflow occurred on the final limb, borrow = 0xfff...fff, otherwise
         // borrow = 0x000...000. Thus, we use it as a mask to conditionally add the modulus.
-        let (d0, carry) = adc(d0, MODULUS.0[0] & borrow, 0);
-        let (d1, carry) = adc(d1, MODULUS.0[1] & borrow, carry);
-        let (d2, carry) = adc(d2, MODULUS.0[2] & borrow, carry);
-        let (d3, _) = adc(d3, MODULUS.0[3] & borrow, carry);
+        let (d0, carry) = adc(d0, MODULUS.0[0], 0);
+        let (d1, carry) = adc(d1, MODULUS.0[1], carry);
+        let (d2, carry) = adc(d2, MODULUS.0[2], carry);
+        let (d3, _) = adc(d3, MODULUS.0[3], carry);
 
         Fp([d0, d1, d2, d3])
     }
