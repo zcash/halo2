@@ -1,10 +1,11 @@
 use ff::Field;
+use group::{Curve, Group};
 
 use crate::{
     arithmetic::CurveAffine,
     plonk::{Error, VerifyingKey},
     poly::multiopen::VerifierQuery,
-    transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead},
+    transcript::{read_n_points, EncodedChallenge, TranscriptRead},
 };
 
 use super::super::{ChallengeX, ChallengeY};
@@ -15,8 +16,8 @@ pub struct Committed<C: CurveAffine> {
 }
 
 pub struct Evaluated<C: CurveAffine> {
-    h_commitments: Vec<C>,
-    h_evals: Vec<C::Scalar>,
+    h_commitment: C,
+    expected_h_eval: C::Scalar,
 }
 
 impl<C: CurveAffine> Argument<C> {
@@ -33,55 +34,41 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
+    pub(in crate::plonk) fn verify(
         self,
-        transcript: &mut T,
+        expressions: impl Iterator<Item = C::Scalar>,
+        y: ChallengeY<C>,
+        xn: C::Scalar,
     ) -> Result<Evaluated<C>, Error> {
-        let h_evals = read_n_scalars(transcript, self.h_commitments.len())
-            .map_err(|_| Error::TranscriptError)?;
+        let expected_h_eval = expressions.fold(C::Scalar::zero(), |h_eval, v| h_eval * &*y + &v);
+        let expected_h_eval = expected_h_eval * ((xn - C::Scalar::one()).invert().unwrap());
+
+        let h_commitment = self
+            .h_commitments
+            .iter()
+            .rev()
+            .fold(C::CurveExt::identity(), |acc, eval| {
+                acc * xn + eval.to_curve()
+            })
+            .to_affine();
 
         Ok(Evaluated {
-            h_commitments: self.h_commitments,
-            h_evals,
+            expected_h_eval,
+            h_commitment,
         })
     }
 }
 
 impl<C: CurveAffine> Evaluated<C> {
-    pub(in crate::plonk) fn verify(
-        &self,
-        expressions: impl Iterator<Item = C::Scalar>,
-        y: ChallengeY<C>,
-        xn: C::Scalar,
-    ) -> Result<(), Error> {
-        let expected_h_eval = expressions.fold(C::Scalar::zero(), |h_eval, v| h_eval * &*y + &v);
-
-        // Compute h(x) from the prover
-        let h_eval = self
-            .h_evals
-            .iter()
-            .rev()
-            .fold(C::Scalar::zero(), |acc, eval| acc * &xn + eval);
-
-        // Did the prover commit to the correct polynomial?
-        if expected_h_eval != (h_eval * &(xn - &C::Scalar::one())) {
-            return Err(Error::ConstraintSystemFailure);
-        }
-
-        Ok(())
-    }
-
     pub(in crate::plonk) fn queries(
         &self,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = VerifierQuery<'_, C>> + Clone {
-        self.h_commitments
-            .iter()
-            .zip(self.h_evals.iter())
-            .map(move |(commitment, &eval)| VerifierQuery {
-                point: *x,
-                commitment,
-                eval,
-            })
+        Some(VerifierQuery {
+            point: *x,
+            commitment: &self.h_commitment,
+            eval: self.expected_h_eval,
+        })
+        .into_iter()
     }
 }

@@ -1,10 +1,10 @@
+use ff::Field;
 use group::Curve;
 
-use super::super::{ChallengeX, ChallengeY};
 use super::Argument;
 use crate::{
-    arithmetic::{eval_polynomial, CurveAffine, FieldExt},
-    plonk::Error,
+    arithmetic::{CurveAffine, FieldExt},
+    plonk::{ChallengeX, ChallengeY, Error},
     poly::{
         commitment::{Blind, Params},
         multiopen::ProverQuery,
@@ -19,7 +19,8 @@ pub(in crate::plonk) struct Constructed<C: CurveAffine> {
 }
 
 pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
-    constructed: Constructed<C>,
+    h_poly: Polynomial<C::Scalar, Coeff>,
+    h_blind: Blind<C::Scalar>,
 }
 
 impl<C: CurveAffine> Argument<C> {
@@ -69,25 +70,26 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
+    pub(in crate::plonk) fn evaluate(
         self,
-        x: ChallengeX<C>,
-        transcript: &mut T,
-    ) -> Result<Evaluated<C>, Error> {
-        let h_evals: Vec<_> = self
+        xn: C::Scalar,
+        domain: &EvaluationDomain<C::Scalar>,
+    ) -> Evaluated<C> {
+        let h_poly = self
             .h_pieces
             .iter()
-            .map(|poly| eval_polynomial(poly, *x))
-            .collect();
+            .rev()
+            .fold(domain.empty_coeff(), |acc, eval| acc * xn + eval);
 
-        // Hash each advice evaluation
-        for eval in &h_evals {
-            transcript
-                .write_scalar(*eval)
-                .map_err(|_| Error::TranscriptError)?;
-        }
+        let h_blind = self
+            .h_blinds
+            .iter()
+            .rev()
+            .fold(Blind(C::Scalar::zero()), |acc, eval| {
+                acc * Blind(xn) + *eval
+            });
 
-        Ok(Evaluated { constructed: self })
+        Evaluated { h_poly, h_blind }
     }
 }
 
@@ -96,14 +98,11 @@ impl<C: CurveAffine> Evaluated<C> {
         &self,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
-        self.constructed
-            .h_pieces
-            .iter()
-            .zip(self.constructed.h_blinds.iter())
-            .map(move |(h_poly, h_blind)| ProverQuery {
-                point: *x,
-                poly: h_poly,
-                blind: *h_blind,
-            })
+        Some(ProverQuery {
+            point: *x,
+            poly: &self.h_poly,
+            blind: self.h_blind,
+        })
+        .into_iter()
     }
 }

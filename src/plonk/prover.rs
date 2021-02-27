@@ -412,6 +412,7 @@ pub fn create_proof<
     let vanishing = vanishing::Argument::construct(params, domain, expressions, y, transcript)?;
 
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
+    let xn = x.pow(&[params.n as u64, 0, 0, 0]);
 
     // Compute and hash instance evals for each circuit instance
     for instance in instance.iter() {
@@ -473,7 +474,7 @@ pub fn create_proof<
             .map_err(|_| Error::TranscriptError)?;
     }
 
-    let vanishing = vanishing.evaluate(x, transcript)?;
+    let vanishing = vanishing.evaluate(xn, domain);
 
     // Evaluate the permutations, if any, at omega^i x.
     let permutations: Vec<Vec<permutation::prover::Evaluated<C>>> = permutations

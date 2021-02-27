@@ -115,8 +115,6 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
     let fixed_evals = read_n_scalars(transcript, vk.cs.fixed_queries.len())
         .map_err(|_| Error::TranscriptError)?;
 
-    let vanishing = vanishing.evaluate(transcript)?;
-
     let permutations_evaluated = permutations_committed
         .into_iter()
         .map(|permutations| -> Result<Vec<_>, _> {
@@ -140,7 +138,7 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
 
     // This check ensures the circuit is satisfied so long as the polynomial
     // commitments open to the correct values.
-    {
+    let vanishing = {
         // x^n
         let xn = x.pow(&[params.n as u64, 0, 0, 0]);
 
@@ -219,8 +217,8 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
                 },
             );
 
-        vanishing.verify(expressions, y, xn)?;
-    }
+        vanishing.verify(expressions, y, xn)?
+    };
 
     let queries = instance_commitments
         .iter()
