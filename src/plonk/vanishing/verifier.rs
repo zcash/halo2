@@ -1,10 +1,12 @@
 use ff::Field;
-use group::{Curve, Group};
 
 use crate::{
     arithmetic::CurveAffine,
     plonk::{Error, VerifyingKey},
-    poly::multiopen::VerifierQuery,
+    poly::{
+        commitment::{Params, MSM},
+        multiopen::VerifierQuery,
+    },
     transcript::{read_n_points, EncodedChallenge, TranscriptRead},
 };
 
@@ -15,8 +17,8 @@ pub struct Committed<C: CurveAffine> {
     h_commitments: Vec<C>,
 }
 
-pub struct Evaluated<C: CurveAffine> {
-    h_commitment: C,
+pub struct Evaluated<'params, C: CurveAffine> {
+    h_commitment: MSM<'params, C>,
     expected_h_eval: C::Scalar,
 }
 
@@ -34,23 +36,25 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(in crate::plonk) fn verify(
+    pub(in crate::plonk) fn verify<'params>(
         self,
+        params: &'params Params<C>,
         expressions: impl Iterator<Item = C::Scalar>,
         y: ChallengeY<C>,
         xn: C::Scalar,
-    ) -> Result<Evaluated<C>, Error> {
+    ) -> Result<Evaluated<'params, C>, Error> {
         let expected_h_eval = expressions.fold(C::Scalar::zero(), |h_eval, v| h_eval * &*y + &v);
         let expected_h_eval = expected_h_eval * ((xn - C::Scalar::one()).invert().unwrap());
 
-        let h_commitment = self
-            .h_commitments
-            .iter()
-            .rev()
-            .fold(C::CurveExt::identity(), |acc, eval| {
-                acc * xn + eval.to_curve()
-            })
-            .to_affine();
+        let h_commitment =
+            self.h_commitments
+                .iter()
+                .rev()
+                .fold(params.empty_msm(), |mut acc, commitment| {
+                    acc.scale(xn);
+                    acc.append_term(C::Scalar::one(), *commitment);
+                    acc
+                });
 
         Ok(Evaluated {
             expected_h_eval,
@@ -59,16 +63,19 @@ impl<C: CurveAffine> Committed<C> {
     }
 }
 
-impl<C: CurveAffine> Evaluated<C> {
-    pub(in crate::plonk) fn queries(
-        &self,
+impl<'params, C: CurveAffine> Evaluated<'params, C> {
+    pub(in crate::plonk) fn queries<'r>(
+        &'r self,
         x: ChallengeX<C>,
-    ) -> impl Iterator<Item = VerifierQuery<'_, C>> + Clone {
-        Some(VerifierQuery {
-            point: *x,
-            commitment: &self.h_commitment,
-            eval: self.expected_h_eval,
-        })
+    ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone
+    where
+        'params: 'r,
+    {
+        Some(VerifierQuery::new_msm(
+            &self.h_commitment,
+            *x,
+            self.expected_h_eval,
+        ))
         .into_iter()
     }
 }

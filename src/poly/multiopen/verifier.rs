@@ -5,8 +5,8 @@ use super::super::{
     Error,
 };
 use super::{
-    construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4, Query,
-    VerifierQuery,
+    construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4,
+    CommitmentReference, Query, VerifierQuery,
 };
 use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine, FieldExt};
 use crate::transcript::{EncodedChallenge, TranscriptRead};
@@ -19,20 +19,20 @@ struct CommitmentData<C: CurveAffine> {
 
 /// Verify a multi-opening proof
 pub fn verify_proof<
-    'b,
-    'a: 'b,
+    'r,
+    'params: 'r,
     I,
     C: CurveAffine,
     E: EncodedChallenge<C>,
     T: TranscriptRead<C, E>,
 >(
-    params: &'a Params<C>,
+    params: &'params Params<C>,
     transcript: &mut T,
     queries: I,
-    mut msm: MSM<'a, C>,
-) -> Result<Guard<'a, C, E>, Error>
+    mut msm: MSM<'params, C>,
+) -> Result<Guard<'params, C, E>, Error>
 where
-    I: IntoIterator<Item = VerifierQuery<'b, C>> + Clone,
+    I: IntoIterator<Item = VerifierQuery<'r, 'params, C>> + Clone,
 {
     // Scale the MSM by a random factor to ensure that if the existing MSM
     // has is_zero() == false then this argument won't be able to interfere
@@ -61,7 +61,14 @@ where
     {
         let mut accumulate = |set_idx: usize, new_commitment, evals: Vec<C::Scalar>| {
             q_commitments[set_idx].scale(*x_1);
-            q_commitments[set_idx].append_term(C::Scalar::one(), new_commitment);
+            match new_commitment {
+                CommitmentReference::Commitment(c) => {
+                    q_commitments[set_idx].append_term(C::Scalar::one(), *c);
+                }
+                CommitmentReference::MSM(msm) => {
+                    q_commitments[set_idx].add_msm(msm);
+                }
+            }
             for (eval, set_eval) in evals.iter().zip(q_eval_sets[set_idx].iter_mut()) {
                 *set_eval *= &(*x_1);
                 *set_eval += eval;
@@ -72,9 +79,9 @@ where
         // For each set, we collapse each commitment's evals pointwise.
         for commitment_data in commitment_map.into_iter() {
             accumulate(
-                commitment_data.set_index,     // set_idx,
-                *commitment_data.commitment.0, // commitment,
-                commitment_data.evals,         // evals
+                commitment_data.set_index,  // set_idx,
+                commitment_data.commitment, // commitment,
+                commitment_data.evals,      // evals
             );
         }
     }
@@ -128,18 +135,8 @@ where
     super::commitment::verify_proof(params, msm, transcript, *x_3, msm_eval)
 }
 
-#[doc(hidden)]
-#[derive(Copy, Clone)]
-pub struct CommitmentPointer<'a, C>(&'a C);
-
-impl<'a, C> PartialEq for CommitmentPointer<'a, C> {
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self.0, other.0)
-    }
-}
-
-impl<'a, C: CurveAffine> Query<C::Scalar> for VerifierQuery<'a, C> {
-    type Commitment = CommitmentPointer<'a, C>;
+impl<'a, 'b, C: CurveAffine> Query<C::Scalar> for VerifierQuery<'a, 'b, C> {
+    type Commitment = CommitmentReference<'a, 'b, C>;
     type Eval = C::Scalar;
 
     fn get_point(&self) -> C::Scalar {
@@ -149,6 +146,6 @@ impl<'a, C: CurveAffine> Query<C::Scalar> for VerifierQuery<'a, C> {
         self.eval
     }
     fn get_commitment(&self) -> Self::Commitment {
-        CommitmentPointer(self.commitment)
+        self.commitment
     }
 }

@@ -13,13 +13,13 @@ use crate::poly::{
 use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
 
 /// Returns a boolean indicating whether or not the proof is valid
-pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
-    params: &'a Params<C>,
+pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
+    params: &'params Params<C>,
     vk: &VerifyingKey<C>,
-    msm: MSM<'a, C>,
+    msm: MSM<'params, C>,
     instance_commitments: &[&[C]],
     transcript: &mut T,
-) -> Result<Guard<'a, C, E>, Error> {
+) -> Result<Guard<'params, C, E>, Error> {
     // Check that instance_commitments matches the expected number of instance columns
     for instance_commitments in instance_commitments.iter() {
         if instance_commitments.len() != vk.cs.num_instance_columns {
@@ -217,7 +217,7 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
                 },
             );
 
-        vanishing.verify(expressions, y, xn)?
+        vanishing.verify(params, expressions, y, xn)?
     };
 
     let queries = instance_commitments
@@ -237,17 +237,21 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
             )| {
                 iter::empty()
                     .chain(vk.cs.instance_queries.iter().enumerate().map(
-                        move |(query_index, &(column, at))| VerifierQuery {
-                            point: vk.domain.rotate_omega(*x, at),
-                            commitment: &instance_commitments[column.index()],
-                            eval: instance_evals[query_index],
+                        move |(query_index, &(column, at))| {
+                            VerifierQuery::new_commitment(
+                                &instance_commitments[column.index()],
+                                vk.domain.rotate_omega(*x, at),
+                                instance_evals[query_index],
+                            )
                         },
                     ))
                     .chain(vk.cs.advice_queries.iter().enumerate().map(
-                        move |(query_index, &(column, at))| VerifierQuery {
-                            point: vk.domain.rotate_omega(*x, at),
-                            commitment: &advice_commitments[column.index()],
-                            eval: advice_evals[query_index],
+                        move |(query_index, &(column, at))| {
+                            VerifierQuery::new_commitment(
+                                &advice_commitments[column.index()],
+                                vk.domain.rotate_omega(*x, at),
+                                advice_evals[query_index],
+                            )
                         },
                     ))
                     .chain(
@@ -270,10 +274,12 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
                 .fixed_queries
                 .iter()
                 .enumerate()
-                .map(|(query_index, &(column, at))| VerifierQuery {
-                    point: vk.domain.rotate_omega(*x, at),
-                    commitment: &vk.fixed_commitments[column.index()],
-                    eval: fixed_evals[query_index],
+                .map(|(query_index, &(column, at))| {
+                    VerifierQuery::new_commitment(
+                        &vk.fixed_commitments[column.index()],
+                        vk.domain.rotate_omega(*x, at),
+                        fixed_evals[query_index],
+                    )
                 }),
         )
         .chain(vanishing.queries(x));

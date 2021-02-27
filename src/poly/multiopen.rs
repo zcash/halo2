@@ -51,13 +51,55 @@ pub struct ProverQuery<'a, C: CurveAffine> {
 
 /// A polynomial query at a point
 #[derive(Debug, Clone)]
-pub struct VerifierQuery<'a, C: CurveAffine> {
+pub struct VerifierQuery<'r, 'params: 'r, C: CurveAffine> {
     /// point at which polynomial is queried
-    pub point: C::Scalar,
+    point: C::Scalar,
     /// commitment to polynomial
-    pub commitment: &'a C,
+    commitment: CommitmentReference<'r, 'params, C>,
     /// evaluation of polynomial at query point
-    pub eval: C::Scalar,
+    eval: C::Scalar,
+}
+
+impl<'r, 'params: 'r, C: CurveAffine> VerifierQuery<'r, 'params, C> {
+    /// Create a new verifier query based on a commitment
+    pub fn new_commitment(commitment: &'r C, point: C::Scalar, eval: C::Scalar) -> Self {
+        VerifierQuery {
+            point,
+            eval,
+            commitment: CommitmentReference::Commitment(commitment),
+        }
+    }
+
+    /// Create a new verifier query based on a linear combination of commitments
+    pub fn new_msm(
+        msm: &'r commitment::MSM<'params, C>,
+        point: C::Scalar,
+        eval: C::Scalar,
+    ) -> Self {
+        VerifierQuery {
+            point,
+            eval,
+            commitment: CommitmentReference::MSM(msm),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+enum CommitmentReference<'r, 'params: 'r, C: CurveAffine> {
+    Commitment(&'r C),
+    MSM(&'r commitment::MSM<'params, C>),
+}
+
+impl<'r, 'params: 'r, C: CurveAffine> PartialEq for CommitmentReference<'r, 'params, C> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (&CommitmentReference::Commitment(a), &CommitmentReference::Commitment(b)) => {
+                std::ptr::eq(a, b)
+            }
+            (&CommitmentReference::MSM(a), &CommitmentReference::MSM(b)) => std::ptr::eq(a, b),
+            _ => false,
+        }
+    }
 }
 
 struct CommitmentData<F, T: PartialEq> {
@@ -279,21 +321,9 @@ fn test_roundtrip() {
             &params,
             &mut transcript,
             std::iter::empty()
-                .chain(Some(VerifierQuery {
-                    point: x,
-                    commitment: &a,
-                    eval: avx,
-                }))
-                .chain(Some(VerifierQuery {
-                    point: x,
-                    commitment: &b,
-                    eval: avx, // NB: wrong!
-                }))
-                .chain(Some(VerifierQuery {
-                    point: y,
-                    commitment: &c,
-                    eval: cvy,
-                })),
+                .chain(Some(VerifierQuery::new_commitment(&a, x, avx)))
+                .chain(Some(VerifierQuery::new_commitment(&b, x, avx))) // NB: wrong!
+                .chain(Some(VerifierQuery::new_commitment(&c, y, cvy))),
             msm,
         )
         .unwrap();
@@ -313,21 +343,9 @@ fn test_roundtrip() {
             &params,
             &mut transcript,
             std::iter::empty()
-                .chain(Some(VerifierQuery {
-                    point: x,
-                    commitment: &a,
-                    eval: avx,
-                }))
-                .chain(Some(VerifierQuery {
-                    point: x,
-                    commitment: &b,
-                    eval: bvx,
-                }))
-                .chain(Some(VerifierQuery {
-                    point: y,
-                    commitment: &c,
-                    eval: cvy,
-                })),
+                .chain(Some(VerifierQuery::new_commitment(&a, x, avx)))
+                .chain(Some(VerifierQuery::new_commitment(&b, x, bvx)))
+                .chain(Some(VerifierQuery::new_commitment(&c, y, cvy))),
             msm,
         )
         .unwrap();

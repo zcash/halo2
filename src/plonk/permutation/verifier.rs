@@ -128,35 +128,33 @@ impl<C: CurveAffine> Evaluated<C> {
             }))
     }
 
-    pub(in crate::plonk) fn queries<'a>(
-        &'a self,
-        vk: &'a plonk::VerifyingKey<C>,
-        vkey: &'a VerifyingKey<C>,
+    pub(in crate::plonk) fn queries<'r, 'params: 'r>(
+        &'r self,
+        vk: &'r plonk::VerifyingKey<C>,
+        vkey: &'r VerifyingKey<C>,
         x: ChallengeX<C>,
-    ) -> impl Iterator<Item = VerifierQuery<'a, C>> + Clone {
+    ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone {
         let x_inv = vk.domain.rotate_omega(*x, Rotation(-1));
 
         iter::empty()
             // Open permutation product commitments at x and \omega^{-1} x
-            .chain(Some(VerifierQuery {
-                point: *x,
-                commitment: &self.permutation_product_commitment,
-                eval: self.permutation_product_eval,
-            }))
-            .chain(Some(VerifierQuery {
-                point: x_inv,
-                commitment: &self.permutation_product_commitment,
-                eval: self.permutation_product_inv_eval,
-            }))
+            .chain(Some(VerifierQuery::new_commitment(
+                &self.permutation_product_commitment,
+                *x,
+                self.permutation_product_eval,
+            )))
+            .chain(Some(VerifierQuery::new_commitment(
+                &self.permutation_product_commitment,
+                x_inv,
+                self.permutation_product_inv_eval,
+            )))
             // Open permutation commitments for each permutation argument at x
             .chain(
                 vkey.commitments
                     .iter()
                     .zip(self.permutation_evals.iter())
-                    .map(move |(commitment, &eval)| VerifierQuery {
-                        point: *x,
-                        commitment,
-                        eval,
+                    .map(move |(commitment, &eval)| {
+                        VerifierQuery::new_commitment(commitment, *x, eval)
                     }),
             )
     }
