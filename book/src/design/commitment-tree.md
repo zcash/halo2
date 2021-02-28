@@ -1,34 +1,16 @@
 # Commitment tree
 
-One of the things we learned from Sapling is that having a single global commitment tree
-makes life hard for light client wallets. When a new note is received, the wallet derives
-its incremental witness from the state of the global tree at the point when the note's
-commitment is appended; this incremental state then needs to be updated with every
-subsequent commitment in the block in-order. It isn't efficient for a server to
-pre-compute and send over the necessary incremental updates for every new note in a block,
-and if a wallet requested a specific update from the server it would leak the specific
-note that was received.
+The commitment tree structure for Orchard is identical to Sapling:
 
-Orchard addresses this by splitting the commitment tree into several sub-trees:
+- A single global commitment tree of fixed depth 32.
+- Note commitments are appended to the tree in-order from the block.
+- Valid Orchard anchors correspond to the global tree state at block boundaries (after all
+  commitments from a block have been appended, and before any commitments from the next
+  block have been appended).
 
-- Bundle tree, that accumulates the commitments within a single bundle (and thus a single
-  transaction).
-- Block tree, that accumulates the bundle tree roots within a single block.
-- Global tree, that accumulates the block tree roots.
-
-Each of these trees has a fixed depth (necessary for being able to create proofs).
-
-Chains that integrate Orchard can decouple the limits on commitments-per-subtree from
-higher-layer constraints like block size, by enabling their blocks and transactions to be
-structured internally as a series of Orchard blocks or txs (e.g. a Zcash block would
-contain a `Vec<BlockTreeRoot>`, that each get appended in-order).
-
-Zcash level: we also bind these roots into the FlyClient history leaves, so that light
-clients can assert they are valid independently of the full block.
-
-TODO: Sean is pretty sure we can just improve the Incremental Merkle Tree implementation
-to work around this, without domain-separating the tree. If we can do that instead, it may
-be simpler.
+The only difference is that we instantiate $\mathsf{MerkleCRH}^\mathsf{Orchard}$ with
+Sinsemilla (whereas $\mathsf{MerkleCRH}^\mathsf{Sapling}$ used a Bowe--Hopwood Pedersen
+hash).
 
 ## Uncommitted leaves
 
@@ -59,3 +41,30 @@ False
 sage: Mod(5, q).is_square()
 False
 ```
+
+## Considered alternatives
+
+We considered splitting the commitment tree into several sub-trees:
+
+- Bundle tree, that accumulates the commitments within a single bundle (and thus a single
+  transaction).
+- Block tree, that accumulates the bundle tree roots within a single block.
+- Global tree, that accumulates the block tree roots.
+
+Each of these trees would have had a fixed depth (necessary for being able to create
+proofs). Chains that integrated Orchard could have decoupled the limits on
+commitments-per-subtree from higher-layer constraints like block size, by enabling their
+blocks and transactions to be structured internally as a series of Orchard blocks or txs
+(e.g. a Zcash block would have contained  a `Vec<BlockTreeRoot>`, that each were appended
+in-order).
+
+The motivation for considering this change was to improve the lives of light client wallet
+developers. When a new note is received, the wallet derives its incremental witness from
+the state of the global tree at the point when the note's commitment is appended; this
+incremental state then needs to be updated with every subsequent commitment in the block
+in-order. Wallets can't get help from the server to create these for new notes without
+leaking the specific note that was received.
+
+We decided that this was too large a change from Sapling, and that it should be possible
+to improve the Incremental Merkle Tree implementation to work around the efficiency issues
+without domain-separating the tree.
