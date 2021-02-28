@@ -92,7 +92,7 @@ while keeping them independent. We can reuse $\beta$ and $\gamma$ from the equal
 constraint permutation here because they serve the same purpose in both places, and we
 aren't trying to combine the lookup and equality constraint permutation arguments. The
 important thing here is that the verifier samples $\beta$ and $\gamma$ after the prover
-has created $\mathbf{A}$, $\mathbf{F}$, and $\mathbf{L}$ (and thus commited to all the
+has created $\mathbf{A}$, $\mathbf{F}$, and $\mathbf{L}$ (and thus committed to all the
 cell values used in lookup columns, as well as $A'(X)$ and $S'(X)$ for each lookup).
 
 As before, the prover creates blinding commitments to each $Z_L$ polynomial:
