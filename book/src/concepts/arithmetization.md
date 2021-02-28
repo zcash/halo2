@@ -1,4 +1,4 @@
-# UltraPLONK Arithmetization
+# UltraPLONK arithmetization
 
 The arithmetization used by Halo 2 comes from [PLONK](https://eprint.iacr.org/2019/953), or
 more precisely its extension UltraPLONK that supports custom gates and lookup arguments. We'll
