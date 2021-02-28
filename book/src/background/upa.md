@@ -1,4 +1,4 @@
-# [WIP] UltraPLONK arithmetisation
+# [WIP] UltraPLONK arithmetization
 
 We call the field over which the circuit is defined $\mathbb{F} = \mathbb{F}_p$.
 
