@@ -3,7 +3,7 @@
 [halo2](README.md)
 - [Concepts](concepts.md)
   - [Proof systems](concepts/proofs.md)
-  - [UltraPLONK Arithmetization](concepts/arithmetization.md)
+  - [UltraPLONK arithmetization](concepts/arithmetization.md)
   - [Cores](concepts/cores.md)
   - [Chips](concepts/chips.md)
   - [Gadgets](concepts/gadgets.md)
