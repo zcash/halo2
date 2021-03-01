@@ -7,6 +7,7 @@ use core::iter::Sum;
 use core::ops::{Add, Mul, Neg, Sub};
 use ff::Field;
 use group::{
+    cofactor::CofactorGroup,
     prime::{PrimeCurve, PrimeCurveAffine, PrimeGroup},
     Curve as _, Group as _, GroupEncoding,
 };
@@ -185,6 +186,25 @@ macro_rules! new_curve_impl {
         }
 
         impl PrimeGroup for $name {}
+
+        impl CofactorGroup for $name {
+            type Subgroup = $name;
+
+            fn clear_cofactor(&self) -> Self {
+                // This is a prime-order group, with a cofactor of 1.
+                *self
+            }
+
+            fn into_subgroup(self) -> CtOption<Self::Subgroup> {
+                // Nothing to do here.
+                CtOption::new(self, 1.into())
+            }
+
+            fn is_torsion_free(&self) -> Choice {
+                // Shortcut: all points in a prime-order group are torsion free.
+                1.into()
+            }
+        }
 
         impl PrimeCurve for $name {
             type Affine = $name_affine;
