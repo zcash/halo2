@@ -1,7 +1,5 @@
 //! The Sinsemilla hash function and commitment scheme.
 
-use std::iter;
-
 use group::{Curve, Group};
 use halo2::{
     arithmetic::{CurveAffine, CurveExt},
@@ -18,6 +16,52 @@ fn lebs2ip_32(bits: &[bool]) -> u32 {
     bits.iter()
         .enumerate()
         .fold(0u32, |acc, (i, b)| acc + if *b { 1 << i } else { 0 })
+}
+
+struct Pad<I: Iterator<Item = bool>> {
+    inner: I,
+    len: usize,
+    padding_left: Option<usize>,
+}
+
+impl<I: Iterator<Item = bool>> Pad<I> {
+    fn new(inner: I) -> Self {
+        Pad {
+            inner,
+            len: 0,
+            padding_left: None,
+        }
+    }
+}
+
+impl<I: Iterator<Item = bool>> Iterator for Pad<I> {
+    type Item = bool;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(n) = self.padding_left.as_mut() {
+                if *n == 0 {
+                    break None;
+                } else {
+                    *n -= 1;
+                    break Some(false);
+                }
+            } else if let Some(ret) = self.inner.next() {
+                self.len += 1;
+                assert!(self.len <= K * C);
+                break Some(ret);
+            } else {
+                // Inner iterator just ended.
+                let rem = self.len % K;
+                if rem > 0 {
+                    self.padding_left = Some(K - rem);
+                } else {
+                    // No padding required.
+                    self.padding_left = Some(0);
+                }
+            }
+        }
+    }
 }
 
 /// Hash extractor for Pallas, from [§ 5.4.8.7].
@@ -42,13 +86,8 @@ fn Q(domain_prefix: &str) -> pallas::Point {
 ///
 /// [§ 5.4.1.9]: https://zips.z.cash/protocol/orchard.pdf#concretesinsemillahash
 #[allow(non_snake_case)]
-pub(crate) fn hash_to_point(
-    domain_prefix: &str,
-    msg: impl Iterator<Item = bool> + ExactSizeIterator,
-) -> pallas::Point {
-    assert!(msg.len() <= K * C);
-    let pad = msg.len() % K;
-    let padded: Vec<_> = msg.chain(iter::repeat(false).take(pad)).collect();
+pub(crate) fn hash_to_point(domain_prefix: &str, msg: impl Iterator<Item = bool>) -> pallas::Point {
+    let padded: Vec<_> = Pad::new(msg).collect();
 
     let hasher_S = pallas::Point::hash_to_curve(GROUP_HASH_S);
     let S = |chunk: &[bool]| hasher_S(&lebs2ip_32(chunk).to_le_bytes());
@@ -61,10 +100,7 @@ pub(crate) fn hash_to_point(
 /// `SinsemillaHash` from [§ 5.4.1.9].
 ///
 /// [§ 5.4.1.9]: https://zips.z.cash/protocol/orchard.pdf#concretesinsemillahash
-pub(crate) fn hash(
-    domain_prefix: &str,
-    msg: impl Iterator<Item = bool> + ExactSizeIterator,
-) -> pallas::Base {
+pub(crate) fn hash(domain_prefix: &str, msg: impl Iterator<Item = bool>) -> pallas::Base {
     extract(&hash_to_point(domain_prefix, msg))
 }
 
@@ -74,7 +110,7 @@ pub(crate) fn hash(
 #[allow(non_snake_case)]
 pub(crate) fn commit(
     domain_prefix: &str,
-    msg: impl Iterator<Item = bool> + ExactSizeIterator,
+    msg: impl Iterator<Item = bool>,
     r: &pallas::Scalar,
 ) -> pallas::Point {
     let m_prefix = domain_prefix.to_owned() + "-M";
@@ -90,8 +126,51 @@ pub(crate) fn commit(
 /// [§ 5.4.7.4]: https://zips.z.cash/protocol/orchard.pdf#concretesinsemillacommit
 pub(crate) fn short_commit(
     domain_prefix: &str,
-    msg: impl Iterator<Item = bool> + ExactSizeIterator,
+    msg: impl Iterator<Item = bool>,
     r: &pallas::Scalar,
 ) -> pallas::Base {
     extract(&commit(domain_prefix, msg, r))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Pad;
+
+    #[test]
+    fn pad() {
+        assert_eq!(Pad::new([].iter().cloned()).collect::<Vec<_>>(), vec![]);
+        assert_eq!(
+            Pad::new([true].iter().cloned()).collect::<Vec<_>>(),
+            vec![true, false, false, false, false, false, false, false, false, false]
+        );
+        assert_eq!(
+            Pad::new([true, true].iter().cloned()).collect::<Vec<_>>(),
+            vec![true, true, false, false, false, false, false, false, false, false]
+        );
+        assert_eq!(
+            Pad::new([true, true, true].iter().cloned()).collect::<Vec<_>>(),
+            vec![true, true, true, false, false, false, false, false, false, false]
+        );
+        assert_eq!(
+            Pad::new(
+                [true, true, false, true, false, true, false, true, false, true]
+                    .iter()
+                    .cloned()
+            )
+            .collect::<Vec<_>>(),
+            vec![true, true, false, true, false, true, false, true, false, true]
+        );
+        assert_eq!(
+            Pad::new(
+                [true, true, false, true, false, true, false, true, false, true, true]
+                    .iter()
+                    .cloned()
+            )
+            .collect::<Vec<_>>(),
+            vec![
+                true, true, false, true, false, true, false, true, false, true, true, false, false,
+                false, false, false, false, false, false, false
+            ]
+        );
+    }
 }
