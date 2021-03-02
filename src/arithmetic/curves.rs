@@ -125,14 +125,6 @@ pub trait CurveAffine:
         writer.write_all(compressed.as_ref())
     }
 
-    /// Attempts to obtain a group element from its uncompressed 64-byte little
-    /// endian representation.
-    fn from_bytes_wide(bytes: &[u8; 64]) -> CtOption<Self>;
-
-    /// Obtains the uncompressed, 64-byte little endian representation of this
-    /// element.
-    fn to_bytes_wide(&self) -> [u8; 64];
-
     /// Returns the curve constant $a$.
     fn a() -> Self::Base;
 

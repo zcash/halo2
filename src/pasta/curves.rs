@@ -62,13 +62,21 @@ macro_rules! new_curve_impl {
 
             fn random(mut rng: impl RngCore) -> Self {
                 loop {
-                    let mut buf = [0; 64];
-                    rng.fill_bytes(&mut buf);
-                    let p: Option<$name_affine> = $name_affine::from_bytes_wide(&buf).into();
-                    if let Some(p) = p {
-                        if !bool::from(p.is_identity()) {
-                            break p.to_curve();
-                        }
+                    let x = $base::random(&mut rng);
+                    let ysign = (rng.next_u32() % 2) as u8;
+
+                    let x3 = x.square() * x;
+                    let y = (x3 + $name::curve_constant_b()).sqrt();
+                    if let Some(y) = Option::<$base>::from(y) {
+                        let sign = y.to_bytes()[0] & 1;
+                        let y = if ysign ^ sign == 0 { y } else { -y };
+
+                        let p = $name_affine {
+                            x,
+                            y,
+                            infinity: Choice::from(0u8),
+                        };
+                        break p.to_curve();
                     }
                 }
             }
@@ -652,44 +660,6 @@ macro_rules! new_curve_impl {
                     x, y, infinity: 0u8.into()
                 };
                 CtOption::new(p, p.is_on_curve())
-            }
-
-            fn from_bytes_wide(bytes: &[u8; 64]) -> CtOption<Self> {
-                let mut xbytes = [0u8; 32];
-                let mut ybytes = [0u8; 32];
-                xbytes.copy_from_slice(&bytes[0..32]);
-                ybytes.copy_from_slice(&bytes[32..64]);
-
-                $base::from_bytes(&xbytes).and_then(|x| {
-                    $base::from_bytes(&ybytes).and_then(|y| {
-                        CtOption::new(Self::identity(), x.ct_is_zero() & y.ct_is_zero()).or_else(|| {
-                            let on_curve =
-                                (x * x.square() + $name::curve_constant_b()).ct_eq(&y.square());
-
-                            CtOption::new(
-                                $name_affine {
-                                    x,
-                                    y,
-                                    infinity: Choice::from(0u8),
-                                },
-                                Choice::from(on_curve),
-                            )
-                        })
-                    })
-                })
-            }
-
-            fn to_bytes_wide(&self) -> [u8; 64] {
-                // TODO: not constant time
-                if bool::from(self.is_identity()) {
-                    [0; 64]
-                } else {
-                    let mut out = [0u8; 64];
-                    (&mut out[0..32]).copy_from_slice(&self.x.to_bytes());
-                    (&mut out[32..64]).copy_from_slice(&self.y.to_bytes());
-
-                    out
-                }
             }
 
             fn a() -> Self::Base {
