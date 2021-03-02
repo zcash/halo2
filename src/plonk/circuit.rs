@@ -792,6 +792,7 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) num_instance_columns: usize,
     pub(crate) gates: Vec<Gate<F>>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
+    num_advice_queries: Vec<usize>,
     pub(crate) instance_queries: Vec<(Column<Instance>, Rotation)>,
     pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
 
@@ -837,6 +838,7 @@ impl<F: Field> Default for ConstraintSystem<F> {
             gates: vec![],
             fixed_queries: Vec::new(),
             advice_queries: Vec::new(),
+            num_advice_queries: Vec::new(),
             instance_queries: Vec::new(),
             permutations: Vec::new(),
             lookups: Vec::new(),
@@ -922,6 +924,7 @@ impl<F: Field> ConstraintSystem<F> {
         // Make a new query
         let index = self.advice_queries.len();
         self.advice_queries.push((column, at));
+        self.num_advice_queries[column.index] += 1;
 
         index
     }
@@ -1055,6 +1058,7 @@ impl<F: Field> ConstraintSystem<F> {
             column_type: Advice,
         };
         self.num_advice_columns += 1;
+        self.num_advice_queries.push(0);
         tmp
     }
 
@@ -1103,6 +1107,28 @@ impl<F: Field> ConstraintSystem<F> {
         );
 
         degree
+    }
+
+    /// Compute the number of blinding factors necessary to perfectly blind
+    /// each of the prover's witness polynomials.
+    pub fn blinding_factors(&self) -> usize {
+        // All of the prover's advice columns are evaluated at most
+        let factors = *self.num_advice_queries.iter().max().unwrap_or(&1);
+        // distinct points during gate checks. In the permutation and lookup
+        // argument the witness polynomials are evaluated at most 2 times:
+
+        let factors = std::cmp::max(2, factors);
+
+        // Each polynomial is evaluated at most an additional time during
+        // multiopen
+        let factors = factors + 1;
+
+        // h(x) is derived by the other evaluations so it does not reveal
+        // anything; in fact it does not even appear in the proof.
+
+        // Add an additional blinding factor so that each polynomial becomes
+        // computationally indistinguishable from random
+        factors + 1
     }
 }
 
