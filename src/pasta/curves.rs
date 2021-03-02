@@ -65,12 +65,6 @@ macro_rules! new_curve_impl {
                     let x = $base::random(&mut rng);
                     let ysign = (rng.next_u32() % 2) as u8;
 
-                    if x.is_zero() && ysign == 0 {
-                        // This would be the identity if encoded, and Group::random must
-                        // sample from the non-identity elements of the group.
-                        continue;
-                    }
-
                     let x3 = x.square() * x;
                     let y = (x3 + $name::curve_constant_b()).sqrt();
                     if let Some(y) = Option::<$base>::from(y) {
