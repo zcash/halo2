@@ -387,18 +387,71 @@ impl<G: Group> EvaluationDomain<G> {
     pub fn rotate_omega(&self, value: G::Scalar, rotation: Rotation) -> G::Scalar {
         let mut point = value;
         if rotation.0 >= 0 {
-            point *= &self.get_omega().pow(&[rotation.0 as u64, 0, 0, 0]);
+            point *= &self.get_omega().pow_vartime(&[rotation.0 as u64]);
         } else {
             point *= &self
                 .get_omega_inv()
-                .pow(&[rotation.0.abs() as u64, 0, 0, 0]);
+                .pow_vartime(&[(rotation.0 as i64).abs() as u64]);
         }
         point
     }
 
-    /// Gets the barycentric weight of $1$ over the $2^k$ size domain.
-    pub fn get_barycentric_weight(&self) -> G::Scalar {
-        self.barycentric_weight
+    /// Computes evaluations (at the point `x`, where `xn = x^n`) of Lagrange
+    /// basis polynomials `l_i(X)` defined such that `l_i(omega^i) = 1` and
+    /// `l_i(omega^j) = 0` for all `j != i` at each provided rotation `i`.
+    pub fn l_i_range<I: IntoIterator<Item = i32> + Clone>(
+        &self,
+        x: G::Scalar,
+        xn: G::Scalar,
+        rotations: I,
+    ) -> Vec<G::Scalar> {
+        // The polynomial
+        // \prod_{j=0,j \neq i}^{n - 1} (X - omega^j)
+        // has a root at all points in the domain except omega^i, where it evaluates to
+        // \prod_{j=0,j \neq i}^{n - 1} (omega^i - omega^j)
+        // and so we divide that polynomial by this value to obtain l_i(X).
+        // Since \prod_{j=0,j \neq i}^{n - 1} (X - omega^j)
+        //       = (X^n - 1) / (X - omega^i)
+        // Then l_i(x) for some x is evaluated as
+        // ((x^n - 1) / (x - omega^i)) * (1 / \prod_{j=0,j \neq i}^{n - 1} (omega^i - omega^j))
+        // We refer to
+        // (1 / \prod_{j=0,j \neq i}^{n - 1} (omega^i - omega^j))
+        // as the barycentric weight of omega^i.
+        // We know that for i = 0
+        // (1 / \prod_{j=0,j \neq i}^{n - 1} (omega^i - omega^j))
+        // = (1 / n)
+        // If we multiply (1 / n) by (omega^{i})^-1 then we obtain
+        // (1 / \prod_{j=0,j \neq 0}^{n - 1} (omega^{i + 1} - omega^{j + 1}))
+        // = (1 / \prod_{j=0,j \neq -i}^{n - 1} (omega^i - omega^j))
+        // which is the barycentric weight of omega^{-i}
+
+        let mut results;
+        {
+            let rotations = rotations.clone().into_iter();
+            results = Vec::with_capacity(rotations.size_hint().1.unwrap_or(0));
+            for rotation in rotations {
+                let rotation = Rotation(rotation);
+                let result = x - self.rotate_omega(G::Scalar::one(), rotation);
+                results.push(result);
+            }
+            results.iter_mut().batch_invert();
+        }
+
+        let common = (xn - G::Scalar::one()) * self.barycentric_weight;
+        for (rotation, result) in rotations.into_iter().zip(results.iter_mut()) {
+            let rotation = Rotation(rotation);
+            *result *= common;
+
+            if rotation.0 >= 0 {
+                *result *= self.get_omega().pow_vartime(&[rotation.0 as u64]);
+            } else {
+                *result *= self
+                    .get_omega_inv()
+                    .pow_vartime(&[(rotation.0 as i64).abs() as u64]);
+            }
+        }
+
+        results
     }
 
     /// Gets the quotient polynomial's degree (as a multiple of n)
@@ -461,4 +514,32 @@ fn test_rotate() {
         eval_polynomial(&poly[..], x * domain.omega_inv),
         eval_polynomial(&poly_rotated_prev[..], x)
     );
+}
+
+#[test]
+fn test_l_i() {
+    use crate::arithmetic::{eval_polynomial, lagrange_interpolate};
+    use crate::pasta::pallas::Scalar;
+    let domain = EvaluationDomain::<Scalar>::new(1, 3);
+
+    let mut l = vec![];
+    let mut points = vec![];
+    for i in 0..8 {
+        points.push(domain.omega.pow(&[i, 0, 0, 0]));
+    }
+    for i in 0..8 {
+        let mut l_i = vec![Scalar::zero(); 8];
+        l_i[i] = Scalar::one();
+        let l_i = lagrange_interpolate(&points[..], &l_i[..]);
+        l.push(l_i);
+    }
+
+    let x = Scalar::rand();
+    let xn = x.pow(&[8, 0, 0, 0]);
+
+    let evaluations = domain.l_i_range(x, xn, -7..=7);
+    for i in 0..8 {
+        assert_eq!(eval_polynomial(&l[i][..], x), evaluations[7 + i]);
+        assert_eq!(eval_polynomial(&l[(8 - i) % 8][..], x), evaluations[7 - i]);
+    }
 }

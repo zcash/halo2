@@ -1,4 +1,3 @@
-use ff::Field;
 use std::iter;
 
 use super::{
@@ -142,11 +141,8 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
         // x^n
         let xn = x.pow(&[params.n as u64, 0, 0, 0]);
 
-        // TODO: bubble this error up
         // l_0(x)
-        let l_0 = (*x - &C::Scalar::one()).invert().unwrap() // 1 / (x - 1)
-            * &(xn - &C::Scalar::one()) // (x^n - 1) / (x - 1)
-            * &vk.domain.get_barycentric_weight(); // l_0(x)
+        let l_0 = vk.domain.l_i_range(*x, xn, 0..=0)[0];
 
         // Compute the expected value of h(x)
         let expressions = advice_evals
