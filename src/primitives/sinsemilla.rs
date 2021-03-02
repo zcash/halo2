@@ -12,7 +12,8 @@ const GROUP_HASH_S: &str = "z.cash:SinsemillaS";
 const K: usize = 10;
 const C: usize = 253;
 
-fn lebs2ip_32(bits: &[bool]) -> u32 {
+fn lebs2ip_K(bits: &[bool]) -> u32 {
+    assert!(bits.len() == K);
     bits.iter()
         .enumerate()
         .fold(0u32, |acc, (i, b)| acc + if *b { 1 << i } else { 0 })
@@ -90,7 +91,7 @@ pub(crate) fn hash_to_point(domain_prefix: &str, msg: impl Iterator<Item = bool>
     let padded: Vec<_> = Pad::new(msg).collect();
 
     let hasher_S = pallas::Point::hash_to_curve(GROUP_HASH_S);
-    let S = |chunk: &[bool]| hasher_S(&lebs2ip_32(chunk).to_le_bytes());
+    let S = |chunk: &[bool]| hasher_S(&lebs2ip_K(chunk).to_le_bytes());
 
     padded
         .chunks(K)
