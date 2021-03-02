@@ -1,6 +1,49 @@
-use std::{cmp, iter, num::ParseIntError, str::FromStr};
+use std::{
+    cmp, fmt, iter,
+    num::ParseIntError,
+    str::FromStr,
+    time::{Duration, Instant},
+};
 
+use ff::Field;
+use group::{Curve, Group};
 use gumdrop::Options;
+use halo2::{arithmetic::best_multiexp, pasta::pallas};
+
+struct Estimator {
+    /// Scalars for estimating multiexp performance.
+    multiexp_scalars: Vec<pallas::Scalar>,
+    /// Bases for estimating multiexp performance.
+    multiexp_bases: Vec<pallas::Affine>,
+}
+
+impl fmt::Debug for Estimator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Estimator")
+    }
+}
+
+impl Estimator {
+    fn random(k: usize) -> Self {
+        let max_size = 1 << (k + 1);
+        let mut rng = rand::thread_rng();
+
+        Estimator {
+            multiexp_scalars: (0..max_size)
+                .map(|_| pallas::Scalar::random(&mut rng))
+                .collect(),
+            multiexp_bases: (0..max_size)
+                .map(|_| pallas::Point::random(&mut rng).to_affine())
+                .collect(),
+        }
+    }
+
+    fn multiexp(&self, size: usize) -> Duration {
+        let start = Instant::now();
+        best_multiexp(&self.multiexp_scalars[..size], &self.multiexp_bases[..size]);
+        Instant::now().duration_since(start)
+    }
+}
 
 #[derive(Debug, Options)]
 struct CostOptions {
@@ -148,6 +191,8 @@ struct Circuit {
     column_queries: usize,
     /// Number of distinct sets of points in the multiopening argument.
     point_sets: usize,
+
+    estimator: Estimator,
 }
 
 impl From<CostOptions> for Circuit {
@@ -183,6 +228,7 @@ impl From<CostOptions> for Circuit {
             permutations: opts.permutation,
             column_queries,
             point_sets,
+            estimator: Estimator::random(opts.k),
         }
     }
 }
@@ -224,6 +270,25 @@ impl Circuit {
 
         plonk + vanishing + multiopen + polycomm
     }
+
+    fn verification_time(&self) -> Duration {
+        // TODO: Estimate cost of BLAKE2b.
+
+        // TODO: This isn't accurate; most of these will have zero scalars.
+        let g_scalars = 1 << self.k;
+
+        // - f_commitment
+        // - q_commitments
+        let multiopen = 1 + self.column_queries;
+
+        // - \iota
+        // - Rounds
+        // - H
+        // - U
+        let polycomm = 1 + (2 * self.k) + 1 + 1;
+
+        self.estimator.multiexp(g_scalars + multiopen + polycomm)
+    }
 }
 
 fn main() {
@@ -231,4 +296,8 @@ fn main() {
     let c = Circuit::from(opts);
     println!("{:#?}", c);
     println!("Proof size: {} bytes", c.proof_size());
+    println!(
+        "Verification: at least {}ms",
+        c.verification_time().as_micros() as f64 / 1_000f64
+    );
 }
