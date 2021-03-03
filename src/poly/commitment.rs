@@ -118,7 +118,6 @@ impl<C: CurveAffine> Params<C> {
     /// slice of coefficients. The commitment will be blinded by the blinding
     /// factor `r`.
     pub fn commit(&self, poly: &Polynomial<C::Scalar, Coeff>, r: Blind<C::Scalar>) -> C::Curve {
-        metrics::increment_counter!("multiexp", "size" => format!("{}", poly.len() + 1), "fn" => "commit");
         let mut tmp_scalars = Vec::with_capacity(poly.len() + 1);
         let mut tmp_bases = Vec::with_capacity(poly.len() + 1);
 
@@ -139,7 +138,6 @@ impl<C: CurveAffine> Params<C> {
         poly: &Polynomial<C::Scalar, LagrangeCoeff>,
         r: Blind<C::Scalar>,
     ) -> C::Curve {
-        metrics::increment_counter!("multiexp", "size" => format!("{}", poly.len() + 1), "fn" => "commit_lagrange");
         let mut tmp_scalars = Vec::with_capacity(poly.len() + 1);
         let mut tmp_bases = Vec::with_capacity(poly.len() + 1);
 

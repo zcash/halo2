@@ -211,7 +211,6 @@ impl<G: Group> EvaluationDomain<G> {
         assert_eq!(a.values.len(), 1 << self.k);
 
         // Perform inverse FFT to obtain the polynomial in coefficient form
-        metrics::increment_counter!("ifft", "size" => format!("{}", a.len()), "fn" => "lagrange_to_coeff");
         Self::ifft(&mut a.values, self.omega_inv, self.k, self.ifft_divisor);
 
         Polynomial {
@@ -246,7 +245,6 @@ impl<G: Group> EvaluationDomain<G> {
             Self::distribute_powers(&mut a.values, g);
         }
         a.values.resize(self.extended_len(), G::group_zero());
-        metrics::increment_counter!("fft", "size" => format!("{}", self.extended_len()), "fn" => "coeff_to_extended");
         best_fft(&mut a.values, self.extended_omega, self.extended_k);
 
         Polynomial {
@@ -265,7 +263,6 @@ impl<G: Group> EvaluationDomain<G> {
         assert_eq!(a.values.len(), self.extended_len());
 
         // Inverse FFT
-        metrics::increment_counter!("ifft", "size" => format!("{}", a.len()), "fn" => "extended_to_coeff");
         Self::ifft(
             &mut a.values,
             self.extended_omega_inv,
