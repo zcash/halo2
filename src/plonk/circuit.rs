@@ -1126,6 +1126,10 @@ impl<F: Field> ConstraintSystem<F> {
         // h(x) is derived by the other evaluations so it does not reveal
         // anything; in fact it does not even appear in the proof.
 
+        // h(x_3) is also not revealed; the verifier only learns a single
+        // evaluation of a polynomial in x_1 which has h(x_3) and another random
+        // polynomial evaluated at x_3 as coefficients
+
         // Add an additional blinding factor so that each polynomial becomes
         // computationally indistinguishable from random
         factors + 1
