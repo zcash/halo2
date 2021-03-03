@@ -19,7 +19,7 @@ use crate::{
 /// Internally, this may both consume a note and create a note, or it may do only one of
 /// the two. TODO: Determine which is more efficient (circuit size vs bundle size).
 #[derive(Debug)]
-pub struct Action {
+pub struct Action<T> {
     /// The nullifier of the note being spent.
     nf_old: Nullifier,
     /// The randomized verification key for the note being spent.
@@ -30,19 +30,34 @@ pub struct Action {
     encrypted_note: EncryptedNote,
     /// A commitment to the net value created or consumed by this action.
     cv_net: ValueCommitment,
+    /// The authorization for this action.
+    authorization: T,
+}
+
+/// Orchard-specific flags.
+#[derive(Debug)]
+pub struct Flags {
+    spends_enabled: bool,
+    outputs_enabled: bool,
+}
+
+/// Defines the authorization type of an Orchard bundle.
+pub trait Authorization {
+    /// The authorization type of an Orchard action.
+    type SpendAuth;
 }
 
 /// A bundle of actions to be applied to the ledger.
-///
-/// TODO: Will this ever exist independently of its signatures, outside of a builder?
 #[derive(Debug)]
-pub struct Bundle {
-    anchor: Anchor,
-    actions: NonEmpty<Action>,
+pub struct Bundle<T: Authorization> {
+    actions: NonEmpty<Action<T::SpendAuth>>,
+    flag: Flags,
     value_balance: ValueSum,
+    anchor: Anchor,
+    authorization: T,
 }
 
-impl Bundle {
+impl<T: Authorization> Bundle<T> {
     /// Computes a commitment to the effects of this bundle, suitable for inclusion within
     /// a transaction ID.
     pub fn commitment(&self) -> BundleCommitment {
@@ -50,27 +65,29 @@ impl Bundle {
     }
 }
 
-/// An authorized bundle of actions, ready to be committed to the ledger.
+/// Marker for an unauthorized bundle with no proofs or signatures.
 #[derive(Debug)]
-pub struct AuthorizedBundle {
-    bundle: Bundle,
+pub struct Unauthorized {}
+
+impl Authorization for Unauthorized {
+    type SpendAuth = ();
+}
+
+/// Authorizing data for a bundle of actions, ready to be committed to the ledger.
+#[derive(Debug)]
+pub struct Authorized {
     proof: Proof,
-    action_signatures: Vec<redpallas::Signature<SpendAuth>>,
     binding_signature: redpallas::Signature<Binding>,
 }
 
-impl AuthorizedBundle {
-    /// Computes a commitment to the effects of this bundle, suitable for inclusion within
-    /// a transaction ID.
-    ///
-    /// This is equivalent to [`Bundle::commitment`].
-    pub fn commitment(&self) -> BundleCommitment {
-        self.bundle.commitment()
-    }
+impl Authorization for Authorized {
+    type SpendAuth = redpallas::Signature<SpendAuth>;
+}
 
+impl Bundle<Authorized> {
     /// Computes a commitment to the authorizing data within for this bundle.
     ///
-    /// This together with `AuthorizedBundle::commitment` bind the entire bundle.
+    /// This together with `Bundle::commitment` bind the entire bundle.
     pub fn authorizing_commitment(&self) -> BundleAuthorizingCommitment {
         todo!()
     }
