@@ -40,16 +40,14 @@ harness = false
 
 [dependencies]
 backtrace = { version = "0.3", optional = true }
-subtle = "2.3"
 crossbeam-utils = "0.8"
 ff = "0.9"
 group = "0.9"
 metrics = "0.14.2"
 num_cpus = "1.13"
+pasta_curves = { git = "https://github.com/zcash/pasta_curves.git", branch = "main" }
 rand = "0.8"
 blake2b_simd = "0.5"
-lazy_static = "1.4.0"
-static_assertions = "1.1.0"
 
 # Temporary workaround for https://github.com/myrrlyn/funty/issues/3
 funty = "=1.1.0"

@@ -19,7 +19,7 @@
 
 pub mod arithmetic;
 pub mod circuit;
-pub mod pasta;
+pub use pasta_curves as pasta;
 pub mod plonk;
 pub mod poly;
 pub mod transcript;
