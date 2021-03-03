@@ -90,10 +90,12 @@ pub fn verify_proof<'params, C: CurveAffine, T: TranscriptRead<C>>(
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    let vanishing = vanishing::Argument::read_commitments_before_y(transcript)?;
+
     // Sample y challenge, which keeps the gates linearly independent.
     let y = ChallengeY::get(transcript);
 
-    let vanishing = vanishing::Argument::read_commitments(vk, transcript)?;
+    let vanishing = vanishing.read_commitments_after_y(vk, transcript)?;
 
     // Sample x challenge, which is used to ensure the circuit is
     // satisfied with high probability.
@@ -115,6 +117,8 @@ pub fn verify_proof<'params, C: CurveAffine, T: TranscriptRead<C>>(
 
     let fixed_evals = read_n_scalars(transcript, vk.cs.fixed_queries.len())
         .map_err(|_| Error::TranscriptError)?;
+
+    let vanishing = vanishing.evaluate_after_x(transcript)?;
 
     let permutations_evaluated = permutations_committed
         .into_iter()
