@@ -128,7 +128,9 @@ impl<F: FieldExt> Argument<F> {
                                     *modified_a *= *a * b;
                                 }
                             });
-                            pk.vk.domain.lagrange_from_vec(modified_a)
+                            let mut tmp = pk.vk.domain.empty_lagrange(0);
+                            tmp[..].copy_from_slice(&modified_a);
+                            tmp
                         },
                         &|a, scalar| a * scalar,
                     )
@@ -153,7 +155,7 @@ impl<F: FieldExt> Argument<F> {
             // Compressed version of expressions
             let compressed_expression = unpermuted_expressions
                 .iter()
-                .fold(domain.empty_lagrange(), |acc, expression| {
+                .fold(domain.empty_lagrange(0), |acc, expression| {
                     acc * *theta + expression
                 });
 
@@ -321,14 +323,16 @@ impl<C: CurveAffine> Permuted<C> {
 
         // Compute the evaluations of the lookup product polynomial
         // over our domain, starting with z[0] = 1
-        let z = iter::once(C::Scalar::one())
+        let z_values = iter::once(C::Scalar::one())
             .chain(lookup_product.into_iter().skip(1))
             .scan(C::Scalar::one(), |state, cur| {
                 *state *= &cur;
                 Some(*state)
             })
             .collect::<Vec<_>>();
-        let z = pk.vk.domain.lagrange_from_vec(z);
+        let mut z = pk.vk.domain.empty_lagrange(0);
+        z[..].copy_from_slice(&z_values[..]);
+        drop(z_values);
 
         #[cfg(feature = "sanity-checks")]
         // This test works only with intermediate representations in this method.
@@ -622,7 +626,7 @@ fn permute_expression_pair<C: CurveAffine>(
     }
     assert!(repeated_input_rows.is_empty());
 
-    let mut permuted_table_expression = domain.empty_lagrange();
+    let mut permuted_table_expression = domain.empty_lagrange(0);
     parallelize(
         &mut permuted_table_expression,
         |permuted_table_expression, start| {

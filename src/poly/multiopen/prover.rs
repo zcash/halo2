@@ -75,6 +75,7 @@ where
             poly.resize(params.n as usize, C::Scalar::zero());
             let poly = Polynomial {
                 values: poly,
+                active: params.n as usize,
                 _marker: PhantomData,
             };
 

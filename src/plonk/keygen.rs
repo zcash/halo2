@@ -147,7 +147,7 @@ where
     let (domain, cs, config) = create_domain::<C, ConcreteCircuit>(params);
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
-        fixed: vec![domain.empty_lagrange(); cs.num_fixed_columns],
+        fixed: vec![domain.empty_lagrange(0); cs.num_fixed_columns],
         permutations: cs
             .permutations
             .iter()
@@ -196,7 +196,7 @@ where
     let config = ConcreteCircuit::configure(&mut cs);
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
-        fixed: vec![vk.domain.empty_lagrange(); vk.cs.num_fixed_columns],
+        fixed: vec![vk.domain.empty_lagrange(0); vk.cs.num_fixed_columns],
         permutations: vk
             .cs
             .permutations
@@ -238,7 +238,7 @@ where
 
     // Compute l_0(X)
     // TODO: this can be done more efficiently
-    let mut l0 = vk.domain.empty_lagrange();
+    let mut l0 = vk.domain.empty_lagrange(0);
     l0[0] = C::Scalar::one();
     let l0 = vk.domain.lagrange_to_coeff(l0);
     let l0 = vk.domain.coeff_to_extended(l0, Rotation::cur());

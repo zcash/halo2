@@ -145,7 +145,7 @@ impl Assembly {
         for i in 0..p.columns.len() {
             // Computes the permutation polynomial based on the permutation
             // description in the assembly.
-            let mut permutation_poly = domain.empty_lagrange();
+            let mut permutation_poly = domain.empty_lagrange(0);
             for (j, p) in permutation_poly.iter_mut().enumerate() {
                 let (permuted_i, permuted_j) = self.mapping[i][j];
                 *p = helper.deltaomega[permuted_i][permuted_j];
@@ -174,7 +174,7 @@ impl Assembly {
         for i in 0..p.columns.len() {
             // Computes the permutation polynomial based on the permutation
             // description in the assembly.
-            let mut permutation_poly = domain.empty_lagrange();
+            let mut permutation_poly = domain.empty_lagrange(0);
             for (j, p) in permutation_poly.iter_mut().enumerate() {
                 let (permuted_i, permuted_j) = self.mapping[i][j];
                 *p = helper.deltaomega[permuted_i][permuted_j];

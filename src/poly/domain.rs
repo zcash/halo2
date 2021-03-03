@@ -137,18 +137,6 @@ impl<G: Group> EvaluationDomain<G> {
         }
     }
 
-    /// Obtains a polynomial in Lagrange form when given a vector of Lagrange
-    /// coefficients of size `n`; panics if the provided vector is the wrong
-    /// length.
-    pub fn lagrange_from_vec(&self, values: Vec<G>) -> Polynomial<G, LagrangeCoeff> {
-        assert_eq!(values.len(), self.n as usize);
-
-        Polynomial {
-            values,
-            _marker: PhantomData,
-        }
-    }
-
     /// Obtains a polynomial in coefficient form when given a vector of
     /// coefficients of size `n`; panics if the provided vector is the wrong
     /// length.
@@ -157,6 +145,7 @@ impl<G: Group> EvaluationDomain<G> {
 
         Polynomial {
             values,
+            active: self.n as usize,
             _marker: PhantomData,
         }
     }
@@ -165,14 +154,26 @@ impl<G: Group> EvaluationDomain<G> {
     pub fn empty_coeff(&self) -> Polynomial<G, Coeff> {
         Polynomial {
             values: vec![G::group_zero(); self.n as usize],
+            active: self.n as usize,
             _marker: PhantomData,
         }
     }
 
     /// Returns an empty (zero) polynomial in the Lagrange coefficient basis
-    pub fn empty_lagrange(&self) -> Polynomial<G, LagrangeCoeff> {
+    pub fn empty_lagrange(&self, inactive: usize) -> Polynomial<G, LagrangeCoeff>
+    where
+        G: FieldExt,
+    {
+        let active = (self.n as usize) - inactive;
+
+        let mut values = vec![G::group_zero(); self.n as usize];
+        for value in &mut values[active..] {
+            *value = G::rand();
+        }
+
         Polynomial {
-            values: vec![G::group_zero(); self.n as usize],
+            values,
+            active,
             _marker: PhantomData,
         }
     }
@@ -181,6 +182,7 @@ impl<G: Group> EvaluationDomain<G> {
     pub fn constant_lagrange(&self, scalar: G) -> Polynomial<G, LagrangeCoeff> {
         Polynomial {
             values: vec![scalar; self.n as usize],
+            active: self.n as usize,
             _marker: PhantomData,
         }
     }
@@ -190,6 +192,7 @@ impl<G: Group> EvaluationDomain<G> {
     pub fn empty_extended(&self) -> Polynomial<G, ExtendedLagrangeCoeff> {
         Polynomial {
             values: vec![G::group_zero(); self.extended_len()],
+            active: self.extended_len(),
             _marker: PhantomData,
         }
     }
@@ -199,6 +202,7 @@ impl<G: Group> EvaluationDomain<G> {
     pub fn constant_extended(&self, scalar: G) -> Polynomial<G, ExtendedLagrangeCoeff> {
         Polynomial {
             values: vec![scalar; self.extended_len()],
+            active: self.extended_len(),
             _marker: PhantomData,
         }
     }
@@ -215,6 +219,7 @@ impl<G: Group> EvaluationDomain<G> {
 
         Polynomial {
             values: a.values,
+            active: 1 << self.k,
             _marker: PhantomData,
         }
     }
@@ -249,6 +254,7 @@ impl<G: Group> EvaluationDomain<G> {
 
         Polynomial {
             values: a.values,
+            active: self.extended_len(),
             _marker: PhantomData,
         }
     }
@@ -302,6 +308,7 @@ impl<G: Group> EvaluationDomain<G> {
 
         Polynomial {
             values: a.values,
+            active: self.extended_len(),
             _marker: PhantomData,
         }
     }
@@ -470,7 +477,7 @@ fn test_rotate() {
     use crate::pasta::pallas::Scalar;
     let domain = EvaluationDomain::<Scalar>::new(1, 3);
 
-    let mut poly = domain.empty_lagrange();
+    let mut poly = domain.empty_lagrange(0);
     assert_eq!(poly.len(), 8);
     for value in poly.iter_mut() {
         *value = Scalar::rand();

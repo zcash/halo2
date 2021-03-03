@@ -383,7 +383,7 @@ fn plonk_api() {
     let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
     let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
 
-    let mut pubinputs = pk.get_vk().get_domain().empty_lagrange();
+    let mut pubinputs = pk.get_vk().get_domain().empty_lagrange(0);
     pubinputs[0] = instance;
     let pubinput = params
         .commit_lagrange(&pubinputs, Blind::default())

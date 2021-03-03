@@ -112,14 +112,16 @@ impl Argument {
 
         // Compute the evaluations of the permutation product polynomial
         // over our domain, starting with z[0] = 1
-        let mut z = vec![C::Scalar::one()];
+        let mut z_values = vec![C::Scalar::one()];
         for row in 1..(params.n as usize) {
-            let mut tmp = z[row - 1];
+            let mut tmp = z_values[row - 1];
 
             tmp *= &modified_values[row];
-            z.push(tmp);
+            z_values.push(tmp);
         }
-        let z = domain.lagrange_from_vec(z);
+        let mut z = domain.empty_lagrange(0);
+        z[..].copy_from_slice(&z_values[..]);
+        drop(z_values);
 
         let blind = Blind(C::Scalar::rand());
 

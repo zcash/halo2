@@ -49,6 +49,8 @@ impl Basis for ExtendedLagrangeCoeff {}
 #[derive(Clone, Debug)]
 pub struct Polynomial<F, B> {
     values: Vec<F>,
+    /// The number of active evaluations at the beginning of the domain
+    active: usize,
     _marker: PhantomData<B>,
 }
 
@@ -56,13 +58,13 @@ impl<F, B> Index<usize> for Polynomial<F, B> {
     type Output = F;
 
     fn index(&self, index: usize) -> &F {
-        self.values.index(index)
+        self.values[..self.active].index(index)
     }
 }
 
 impl<F, B> IndexMut<usize> for Polynomial<F, B> {
     fn index_mut(&mut self, index: usize) -> &mut F {
-        self.values.index_mut(index)
+        self.values[..self.active].index_mut(index)
     }
 }
 
@@ -70,13 +72,13 @@ impl<F, B> Index<RangeFrom<usize>> for Polynomial<F, B> {
     type Output = [F];
 
     fn index(&self, index: RangeFrom<usize>) -> &[F] {
-        self.values.index(index)
+        self.values[..self.active].index(index)
     }
 }
 
 impl<F, B> IndexMut<RangeFrom<usize>> for Polynomial<F, B> {
     fn index_mut(&mut self, index: RangeFrom<usize>) -> &mut [F] {
-        self.values.index_mut(index)
+        self.values[..self.active].index_mut(index)
     }
 }
 
@@ -84,13 +86,13 @@ impl<F, B> Index<RangeFull> for Polynomial<F, B> {
     type Output = [F];
 
     fn index(&self, index: RangeFull) -> &[F] {
-        self.values.index(index)
+        self.values[..self.active].index(index)
     }
 }
 
 impl<F, B> IndexMut<RangeFull> for Polynomial<F, B> {
     fn index_mut(&mut self, index: RangeFull) -> &mut [F] {
-        self.values.index_mut(index)
+        self.values[..self.active].index_mut(index)
     }
 }
 
@@ -98,13 +100,13 @@ impl<F, B> Deref for Polynomial<F, B> {
     type Target = [F];
 
     fn deref(&self) -> &[F] {
-        &self.values[..]
+        &self.values[..self.active]
     }
 }
 
 impl<F, B> DerefMut for Polynomial<F, B> {
     fn deref_mut(&mut self) -> &mut [F] {
-        &mut self.values[..]
+        &mut self.values[..self.active]
     }
 }
 
@@ -112,19 +114,13 @@ impl<F, B> Polynomial<F, B> {
     /// Iterate over the values, which are either in coefficient or evaluation
     /// form depending on the basis `B`.
     pub fn iter(&self) -> impl Iterator<Item = &F> {
-        self.values.iter()
+        self.values[..self.active].iter()
     }
 
     /// Iterate over the values mutably, which are either in coefficient or
     /// evaluation form depending on the basis `B`.
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut F> {
-        self.values.iter_mut()
-    }
-
-    /// Gets the size of this polynomial in terms of the number of
-    /// coefficients used to describe it.
-    pub fn num_coeffs(&self) -> usize {
-        self.values.len()
+        self.values[..self.active].iter_mut()
     }
 }
 
@@ -144,6 +140,8 @@ impl<'a, F: Field, B: Basis> Add<&'a Polynomial<F, B>> for Polynomial<F, B> {
     type Output = Polynomial<F, B>;
 
     fn add(mut self, rhs: &'a Polynomial<F, B>) -> Polynomial<F, B> {
+        assert_eq!(self.active, self.values.len());
+        assert_eq!(rhs.active, rhs.values.len());
         parallelize(&mut self.values, |lhs, start| {
             for (lhs, rhs) in lhs.iter_mut().zip(rhs.values[start..].iter()) {
                 *lhs += *rhs;
@@ -158,6 +156,8 @@ impl<'a, F: Field, B: Basis> Sub<&'a Polynomial<F, B>> for Polynomial<F, B> {
     type Output = Polynomial<F, B>;
 
     fn sub(mut self, rhs: &'a Polynomial<F, B>) -> Polynomial<F, B> {
+        assert_eq!(self.active, self.values.len());
+        assert_eq!(rhs.active, rhs.values.len());
         parallelize(&mut self.values, |lhs, start| {
             for (lhs, rhs) in lhs.iter_mut().zip(rhs.values[start..].iter()) {
                 *lhs -= *rhs;
@@ -177,6 +177,8 @@ impl<'a, F: Field> Mul<&'a Polynomial<F, ExtendedLagrangeCoeff>>
         mut self,
         rhs: &'a Polynomial<F, ExtendedLagrangeCoeff>,
     ) -> Polynomial<F, ExtendedLagrangeCoeff> {
+        assert_eq!(self.active, self.values.len());
+        assert_eq!(rhs.active, rhs.values.len());
         parallelize(&mut self.values, |lhs, start| {
             for (lhs, rhs) in lhs.iter_mut().zip(rhs.values[start..].iter()) {
                 *lhs *= *rhs;
@@ -190,6 +192,7 @@ impl<'a, F: Field> Mul<&'a Polynomial<F, ExtendedLagrangeCoeff>>
 impl<'a, F: Field> Polynomial<F, LagrangeCoeff> {
     /// Rotates the values in a Lagrange basis polynomial by `Rotation`
     pub fn rotate(&self, rotation: Rotation) -> Polynomial<F, LagrangeCoeff> {
+        let len = self.values.len();
         let mut values = self.values.clone();
         if rotation.0 < 0 {
             values.rotate_right((-rotation.0) as usize);
@@ -198,8 +201,19 @@ impl<'a, F: Field> Polynomial<F, LagrangeCoeff> {
         }
         Polynomial {
             values,
+            active: len,
             _marker: PhantomData,
         }
+    }
+
+    /// Obtains a slice into the inactive values of the domain
+    pub fn inactive(&self) -> &[F] {
+        &self.values[self.active..]
+    }
+
+    /// Obtains a mutable slice into the inactive values of the domain
+    pub fn inactive_mut(&mut self) -> &mut [F] {
+        &mut self.values[self.active..]
     }
 }
 
@@ -207,6 +221,8 @@ impl<'a, F: Field, B: Basis> Mul<F> for Polynomial<F, B> {
     type Output = Polynomial<F, B>;
 
     fn mul(mut self, rhs: F) -> Polynomial<F, B> {
+        assert_eq!(self.active, self.values.len());
+
         parallelize(&mut self.values, |lhs, _| {
             for lhs in lhs.iter_mut() {
                 *lhs *= rhs;

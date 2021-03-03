@@ -259,7 +259,7 @@ fn test_commit_lagrange_epaffine() {
     let params = Params::<EpAffine>::new(K);
     let domain = super::EvaluationDomain::new(1, K);
 
-    let mut a = domain.empty_lagrange();
+    let mut a = domain.empty_lagrange(0);
 
     for (i, a) in a.iter_mut().enumerate() {
         *a = Fq::from(i as u64);
@@ -280,7 +280,7 @@ fn test_commit_lagrange_eqaffine() {
     let params = Params::<EqAffine>::new(K);
     let domain = super::EvaluationDomain::new(1, K);
 
-    let mut a = domain.empty_lagrange();
+    let mut a = domain.empty_lagrange(0);
 
     for (i, a) in a.iter_mut().enumerate() {
         *a = Fp::from(i as u64);

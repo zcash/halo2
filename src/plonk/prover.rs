@@ -67,10 +67,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
 
             let instance_polys: Vec<_> = instance
                 .iter()
-                .map(|poly| {
-                    let lagrange_vec = domain.lagrange_from_vec(poly.to_vec());
-                    domain.lagrange_to_coeff(lagrange_vec)
-                })
+                .map(|poly| domain.lagrange_to_coeff(poly.clone()))
                 .collect();
 
             let instance_cosets: Vec<_> = meta
@@ -183,7 +180,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
             }
 
             let mut witness = WitnessCollection {
-                advice: vec![domain.empty_lagrange(); meta.num_advice_columns],
+                advice: vec![domain.empty_lagrange(0); meta.num_advice_columns],
                 _marker: std::marker::PhantomData,
             };
 
