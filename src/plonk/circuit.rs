@@ -784,7 +784,8 @@ impl<F: Field> ConstraintSystem<F> {
         // Account for each gate to ensure our quotient polynomial is the
         // correct degree and that our extended domain is the right size.
         for (_, poly) in self.gates.iter() {
-            degree = std::cmp::max(degree, poly.degree());
+            // All gates are multiplied by (1 - l_cover(X))
+            degree = std::cmp::max(degree, poly.degree() + 1);
         }
 
         degree

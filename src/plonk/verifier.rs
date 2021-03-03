@@ -1,3 +1,4 @@
+use ff::Field;
 use std::iter;
 
 use super::{
@@ -147,8 +148,17 @@ pub fn verify_proof<'params, C: CurveAffine, T: TranscriptRead<C>>(
         // x^n
         let xn = x.pow(&[params.n as u64, 0, 0, 0]);
 
-        // l_0(x)
-        let l_0 = vk.domain.l_i_range(*x, xn, 0..=0)[0];
+        let blinding_factors = vk.cs.blinding_factors();
+        let l_evals = vk
+            .domain
+            .l_i_range(*x, xn, (-((blinding_factors + 1) as i32))..=0);
+        assert_eq!(l_evals.len(), 2 + blinding_factors);
+        let l_last = l_evals[0];
+        let l_cover: C::Scalar = l_evals[1..(1 + blinding_factors)]
+            .iter()
+            .fold(C::Scalar::zero(), |acc, eval| acc + eval)
+            + l_last;
+        let l_0 = l_evals[1 + blinding_factors];
 
         // Compute the expected value of h(x)
         let gate_expressions = advice_evals.iter().zip(instance_evals.iter()).flat_map(
@@ -217,7 +227,7 @@ pub fn verify_proof<'params, C: CurveAffine, T: TranscriptRead<C>>(
                 },
             );
 
-        vanishing.verify(params, gate_expressions, custom_expressions, y, xn)
+        vanishing.verify(params, l_cover, gate_expressions, custom_expressions, y, xn)
     };
 
     let queries = instance_commitments

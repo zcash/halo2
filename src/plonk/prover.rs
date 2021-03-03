@@ -390,6 +390,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     // Construct the vanishing argument's h(X) commitments
     let vanishing = vanishing.construct(
         params,
+        pk,
         domain,
         gate_expressions,
         custom_expressions,

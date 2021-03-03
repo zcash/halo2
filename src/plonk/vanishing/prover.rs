@@ -6,7 +6,7 @@ use group::Curve;
 use super::Argument;
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine, FieldExt},
-    plonk::{ChallengeX, ChallengeY, Error},
+    plonk::{ChallengeX, ChallengeY, Error, ProvingKey},
     poly::{
         commitment::{Blind, Params},
         multiopen::ProverQuery,
@@ -65,6 +65,7 @@ impl<C: CurveAffine> Committed<C> {
     pub(in crate::plonk) fn construct<T: TranscriptWrite<C>>(
         self,
         params: &Params<C>,
+        pk: &ProvingKey<C>,
         domain: &EvaluationDomain<C::Scalar>,
         gate_expressions: impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
         custom_expressions: impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
@@ -73,6 +74,8 @@ impl<C: CurveAffine> Committed<C> {
     ) -> Result<Constructed<C>, Error> {
         // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
         let h_poly = gate_expressions.fold(domain.empty_extended(), |h_poly, v| h_poly * *y + &v);
+        // All gates are multiplied by (1 - l_cover(X))
+        let h_poly = h_poly * &Polynomial::one_minus(pk.l_cover.clone());
         let h_poly = custom_expressions.fold(h_poly, |h_poly, v| h_poly * *y + &v);
 
         // Divide by t(X) = X^{params.n} - 1.

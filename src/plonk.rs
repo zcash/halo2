@@ -126,8 +126,9 @@ pub struct PinnedVerificationKey<'a, C: CurveAffine> {
 #[derive(Debug)]
 pub struct ProvingKey<C: CurveAffine> {
     vk: VerifyingKey<C>,
-    // TODO: get rid of this?
     l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    l_cover: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    l_last: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     fixed_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
     fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
     fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,

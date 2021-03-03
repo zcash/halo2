@@ -195,6 +195,16 @@ where
     let mut cs = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut cs);
 
+    let cs = cs;
+    // There needs to be enough room for at least one row.
+    assert!(
+        cs.blinding_factors() // m blinding factors
+        + 1 // for l_{-(m + 1)}
+        + 1 // for l_0
+        + 1 // for at least one row
+        <= (params.n as usize)
+    );
+
     let mut assembly: Assembly<C::Scalar> = Assembly {
         fixed: vec![vk.domain.empty_lagrange(0); vk.cs.num_fixed_columns],
         permutations: vk
@@ -243,9 +253,32 @@ where
     let l0 = vk.domain.lagrange_to_coeff(l0);
     let l0 = vk.domain.coeff_to_extended(l0, Rotation::cur());
 
+    // Compute l_cover(X) which evaluates to 1 for each inactive row and 0
+    // otherwise over the domain.
+    let mut l_cover = vk.domain.empty_lagrange(0);
+    for evaluation in l_cover[..].iter_mut().rev().take(cs.blinding_factors() + 1) {
+        *evaluation = C::Scalar::one();
+    }
+    let l_cover = vk.domain.lagrange_to_coeff(l_cover);
+    let l_cover = vk.domain.coeff_to_extended(l_cover, Rotation::cur());
+
+    // Compute l_last(X) which evaluates to 1 on the first inactive row (before
+    // the blinding factors) and 0 otherwise over the domain
+    let mut l_last = vk.domain.empty_lagrange(0);
+    *(l_last[..]
+        .iter_mut()
+        .rev()
+        .skip(cs.blinding_factors())
+        .next()
+        .unwrap()) = C::Scalar::one();
+    let l_last = vk.domain.lagrange_to_coeff(l_last);
+    let l_last = vk.domain.coeff_to_extended(l_last, Rotation::cur());
+
     Ok(ProvingKey {
         vk,
         l0,
+        l_cover,
+        l_last,
         fixed_values: assembly.fixed,
         fixed_polys,
         fixed_cosets,
