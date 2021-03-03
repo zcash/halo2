@@ -152,15 +152,10 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
             .zip(lookups_evaluated.iter())
             .flat_map(
                 |(((advice_evals, instance_evals), permutations), lookups)| {
-                    let fixed_evals = fixed_evals.clone();
-                    let fixed_evals_copy = fixed_evals.clone();
-                    let fixed_evals_copy_copy = fixed_evals.clone();
-
+                    let fixed_evals = &fixed_evals;
                     std::iter::empty()
                         // Evaluate the circuit using the custom gates provided
                         .chain(vk.cs.gates.iter().flat_map(move |gate| {
-                            let fixed_evals = fixed_evals.clone();
-
                             gate.polynomials().iter().map(move |poly| {
                                 poly.evaluate(
                                     &|scalar| scalar,
@@ -181,9 +176,9 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                                     p.expressions(
                                         vk,
                                         argument,
-                                        advice_evals,
-                                        &fixed_evals_copy,
-                                        instance_evals,
+                                        &advice_evals,
+                                        &fixed_evals,
+                                        &instance_evals,
                                         l_0,
                                         beta,
                                         gamma,
@@ -203,9 +198,9 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                                         theta,
                                         beta,
                                         gamma,
-                                        advice_evals,
-                                        &fixed_evals_copy_copy,
-                                        instance_evals,
+                                        &advice_evals,
+                                        &fixed_evals,
+                                        &instance_evals,
                                     )
                                 })
                                 .into_iter(),
