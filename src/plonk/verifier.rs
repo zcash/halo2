@@ -154,10 +154,7 @@ pub fn verify_proof<'params, C: CurveAffine, T: TranscriptRead<C>>(
             .zip(lookups_evaluated.iter())
             .flat_map(
                 |(((advice_evals, instance_evals), permutations), lookups)| {
-                    let fixed_evals = fixed_evals.clone();
-                    let fixed_evals_copy = fixed_evals.clone();
-                    let fixed_evals_copy_copy = fixed_evals.clone();
-
+                    let fixed_evals = &fixed_evals;
                     std::iter::empty()
                         // Evaluate the circuit using the custom gates provided
                         .chain(vk.cs.gates.iter().map(move |(_, poly)| {
@@ -180,7 +177,7 @@ pub fn verify_proof<'params, C: CurveAffine, T: TranscriptRead<C>>(
                                         vk,
                                         argument,
                                         &advice_evals,
-                                        &fixed_evals_copy,
+                                        &fixed_evals,
                                         &instance_evals,
                                         l_0,
                                         beta,
@@ -202,7 +199,7 @@ pub fn verify_proof<'params, C: CurveAffine, T: TranscriptRead<C>>(
                                         beta,
                                         gamma,
                                         &advice_evals,
-                                        &fixed_evals_copy_copy,
+                                        &fixed_evals,
                                         &instance_evals,
                                     )
                                 })
