@@ -66,12 +66,14 @@ impl<C: CurveAffine> Committed<C> {
         self,
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
-        expressions: impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
+        gate_expressions: impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
+        custom_expressions: impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
         y: ChallengeY<C>,
         transcript: &mut T,
     ) -> Result<Constructed<C>, Error> {
         // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
-        let h_poly = expressions.fold(domain.empty_extended(), |h_poly, v| h_poly * *y + &v);
+        let h_poly = gate_expressions.fold(domain.empty_extended(), |h_poly, v| h_poly * *y + &v);
+        let h_poly = custom_expressions.fold(h_poly, |h_poly, v| h_poly * *y + &v);
 
         // Divide by t(X) = X^{params.n} - 1.
         let h_poly = domain.divide_by_vanishing_poly(h_poly);

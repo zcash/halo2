@@ -151,7 +151,24 @@ pub fn verify_proof<'params, C: CurveAffine, T: TranscriptRead<C>>(
         let l_0 = vk.domain.l_i_range(*x, xn, 0..=0)[0];
 
         // Compute the expected value of h(x)
-        let expressions = advice_evals
+        let gate_expressions = advice_evals.iter().zip(instance_evals.iter()).flat_map(
+            |(advice_evals, instance_evals)| {
+                let fixed_evals = &fixed_evals;
+                vk.cs.gates.iter().map(move |(_, poly)| {
+                    poly.evaluate(
+                        &|scalar| scalar,
+                        &|index| fixed_evals[index],
+                        &|index| advice_evals[index],
+                        &|index| instance_evals[index],
+                        &|a, b| a + &b,
+                        &|a, b| a * &b,
+                        &|a, scalar| a * &scalar,
+                    )
+                })
+            },
+        );
+
+        let custom_expressions = advice_evals
             .iter()
             .zip(instance_evals.iter())
             .zip(permutations_evaluated.iter())
@@ -160,18 +177,6 @@ pub fn verify_proof<'params, C: CurveAffine, T: TranscriptRead<C>>(
                 |(((advice_evals, instance_evals), permutations), lookups)| {
                     let fixed_evals = &fixed_evals;
                     std::iter::empty()
-                        // Evaluate the circuit using the custom gates provided
-                        .chain(vk.cs.gates.iter().map(move |(_, poly)| {
-                            poly.evaluate(
-                                &|scalar| scalar,
-                                &|index| fixed_evals[index],
-                                &|index| advice_evals[index],
-                                &|index| instance_evals[index],
-                                &|a, b| a + &b,
-                                &|a, b| a * &b,
-                                &|a, scalar| a * &scalar,
-                            )
-                        }))
                         .chain(
                             permutations
                                 .iter()
@@ -212,7 +217,7 @@ pub fn verify_proof<'params, C: CurveAffine, T: TranscriptRead<C>>(
                 },
             );
 
-        vanishing.verify(params, expressions, y, xn)
+        vanishing.verify(params, gate_expressions, custom_expressions, y, xn)
     };
 
     let queries = instance_commitments

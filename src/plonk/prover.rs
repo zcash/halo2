@@ -359,35 +359,43 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         })
         .unzip();
 
-    let expressions = advice
+    let gate_expressions = advice
         .iter()
         .zip(instance.iter())
-        .zip(permutation_expressions.into_iter())
+        .flat_map(|(advice, instance)| {
+            meta.gates.iter().map(move |(_, poly)| {
+                poly.evaluate(
+                    &|scalar| pk.vk.domain.constant_extended(scalar),
+                    &|index| pk.fixed_cosets[index].clone(),
+                    &|index| advice.advice_cosets[index].clone(),
+                    &|index| instance.instance_cosets[index].clone(),
+                    &|a, b| a + &b,
+                    &|a, b| a * &b,
+                    &|a, scalar| a * scalar,
+                )
+            })
+        });
+
+    let custom_expressions = permutation_expressions
+        .into_iter()
         .zip(lookup_expressions.into_iter())
-        .flat_map(
-            |(((advice, instance), permutation_expressions), lookup_expressions)| {
-                iter::empty()
-                    // Custom constraints
-                    .chain(meta.gates.iter().map(move |(_, poly)| {
-                        poly.evaluate(
-                            &|scalar| pk.vk.domain.constant_extended(scalar),
-                            &|index| pk.fixed_cosets[index].clone(),
-                            &|index| advice.advice_cosets[index].clone(),
-                            &|index| instance.instance_cosets[index].clone(),
-                            &|a, b| a + &b,
-                            &|a, b| a * &b,
-                            &|a, scalar| a * scalar,
-                        )
-                    }))
-                    // Permutation constraints, if any.
-                    .chain(permutation_expressions.into_iter().flatten())
-                    // Lookup constraints, if any.
-                    .chain(lookup_expressions.into_iter().flatten())
-            },
-        );
+        .flat_map(|(permutation_expressions, lookup_expressions)| {
+            iter::empty()
+                // Permutation constraints, if any.
+                .chain(permutation_expressions.into_iter().flatten())
+                // Lookup constraints, if any.
+                .chain(lookup_expressions.into_iter().flatten())
+        });
 
     // Construct the vanishing argument's h(X) commitments
-    let vanishing = vanishing.construct(params, domain, expressions, y, transcript)?;
+    let vanishing = vanishing.construct(
+        params,
+        domain,
+        gate_expressions,
+        custom_expressions,
+        y,
+        transcript,
+    )?;
 
     let x = ChallengeX::get(transcript);
     let xn = x.pow(&[params.n as u64, 0, 0, 0]);

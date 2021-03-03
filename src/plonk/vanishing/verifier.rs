@@ -88,11 +88,15 @@ impl<C: CurveAffine> PartiallyEvaluated<C> {
     pub(in crate::plonk) fn verify(
         self,
         params: &Params<C>,
-        expressions: impl Iterator<Item = C::Scalar>,
+        gate_expressions: impl Iterator<Item = C::Scalar>,
+        custom_expressions: impl Iterator<Item = C::Scalar>,
         y: ChallengeY<C>,
         xn: C::Scalar,
     ) -> Evaluated<C> {
-        let expected_h_eval = expressions.fold(C::Scalar::zero(), |h_eval, v| h_eval * &*y + &v);
+        let expected_h_eval =
+            gate_expressions.fold(C::Scalar::zero(), |h_eval, v| h_eval * &*y + &v);
+        let expected_h_eval =
+            custom_expressions.fold(expected_h_eval, |h_eval, v| h_eval * &*y + &v);
         let expected_h_eval = expected_h_eval * ((xn - C::Scalar::one()).invert().unwrap());
 
         let h_commitment =
