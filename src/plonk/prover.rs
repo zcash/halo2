@@ -339,6 +339,9 @@ pub fn create_proof<
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    // Commit to the vanishing argument's random polynomial for blinding h(x_3)
+    let vanishing = vanishing::Argument::commit(params, domain, transcript)?;
+
     // Obtain challenge for keeping all separate gates linearly independent
     let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
 
@@ -408,8 +411,8 @@ pub fn create_proof<
             },
         );
 
-    // Construct the vanishing argument
-    let vanishing = vanishing::Argument::construct(params, domain, expressions, y, transcript)?;
+    // Construct the vanishing argument's h(X) commitments
+    let vanishing = vanishing.construct(params, domain, expressions, y, transcript)?;
 
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
     let xn = x.pow(&[params.n as u64, 0, 0, 0]);
@@ -474,7 +477,7 @@ pub fn create_proof<
             .map_err(|_| Error::TranscriptError)?;
     }
 
-    let vanishing = vanishing.evaluate(xn, domain);
+    let vanishing = vanishing.evaluate(x, xn, domain, transcript)?;
 
     // Evaluate the permutations, if any, at omega^i x.
     let permutations: Vec<Vec<permutation::prover::Evaluated<C>>> = permutations

@@ -1,9 +1,11 @@
+use std::iter;
+
 use ff::Field;
 use group::Curve;
 
 use super::Argument;
 use crate::{
-    arithmetic::{CurveAffine, FieldExt},
+    arithmetic::{eval_polynomial, CurveAffine, FieldExt},
     plonk::{ChallengeX, ChallengeY, Error},
     poly::{
         commitment::{Blind, Params},
@@ -13,18 +15,55 @@ use crate::{
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 
+pub(in crate::plonk) struct Committed<C: CurveAffine> {
+    random_poly: Polynomial<C::Scalar, Coeff>,
+    random_blind: Blind<C::Scalar>,
+}
+
 pub(in crate::plonk) struct Constructed<C: CurveAffine> {
     h_pieces: Vec<Polynomial<C::Scalar, Coeff>>,
     h_blinds: Vec<Blind<C::Scalar>>,
+    random_poly: Polynomial<C::Scalar, Coeff>,
+    random_blind: Blind<C::Scalar>,
 }
 
 pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
     h_poly: Polynomial<C::Scalar, Coeff>,
     h_blind: Blind<C::Scalar>,
+    random_poly: Polynomial<C::Scalar, Coeff>,
+    random_blind: Blind<C::Scalar>,
 }
 
 impl<C: CurveAffine> Argument<C> {
+    pub(in crate::plonk) fn commit<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
+        params: &Params<C>,
+        domain: &EvaluationDomain<C::Scalar>,
+        transcript: &mut T,
+    ) -> Result<Committed<C>, Error> {
+        // Sample a random polynomial of degree n - 1
+        let mut random_poly = domain.empty_coeff();
+        for coeff in random_poly.iter_mut() {
+            *coeff = C::Scalar::rand();
+        }
+        // Sample a random blinding factor
+        let random_blind = Blind(C::Scalar::rand());
+
+        // Commit
+        let c = params.commit(&random_poly, random_blind).to_affine();
+        transcript
+            .write_point(c)
+            .map_err(|_| Error::TranscriptError)?;
+
+        Ok(Committed {
+            random_poly,
+            random_blind,
+        })
+    }
+}
+
+impl<C: CurveAffine> Committed<C> {
     pub(in crate::plonk) fn construct<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
+        self,
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
         expressions: impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
@@ -65,16 +104,23 @@ impl<C: CurveAffine> Argument<C> {
                 .map_err(|_| Error::TranscriptError)?;
         }
 
-        Ok(Constructed { h_pieces, h_blinds })
+        Ok(Constructed {
+            h_pieces,
+            h_blinds,
+            random_poly: self.random_poly,
+            random_blind: self.random_blind,
+        })
     }
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(in crate::plonk) fn evaluate(
+    pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
         self,
+        x: ChallengeX<C>,
         xn: C::Scalar,
         domain: &EvaluationDomain<C::Scalar>,
-    ) -> Evaluated<C> {
+        transcript: &mut T,
+    ) -> Result<Evaluated<C>, Error> {
         let h_poly = self
             .h_pieces
             .iter()
@@ -89,7 +135,17 @@ impl<C: CurveAffine> Constructed<C> {
                 acc * Blind(xn) + *eval
             });
 
-        Evaluated { h_poly, h_blind }
+        let random_eval = eval_polynomial(&self.random_poly, *x);
+        transcript
+            .write_scalar(random_eval)
+            .map_err(|_| Error::TranscriptError)?;
+
+        Ok(Evaluated {
+            h_poly,
+            h_blind,
+            random_poly: self.random_poly,
+            random_blind: self.random_blind,
+        })
     }
 }
 
@@ -98,11 +154,16 @@ impl<C: CurveAffine> Evaluated<C> {
         &self,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
-        Some(ProverQuery {
-            point: *x,
-            poly: &self.h_poly,
-            blind: self.h_blind,
-        })
-        .into_iter()
+        iter::empty()
+            .chain(Some(ProverQuery {
+                point: *x,
+                poly: &self.h_poly,
+                blind: self.h_blind,
+            }))
+            .chain(Some(ProverQuery {
+                point: *x,
+                poly: &self.random_poly,
+                blind: self.random_blind,
+            }))
     }
 }
