@@ -446,7 +446,7 @@ fn plonk_api() {
             &params,
             &pk,
             &[circuit.clone(), circuit.clone()],
-            &[&[pubinputs.clone()], &[pubinputs.clone()]],
+            &[&[&[instance]], &[&[instance]]],
             &mut transcript,
         )
         .expect("proof generation should not fail");

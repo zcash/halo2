@@ -35,7 +35,7 @@ pub fn create_proof<
     params: &Params<C>,
     pk: &ProvingKey<C>,
     circuits: &[ConcreteCircuit],
-    instances: &[&[Polynomial<C::Scalar, LagrangeCoeff>]],
+    instances: &[&[&[C::Scalar]]],
     transcript: &mut T,
 ) -> Result<(), Error> {
     for instance in instances.iter() {
@@ -53,8 +53,8 @@ pub fn create_proof<
     let mut meta = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut meta);
 
-    struct InstanceSingle<'a, C: CurveAffine> {
-        pub instance_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+    struct InstanceSingle<C: CurveAffine> {
+        pub instance_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
         pub instance_polys: Vec<Polynomial<C::Scalar, Coeff>>,
         pub instance_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     }
@@ -62,7 +62,17 @@ pub fn create_proof<
     let instance: Vec<InstanceSingle<C>> = instances
         .iter()
         .map(|instance| -> Result<InstanceSingle<C>, Error> {
-            let instance_commitments_projective: Vec<_> = instance
+            let instance_values = instance
+                .iter()
+                .map(|values| {
+                    let mut poly = domain.empty_lagrange();
+                    for (poly, value) in poly.iter_mut().zip(values.iter()) {
+                        *poly = *value;
+                    }
+                    poly
+                })
+                .collect::<Vec<_>>();
+            let instance_commitments_projective: Vec<_> = instance_values
                 .iter()
                 .map(|poly| params.commit_lagrange(poly, Blind::default()))
                 .collect();
@@ -78,7 +88,7 @@ pub fn create_proof<
                     .map_err(|_| Error::TranscriptError)?;
             }
 
-            let instance_polys: Vec<_> = instance
+            let instance_polys: Vec<_> = instance_values
                 .iter()
                 .map(|poly| {
                     let lagrange_vec = domain.lagrange_from_vec(poly.to_vec());
@@ -96,7 +106,7 @@ pub fn create_proof<
                 .collect();
 
             Ok(InstanceSingle {
-                instance_values: *instance,
+                instance_values,
                 instance_polys,
                 instance_cosets,
             })
@@ -284,7 +294,7 @@ pub fn create_proof<
                         theta,
                         &advice.advice_values,
                         &pk.fixed_values,
-                        instance.instance_values,
+                        &instance.instance_values,
                         &advice.advice_cosets,
                         &pk.fixed_cosets,
                         &instance.instance_cosets,
@@ -318,7 +328,7 @@ pub fn create_proof<
                         pkey,
                         &advice.advice_values,
                         &pk.fixed_values,
-                        instance.instance_values,
+                        &instance.instance_values,
                         beta,
                         gamma,
                         transcript,
