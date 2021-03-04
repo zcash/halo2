@@ -214,6 +214,8 @@ pub fn verify_proof<'params, C: CurveAffine, T: TranscriptRead<C>>(
                                 .flat_map(move |(p, argument)| {
                                     p.expressions(
                                         l_0,
+                                        l_last,
+                                        l_cover,
                                         argument,
                                         theta,
                                         beta,

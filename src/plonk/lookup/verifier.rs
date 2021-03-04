@@ -23,7 +23,7 @@ pub struct Committed<C: CurveAffine> {
 pub struct Evaluated<C: CurveAffine> {
     committed: Committed<C>,
     product_eval: C::Scalar,
-    product_inv_eval: C::Scalar,
+    product_next_eval: C::Scalar,
     permuted_input_eval: C::Scalar,
     permuted_input_inv_eval: C::Scalar,
     permuted_table_eval: C::Scalar,
@@ -72,7 +72,7 @@ impl<C: CurveAffine> Committed<C> {
         let product_eval = transcript
             .read_scalar()
             .map_err(|_| Error::TranscriptError)?;
-        let product_inv_eval = transcript
+        let product_next_eval = transcript
             .read_scalar()
             .map_err(|_| Error::TranscriptError)?;
         let permuted_input_eval = transcript
@@ -88,7 +88,7 @@ impl<C: CurveAffine> Committed<C> {
         Ok(Evaluated {
             committed: self,
             product_eval,
-            product_inv_eval,
+            product_next_eval,
             permuted_input_eval,
             permuted_input_inv_eval,
             permuted_table_eval,
@@ -100,6 +100,8 @@ impl<C: CurveAffine> Evaluated<C> {
     pub(in crate::plonk) fn expressions<'a>(
         &'a self,
         l_0: C::Scalar,
+        l_last: C::Scalar,
+        l_cover: C::Scalar,
         argument: &'a Argument<C::Scalar>,
         theta: ChallengeTheta<C>,
         beta: ChallengeBeta<C>,
@@ -108,10 +110,11 @@ impl<C: CurveAffine> Evaluated<C> {
         fixed_evals: &[C::Scalar],
         instance_evals: &[C::Scalar],
     ) -> impl Iterator<Item = C::Scalar> + 'a {
+        let l_active = C::Scalar::one() - (l_last + l_cover);
         let product_expression = || {
-            // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
-            // - z'(\omega^{-1} X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
-            let left = self.product_eval
+            // z'(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
+            // - z'(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
+            let left = self.product_next_eval
                 * &(self.permuted_input_eval + &*beta)
                 * &(self.permuted_table_eval + &*gamma);
 
@@ -131,11 +134,12 @@ impl<C: CurveAffine> Evaluated<C> {
                     })
                     .fold(C::Scalar::zero(), |acc, eval| acc * &*theta + &eval)
             };
-            let right = self.product_inv_eval
+            let right = self.product_eval
                 * &(compress_expressions(&argument.input_expressions) + &*beta)
                 * &(compress_expressions(&argument.table_expressions) + &*gamma);
 
-            left - &right
+            // (1 - (l_last(X) + l_cover(X))) * (left - right)
+            (left - &right) * l_active
         };
 
         std::iter::empty()
@@ -144,8 +148,14 @@ impl<C: CurveAffine> Evaluated<C> {
                 Some(l_0 * &(C::Scalar::one() - &self.product_eval)),
             )
             .chain(
+                // l_last(X) * (1 - z'(X)) = 0
+                Some(l_last * &(C::Scalar::one() - &self.product_eval)),
+            )
+            .chain(
+                // (1 - (l_last(X) + l_cover(X))) * (
                 // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
                 // - z'(\omega^{-1} X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
+                // )
                 Some(product_expression()),
             )
             .chain(Some(
@@ -153,9 +163,10 @@ impl<C: CurveAffine> Evaluated<C> {
                 l_0 * &(self.permuted_input_eval - &self.permuted_table_eval),
             ))
             .chain(Some(
-                // (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
+                // (1 - (l_last(X) + l_cover(X))) * (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
                 (self.permuted_input_eval - &self.permuted_table_eval)
-                    * &(self.permuted_input_eval - &self.permuted_input_inv_eval),
+                    * &(self.permuted_input_eval - &self.permuted_input_inv_eval)
+                    * l_active,
             ))
     }
 
@@ -164,7 +175,8 @@ impl<C: CurveAffine> Evaluated<C> {
         vk: &'r VerifyingKey<C>,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone {
-        let x_inv = vk.domain.rotate_omega(*x, Rotation(-1));
+        let x_prev = vk.domain.rotate_omega(*x, Rotation::prev());
+        let x_next = vk.domain.rotate_omega(*x, Rotation::next());
 
         iter::empty()
             // Open lookup product commitments at x
@@ -188,14 +200,14 @@ impl<C: CurveAffine> Evaluated<C> {
             // Open lookup input commitments at \omega^{-1} x
             .chain(Some(VerifierQuery::new_commitment(
                 &self.committed.permuted.permuted_input_commitment,
-                x_inv,
+                x_prev,
                 self.permuted_input_inv_eval,
             )))
-            // Open lookup product commitments at \omega^{-1} x
+            // Open lookup product commitment at \omega x
             .chain(Some(VerifierQuery::new_commitment(
                 &self.committed.product_commitment,
-                x_inv,
-                self.product_inv_eval,
+                x_next,
+                self.product_next_eval,
             )))
     }
 }

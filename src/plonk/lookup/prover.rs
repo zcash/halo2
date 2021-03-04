@@ -1,6 +1,6 @@
 use super::super::{
-    circuit::Expression, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error,
-    ProvingKey,
+    circuit::{ConstraintSystem, Expression},
+    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error, ProvingKey,
 };
 use super::Argument;
 use crate::{
@@ -44,7 +44,7 @@ pub(in crate::plonk) struct Committed<C: CurveAffine> {
     permuted: Permuted<C>,
     product_poly: Polynomial<C::Scalar, Coeff>,
     product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
-    product_inv_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    product_next_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     product_blind: Blind<C::Scalar>,
     product_commitment: C,
 }
@@ -120,7 +120,8 @@ impl<F: FieldExt> Argument<F> {
                         },
                         &|a, b| a + &b,
                         &|a, b| {
-                            let mut modified_a = vec![C::Scalar::one(); params.n as usize];
+                            let mut modified_a =
+                                vec![C::Scalar::one(); (params.n as usize) - blinding_factors - 1];
                             parallelize(&mut modified_a, |modified_a, start| {
                                 for ((modified_a, a), b) in modified_a
                                     .iter_mut()
@@ -130,7 +131,7 @@ impl<F: FieldExt> Argument<F> {
                                     *modified_a *= *a * b;
                                 }
                             });
-                            let mut tmp = pk.vk.domain.empty_lagrange(0);
+                            let mut tmp = pk.vk.domain.empty_lagrange(blinding_factors + 1);
                             tmp[..].copy_from_slice(&modified_a);
                             tmp
                         },
@@ -155,11 +156,10 @@ impl<F: FieldExt> Argument<F> {
                 .collect();
 
             // Compressed version of expressions
-            let compressed_expression = unpermuted_expressions
-                .iter()
-                .fold(domain.empty_lagrange(0), |acc, expression| {
-                    acc * *theta + expression
-                });
+            let compressed_expression = unpermuted_expressions.iter().fold(
+                domain.empty_lagrange(blinding_factors + 1),
+                |acc, expression| acc * *theta + expression,
+            );
 
             (
                 unpermuted_expressions,
@@ -186,6 +186,7 @@ impl<F: FieldExt> Argument<F> {
 
         // Permute compressed (InputExpression, TableExpression) pair
         let (permuted_input_expression, permuted_table_expression) = permute_expression_pair::<C>(
+            &pk.vk.cs,
             domain,
             &compressed_input_expression,
             &compressed_table_expression,
@@ -216,7 +217,7 @@ impl<F: FieldExt> Argument<F> {
         let permuted_input_inv_coset = pk
             .vk
             .domain
-            .coeff_to_extended(permuted_input_poly.clone(), Rotation(-1));
+            .coeff_to_extended(permuted_input_poly.clone(), Rotation::prev());
         let permuted_table_coset = pk
             .vk
             .domain
@@ -257,6 +258,7 @@ impl<C: CurveAffine> Permuted<C> {
         gamma: ChallengeGamma<C>,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
+        let blinding_factors = pk.vk.cs.blinding_factors();
         // Goal is to compute the products of fractions
         //
         // Numerator: (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
@@ -268,7 +270,8 @@ impl<C: CurveAffine> Permuted<C> {
         // s_j(X) is the jth table expression in this lookup,
         // s'(X) is the compression of the permuted table expressions,
         // and i is the ith row of the expression.
-        let mut lookup_product = vec![C::Scalar::zero(); params.n as usize];
+        let mut lookup_product =
+            vec![C::Scalar::zero(); (params.n as usize) - blinding_factors - 1];
         // Denominator uses the permuted input expression and permuted table expression
         parallelize(&mut lookup_product, |lookup_product, start| {
             for ((lookup_product, permuted_input_value), permuted_table_value) in lookup_product
@@ -310,6 +313,9 @@ impl<C: CurveAffine> Permuted<C> {
             }
         });
 
+        // We don't need/want the last entry.
+        lookup_product.pop().expect("should be at least one entry");
+
         // The product vector is a vector of products of fractions of the form
         //
         // Numerator: (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
@@ -326,37 +332,37 @@ impl<C: CurveAffine> Permuted<C> {
         // Compute the evaluations of the lookup product polynomial
         // over our domain, starting with z[0] = 1
         let z_values = iter::once(C::Scalar::one())
-            .chain(lookup_product.into_iter().skip(1))
+            .chain(lookup_product)
             .scan(C::Scalar::one(), |state, cur| {
                 *state *= &cur;
                 Some(*state)
             })
             .collect::<Vec<_>>();
-        let mut z = pk.vk.domain.empty_lagrange(0);
+        let mut z = pk.vk.domain.empty_lagrange(blinding_factors + 1);
         z[..].copy_from_slice(&z_values[..]);
         drop(z_values);
+        z.inactive_mut()[0] = C::Scalar::one();
 
         #[cfg(feature = "sanity-checks")]
         // This test works only with intermediate representations in this method.
         // It can be used for debugging purposes.
         {
             // While in Lagrange basis, check that product is correctly constructed
-            let n = params.n as usize;
+            let n = (params.n as usize) - blinding_factors - 1;
 
-            // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
-            // - z'(\omega^{-1} X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
+            // z'(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
+            // - z'(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
             for i in 0..n {
-                let prev_idx = (n + i - 1) % n;
+                let next_idx = (i + 1) % n;
 
-                let mut left = z[i];
+                let mut left = z[next_idx];
                 let permuted_input_value = &self.permuted_input_expression[i];
-
                 let permuted_table_value = &self.permuted_table_expression[i];
 
                 left *= &(*beta + permuted_input_value);
                 left *= &(*gamma + permuted_table_value);
 
-                let mut right = z[prev_idx];
+                let mut right = z[i];
                 let mut input_term = self
                     .unpermuted_input_expressions
                     .iter()
@@ -379,7 +385,7 @@ impl<C: CurveAffine> Permuted<C> {
         let product_commitment = params.commit_lagrange(&z, product_blind).to_affine();
         let z = pk.vk.domain.lagrange_to_coeff(z);
         let product_coset = pk.vk.domain.coeff_to_extended(z.clone(), Rotation::cur());
-        let product_inv_coset = pk.vk.domain.coeff_to_extended(z.clone(), Rotation::prev());
+        let product_next_coset = pk.vk.domain.coeff_to_extended(z.clone(), Rotation::next());
 
         // Hash product commitment
         transcript
@@ -390,7 +396,7 @@ impl<C: CurveAffine> Permuted<C> {
             permuted: self,
             product_poly: z,
             product_coset,
-            product_inv_coset,
+            product_next_coset,
             product_commitment,
             product_blind,
         })
@@ -415,16 +421,24 @@ impl<'a, C: CurveAffine> Committed<C> {
     ) {
         let permuted = self.permuted;
 
+        let active_rows = Polynomial::one_minus(pk.l_last.clone() + &pk.l_cover);
+
         let expressions = iter::empty()
             // l_0(X) * (1 - z'(X)) = 0
             .chain(Some(
                 Polynomial::one_minus(self.product_coset.clone()) * &pk.l0,
             ))
-            // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
-            // - z'(\omega^{-1} X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
+            // l_last(X) * (1 - z'(X)) = 0
+            .chain(Some(
+                Polynomial::one_minus(self.product_coset.clone()) * &pk.l_last,
+            ))
+            // (1 - (l_last(X) + l_cover(X))) * (
+            // z'(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
+            // - z'(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
+            // )
             .chain({
-                // z'(X) (a'(X) + \beta) (s'(X) + \gamma)
-                let mut left = self.product_coset.clone();
+                // z'(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
+                let mut left = self.product_next_coset.clone();
                 parallelize(&mut left, |left, start| {
                     for ((left, permuted_input), permuted_table) in left
                         .iter_mut()
@@ -436,8 +450,8 @@ impl<'a, C: CurveAffine> Committed<C> {
                     }
                 });
 
-                //  z'(\omega^{-1} X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
-                let mut right = self.product_inv_coset;
+                //  z'(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
+                let mut right = self.product_coset;
                 parallelize(&mut right, |right, start| {
                     for (i, right) in right.iter_mut().enumerate() {
                         let i = i + start;
@@ -462,7 +476,7 @@ impl<'a, C: CurveAffine> Committed<C> {
                     }
                 });
 
-                Some(left - &right)
+                Some((left - &right) * &active_rows)
             })
             // Check that the first values in the permuted input expression and permuted
             // fixed expression are the same.
@@ -473,10 +487,11 @@ impl<'a, C: CurveAffine> Committed<C> {
             // Check that each value in the permuted lookup input expression is either
             // equal to the value above it, or the value at the same index in the
             // permuted table expression.
-            // (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
+            // (1 - (l_last(X) + l_cover(X))) * ((a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X))) = 0
             .chain(Some(
                 (permuted.permuted_input_coset.clone() - &permuted.permuted_table_coset)
-                    * &(permuted.permuted_input_coset.clone() - &permuted.permuted_input_inv_coset),
+                    * &(permuted.permuted_input_coset.clone() - &permuted.permuted_input_inv_coset)
+                    * &active_rows,
             ));
 
         (
@@ -501,10 +516,11 @@ impl<C: CurveAffine> Constructed<C> {
         transcript: &mut T,
     ) -> Result<Evaluated<C>, Error> {
         let domain = &pk.vk.domain;
-        let x_inv = domain.rotate_omega(*x, Rotation(-1));
+        let x_inv = domain.rotate_omega(*x, Rotation::prev());
+        let x_next = domain.rotate_omega(*x, Rotation::next());
 
         let product_eval = eval_polynomial(&self.product_poly, *x);
-        let product_inv_eval = eval_polynomial(&self.product_poly, x_inv);
+        let product_next_eval = eval_polynomial(&self.product_poly, x_next);
         let permuted_input_eval = eval_polynomial(&self.permuted_input_poly, *x);
         let permuted_input_inv_eval = eval_polynomial(&self.permuted_input_poly, x_inv);
         let permuted_table_eval = eval_polynomial(&self.permuted_table_poly, *x);
@@ -512,7 +528,7 @@ impl<C: CurveAffine> Constructed<C> {
         // Hash each advice evaluation
         for eval in iter::empty()
             .chain(Some(product_eval))
-            .chain(Some(product_inv_eval))
+            .chain(Some(product_next_eval))
             .chain(Some(permuted_input_eval))
             .chain(Some(permuted_input_inv_eval))
             .chain(Some(permuted_table_eval))
@@ -532,7 +548,8 @@ impl<C: CurveAffine> Evaluated<C> {
         pk: &'a ProvingKey<C>,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
-        let x_inv = pk.vk.domain.rotate_omega(*x, Rotation(-1));
+        let x_prev = pk.vk.domain.rotate_omega(*x, Rotation::prev());
+        let x_next = pk.vk.domain.rotate_omega(*x, Rotation::next());
 
         iter::empty()
             // Open lookup product commitments at x
@@ -553,15 +570,15 @@ impl<C: CurveAffine> Evaluated<C> {
                 poly: &self.constructed.permuted_table_poly,
                 blind: self.constructed.permuted_table_blind,
             }))
-            // Open lookup input commitments at x_inv
+            // Open lookup input commitments at \omega^-1 x
             .chain(Some(ProverQuery {
-                point: x_inv,
+                point: x_prev,
                 poly: &self.constructed.permuted_input_poly,
                 blind: self.constructed.permuted_input_blind,
             }))
-            // Open lookup product commitments at x_inv
+            // Open lookup product commitments at \omega x
             .chain(Some(ProverQuery {
-                point: x_inv,
+                point: x_next,
                 poly: &self.constructed.product_poly,
                 blind: self.constructed.product_blind,
             }))
@@ -577,6 +594,7 @@ type ExpressionPair<F> = (Polynomial<F, LagrangeCoeff>, Polynomial<F, LagrangeCo
 ///   that has the corresponding value in S'.
 /// This method returns (A', S') if no errors are encountered.
 fn permute_expression_pair<C: CurveAffine>(
+    cs: &ConstraintSystem<C::Scalar>,
     domain: &EvaluationDomain<C::Scalar>,
     input_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
     table_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
@@ -628,7 +646,8 @@ fn permute_expression_pair<C: CurveAffine>(
     }
     assert!(repeated_input_rows.is_empty());
 
-    let mut permuted_table_expression = domain.empty_lagrange(0);
+    let blinding_factors = cs.blinding_factors();
+    let mut permuted_table_expression = domain.empty_lagrange(blinding_factors + 1);
     parallelize(
         &mut permuted_table_expression,
         |permuted_table_expression, start| {

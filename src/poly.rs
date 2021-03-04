@@ -140,8 +140,6 @@ impl<'a, F: Field, B: Basis> Add<&'a Polynomial<F, B>> for Polynomial<F, B> {
     type Output = Polynomial<F, B>;
 
     fn add(mut self, rhs: &'a Polynomial<F, B>) -> Polynomial<F, B> {
-        assert_eq!(self.active, self.values.len());
-        assert_eq!(rhs.active, rhs.values.len());
         parallelize(&mut self.values, |lhs, start| {
             for (lhs, rhs) in lhs.iter_mut().zip(rhs.values[start..].iter()) {
                 *lhs += *rhs;
@@ -156,8 +154,6 @@ impl<'a, F: Field, B: Basis> Sub<&'a Polynomial<F, B>> for Polynomial<F, B> {
     type Output = Polynomial<F, B>;
 
     fn sub(mut self, rhs: &'a Polynomial<F, B>) -> Polynomial<F, B> {
-        assert_eq!(self.active, self.values.len());
-        assert_eq!(rhs.active, rhs.values.len());
         parallelize(&mut self.values, |lhs, start| {
             for (lhs, rhs) in lhs.iter_mut().zip(rhs.values[start..].iter()) {
                 *lhs -= *rhs;
@@ -177,8 +173,6 @@ impl<'a, F: Field> Mul<&'a Polynomial<F, ExtendedLagrangeCoeff>>
         mut self,
         rhs: &'a Polynomial<F, ExtendedLagrangeCoeff>,
     ) -> Polynomial<F, ExtendedLagrangeCoeff> {
-        assert_eq!(self.active, self.values.len());
-        assert_eq!(rhs.active, rhs.values.len());
         parallelize(&mut self.values, |lhs, start| {
             for (lhs, rhs) in lhs.iter_mut().zip(rhs.values[start..].iter()) {
                 *lhs *= *rhs;
@@ -228,8 +222,6 @@ impl<'a, F: Field, B: Basis> Mul<F> for Polynomial<F, B> {
     type Output = Polynomial<F, B>;
 
     fn mul(mut self, rhs: F) -> Polynomial<F, B> {
-        assert_eq!(self.active, self.values.len());
-
         parallelize(&mut self.values, |lhs, _| {
             for lhs in lhs.iter_mut() {
                 *lhs *= rhs;

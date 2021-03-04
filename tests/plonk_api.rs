@@ -281,8 +281,8 @@ fn plonk_api() {
             let b_ = meta.query_any(b.into(), Rotation::cur());
             let sl_ = meta.query_any(sl.into(), Rotation::cur());
             let sl2_ = meta.query_any(sl2.into(), Rotation::cur());
-            //meta.lookup(&[a_.clone()], &[sl_.clone()]);
-            //meta.lookup(&[a_ * b_], &[sl_ * sl2_]);
+            meta.lookup(&[a_.clone()], &[sl_.clone()]);
+            meta.lookup(&[a_ * b_], &[sl_ * sl2_]);
 
             meta.create_gate("Combined add-mult", |meta| {
                 let d = meta.query_advice(d, Rotation::next());
@@ -458,6 +458,7 @@ fn plonk_api() {
 
     // Check that the verification key has not changed unexpectedly
     {
+        // panic!("{:#?}", pk.get_vk().pinned());
         assert_eq!(
             format!("{:#?}", pk.get_vk().pinned()),
             r#####"PinnedVerificationKey {
@@ -465,7 +466,7 @@ fn plonk_api() {
     scalar_modulus: "0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001",
     domain: PinnedEvaluationDomain {
         k: 5,
-        extended_k: 7,
+        extended_k: 8,
         omega: 0x0cc3380dc616f2e1daf29ad1560833ed3baea3393eceb7bc8fa36376929b78cc,
     },
     cs: PinnedConstraintSystem {
@@ -717,7 +718,42 @@ fn plonk_api() {
                 ],
             },
         ],
-        lookups: [],
+        lookups: [
+            Argument {
+                input_expressions: [
+                    Advice(
+                        0,
+                    ),
+                ],
+                table_expressions: [
+                    Fixed(
+                        0,
+                    ),
+                ],
+            },
+            Argument {
+                input_expressions: [
+                    Product(
+                        Advice(
+                            0,
+                        ),
+                        Advice(
+                            1,
+                        ),
+                    ),
+                ],
+                table_expressions: [
+                    Product(
+                        Fixed(
+                            0,
+                        ),
+                        Fixed(
+                            1,
+                        ),
+                    ),
+                ],
+            },
+        ],
     },
     fixed_commitments: [
         (0x046711bb0579a337420e33de9d54438e7c3a9cc47b6728b873d1fd0214d7eb58, 0x2416b30fadfacd828cf76891a2a5f0fe90d7ae0e5a8df947e98660ffbebf72e4),
