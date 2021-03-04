@@ -18,7 +18,7 @@ use crate::{
 pub(crate) struct Committed<C: CurveAffine> {
     permutation_product_poly: Polynomial<C::Scalar, Coeff>,
     permutation_product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
-    permutation_product_coset_inv: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    permutation_product_coset_next: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permutation_product_blind: Blind<C::Scalar>,
 }
 
@@ -120,7 +120,7 @@ impl Argument {
         for row in 1..(params.n as usize) {
             let mut tmp = z[row - 1];
 
-            tmp *= &modified_values[row];
+            tmp *= &modified_values[row - 1];
             z.push(tmp);
         }
         let z = domain.lagrange_from_vec(z);
@@ -132,7 +132,7 @@ impl Argument {
         let z = domain.lagrange_to_coeff(z);
         let permutation_product_poly = z.clone();
         let permutation_product_coset = domain.coeff_to_extended(z.clone(), Rotation::cur());
-        let permutation_product_coset_inv = domain.coeff_to_extended(z, Rotation::prev());
+        let permutation_product_coset_next = domain.coeff_to_extended(z, Rotation::next());
 
         let permutation_product_commitment = permutation_product_commitment_projective.to_affine();
 
@@ -144,7 +144,7 @@ impl Argument {
         Ok(Committed {
             permutation_product_poly,
             permutation_product_coset,
-            permutation_product_coset_inv,
+            permutation_product_coset_next,
             permutation_product_blind,
         })
     }
@@ -171,9 +171,9 @@ impl<C: CurveAffine> Committed<C> {
             .chain(Some(
                 Polynomial::one_minus(self.permutation_product_coset.clone()) * &pk.l0,
             ))
-            // z(X) \prod (p(X) + \beta s_i(X) + \gamma) - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
+            // z(omega X) \prod (p(X) + \beta s_i(X) + \gamma) - z(X) \prod (p(X) + \delta^i \beta X + \gamma)
             .chain(Some({
-                let mut left = self.permutation_product_coset.clone();
+                let mut left = self.permutation_product_coset_next.clone();
                 for (values, permutation) in p
                     .columns
                     .iter()
@@ -201,7 +201,7 @@ impl<C: CurveAffine> Committed<C> {
                     });
                 }
 
-                let mut right = self.permutation_product_coset_inv.clone();
+                let mut right = self.permutation_product_coset.clone();
                 let mut current_delta = *beta * &C::Scalar::ZETA;
                 let step = domain.get_extended_omega();
                 for values in p.columns.iter().map(|&column| match column.column_type() {
@@ -268,9 +268,9 @@ impl<C: CurveAffine> Constructed<C> {
 
         let permutation_product_eval = eval_polynomial(&self.permutation_product_poly, *x);
 
-        let permutation_product_inv_eval = eval_polynomial(
+        let permutation_product_next_eval = eval_polynomial(
             &self.permutation_product_poly,
-            domain.rotate_omega(*x, Rotation(-1)),
+            domain.rotate_omega(*x, Rotation::next()),
         );
 
         let permutation_evals = pkey.evaluate(x);
@@ -278,7 +278,7 @@ impl<C: CurveAffine> Constructed<C> {
         // Hash permutation product evals
         for eval in iter::empty()
             .chain(Some(&permutation_product_eval))
-            .chain(Some(&permutation_product_inv_eval))
+            .chain(Some(&permutation_product_next_eval))
             .chain(permutation_evals.iter())
         {
             transcript
@@ -297,7 +297,7 @@ impl<C: CurveAffine> Evaluated<C> {
         pkey: &'a ProvingKey<C>,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
-        let x_inv = pk.vk.domain.rotate_omega(*x, Rotation(-1));
+        let x_next = pk.vk.domain.rotate_omega(*x, Rotation::next());
 
         iter::empty()
             // Open permutation product commitments at x and \omega^{-1} x
@@ -307,7 +307,7 @@ impl<C: CurveAffine> Evaluated<C> {
                 blind: self.constructed.permutation_product_blind,
             }))
             .chain(Some(ProverQuery {
-                point: x_inv,
+                point: x_next,
                 poly: &self.constructed.permutation_product_poly,
                 blind: self.constructed.permutation_product_blind,
             }))

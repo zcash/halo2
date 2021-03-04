@@ -17,7 +17,7 @@ pub struct Committed<C: CurveAffine> {
 pub struct Evaluated<C: CurveAffine> {
     permutation_product_commitment: C,
     permutation_product_eval: C::Scalar,
-    permutation_product_inv_eval: C::Scalar,
+    permutation_product_next_eval: C::Scalar,
     permutation_evals: Vec<C::Scalar>,
 }
 
@@ -49,7 +49,7 @@ impl<C: CurveAffine> Committed<C> {
         let permutation_product_eval = transcript
             .read_scalar()
             .map_err(|_| Error::TranscriptError)?;
-        let permutation_product_inv_eval = transcript
+        let permutation_product_next_eval = transcript
             .read_scalar()
             .map_err(|_| Error::TranscriptError)?;
         let mut permutation_evals = Vec::with_capacity(vkey.commitments.len());
@@ -64,7 +64,7 @@ impl<C: CurveAffine> Committed<C> {
         Ok(Evaluated {
             permutation_product_commitment: self.permutation_product_commitment,
             permutation_product_eval,
-            permutation_product_inv_eval,
+            permutation_product_next_eval,
             permutation_evals,
         })
     }
@@ -88,10 +88,10 @@ impl<C: CurveAffine> Evaluated<C> {
             .chain(Some(
                 l_0 * &(C::Scalar::one() - &self.permutation_product_eval),
             ))
-            // z(X) \prod (p(X) + \beta s_i(X) + \gamma)
-            // - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
+            // z(omega X) \prod (p(X) + \beta s_i(X) + \gamma)
+            // - z(X) \prod (p(X) + \delta^i \beta X + \gamma)
             .chain(Some({
-                let mut left = self.permutation_product_eval;
+                let mut left = self.permutation_product_next_eval;
                 for (eval, permutation_eval) in p
                     .columns
                     .iter()
@@ -111,7 +111,7 @@ impl<C: CurveAffine> Evaluated<C> {
                     left *= &(eval + &(*beta * permutation_eval) + &*gamma);
                 }
 
-                let mut right = self.permutation_product_inv_eval;
+                let mut right = self.permutation_product_eval;
                 let mut current_delta = *beta * &*x;
                 for eval in p.columns.iter().map(|&column| match column.column_type() {
                     Any::Advice => advice_evals[vk.cs.get_any_query_index(column, Rotation::cur())],
@@ -134,10 +134,10 @@ impl<C: CurveAffine> Evaluated<C> {
         vkey: &'r VerifyingKey<C>,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone {
-        let x_inv = vk.domain.rotate_omega(*x, Rotation(-1));
+        let x_next = vk.domain.rotate_omega(*x, Rotation::next());
 
         iter::empty()
-            // Open permutation product commitments at x and \omega^{-1} x
+            // Open permutation product commitments at x and \omega x
             .chain(Some(VerifierQuery::new_commitment(
                 &self.permutation_product_commitment,
                 *x,
@@ -145,8 +145,8 @@ impl<C: CurveAffine> Evaluated<C> {
             )))
             .chain(Some(VerifierQuery::new_commitment(
                 &self.permutation_product_commitment,
-                x_inv,
-                self.permutation_product_inv_eval,
+                x_next,
+                self.permutation_product_next_eval,
             )))
             // Open permutation commitments for each permutation argument at x
             .chain(
