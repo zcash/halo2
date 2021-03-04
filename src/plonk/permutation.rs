@@ -34,10 +34,15 @@ impl Argument {
         // degree 2:
         // l_0(X) * (1 - z(X)) = 0
         //
-        // degree columns + 1
+        // degree 2:
+        // l_last(X) * (1 - z(X)) = 0
+        //
+        // degree columns + 2
+        // (1 - (l_cover(X) + l_last(X))) * (
         // z(omega X) \prod (p(X) + \beta s_i(X) + \gamma)
         // - z(X) \prod (p(X) + \delta^i \beta X + \gamma)
-        std::cmp::max(self.columns.len() + 1, 2)
+        // )
+        self.columns.len() + 2
     }
 
     pub(crate) fn get_columns(&self) -> Vec<Column<Any>> {

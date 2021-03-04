@@ -75,6 +75,8 @@ impl<C: CurveAffine> Evaluated<C> {
         fixed_evals: &[C::Scalar],
         instance_evals: &'a [C::Scalar],
         l_0: C::Scalar,
+        l_last: C::Scalar,
+        l_cover: C::Scalar,
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
         x: ChallengeX<C>,
@@ -84,8 +86,14 @@ impl<C: CurveAffine> Evaluated<C> {
             .chain(Some(
                 l_0 * &(C::Scalar::one() - &self.permutation_product_eval),
             ))
+            // l_last(X) * (1 - z(X)) = 0
+            .chain(Some(
+                l_last * &(C::Scalar::one() - &self.permutation_product_eval),
+            ))
+            // (1 - (l_cover(X) + l_last(X))) * (
             // z(omega X) \prod (p(X) + \beta s_i(X) + \gamma)
             // - z(X) \prod (p(X) + \delta^i \beta X + \gamma)
+            // )
             .chain(Some({
                 let mut left = self.permutation_product_next_eval;
                 for (eval, permutation_eval) in p
@@ -120,7 +128,7 @@ impl<C: CurveAffine> Evaluated<C> {
                     current_delta *= &C::Scalar::DELTA;
                 }
 
-                left - &right
+                (left - &right) * (C::Scalar::one() - (l_cover + l_last))
             }))
     }
 

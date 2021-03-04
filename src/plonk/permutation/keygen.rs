@@ -104,8 +104,10 @@ impl Assembly {
             .max()
             .unwrap_or_default();
 
-        // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
-        let mut omega_powers = Vec::with_capacity(params.n as usize);
+        let blinding_factors = cs.blinding_factors();
+
+        // Compute [omega^0, omega^1, ..., omega^{params.n - blinding_factors - 2}]
+        let mut omega_powers = Vec::with_capacity((params.n as usize) - blinding_factors - 1);
         {
             let mut cur = C::Scalar::one();
             for _ in 0..params.n {
@@ -136,16 +138,20 @@ impl Assembly {
     pub(crate) fn build_vk<C: CurveAffine>(
         self,
         params: &Params<C>,
+        cs: &ConstraintSystem<C::Scalar>,
         domain: &EvaluationDomain<C::Scalar>,
         helper: &AssemblyHelper<C>,
         p: &Argument,
     ) -> VerifyingKey<C> {
+        let blinding_factors = cs.blinding_factors();
+
         // Pre-compute commitments for the URS.
         let mut commitments = vec![];
         for i in 0..p.columns.len() {
             // Computes the permutation polynomial based on the permutation
             // description in the assembly.
-            let mut permutation_poly = domain.empty_lagrange(0);
+            let mut permutation_poly = domain.empty_lagrange(blinding_factors + 1);
+            permutation_poly.clear_inactive();
             for (j, p) in permutation_poly.iter_mut().enumerate() {
                 let (permuted_i, permuted_j) = self.mapping[i][j];
                 *p = helper.deltaomega[permuted_i][permuted_j];
@@ -163,10 +169,13 @@ impl Assembly {
 
     pub(crate) fn build_pk<C: CurveAffine>(
         self,
+        cs: &ConstraintSystem<C::Scalar>,
         domain: &EvaluationDomain<C::Scalar>,
         helper: &AssemblyHelper<C>,
         p: &Argument,
     ) -> ProvingKey<C> {
+        let blinding_factors = cs.blinding_factors();
+
         // Compute permutation polynomials, convert to coset form.
         let mut permutations = vec![];
         let mut polys = vec![];
@@ -174,7 +183,8 @@ impl Assembly {
         for i in 0..p.columns.len() {
             // Computes the permutation polynomial based on the permutation
             // description in the assembly.
-            let mut permutation_poly = domain.empty_lagrange(0);
+            let mut permutation_poly = domain.empty_lagrange(blinding_factors + 1);
+            permutation_poly.clear_inactive();
             for (j, p) in permutation_poly.iter_mut().enumerate() {
                 let (permuted_i, permuted_j) = self.mapping[i][j];
                 *p = helper.deltaomega[permuted_i][permuted_j];

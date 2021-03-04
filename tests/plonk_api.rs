@@ -281,8 +281,8 @@ fn plonk_api() {
             let b_ = meta.query_any(b.into(), Rotation::cur());
             let sl_ = meta.query_any(sl.into(), Rotation::cur());
             let sl2_ = meta.query_any(sl2.into(), Rotation::cur());
-            meta.lookup(&[a_.clone()], &[sl_.clone()]);
-            meta.lookup(&[a_ * b_], &[sl_ * sl2_]);
+            //meta.lookup(&[a_.clone()], &[sl_.clone()]);
+            //meta.lookup(&[a_ * b_], &[sl_ * sl2_]);
 
             meta.create_gate("Combined add-mult", |meta| {
                 let d = meta.query_advice(d, Rotation::next());
@@ -717,42 +717,7 @@ fn plonk_api() {
                 ],
             },
         ],
-        lookups: [
-            Argument {
-                input_expressions: [
-                    Advice(
-                        0,
-                    ),
-                ],
-                table_expressions: [
-                    Fixed(
-                        0,
-                    ),
-                ],
-            },
-            Argument {
-                input_expressions: [
-                    Product(
-                        Advice(
-                            0,
-                        ),
-                        Advice(
-                            1,
-                        ),
-                    ),
-                ],
-                table_expressions: [
-                    Product(
-                        Fixed(
-                            0,
-                        ),
-                        Fixed(
-                            1,
-                        ),
-                    ),
-                ],
-            },
-        ],
+        lookups: [],
     },
     fixed_commitments: [
         (0x046711bb0579a337420e33de9d54438e7c3a9cc47b6728b873d1fd0214d7eb58, 0x2416b30fadfacd828cf76891a2a5f0fe90d7ae0e5a8df947e98660ffbebf72e4),
@@ -767,16 +732,16 @@ fn plonk_api() {
     permutations: [
         VerifyingKey {
             commitments: [
-                (0x02d8dce08483e705f124b2e3db76a8065bfd8d893a1de76fd4ba586acb8e2cd0, 0x1456b7e28d96b5f90f885d21fde2ed00d1774cdebc358a95383b95302a87e09d),
-                (0x1d8a9751a63cbdf4c87787424b9c4a347483d5138943470dd1a73e1d1fd336b1, 0x2b1f6a54bff445799b6abf5bb0ed734d1cabdb46b4966556e753097ed87cef1b),
-                (0x1592b59a2a90b155420abde2bcf6fb822d80a11e1b44306dc07fc45025f214e5, 0x3802666ef284d7db51cbd2f9be20014e19f0f6a22e1a4d3a0db124b7bdd7fa1b),
+                (0x05360712179da3234af5603101f5255af539ba2ca95f146b9f50282ac09c1f32, 0x1364dece20ae5425d798dcb721d5d1afa54718e0571c4ff253ff792c3c97089a),
+                (0x25d47eafa58c801384aad6fd02c32dee03d7abe277b4cd8342330c52b411df9a, 0x21c9106c39e36cc057cce58e184bfab7d93ab415990bb06b6e7ab92aaa0478eb),
+                (0x0173bd68e141ad0e1e308e1a7cdea197dcc834e0ef0198771c269da45cc3a5e9, 0x3f8ae37634ac1202bb40d005ee58363dae9a6ab07d80268eea2ca05063912d9b),
             ],
         },
         VerifyingKey {
             commitments: [
-                (0x02d8dce08483e705f124b2e3db76a8065bfd8d893a1de76fd4ba586acb8e2cd0, 0x1456b7e28d96b5f90f885d21fde2ed00d1774cdebc358a95383b95302a87e09d),
-                (0x1d8a9751a63cbdf4c87787424b9c4a347483d5138943470dd1a73e1d1fd336b1, 0x2b1f6a54bff445799b6abf5bb0ed734d1cabdb46b4966556e753097ed87cef1b),
-                (0x1592b59a2a90b155420abde2bcf6fb822d80a11e1b44306dc07fc45025f214e5, 0x3802666ef284d7db51cbd2f9be20014e19f0f6a22e1a4d3a0db124b7bdd7fa1b),
+                (0x05360712179da3234af5603101f5255af539ba2ca95f146b9f50282ac09c1f32, 0x1364dece20ae5425d798dcb721d5d1afa54718e0571c4ff253ff792c3c97089a),
+                (0x25d47eafa58c801384aad6fd02c32dee03d7abe277b4cd8342330c52b411df9a, 0x21c9106c39e36cc057cce58e184bfab7d93ab415990bb06b6e7ab92aaa0478eb),
+                (0x0173bd68e141ad0e1e308e1a7cdea197dcc834e0ef0198771c269da45cc3a5e9, 0x3f8ae37634ac1202bb40d005ee58363dae9a6ab07d80268eea2ca05063912d9b),
             ],
         },
     ],

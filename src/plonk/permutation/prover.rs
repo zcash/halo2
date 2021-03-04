@@ -54,7 +54,10 @@ impl Argument {
         // where p_j(X) is the jth column in this permutation,
         // and i is the ith row of the column.
 
-        let mut modified_values = vec![C::Scalar::one(); params.n as usize];
+        let blinding_factors = pk.vk.cs.blinding_factors();
+
+        let mut modified_values =
+            vec![C::Scalar::one(); (params.n as usize) - blinding_factors - 1];
 
         // Iterate over each column of the permutation
         for (&column, permuted_column_values) in self.columns.iter().zip(pkey.permutations.iter()) {
@@ -113,15 +116,16 @@ impl Argument {
         // Compute the evaluations of the permutation product polynomial
         // over our domain, starting with z[0] = 1
         let mut z_values = vec![C::Scalar::one()];
-        for row in 1..(params.n as usize) {
+        for row in 1..((params.n as usize) - blinding_factors - 1) {
             let mut tmp = z_values[row - 1];
 
             tmp *= &modified_values[row - 1];
             z_values.push(tmp);
         }
-        let mut z = domain.empty_lagrange(0);
+        let mut z = domain.empty_lagrange(blinding_factors + 1);
         z[..].copy_from_slice(&z_values[..]);
         drop(z_values);
+        z.inactive_mut()[0] = C::Scalar::one();
 
         let blind = Blind(C::Scalar::rand());
 
@@ -169,7 +173,13 @@ impl<C: CurveAffine> Committed<C> {
             .chain(Some(
                 Polynomial::one_minus(self.permutation_product_coset.clone()) * &pk.l0,
             ))
-            // z(omega X) \prod (p(X) + \beta s_i(X) + \gamma) - z(X) \prod (p(X) + \delta^i \beta X + \gamma)
+            // l_last(X) * (1 - z(X)) = 0
+            .chain(Some(
+                Polynomial::one_minus(self.permutation_product_coset.clone()) * &pk.l_last,
+            ))
+            // (1 - (l_cover(X) + l_last(X))) * (
+            //     z(omega X) \prod (p(X) + \beta s_i(X) + \gamma) - z(X) \prod (p(X) + \delta^i \beta X + \gamma)
+            // )
             .chain(Some({
                 let mut left = self.permutation_product_coset_next.clone();
                 for (values, permutation) in p
@@ -224,7 +234,7 @@ impl<C: CurveAffine> Committed<C> {
                     current_delta *= &C::Scalar::DELTA;
                 }
 
-                left - &right
+                (left - &right) * &Polynomial::one_minus(pk.l_cover.clone() + &pk.l_last)
             }));
 
         (

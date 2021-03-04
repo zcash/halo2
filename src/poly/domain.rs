@@ -164,6 +164,7 @@ impl<G: Group> EvaluationDomain<G> {
     where
         G: FieldExt,
     {
+        assert!(inactive < (self.n as usize));
         let active = (self.n as usize) - inactive;
 
         let mut values = vec![G::group_zero(); self.n as usize];
@@ -179,10 +180,11 @@ impl<G: Group> EvaluationDomain<G> {
     }
 
     /// Returns a constant polynomial in the Lagrange coefficient basis
-    pub fn constant_lagrange(&self, scalar: G) -> Polynomial<G, LagrangeCoeff> {
+    pub fn constant_lagrange(&self, scalar: G, inactive: usize) -> Polynomial<G, LagrangeCoeff> {
+        assert!(inactive < (self.n as usize));
         Polynomial {
             values: vec![scalar; self.n as usize],
-            active: self.n as usize,
+            active: (self.n as usize) - inactive,
             _marker: PhantomData,
         }
     }

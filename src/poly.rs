@@ -215,6 +215,13 @@ impl<'a, F: Field> Polynomial<F, LagrangeCoeff> {
     pub fn inactive_mut(&mut self) -> &mut [F] {
         &mut self.values[self.active..]
     }
+
+    /// Set all of the inactive coefficients to zero.
+    pub fn clear_inactive(&mut self) {
+        for e in &mut self.values[self.active..] {
+            *e = F::zero();
+        }
+    }
 }
 
 impl<'a, F: Field, B: Basis> Mul<F> for Polynomial<F, B> {

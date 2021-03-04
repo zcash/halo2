@@ -90,6 +90,8 @@ impl<F: FieldExt> Argument<F> {
         C: CurveAffine<ScalarExt = F>,
         C::Curve: Mul<F, Output = C::Curve> + MulAssign<F>,
     {
+        let blinding_factors = pk.vk.cs.blinding_factors();
+
         // Closure to get values of expressions and compress them
         let compress_expressions = |expressions: &[Expression<C::Scalar>]| {
             // Values of input expressions involved in the lookup
@@ -97,7 +99,7 @@ impl<F: FieldExt> Argument<F> {
                 .iter()
                 .map(|expression| {
                     expression.evaluate(
-                        &|scalar| pk.vk.domain.constant_lagrange(scalar),
+                        &|scalar| pk.vk.domain.constant_lagrange(scalar, blinding_factors + 1),
                         &|index| {
                             let query = pk.vk.cs.fixed_queries[index];
                             let column_index = query.0.index();

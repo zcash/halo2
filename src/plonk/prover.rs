@@ -40,6 +40,8 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     let mut meta = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut meta);
 
+    let blinding_factors = pk.vk.cs.blinding_factors();
+
     struct InstanceSingle<C: CurveAffine> {
         pub instance_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
         pub instance_polys: Vec<Polynomial<C::Scalar, Coeff>>,
@@ -52,7 +54,8 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
             let instance_values = instance
                 .iter()
                 .map(|values| {
-                    let mut poly = domain.empty_lagrange(0);
+                    let mut poly = domain.empty_lagrange(blinding_factors + 1);
+                    poly.clear_inactive();
                     for (poly, value) in poly.iter_mut().zip(values.iter()) {
                         *poly = *value;
                     }
@@ -190,7 +193,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
             }
 
             let mut witness = WitnessCollection {
-                advice: vec![domain.empty_lagrange(0); meta.num_advice_columns],
+                advice: vec![domain.empty_lagrange(blinding_factors + 1); meta.num_advice_columns],
                 _marker: std::marker::PhantomData,
             };
 

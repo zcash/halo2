@@ -146,12 +146,19 @@ where
 {
     let (domain, cs, config) = create_domain::<C, ConcreteCircuit>(params);
 
+    let blinding_factors = cs.blinding_factors();
+
+    let mut empty_poly = domain.empty_lagrange(blinding_factors + 1);
+    empty_poly.clear_inactive();
+
     let mut assembly: Assembly<C::Scalar> = Assembly {
-        fixed: vec![domain.empty_lagrange(0); cs.num_fixed_columns],
+        fixed: vec![empty_poly; cs.num_fixed_columns],
         permutations: cs
             .permutations
             .iter()
-            .map(|p| permutation::keygen::Assembly::new(params.n as usize, p))
+            .map(|p| {
+                permutation::keygen::Assembly::new((params.n as usize) - blinding_factors - 1, p)
+            })
             .collect(),
         _marker: std::marker::PhantomData,
     };
@@ -165,7 +172,7 @@ where
         .permutations
         .iter()
         .zip(assembly.permutations.into_iter())
-        .map(|(p, assembly)| assembly.build_vk(params, &domain, &permutation_helper, p))
+        .map(|(p, assembly)| assembly.build_vk(params, &cs, &domain, &permutation_helper, p))
         .collect();
 
     let fixed_commitments = assembly
@@ -196,22 +203,28 @@ where
     let config = ConcreteCircuit::configure(&mut cs);
 
     let cs = cs;
+    let blinding_factors = cs.blinding_factors();
     // There needs to be enough room for at least one row.
     assert!(
-        cs.blinding_factors() // m blinding factors
+        blinding_factors // m blinding factors
         + 1 // for l_{-(m + 1)}
         + 1 // for l_0
         + 1 // for at least one row
         <= (params.n as usize)
     );
 
+    let mut empty_poly = vk.domain.empty_lagrange(blinding_factors + 1);
+    empty_poly.clear_inactive();
+
     let mut assembly: Assembly<C::Scalar> = Assembly {
-        fixed: vec![vk.domain.empty_lagrange(0); vk.cs.num_fixed_columns],
+        fixed: vec![empty_poly; vk.cs.num_fixed_columns],
         permutations: vk
             .cs
             .permutations
             .iter()
-            .map(|p| permutation::keygen::Assembly::new(params.n as usize, p))
+            .map(|p| {
+                permutation::keygen::Assembly::new((params.n as usize) - blinding_factors - 1, p)
+            })
             .collect(),
         _marker: std::marker::PhantomData,
     };
@@ -243,7 +256,7 @@ where
         .permutations
         .iter()
         .zip(assembly.permutations.into_iter())
-        .map(|(p, assembly)| assembly.build_pk(&vk.domain, &permutation_helper, p))
+        .map(|(p, assembly)| assembly.build_pk(&cs, &vk.domain, &permutation_helper, p))
         .collect();
 
     // Compute l_0(X)

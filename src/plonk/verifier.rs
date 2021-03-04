@@ -198,6 +198,8 @@ pub fn verify_proof<'params, C: CurveAffine, T: TranscriptRead<C>>(
                                         &fixed_evals,
                                         &instance_evals,
                                         l_0,
+                                        l_last,
+                                        l_cover,
                                         beta,
                                         gamma,
                                         x,
