@@ -35,8 +35,8 @@ impl Argument {
         // l_0(X) * (1 - z(X)) = 0
         //
         // degree columns + 1
-        // z(X) \prod (p(X) + \beta s_i(X) + \gamma)
-        // - z(omega^{-1} X) \prod (p(X) + \delta^i \beta X + \gamma)
+        // z(omega X) \prod (p(X) + \beta s_i(X) + \gamma)
+        // - z(X) \prod (p(X) + \delta^i \beta X + \gamma)
         std::cmp::max(self.columns.len() + 1, 2)
     }
 
