@@ -58,7 +58,6 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
             C::Curve::batch_normalize(&instance_commitments_projective, &mut instance_commitments);
             let instance_commitments = instance_commitments;
             drop(instance_commitments_projective);
-            metrics::counter!("instance_commitments", instance_commitments.len() as u64);
 
             for commitment in &instance_commitments {
                 transcript
@@ -209,7 +208,6 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
             C::Curve::batch_normalize(&advice_commitments_projective, &mut advice_commitments);
             let advice_commitments = advice_commitments;
             drop(advice_commitments_projective);
-            metrics::counter!("advice_commitments", advice_commitments.len() as u64);
 
             for commitment in &advice_commitments {
                 transcript

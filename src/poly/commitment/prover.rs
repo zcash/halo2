@@ -95,14 +95,12 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>>(
         //
         // TODO: If we modify multiexp to take "extra" bases, we could speed
         // this piece up a bit by combining the multiexps.
-        metrics::counter!("multiexp", 2, "val" => "l/r", "size" => format!("{}", half));
         let l = best_multiexp(&a[half..], &g[0..half]);
         let r = best_multiexp(&a[0..half], &g[half..]);
         let value_l = compute_inner_product(&a[half..], &b[0..half]);
         let value_r = compute_inner_product(&a[0..half], &b[half..]);
         let l_randomness = C::Scalar::rand();
         let r_randomness = C::Scalar::rand();
-        metrics::counter!("multiexp", 2, "val" => "l/r", "size" => "2");
         let l = l + &best_multiexp(&[value_l * &z, l_randomness], &[params.u, params.h]);
         let r = r + &best_multiexp(&[value_r * &z, r_randomness], &[params.u, params.h]);
         let l = l.to_affine();
@@ -147,7 +145,6 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>>(
 fn parallel_generator_collapse<C: CurveAffine>(g: &mut [C], challenge: C::Scalar) {
     let len = g.len() / 2;
     let (mut g_lo, g_hi) = g.split_at_mut(len);
-    metrics::counter!("scalar_multiplication", len as u64, "fn" => "parallel_generator_collapse");
 
     parallelize(&mut g_lo, |g_lo, start| {
         let g_hi = &g_hi[start..];

@@ -25,4 +25,3 @@ pub mod poly;
 pub mod transcript;
 
 pub mod dev;
-pub mod model;
