@@ -121,7 +121,7 @@ impl<C: CurveAffine> Params<C> {
         let mut tmp_scalars = Vec::with_capacity(poly.len() + 1);
         let mut tmp_bases = Vec::with_capacity(poly.len() + 1);
 
-        tmp_scalars.extend(poly.iter());
+        tmp_scalars.extend(poly.values.iter());
         tmp_scalars.push(r.0);
 
         tmp_bases.extend(self.g.iter());
@@ -141,7 +141,7 @@ impl<C: CurveAffine> Params<C> {
         let mut tmp_scalars = Vec::with_capacity(poly.len() + 1);
         let mut tmp_bases = Vec::with_capacity(poly.len() + 1);
 
-        tmp_scalars.extend(poly.iter());
+        tmp_scalars.extend(poly.values.iter());
         tmp_scalars.push(r.0);
 
         tmp_bases.extend(self.g_lagrange.iter());
