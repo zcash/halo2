@@ -74,8 +74,8 @@ impl<C: CurveAffine> Committed<C> {
     ) -> Result<Constructed<C>, Error> {
         // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
         let h_poly = gate_expressions.fold(domain.empty_extended(), |h_poly, v| h_poly * *y + &v);
-        // All gates are multiplied by (1 - l_cover(X))
-        let h_poly = h_poly * &Polynomial::one_minus(pk.l_cover.clone());
+        // All gates are multiplied by (1 - (l_cover(X) + l_last(X)))
+        let h_poly = h_poly * &Polynomial::one_minus(pk.l_cover.clone() + &pk.l_last);
         let h_poly = custom_expressions.fold(h_poly, |h_poly, v| h_poly * *y + &v);
 
         // Divide by t(X) = X^{params.n} - 1.

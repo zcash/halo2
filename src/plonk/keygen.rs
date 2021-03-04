@@ -253,10 +253,10 @@ where
     let l0 = vk.domain.lagrange_to_coeff(l0);
     let l0 = vk.domain.coeff_to_extended(l0, Rotation::cur());
 
-    // Compute l_cover(X) which evaluates to 1 for each inactive row and 0
-    // otherwise over the domain.
+    // Compute l_cover(X) which evaluates to 1 for each inactive row (except
+    // the first one) and 0 otherwise over the domain.
     let mut l_cover = vk.domain.empty_lagrange(0);
-    for evaluation in l_cover[..].iter_mut().rev().take(cs.blinding_factors() + 1) {
+    for evaluation in l_cover[..].iter_mut().rev().take(cs.blinding_factors()) {
         *evaluation = C::Scalar::one();
     }
     let l_cover = vk.domain.lagrange_to_coeff(l_cover);
