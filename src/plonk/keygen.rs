@@ -204,14 +204,18 @@ where
 
     let cs = cs;
     let blinding_factors = cs.blinding_factors();
-    // There needs to be enough room for at least one row.
-    assert!(
-        blinding_factors // m blinding factors
-        + 1 // for l_{-(m + 1)}
-        + 1 // for l_0
-        + 1 // for at least one row
-        <= (params.n as usize)
-    );
+
+    #[allow(clippy::int_plus_one)]
+    {
+        // There needs to be enough room for at least one row.
+        assert!(
+            blinding_factors // m blinding factors
+            + 1 // for l_{-(m + 1)}
+            + 1 // for l_0
+            + 1 // for at least one row
+            <= (params.n as usize)
+        );
+    }
 
     let mut empty_poly = vk.domain.empty_lagrange(blinding_factors + 1);
     empty_poly.clear_inactive();
@@ -281,8 +285,7 @@ where
     *(l_last[..]
         .iter_mut()
         .rev()
-        .skip(cs.blinding_factors())
-        .next()
+        .nth(cs.blinding_factors())
         .unwrap()) = C::Scalar::one();
     let l_last = vk.domain.lagrange_to_coeff(l_last);
     let l_last = vk.domain.coeff_to_extended(l_last, Rotation::cur());
