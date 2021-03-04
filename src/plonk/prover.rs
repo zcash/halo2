@@ -22,7 +22,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     params: &Params<C>,
     pk: &ProvingKey<C>,
     circuits: &[ConcreteCircuit],
-    instances: &[&[Polynomial<C::Scalar, LagrangeCoeff>]],
+    instances: &[&[&[C::Scalar]]],
     transcript: &mut T,
 ) -> Result<(), Error> {
     for instance in instances.iter() {
@@ -40,8 +40,8 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     let mut meta = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut meta);
 
-    struct InstanceSingle<'a, C: CurveAffine> {
-        pub instance_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+    struct InstanceSingle<C: CurveAffine> {
+        pub instance_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
         pub instance_polys: Vec<Polynomial<C::Scalar, Coeff>>,
         pub instance_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     }
@@ -49,7 +49,17 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     let instance: Vec<InstanceSingle<C>> = instances
         .iter()
         .map(|instance| -> Result<InstanceSingle<C>, Error> {
-            let instance_commitments_projective: Vec<_> = instance
+            let instance_values = instance
+                .iter()
+                .map(|values| {
+                    let mut poly = domain.empty_lagrange(0);
+                    for (poly, value) in poly.iter_mut().zip(values.iter()) {
+                        *poly = *value;
+                    }
+                    poly
+                })
+                .collect::<Vec<_>>();
+            let instance_commitments_projective: Vec<_> = instance_values
                 .iter()
                 .map(|poly| params.commit_lagrange(poly, Blind::default()))
                 .collect();
@@ -65,7 +75,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
                     .map_err(|_| Error::TranscriptError)?;
             }
 
-            let instance_polys: Vec<_> = instance
+            let instance_polys: Vec<_> = instance_values
                 .iter()
                 .map(|poly| domain.lagrange_to_coeff(poly.clone()))
                 .collect();
@@ -80,7 +90,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
                 .collect();
 
             Ok(InstanceSingle {
-                instance_values: *instance,
+                instance_values,
                 instance_polys,
                 instance_cosets,
             })
