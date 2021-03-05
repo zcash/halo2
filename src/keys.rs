@@ -3,6 +3,8 @@
 use std::convert::TryInto;
 use std::mem;
 
+use aes::Aes256;
+use fpe::ff1::{BinaryNumeralString, FF1};
 use group::GroupEncoding;
 use halo2::{arithmetic::FieldExt, pasta::pallas};
 use subtle::CtOption;
@@ -176,8 +178,12 @@ impl DiversifierKey {
     }
 
     /// Returns the diversifier at the given index.
-    pub fn get(&self, _: impl Into<DiversifierIndex>) -> Diversifier {
-        todo!()
+    pub fn get(&self, j: impl Into<DiversifierIndex>) -> Diversifier {
+        let ff = FF1::<Aes256>::new(&self.0, 2).expect("valid radix");
+        let enc = ff
+            .encrypt(&[], &BinaryNumeralString::from_bytes_le(&j.into().0[..]))
+            .unwrap();
+        Diversifier(enc.to_bytes_le().try_into().unwrap())
     }
 }
 

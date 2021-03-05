@@ -19,8 +19,10 @@ publish = false
 rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 
 [dependencies]
+aes = "0.6"
 blake2b_simd = "0.5"
 ff = "0.9"
+fpe = "0.4"
 group = "0.9"
 halo2 = { git = "https://github.com/zcash/halo2.git", branch = "main" }
 nonempty = "0.6"
