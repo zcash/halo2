@@ -10,9 +10,11 @@
 mod address;
 pub mod bundle;
 mod circuit;
+mod constants;
 pub mod keys;
 mod note;
 pub mod primitives;
+mod spec;
 mod tree;
 pub mod value;
 

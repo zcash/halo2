@@ -1,10 +1,9 @@
 //! The Sinsemilla hash function and commitment scheme.
 
-use group::{Curve, Group};
-use halo2::{
-    arithmetic::{CurveAffine, CurveExt},
-    pasta::pallas,
-};
+use group::Group;
+use halo2::{arithmetic::CurveExt, pasta::pallas};
+
+use crate::spec::extract_p;
 
 const GROUP_HASH_Q: &str = "z.cash:SinsemillaQ";
 const GROUP_HASH_S: &str = "z.cash:SinsemillaS";
@@ -65,19 +64,6 @@ impl<I: Iterator<Item = bool>> Iterator for Pad<I> {
     }
 }
 
-/// Hash extractor for Pallas, from [§ 5.4.8.7].
-///
-/// [§ 5.4.8.7]: https://zips.z.cash/protocol/nu5.pdf#concreteextractorpallas
-fn extract(point: &pallas::Point) -> pallas::Base {
-    // TODO: Should we return the actual bits in a Vec, or allow the caller to use
-    // PrimeField::to_le_bits on the returned pallas::Base?
-    if let Some((x, _)) = point.to_affine().get_xy().into() {
-        x
-    } else {
-        pallas::Base::zero()
-    }
-}
-
 #[allow(non_snake_case)]
 fn Q(domain_prefix: &str) -> pallas::Point {
     pallas::Point::hash_to_curve(GROUP_HASH_Q)(domain_prefix.as_bytes())
@@ -102,7 +88,7 @@ pub(crate) fn hash_to_point(domain_prefix: &str, msg: impl Iterator<Item = bool>
 ///
 /// [§ 5.4.1.9]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
 pub(crate) fn hash(domain_prefix: &str, msg: impl Iterator<Item = bool>) -> pallas::Base {
-    extract(&hash_to_point(domain_prefix, msg))
+    extract_p(&hash_to_point(domain_prefix, msg))
 }
 
 /// `SinsemillaCommit` from [§ 5.4.7.4].
@@ -130,7 +116,7 @@ pub(crate) fn short_commit(
     msg: impl Iterator<Item = bool>,
     r: &pallas::Scalar,
 ) -> pallas::Base {
-    extract(&commit(domain_prefix, msg, r))
+    extract_p(&commit(domain_prefix, msg, r))
 }
 
 #[cfg(test)]

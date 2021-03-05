@@ -1,41 +1,94 @@
 //! Key structures for Orchard.
 
-use crate::address::Address;
+use std::convert::TryInto;
+use std::mem;
+
+use group::GroupEncoding;
+use halo2::{arithmetic::FieldExt, pasta::pallas};
+use subtle::CtOption;
+
+use crate::{
+    address::Address,
+    spec::{
+        commit_ivk, diversify_hash, extract_p, ka_orchard, prf_expand, prf_expand_vec, to_base,
+        to_scalar,
+    },
+};
 
 /// A spending key, from which all key material is derived.
 ///
-/// TODO: In Sapling we never actually used this, instead deriving everything via ZIP 32,
-/// so that we could maintain Bitcoin-like HD keys with properties like non-hardened
-/// derivation. If we decide that we don't actually require non-hardened derivation, then
-/// we could greatly simplify the HD structure and use this struct directly.
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][§4.2.3].
+///
+/// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
-pub struct SpendingKey;
+pub struct SpendingKey([u8; 32]);
 
+impl SpendingKey {
+    /// Constructs an Orchard spending key from uniformly-random bytes.
+    ///
+    /// Returns `None` if the bytes do not correspond to a valid Orchard spending key.
+    pub fn from_bytes(sk: [u8; 32]) -> CtOption<Self> {
+        let sk = SpendingKey(sk);
+        // If ask = 0, discard this key.
+        let ask = SpendAuthorizingKey::derive_inner(&sk);
+        CtOption::new(sk, !ask.ct_is_zero())
+    }
+}
+
+/// A spending authorizing key, used to create spend authorization signatures.
+///
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][§4.2.3].
+///
+/// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
-pub(crate) struct SpendAuthorizingKey;
+pub(crate) struct SpendAuthorizingKey(reddsa::SigningKey<reddsa::orchard::SpendAuth>);
+
+impl SpendAuthorizingKey {
+    /// Derives ask from sk. Internal use only, does not enforce all constraints.
+    fn derive_inner(sk: &SpendingKey) -> pallas::Scalar {
+        to_scalar(prf_expand(&sk.0, &[0x06]))
+    }
+}
 
 impl From<&SpendingKey> for SpendAuthorizingKey {
-    fn from(_: &SpendingKey) -> Self {
-        todo!()
+    fn from(sk: &SpendingKey) -> Self {
+        let ask = Self::derive_inner(sk);
+        // SpendingKey cannot be constructed such that this assertion would fail.
+        assert!(!bool::from(ask.ct_is_zero()));
+        // TODO: Add TryFrom<S::Scalar> for SpendAuthorizingKey.
+        let ret = SpendAuthorizingKey(ask.to_bytes().try_into().unwrap());
+        // If the last bit of repr_P(ak) is 1, negate ask.
+        if (<[u8; 32]>::from(AuthorizingKey::from(&ret).0)[31] >> 7) == 1 {
+            SpendAuthorizingKey((-ask).to_bytes().try_into().unwrap())
+        } else {
+            ret
+        }
     }
 }
 
 /// TODO: This is its protocol spec name for Sapling, but I'd prefer a different name.
 #[derive(Debug)]
-pub(crate) struct AuthorizingKey;
+pub(crate) struct AuthorizingKey(reddsa::VerificationKey<reddsa::orchard::SpendAuth>);
 
 impl From<&SpendAuthorizingKey> for AuthorizingKey {
-    fn from(_: &SpendAuthorizingKey) -> Self {
-        todo!()
+    fn from(ask: &SpendAuthorizingKey) -> Self {
+        AuthorizingKey((&ask.0).into())
     }
 }
 
+/// A key used to derive [`Nullifier`]s from [`Note`]s.
+///
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][§4.2.3].
+///
+/// [`Nullifier`]: crate::note::Nullifier;
+/// [`Note`]: crate::note::Note;
+/// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
-pub(crate) struct NullifierDerivingKey;
+pub(crate) struct NullifierDerivingKey(pallas::Base);
 
 impl From<&SpendingKey> for NullifierDerivingKey {
-    fn from(_: &SpendingKey) -> Self {
-        todo!()
+    fn from(sk: &SpendingKey) -> Self {
+        NullifierDerivingKey(to_base(prf_expand(&sk.0, &[0x07])))
     }
 }
 
@@ -43,25 +96,88 @@ impl From<&SpendingKey> for NullifierDerivingKey {
 ///
 /// This key is useful anywhere you need to maintain accurate balance, but do not want the
 /// ability to spend funds (such as a view-only wallet).
-///
-/// TODO: Should we just define the FVK to include extended stuff like the diversifier key?
 #[derive(Debug)]
 pub struct FullViewingKey {
     ak: AuthorizingKey,
     nk: NullifierDerivingKey,
-    rivk: (),
+    rivk: pallas::Scalar,
 }
 
 impl From<&SpendingKey> for FullViewingKey {
-    fn from(_: &SpendingKey) -> Self {
-        todo!()
+    fn from(sk: &SpendingKey) -> Self {
+        FullViewingKey {
+            ak: (&SpendAuthorizingKey::from(sk)).into(),
+            nk: sk.into(),
+            rivk: to_scalar(prf_expand(&sk.0, &[0x08])),
+        }
     }
 }
 
 impl FullViewingKey {
+    /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][§4.2.3].
+    ///
+    /// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
+    fn derive_dk_ovk(&self) -> (DiversifierKey, OutgoingViewingKey) {
+        let k = self.rivk.to_bytes();
+        let b = [self.ak.0.into(), self.nk.0.to_bytes()];
+        let r = prf_expand_vec(&k, &[&[0x82], &b[0][..], &b[1][..]]);
+        (
+            DiversifierKey(r.as_bytes()[..32].try_into().unwrap()),
+            OutgoingViewingKey(r.as_bytes()[32..].try_into().unwrap()),
+        )
+    }
+
+    /// Returns the default payment address for this key.
+    pub fn default_address(&self) -> Address {
+        self.address(DiversifierKey::from(self).default_diversifier())
+    }
+
     /// Returns the payment address for this key corresponding to the given diversifier.
     pub fn address(&self, d: Diversifier) -> Address {
         IncomingViewingKey::from(self).address(d)
+    }
+}
+
+/// A key that provides the capability to derive a sequence of diversifiers.
+#[derive(Debug)]
+pub struct DiversifierKey([u8; 32]);
+
+impl From<&FullViewingKey> for DiversifierKey {
+    fn from(fvk: &FullViewingKey) -> Self {
+        fvk.derive_dk_ovk().0
+    }
+}
+
+/// The index for a particular diversifier.
+#[derive(Clone, Copy, Debug)]
+pub struct DiversifierIndex([u8; 11]);
+
+macro_rules! di_from {
+    ($n:ident) => {
+        impl From<$n> for DiversifierIndex {
+            fn from(j: $n) -> Self {
+                let mut j_bytes = [0; 11];
+                j_bytes[..mem::size_of::<$n>()].copy_from_slice(&j.to_le_bytes());
+                DiversifierIndex(j_bytes)
+            }
+        }
+    };
+}
+di_from!(u8);
+di_from!(u16);
+di_from!(u32);
+di_from!(u64);
+di_from!(usize);
+
+impl DiversifierKey {
+    /// Returns the diversifier at index 0.
+    pub fn default_diversifier(&self) -> Diversifier {
+        self.get(0u8)
+    }
+
+    /// Returns the diversifier at the given index.
+    pub fn get(&self, _: impl Into<DiversifierIndex>) -> Diversifier {
+        todo!()
     }
 }
 
@@ -79,18 +195,20 @@ pub struct Diversifier([u8; 11]);
 /// This key is not suitable for use on its own in a wallet, as it cannot maintain
 /// accurate balance. You should use a [`FullViewingKey`] instead.
 #[derive(Debug)]
-pub struct IncomingViewingKey;
+pub struct IncomingViewingKey(pallas::Scalar);
 
 impl From<&FullViewingKey> for IncomingViewingKey {
-    fn from(_: &FullViewingKey) -> Self {
-        todo!()
+    fn from(fvk: &FullViewingKey) -> Self {
+        let ak = pallas::Point::from_bytes(&fvk.ak.0.into()).unwrap();
+        IncomingViewingKey(commit_ivk(&extract_p(&ak), &fvk.nk.0, &fvk.rivk))
     }
 }
 
 impl IncomingViewingKey {
     /// Returns the payment address for this key corresponding to the given diversifier.
-    pub fn address(&self, _: Diversifier) -> Address {
-        todo!()
+    pub fn address(&self, d: Diversifier) -> Address {
+        let g_d = diversify_hash(&d.0);
+        Address::from_parts(d, ka_orchard(&self.0, &g_d))
     }
 }
 
@@ -100,10 +218,10 @@ impl IncomingViewingKey {
 /// This key is not suitable for use on its own in a wallet, as it cannot maintain
 /// accurate balance. You should use a [`FullViewingKey`] instead.
 #[derive(Debug)]
-pub struct OutgoingViewingKey;
+pub struct OutgoingViewingKey([u8; 32]);
 
 impl From<&FullViewingKey> for OutgoingViewingKey {
-    fn from(_: &FullViewingKey) -> Self {
-        todo!()
+    fn from(fvk: &FullViewingKey) -> Self {
+        fvk.derive_dk_ovk().1
     }
 }
