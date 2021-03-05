@@ -1,38 +1,27 @@
-//! TODO
-
-use std::fmt;
-use std::marker::PhantomData;
+//! A minimal RedPallas implementation for use in Zcash.
 
 /// A RedPallas signature type.
-pub trait SigType: private::Sealed + fmt::Debug {}
+pub trait SigType: reddsa::SigType + private::Sealed {}
 
 /// A type variable corresponding to an Orchard spend authorization signature.
-#[derive(Debug)]
-pub enum SpendAuth {}
+pub type SpendAuth = reddsa::orchard::SpendAuth;
 impl SigType for SpendAuth {}
 
 /// A type variable corresponding to an Orchard binding signature.
-#[derive(Debug)]
-pub enum Binding {}
+pub type Binding = reddsa::orchard::Binding;
 impl SigType for Binding {}
 
 /// A RedPallas signing key.
 #[derive(Debug)]
-pub struct SigningKey<T: SigType> {
-    _t: PhantomData<T>,
-}
+pub struct SigningKey<T: SigType>(reddsa::SigningKey<T>);
 
 /// A RedPallas verification key.
 #[derive(Debug)]
-pub struct VerificationKey<T: SigType> {
-    _t: PhantomData<T>,
-}
+pub struct VerificationKey<T: SigType>(reddsa::VerificationKey<T>);
 
 /// A RedPallas signature.
 #[derive(Debug)]
-pub struct Signature<T: SigType> {
-    _t: PhantomData<T>,
-}
+pub struct Signature<T: SigType>(reddsa::Signature<T>);
 
 pub(crate) mod private {
     use super::{Binding, SpendAuth};
