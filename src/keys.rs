@@ -38,7 +38,7 @@ impl SpendingKey {
     }
 }
 
-/// A spending authorizing key, used to create spend authorization signatures.
+/// A spend authorizing key, used to create spend authorization signatures.
 ///
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][§4.2.3].
 ///
