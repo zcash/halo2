@@ -95,6 +95,20 @@ impl From<&SpendingKey> for NullifierDerivingKey {
     }
 }
 
+/// The randomness for $\mathsf{Commit}^\mathsf{ivk}$.
+///
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
+///
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
+#[derive(Debug)]
+struct CommitIvkRandomness(pallas::Scalar);
+
+impl From<&SpendingKey> for CommitIvkRandomness {
+    fn from(sk: &SpendingKey) -> Self {
+        CommitIvkRandomness(to_scalar(prf_expand(&sk.0, &[0x08])))
+    }
+}
+
 /// A key that provides the capability to view incoming and outgoing transactions.
 ///
 /// This key is useful anywhere you need to maintain accurate balance, but do not want the
@@ -103,7 +117,7 @@ impl From<&SpendingKey> for NullifierDerivingKey {
 pub struct FullViewingKey {
     ak: AuthorizingKey,
     nk: NullifierDerivingKey,
-    rivk: pallas::Scalar,
+    rivk: CommitIvkRandomness,
 }
 
 impl From<&SpendingKey> for FullViewingKey {
@@ -111,7 +125,7 @@ impl From<&SpendingKey> for FullViewingKey {
         FullViewingKey {
             ak: (&SpendAuthorizingKey::from(sk)).into(),
             nk: sk.into(),
-            rivk: to_scalar(prf_expand(&sk.0, &[0x08])),
+            rivk: sk.into(),
         }
     }
 }
@@ -121,7 +135,7 @@ impl FullViewingKey {
     ///
     /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
     fn derive_dk_ovk(&self) -> (DiversifierKey, OutgoingViewingKey) {
-        let k = self.rivk.to_bytes();
+        let k = self.rivk.0.to_bytes();
         let b = [(&self.ak.0).into(), self.nk.0.to_bytes()];
         let r = prf_expand_vec(&k, &[&[0x82], &b[0][..], &b[1][..]]);
         (
@@ -207,7 +221,7 @@ pub struct IncomingViewingKey(pallas::Scalar);
 impl From<&FullViewingKey> for IncomingViewingKey {
     fn from(fvk: &FullViewingKey) -> Self {
         let ak = pallas::Point::from_bytes(&(&fvk.ak.0).into()).unwrap();
-        IncomingViewingKey(commit_ivk(&extract_p(&ak), &fvk.nk.0, &fvk.rivk))
+        IncomingViewingKey(commit_ivk(&extract_p(&ak), &fvk.nk.0, &fvk.rivk.0))
     }
 }
 
