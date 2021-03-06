@@ -214,8 +214,8 @@ impl From<&FullViewingKey> for IncomingViewingKey {
 impl IncomingViewingKey {
     /// Returns the payment address for this key corresponding to the given diversifier.
     pub fn address(&self, d: Diversifier) -> Address {
-        let g_d = diversify_hash(&d.0);
-        Address::from_parts(d, ka_orchard(&self.0, &g_d))
+        let pk_d = DiversifiedTransmissionKey::derive(self, &d);
+        Address::from_parts(d, pk_d)
     }
 }
 
@@ -230,5 +230,19 @@ pub struct OutgoingViewingKey([u8; 32]);
 impl From<&FullViewingKey> for OutgoingViewingKey {
     fn from(fvk: &FullViewingKey) -> Self {
         fvk.derive_dk_ovk().1
+    }
+}
+
+/// The diversified transmission key for a given payment address.
+#[derive(Debug)]
+pub(crate) struct DiversifiedTransmissionKey(pallas::Point);
+
+impl DiversifiedTransmissionKey {
+    /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][§4.2.3].
+    ///
+    /// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
+    fn derive(ivk: &IncomingViewingKey, d: &Diversifier) -> Self {
+        let g_d = diversify_hash(&d.0);
+        DiversifiedTransmissionKey(ka_orchard(&ivk.0, &g_d))
     }
 }
