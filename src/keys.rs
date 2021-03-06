@@ -11,6 +11,7 @@ use subtle::CtOption;
 
 use crate::{
     address::Address,
+    primitives::redpallas::{self, SpendAuth},
     spec::{
         commit_ivk, diversify_hash, extract_p, ka_orchard, prf_expand, prf_expand_vec, to_base,
         to_scalar,
@@ -43,7 +44,7 @@ impl SpendingKey {
 ///
 /// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
-pub(crate) struct SpendAuthorizingKey(reddsa::SigningKey<reddsa::orchard::SpendAuth>);
+pub(crate) struct SpendAuthorizingKey(redpallas::SigningKey<SpendAuth>);
 
 impl SpendAuthorizingKey {
     /// Derives ask from sk. Internal use only, does not enforce all constraints.
@@ -70,7 +71,7 @@ impl From<&SpendingKey> for SpendAuthorizingKey {
 
 /// TODO: This is its protocol spec name for Sapling, but I'd prefer a different name.
 #[derive(Debug)]
-pub(crate) struct AuthorizingKey(reddsa::VerificationKey<reddsa::orchard::SpendAuth>);
+pub(crate) struct AuthorizingKey(redpallas::VerificationKey<SpendAuth>);
 
 impl From<&SpendAuthorizingKey> for AuthorizingKey {
     fn from(ask: &SpendAuthorizingKey) -> Self {
@@ -121,7 +122,7 @@ impl FullViewingKey {
     /// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
     fn derive_dk_ovk(&self) -> (DiversifierKey, OutgoingViewingKey) {
         let k = self.rivk.to_bytes();
-        let b = [self.ak.0.into(), self.nk.0.to_bytes()];
+        let b = [(&self.ak.0).into(), self.nk.0.to_bytes()];
         let r = prf_expand_vec(&k, &[&[0x82], &b[0][..], &b[1][..]]);
         (
             DiversifierKey(r.as_bytes()[..32].try_into().unwrap()),
@@ -205,7 +206,7 @@ pub struct IncomingViewingKey(pallas::Scalar);
 
 impl From<&FullViewingKey> for IncomingViewingKey {
     fn from(fvk: &FullViewingKey) -> Self {
-        let ak = pallas::Point::from_bytes(&fvk.ak.0.into()).unwrap();
+        let ak = pallas::Point::from_bytes(&(&fvk.ak.0).into()).unwrap();
         IncomingViewingKey(commit_ivk(&extract_p(&ak), &fvk.nk.0, &fvk.rivk))
     }
 }

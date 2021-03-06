@@ -1,5 +1,7 @@
 //! A minimal RedPallas implementation for use in Zcash.
 
+use std::convert::{TryFrom, TryInto};
+
 /// A RedPallas signature type.
 pub trait SigType: reddsa::SigType + private::Sealed {}
 
@@ -15,9 +17,55 @@ impl SigType for Binding {}
 #[derive(Debug)]
 pub struct SigningKey<T: SigType>(reddsa::SigningKey<T>);
 
+impl<T: SigType> From<SigningKey<T>> for [u8; 32] {
+    fn from(sk: SigningKey<T>) -> [u8; 32] {
+        sk.0.into()
+    }
+}
+
+impl<T: SigType> From<&SigningKey<T>> for [u8; 32] {
+    fn from(sk: &SigningKey<T>) -> [u8; 32] {
+        sk.0.into()
+    }
+}
+
+impl<T: SigType> TryFrom<[u8; 32]> for SigningKey<T> {
+    type Error = reddsa::Error;
+
+    fn try_from(bytes: [u8; 32]) -> Result<Self, Self::Error> {
+        bytes.try_into().map(SigningKey)
+    }
+}
+
 /// A RedPallas verification key.
 #[derive(Debug)]
 pub struct VerificationKey<T: SigType>(reddsa::VerificationKey<T>);
+
+impl<T: SigType> From<VerificationKey<T>> for [u8; 32] {
+    fn from(vk: VerificationKey<T>) -> [u8; 32] {
+        vk.0.into()
+    }
+}
+
+impl<T: SigType> From<&VerificationKey<T>> for [u8; 32] {
+    fn from(vk: &VerificationKey<T>) -> [u8; 32] {
+        vk.0.into()
+    }
+}
+
+impl<T: SigType> TryFrom<[u8; 32]> for VerificationKey<T> {
+    type Error = reddsa::Error;
+
+    fn try_from(bytes: [u8; 32]) -> Result<Self, Self::Error> {
+        bytes.try_into().map(VerificationKey)
+    }
+}
+
+impl<'a, T: SigType> From<&'a SigningKey<T>> for VerificationKey<T> {
+    fn from(sk: &'a SigningKey<T>) -> VerificationKey<T> {
+        VerificationKey((&sk.0).into())
+    }
+}
 
 /// A RedPallas signature.
 #[derive(Debug)]
