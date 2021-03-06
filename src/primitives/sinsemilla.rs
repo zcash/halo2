@@ -69,9 +69,9 @@ fn Q(domain_prefix: &str) -> pallas::Point {
     pallas::Point::hash_to_curve(GROUP_HASH_Q)(domain_prefix.as_bytes())
 }
 
-/// `SinsemillaHashToPoint` from [§ 5.4.1.9].
+/// `SinsemillaHashToPoint` from [§ 5.4.1.9][concretesinsemillahash].
 ///
-/// [§ 5.4.1.9]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
+/// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
 #[allow(non_snake_case)]
 pub(crate) fn hash_to_point(domain_prefix: &str, msg: impl Iterator<Item = bool>) -> pallas::Point {
     let padded: Vec<_> = Pad::new(msg).collect();
@@ -84,16 +84,16 @@ pub(crate) fn hash_to_point(domain_prefix: &str, msg: impl Iterator<Item = bool>
         .fold(Q(domain_prefix), |acc, chunk| acc.double() + S(chunk))
 }
 
-/// `SinsemillaHash` from [§ 5.4.1.9].
+/// `SinsemillaHash` from [§ 5.4.1.9][concretesinsemillahash].
 ///
-/// [§ 5.4.1.9]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
+/// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
 pub(crate) fn hash(domain_prefix: &str, msg: impl Iterator<Item = bool>) -> pallas::Base {
     extract_p(&hash_to_point(domain_prefix, msg))
 }
 
-/// `SinsemillaCommit` from [§ 5.4.7.4].
+/// `SinsemillaCommit` from [§ 5.4.7.4][concretesinsemillacommit].
 ///
-/// [§ 5.4.7.4]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
+/// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
 #[allow(non_snake_case)]
 pub(crate) fn commit(
     domain_prefix: &str,
@@ -108,9 +108,9 @@ pub(crate) fn commit(
     hash_to_point(&m_prefix, msg) + hasher_r(&[]) * r
 }
 
-/// `SinsemillaShortCommit` from [§ 5.4.7.4].
+/// `SinsemillaShortCommit` from [§ 5.4.7.4][concretesinsemillacommit].
 ///
-/// [§ 5.4.7.4]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
+/// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
 pub(crate) fn short_commit(
     domain_prefix: &str,
     msg: impl Iterator<Item = bool>,

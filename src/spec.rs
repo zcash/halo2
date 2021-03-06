@@ -16,25 +16,25 @@ const PRF_EXPAND_PERSONALIZATION: &[u8; 16] = b"Zcash_ExpandSeed";
 
 /// $\mathsf{ToBase}^\mathsf{Orchard}(x) := LEOS2IP_{\ell_\mathsf{PRFexpand}}(x) (mod q_P)$
 ///
-/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][§4.2.3].
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
-/// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 pub(crate) fn to_base(hash: Hash) -> pallas::Base {
     pallas::Base::from_bytes_wide(hash.as_array())
 }
 
 /// $\mathsf{ToScalar}^\mathsf{Orchard}(x) := LEOS2IP_{\ell_\mathsf{PRFexpand}}(x) (mod r_P)$
 ///
-/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][§4.2.3].
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
-/// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 pub(crate) fn to_scalar(hash: Hash) -> pallas::Scalar {
     pallas::Scalar::from_bytes_wide(hash.as_array())
 }
 
-/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][§4.2.3].
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
-/// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 pub(crate) fn commit_ivk(
     ak: &pallas::Base,
     nk: &pallas::Base,
@@ -53,18 +53,18 @@ pub(crate) fn commit_ivk(
     pallas::Scalar::from_repr(ivk.to_repr()).unwrap()
 }
 
-/// Defined in [Zcash Protocol Spec § 5.4.1.6: DiversifyHash^Sapling and DiversifyHash^Orchard Hash Functions][§5.4.1.6].
+/// Defined in [Zcash Protocol Spec § 5.4.1.6: DiversifyHash^Sapling and DiversifyHash^Orchard Hash Functions][concretediversifyhash].
 ///
-/// [§5.4.1.6]: https://zips.z.cash/protocol/nu5.pdf#concretediversifyhash
+/// [concretediversifyhash]: https://zips.z.cash/protocol/nu5.pdf#concretediversifyhash
 pub(crate) fn diversify_hash(d: &[u8; 11]) -> pallas::Point {
     pallas::Point::hash_to_curve("z.cash:Orchard-gd")(d)
 }
 
 /// $PRF^\mathsf{expand}(sk, t) := BLAKE2b-512("Zcash_ExpandSeed", sk || t)$
 ///
-/// Defined in [Zcash Protocol Spec § 5.4.2: Pseudo Random Functions][§5.4.2].
+/// Defined in [Zcash Protocol Spec § 5.4.2: Pseudo Random Functions][concreteprfs].
 ///
-/// [§5.4.2]: https://zips.z.cash/protocol/orchard.pdf#concreteprfs
+/// [concreteprfs]: https://zips.z.cash/protocol/orchard.pdf#concreteprfs
 pub(crate) fn prf_expand(sk: &[u8], t: &[u8]) -> Hash {
     prf_expand_vec(sk, &[t])
 }
@@ -81,16 +81,18 @@ pub(crate) fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Hash {
     h.finalize()
 }
 
-/// Defined in [Zcash Protocol Spec § 5.4.4.5: Orchard Key Agreement][§5.4.4.5].
+/// Defined in [Zcash Protocol Spec § 5.4.4.5: Orchard Key Agreement][concreteorchardkeyagreement].
 ///
-/// [§5.4.4.5]: https://zips.z.cash/protocol/nu5.pdf#concreteorchardkeyagreement
+/// [concreteorchardkeyagreement]: https://zips.z.cash/protocol/nu5.pdf#concreteorchardkeyagreement
 pub(crate) fn ka_orchard(sk: &pallas::Scalar, b: &pallas::Point) -> pallas::Point {
     b * sk
 }
 
-/// Hash extractor for Pallas, from [§ 5.4.8.7].
+/// Hash extractor for Pallas.
 ///
-/// [§ 5.4.8.7]: https://zips.z.cash/protocol/nu5.pdf#concreteextractorpallas
+/// Defined in [Zcash Protocol Spec § 5.4.8.7: Hash Extractor for Pallas][concreteextractorpallas].
+///
+/// [concreteextractorpallas]: https://zips.z.cash/protocol/nu5.pdf#concreteextractorpallas
 pub(crate) fn extract_p(point: &pallas::Point) -> pallas::Base {
     // TODO: Should we return the actual bits in a Vec, or allow the caller to use
     // PrimeField::to_le_bits on the returned pallas::Base?

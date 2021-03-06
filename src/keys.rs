@@ -20,9 +20,9 @@ use crate::{
 
 /// A spending key, from which all key material is derived.
 ///
-/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][§4.2.3].
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
-/// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
 pub struct SpendingKey([u8; 32]);
 
@@ -40,9 +40,9 @@ impl SpendingKey {
 
 /// A spend authorizing key, used to create spend authorization signatures.
 ///
-/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][§4.2.3].
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
-/// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
 pub(crate) struct SpendAuthorizingKey(redpallas::SigningKey<SpendAuth>);
 
@@ -81,11 +81,11 @@ impl From<&SpendAuthorizingKey> for AuthorizingKey {
 
 /// A key used to derive [`Nullifier`]s from [`Note`]s.
 ///
-/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][§4.2.3].
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [`Nullifier`]: crate::note::Nullifier;
 /// [`Note`]: crate::note::Note;
-/// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
 pub(crate) struct NullifierDerivingKey(pallas::Base);
 
@@ -117,9 +117,9 @@ impl From<&SpendingKey> for FullViewingKey {
 }
 
 impl FullViewingKey {
-    /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][§4.2.3].
+    /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
     ///
-    /// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
+    /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
     fn derive_dk_ovk(&self) -> (DiversifierKey, OutgoingViewingKey) {
         let k = self.rivk.to_bytes();
         let b = [(&self.ak.0).into(), self.nk.0.to_bytes()];
@@ -238,9 +238,9 @@ impl From<&FullViewingKey> for OutgoingViewingKey {
 pub(crate) struct DiversifiedTransmissionKey(pallas::Point);
 
 impl DiversifiedTransmissionKey {
-    /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][§4.2.3].
+    /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
     ///
-    /// [§4.2.3]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
+    /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
     fn derive(ivk: &IncomingViewingKey, d: &Diversifier) -> Self {
         let g_d = diversify_hash(&d.0);
         DiversifiedTransmissionKey(ka_orchard(&ivk.0, &g_d))
