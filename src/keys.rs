@@ -146,8 +146,8 @@ impl FullViewingKey {
         let b = [(&self.ak.0).into(), self.nk.0.to_bytes()];
         let r = prf_expand_vec(&k, &[&[0x82], &b[0][..], &b[1][..]]);
         (
-            DiversifierKey(r.as_bytes()[..32].try_into().unwrap()),
-            OutgoingViewingKey(r.as_bytes()[32..].try_into().unwrap()),
+            DiversifierKey(r[..32].try_into().unwrap()),
+            OutgoingViewingKey(r[32..].try_into().unwrap()),
         )
     }
 

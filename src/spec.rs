@@ -3,7 +3,7 @@
 use std::iter;
 
 use bitvec::{array::BitArray, order::Lsb0};
-use blake2b_simd::{Hash, Params};
+use blake2b_simd::Params;
 use ff::PrimeField;
 use group::{Curve, GroupEncoding};
 use halo2::{
@@ -20,8 +20,8 @@ const PRF_EXPAND_PERSONALIZATION: &[u8; 16] = b"Zcash_ExpandSeed";
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-pub(crate) fn to_base(hash: Hash) -> pallas::Base {
-    pallas::Base::from_bytes_wide(hash.as_array())
+pub(crate) fn to_base(x: [u8; 64]) -> pallas::Base {
+    pallas::Base::from_bytes_wide(&x)
 }
 
 /// $\mathsf{ToScalar}^\mathsf{Orchard}(x) := LEOS2IP_{\ell_\mathsf{PRFexpand}}(x) (mod r_P)$
@@ -29,8 +29,8 @@ pub(crate) fn to_base(hash: Hash) -> pallas::Base {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-pub(crate) fn to_scalar(hash: Hash) -> pallas::Scalar {
-    pallas::Scalar::from_bytes_wide(hash.as_array())
+pub(crate) fn to_scalar(x: [u8; 64]) -> pallas::Scalar {
+    pallas::Scalar::from_bytes_wide(&x)
 }
 
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
@@ -66,11 +66,11 @@ pub(crate) fn diversify_hash(d: &[u8; 11]) -> pallas::Point {
 /// Defined in [Zcash Protocol Spec § 5.4.2: Pseudo Random Functions][concreteprfs].
 ///
 /// [concreteprfs]: https://zips.z.cash/protocol/orchard.pdf#concreteprfs
-pub(crate) fn prf_expand(sk: &[u8], t: &[u8]) -> Hash {
+pub(crate) fn prf_expand(sk: &[u8], t: &[u8]) -> [u8; 64] {
     prf_expand_vec(sk, &[t])
 }
 
-pub(crate) fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Hash {
+pub(crate) fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> [u8; 64] {
     let mut h = Params::new()
         .hash_length(64)
         .personal(PRF_EXPAND_PERSONALIZATION)
@@ -79,7 +79,7 @@ pub(crate) fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Hash {
     for t in ts {
         h.update(t);
     }
-    h.finalize()
+    *h.finalize().as_array()
 }
 
 /// Defined in [Zcash Protocol Spec § 5.4.4.5: Orchard Key Agreement][concreteorchardkeyagreement].
