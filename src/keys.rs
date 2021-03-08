@@ -60,7 +60,7 @@ impl From<&SpendingKey> for SpendAuthorizingKey {
         // TODO: Add TryFrom<S::Scalar> for SpendAuthorizingKey.
         let ret = SpendAuthorizingKey(ask.to_bytes().try_into().unwrap());
         // If the last bit of repr_P(ak) is 1, negate ask.
-        if (<[u8; 32]>::from(AuthorizingKey::from(&ret).0)[31] >> 7) == 1 {
+        if (<[u8; 32]>::from(SpendValidatingKey::from(&ret).0)[31] >> 7) == 1 {
             SpendAuthorizingKey((-ask).to_bytes().try_into().unwrap())
         } else {
             ret
@@ -68,13 +68,17 @@ impl From<&SpendingKey> for SpendAuthorizingKey {
     }
 }
 
-/// TODO: This is its protocol spec name for Sapling, but I'd prefer a different name.
+/// A key used to validate spend authorization signatures.
+///
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
+///
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
-pub(crate) struct AuthorizingKey(redpallas::VerificationKey<SpendAuth>);
+pub(crate) struct SpendValidatingKey(redpallas::VerificationKey<SpendAuth>);
 
-impl From<&SpendAuthorizingKey> for AuthorizingKey {
+impl From<&SpendAuthorizingKey> for SpendValidatingKey {
     fn from(ask: &SpendAuthorizingKey) -> Self {
-        AuthorizingKey((&ask.0).into())
+        SpendValidatingKey((&ask.0).into())
     }
 }
 
@@ -114,7 +118,7 @@ impl From<&SpendingKey> for CommitIvkRandomness {
 /// ability to spend funds (such as a view-only wallet).
 #[derive(Debug)]
 pub struct FullViewingKey {
-    ak: AuthorizingKey,
+    ak: SpendValidatingKey,
     nk: NullifierDerivingKey,
     rivk: CommitIvkRandomness,
 }
