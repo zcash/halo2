@@ -116,6 +116,10 @@ impl From<&SpendingKey> for CommitIvkRandomness {
 ///
 /// This key is useful anywhere you need to maintain accurate balance, but do not want the
 /// ability to spend funds (such as a view-only wallet).
+///
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
+///
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
 pub struct FullViewingKey {
     ak: SpendValidatingKey,
@@ -159,6 +163,10 @@ impl FullViewingKey {
 }
 
 /// A key that provides the capability to derive a sequence of diversifiers.
+///
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
+///
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
 pub struct DiversifierKey([u8; 32]);
 
@@ -205,6 +213,10 @@ impl DiversifierKey {
 
 /// A diversifier that can be used to derive a specific [`Address`] from a
 /// [`FullViewingKey`] or [`IncomingViewingKey`].
+///
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
+///
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
 pub struct Diversifier([u8; 11]);
 
@@ -216,6 +228,10 @@ pub struct Diversifier([u8; 11]);
 ///
 /// This key is not suitable for use on its own in a wallet, as it cannot maintain
 /// accurate balance. You should use a [`FullViewingKey`] instead.
+///
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
+///
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
 pub struct IncomingViewingKey(pallas::Scalar);
 
@@ -239,6 +255,10 @@ impl IncomingViewingKey {
 ///
 /// This key is not suitable for use on its own in a wallet, as it cannot maintain
 /// accurate balance. You should use a [`FullViewingKey`] instead.
+///
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
+///
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
 pub struct OutgoingViewingKey([u8; 32]);
 
@@ -249,6 +269,10 @@ impl From<&FullViewingKey> for OutgoingViewingKey {
 }
 
 /// The diversified transmission key for a given payment address.
+///
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
+///
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
 pub(crate) struct DiversifiedTransmissionKey(pallas::Point);
 
