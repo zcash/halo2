@@ -86,8 +86,8 @@ impl From<&SpendAuthorizingKey> for SpendValidatingKey {
 ///
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
-/// [`Nullifier`]: crate::note::Nullifier;
-/// [`Note`]: crate::note::Note;
+/// [`Nullifier`]: crate::note::Nullifier
+/// [`Note`]: crate::note::Note
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
 pub(crate) struct NullifierDerivingKey(pallas::Base);
