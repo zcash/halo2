@@ -180,8 +180,6 @@ macro_rules! di_from {
         }
     };
 }
-di_from!(u8);
-di_from!(u16);
 di_from!(u32);
 di_from!(u64);
 di_from!(usize);
@@ -189,7 +187,7 @@ di_from!(usize);
 impl DiversifierKey {
     /// Returns the diversifier at index 0.
     pub fn default_diversifier(&self) -> Diversifier {
-        self.get(0u8)
+        self.get(0u32)
     }
 
     /// Returns the diversifier at the given index.
