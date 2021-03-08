@@ -20,6 +20,7 @@ rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 
 [dependencies]
 aes = "0.6"
+bitvec = "0.20"
 blake2b_simd = "0.5"
 ff = "0.9"
 fpe = "0.4"

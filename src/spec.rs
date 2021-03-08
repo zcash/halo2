@@ -2,9 +2,10 @@
 
 use std::iter;
 
+use bitvec::{array::BitArray, order::Lsb0};
 use blake2b_simd::{Hash, Params};
 use ff::PrimeField;
-use group::Curve;
+use group::{Curve, GroupEncoding};
 use halo2::{
     arithmetic::{CurveAffine, CurveExt, FieldExt},
     pasta::pallas,
@@ -36,14 +37,14 @@ pub(crate) fn to_scalar(hash: Hash) -> pallas::Scalar {
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 pub(crate) fn commit_ivk(
-    ak: &pallas::Base,
+    ak: &pallas::Point,
     nk: &pallas::Base,
     rivk: &pallas::Scalar,
 ) -> pallas::Scalar {
     let ivk = sinsemilla::short_commit(
         "z.cash:Orchard-CommitIvk",
         iter::empty()
-            .chain(ak.to_le_bits().iter().by_val().take(L_ORCHARD_SCALAR))
+            .chain(BitArray::<Lsb0, _>::new(ak.to_bytes()).iter().by_val())
             .chain(nk.to_le_bits().iter().by_val().take(L_ORCHARD_SCALAR)),
         rivk,
     );

@@ -13,8 +13,7 @@ use crate::{
     address::Address,
     primitives::redpallas::{self, SpendAuth},
     spec::{
-        commit_ivk, diversify_hash, extract_p, ka_orchard, prf_expand, prf_expand_vec, to_base,
-        to_scalar,
+        commit_ivk, diversify_hash, ka_orchard, prf_expand, prf_expand_vec, to_base, to_scalar,
     },
 };
 
@@ -219,7 +218,7 @@ pub struct IncomingViewingKey(pallas::Scalar);
 impl From<&FullViewingKey> for IncomingViewingKey {
     fn from(fvk: &FullViewingKey) -> Self {
         let ak = pallas::Point::from_bytes(&(&fvk.ak.0).into()).unwrap();
-        IncomingViewingKey(commit_ivk(&extract_p(&ak), &fvk.nk.0, &fvk.rivk.0))
+        IncomingViewingKey(commit_ivk(&ak, &fvk.nk.0, &fvk.rivk.0))
     }
 }
 
