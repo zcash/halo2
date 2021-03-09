@@ -10,7 +10,9 @@ pub(super) fn generate_mds<F: FieldExt>(
     let (xs, ys, mds) = loop {
         // Generate two [F; arity] arrays of unique field elements.
         let (xs, ys) = loop {
-            let mut vals: Vec<_> = (0..2 * arity).map(|_| grain.next_field_element()).collect();
+            let mut vals: Vec<_> = (0..2 * arity)
+                .map(|_| grain.next_field_element_without_rejection())
+                .collect();
 
             // Check that we have unique field elements.
             let mut unique = vals.clone();
@@ -33,20 +35,27 @@ pub(super) fn generate_mds<F: FieldExt>(
         }
 
         // Generate a Cauchy matrix, with elements a_ij in the form:
-        //     a_ij = 1/(x_i - y_j); x_i - y_j != 0
-        //
-        // The Poseidon paper uses the alternate definition:
         //     a_ij = 1/(x_i + y_j); x_i + y_j != 0
         //
-        // These are clearly equivalent on `y <= -y`, but it is easier to work with the
+        // It would be much easier to use the alternate definition:
+        //     a_ij = 1/(x_i - y_j); x_i - y_j != 0
+        //
+        // These are clearly equivalent on `y <- -y`, but it is easier to work with the
         // negative formulation, because ensuring that xs ∪ ys is unique implies that
         // x_i - y_j != 0 by construction (whereas the positive case does not hold). It
         // also makes computation of the matrix inverse simpler below (the theorem used
         // was formulated for the negative definition).
+        //
+        // However, the Poseidon paper and reference impl use the positive formulation,
+        // and we want to rely on the reference impl for MDS security, so we use the same
+        // formulation.
         let mut mds = vec![vec![F::zero(); arity]; arity];
         for i in 0..arity {
             for j in 0..arity {
-                mds[i][j] = (xs[i] - ys[j]).invert().unwrap();
+                let sum = xs[i] + ys[j];
+                // We leverage the secure MDS selection counter to also check this.
+                assert!(!sum.is_zero());
+                mds[i][j] = sum.invert().unwrap();
             }
         }
 
@@ -54,11 +63,17 @@ pub(super) fn generate_mds<F: FieldExt>(
     };
 
     // Compute the inverse. All square Cauchy matrices have a non-zero determinant and
-    // thus are invertible. The inverse has elements b_ij given by:
+    // thus are invertible. The inverse for a Cauchy matrix of the form:
+    //
+    //     a_ij = 1/(x_i - y_j); x_i - y_j != 0
+    //
+    // has elements b_ij given by:
     //
     //     b_ij = (x_j - y_i) A_j(y_i) B_i(x_j)    (Schechter 1959, Theorem 1)
     //
     // where A_i(x) and B_i(x) are the Lagrange polynomials for xs and ys respectively.
+    //
+    // We adapt this to the positive Cauchy formulation by negating ys.
     let mut mds_inv = vec![vec![F::zero(); arity]; arity];
     let l = |xs: &[F], j, x: F| {
         let x_j = xs[j];
@@ -71,9 +86,10 @@ pub(super) fn generate_mds<F: FieldExt>(
             }
         })
     };
+    let neg_ys: Vec<_> = ys.iter().map(|y| -*y).collect();
     for i in 0..arity {
         for j in 0..arity {
-            mds_inv[i][j] = (xs[j] - ys[i]) * l(&xs, j, ys[i]) * l(&ys, i, xs[j]);
+            mds_inv[i][j] = (xs[j] - neg_ys[i]) * l(&xs, j, neg_ys[i]) * l(&neg_ys, i, xs[j]);
         }
     }
 

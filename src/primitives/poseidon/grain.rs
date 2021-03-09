@@ -114,9 +114,19 @@ impl<F: FieldExt> Grain<F> {
         loop {
             let mut bytes = F::Repr::default();
 
-            // Fill the repr with bits in little-endian order.
+            // Poseidon reference impl interprets the bits as a repr in MSB order, because
+            // it's easy to do that in Python. Meanwhile, our field elements all use LSB
+            // order. There's little motivation to diverge from the reference impl; these
+            // are all constants, so we aren't introducing big-endianness into the rest of
+            // the circuit (assuming unkeyed Poseidon, but we probably wouldn't want to
+            // implement Grain inside a circuit, so we'd use a different round constant
+            // derivation function there).
             let view = bytes.as_mut();
             for (i, bit) in self.take(F::NUM_BITS as usize).enumerate() {
+                // If we diverged from the reference impl and interpreted the bits in LSB
+                // order, we would remove this line.
+                let i = F::NUM_BITS as usize - 1 - i;
+
                 view[i / 8] |= if bit { 1 << (i % 8) } else { 0 };
             }
 
@@ -124,6 +134,34 @@ impl<F: FieldExt> Grain<F> {
                 break f;
             }
         }
+    }
+
+    /// Returns the next field element from this Grain instantiation, without using
+    /// rejection sampling.
+    pub(super) fn next_field_element_without_rejection(&mut self) -> F {
+        let mut bytes = [0u8; 64];
+
+        // Poseidon reference impl interprets the bits as a repr in MSB order, because
+        // it's easy to do that in Python. Additionally, it does not use rejection
+        // sampling in cases where the constants don't specifically need to be uniformly
+        // random for security. We do not provide APIs that take a field-element-sized
+        // array and reduce it modulo the field order, because those are unsafe APIs to
+        // offer generally (accidentally using them can lead to divergence in consensus
+        // systems due to not rejecting canonical forms).
+        //
+        // Given that we don't want to diverge from the reference implementation, we hack
+        // around this restriction by serializing the bits into a 64-byte array and then
+        // calling F::from_bytes_wide. PLEASE DO NOT COPY THIS INTO YOUR OWN CODE!
+        let view = bytes.as_mut();
+        for (i, bit) in self.take(F::NUM_BITS as usize).enumerate() {
+            // If we diverged from the reference impl and interpreted the bits in LSB
+            // order, we would remove this line.
+            let i = F::NUM_BITS as usize - 1 - i;
+
+            view[i / 8] |= if bit { 1 << (i % 8) } else { 0 };
+        }
+
+        F::from_bytes_wide(&bytes)
     }
 }
 

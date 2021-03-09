@@ -25,9 +25,9 @@ pub trait PoseidonSpec<F: FieldExt> {
     fn constants(&self) -> (Vec<Vec<F>>, Vec<Vec<F>>, Vec<Vec<F>>);
 }
 
-/// A little-endian Poseidon specification.
+/// A generic Poseidon specification.
 #[derive(Debug)]
-pub struct LsbPoseidon<F: FieldExt> {
+pub struct Generic<F: FieldExt> {
     sbox: SboxType,
     /// The arity of the Poseidon permutation.
     t: u16,
@@ -41,7 +41,7 @@ pub struct LsbPoseidon<F: FieldExt> {
     _field: PhantomData<F>,
 }
 
-impl<F: FieldExt> LsbPoseidon<F> {
+impl<F: FieldExt> Generic<F> {
     /// Creates a new Poseidon specification for a field, using the `x^\alpha` S-box.
     pub fn with_pow_sbox(
         arity: usize,
@@ -49,7 +49,7 @@ impl<F: FieldExt> LsbPoseidon<F> {
         partial_rounds: usize,
         secure_mds: usize,
     ) -> Self {
-        LsbPoseidon {
+        Generic {
             sbox: SboxType::Pow,
             t: arity as u16,
             r_f: full_rounds as u16,
@@ -60,7 +60,7 @@ impl<F: FieldExt> LsbPoseidon<F> {
     }
 }
 
-impl<F: FieldExt> PoseidonSpec<F> for LsbPoseidon<F> {
+impl<F: FieldExt> PoseidonSpec<F> for Generic<F> {
     fn arity(&self) -> usize {
         self.t as usize
     }
