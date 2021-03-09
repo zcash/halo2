@@ -5,6 +5,9 @@ use halo2::arithmetic::FieldExt;
 pub(crate) mod grain;
 pub(crate) mod mds;
 
+#[cfg(test)]
+mod test_vectors;
+
 use grain::SboxType;
 
 /// A specification for a Poseidon permutation.
