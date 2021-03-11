@@ -1,7 +1,7 @@
 use halo2::arithmetic::FieldExt;
 use pasta_curves::pallas;
 
-use super::{Generic, Spec};
+use super::{P256Pow5T3, Spec};
 
 // $ sage generate_parameters_grain.sage 1 0 255 3 8 120 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001
 // Number of round constants: 384
@@ -424,7 +424,7 @@ const MDS: [[&str; 3]; 3] = [
 
 #[test]
 fn test_vectors() {
-    let poseidon = Generic::<pallas::Base>::with_pow_sbox(5, 3, 8, 120, 0);
+    let poseidon = P256Pow5T3::<pallas::Base>::new(0);
     let (round_constants, mds, _) = poseidon.constants();
 
     for (actual, expected) in round_constants
