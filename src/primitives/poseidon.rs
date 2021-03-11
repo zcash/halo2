@@ -21,6 +21,8 @@ pub trait Spec<F: FieldExt> {
     /// The number of partial rounds for this specification.
     fn partial_rounds(&self) -> usize;
 
+    fn sbox(&self, val: F) -> F;
+
     /// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.
     fn constants(&self) -> (Vec<Vec<F>>, Vec<Vec<F>>, Vec<Vec<F>>);
 }
@@ -28,7 +30,7 @@ pub trait Spec<F: FieldExt> {
 /// A generic Poseidon specification.
 #[derive(Debug)]
 pub struct Generic<F: FieldExt> {
-    sbox: SboxType,
+    pow_sbox: u64,
     /// The arity of the Poseidon permutation.
     t: u16,
     /// The number of full rounds.
@@ -44,13 +46,14 @@ pub struct Generic<F: FieldExt> {
 impl<F: FieldExt> Generic<F> {
     /// Creates a new Poseidon specification for a field, using the `x^\alpha` S-box.
     pub fn with_pow_sbox(
+        pow_sbox: u64,
         arity: usize,
         full_rounds: usize,
         partial_rounds: usize,
         secure_mds: usize,
     ) -> Self {
         Generic {
-            sbox: SboxType::Pow,
+            pow_sbox,
             t: arity as u16,
             r_f: full_rounds as u16,
             r_p: partial_rounds as u16,
@@ -73,8 +76,12 @@ impl<F: FieldExt> Spec<F> for Generic<F> {
         self.r_p as usize
     }
 
+    fn sbox(&self, val: F) -> F {
+        val.pow_vartime(&[self.pow_sbox])
+    }
+
     fn constants(&self) -> (Vec<Vec<F>>, Vec<Vec<F>>, Vec<Vec<F>>) {
-        let mut grain = grain::Grain::new(self.sbox, self.t, self.r_f, self.r_p);
+        let mut grain = grain::Grain::new(SboxType::Pow, self.t, self.r_f, self.r_p);
 
         let round_constants = (0..(self.r_f + self.r_p))
             .map(|_| (0..self.t).map(|_| grain.next_field_element()).collect())

@@ -424,7 +424,7 @@ const MDS: [[&str; 3]; 3] = [
 
 #[test]
 fn test_vectors() {
-    let poseidon = Generic::<pallas::Base>::with_pow_sbox(3, 8, 120, 0);
+    let poseidon = Generic::<pallas::Base>::with_pow_sbox(5, 3, 8, 120, 0);
     let (round_constants, mds, _) = poseidon.constants();
 
     for (actual, expected) in round_constants
