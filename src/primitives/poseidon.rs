@@ -11,7 +11,7 @@ mod test_vectors;
 use grain::SboxType;
 
 /// A specification for a Poseidon permutation.
-pub trait PoseidonSpec<F: FieldExt> {
+pub trait Spec<F: FieldExt> {
     /// The arity of this specification.
     fn arity(&self) -> usize;
 
@@ -60,7 +60,7 @@ impl<F: FieldExt> Generic<F> {
     }
 }
 
-impl<F: FieldExt> PoseidonSpec<F> for Generic<F> {
+impl<F: FieldExt> Spec<F> for Generic<F> {
     fn arity(&self) -> usize {
         self.t as usize
     }

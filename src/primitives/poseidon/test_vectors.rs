@@ -1,7 +1,7 @@
 use halo2::arithmetic::FieldExt;
 use pasta_curves::pallas;
 
-use super::{Generic, PoseidonSpec};
+use super::{Generic, Spec};
 
 // $ sage generate_parameters_grain.sage 1 0 255 3 8 120 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001
 // Number of round constants: 384
