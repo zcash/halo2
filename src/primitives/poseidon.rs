@@ -147,6 +147,7 @@ fn permute<F: FieldExt, S: Spec<F>>(
     let apply_mds = |state: &mut S::State| {
         let mut new_state = S::State::default();
         // Matrix multiplication
+        #[allow(clippy::needless_range_loop)]
         for i in 0..S::arity() {
             for j in 0..S::arity() {
                 new_state.as_mut()[i] += mds[i].as_ref()[j] * state.as_ref()[j];

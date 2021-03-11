@@ -50,6 +50,7 @@ pub(super) fn generate_mds<F: FieldExt>(
         // and we want to rely on the reference impl for MDS security, so we use the same
         // formulation.
         let mut mds = vec![vec![F::zero(); arity]; arity];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..arity {
             for j in 0..arity {
                 let sum = xs[i] + ys[j];
@@ -109,6 +110,7 @@ mod tests {
         let (mds, mds_inv) = generate_mds::<Fp>(&mut grain, arity, 0);
 
         // Verify that MDS * MDS^-1 = I.
+        #[allow(clippy::needless_range_loop)]
         for i in 0..arity {
             for j in 0..arity {
                 let expected = if i == j { Fp::one() } else { Fp::zero() };
