@@ -487,14 +487,15 @@ impl<F: FieldExt> Pow5T3State<F> {
 #[cfg(test)]
 mod tests {
     use halo2::{
+        arithmetic::FieldExt,
         circuit::{layouter, Layouter},
         dev::MockProver,
         pasta::Fp,
         plonk::{Assignment, Circuit, ConstraintSystem, Error},
     };
 
-    use super::{PoseidonInstructions, Pow5T3Chip, Pow5T3Config, Pow5T3State, StateWord};
-    use crate::primitives::poseidon::OrchardNullifier;
+    use super::{PoseidonInstructions, Pow5T3Chip, Pow5T3Config, Pow5T3State, StateWord, WIDTH};
+    use crate::primitives::poseidon::{self, OrchardNullifier, Spec};
 
     struct MyCircuit {}
 
@@ -540,8 +541,36 @@ mod tests {
                 },
             )?;
 
-            let chip = Pow5T3Chip::construct(config);
-            chip.permute(&mut layouter, &initial_state).map(|_| ())
+            let chip = Pow5T3Chip::construct(config.clone());
+            let final_state = chip.permute(&mut layouter, &initial_state)?;
+
+            // For the purpose of this test, compute the real final state inline.
+            let mut expected_final_state = [Fp::zero(), Fp::one(), Fp::from_u64(2)];
+            let (round_constants, mds, _) = OrchardNullifier.constants();
+            poseidon::permute::<_, OrchardNullifier, WIDTH, 2>(
+                &mut expected_final_state,
+                &mds,
+                &round_constants,
+            );
+
+            layouter.assign_region(
+                || "constrain final state",
+                |mut region| {
+                    let mut final_state_word = |i: usize| {
+                        let var = region.assign_advice(
+                            || format!("load final_state_{}", i),
+                            config.state[i],
+                            0,
+                            || Ok(expected_final_state[i]),
+                        )?;
+                        region.constrain_equal(&config.state_permutation, final_state.0[i].var, var)
+                    };
+
+                    final_state_word(0)?;
+                    final_state_word(1)?;
+                    final_state_word(2)
+                },
+            )
         }
     }
 
