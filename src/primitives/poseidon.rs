@@ -186,16 +186,11 @@ fn permute<F: FieldExt, S: Spec<F>>(
 fn poseidon_duplex<F: FieldExt, S: Spec<F>>(
     state: &mut S::State,
     input: &S::Rate,
+    pad_and_add: &dyn Fn(&mut S::State, &S::Rate),
     mds_matrix: &[S::State],
     round_constants: &[S::State],
 ) -> S::Rate {
-    // `Iterator::zip` short-circuits when one iterator completes, so this will only
-    // mutate the rate portion of the state.
-    for (word, value) in state.as_mut().iter_mut().zip(input.as_ref().iter()) {
-        // TODO: Decide on a padding strategy, if we ever need to use Poseidon with
-        // incomplete state input.
-        *word += value.unwrap();
-    }
+    pad_and_add(state, input);
 
     permute::<F, S>(state, mds_matrix, round_constants);
 
@@ -223,6 +218,7 @@ impl<F: FieldExt, S: Spec<F>> SpongeState<F, S> {
 pub struct Duplex<F: FieldExt, S: Spec<F>> {
     sponge: SpongeState<F, S>,
     state: S::State,
+    pad_and_add: Box<dyn Fn(&mut S::State, &S::Rate)>,
     mds_matrix: Vec<S::State>,
     round_constants: Vec<S::State>,
     _marker: PhantomData<S>,
@@ -230,12 +226,21 @@ pub struct Duplex<F: FieldExt, S: Spec<F>> {
 
 impl<F: FieldExt, S: Spec<F>> Duplex<F, S> {
     /// Constructs a new duplex sponge for the given Poseidon specification.
-    pub fn new(spec: S) -> Self {
+    pub fn new(
+        spec: S,
+        initial_capacity_element: F,
+        pad_and_add: Box<dyn Fn(&mut S::State, &S::Rate)>,
+    ) -> Self {
         let (round_constants, mds_matrix, _) = spec.constants();
 
+        let input = S::Rate::default();
+        let mut state = S::State::default();
+        state.as_mut()[input.as_ref().len()] = initial_capacity_element;
+
         Duplex {
-            sponge: SpongeState::Absorbing(S::Rate::default()),
-            state: S::State::default(),
+            sponge: SpongeState::Absorbing(input),
+            state,
+            pad_and_add,
             mds_matrix,
             round_constants,
             _marker: PhantomData::default(),
@@ -257,6 +262,7 @@ impl<F: FieldExt, S: Spec<F>> Duplex<F, S> {
                 let _ = poseidon_duplex::<F, S>(
                     &mut self.state,
                     &input,
+                    &self.pad_and_add,
                     &self.mds_matrix,
                     &self.round_constants,
                 );
@@ -277,6 +283,7 @@ impl<F: FieldExt, S: Spec<F>> Duplex<F, S> {
                     self.sponge = SpongeState::Squeezing(poseidon_duplex::<F, S>(
                         &mut self.state,
                         &input,
+                        &self.pad_and_add,
                         &self.mds_matrix,
                         &self.round_constants,
                     ));
@@ -296,23 +303,102 @@ impl<F: FieldExt, S: Spec<F>> Duplex<F, S> {
     }
 }
 
+/// A domain in which a Poseidon hash function is being used.
+pub trait Domain<F: FieldExt, S: Spec<F>>: Copy {
+    /// The initial capacity element, encoding this domain.
+    fn initial_capacity_element(&self) -> F;
+
+    /// Returns a function that will update the given state with the given input to a
+    /// duplex permutation round, applying padding according to this domain specification.
+    fn pad_and_add(&self) -> Box<dyn Fn(&mut S::State, &S::Rate)>;
+}
+
+/// A Poseidon hash function used with constant input length.
+///
+/// Domain specified in section 4.2 of https://eprint.iacr.org/2019/458.pdf
+#[derive(Clone, Copy, Debug)]
+pub struct ConstantLength(pub usize);
+
+impl<F: FieldExt, S: Spec<F>> Domain<F, S> for ConstantLength {
+    fn initial_capacity_element(&self) -> F {
+        // Capacity value is $length \cdot 2^64 + (o-1)$ where o is the output length.
+        // We hard-code an output length of 1.
+        F::from_u128((self.0 as u128) << 64)
+    }
+
+    fn pad_and_add(&self) -> Box<dyn Fn(&mut S::State, &S::Rate)> {
+        Box::new(|state, input| {
+            // `Iterator::zip` short-circuits when one iterator completes, so this will only
+            // mutate the rate portion of the state.
+            for (word, value) in state.as_mut().iter_mut().zip(input.as_ref().iter()) {
+                // For constant-input-length hashing, padding consists of the field
+                // elements being zero, so we don't add anything to the state.
+                if let Some(value) = value {
+                    *word += value;
+                }
+            }
+        })
+    }
+}
+
 /// A Poseidon hash function, built around a duplex sponge.
-pub struct Hash<F: FieldExt, S: Spec<F>>(Duplex<F, S>);
+pub struct Hash<F: FieldExt, S: Spec<F>, D: Domain<F, S>> {
+    duplex: Duplex<F, S>,
+    domain: D,
+}
 
-impl<F: FieldExt, S: Spec<F>> Hash<F, S> {
+impl<F: FieldExt, S: Spec<F>, D: Domain<F, S>> Hash<F, S, D> {
     /// Initializes a new hasher.
-    pub fn init(spec: S) -> Self {
-        Hash(Duplex::new(spec))
+    pub fn init(spec: S, domain: D) -> Self {
+        Hash {
+            duplex: Duplex::new(
+                spec,
+                domain.initial_capacity_element(),
+                domain.pad_and_add(),
+            ),
+            domain,
+        }
     }
+}
 
-    /// Updates the hasher with the given value.
-    pub fn update(&mut self, value: F) {
-        self.0.absorb(value);
+impl<F: FieldExt, S: Spec<F>> Hash<F, S, ConstantLength> {
+    /// Hashes the given input.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the message length is not the correct length.
+    pub fn hash(mut self, message: impl Iterator<Item = F>) -> F {
+        let mut length = 0;
+        for (i, value) in message.enumerate() {
+            length = i + 1;
+            self.duplex.absorb(value);
+        }
+        assert_eq!(length, self.domain.0);
+        self.duplex.squeeze()
     }
+}
 
-    /// Finalizes the hasher, returning its output.
-    pub fn finalize(mut self) -> F {
-        // TODO: Check which state element other implementations use.
-        self.0.squeeze()
+#[cfg(test)]
+mod tests {
+    use halo2::arithmetic::FieldExt;
+    use pasta_curves::pallas;
+
+    use super::{permute, ConstantLength, Hash, P256Pow5T3, Spec};
+
+    #[test]
+    fn orchard_spec_equivalence() {
+        let message = [pallas::Base::from_u64(6), pallas::Base::from_u64(42)];
+
+        let spec = P256Pow5T3::<pallas::Base>::new(0);
+        let (round_constants, mds, _) = spec.constants();
+
+        let hasher = Hash::init(spec, ConstantLength(2));
+        let result = hasher.hash(message.iter().cloned());
+
+        // The result should be equivalent to just directly applying the permutation and
+        // taking the first state element as the output.
+        let mut state = [message[0], message[1], pallas::Base::from_u128(2 << 64)];
+        permute::<pallas::Base, P256Pow5T3<_>>(&mut state, &mds, &round_constants);
+        assert_eq!(state[0], result);
     }
 }
