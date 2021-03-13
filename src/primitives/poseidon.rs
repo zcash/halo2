@@ -6,8 +6,8 @@ use halo2::arithmetic::FieldExt;
 pub(crate) mod grain;
 pub(crate) mod mds;
 
-#[cfg(test)]
-mod test_vectors;
+mod nullifier;
+pub use nullifier::OrchardNullifier;
 
 use grain::SboxType;
 
@@ -90,51 +90,6 @@ pub trait Spec<F: FieldExt> {
                 })
                 .collect(),
         )
-    }
-}
-
-/// Poseidon-128 using the $x^5$ S-box, with a width of 3 field elements, and an extra
-/// partial round compared to the standard specification.
-///
-/// The standard specification for this set of parameters uses $R_F = 8, R_P = 57$. Having
-/// an even number of partial rounds makes it easier to construct a Halo 2 circuit.
-#[derive(Debug)]
-pub struct P128Pow5T3Plus<F: FieldExt> {
-    secure_mds: usize,
-    _field: PhantomData<F>,
-}
-
-impl<F: FieldExt> P128Pow5T3Plus<F> {
-    pub fn new(secure_mds: usize) -> Self {
-        P128Pow5T3Plus {
-            secure_mds,
-            _field: PhantomData::default(),
-        }
-    }
-}
-
-impl<F: FieldExt> Spec<F> for P128Pow5T3Plus<F> {
-    type State = [F; 3];
-    type Rate = [Option<F>; 2];
-
-    fn arity() -> usize {
-        3
-    }
-
-    fn full_rounds() -> usize {
-        8
-    }
-
-    fn partial_rounds() -> usize {
-        58
-    }
-
-    fn sbox(val: F) -> F {
-        val.pow_vartime(&[5])
-    }
-
-    fn secure_mds(&self) -> usize {
-        self.secure_mds
     }
 }
 
@@ -387,22 +342,21 @@ mod tests {
     use halo2::arithmetic::FieldExt;
     use pasta_curves::pallas;
 
-    use super::{permute, ConstantLength, Hash, P128Pow5T3Plus, Spec};
+    use super::{permute, ConstantLength, Hash, OrchardNullifier, Spec};
 
     #[test]
     fn orchard_spec_equivalence() {
         let message = [pallas::Base::from_u64(6), pallas::Base::from_u64(42)];
 
-        let spec = P128Pow5T3Plus::<pallas::Base>::new(0);
-        let (round_constants, mds, _) = spec.constants();
+        let (round_constants, mds, _) = OrchardNullifier.constants();
 
-        let hasher = Hash::init(spec, ConstantLength(2));
+        let hasher = Hash::init(OrchardNullifier, ConstantLength(2));
         let result = hasher.hash(message.iter().cloned());
 
         // The result should be equivalent to just directly applying the permutation and
         // taking the first state element as the output.
         let mut state = [message[0], message[1], pallas::Base::from_u128(2 << 64)];
-        permute::<pallas::Base, P128Pow5T3Plus<_>>(&mut state, &mds, &round_constants);
+        permute::<_, OrchardNullifier>(&mut state, &mds, &round_constants);
         assert_eq!(state[0], result);
     }
 }
