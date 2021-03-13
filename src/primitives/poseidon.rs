@@ -93,23 +93,27 @@ pub trait Spec<F: FieldExt> {
     }
 }
 
-/// Poseidon-256 with arity 3, using the `x^5` S-box.
+/// Poseidon-128 using the $x^5$ S-box, with a width of 3 field elements, and an extra
+/// partial round compared to the standard specification.
+///
+/// The standard specification for this set of parameters uses $R_F = 8, R_P = 57$. Having
+/// an even number of partial rounds makes it easier to construct a Halo 2 circuit.
 #[derive(Debug)]
-pub struct P256Pow5T3<F: FieldExt> {
+pub struct P128Pow5T3Plus<F: FieldExt> {
     secure_mds: usize,
     _field: PhantomData<F>,
 }
 
-impl<F: FieldExt> P256Pow5T3<F> {
+impl<F: FieldExt> P128Pow5T3Plus<F> {
     pub fn new(secure_mds: usize) -> Self {
-        P256Pow5T3 {
+        P128Pow5T3Plus {
             secure_mds,
             _field: PhantomData::default(),
         }
     }
 }
 
-impl<F: FieldExt> Spec<F> for P256Pow5T3<F> {
+impl<F: FieldExt> Spec<F> for P128Pow5T3Plus<F> {
     type State = [F; 3];
     type Rate = [Option<F>; 2];
 
@@ -122,7 +126,7 @@ impl<F: FieldExt> Spec<F> for P256Pow5T3<F> {
     }
 
     fn partial_rounds() -> usize {
-        120
+        58
     }
 
     fn sbox(val: F) -> F {
@@ -383,13 +387,13 @@ mod tests {
     use halo2::arithmetic::FieldExt;
     use pasta_curves::pallas;
 
-    use super::{permute, ConstantLength, Hash, P256Pow5T3, Spec};
+    use super::{permute, ConstantLength, Hash, P128Pow5T3Plus, Spec};
 
     #[test]
     fn orchard_spec_equivalence() {
         let message = [pallas::Base::from_u64(6), pallas::Base::from_u64(42)];
 
-        let spec = P256Pow5T3::<pallas::Base>::new(0);
+        let spec = P128Pow5T3Plus::<pallas::Base>::new(0);
         let (round_constants, mds, _) = spec.constants();
 
         let hasher = Hash::init(spec, ConstantLength(2));
@@ -398,7 +402,7 @@ mod tests {
         // The result should be equivalent to just directly applying the permutation and
         // taking the first state element as the output.
         let mut state = [message[0], message[1], pallas::Base::from_u128(2 << 64)];
-        permute::<pallas::Base, P256Pow5T3<_>>(&mut state, &mds, &round_constants);
+        permute::<pallas::Base, P128Pow5T3Plus<_>>(&mut state, &mds, &round_constants);
         assert_eq!(state[0], result);
     }
 }
