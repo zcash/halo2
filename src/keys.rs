@@ -7,7 +7,7 @@ use aes::Aes256;
 use fpe::ff1::{BinaryNumeralString, FF1};
 use group::GroupEncoding;
 use halo2::{arithmetic::FieldExt, pasta::pallas};
-use subtle::CtOption;
+use subtle::{Choice, CtOption};
 
 use crate::{
     address::Address,
@@ -31,9 +31,18 @@ impl SpendingKey {
     /// Returns `None` if the bytes do not correspond to a valid Orchard spending key.
     pub fn from_bytes(sk: [u8; 32]) -> CtOption<Self> {
         let sk = SpendingKey(sk);
-        // If ask = 0, discard this key.
-        let ask = SpendAuthorizingKey::derive_inner(&sk);
-        CtOption::new(sk, !ask.ct_is_zero())
+        // If ask = 0, or the default address would be ⊥, discard this key.
+        let ask_not_zero = !SpendAuthorizingKey::derive_inner(&sk).ct_is_zero();
+        let have_default_address = Choice::from({
+            let fvk = FullViewingKey::from(&sk);
+            let default_address = fvk.address(DiversifierKey::from(&fvk).default_diversifier());
+            if default_address.is_some() {
+                1
+            } else {
+                0
+            }
+        });
+        CtOption::new(sk, ask_not_zero & have_default_address)
     }
 }
 
@@ -154,10 +163,16 @@ impl FullViewingKey {
     /// Returns the default payment address for this key.
     pub fn default_address(&self) -> Address {
         self.address(DiversifierKey::from(self).default_diversifier())
+            .expect("Default address works by construction")
     }
 
     /// Returns the payment address for this key corresponding to the given diversifier.
-    pub fn address(&self, d: Diversifier) -> Address {
+    ///
+    /// Returns `None` if the diversifier does not correspond to an address. This happens
+    /// with negligible probability; in most cases unwrapping the result will be fine, but
+    /// if you have specific stability requirements then you can either convert this into
+    /// an error, or try another diversifier.
+    pub fn address(&self, d: Diversifier) -> Option<Address> {
         IncomingViewingKey::from(self).address(d)
     }
 }
@@ -244,9 +259,13 @@ impl From<&FullViewingKey> for IncomingViewingKey {
 
 impl IncomingViewingKey {
     /// Returns the payment address for this key corresponding to the given diversifier.
-    pub fn address(&self, d: Diversifier) -> Address {
-        let pk_d = DiversifiedTransmissionKey::derive(self, &d);
-        Address::from_parts(d, pk_d)
+    ///
+    /// Returns `None` if the diversifier does not correspond to an address. This happens
+    /// with negligible probability; in most cases unwrapping the result will be fine, but
+    /// if you have specific stability requirements then you can either convert this into
+    /// an error, or try another diversifier.
+    pub fn address(&self, d: Diversifier) -> Option<Address> {
+        DiversifiedTransmissionKey::derive(self, &d).map(|pk_d| Address::from_parts(d, pk_d))
     }
 }
 
@@ -280,8 +299,7 @@ impl DiversifiedTransmissionKey {
     /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
     ///
     /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-    fn derive(ivk: &IncomingViewingKey, d: &Diversifier) -> Self {
-        let g_d = diversify_hash(&d.0);
-        DiversifiedTransmissionKey(ka_orchard(&ivk.0, &g_d))
+    fn derive(ivk: &IncomingViewingKey, d: &Diversifier) -> Option<Self> {
+        diversify_hash(&d.0).map(|g_d| DiversifiedTransmissionKey(ka_orchard(&ivk.0, &g_d)))
     }
 }

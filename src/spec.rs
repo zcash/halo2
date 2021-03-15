@@ -5,7 +5,7 @@ use std::iter;
 use bitvec::{array::BitArray, order::Lsb0};
 use blake2b_simd::Params;
 use ff::PrimeField;
-use group::{Curve, GroupEncoding};
+use group::{Curve, Group, GroupEncoding};
 use halo2::{
     arithmetic::{CurveAffine, CurveExt, FieldExt},
     pasta::pallas,
@@ -57,8 +57,13 @@ pub(crate) fn commit_ivk(
 /// Defined in [Zcash Protocol Spec § 5.4.1.6: DiversifyHash^Sapling and DiversifyHash^Orchard Hash Functions][concretediversifyhash].
 ///
 /// [concretediversifyhash]: https://zips.z.cash/protocol/nu5.pdf#concretediversifyhash
-pub(crate) fn diversify_hash(d: &[u8; 11]) -> pallas::Point {
-    pallas::Point::hash_to_curve("z.cash:Orchard-gd")(d)
+pub(crate) fn diversify_hash(d: &[u8; 11]) -> Option<pallas::Point> {
+    let pk_d = pallas::Point::hash_to_curve("z.cash:Orchard-gd")(d);
+    if pk_d.is_identity().into() {
+        None
+    } else {
+        Some(pk_d)
+    }
 }
 
 /// $PRF^\mathsf{expand}(sk, t) := BLAKE2b-512("Zcash_ExpandSeed", sk || t)$
