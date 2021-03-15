@@ -166,6 +166,16 @@ impl FullViewingKey {
             .expect("Default address works by construction")
     }
 
+    /// Returns the payment address for this key at the given index.
+    ///
+    /// Returns `None` if the diversifier does not correspond to an address. This happens
+    /// with negligible probability; in most cases unwrapping the result will be fine, but
+    /// if you have specific stability requirements then you can either convert this into
+    /// an error, or try another diversifier index (e.g. incrementing).
+    pub fn address_at(&self, j: impl Into<DiversifierIndex>) -> Option<Address> {
+        self.address(DiversifierKey::from(self).get(j))
+    }
+
     /// Returns the payment address for this key corresponding to the given diversifier.
     ///
     /// Returns `None` if the diversifier does not correspond to an address. This happens
