@@ -29,6 +29,8 @@ pub trait Spec<F: FieldExt> {
     fn width() -> usize;
 
     /// The number of full rounds for this specification.
+    ///
+    /// This must be an even number.
     fn full_rounds() -> usize;
 
     /// The number of partial rounds for this specification.
@@ -99,7 +101,6 @@ fn permute<F: FieldExt, S: Spec<F>>(
     mds: &[S::State],
     round_constants: &[S::State],
 ) {
-    // TODO: Check what should happen for odd number of full rounds.
     let r_f = S::full_rounds() / 2;
     let r_p = S::partial_rounds();
 
