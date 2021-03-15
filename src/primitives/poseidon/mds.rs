@@ -4,13 +4,13 @@ use super::grain::Grain;
 
 pub(super) fn generate_mds<F: FieldExt>(
     grain: &mut Grain<F>,
-    arity: usize,
+    width: usize,
     mut select: usize,
 ) -> (Vec<Vec<F>>, Vec<Vec<F>>) {
     let (xs, ys, mds) = loop {
-        // Generate two [F; arity] arrays of unique field elements.
+        // Generate two [F; width] arrays of unique field elements.
         let (xs, ys) = loop {
-            let mut vals: Vec<_> = (0..2 * arity)
+            let mut vals: Vec<_> = (0..2 * width)
                 .map(|_| grain.next_field_element_without_rejection())
                 .collect();
 
@@ -19,7 +19,7 @@ pub(super) fn generate_mds<F: FieldExt>(
             unique.sort_unstable();
             unique.dedup();
             if vals.len() == unique.len() {
-                let rhs = vals.split_off(arity);
+                let rhs = vals.split_off(width);
                 break (vals, rhs);
             }
         };
@@ -49,10 +49,10 @@ pub(super) fn generate_mds<F: FieldExt>(
         // However, the Poseidon paper and reference impl use the positive formulation,
         // and we want to rely on the reference impl for MDS security, so we use the same
         // formulation.
-        let mut mds = vec![vec![F::zero(); arity]; arity];
+        let mut mds = vec![vec![F::zero(); width]; width];
         #[allow(clippy::needless_range_loop)]
-        for i in 0..arity {
-            for j in 0..arity {
+        for i in 0..width {
+            for j in 0..width {
                 let sum = xs[i] + ys[j];
                 // We leverage the secure MDS selection counter to also check this.
                 assert!(!sum.is_zero());
@@ -75,7 +75,7 @@ pub(super) fn generate_mds<F: FieldExt>(
     // where A_i(x) and B_i(x) are the Lagrange polynomials for xs and ys respectively.
     //
     // We adapt this to the positive Cauchy formulation by negating ys.
-    let mut mds_inv = vec![vec![F::zero(); arity]; arity];
+    let mut mds_inv = vec![vec![F::zero(); width]; width];
     let l = |xs: &[F], j, x: F| {
         let x_j = xs[j];
         xs.iter().enumerate().fold(F::one(), |acc, (m, x_m)| {
@@ -88,8 +88,8 @@ pub(super) fn generate_mds<F: FieldExt>(
         })
     };
     let neg_ys: Vec<_> = ys.iter().map(|y| -*y).collect();
-    for i in 0..arity {
-        for j in 0..arity {
+    for i in 0..width {
+        for j in 0..width {
             mds_inv[i][j] = (xs[j] - neg_ys[i]) * l(&xs, j, neg_ys[i]) * l(&neg_ys, i, xs[j]);
         }
     }
@@ -105,17 +105,17 @@ mod tests {
 
     #[test]
     fn poseidon_mds() {
-        let arity = 3;
-        let mut grain = Grain::new(super::super::grain::SboxType::Pow, arity as u16, 8, 56);
-        let (mds, mds_inv) = generate_mds::<Fp>(&mut grain, arity, 0);
+        let width = 3;
+        let mut grain = Grain::new(super::super::grain::SboxType::Pow, width as u16, 8, 56);
+        let (mds, mds_inv) = generate_mds::<Fp>(&mut grain, width, 0);
 
         // Verify that MDS * MDS^-1 = I.
         #[allow(clippy::needless_range_loop)]
-        for i in 0..arity {
-            for j in 0..arity {
+        for i in 0..width {
+            for j in 0..width {
                 let expected = if i == j { Fp::one() } else { Fp::zero() };
                 assert_eq!(
-                    (0..arity).fold(Fp::zero(), |acc, k| acc + (mds[i][k] * mds_inv[k][j])),
+                    (0..width).fold(Fp::zero(), |acc, k| acc + (mds[i][k] * mds_inv[k][j])),
                     expected
                 );
             }

@@ -15,7 +15,7 @@ impl Spec<pallas::Base> for OrchardNullifier {
     type State = [pallas::Base; 3];
     type Rate = [Option<pallas::Base>; 2];
 
-    fn arity() -> usize {
+    fn width() -> usize {
         3
     }
 
@@ -1540,7 +1540,7 @@ mod tests {
         type State = [F; 3];
         type Rate = [Option<F>; 2];
 
-        fn arity() -> usize {
+        fn width() -> usize {
             3
         }
 

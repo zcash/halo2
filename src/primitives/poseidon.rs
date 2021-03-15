@@ -15,7 +15,7 @@ use grain::SboxType;
 pub trait Spec<F: FieldExt> {
     /// The type used to hold permutation state, or equivalent-length constant values.
     ///
-    /// This must be an array of length [`Spec::arity`], that defaults to all-zeroes.
+    /// This must be an array of length [`Spec::width`], that defaults to all-zeroes.
     type State: Default + AsRef<[F]> + AsMut<[F]>;
 
     /// The type used to hold duplex sponge state.
@@ -25,8 +25,8 @@ pub trait Spec<F: FieldExt> {
     /// to `[None; RATE]`.
     type Rate: Default + AsRef<[Option<F>]> + AsMut<[Option<F>]>;
 
-    /// The arity of this specification.
-    fn arity() -> usize;
+    /// The width of this specification.
+    fn width() -> usize;
 
     /// The number of full rounds for this specification.
     fn full_rounds() -> usize;
@@ -46,7 +46,7 @@ pub trait Spec<F: FieldExt> {
 
     /// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.
     fn constants(&self) -> (Vec<Self::State>, Vec<Self::State>, Vec<Self::State>) {
-        let t = Self::arity();
+        let t = Self::width();
         let r_f = Self::full_rounds();
         let r_p = Self::partial_rounds();
 
@@ -107,8 +107,8 @@ fn permute<F: FieldExt, S: Spec<F>>(
         let mut new_state = S::State::default();
         // Matrix multiplication
         #[allow(clippy::needless_range_loop)]
-        for i in 0..S::arity() {
-            for j in 0..S::arity() {
+        for i in 0..S::width() {
+            for j in 0..S::width() {
                 new_state.as_mut()[i] += mds[i].as_ref()[j] * state.as_ref()[j];
             }
         }
