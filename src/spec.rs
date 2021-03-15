@@ -2,16 +2,15 @@
 
 use std::iter;
 
-use bitvec::{array::BitArray, order::Lsb0};
 use blake2b_simd::Params;
 use ff::PrimeField;
-use group::{Curve, Group, GroupEncoding};
+use group::{Curve, Group};
 use halo2::{
     arithmetic::{CurveAffine, CurveExt, FieldExt},
     pasta::pallas,
 };
 
-use crate::{constants::L_ORCHARD_SCALAR, primitives::sinsemilla};
+use crate::{constants::L_ORCHARD_BASE, primitives::sinsemilla};
 
 const PRF_EXPAND_PERSONALIZATION: &[u8; 16] = b"Zcash_ExpandSeed";
 
@@ -37,15 +36,17 @@ pub(crate) fn to_scalar(x: [u8; 64]) -> pallas::Scalar {
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 pub(crate) fn commit_ivk(
-    ak: &pallas::Point,
+    ak: &pallas::Base,
     nk: &pallas::Base,
     rivk: &pallas::Scalar,
 ) -> pallas::Scalar {
+    // We rely on the API contract that to_le_bits() returns at least PrimeField::NUM_BITS
+    // bits, which is equal to L_ORCHARD_BASE.
     let ivk = sinsemilla::short_commit(
         "z.cash:Orchard-CommitIvk",
         iter::empty()
-            .chain(BitArray::<Lsb0, _>::new(ak.to_bytes()).iter().by_val())
-            .chain(nk.to_le_bits().iter().by_val().take(L_ORCHARD_SCALAR)),
+            .chain(ak.to_le_bits().iter().by_val().take(L_ORCHARD_BASE))
+            .chain(nk.to_le_bits().iter().by_val().take(L_ORCHARD_BASE)),
         rivk,
     );
 

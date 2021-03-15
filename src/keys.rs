@@ -13,7 +13,8 @@ use crate::{
     address::Address,
     primitives::redpallas::{self, SpendAuth},
     spec::{
-        commit_ivk, diversify_hash, ka_orchard, prf_expand, prf_expand_vec, to_base, to_scalar,
+        commit_ivk, diversify_hash, extract_p, ka_orchard, prf_expand, prf_expand_vec, to_base,
+        to_scalar,
     },
 };
 
@@ -80,6 +81,8 @@ impl From<&SpendingKey> for SpendAuthorizingKey {
 /// A key used to validate spend authorization signatures.
 ///
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
+/// Note that this is $\mathsf{ak}^\mathbb{P}$, which by construction is equivalent to
+/// $\mathsf{ak}$ but stored here as a RedPallas verification key.
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
@@ -262,7 +265,7 @@ pub struct IncomingViewingKey(pallas::Scalar);
 
 impl From<&FullViewingKey> for IncomingViewingKey {
     fn from(fvk: &FullViewingKey) -> Self {
-        let ak = pallas::Point::from_bytes(&(&fvk.ak.0).into()).unwrap();
+        let ak = extract_p(&pallas::Point::from_bytes(&(&fvk.ak.0).into()).unwrap());
         IncomingViewingKey(commit_ivk(&ak, &fvk.nk.0, &fvk.rivk.0))
     }
 }
