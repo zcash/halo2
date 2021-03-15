@@ -36,8 +36,7 @@ impl SpendingKey {
         let ask_not_zero = !SpendAuthorizingKey::derive_inner(&sk).ct_is_zero();
         let have_default_address = Choice::from({
             let fvk = FullViewingKey::from(&sk);
-            let default_address = fvk.address(DiversifierKey::from(&fvk).default_diversifier());
-            if default_address.is_some() {
+            if fvk.default_address_inner().is_some() {
                 1
             } else {
                 0
@@ -165,8 +164,12 @@ impl FullViewingKey {
 
     /// Returns the default payment address for this key.
     pub fn default_address(&self) -> Address {
-        self.address(DiversifierKey::from(self).default_diversifier())
+        self.default_address_inner()
             .expect("Default address works by construction")
+    }
+
+    fn default_address_inner(&self) -> Option<Address> {
+        self.address(DiversifierKey::from(self).default_diversifier())
     }
 
     /// Returns the payment address for this key at the given index.
