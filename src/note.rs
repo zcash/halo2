@@ -11,6 +11,9 @@ use crate::{
 mod commitment;
 pub use self::commitment::NoteCommitment;
 
+mod nullifier;
+pub use self::nullifier::Nullifier;
+
 /// The ZIP 212 seed randomness for a note.
 #[derive(Debug)]
 struct RandomSeed([u8; 32]);
@@ -69,15 +72,11 @@ impl Note {
     }
 
     /// Derives the nullifier for this note.
-    pub fn nullifier(&self, _: &FullViewingKey) -> Nullifier {
-        todo!()
+    pub fn nullifier(&self, fvk: &FullViewingKey) -> Nullifier {
+        Nullifier::derive(self.rho.0, self.rseed.psi(), self.commitment(), fvk.nk())
     }
 }
 
 /// An encrypted note.
 #[derive(Debug)]
 pub struct EncryptedNote;
-
-/// A unique nullifier for a note.
-#[derive(Debug)]
-pub struct Nullifier(pallas::Base);

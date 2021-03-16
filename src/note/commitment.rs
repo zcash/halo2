@@ -23,7 +23,7 @@ impl From<&RandomSeed> for NoteCommitTrapdoor {
 
 /// A commitment to a note.
 #[derive(Debug)]
-pub struct NoteCommitment(pallas::Point);
+pub struct NoteCommitment(pub(super) pallas::Point);
 
 impl NoteCommitment {
     /// $NoteCommit^Orchard$.

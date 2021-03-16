@@ -8,7 +8,10 @@ use group::{Curve, Group};
 use halo2::arithmetic::{CurveAffine, CurveExt, FieldExt};
 use pasta_curves::pallas;
 
-use crate::{constants::L_ORCHARD_BASE, primitives::sinsemilla};
+use crate::{
+    constants::L_ORCHARD_BASE,
+    primitives::{poseidon, sinsemilla},
+};
 
 const PRF_EXPAND_PERSONALIZATION: &[u8; 16] = b"Zcash_ExpandSeed";
 
@@ -92,6 +95,16 @@ pub(crate) fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> [u8; 64] {
         h.update(t);
     }
     *h.finalize().as_array()
+}
+
+/// $PRF^\mathsf{nfOrchard}(nk, \rho) := Poseidon(nk, \rho)$
+///
+/// Defined in [Zcash Protocol Spec § 5.4.2: Pseudo Random Functions][concreteprfs].
+///
+/// [concreteprfs]: https://zips.z.cash/protocol/orchard.pdf#concreteprfs
+pub(crate) fn prf_nf(nk: pallas::Base, rho: pallas::Base) -> pallas::Base {
+    poseidon::Hash::init(poseidon::OrchardNullifier, poseidon::ConstantLength(2))
+        .hash(iter::empty().chain(Some(nk)).chain(Some(rho)))
 }
 
 /// Defined in [Zcash Protocol Spec § 5.4.5.5: Orchard Key Agreement][concreteorchardkeyagreement].

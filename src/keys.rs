@@ -14,8 +14,8 @@ use crate::{
     address::Address,
     primitives::redpallas::{self, SpendAuth},
     spec::{
-        commit_ivk, diversify_hash, extract_p, ka_orchard, prf_expand, prf_expand_vec, to_base,
-        to_scalar,
+        commit_ivk, diversify_hash, extract_p, ka_orchard, prf_expand, prf_expand_vec, prf_nf,
+        to_base, to_scalar,
     },
 };
 
@@ -102,6 +102,12 @@ impl From<&SpendingKey> for NullifierDerivingKey {
     }
 }
 
+impl NullifierDerivingKey {
+    pub(crate) fn prf_nf(&self, rho: pallas::Base) -> pallas::Base {
+        prf_nf(self.0, rho)
+    }
+}
+
 /// The randomness for $\mathsf{Commit}^\mathsf{ivk}$.
 ///
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
@@ -142,6 +148,10 @@ impl From<&SpendingKey> for FullViewingKey {
 }
 
 impl FullViewingKey {
+    pub(crate) fn nk(&self) -> &NullifierDerivingKey {
+        &self.nk
+    }
+
     /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
     ///
     /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
