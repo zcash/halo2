@@ -30,6 +30,14 @@ pub(crate) fn to_scalar(x: [u8; 64]) -> pallas::Scalar {
     pallas::Scalar::from_bytes_wide(&x)
 }
 
+/// Converts from pallas::Base to pallas::Scalar (aka $x \pmod{r_\mathbb{P}}$).
+///
+/// This requires no modular reduction because Pallas' base field is smaller than its
+/// scalar field.
+pub(crate) fn mod_r_p(x: pallas::Base) -> pallas::Scalar {
+    pallas::Scalar::from_repr(x.to_repr()).unwrap()
+}
+
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
@@ -41,16 +49,14 @@ pub(crate) fn commit_ivk(
     // We rely on the API contract that to_le_bits() returns at least PrimeField::NUM_BITS
     // bits, which is equal to L_ORCHARD_BASE.
     let domain = sinsemilla::CommitDomain::new(&"z.cash:Orchard-CommitIvk");
-    let ivk = domain.short_commit(
-        iter::empty()
-            .chain(ak.to_le_bits().iter().by_val().take(L_ORCHARD_BASE))
-            .chain(nk.to_le_bits().iter().by_val().take(L_ORCHARD_BASE)),
-        rivk,
-    );
-
-    // Convert from pallas::Base to pallas::Scalar. This requires no modular reduction
-    // because Pallas' base field is smaller than its scalar field.
-    pallas::Scalar::from_repr(ivk.to_repr()).unwrap()
+    mod_r_p(
+        domain.short_commit(
+            iter::empty()
+                .chain(ak.to_le_bits().iter().by_val().take(L_ORCHARD_BASE))
+                .chain(nk.to_le_bits().iter().by_val().take(L_ORCHARD_BASE)),
+            rivk,
+        ),
+    )
 }
 
 /// Defined in [Zcash Protocol Spec § 5.4.1.6: DiversifyHash^Sapling and DiversifyHash^Orchard Hash Functions][concretediversifyhash].
