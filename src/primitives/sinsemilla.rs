@@ -18,9 +18,16 @@ fn lebs2ip_k(bits: &[bool]) -> u32 {
         .fold(0u32, |acc, (i, b)| acc + if *b { 1 << i } else { 0 })
 }
 
+/// Pads the given iterator (which MUST have length $\leq K * C$) with zero-bits to a
+/// multiple of $K$ bits.
 struct Pad<I: Iterator<Item = bool>> {
+    /// The iterator we are padding.
     inner: I,
+    /// The measured length of the inner iterator.
+    ///
+    /// This starts as a lower bound, and will be accurate once `padding_left.is_some()`.
     len: usize,
+    /// The amount of padding that remains to be emitted.
     padding_left: Option<usize>,
 }
 
@@ -39,21 +46,28 @@ impl<I: Iterator<Item = bool>> Iterator for Pad<I> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
+            // If we have identified the required padding, the inner iterator has ended,
+            // and we will never poll it again.
             if let Some(n) = self.padding_left.as_mut() {
                 if *n == 0 {
+                    // Either we already emitted all necessary padding, or there was no
+                    // padding required.
                     break None;
                 } else {
+                    // Emit the next padding bit.
                     *n -= 1;
                     break Some(false);
                 }
             } else if let Some(ret) = self.inner.next() {
+                // We haven't reached the end of the inner iterator yet.
                 self.len += 1;
                 assert!(self.len <= K * C);
                 break Some(ret);
             } else {
-                // Inner iterator just ended.
+                // Inner iterator just ended, so we now know its length.
                 let rem = self.len % K;
                 if rem > 0 {
+                    // The inner iterator requires padding in the range [1,K).
                     self.padding_left = Some(K - rem);
                 } else {
                     // No padding required.
