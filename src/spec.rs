@@ -58,12 +58,13 @@ pub(crate) fn commit_ivk(
 /// Defined in [Zcash Protocol Spec § 5.4.1.6: DiversifyHash^Sapling and DiversifyHash^Orchard Hash Functions][concretediversifyhash].
 ///
 /// [concretediversifyhash]: https://zips.z.cash/protocol/nu5.pdf#concretediversifyhash
-pub(crate) fn diversify_hash(d: &[u8; 11]) -> Option<pallas::Point> {
+pub(crate) fn diversify_hash(d: &[u8; 11]) -> pallas::Point {
     let pk_d = pallas::Point::hash_to_curve("z.cash:Orchard-gd")(d);
     if pk_d.is_identity().into() {
-        None
+        // If the identity occurs, we replace it with a different fixed point.
+        pallas::Point::hash_to_curve("z.cash:Orchard-gd")(&[])
     } else {
-        Some(pk_d)
+        pk_d
     }
 }
 
@@ -105,5 +106,18 @@ pub(crate) fn extract_p(point: &pallas::Point) -> pallas::Base {
         x
     } else {
         pallas::Base::zero()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use group::Group;
+    use halo2::{arithmetic::CurveExt, pasta::pallas};
+
+    #[test]
+    fn diversify_hash_substitution() {
+        assert!(!bool::from(
+            pallas::Point::hash_to_curve("z.cash:Orchard-gd")(&[]).is_identity()
+        ));
     }
 }
