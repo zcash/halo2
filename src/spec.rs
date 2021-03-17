@@ -72,7 +72,7 @@ pub(crate) fn diversify_hash(d: &[u8; 11]) -> pallas::Point {
 ///
 /// Defined in [Zcash Protocol Spec § 5.4.2: Pseudo Random Functions][concreteprfs].
 ///
-/// [concreteprfs]: https://zips.z.cash/protocol/orchard.pdf#concreteprfs
+/// [concreteprfs]: https://zips.z.cash/protocol/nu5.pdf#concreteprfs
 pub(crate) fn prf_expand(sk: &[u8], t: &[u8]) -> [u8; 64] {
     prf_expand_vec(sk, &[t])
 }
@@ -89,16 +89,16 @@ pub(crate) fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> [u8; 64] {
     *h.finalize().as_array()
 }
 
-/// Defined in [Zcash Protocol Spec § 5.4.4.5: Orchard Key Agreement][concreteorchardkeyagreement].
+/// Defined in [Zcash Protocol Spec § 5.4.5.5: Orchard Key Agreement][concreteorchardkeyagreement].
 ///
 /// [concreteorchardkeyagreement]: https://zips.z.cash/protocol/nu5.pdf#concreteorchardkeyagreement
 pub(crate) fn ka_orchard(sk: &pallas::Scalar, b: &pallas::Point) -> pallas::Point {
     b * sk
 }
 
-/// Hash extractor for Pallas.
+/// Coordinate extractor for Pallas.
 ///
-/// Defined in [Zcash Protocol Spec § 5.4.8.7: Hash Extractor for Pallas][concreteextractorpallas].
+/// Defined in [Zcash Protocol Spec § 5.4.9.7: Coordinate Extractor for Pallas][concreteextractorpallas].
 ///
 /// [concreteextractorpallas]: https://zips.z.cash/protocol/nu5.pdf#concreteextractorpallas
 pub(crate) fn extract_p(point: &pallas::Point) -> pallas::Base {
