@@ -76,16 +76,27 @@ impl<I: Iterator<Item = bool>> Iterator for Pad<I> {
     }
 }
 
-#[allow(non_snake_case)]
-fn Q(domain_prefix: &str) -> pallas::Point {
-    pallas::Point::hash_to_curve(Q_PERSONALIZATION)(domain_prefix.as_bytes())
+pub trait HashDomain {
+    #[allow(non_snake_case)]
+    fn Q(&self) -> pallas::Point;
+}
+
+pub struct Domain(pub &'static str);
+
+impl HashDomain for Domain {
+    fn Q(&self) -> pallas::Point {
+        pallas::Point::hash_to_curve(Q_PERSONALIZATION)(self.0.as_bytes())
+    }
 }
 
 /// `SinsemillaHashToPoint` from [§ 5.4.1.9][concretesinsemillahash].
 ///
 /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
 #[allow(non_snake_case)]
-pub(crate) fn hash_to_point(domain_prefix: &str, msg: impl Iterator<Item = bool>) -> pallas::Point {
+pub(crate) fn hash_to_point<D: HashDomain>(
+    domain: &D,
+    msg: impl Iterator<Item = bool>,
+) -> pallas::Point {
     let padded: Vec<_> = Pad::new(msg).collect();
 
     let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
@@ -93,42 +104,59 @@ pub(crate) fn hash_to_point(domain_prefix: &str, msg: impl Iterator<Item = bool>
 
     padded
         .chunks(K)
-        .fold(Q(domain_prefix), |acc, chunk| acc.double() + S(chunk))
+        .fold(domain.Q(), |acc, chunk| acc.double() + S(chunk))
 }
 
 /// `SinsemillaHash` from [§ 5.4.1.9][concretesinsemillahash].
 ///
 /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
-pub(crate) fn hash(domain_prefix: &str, msg: impl Iterator<Item = bool>) -> pallas::Base {
-    extract_p(&hash_to_point(domain_prefix, msg))
+pub(crate) fn hash<D: HashDomain>(domain: &D, msg: impl Iterator<Item = bool>) -> pallas::Base {
+    extract_p(&hash_to_point(domain, msg))
+}
+
+pub trait CommitDomain: HashDomain {
+    #[allow(non_snake_case)]
+    fn R(&self) -> pallas::Point;
+}
+
+pub struct Comm(pub &'static str);
+
+impl HashDomain for Comm {
+    fn Q(&self) -> pallas::Point {
+        let m_prefix = self.0.to_owned() + "-M";
+        pallas::Point::hash_to_curve(Q_PERSONALIZATION)(m_prefix.as_bytes())
+    }
+}
+
+impl CommitDomain for Comm {
+    fn R(&self) -> pallas::Point {
+        let r_prefix = self.0.to_owned() + "-r";
+        let hasher_r = pallas::Point::hash_to_curve(&r_prefix);
+        hasher_r(&[])
+    }
 }
 
 /// `SinsemillaCommit` from [§ 5.4.8.4][concretesinsemillacommit].
 ///
 /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
 #[allow(non_snake_case)]
-pub(crate) fn commit(
-    domain_prefix: &str,
+pub(crate) fn commit<D: CommitDomain>(
+    domain: &D,
     msg: impl Iterator<Item = bool>,
     r: &pallas::Scalar,
 ) -> pallas::Point {
-    let m_prefix = domain_prefix.to_owned() + "-M";
-    let r_prefix = domain_prefix.to_owned() + "-r";
-
-    let hasher_r = pallas::Point::hash_to_curve(&r_prefix);
-
-    hash_to_point(&m_prefix, msg) + hasher_r(&[]) * r
+    hash_to_point(domain, msg) + domain.R() * r
 }
 
 /// `SinsemillaShortCommit` from [§ 5.4.8.4][concretesinsemillacommit].
 ///
 /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
-pub(crate) fn short_commit(
-    domain_prefix: &str,
+pub(crate) fn short_commit<D: CommitDomain>(
+    domain: &D,
     msg: impl Iterator<Item = bool>,
     r: &pallas::Scalar,
 ) -> pallas::Base {
-    extract_p(&commit(domain_prefix, msg, r))
+    extract_p(&commit(domain, msg, r))
 }
 
 #[cfg(test)]
