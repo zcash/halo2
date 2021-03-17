@@ -6,11 +6,8 @@ use pasta_curves::pallas;
 
 use crate::spec::extract_p;
 
-const GROUP_HASH_Q: &str = "z.cash:SinsemillaQ";
-const GROUP_HASH_S: &str = "z.cash:SinsemillaS";
-
-const K: usize = 10;
-const C: usize = 253;
+mod constants;
+pub use constants::*;
 
 fn lebs2ip_k(bits: &[bool]) -> u32 {
     assert!(bits.len() == K);
@@ -81,7 +78,7 @@ impl<I: Iterator<Item = bool>> Iterator for Pad<I> {
 
 #[allow(non_snake_case)]
 fn Q(domain_prefix: &str) -> pallas::Point {
-    pallas::Point::hash_to_curve(GROUP_HASH_Q)(domain_prefix.as_bytes())
+    pallas::Point::hash_to_curve(Q_PERSONALIZATION)(domain_prefix.as_bytes())
 }
 
 /// `SinsemillaHashToPoint` from [§ 5.4.1.9][concretesinsemillahash].
@@ -91,7 +88,7 @@ fn Q(domain_prefix: &str) -> pallas::Point {
 pub(crate) fn hash_to_point(domain_prefix: &str, msg: impl Iterator<Item = bool>) -> pallas::Point {
     let padded: Vec<_> = Pad::new(msg).collect();
 
-    let hasher_S = pallas::Point::hash_to_curve(GROUP_HASH_S);
+    let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
     let S = |chunk: &[bool]| hasher_S(&lebs2ip_k(chunk).to_le_bytes());
 
     padded
