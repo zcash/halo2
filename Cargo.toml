@@ -25,9 +25,16 @@ blake2b_simd = "0.5"
 ff = "0.9"
 fpe = "0.4"
 group = "0.9"
-halo2 = { git = "https://github.com/zcash/halo2.git", branch = "main" }
 nonempty = "0.6"
 subtle = "2.3"
+
+[dependencies.halo2]
+git = "https://github.com/zcash/halo2.git"
+rev = "b079624ea78b4a07d44cb3c725dd734093577062"
+
+[dependencies.pasta_curves]
+git = "https://github.com/zcash/pasta_curves.git"
+rev = "0a6b2f6eb5acbe1dabc9e77ed0bcb748cc640196"
 
 [dependencies.reddsa]
 git = "https://github.com/str4d/redjubjub.git"

@@ -6,7 +6,8 @@ use std::mem;
 use aes::Aes256;
 use fpe::ff1::{BinaryNumeralString, FF1};
 use group::GroupEncoding;
-use halo2::{arithmetic::FieldExt, pasta::pallas};
+use halo2::arithmetic::FieldExt;
+use pasta_curves::pallas;
 use subtle::CtOption;
 
 use crate::{
