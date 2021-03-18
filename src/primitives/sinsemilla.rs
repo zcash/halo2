@@ -105,7 +105,7 @@ pub(crate) fn hash(domain_prefix: &str, msg: impl Iterator<Item = bool>) -> pall
     extract_p(&hash_to_point(domain_prefix, msg))
 }
 
-/// `SinsemillaCommit` from [§ 5.4.7.4][concretesinsemillacommit].
+/// `SinsemillaCommit` from [§ 5.4.8.4][concretesinsemillacommit].
 ///
 /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
 #[allow(non_snake_case)]
@@ -122,7 +122,7 @@ pub(crate) fn commit(
     hash_to_point(&m_prefix, msg) + hasher_r(&[]) * r
 }
 
-/// `SinsemillaShortCommit` from [§ 5.4.7.4][concretesinsemillacommit].
+/// `SinsemillaShortCommit` from [§ 5.4.8.4][concretesinsemillacommit].
 ///
 /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
 pub(crate) fn short_commit(
