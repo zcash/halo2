@@ -1,7 +1,8 @@
 //! The Sinsemilla hash function and commitment scheme.
 
 use group::Group;
-use halo2::{arithmetic::CurveExt, pasta::pallas};
+use halo2::arithmetic::CurveExt;
+use pasta_curves::pallas;
 
 use crate::spec::extract_p;
 

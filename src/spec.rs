@@ -5,10 +5,8 @@ use std::iter;
 use blake2b_simd::Params;
 use ff::PrimeField;
 use group::{Curve, Group};
-use halo2::{
-    arithmetic::{CurveAffine, CurveExt, FieldExt},
-    pasta::pallas,
-};
+use halo2::arithmetic::{CurveAffine, CurveExt, FieldExt};
+use pasta_curves::pallas;
 
 use crate::{constants::L_ORCHARD_BASE, primitives::sinsemilla};
 
@@ -113,7 +111,8 @@ pub(crate) fn extract_p(point: &pallas::Point) -> pallas::Base {
 #[cfg(test)]
 mod tests {
     use group::Group;
-    use halo2::{arithmetic::CurveExt, pasta::pallas};
+    use halo2::arithmetic::CurveExt;
+    use pasta_curves::pallas;
 
     #[test]
     fn diversify_hash_substitution() {
