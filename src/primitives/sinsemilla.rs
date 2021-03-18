@@ -76,11 +76,21 @@ impl<I: Iterator<Item = bool>> Iterator for Pad<I> {
     }
 }
 
+/// Trait representing a domain in which [`sinsemilla::hash_to_point`] and
+/// [`sinsemilla::hash`] can be used.
+///
+/// [`sinsemilla::hash_to_point`]: self::hash_to_point
+/// [`sinsemilla::hash`]: self::hash
 pub trait HashDomain {
     #[allow(non_snake_case)]
     fn Q(&self) -> pallas::Point;
 }
 
+/// A domain with a specific prefix string, in which [`sinsemilla::hash_to_point`] and
+/// [`sinsemilla::hash`] can be used.
+///
+/// [`sinsemilla::hash_to_point`]: self::hash_to_point
+/// [`sinsemilla::hash`]: self::hash
 pub struct Domain(pub &'static str);
 
 impl HashDomain for Domain {
@@ -114,11 +124,21 @@ pub(crate) fn hash<D: HashDomain>(domain: &D, msg: impl Iterator<Item = bool>) -
     extract_p(&hash_to_point(domain, msg))
 }
 
+/// Trait representing a domain in which [`sinsemilla::commit`] and
+/// [`sinsemilla::short_commit`] can be used.
+///
+/// [`sinsemilla::commit`]: self::commit
+/// [`sinsemilla::short_commit`]: self::short_commit
 pub trait CommitDomain: HashDomain {
     #[allow(non_snake_case)]
     fn R(&self) -> pallas::Point;
 }
 
+/// A domain with a specific prefix string, in which [`sinsemilla::commit`] and
+/// [`sinsemilla::short_commit`] can be used.
+///
+/// [`sinsemilla::commit`]: self::commit
+/// [`sinsemilla::short_commit`]: self::short_commit
 pub struct Comm(pub &'static str);
 
 impl HashDomain for Comm {
