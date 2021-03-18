@@ -59,10 +59,11 @@ pub(crate) fn commit_ivk(
 ///
 /// [concretediversifyhash]: https://zips.z.cash/protocol/nu5.pdf#concretediversifyhash
 pub(crate) fn diversify_hash(d: &[u8; 11]) -> pallas::Point {
-    let pk_d = pallas::Point::hash_to_curve("z.cash:Orchard-gd")(d);
+    let hasher = pallas::Point::hash_to_curve("z.cash:Orchard-gd");
+    let pk_d = hasher(d);
     if pk_d.is_identity().into() {
         // If the identity occurs, we replace it with a different fixed point.
-        pallas::Point::hash_to_curve("z.cash:Orchard-gd")(&[])
+        hasher(&[])
     } else {
         pk_d
     }
