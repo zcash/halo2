@@ -115,6 +115,12 @@ impl HashDomain {
     pub(crate) fn hash(&self, msg: impl Iterator<Item = bool>) -> pallas::Base {
         extract_p(&self.hash_to_point(msg))
     }
+
+    /// Return `Q`
+    #[allow(non_snake_case)]
+    pub(crate) fn Q(&self) -> pallas::Point {
+        self.Q
+    }
 }
 
 /// A domain in which [`sinsemilla::commit`] and
@@ -175,6 +181,18 @@ impl CommitDomain {
         r: &pallas::Scalar,
     ) -> pallas::Base {
         extract_p(&self.commit(msg, r))
+    }
+
+    /// Return `Q`
+    #[allow(non_snake_case)]
+    pub(crate) fn Q(&self) -> pallas::Point {
+        self.Q
+    }
+
+    /// Return `R`
+    #[allow(non_snake_case)]
+    pub(crate) fn R(&self) -> pallas::Point {
+        self.R
     }
 }
 
