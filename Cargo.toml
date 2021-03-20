@@ -45,3 +45,7 @@ criterion = "0.3"
 
 [lib]
 bench = false
+
+[[bench]]
+name = "small"
+harness = false
