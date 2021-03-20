@@ -76,11 +76,9 @@ impl<I: Iterator<Item = bool>> Iterator for Pad<I> {
     }
 }
 
-/// A domain in which [`sinsemilla::hash_to_point`] and
-/// [`sinsemilla::hash`] can be used.
-///
-/// [`sinsemilla::hash_to_point`]: self::hash_to_point
-/// [`sinsemilla::hash`]: self::hash
+/// A domain in which [`Self::hash_to_point()`] and
+/// [`Self::hash()`] can be used.
+#[derive(Debug)]
 #[allow(non_snake_case)]
 pub struct HashDomain {
     Q: pallas::Point,
@@ -123,14 +121,12 @@ impl HashDomain {
     }
 }
 
-/// A domain in which [`sinsemilla::commit`] and
-/// [`sinsemilla::short_commit`] can be used.
-///
-/// [`sinsemilla::commit`]: self::commit
-/// [`sinsemilla::short_commit`]: self::short_commit
+/// A domain in which [`Self::commit`] and
+/// [`Self::short_commit`] can be used.
+#[derive(Debug)]
 #[allow(non_snake_case)]
 pub struct CommitDomain {
-    Q: pallas::Point,
+    M: HashDomain,
     R: pallas::Point,
 }
 
@@ -140,24 +136,9 @@ impl CommitDomain {
         let m_prefix = domain.to_owned() + "-M";
         let r_prefix = domain.to_owned() + "-r";
         CommitDomain {
-            Q: HashDomain::new(&m_prefix).Q,
+            M: HashDomain::new(&m_prefix),
             R: pallas::Point::hash_to_curve(&r_prefix.clone())(&[]),
         }
-    }
-
-    /// `SinsemillaHashToPoint` from [§ 5.4.1.9][concretesinsemillahash].
-    ///
-    /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
-    #[allow(non_snake_case)]
-    pub(crate) fn hash_to_point(&self, msg: impl Iterator<Item = bool>) -> pallas::Point {
-        let padded: Vec<_> = Pad::new(msg).collect();
-
-        let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
-        let S = |chunk: &[bool]| hasher_S(&lebs2ip_k(chunk).to_le_bytes());
-
-        padded
-            .chunks(K)
-            .fold(self.Q, |acc, chunk| acc.double() + S(chunk))
     }
 
     /// `SinsemillaCommit` from [§ 5.4.8.4][concretesinsemillacommit].
@@ -169,7 +150,7 @@ impl CommitDomain {
         msg: impl Iterator<Item = bool>,
         r: &pallas::Scalar,
     ) -> pallas::Point {
-        self.hash_to_point(msg) + self.R * r
+        self.M.hash_to_point(msg) + self.R * r
     }
 
     /// `SinsemillaShortCommit` from [§ 5.4.8.4][concretesinsemillacommit].
@@ -181,12 +162,6 @@ impl CommitDomain {
         r: &pallas::Scalar,
     ) -> pallas::Base {
         extract_p(&self.commit(msg, r))
-    }
-
-    /// Return `Q`
-    #[allow(non_snake_case)]
-    pub(crate) fn Q(&self) -> pallas::Point {
-        self.Q
     }
 
     /// Return `R`
