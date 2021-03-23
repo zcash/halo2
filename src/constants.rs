@@ -47,7 +47,7 @@ pub const NUM_WINDOWS: usize = pallas::Base::NUM_BITS as usize / FIXED_BASE_WIND
 /// Number of bits used in complete addition (for variable-base scalar mul)
 pub const NUM_COMPLETE_BITS: usize = 3;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug)]
 pub enum OrchardFixedBases<C: CurveAffine> {
     CommitIvkR(OrchardFixedBase<C>),
     NoteCommitR(OrchardFixedBase<C>),
@@ -55,6 +55,48 @@ pub enum OrchardFixedBases<C: CurveAffine> {
     ValueCommitR(OrchardFixedBase<C>),
     ValueCommitV(OrchardFixedBase<C>),
 }
+
+impl<C: CurveAffine> std::hash::Hash for OrchardFixedBases<C> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match *self {
+            OrchardFixedBases::CommitIvkR(_) => {
+                state.write(&format!("{:?}", "CommitIvkR").as_bytes())
+            }
+            OrchardFixedBases::NoteCommitR(_) => {
+                state.write(&format!("{:?}", "NoteCommitR").as_bytes())
+            }
+            OrchardFixedBases::NullifierK(_) => {
+                state.write(&format!("{:?}", "NullifierK").as_bytes())
+            }
+            OrchardFixedBases::ValueCommitR(_) => {
+                state.write(&format!("{:?}", "ValueCommitR").as_bytes())
+            }
+            OrchardFixedBases::ValueCommitV(_) => {
+                state.write(&format!("{:?}", "ValueCommitV").as_bytes())
+            }
+        }
+    }
+}
+
+impl<C: CurveAffine> OrchardFixedBases<C> {
+    pub fn inner(&self) -> OrchardFixedBase<C> {
+        match self {
+            Self::CommitIvkR(inner) => *inner,
+            Self::NoteCommitR(inner) => *inner,
+            Self::NullifierK(inner) => *inner,
+            Self::ValueCommitR(inner) => *inner,
+            Self::ValueCommitV(inner) => *inner,
+        }
+    }
+}
+
+impl<C: CurveAffine> PartialEq for OrchardFixedBases<C> {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner() == other.inner()
+    }
+}
+
+impl<C: CurveAffine> Eq for OrchardFixedBases<C> {}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct OrchardFixedBase<C: CurveAffine>(C);
@@ -147,8 +189,7 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
                     .iter()
                     .map(|point| point.get_xy().unwrap().0)
                     .collect();
-                let coeffs = lagrange_interpolate(&points, &x_window_points);
-                coeffs
+                lagrange_interpolate(&points, &x_window_points)
             })
             .collect::<Vec<Vec<_>>>()
     }
