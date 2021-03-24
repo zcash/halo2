@@ -6,11 +6,8 @@ use pasta_curves::pallas;
 
 use crate::spec::extract_p;
 
-const GROUP_HASH_Q: &str = "z.cash:SinsemillaQ";
-const GROUP_HASH_S: &str = "z.cash:SinsemillaS";
-
-const K: usize = 10;
-const C: usize = 253;
+mod constants;
+pub use constants::*;
 
 fn lebs2ip_k(bits: &[bool]) -> u32 {
     assert!(bits.len() == K);
@@ -79,59 +76,102 @@ impl<I: Iterator<Item = bool>> Iterator for Pad<I> {
     }
 }
 
+/// A domain in which $\mathsf{SinsemillaHashToPoint}$ and $\mathsf{SinsemillaHash}$ can
+/// be used.
+#[derive(Debug)]
 #[allow(non_snake_case)]
-fn Q(domain_prefix: &str) -> pallas::Point {
-    pallas::Point::hash_to_curve(GROUP_HASH_Q)(domain_prefix.as_bytes())
+pub struct HashDomain {
+    Q: pallas::Point,
 }
 
-/// `SinsemillaHashToPoint` from [§ 5.4.1.9][concretesinsemillahash].
-///
-/// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
+impl HashDomain {
+    /// Constructs a new `HashDomain` with a specific prefix string.
+    pub(crate) fn new(domain: &str) -> Self {
+        HashDomain {
+            Q: pallas::Point::hash_to_curve(Q_PERSONALIZATION)(domain.as_bytes()),
+        }
+    }
+
+    /// $\mathsf{SinsemillaHashToPoint}$ from [§ 5.4.1.9][concretesinsemillahash].
+    ///
+    /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
+    #[allow(non_snake_case)]
+    pub(crate) fn hash_to_point(&self, msg: impl Iterator<Item = bool>) -> pallas::Point {
+        let padded: Vec<_> = Pad::new(msg).collect();
+
+        let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
+        let S = |chunk: &[bool]| hasher_S(&lebs2ip_k(chunk).to_le_bytes());
+
+        padded
+            .chunks(K)
+            .fold(self.Q, |acc, chunk| acc.double() + S(chunk))
+    }
+
+    /// $\mathsf{SinsemillaHash}$ from [§ 5.4.1.9][concretesinsemillahash].
+    ///
+    /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
+    pub(crate) fn hash(&self, msg: impl Iterator<Item = bool>) -> pallas::Base {
+        extract_p(&self.hash_to_point(msg))
+    }
+
+    /// Returns the Sinsemilla $Q$ constant for this domain.
+    #[cfg(test)]
+    #[allow(non_snake_case)]
+    pub(crate) fn Q(&self) -> pallas::Point {
+        self.Q
+    }
+}
+
+/// A domain in which $\mathsf{SinsemillaCommit}$ and $\mathsf{SinsemillaShortCommit}$ can
+/// be used.
+#[derive(Debug)]
 #[allow(non_snake_case)]
-pub(crate) fn hash_to_point(domain_prefix: &str, msg: impl Iterator<Item = bool>) -> pallas::Point {
-    let padded: Vec<_> = Pad::new(msg).collect();
-
-    let hasher_S = pallas::Point::hash_to_curve(GROUP_HASH_S);
-    let S = |chunk: &[bool]| hasher_S(&lebs2ip_k(chunk).to_le_bytes());
-
-    padded
-        .chunks(K)
-        .fold(Q(domain_prefix), |acc, chunk| acc.double() + S(chunk))
+pub struct CommitDomain {
+    M: HashDomain,
+    R: pallas::Point,
 }
 
-/// `SinsemillaHash` from [§ 5.4.1.9][concretesinsemillahash].
-///
-/// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
-pub(crate) fn hash(domain_prefix: &str, msg: impl Iterator<Item = bool>) -> pallas::Base {
-    extract_p(&hash_to_point(domain_prefix, msg))
-}
+impl CommitDomain {
+    /// Constructs a new `CommitDomain` with a specific prefix string.
+    pub(crate) fn new(domain: &str) -> Self {
+        let m_prefix = format!("{}-M", domain);
+        let r_prefix = format!("{}-r", domain);
+        let hasher_r = pallas::Point::hash_to_curve(&r_prefix);
+        CommitDomain {
+            M: HashDomain::new(&m_prefix),
+            R: hasher_r(&[]),
+        }
+    }
 
-/// `SinsemillaCommit` from [§ 5.4.8.4][concretesinsemillacommit].
-///
-/// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
-#[allow(non_snake_case)]
-pub(crate) fn commit(
-    domain_prefix: &str,
-    msg: impl Iterator<Item = bool>,
-    r: &pallas::Scalar,
-) -> pallas::Point {
-    let m_prefix = domain_prefix.to_owned() + "-M";
-    let r_prefix = domain_prefix.to_owned() + "-r";
+    /// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
+    ///
+    /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
+    #[allow(non_snake_case)]
+    pub(crate) fn commit(
+        &self,
+        msg: impl Iterator<Item = bool>,
+        r: &pallas::Scalar,
+    ) -> pallas::Point {
+        self.M.hash_to_point(msg) + self.R * r
+    }
 
-    let hasher_r = pallas::Point::hash_to_curve(&r_prefix);
+    /// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
+    ///
+    /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
+    pub(crate) fn short_commit(
+        &self,
+        msg: impl Iterator<Item = bool>,
+        r: &pallas::Scalar,
+    ) -> pallas::Base {
+        extract_p(&self.commit(msg, r))
+    }
 
-    hash_to_point(&m_prefix, msg) + hasher_r(&[]) * r
-}
-
-/// `SinsemillaShortCommit` from [§ 5.4.8.4][concretesinsemillacommit].
-///
-/// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
-pub(crate) fn short_commit(
-    domain_prefix: &str,
-    msg: impl Iterator<Item = bool>,
-    r: &pallas::Scalar,
-) -> pallas::Base {
-    extract_p(&commit(domain_prefix, msg, r))
+    /// Returns the Sinsemilla $R$ constant for this domain.
+    #[cfg(test)]
+    #[allow(non_snake_case)]
+    pub(crate) fn R(&self) -> pallas::Point {
+        self.R
+    }
 }
 
 #[cfg(test)]

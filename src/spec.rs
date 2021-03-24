@@ -40,8 +40,8 @@ pub(crate) fn commit_ivk(
 ) -> pallas::Scalar {
     // We rely on the API contract that to_le_bits() returns at least PrimeField::NUM_BITS
     // bits, which is equal to L_ORCHARD_BASE.
-    let ivk = sinsemilla::short_commit(
-        "z.cash:Orchard-CommitIvk",
+    let domain = sinsemilla::CommitDomain::new(&"z.cash:Orchard-CommitIvk");
+    let ivk = domain.short_commit(
         iter::empty()
             .chain(ak.to_le_bits().iter().by_val().take(L_ORCHARD_BASE))
             .chain(nk.to_le_bits().iter().by_val().take(L_ORCHARD_BASE)),
