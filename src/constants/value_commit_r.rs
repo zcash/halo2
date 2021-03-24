@@ -16,8 +16,8 @@ pub const GENERATOR: ([u8; 32], [u8; 32]) = (
     ],
 );
 
-/// z-values for GENERATOR
-pub const Z: [u64; 85] = [
+/// Full-width z-values for GENERATOR
+pub const Z: [u64; super::NUM_WINDOWS] = [
     287008, 5261, 10541, 67788, 1084, 31201, 1662, 32921, 2652, 52006, 3486, 82692, 7295, 40007,
     37754, 44773, 3021, 171863, 33315, 8829, 67034, 50428, 40391, 6615, 40340, 238, 199437, 50234,
     899, 27825, 139735, 36053, 194684, 28229, 31719, 66166, 100600, 59796, 52804, 10221, 159298,
@@ -25,6 +25,12 @@ pub const Z: [u64; 85] = [
     11413, 19391, 84631, 96003, 71276, 61444, 49575, 154646, 229521, 4555, 313045, 30544, 15466,
     7134, 12520, 164127, 29119, 11279, 103167, 63033, 13765, 35197, 71168, 10379, 9560, 54432,
     132537, 189703, 29967, 9941,
+];
+
+/// Short signed z-values for GENERATOR
+pub const Z_SHORT: [u64; super::NUM_WINDOWS_SHORT] = [
+    287008, 5261, 10541, 67788, 1084, 31201, 1662, 32921, 2652, 52006, 3486, 82692, 7295, 40007,
+    37754, 44773, 3021, 171863, 33315, 8829, 67034, 16641,
 ];
 
 pub fn generator<C: CurveAffine>() -> OrchardFixedBases<C> {
@@ -39,13 +45,15 @@ pub fn generator<C: CurveAffine>() -> OrchardFixedBases<C> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::TestFixedBase;
+    use super::super::{TestFixedBase, L_VALUE, NUM_WINDOWS, NUM_WINDOWS_SHORT};
     use super::*;
+    use ff::PrimeField;
     use group::Curve;
     use halo2::{
         arithmetic::{CurveAffine, CurveExt, FieldExt},
         pasta::pallas,
     };
+    use rand;
 
     #[test]
     fn generator() {
@@ -61,7 +69,23 @@ mod tests {
     fn lagrange_coeffs() {
         let base = super::generator::<pallas::Affine>();
         match base {
-            OrchardFixedBases::ValueCommitR(inner) => inner.test_lagrange_coeffs(),
+            OrchardFixedBases::ValueCommitR(inner) => inner.test_lagrange_coeffs(
+                pallas::Scalar::rand(),
+                pallas::Scalar::NUM_BITS as usize,
+                NUM_WINDOWS,
+            ),
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn lagrange_coeffs_short() {
+        let base = super::generator::<pallas::Affine>();
+        match base {
+            OrchardFixedBases::ValueCommitR(inner) => {
+                let scalar = pallas::Scalar::from_u64(rand::random::<u64>());
+                inner.test_lagrange_coeffs(scalar, L_VALUE, NUM_WINDOWS_SHORT)
+            }
             _ => unreachable!(),
         }
     }
@@ -70,7 +94,16 @@ mod tests {
     fn z() {
         let base = super::generator::<pallas::Affine>();
         match base {
-            OrchardFixedBases::ValueCommitR(inner) => inner.test_z(&Z),
+            OrchardFixedBases::ValueCommitR(inner) => inner.test_z(&Z, NUM_WINDOWS),
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn z_short() {
+        let base = super::generator::<pallas::Affine>();
+        match base {
+            OrchardFixedBases::ValueCommitR(inner) => inner.test_z(&Z_SHORT, NUM_WINDOWS_SHORT),
             _ => unreachable!(),
         }
     }
