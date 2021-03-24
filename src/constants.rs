@@ -17,6 +17,9 @@ pub mod util;
 /// $\ell^\mathsf{Orchard}_\mathsf{base}$
 pub(crate) const L_ORCHARD_BASE: usize = 255;
 
+/// $\ell_\mathsf{value}$
+pub(crate) const L_VALUE: usize = 64;
+
 // SWU hash-to-curve personalizations
 
 /// SWU hash-to-curve personalization
