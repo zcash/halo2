@@ -134,11 +134,12 @@ pub struct CommitDomain {
 impl CommitDomain {
     /// Constructs a new `CommitDomain` with a specific prefix string.
     pub(crate) fn new(domain: &str) -> Self {
-        let m_prefix = domain.to_owned() + "-M";
-        let r_prefix = domain.to_owned() + "-r";
+        let m_prefix = format!("{}-M", domain);
+        let r_prefix = format!("{}-r", domain);
+        let hasher_r = pallas::Point::hash_to_curve(&r_prefix);
         CommitDomain {
             M: HashDomain::new(&m_prefix),
-            R: pallas::Point::hash_to_curve(&r_prefix.clone())(&[]),
+            R: hasher_r(&[]),
         }
     }
 
