@@ -18,8 +18,9 @@ a * sa + b * sb + a * b * sm + c * sc + PI = 0
 ```
 
 ## Columns
-- **fixed (i.e. "selector") columns**: fixed for all instances of a particular circuit.
-  These columns toggle parts of a polynomial rule "on" or "off" to form a "custom gate".
+- **fixed columns**: fixed for all instances of a particular circuit. These include
+  selector columns, which toggle parts of a polynomial rule "on" or "off" to form a
+  "custom gate". They can also include any other fixed data.
 - **advice columns**: variable values assigned in each instance of the circuit.
   Corresponds to the prover's secret witness.
 - **public input**: like advice columns, but publicly known values.
