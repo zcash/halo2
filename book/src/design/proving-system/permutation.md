@@ -125,14 +125,14 @@ correct $(a\ b\ c\ d)$.
 
 ## Argument specification
 
-We need to represent permutations over $m$ columns, represented by polynomials $p_0, \ldots, p_{m-1}$.
+We need to check a permutation of cells in $m$ columns, represented in Lagrange basis by
+polynomials $p_0, \ldots, p_{m-1}$.
 
-We first assign a unique element of $\mathbb{F}^\times$ as an "extended domain" element for each cell
-that can participate in the permutation argument.
+We first label each cell in those $m$ columns with a unique element of $\mathbb{F}^\times$.
 
 Let $\omega$ be a $2^k$ root of unity and let $\delta$ be a $T$ root of unity, where
 $T \cdot 2^S + 1 = p$ with $T$ odd and $k \leq S$.
-We will use $\delta^i \cdot \omega^j \in \mathbb{F}^\times$ as the extended domain element for the
+We will use $\delta^i \cdot \omega^j \in \mathbb{F}^\times$ as the label for the
 cell in the $j$th row of the $i$th column of the permutation argument.
 
 If we have a permutation $\sigma(\mathsf{column}: i, \mathsf{row}: j) = (\mathsf{column}: i', \mathsf{row}: j')$,
@@ -141,7 +141,7 @@ we can represent it as a vector of $m$ polynomials $s_i(X)$ such that $s_i(\omeg
 Notice that the identity permutation can be represented by the vector of $m$ polynomials
 $\mathsf{ID}_i(X)$ such that $\mathsf{ID}_i(X) = \delta^i \cdot X$.
 
-Now given our permutation represented by $s_0, \ldots, s_{m-1}$, over advice columns represented by
+Now given our permutation represented by $s_0, \ldots, s_{m-1}$ over columns represented by
 $p_0, \ldots, p_{m-1}$, we want to ensure that:
 $$
 \prod\limits_{i=0}^{m-1} \prod\limits_{j=0}^{n-1} \left(\frac{p_i(\omega^j) + \beta \cdot \delta^i \cdot \omega^j + \gamma}{p_i(\omega^j) + \beta \cdot s_i(\omega^j) + \gamma}\right) = 1
