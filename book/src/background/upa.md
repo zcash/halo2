@@ -30,9 +30,9 @@ $a(X), X \in \mathcal{H}.$ To recover the coefficient form, we can use
 [Lagrange interpolation](polynomials.md#lagrange-interpolation), such that
 $a(\omega^i) = a_i.$
 
-## Copy constraints
+## Equality constraints
 - Define permutation between a set of columns, e.g. $\sigma(a, b, c)$
-- Copy specific cells between these columns, e.g. $b_1 = c_0$
+- Assert equalities between specific cells in these columns, e.g. $b_1 = c_0$
 - Construct permuted columns which should evaluate to same value as original columns
 
 ## Permutation grand product
