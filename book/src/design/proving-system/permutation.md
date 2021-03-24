@@ -73,9 +73,11 @@ To add an equality constraint $\mathit{left} \equiv \mathit{right}$:
 2. Otherwise, $\mathit{left}$ and $\mathit{right}$ belong to different cycles. Make
    $\mathit{left}$ the larger cycle and $\mathit{right}$ the smaller one, by swapping them
    iff $\mathsf{sizes}(\mathsf{aux}(\mathit{left})) < \mathsf{sizes}(\mathsf{aux}(\mathit{right}))$.
-3. Following the mapping around the right (smaller) cycle, for each element $x$ set
-   $\mathsf{aux}(x) = \mathsf{aux}(\mathit{left})$.
-4. Splice the smaller cycle into the larger one by swapping $\mathsf{mapping}(\mathit{left})$
+3. Set $\mathsf{sizes}(\mathsf{aux}(\mathit{left}))) :=
+        \mathsf{sizes}(\mathsf{aux}(\mathit{left}))) + \mathsf{sizes}(\mathsf{aux}(\mathit{right})))$.
+4. Following the mapping around the right (smaller) cycle, for each element $x$ set
+   $\mathsf{aux}(x) := \mathsf{aux}(\mathit{left})$.
+5. Splice the smaller cycle into the larger one by swapping $\mathsf{mapping}(\mathit{left})$
    with $\mathsf{mapping}(\mathit{right})$.
 
 For example, given two disjoint cycles $(A\ B\ C\ D)$ and $(E\ F\ G\ H)$:
@@ -117,7 +119,7 @@ following constraints:
 - $c \equiv d$
 - $b \equiv d$
 
-and we tried to implement adding an equality constraint just using step 4 of the above
+and we tried to implement adding an equality constraint just using step 5 of the above
 algorithm, then we would end up constructing the cycle $(a\ b)\ (c\ d)$, rather than the
 correct $(a\ b\ c\ d)$.
 
