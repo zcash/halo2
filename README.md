@@ -2,6 +2,8 @@
 
 **IMPORTANT**: This library is being actively developed and should not be used in production software.
 
+Requires Rust 1.51+.
+
 ## Documentation
 
 - [The Orchard Book](https://zcash.github.io/orchard/)
