@@ -51,7 +51,6 @@ mod tests {
         arithmetic::{CurveAffine, CurveExt, FieldExt},
         pasta::pallas,
     };
-    use rand;
 
     #[test]
     fn generator() {
