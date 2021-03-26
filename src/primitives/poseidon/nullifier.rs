@@ -1,7 +1,7 @@
 use halo2::arithmetic::Field;
 use pasta_curves::pallas;
 
-use super::Spec;
+use super::{Mds, Spec};
 
 /// Poseidon-128 using the $x^5$ S-box, with a width of 3 field elements, and an extra
 /// partial round compared to the standard specification.
@@ -11,14 +11,7 @@ use super::Spec;
 #[derive(Debug)]
 pub struct OrchardNullifier;
 
-impl Spec<pallas::Base> for OrchardNullifier {
-    type State = [pallas::Base; 3];
-    type Rate = [Option<pallas::Base>; 2];
-
-    fn width() -> usize {
-        3
-    }
-
+impl Spec<pallas::Base, 3, 2> for OrchardNullifier {
     fn full_rounds() -> usize {
         8
     }
@@ -35,12 +28,14 @@ impl Spec<pallas::Base> for OrchardNullifier {
         unimplemented!()
     }
 
-    fn constants(&self) -> (Vec<Self::State>, Vec<Self::State>, Vec<Self::State>) {
-        let round_constants = ROUND_CONSTANTS[..].to_vec();
-        let mds = MDS[..].to_vec();
-        let mds_inv = MDS_INV[..].to_vec();
-
-        (round_constants, mds, mds_inv)
+    fn constants(
+        &self,
+    ) -> (
+        Vec<[pallas::Base; 3]>,
+        Mds<pallas::Base, 3>,
+        Mds<pallas::Base, 3>,
+    ) {
+        (ROUND_CONSTANTS[..].to_vec(), MDS, MDS_INV)
     }
 }
 
@@ -1536,14 +1531,7 @@ mod tests {
         }
     }
 
-    impl<F: FieldExt> Spec<F> for P128Pow5T3Plus<F> {
-        type State = [F; 3];
-        type Rate = [Option<F>; 2];
-
-        fn width() -> usize {
-            3
-        }
-
+    impl<F: FieldExt> Spec<F, 3, 2> for P128Pow5T3Plus<F> {
         fn full_rounds() -> usize {
             8
         }
