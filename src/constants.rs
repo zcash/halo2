@@ -69,11 +69,11 @@ pub enum OrchardFixedBases<C: CurveAffine> {
 impl<C: CurveAffine> std::hash::Hash for OrchardFixedBases<C> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match *self {
-            OrchardFixedBases::CommitIvkR(_) => state.write(b"CommitIvkR"),
-            OrchardFixedBases::NoteCommitR(_) => state.write(b"NoteCommitR"),
-            OrchardFixedBases::NullifierK(_) => state.write(b"NullifierK"),
-            OrchardFixedBases::ValueCommitR(_) => state.write(b"ValueCommitR"),
-            OrchardFixedBases::ValueCommitV(_) => state.write(b"ValueCommitV"),
+            OrchardFixedBases::CommitIvkR(_) => state.write(self.variant()),
+            OrchardFixedBases::NoteCommitR(_) => state.write(self.variant()),
+            OrchardFixedBases::NullifierK(_) => state.write(self.variant()),
+            OrchardFixedBases::ValueCommitR(_) => state.write(self.variant()),
+            OrchardFixedBases::ValueCommitV(_) => state.write(self.variant()),
         }
     }
 }
@@ -88,6 +88,16 @@ impl<C: CurveAffine> OrchardFixedBases<C> {
             Self::ValueCommitV(inner) => *inner,
         }
     }
+
+    pub fn variant(&self) -> &[u8] {
+        match *self {
+            OrchardFixedBases::CommitIvkR(_) => b"CommitIvkR",
+            OrchardFixedBases::NoteCommitR(_) => b"NoteCommitR",
+            OrchardFixedBases::NullifierK(_) => b"NullifierK",
+            OrchardFixedBases::ValueCommitR(_) => b"ValueCommitR",
+            OrchardFixedBases::ValueCommitV(_) => b"ValueCommitV",
+        }
+    }
 }
 
 impl<C: CurveAffine> PartialEq for OrchardFixedBases<C> {
@@ -97,6 +107,18 @@ impl<C: CurveAffine> PartialEq for OrchardFixedBases<C> {
 }
 
 impl<C: CurveAffine> Eq for OrchardFixedBases<C> {}
+
+impl<C: CurveAffine> PartialOrd for OrchardFixedBases<C> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.variant().partial_cmp(&other.variant())
+    }
+}
+
+impl<C: CurveAffine> Ord for OrchardFixedBases<C> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.variant().cmp(&other.variant())
+    }
+}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct OrchardFixedBase<C: CurveAffine>(C);
