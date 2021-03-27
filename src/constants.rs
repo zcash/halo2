@@ -262,7 +262,7 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
 
 pub trait TestFixedBase<C: CurveAffine> {
     fn test_lagrange_coeffs(&self, scalar: C::Scalar, scalar_num_bits: usize, num_windows: usize);
-    fn test_z(&self, z: &[u64], num_windows: usize);
+    fn test_z(&self, z: &[u64], u: &[[[u8; 32]; H]], num_windows: usize);
 }
 
 impl<C: CurveAffine> TestFixedBase<C> for OrchardFixedBase<C> {
@@ -318,13 +318,14 @@ impl<C: CurveAffine> TestFixedBase<C> for OrchardFixedBase<C> {
         assert_eq!(window_sum, multiple);
     }
 
-    fn test_z(&self, z: &[u64], num_windows: usize) {
+    fn test_z(&self, z: &[u64], u: &[[[u8; 32]; H]], num_windows: usize) {
         let window_table = self.compute_window_table(num_windows);
 
-        for (z, window_points) in z.iter().zip(window_table) {
-            for point in window_points.iter() {
+        for ((u, z), window_points) in u.iter().zip(z.iter()).zip(window_table) {
+            for (u, point) in u.iter().zip(window_points.iter()) {
                 let y = point.get_xy().unwrap().1;
-                assert_eq!((C::Base::from_u64(*z) + y).sqrt().is_some().unwrap_u8(), 1);
+                let u = C::Base::from_bytes(&u).unwrap();
+                assert_eq!((C::Base::from_u64(*z) + y).sqrt().unwrap(), u);
                 assert_eq!((C::Base::from_u64(*z) - y).sqrt().is_some().unwrap_u8(), 0);
             }
         }
