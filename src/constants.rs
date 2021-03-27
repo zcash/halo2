@@ -21,8 +21,6 @@ pub(crate) const L_ORCHARD_BASE: usize = 255;
 pub(crate) const L_VALUE: usize = 64;
 
 // SWU hash-to-curve personalizations
-
-/// SWU hash-to-curve personalization
 /// This is used for the spending key base point and the nullifier base point K^Orchard
 pub const ORCHARD_PERSONALIZATION: &str = "z.cash:Orchard";
 
@@ -48,7 +46,8 @@ pub const FIXED_BASE_WINDOW_SIZE: usize = 3;
 pub const H: usize = 1 << FIXED_BASE_WINDOW_SIZE;
 
 /// Number of windows for a full-width scalar
-pub const NUM_WINDOWS: usize = pallas::Base::NUM_BITS as usize / FIXED_BASE_WINDOW_SIZE;
+pub const NUM_WINDOWS: usize =
+    (pallas::Base::NUM_BITS as usize + FIXED_BASE_WINDOW_SIZE - 1) / FIXED_BASE_WINDOW_SIZE;
 
 /// Number of windows for a short signed scalar
 pub const NUM_WINDOWS_SHORT: usize =
