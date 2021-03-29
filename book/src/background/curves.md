@@ -201,7 +201,36 @@ complicated, but when the curve has a prime $q$ number of points (and thus a pri
 $\mathbb{F}_q$ which is also a primitive cube root $\zeta_q$ in the scalar field.
 
 ## Curve point compression
-TODO
+Given a point on the curve $P = (x,y)$, we know that its negation $-P = (x, -y)$ is also
+on the curve. To uniquely specify a point, we need only encode its $x$-coordinate along
+with the sign of its $y$-coordinate.
+
+### Serialization
+As mentioned in the [Fields](./fields.md) section, we can interpret the least significant
+bit of a field element as its "sign", since its additive inverse will always have the
+opposite LSB. So we record the LSB of the $y$-coordinate as `sign`.
+
+Pallas and Vesta are defined over the $\mathbb{F}_p$ and $\mathbb{F}_q$ fields, which
+elements can be expressed in $255$ bits. This conveniently leaves one unused bit in a
+32-byte representation. We pack the $y$-coordinate `sign` bit into the highest bit in
+the representation of the $x$-coordinate:
+
+```
+         <----------------------------------- x --------------------------------->
+Enc(P) = [_ _ _ _ _ _ _ _] [_ _ _ _ _ _ _ _] ... [_ _ _ _ _ _ _ _] [_ _ _ _ _ _ _ sign]
+          ^                <------------------------------------->                 ^
+         LSB                              30 bytes                                MSB
+```
+
+### Deserialization
+When deserializing a compressed curve point, we first read the most significant bit as
+`ysign`, the sign of the $y$-coordinate. Then, we set this bit to zero to recover the
+original $x$-coordinate.
+
+If $x = 0, y = 0,$ we return the additive identity $(0, 0, 0)$. Otherwise, we proceed
+to compute $y = \sqrt{x^3 + b}.$ Here, we read the least significant bit of $y$ as `sign`.
+If `sign == ysign`, we already have the correct sign and simply return the curve point
+$(x, y)$. Otherwise, we negate $y$ and return $(x, -y)$.
 
 ## Cycles of curves
 Let $E_p$ be an elliptic curve over a finite field $\mathbb{F}_p,$ where $p$ is a prime.
