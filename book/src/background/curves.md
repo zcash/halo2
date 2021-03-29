@@ -152,16 +152,26 @@ corresponding numerators such that $X/Z = x'$ and $Y/Z = y'$. This completely av
 need to perform an inversion when doubling, and something analogous to this can be done
 when adding two distinct points.
 
-### TODO: Point addition
+### Point addition
+We now add two points with distinct $x$-coordinates, $P = (x_0, y_0)$ and $Q = (x_1, y_1),$
+where $x_0 \neq x_1$, to obtain $R = P + Q = (x_2, y_2).$ The line $\overline{PQ}$ has slope
+$\lambda = (y_1 - y_0)/(x_1 - x_0) \implies y - y_0 = \lambda \cdot (x - x_0).$
+
+Using the expression for $\overline{PQ}$, we compute $y$-coordinate $-y_2$ of $-R$ as:
+$$-y_2 - y_0 = \lambda \cdot (x_2 - x_0) \implies \boxed{y_2 = (x_0 - x_2) - y_0}.$$
+
+Plugging the expression for $\overline{PQ}$ into the curve equation $y^2 = x^3 + b$ yields
 $$
 \begin{aligned}
-P + Q &= R\\
-(x_p, y_p) + (x_q, y_q) &= (x_r, y_r) \\
-\lambda &= \frac{y_q - y_p}{x_q - x_p} \\
-x_r &= \lambda^2 - x_p - x_q \\
-y_r &= \lambda(x_p - x_r) - y_p
+y^2 = x^3 + b &\implies (\lambda \cdot (x - x_0) + y_0)^2 = x^3 + b \\
+&\implies x^3 - \lambda^2 x^2 + \cdots = 0 \leftarrow\text{(rearranging terms)} \\
+&= (x - x_0)(x - x_1)(x - x_2) \leftarrow\text{(known roots $x_0, x_1, x_2$)} \\
+&= x^3 - (x_0 + x_1 + x_2)x^2 + \cdots.
 \end{aligned}
 $$
+
+Comparing coefficients for the $x^2$ term gives us
+$\lambda^2 = x_0 + x_1 + x_2 \implies \boxed{x_2 = \lambda^2 - x_0 - x_1}$.
 
 ----------
 
