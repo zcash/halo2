@@ -13,9 +13,17 @@
 //! [`Action`]: crate::bundle::Action
 //! [`Bundle`]: crate::bundle::Bundle
 
+use bitvec::{array::BitArray, order::Lsb0};
+
 /// The value of an individual Orchard note.
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct NoteValue(u64);
+
+impl NoteValue {
+    pub(crate) fn to_le_bits(&self) -> BitArray<Lsb0, [u8; 8]> {
+        BitArray::<Lsb0, _>::new(self.0.to_le_bytes())
+    }
+}
 
 /// A sum of Orchard note values.
 #[derive(Debug)]

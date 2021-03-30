@@ -8,7 +8,10 @@ use group::{Curve, Group};
 use halo2::arithmetic::{CurveAffine, CurveExt, FieldExt};
 use pasta_curves::pallas;
 
-use crate::{constants::L_ORCHARD_BASE, primitives::sinsemilla};
+use crate::{
+    constants::L_ORCHARD_BASE,
+    primitives::{poseidon, sinsemilla},
+};
 
 const PRF_EXPAND_PERSONALIZATION: &[u8; 16] = b"Zcash_ExpandSeed";
 
@@ -30,6 +33,14 @@ pub(crate) fn to_scalar(x: [u8; 64]) -> pallas::Scalar {
     pallas::Scalar::from_bytes_wide(&x)
 }
 
+/// Converts from pallas::Base to pallas::Scalar (aka $x \pmod{r_\mathbb{P}}$).
+///
+/// This requires no modular reduction because Pallas' base field is smaller than its
+/// scalar field.
+pub(crate) fn mod_r_p(x: pallas::Base) -> pallas::Scalar {
+    pallas::Scalar::from_repr(x.to_repr()).unwrap()
+}
+
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
@@ -41,16 +52,15 @@ pub(crate) fn commit_ivk(
     // We rely on the API contract that to_le_bits() returns at least PrimeField::NUM_BITS
     // bits, which is equal to L_ORCHARD_BASE.
     let domain = sinsemilla::CommitDomain::new(&"z.cash:Orchard-CommitIvk");
-    let ivk = domain.short_commit(
-        iter::empty()
-            .chain(ak.to_le_bits().iter().by_val().take(L_ORCHARD_BASE))
-            .chain(nk.to_le_bits().iter().by_val().take(L_ORCHARD_BASE)),
-        rivk,
-    );
-
-    // Convert from pallas::Base to pallas::Scalar. This requires no modular reduction
-    // because Pallas' base field is smaller than its scalar field.
-    pallas::Scalar::from_repr(ivk.to_repr()).unwrap()
+    // TODO: handle the (negligible probability of) failure of SinsemillaShortCommit.
+    mod_r_p(
+        domain.short_commit(
+            iter::empty()
+                .chain(ak.to_le_bits().iter().by_val().take(L_ORCHARD_BASE))
+                .chain(nk.to_le_bits().iter().by_val().take(L_ORCHARD_BASE)),
+            rivk,
+        ),
+    )
 }
 
 /// Defined in [Zcash Protocol Spec § 5.4.1.6: DiversifyHash^Sapling and DiversifyHash^Orchard Hash Functions][concretediversifyhash].
@@ -86,6 +96,16 @@ pub(crate) fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> [u8; 64] {
         h.update(t);
     }
     *h.finalize().as_array()
+}
+
+/// $PRF^\mathsf{nfOrchard}(nk, \rho) := Poseidon(nk, \rho)$
+///
+/// Defined in [Zcash Protocol Spec § 5.4.2: Pseudo Random Functions][concreteprfs].
+///
+/// [concreteprfs]: https://zips.z.cash/protocol/nu5.pdf#concreteprfs
+pub(crate) fn prf_nf(nk: pallas::Base, rho: pallas::Base) -> pallas::Base {
+    poseidon::Hash::init(poseidon::OrchardNullifier, poseidon::ConstantLength(2))
+        .hash(iter::empty().chain(Some(nk)).chain(Some(rho)))
 }
 
 /// Defined in [Zcash Protocol Spec § 5.4.5.5: Orchard Key Agreement][concreteorchardkeyagreement].

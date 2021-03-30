@@ -14,8 +14,8 @@ use crate::{
     address::Address,
     primitives::redpallas::{self, SpendAuth},
     spec::{
-        commit_ivk, diversify_hash, extract_p, ka_orchard, prf_expand, prf_expand_vec, to_base,
-        to_scalar,
+        commit_ivk, diversify_hash, extract_p, ka_orchard, prf_expand, prf_expand_vec, prf_nf,
+        to_base, to_scalar,
     },
 };
 
@@ -102,6 +102,12 @@ impl From<&SpendingKey> for NullifierDerivingKey {
     }
 }
 
+impl NullifierDerivingKey {
+    pub(crate) fn prf_nf(&self, rho: pallas::Base) -> pallas::Base {
+        prf_nf(self.0, rho)
+    }
+}
+
 /// The randomness for $\mathsf{Commit}^\mathsf{ivk}$.
 ///
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
@@ -142,6 +148,10 @@ impl From<&SpendingKey> for FullViewingKey {
 }
 
 impl FullViewingKey {
+    pub(crate) fn nk(&self) -> &NullifierDerivingKey {
+        &self.nk
+    }
+
     /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
     ///
     /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
@@ -229,6 +239,13 @@ impl DiversifierKey {
 #[derive(Debug)]
 pub struct Diversifier([u8; 11]);
 
+impl Diversifier {
+    /// Returns the byte array corresponding to this diversifier.
+    pub fn as_array(&self) -> &[u8; 11] {
+        &self.0
+    }
+}
+
 /// A key that provides the capability to detect and decrypt incoming notes from the block
 /// chain, without being able to spend the notes or detect when they are spent.
 ///
@@ -290,7 +307,12 @@ impl DiversifiedTransmissionKey {
     ///
     /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
     fn derive(ivk: &IncomingViewingKey, d: &Diversifier) -> Self {
-        let g_d = diversify_hash(&d.0);
+        let g_d = diversify_hash(&d.as_array());
         DiversifiedTransmissionKey(ka_orchard(&ivk.0, &g_d))
+    }
+
+    /// $repr_P(self)$
+    pub(crate) fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
     }
 }
