@@ -101,7 +101,7 @@ pub(crate) fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> [u8; 64] {
 ///
 /// Defined in [Zcash Protocol Spec § 5.4.2: Pseudo Random Functions][concreteprfs].
 ///
-/// [concreteprfs]: https://zips.z.cash/protocol/orchard.pdf#concreteprfs
+/// [concreteprfs]: https://zips.z.cash/protocol/nu5.pdf#concreteprfs
 pub(crate) fn prf_nf(nk: pallas::Base, rho: pallas::Base) -> pallas::Base {
     poseidon::Hash::init(poseidon::OrchardNullifier, poseidon::ConstantLength(2))
         .hash(iter::empty().chain(Some(nk)).chain(Some(rho)))
