@@ -73,9 +73,11 @@ To add an equality constraint $\mathit{left} \equiv \mathit{right}$:
 2. Otherwise, $\mathit{left}$ and $\mathit{right}$ belong to different cycles. Make
    $\mathit{left}$ the larger cycle and $\mathit{right}$ the smaller one, by swapping them
    iff $\mathsf{sizes}(\mathsf{aux}(\mathit{left})) < \mathsf{sizes}(\mathsf{aux}(\mathit{right}))$.
-3. Following the mapping around the right (smaller) cycle, for each element $x$ set
-   $\mathsf{aux}(x) = \mathsf{aux}(\mathit{left})$.
-4. Splice the smaller cycle into the larger one by swapping $\mathsf{mapping}(\mathit{left})$
+3. Set $\mathsf{sizes}(\mathsf{aux}(\mathit{left}))) :=
+        \mathsf{sizes}(\mathsf{aux}(\mathit{left}))) + \mathsf{sizes}(\mathsf{aux}(\mathit{right})))$.
+4. Following the mapping around the right (smaller) cycle, for each element $x$ set
+   $\mathsf{aux}(x) := \mathsf{aux}(\mathit{left})$.
+5. Splice the smaller cycle into the larger one by swapping $\mathsf{mapping}(\mathit{left})$
    with $\mathsf{mapping}(\mathit{right})$.
 
 For example, given two disjoint cycles $(A\ B\ C\ D)$ and $(E\ F\ G\ H)$:
@@ -117,20 +119,20 @@ following constraints:
 - $c \equiv d$
 - $b \equiv d$
 
-and we tried to implement adding an equality constraint just using step 4 of the above
+and we tried to implement adding an equality constraint just using step 5 of the above
 algorithm, then we would end up constructing the cycle $(a\ b)\ (c\ d)$, rather than the
 correct $(a\ b\ c\ d)$.
 
 ## Argument specification
 
-We need to represent permutations over $m$ columns, represented by polynomials $p_0, \ldots, p_{m-1}$.
+We need to check a permutation of cells in $m$ columns, represented in Lagrange basis by
+polynomials $p_0, \ldots, p_{m-1}$.
 
-We first assign a unique element of $\mathbb{F}^\times$ as an "extended domain" element for each cell
-that can participate in the permutation argument.
+We first label each cell in those $m$ columns with a unique element of $\mathbb{F}^\times$.
 
 Let $\omega$ be a $2^k$ root of unity and let $\delta$ be a $T$ root of unity, where
 $T \cdot 2^S + 1 = p$ with $T$ odd and $k \leq S$.
-We will use $\delta^i \cdot \omega^j \in \mathbb{F}^\times$ as the extended domain element for the
+We will use $\delta^i \cdot \omega^j \in \mathbb{F}^\times$ as the label for the
 cell in the $j$th row of the $i$th column of the permutation argument.
 
 If we have a permutation $\sigma(\mathsf{column}: i, \mathsf{row}: j) = (\mathsf{column}: i', \mathsf{row}: j')$,
@@ -139,7 +141,7 @@ we can represent it as a vector of $m$ polynomials $s_i(X)$ such that $s_i(\omeg
 Notice that the identity permutation can be represented by the vector of $m$ polynomials
 $\mathsf{ID}_i(X)$ such that $\mathsf{ID}_i(X) = \delta^i \cdot X$.
 
-Now given our permutation represented by $s_0, \ldots, s_{m-1}$, over advice columns represented by
+Now given our permutation represented by $s_0, \ldots, s_{m-1}$ over columns represented by
 $p_0, \ldots, p_{m-1}$, we want to ensure that:
 $$
 \prod\limits_{i=0}^{m-1} \prod\limits_{j=0}^{n-1} \left(\frac{p_i(\omega^j) + \beta \cdot \delta^i \cdot \omega^j + \gamma}{p_i(\omega^j) + \beta \cdot s_i(\omega^j) + \gamma}\right) = 1

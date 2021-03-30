@@ -18,8 +18,9 @@ a * sa + b * sb + a * b * sm + c * sc + PI = 0
 ```
 
 ## Columns
-- **fixed (i.e. "selector") columns**: fixed for all instances of a particular circuit.
-  These columns toggle parts of a polynomial rule "on" or "off" to form a "custom gate".
+- **fixed columns**: fixed for all instances of a particular circuit. These include
+  selector columns, which toggle parts of a polynomial rule "on" or "off" to form a
+  "custom gate". They can also include any other fixed data.
 - **advice columns**: variable values assigned in each instance of the circuit.
   Corresponds to the prover's secret witness.
 - **public input**: like advice columns, but publicly known values.
@@ -30,9 +31,9 @@ $a(X), X \in \mathcal{H}.$ To recover the coefficient form, we can use
 [Lagrange interpolation](polynomials.md#lagrange-interpolation), such that
 $a(\omega^i) = a_i.$
 
-## Copy constraints
+## Equality constraints
 - Define permutation between a set of columns, e.g. $\sigma(a, b, c)$
-- Copy specific cells between these columns, e.g. $b_1 = c_0$
+- Assert equalities between specific cells in these columns, e.g. $b_1 = c_0$
 - Construct permuted columns which should evaluate to same value as original columns
 
 ## Permutation grand product
