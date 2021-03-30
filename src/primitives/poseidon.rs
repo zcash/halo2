@@ -1,3 +1,4 @@
+use std::array;
 use std::iter;
 use std::marker::PhantomData;
 
@@ -250,15 +251,15 @@ pub trait Domain<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: u
 ///
 /// Domain specified in section 4.2 of https://eprint.iacr.org/2019/458.pdf
 #[derive(Clone, Copy, Debug)]
-pub struct ConstantLength(pub usize);
+pub struct ConstantLength<const L: usize>;
 
-impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> Domain<F, S, T, RATE>
-    for ConstantLength
+impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, const L: usize>
+    Domain<F, S, T, RATE> for ConstantLength<L>
 {
     fn initial_capacity_element(&self) -> F {
         // Capacity value is $length \cdot 2^64 + (o-1)$ where o is the output length.
         // We hard-code an output length of 1.
-        F::from_u128((self.0 as u128) << 64)
+        F::from_u128((L as u128) << 64)
     }
 
     fn pad_and_add(&self) -> Box<dyn Fn(&mut State<F, T>, &SpongeState<F, RATE>)> {
@@ -309,21 +310,14 @@ impl<
     }
 }
 
-impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
-    Hash<F, S, ConstantLength, T, RATE>
+impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, const L: usize>
+    Hash<F, S, ConstantLength<L>, T, RATE>
 {
     /// Hashes the given input.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the message length is not the correct length.
-    pub fn hash(mut self, message: impl Iterator<Item = F>) -> F {
-        let mut length = 0;
-        for (i, value) in message.enumerate() {
-            length = i + 1;
+    pub fn hash(mut self, message: [F; L]) -> F {
+        for value in array::IntoIter::new(message) {
             self.duplex.absorb(value);
         }
-        assert_eq!(length, self.domain.0);
         self.duplex.squeeze()
     }
 }
@@ -341,8 +335,8 @@ mod tests {
 
         let (round_constants, mds, _) = OrchardNullifier.constants();
 
-        let hasher = Hash::init(OrchardNullifier, ConstantLength(2));
-        let result = hasher.hash(message.iter().cloned());
+        let hasher = Hash::init(OrchardNullifier, ConstantLength);
+        let result = hasher.hash(message);
 
         // The result should be equivalent to just directly applying the permutation and
         // taking the first state element as the output.
