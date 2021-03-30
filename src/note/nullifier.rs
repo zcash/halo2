@@ -18,10 +18,10 @@ impl Nullifier {
     ///
     /// [commitmentsandnullifiers]: https://zips.z.cash/protocol/nu5.pdf#commitmentsandnullifiers
     pub(super) fn derive(
+        nk: &NullifierDerivingKey,
         rho: pallas::Base,
         psi: pallas::Base,
         cm: NoteCommitment,
-        nk: &NullifierDerivingKey,
     ) -> Self {
         let k = pallas::Point::hash_to_curve("z.cash:Orchard")(b"K");
 
