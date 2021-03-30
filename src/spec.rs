@@ -52,6 +52,7 @@ pub(crate) fn commit_ivk(
     // We rely on the API contract that to_le_bits() returns at least PrimeField::NUM_BITS
     // bits, which is equal to L_ORCHARD_BASE.
     let domain = sinsemilla::CommitDomain::new(&"z.cash:Orchard-CommitIvk");
+    // TODO: handle the (negligible probability of) failure of SinsemillaShortCommit.
     mod_r_p(
         domain.short_commit(
             iter::empty()
