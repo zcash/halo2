@@ -6,7 +6,7 @@ use halo2::{
 };
 
 use super::PoseidonInstructions;
-use crate::primitives::poseidon::{Mds, Spec};
+use crate::primitives::poseidon::{Mds, Spec, State};
 
 const WIDTH: usize = 3;
 
@@ -186,14 +186,14 @@ impl<F: FieldExt> Chip<F> for Pow5T3Chip<F> {
     }
 }
 
-impl<F: FieldExt> PoseidonInstructions<F> for Pow5T3Chip<F> {
-    type State = Pow5T3State<F>;
+impl<F: FieldExt, S: Spec<F, WIDTH, 2>> PoseidonInstructions<F, S, WIDTH, 2> for Pow5T3Chip<F> {
+    type Word = StateWord<F>;
 
     fn permute(
         &self,
         layouter: &mut impl Layouter<F>,
-        initial_state: &Self::State,
-    ) -> Result<Self::State, Error> {
+        initial_state: &State<Self::Word, WIDTH>,
+    ) -> Result<State<Self::Word, WIDTH>, Error> {
         let config = self.config();
 
         layouter.assign_region(
@@ -217,7 +217,7 @@ impl<F: FieldExt> PoseidonInstructions<F> for Pow5T3Chip<F> {
                     })
                 })?;
 
-                (0..config.half_full_rounds).fold(Ok(state), |res, r| {
+                let state = (0..config.half_full_rounds).fold(Ok(state), |res, r| {
                     res.and_then(|state| {
                         state.full_round(
                             &mut region,
@@ -226,20 +226,22 @@ impl<F: FieldExt> PoseidonInstructions<F> for Pow5T3Chip<F> {
                             config.half_full_rounds + config.half_partial_rounds + r,
                         )
                     })
-                })
+                })?;
+
+                Ok(state.0)
             },
         )
     }
 }
 
 #[derive(Debug)]
-struct StateWord<F: FieldExt> {
+pub struct StateWord<F: FieldExt> {
     var: Cell,
     value: Option<F>,
 }
 
 #[derive(Debug)]
-pub struct Pow5T3State<F: FieldExt>([StateWord<F>; WIDTH]);
+struct Pow5T3State<F: FieldExt>([StateWord<F>; WIDTH]);
 
 impl<F: FieldExt> Pow5T3State<F> {
     fn full_round(
@@ -352,17 +354,17 @@ impl<F: FieldExt> Pow5T3State<F> {
     fn load(
         region: &mut Region<F>,
         config: &Pow5T3Config<F>,
-        initial_state: &Self,
+        initial_state: &State<StateWord<F>, WIDTH>,
     ) -> Result<Self, Error> {
         let mut load_state_word = |i: usize| {
-            let value = initial_state.0[i].value;
+            let value = initial_state[i].value;
             let var = region.assign_advice(
                 || format!("load state_{}", i),
                 config.state[i],
                 0,
                 || value.ok_or(Error::SynthesisError),
             )?;
-            region.constrain_equal(&config.state_permutation, initial_state.0[i].var, var)?;
+            region.constrain_equal(&config.state_permutation, initial_state[i].var, var)?;
             Ok(StateWord { var, value })
         };
 
@@ -429,7 +431,7 @@ mod tests {
         plonk::{Assignment, Circuit, ConstraintSystem, Error},
     };
 
-    use super::{PoseidonInstructions, Pow5T3Chip, Pow5T3Config, Pow5T3State, StateWord, WIDTH};
+    use super::{PoseidonInstructions, Pow5T3Chip, Pow5T3Config, StateWord, WIDTH};
     use crate::primitives::poseidon::{self, OrchardNullifier, Spec};
 
     struct MyCircuit {}
@@ -468,16 +470,17 @@ mod tests {
                         Ok(StateWord { var, value })
                     };
 
-                    Ok(Pow5T3State([
-                        state_word(0)?,
-                        state_word(1)?,
-                        state_word(2)?,
-                    ]))
+                    Ok([state_word(0)?, state_word(1)?, state_word(2)?])
                 },
             )?;
 
             let chip = Pow5T3Chip::construct(config.clone());
-            let final_state = chip.permute(&mut layouter, &initial_state)?;
+            let final_state = <Pow5T3Chip<_> as PoseidonInstructions<
+                Fp,
+                OrchardNullifier,
+                WIDTH,
+                2,
+            >>::permute(&chip, &mut layouter, &initial_state)?;
 
             // For the purpose of this test, compute the real final state inline.
             let mut expected_final_state = [Fp::zero(), Fp::one(), Fp::from_u64(2)];
@@ -498,7 +501,7 @@ mod tests {
                             0,
                             || Ok(expected_final_state[i]),
                         )?;
-                        region.constrain_equal(&config.state_permutation, final_state.0[i].var, var)
+                        region.constrain_equal(&config.state_permutation, final_state[i].var, var)
                     };
 
                     final_state_word(0)?;
