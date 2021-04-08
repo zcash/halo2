@@ -6,6 +6,7 @@ use std::fmt;
 use std::marker::PhantomData;
 
 use super::{Cell, Config, Layouter, Region, RegionIndex, RegionStart};
+use crate::arithmetic::FieldExt;
 use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation};
 
 /// Helper trait for implementing a custom [`Layouter`].
@@ -13,7 +14,7 @@ use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation};
 /// This trait is used for implementing region assignments:
 ///
 /// ```ignore
-/// impl<'a, C: Config, CS: Assignment<C::Field> + 'a> Layouter<C> for MyLayouter<'a, C, CS> {
+/// impl<'a, F: FieldExt, CS: Assignment<F> + 'a> Layouter<C> for MyLayouter<'a, C, CS> {
 ///     fn assign_region(
 ///         &mut self,
 ///         assignment: impl FnOnce(Region<'_, C>) -> Result<(), Error>,
@@ -55,7 +56,7 @@ pub trait RegionLayouter<C: Config>: fmt::Debug {
         to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
     ) -> Result<Cell, Error>;
 
-    /// Constraint two cells to have the same value.
+    /// Constrain two cells to have the same value.
     ///
     /// Returns an error if either of the cells is not within the given permutation.
     fn constrain_equal(
@@ -67,56 +68,45 @@ pub trait RegionLayouter<C: Config>: fmt::Debug {
 }
 
 /// A [`Layouter`] for a single-chip circuit.
-pub struct SingleConfigLayouter<'a, C: Config, CS: Assignment<C::Field> + 'a> {
-    cs: &'a mut CS,
-    configured: C::Configured,
-    loaded: Option<C::Loaded>,
+pub struct SingleConfigLayouter<'a, F: FieldExt, CS: Assignment<F> + 'a> {
+    /// Constraint system
+    pub cs: &'a mut CS,
     /// Stores the starting row for each region.
     regions: Vec<RegionStart>,
     /// Stores the first empty row for each column.
     columns: HashMap<Column<Any>, usize>,
-    _marker: PhantomData<C>,
+    marker: PhantomData<F>,
 }
 
-impl<'a, C: Config, CS: Assignment<C::Field> + 'a> fmt::Debug for SingleConfigLayouter<'a, C, CS> {
+impl<'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for SingleConfigLayouter<'a, F, CS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SingleConfigLayouter")
-            .field("configured", &self.configured)
             .field("regions", &self.regions)
             .field("columns", &self.columns)
             .finish()
     }
 }
 
-impl<'a, C: Config, CS: Assignment<C::Field>> SingleConfigLayouter<'a, C, CS> {
-    /// Creates a new single-chip layouter.
-    pub fn new(cs: &'a mut CS, configured: C::Configured) -> Result<Self, Error> {
-        let mut ret = SingleConfigLayouter {
+impl<'a, F: FieldExt, CS: Assignment<F>> SingleConfigLayouter<'a, F, CS> {
+    /// Creates a new single-core layouter.
+    pub fn new(cs: &'a mut CS) -> Self {
+        SingleConfigLayouter {
             cs,
-            configured,
-            loaded: None,
             regions: vec![],
             columns: HashMap::default(),
-            _marker: PhantomData,
-        };
-        let loaded = C::load(&mut ret)?;
-        ret.loaded = Some(loaded);
-        Ok(ret)
+            marker: PhantomData,
+        }
     }
 }
 
-impl<'a, C: Config, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleConfigLayouter<'a, C, CS> {
-    type Root = Self;
+impl<'a, F: FieldExt, CS: Assignment<F>> Layouter for SingleConfigLayouter<'a, F, CS> {
+    type Field = F;
 
-    fn configured(&self) -> &C::Configured {
-        &self.configured
-    }
-
-    fn loaded(&self) -> &C::Loaded {
-        self.loaded.as_ref().expect("We called C::load")
-    }
-
-    fn assign_region<A, AR, N, NR>(&mut self, name: N, mut assignment: A) -> Result<AR, Error>
+    fn assign_region<A, AR, N, NR, C: Config<Field = F>>(
+        &mut self,
+        name: N,
+        mut assignment: A,
+    ) -> Result<AR, Error>
     where
         A: FnMut(Region<'_, C>) -> Result<AR, Error>,
         N: Fn() -> NR,
@@ -153,22 +143,6 @@ impl<'a, C: Config, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleConfigL
         self.cs.exit_region();
 
         Ok(result)
-    }
-
-    fn get_root(&mut self) -> &mut Self::Root {
-        self
-    }
-
-    fn push_namespace<NR, N>(&mut self, name_fn: N)
-    where
-        NR: Into<String>,
-        N: FnOnce() -> NR,
-    {
-        self.cs.push_namespace(name_fn)
-    }
-
-    fn pop_namespace(&mut self, gadget_name: Option<String>) {
-        self.cs.pop_namespace(gadget_name)
     }
 }
 
@@ -253,13 +227,13 @@ impl<C: Config> RegionLayouter<C> for RegionShape {
     }
 }
 
-struct SingleConfigLayouterRegion<'r, 'a, C: Config, CS: Assignment<C::Field> + 'a> {
-    layouter: &'r mut SingleConfigLayouter<'a, C, CS>,
+struct SingleConfigLayouterRegion<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> {
+    layouter: &'r mut SingleConfigLayouter<'a, F, CS>,
     region_index: RegionIndex,
 }
 
-impl<'r, 'a, C: Config, CS: Assignment<C::Field> + 'a> fmt::Debug
-    for SingleConfigLayouterRegion<'r, 'a, C, CS>
+impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug
+    for SingleConfigLayouterRegion<'r, 'a, F, CS>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SingleConfigLayouterRegion")
@@ -269,8 +243,8 @@ impl<'r, 'a, C: Config, CS: Assignment<C::Field> + 'a> fmt::Debug
     }
 }
 
-impl<'r, 'a, C: Config, CS: Assignment<C::Field> + 'a> SingleConfigLayouterRegion<'r, 'a, C, CS> {
-    fn new(layouter: &'r mut SingleConfigLayouter<'a, C, CS>, region_index: RegionIndex) -> Self {
+impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> SingleConfigLayouterRegion<'r, 'a, F, CS> {
+    fn new(layouter: &'r mut SingleConfigLayouter<'a, F, CS>, region_index: RegionIndex) -> Self {
         SingleConfigLayouterRegion {
             layouter,
             region_index,
@@ -278,8 +252,8 @@ impl<'r, 'a, C: Config, CS: Assignment<C::Field> + 'a> SingleConfigLayouterRegio
     }
 }
 
-impl<'r, 'a, C: Config, CS: Assignment<C::Field> + 'a> RegionLayouter<C>
-    for SingleConfigLayouterRegion<'r, 'a, C, CS>
+impl<'r, 'a, F: FieldExt, C: Config<Field = F>, CS: Assignment<F> + 'a> RegionLayouter<C>
+    for SingleConfigLayouterRegion<'r, 'a, F, CS>
 {
     fn assign_advice<'v>(
         &'v mut self,

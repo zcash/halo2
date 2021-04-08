@@ -157,7 +157,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// Selectors are disabled on all rows by default, and must be explicitly enabled on each
 /// row when required:
 /// ```
-/// use halo2::{circuit::{Config, Layouter}, plonk::{Advice, Column, Error, Selector}};
+/// use halo2::{circuit::{Config, Region, Layouter}, plonk::{Advice, Column, Error, Selector}};
 /// # use ff::Field;
 /// # use halo2::plonk::Fixed;
 ///
@@ -167,10 +167,10 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 ///     s: Selector,
 /// }
 ///
-/// fn circuit_logic<C: Config>(mut layouter: impl Layouter<C>) -> Result<(), Error> {
-///     let configured = layouter.configured().clone();
+/// fn circuit_logic<C: Config>(mut config: C) -> Result<(), Error> {
+///     let configured = config.configured().clone();
 ///     # let configured: Configured = todo!();
-///     layouter.assign_region(|| "bar", |mut region| {
+///     config.layouter().assign_region(|| "bar", |mut region: Region<'_, C>| {
 ///         region.assign_advice(|| "a", configured.a, 0, || Ok(C::Field::one()))?;
 ///         region.assign_advice(|| "a", configured.b, 1, || Ok(C::Field::one()))?;
 ///         configured.s.enable(&mut region, 1)

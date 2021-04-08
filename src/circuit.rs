@@ -15,6 +15,10 @@ pub mod layouter;
 /// synthesis time should be stored in [`Config::Configured`], which can then be fetched via
 /// [`Layouter::configured`].
 pub trait Config: Sized {
+    /// Represents the type of the "root" of this layouter, so that nested namespaces
+    /// can minimize indirection.
+    type Root: Config;
+
     /// A type that holds the configuration for this chip, and any other state it may need
     /// during circuit synthesis, that can be derived during [`Circuit::configure`].
     ///
@@ -29,13 +33,54 @@ pub trait Config: Sized {
 
     /// The field that the chip is defined over.
     ///
-    /// This provides a type that the chip's configuration can reference if necessary.
+    /// This provides a type that the configuration can reference if necessary.
     type Field: FieldExt;
 
-    /// Load any fixed configuration for this chip into the circuit.
+    /// Layouter type
+    type Layouter: Layouter<Field = Self::Field>;
+
+    /// Access `Configured`
+    fn configured(&self) -> &Self::Configured;
+
+    /// Access `Loaded`
+    fn loaded(&self) -> &Self::Loaded;
+
+    /// Load any fixed configuration for this Config into the circuit.
     ///
     /// `layouter.loaded()` will panic if called inside this function.
-    fn load(layouter: &mut impl Layouter<Self>) -> Result<Self::Loaded, Error>;
+    fn load(&mut self) -> Result<Self::Loaded, Error>;
+
+    /// The layouter for this Config.
+    fn layouter(&mut self) -> &mut Self::Layouter;
+
+    /// Gets the "root" of this assignment, bypassing the namespacing.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    fn get_root(&mut self) -> &mut Self::Root;
+
+    /// Creates a new (sub)namespace and enters into it.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    fn push_namespace<NR, N>(&mut self, name_fn: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR;
+
+    /// Exits out of the existing namespace.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    fn pop_namespace(&mut self, gadget_name: Option<String>);
+
+    /// Enters into a namespace.
+    fn namespace<NR, N>(&mut self, name_fn: N) -> NamespacedConfig<'_, Self::Root>
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        self.get_root().push_namespace(name_fn);
+
+        NamespacedConfig(self.get_root(), PhantomData)
+    }
 }
 
 /// Index of a region in a layouter
@@ -165,19 +210,9 @@ impl<'r, C: Config> Region<'r, C> {
 ///
 /// A particular concrete layout strategy will implement this trait for each chip it
 /// supports.
-pub trait Layouter<C: Config> {
-    /// Represents the type of the "root" of this layouter, so that nested namespaces
-    /// can minimize indirection.
-    type Root: Layouter<C>;
-
-    /// Provides access to the chip configuration.
-    fn configured(&self) -> &C::Configured;
-
-    /// Provides access to general chip state loaded at the beginning of circuit
-    /// synthesis.
-    ///
-    /// Panics if called inside `C::load`.
-    fn loaded(&self) -> &C::Loaded;
+pub trait Layouter {
+    /// A Layouter can only support configs that use the same field.
+    type Field: FieldExt;
 
     /// Assign a region of gates to an absolute row number.
     ///
@@ -190,65 +225,72 @@ pub trait Layouter<C: Config> {
     ///     region.assign_advice(self.configured.a, offset, || { Some(value)});
     /// });
     /// ```
-    fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>
+    fn assign_region<A, AR, N, NR, C: Config<Field = Self::Field>>(
+        &mut self,
+        name: N,
+        assignment: A,
+    ) -> Result<AR, Error>
     where
         A: FnMut(Region<'_, C>) -> Result<AR, Error>,
         N: Fn() -> NR,
         NR: Into<String>;
+}
 
-    /// Gets the "root" of this assignment, bypassing the namespacing.
-    ///
-    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
-    fn get_root(&mut self) -> &mut Self::Root;
+#[derive(Debug)]
+/// Used only to make types check out.
+pub struct DummyLayouter<F: FieldExt> {
+    marker: PhantomData<F>,
+}
 
-    /// Creates a new (sub)namespace and enters into it.
-    ///
-    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
-    fn push_namespace<NR, N>(&mut self, name_fn: N)
+impl<F: FieldExt> Layouter for DummyLayouter<F> {
+    type Field = F;
+    fn assign_region<A, AR, N, NR, C: Config<Field = Self::Field>>(
+        &mut self,
+        _name: N,
+        _assignment: A,
+    ) -> Result<AR, Error>
     where
+        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        N: Fn() -> NR,
         NR: Into<String>,
-        N: FnOnce() -> NR;
-
-    /// Exits out of the existing namespace.
-    ///
-    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
-    fn pop_namespace(&mut self, gadget_name: Option<String>);
-
-    /// Enters into a namespace.
-    fn namespace<NR, N>(&mut self, name_fn: N) -> NamespacedLayouter<'_, C, Self::Root>
-    where
-        NR: Into<String>,
-        N: FnOnce() -> NR,
     {
-        self.get_root().push_namespace(name_fn);
-
-        NamespacedLayouter(self.get_root(), PhantomData)
+        // We shouldn't call this on a `DummyLayouter`.
+        Err(Error::SynthesisError)
     }
 }
 
 /// This is a "namespaced" layouter which borrows a `Layouter` (pushing a namespace
 /// context) and, when dropped, pops out of the namespace context.
 #[derive(Debug)]
-pub struct NamespacedLayouter<'a, C: Config, L: Layouter<C> + 'a>(&'a mut L, PhantomData<C>);
+pub struct NamespacedConfig<'a, C: Config>(&'a mut C, PhantomData<C>);
 
-impl<'a, C: Config, L: Layouter<C> + 'a> Layouter<C> for NamespacedLayouter<'a, C, L> {
-    type Root = L::Root;
+impl<'a, C: Config> Config for NamespacedConfig<'a, C> {
+    type Root = C::Root;
 
-    fn configured(&self) -> &C::Configured {
+    type Configured = C::Configured;
+
+    type Loaded = C::Loaded;
+
+    type Field = C::Field;
+
+    type Layouter = C::Layouter;
+
+    /// Access `Configured`
+    fn configured(&self) -> &Self::Configured {
         self.0.configured()
     }
 
-    fn loaded(&self) -> &C::Loaded {
+    /// Access `Loaded`
+    fn loaded(&self) -> &Self::Loaded {
         self.0.loaded()
     }
 
-    fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>
-    where
-        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
-        N: Fn() -> NR,
-        NR: Into<String>,
-    {
-        self.0.assign_region(name, assignment)
+    fn load(&mut self) -> Result<Self::Loaded, Error> {
+        self.0.load()
+    }
+
+    fn layouter(&mut self) -> &mut Self::Layouter {
+        self.0.layouter()
     }
 
     fn get_root(&mut self) -> &mut Self::Root {
@@ -268,7 +310,7 @@ impl<'a, C: Config, L: Layouter<C> + 'a> Layouter<C> for NamespacedLayouter<'a, 
     }
 }
 
-impl<'a, C: Config, L: Layouter<C> + 'a> Drop for NamespacedLayouter<'a, C, L> {
+impl<'a, C: Config> Drop for NamespacedConfig<'a, C> {
     fn drop(&mut self) {
         let gadget_name = {
             #[cfg(feature = "gadget-traces")]
