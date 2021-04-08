@@ -4,7 +4,7 @@ use std::{fmt, marker::PhantomData};
 
 use crate::{
     arithmetic::FieldExt,
-    plonk::{Advice, Any, Column, Error, Fixed, Permutation},
+    plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation},
 };
 
 pub mod layouter;
@@ -178,6 +178,14 @@ pub trait Layouter<C: Config> {
     ///
     /// Panics if called inside `C::load`.
     fn loaded(&self) -> &C::Loaded;
+
+    /// Returns a layouter for a sub-configuration.
+    fn sublayouter<'a, Co: Config, CS: Assignment<Co::Field> + 'a>(
+        cs: &'a mut CS,
+        configured: Co::Configured,
+    ) -> Result<layouter::SingleConfigLayouter<'a, Co, CS>, Error> {
+        layouter::SingleConfigLayouter::new(cs, configured)
+    }
 
     /// Assign a region of gates to an absolute row number.
     ///

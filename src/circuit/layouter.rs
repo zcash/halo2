@@ -68,7 +68,8 @@ pub trait RegionLayouter<C: Config>: fmt::Debug {
 
 /// A [`Layouter`] for a single-chip circuit.
 pub struct SingleConfigLayouter<'a, C: Config, CS: Assignment<C::Field> + 'a> {
-    cs: &'a mut CS,
+    /// Constraint system
+    pub cs: &'a mut CS,
     configured: C::Configured,
     loaded: Option<C::Loaded>,
     /// Stores the starting row for each region.
