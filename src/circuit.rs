@@ -10,11 +10,11 @@ use crate::{
 pub mod layouter;
 
 /// A core implements a set of instructions that can be used by gadgets.
-///
-/// The core itself should not store any state; instead, state that is required at circuit
-/// synthesis time should be stored in [`Core::Config`], which can then be fetched via
-/// [`Layouter::config`].
 pub trait Core: Sized {
+    /// Represents the type of the "root" of this core, so that nested namespaces
+    /// can minimize indirection.
+    type Root: Core;
+
     /// A type that holds the configuration for this core, and any other state it may need
     /// during circuit synthesis, that can be derived during [`Circuit::configure`].
     ///
@@ -29,13 +29,54 @@ pub trait Core: Sized {
 
     /// The field that the core is defined over.
     ///
-    /// This provides a type that the core's configuration can reference if necessary.
+    /// This provides a type that the configuration can reference if necessary.
     type Field: FieldExt;
+
+    /// Layouter type
+    type Layouter: Layouter<Self::Field>;
+
+    /// Access `Config`
+    fn config(&self) -> &Self::Config;
+
+    /// Access `Loaded`
+    fn loaded(&self) -> &Self::Loaded;
 
     /// Load any fixed configuration for this core into the circuit.
     ///
     /// `layouter.loaded()` will panic if called inside this function.
-    fn load(layouter: &mut impl Layouter<Self>) -> Result<Self::Loaded, Error>;
+    fn load(&mut self) -> Result<Self::Loaded, Error>;
+
+    /// The layouter for this core.
+    fn layouter(&mut self) -> &mut Self::Layouter;
+
+    /// Gets the "root" of this assignment, bypassing the namespacing.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    fn get_root(&mut self) -> &mut Self::Root;
+
+    /// Creates a new (sub)namespace and enters into it.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    fn push_namespace<NR, N>(&mut self, name_fn: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR;
+
+    /// Exits out of the existing namespace.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    fn pop_namespace(&mut self, gadget_name: Option<String>);
+
+    /// Enters into a namespace.
+    fn namespace<NR, N>(&mut self, name_fn: N) -> NamespacedCore<'_, Self::Root>
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        self.get_root().push_namespace(name_fn);
+
+        NamespacedCore(self.get_root(), PhantomData)
+    }
 }
 
 /// Index of a region in a layouter
@@ -165,20 +206,7 @@ impl<'r, C: Core> Region<'r, C> {
 ///
 /// A particular concrete layout strategy will implement this trait for each core it
 /// supports.
-pub trait Layouter<C: Core> {
-    /// Represents the type of the "root" of this layouter, so that nested namespaces
-    /// can minimize indirection.
-    type Root: Layouter<C>;
-
-    /// Provides access to the core configuration.
-    fn config(&self) -> &C::Config;
-
-    /// Provides access to general core state loaded at the beginning of circuit
-    /// synthesis.
-    ///
-    /// Panics if called inside `C::load`.
-    fn loaded(&self) -> &C::Loaded;
-
+pub trait Layouter<F: FieldExt> {
     /// Assign a region of gates to an absolute row number.
     ///
     /// Inside the closure, the core may freely use relative offsets; the `Layouter` will
@@ -190,65 +218,64 @@ pub trait Layouter<C: Core> {
     ///     region.assign_advice(self.config.a, offset, || { Some(value)});
     /// });
     /// ```
-    fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>
+    fn assign_region<A, AR, N, NR, C: Core<Field = F>>(
+        &mut self,
+        name: N,
+        assignment: A,
+    ) -> Result<AR, Error>
     where
         A: FnMut(Region<'_, C>) -> Result<AR, Error>,
         N: Fn() -> NR,
         NR: Into<String>;
+}
 
-    /// Gets the "root" of this assignment, bypassing the namespacing.
-    ///
-    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
-    fn get_root(&mut self) -> &mut Self::Root;
-
-    /// Creates a new (sub)namespace and enters into it.
-    ///
-    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
-    fn push_namespace<NR, N>(&mut self, name_fn: N)
+impl<F: FieldExt> Layouter<F> for () {
+    fn assign_region<A, AR, N, NR, C: Core>(
+        &mut self,
+        _name: N,
+        _assignment: A,
+    ) -> Result<AR, Error>
     where
+        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        N: Fn() -> NR,
         NR: Into<String>,
-        N: FnOnce() -> NR;
-
-    /// Exits out of the existing namespace.
-    ///
-    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
-    fn pop_namespace(&mut self, gadget_name: Option<String>);
-
-    /// Enters into a namespace.
-    fn namespace<NR, N>(&mut self, name_fn: N) -> NamespacedLayouter<'_, C, Self::Root>
-    where
-        NR: Into<String>,
-        N: FnOnce() -> NR,
     {
-        self.get_root().push_namespace(name_fn);
-
-        NamespacedLayouter(self.get_root(), PhantomData)
+        Err(Error::SynthesisError)
     }
 }
 
 /// This is a "namespaced" layouter which borrows a `Layouter` (pushing a namespace
 /// context) and, when dropped, pops out of the namespace context.
 #[derive(Debug)]
-pub struct NamespacedLayouter<'a, C: Core, L: Layouter<C> + 'a>(&'a mut L, PhantomData<C>);
+pub struct NamespacedCore<'a, C: Core>(&'a mut C, PhantomData<C>);
 
-impl<'a, C: Core, L: Layouter<C> + 'a> Layouter<C> for NamespacedLayouter<'a, C, L> {
-    type Root = L::Root;
+impl<'a, C: Core> Core for NamespacedCore<'a, C> {
+    type Root = C::Root;
 
-    fn config(&self) -> &C::Config {
+    type Config = C::Config;
+
+    type Loaded = C::Loaded;
+
+    type Field = C::Field;
+
+    type Layouter = C::Layouter;
+
+    /// Access `Config`
+    fn config(&self) -> &Self::Config {
         self.0.config()
     }
 
-    fn loaded(&self) -> &C::Loaded {
+    /// Access `Loaded`
+    fn loaded(&self) -> &Self::Loaded {
         self.0.loaded()
     }
 
-    fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>
-    where
-        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
-        N: Fn() -> NR,
-        NR: Into<String>,
-    {
-        self.0.assign_region(name, assignment)
+    fn load(&mut self) -> Result<Self::Loaded, Error> {
+        self.0.load()
+    }
+
+    fn layouter(&mut self) -> &mut Self::Layouter {
+        self.0.layouter()
     }
 
     fn get_root(&mut self) -> &mut Self::Root {
@@ -268,7 +295,7 @@ impl<'a, C: Core, L: Layouter<C> + 'a> Layouter<C> for NamespacedLayouter<'a, C,
     }
 }
 
-impl<'a, C: Core, L: Layouter<C> + 'a> Drop for NamespacedLayouter<'a, C, L> {
+impl<'a, C: Core> Drop for NamespacedCore<'a, C> {
     fn drop(&mut self) {
         let gadget_name = {
             #[cfg(feature = "gadget-traces")]

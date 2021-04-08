@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{layouter::SingleCoreLayouter, Cell, Core, Layouter},
+    circuit::{layouter::SingleCoreLayouter, Cell, Core, Layouter, Region},
     dev::VerifyFailure,
     plonk::{
         Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Instance, Permutation,
@@ -19,28 +19,23 @@ trait NumericInstructions: Core {
     type Num;
 
     /// Loads a number into the circuit as a private input.
-    fn load_private(
-        layouter: &mut impl Layouter<Self>,
-        a: Option<Self::Field>,
-    ) -> Result<Self::Num, Error>;
+    fn load_private(&mut self, a: Option<Self::Field>) -> Result<Self::Num, Error>;
 
     /// Returns `c = a * b`.
-    fn mul(
-        layouter: &mut impl Layouter<Self>,
-        a: Self::Num,
-        b: Self::Num,
-    ) -> Result<Self::Num, Error>;
+    fn mul(&mut self, a: Self::Num, b: Self::Num) -> Result<Self::Num, Error>;
 
     /// Exposes a number as a public input to the circuit.
-    fn expose_public(layouter: &mut impl Layouter<Self>, num: Self::Num) -> Result<(), Error>;
+    fn expose_public(&mut self, num: Self::Num) -> Result<(), Error>;
 }
 // ANCHOR_END: instructions
 
 // ANCHOR: core
 /// The core that will implement our instructions! Cores do not store any persistent
 /// state themselves, and usually only contain type markers if necessary.
-struct FieldCore<F: FieldExt> {
-    _marker: PhantomData<F>,
+struct FieldCore<'a, F: FieldExt, L: Layouter<F>> {
+    config: FieldConfig,
+    layouter: &'a mut L,
+    marker: PhantomData<F>,
 }
 // ANCHOR_END: core
 
@@ -70,7 +65,7 @@ struct FieldConfig {
     s_pub: Selector,
 }
 
-impl<F: FieldExt> FieldCore<F> {
+impl<F: FieldExt, L: Layouter<F>> FieldCore<'_, F, L> {
     fn configure(
         meta: &mut ConstraintSystem<F>,
         advice: [Column<Advice>; 2],
@@ -136,16 +131,49 @@ impl<F: FieldExt> FieldCore<F> {
 }
 // ANCHOR_END: core-config
 
-// ANCHOR: core-impl
-impl<F: FieldExt> Core for FieldCore<F> {
+// ANCHOR: chip-impl
+impl<F: FieldExt, L: Layouter<F>> Core for FieldCore<'_, F, L> {
+    type Root = Self;
     type Config = FieldConfig;
     type Loaded = ();
     type Field = F;
+    type Layouter = L;
 
-    fn load(_layouter: &mut impl Layouter<Self>) -> Result<(), halo2::plonk::Error> {
-        // None of the instructions implemented by this core have any fixed state.
+    fn get_root(&mut self) -> &mut Self::Root {
+        self
+    }
+
+    fn config(&self) -> &Self::Config {
+        &self.config
+    }
+
+    fn loaded(&self) -> &Self::Loaded {
+        &()
+    }
+
+    fn load(&mut self) -> Result<(), halo2::plonk::Error> {
+        // None of the instructions implemented by this chip have any fixed state.
         // But if we required e.g. a lookup table, this is where we would load it.
         Ok(())
+    }
+
+    fn layouter(&mut self) -> &mut Self::Layouter {
+        self.layouter
+    }
+
+    fn push_namespace<NR, N>(&mut self, _name_fn: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // TODO
+    }
+
+    /// Exits out of the existing namespace.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    fn pop_namespace(&mut self, _gadget_name: Option<String>) {
+        // TODO
     }
 }
 // ANCHOR_END: core-impl
@@ -158,18 +186,15 @@ struct Number<F: FieldExt> {
     value: Option<F>,
 }
 
-impl<F: FieldExt> NumericInstructions for FieldCore<F> {
+impl<F: FieldExt, L: Layouter<F>> NumericInstructions for FieldCore<'_, F, L> {
     type Num = Number<F>;
 
-    fn load_private(
-        layouter: &mut impl Layouter<Self>,
-        value: Option<Self::Field>,
-    ) -> Result<Self::Num, Error> {
-        let config = layouter.config().clone();
+    fn load_private(&mut self, value: Option<Self::Field>) -> Result<Self::Num, Error> {
+        let config = self.config().clone();
         let mut num = None;
-        layouter.assign_region(
+        self.layouter().assign_region(
             || "load private",
-            |mut region| {
+            |mut region: Region<'_, Self>| {
                 let cell = region.assign_advice(
                     || "private input",
                     config.advice[0],
@@ -183,16 +208,12 @@ impl<F: FieldExt> NumericInstructions for FieldCore<F> {
         Ok(num.unwrap())
     }
 
-    fn mul(
-        layouter: &mut impl Layouter<Self>,
-        a: Self::Num,
-        b: Self::Num,
-    ) -> Result<Self::Num, Error> {
-        let config = layouter.config().clone();
+    fn mul(&mut self, a: Self::Num, b: Self::Num) -> Result<Self::Num, Error> {
+        let config = self.config().clone();
         let mut out = None;
-        layouter.assign_region(
+        self.layouter().assign_region(
             || "mul",
-            |mut region| {
+            |mut region: Region<'_, Self>| {
                 // We only want to use a single multiplication gate in this region,
                 // so we enable it at region offset 0; this means it will constrain
                 // cells at offsets 0 and 1.
@@ -236,11 +257,11 @@ impl<F: FieldExt> NumericInstructions for FieldCore<F> {
         Ok(out.unwrap())
     }
 
-    fn expose_public(layouter: &mut impl Layouter<Self>, num: Self::Num) -> Result<(), Error> {
-        let config = layouter.config().clone();
-        layouter.assign_region(
+    fn expose_public(&mut self, num: Self::Num) -> Result<(), Error> {
+        let config = self.config().clone();
+        self.layouter().assign_region(
             || "expose public",
-            |mut region| {
+            |mut region: Region<'_, Self>| {
                 // Enable the public-input gate.
                 config.s_pub.enable(&mut region, 0)?;
 
@@ -284,15 +305,19 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         // We also need an instance column to store public inputs.
         let instance = meta.instance_column();
 
-        FieldCore::configure(meta, advice, instance)
+        FieldCore::<F, ()>::configure(meta, advice, instance)
     }
 
     fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error> {
-        let mut layouter = SingleCoreLayouter::new(cs, config)?;
+        let mut config = FieldCore {
+            config,
+            layouter: &mut SingleCoreLayouter::new(cs),
+            marker: PhantomData,
+        };
 
         // Load our private values into the circuit.
-        let a = FieldCore::load_private(&mut layouter, self.a)?;
-        let b = FieldCore::load_private(&mut layouter, self.b)?;
+        let a = config.load_private(self.a)?;
+        let b = config.load_private(self.b)?;
 
         // We only have access to plain multiplication.
         // We could implement our circuit as:
@@ -303,11 +328,11 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         // but it's more efficient to implement it as:
         //     ab = a*b
         //     c  = ab^2
-        let ab = FieldCore::mul(&mut layouter, a, b)?;
-        let c = FieldCore::mul(&mut layouter, ab.clone(), ab)?;
+        let ab = config.mul(a, b)?;
+        let c = config.mul(ab.clone(), ab)?;
 
         // Expose the result as a public input to the circuit.
-        FieldCore::expose_public(&mut layouter, c)
+        config.expose_public(c)
     }
 }
 // ANCHOR_END: circuit
@@ -326,7 +351,7 @@ fn main() {
     let c = a.square() * b.square();
 
     // Instantiate the circuit with the private inputs.
-    let circuit = MyCircuit {
+    let circuit = MyCircuit::<Fp> {
         a: Some(a),
         b: Some(b),
     };
