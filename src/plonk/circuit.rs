@@ -9,7 +9,7 @@ use std::{
 use super::{lookup, permutation, Error};
 use crate::{
     arithmetic::FieldExt,
-    circuit::{Chip, Region},
+    circuit::{Config, Region},
     poly::Rotation,
 };
 
@@ -157,23 +157,23 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// Selectors are disabled on all rows by default, and must be explicitly enabled on each
 /// row when required:
 /// ```
-/// use halo2::{circuit::{Chip, Layouter}, plonk::{Advice, Column, Error, Selector}};
+/// use halo2::{circuit::{Config, Layouter}, plonk::{Advice, Column, Error, Selector}};
 /// # use ff::Field;
 /// # use halo2::plonk::Fixed;
 ///
-/// struct Config {
+/// struct Configured {
 ///     a: Column<Advice>,
 ///     b: Column<Advice>,
 ///     s: Selector,
 /// }
 ///
-/// fn circuit_logic<C: Chip>(mut layouter: impl Layouter<C>) -> Result<(), Error> {
-///     let config = layouter.config().clone();
-///     # let config: Config = todo!();
+/// fn circuit_logic<C: Config>(mut layouter: impl Layouter<C>) -> Result<(), Error> {
+///     let configured = layouter.configured().clone();
+///     # let configured: Configured = todo!();
 ///     layouter.assign_region(|| "bar", |mut region| {
-///         region.assign_advice(|| "a", config.a, 0, || Ok(C::Field::one()))?;
-///         region.assign_advice(|| "a", config.b, 1, || Ok(C::Field::one()))?;
-///         config.s.enable(&mut region, 1)
+///         region.assign_advice(|| "a", configured.a, 0, || Ok(C::Field::one()))?;
+///         region.assign_advice(|| "a", configured.b, 1, || Ok(C::Field::one()))?;
+///         configured.s.enable(&mut region, 1)
 ///     })?;
 ///     Ok(())
 /// }
@@ -183,7 +183,7 @@ pub struct Selector(Column<Fixed>);
 
 impl Selector {
     /// Enable this selector at the given offset within the given region.
-    pub fn enable<C: Chip>(&self, region: &mut Region<C>, offset: usize) -> Result<(), Error> {
+    pub fn enable<C: Config>(&self, region: &mut Region<C>, offset: usize) -> Result<(), Error> {
         // TODO: Ensure that the default for a selector's cells is always zero, if we
         // alter the proving system to change the global default.
         // TODO: Add Region::enable_selector method to allow the layouter to control the
@@ -304,16 +304,20 @@ pub trait Assignment<F: Field> {
 /// [`ConstraintSystem`] implementation.
 pub trait Circuit<F: Field> {
     /// This is a configuration object that stores things like columns.
-    type Config: Clone;
+    type Configured: Clone;
 
     /// The circuit is given an opportunity to describe the exact gate
     /// arrangement, column arrangement, etc.
-    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config;
+    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Configured;
 
     /// Given the provided `cs`, synthesize the circuit. The concrete type of
     /// the caller will be different depending on the context, and they may or
     /// may not expect to have a witness present.
-    fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error>;
+    fn synthesize(
+        &self,
+        cs: &mut impl Assignment<F>,
+        configured: Self::Configured,
+    ) -> Result<(), Error>;
 }
 
 /// Low-degree expression representing an identity that must hold over the committed columns.

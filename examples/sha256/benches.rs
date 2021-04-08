@@ -1,6 +1,6 @@
 use halo2::{
     arithmetic::FieldExt,
-    circuit::Chip,
+    circuit::Config,
     circuit::{layouter, Layouter},
     pasta::EqAffine,
     plonk::{
@@ -19,26 +19,27 @@ use std::{
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use crate::{BlockWord, Sha256, Table16Chip, Table16Config, BLOCK_SIZE};
+use crate::{BlockWord, Sha256, Table16Config, Table16Configured, BLOCK_SIZE};
 
 #[allow(dead_code)]
 fn bench(name: &str, k: u32, c: &mut Criterion) {
     struct MyCircuit {}
 
     impl<F: FieldExt> Circuit<F> for MyCircuit {
-        type Config = Table16Config;
+        type Configured = Table16Configured;
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> Table16Config {
-            Table16Chip::configure(meta)
+        fn configure(meta: &mut ConstraintSystem<F>) -> Table16Configured {
+            Table16Config::configure(meta)
         }
 
         fn synthesize(
             &self,
             cs: &mut impl Assignment<F>,
-            config: Table16Config,
+            configured: Table16Configured,
         ) -> Result<(), Error> {
-            let mut layouter = layouter::SingleChip::<Table16Chip<F>, _>::new(cs, config)?;
-            Table16Chip::load(&mut layouter)?;
+            let mut layouter =
+                layouter::SingleConfigLayouter::<Table16Config<F>, _>::new(cs, configured)?;
+            Table16Config::load(&mut layouter)?;
 
             // Test vector: "abc"
             let test_input = [

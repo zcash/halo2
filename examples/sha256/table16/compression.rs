@@ -1,6 +1,6 @@
 use super::{
     super::DIGEST_SIZE, BlockWord, CellValue16, CellValue32, SpreadInputs, SpreadVar,
-    Table16Assignment, Table16Chip, ROUNDS, STATE,
+    Table16Assignment, Table16Config, ROUNDS, STATE,
 };
 use halo2::{
     arithmetic::FieldExt,
@@ -679,7 +679,7 @@ impl Compression {
     /// Returns an initialized state.
     pub(super) fn initialize_with_iv<F: FieldExt>(
         &self,
-        layouter: &mut impl Layouter<Table16Chip<F>>,
+        layouter: &mut impl Layouter<Table16Config<F>>,
         init_state: [u32; STATE],
     ) -> Result<State, Error> {
         let mut new_state = State::empty_state();
@@ -697,7 +697,7 @@ impl Compression {
     /// output from a previous compression round.
     pub(super) fn initialize_with_state<F: FieldExt>(
         &self,
-        layouter: &mut impl Layouter<Table16Chip<F>>,
+        layouter: &mut impl Layouter<Table16Config<F>>,
         init_state: State,
     ) -> Result<State, Error> {
         let mut new_state = State::empty_state();
@@ -714,7 +714,7 @@ impl Compression {
     /// Given an initialized state and a message schedule, perform 64 compression rounds.
     pub(super) fn compress<F: FieldExt>(
         &self,
-        layouter: &mut impl Layouter<Table16Chip<F>>,
+        layouter: &mut impl Layouter<Table16Config<F>>,
         initialized_state: State,
         w_halves: [(CellValue16, CellValue16); ROUNDS],
     ) -> Result<State, Error> {
@@ -736,7 +736,7 @@ impl Compression {
     /// After the final round, convert the state into the final digest.
     pub(super) fn digest<F: FieldExt>(
         &self,
-        layouter: &mut impl Layouter<Table16Chip<F>>,
+        layouter: &mut impl Layouter<Table16Config<F>>,
         state: State,
     ) -> Result<[BlockWord; DIGEST_SIZE], Error> {
         let mut digest = [BlockWord::new(0); DIGEST_SIZE];
@@ -800,7 +800,7 @@ impl Compression {
 mod tests {
     use super::super::{
         super::BLOCK_SIZE, get_msg_schedule_test_input, BlockWord, MessageSchedule, SpreadTable,
-        Table16Chip, Table16Config, IV,
+        Table16Config, Table16Configured, IV,
     };
     use super::Compression;
     use halo2::{
@@ -816,9 +816,9 @@ mod tests {
         struct MyCircuit {}
 
         impl<F: FieldExt> Circuit<F> for MyCircuit {
-            type Config = Table16Config;
+            type Configured = Table16Configured;
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Configured {
                 let a = meta.advice_column();
                 let b = meta.advice_column();
                 let c = meta.advice_column();
@@ -877,7 +877,7 @@ mod tests {
                     perm.clone(),
                 );
 
-                Table16Config {
+                Table16Configured {
                     lookup_table,
                     message_schedule,
                     compression,
@@ -887,21 +887,22 @@ mod tests {
             fn synthesize(
                 &self,
                 cs: &mut impl Assignment<F>,
-                config: Self::Config,
+                configured: Self::Configured,
             ) -> Result<(), Error> {
-                let mut layouter = layouter::SingleChip::<Table16Chip<F>, _>::new(cs, config)?;
+                let mut layouter =
+                    layouter::SingleConfigLayouter::<Table16Config<F>, _>::new(cs, configured)?;
 
                 // Load table
-                let table = layouter.config().lookup_table.clone();
+                let table = layouter.configured().lookup_table.clone();
                 table.load(&mut layouter)?;
 
                 // Test vector: "abc"
                 let input: [BlockWord; BLOCK_SIZE] = get_msg_schedule_test_input();
 
-                let config = layouter.config().clone();
-                let (_, w_halves) = config.message_schedule.process(&mut layouter, input)?;
+                let configured = layouter.configured().clone();
+                let (_, w_halves) = configured.message_schedule.process(&mut layouter, input)?;
 
-                let compression = config.compression.clone();
+                let compression = configured.compression.clone();
                 let initial_state = compression.initialize_with_iv(&mut layouter, IV)?;
 
                 let state =
@@ -909,7 +910,7 @@ mod tests {
                         .compression
                         .compress(&mut layouter, initial_state.clone(), w_halves)?;
 
-                let digest = config.compression.digest(&mut layouter, state)?;
+                let digest = configured.compression.digest(&mut layouter, state)?;
                 for (idx, digest_word) in digest.iter().enumerate() {
                     assert_eq!(
                         (digest_word.value.unwrap() as u64 + IV[idx] as u64) as u32,

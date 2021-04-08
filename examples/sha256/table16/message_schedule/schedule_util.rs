@@ -1,4 +1,4 @@
-use super::super::{CellValue16, Table16Chip};
+use super::super::{CellValue16, Table16Config};
 use super::MessageSchedule;
 use halo2::{
     arithmetic::FieldExt,
@@ -152,7 +152,7 @@ impl MessageSchedule {
     // Assign a word and its hi and lo halves
     pub fn assign_word_and_halves<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, Table16Config<F>>,
         word: u32,
         word_idx: usize,
     ) -> Result<(Cell, (CellValue16, CellValue16)), Error> {

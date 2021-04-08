@@ -1,7 +1,8 @@
 use std::convert::TryInto;
 
 use super::{
-    super::BLOCK_SIZE, BlockWord, CellValue16, SpreadInputs, Table16Assignment, Table16Chip, ROUNDS,
+    super::BLOCK_SIZE, BlockWord, CellValue16, SpreadInputs, Table16Assignment, Table16Config,
+    ROUNDS,
 };
 use halo2::{
     arithmetic::FieldExt,
@@ -309,7 +310,7 @@ impl MessageSchedule {
     #[allow(clippy::type_complexity)]
     pub(super) fn process<F: FieldExt>(
         &self,
-        layouter: &mut impl Layouter<Table16Chip<F>>,
+        layouter: &mut impl Layouter<Table16Config<F>>,
         input: [BlockWord; BLOCK_SIZE],
     ) -> Result<([MessageWord; ROUNDS], [(CellValue16, CellValue16); ROUNDS]), Error> {
         let mut w = Vec::<MessageWord>::with_capacity(ROUNDS);
@@ -481,7 +482,7 @@ impl MessageSchedule {
 #[cfg(test)]
 mod tests {
     use super::super::{
-        super::BLOCK_SIZE, BlockWord, Compression, SpreadTable, Table16Chip, Table16Config,
+        super::BLOCK_SIZE, BlockWord, Compression, SpreadTable, Table16Config, Table16Configured,
     };
     use super::{schedule_util::*, MessageSchedule};
     use halo2::{
@@ -497,9 +498,9 @@ mod tests {
         struct MyCircuit {}
 
         impl<F: FieldExt> Circuit<F> for MyCircuit {
-            type Config = Table16Config;
+            type Configured = Table16Configured;
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Configured {
                 let a = meta.advice_column();
                 let b = meta.advice_column();
                 let c = meta.advice_column();
@@ -553,7 +554,7 @@ mod tests {
                 let message_schedule =
                     MessageSchedule::configure(meta, lookup_inputs, message_schedule, extras, perm);
 
-                Table16Config {
+                Table16Configured {
                     lookup_table,
                     message_schedule,
                     compression,
@@ -563,12 +564,13 @@ mod tests {
             fn synthesize(
                 &self,
                 cs: &mut impl Assignment<F>,
-                config: Self::Config,
+                configured: Self::Configured,
             ) -> Result<(), Error> {
-                let mut layouter = layouter::SingleChip::<Table16Chip<F>, _>::new(cs, config)?;
+                let mut layouter =
+                    layouter::SingleConfigLayouter::<Table16Config<F>, _>::new(cs, configured)?;
 
                 // Load table
-                let table = layouter.config().lookup_table.clone();
+                let table = layouter.configured().lookup_table.clone();
                 table.load(&mut layouter)?;
 
                 // Provide input
@@ -576,7 +578,7 @@ mod tests {
                 let inputs: [BlockWord; BLOCK_SIZE] = get_msg_schedule_test_input();
 
                 // Run message_scheduler to get W_[0..64]
-                let message_schedule = layouter.config().message_schedule.clone();
+                let message_schedule = layouter.configured().message_schedule.clone();
                 let (w, _) = message_schedule.process(&mut layouter, inputs)?;
                 for (word, test_word) in w.iter().zip(MSG_SCHEDULE_TEST_OUTPUT.iter()) {
                     let word = word.value.unwrap();

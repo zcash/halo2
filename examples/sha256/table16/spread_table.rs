@@ -1,7 +1,7 @@
-use super::{util::*, CellValue16, CellValue32, Table16Chip};
+use super::{util::*, CellValue16, CellValue32, Table16Config};
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Chip, Layouter, Region},
+    circuit::{Config, Layouter, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
     poly::Rotation,
 };
@@ -33,7 +33,7 @@ pub(super) struct SpreadVar {
 }
 
 impl SpreadVar {
-    pub(super) fn with_lookup<'r, C: Chip>(
+    pub(super) fn with_lookup<'r, C: Config>(
         region: &mut Region<'r, C>,
         cols: &SpreadInputs,
         row: usize,
@@ -76,7 +76,7 @@ impl SpreadVar {
         })
     }
 
-    pub(super) fn without_lookup<C: Chip>(
+    pub(super) fn without_lookup<C: Config>(
         region: &mut Region<'_, C>,
         dense_col: Column<Advice>,
         dense_row: usize,
@@ -195,7 +195,7 @@ impl SpreadTable {
 
     pub(super) fn load<F: FieldExt>(
         &self,
-        layouter: &mut impl Layouter<Table16Chip<F>>,
+        layouter: &mut impl Layouter<Table16Config<F>>,
     ) -> Result<(), Error> {
         layouter.assign_region(
             || "spread table",
@@ -245,7 +245,7 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::{
-        super::{util::*, Compression, MessageSchedule, Table16Chip, Table16Config},
+        super::{util::*, Compression, MessageSchedule, Table16Config, Table16Configured},
         SpreadInputs, SpreadTable,
     };
     use halo2::{
@@ -265,16 +265,16 @@ mod tests {
         pub struct Variable(Column<Advice>, usize);
 
         #[derive(Clone, Debug)]
-        struct MyConfig {
+        struct MyConfigured {
             lookup_inputs: SpreadInputs,
-            sha256: Table16Config,
+            sha256: Table16Configured,
         }
 
         struct MyCircuit {}
 
         struct MyLayouter<'a, F: FieldExt, CS: Assignment<F> + 'a> {
             cs: &'a mut CS,
-            config: MyConfig,
+            configured: MyConfigured,
             regions: Vec<usize>,
             /// Stores the first empty row for each column.
             columns: HashMap<Column<Any>, usize>,
@@ -284,7 +284,7 @@ mod tests {
         impl<'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for MyLayouter<'a, F, CS> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.debug_struct("MyLayouter")
-                    .field("config", &self.config)
+                    .field("configured", &self.configured)
                     .field("regions", &self.regions)
                     .field("columns", &self.columns)
                     .finish()
@@ -292,27 +292,27 @@ mod tests {
         }
 
         impl<'a, FF: FieldExt, CS: Assignment<FF>> MyLayouter<'a, FF, CS> {
-            fn new(cs: &'a mut CS, config: MyConfig) -> Result<Self, Error> {
+            fn new(cs: &'a mut CS, configured: MyConfigured) -> Result<Self, Error> {
                 let mut res = MyLayouter {
                     cs,
-                    config,
+                    configured,
                     regions: vec![],
                     columns: HashMap::default(),
                     _marker: PhantomData,
                 };
 
-                let table = res.config.sha256.lookup_table.clone();
+                let table = res.configured.sha256.lookup_table.clone();
                 table.load(&mut res)?;
 
                 Ok(res)
             }
         }
 
-        impl<'a, F: FieldExt, CS: Assignment<F> + 'a> Layouter<Table16Chip<F>> for MyLayouter<'a, F, CS> {
+        impl<'a, F: FieldExt, CS: Assignment<F> + 'a> Layouter<Table16Config<F>> for MyLayouter<'a, F, CS> {
             type Root = Self;
 
-            fn config(&self) -> &Table16Config {
-                &self.config.sha256
+            fn configured(&self) -> &Table16Configured {
+                &self.configured.sha256
             }
 
             fn loaded(&self) -> &() {
@@ -325,7 +325,7 @@ mod tests {
                 mut assignment: A,
             ) -> Result<AR, Error>
             where
-                A: FnMut(Region<'_, Table16Chip<F>>) -> Result<AR, Error>,
+                A: FnMut(Region<'_, Table16Config<F>>) -> Result<AR, Error>,
                 N: Fn() -> NR,
                 NR: Into<String>,
             {
@@ -334,7 +334,7 @@ mod tests {
                 // Get shape of the region.
                 let mut shape = layouter::RegionShape::new(region_index.into());
                 {
-                    let region: &mut dyn layouter::RegionLayouter<Table16Chip<F>> = &mut shape;
+                    let region: &mut dyn layouter::RegionLayouter<Table16Config<F>> = &mut shape;
                     assignment(region.into())?;
                 }
 
@@ -356,7 +356,7 @@ mod tests {
                 self.cs.enter_region(name);
                 let mut region = MyRegion::new(self, region_index.into());
                 let result = {
-                    let region: &mut dyn layouter::RegionLayouter<Table16Chip<F>> = &mut region;
+                    let region: &mut dyn layouter::RegionLayouter<Table16Config<F>> = &mut region;
                     assignment(region.into())
                 }?;
                 self.cs.exit_region();
@@ -406,7 +406,7 @@ mod tests {
             }
         }
 
-        impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> layouter::RegionLayouter<Table16Chip<F>>
+        impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> layouter::RegionLayouter<Table16Config<F>>
             for MyRegion<'r, 'a, F, CS>
         {
             fn assign_advice<'v>(
@@ -469,9 +469,9 @@ mod tests {
         }
 
         impl<F: FieldExt> Circuit<F> for MyCircuit {
-            type Config = MyConfig;
+            type Configured = MyConfigured;
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> MyConfig {
+            fn configure(meta: &mut ConstraintSystem<F>) -> MyConfigured {
                 let a = meta.advice_column();
                 let b = meta.advice_column();
                 let c = meta.advice_column();
@@ -530,9 +530,9 @@ mod tests {
                     perm.clone(),
                 );
 
-                MyConfig {
+                MyConfigured {
                     lookup_inputs,
-                    sha256: Table16Config {
+                    sha256: Table16Configured {
                         lookup_table,
                         message_schedule,
                         compression,
@@ -543,10 +543,10 @@ mod tests {
             fn synthesize(
                 &self,
                 cs: &mut impl Assignment<F>,
-                config: MyConfig,
+                configured: MyConfigured,
             ) -> Result<(), Error> {
-                let lookup = config.lookup_inputs.clone();
-                let mut layouter = MyLayouter::new(cs, config)?;
+                let lookup = configured.lookup_inputs.clone();
+                let mut layouter = MyLayouter::new(cs, configured)?;
 
                 layouter.assign_region(
                     || "spread_test",

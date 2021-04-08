@@ -12,14 +12,14 @@ pub mod layouter;
 /// A chip implements a set of instructions that can be used by gadgets.
 ///
 /// The chip itself should not store any state; instead, state that is required at circuit
-/// synthesis time should be stored in [`Chip::Config`], which can then be fetched via
-/// [`Layouter::config`].
-pub trait Chip: Sized {
+/// synthesis time should be stored in [`Config::Configured`], which can then be fetched via
+/// [`Layouter::configured`].
+pub trait Config: Sized {
     /// A type that holds the configuration for this chip, and any other state it may need
     /// during circuit synthesis, that can be derived during [`Circuit::configure`].
     ///
     /// [`Circuit::configure`]: crate::plonk::Circuit::configure
-    type Config: fmt::Debug;
+    type Configured: fmt::Debug;
 
     /// A type that holds any general chip state that needs to be loaded at the start of
     /// [`Circuit::synthesize`]. This might simply be `()` for some chips.
@@ -95,19 +95,19 @@ pub struct Cell {
 ///
 /// TODO: It would be great if we could constrain the columns in these types to be
 /// "logical" columns that are guaranteed to correspond to the chip (and have come from
-/// `Chip::Config`).
+/// `Config::Configured`).
 #[derive(Debug)]
-pub struct Region<'r, C: Chip> {
+pub struct Region<'r, C: Config> {
     region: &'r mut dyn layouter::RegionLayouter<C>,
 }
 
-impl<'r, C: Chip> From<&'r mut dyn layouter::RegionLayouter<C>> for Region<'r, C> {
+impl<'r, C: Config> From<&'r mut dyn layouter::RegionLayouter<C>> for Region<'r, C> {
     fn from(region: &'r mut dyn layouter::RegionLayouter<C>) -> Self {
         Region { region }
     }
 }
 
-impl<'r, C: Chip> Region<'r, C> {
+impl<'r, C: Config> Region<'r, C> {
     /// Assign an advice column value (witness).
     ///
     /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
@@ -165,13 +165,13 @@ impl<'r, C: Chip> Region<'r, C> {
 ///
 /// A particular concrete layout strategy will implement this trait for each chip it
 /// supports.
-pub trait Layouter<C: Chip> {
+pub trait Layouter<C: Config> {
     /// Represents the type of the "root" of this layouter, so that nested namespaces
     /// can minimize indirection.
     type Root: Layouter<C>;
 
     /// Provides access to the chip configuration.
-    fn config(&self) -> &C::Config;
+    fn configured(&self) -> &C::Configured;
 
     /// Provides access to general chip state loaded at the beginning of circuit
     /// synthesis.
@@ -187,7 +187,7 @@ pub trait Layouter<C: Chip> {
     ///
     /// ```ignore
     /// fn assign_region(&mut self, || "region name", |region| {
-    ///     region.assign_advice(self.config.a, offset, || { Some(value)});
+    ///     region.assign_advice(self.configured.a, offset, || { Some(value)});
     /// });
     /// ```
     fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>
@@ -229,13 +229,13 @@ pub trait Layouter<C: Chip> {
 /// This is a "namespaced" layouter which borrows a `Layouter` (pushing a namespace
 /// context) and, when dropped, pops out of the namespace context.
 #[derive(Debug)]
-pub struct NamespacedLayouter<'a, C: Chip, L: Layouter<C> + 'a>(&'a mut L, PhantomData<C>);
+pub struct NamespacedLayouter<'a, C: Config, L: Layouter<C> + 'a>(&'a mut L, PhantomData<C>);
 
-impl<'a, C: Chip, L: Layouter<C> + 'a> Layouter<C> for NamespacedLayouter<'a, C, L> {
+impl<'a, C: Config, L: Layouter<C> + 'a> Layouter<C> for NamespacedLayouter<'a, C, L> {
     type Root = L::Root;
 
-    fn config(&self) -> &C::Config {
-        self.0.config()
+    fn configured(&self) -> &C::Configured {
+        self.0.configured()
     }
 
     fn loaded(&self) -> &C::Loaded {
@@ -268,7 +268,7 @@ impl<'a, C: Chip, L: Layouter<C> + 'a> Layouter<C> for NamespacedLayouter<'a, C,
     }
 }
 
-impl<'a, C: Chip, L: Layouter<C> + 'a> Drop for NamespacedLayouter<'a, C, L> {
+impl<'a, C: Config, L: Layouter<C> + 'a> Drop for NamespacedLayouter<'a, C, L> {
     fn drop(&mut self) {
         let gadget_name = {
             #[cfg(feature = "gadget-traces")]

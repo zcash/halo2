@@ -41,9 +41,9 @@ pub fn circuit_layout<F: Field, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>
 
     // Collect the layout details.
     let mut cs = ConstraintSystem::default();
-    let config = ConcreteCircuit::configure(&mut cs);
+    let configured = ConcreteCircuit::configure(&mut cs);
     let mut layout = Layout::default();
-    circuit.synthesize(&mut layout, config).unwrap();
+    circuit.synthesize(&mut layout, configured).unwrap();
 
     // Figure out what order to render the columns in.
     // TODO: For now, just render them in the order they were configured.

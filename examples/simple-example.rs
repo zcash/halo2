@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{layouter::SingleChip, Cell, Chip, Layouter},
+    circuit::{layouter::SingleConfigLayouter, Cell, Config, Layouter},
     dev::VerifyFailure,
     plonk::{
         Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Instance, Permutation,
@@ -14,7 +14,7 @@ use halo2::{
 };
 
 // ANCHOR: instructions
-trait NumericInstructions: Chip {
+trait NumericInstructions: Config {
     /// Variable representing a number.
     type Num;
 
@@ -39,7 +39,7 @@ trait NumericInstructions: Chip {
 // ANCHOR: chip
 /// The chip that will implement our instructions! Chips do not store any persistent
 /// state themselves, and usually only contain type markers if necessary.
-struct FieldChip<F: FieldExt> {
+struct FieldConfig<F: FieldExt> {
     _marker: PhantomData<F>,
 }
 // ANCHOR_END: chip
@@ -49,7 +49,7 @@ struct FieldChip<F: FieldExt> {
 /// during configuration, and then handed to the `Layouter`, which makes it available
 /// to the chip when it needs to implement its instructions.
 #[derive(Clone, Debug)]
-struct FieldConfig {
+struct FieldConfigured {
     /// For this chip, we will use two advice columns to implement our instructions.
     /// These are also the columns through which we communicate with other parts of
     /// the circuit.
@@ -70,12 +70,12 @@ struct FieldConfig {
     s_pub: Selector,
 }
 
-impl<F: FieldExt> FieldChip<F> {
+impl<F: FieldExt> FieldConfig<F> {
     fn configure(
         meta: &mut ConstraintSystem<F>,
         advice: [Column<Advice>; 2],
         instance: Column<Instance>,
-    ) -> FieldConfig {
+    ) -> FieldConfigured {
         let perm = Permutation::new(
             meta,
             &advice
@@ -126,7 +126,7 @@ impl<F: FieldExt> FieldChip<F> {
             s * (p + a * -F::one())
         });
 
-        FieldConfig {
+        FieldConfigured {
             advice,
             perm,
             s_mul,
@@ -137,8 +137,8 @@ impl<F: FieldExt> FieldChip<F> {
 // ANCHOR_END: chip-config
 
 // ANCHOR: chip-impl
-impl<F: FieldExt> Chip for FieldChip<F> {
-    type Config = FieldConfig;
+impl<F: FieldExt> Config for FieldConfig<F> {
+    type Configured = FieldConfigured;
     type Loaded = ();
     type Field = F;
 
@@ -158,21 +158,21 @@ struct Number<F: FieldExt> {
     value: Option<F>,
 }
 
-impl<F: FieldExt> NumericInstructions for FieldChip<F> {
+impl<F: FieldExt> NumericInstructions for FieldConfig<F> {
     type Num = Number<F>;
 
     fn load_private(
         layouter: &mut impl Layouter<Self>,
         value: Option<Self::Field>,
     ) -> Result<Self::Num, Error> {
-        let config = layouter.config().clone();
+        let configured = layouter.configured().clone();
         let mut num = None;
         layouter.assign_region(
             || "load private",
             |mut region| {
                 let cell = region.assign_advice(
                     || "private input",
-                    config.advice[0],
+                    configured.advice[0],
                     0,
                     || value.ok_or(Error::SynthesisError),
                 )?;
@@ -188,7 +188,7 @@ impl<F: FieldExt> NumericInstructions for FieldChip<F> {
         a: Self::Num,
         b: Self::Num,
     ) -> Result<Self::Num, Error> {
-        let config = layouter.config().clone();
+        let configured = layouter.configured().clone();
         let mut out = None;
         layouter.assign_region(
             || "mul",
@@ -196,7 +196,7 @@ impl<F: FieldExt> NumericInstructions for FieldChip<F> {
                 // We only want to use a single multiplication gate in this region,
                 // so we enable it at region offset 0; this means it will constrain
                 // cells at offsets 0 and 1.
-                config.s_mul.enable(&mut region, 0)?;
+                configured.s_mul.enable(&mut region, 0)?;
 
                 // The inputs we've been given could be located anywhere in the circuit,
                 // but we can only rely on relative offsets inside this region. So we
@@ -204,24 +204,24 @@ impl<F: FieldExt> NumericInstructions for FieldChip<F> {
                 // same values as the inputs.
                 let lhs = region.assign_advice(
                     || "lhs",
-                    config.advice[0],
+                    configured.advice[0],
                     0,
                     || a.value.ok_or(Error::SynthesisError),
                 )?;
                 let rhs = region.assign_advice(
                     || "rhs",
-                    config.advice[1],
+                    configured.advice[1],
                     0,
                     || b.value.ok_or(Error::SynthesisError),
                 )?;
-                region.constrain_equal(&config.perm, a.cell, lhs)?;
-                region.constrain_equal(&config.perm, b.cell, rhs)?;
+                region.constrain_equal(&configured.perm, a.cell, lhs)?;
+                region.constrain_equal(&configured.perm, b.cell, rhs)?;
 
                 // Now we can assign the multiplication result into the output position.
                 let value = a.value.and_then(|a| b.value.map(|b| a * b));
                 let cell = region.assign_advice(
                     || "lhs * rhs",
-                    config.advice[0],
+                    configured.advice[0],
                     1,
                     || value.ok_or(Error::SynthesisError),
                 )?;
@@ -237,21 +237,21 @@ impl<F: FieldExt> NumericInstructions for FieldChip<F> {
     }
 
     fn expose_public(layouter: &mut impl Layouter<Self>, num: Self::Num) -> Result<(), Error> {
-        let config = layouter.config().clone();
+        let configured = layouter.configured().clone();
         layouter.assign_region(
             || "expose public",
             |mut region| {
                 // Enable the public-input gate.
-                config.s_pub.enable(&mut region, 0)?;
+                configured.s_pub.enable(&mut region, 0)?;
 
                 // Load the output into the correct advice column.
                 let out = region.assign_advice(
                     || "public advice",
-                    config.advice[1],
+                    configured.advice[1],
                     0,
                     || num.value.ok_or(Error::SynthesisError),
                 )?;
-                region.constrain_equal(&config.perm, num.cell, out)?;
+                region.constrain_equal(&configured.perm, num.cell, out)?;
 
                 // We don't assign to the instance column inside the circuit;
                 // the mapping of public inputs to cells is provided to the prover.
@@ -274,25 +274,29 @@ struct MyCircuit<F: FieldExt> {
 }
 
 impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
-    // Since we are using a single chip for everything, we can just reuse its config.
-    type Config = FieldConfig;
+    // Since we are using a single chip for everything, we can just reuse its configured.
+    type Configured = FieldConfigured;
 
-    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
-        // We create the two advice columns that FieldChip uses for I/O.
+    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Configured {
+        // We create the two advice columns that FieldConfig uses for I/O.
         let advice = [meta.advice_column(), meta.advice_column()];
 
         // We also need an instance column to store public inputs.
         let instance = meta.instance_column();
 
-        FieldChip::configure(meta, advice, instance)
+        FieldConfig::configure(meta, advice, instance)
     }
 
-    fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error> {
-        let mut layouter = SingleChip::new(cs, config)?;
+    fn synthesize(
+        &self,
+        cs: &mut impl Assignment<F>,
+        configured: Self::Configured,
+    ) -> Result<(), Error> {
+        let mut layouter = SingleConfigLayouter::new(cs, configured)?;
 
         // Load our private values into the circuit.
-        let a = FieldChip::load_private(&mut layouter, self.a)?;
-        let b = FieldChip::load_private(&mut layouter, self.b)?;
+        let a = FieldConfig::load_private(&mut layouter, self.a)?;
+        let b = FieldConfig::load_private(&mut layouter, self.b)?;
 
         // We only have access to plain multiplication.
         // We could implement our circuit as:
@@ -303,11 +307,11 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         // but it's more efficient to implement it as:
         //     ab = a*b
         //     c  = ab^2
-        let ab = FieldChip::mul(&mut layouter, a, b)?;
-        let c = FieldChip::mul(&mut layouter, ab.clone(), ab)?;
+        let ab = FieldConfig::mul(&mut layouter, a, b)?;
+        let c = FieldConfig::mul(&mut layouter, ab.clone(), ab)?;
 
         // Expose the result as a public input to the circuit.
-        FieldChip::expose_public(&mut layouter, c)
+        FieldConfig::expose_public(&mut layouter, c)
     }
 }
 // ANCHOR_END: circuit

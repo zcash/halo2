@@ -16,20 +16,20 @@ pub(crate) fn create_domain<C, ConcreteCircuit>(
 ) -> (
     EvaluationDomain<C::Scalar>,
     ConstraintSystem<C::Scalar>,
-    ConcreteCircuit::Config,
+    ConcreteCircuit::Configured,
 )
 where
     C: CurveAffine,
     ConcreteCircuit: Circuit<C::Scalar>,
 {
     let mut cs = ConstraintSystem::default();
-    let config = ConcreteCircuit::configure(&mut cs);
+    let configured = ConcreteCircuit::configure(&mut cs);
 
     let degree = cs.degree();
 
     let domain = EvaluationDomain::new(degree as u32, params.k);
 
-    (domain, cs, config)
+    (domain, cs, configured)
 }
 
 /// Assembly to be used in circuit synthesis.
@@ -144,7 +144,7 @@ where
     C: CurveAffine,
     ConcreteCircuit: Circuit<C::Scalar>,
 {
-    let (domain, cs, config) = create_domain::<C, ConcreteCircuit>(params);
+    let (domain, cs, configured) = create_domain::<C, ConcreteCircuit>(params);
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
         fixed: vec![domain.empty_lagrange(); cs.num_fixed_columns],
@@ -157,7 +157,7 @@ where
     };
 
     // Synthesize the circuit to obtain URS
-    circuit.synthesize(&mut assembly, config)?;
+    circuit.synthesize(&mut assembly, configured)?;
 
     let permutation_helper = permutation::keygen::Assembly::build_helper(params, &cs, &domain);
 
@@ -193,7 +193,7 @@ where
     ConcreteCircuit: Circuit<C::Scalar>,
 {
     let mut cs = ConstraintSystem::default();
-    let config = ConcreteCircuit::configure(&mut cs);
+    let configured = ConcreteCircuit::configure(&mut cs);
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
         fixed: vec![vk.domain.empty_lagrange(); vk.cs.num_fixed_columns],
@@ -207,7 +207,7 @@ where
     };
 
     // Synthesize the circuit to obtain URS
-    circuit.synthesize(&mut assembly, config)?;
+    circuit.synthesize(&mut assembly, configured)?;
 
     let fixed_polys: Vec<_> = assembly
         .fixed

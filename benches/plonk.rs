@@ -21,7 +21,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     let params: Params<EqAffine> = Params::new(k);
 
     #[derive(Clone)]
-    struct PLONKConfig {
+    struct PLONKConfigured {
         a: Column<Advice>,
         b: Column<Advice>,
         c: Column<Advice>,
@@ -52,16 +52,16 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
 
     struct StandardPLONK<'a, F: FieldExt, CS: Assignment<F> + 'a> {
         cs: &'a mut CS,
-        config: PLONKConfig,
+        configured: PLONKConfigured,
         current_gate: usize,
         _marker: PhantomData<F>,
     }
 
     impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardPLONK<'a, FF, CS> {
-        fn new(cs: &'a mut CS, config: PLONKConfig) -> Self {
+        fn new(cs: &'a mut CS, configured: PLONKConfigured) -> Self {
             StandardPLONK {
                 cs,
-                config,
+                configured,
                 current_gate: 0,
                 _marker: PhantomData,
             }
@@ -78,7 +78,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             let mut value = None;
             self.cs.assign_advice(
                 || "lhs",
-                self.config.a,
+                self.configured.a,
                 index,
                 || {
                     value = Some(f()?);
@@ -87,29 +87,29 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             )?;
             self.cs.assign_advice(
                 || "rhs",
-                self.config.b,
+                self.configured.b,
                 index,
                 || Ok(value.ok_or(Error::SynthesisError)?.1),
             )?;
             self.cs.assign_advice(
                 || "out",
-                self.config.c,
+                self.configured.c,
                 index,
                 || Ok(value.ok_or(Error::SynthesisError)?.2),
             )?;
 
             self.cs
-                .assign_fixed(|| "a", self.config.sa, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "a", self.configured.sa, index, || Ok(FF::zero()))?;
             self.cs
-                .assign_fixed(|| "b", self.config.sb, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "b", self.configured.sb, index, || Ok(FF::zero()))?;
             self.cs
-                .assign_fixed(|| "c", self.config.sc, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "c", self.configured.sc, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(|| "a * b", self.config.sm, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "a * b", self.configured.sm, index, || Ok(FF::one()))?;
             Ok((
-                Variable(self.config.a, index),
-                Variable(self.config.b, index),
-                Variable(self.config.c, index),
+                Variable(self.configured.a, index),
+                Variable(self.configured.b, index),
+                Variable(self.configured.c, index),
             ))
         }
         fn raw_add<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
@@ -121,7 +121,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             let mut value = None;
             self.cs.assign_advice(
                 || "lhs",
-                self.config.a,
+                self.configured.a,
                 index,
                 || {
                     value = Some(f()?);
@@ -130,34 +130,34 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             )?;
             self.cs.assign_advice(
                 || "rhs",
-                self.config.b,
+                self.configured.b,
                 index,
                 || Ok(value.ok_or(Error::SynthesisError)?.1),
             )?;
             self.cs.assign_advice(
                 || "out",
-                self.config.c,
+                self.configured.c,
                 index,
                 || Ok(value.ok_or(Error::SynthesisError)?.2),
             )?;
 
             self.cs
-                .assign_fixed(|| "a", self.config.sa, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "a", self.configured.sa, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(|| "b", self.config.sb, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "b", self.configured.sb, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(|| "c", self.config.sc, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "c", self.configured.sc, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(|| "a * b", self.config.sm, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "a * b", self.configured.sm, index, || Ok(FF::zero()))?;
             Ok((
-                Variable(self.config.a, index),
-                Variable(self.config.b, index),
-                Variable(self.config.c, index),
+                Variable(self.configured.a, index),
+                Variable(self.configured.b, index),
+                Variable(self.configured.c, index),
             ))
         }
         fn copy(&mut self, left: Variable, right: Variable) -> Result<(), Error> {
             self.cs.copy(
-                &self.config.perm,
+                &self.configured.perm,
                 left.0.into(),
                 left.1,
                 right.0.into(),
@@ -167,9 +167,9 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     }
 
     impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
-        type Config = PLONKConfig;
+        type Configured = PLONKConfigured;
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
+        fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfigured {
             let a = meta.advice_column();
             let b = meta.advice_column();
             let c = meta.advice_column();
@@ -194,7 +194,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
                 a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))
             });
 
-            PLONKConfig {
+            PLONKConfigured {
                 a,
                 b,
                 c,
@@ -209,9 +209,9 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         fn synthesize(
             &self,
             cs: &mut impl Assignment<F>,
-            config: PLONKConfig,
+            configured: PLONKConfigured,
         ) -> Result<(), Error> {
-            let mut cs = StandardPLONK::new(cs, config);
+            let mut cs = StandardPLONK::new(cs, configured);
 
             for _ in 0..(1 << (self.k - 1)) {
                 let mut a_squared = None;

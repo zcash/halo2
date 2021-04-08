@@ -38,7 +38,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
 
     let domain = &pk.vk.domain;
     let mut meta = ConstraintSystem::default();
-    let config = ConcreteCircuit::configure(&mut meta);
+    let configured = ConcreteCircuit::configure(&mut meta);
 
     struct InstanceSingle<'a, C: CurveAffine> {
         pub instance_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
@@ -188,7 +188,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
             };
 
             // Synthesize the circuit to obtain the witness and other information.
-            circuit.synthesize(&mut witness, config.clone())?;
+            circuit.synthesize(&mut witness, configured.clone())?;
 
             let witness = witness;
 

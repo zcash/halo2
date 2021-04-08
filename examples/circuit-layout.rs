@@ -15,7 +15,7 @@ fn main() {
     pub struct Variable(Column<Advice>, usize);
 
     #[derive(Clone)]
-    struct PLONKConfig {
+    struct PLONKConfigured {
         a: Column<Advice>,
         b: Column<Advice>,
         c: Column<Advice>,
@@ -55,16 +55,16 @@ fn main() {
 
     struct StandardPLONK<'a, F: FieldExt, CS: Assignment<F> + 'a> {
         cs: &'a mut CS,
-        config: PLONKConfig,
+        configured: PLONKConfigured,
         current_gate: usize,
         _marker: PhantomData<F>,
     }
 
     impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardPLONK<'a, FF, CS> {
-        fn new(cs: &'a mut CS, config: PLONKConfig) -> Self {
+        fn new(cs: &'a mut CS, configured: PLONKConfigured) -> Self {
             StandardPLONK {
                 cs,
-                config,
+                configured,
                 current_gate: 0,
                 _marker: PhantomData,
             }
@@ -93,7 +93,7 @@ fn main() {
             let mut value = None;
             self.cs.assign_advice(
                 || "lhs",
-                self.config.a,
+                self.configured.a,
                 index,
                 || {
                     value = Some(f()?);
@@ -102,41 +102,41 @@ fn main() {
             )?;
             self.cs.assign_advice(
                 || "lhs^4",
-                self.config.d,
+                self.configured.d,
                 index,
                 || Ok(value.ok_or(Error::SynthesisError)?.0.square().square()),
             )?;
             self.cs.assign_advice(
                 || "rhs",
-                self.config.b,
+                self.configured.b,
                 index,
                 || Ok(value.ok_or(Error::SynthesisError)?.1),
             )?;
             self.cs.assign_advice(
                 || "rhs^4",
-                self.config.e,
+                self.configured.e,
                 index,
                 || Ok(value.ok_or(Error::SynthesisError)?.1.square().square()),
             )?;
             self.cs.assign_advice(
                 || "out",
-                self.config.c,
+                self.configured.c,
                 index,
                 || Ok(value.ok_or(Error::SynthesisError)?.2),
             )?;
 
             self.cs
-                .assign_fixed(|| "a", self.config.sa, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "a", self.configured.sa, index, || Ok(FF::zero()))?;
             self.cs
-                .assign_fixed(|| "b", self.config.sb, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "b", self.configured.sb, index, || Ok(FF::zero()))?;
             self.cs
-                .assign_fixed(|| "c", self.config.sc, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "c", self.configured.sc, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(|| "a * b", self.config.sm, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "a * b", self.configured.sm, index, || Ok(FF::one()))?;
             Ok((
-                Variable(self.config.a, index),
-                Variable(self.config.b, index),
-                Variable(self.config.c, index),
+                Variable(self.configured.a, index),
+                Variable(self.configured.b, index),
+                Variable(self.configured.c, index),
             ))
         }
         fn raw_add<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
@@ -148,7 +148,7 @@ fn main() {
             let mut value = None;
             self.cs.assign_advice(
                 || "lhs",
-                self.config.a,
+                self.configured.a,
                 index,
                 || {
                     value = Some(f()?);
@@ -157,53 +157,53 @@ fn main() {
             )?;
             self.cs.assign_advice(
                 || "lhs^4",
-                self.config.d,
+                self.configured.d,
                 index,
                 || Ok(value.ok_or(Error::SynthesisError)?.0.square().square()),
             )?;
             self.cs.assign_advice(
                 || "rhs",
-                self.config.b,
+                self.configured.b,
                 index,
                 || Ok(value.ok_or(Error::SynthesisError)?.1),
             )?;
             self.cs.assign_advice(
                 || "rhs^4",
-                self.config.e,
+                self.configured.e,
                 index,
                 || Ok(value.ok_or(Error::SynthesisError)?.1.square().square()),
             )?;
             self.cs.assign_advice(
                 || "out",
-                self.config.c,
+                self.configured.c,
                 index,
                 || Ok(value.ok_or(Error::SynthesisError)?.2),
             )?;
 
             self.cs
-                .assign_fixed(|| "a", self.config.sa, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "a", self.configured.sa, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(|| "b", self.config.sb, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "b", self.configured.sb, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(|| "c", self.config.sc, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "c", self.configured.sc, index, || Ok(FF::one()))?;
             self.cs
-                .assign_fixed(|| "a * b", self.config.sm, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "a * b", self.configured.sm, index, || Ok(FF::zero()))?;
             Ok((
-                Variable(self.config.a, index),
-                Variable(self.config.b, index),
-                Variable(self.config.c, index),
+                Variable(self.configured.a, index),
+                Variable(self.configured.b, index),
+                Variable(self.configured.c, index),
             ))
         }
         fn copy(&mut self, left: Variable, right: Variable) -> Result<(), Error> {
             self.cs.copy(
-                &self.config.perm,
+                &self.configured.perm,
                 left.0.into(),
                 left.1,
                 right.0.into(),
                 right.1,
             )?;
             self.cs.copy(
-                &self.config.perm2,
+                &self.configured.perm2,
                 left.0.into(),
                 left.1,
                 right.0.into(),
@@ -217,30 +217,38 @@ fn main() {
             let index = self.current_gate;
             self.current_gate += 1;
             self.cs
-                .assign_advice(|| "value", self.config.a, index, || f())?;
+                .assign_advice(|| "value", self.configured.a, index, || f())?;
             self.cs
-                .assign_fixed(|| "public", self.config.sp, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "public", self.configured.sp, index, || Ok(FF::one()))?;
 
-            Ok(Variable(self.config.a, index))
+            Ok(Variable(self.configured.a, index))
         }
         fn lookup_table(&mut self, values: &[Vec<FF>]) -> Result<(), Error> {
             for (&value_0, &value_1) in values[0].iter().zip(values[1].iter()) {
                 let index = self.current_gate;
 
                 self.current_gate += 1;
-                self.cs
-                    .assign_fixed(|| "table col 1", self.config.sl, index, || Ok(value_0))?;
-                self.cs
-                    .assign_fixed(|| "table col 2", self.config.sl2, index, || Ok(value_1))?;
+                self.cs.assign_fixed(
+                    || "table col 1",
+                    self.configured.sl,
+                    index,
+                    || Ok(value_0),
+                )?;
+                self.cs.assign_fixed(
+                    || "table col 2",
+                    self.configured.sl2,
+                    index,
+                    || Ok(value_1),
+                )?;
             }
             Ok(())
         }
     }
 
     impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
-        type Config = PLONKConfig;
+        type Configured = PLONKConfigured;
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
+        fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfigured {
             let e = meta.advice_column();
             let a = meta.advice_column();
             let b = meta.advice_column();
@@ -306,7 +314,7 @@ fn main() {
                 sp * (a + p * (-F::one()))
             });
 
-            PLONKConfig {
+            PLONKConfigured {
                 a,
                 b,
                 c,
@@ -327,9 +335,9 @@ fn main() {
         fn synthesize(
             &self,
             cs: &mut impl Assignment<F>,
-            config: PLONKConfig,
+            configured: PLONKConfigured,
         ) -> Result<(), Error> {
-            let mut cs = StandardPLONK::new(cs, config);
+            let mut cs = StandardPLONK::new(cs, configured);
 
             cs.enter_region(|| "input");
             let _ = cs.public_input(|| Ok(F::one() + F::one()))?;

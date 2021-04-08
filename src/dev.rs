@@ -76,7 +76,7 @@ pub enum VerifyFailure {
 /// const K: u32 = 5;
 ///
 /// #[derive(Copy, Clone)]
-/// struct MyConfig {
+/// struct MyConfigured {
 ///     a: Column<Advice>,
 ///     b: Column<Advice>,
 ///     c: Column<Advice>,
@@ -89,9 +89,9 @@ pub enum VerifyFailure {
 /// }
 ///
 /// impl<F: FieldExt> Circuit<F> for MyCircuit {
-///     type Config = MyConfig;
+///     type Configured = MyConfigured;
 ///
-///     fn configure(meta: &mut ConstraintSystem<F>) -> MyConfig {
+///     fn configure(meta: &mut ConstraintSystem<F>) -> MyConfigured {
 ///         let a = meta.advice_column();
 ///         let b = meta.advice_column();
 ///         let c = meta.advice_column();
@@ -105,17 +105,17 @@ pub enum VerifyFailure {
 ///             a * b + c
 ///         });
 ///
-///         MyConfig { a, b, c }
+///         MyConfigured { a, b, c }
 ///     }
 ///
-///     fn synthesize(&self, cs: &mut impl Assignment<F>, config: MyConfig) -> Result<(), Error> {
-///         cs.assign_advice(|| "a", config.a, 0, || {
+///     fn synthesize(&self, cs: &mut impl Assignment<F>, configured: MyConfigured) -> Result<(), Error> {
+///         cs.assign_advice(|| "a", configured.a, 0, || {
 ///             self.a.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
 ///         })?;
-///         cs.assign_advice(|| "b", config.b, 0, || {
+///         cs.assign_advice(|| "b", configured.b, 0, || {
 ///             self.b.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
 ///         })?;
-///         cs.assign_advice(|| "c", config.c, 0, || {
+///         cs.assign_advice(|| "c", configured.c, 0, || {
 ///             self.a
 ///                 .and_then(|a| self.b.map(|b| F::from_u64(a * b)))
 ///                 .ok_or(Error::SynthesisError)
@@ -265,7 +265,7 @@ impl<F: FieldExt> MockProver<F> {
         let n = 1 << k;
 
         let mut cs = ConstraintSystem::default();
-        let config = ConcreteCircuit::configure(&mut cs);
+        let configured = ConcreteCircuit::configure(&mut cs);
 
         let fixed = vec![vec![F::zero(); n as usize]; cs.num_fixed_columns];
         let advice = vec![vec![F::zero(); n as usize]; cs.num_advice_columns];
@@ -284,7 +284,7 @@ impl<F: FieldExt> MockProver<F> {
             permutations,
         };
 
-        circuit.synthesize(&mut prover, config)?;
+        circuit.synthesize(&mut prover, configured)?;
 
         Ok(prover)
     }
