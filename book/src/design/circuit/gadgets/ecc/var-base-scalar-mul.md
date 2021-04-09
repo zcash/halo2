@@ -61,7 +61,8 @@ So to entirely avoid exceptional cases, we would need $2^{n+1} + 2^n - 1 < (q-1)
 
 The first $i$ for which the algorithm using **only** incomplete addition fails is going to be $252$, since $2^{252+1} + 2^{252} - 1 > (q - 1)/2$. We need $n = 254$ to make the wraparound technique above work.
 
-> sage: q = 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001
+```python
+sage: q = 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001
 sage: 2^253 + 2^252 - 1 < (q-1)//2
 False
 sage: 2^252 + 2^251 - 1 < (q-1)//2
@@ -93,10 +94,15 @@ We witness $x_{A,i}, x_{P,i}, x_{A, i+1},$ and $\lambda_{1, i}, \lambda_{2, i}, 
 
 1. $
 \lambda_{2,i}^2 - (x_{A,i+1} + (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}) + x_{A,i}) = 0,
-$ and
+$$
 
-2. $
-2 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - \big(
-        (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i})) +
-        (\lambda_{1,i+1} + \lambda_{2,i+1}) \cdot (x_{A,i+1} - (\lambda_{1,i+1}^2 - x_{A,i+1} - x_{P,i+1}))\big) = 0.
-$
+$$
+\begin{aligned}
+2 \cdot &\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - \big( \\
+    &\begin{aligned}
+        (\lambda_{1,i} + \lambda_{2,i}) &\cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i})) + \\
+        (\lambda_{1,i+1} + \lambda_{2,i+1}) &\cdot (x_{A,i+1} - (\lambda_{1,i+1}^2 - x_{A,i+1} - x_{P,i+1})) \\
+    \end{aligned} \\
+\big) &= 0.
+\end{aligned}
+$$

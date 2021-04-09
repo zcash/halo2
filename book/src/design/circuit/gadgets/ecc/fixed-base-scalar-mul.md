@@ -12,18 +12,22 @@ In most cases, we multiply the fixed bases by $255-$bit scalars from $\mathbb{F}
 $$\alpha = k_0 + k_1 \cdot (2^3)^1 + \cdots + k_{84} \cdot (2^3)^{84}, k_i \in [0..2^3).$$
 
 ## Load fixed base
-Then, we precompute multiples of the fixed base $B$ for each window. This takes the form of a window table: $M[0..84][0..7]$ such that:
+Then, we precompute multiples of the fixed base $B$ for each window. This takes the form of a window table: $M[0..85)[0..8)$ such that:
 
-- for the first 84 rows $M[0..83][0..7]$: $M[w][k] = [(k+1) \cdot (2^3)^w]B$
-- in the last row $M[84][0..7]$: $M[w][k] = [k \cdot (2^3)^w - \sum\limits_{j=0}^{83} (2^3)^j]B$
+- for the first 84 rows $M[0..83][0..7]$: $$M[w][k] = [(k+1) \cdot (2^3)^w]B$$
+- in the last row $M[84][0..7]$: $$M[w][k] = [k \cdot (2^3)^w - \sum\limits_{j=0}^{83} (2^3)^j]B$$
 
-The additional $(k + 1)$ term lets us avoid adding the point at infinity in the case $k = 0$. We offset these accumulated terms by subtracting them in the final window $- \sum\limits_{j=0}^{83} (2^3)^j$.
+The additional $(k + 1)$ term lets us avoid adding the point at infinity in the case $k = 0$. We offset these accumulated terms by subtracting them in the final window, i.e. we subtract $\sum\limits_{j=0}^{83} (2^3)^j$.
 
 For each window of fixed-base multiples $M[w] = (M[w][0], \cdots, M[w][7]), w \in [0..84]$:
-- define a Lagrange interpolation polynomial $\mathcal{L}_x(k)$ that maps $k \in [0..7]$ to the $x$-coordinate of the multiple $M[w][k]$, i.e. 
-    - $\mathcal{L}_x(k) = ([(k + 1) \cdot 8^w] B)_x$ for $w \in [0..83]$;
-    - $\mathcal{L}_x(k) = ([k \cdot (8)^w - \sum\limits_{j=0}^{83} (8)^j] B)_x$ for $w = 84$; and
-- find a value $z_w$ such that $z_w + (M[w][k])_y$ is a square $u^2$ in the field, but the wrong-sign $y$-coordinate $z_w - (M[w][k])_y$ does not produce a square.
+- Define a Lagrange interpolation polynomial $\mathcal{L}_x(k)$ that maps $k \in [0..7]$ to the $x$-coordinate of the multiple $M[w][k]$, i.e.
+  $$
+  \mathcal{L}_x(k) = \begin{cases}
+    ([(k + 1) \cdot 8^w] B)_x &\text{for } w \in [0..83]; \\
+    ([k \cdot (8)^w - \sum\limits_{j=0}^{83} (8)^j] B)_x &\text{for } w = 84; \text{ and}
+  \end{cases}
+  $$
+- Find a value $z_w$ such that $z_w + (M[w][k])_y$ is a square $u^2$ in the field, but the wrong-sign $y$-coordinate $z_w - (M[w][k])_y$ does not produce a square.
 
 Repeating this for all $85$ windows, we end up with:
 - an $85 \times 8$ table $\mathcal{L}_x$ storing $8$ coefficients interpolating the $x-$coordinate for each window. Each $x$-coordinate interpolation polynomial will be of the form
@@ -36,7 +40,7 @@ We load these precomputed values into fixed columns whenever we do fixed-base sc
 ## Fixed-base scalar multiplication
 Given a decomposed scalar $\alpha$ and a fixed base $B$, we compute $[\alpha]B$ as such:
 
-1. For each $k_w, w \in [0..84], k_w \in [0..7]$ in the scalar decomposition,witness the $x$- and $y$-coordinates $(x_w,y_w) = M[w][k_w].$
+1. For each $k_w, w \in [0..84], k_w \in [0..7]$ in the scalar decomposition, witness the $x$- and $y$-coordinates $(x_w,y_w) = M[w][k_w].$
 2. Check that $(x_w, y_w)$ is on the curve: $y_w^2 = x_w^3 + b$.
 3. Witness $u_w$ such that $y_w + z_w = u_w^2$.
 4. Use [incomplete addition](./incomplete-add.md) to sum the $M[w][k_w]$'s, resulting in $[\alpha]B$.
