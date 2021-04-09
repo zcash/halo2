@@ -92,7 +92,7 @@ and similarly for $\lambda_{1, i+1}, \lambda_{2, i+1}$.
 
 We witness $x_{A,i}, x_{P,i}, x_{A, i+1},$ and $\lambda_{1, i}, \lambda_{2, i}, \lambda_{1, i+1}, \lambda_{2, i+1},$ and specify the following constraints on them (copied from ["Faster variable-base scalar multiplication in zk-SNARK circuits"](https://github.com/zcash/zcash/issues/3924), with some variable name changes):
 
-1. $
+$$
 \lambda_{2,i}^2 - (x_{A,i+1} + (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}) + x_{A,i}) = 0,
 $$
 
