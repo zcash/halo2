@@ -187,9 +187,19 @@ impl Layout {
         if let Some(region) = self.current_region {
             let region = &mut self.regions[region];
             region.columns.insert(column);
-            let offset = region.offset.unwrap_or(row);
+
+            // The region offset is the earliest row assigned to.
+            let mut offset = region.offset.unwrap_or(row);
+            if row < offset {
+                // The first row assigned was not at offset 0 within the region.
+                region.rows += offset - row;
+                offset = row;
+            }
+            // The number of rows in this region is the gap between the earliest and
+            // latest rows assigned.
             region.rows = cmp::max(region.rows, row - offset + 1);
             region.offset = Some(offset);
+
             region.cells.push((column, row));
         } else {
             self.loose_cells.push((column, row));
