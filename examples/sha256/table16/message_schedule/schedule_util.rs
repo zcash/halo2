@@ -1,8 +1,8 @@
-use super::super::{CellValue16, Table16Config};
-use super::MessageSchedule;
+use super::super::CellValue16;
+use super::MessageScheduleConfig;
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Cell, Region},
+    circuit::{Cell, Config, Layouter, Region},
     plonk::Error,
 };
 
@@ -148,49 +148,54 @@ pub const MSG_SCHEDULE_TEST_OUTPUT: [u32; ROUNDS] = [
     0b00010010101100011110110111101011,
 ];
 
-impl MessageSchedule {
+impl<F: FieldExt, L: Layouter<Field = F>> MessageScheduleConfig<'_, F, L> {
     // Assign a word and its hi and lo halves
-    pub fn assign_word_and_halves<F: FieldExt>(
-        &self,
-        region: &mut Region<'_, Table16Config<F>>,
+    pub fn assign_word_and_halves(
+        &mut self,
         word: u32,
         word_idx: usize,
     ) -> Result<(Cell, (CellValue16, CellValue16)), Error> {
+        let configured = self.configured().clone();
         // Rename these here for ease of matching the gates to the specification.
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
+        let a_3 = configured.extras[0];
+        let a_4 = configured.extras[1];
 
         let row = get_word_row(word_idx);
 
-        let var = region.assign_advice(
-            || format!("W_{}", word_idx),
-            self.message_schedule,
-            row,
-            || Ok(F::from_u64(word as u64)),
-        )?;
+        self.layouter().assign_region(
+            || "assign_word_and_halves",
+            |mut region: Region<'_, Self>| {
+                let var = region.assign_advice(
+                    || format!("W_{}", word_idx),
+                    configured.message_schedule,
+                    row,
+                    || Ok(F::from_u64(word as u64)),
+                )?;
 
-        let w_lo = word as u16;
-        let w_hi = (word >> 16) as u16;
+                let w_lo = word as u16;
+                let w_hi = (word >> 16) as u16;
 
-        let w_lo_cell = region.assign_advice(
-            || format!("W_{}_lo", word_idx),
-            a_3,
-            row,
-            || Ok(F::from_u64(w_lo as u64)),
-        )?;
-        let w_hi_cell = region.assign_advice(
-            || format!("W_{}_hi", word_idx),
-            a_4,
-            row,
-            || Ok(F::from_u64(w_hi as u64)),
-        )?;
+                let w_lo_cell = region.assign_advice(
+                    || format!("W_{}_lo", word_idx),
+                    a_3,
+                    row,
+                    || Ok(F::from_u64(w_lo as u64)),
+                )?;
+                let w_hi_cell = region.assign_advice(
+                    || format!("W_{}_hi", word_idx),
+                    a_4,
+                    row,
+                    || Ok(F::from_u64(w_hi as u64)),
+                )?;
 
-        Ok((
-            var,
-            (
-                CellValue16::new(w_lo_cell, w_lo),
-                CellValue16::new(w_hi_cell, w_hi),
-            ),
-        ))
+                Ok((
+                    var,
+                    (
+                        CellValue16::new(w_lo_cell, w_lo),
+                        CellValue16::new(w_hi_cell, w_hi),
+                    ),
+                ))
+            },
+        )
     }
 }

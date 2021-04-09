@@ -1,10 +1,10 @@
 use super::{
     super::DIGEST_SIZE, BlockWord, CellValue16, CellValue32, SpreadInputs, SpreadVar,
-    Table16Assignment, Table16Config, ROUNDS, STATE,
+    Table16Assignment, ROUNDS, STATE,
 };
 use halo2::{
     arithmetic::FieldExt,
-    circuit::Layouter,
+    circuit::{Config, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Permutation},
     poly::Rotation,
 };
@@ -231,7 +231,7 @@ pub enum StateWord {
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct Compression {
+pub(super) struct CompressionConfigured {
     lookup: SpreadInputs,
     message_schedule: Column<Advice>,
     extras: [Column<Advice>; 6],
@@ -256,16 +256,65 @@ pub(super) struct Compression {
     perm: Permutation,
 }
 
-impl<F: FieldExt> Table16Assignment<F> for Compression {}
+pub(super) struct CompressionConfig<'a, F: FieldExt, L: Layouter> {
+    pub configured: CompressionConfigured,
+    pub layouter: &'a mut L,
+    pub marker: std::marker::PhantomData<F>,
+}
 
-impl Compression {
-    pub(super) fn configure<F: FieldExt>(
+impl<F: FieldExt, L: Layouter<Field = F>> Config for CompressionConfig<'_, F, L> {
+    type Root = Self;
+    type Field = F;
+    type Configured = CompressionConfigured;
+    type Loaded = ();
+    type Layouter = L;
+
+    fn get_root(&mut self) -> &mut Self::Root {
+        self
+    }
+
+    fn configured(&self) -> &Self::Configured {
+        &self.configured
+    }
+
+    fn loaded(&self) -> &Self::Loaded {
+        &()
+    }
+
+    fn load(&mut self) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn layouter(&mut self) -> &mut Self::Layouter {
+        self.layouter
+    }
+
+    fn push_namespace<NR, N>(&mut self, _name_fn: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // TODO
+    }
+
+    /// Exits out of the existing namespace.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    fn pop_namespace(&mut self, _gadget_name: Option<String>) {
+        // TODO
+    }
+}
+
+impl<F: FieldExt, L: Layouter<Field = F>> Table16Assignment<F, L> for CompressionConfig<'_, F, L> {}
+
+impl<F: FieldExt, L: Layouter<Field = F>> CompressionConfig<'_, F, L> {
+    pub(super) fn configure(
         meta: &mut ConstraintSystem<F>,
         lookup: SpreadInputs,
         message_schedule: Column<Advice>,
         extras: [Column<Advice>; 6],
         perm: Permutation,
-    ) -> Self {
+    ) -> CompressionConfigured {
         let s_ch = meta.fixed_column();
         let s_ch_neg = meta.fixed_column();
         let s_maj = meta.fixed_column();
@@ -656,7 +705,7 @@ impl Compression {
             .0
         });
 
-        Compression {
+        CompressionConfigured {
             lookup,
             message_schedule,
             extras,
@@ -677,78 +726,32 @@ impl Compression {
 
     /// Initialize compression with a constant Initialization Vector of 32-byte words.
     /// Returns an initialized state.
-    pub(super) fn initialize_with_iv<F: FieldExt>(
-        &self,
-        layouter: &mut impl Layouter<Table16Config<F>>,
-        init_state: [u32; STATE],
-    ) -> Result<State, Error> {
-        let mut new_state = State::empty_state();
-        layouter.assign_region(
-            || "initialize_with_iv",
-            |mut region| {
-                new_state = self.initialize_iv(&mut region, init_state)?;
-                Ok(())
-            },
-        )?;
-        Ok(new_state)
+    pub(super) fn initialize_with_iv(&mut self, init_state: [u32; STATE]) -> Result<State, Error> {
+        self.initialize_iv(init_state)
     }
 
     /// Initialize compression with some initialized state. This could be a state
     /// output from a previous compression round.
-    pub(super) fn initialize_with_state<F: FieldExt>(
-        &self,
-        layouter: &mut impl Layouter<Table16Config<F>>,
-        init_state: State,
-    ) -> Result<State, Error> {
-        let mut new_state = State::empty_state();
-        layouter.assign_region(
-            || "initialize_with_state",
-            |mut region| {
-                new_state = self.initialize_state(&mut region, init_state.clone())?;
-                Ok(())
-            },
-        )?;
-        Ok(new_state)
+    pub(super) fn initialize_with_state(&mut self, init_state: State) -> Result<State, Error> {
+        self.initialize_state(init_state.clone())
     }
 
     /// Given an initialized state and a message schedule, perform 64 compression rounds.
-    pub(super) fn compress<F: FieldExt>(
-        &self,
-        layouter: &mut impl Layouter<Table16Config<F>>,
+    pub(super) fn compress(
+        &mut self,
         initialized_state: State,
         w_halves: [(CellValue16, CellValue16); ROUNDS],
     ) -> Result<State, Error> {
-        let mut state = State::empty_state();
-        layouter.assign_region(
-            || "compress",
-            |mut region| {
-                state = initialized_state.clone();
-                for idx in 0..64 {
-                    state =
-                        self.assign_round(&mut region, idx, state.clone(), w_halves[idx as usize])?;
-                }
-                Ok(())
-            },
-        )?;
+        let mut state = initialized_state.clone();
+        for idx in 0..64 {
+            state = self.assign_round(idx, state.clone(), w_halves[idx as usize])?;
+        }
         Ok(state)
     }
 
     /// After the final round, convert the state into the final digest.
-    pub(super) fn digest<F: FieldExt>(
-        &self,
-        layouter: &mut impl Layouter<Table16Config<F>>,
-        state: State,
-    ) -> Result<[BlockWord; DIGEST_SIZE], Error> {
-        let mut digest = [BlockWord::new(0); DIGEST_SIZE];
-        layouter.assign_region(
-            || "digest",
-            |mut region| {
-                digest = self.assign_digest(&mut region, state.clone())?;
-
-                Ok(())
-            },
-        )?;
-        Ok(digest)
+    pub(super) fn digest(&mut self, state: State) -> Result<[BlockWord; DIGEST_SIZE], Error> {
+        self.assign_digest(state.clone())
     }
 
     #[cfg(test)]
@@ -758,7 +761,7 @@ impl Compression {
         message_schedule: Column<Advice>,
         extras: [Column<Advice>; 6],
         perm: Permutation,
-    ) -> Self {
+    ) -> CompressionConfigured {
         let s_ch = meta.fixed_column();
         let s_ch_neg = meta.fixed_column();
         let s_maj = meta.fixed_column();
@@ -776,7 +779,7 @@ impl Compression {
 
         let s_digest = meta.fixed_column();
 
-        Compression {
+        CompressionConfigured {
             lookup,
             message_schedule,
             extras,

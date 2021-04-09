@@ -1,8 +1,10 @@
-use super::super::{
-    util::*, CellValue16, CellValue32, SpreadVar, SpreadWord, Table16Assignment, Table16Config,
+use super::super::{util::*, CellValue16, CellValue32, SpreadVar, SpreadWord, Table16Assignment};
+use super::{schedule_util::*, MessageScheduleConfig, MessageWord};
+use halo2::{
+    arithmetic::FieldExt,
+    circuit::{Config, Layouter, Region},
+    plonk::Error,
 };
-use super::{schedule_util::*, MessageSchedule, MessageWord};
-use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
 
 // A word in subregion 3
 // (10, 7, 2, 13)-bit chunks
@@ -18,20 +20,21 @@ pub struct Subregion3Word {
     spread_d: CellValue32,
 }
 
-impl MessageSchedule {
+impl<F: FieldExt, L: Layouter<Field = F>> MessageScheduleConfig<'_, F, L> {
     // W_[49..62]
-    pub fn assign_subregion3<F: FieldExt>(
-        &self,
-        region: &mut Region<'_, Table16Config<F>>,
+    pub fn assign_subregion3(
+        &mut self,
         lower_sigma_0_v2_output: Vec<(CellValue16, CellValue16)>,
         w: &mut Vec<MessageWord>,
         w_halves: &mut Vec<(CellValue16, CellValue16)>,
     ) -> Result<(), Error> {
-        let a_5 = self.message_schedule;
-        let a_6 = self.extras[2];
-        let a_7 = self.extras[3];
-        let a_8 = self.extras[4];
-        let a_9 = self.extras[5];
+        let configured = self.configured().clone();
+
+        let a_5 = configured.message_schedule;
+        let a_6 = configured.extras[2];
+        let a_7 = configured.extras[3];
+        let a_8 = configured.extras[4];
+        let a_9 = configured.extras[5];
 
         // Closure to compose new word
         // W_i = sigma_1(W_{i - 2}) + W_{i - 7} + sigma_0(W_{i - 15}) + W_{i - 16}
@@ -42,66 +45,59 @@ impl MessageSchedule {
         // The lowest-index words involved will be W_[35..58]
         let mut new_word = |idx: usize| -> Result<(), Error> {
             // Decompose word into (10, 7, 2, 13)-bit chunks
-            let subregion3_word =
-                self.decompose_subregion3_word(region, w[idx].value.unwrap(), idx)?;
+            let subregion3_word = self.decompose_subregion3_word(w[idx].value.unwrap(), idx)?;
 
             // sigma_1 on subregion3_word
-            let (r_0_even, r_1_even) = self.lower_sigma_1(region, subregion3_word)?;
+            let (r_0_even, r_1_even) = self.lower_sigma_1(subregion3_word)?;
 
             let new_word_idx = idx + 2;
 
             // Copy sigma_0_v2(W_{i - 15}) output from Subregion 2
             self.assign_and_constrain(
-                region,
                 || format!("sigma_0(W_{})_lo", new_word_idx - 15),
                 a_6,
                 get_word_row(new_word_idx - 16),
                 &lower_sigma_0_v2_output[idx - 49].0.into(),
-                &self.perm,
+                &configured.perm,
             )?;
             self.assign_and_constrain(
-                region,
                 || format!("sigma_0(W_{})_hi", new_word_idx - 15),
                 a_6,
                 get_word_row(new_word_idx - 16) + 1,
                 &lower_sigma_0_v2_output[idx - 49].1.into(),
-                &self.perm,
+                &configured.perm,
             )?;
 
             // Copy sigma_1(W_{i - 2})
             self.assign_and_constrain(
-                region,
                 || format!("sigma_1(W_{})_lo", new_word_idx - 2),
                 a_7,
                 get_word_row(new_word_idx - 16),
                 &r_0_even.into(),
-                &self.perm,
+                &configured.perm,
             )?;
             self.assign_and_constrain(
-                region,
                 || format!("sigma_1(W_{})_hi", new_word_idx - 2),
                 a_7,
                 get_word_row(new_word_idx - 16) + 1,
                 &r_1_even.into(),
-                &self.perm,
+                &configured.perm,
             )?;
 
             // Copy W_{i - 7}
             self.assign_and_constrain(
-                region,
                 || format!("W_{}_lo", new_word_idx - 7),
                 a_8,
                 get_word_row(new_word_idx - 16),
                 &w_halves[new_word_idx - 7].0.into(),
-                &self.perm,
+                &configured.perm,
             )?;
             self.assign_and_constrain(
-                region,
                 || format!("W_{}_hi", new_word_idx - 7),
                 a_8,
                 get_word_row(new_word_idx - 16) + 1,
                 &w_halves[new_word_idx - 7].1.into(),
-                &self.perm,
+                &configured.perm,
             )?;
 
             // Calculate W_i, carry_i
@@ -118,20 +114,28 @@ impl MessageSchedule {
             let carry = word >> 32;
             let word = word as u32;
 
-            // Assign W_i, carry_i
-            region.assign_advice(
-                || format!("W_{}", new_word_idx),
-                a_5,
-                get_word_row(new_word_idx - 16) + 1,
-                || Ok(F::from_u64(word as u64)),
+            self.layouter().assign_region(
+                || "assign subregion 3",
+                |mut region: Region<'_, Self>| {
+                    // Assign W_i, carry_i
+                    region.assign_advice(
+                        || format!("W_{}", new_word_idx),
+                        a_5,
+                        get_word_row(new_word_idx - 16) + 1,
+                        || Ok(F::from_u64(word as u64)),
+                    )?;
+                    region.assign_advice(
+                        || format!("carry_{}", new_word_idx),
+                        a_9,
+                        get_word_row(new_word_idx - 16) + 1,
+                        || Ok(F::from_u64(carry as u64)),
+                    )?;
+
+                    Ok(())
+                },
             )?;
-            region.assign_advice(
-                || format!("carry_{}", new_word_idx),
-                a_9,
-                get_word_row(new_word_idx - 16) + 1,
-                || Ok(F::from_u64(carry as u64)),
-            )?;
-            let (var, halves) = self.assign_word_and_halves(region, word, new_word_idx)?;
+
+            let (var, halves) = self.assign_word_and_halves(word, new_word_idx)?;
             w.push(MessageWord {
                 var,
                 value: Some(word),
@@ -148,59 +152,83 @@ impl MessageSchedule {
         Ok(())
     }
 
-    fn decompose_subregion3_word<F: FieldExt>(
-        &self,
-        region: &mut Region<'_, Table16Config<F>>,
+    fn decompose_subregion3_word(
+        &mut self,
         word: u32,
         index: usize,
     ) -> Result<Subregion3Word, Error> {
+        let configured = self.configured().clone();
+
         let row = get_word_row(index);
 
         // Rename these here for ease of matching the gates to the specification.
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
+        let a_3 = configured.extras[0];
+        let a_4 = configured.extras[1];
 
         let pieces = chop_u32(word, &[10, 7, 2, 13]);
 
-        // Assign `a` (10-bit piece)
-        let spread_a = SpreadWord::new(pieces[0] as u16);
-        let spread_a = SpreadVar::with_lookup(region, &self.lookup, row + 1, spread_a)?;
+        self.layouter().assign_region(
+            || "decompose subregion3 word",
+            |mut region: Region<'_, Self>| {
+                // Assign `a` (10-bit piece)
+                let spread_a = SpreadWord::new(pieces[0] as u16);
+                let spread_a =
+                    SpreadVar::with_lookup(&mut region, &configured.lookup, row + 1, spread_a)?;
 
-        // Assign `b` (7-bit piece)
-        let b = region.assign_advice(|| "b", a_4, row + 1, || Ok(F::from_u64(pieces[1] as u64)))?;
+                // Assign `b` (7-bit piece)
+                let b = region.assign_advice(
+                    || "b",
+                    a_4,
+                    row + 1,
+                    || Ok(F::from_u64(pieces[1] as u64)),
+                )?;
 
-        // Assign `c` (2-bit piece)
-        let c = region.assign_advice(|| "c", a_3, row + 1, || Ok(F::from_u64(pieces[2] as u64)))?;
+                // Assign `c` (2-bit piece)
+                let c = region.assign_advice(
+                    || "c",
+                    a_3,
+                    row + 1,
+                    || Ok(F::from_u64(pieces[2] as u64)),
+                )?;
 
-        // Assign `d` (13-bit piece) lookup
-        let spread_d = SpreadWord::new(pieces[3] as u16);
-        let spread_d = SpreadVar::with_lookup(region, &self.lookup, row, spread_d)?;
+                // Assign `d` (13-bit piece) lookup
+                let spread_d = SpreadWord::new(pieces[3] as u16);
+                let spread_d =
+                    SpreadVar::with_lookup(&mut region, &configured.lookup, row, spread_d)?;
 
-        Ok(Subregion3Word {
-            index,
-            a: CellValue32::new(spread_a.dense.var, spread_a.dense.value.unwrap().into()),
-            b: CellValue32::new(b, pieces[1]),
-            c: CellValue32::new(c, pieces[2]),
-            d: CellValue32::new(spread_d.dense.var, spread_d.dense.value.unwrap().into()),
-            spread_a: CellValue32::new(spread_a.spread.var, spread_a.spread.value.unwrap()),
-            spread_d: CellValue32::new(spread_d.spread.var, spread_d.spread.value.unwrap()),
-        })
+                Ok(Subregion3Word {
+                    index,
+                    a: CellValue32::new(spread_a.dense.var, spread_a.dense.value.unwrap().into()),
+                    b: CellValue32::new(b, pieces[1]),
+                    c: CellValue32::new(c, pieces[2]),
+                    d: CellValue32::new(spread_d.dense.var, spread_d.dense.value.unwrap().into()),
+                    spread_a: CellValue32::new(spread_a.spread.var, spread_a.spread.value.unwrap()),
+                    spread_d: CellValue32::new(spread_d.spread.var, spread_d.spread.value.unwrap()),
+                })
+            },
+        )
     }
 
-    fn lower_sigma_1<F: FieldExt>(
-        &self,
-        region: &mut Region<'_, Table16Config<F>>,
-        word: Subregion3Word,
-    ) -> Result<(CellValue16, CellValue16), Error> {
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
-        let a_5 = self.message_schedule;
-        let a_6 = self.extras[2];
+    fn lower_sigma_1(&mut self, word: Subregion3Word) -> Result<(CellValue16, CellValue16), Error> {
+        let configured = self.configured().clone();
+        let a_3 = configured.extras[0];
+        let a_4 = configured.extras[1];
+        let a_5 = configured.message_schedule;
+        let a_6 = configured.extras[2];
 
         let row = get_word_row(word.index) + 3;
 
         // Assign `spread_a` and copy constraint
-        self.assign_and_constrain(region, || "spread_a", a_4, row, &word.spread_a, &self.perm)?;
+        self.assign_and_constrain(|| "spread_a", a_4, row, &word.spread_a, &configured.perm)?;
+
+        // Assign `b` and copy constraint
+        self.assign_and_constrain(|| "b", a_6, row, &word.b, &configured.perm)?;
+
+        // Assign `c` and copy constraint
+        self.assign_and_constrain(|| "c", a_3, row + 1, &word.c, &configured.perm)?;
+
+        // Assign `spread_d` and copy constraint
+        self.assign_and_constrain(|| "spread_d", a_5, row, &word.spread_d, &configured.perm)?;
 
         // Split `b` (7-bit chunk) into (2,2,3)-bit `b_lo`, `b_mid` and `b_hi`
         let b = word.b.value.unwrap();
@@ -209,47 +237,45 @@ impl MessageSchedule {
         let spread_b_lo = interleave_u16_with_zeros(b_lo as u16);
         let spread_b_mid = interleave_u16_with_zeros(b_mid as u16);
         let spread_b_hi = interleave_u16_with_zeros(b_hi as u16);
-
-        // Assign `b_lo`, `spread_b_lo`, `b_mid`, `spread_b_mid`, `b_hi`, `spread_b_hi`
-        region.assign_advice(|| "b_lo", a_3, row - 1, || Ok(F::from_u64(b_lo as u64)))?;
-        region.assign_advice(
-            || "spread_b_lo",
-            a_4,
-            row - 1,
-            || Ok(F::from_u64(spread_b_lo as u64)),
-        )?;
-        region.assign_advice(|| "b_mid", a_5, row - 1, || Ok(F::from_u64(b_mid as u64)))?;
-        region.assign_advice(
-            || "spread_b_mid",
-            a_6,
-            row - 1,
-            || Ok(F::from_u64(spread_b_mid as u64)),
-        )?;
-        region.assign_advice(|| "b_hi", a_5, row + 1, || Ok(F::from_u64(b_hi as u64)))?;
-        region.assign_advice(
-            || "spread_b_hi",
-            a_6,
-            row + 1,
-            || Ok(F::from_u64(spread_b_hi as u64)),
-        )?;
-
-        // Assign `b` and copy constraint
-        self.assign_and_constrain(region, || "b", a_6, row, &word.b, &self.perm)?;
-
-        // Assign `c` and copy constraint
-        self.assign_and_constrain(region, || "c", a_3, row + 1, &word.c, &self.perm)?;
-
         // Witness `spread_c`
         let spread_c = interleave_u16_with_zeros(word.c.value.unwrap() as u16);
-        region.assign_advice(
-            || "spread_c",
-            a_4,
-            row + 1,
-            || Ok(F::from_u64(spread_c as u64)),
-        )?;
 
-        // Assign `spread_d` and copy constraint
-        self.assign_and_constrain(region, || "spread_d", a_5, row, &word.spread_d, &self.perm)?;
+        self.layouter().assign_region(
+            || "lower sigma 1",
+            |mut region: Region<'_, Self>| {
+                // Assign `b_lo`, `spread_b_lo`, `b_mid`, `spread_b_mid`, `b_hi`, `spread_b_hi`
+                region.assign_advice(|| "b_lo", a_3, row - 1, || Ok(F::from_u64(b_lo as u64)))?;
+                region.assign_advice(
+                    || "spread_b_lo",
+                    a_4,
+                    row - 1,
+                    || Ok(F::from_u64(spread_b_lo as u64)),
+                )?;
+                region.assign_advice(|| "b_mid", a_5, row - 1, || Ok(F::from_u64(b_mid as u64)))?;
+                region.assign_advice(
+                    || "spread_b_mid",
+                    a_6,
+                    row - 1,
+                    || Ok(F::from_u64(spread_b_mid as u64)),
+                )?;
+                region.assign_advice(|| "b_hi", a_5, row + 1, || Ok(F::from_u64(b_hi as u64)))?;
+                region.assign_advice(
+                    || "spread_b_hi",
+                    a_6,
+                    row + 1,
+                    || Ok(F::from_u64(spread_b_hi as u64)),
+                )?;
+
+                region.assign_advice(
+                    || "spread_c",
+                    a_4,
+                    row + 1,
+                    || Ok(F::from_u64(spread_c as u64)),
+                )?;
+
+                Ok(())
+            },
+        )?;
 
         // (10, 7, 2, 13)
         // Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
@@ -282,10 +308,9 @@ impl MessageSchedule {
         let (r_1_even, r_1_odd) = get_even_and_odd_bits_u32(r_pieces[1] as u32);
 
         self.assign_sigma_outputs(
-            region,
-            &self.lookup,
+            &configured.lookup,
             a_3,
-            &self.perm,
+            &configured.perm,
             row,
             r_0_even,
             r_0_odd,

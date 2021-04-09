@@ -1,4 +1,4 @@
-use super::{util::*, CellValue16, CellValue32, Table16Config};
+use super::{util::*, CellValue16, CellValue32};
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Config, Layouter, Region},
@@ -124,19 +124,71 @@ pub(super) struct SpreadInputs {
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct SpreadTable {
+pub(super) struct SpreadTableConfigured {
     table_tag: Column<Fixed>,
     table_dense: Column<Fixed>,
     table_spread: Column<Fixed>,
 }
 
-impl SpreadTable {
-    pub(super) fn configure<F: FieldExt>(
+pub(super) struct SpreadTableConfig<'a, F: FieldExt, L: Layouter> {
+    pub configured: SpreadTableConfigured,
+    pub layouter: &'a mut L,
+    pub marker: std::marker::PhantomData<F>,
+}
+
+// ANCHOR: chip-impl
+impl<F: FieldExt, L: Layouter<Field = F>> Config for SpreadTableConfig<'_, F, L> {
+    type Root = Self;
+    type Configured = SpreadTableConfigured;
+    type Loaded = ();
+    type Field = F;
+    type Layouter = L;
+
+    fn get_root(&mut self) -> &mut Self::Root {
+        self
+    }
+
+    fn configured(&self) -> &Self::Configured {
+        &self.configured
+    }
+
+    fn loaded(&self) -> &Self::Loaded {
+        &()
+    }
+
+    fn load(&mut self) -> Result<(), halo2::plonk::Error> {
+        // None of the instructions implemented by this chip have any fixed state.
+        // But if we required e.g. a lookup table, this is where we would load it.
+        Ok(())
+    }
+
+    fn layouter(&mut self) -> &mut Self::Layouter {
+        self.layouter
+    }
+
+    fn push_namespace<NR, N>(&mut self, _name_fn: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // TODO
+    }
+
+    /// Exits out of the existing namespace.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    fn pop_namespace(&mut self, _gadget_name: Option<String>) {
+        // TODO
+    }
+}
+
+impl<F: FieldExt, L: Layouter<Field = F>> SpreadTableConfig<'_, F, L> {
+    pub(super) fn configure(
         meta: &mut ConstraintSystem<F>,
         tag: Column<Advice>,
         dense: Column<Advice>,
         spread: Column<Advice>,
-    ) -> (SpreadInputs, Self) {
+    ) -> (SpreadInputs, SpreadTableConfigured) {
         let table_tag = meta.fixed_column();
         let table_dense = meta.fixed_column();
         let table_spread = meta.fixed_column();
@@ -154,7 +206,7 @@ impl SpreadTable {
 
         (
             SpreadInputs { tag, dense, spread },
-            SpreadTable {
+            SpreadTableConfigured {
                 table_tag,
                 table_dense,
                 table_spread,
@@ -162,7 +214,7 @@ impl SpreadTable {
         )
     }
 
-    fn generate<F: FieldExt>() -> impl Iterator<Item = (F, F, F)> {
+    fn generate() -> impl Iterator<Item = (F, F, F)> {
         (1..=(1 << 16)).scan(
             (F::zero(), F::zero(), F::zero()),
             |(tag, dense, spread), i| {
@@ -193,21 +245,19 @@ impl SpreadTable {
         )
     }
 
-    pub(super) fn load<F: FieldExt>(
-        &self,
-        layouter: &mut impl Layouter<Table16Config<F>>,
-    ) -> Result<(), Error> {
-        layouter.assign_region(
+    pub(super) fn load(&mut self) -> Result<(), Error> {
+        let configured = self.configured().clone();
+        self.layouter().assign_region(
             || "spread table",
-            |mut gate| {
+            |mut gate: Region<'_, Self>| {
                 // We generate the row values lazily (we only need them during keygen).
-                let mut rows = Self::generate::<F>();
+                let mut rows = Self::generate();
 
                 for index in 0..(1 << 16) {
                     let mut row = None;
                     gate.assign_fixed(
                         || "tag",
-                        self.table_tag,
+                        configured.table_tag,
                         index,
                         || {
                             row = rows.next();
@@ -216,13 +266,13 @@ impl SpreadTable {
                     )?;
                     gate.assign_fixed(
                         || "dense",
-                        self.table_dense,
+                        configured.table_dense,
                         index,
                         || row.map(|(_, dense, _)| dense).ok_or(Error::SynthesisError),
                     )?;
                     gate.assign_fixed(
                         || "spread",
-                        self.table_spread,
+                        configured.table_spread,
                         index,
                         || {
                             row.map(|(_, _, spread)| spread)
@@ -468,7 +518,7 @@ mod tests {
             }
         }
 
-        impl<F: FieldExt> Circuit<F> for MyCircuit {
+        impl Circuit<F> for MyCircuit {
             type Configured = MyConfigured;
 
             fn configure(meta: &mut ConstraintSystem<F>) -> MyConfigured {
