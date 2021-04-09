@@ -382,7 +382,11 @@ impl<F: FieldExt> MockProver<F> {
             let original = self.cs.permutations[perm_index]
                 .get_columns()
                 .iter()
-                .map(|c| self.advice[c.index()].clone())
+                .map(|c| match c.column_type() {
+                    Any::Advice => self.advice[c.index()].clone(),
+                    Any::Fixed => self.fixed[c.index()].clone(),
+                    Any::Instance => self.instance[c.index()].clone(),
+                })
                 .collect::<Vec<_>>();
 
             // Iterate over each column of the permutation
