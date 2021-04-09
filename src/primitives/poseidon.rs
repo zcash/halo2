@@ -134,13 +134,13 @@ fn poseidon_duplex<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE:
     output
 }
 
-enum Sponge<F: FieldExt, const RATE: usize> {
+pub(crate) enum Sponge<F, const RATE: usize> {
     Absorbing(SpongeState<F, RATE>),
     Squeezing(SpongeState<F, RATE>),
 }
 
-impl<F: FieldExt, const RATE: usize> Sponge<F, RATE> {
-    fn absorb(val: F) -> Self {
+impl<F: Copy, const RATE: usize> Sponge<F, RATE> {
+    pub(crate) fn absorb(val: F) -> Self {
         let mut input = [None; RATE];
         input[0] = Some(val);
         Sponge::Absorbing(input)

@@ -609,7 +609,10 @@ mod tests {
     };
 
     use super::{PoseidonInstructions, Pow5T3Chip, Pow5T3Config, StateWord, WIDTH};
-    use crate::primitives::poseidon::{self, OrchardNullifier, Spec};
+    use crate::{
+        circuit::gadget::poseidon::{Hash, Word},
+        primitives::poseidon::{self, ConstantLength, OrchardNullifier, Spec},
+    };
 
     struct PermuteCircuit {}
 
@@ -697,6 +700,88 @@ mod tests {
         assert_eq!(prover.verify(), Ok(()))
     }
 
+    struct HashCircuit {
+        message: Option<[Fp; 2]>,
+    }
+
+    impl Circuit<Fp> for HashCircuit {
+        type Config = Pow5T3Config<Fp>;
+
+        fn configure(meta: &mut ConstraintSystem<Fp>) -> Pow5T3Config<Fp> {
+            let state = [
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+            ];
+
+            Pow5T3Chip::configure(meta, OrchardNullifier, state)
+        }
+
+        fn synthesize(
+            &self,
+            cs: &mut impl Assignment<Fp>,
+            config: Pow5T3Config<Fp>,
+        ) -> Result<(), Error> {
+            let mut layouter = layouter::SingleChipLayouter::<'_, Fp, _>::new(cs)?;
+            let chip = Pow5T3Chip::construct(config.clone());
+
+            let message = layouter.assign_region(
+                || "load message",
+                |mut region| {
+                    let mut message_word = |i: usize| {
+                        let value = self.message.map(|message_vals| message_vals[i]);
+                        let var = region.assign_advice(
+                            || format!("load message_{}", i),
+                            config.state[i],
+                            0,
+                            || value.ok_or(Error::SynthesisError),
+                        )?;
+                        Ok(Word::<_, _, OrchardNullifier, WIDTH, 2> {
+                            inner: StateWord { var, value },
+                        })
+                    };
+
+                    Ok([message_word(0)?, message_word(1)?])
+                },
+            )?;
+
+            let hasher = Hash::init(chip, layouter.namespace(|| "init"), ConstantLength::<2>)?;
+            let output = hasher.hash(layouter.namespace(|| "hash"), message)?;
+
+            // For the purpose of this test, compute the real final state inline.
+            // TODO: Move this into an instance column.
+            let expected_output = self.message.map(|message_vals| {
+                poseidon::Hash::init(OrchardNullifier, ConstantLength::<2>).hash(message_vals)
+            });
+
+            layouter.assign_region(
+                || "constrain output",
+                |mut region| {
+                    let expected_var = region.assign_advice(
+                        || "load output",
+                        config.state[0],
+                        0,
+                        || expected_output.ok_or(Error::SynthesisError),
+                    )?;
+                    let word: StateWord<_> = output.inner;
+                    region.constrain_equal(&config.state_permutation, word.var, expected_var)
+                },
+            )
+        }
+    }
+
+    #[test]
+    fn poseidon_hash() {
+        let message = [Fp::rand(), Fp::rand()];
+
+        let k = 6;
+        let circuit = HashCircuit {
+            message: Some(message),
+        };
+        let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+        assert_eq!(prover.verify(), Ok(()))
+    }
+
     #[cfg(feature = "dev-graph")]
     #[test]
     fn print_poseidon_chip() {
@@ -708,7 +793,7 @@ mod tests {
             .titled("Poseidon Chip Layout", ("sans-serif", 60))
             .unwrap();
 
-        let circuit = PermuteCircuit {};
+        let circuit = HashCircuit { message: None };
         halo2::dev::circuit_layout(&circuit, &root).unwrap();
     }
 }
