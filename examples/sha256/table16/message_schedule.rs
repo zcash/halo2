@@ -79,7 +79,7 @@ impl<F: FieldExt, L: Layouter<Field = F>> Config for MessageScheduleConfig<'_, F
     }
 
     fn load(&mut self) -> Result<(), halo2::plonk::Error> {
-        // None of the instructions implemented by this chip have any fixed state.
+        // None of the instructions implemented by this config have any fixed state.
         // But if we required e.g. a lookup table, this is where we would load it.
         Ok(())
     }

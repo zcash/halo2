@@ -105,7 +105,7 @@ pub struct Table16Configured {
     compression: CompressionConfigured,
 }
 
-/// A chip that implements SHA-256 with a maximum lookup table size of $2^16$.
+/// A config that implements SHA-256 with a maximum lookup table size of $2^16$.
 #[derive(Debug)]
 pub struct Table16Config<'a, F: FieldExt, L: Layouter> {
     pub configured: Table16Configured,
@@ -114,9 +114,9 @@ pub struct Table16Config<'a, F: FieldExt, L: Layouter> {
 }
 
 impl<F: FieldExt, L: Layouter<Field = F>> Table16Config<'_, F, L> {
-    /// Configures this chip for use in a circuit.
+    /// Configures this config for use in a circuit.
     pub fn configure(meta: &mut ConstraintSystem<F>) -> Table16Configured {
-        // Columns required by this chip:
+        // Columns required by this config:
         // - Three advice columns to interact with the lookup table.
         let tag = meta.advice_column();
         let dense = meta.advice_column();
@@ -282,7 +282,7 @@ impl<F: FieldExt, L: Layouter<Field = F>> Sha256Instructions for Table16Config<'
         let (_, w_halves) = message_schedule.process(input)?;
 
         let mut compression = CompressionConfig::<'_, F, L> {
-            configured: configured.compression.clone(),
+            configured: configured.compression,
             layouter: self.layouter(),
             marker: PhantomData,
         };
@@ -481,7 +481,7 @@ mod tests {
 
     #[cfg(feature = "dev-graph")]
     #[test]
-    fn print_table16_chip() {
+    fn print_table16_config() {
         use plotters::prelude::*;
         struct MyCircuit {}
 
@@ -533,10 +533,10 @@ mod tests {
         }
 
         let root =
-            SVGBackend::new("sha-256-table16-chip-layout.svg", (1024, 20480)).into_drawing_area();
+            SVGBackend::new("sha-256-table16-config-layout.svg", (1024, 20480)).into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root
-            .titled("16-bit Table SHA-256 Chip", ("sans-serif", 60))
+            .titled("16-bit Table SHA-256 Config", ("sans-serif", 60))
             .unwrap();
 
         let circuit = MyCircuit {};

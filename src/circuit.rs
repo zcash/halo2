@@ -9,29 +9,28 @@ use crate::{
 
 pub mod layouter;
 
-/// A chip implements a set of instructions that can be used by gadgets.
+/// A config implements a set of instructions that can be used by gadgets.
 ///
-/// The chip itself should not store any state; instead, state that is required at circuit
-/// synthesis time should be stored in [`Config::Configured`], which can then be fetched via
-/// [`Layouter::configured`].
+/// The state that is required at circuit synthesis time should be stored in [`Config::Configured`],
+/// which can then be provided to a `Layouter` via [`Config::configured`].
 pub trait Config: Sized {
-    /// Represents the type of the "root" of this layouter, so that nested namespaces
+    /// Represents the type of the "root" of this config, so that nested namespaces
     /// can minimize indirection.
     type Root: Config;
 
-    /// A type that holds the configuration for this chip, and any other state it may need
+    /// A type that holds the configured state for this config, and any other state it may need
     /// during circuit synthesis, that can be derived during [`Circuit::configure`].
     ///
     /// [`Circuit::configure`]: crate::plonk::Circuit::configure
     type Configured: fmt::Debug;
 
-    /// A type that holds any general chip state that needs to be loaded at the start of
-    /// [`Circuit::synthesize`]. This might simply be `()` for some chips.
+    /// A type that holds any general config state that needs to be loaded at the start of
+    /// [`Circuit::synthesize`]. This might simply be `()` for some configs.
     ///
     /// [`Circuit::synthesize`]: crate::plonk::Circuit::synthesize
     type Loaded: fmt::Debug;
 
-    /// The field that the chip is defined over.
+    /// The field that the config is defined over.
     ///
     /// This provides a type that the configuration can reference if necessary.
     type Field: FieldExt;
@@ -45,9 +44,9 @@ pub trait Config: Sized {
     /// Access `Loaded`
     fn loaded(&self) -> &Self::Loaded;
 
-    /// Load any fixed configuration for this Config into the circuit.
+    /// Load any fixed configuration for this config into the circuit.
     ///
-    /// `layouter.loaded()` will panic if called inside this function.
+    /// `config.loaded()` will panic if called inside this function.
     fn load(&mut self) -> Result<Self::Loaded, Error>;
 
     /// The layouter for this Config.
@@ -55,12 +54,12 @@ pub trait Config: Sized {
 
     /// Gets the "root" of this assignment, bypassing the namespacing.
     ///
-    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    /// Not intended for downstream consumption; use [`Config::namespace`] instead.
     fn get_root(&mut self) -> &mut Self::Root;
 
     /// Creates a new (sub)namespace and enters into it.
     ///
-    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    /// Not intended for downstream consumption; use [`Config::namespace`] instead.
     fn push_namespace<NR, N>(&mut self, name_fn: N)
     where
         NR: Into<String>,
@@ -68,7 +67,7 @@ pub trait Config: Sized {
 
     /// Exits out of the existing namespace.
     ///
-    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    /// Not intended for downstream consumption; use [`Config::namespace`] instead.
     fn pop_namespace(&mut self, gadget_name: Option<String>);
 
     /// Enters into a namespace.
@@ -80,6 +79,62 @@ pub trait Config: Sized {
         self.get_root().push_namespace(name_fn);
 
         NamespacedConfig(self.get_root(), PhantomData)
+    }
+}
+
+/// A layout strategy for a circuit.
+///
+/// This abstracts over the circuit assignments, handling row indices etc.
+///
+/// A particular concrete layout strategy will implement this trait for each config it
+/// supports.
+pub trait Layouter {
+    /// A Layouter can only be used across configs that use the same field.
+    type Field: FieldExt;
+
+    /// Assign a region of gates to an absolute row number.
+    ///
+    /// Inside the closure, the config may freely use relative offsets; the `Layouter`
+    /// will treat these assignments as a single "region" within the circuit. Outside
+    /// this closure, the `Layouter` is allowed to optimise as it sees fit.
+    ///
+    /// ```ignore
+    /// fn assign_region(&mut self, || "region name", |region| {
+    ///     region.assign_advice(self.configured.a, offset, || { Some(value)});
+    /// });
+    /// ```
+    fn assign_region<A, AR, N, NR, C: Config<Field = Self::Field>>(
+        &mut self,
+        name: N,
+        assignment: A,
+    ) -> Result<AR, Error>
+    where
+        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        N: Fn() -> NR,
+        NR: Into<String>;
+}
+
+#[derive(Debug)]
+/// Used only to make types check out.
+/// FIXME: Remove this dummy type.
+pub struct DummyLayouter<F: FieldExt> {
+    marker: PhantomData<F>,
+}
+
+impl<F: FieldExt> Layouter for DummyLayouter<F> {
+    type Field = F;
+    fn assign_region<A, AR, N, NR, C: Config<Field = Self::Field>>(
+        &mut self,
+        _name: N,
+        _assignment: A,
+    ) -> Result<AR, Error>
+    where
+        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        N: Fn() -> NR,
+        NR: Into<String>,
+    {
+        // We shouldn't try to assign a region on a `DummyLayouter`.
+        Err(Error::SynthesisError)
     }
 }
 
@@ -130,16 +185,16 @@ pub struct Cell {
     column: Column<Any>,
 }
 
-/// A region of the circuit in which a [`Chip`] can assign cells.
+/// A region of the circuit in which a [`Config`] can assign cells.
 ///
-/// Inside a region, the chip may freely use relative offsets; the [`Layouter`] will
+/// Inside a region, the config may freely use relative offsets; the [`Layouter`] will
 /// treat these assignments as a single "region" within the circuit.
 ///
-/// The [`Layouter`] is allowed to optimise between regions as it sees fit. Chips must use
+/// The [`Layouter`] is allowed to optimise between regions as it sees fit. Configs must use
 /// [`Region::constrain_equal`] to copy in variables assigned in other regions.
 ///
 /// TODO: It would be great if we could constrain the columns in these types to be
-/// "logical" columns that are guaranteed to correspond to the chip (and have come from
+/// "logical" columns that are guaranteed to correspond to the config (and have come from
 /// `Config::Configured`).
 #[derive(Debug)]
 pub struct Region<'r, C: Config> {
@@ -191,7 +246,7 @@ impl<'r, C: Config> Region<'r, C> {
             .assign_fixed(&|| annotation().into(), column, offset, &mut to)
     }
 
-    /// Constraint two cells to have the same value.
+    /// Constrain two cells to have the same value.
     ///
     /// Returns an error if either of the cells is not within the given permutation.
     pub fn constrain_equal(
@@ -204,62 +259,7 @@ impl<'r, C: Config> Region<'r, C> {
     }
 }
 
-/// A layout strategy for a specific chip within a circuit.
-///
-/// This abstracts over the circuit assignments, handling row indices etc.
-///
-/// A particular concrete layout strategy will implement this trait for each chip it
-/// supports.
-pub trait Layouter {
-    /// A Layouter can only support configs that use the same field.
-    type Field: FieldExt;
-
-    /// Assign a region of gates to an absolute row number.
-    ///
-    /// Inside the closure, the chip may freely use relative offsets; the `Layouter` will
-    /// treat these assignments as a single "region" within the circuit. Outside this
-    /// closure, the `Layouter` is allowed to optimise as it sees fit.
-    ///
-    /// ```ignore
-    /// fn assign_region(&mut self, || "region name", |region| {
-    ///     region.assign_advice(self.configured.a, offset, || { Some(value)});
-    /// });
-    /// ```
-    fn assign_region<A, AR, N, NR, C: Config<Field = Self::Field>>(
-        &mut self,
-        name: N,
-        assignment: A,
-    ) -> Result<AR, Error>
-    where
-        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
-        N: Fn() -> NR,
-        NR: Into<String>;
-}
-
-#[derive(Debug)]
-/// Used only to make types check out.
-pub struct DummyLayouter<F: FieldExt> {
-    marker: PhantomData<F>,
-}
-
-impl<F: FieldExt> Layouter for DummyLayouter<F> {
-    type Field = F;
-    fn assign_region<A, AR, N, NR, C: Config<Field = Self::Field>>(
-        &mut self,
-        _name: N,
-        _assignment: A,
-    ) -> Result<AR, Error>
-    where
-        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
-        N: Fn() -> NR,
-        NR: Into<String>,
-    {
-        // We shouldn't call this on a `DummyLayouter`.
-        Err(Error::SynthesisError)
-    }
-}
-
-/// This is a "namespaced" layouter which borrows a `Layouter` (pushing a namespace
+/// This is a "namespaced" config which borrows a `Config` (pushing a namespace
 /// context) and, when dropped, pops out of the namespace context.
 #[derive(Debug)]
 pub struct NamespacedConfig<'a, C: Config>(&'a mut C, PhantomData<C>);

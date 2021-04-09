@@ -10,7 +10,7 @@ pub mod layout;
 /// Builds a dot graph string representing the given circuit.
 ///
 /// The graph is built from calls to [`Layouter::namespace`] both within the circuit, and
-/// inside the gadgets and chips that it uses.
+/// inside the gadgets and configs that it uses.
 ///
 /// [`Layouter::namespace`]: crate::circuit::Layouter#method.namespace
 pub fn circuit_dot_graph<F: Field, ConcreteCircuit: Circuit<F>>(

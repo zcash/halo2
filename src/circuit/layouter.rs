@@ -35,7 +35,7 @@ use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation};
 /// ```
 ///
 /// TODO: It would be great if we could constrain the columns in these types to be
-/// "logical" columns that are guaranteed to correspond to the chip (and have come from
+/// "logical" columns that are guaranteed to correspond to the config (and have come from
 /// `Config::Configured`).
 pub trait RegionLayouter<C: Config>: fmt::Debug {
     /// Assign an advice column value (witness)
@@ -67,7 +67,7 @@ pub trait RegionLayouter<C: Config>: fmt::Debug {
     ) -> Result<(), Error>;
 }
 
-/// A [`Layouter`] for a single-chip circuit.
+/// A [`Layouter`] for a single-config circuit.
 pub struct SingleConfigLayouter<'a, F: FieldExt, CS: Assignment<F> + 'a> {
     /// Constraint system
     pub cs: &'a mut CS,

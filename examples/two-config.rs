@@ -86,7 +86,7 @@ impl<F: FieldExt, L: Layouter<Field = F>> Config for FieldConfig<'_, F, L> {
     }
 
     fn load(&mut self) -> Result<(), halo2::plonk::Error> {
-        // None of the instructions implemented by this chip have any fixed state.
+        // None of the instructions implemented by this config have any fixed state.
         // But if we required e.g. a lookup table, this is where we would load it.
         Ok(())
     }
@@ -264,7 +264,7 @@ impl<F: FieldExt, L: Layouter<Field = F>> Config for AddConfig<'_, F, L> {
     }
 
     fn load(&mut self) -> Result<(), halo2::plonk::Error> {
-        // None of the instructions implemented by this chip have any fixed state.
+        // None of the instructions implemented by this config have any fixed state.
         // But if we required e.g. a lookup table, this is where we would load it.
         Ok(())
     }
@@ -434,7 +434,7 @@ impl<F: FieldExt, L: Layouter<Field = F>> Config for MulConfig<'_, F, L> {
     }
 
     fn load(&mut self) -> Result<(), halo2::plonk::Error> {
-        // None of the instructions implemented by this chip have any fixed state.
+        // None of the instructions implemented by this config have any fixed state.
         // But if we required e.g. a lookup table, this is where we would load it.
         Ok(())
     }
@@ -587,11 +587,11 @@ struct MyCircuit<F: FieldExt> {
 }
 
 impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
-    // Since we are using a single chip for everything, we can just reuse its configured.
+    // Since we are using a single config for everything, we can just reuse its configured.
     type Configured = FieldConfigured;
 
     fn configure(meta: &mut ConstraintSystem<F>) -> Self::Configured {
-        // We create the two advice columns that FieldChip uses for I/O.
+        // We create the two advice columns that FieldConfig uses for I/O.
         let advice = [meta.advice_column(), meta.advice_column()];
 
         // We also need an instance column to store public inputs.
@@ -615,13 +615,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         let a = config.load_private(self.a)?;
         let b = config.load_private(self.b)?;
 
-        // We only have access to plain multiplication.
-        // We could implement our circuit as:
-        //     asq = a*a
-        //     bsq = b*b
-        //     c   = asq*bsq
-        //
-        // but it's more efficient to implement it as:
+        // We implement our circuit as:
         //     ab = a*b
         //     c  = ab + ab
         let ab = config.mul(a, b)?;
@@ -652,8 +646,8 @@ fn main() {
         b: Some(b),
     };
 
-    // Arrange the public input. We expose the multiplication result in row 6
-    // of the instance column, so we position it there in our public inputs.
+    // Arrange the public input. We expose the result in row 6 of the instance column,
+    // so we position it there in our public inputs.
     let mut public_inputs = vec![Fp::zero(); 1 << k];
     public_inputs[6] = c;
 

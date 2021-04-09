@@ -733,7 +733,7 @@ impl<F: FieldExt, L: Layouter<Field = F>> CompressionConfig<'_, F, L> {
     /// Initialize compression with some initialized state. This could be a state
     /// output from a previous compression round.
     pub(super) fn initialize_with_state(&mut self, init_state: State) -> Result<State, Error> {
-        self.initialize_state(init_state.clone())
+        self.initialize_state(init_state)
     }
 
     /// Given an initialized state and a message schedule, perform 64 compression rounds.
@@ -742,16 +742,16 @@ impl<F: FieldExt, L: Layouter<Field = F>> CompressionConfig<'_, F, L> {
         initialized_state: State,
         w_halves: [(CellValue16, CellValue16); ROUNDS],
     ) -> Result<State, Error> {
-        let mut state = initialized_state.clone();
+        let mut state = initialized_state;
         for idx in 0..64 {
-            state = self.assign_round(idx, state.clone(), w_halves[idx as usize])?;
+            state = self.assign_round(idx, state, w_halves[idx as usize])?;
         }
         Ok(state)
     }
 
     /// After the final round, convert the state into the final digest.
     pub(super) fn digest(&mut self, state: State) -> Result<[BlockWord; DIGEST_SIZE], Error> {
-        self.assign_digest(state.clone())
+        self.assign_digest(state)
     }
 
     #[cfg(test)]

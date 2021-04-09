@@ -28,7 +28,7 @@ pub enum VerifyFailure {
         /// `Circuit::configure`.
         gate_index: usize,
         /// The name of the gate that is not satisfied. These are specified by the gate
-        /// creator (such as a chip implementation), and may not be unique.
+        /// creator (such as a config implementation), and may not be unique.
         gate_name: &'static str,
         /// The row on which this gate is not satisfied.
         row: usize,
