@@ -28,33 +28,33 @@ these in a way that makes the most sense for their optimization goals.
 {{#include ../../../examples/simple-example.rs:instructions}}
 ```
 
-## Define a chip implementation
+## Define a Config implementation
 
-For our circuit, we will build a [chip](../concepts/chips.md) that provides the above
+For our circuit, we will build a [Config](../concepts/configs.md) that provides the above
 numeric instructions for a finite field.
 
 ```rust,ignore,no_run
-{{#include ../../../examples/simple-example.rs:chip}}
+{{#include ../../../examples/simple-example.rs:config}}
 ```
 
-Every chip needs to implement the `Chip` trait. This defines the properties of the chip
-that a `Layouter` may rely on when synthesizing a circuit, as well as enabling any initial
-state that the chip requires to be loaded into the circuit.
+Every Config implementation needs to implement the `Config` trait. This defines the
+properties that a `Layouter` may rely on when synthesizing a circuit, as well as enabling
+any initial state that the Config requires to be loaded into the circuit.
 
 ```rust,ignore,no_run
-{{#include ../../../examples/simple-example.rs:chip-impl}}
+{{#include ../../../examples/simple-example.rs:config-impl}}
 ```
 
-## Configure the chip
+## Configuration
 
-The chip needs to be configured with the columns, permutations, and gates that will be
+The Config needs to be configured with the columns, permutations, and gates that will be
 required to implement all of the desired instructions.
 
 ```rust,ignore,no_run
-{{#include ../../../examples/simple-example.rs:chip-config}}
+{{#include ../../../examples/simple-example.rs:configure}}
 ```
 
-## Implement chip traits
+## Implement instruction traits
 
 ```rust,ignore,no_run
 {{#include ../../../examples/simple-example.rs:instructions-impl}}
@@ -62,7 +62,7 @@ required to implement all of the desired instructions.
 
 ## Build the circuit
 
-Now that we have the instructions we need, and a chip that implements them, we can finally
+Now that we have the instructions we need, and a Config that implements them, we can finally
 build our circuit!
 
 ```rust,ignore,no_run

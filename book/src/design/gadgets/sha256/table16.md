@@ -1,6 +1,6 @@
-# 16-bit table chip for SHA-256
+# 16-bit Table Config for SHA-256
 
-This chip implementation is based around a single 16-bit lookup table. It requires a
+This Config implementation is based around a single 16-bit lookup table. It requires a
 minimum of $2^{16}$ circuit rows, and is therefore suitable for use in larger circuits.
 
 We target a maximum constraint degree of $9$. That will allow us to handle constraining

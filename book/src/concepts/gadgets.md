@@ -1,7 +1,7 @@
 # Gadgets
 
 When implementing a circuit, we could use the features of the cores we've selected directly
-via the chip. Typically, though, we will use them via ***gadgets***. This indirection is
+via the Config. Typically, though, we will use them via ***gadgets***. This indirection is
 useful because, for reasons of efficiency and limitations imposed by UPA, the core interfaces
 will often be dependent on low-level implementation details. The gadget interface can provide
 a more convenient and stable API that abstracts away from extraneous detail.
