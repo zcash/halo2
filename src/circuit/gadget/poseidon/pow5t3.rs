@@ -5,8 +5,8 @@ use halo2::{
     poly::Rotation,
 };
 
-use super::PoseidonInstructions;
-use crate::primitives::poseidon::{Mds, Spec, State};
+use super::{PoseidonDuplexInstructions, PoseidonInstructions};
+use crate::primitives::poseidon::{Domain, Mds, Spec, SpongeState, State};
 
 const WIDTH: usize = 3;
 
@@ -20,6 +20,7 @@ pub struct Pow5T3Config<F: FieldExt> {
     rc_b: [Column<Fixed>; WIDTH],
     s_full: Selector,
     s_partial: Selector,
+    s_pad_and_add: Selector,
 
     half_full_rounds: usize,
     half_partial_rounds: usize,
@@ -54,9 +55,6 @@ impl<F: FieldExt> Pow5T3Chip<F> {
         let half_partial_rounds = S::partial_rounds() / 2;
         let (round_constants, m_reg, m_inv) = spec.constants();
 
-        let state_permutation =
-            Permutation::new(meta, &[state[0].into(), state[1].into(), state[2].into()]);
-
         let partial_sbox = meta.advice_column();
 
         let rc_a = [
@@ -70,8 +68,26 @@ impl<F: FieldExt> Pow5T3Chip<F> {
             meta.fixed_column(),
         ];
 
+        // This allows state words to be initialized (by constraining them equal to fixed
+        // values), and used in a permutation from an arbitrary region. rc_a is used in
+        // every permutation round, while rc_b is empty in the initial and final full
+        // rounds, so we use rc_b as "scratch space" for fixed values (enabling potential
+        // layouter optimisations).
+        let state_permutation = Permutation::new(
+            meta,
+            &[
+                state[0].into(),
+                state[1].into(),
+                state[2].into(),
+                rc_b[0].into(),
+                rc_b[1].into(),
+                rc_b[2].into(),
+            ],
+        );
+
         let s_full = meta.selector();
         let s_partial = meta.selector();
+        let s_pad_and_add = meta.selector();
 
         let alpha = [5, 0, 0, 0];
         let pow_5 = |v: Expression<F>| {
@@ -151,6 +167,32 @@ impl<F: FieldExt> Pow5T3Chip<F> {
             ]
         });
 
+        meta.create_gate("pad-and-add", |meta| {
+            let initial_state_0 = meta.query_advice(state[0], Rotation::prev());
+            let initial_state_1 = meta.query_advice(state[1], Rotation::prev());
+            let initial_state_2 = meta.query_advice(state[2], Rotation::prev());
+            let input_0 = meta.query_advice(state[0], Rotation::cur());
+            let input_1 = meta.query_advice(state[1], Rotation::cur());
+            let output_state_0 = meta.query_advice(state[0], Rotation::next());
+            let output_state_1 = meta.query_advice(state[1], Rotation::next());
+            let output_state_2 = meta.query_advice(state[2], Rotation::next());
+
+            let s_pad_and_add = meta.query_selector(s_pad_and_add, Rotation::cur());
+
+            let pad_and_add = |initial_state, input, output_state| {
+                // We pad the input by storing the required padding in fixed columns and
+                // then constraining the corresponding input columns to be equal to it.
+                s_pad_and_add.clone() * (initial_state + input - output_state)
+            };
+
+            vec![
+                pad_and_add(initial_state_0, input_0, output_state_0),
+                pad_and_add(initial_state_1, input_1, output_state_1),
+                // The capacity element is never altered by the input.
+                s_pad_and_add * (initial_state_2 - output_state_2),
+            ]
+        });
+
         Pow5T3Config {
             state,
             state_permutation,
@@ -159,6 +201,7 @@ impl<F: FieldExt> Pow5T3Chip<F> {
             rc_b,
             s_full,
             s_partial,
+            s_pad_and_add,
             half_full_rounds,
             half_partial_rounds,
             alpha,
@@ -234,7 +277,141 @@ impl<F: FieldExt, S: Spec<F, WIDTH, 2>> PoseidonInstructions<F, S, WIDTH, 2> for
     }
 }
 
-#[derive(Debug)]
+impl<F: FieldExt, S: Spec<F, WIDTH, 2>> PoseidonDuplexInstructions<F, S, WIDTH, 2>
+    for Pow5T3Chip<F>
+{
+    fn initial_state(
+        &self,
+        layouter: &mut impl Layouter<F>,
+        domain: &impl Domain<F, S, WIDTH, 2>,
+    ) -> Result<State<Self::Word, WIDTH>, Error> {
+        let config = self.config();
+        layouter.assign_region(
+            || format!("initial state for domain {:?}", domain),
+            |mut region| {
+                let mut load_state_word = |i: usize, value: F| {
+                    let var = region.assign_advice(
+                        || format!("state_{}", i),
+                        config.state[i],
+                        0,
+                        || Ok(value),
+                    )?;
+                    let fixed = region.assign_fixed(
+                        || format!("state_{}", i),
+                        config.rc_b[i],
+                        0,
+                        || Ok(value),
+                    )?;
+                    region.constrain_equal(&config.state_permutation, var, fixed)?;
+                    Ok(StateWord {
+                        var,
+                        value: Some(value),
+                    })
+                };
+
+                Ok([
+                    load_state_word(0, F::zero())?,
+                    load_state_word(1, F::zero())?,
+                    load_state_word(2, domain.initial_capacity_element())?,
+                ])
+            },
+        )
+    }
+
+    fn pad_and_add(
+        &self,
+        layouter: &mut impl Layouter<F>,
+        domain: &impl Domain<F, S, WIDTH, 2>,
+        initial_state: &State<Self::Word, WIDTH>,
+        input: &SpongeState<Self::Word, 2>,
+    ) -> Result<State<Self::Word, WIDTH>, Error> {
+        let config = self.config();
+        layouter.assign_region(
+            || format!("pad-and-add for domain {:?}", domain),
+            |mut region| {
+                config.s_pad_and_add.enable(&mut region, 1)?;
+
+                // Load the initial state into this region.
+                let mut load_state_word = |i: usize| {
+                    let value = initial_state[i].value;
+                    let var = region.assign_advice(
+                        || format!("load state_{}", i),
+                        config.state[i],
+                        0,
+                        || value.ok_or(Error::SynthesisError),
+                    )?;
+                    region.constrain_equal(&config.state_permutation, initial_state[i].var, var)?;
+                    Ok(StateWord { var, value })
+                };
+                let initial_state = [
+                    load_state_word(0)?,
+                    load_state_word(1)?,
+                    load_state_word(2)?,
+                ];
+
+                let padding_values = domain.padding();
+
+                // Load the input and padding into this region.
+                let mut load_input_word = |i: usize| {
+                    let (constraint_var, value) = match (input[i], padding_values[i]) {
+                        (Some(word), None) => (word.var, word.value),
+                        (None, Some(padding_value)) => {
+                            let padding_var = region.assign_fixed(
+                                || format!("load pad_{}", i),
+                                config.rc_b[i],
+                                1,
+                                || Ok(padding_value),
+                            )?;
+                            (padding_var, Some(padding_value))
+                        }
+                        _ => panic!("Input and padding don't match"),
+                    };
+                    let var = region.assign_advice(
+                        || format!("load input_{}", i),
+                        config.state[i],
+                        1,
+                        || value.ok_or(Error::SynthesisError),
+                    )?;
+                    region.constrain_equal(&config.state_permutation, constraint_var, var)?;
+
+                    Ok(StateWord { var, value })
+                };
+                let input = [load_input_word(0)?, load_input_word(1)?];
+
+                // Constrain the output.
+                let mut constrain_output_word = |i: usize| {
+                    let value = initial_state[i].value.and_then(|initial_word| {
+                        input
+                            .get(i)
+                            .map(|word| word.value)
+                            // The capacity element is never altered by the input.
+                            .unwrap_or_else(|| Some(F::zero()))
+                            .map(|input_word| initial_word + input_word)
+                    });
+                    let var = region.assign_advice(
+                        || format!("load output_{}", i),
+                        config.state[i],
+                        2,
+                        || value.ok_or(Error::SynthesisError),
+                    )?;
+                    Ok(StateWord { var, value })
+                };
+
+                Ok([
+                    constrain_output_word(0)?,
+                    constrain_output_word(1)?,
+                    constrain_output_word(2)?,
+                ])
+            },
+        )
+    }
+
+    fn get_output(state: &State<Self::Word, WIDTH>) -> SpongeState<Self::Word, 2> {
+        [Some(state[0]), Some(state[1])]
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 pub struct StateWord<F: FieldExt> {
     var: Cell,
     value: Option<F>,

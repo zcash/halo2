@@ -1,4 +1,5 @@
 use std::array;
+use std::fmt;
 use std::iter;
 use std::marker::PhantomData;
 
@@ -237,10 +238,12 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> Duplex
 
 /// A domain in which a Poseidon hash function is being used.
 pub trait Domain<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>:
-    Copy
+    Copy + fmt::Debug
 {
     /// The initial capacity element, encoding this domain.
     fn initial_capacity_element(&self) -> F;
+
+    fn padding(&self) -> SpongeState<F, RATE>;
 
     /// Returns a function that will update the given state with the given input to a
     /// duplex permutation round, applying padding according to this domain specification.
@@ -260,6 +263,16 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, const 
         // Capacity value is $length \cdot 2^64 + (o-1)$ where o is the output length.
         // We hard-code an output length of 1.
         F::from_u128((L as u128) << 64)
+    }
+
+    fn padding(&self) -> SpongeState<F, RATE> {
+        // For constant-input-length hashing, padding consists of the field elements being
+        // zero.
+        let mut padding = [None; RATE];
+        for word in padding.iter_mut().skip(L) {
+            *word = Some(F::zero());
+        }
+        padding
     }
 
     fn pad_and_add(&self) -> Box<dyn Fn(&mut State<F, T>, &SpongeState<F, RATE>)> {
