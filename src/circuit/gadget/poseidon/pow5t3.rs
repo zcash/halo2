@@ -434,9 +434,9 @@ mod tests {
     use super::{PoseidonInstructions, Pow5T3Chip, Pow5T3Config, StateWord, WIDTH};
     use crate::primitives::poseidon::{self, OrchardNullifier, Spec};
 
-    struct MyCircuit {}
+    struct PermuteCircuit {}
 
-    impl Circuit<Fp> for MyCircuit {
+    impl Circuit<Fp> for PermuteCircuit {
         type Config = Pow5T3Config<Fp>;
 
         fn configure(meta: &mut ConstraintSystem<Fp>) -> Pow5T3Config<Fp> {
@@ -513,9 +513,9 @@ mod tests {
     }
 
     #[test]
-    fn poseidon() {
+    fn poseidon_permute() {
         let k = 6;
-        let circuit = MyCircuit {};
+        let circuit = PermuteCircuit {};
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
     }
@@ -531,7 +531,7 @@ mod tests {
             .titled("Poseidon Chip Layout", ("sans-serif", 60))
             .unwrap();
 
-        let circuit = MyCircuit {};
+        let circuit = PermuteCircuit {};
         halo2::dev::circuit_layout(&circuit, &root).unwrap();
     }
 }
