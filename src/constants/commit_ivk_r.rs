@@ -3735,21 +3735,23 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn z() {
-    //     let base = super::generator::<pallas::Affine>();
-    //     match base {
-    //         OrchardFixedBases::CommitIvkR(inner) => inner.test_z(&Z, &U, NUM_WINDOWS),
-    //         _ => unreachable!(),
-    //     }
-    // }
+    #[test]
+    fn z() {
+        let base = super::generator::<pallas::Affine>();
+        match base {
+            OrchardFixedBases::CommitIvkR(inner) => inner.test_z(&Z, &U, NUM_WINDOWS),
+            _ => unreachable!(),
+        }
+    }
 
-    // #[test]
-    // fn z_short() {
-    //     let base = super::generator::<pallas::Affine>();
-    //     match base {
-    //         OrchardFixedBases::CommitIvkR(inner) => inner.test_z(&Z_SHORT, &U_SHORT, NUM_WINDOWS_SHORT),
-    //         _ => unreachable!(),
-    //     }
-    // }
+    #[test]
+    fn z_short() {
+        let base = super::generator::<pallas::Affine>();
+        match base {
+            OrchardFixedBases::CommitIvkR(inner) => {
+                inner.test_z(&Z_SHORT, &U_SHORT, NUM_WINDOWS_SHORT)
+            }
+            _ => unreachable!(),
+        }
+    }
 }

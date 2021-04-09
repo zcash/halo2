@@ -240,11 +240,11 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
             let z_for_single_y = |y: C::Base, z: u64| {
                 let sum_y_is_square: bool = (y + C::Base::from_u64(z)).sqrt().is_some().into();
                 let sum_neg_y_is_square: bool = (-y + C::Base::from_u64(z)).sqrt().is_some().into();
-                (sum_y_is_square && !sum_neg_y_is_square) as usize
+                sum_y_is_square && !sum_neg_y_is_square
             };
 
             for z in 0..(1000 * (1 << (2 * H))) {
-                if ys.iter().map(|y| z_for_single_y(*y, z)).sum::<usize>() == H {
+                if ys.iter().all(|y| z_for_single_y(*y, z)) {
                     return Some(z);
                 }
             }
