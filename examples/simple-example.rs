@@ -192,7 +192,8 @@ impl<F: FieldExt, L: Layouter<F>> NumericInstructions for FieldConfig<'_, F, L> 
     fn load_private(&mut self, value: Option<Self::Field>) -> Result<Self::Num, Error> {
         let configured = self.configured().clone();
         let mut num = None;
-        self.layouter().assign_region(
+        self.layouter().assign_new_region(
+            &[configured.advice[0].into()],
             || "load private",
             |mut region: Region<'_, Self>| {
                 let cell = region.assign_advice(
@@ -211,7 +212,12 @@ impl<F: FieldExt, L: Layouter<F>> NumericInstructions for FieldConfig<'_, F, L> 
     fn mul(&mut self, a: Self::Num, b: Self::Num) -> Result<Self::Num, Error> {
         let configured = self.configured().clone();
         let mut out = None;
-        self.layouter().assign_region(
+        self.layouter().assign_new_region(
+            &[
+                configured.s_mul.into(),
+                configured.advice[0].into(),
+                configured.advice[1].into(),
+            ],
             || "mul",
             |mut region: Region<'_, Self>| {
                 // We only want to use a single multiplication gate in this region,
@@ -259,7 +265,9 @@ impl<F: FieldExt, L: Layouter<F>> NumericInstructions for FieldConfig<'_, F, L> 
 
     fn expose_public(&mut self, num: Self::Num) -> Result<(), Error> {
         let configured = self.configured().clone();
-        self.layouter().assign_region(
+
+        self.layouter().assign_new_region(
+            &[configured.s_pub.into(), configured.advice[1].into()],
             || "expose public",
             |mut region: Region<'_, Self>| {
                 // Enable the public-input gate.
@@ -362,6 +370,7 @@ fn main() {
 
     // Arrange the public input. We expose the multiplication result in row 6
     // of the instance column, so we position it there in our public inputs.
+    // Note: the absolute row depends on the specific layouter strategy used.
     let mut public_inputs = vec![Fp::zero(); 1 << k];
     public_inputs[6] = c;
 

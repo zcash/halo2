@@ -130,6 +130,18 @@ pub struct Cell {
     column: Column<Any>,
 }
 
+impl Cell {
+    /// The region index of this cell.
+    pub fn region_index(&self) -> RegionIndex {
+        self.region_index
+    }
+
+    /// The relative row offset of this cell within its region.
+    pub fn row_offset(&self) -> usize {
+        self.row_offset
+    }
+}
+
 /// A region of the circuit in which a [`Chip`] can assign cells.
 ///
 /// Inside a region, the chip may freely use relative offsets; the [`Layouter`] will
@@ -222,8 +234,21 @@ pub trait Layouter<F: FieldExt> {
     ///     region.assign_advice(self.configured.a, offset, || { Some(value)});
     /// });
     /// ```
-    fn assign_region<A, AR, N, NR, C: Config<Field = F>>(
+    fn assign_new_region<A, AR, N, NR, C: Config<Field = F>>(
         &mut self,
+        columns: &[Column<Any>],
+        name: N,
+        assignment: A,
+    ) -> Result<AR, Error>
+    where
+        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        N: Fn() -> NR,
+        NR: Into<String>;
+
+    /// Assign to an existing region.
+    fn assign_existing_region<A, AR, N, NR, C: Config<Field = F>>(
+        &mut self,
+        region_index: RegionIndex,
         name: N,
         assignment: A,
     ) -> Result<AR, Error>
@@ -234,8 +259,23 @@ pub trait Layouter<F: FieldExt> {
 }
 
 impl<F: FieldExt> Layouter<F> for () {
-    fn assign_region<A, AR, N, NR, C: Config>(
+    fn assign_new_region<A, AR, N, NR, C: Config>(
         &mut self,
+        _columns: &[Column<Any>],
+        _name: N,
+        _assignment: A,
+    ) -> Result<AR, Error>
+    where
+        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        N: Fn() -> NR,
+        NR: Into<String>,
+    {
+        Err(Error::SynthesisError)
+    }
+
+    fn assign_existing_region<A, AR, N, NR, C: Config<Field = F>>(
+        &mut self,
+        _region_index: RegionIndex,
         _name: N,
         _assignment: A,
     ) -> Result<AR, Error>

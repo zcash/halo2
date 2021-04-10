@@ -1,7 +1,7 @@
 //! Implementations of common circuit layouters.
 
 use std::cmp;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
 
@@ -19,8 +19,8 @@ use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation};
 ///         &mut self,
 ///         assignment: impl FnOnce(Region<'_, C>) -> Result<(), Error>,
 ///     ) -> Result<(), Error> {
-///         let region_index = self.regions.len();
-///         self.regions.push(self.current_gate);
+///         let region_index = self.region_starts.len();
+///         self.region_starts.push(self.current_gate);
 ///
 ///         let mut region = MyRegion::new(self, region_index);
 ///         {
@@ -72,7 +72,9 @@ pub struct SingleConfigLayouter<'a, F: FieldExt, CS: Assignment<F> + 'a> {
     /// Constraint system
     pub cs: &'a mut CS,
     /// Stores the starting row for each region.
-    regions: Vec<RegionStart>,
+    region_starts: Vec<RegionStart>,
+    /// Stores the columns used by each region.
+    region_columns: Vec<Vec<Column<Any>>>,
     /// Stores the first empty row for each column.
     columns: HashMap<Column<Any>, usize>,
     marker: PhantomData<F>,
@@ -81,7 +83,7 @@ pub struct SingleConfigLayouter<'a, F: FieldExt, CS: Assignment<F> + 'a> {
 impl<'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for SingleConfigLayouter<'a, F, CS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SingleConfigLayouter")
-            .field("regions", &self.regions)
+            .field("regions", &self.region_starts)
             .field("columns", &self.columns)
             .finish()
     }
@@ -92,7 +94,8 @@ impl<'a, F: FieldExt, CS: Assignment<F>> SingleConfigLayouter<'a, F, CS> {
     pub fn new(cs: &'a mut CS) -> Self {
         SingleConfigLayouter {
             cs,
-            regions: vec![],
+            region_starts: vec![],
+            region_columns: vec![],
             columns: HashMap::default(),
             marker: PhantomData,
         }
@@ -100,8 +103,9 @@ impl<'a, F: FieldExt, CS: Assignment<F>> SingleConfigLayouter<'a, F, CS> {
 }
 
 impl<'a, F: FieldExt, CS: Assignment<F>> Layouter<F> for SingleConfigLayouter<'a, F, CS> {
-    fn assign_region<A, AR, N, NR, C: Config<Field = F>>(
+    fn assign_new_region<A, AR, N, NR, C: Config<Field = F>>(
         &mut self,
+        columns: &[Column<Any>],
         name: N,
         mut assignment: A,
     ) -> Result<AR, Error>
@@ -110,10 +114,10 @@ impl<'a, F: FieldExt, CS: Assignment<F>> Layouter<F> for SingleConfigLayouter<'a
         N: Fn() -> NR,
         NR: Into<String>,
     {
-        let region_index = self.regions.len();
+        let region_index = self.region_starts.len().into();
 
         // Get shape of the region.
-        let mut shape = RegionShape::new(region_index.into());
+        let mut shape = RegionShape::new(region_index, columns);
         {
             let region: &mut dyn RegionLayouter<C> = &mut shape;
             assignment(region.into())?;
@@ -125,11 +129,53 @@ impl<'a, F: FieldExt, CS: Assignment<F>> Layouter<F> for SingleConfigLayouter<'a
         for column in &shape.columns {
             region_start = cmp::max(region_start, self.columns.get(column).cloned().unwrap_or(0));
         }
-        self.regions.push(region_start.into());
+        self.region_starts.push(region_start.into());
+        self.region_columns.push(columns.to_vec());
 
         // Update column usage information.
         for column in shape.columns {
             self.columns.insert(column, region_start + shape.row_count);
+        }
+
+        self.cs.enter_region(name);
+        let mut region = SingleConfigLayouterRegion::new(self, region_index.into());
+        let result = {
+            let region: &mut dyn RegionLayouter<C> = &mut region;
+            assignment(region.into())
+        }?;
+        self.cs.exit_region();
+
+        Ok(result)
+    }
+
+    fn assign_existing_region<A, AR, N, NR, C: Config<Field = F>>(
+        &mut self,
+        region_index: super::RegionIndex,
+        name: N,
+        mut assignment: A,
+    ) -> Result<AR, Error>
+    where
+        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        N: Fn() -> NR,
+        NR: Into<String>,
+    {
+        let mut shape = RegionShape::new(region_index, &self.region_columns[*region_index]);
+        {
+            let region: &mut dyn RegionLayouter<C> = &mut shape;
+            assignment(region.into())?;
+        }
+
+        let region_start = self.region_starts[*region_index];
+
+        // Update column usage information.
+        for column in shape.columns {
+            let new_row = *region_start + shape.row_count;
+            let current_row = self.columns.get(&column).unwrap();
+
+            if *current_row < new_row {
+                self.columns.insert(column, new_row);
+            } else {
+            }
         }
 
         self.cs.enter_region(name);
@@ -149,16 +195,16 @@ impl<'a, F: FieldExt, CS: Assignment<F>> Layouter<F> for SingleConfigLayouter<'a
 #[derive(Debug)]
 pub struct RegionShape {
     region_index: RegionIndex,
-    columns: HashSet<Column<Any>>,
+    columns: Vec<Column<Any>>,
     row_count: usize,
 }
 
 impl RegionShape {
-    /// Create a new `RegionShape` for a region at `region_index`.
-    pub fn new(region_index: RegionIndex) -> Self {
+    /// Create a new `RegionShape` for an assignment at `region_index`.
+    pub fn new(region_index: RegionIndex, columns: &[Column<Any>]) -> Self {
         RegionShape {
             region_index,
-            columns: HashSet::default(),
+            columns: columns.to_vec(),
             row_count: 0,
         }
     }
@@ -169,7 +215,7 @@ impl RegionShape {
     }
 
     /// Get a reference to the set of `columns` used in a `RegionShape`.
-    pub fn columns(&self) -> &HashSet<Column<Any>> {
+    pub fn columns(&self) -> &[Column<Any>] {
         &self.columns
     }
 
@@ -187,7 +233,7 @@ impl<C: Config> RegionLayouter<C> for RegionShape {
         offset: usize,
         _to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
     ) -> Result<Cell, Error> {
-        self.columns.insert(column.into());
+        // self.columns.insert(column.into());
         self.row_count = cmp::max(self.row_count, offset + 1);
 
         Ok(Cell {
@@ -204,7 +250,7 @@ impl<C: Config> RegionLayouter<C> for RegionShape {
         offset: usize,
         _to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
     ) -> Result<Cell, Error> {
-        self.columns.insert(column.into());
+        // self.columns.insert(column.into());
         self.row_count = cmp::max(self.row_count, offset + 1);
 
         Ok(Cell {
@@ -263,7 +309,7 @@ impl<'r, 'a, F: FieldExt, C: Config<Field = F>, CS: Assignment<F> + 'a> RegionLa
         self.layouter.cs.assign_advice(
             annotation,
             column,
-            *self.layouter.regions[*self.region_index] + offset,
+            *self.layouter.region_starts[*self.region_index] + offset,
             to,
         )?;
 
@@ -284,7 +330,7 @@ impl<'r, 'a, F: FieldExt, C: Config<Field = F>, CS: Assignment<F> + 'a> RegionLa
         self.layouter.cs.assign_fixed(
             annotation,
             column,
-            *self.layouter.regions[*self.region_index] + offset,
+            *self.layouter.region_starts[*self.region_index] + offset,
             to,
         )?;
 
@@ -304,9 +350,9 @@ impl<'r, 'a, F: FieldExt, C: Config<Field = F>, CS: Assignment<F> + 'a> RegionLa
         self.layouter.cs.copy(
             permutation,
             left.column,
-            *self.layouter.regions[*left.region_index] + left.row_offset,
+            *self.layouter.region_starts[*left.region_index] + left.row_offset,
             right.column,
-            *self.layouter.regions[*right.region_index] + right.row_offset,
+            *self.layouter.region_starts[*right.region_index] + right.row_offset,
         )?;
 
         Ok(())

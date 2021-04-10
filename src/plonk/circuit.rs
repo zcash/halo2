@@ -79,6 +79,15 @@ impl From<Column<Fixed>> for Column<Any> {
     }
 }
 
+impl From<Selector> for Column<Any> {
+    fn from(selector: Selector) -> Column<Any> {
+        Column {
+            index: selector.0.index(),
+            column_type: Any::Fixed,
+        }
+    }
+}
+
 impl From<Column<Instance>> for Column<Any> {
     fn from(advice: Column<Instance>) -> Column<Any> {
         Column {
@@ -112,6 +121,20 @@ impl TryFrom<Column<Any>> for Column<Fixed> {
                 column_type: Fixed,
             }),
             _ => Err("Cannot convert into Column<Fixed>"),
+        }
+    }
+}
+
+impl TryFrom<Column<Any>> for Selector {
+    type Error = &'static str;
+
+    fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
+        match any.column_type() {
+            Any::Fixed => Ok(Selector(Column {
+                index: any.index(),
+                column_type: Fixed,
+            })),
+            _ => Err("Cannot convert into Column<Selector>"),
         }
     }
 }
@@ -170,11 +193,14 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// fn circuit_logic<C: Config>(mut config: C) -> Result<(), Error> {
 ///     let configured = config.configured().clone();
 ///     # let configured: Configured = todo!();
-///     config.layouter().assign_region(|| "bar", |mut region: Region<'_, C>| {
-///         region.assign_advice(|| "a", configured.a, 0, || Ok(C::Field::one()))?;
-///         region.assign_advice(|| "a", configured.b, 1, || Ok(C::Field::one()))?;
-///         configured.s.enable(&mut region, 1)
-///     })?;
+///     config.layouter().assign_new_region(
+///         &[configured.a.into(), configured.b.into(), configured.s.into()],
+///         || "bar",
+///         |mut region: Region<'_, C>| {
+///              region.assign_advice(|| "a", configured.a, 0, || Ok(C::Field::one()))?;
+///              region.assign_advice(|| "a", configured.b, 1, || Ok(C::Field::one()))?;
+///              configured.s.enable(&mut region, 1)
+///          })?;
 ///     Ok(())
 /// }
 /// ```
