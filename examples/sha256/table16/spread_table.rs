@@ -1,4 +1,4 @@
-use super::{util::*, CellValue16, CellValue32, Table16Config};
+use super::{util::*, CellValue16, CellValue32};
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Config, Layouter, Region},
@@ -125,18 +125,76 @@ pub(super) struct SpreadInputs {
 
 #[derive(Clone, Debug)]
 pub(super) struct SpreadTable {
-    table_tag: Column<Fixed>,
-    table_dense: Column<Fixed>,
-    table_spread: Column<Fixed>,
+    tag: Column<Fixed>,
+    dense: Column<Fixed>,
+    spread: Column<Fixed>,
 }
 
-impl SpreadTable {
-    pub(super) fn configure<F: FieldExt>(
+#[derive(Clone, Debug)]
+pub(super) struct SpreadTableConfigured {
+    pub table: SpreadTable,
+    pub inputs: SpreadInputs,
+}
+
+pub(super) struct SpreadTableConfig<'a, F: FieldExt, L: Layouter<F>> {
+    pub configured: SpreadTableConfigured,
+    pub layouter: &'a mut L,
+    pub marker: std::marker::PhantomData<F>,
+}
+
+// ANCHOR: chip-impl
+impl<F: FieldExt, L: Layouter<F>> Config for SpreadTableConfig<'_, F, L> {
+    type Root = Self;
+    type Configured = SpreadTableConfigured;
+    type Loaded = ();
+    type Field = F;
+    type Layouter = L;
+
+    fn get_root(&mut self) -> &mut Self::Root {
+        self
+    }
+
+    fn configured(&self) -> &Self::Configured {
+        &self.configured
+    }
+
+    fn loaded(&self) -> &Self::Loaded {
+        &()
+    }
+
+    fn load(&mut self) -> Result<(), halo2::plonk::Error> {
+        // None of the instructions implemented by this chip have any fixed state.
+        // But if we required e.g. a lookup table, this is where we would load it.
+        Ok(())
+    }
+
+    fn layouter(&mut self) -> &mut Self::Layouter {
+        self.layouter
+    }
+
+    fn push_namespace<NR, N>(&mut self, _name_fn: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // TODO
+    }
+
+    /// Exits out of the existing namespace.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    fn pop_namespace(&mut self, _gadget_name: Option<String>) {
+        // TODO
+    }
+}
+
+impl<F: FieldExt, L: Layouter<F>> SpreadTableConfig<'_, F, L> {
+    pub(super) fn configure(
         meta: &mut ConstraintSystem<F>,
         tag: Column<Advice>,
         dense: Column<Advice>,
         spread: Column<Advice>,
-    ) -> (SpreadInputs, Self) {
+    ) -> SpreadTableConfigured {
         let table_tag = meta.fixed_column();
         let table_dense = meta.fixed_column();
         let table_spread = meta.fixed_column();
@@ -152,17 +210,17 @@ impl SpreadTable {
             &[table_tag_, table_dense_, table_spread_],
         );
 
-        (
-            SpreadInputs { tag, dense, spread },
-            SpreadTable {
-                table_tag,
-                table_dense,
-                table_spread,
+        SpreadTableConfigured {
+            table: SpreadTable {
+                tag: table_tag,
+                dense: table_dense,
+                spread: table_spread,
             },
-        )
+            inputs: SpreadInputs { tag, dense, spread },
+        }
     }
 
-    fn generate<F: FieldExt>() -> impl Iterator<Item = (F, F, F)> {
+    fn generate() -> impl Iterator<Item = (F, F, F)> {
         (1..=(1 << 16)).scan(
             (F::zero(), F::zero(), F::zero()),
             |(tag, dense, spread), i| {
@@ -193,21 +251,23 @@ impl SpreadTable {
         )
     }
 
-    pub(super) fn load<F: FieldExt>(
-        &self,
-        layouter: &mut impl Layouter<Table16Config<F>>,
-    ) -> Result<(), Error> {
-        layouter.assign_region(
+    pub(super) fn load(&mut self) -> Result<(), Error> {
+        let configured = self.configured().clone();
+        let tag = configured.table.tag;
+        let dense = configured.table.dense;
+        let spread = configured.table.spread;
+        self.layouter().assign_new_region(
+            &[tag.into(), dense.into(), spread.into()],
             || "spread table",
-            |mut gate| {
+            |mut gate: Region<'_, Self>| {
                 // We generate the row values lazily (we only need them during keygen).
-                let mut rows = Self::generate::<F>();
+                let mut rows = Self::generate();
 
                 for index in 0..(1 << 16) {
                     let mut row = None;
                     gate.assign_fixed(
                         || "tag",
-                        self.table_tag,
+                        tag,
                         index,
                         || {
                             row = rows.next();
@@ -216,13 +276,13 @@ impl SpreadTable {
                     )?;
                     gate.assign_fixed(
                         || "dense",
-                        self.table_dense,
+                        dense,
                         index,
                         || row.map(|(_, dense, _)| dense).ok_or(Error::SynthesisError),
                     )?;
                     gate.assign_fixed(
                         || "spread",
-                        self.table_spread,
+                        spread,
                         index,
                         || {
                             row.map(|(_, _, spread)| spread)
@@ -239,23 +299,16 @@ impl SpreadTable {
 #[cfg(test)]
 mod tests {
     use rand::Rng;
-    use std::cmp;
-    use std::collections::HashMap;
-    use std::fmt;
-    use std::marker::PhantomData;
+    use std::convert::TryFrom;
 
-    use super::{
-        super::{util::*, Compression, MessageSchedule, Table16Config, Table16Configured},
-        SpreadInputs, SpreadTable,
-    };
+    use super::super::util::*;
+    use super::{SpreadTableConfig, SpreadTableConfigured};
     use halo2::{
         arithmetic::FieldExt,
-        circuit::{layouter, Cell, Layouter, Region, RegionIndex},
+        circuit::{layouter::SingleConfigLayouter, Config, Layouter, Region},
         dev::MockProver,
         pasta::Fp,
-        plonk::{
-            Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation,
-        },
+        plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error},
     };
 
     #[test]
@@ -264,382 +317,143 @@ mod tests {
         #[derive(Copy, Clone, Debug)]
         pub struct Variable(Column<Advice>, usize);
 
-        #[derive(Clone, Debug)]
-        struct MyConfigured {
-            lookup_inputs: SpreadInputs,
-            sha256: Table16Configured,
-        }
-
         struct MyCircuit {}
 
-        struct MyLayouter<'a, F: FieldExt, CS: Assignment<F> + 'a> {
-            cs: &'a mut CS,
-            configured: MyConfigured,
-            regions: Vec<usize>,
-            /// Stores the first empty row for each column.
-            columns: HashMap<Column<Any>, usize>,
-            _marker: PhantomData<F>,
-        }
+        impl<F: FieldExt, L: Layouter<F>> SpreadTableConfig<'_, F, L> {
+            fn assign_new_row(&mut self, tag: F, dense: F, spread: F) -> Result<(), Error> {
+                let input_tag = self.configured.inputs.tag;
+                let input_dense = self.configured.inputs.dense;
+                let input_spread = self.configured.inputs.spread;
 
-        impl<'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for MyLayouter<'a, F, CS> {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.debug_struct("MyLayouter")
-                    .field("configured", &self.configured)
-                    .field("regions", &self.regions)
-                    .field("columns", &self.columns)
-                    .finish()
-            }
-        }
-
-        impl<'a, FF: FieldExt, CS: Assignment<FF>> MyLayouter<'a, FF, CS> {
-            fn new(cs: &'a mut CS, configured: MyConfigured) -> Result<Self, Error> {
-                let mut res = MyLayouter {
-                    cs,
-                    configured,
-                    regions: vec![],
-                    columns: HashMap::default(),
-                    _marker: PhantomData,
-                };
-
-                let table = res.configured.sha256.lookup_table.clone();
-                table.load(&mut res)?;
-
-                Ok(res)
-            }
-        }
-
-        impl<'a, F: FieldExt, CS: Assignment<F> + 'a> Layouter<Table16Config<F>> for MyLayouter<'a, F, CS> {
-            type Root = Self;
-
-            fn configured(&self) -> &Table16Configured {
-                &self.configured.sha256
-            }
-
-            fn loaded(&self) -> &() {
-                &()
-            }
-
-            fn assign_region<A, AR, N, NR>(
-                &mut self,
-                name: N,
-                mut assignment: A,
-            ) -> Result<AR, Error>
-            where
-                A: FnMut(Region<'_, Table16Config<F>>) -> Result<AR, Error>,
-                N: Fn() -> NR,
-                NR: Into<String>,
-            {
-                let region_index = self.regions.len();
-
-                // Get shape of the region.
-                let mut shape = layouter::RegionShape::new(region_index.into());
-                {
-                    let region: &mut dyn layouter::RegionLayouter<Table16Config<F>> = &mut shape;
-                    assignment(region.into())?;
-                }
-
-                // Lay out this region. We implement the simplest approach here: position the
-                // region starting at the earliest row for which none of the columns are in use.
-                let mut region_start = 0;
-                for column in shape.columns() {
-                    region_start =
-                        cmp::max(region_start, self.columns.get(column).cloned().unwrap_or(0));
-                }
-                self.regions.push(region_start);
-
-                // Update column usage information.
-                for column in shape.columns() {
-                    self.columns
-                        .insert(*column, region_start + shape.row_count());
-                }
-
-                self.cs.enter_region(name);
-                let mut region = MyRegion::new(self, region_index.into());
-                let result = {
-                    let region: &mut dyn layouter::RegionLayouter<Table16Config<F>> = &mut region;
-                    assignment(region.into())
-                }?;
-                self.cs.exit_region();
-
-                Ok(result)
-            }
-
-            fn get_root(&mut self) -> &mut Self::Root {
-                self
-            }
-
-            fn push_namespace<NR, N>(&mut self, name_fn: N)
-            where
-                NR: Into<String>,
-                N: FnOnce() -> NR,
-            {
-                self.cs.push_namespace(name_fn)
-            }
-
-            fn pop_namespace(&mut self, gadget_name: Option<String>) {
-                self.cs.pop_namespace(gadget_name)
-            }
-        }
-
-        struct MyRegion<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> {
-            layouter: &'r mut MyLayouter<'a, F, CS>,
-            region_index: RegionIndex,
-            _marker: PhantomData<F>,
-        }
-
-        impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for MyRegion<'r, 'a, F, CS> {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.debug_struct("MyRegion")
-                    .field("layouter", &self.layouter)
-                    .field("region_index", &self.region_index)
-                    .finish()
-            }
-        }
-
-        impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> MyRegion<'r, 'a, F, CS> {
-            fn new(layouter: &'r mut MyLayouter<'a, F, CS>, region_index: RegionIndex) -> Self {
-                MyRegion {
-                    layouter,
-                    region_index,
-                    _marker: PhantomData::default(),
-                }
-            }
-        }
-
-        impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> layouter::RegionLayouter<Table16Config<F>>
-            for MyRegion<'r, 'a, F, CS>
-        {
-            fn assign_advice<'v>(
-                &'v mut self,
-                annotation: &'v (dyn Fn() -> String + 'v),
-                column: Column<Advice>,
-                offset: usize,
-                to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
-            ) -> Result<Cell, Error> {
-                self.layouter.cs.assign_advice(
-                    annotation,
-                    column,
-                    self.layouter.regions[*self.region_index] + offset,
-                    to,
-                )?;
-
-                Ok(Cell {
-                    region_index: self.region_index,
-                    row_offset: offset,
-                    column: column.into(),
-                })
-            }
-
-            fn assign_fixed<'v>(
-                &'v mut self,
-                annotation: &'v (dyn Fn() -> String + 'v),
-                column: Column<Fixed>,
-                offset: usize,
-                to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
-            ) -> Result<Cell, Error> {
-                self.layouter.cs.assign_fixed(
-                    annotation,
-                    column,
-                    self.layouter.regions[*self.region_index] + offset,
-                    to,
-                )?;
-                Ok(Cell {
-                    region_index: self.region_index,
-                    row_offset: offset,
-                    column: column.into(),
-                })
-            }
-
-            fn constrain_equal(
-                &mut self,
-                permutation: &Permutation,
-                left: Cell,
-                right: Cell,
-            ) -> Result<(), Error> {
-                self.layouter.cs.copy(
-                    permutation,
-                    left.column,
-                    self.layouter.regions[*left.region_index] + left.row_offset,
-                    right.column,
-                    self.layouter.regions[*right.region_index] + right.row_offset,
-                )?;
-
-                Ok(())
+                self.layouter().assign_new_region(
+                    &[input_tag.into(), input_dense.into(), input_spread.into()],
+                    || "assign new row",
+                    |mut region: Region<'_, Self>| {
+                        region.assign_advice(
+                            || "tag",
+                            Column::<Advice>::try_from(input_tag).unwrap(),
+                            0,
+                            || Ok(tag),
+                        )?;
+                        region.assign_advice(
+                            || "dense",
+                            Column::<Advice>::try_from(input_dense).unwrap(),
+                            0,
+                            || Ok(dense),
+                        )?;
+                        let cell = region.assign_advice(
+                            || "spread",
+                            Column::<Advice>::try_from(input_spread).unwrap(),
+                            0,
+                            || Ok(spread),
+                        )?;
+                        Ok(())
+                    },
+                )
             }
         }
 
         impl<F: FieldExt> Circuit<F> for MyCircuit {
-            type Configured = MyConfigured;
+            type Configured = SpreadTableConfigured;
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> MyConfigured {
-                let a = meta.advice_column();
-                let b = meta.advice_column();
-                let c = meta.advice_column();
-
-                let (lookup_inputs, lookup_table) = SpreadTable::configure(meta, a, b, c);
-
-                let message_schedule = meta.advice_column();
-                let extras = [
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                ];
-
-                // Rename these here for ease of matching the gates to the specification.
-                let _a_0 = lookup_inputs.tag;
-                let a_1 = lookup_inputs.dense;
-                let a_2 = lookup_inputs.spread;
-                let a_3 = extras[0];
-                let a_4 = extras[1];
-                let a_5 = message_schedule;
-                let a_6 = extras[2];
-                let a_7 = extras[3];
-                let a_8 = extras[4];
-                let _a_9 = extras[5];
-
-                let perm = Permutation::new(
-                    meta,
-                    &[
-                        a_1.into(),
-                        a_2.into(),
-                        a_3.into(),
-                        a_4.into(),
-                        a_5.into(),
-                        a_6.into(),
-                        a_7.into(),
-                        a_8.into(),
-                    ],
-                );
-
-                let compression = Compression::empty_configure(
-                    meta,
-                    lookup_inputs.clone(),
-                    message_schedule,
-                    extras,
-                    perm.clone(),
-                );
-
-                let message_schedule = MessageSchedule::empty_configure(
-                    meta,
-                    lookup_inputs.clone(),
-                    message_schedule,
-                    extras,
-                    perm.clone(),
-                );
-
-                MyConfigured {
-                    lookup_inputs,
-                    sha256: Table16Configured {
-                        lookup_table,
-                        message_schedule,
-                        compression,
-                    },
-                }
+            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Configured {
+                let tag = meta.advice_column();
+                let dense = meta.advice_column();
+                let spread = meta.advice_column();
+                SpreadTableConfig::<F, ()>::configure(meta, tag, dense, spread)
             }
 
             fn synthesize(
                 &self,
                 cs: &mut impl Assignment<F>,
-                configured: MyConfigured,
+                configured: Self::Configured,
             ) -> Result<(), Error> {
-                let lookup = configured.lookup_inputs.clone();
-                let mut layouter = MyLayouter::new(cs, configured)?;
+                let mut config = SpreadTableConfig {
+                    configured,
+                    layouter: &mut SingleConfigLayouter::new(cs),
+                    marker: std::marker::PhantomData,
+                };
+                config.load()?;
 
-                layouter.assign_region(
-                    || "spread_test",
-                    |mut gate| {
-                        let mut row = 0;
-                        let mut add_row = |tag, dense, spread| {
-                            gate.assign_advice(|| "tag", lookup.tag, row, || Ok(tag))?;
-                            gate.assign_advice(|| "dense", lookup.dense, row, || Ok(dense))?;
-                            gate.assign_advice(|| "spread", lookup.spread, row, || Ok(spread))?;
-                            row += 1;
-                            Ok(())
-                        };
+                // Test the first few small values.
+                config.assign_new_row(F::zero(), F::from_u64(0b000), F::from_u64(0b000000))?;
+                config.assign_new_row(F::zero(), F::from_u64(0b001), F::from_u64(0b000001))?;
+                config.assign_new_row(F::zero(), F::from_u64(0b010), F::from_u64(0b000100))?;
 
-                        // Test the first few small values.
-                        add_row(F::zero(), F::from_u64(0b000), F::from_u64(0b000000))?;
-                        add_row(F::zero(), F::from_u64(0b001), F::from_u64(0b000001))?;
-                        add_row(F::zero(), F::from_u64(0b010), F::from_u64(0b000100))?;
-                        add_row(F::zero(), F::from_u64(0b011), F::from_u64(0b000101))?;
-                        add_row(F::zero(), F::from_u64(0b100), F::from_u64(0b010000))?;
-                        add_row(F::zero(), F::from_u64(0b101), F::from_u64(0b010001))?;
+                config.assign_new_row(F::zero(), F::from_u64(0b011), F::from_u64(0b000101))?;
+                config.assign_new_row(F::zero(), F::from_u64(0b100), F::from_u64(0b010000))?;
+                config.assign_new_row(F::zero(), F::from_u64(0b101), F::from_u64(0b010001))?;
 
-                        // Test the tag boundaries:
-                        // 7-bit
-                        add_row(
-                            F::zero(),
-                            F::from_u64(0b1111111),
-                            F::from_u64(0b01010101010101),
-                        )?;
-                        add_row(
-                            F::one(),
-                            F::from_u64(0b10000000),
-                            F::from_u64(0b0100000000000000),
-                        )?;
-                        // - 10-bit
-                        add_row(
-                            F::one(),
-                            F::from_u64(0b1111111111),
-                            F::from_u64(0b01010101010101010101),
-                        )?;
-                        add_row(
-                            F::from_u64(2),
-                            F::from_u64(0b10000000000),
-                            F::from_u64(0b0100000000000000000000),
-                        )?;
-                        // - 11-bit
-                        add_row(
-                            F::from_u64(2),
-                            F::from_u64(0b11111111111),
-                            F::from_u64(0b0101010101010101010101),
-                        )?;
-                        add_row(
-                            F::from_u64(3),
-                            F::from_u64(0b100000000000),
-                            F::from_u64(0b010000000000000000000000),
-                        )?;
-                        // - 13-bit
-                        add_row(
-                            F::from_u64(3),
-                            F::from_u64(0b1111111111111),
-                            F::from_u64(0b01010101010101010101010101),
-                        )?;
-                        add_row(
-                            F::from_u64(4),
-                            F::from_u64(0b10000000000000),
-                            F::from_u64(0b0100000000000000000000000000),
-                        )?;
-                        // - 14-bit
-                        add_row(
-                            F::from_u64(4),
-                            F::from_u64(0b11111111111111),
-                            F::from_u64(0b0101010101010101010101010101),
-                        )?;
-                        add_row(
-                            F::from_u64(5),
-                            F::from_u64(0b100000000000000),
-                            F::from_u64(0b010000000000000000000000000000),
-                        )?;
+                // Test the tag boundaries:
+                // 7-bit
+                config.assign_new_row(
+                    F::zero(),
+                    F::from_u64(0b1111111),
+                    F::from_u64(0b01010101010101),
+                )?;
+                config.assign_new_row(
+                    F::one(),
+                    F::from_u64(0b10000000),
+                    F::from_u64(0b0100000000000000),
+                )?;
+                // - 10-bit
+                config.assign_new_row(
+                    F::one(),
+                    F::from_u64(0b1111111111),
+                    F::from_u64(0b01010101010101010101),
+                )?;
+                config.assign_new_row(
+                    F::from_u64(2),
+                    F::from_u64(0b10000000000),
+                    F::from_u64(0b0100000000000000000000),
+                )?;
+                // - 11-bit
+                config.assign_new_row(
+                    F::from_u64(2),
+                    F::from_u64(0b11111111111),
+                    F::from_u64(0b0101010101010101010101),
+                )?;
+                config.assign_new_row(
+                    F::from_u64(3),
+                    F::from_u64(0b100000000000),
+                    F::from_u64(0b010000000000000000000000),
+                )?;
+                // - 13-bit
+                config.assign_new_row(
+                    F::from_u64(3),
+                    F::from_u64(0b1111111111111),
+                    F::from_u64(0b01010101010101010101010101),
+                )?;
+                config.assign_new_row(
+                    F::from_u64(4),
+                    F::from_u64(0b10000000000000),
+                    F::from_u64(0b0100000000000000000000000000),
+                )?;
+                // - 14-bit
+                config.assign_new_row(
+                    F::from_u64(4),
+                    F::from_u64(0b11111111111111),
+                    F::from_u64(0b0101010101010101010101010101),
+                )?;
+                config.assign_new_row(
+                    F::from_u64(5),
+                    F::from_u64(0b100000000000000),
+                    F::from_u64(0b010000000000000000000000000000),
+                )?;
 
-                        // Test random lookup values
-                        let mut rng = rand::thread_rng();
+                // Test random lookup values
+                let mut rng = rand::thread_rng();
 
-                        for _ in 0..10 {
-                            let word: u16 = rng.gen();
-                            add_row(
-                                F::from_u64(get_tag(word).into()),
-                                F::from_u64(word.into()),
-                                F::from_u64(interleave_u16_with_zeros(word).into()),
-                            )?;
-                        }
+                for _ in 0..10 {
+                    let word: u16 = rng.gen();
+                    config.assign_new_row(
+                        F::from_u64(get_tag(word).into()),
+                        F::from_u64(word.into()),
+                        F::from_u64(interleave_u16_with_zeros(word).into()),
+                    )?;
+                }
 
-                        Ok(())
-                    },
-                )
+                Ok(())
             }
         }
 

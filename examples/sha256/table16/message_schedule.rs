@@ -1,13 +1,10 @@
 use std::convert::TryInto;
 
-use super::{
-    super::BLOCK_SIZE, BlockWord, CellValue16, SpreadInputs, Table16Assignment, Table16Config,
-    ROUNDS,
-};
+use super::{super::BLOCK_SIZE, BlockWord, CellValue16, SpreadInputs, Table16Assignment, ROUNDS};
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Cell, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Permutation},
+    circuit::{Cell, Config, Layouter, Region},
+    plonk::{Advice, Any, Column, ConstraintSystem, Error, Fixed, Permutation},
     poly::Rotation,
 };
 
@@ -30,8 +27,8 @@ pub(super) struct MessageWord {
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct MessageSchedule {
-    lookup: SpreadInputs,
+pub(super) struct MessageScheduleConfigured {
+    lookup_inputs: SpreadInputs,
     message_schedule: Column<Advice>,
     extras: [Column<Advice>; 6],
 
@@ -56,9 +53,86 @@ pub(super) struct MessageSchedule {
     perm: Permutation,
 }
 
-impl<F: FieldExt> Table16Assignment<F> for MessageSchedule {}
+impl MessageScheduleConfigured {
+    pub fn columns(&self) -> Vec<Column<Any>> {
+        vec![
+            self.lookup_inputs.tag.into(),
+            self.lookup_inputs.spread.into(),
+            self.lookup_inputs.dense.into(),
+            self.message_schedule.into(),
+            self.extras[0].into(),
+            self.extras[1].into(),
+            self.extras[2].into(),
+            self.extras[3].into(),
+            self.extras[4].into(),
+            self.extras[5].into(),
+            self.s_word.into(),
+            self.s_decompose_0.into(),
+            self.s_decompose_1.into(),
+            self.s_decompose_2.into(),
+            self.s_decompose_3.into(),
+            self.s_lower_sigma_0.into(),
+            self.s_lower_sigma_1.into(),
+            self.s_lower_sigma_0_v2.into(),
+            self.s_lower_sigma_1_v2.into(),
+        ]
+    }
+}
 
-impl MessageSchedule {
+pub(super) struct MessageScheduleConfig<'a, F: FieldExt, L: Layouter<F>> {
+    pub configured: MessageScheduleConfigured,
+    pub layouter: &'a mut L,
+    pub marker: std::marker::PhantomData<F>,
+}
+
+impl<F: FieldExt, L: Layouter<F>> Config for MessageScheduleConfig<'_, F, L> {
+    type Root = Self;
+    type Configured = MessageScheduleConfigured;
+    type Loaded = ();
+    type Field = F;
+    type Layouter = L;
+
+    fn get_root(&mut self) -> &mut Self::Root {
+        self
+    }
+
+    fn configured(&self) -> &Self::Configured {
+        &self.configured
+    }
+
+    fn loaded(&self) -> &Self::Loaded {
+        &()
+    }
+
+    fn load(&mut self) -> Result<(), halo2::plonk::Error> {
+        // None of the instructions implemented by this chip have any fixed state.
+        // But if we required e.g. a lookup table, this is where we would load it.
+        Ok(())
+    }
+
+    fn layouter(&mut self) -> &mut Self::Layouter {
+        self.layouter
+    }
+
+    fn push_namespace<NR, N>(&mut self, _name_fn: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // TODO
+    }
+
+    /// Exits out of the existing namespace.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    fn pop_namespace(&mut self, _gadget_name: Option<String>) {
+        // TODO
+    }
+}
+
+impl<F: FieldExt, L: Layouter<F>> Table16Assignment<F, L> for MessageScheduleConfig<'_, F, L> {}
+
+impl<F: FieldExt, L: Layouter<F>> MessageScheduleConfig<'_, F, L> {
     /// Configures the message schedule.
     ///
     /// `message_schedule` is the column into which the message schedule will be placed.
@@ -69,13 +143,13 @@ impl MessageSchedule {
     /// gates, and will not place any constraints on (such as lookup constraints) outside
     /// itself.
     #[allow(clippy::many_single_char_names)]
-    pub(super) fn configure<F: FieldExt>(
+    pub(super) fn configure(
         meta: &mut ConstraintSystem<F>,
-        lookup: SpreadInputs,
+        lookup_inputs: SpreadInputs,
         message_schedule: Column<Advice>,
         extras: [Column<Advice>; 6],
         perm: Permutation,
-    ) -> Self {
+    ) -> MessageScheduleConfigured {
         // Create fixed columns for the selectors we will require.
         let s_word = meta.fixed_column();
         let s_decompose_0 = meta.fixed_column();
@@ -88,9 +162,9 @@ impl MessageSchedule {
         let s_lower_sigma_1_v2 = meta.fixed_column();
 
         // Rename these here for ease of matching the gates to the specification.
-        let a_0 = lookup.tag;
-        let a_1 = lookup.dense;
-        let a_2 = lookup.spread;
+        let a_0 = lookup_inputs.tag;
+        let a_1 = lookup_inputs.dense;
+        let a_2 = lookup_inputs.spread;
         let a_3 = extras[0];
         let a_4 = extras[1];
         let a_5 = message_schedule;
@@ -290,8 +364,8 @@ impl MessageSchedule {
             .0
         });
 
-        MessageSchedule {
-            lookup,
+        MessageScheduleConfigured {
+            lookup_inputs,
             message_schedule,
             extras,
             s_word,
@@ -308,17 +382,17 @@ impl MessageSchedule {
     }
 
     #[allow(clippy::type_complexity)]
-    pub(super) fn process<F: FieldExt>(
-        &self,
-        layouter: &mut impl Layouter<Table16Config<F>>,
+    pub(super) fn process(
+        &mut self,
         input: [BlockWord; BLOCK_SIZE],
     ) -> Result<([MessageWord; ROUNDS], [(CellValue16, CellValue16); ROUNDS]), Error> {
+        let configured = self.configured().clone();
         let mut w = Vec::<MessageWord>::with_capacity(ROUNDS);
         let mut w_halves = Vec::<(CellValue16, CellValue16)>::with_capacity(ROUNDS);
-
-        layouter.assign_region(
+        let region_index = self.layouter().assign_new_region(
+            &configured.columns(),
             || "process message block",
-            |mut region| {
+            |mut region: Region<'_, Self>| {
                 w = Vec::<MessageWord>::with_capacity(ROUNDS);
                 w_halves = Vec::<(CellValue16, CellValue16)>::with_capacity(ROUNDS);
 
@@ -327,13 +401,13 @@ impl MessageSchedule {
                     let row = get_word_row(index);
                     region.assign_fixed(
                         || "s_decompose_1",
-                        self.s_decompose_1,
+                        configured.s_decompose_1,
                         row,
                         || Ok(F::one()),
                     )?;
                     region.assign_fixed(
                         || "s_lower_sigma_0",
-                        self.s_lower_sigma_0,
+                        configured.s_lower_sigma_0,
                         row + 3,
                         || Ok(F::one()),
                     )?;
@@ -343,19 +417,19 @@ impl MessageSchedule {
                     let row = get_word_row(index);
                     region.assign_fixed(
                         || "s_decompose_2",
-                        self.s_decompose_2,
+                        configured.s_decompose_2,
                         row,
                         || Ok(F::one()),
                     )?;
                     region.assign_fixed(
                         || "s_lower_sigma_0_v2",
-                        self.s_lower_sigma_0_v2,
+                        configured.s_lower_sigma_0_v2,
                         row + 3,
                         || Ok(F::one()),
                     )?;
                     region.assign_fixed(
                         || "s_lower_sigma_1_v2",
-                        self.s_lower_sigma_1_v2,
+                        configured.s_lower_sigma_1_v2,
                         row + SIGMA_0_V2_ROWS + 3,
                         || Ok(F::one()),
                     )?;
@@ -363,7 +437,7 @@ impl MessageSchedule {
                     let new_word_idx = index + 2;
                     region.assign_fixed(
                         || "s_word",
-                        self.s_word,
+                        configured.s_word,
                         get_word_row(new_word_idx - 16) + 1,
                         || Ok(F::one()),
                     )?;
@@ -373,13 +447,13 @@ impl MessageSchedule {
                     let row = get_word_row(index);
                     region.assign_fixed(
                         || "s_decompose_3",
-                        self.s_decompose_3,
+                        configured.s_decompose_3,
                         row,
                         || Ok(F::one()),
                     )?;
                     region.assign_fixed(
                         || "s_lower_sigma_1",
-                        self.s_lower_sigma_1,
+                        configured.s_lower_sigma_1,
                         row + 3,
                         || Ok(F::one()),
                     )?;
@@ -387,7 +461,7 @@ impl MessageSchedule {
                     let new_word_idx = index + 2;
                     region.assign_fixed(
                         || "s_word",
-                        self.s_word,
+                        configured.s_word,
                         get_word_row(new_word_idx - 16) + 1,
                         || Ok(F::one()),
                     )?;
@@ -397,59 +471,58 @@ impl MessageSchedule {
                     let row = get_word_row(index);
                     region.assign_fixed(
                         || "s_decompose_0",
-                        self.s_decompose_0,
+                        configured.s_decompose_0,
                         row,
                         || Ok(F::one()),
                     )?;
                 }
 
-                // Assign W[0..16]
-                for (i, word) in input.iter().enumerate() {
-                    let (var, halves) =
-                        self.assign_word_and_halves(&mut region, word.value.unwrap(), i)?;
-                    w.push(MessageWord {
-                        var,
-                        value: word.value,
-                    });
-                    w_halves.push(halves);
-                }
-
-                // Returns the output of sigma_0 on W_[1..14]
-                let lower_sigma_0_output = self.assign_subregion1(&mut region, &input[1..14])?;
-
-                // sigma_0_v2 and sigma_1_v2 on W_[14..49]
-                // Returns the output of sigma_0_v2 on W_[36..49], to be used in subregion3
-                let lower_sigma_0_v2_output = self.assign_subregion2(
-                    &mut region,
-                    lower_sigma_0_output,
-                    &mut w,
-                    &mut w_halves,
+                // Repeat last assignment to get region index
+                let cell = region.assign_fixed(
+                    || "s_decompose_0",
+                    configured.s_decompose_0,
+                    get_word_row(63),
+                    || Ok(F::one()),
                 )?;
 
-                // sigma_1 v1 on W[49..62]
-                self.assign_subregion3(
-                    &mut region,
-                    lower_sigma_0_v2_output,
-                    &mut w,
-                    &mut w_halves,
-                )?;
-
-                Ok(())
+                Ok(cell.region_index())
             },
         )?;
+
+        // Assign W[0..16]
+        for (i, word) in input.iter().enumerate() {
+            let (var, halves) =
+                self.assign_word_and_halves(region_index, word.value.unwrap(), i)?;
+            w.push(MessageWord {
+                var,
+                value: word.value,
+            });
+            w_halves.push(halves);
+        }
+
+        // Returns the output of sigma_0 on W_[1..14]
+        let lower_sigma_0_output = self.assign_subregion1(region_index, &input[1..14])?;
+
+        // sigma_0_v2 and sigma_1_v2 on W_[14..49]
+        // Returns the output of sigma_0_v2 on W_[36..49], to be used in subregion3
+        let lower_sigma_0_v2_output =
+            self.assign_subregion2(region_index, lower_sigma_0_output, &mut w, &mut w_halves)?;
+
+        // sigma_1 v1 on W[49..62]
+        self.assign_subregion3(region_index, lower_sigma_0_v2_output, &mut w, &mut w_halves)?;
 
         Ok((w.try_into().unwrap(), w_halves.try_into().unwrap()))
     }
 
     /// Empty configuration without gates. Useful for fast testing
     #[cfg(test)]
-    pub(super) fn empty_configure<F: FieldExt>(
+    pub(super) fn empty_configure(
         meta: &mut ConstraintSystem<F>,
-        lookup: SpreadInputs,
+        lookup_inputs: SpreadInputs,
         message_schedule: Column<Advice>,
         extras: [Column<Advice>; 6],
         perm: Permutation,
-    ) -> Self {
+    ) -> MessageScheduleConfigured {
         // Create fixed columns for the selectors we will require.
         let s_word = meta.fixed_column();
         let s_decompose_0 = meta.fixed_column();
@@ -461,8 +534,8 @@ impl MessageSchedule {
         let s_lower_sigma_0_v2 = meta.fixed_column();
         let s_lower_sigma_1_v2 = meta.fixed_column();
 
-        MessageSchedule {
-            lookup,
+        MessageScheduleConfigured {
+            lookup_inputs,
             message_schedule,
             extras,
             s_word,
@@ -482,16 +555,17 @@ impl MessageSchedule {
 #[cfg(test)]
 mod tests {
     use super::super::{
-        super::BLOCK_SIZE, BlockWord, Compression, SpreadTable, Table16Config, Table16Configured,
+        super::BLOCK_SIZE, BlockWord, SpreadTableConfig, Table16Config, Table16Configured,
     };
-    use super::{schedule_util::*, MessageSchedule};
+    use super::{schedule_util::*, MessageScheduleConfig};
     use halo2::{
         arithmetic::FieldExt,
-        circuit::{layouter, Layouter},
+        circuit::{layouter, Config},
         dev::MockProver,
         pasta::Fp,
-        plonk::{Assignment, Circuit, ConstraintSystem, Error, Permutation},
+        plonk::{Assignment, Circuit, ConstraintSystem, Error},
     };
+    use std::marker::PhantomData;
 
     #[test]
     fn message_schedule() {
@@ -501,64 +575,7 @@ mod tests {
             type Configured = Table16Configured;
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Configured {
-                let a = meta.advice_column();
-                let b = meta.advice_column();
-                let c = meta.advice_column();
-
-                let (lookup_inputs, lookup_table) = SpreadTable::configure(meta, a, b, c);
-
-                let message_schedule = meta.advice_column();
-                let extras = [
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                ];
-
-                // Rename these here for ease of matching the gates to the specification.
-                let _a_0 = lookup_inputs.tag;
-                let a_1 = lookup_inputs.dense;
-                let a_2 = lookup_inputs.spread;
-                let a_3 = extras[0];
-                let a_4 = extras[1];
-                let a_5 = message_schedule;
-                let a_6 = extras[2];
-                let a_7 = extras[3];
-                let a_8 = extras[4];
-                let _a_9 = extras[5];
-
-                let perm = Permutation::new(
-                    meta,
-                    &[
-                        a_1.into(),
-                        a_2.into(),
-                        a_3.into(),
-                        a_4.into(),
-                        a_5.into(),
-                        a_6.into(),
-                        a_7.into(),
-                        a_8.into(),
-                    ],
-                );
-
-                let compression = Compression::empty_configure(
-                    meta,
-                    lookup_inputs.clone(),
-                    message_schedule,
-                    extras,
-                    perm.clone(),
-                );
-
-                let message_schedule =
-                    MessageSchedule::configure(meta, lookup_inputs, message_schedule, extras, perm);
-
-                Table16Configured {
-                    lookup_table,
-                    message_schedule,
-                    compression,
-                }
+                Table16Config::<F, ()>::configure(meta)
             }
 
             fn synthesize(
@@ -566,20 +583,35 @@ mod tests {
                 cs: &mut impl Assignment<F>,
                 configured: Self::Configured,
             ) -> Result<(), Error> {
-                let mut layouter =
-                    layouter::SingleConfigLayouter::<Table16Config<F>, _>::new(cs, configured)?;
+                let mut config = Table16Config {
+                    compression_region_idx: None,
+                    configured,
+                    layouter: &mut layouter::SingleConfigLayouter::new(cs),
+                    _marker: std::marker::PhantomData,
+                };
 
-                // Load table
-                let table = layouter.configured().lookup_table.clone();
-                table.load(&mut layouter)?;
+                // Load lookup table
+                let lookup_table_configured = config.configured().lookup_table.clone();
+                let mut lookup_table_config = SpreadTableConfig {
+                    configured: lookup_table_configured,
+                    layouter: config.layouter(),
+                    marker: PhantomData,
+                };
+                lookup_table_config.load()?;
 
                 // Provide input
                 // Test vector: "abc"
                 let inputs: [BlockWord; BLOCK_SIZE] = get_msg_schedule_test_input();
 
                 // Run message_scheduler to get W_[0..64]
-                let message_schedule = layouter.configured().message_schedule.clone();
-                let (w, _) = message_schedule.process(&mut layouter, inputs)?;
+                let message_schedule_configured = config.configured().message_schedule.clone();
+                let mut message_schedule_config = MessageScheduleConfig {
+                    configured: message_schedule_configured,
+                    layouter: config.layouter(),
+                    marker: PhantomData,
+                };
+
+                let (w, _) = message_schedule_config.process(inputs)?;
                 for (word, test_word) in w.iter().zip(MSG_SCHEDULE_TEST_OUTPUT.iter()) {
                     let word = word.value.unwrap();
                     assert_eq!(word, *test_word);

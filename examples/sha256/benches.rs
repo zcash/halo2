@@ -1,7 +1,7 @@
 use halo2::{
     arithmetic::FieldExt,
+    circuit::layouter,
     circuit::Config,
-    circuit::{layouter, Layouter},
     pasta::EqAffine,
     plonk::{
         create_proof, keygen_pk, keygen_vk, verify_proof, Assignment, Circuit, ConstraintSystem,
@@ -28,18 +28,22 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     impl<F: FieldExt> Circuit<F> for MyCircuit {
         type Configured = Table16Configured;
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> Table16Configured {
-            Table16Config::configure(meta)
+        fn configure(meta: &mut ConstraintSystem<F>) -> Self::Configured {
+            Table16Config::<F, ()>::configure(meta)
         }
 
         fn synthesize(
             &self,
             cs: &mut impl Assignment<F>,
-            configured: Table16Configured,
+            configured: Self::Configured,
         ) -> Result<(), Error> {
-            let mut layouter =
-                layouter::SingleConfigLayouter::<Table16Config<F>, _>::new(cs, configured)?;
-            Table16Config::load(&mut layouter)?;
+            let mut config = Table16Config {
+                compression_region_idx: None,
+                configured,
+                layouter: &mut layouter::SingleConfigLayouter::new(cs),
+                _marker: std::marker::PhantomData,
+            };
+            config.load()?;
 
             // Test vector: "abc"
             let test_input = [
@@ -66,7 +70,8 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
                 input.extend_from_slice(&test_input);
             }
 
-            Sha256::digest(layouter.namespace(|| "test vector"), &input)?;
+            let mut table16_config = Sha256::new(&mut config)?;
+            table16_config.update(&mut config, &input)?;
 
             Ok(())
         }
