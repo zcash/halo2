@@ -99,9 +99,7 @@ impl<'a, F: FieldExt, CS: Assignment<F>> SingleConfigLayouter<'a, F, CS> {
     }
 }
 
-impl<'a, F: FieldExt, CS: Assignment<F>> Layouter for SingleConfigLayouter<'a, F, CS> {
-    type Field = F;
-
+impl<'a, F: FieldExt, CS: Assignment<F>> Layouter<F> for SingleConfigLayouter<'a, F, CS> {
     fn assign_region<A, AR, N, NR, C: Config<Field = F>>(
         &mut self,
         name: N,

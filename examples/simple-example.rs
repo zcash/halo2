@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{layouter::SingleConfigLayouter, Cell, Config, DummyLayouter, Layouter, Region},
+    circuit::{layouter::SingleConfigLayouter, Cell, Config, Layouter, Region},
     dev::VerifyFailure,
     plonk::{
         Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Instance, Permutation,
@@ -32,7 +32,7 @@ trait NumericInstructions: Config {
 // ANCHOR: chip
 /// The chip that will implement our instructions! Chips do not store any persistent
 /// state themselves, and usually only contain type markers if necessary.
-struct FieldConfig<'a, F: FieldExt, L: Layouter<Field = F>> {
+struct FieldConfig<'a, F: FieldExt, L: Layouter<F>> {
     configured: FieldConfigured,
     layouter: &'a mut L,
     marker: PhantomData<F>,
@@ -65,7 +65,7 @@ struct FieldConfigured {
     s_pub: Selector,
 }
 
-impl<F: FieldExt, L: Layouter<Field = F>> FieldConfig<'_, F, L> {
+impl<F: FieldExt, L: Layouter<F>> FieldConfig<'_, F, L> {
     fn configure(
         meta: &mut ConstraintSystem<F>,
         advice: [Column<Advice>; 2],
@@ -132,7 +132,7 @@ impl<F: FieldExt, L: Layouter<Field = F>> FieldConfig<'_, F, L> {
 // ANCHOR_END: chip-config
 
 // ANCHOR: chip-impl
-impl<F: FieldExt, L: Layouter<Field = F>> Config for FieldConfig<'_, F, L> {
+impl<F: FieldExt, L: Layouter<F>> Config for FieldConfig<'_, F, L> {
     type Root = Self;
     type Configured = FieldConfigured;
     type Loaded = ();
@@ -186,7 +186,7 @@ struct Number<F: FieldExt> {
     value: Option<F>,
 }
 
-impl<F: FieldExt, L: Layouter<Field = F>> NumericInstructions for FieldConfig<'_, F, L> {
+impl<F: FieldExt, L: Layouter<F>> NumericInstructions for FieldConfig<'_, F, L> {
     type Num = Number<F>;
 
     fn load_private(&mut self, value: Option<Self::Field>) -> Result<Self::Num, Error> {
@@ -305,7 +305,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         // We also need an instance column to store public inputs.
         let instance = meta.instance_column();
 
-        FieldConfig::<F, DummyLayouter<F>>::configure(meta, advice, instance)
+        FieldConfig::<F, ()>::configure(meta, advice, instance)
     }
 
     fn synthesize(

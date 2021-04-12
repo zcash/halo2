@@ -37,7 +37,7 @@ pub trait Config: Sized {
     type Field: FieldExt;
 
     /// Layouter type
-    type Layouter: Layouter<Field = Self::Field>;
+    type Layouter: Layouter<Self::Field>;
 
     /// Access `Configured`
     fn configured(&self) -> &Self::Configured;
@@ -210,10 +210,7 @@ impl<'r, C: Config> Region<'r, C> {
 ///
 /// A particular concrete layout strategy will implement this trait for each chip it
 /// supports.
-pub trait Layouter {
-    /// A Layouter can only support configs that use the same field.
-    type Field: FieldExt;
-
+pub trait Layouter<F: FieldExt> {
     /// Assign a region of gates to an absolute row number.
     ///
     /// Inside the closure, the chip may freely use relative offsets; the `Layouter` will
@@ -225,7 +222,7 @@ pub trait Layouter {
     ///     region.assign_advice(self.configured.a, offset, || { Some(value)});
     /// });
     /// ```
-    fn assign_region<A, AR, N, NR, C: Config<Field = Self::Field>>(
+    fn assign_region<A, AR, N, NR, C: Config<Field = F>>(
         &mut self,
         name: N,
         assignment: A,
@@ -236,15 +233,8 @@ pub trait Layouter {
         NR: Into<String>;
 }
 
-#[derive(Debug)]
-/// Used only to make types check out.
-pub struct DummyLayouter<F: FieldExt> {
-    marker: PhantomData<F>,
-}
-
-impl<F: FieldExt> Layouter for DummyLayouter<F> {
-    type Field = F;
-    fn assign_region<A, AR, N, NR, C: Config<Field = Self::Field>>(
+impl<F: FieldExt> Layouter<F> for () {
+    fn assign_region<A, AR, N, NR, C: Config>(
         &mut self,
         _name: N,
         _assignment: A,
@@ -254,7 +244,6 @@ impl<F: FieldExt> Layouter for DummyLayouter<F> {
         N: Fn() -> NR,
         NR: Into<String>,
     {
-        // We shouldn't call this on a `DummyLayouter`.
         Err(Error::SynthesisError)
     }
 }

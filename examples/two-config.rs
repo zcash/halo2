@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{layouter::SingleConfigLayouter, Cell, Config, DummyLayouter, Layouter, Region},
+    circuit::{layouter::SingleConfigLayouter, Cell, Config, Layouter, Region},
     dev::VerifyFailure,
     plonk::{
         Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Instance, Permutation,
@@ -60,13 +60,13 @@ trait AddInstructions: Config {
 // ANCHOR: config
 /// The config that will implement our instructions! Configs do not store any persistent
 /// state themselves, and usually only contain type markers if necessary.
-struct FieldConfig<'a, F: FieldExt, L: Layouter> {
+struct FieldConfig<'a, F: FieldExt, L: Layouter<F>> {
     configured: FieldConfigured,
     layouter: &'a mut L,
     marker: PhantomData<F>,
 }
 
-impl<F: FieldExt, L: Layouter<Field = F>> Config for FieldConfig<'_, F, L> {
+impl<F: FieldExt, L: Layouter<F>> Config for FieldConfig<'_, F, L> {
     type Root = Self;
     type Configured = FieldConfigured;
     type Loaded = ();
@@ -125,7 +125,7 @@ struct FieldConfigured {
     mul_configured: MulConfigured,
 }
 
-impl<F: FieldExt, L: Layouter> FieldConfig<'_, F, L> {
+impl<F: FieldExt, L: Layouter<F>> FieldConfig<'_, F, L> {
     fn configure(
         meta: &mut ConstraintSystem<F>,
         advice: [Column<Advice>; 2],
@@ -170,7 +170,7 @@ impl<F: FieldExt, L: Layouter> FieldConfig<'_, F, L> {
 // ANCHOR_END: configured
 
 // ANCHOR: instructions-impl
-impl<F: FieldExt, L: Layouter<Field = F>> NumericInstructions for FieldConfig<'_, F, L> {
+impl<F: FieldExt, L: Layouter<F>> NumericInstructions for FieldConfig<'_, F, L> {
     type Num = Number<F>;
 
     fn load_private(&mut self, value: Option<Self::Field>) -> Result<Self::Num, Error> {
@@ -238,13 +238,13 @@ impl<F: FieldExt, L: Layouter<Field = F>> NumericInstructions for FieldConfig<'_
 
 // ANCHOR: add-config
 /// The config that will implement AddInstructions.
-struct AddConfig<'a, F: FieldExt, L: Layouter> {
+struct AddConfig<'a, F: FieldExt, L: Layouter<F>> {
     configured: AddConfigured,
     layouter: &'a mut L,
     marker: PhantomData<F>,
 }
 
-impl<F: FieldExt, L: Layouter<Field = F>> Config for AddConfig<'_, F, L> {
+impl<F: FieldExt, L: Layouter<F>> Config for AddConfig<'_, F, L> {
     type Root = Self;
     type Configured = AddConfigured;
     type Loaded = ();
@@ -307,7 +307,7 @@ struct AddConfigured {
     s_add: Selector,
 }
 
-impl<F: FieldExt, L: Layouter> AddConfig<'_, F, L> {
+impl<F: FieldExt, L: Layouter<F>> AddConfig<'_, F, L> {
     fn configure(
         meta: &mut ConstraintSystem<F>,
         perm: Permutation,
@@ -351,7 +351,7 @@ impl<F: FieldExt, L: Layouter> AddConfig<'_, F, L> {
 // ANCHOR_END: add-configured
 
 // ANCHOR: add-instructions-impl
-impl<F: FieldExt, L: Layouter<Field = F>> AddInstructions for AddConfig<'_, F, L> {
+impl<F: FieldExt, L: Layouter<F>> AddInstructions for AddConfig<'_, F, L> {
     type Num = Number<F>;
 
     fn add(&mut self, a: Self::Num, b: Self::Num) -> Result<Self::Num, Error> {
@@ -408,13 +408,13 @@ impl<F: FieldExt, L: Layouter<Field = F>> AddInstructions for AddConfig<'_, F, L
 
 // ANCHOR: mul-config
 /// The config that will implement MulInstructions.
-struct MulConfig<'a, F: FieldExt, L: Layouter> {
+struct MulConfig<'a, F: FieldExt, L: Layouter<F>> {
     configured: MulConfigured,
     layouter: &'a mut L,
     marker: PhantomData<F>,
 }
 
-impl<F: FieldExt, L: Layouter<Field = F>> Config for MulConfig<'_, F, L> {
+impl<F: FieldExt, L: Layouter<F>> Config for MulConfig<'_, F, L> {
     type Root = Self;
     type Configured = MulConfigured;
     type Loaded = ();
@@ -477,7 +477,7 @@ struct MulConfigured {
     s_mul: Selector,
 }
 
-impl<F: FieldExt, L: Layouter> MulConfig<'_, F, L> {
+impl<F: FieldExt, L: Layouter<F>> MulConfig<'_, F, L> {
     fn configure(
         meta: &mut ConstraintSystem<F>,
         perm: Permutation,
@@ -521,7 +521,7 @@ impl<F: FieldExt, L: Layouter> MulConfig<'_, F, L> {
 // ANCHOR_END: mul-configured
 
 // ANCHOR: mul-instructions-impl
-impl<F: FieldExt, L: Layouter<Field = F>> MulInstructions for MulConfig<'_, F, L> {
+impl<F: FieldExt, L: Layouter<F>> MulInstructions for MulConfig<'_, F, L> {
     type Num = Number<F>;
 
     fn mul(&mut self, a: Self::Num, b: Self::Num) -> Result<Self::Num, Error> {
@@ -597,7 +597,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         // We also need an instance column to store public inputs.
         let instance = meta.instance_column();
 
-        FieldConfig::<F, DummyLayouter<F>>::configure(meta, advice, instance)
+        FieldConfig::<F, ()>::configure(meta, advice, instance)
     }
 
     fn synthesize(
