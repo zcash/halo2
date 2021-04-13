@@ -2,11 +2,12 @@ use ff::Field;
 
 use crate::{
     arithmetic::CurveAffine,
-    plonk::{ChallengeX, ChallengeY, Error, VerifyingKey},
+    plonk::{Error, VerifyingKey},
     poly::multiopen::VerifierQuery,
-    transcript::{read_n_points, read_n_scalars, TranscriptRead},
+    transcript::{read_n_points, read_n_scalars, ChallengeSpace, TranscriptRead},
 };
 
+use super::super::{ChallengeX, ChallengeY};
 use super::Argument;
 
 pub struct Committed<C: CurveAffine> {
@@ -19,7 +20,7 @@ pub struct Evaluated<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Argument<C> {
-    pub(in crate::plonk) fn read_commitments<T: TranscriptRead<C>>(
+    pub(in crate::plonk) fn read_commitments<S: ChallengeSpace<C>, T: TranscriptRead<C, S>>(
         vk: &VerifyingKey<C>,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
@@ -32,7 +33,7 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(in crate::plonk) fn evaluate<T: TranscriptRead<C>>(
+    pub(in crate::plonk) fn evaluate<S: ChallengeSpace<C>, T: TranscriptRead<C, S>>(
         self,
         transcript: &mut T,
     ) -> Result<Evaluated<C>, Error> {

@@ -1,13 +1,13 @@
 use ff::Field;
 use std::iter;
 
-use super::super::circuit::Any;
+use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
 use super::{Argument, VerifyingKey};
 use crate::{
     arithmetic::{CurveAffine, FieldExt},
-    plonk::{self, ChallengeBeta, ChallengeGamma, ChallengeX, Error},
+    plonk::{self, Error},
     poly::{multiopen::VerifierQuery, Rotation},
-    transcript::TranscriptRead,
+    transcript::{ChallengeSpace, TranscriptRead},
 };
 
 pub struct Committed<C: CurveAffine> {
@@ -22,7 +22,11 @@ pub struct Evaluated<C: CurveAffine> {
 }
 
 impl Argument {
-    pub(crate) fn read_product_commitment<C: CurveAffine, T: TranscriptRead<C>>(
+    pub(crate) fn read_product_commitment<
+        C: CurveAffine,
+        S: ChallengeSpace<C>,
+        T: TranscriptRead<C, S>,
+    >(
         &self,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
@@ -37,7 +41,7 @@ impl Argument {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(crate) fn evaluate<T: TranscriptRead<C>>(
+    pub(crate) fn evaluate<S: ChallengeSpace<C>, T: TranscriptRead<C, S>>(
         self,
         vkey: &VerifyingKey<C>,
         transcript: &mut T,

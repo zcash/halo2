@@ -306,7 +306,7 @@ fn test_opening_proof() {
     use crate::arithmetic::{eval_polynomial, FieldExt};
     use crate::pasta::{EpAffine, Fq};
     use crate::transcript::{
-        Blake2bRead, Blake2bWrite, ChallengeScalar, Transcript, TranscriptRead, TranscriptWrite,
+        Blake2bRead, Blake2bWrite, ChallengeScalarEndo, Transcript, TranscriptRead, TranscriptWrite,
     };
 
     let params = Params::<EpAffine>::new(K);
@@ -326,9 +326,10 @@ fn test_opening_proof() {
 
     let p = params.commit(&px, blind).to_affine();
 
-    let mut transcript = Blake2bWrite::<Vec<u8>, EpAffine>::init(vec![]);
+    let mut transcript =
+        Blake2bWrite::<Vec<u8>, EpAffine, ChallengeScalarEndo<EpAffine>>::init(vec![]);
     transcript.write_point(p).unwrap();
-    let x = ChallengeScalar::<_, ()>::get(&mut transcript);
+    let x = transcript.squeeze_challenge_scalar::<()>();
     // Evaluate the polynomial
     let v = eval_polynomial(&px, *x);
     transcript.write_scalar(v).unwrap();
@@ -340,10 +341,11 @@ fn test_opening_proof() {
     };
 
     // Verify the opening proof
-    let mut transcript = Blake2bRead::<&[u8], EpAffine>::init(&proof[..]);
+    let mut transcript =
+        Blake2bRead::<&[u8], EpAffine, ChallengeScalarEndo<EpAffine>>::init(&proof[..]);
     let p_prime = transcript.read_point().unwrap();
     assert_eq!(p, p_prime);
-    let x_prime = ChallengeScalar::<_, ()>::get(&mut transcript);
+    let x_prime = transcript.squeeze_challenge_scalar::<()>();
     assert_eq!(*x, *x_prime);
     let v_prime = transcript.read_scalar().unwrap();
     assert_eq!(v, v_prime);

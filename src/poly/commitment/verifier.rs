@@ -3,7 +3,7 @@ use group::Curve;
 
 use super::super::Error;
 use super::{Params, MSM};
-use crate::transcript::{Challenge, ChallengeScalar, TranscriptRead};
+use crate::transcript::{Challenge, ChallengeSpace, TranscriptRead};
 
 use crate::arithmetic::{best_multiexp, BatchInvert, CurveAffine};
 
@@ -64,7 +64,7 @@ impl<'a, C: CurveAffine> Guard<'a, C> {
 /// Checks to see if the proof represented within `transcript` is valid, and a
 /// point `x` that the polynomial commitment `P` opens purportedly to the value
 /// `v`. The provided `msm` should evaluate to the commitment `P` being opened.
-pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
+pub fn verify_proof<'a, C: CurveAffine, S: ChallengeSpace<C>, T: TranscriptRead<C, S>>(
     params: &'a Params<C>,
     mut msm: MSM<'a, C>,
     transcript: &mut T,
@@ -78,10 +78,11 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
     msm.add_constant_term(-v);
     let s_poly_commitment = transcript.read_point().map_err(|_| Error::OpeningError)?;
 
-    let iota = *ChallengeScalar::<C, ()>::get(transcript);
+    let iota = *transcript.squeeze_challenge_scalar::<()>();
+
     msm.append_term(iota, s_poly_commitment);
 
-    let z = *ChallengeScalar::<C, ()>::get(transcript);
+    let z = *transcript.squeeze_challenge_scalar::<()>();
 
     let mut rounds = vec![];
     for _ in 0..k {
@@ -89,8 +90,8 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         let l = transcript.read_point().map_err(|_| Error::OpeningError)?;
         let r = transcript.read_point().map_err(|_| Error::OpeningError)?;
 
-        let challenge_packed = Challenge::get(transcript);
-        let challenge = *ChallengeScalar::<C, ()>::from(challenge_packed);
+        let challenge_packed = transcript.squeeze_challenge_128();
+        let challenge = *transcript.to_challenge_scalar::<()>(challenge_packed);
 
         rounds.push((
             l,

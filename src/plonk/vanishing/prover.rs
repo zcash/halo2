@@ -1,15 +1,16 @@
 use group::Curve;
 
+use super::super::{ChallengeX, ChallengeY};
 use super::Argument;
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine, FieldExt},
-    plonk::{ChallengeX, ChallengeY, Error},
+    plonk::Error,
     poly::{
         commitment::{Blind, Params},
         multiopen::ProverQuery,
         Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial,
     },
-    transcript::TranscriptWrite,
+    transcript::{ChallengeSpace, TranscriptWrite},
 };
 
 pub(in crate::plonk) struct Constructed<C: CurveAffine> {
@@ -22,7 +23,7 @@ pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Argument<C> {
-    pub(in crate::plonk) fn construct<T: TranscriptWrite<C>>(
+    pub(in crate::plonk) fn construct<S: ChallengeSpace<C>, T: TranscriptWrite<C, S>>(
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
         expressions: impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
@@ -68,7 +69,7 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(in crate::plonk) fn evaluate<T: TranscriptWrite<C>>(
+    pub(in crate::plonk) fn evaluate<S: ChallengeSpace<C>, T: TranscriptWrite<C, S>>(
         self,
         x: ChallengeX<C>,
         transcript: &mut T,

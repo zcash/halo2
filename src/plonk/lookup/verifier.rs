@@ -1,12 +1,14 @@
 use std::iter;
 
-use super::super::circuit::Expression;
+use super::super::{
+    circuit::Expression, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
+};
 use super::Argument;
 use crate::{
     arithmetic::{CurveAffine, FieldExt},
-    plonk::{ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error, VerifyingKey},
+    plonk::{Error, VerifyingKey},
     poly::{multiopen::VerifierQuery, Rotation},
-    transcript::TranscriptRead,
+    transcript::{ChallengeSpace, TranscriptRead},
 };
 use ff::Field;
 
@@ -30,7 +32,11 @@ pub struct Evaluated<C: CurveAffine> {
 }
 
 impl<F: FieldExt> Argument<F> {
-    pub(in crate::plonk) fn read_permuted_commitments<C: CurveAffine, T: TranscriptRead<C>>(
+    pub(in crate::plonk) fn read_permuted_commitments<
+        C: CurveAffine,
+        S: ChallengeSpace<C>,
+        T: TranscriptRead<C, S>,
+    >(
         &self,
         transcript: &mut T,
     ) -> Result<PermutationCommitments<C>, Error> {
@@ -49,7 +55,10 @@ impl<F: FieldExt> Argument<F> {
 }
 
 impl<C: CurveAffine> PermutationCommitments<C> {
-    pub(in crate::plonk) fn read_product_commitment<T: TranscriptRead<C>>(
+    pub(in crate::plonk) fn read_product_commitment<
+        S: ChallengeSpace<C>,
+        T: TranscriptRead<C, S>,
+    >(
         self,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
@@ -65,7 +74,7 @@ impl<C: CurveAffine> PermutationCommitments<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(crate) fn evaluate<T: TranscriptRead<C>>(
+    pub(crate) fn evaluate<S: ChallengeSpace<C>, T: TranscriptRead<C, S>>(
         self,
         transcript: &mut T,
     ) -> Result<Evaluated<C>, Error> {

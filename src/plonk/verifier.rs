@@ -1,19 +1,16 @@
 use ff::Field;
 use std::iter;
 
-use super::{
-    vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
-    VerifyingKey,
-};
+use super::{vanishing, Error, VerifyingKey};
 use crate::arithmetic::{CurveAffine, FieldExt};
 use crate::poly::{
     commitment::{Guard, Params, MSM},
     multiopen::{self, VerifierQuery},
 };
-use crate::transcript::{read_n_points, read_n_scalars, TranscriptRead};
+use crate::transcript::{read_n_points, read_n_scalars, ChallengeSpace, TranscriptRead};
 
 /// Returns a boolean indicating whether or not the proof is valid
-pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
+pub fn verify_proof<'a, C: CurveAffine, S: ChallengeSpace<C>, T: TranscriptRead<C, S>>(
     params: &'a Params<C>,
     vk: &VerifyingKey<C>,
     msm: MSM<'a, C>,
@@ -50,7 +47,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample theta challenge for keeping lookup columns linearly independent
-    let theta = ChallengeTheta::get(transcript);
+    let theta = transcript.squeeze_challenge_scalar();
 
     let lookups_permuted = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
@@ -64,10 +61,10 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample beta challenge
-    let beta = ChallengeBeta::get(transcript);
+    let beta = transcript.squeeze_challenge_scalar();
 
     // Sample gamma challenge
-    let gamma = ChallengeGamma::get(transcript);
+    let gamma = transcript.squeeze_challenge_scalar();
 
     let permutations_committed = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
@@ -92,14 +89,12 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample y challenge, which keeps the gates linearly independent.
-    let y = ChallengeY::get(transcript);
-
+    let y = transcript.squeeze_challenge_scalar();
     let vanishing = vanishing::Argument::read_commitments(vk, transcript)?;
 
     // Sample x challenge, which is used to ensure the circuit is
     // satisfied with high probability.
-    let x = ChallengeX::get(transcript);
-
+    let x = transcript.squeeze_challenge_scalar();
     let instance_evals = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
             read_n_scalars(transcript, vk.cs.instance_queries.len())

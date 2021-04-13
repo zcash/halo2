@@ -4,8 +4,7 @@ use std::iter;
 
 use super::{
     circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
-    ChallengeY, Error, Permutation, ProvingKey,
+    lookup, permutation, vanishing, Error, Permutation, ProvingKey,
 };
 use crate::arithmetic::{eval_polynomial, CurveAffine, FieldExt};
 use crate::poly::{
@@ -13,12 +12,17 @@ use crate::poly::{
     multiopen::{self, ProverQuery},
     Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
 };
-use crate::transcript::TranscriptWrite;
+use crate::transcript::{ChallengeSpace, TranscriptWrite};
 
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
 /// generated previously for the same circuit.
-pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circuit<C::Scalar>>(
+pub fn create_proof<
+    C: CurveAffine,
+    S: ChallengeSpace<C>,
+    T: TranscriptWrite<C, S>,
+    ConcreteCircuit: Circuit<C::Scalar>,
+>(
     params: &Params<C>,
     pk: &ProvingKey<C>,
     circuits: &[ConcreteCircuit],
@@ -241,7 +245,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample theta challenge for keeping lookup columns linearly independent
-    let theta = ChallengeTheta::get(transcript);
+    let theta = transcript.squeeze_challenge_scalar();
 
     let lookups: Vec<Vec<lookup::prover::Permuted<C>>> = instance
         .iter()
@@ -272,10 +276,10 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample beta challenge
-    let beta = ChallengeBeta::get(transcript);
+    let beta = transcript.squeeze_challenge_scalar();
 
     // Sample gamma challenge
-    let gamma = ChallengeGamma::get(transcript);
+    let gamma = transcript.squeeze_challenge_scalar();
 
     let permutations: Vec<Vec<permutation::prover::Committed<C>>> = instance
         .iter()
@@ -316,7 +320,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
         .collect::<Result<Vec<_>, _>>()?;
 
     // Obtain challenge for keeping all separate gates linearly independent
-    let y = ChallengeY::get(transcript);
+    let y = transcript.squeeze_challenge_scalar();
 
     let (permutations, permutation_expressions): (Vec<Vec<_>>, Vec<Vec<_>>) = permutations
         .into_iter()
@@ -389,7 +393,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     // Construct the vanishing argument
     let vanishing = vanishing::Argument::construct(params, domain, expressions, y, transcript)?;
 
-    let x = ChallengeX::get(transcript);
+    let x = transcript.squeeze_challenge_scalar();
 
     // Compute and hash instance evals for each circuit instance
     for instance in instance.iter() {
