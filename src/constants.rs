@@ -261,61 +261,60 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
 }
 
 pub trait TestFixedBase<C: CurveAffine> {
-    fn test_lagrange_coeffs(&self, scalar: C::Scalar, scalar_num_bits: usize, num_windows: usize);
+    // Test that Lagrange interpolation coefficients reproduce the correct x-coordinate
+    // for each fixed-base multiple in each window.
+    fn test_lagrange_coeffs(&self, num_windows: usize);
+
+    // Test that the z-values and u-values satisfy the conditions:
+    //      1. y + z = u^2,
+    //      2. y - z is not a square
+    // for the y-coordinate of each fixed-base multiple in each window.
     fn test_z(&self, z: &[u64], u: &[[[u8; 32]; H]], num_windows: usize);
 }
 
 impl<C: CurveAffine> TestFixedBase<C> for OrchardFixedBase<C> {
-    fn test_lagrange_coeffs(&self, scalar: C::Scalar, scalar_num_bits: usize, num_windows: usize) {
+    fn test_lagrange_coeffs(&self, num_windows: usize) {
         let lagrange_coeffs = self.compute_lagrange_coeffs(num_windows);
-        let mut points = Vec::<C::CurveExt>::with_capacity(num_windows);
-
-        let bits =
-            util::decompose_scalar_fixed::<C>(scalar, scalar_num_bits, FIXED_BASE_WINDOW_SIZE);
 
         // Check first 84 windows, i.e. `k_0, k_1, ..., k_83`
-        for ((idx, bits), coeffs) in bits[0..(num_windows - 1)]
-            .iter()
-            .enumerate()
-            .zip(lagrange_coeffs[0..(num_windows - 1)].iter())
-        {
-            let interpolated_x = util::evaluate::<C>(*bits, coeffs);
+        for (idx, coeffs) in lagrange_coeffs[0..(num_windows - 1)].iter().enumerate() {
+            // Test each three-bit chunk in this window.
+            for bits in 0..(1 << FIXED_BASE_WINDOW_SIZE) {
+                {
+                    // Interpolate the x-coordinate using this window's coefficients
+                    let interpolated_x = util::evaluate::<C>(bits, coeffs);
 
-            // [(k+1)*(8^w)]B
-            let point = self.0
-                * C::Scalar::from_u64(*bits as u64 + 1)
-                * C::Scalar::from_u64(H as u64).pow(&[idx as u64, 0, 0, 0]);
-            let x = point.to_affine().get_xy().unwrap().0;
+                    // Compute the actual x-coordinate of the multiple [(k+1)*(8^w)]B.
+                    let point = self.0
+                        * C::Scalar::from_u64(bits as u64 + 1)
+                        * C::Scalar::from_u64(H as u64).pow(&[idx as u64, 0, 0, 0]);
+                    let x = point.to_affine().get_xy().unwrap().0;
 
-            assert_eq!(x, interpolated_x);
-            points.push(point);
+                    // Check that the interpolated x-coordinate matches the actual one.
+                    assert_eq!(x, interpolated_x);
+                }
+            }
         }
 
-        // Check last window
-        {
-            let last_bits = bits[num_windows - 1];
-            let interpolated_x = util::evaluate::<C>(last_bits, &lagrange_coeffs[num_windows - 1]);
+        // Check last window.
+        for bits in 0..(1 << FIXED_BASE_WINDOW_SIZE) {
+            // Interpolate the x-coordinate using the last window's coefficients
+            let interpolated_x = util::evaluate::<C>(bits, &lagrange_coeffs[num_windows - 1]);
 
-            // [k * (8^w) - offset]B, where offset = \sum_{j = 0}^{83} 8^j
+            // Compute the actual x-coordinate of the multiple [k * (8^84) - offset]B,
+            // where offset = \sum_{j = 0}^{83} 8^j
             let offset = (0..(num_windows - 1)).fold(C::Scalar::zero(), |acc, w| {
                 acc + C::Scalar::from_u64(H as u64).pow(&[w as u64, 0, 0, 0])
             });
-            let scalar = C::Scalar::from_u64(last_bits as u64)
+            let scalar = C::Scalar::from_u64(bits as u64)
                 * C::Scalar::from_u64(H as u64).pow(&[(num_windows - 1) as u64, 0, 0, 0])
                 - offset;
             let point = self.0 * scalar;
             let x = point.to_affine().get_xy().unwrap().0;
 
+            // Check that the interpolated x-coordinate matches the actual one.
             assert_eq!(x, interpolated_x);
-            points.push(point);
         }
-
-        // Check the sum of all the window points
-        let window_sum = points
-            .iter()
-            .fold(C::CurveExt::default(), |acc, point| acc + point);
-        let multiple = self.0 * scalar;
-        assert_eq!(window_sum, multiple);
     }
 
     fn test_z(&self, z: &[u64], u: &[[[u8; 32]; H]], num_windows: usize) {

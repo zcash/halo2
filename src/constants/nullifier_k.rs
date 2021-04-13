@@ -3689,9 +3689,8 @@ pub fn generator<C: CurveAffine>() -> OrchardFixedBases<C> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{TestFixedBase, L_VALUE, NUM_WINDOWS, NUM_WINDOWS_SHORT};
+    use super::super::{TestFixedBase, NUM_WINDOWS, NUM_WINDOWS_SHORT};
     use super::*;
-    use ff::PrimeField;
     use group::Curve;
     use halo2::{
         arithmetic::{CurveAffine, CurveExt, FieldExt},
@@ -3712,11 +3711,7 @@ mod tests {
     fn lagrange_coeffs() {
         let base = super::generator::<pallas::Affine>();
         match base {
-            OrchardFixedBases::NullifierK(inner) => inner.test_lagrange_coeffs(
-                pallas::Scalar::rand(),
-                pallas::Scalar::NUM_BITS as usize,
-                NUM_WINDOWS,
-            ),
+            OrchardFixedBases::NullifierK(inner) => inner.test_lagrange_coeffs(NUM_WINDOWS),
             _ => unreachable!(),
         }
     }
@@ -3725,10 +3720,7 @@ mod tests {
     fn lagrange_coeffs_short() {
         let base = super::generator::<pallas::Affine>();
         match base {
-            OrchardFixedBases::NullifierK(inner) => {
-                let scalar = pallas::Scalar::from_u64(rand::random::<u64>());
-                inner.test_lagrange_coeffs(scalar, L_VALUE, NUM_WINDOWS_SHORT)
-            }
+            OrchardFixedBases::NullifierK(inner) => inner.test_lagrange_coeffs(NUM_WINDOWS_SHORT),
             _ => unreachable!(),
         }
     }

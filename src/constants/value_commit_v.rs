@@ -3691,9 +3691,8 @@ pub fn generator<C: CurveAffine>() -> OrchardFixedBases<C> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{TestFixedBase, L_VALUE, NUM_WINDOWS, NUM_WINDOWS_SHORT};
+    use super::super::{TestFixedBase, NUM_WINDOWS, NUM_WINDOWS_SHORT};
     use super::*;
-    use ff::PrimeField;
     use group::Curve;
     use halo2::{
         arithmetic::{CurveAffine, CurveExt, FieldExt},
@@ -3706,9 +3705,6 @@ mod tests {
         let point = hasher(b"-v");
         let (x, y) = point.to_affine().get_xy().unwrap();
 
-        println!("{:?}", x.to_bytes());
-        println!("{:?}", y.to_bytes());
-
         assert_eq!(x, pallas::Base::from_bytes(&GENERATOR.0).unwrap());
         assert_eq!(y, pallas::Base::from_bytes(&GENERATOR.1).unwrap());
     }
@@ -3717,11 +3713,7 @@ mod tests {
     fn lagrange_coeffs() {
         let base = super::generator::<pallas::Affine>();
         match base {
-            OrchardFixedBases::ValueCommitV(inner) => inner.test_lagrange_coeffs(
-                pallas::Scalar::rand(),
-                pallas::Scalar::NUM_BITS as usize,
-                NUM_WINDOWS,
-            ),
+            OrchardFixedBases::ValueCommitV(inner) => inner.test_lagrange_coeffs(NUM_WINDOWS),
             _ => unreachable!(),
         }
     }
@@ -3730,10 +3722,7 @@ mod tests {
     fn lagrange_coeffs_short() {
         let base = super::generator::<pallas::Affine>();
         match base {
-            OrchardFixedBases::ValueCommitV(inner) => {
-                let scalar = pallas::Scalar::from_u64(rand::random::<u64>());
-                inner.test_lagrange_coeffs(scalar, L_VALUE, NUM_WINDOWS_SHORT)
-            }
+            OrchardFixedBases::ValueCommitV(inner) => inner.test_lagrange_coeffs(NUM_WINDOWS_SHORT),
             _ => unreachable!(),
         }
     }

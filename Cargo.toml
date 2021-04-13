@@ -27,7 +27,6 @@ fpe = "0.4"
 group = "0.9"
 rand = "0.8"
 nonempty = "0.6"
-rand = "0.8"
 subtle = "2.3"
 
 [dependencies.halo2]
