@@ -13,7 +13,7 @@ use halo2::poly::{
     commitment::{Blind, Params},
     Rotation,
 };
-use halo2::transcript::{Blake2bRead, Blake2bWrite};
+use halo2::transcript::{Blake2bRead, Blake2bWrite, ChallengeScalarEndo};
 use std::marker::PhantomData;
 
 #[test]
@@ -397,7 +397,7 @@ fn plonk_api() {
     assert_eq!(prover.verify(), Ok(()));
 
     for _ in 0..10 {
-        let mut transcript = Blake2bWrite::init(vec![]);
+        let mut transcript = Blake2bWrite::<_, _, ChallengeScalarEndo<EqAffine>>::init(vec![]);
         // Create a proof
         create_proof(
             &params,
@@ -412,7 +412,7 @@ fn plonk_api() {
         let pubinput_slice = &[pubinput];
         let pubinput_slice_copy = &[pubinput];
         let msm = params.empty_msm();
-        let mut transcript = Blake2bRead::init(&proof[..]);
+        let mut transcript = Blake2bRead::<_, _, ChallengeScalarEndo<EqAffine>>::init(&proof[..]);
         let guard = verify_proof(
             &params,
             pk.get_vk(),
@@ -432,7 +432,7 @@ fn plonk_api() {
         }
         let msm = guard.clone().use_challenges();
         assert!(msm.clone().eval());
-        let mut transcript = Blake2bRead::init(&proof[..]);
+        let mut transcript = Blake2bRead::<_, _, ChallengeScalarEndo<EqAffine>>::init(&proof[..]);
         let mut vk_buffer = vec![];
         pk.get_vk().write(&mut vk_buffer).unwrap();
         let vk = VerifyingKey::<EqAffine>::read::<_, MyCircuit<Fp>>(&mut &vk_buffer[..], &params)

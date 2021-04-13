@@ -8,7 +8,7 @@ use halo2::{
         Error, VerifyingKey,
     },
     poly::commitment::Params,
-    transcript::{Blake2bRead, Blake2bWrite},
+    transcript::{Blake2bRead, Blake2bWrite, ChallengeScalarEndo},
 };
 
 use std::{
@@ -128,7 +128,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     // Create a proof
     let proof_path = Path::new("./benches/sha256_assets/sha256_proof");
     if File::open(&proof_path).is_err() {
-        let mut transcript = Blake2bWrite::init(vec![]);
+        let mut transcript = Blake2bWrite::<_, _, ChallengeScalarEndo<EqAffine>>::init(vec![]);
         create_proof(&params, &pk, &[circuit], &[], &mut transcript)
             .expect("proof generation should not fail");
         let proof: Vec<u8> = transcript.finalize();
@@ -145,7 +145,8 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     c.bench_function(&verifier_name, |b| {
         b.iter(|| {
             let msm = params.empty_msm();
-            let mut transcript = Blake2bRead::init(&proof[..]);
+            let mut transcript =
+                Blake2bRead::<_, _, ChallengeScalarEndo<EqAffine>>::init(&proof[..]);
             let guard = verify_proof(&params, pk.get_vk(), msm, &[], &mut transcript).unwrap();
             let msm = guard.clone().use_challenges();
             assert!(msm.eval());
