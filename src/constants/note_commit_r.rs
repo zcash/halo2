@@ -1,4 +1,4 @@
-use super::{OrchardFixedBase, OrchardFixedBases, NOTE_COMMITMENT_PERSONALIZATION};
+use super::{NoteCommitR, OrchardFixedBase, NOTE_COMMITMENT_PERSONALIZATION};
 use halo2::arithmetic::{CurveAffine, FieldExt};
 
 pub const PERSONALIZATION: &str = NOTE_COMMITMENT_PERSONALIZATION;
@@ -3678,8 +3678,8 @@ pub const U_SHORT: [[[u8; 32]; super::H]; super::NUM_WINDOWS_SHORT] = [
     ],
 ];
 
-pub fn generator<C: CurveAffine>() -> OrchardFixedBases<C> {
-    OrchardFixedBases::NoteCommitR(OrchardFixedBase::<C>::new(
+pub fn generator<C: CurveAffine>() -> NoteCommitR<C> {
+    NoteCommitR(OrchardFixedBase::<C>::new(
         C::from_xy(
             C::Base::from_bytes(&GENERATOR.0).unwrap(),
             C::Base::from_bytes(&GENERATOR.1).unwrap(),
@@ -3712,38 +3712,24 @@ mod tests {
     #[test]
     fn lagrange_coeffs() {
         let base = super::generator::<pallas::Affine>();
-        match base {
-            OrchardFixedBases::NoteCommitR(inner) => inner.test_lagrange_coeffs(NUM_WINDOWS),
-            _ => unreachable!(),
-        }
+        base.0.test_lagrange_coeffs(NUM_WINDOWS);
     }
 
     #[test]
     fn lagrange_coeffs_short() {
         let base = super::generator::<pallas::Affine>();
-        match base {
-            OrchardFixedBases::NoteCommitR(inner) => inner.test_lagrange_coeffs(NUM_WINDOWS_SHORT),
-            _ => unreachable!(),
-        }
+        base.0.test_lagrange_coeffs(NUM_WINDOWS_SHORT);
     }
 
     #[test]
     fn z() {
         let base = super::generator::<pallas::Affine>();
-        match base {
-            OrchardFixedBases::NoteCommitR(inner) => inner.test_z(&Z, &U, NUM_WINDOWS),
-            _ => unreachable!(),
-        }
+        base.0.test_z(&Z, &U, NUM_WINDOWS);
     }
 
     #[test]
     fn z_short() {
         let base = super::generator::<pallas::Affine>();
-        match base {
-            OrchardFixedBases::NoteCommitR(inner) => {
-                inner.test_z(&Z_SHORT, &U_SHORT, NUM_WINDOWS_SHORT)
-            }
-            _ => unreachable!(),
-        }
+        base.0.test_z(&Z_SHORT, &U_SHORT, NUM_WINDOWS_SHORT);
     }
 }

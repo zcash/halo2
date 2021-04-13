@@ -56,66 +56,47 @@ pub const NUM_WINDOWS_SHORT: usize =
 /// Number of bits used in complete addition (for variable-base scalar mul)
 pub const NUM_COMPLETE_BITS: usize = 3;
 
+pub trait OrchardFixedBases {
+    fn name(&self) -> &[u8];
+}
+
 #[derive(Copy, Clone, Debug)]
-pub enum OrchardFixedBases<C: CurveAffine> {
-    CommitIvkR(OrchardFixedBase<C>),
-    NoteCommitR(OrchardFixedBase<C>),
-    NullifierK(OrchardFixedBase<C>),
-    ValueCommitR(OrchardFixedBase<C>),
-    ValueCommitV(OrchardFixedBase<C>),
-}
-
-impl<C: CurveAffine> std::hash::Hash for OrchardFixedBases<C> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        match *self {
-            OrchardFixedBases::CommitIvkR(_) => state.write(self.variant()),
-            OrchardFixedBases::NoteCommitR(_) => state.write(self.variant()),
-            OrchardFixedBases::NullifierK(_) => state.write(self.variant()),
-            OrchardFixedBases::ValueCommitR(_) => state.write(self.variant()),
-            OrchardFixedBases::ValueCommitV(_) => state.write(self.variant()),
-        }
+pub struct CommitIvkR<C: CurveAffine>(pub OrchardFixedBase<C>);
+impl<C: CurveAffine> OrchardFixedBases for CommitIvkR<C> {
+    fn name(&self) -> &[u8] {
+        b"CommitIvkR"
     }
 }
 
-impl<C: CurveAffine> OrchardFixedBases<C> {
-    pub fn inner(&self) -> OrchardFixedBase<C> {
-        match self {
-            Self::CommitIvkR(inner) => *inner,
-            Self::NoteCommitR(inner) => *inner,
-            Self::NullifierK(inner) => *inner,
-            Self::ValueCommitR(inner) => *inner,
-            Self::ValueCommitV(inner) => *inner,
-        }
-    }
-
-    pub fn variant(&self) -> &[u8] {
-        match *self {
-            OrchardFixedBases::CommitIvkR(_) => b"CommitIvkR",
-            OrchardFixedBases::NoteCommitR(_) => b"NoteCommitR",
-            OrchardFixedBases::NullifierK(_) => b"NullifierK",
-            OrchardFixedBases::ValueCommitR(_) => b"ValueCommitR",
-            OrchardFixedBases::ValueCommitV(_) => b"ValueCommitV",
-        }
+#[derive(Copy, Clone, Debug)]
+pub struct NoteCommitR<C: CurveAffine>(pub OrchardFixedBase<C>);
+impl<C: CurveAffine> OrchardFixedBases for NoteCommitR<C> {
+    fn name(&self) -> &[u8] {
+        b"NoteCommitR"
     }
 }
 
-impl<C: CurveAffine> PartialEq for OrchardFixedBases<C> {
-    fn eq(&self, other: &Self) -> bool {
-        self.inner() == other.inner()
+#[derive(Copy, Clone, Debug)]
+pub struct NullifierK<C: CurveAffine>(pub OrchardFixedBase<C>);
+impl<C: CurveAffine> OrchardFixedBases for NullifierK<C> {
+    fn name(&self) -> &[u8] {
+        b"NullifierK"
     }
 }
 
-impl<C: CurveAffine> Eq for OrchardFixedBases<C> {}
-
-impl<C: CurveAffine> PartialOrd for OrchardFixedBases<C> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.variant().partial_cmp(&other.variant())
+#[derive(Copy, Clone, Debug)]
+pub struct ValueCommitR<C: CurveAffine>(pub OrchardFixedBase<C>);
+impl<C: CurveAffine> OrchardFixedBases for ValueCommitR<C> {
+    fn name(&self) -> &[u8] {
+        b"ValueCommitR"
     }
 }
 
-impl<C: CurveAffine> Ord for OrchardFixedBases<C> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.variant().cmp(&other.variant())
+#[derive(Copy, Clone, Debug)]
+pub struct ValueCommitV<C: CurveAffine>(pub OrchardFixedBase<C>);
+impl<C: CurveAffine> OrchardFixedBases for ValueCommitV<C> {
+    fn name(&self) -> &[u8] {
+        b"ValueCommitV"
     }
 }
 
