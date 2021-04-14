@@ -3,11 +3,12 @@
 
 use group::Curve;
 use halo2::arithmetic::FieldExt;
+use halo2::circuit::{layouter::SingleCoreLayouter, Chip, Core, Layouter};
 use halo2::dev::MockProver;
 use halo2::pasta::{EqAffine, Fp};
 use halo2::plonk::{
-    create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Assignment, Circuit, Column,
-    ConstraintSystem, Error, Fixed, Permutation, VerifyingKey,
+    create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Assembly, Assignment, Circuit,
+    Column, ConstraintSystem, Error, Fixed, Permutation, VerifyingKey, WitnessCollection,
 };
 use halo2::poly::{
     commitment::{Blind, Params},
@@ -27,7 +28,7 @@ fn plonk_api() {
     // Initialize the polynomial commitment parameters
     let params: Params<EqAffine> = Params::new(K);
 
-    #[derive(Clone)]
+    #[derive(Debug, Clone)]
     struct PLONKConfig {
         a: Column<Advice>,
         b: Column<Advice>,
@@ -47,6 +48,81 @@ fn plonk_api() {
         perm2: Permutation,
     }
 
+    struct PLONKChip<F: FieldExt, L: Layouter<F>> {
+        core: PLONKCore<F, L>,
+    }
+
+    impl<F: FieldExt, L: Layouter<F>> Chip<F, PLONKCore<F, L>> for PLONKChip<F, L> {
+        type Root = Self;
+        type Config = PLONKConfig;
+        type Layouter = L;
+
+        fn new(config: Self::Config, layouter: Self::Layouter) -> Self::Root {
+            PLONKChip {
+                core: PLONKCore {
+                    config,
+                    layouter,
+                    marker: PhantomData,
+                },
+            }
+        }
+
+        fn root(&mut self) -> &mut Self::Root {
+            self
+        }
+
+        fn core(&mut self) -> &mut PLONKCore<F, L> {
+            &mut self.core
+        }
+
+        fn push_namespace<NR, N>(&mut self, _name_fn: N)
+        where
+            NR: Into<String>,
+            N: FnOnce() -> NR,
+        {
+        }
+
+        fn pop_namespace(&mut self, _gadget_name: Option<String>) {}
+    }
+
+    struct PLONKCore<F: FieldExt, L: Layouter<F>> {
+        config: PLONKConfig,
+        layouter: L,
+        marker: PhantomData<F>,
+    }
+
+    impl<F: FieldExt, L: Layouter<F>> Core<F> for PLONKCore<F, L> {
+        type Config = PLONKConfig;
+        type Loaded = ();
+        type Layouter = L;
+
+        // fn new(config: Self::Config, mut layouter: Self::Layouter) -> Self {
+        //     Self {
+        //         config,
+        //         layouter,
+        //         marker: PhantomData,
+        //     }
+        // }
+
+        fn config(&self) -> &Self::Config {
+            &self.config
+        }
+
+        /// Access `Loaded`
+        fn loaded(&self) -> &Self::Loaded {
+            &()
+        }
+
+        fn load(&mut self) -> Result<Self::Loaded, Error> {
+            Ok(())
+        }
+
+        /// The layouter for this Config.
+        fn layouter(&mut self) -> &mut Self::Layouter {
+            &mut self.layouter
+        }
+    }
+
     trait StandardCS<FF: FieldExt> {
         fn raw_multiply<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
         where
@@ -62,9 +138,10 @@ fn plonk_api() {
     }
 
     #[derive(Clone)]
-    struct MyCircuit<F: FieldExt> {
+    struct MyCircuit<'a, F: FieldExt, CS: Assignment<F>> {
         a: Option<F>,
         lookup_tables: Vec<Vec<F>>,
+        marker: PhantomData<&'a CS>,
     }
 
     struct StandardPLONK<'a, F: FieldExt, CS: Assignment<F> + 'a> {
@@ -239,8 +316,12 @@ fn plonk_api() {
         }
     }
 
-    impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
+    impl<'a, F: FieldExt, CS: Assignment<F> + 'a> Circuit<F> for MyCircuit<'a, F, CS> {
+        type Chip = PLONKChip<F, Self::Layouter>;
+        type Core = PLONKCore<F, Self::Layouter>;
+        type Layouter = SingleCoreLayouter<'a, F, CS>;
         type Config = PLONKConfig;
+        type CS = CS;
 
         fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
             let e = meta.advice_column();
@@ -326,11 +407,7 @@ fn plonk_api() {
             }
         }
 
-        fn synthesize(
-            &self,
-            cs: &mut impl Assignment<F>,
-            config: PLONKConfig,
-        ) -> Result<(), Error> {
+        fn synthesize(&self, cs: &mut CS, config: PLONKConfig) -> Result<(), Error> {
             let mut cs = StandardPLONK::new(cs, config);
 
             let _ = cs.public_input(|| Ok(F::one() + F::one()))?;
@@ -369,14 +446,16 @@ fn plonk_api() {
     let lookup_table = vec![instance, a, a, Fp::zero()];
     let lookup_table_2 = vec![Fp::zero(), a, a_squared, Fp::zero()];
 
-    let empty_circuit: MyCircuit<Fp> = MyCircuit {
+    let empty_circuit: MyCircuit<'_, Fp, Assembly<Fp>> = MyCircuit {
         a: None,
         lookup_tables: vec![lookup_table.clone(), lookup_table_2.clone()],
+        marker: PhantomData,
     };
 
-    let circuit: MyCircuit<Fp> = MyCircuit {
+    let circuit: MyCircuit<'_, Fp, MockProver<Fp>> = MyCircuit {
         a: Some(a),
-        lookup_tables: vec![lookup_table, lookup_table_2],
+        lookup_tables: vec![lookup_table.clone(), lookup_table_2.clone()],
+        marker: PhantomData,
     };
 
     // Initialize the proving key
@@ -395,6 +474,12 @@ fn plonk_api() {
         Err(e) => panic!("{:?}", e),
     };
     assert_eq!(prover.verify(), Ok(()));
+
+    let circuit: MyCircuit<'_, Fp, WitnessCollection<Fp>> = MyCircuit {
+        a: Some(a),
+        lookup_tables: vec![lookup_table, lookup_table_2],
+        marker: PhantomData,
+    };
 
     for _ in 0..10 {
         let mut transcript = Blake2bWrite::init(vec![]);
@@ -435,8 +520,11 @@ fn plonk_api() {
         let mut transcript = Blake2bRead::init(&proof[..]);
         let mut vk_buffer = vec![];
         pk.get_vk().write(&mut vk_buffer).unwrap();
-        let vk = VerifyingKey::<EqAffine>::read::<_, MyCircuit<Fp>>(&mut &vk_buffer[..], &params)
-            .unwrap();
+        let vk = VerifyingKey::<EqAffine>::read::<_, MyCircuit<'_, Fp, Assembly<Fp>>>(
+            &mut &vk_buffer[..],
+            &params,
+        )
+        .unwrap();
         let guard = verify_proof(
             &params,
             &vk,

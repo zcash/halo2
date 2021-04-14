@@ -20,7 +20,7 @@ pub(crate) fn create_domain<C, ConcreteCircuit>(
 )
 where
     C: CurveAffine,
-    ConcreteCircuit: Circuit<C::Scalar>,
+    ConcreteCircuit: Circuit<C::Scalar, CS = Assembly<C::Scalar>>,
 {
     let mut cs = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut cs);
@@ -34,7 +34,7 @@ where
 
 /// Assembly to be used in circuit synthesis.
 #[derive(Debug)]
-struct Assembly<F: Field> {
+pub struct Assembly<F: Field> {
     fixed: Vec<Polynomial<F, LagrangeCoeff>>,
     permutations: Vec<permutation::keygen::Assembly>,
     _marker: std::marker::PhantomData<F>,
@@ -142,7 +142,7 @@ pub fn keygen_vk<C, ConcreteCircuit>(
 ) -> Result<VerifyingKey<C>, Error>
 where
     C: CurveAffine,
-    ConcreteCircuit: Circuit<C::Scalar>,
+    ConcreteCircuit: Circuit<C::Scalar, CS = Assembly<C::Scalar>>,
 {
     let (domain, cs, config) = create_domain::<C, ConcreteCircuit>(params);
 
@@ -190,7 +190,7 @@ pub fn keygen_pk<C, ConcreteCircuit>(
 ) -> Result<ProvingKey<C>, Error>
 where
     C: CurveAffine,
-    ConcreteCircuit: Circuit<C::Scalar>,
+    ConcreteCircuit: Circuit<C::Scalar, CS = Assembly<C::Scalar>>,
 {
     let mut cs = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut cs);

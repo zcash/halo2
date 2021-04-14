@@ -15,10 +15,99 @@ use crate::poly::{
 };
 use crate::transcript::TranscriptWrite;
 
+/// TODO
+#[derive(Clone, Debug)]
+pub struct WitnessCollection<F: Field> {
+    /// TODO
+    pub advice: Vec<Polynomial<F, LagrangeCoeff>>,
+    _marker: std::marker::PhantomData<F>,
+}
+
+impl<F: FieldExt> Assignment<F> for WitnessCollection<F> {
+    fn enter_region<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // Do nothing; we don't care about regions in this context.
+    }
+
+    fn exit_region(&mut self) {
+        // Do nothing; we don't care about regions in this context.
+    }
+
+    fn assign_advice<V, A, AR>(
+        &mut self,
+        _: A,
+        column: Column<Advice>,
+        row: usize,
+        to: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Result<F, Error>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        *self
+            .advice
+            .get_mut(column.index())
+            .and_then(|v| v.get_mut(row))
+            .ok_or(Error::BoundsFailure)? = to()?;
+
+        Ok(())
+    }
+
+    fn assign_fixed<V, A, AR>(
+        &mut self,
+        _: A,
+        _: Column<Fixed>,
+        _: usize,
+        _: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Result<F, Error>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // We only care about advice columns here
+
+        Ok(())
+    }
+
+    fn copy(
+        &mut self,
+        _: &Permutation,
+        _: Column<Any>,
+        _: usize,
+        _: Column<Any>,
+        _: usize,
+    ) -> Result<(), Error> {
+        // We only care about advice columns here
+
+        Ok(())
+    }
+
+    fn push_namespace<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // Do nothing; we don't care about namespaces in this context.
+    }
+
+    fn pop_namespace(&mut self, _: Option<String>) {
+        // Do nothing; we don't care about namespaces in this context.
+    }
+}
+
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
 /// generated previously for the same circuit.
-pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circuit<C::Scalar>>(
+pub fn create_proof<
+    C: CurveAffine,
+    T: TranscriptWrite<C>,
+    ConcreteCircuit: Circuit<C::Scalar, CS = WitnessCollection<C::Scalar>>,
+>(
     params: &Params<C>,
     pk: &ProvingKey<C>,
     circuits: &[ConcreteCircuit],
@@ -100,88 +189,6 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>, ConcreteCircuit: Circ
     let advice: Vec<AdviceSingle<C>> = circuits
         .iter()
         .map(|circuit| -> Result<AdviceSingle<C>, Error> {
-            struct WitnessCollection<F: Field> {
-                pub advice: Vec<Polynomial<F, LagrangeCoeff>>,
-                _marker: std::marker::PhantomData<F>,
-            }
-
-            impl<F: Field> Assignment<F> for WitnessCollection<F> {
-                fn enter_region<NR, N>(&mut self, _: N)
-                where
-                    NR: Into<String>,
-                    N: FnOnce() -> NR,
-                {
-                    // Do nothing; we don't care about regions in this context.
-                }
-
-                fn exit_region(&mut self) {
-                    // Do nothing; we don't care about regions in this context.
-                }
-
-                fn assign_advice<V, A, AR>(
-                    &mut self,
-                    _: A,
-                    column: Column<Advice>,
-                    row: usize,
-                    to: V,
-                ) -> Result<(), Error>
-                where
-                    V: FnOnce() -> Result<F, Error>,
-                    A: FnOnce() -> AR,
-                    AR: Into<String>,
-                {
-                    *self
-                        .advice
-                        .get_mut(column.index())
-                        .and_then(|v| v.get_mut(row))
-                        .ok_or(Error::BoundsFailure)? = to()?;
-
-                    Ok(())
-                }
-
-                fn assign_fixed<V, A, AR>(
-                    &mut self,
-                    _: A,
-                    _: Column<Fixed>,
-                    _: usize,
-                    _: V,
-                ) -> Result<(), Error>
-                where
-                    V: FnOnce() -> Result<F, Error>,
-                    A: FnOnce() -> AR,
-                    AR: Into<String>,
-                {
-                    // We only care about advice columns here
-
-                    Ok(())
-                }
-
-                fn copy(
-                    &mut self,
-                    _: &Permutation,
-                    _: Column<Any>,
-                    _: usize,
-                    _: Column<Any>,
-                    _: usize,
-                ) -> Result<(), Error> {
-                    // We only care about advice columns here
-
-                    Ok(())
-                }
-
-                fn push_namespace<NR, N>(&mut self, _: N)
-                where
-                    NR: Into<String>,
-                    N: FnOnce() -> NR,
-                {
-                    // Do nothing; we don't care about namespaces in this context.
-                }
-
-                fn pop_namespace(&mut self, _: Option<String>) {
-                    // Do nothing; we don't care about namespaces in this context.
-                }
-            }
-
             let mut witness = WitnessCollection {
                 advice: vec![domain.empty_lagrange(); meta.num_advice_columns],
                 _marker: std::marker::PhantomData,

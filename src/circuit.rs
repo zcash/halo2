@@ -9,50 +9,28 @@ use crate::{
 
 pub mod layouter;
 
-/// A core implements a set of instructions that can be used by gadgets.
-pub trait Core: Sized {
-    /// Represents the type of the "root" of this core, so that nested namespaces
+/// TODO
+pub trait Chip<F: FieldExt, Co: Core<F>> {
+    /// Represents the type of the "root" of this chip, so that nested namespaces
     /// can minimize indirection.
-    type Root: Core;
+    type Root: Chip<F, Co>;
 
-    /// A type that holds the configuration for this core, and any other state it may need
-    /// during circuit synthesis, that can be derived during [`Circuit::configure`].
-    ///
-    /// [`Circuit::configure`]: crate::plonk::Circuit::configure
-    type Config: fmt::Debug;
+    /// TODO
+    type Config;
 
-    /// A type that holds any general core state that needs to be loaded at the start of
-    /// [`Circuit::synthesize`]. This might simply be `()` for some cores.
-    ///
-    /// [`Circuit::synthesize`]: crate::plonk::Circuit::synthesize
-    type Loaded: fmt::Debug;
+    /// TODO
+    type Layouter;
 
-    /// The field that the core is defined over.
-    ///
-    /// This provides a type that the configuration can reference if necessary.
-    type Field: FieldExt;
-
-    /// Layouter type
-    type Layouter: Layouter<Self::Field>;
-
-    /// Access `Config`
-    fn config(&self) -> &Self::Config;
-
-    /// Access `Loaded`
-    fn loaded(&self) -> &Self::Loaded;
-
-    /// Load any fixed configuration for this core into the circuit.
-    ///
-    /// `layouter.loaded()` will panic if called inside this function.
-    fn load(&mut self) -> Result<Self::Loaded, Error>;
-
-    /// The layouter for this core.
-    fn layouter(&mut self) -> &mut Self::Layouter;
+    /// TODO
+    fn new(config: Self::Config, layouter: Self::Layouter) -> Self::Root;
 
     /// Gets the "root" of this assignment, bypassing the namespacing.
     ///
     /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
-    fn get_root(&mut self) -> &mut Self::Root;
+    fn root(&mut self) -> &mut Self::Root;
+
+    /// Access the core inside this chip.
+    fn core(&mut self) -> &mut Co;
 
     /// Creates a new (sub)namespace and enters into it.
     ///
@@ -68,15 +46,54 @@ pub trait Core: Sized {
     fn pop_namespace(&mut self, gadget_name: Option<String>);
 
     /// Enters into a namespace.
-    fn namespace<NR, N>(&mut self, name_fn: N) -> NamespacedCore<'_, Self::Root>
+    fn namespace<NR, N>(&mut self, name_fn: N) -> NamespacedChip<'_, F, Co, Self::Root>
     where
         NR: Into<String>,
         N: FnOnce() -> NR,
     {
-        self.get_root().push_namespace(name_fn);
+        self.root().push_namespace(name_fn);
 
-        NamespacedCore(self.get_root(), PhantomData)
+        NamespacedChip(self.root(), PhantomData, PhantomData)
     }
+}
+
+/// A chip implements a set of instructions that can be used by gadgets.
+///
+/// The chip itself should not store any state; instead, state that is required at circuit
+/// synthesis time should be stored in [`Core::Config`], which can then be fetched via
+/// [`Layouter::config`].
+pub trait Core<F: FieldExt>: Sized {
+    /// A type that holds the configuration for this chip, and any other state it may need
+    /// during circuit synthesis, that can be derived during [`Circuit::configure`].
+    ///
+    /// [`Circuit::configure`]: crate::plonk::Circuit::configure
+    type Config: fmt::Debug;
+
+    /// A type that holds any general core state that needs to be loaded at the start of
+    /// [`Circuit::synthesize`]. This might simply be `()` for some cores.
+    ///
+    /// [`Circuit::synthesize`]: crate::plonk::Circuit::synthesize
+    type Loaded: fmt::Debug;
+
+    /// Layouter type
+    type Layouter: Layouter<F>;
+
+    // /// Instantiate a new core given a configuration and layouter.
+    // fn new(config: Self::Config, layouter: Self::Layouter) -> Self;
+
+    /// Access `Config`
+    fn config(&self) -> &Self::Config;
+
+    /// Access `Loaded`
+    fn loaded(&self) -> &Self::Loaded;
+
+    /// Load any fixed configuration for this core into the circuit.
+    ///
+    /// `layouter.loaded()` will panic if called inside this function.
+    fn load(&mut self) -> Result<Self::Loaded, Error>;
+
+    /// The layouter for this core.
+    fn layouter(&mut self) -> &mut Self::Layouter;
 }
 
 /// Index of a region in a layouter
@@ -138,17 +155,19 @@ pub struct Cell {
 /// "logical" columns that are guaranteed to correspond to the core (and have come from
 /// `Core::Config`).
 #[derive(Debug)]
-pub struct Region<'r, C: Core> {
-    region: &'r mut dyn layouter::RegionLayouter<C>,
+pub struct Region<'r, F: FieldExt, C: Core<F>> {
+    region: &'r mut dyn layouter::RegionLayouter<F, C>,
 }
 
-impl<'r, C: Core> From<&'r mut dyn layouter::RegionLayouter<C>> for Region<'r, C> {
-    fn from(region: &'r mut dyn layouter::RegionLayouter<C>) -> Self {
+impl<'r, F: FieldExt, C: Core<F>> From<&'r mut dyn layouter::RegionLayouter<F, C>>
+    for Region<'r, F, C>
+{
+    fn from(region: &'r mut dyn layouter::RegionLayouter<F, C>) -> Self {
         Region { region }
     }
 }
 
-impl<'r, C: Core> Region<'r, C> {
+impl<'r, F: FieldExt, C: Core<F>> Region<'r, F, C> {
     /// Assign an advice column value (witness).
     ///
     /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
@@ -160,7 +179,7 @@ impl<'r, C: Core> Region<'r, C> {
         mut to: V,
     ) -> Result<Cell, Error>
     where
-        V: FnMut() -> Result<C::Field, Error> + 'v,
+        V: FnMut() -> Result<F, Error> + 'v,
         A: Fn() -> AR,
         AR: Into<String>,
     {
@@ -179,7 +198,7 @@ impl<'r, C: Core> Region<'r, C> {
         mut to: V,
     ) -> Result<Cell, Error>
     where
-        V: FnMut() -> Result<C::Field, Error> + 'v,
+        V: FnMut() -> Result<F, Error> + 'v,
         A: Fn() -> AR,
         AR: Into<String>,
     {
@@ -218,25 +237,25 @@ pub trait Layouter<F: FieldExt> {
     ///     region.assign_advice(self.config.a, offset, || { Some(value)});
     /// });
     /// ```
-    fn assign_region<A, AR, N, NR, C: Core<Field = F>>(
+    fn assign_region<A, AR, N, NR, C: Core<F>>(
         &mut self,
         name: N,
         assignment: A,
     ) -> Result<AR, Error>
     where
-        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        A: FnMut(Region<'_, F, C>) -> Result<AR, Error>,
         N: Fn() -> NR,
         NR: Into<String>;
 }
 
 impl<F: FieldExt> Layouter<F> for () {
-    fn assign_region<A, AR, N, NR, C: Core>(
+    fn assign_region<A, AR, N, NR, C: Core<F>>(
         &mut self,
         _name: N,
         _assignment: A,
     ) -> Result<AR, Error>
     where
-        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        A: FnMut(Region<'_, F, C>) -> Result<AR, Error>,
         N: Fn() -> NR,
         NR: Into<String>,
     {
@@ -247,39 +266,29 @@ impl<F: FieldExt> Layouter<F> for () {
 /// This is a "namespaced" layouter which borrows a `Layouter` (pushing a namespace
 /// context) and, when dropped, pops out of the namespace context.
 #[derive(Debug)]
-pub struct NamespacedCore<'a, C: Core>(&'a mut C, PhantomData<C>);
+pub struct NamespacedChip<'a, F: FieldExt, Co: Core<F>, Ch: Chip<F, Co>>(
+    &'a mut Ch,
+    PhantomData<F>,
+    PhantomData<Co>,
+);
 
-impl<'a, C: Core> Core for NamespacedCore<'a, C> {
-    type Root = C::Root;
+impl<'a, F: FieldExt, Co: Core<F>, Ch: Chip<F, Co> + 'a> Chip<F, Co>
+    for NamespacedChip<'a, F, Co, Ch>
+{
+    type Root = Ch::Root;
+    type Config = Ch::Config;
+    type Layouter = Ch::Layouter;
 
-    type Config = C::Config;
-
-    type Loaded = C::Loaded;
-
-    type Field = C::Field;
-
-    type Layouter = C::Layouter;
-
-    /// Access `Config`
-    fn config(&self) -> &Self::Config {
-        self.0.config()
+    fn new(config: Self::Config, layouter: Self::Layouter) -> Self::Root {
+        Ch::new(config, layouter)
     }
 
-    /// Access `Loaded`
-    fn loaded(&self) -> &Self::Loaded {
-        self.0.loaded()
+    fn root(&mut self) -> &mut Self::Root {
+        self.0.root()
     }
 
-    fn load(&mut self) -> Result<Self::Loaded, Error> {
-        self.0.load()
-    }
-
-    fn layouter(&mut self) -> &mut Self::Layouter {
-        self.0.layouter()
-    }
-
-    fn get_root(&mut self) -> &mut Self::Root {
-        self.0.get_root()
+    fn core(&mut self) -> &mut Co {
+        self.0.core()
     }
 
     fn push_namespace<NR, N>(&mut self, _name_fn: N)
@@ -295,7 +304,7 @@ impl<'a, C: Core> Core for NamespacedCore<'a, C> {
     }
 }
 
-impl<'a, C: Core> Drop for NamespacedCore<'a, C> {
+impl<'a, F: FieldExt, Co: Core<F>, Ch: Chip<F, Co>> Drop for NamespacedChip<'a, F, Co, Ch> {
     fn drop(&mut self) {
         let gadget_name = {
             #[cfg(feature = "gadget-traces")]
@@ -324,6 +333,6 @@ impl<'a, C: Core> Drop for NamespacedCore<'a, C> {
             None
         };
 
-        self.get_root().pop_namespace(gadget_name);
+        self.root().pop_namespace(gadget_name);
     }
 }

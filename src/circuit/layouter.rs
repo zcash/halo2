@@ -17,14 +17,14 @@ use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation};
 /// impl<'a, F: FieldExt, CS: Assignment<F> + 'a> Layouter<C> for MyLayouter<'a, C, CS> {
 ///     fn assign_region(
 ///         &mut self,
-///         assignment: impl FnOnce(Region<'_, C>) -> Result<(), Error>,
+///         assignment: impl FnOnce(Region<'_, F, C>) -> Result<(), Error>,
 ///     ) -> Result<(), Error> {
 ///         let region_index = self.regions.len();
 ///         self.regions.push(self.current_gate);
 ///
 ///         let mut region = MyRegion::new(self, region_index);
 ///         {
-///             let region: &mut dyn RegionLayouter<C> = &mut region;
+///             let region: &mut dyn RegionLayouter<F, C> = &mut region;
 ///             assignment(region.into())?;
 ///         }
 ///         self.current_gate += region.row_count;
@@ -35,16 +35,16 @@ use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation};
 /// ```
 ///
 /// TODO: It would be great if we could constrain the columns in these types to be
-/// "logical" columns that are guaranteed to correspond to the core (and have come from
+/// "logical" columns that are guaranteed to correspond to the chip (and have come from
 /// `Core::Config`).
-pub trait RegionLayouter<C: Core>: fmt::Debug {
+pub trait RegionLayouter<F: FieldExt, C: Core<F>>: fmt::Debug {
     /// Assign an advice column value (witness)
     fn assign_advice<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
     ) -> Result<Cell, Error>;
 
     /// Assign a fixed value
@@ -53,7 +53,7 @@ pub trait RegionLayouter<C: Core>: fmt::Debug {
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
     ) -> Result<Cell, Error>;
 
     /// Constrain two cells to have the same value.
@@ -99,14 +99,14 @@ impl<'a, F: FieldExt, CS: Assignment<F>> SingleCoreLayouter<'a, F, CS> {
     }
 }
 
-impl<'a, F: FieldExt, CS: Assignment<F>> Layouter<F> for SingleCoreLayouter<'a, F, CS> {
-    fn assign_region<A, AR, N, NR, C: Core<Field = F>>(
+impl<F: FieldExt, CS: Assignment<F>> Layouter<F> for SingleCoreLayouter<'_, F, CS> {
+    fn assign_region<A, AR, N, NR, C: Core<F>>(
         &mut self,
         name: N,
         mut assignment: A,
     ) -> Result<AR, Error>
     where
-        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        A: FnMut(Region<'_, F, C>) -> Result<AR, Error>,
         N: Fn() -> NR,
         NR: Into<String>,
     {
@@ -115,7 +115,7 @@ impl<'a, F: FieldExt, CS: Assignment<F>> Layouter<F> for SingleCoreLayouter<'a, 
         // Get shape of the region.
         let mut shape = RegionShape::new(region_index.into());
         {
-            let region: &mut dyn RegionLayouter<C> = &mut shape;
+            let region: &mut dyn RegionLayouter<F, C> = &mut shape;
             assignment(region.into())?;
         }
 
@@ -135,7 +135,7 @@ impl<'a, F: FieldExt, CS: Assignment<F>> Layouter<F> for SingleCoreLayouter<'a, 
         self.cs.enter_region(name);
         let mut region = SingleCoreLayouterRegion::new(self, region_index.into());
         let result = {
-            let region: &mut dyn RegionLayouter<C> = &mut region;
+            let region: &mut dyn RegionLayouter<F, C> = &mut region;
             assignment(region.into())
         }?;
         self.cs.exit_region();
@@ -179,13 +179,13 @@ impl RegionShape {
     }
 }
 
-impl<C: Core> RegionLayouter<C> for RegionShape {
+impl<F: FieldExt, C: Core<F>> RegionLayouter<F, C> for RegionShape {
     fn assign_advice<'v>(
         &'v mut self,
         _: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
-        _to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
+        _to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
     ) -> Result<Cell, Error> {
         self.columns.insert(column.into());
         self.row_count = cmp::max(self.row_count, offset + 1);
@@ -202,7 +202,7 @@ impl<C: Core> RegionLayouter<C> for RegionShape {
         _: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
-        _to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
+        _to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
     ) -> Result<Cell, Error> {
         self.columns.insert(column.into());
         self.row_count = cmp::max(self.row_count, offset + 1);
@@ -250,7 +250,7 @@ impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> SingleCoreLayouterRegion<'r, '
     }
 }
 
-impl<'r, 'a, F: FieldExt, C: Core<Field = F>, CS: Assignment<F> + 'a> RegionLayouter<C>
+impl<'r, 'a, F: FieldExt, C: Core<F>, CS: Assignment<F> + 'a> RegionLayouter<F, C>
     for SingleCoreLayouterRegion<'r, 'a, F, CS>
 {
     fn assign_advice<'v>(
@@ -258,7 +258,7 @@ impl<'r, 'a, F: FieldExt, C: Core<Field = F>, CS: Assignment<F> + 'a> RegionLayo
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
     ) -> Result<Cell, Error> {
         self.layouter.cs.assign_advice(
             annotation,
@@ -279,7 +279,7 @@ impl<'r, 'a, F: FieldExt, C: Core<Field = F>, CS: Assignment<F> + 'a> RegionLayo
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
     ) -> Result<Cell, Error> {
         self.layouter.cs.assign_fixed(
             annotation,

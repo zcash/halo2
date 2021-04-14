@@ -54,7 +54,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
     }
 
     /// Reads a verification key from a buffer.
-    pub fn read<R: io::Read, ConcreteCircuit: Circuit<C::Scalar>>(
+    pub fn read<R: io::Read, ConcreteCircuit: Circuit<C::Scalar, CS = Assembly<C::Scalar>>>(
         reader: &mut R,
         params: &Params<C>,
     ) -> io::Result<Self> {

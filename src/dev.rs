@@ -64,8 +64,8 @@ pub enum VerifyFailure {
 /// then checks every constraint manually.
 ///
 /// # Examples
-///
-/// ```
+/// TODO: update to use core/chip abstraction.
+/// ```ignore
 /// use halo2::{
 ///     arithmetic::FieldExt,
 ///     dev::{MockProver, VerifyFailure},
@@ -90,6 +90,10 @@ pub enum VerifyFailure {
 ///
 /// impl<F: FieldExt> Circuit<F> for MyCircuit {
 ///     type Config = MyConfig;
+///     type CS = MockProver<F>;
+///     type Chip = ();
+///     type Core = ();
+///     type Layouter = ();
 ///
 ///     fn configure(meta: &mut ConstraintSystem<F>) -> MyConfig {
 ///         let a = meta.advice_column();
@@ -142,7 +146,7 @@ pub enum VerifyFailure {
 ///     })
 /// );
 /// ```
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct MockProver<F: Group + Field> {
     n: u32,
     cs: ConstraintSystem<F>,
@@ -255,9 +259,44 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
 }
 
 impl<F: FieldExt> MockProver<F> {
+    /// An empty MockProver
+    pub fn empty() -> Self {
+        Self {
+            n: 0,
+            cs: ConstraintSystem::default(),
+            fixed: vec![],
+            advice: vec![],
+            instance: vec![],
+            permutations: vec![],
+        }
+    }
+
+    /// A new MockProver
+    pub fn new(k: u32, instance: Vec<Vec<F>>, cs: &ConstraintSystem<F>) -> Self {
+        let n = 1 << k;
+        let fixed = vec![vec![F::zero(); n as usize]; cs.num_fixed_columns];
+        let advice = vec![vec![F::zero(); n as usize]; cs.num_advice_columns];
+        let permutations = cs
+            .permutations
+            .iter()
+            .map(|p| permutation::keygen::Assembly::new(n as usize, p))
+            .collect();
+
+        let prover = MockProver {
+            n,
+            cs: cs.clone(),
+            fixed,
+            advice,
+            instance,
+            permutations,
+        };
+
+        prover
+    }
+
     /// Runs a synthetic keygen-and-prove operation on the given circuit, collecting data
     /// about the constraints and their assignments.
-    pub fn run<ConcreteCircuit: Circuit<F>>(
+    pub fn run<ConcreteCircuit: Circuit<F, CS = Self>>(
         k: u32,
         circuit: &ConcreteCircuit,
         instance: Vec<Vec<F>>,

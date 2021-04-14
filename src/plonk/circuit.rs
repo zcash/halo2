@@ -9,7 +9,7 @@ use std::{
 use super::{lookup, permutation, Error};
 use crate::{
     arithmetic::FieldExt,
-    circuit::{Core, Region},
+    circuit::{Chip, Core, Layouter, Region},
     poly::Rotation,
 };
 
@@ -159,7 +159,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// ```
 /// use halo2::{circuit::{Core, Region, Layouter}, plonk::{Advice, Column, Error, Selector}};
 /// # use ff::Field;
-/// # use halo2::plonk::Fixed;
+/// # use halo2::{arithmetic::FieldExt, plonk::Fixed};
 ///
 /// struct Config {
 ///     a: Column<Advice>,
@@ -167,12 +167,12 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 ///     s: Selector,
 /// }
 ///
-/// fn circuit_logic<C: Core>(mut core: C) -> Result<(), Error> {
+/// fn circuit_logic<F: FieldExt, C: Core<F>>(mut core: C) -> Result<(), Error> {
 ///     let config = core.config().clone();
 ///     # let config: Config = todo!();
-///     core.layouter().assign_region(|| "bar", |mut region: Region<'_, C>| {
-///         region.assign_advice(|| "a", config.a, 0, || Ok(C::Field::one()))?;
-///         region.assign_advice(|| "a", config.b, 1, || Ok(C::Field::one()))?;
+///     core.layouter().assign_region(|| "bar", |mut region: Region<'_, F, C>| {
+///         region.assign_advice(|| "a", config.a, 0, || Ok(F::one()))?;
+///         region.assign_advice(|| "a", config.b, 1, || Ok(F::one()))?;
 ///         config.s.enable(&mut region, 1)
 ///     })?;
 ///     Ok(())
@@ -183,14 +183,18 @@ pub struct Selector(Column<Fixed>);
 
 impl Selector {
     /// Enable this selector at the given offset within the given region.
-    pub fn enable<C: Core>(&self, region: &mut Region<C>, offset: usize) -> Result<(), Error> {
+    pub fn enable<F: FieldExt, C: Core<F>>(
+        &self,
+        region: &mut Region<F, C>,
+        offset: usize,
+    ) -> Result<(), Error> {
         // TODO: Ensure that the default for a selector's cells is always zero, if we
         // alter the proving system to change the global default.
         // TODO: Add Region::enable_selector method to allow the layouter to control the
         // selector's assignment.
         // https://github.com/zcash/halo2/issues/116
         region
-            .assign_fixed(|| "", self.0, offset, || Ok(C::Field::one()))
+            .assign_fixed(|| "", self.0, offset, || Ok(F::one()))
             .map(|_| ())
     }
 }
@@ -302,9 +306,21 @@ pub trait Assignment<F: Field> {
 /// This is a trait that circuits provide implementations for so that the
 /// backend prover can ask the circuit to synthesize using some given
 /// [`ConstraintSystem`] implementation.
-pub trait Circuit<F: Field> {
+pub trait Circuit<F: FieldExt> {
+    /// TODO
+    type Chip: Chip<F, Self::Core>;
+
+    /// TODO
+    type Core: Core<F>;
+
+    /// TODO
+    type Layouter: Layouter<F>;
+
     /// This is a configuration object that stores things like columns.
     type Config: Clone;
+
+    /// TODO
+    type CS: Assignment<F>;
 
     /// The circuit is given an opportunity to describe the exact gate
     /// arrangement, column arrangement, etc.
@@ -313,7 +329,7 @@ pub trait Circuit<F: Field> {
     /// Given the provided `cs`, synthesize the circuit. The concrete type of
     /// the caller will be different depending on the context, and they may or
     /// may not expect to have a witness present.
-    fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error>;
+    fn synthesize(&self, cs: &mut Self::CS, config: Self::Config) -> Result<(), Error>;
 }
 
 /// Low-degree expression representing an identity that must hold over the committed columns.
