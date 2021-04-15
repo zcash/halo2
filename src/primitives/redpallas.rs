@@ -67,6 +67,12 @@ impl<'a, T: SigType> From<&'a SigningKey<T>> for VerificationKey<T> {
     }
 }
 
+impl<T: SigType> PartialEq for VerificationKey<T> {
+    fn eq(&self, other: &Self) -> bool {
+        <[u8; 32]>::from(self).eq(&<[u8; 32]>::from(other))
+    }
+}
+
 /// A RedPallas signature.
 #[derive(Debug)]
 pub struct Signature<T: SigType>(reddsa::Signature<T>);
