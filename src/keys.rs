@@ -68,12 +68,21 @@ impl SpendingKey {
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
-pub(crate) struct SpendAuthorizingKey(redpallas::SigningKey<SpendAuth>);
+pub struct SpendAuthorizingKey(redpallas::SigningKey<SpendAuth>);
 
 impl SpendAuthorizingKey {
     /// Derives ask from sk. Internal use only, does not enforce all constraints.
     fn derive_inner(sk: &SpendingKey) -> pallas::Scalar {
         to_scalar(prf_expand(&sk.0, &[0x06]))
+    }
+
+    /// Creates a spend authorization signature over the given message.
+    pub fn sign<R: rand_7::RngCore + rand_7::CryptoRng>(
+        &self,
+        rng: R,
+        msg: &[u8],
+    ) -> redpallas::Signature<SpendAuth> {
+        self.0.sign(rng, msg)
     }
 }
 
@@ -101,11 +110,17 @@ impl From<&SpendingKey> for SpendAuthorizingKey {
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug)]
-pub(crate) struct SpendValidatingKey(redpallas::VerificationKey<SpendAuth>);
+pub struct SpendValidatingKey(redpallas::VerificationKey<SpendAuth>);
 
 impl From<&SpendAuthorizingKey> for SpendValidatingKey {
     fn from(ask: &SpendAuthorizingKey) -> Self {
         SpendValidatingKey((&ask.0).into())
+    }
+}
+
+impl PartialEq for SpendValidatingKey {
+    fn eq(&self, other: &Self) -> bool {
+        <[u8; 32]>::from(&self.0).eq(&<[u8; 32]>::from(&other.0))
     }
 }
 

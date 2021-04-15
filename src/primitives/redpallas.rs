@@ -3,6 +3,7 @@
 use std::convert::{TryFrom, TryInto};
 
 use pasta_curves::pallas;
+use rand_7::{CryptoRng, RngCore};
 
 /// A RedPallas signature type.
 pub trait SigType: reddsa::SigType + private::Sealed {}
@@ -39,8 +40,15 @@ impl<T: SigType> TryFrom<[u8; 32]> for SigningKey<T> {
     }
 }
 
+impl<T: SigType> SigningKey<T> {
+    /// Creates a signature of type `T` on `msg` using this `SigningKey`.
+    pub fn sign<R: RngCore + CryptoRng>(&self, rng: R, msg: &[u8]) -> Signature<T> {
+        Signature(self.0.sign(rng, msg))
+    }
+}
+
 /// A RedPallas verification key.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct VerificationKey<T: SigType>(reddsa::VerificationKey<T>);
 
 impl<T: SigType> From<VerificationKey<T>> for [u8; 32] {

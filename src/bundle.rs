@@ -3,7 +3,7 @@
 use nonempty::NonEmpty;
 
 use crate::{
-    circuit::Proof,
+    circuit::{Instance, Proof},
     note::{EncryptedNote, ExtractedNoteCommitment, Nullifier},
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::Anchor,
@@ -106,6 +106,18 @@ impl<T> Action<T> {
             cv_net: self.cv_net,
             authorization: step(self.authorization)?,
         })
+    }
+
+    pub(crate) fn to_instance(&self, flags: Flags, anchor: Anchor) -> Instance {
+        Instance {
+            anchor,
+            cv_net: self.cv_net.clone(),
+            nf_old: self.nf.clone(),
+            rk: self.rk.clone(),
+            cmx: self.cmx.clone(),
+            enable_spend: flags.spends_enabled,
+            enable_output: flags.outputs_enabled,
+        }
     }
 }
 

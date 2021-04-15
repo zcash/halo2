@@ -76,7 +76,7 @@ impl Sub for NoteValue {
 }
 
 /// A sum of Orchard note values.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ValueSum(i64);
 
 impl ValueSum {
