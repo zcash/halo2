@@ -34,8 +34,34 @@ pub struct Action<T> {
     authorization: T,
 }
 
+impl<T> Action<T> {
+    /// Transitions this action from one authorization state to another.
+    pub fn map<U>(self, step: impl FnOnce(T) -> U) -> Action<U> {
+        Action {
+            nf_old: self.nf_old,
+            rk: self.rk,
+            cm_new: self.cm_new,
+            encrypted_note: self.encrypted_note,
+            cv_net: self.cv_net,
+            authorization: step(self.authorization),
+        }
+    }
+
+    /// Transitions this action from one authorization state to another.
+    pub fn try_map<U, E>(self, step: impl FnOnce(T) -> Result<U, E>) -> Result<Action<U>, E> {
+        Ok(Action {
+            nf_old: self.nf_old,
+            rk: self.rk,
+            cm_new: self.cm_new,
+            encrypted_note: self.encrypted_note,
+            cv_net: self.cv_net,
+            authorization: step(self.authorization)?,
+        })
+    }
+}
+
 /// Orchard-specific flags.
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Flags {
     spends_enabled: bool,
     outputs_enabled: bool,
@@ -62,6 +88,46 @@ impl<T: Authorization> Bundle<T> {
     /// a transaction ID.
     pub fn commitment(&self) -> BundleCommitment {
         todo!()
+    }
+
+    /// Transitions this bundle from one authorization state to another.
+    pub fn map<U: Authorization>(
+        self,
+        mut spend_auth: impl FnMut(&T, T::SpendAuth) -> U::SpendAuth,
+        step: impl FnOnce(T) -> U,
+    ) -> Bundle<U> {
+        let authorization = self.authorization;
+        Bundle {
+            actions: self
+                .actions
+                .map(|a| a.map(|a_auth| spend_auth(&authorization, a_auth))),
+            flag: self.flag,
+            value_balance: self.value_balance,
+            anchor: self.anchor,
+            authorization: step(authorization),
+        }
+    }
+
+    /// Transitions this bundle from one authorization state to another.
+    pub fn try_map<U: Authorization, E>(
+        self,
+        mut spend_auth: impl FnMut(&T, T::SpendAuth) -> Result<U::SpendAuth, E>,
+        step: impl FnOnce(T) -> Result<U, E>,
+    ) -> Result<Bundle<U>, E> {
+        let authorization = self.authorization;
+        let new_actions = self
+            .actions
+            .into_iter()
+            .map(|a| a.try_map(|a_auth| spend_auth(&authorization, a_auth)))
+            .collect::<Result<Vec<_>, E>>()?;
+
+        Ok(Bundle {
+            actions: NonEmpty::from_vec(new_actions).unwrap(),
+            flag: self.flag,
+            value_balance: self.value_balance,
+            anchor: self.anchor,
+            authorization: step(authorization)?,
+        })
     }
 }
 
