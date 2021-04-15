@@ -1,8 +1,9 @@
 use group::GroupEncoding;
 use pasta_curves::pallas;
+use rand::RngCore;
 
 use crate::{
-    keys::FullViewingKey,
+    keys::{FullViewingKey, SpendingKey},
     spec::{prf_expand, to_base, to_scalar},
     value::NoteValue,
     Address,
@@ -19,6 +20,12 @@ pub use self::nullifier::Nullifier;
 struct RandomSeed([u8; 32]);
 
 impl RandomSeed {
+    pub(crate) fn random(rng: &mut impl RngCore) -> Self {
+        let mut bytes = [0; 32];
+        rng.fill_bytes(&mut bytes);
+        RandomSeed(bytes)
+    }
+
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
     ///
     /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
@@ -53,6 +60,25 @@ pub struct Note {
 }
 
 impl Note {
+    /// Generates a dummy spent note.
+    ///
+    /// Defined in [Zcash Protocol Spec § 4.8.3: Dummy Notes (Orchard)][orcharddummynotes].
+    ///
+    /// [orcharddummynotes]: https://zips.z.cash/protocol/nu5.pdf#orcharddummynotes
+    pub(crate) fn dummy(rng: &mut impl RngCore, rho: Option<Nullifier>) -> (FullViewingKey, Self) {
+        let fvk: FullViewingKey = (&SpendingKey::random(rng)).into();
+        let recipient = fvk.default_address();
+
+        let note = Note {
+            recipient,
+            value: NoteValue::default(),
+            rho: rho.unwrap_or_else(|| Nullifier::dummy(rng)),
+            rseed: RandomSeed::random(rng),
+        };
+
+        (fvk, note)
+    }
+
     /// Derives the commitment to this note.
     ///
     /// Defined in [Zcash Protocol Spec § 3.2: Notes][notes].
