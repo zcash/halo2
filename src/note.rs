@@ -79,6 +79,11 @@ impl Note {
         (fvk, note)
     }
 
+    /// Returns the value of this note.
+    pub fn value(&self) -> NoteValue {
+        self.value
+    }
+
     /// Derives the commitment to this note.
     ///
     /// Defined in [Zcash Protocol Spec § 3.2: Notes][notes].

@@ -177,6 +177,12 @@ impl From<&SpendingKey> for FullViewingKey {
     }
 }
 
+impl From<FullViewingKey> for SpendValidatingKey {
+    fn from(fvk: FullViewingKey) -> Self {
+        fvk.ak
+    }
+}
+
 impl FullViewingKey {
     pub(crate) fn nk(&self) -> &NullifierDerivingKey {
         &self.nk
