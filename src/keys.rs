@@ -109,6 +109,13 @@ impl From<&SpendAuthorizingKey> for SpendValidatingKey {
     }
 }
 
+impl SpendValidatingKey {
+    /// Randomizes this spend validating key with the given `randomizer`.
+    pub fn randomize(&self, randomizer: &pallas::Scalar) -> redpallas::VerificationKey<SpendAuth> {
+        self.0.randomize(randomizer)
+    }
+}
+
 /// A key used to derive [`Nullifier`]s from [`Note`]s.
 ///
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
