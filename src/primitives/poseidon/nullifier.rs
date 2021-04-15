@@ -1510,7 +1510,7 @@ mod tests {
     use halo2::arithmetic::FieldExt;
     use pasta_curves::pallas;
 
-    use crate::primitives::poseidon::Spec;
+    use crate::primitives::poseidon::{permute, Spec};
 
     use super::{MDS, MDS_INV, ROUND_CONSTANTS};
 
@@ -1569,5 +1569,61 @@ mod tests {
         for (actual, expected) in mds_inv.iter().flatten().zip(MDS_INV.iter().flatten()) {
             assert_eq!(actual, expected);
         }
+    }
+
+    #[test]
+    fn test_against_reference() {
+        // This is the test vector output by the reference code at
+        // <https://extgit.iaik.tugraz.at/krypto/hadeshash>, using parameters from
+        // `generate_parameters_grain.sage 1 0 255 3 8 58 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001`.
+
+        let mut input = [
+            pallas::Base::from_raw([
+                0x0000_0000_0000_0000,
+                0x0000_0000_0000_0000,
+                0x0000_0000_0000_0000,
+                0x0000_0000_0000_0000,
+            ]),
+            pallas::Base::from_raw([
+                0x0000_0000_0000_0001,
+                0x0000_0000_0000_0000,
+                0x0000_0000_0000_0000,
+                0x0000_0000_0000_0000,
+            ]),
+            pallas::Base::from_raw([
+                0x0000_0000_0000_0002,
+                0x0000_0000_0000_0000,
+                0x0000_0000_0000_0000,
+                0x0000_0000_0000_0000,
+            ]),
+        ];
+
+        let expected_output = [
+            pallas::Base::from_raw([
+                0x4586_0cdf_c122_4c90,
+                0x6ad2_1f3e_0511_2d6e,
+                0xe2d3_3be0_7ee5_db5c,
+                0x19a2_64db_f840_aaea,
+            ]),
+            pallas::Base::from_raw([
+                0x3dc3_ed1c_3434_091e,
+                0x31cc_06bf_df6b_d5fd,
+                0x8136_86b6_df10_cf99,
+                0x11b8_23d6_6e94_c285,
+            ]),
+            pallas::Base::from_raw([
+                0xc5dc_3d6d_756e_de28,
+                0xcbaa_5cae_abc5_96e3,
+                0x68a6_35c3_b4cb_b608,
+                0x1111_04f4_1966_d2ce,
+            ]),
+        ];
+
+        permute::<pallas::Base, P128Pow5T3Plus<pallas::Base>, 3, 2>(
+            &mut input,
+            &MDS,
+            &ROUND_CONSTANTS,
+        );
+        assert_eq!(input, expected_output);
     }
 }
