@@ -11,7 +11,7 @@ edition = "2018"
 description = """
 Fast proof-carrying data implementation with no trusted setup
 """
-license = "TGPPL"
+license = "BOSL"
 repository = "https://github.com/zcash/halo2"
 documentation = "https://docs.rs/halo2"
 readme = "README.md"
