@@ -9,30 +9,30 @@ use crate::{
 
 pub mod layouter;
 
-/// A chip implements a set of instructions that can be used by gadgets.
+/// A core implements a set of instructions that can be used by gadgets.
 ///
-/// The chip itself should not store any state; instead, state that is required at circuit
-/// synthesis time should be stored in [`Chip::Config`], which can then be fetched via
+/// The core itself should not store any state; instead, state that is required at circuit
+/// synthesis time should be stored in [`Core::Config`], which can then be fetched via
 /// [`Layouter::config`].
-pub trait Chip: Sized {
-    /// A type that holds the configuration for this chip, and any other state it may need
+pub trait Core: Sized {
+    /// A type that holds the configuration for this core, and any other state it may need
     /// during circuit synthesis, that can be derived during [`Circuit::configure`].
     ///
     /// [`Circuit::configure`]: crate::plonk::Circuit::configure
     type Config: fmt::Debug;
 
-    /// A type that holds any general chip state that needs to be loaded at the start of
-    /// [`Circuit::synthesize`]. This might simply be `()` for some chips.
+    /// A type that holds any general core state that needs to be loaded at the start of
+    /// [`Circuit::synthesize`]. This might simply be `()` for some cores.
     ///
     /// [`Circuit::synthesize`]: crate::plonk::Circuit::synthesize
     type Loaded: fmt::Debug;
 
-    /// The field that the chip is defined over.
+    /// The field that the core is defined over.
     ///
-    /// This provides a type that the chip's configuration can reference if necessary.
+    /// This provides a type that the core's configuration can reference if necessary.
     type Field: FieldExt;
 
-    /// Load any fixed configuration for this chip into the circuit.
+    /// Load any fixed configuration for this core into the circuit.
     ///
     /// `layouter.loaded()` will panic if called inside this function.
     fn load(layouter: &mut impl Layouter<Self>) -> Result<Self::Loaded, Error>;
@@ -85,29 +85,29 @@ pub struct Cell {
     column: Column<Any>,
 }
 
-/// A region of the circuit in which a [`Chip`] can assign cells.
+/// A region of the circuit in which a [`Core`] can assign cells.
 ///
-/// Inside a region, the chip may freely use relative offsets; the [`Layouter`] will
+/// Inside a region, the core may freely use relative offsets; the [`Layouter`] will
 /// treat these assignments as a single "region" within the circuit.
 ///
-/// The [`Layouter`] is allowed to optimise between regions as it sees fit. Chips must use
+/// The [`Layouter`] is allowed to optimise between regions as it sees fit. Cores must use
 /// [`Region::constrain_equal`] to copy in variables assigned in other regions.
 ///
 /// TODO: It would be great if we could constrain the columns in these types to be
-/// "logical" columns that are guaranteed to correspond to the chip (and have come from
-/// `Chip::Config`).
+/// "logical" columns that are guaranteed to correspond to the core (and have come from
+/// `Core::Config`).
 #[derive(Debug)]
-pub struct Region<'r, C: Chip> {
+pub struct Region<'r, C: Core> {
     region: &'r mut dyn layouter::RegionLayouter<C>,
 }
 
-impl<'r, C: Chip> From<&'r mut dyn layouter::RegionLayouter<C>> for Region<'r, C> {
+impl<'r, C: Core> From<&'r mut dyn layouter::RegionLayouter<C>> for Region<'r, C> {
     fn from(region: &'r mut dyn layouter::RegionLayouter<C>) -> Self {
         Region { region }
     }
 }
 
-impl<'r, C: Chip> Region<'r, C> {
+impl<'r, C: Core> Region<'r, C> {
     /// Assign an advice column value (witness).
     ///
     /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
@@ -159,21 +159,21 @@ impl<'r, C: Chip> Region<'r, C> {
     }
 }
 
-/// A layout strategy for a specific chip within a circuit.
+/// A layout strategy for a specific core within a circuit.
 ///
 /// This abstracts over the circuit assignments, handling row indices etc.
 ///
-/// A particular concrete layout strategy will implement this trait for each chip it
+/// A particular concrete layout strategy will implement this trait for each core it
 /// supports.
-pub trait Layouter<C: Chip> {
+pub trait Layouter<C: Core> {
     /// Represents the type of the "root" of this layouter, so that nested namespaces
     /// can minimize indirection.
     type Root: Layouter<C>;
 
-    /// Provides access to the chip configuration.
+    /// Provides access to the core configuration.
     fn config(&self) -> &C::Config;
 
-    /// Provides access to general chip state loaded at the beginning of circuit
+    /// Provides access to general core state loaded at the beginning of circuit
     /// synthesis.
     ///
     /// Panics if called inside `C::load`.
@@ -181,7 +181,7 @@ pub trait Layouter<C: Chip> {
 
     /// Assign a region of gates to an absolute row number.
     ///
-    /// Inside the closure, the chip may freely use relative offsets; the `Layouter` will
+    /// Inside the closure, the core may freely use relative offsets; the `Layouter` will
     /// treat these assignments as a single "region" within the circuit. Outside this
     /// closure, the `Layouter` is allowed to optimise as it sees fit.
     ///
@@ -229,9 +229,9 @@ pub trait Layouter<C: Chip> {
 /// This is a "namespaced" layouter which borrows a `Layouter` (pushing a namespace
 /// context) and, when dropped, pops out of the namespace context.
 #[derive(Debug)]
-pub struct NamespacedLayouter<'a, C: Chip, L: Layouter<C> + 'a>(&'a mut L, PhantomData<C>);
+pub struct NamespacedLayouter<'a, C: Core, L: Layouter<C> + 'a>(&'a mut L, PhantomData<C>);
 
-impl<'a, C: Chip, L: Layouter<C> + 'a> Layouter<C> for NamespacedLayouter<'a, C, L> {
+impl<'a, C: Core, L: Layouter<C> + 'a> Layouter<C> for NamespacedLayouter<'a, C, L> {
     type Root = L::Root;
 
     fn config(&self) -> &C::Config {
@@ -268,7 +268,7 @@ impl<'a, C: Chip, L: Layouter<C> + 'a> Layouter<C> for NamespacedLayouter<'a, C,
     }
 }
 
-impl<'a, C: Chip, L: Layouter<C> + 'a> Drop for NamespacedLayouter<'a, C, L> {
+impl<'a, C: Core, L: Layouter<C> + 'a> Drop for NamespacedLayouter<'a, C, L> {
     fn drop(&mut self) {
         let gadget_name = {
             #[cfg(feature = "gadget-traces")]

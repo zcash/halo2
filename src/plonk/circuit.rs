@@ -9,7 +9,7 @@ use std::{
 use super::{lookup, permutation, Error};
 use crate::{
     arithmetic::FieldExt,
-    circuit::{Chip, Region},
+    circuit::{Core, Region},
     poly::Rotation,
 };
 
@@ -157,7 +157,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// Selectors are disabled on all rows by default, and must be explicitly enabled on each
 /// row when required:
 /// ```
-/// use halo2::{circuit::{Chip, Layouter}, plonk::{Advice, Column, Error, Selector}};
+/// use halo2::{circuit::{Core, Layouter}, plonk::{Advice, Column, Error, Selector}};
 /// # use ff::Field;
 /// # use halo2::plonk::Fixed;
 ///
@@ -167,7 +167,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 ///     s: Selector,
 /// }
 ///
-/// fn circuit_logic<C: Chip>(mut layouter: impl Layouter<C>) -> Result<(), Error> {
+/// fn circuit_logic<C: Core>(mut layouter: impl Layouter<C>) -> Result<(), Error> {
 ///     let config = layouter.config().clone();
 ///     # let config: Config = todo!();
 ///     layouter.assign_region(|| "bar", |mut region| {
@@ -183,7 +183,7 @@ pub struct Selector(Column<Fixed>);
 
 impl Selector {
     /// Enable this selector at the given offset within the given region.
-    pub fn enable<C: Chip>(&self, region: &mut Region<C>, offset: usize) -> Result<(), Error> {
+    pub fn enable<C: Core>(&self, region: &mut Region<C>, offset: usize) -> Result<(), Error> {
         // TODO: Ensure that the default for a selector's cells is always zero, if we
         // alter the proving system to change the global default.
         // TODO: Add Region::enable_selector method to allow the layouter to control the
