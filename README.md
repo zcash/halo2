@@ -20,4 +20,4 @@ Licence, version 1.0.
 The purpose of the BOSL is to allow commercial improvements to the package
 while ensuring that all improvements are open source. See
 [here](https://electriccoin.co/blog/introducing-tgppl-a-radically-new-type-of-open-source-license/)
-for why the BOSL exists, graphically illustrated on three slides.
+for why the BOSL exists.
