@@ -7,12 +7,12 @@ authors = [
 ]
 edition = "2018"
 description = "Sapling on stilts!"
-license = "TGPPL"
+license = "BOSL"
 repository = "https://github.com/zcash/orchard"
 documentation = "https://docs.rs/orchard"
 readme = "README.md"
 
-# We can't publish to crates.io under TGPPL yet.
+# We are not publishing this yet.
 publish = false
 
 [package.metadata.docs.rs]
