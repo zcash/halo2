@@ -35,15 +35,17 @@ pub trait Chip<F: FieldExt, Co: Core<F>> {
     /// Creates a new (sub)namespace and enters into it.
     ///
     /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
-    fn push_namespace<NR, N>(&mut self, name_fn: N)
+    fn push_namespace<NR, N>(&mut self, _name_fn: N)
     where
         NR: Into<String>,
-        N: FnOnce() -> NR;
+        N: FnOnce() -> NR,
+    {
+    }
 
     /// Exits out of the existing namespace.
     ///
     /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
-    fn pop_namespace(&mut self, gadget_name: Option<String>);
+    fn pop_namespace(&mut self, _gadget_name: Option<String>) {}
 
     /// Enters into a namespace.
     fn namespace<NR, N>(&mut self, name_fn: N) -> NamespacedChip<'_, F, Co, Self::Root>
