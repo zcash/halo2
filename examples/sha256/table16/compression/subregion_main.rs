@@ -1,14 +1,18 @@
 use super::super::{
-    CellValue16, RoundWordA, RoundWordE, StateWord, Table16Assignment, Table16Chip, ROUND_CONSTANTS,
+    CellValue16, RoundWordA, RoundWordE, StateWord, Table16Assignment, ROUND_CONSTANTS,
 };
-use super::{compression_util::*, Compression, State};
-use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
+use super::{compression_util::*, CompressionConfig, State};
+use halo2::{
+    arithmetic::FieldExt,
+    circuit::{Core, Region},
+    plonk::Error,
+};
 
-impl Compression {
+impl CompressionConfig {
     #[allow(clippy::many_single_char_names)]
-    pub fn assign_round<F: FieldExt>(
+    pub fn assign_round<F: FieldExt, C: Core<F>>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         idx: i32,
         state: State,
         schedule_word: (CellValue16, CellValue16),

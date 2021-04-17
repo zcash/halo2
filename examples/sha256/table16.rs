@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use super::Sha256Instructions;
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Cell, Chip, Layouter, Region},
+    circuit::{Cell, Chip, Core, Layouter, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Permutation},
 };
 
@@ -63,55 +63,55 @@ impl BlockWord {
 
 #[derive(Clone, Copy, Debug)]
 pub struct CellValue16 {
-    var: Cell,
+    cell: Cell,
     value: Option<u16>,
 }
 
 impl CellValue16 {
-    pub fn new(var: Cell, value: u16) -> Self {
-        CellValue16 {
-            var,
-            value: Some(value),
-        }
+    pub fn new(cell: Cell, value: Option<u16>) -> Self {
+        CellValue16 { cell, value }
     }
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct CellValue32 {
-    var: Cell,
+    cell: Cell,
     value: Option<u32>,
 }
 
 impl CellValue32 {
-    pub fn new(var: Cell, value: u32) -> Self {
-        CellValue32 {
-            var,
-            value: Some(value),
-        }
+    pub fn new(cell: Cell, value: Option<u32>) -> Self {
+        CellValue32 { cell, value }
     }
 }
 
-impl Into<CellValue32> for CellValue16 {
-    fn into(self) -> CellValue32 {
-        CellValue32::new(self.var, self.value.unwrap() as u32)
+impl From<CellValue16> for CellValue32 {
+    fn from(cell_value: CellValue16) -> Self {
+        let value = match cell_value.value {
+            Some(value) => Some(value as u32),
+            None => None,
+        };
+        CellValue32::new(cell_value.cell, value)
     }
 }
 
-/// Configuration for a [`Table16Chip`].
+/// Configuration for a [`Table16Config`].
 #[derive(Clone, Debug)]
 pub struct Table16Config {
-    lookup_table: SpreadTable,
-    message_schedule: MessageSchedule,
-    compression: Compression,
+    lookup_table: SpreadTableConfig,
+    message_schedule: MessageScheduleConfig,
+    compression: CompressionConfig,
 }
 
-/// A chip that implements SHA-256 with a maximum lookup table size of $2^16$.
-#[derive(Clone, Debug)]
-pub struct Table16Chip<F: FieldExt> {
-    _marker: PhantomData<F>,
+/// A core that implements SHA-256 with a maximum lookup table size of $2^16$.
+#[derive(Debug)]
+pub struct Table16Core<F: FieldExt, L: Layouter<F>> {
+    pub config: Table16Config,
+    pub layouter: L,
+    pub _marker: PhantomData<F>,
 }
 
-impl<F: FieldExt> Table16Chip<F> {
+impl<F: FieldExt, L: Layouter<F>> Table16Core<F, L> {
     /// Configures this chip for use in a circuit.
     pub fn configure(meta: &mut ConstraintSystem<F>) -> Table16Config {
         // Columns required by this chip:
@@ -130,7 +130,8 @@ impl<F: FieldExt> Table16Chip<F> {
             meta.advice_column(),
         ];
 
-        let (lookup_inputs, lookup_table) = SpreadTable::configure(meta, tag, dense, spread);
+        let lookup_table = SpreadTableCore::<'_, F, L>::configure(meta, tag, dense, spread);
+        let lookup_inputs = lookup_table.inputs.clone();
 
         // Rename these here for ease of matching the gates to the specification.
         let _a_0 = lookup_inputs.tag;
@@ -158,7 +159,7 @@ impl<F: FieldExt> Table16Chip<F> {
             ],
         );
 
-        let compression = Compression::configure(
+        let compression = CompressionCore::<'_, F, L>::configure(
             meta,
             lookup_inputs.clone(),
             message_schedule,
@@ -166,8 +167,13 @@ impl<F: FieldExt> Table16Chip<F> {
             perm.clone(),
         );
 
-        let message_schedule =
-            MessageSchedule::configure(meta, lookup_inputs, message_schedule, extras, perm);
+        let message_schedule = MessageScheduleCore::<'_, F, L>::configure(
+            meta,
+            lookup_inputs,
+            message_schedule,
+            extras,
+            perm,
+        );
 
         Table16Config {
             lookup_table,
@@ -177,18 +183,35 @@ impl<F: FieldExt> Table16Chip<F> {
     }
 }
 
-impl<F: FieldExt> Chip for Table16Chip<F> {
-    type Field = F;
+impl<F: FieldExt, L: Layouter<F>> Core<F> for Table16Core<F, L> {
     type Config = Table16Config;
     type Loaded = ();
+    type Layouter = L;
 
-    fn load(layouter: &mut impl Layouter<Self>) -> Result<(), Error> {
-        let table = layouter.config().lookup_table.clone();
-        table.load(layouter)
+    fn config(&self) -> &Self::Config {
+        &self.config
+    }
+
+    fn loaded(&self) -> &Self::Loaded {
+        &()
+    }
+
+    fn load(&mut self) -> Result<(), Error> {
+        let config = self.config().lookup_table.clone();
+        let mut spread_table = SpreadTableCore::<'_, F, L> {
+            config,
+            layouter: self.layouter(),
+            marker: PhantomData,
+        };
+        spread_table.load()
+    }
+
+    fn layouter(&mut self) -> &mut Self::Layouter {
+        &mut self.layouter
     }
 }
 
-impl<F: FieldExt> Sha256Instructions for Table16Chip<F> {
+impl<F: FieldExt, L: Layouter<F>> Sha256Instructions for Table16Core<F, L> {
     type State = State;
     type BlockWord = BlockWord;
 
@@ -196,55 +219,107 @@ impl<F: FieldExt> Sha256Instructions for Table16Chip<F> {
         BlockWord::new(0)
     }
 
-    fn initialization_vector(layouter: &mut impl Layouter<Self>) -> Result<State, Error> {
-        let config = layouter.config().clone();
-        config.compression.initialize_with_iv(layouter, IV)
+    fn initialization_vector(&mut self) -> Result<State, Error> {
+        let config = self.config().compression.clone();
+
+        let mut compression = CompressionCore::<'_, F, L> {
+            config,
+            layouter: self.layouter(),
+            marker: PhantomData,
+        };
+        compression.initialize_with_iv(IV)
     }
 
-    fn initialization(
-        layouter: &mut impl Layouter<Table16Chip<F>>,
-        init_state: &Self::State,
-    ) -> Result<Self::State, Error> {
-        let config = layouter.config().clone();
-        config
-            .compression
-            .initialize_with_state(layouter, init_state.clone())
+    fn initialization(&mut self, init_state: &Self::State) -> Result<Self::State, Error> {
+        let config = self.config().compression.clone();
+
+        let mut compression = CompressionCore::<'_, F, L> {
+            config,
+            layouter: self.layouter(),
+            marker: PhantomData,
+        };
+        compression.initialize_with_state(init_state.clone())
     }
 
     // Given an initialized state and an input message block, compress the
     // message block and return the final state.
     fn compress(
-        layouter: &mut impl Layouter<Self>,
+        &mut self,
         initialized_state: &Self::State,
         input: [Self::BlockWord; super::BLOCK_SIZE],
     ) -> Result<Self::State, Error> {
-        let config = layouter.config().clone();
-        let (_, w_halves) = config.message_schedule.process(layouter, input)?;
+        let config = self.config().clone();
 
-        config
-            .compression
-            .compress(layouter, initialized_state.clone(), w_halves)
+        let mut message_schedule = MessageScheduleCore::<'_, F, L> {
+            config: config.message_schedule.clone(),
+            layouter: self.layouter(),
+            marker: PhantomData,
+        };
+
+        let (_, w_halves) = message_schedule.process(input)?;
+
+        let mut compression = CompressionCore::<'_, F, L> {
+            config: config.compression,
+            layouter: self.layouter(),
+            marker: PhantomData,
+        };
+        compression.compress(initialized_state.clone(), w_halves)
     }
 
     fn digest(
-        layouter: &mut impl Layouter<Self>,
+        &mut self,
         state: &Self::State,
     ) -> Result<[Self::BlockWord; super::DIGEST_SIZE], Error> {
         // Copy the dense forms of the state variable chunks down to this gate.
         // Reconstruct the 32-bit dense words.
-        let config = layouter.config().clone();
-        config.compression.digest(layouter, state.clone())
+        let config = self.config().compression.clone();
+
+        let mut compression = CompressionCore::<'_, F, L> {
+            config,
+            layouter: self.layouter(),
+            marker: PhantomData,
+        };
+        compression.digest(state.clone())
+    }
+}
+
+/// The chip for Table16Core.
+pub struct Table16Chip<F: FieldExt, L: Layouter<F>> {
+    core: Table16Core<F, L>,
+}
+
+impl<'a, F: FieldExt, L: Layouter<F>> Chip<F, Table16Core<F, L>> for Table16Chip<F, L> {
+    type Root = Self;
+    type Config = Table16Config;
+    type Layouter = L;
+
+    fn new(config: Self::Config, layouter: Self::Layouter) -> Self::Root {
+        Table16Chip {
+            core: Table16Core {
+                config,
+                layouter,
+                _marker: PhantomData,
+            },
+        }
+    }
+
+    fn root(&mut self) -> &mut Self::Root {
+        self
+    }
+
+    fn core(&mut self) -> &mut Table16Core<F, L> {
+        &mut self.core
     }
 }
 
 /// Common assignment patterns used by Table16 regions.
-trait Table16Assignment<F: FieldExt> {
+trait Table16Assignment<F: FieldExt, C: Core<F>> {
     // Assign cells for general spread computation used in sigma, ch, ch_neg, maj gates
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::type_complexity)]
     fn assign_spread_outputs(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
         perm: &Permutation,
@@ -267,16 +342,16 @@ trait Table16Assignment<F: FieldExt> {
             row,
             || Ok(F::from_u64(r_1_odd.spread.value.unwrap().into())),
         )?;
-        region.constrain_equal(perm, r_1_odd.spread.var, r_1_odd_spread)?;
+        region.constrain_equal(perm, r_1_odd.spread.cell, r_1_odd_spread)?;
 
         Ok((
             (
-                CellValue16::new(r_0_even.dense.var, r_0_even.dense.value.unwrap()),
-                CellValue16::new(r_1_even.dense.var, r_1_even.dense.value.unwrap()),
+                CellValue16::new(r_0_even.dense.cell, r_0_even.dense.value),
+                CellValue16::new(r_1_even.dense.cell, r_1_even.dense.value),
             ),
             (
-                CellValue16::new(r_0_odd.dense.var, r_0_odd.dense.value.unwrap()),
-                CellValue16::new(r_1_odd.dense.var, r_1_odd.dense.value.unwrap()),
+                CellValue16::new(r_0_odd.dense.cell, r_0_odd.dense.value),
+                CellValue16::new(r_1_odd.dense.cell, r_1_odd.dense.value),
             ),
         ))
     }
@@ -285,7 +360,7 @@ trait Table16Assignment<F: FieldExt> {
     #[allow(clippy::too_many_arguments)]
     fn assign_sigma_outputs(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
         perm: &Permutation,
@@ -305,7 +380,7 @@ trait Table16Assignment<F: FieldExt> {
     // Assign a cell the same value as another cell and set up a copy constraint between them
     fn assign_and_constrain<A, AR>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         annotation: A,
         column: Column<Advice>,
         row: usize,
@@ -319,7 +394,7 @@ trait Table16Assignment<F: FieldExt> {
         let cell = region.assign_advice(annotation, column, row, || {
             Ok(F::from_u64(copy.value.unwrap() as u64))
         })?;
-        region.constrain_equal(perm, cell, copy.var)?;
+        region.constrain_equal(perm, cell, copy.cell)?;
         Ok(cell)
     }
 }
@@ -345,7 +420,7 @@ mod tests {
             type Config = Table16Config;
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Table16Config {
-                Table16Chip::configure(meta)
+                Table16Core::<F, ()>::configure(meta)
             }
 
             fn synthesize(
