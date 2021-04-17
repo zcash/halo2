@@ -18,7 +18,5 @@
   - [Circuit](design/circuit.md)
     - [Gadgets](design/circuit/gadgets.md)
       - [Elliptic curve cryptography](design/circuit/gadgets/ecc.md)
-        - [Complete addition](design/circuit/gadgets/ecc/complete-add.md)
-        - [Incomplete addition](design/circuit/gadgets/ecc/incomplete-add.md)
         - [Fixed-base scalar multiplication](design/circuit/gadgets/ecc/fixed-base-scalar-mul.md)
         - [Variable-base scalar multiplication](design/circuit/gadgets/ecc/var-base-scalar-mul.md)

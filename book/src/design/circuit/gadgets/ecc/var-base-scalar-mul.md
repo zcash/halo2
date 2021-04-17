@@ -67,6 +67,7 @@ sage: 2^253 + 2^252 - 1 < (q-1)//2
 False
 sage: 2^252 + 2^251 - 1 < (q-1)//2
 True
+```
 
 So the last three iterations of the loop ($i = 2..0$) need to use [complete addition](./complete-add.md), as does the conditional subtraction at the end. Writing this out using ⸭ for incomplete addition (as we do in the spec), we have:
 
