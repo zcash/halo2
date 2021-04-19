@@ -8,7 +8,7 @@ use subtle::CtOption;
 use crate::{
     constants::L_ORCHARD_BASE,
     primitives::sinsemilla,
-    spec::{prf_expand, to_scalar},
+    spec::{extract_p, prf_expand, to_scalar},
     value::NoteValue,
 };
 
@@ -52,5 +52,15 @@ impl NoteCommitment {
                 &rcm.0,
             )
             .map(NoteCommitment)
+    }
+}
+
+/// The x-coordinate of the commitment to a note.
+#[derive(Debug)]
+pub struct ExtractedNoteCommitment(pub(super) pallas::Base);
+
+impl From<NoteCommitment> for ExtractedNoteCommitment {
+    fn from(cm: NoteCommitment) -> Self {
+        ExtractedNoteCommitment(extract_p(&cm.0))
     }
 }

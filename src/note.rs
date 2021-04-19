@@ -9,7 +9,7 @@ use crate::{
 };
 
 mod commitment;
-pub use self::commitment::NoteCommitment;
+pub use self::commitment::{ExtractedNoteCommitment, NoteCommitment};
 
 mod nullifier;
 pub use self::nullifier::Nullifier;
