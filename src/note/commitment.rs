@@ -3,6 +3,7 @@ use std::iter;
 use bitvec::{array::BitArray, order::Lsb0};
 use ff::PrimeField;
 use pasta_curves::pallas;
+use subtle::CtOption;
 
 use crate::{
     constants::L_ORCHARD_BASE,
@@ -38,10 +39,10 @@ impl NoteCommitment {
         rho: pallas::Base,
         psi: pallas::Base,
         rcm: NoteCommitTrapdoor,
-    ) -> Self {
+    ) -> CtOption<Self> {
         let domain = sinsemilla::CommitDomain::new("z.cash:Orchard-NoteCommit");
-        NoteCommitment(
-            domain.commit(
+        domain
+            .commit(
                 iter::empty()
                     .chain(BitArray::<Lsb0, _>::new(g_d).iter().by_val())
                     .chain(BitArray::<Lsb0, _>::new(pk_d).iter().by_val())
@@ -49,7 +50,7 @@ impl NoteCommitment {
                     .chain(rho.to_le_bits().iter().by_val().take(L_ORCHARD_BASE))
                     .chain(psi.to_le_bits().iter().by_val().take(L_ORCHARD_BASE)),
                 &rcm.0,
-            ),
-        )
+            )
+            .map(NoteCommitment)
     }
 }

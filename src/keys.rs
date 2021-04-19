@@ -35,7 +35,9 @@ impl SpendingKey {
         let sk = SpendingKey(sk);
         // If ask = 0, discard this key.
         let ask = SpendAuthorizingKey::derive_inner(&sk);
-        CtOption::new(sk, !ask.ct_is_zero())
+        // If ivk = ⊥, discard this key.
+        let ivk = IncomingViewingKey::derive_inner(&(&sk).into());
+        CtOption::new(sk, !(ask.ct_is_zero() | ivk.is_none()))
     }
 }
 
@@ -263,12 +265,19 @@ pub struct IncomingViewingKey(pallas::Scalar);
 
 impl From<&FullViewingKey> for IncomingViewingKey {
     fn from(fvk: &FullViewingKey) -> Self {
-        let ak = extract_p(&pallas::Point::from_bytes(&(&fvk.ak.0).into()).unwrap());
-        IncomingViewingKey(commit_ivk(&ak, &fvk.nk.0, &fvk.rivk.0))
+        let ivk = IncomingViewingKey::derive_inner(fvk);
+        // IncomingViewingKey cannot be constructed such that this unwrap would fail.
+        IncomingViewingKey(ivk.unwrap())
     }
 }
 
 impl IncomingViewingKey {
+    /// Derives ask from sk. Internal use only, does not enforce all constraints.
+    fn derive_inner(fvk: &FullViewingKey) -> CtOption<pallas::Scalar> {
+        let ak = extract_p(&pallas::Point::from_bytes(&(&fvk.ak.0).into()).unwrap());
+        commit_ivk(&ak, &fvk.nk.0, &fvk.rivk.0)
+    }
+
     /// Returns the payment address for this key corresponding to the given diversifier.
     pub fn address(&self, d: Diversifier) -> Address {
         let pk_d = DiversifiedTransmissionKey::derive(self, &d);

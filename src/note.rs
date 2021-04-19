@@ -61,6 +61,7 @@ impl Note {
     pub fn commitment(&self) -> NoteCommitment {
         let g_d = self.recipient.g_d();
 
+        // `Note` will always have a note commitment by construction.
         NoteCommitment::derive(
             g_d.to_bytes(),
             self.recipient.pk_d().to_bytes(),
@@ -69,6 +70,7 @@ impl Note {
             self.rseed.psi(),
             (&self.rseed).into(),
         )
+        .unwrap()
     }
 
     /// Derives the nullifier for this note.

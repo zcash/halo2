@@ -7,6 +7,7 @@ use ff::PrimeField;
 use group::{Curve, Group};
 use halo2::arithmetic::{CurveAffine, CurveExt, FieldExt};
 use pasta_curves::pallas;
+use subtle::CtOption;
 
 use crate::{
     constants::L_ORCHARD_BASE,
@@ -48,19 +49,18 @@ pub(crate) fn commit_ivk(
     ak: &pallas::Base,
     nk: &pallas::Base,
     rivk: &pallas::Scalar,
-) -> pallas::Scalar {
+) -> CtOption<pallas::Scalar> {
     // We rely on the API contract that to_le_bits() returns at least PrimeField::NUM_BITS
     // bits, which is equal to L_ORCHARD_BASE.
     let domain = sinsemilla::CommitDomain::new(&"z.cash:Orchard-CommitIvk");
-    // TODO: handle the (negligible probability of) failure of SinsemillaShortCommit.
-    mod_r_p(
-        domain.short_commit(
+    domain
+        .short_commit(
             iter::empty()
                 .chain(ak.to_le_bits().iter().by_val().take(L_ORCHARD_BASE))
                 .chain(nk.to_le_bits().iter().by_val().take(L_ORCHARD_BASE)),
             rivk,
-        ),
-    )
+        )
+        .map(mod_r_p)
 }
 
 /// Defined in [Zcash Protocol Spec § 5.4.1.6: DiversifyHash^Sapling and DiversifyHash^Orchard Hash Functions][concretediversifyhash].
@@ -125,6 +125,15 @@ pub(crate) fn extract_p(point: &pallas::Point) -> pallas::Base {
         .coordinates()
         .map(|c| *c.x())
         .unwrap_or_else(pallas::Base::zero)
+}
+
+/// Coordinate extractor for Pallas.
+///
+/// Defined in [Zcash Protocol Spec § 5.4.9.7: Coordinate Extractor for Pallas][concreteextractorpallas].
+///
+/// [concreteextractorpallas]: https://zips.z.cash/protocol/nu5.pdf#concreteextractorpallas
+pub(crate) fn extract_p_bottom(point: CtOption<pallas::Point>) -> CtOption<pallas::Base> {
+    point.map(|p| extract_p(&p))
 }
 
 #[cfg(test)]
