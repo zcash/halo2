@@ -6,7 +6,7 @@ use ff::Field;
 use std::convert::TryInto;
 use std::ops::Deref;
 
-use crate::arithmetic::{CurveAffine, FieldExt};
+use crate::arithmetic::{Coordinates, CurveAffine, FieldExt};
 
 use std::io::{self, Read, Write};
 use std::marker::PhantomData;
@@ -96,14 +96,14 @@ impl<R: Read, C: CurveAffine> TranscriptRead<C> for Blake2bRead<R, C> {
 
 impl<R: Read, C: CurveAffine> Transcript<C> for Blake2bRead<R, C> {
     fn common_point(&mut self, point: C) -> io::Result<()> {
-        let (x, y) = Option::from(point.get_xy()).ok_or_else(|| {
+        let coords: Coordinates<C> = Option::from(point.coordinates()).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::Other,
                 "cannot write points at infinity to the transcript",
             )
         })?;
-        self.state.update(&x.to_bytes());
-        self.state.update(&y.to_bytes());
+        self.state.update(&coords.x().to_bytes());
+        self.state.update(&coords.y().to_bytes());
 
         Ok(())
     }
@@ -165,14 +165,14 @@ impl<W: Write, C: CurveAffine> TranscriptWrite<C> for Blake2bWrite<W, C> {
 
 impl<W: Write, C: CurveAffine> Transcript<C> for Blake2bWrite<W, C> {
     fn common_point(&mut self, point: C) -> io::Result<()> {
-        let (x, y) = Option::from(point.get_xy()).ok_or_else(|| {
+        let coords: Coordinates<C> = Option::from(point.coordinates()).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::Other,
                 "cannot write points at infinity to the transcript",
             )
         })?;
-        self.state.update(&x.to_bytes());
-        self.state.update(&y.to_bytes());
+        self.state.update(&coords.x().to_bytes());
+        self.state.update(&coords.y().to_bytes());
 
         Ok(())
     }

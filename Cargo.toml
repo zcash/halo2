@@ -56,7 +56,7 @@ tabbycat = { version = "0.1", features = ["attributes"], optional = true }
 
 [dependencies.pasta_curves]
 git = "https://github.com/zcash/pasta_curves.git"
-rev = "0a6b2f6eb5acbe1dabc9e77ed0bcb748cc640196"
+rev = "b55a6960dfafd7f767e2820ddf1adaa499322f98"
 
 [features]
 dev-graph = ["plotters", "tabbycat"]
