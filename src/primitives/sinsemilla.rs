@@ -6,6 +6,8 @@ use pasta_curves::pallas;
 
 use crate::spec::extract_p;
 
+mod addition;
+
 mod constants;
 pub use constants::*;
 

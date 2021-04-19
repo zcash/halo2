@@ -120,11 +120,11 @@ pub(crate) fn ka_orchard(sk: &pallas::Scalar, b: &pallas::Point) -> pallas::Poin
 ///
 /// [concreteextractorpallas]: https://zips.z.cash/protocol/nu5.pdf#concreteextractorpallas
 pub(crate) fn extract_p(point: &pallas::Point) -> pallas::Base {
-    if let Some((x, _)) = point.to_affine().get_xy().into() {
-        x
-    } else {
-        pallas::Base::zero()
-    }
+    point
+        .to_affine()
+        .coordinates()
+        .map(|c| *c.x())
+        .unwrap_or_else(pallas::Base::zero)
 }
 
 #[cfg(test)]
