@@ -5,7 +5,8 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::marker::PhantomData;
 
-use super::{Cell, Chip, Layouter, Region, RegionIndex, RegionStart};
+use super::{Cell, Layouter, Region, RegionIndex, RegionStart};
+use crate::arithmetic::FieldExt;
 use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation};
 
 /// Helper trait for implementing a custom [`Layouter`].
@@ -13,17 +14,17 @@ use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation};
 /// This trait is used for implementing region assignments:
 ///
 /// ```ignore
-/// impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for MyLayouter<'a, C, CS> {
+/// impl<'a, F: FieldExt, C: Chip<F>, CS: Assignment<F> + 'a> Layouter<C> for MyLayouter<'a, C, CS> {
 ///     fn assign_region(
 ///         &mut self,
-///         assignment: impl FnOnce(Region<'_, C>) -> Result<(), Error>,
+///         assignment: impl FnOnce(Region<'_, F, C>) -> Result<(), Error>,
 ///     ) -> Result<(), Error> {
 ///         let region_index = self.regions.len();
 ///         self.regions.push(self.current_gate);
 ///
 ///         let mut region = MyRegion::new(self, region_index);
 ///         {
-///             let region: &mut dyn RegionLayouter<C> = &mut region;
+///             let region: &mut dyn RegionLayouter<F> = &mut region;
 ///             assignment(region.into())?;
 ///         }
 ///         self.current_gate += region.row_count;
@@ -36,14 +37,14 @@ use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation};
 /// TODO: It would be great if we could constrain the columns in these types to be
 /// "logical" columns that are guaranteed to correspond to the chip (and have come from
 /// `Chip::Config`).
-pub trait RegionLayouter<C: Chip>: fmt::Debug {
+pub trait RegionLayouter<F: FieldExt>: fmt::Debug {
     /// Assign an advice column value (witness)
     fn assign_advice<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
     ) -> Result<Cell, Error>;
 
     /// Assign a fixed value
@@ -52,7 +53,7 @@ pub trait RegionLayouter<C: Chip>: fmt::Debug {
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
     ) -> Result<Cell, Error>;
 
     /// Constraint two cells to have the same value.
@@ -67,58 +68,43 @@ pub trait RegionLayouter<C: Chip>: fmt::Debug {
 }
 
 /// A [`Layouter`] for a single-chip circuit.
-pub struct SingleChip<'a, C: Chip, CS: Assignment<C::Field> + 'a> {
+pub struct SingleChipLayouter<'a, F: FieldExt, CS: Assignment<F> + 'a> {
     cs: &'a mut CS,
-    config: C::Config,
-    loaded: Option<C::Loaded>,
     /// Stores the starting row for each region.
     regions: Vec<RegionStart>,
     /// Stores the first empty row for each column.
     columns: HashMap<Column<Any>, usize>,
-    _marker: PhantomData<C>,
+    marker: PhantomData<F>,
 }
 
-impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> fmt::Debug for SingleChip<'a, C, CS> {
+impl<'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for SingleChipLayouter<'a, F, CS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SingleChip")
-            .field("config", &self.config)
+        f.debug_struct("SingleChipLayouter")
             .field("regions", &self.regions)
             .field("columns", &self.columns)
             .finish()
     }
 }
 
-impl<'a, C: Chip, CS: Assignment<C::Field>> SingleChip<'a, C, CS> {
+impl<'a, F: FieldExt, CS: Assignment<F>> SingleChipLayouter<'a, F, CS> {
     /// Creates a new single-chip layouter.
-    pub fn new(cs: &'a mut CS, config: C::Config) -> Result<Self, Error> {
-        let mut ret = SingleChip {
+    pub fn new(cs: &'a mut CS) -> Result<Self, Error> {
+        let ret = SingleChipLayouter {
             cs,
-            config,
-            loaded: None,
             regions: vec![],
             columns: HashMap::default(),
-            _marker: PhantomData,
+            marker: PhantomData,
         };
-        let loaded = C::load(&mut ret)?;
-        ret.loaded = Some(loaded);
         Ok(ret)
     }
 }
 
-impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, C, CS> {
+impl<'a, F: FieldExt, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a, F, CS> {
     type Root = Self;
-
-    fn config(&self) -> &C::Config {
-        &self.config
-    }
-
-    fn loaded(&self) -> &C::Loaded {
-        self.loaded.as_ref().expect("We called C::load")
-    }
 
     fn assign_region<A, AR, N, NR>(&mut self, name: N, mut assignment: A) -> Result<AR, Error>
     where
-        A: FnMut(Region<'_, C>) -> Result<AR, Error>,
+        A: FnMut(Region<'_, F>) -> Result<AR, Error>,
         N: Fn() -> NR,
         NR: Into<String>,
     {
@@ -127,7 +113,7 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
         // Get shape of the region.
         let mut shape = RegionShape::new(region_index.into());
         {
-            let region: &mut dyn RegionLayouter<C> = &mut shape;
+            let region: &mut dyn RegionLayouter<F> = &mut shape;
             assignment(region.into())?;
         }
 
@@ -145,9 +131,9 @@ impl<'a, C: Chip, CS: Assignment<C::Field> + 'a> Layouter<C> for SingleChip<'a, 
         }
 
         self.cs.enter_region(name);
-        let mut region = SingleChipRegion::new(self, region_index.into());
+        let mut region = SingleChipLayouterRegion::new(self, region_index.into());
         let result = {
-            let region: &mut dyn RegionLayouter<C> = &mut region;
+            let region: &mut dyn RegionLayouter<F> = &mut region;
             assignment(region.into())
         }?;
         self.cs.exit_region();
@@ -207,13 +193,13 @@ impl RegionShape {
     }
 }
 
-impl<C: Chip> RegionLayouter<C> for RegionShape {
+impl<F: FieldExt> RegionLayouter<F> for RegionShape {
     fn assign_advice<'v>(
         &'v mut self,
         _: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
-        _to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
+        _to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
     ) -> Result<Cell, Error> {
         self.columns.insert(column.into());
         self.row_count = cmp::max(self.row_count, offset + 1);
@@ -230,7 +216,7 @@ impl<C: Chip> RegionLayouter<C> for RegionShape {
         _: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
-        _to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
+        _to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
     ) -> Result<Cell, Error> {
         self.columns.insert(column.into());
         self.row_count = cmp::max(self.row_count, offset + 1);
@@ -253,40 +239,40 @@ impl<C: Chip> RegionLayouter<C> for RegionShape {
     }
 }
 
-struct SingleChipRegion<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> {
-    layouter: &'r mut SingleChip<'a, C, CS>,
+struct SingleChipLayouterRegion<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> {
+    layouter: &'r mut SingleChipLayouter<'a, F, CS>,
     region_index: RegionIndex,
 }
 
-impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> fmt::Debug
-    for SingleChipRegion<'r, 'a, C, CS>
+impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug
+    for SingleChipLayouterRegion<'r, 'a, F, CS>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SingleChipRegion")
+        f.debug_struct("SingleChipLayouterRegion")
             .field("layouter", &self.layouter)
             .field("region_index", &self.region_index)
             .finish()
     }
 }
 
-impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> SingleChipRegion<'r, 'a, C, CS> {
-    fn new(layouter: &'r mut SingleChip<'a, C, CS>, region_index: RegionIndex) -> Self {
-        SingleChipRegion {
+impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> SingleChipLayouterRegion<'r, 'a, F, CS> {
+    fn new(layouter: &'r mut SingleChipLayouter<'a, F, CS>, region_index: RegionIndex) -> Self {
+        SingleChipLayouterRegion {
             layouter,
             region_index,
         }
     }
 }
 
-impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> RegionLayouter<C>
-    for SingleChipRegion<'r, 'a, C, CS>
+impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> RegionLayouter<F>
+    for SingleChipLayouterRegion<'r, 'a, F, CS>
 {
     fn assign_advice<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
     ) -> Result<Cell, Error> {
         self.layouter.cs.assign_advice(
             annotation,
@@ -307,7 +293,7 @@ impl<'r, 'a, C: Chip, CS: Assignment<C::Field> + 'a> RegionLayouter<C>
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<C::Field, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
     ) -> Result<Cell, Error> {
         self.layouter.cs.assign_fixed(
             annotation,
