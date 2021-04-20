@@ -1,7 +1,5 @@
-use super::super::{
-    util::*, CellValue16, CellValue32, SpreadVar, SpreadWord, Table16Assignment, Table16Chip,
-};
-use super::{schedule_util::*, MessageSchedule, MessageWord};
+use super::super::{util::*, CellValue16, CellValue32, SpreadVar, SpreadWord, Table16Assignment};
+use super::{schedule_util::*, MessageScheduleConfig, MessageWord};
 use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
 
 // A word in subregion 3
@@ -18,11 +16,11 @@ pub struct Subregion3Word {
     spread_d: CellValue32,
 }
 
-impl MessageSchedule {
+impl MessageScheduleConfig {
     // W_[49..62]
     pub fn assign_subregion3<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         lower_sigma_0_v2_output: Vec<(CellValue16, CellValue16)>,
         w: &mut Vec<MessageWord>,
         w_halves: &mut Vec<(CellValue16, CellValue16)>,
@@ -150,7 +148,7 @@ impl MessageSchedule {
 
     fn decompose_subregion3_word<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         word: u32,
         index: usize,
     ) -> Result<Subregion3Word, Error> {
@@ -189,7 +187,7 @@ impl MessageSchedule {
 
     fn lower_sigma_1<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         word: Subregion3Word,
     ) -> Result<(CellValue16, CellValue16), Error> {
         let a_3 = self.extras[0];

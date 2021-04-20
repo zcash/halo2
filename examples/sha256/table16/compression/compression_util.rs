@@ -1,9 +1,9 @@
 use super::super::{
     util::*, CellValue16, CellValue32, SpreadVar, SpreadWord, StateWord, Table16Assignment,
-    Table16Chip,
 };
 use super::{
-    AbcdVar, Compression, EfghVar, RoundWordA, RoundWordDense, RoundWordE, RoundWordSpread, State,
+    AbcdVar, CompressionConfig, EfghVar, RoundWordA, RoundWordDense, RoundWordE, RoundWordSpread,
+    State,
 };
 use halo2::{
     arithmetic::FieldExt,
@@ -144,10 +144,10 @@ pub fn get_digest_efgh_row() -> usize {
     get_digest_abcd_row() + 2
 }
 
-impl Compression {
+impl CompressionConfig {
     pub(super) fn decompose_abcd<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         row: usize,
         a_val: u32,
     ) -> Result<
@@ -191,7 +191,7 @@ impl Compression {
 
     pub(super) fn decompose_efgh<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         row: usize,
         val: u32,
     ) -> Result<
@@ -234,7 +234,7 @@ impl Compression {
 
     pub(super) fn decompose_a<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         idx: i32,
         a_val: u32,
     ) -> Result<RoundWordA, Error> {
@@ -257,7 +257,7 @@ impl Compression {
 
     pub(super) fn decompose_e<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         idx: i32,
         e_val: u32,
     ) -> Result<RoundWordE, Error> {
@@ -280,7 +280,7 @@ impl Compression {
 
     pub(super) fn assign_upper_sigma_0<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         idx: i32,
         word: AbcdVar,
     ) -> Result<(CellValue16, CellValue16), Error> {
@@ -385,7 +385,7 @@ impl Compression {
 
     pub(super) fn assign_upper_sigma_1<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         idx: i32,
         word: EfghVar,
     ) -> Result<(CellValue16, CellValue16), Error> {
@@ -490,7 +490,7 @@ impl Compression {
 
     fn assign_ch_outputs<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         row: usize,
         r_0_even: u16,
         r_0_odd: u16,
@@ -516,7 +516,7 @@ impl Compression {
 
     pub(super) fn assign_ch<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         idx: i32,
         spread_halves_e: (CellValue32, CellValue32),
         spread_halves_f: (CellValue32, CellValue32),
@@ -578,7 +578,7 @@ impl Compression {
 
     pub(super) fn assign_ch_neg<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         idx: i32,
         spread_halves_e: (CellValue32, CellValue32),
         spread_halves_g: (CellValue32, CellValue32),
@@ -661,7 +661,7 @@ impl Compression {
 
     fn assign_maj_outputs<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         row: usize,
         r_0_even: u16,
         r_0_odd: u16,
@@ -686,7 +686,7 @@ impl Compression {
 
     pub(super) fn assign_maj<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         idx: i32,
         spread_halves_a: (CellValue32, CellValue32),
         spread_halves_b: (CellValue32, CellValue32),
@@ -771,7 +771,7 @@ impl Compression {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn assign_h_prime<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         idx: i32,
         h: (CellValue16, CellValue16),
         ch: (CellValue16, CellValue16),
@@ -900,7 +900,7 @@ impl Compression {
     // s_e_new to get E_new = H' + D
     pub(super) fn assign_e_new<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         idx: i32,
         d: (CellValue16, CellValue16),
         h_prime: (CellValue16, CellValue16),
@@ -939,7 +939,7 @@ impl Compression {
     // s_a_new to get A_new = H' + Maj(A, B, C) + s_upper_sigma_0(A)
     pub(super) fn assign_a_new<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         idx: i32,
         maj: (CellValue16, CellValue16),
         sigma_0: (CellValue16, CellValue16),
@@ -1026,7 +1026,7 @@ impl Compression {
 
     pub fn assign_word_halves_dense<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         lo_row: usize,
         lo_col: Column<Advice>,
         hi_row: usize,
@@ -1056,7 +1056,7 @@ impl Compression {
     #[allow(clippy::type_complexity)]
     pub fn assign_word_halves<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         row: usize,
         word: u32,
     ) -> Result<((CellValue16, CellValue16), (CellValue32, CellValue32)), Error> {

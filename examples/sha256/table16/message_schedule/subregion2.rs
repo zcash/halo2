@@ -1,7 +1,5 @@
-use super::super::{
-    util::*, CellValue16, CellValue32, SpreadVar, SpreadWord, Table16Assignment, Table16Chip,
-};
-use super::{schedule_util::*, MessageSchedule, MessageWord};
+use super::super::{util::*, CellValue16, CellValue32, SpreadVar, SpreadWord, Table16Assignment};
+use super::{schedule_util::*, MessageScheduleConfig, MessageWord};
 use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
 
 // A word in subregion 2
@@ -20,11 +18,11 @@ pub struct Subregion2Word {
     spread_g: CellValue32,
 }
 
-impl MessageSchedule {
+impl MessageScheduleConfig {
     // W_[14..49]
     pub fn assign_subregion2<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         lower_sigma_0_output: Vec<(CellValue16, CellValue16)>,
         w: &mut Vec<MessageWord>,
         w_halves: &mut Vec<(CellValue16, CellValue16)>,
@@ -171,7 +169,7 @@ impl MessageSchedule {
 
     fn decompose_subregion2_word<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         word: u32,
         index: usize,
     ) -> Result<Subregion2Word, Error> {
@@ -224,7 +222,7 @@ impl MessageSchedule {
     #[allow(clippy::type_complexity)]
     fn assign_lower_sigma_v2_pieces<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         row: usize,
         subregion2_word: Subregion2Word,
     ) -> Result<(u64, u64, u64, u64, u64, u64, u64, u64), Error> {
@@ -323,7 +321,7 @@ impl MessageSchedule {
 
     fn lower_sigma_0_v2<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         subregion2_word: Subregion2Word,
     ) -> Result<(CellValue16, CellValue16), Error> {
         let a_3 = self.extras[0];
@@ -378,7 +376,7 @@ impl MessageSchedule {
 
     fn lower_sigma_1_v2<F: FieldExt>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         subregion2_word: Subregion2Word,
     ) -> Result<(CellValue16, CellValue16), Error> {
         let a_3 = self.extras[0];

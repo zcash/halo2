@@ -1,7 +1,6 @@
 use halo2::{
     arithmetic::FieldExt,
-    circuit::Chip,
-    circuit::{layouter, Layouter},
+    circuit::{layouter::SingleChipLayouter, Layouter},
     pasta::EqAffine,
     plonk::{
         create_proof, keygen_pk, keygen_vk, verify_proof, Assignment, Circuit, ConstraintSystem,
@@ -28,17 +27,18 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     impl<F: FieldExt> Circuit<F> for MyCircuit {
         type Config = Table16Config;
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> Table16Config {
+        fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
             Table16Chip::configure(meta)
         }
 
         fn synthesize(
             &self,
             cs: &mut impl Assignment<F>,
-            config: Table16Config,
+            config: Self::Config,
         ) -> Result<(), Error> {
-            let mut layouter = layouter::SingleChip::<Table16Chip<F>, _>::new(cs, config)?;
-            Table16Chip::load(&mut layouter)?;
+            let mut layouter = SingleChipLayouter::new(cs)?;
+            Table16Chip::<F>::load(config.clone(), &mut layouter)?;
+            let table16_chip = Table16Chip::<F>::construct(config);
 
             // Test vector: "abc"
             let test_input = [
@@ -65,7 +65,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
                 input.extend_from_slice(&test_input);
             }
 
-            Sha256::digest(layouter.namespace(|| "test vector"), &input)?;
+            Sha256::digest(table16_chip, layouter.namespace(|| "'abc' * 2"), &input)?;
 
             Ok(())
         }
