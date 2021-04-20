@@ -71,7 +71,7 @@ impl Note {
 
         let note = Note {
             recipient,
-            value: NoteValue::default(),
+            value: NoteValue::zero(),
             rho: rho.unwrap_or_else(|| Nullifier::dummy(rng)),
             rseed: RandomSeed::random(rng),
         };

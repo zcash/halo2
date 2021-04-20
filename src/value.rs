@@ -47,6 +47,11 @@ impl std::error::Error for OverflowError {}
 pub struct NoteValue(u64);
 
 impl NoteValue {
+    pub(crate) fn zero() -> Self {
+        // Default for u64 is zero.
+        Default::default()
+    }
+
     pub(crate) fn to_le_bits(self) -> BitArray<Lsb0, [u8; 8]> {
         BitArray::<Lsb0, _>::new(self.0.to_le_bytes())
     }
