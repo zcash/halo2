@@ -120,8 +120,7 @@ impl HashDomain {
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
     pub(crate) fn hash(&self, msg: impl Iterator<Item = bool>) -> CtOption<pallas::Base> {
-        let point: CtOption<_> = self.hash_to_point(msg).into();
-        extract_p_bottom(point)
+        extract_p_bottom(self.hash_to_point(msg))
     }
 
     /// Returns the Sinsemilla $Q$ constant for this domain.
