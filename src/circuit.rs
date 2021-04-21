@@ -120,6 +120,12 @@ impl Instance {
 #[derive(Debug)]
 pub struct Proof(Vec<u8>);
 
+impl<'a> From<&'a Proof> for &'a Vec<u8> {
+    fn from(proof: &'a Proof) -> &'a Vec<u8> {
+        &proof.0
+    }
+}
+
 impl Proof {
     /// Creates a proof for the given circuits and instances.
     pub fn create(

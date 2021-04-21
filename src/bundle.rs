@@ -195,6 +195,16 @@ impl Authorized {
             binding_signature,
         }
     }
+
+    /// Return the proof component of the authorizing data.
+    pub fn proof(&self) -> &Proof {
+        &self.proof
+    }
+
+    /// Return the binding signature.
+    pub fn binding_signature(&self) -> &redpallas::Signature<Binding> {
+        &self.binding_signature
+    }
 }
 
 impl Authorization for Authorized {

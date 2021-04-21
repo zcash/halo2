@@ -64,6 +64,11 @@ impl ExtractedNoteCommitment {
     pub fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
         pallas::Base::from_bytes(bytes).map(ExtractedNoteCommitment)
     }
+
+    /// Serialize the value commitment to its canonical byte representation.
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
+    }
 }
 
 impl From<NoteCommitment> for ExtractedNoteCommitment {

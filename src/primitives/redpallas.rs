@@ -102,6 +102,12 @@ impl<T: SigType> From<[u8; 64]> for Signature<T> {
     }
 }
 
+impl<T: SigType> From<&Signature<T>> for [u8; 64] {
+    fn from(sig: &Signature<T>) -> Self {
+        sig.0.into()
+    }
+}
+
 pub(crate) mod private {
     use super::{Binding, SpendAuth};
 

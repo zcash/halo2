@@ -36,6 +36,11 @@ impl Nullifier {
         pallas::Base::from_bytes(bytes).map(Nullifier)
     }
 
+    /// Serialize the nullifier to its canonical byte representation.
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
+    }
+
     /// $DeriveNullifier$.
     ///
     /// Defined in [Zcash Protocol Spec § 4.16: Note Commitments and Nullifiers][commitmentsandnullifiers].

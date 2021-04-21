@@ -266,4 +266,9 @@ mod tests {
             assert_eq!(redpallas::VerificationKey::from(&bsk), bvk);
         }
     }
+
+    /// Serialize the value commitment to its canonical byte representation.
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
+    }
 }
