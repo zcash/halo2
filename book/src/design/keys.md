@@ -34,6 +34,16 @@ We make several structural changes, building on the lessons learned from Sapling
   being specified to be infallible. This removes significant complexity from the use cases
   for diversified addresses.
 
+- The fact that Pallas is a prime-order curve simplifies the protocol and removes the need
+  for cofactor multiplication in key agreement. Unlike Sapling, we define public (including
+  ephemeral) and private keys used for note encryption to exclude the zero point and the
+  zero scalar. Without this change, the implementation of the Orchard Action circuit would
+  need special cases for the zero point, since Pallas is a short Weierstrass rather than
+  an Edwards curve. This also has the advantage of ensuring that the key agreement has
+  "contributory behaviour" — that is, if *either* party contributes a random scalar, then
+  the shared secret will be random to an observer who does not know that scalar and cannot
+  break Diffie–Hellman.
+
 Other than the above, Orchard retains the same design rationale for its keys and addresses
 as Sapling. For example, diversifiers remain at 11 bytes, so that a raw Orchard address is
 the same length as a raw Sapling address.
