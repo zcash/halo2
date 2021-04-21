@@ -1,10 +1,10 @@
 //! Traits and structs for implementing circuit components.
 
-use std::{collections::BTreeMap, fmt, marker::PhantomData};
+use std::{fmt, marker::PhantomData};
 
 use crate::{
     arithmetic::FieldExt,
-    plonk::{Advice, Any, Column, ConstraintSystem, Error, Fixed, Permutation, Selector},
+    plonk::{Advice, Any, Column, Error, Fixed, Permutation},
 };
 
 pub mod layouter;
@@ -46,39 +46,13 @@ pub trait Chip<F: FieldExt>: Sized {
     /// [`Circuit::synthesize`]: crate::plonk::Circuit::synthesize
     type Loaded: Loaded;
 
-    /// A new chip that is not yet configured or loaded.
-    fn new() -> Self;
-
-    /// A chip constructed from a given config and loaded state.
-    fn construct(config: Self::Config, loaded: Self::Loaded) -> Self;
-
-    /// The chip is responsible for mutating the constraint system to set up
-    /// the columns, gates, lookups and permutations it needs.
-    ///
-    /// We allow for the chip to use pre-existing columns, selectors, and
-    /// permutations in its configuration. Chips that are lower in a hierarchy
-    /// depend on other chips to pass down these objects.
-    fn configure(
-        &mut self,
-        meta: &mut ConstraintSystem<F>,
-        selectors: BTreeMap<&str, Selector>,
-        columns: BTreeMap<&str, Column<Any>>,
-        perms: BTreeMap<&str, Permutation>,
-    ) -> Self::Config;
-
     /// The chip holds its own configuration.
     fn config(&self) -> &Self::Config;
-
-    /// Load any fixed configuration for this chip into the circuit, i.e.
-    /// assigns cells in fixed columns.
-    ///
-    /// `self.loaded()` will panic if called inside this function.
-    fn load(&mut self, layouter: &mut impl Layouter<F>) -> Result<Self::Loaded, Error>;
 
     /// Provides access to general chip state loaded at the beginning of circuit
     /// synthesis.
     ///
-    /// Panics if called inside `Chip::load`.
+    /// Panics if called before `Chip::load`.
     fn loaded(&self) -> &Self::Loaded;
 }
 

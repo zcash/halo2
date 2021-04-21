@@ -74,7 +74,7 @@ pub struct SingleChipLayouter<'a, F: FieldExt, CS: Assignment<F> + 'a> {
     regions: Vec<RegionStart>,
     /// Stores the first empty row for each column.
     columns: HashMap<Column<Any>, usize>,
-    marker: PhantomData<F>,
+    _marker: PhantomData<F>,
 }
 
 impl<'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for SingleChipLayouter<'a, F, CS> {
@@ -93,7 +93,7 @@ impl<'a, F: FieldExt, CS: Assignment<F>> SingleChipLayouter<'a, F, CS> {
             cs,
             regions: vec![],
             columns: HashMap::default(),
-            marker: PhantomData,
+            _marker: PhantomData,
         };
         Ok(ret)
     }

@@ -1,7 +1,5 @@
 extern crate halo2;
 
-use std::collections::BTreeMap;
-use std::convert::TryFrom;
 use std::marker::PhantomData;
 
 use halo2::{
@@ -9,7 +7,8 @@ use halo2::{
     circuit::{layouter::SingleChipLayouter, Cell, Chip, Config, Layouter, Region},
     dev::VerifyFailure,
     plonk::{
-        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Permutation, Selector,
+        Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Instance, Permutation,
+        Selector,
     },
     poly::Rotation,
 };
@@ -29,7 +28,7 @@ trait FieldInstructions<F: FieldExt>: AddInstructions<F> + MulInstructions<F> {
     /// Loads a number into the circuit as a private input.
     fn load_private(
         &self,
-        layouter: &mut impl Layouter<F>,
+        layouter: impl Layouter<F>,
         a: Option<F>,
     ) -> Result<<Self as FieldInstructions<F>>::Num, Error>;
 
@@ -45,7 +44,7 @@ trait FieldInstructions<F: FieldExt>: AddInstructions<F> + MulInstructions<F> {
     /// Exposes a number as a public input to the circuit.
     fn expose_public(
         &self,
-        layouter: &mut impl Layouter<F>,
+        layouter: impl Layouter<F>,
         num: <Self as FieldInstructions<F>>::Num,
     ) -> Result<(), Error>;
 }
@@ -59,7 +58,7 @@ trait AddInstructions<F: FieldExt>: Chip<F> {
     /// Returns `c = a + b`.
     fn add(
         &self,
-        layouter: &mut impl Layouter<F>,
+        layouter: impl Layouter<F>,
         a: Self::Num,
         b: Self::Num,
     ) -> Result<Self::Num, Error>;
@@ -74,7 +73,7 @@ trait MulInstructions<F: FieldExt>: Chip<F> {
     /// Returns `c = a * b`.
     fn mul(
         &self,
-        layouter: &mut impl Layouter<F>,
+        layouter: impl Layouter<F>,
         a: Self::Num,
         b: Self::Num,
     ) -> Result<Self::Num, Error>;
@@ -180,19 +179,31 @@ struct MulChip<F: FieldExt> {
 }
 // ANCHOR_END: mul-chip
 
-// ANCHOR: add-chip-impl
+// ANCHOR: add-chip-trait-impl
 impl<F: FieldExt> Chip<F> for AddChip<F> {
     type Config = AddConfigEnum;
     type Loaded = ();
 
+    fn config(&self) -> &Self::Config {
+        &self.config
+    }
+
+    fn loaded(&self) -> &Self::Loaded {
+        &()
+    }
+}
+// ANCHOR END: add-chip-trait-impl
+
+// ANCHOR: add-chip-impl
+impl<F: FieldExt> AddChip<F> {
     fn new() -> Self {
         Self {
-            config: Self::Config::empty(),
+            config: <Self as Chip<F>>::Config::empty(),
             _marker: PhantomData,
         }
     }
 
-    fn construct(config: Self::Config, _loaded: Self::Loaded) -> Self {
+    fn construct(config: <Self as Chip<F>>::Config, _loaded: <Self as Chip<F>>::Loaded) -> Self {
         Self {
             config,
             _marker: PhantomData,
@@ -202,50 +213,27 @@ impl<F: FieldExt> Chip<F> for AddChip<F> {
     fn configure(
         &mut self,
         meta: &mut ConstraintSystem<F>,
-        _selectors: BTreeMap<&str, Selector>,
-        columns: BTreeMap<&str, Column<Any>>,
-        perms: BTreeMap<&str, Permutation>,
-    ) -> Self::Config {
-        let advice = [
-            *columns.get("advice0").unwrap(),
-            *columns.get("advice1").unwrap(),
-        ];
-        let perm = perms.get("perm").unwrap();
+        advice: [Column<Advice>; 2],
+        perm: Permutation,
+    ) -> <Self as Chip<F>>::Config {
         let s_add = meta.selector();
 
         // Define our addition gate!
         meta.create_gate("add", |meta| {
-            let lhs = meta.query_any(advice[0], Rotation::cur());
-            let rhs = meta.query_any(advice[1], Rotation::cur());
-            let out = meta.query_any(advice[0], Rotation::next());
+            let lhs = meta.query_advice(advice[0], Rotation::cur());
+            let rhs = meta.query_advice(advice[1], Rotation::cur());
+            let out = meta.query_advice(advice[0], Rotation::next());
             let s_add = meta.query_selector(s_add, Rotation::cur());
             s_add * (lhs + rhs + out * -F::one())
         });
 
         let config = AddConfigEnum::Config(AddConfig {
-            advice: [
-                Column::<Advice>::try_from(advice[0]).unwrap(),
-                Column::<Advice>::try_from(advice[1]).unwrap(),
-            ],
-            perm: perm.clone(),
+            advice,
+            perm,
             s_add,
         });
         self.config = config.clone();
         config
-    }
-
-    fn config(&self) -> &Self::Config {
-        &self.config
-    }
-
-    fn load(&mut self, _layouter: &mut impl Layouter<F>) -> Result<(), halo2::plonk::Error> {
-        // None of the instructions implemented by this chip have any fixed state.
-        // But if we required e.g. a lookup table, this is where we would load it.
-        Ok(())
-    }
-
-    fn loaded(&self) -> &Self::Loaded {
-        &()
     }
 }
 // ANCHOR END: add-chip-impl
@@ -255,7 +243,7 @@ impl<F: FieldExt> AddInstructions<F> for FieldChip<F> {
     type Num = Number<F>;
     fn add(
         &self,
-        layouter: &mut impl Layouter<F>,
+        layouter: impl Layouter<F>,
         a: Self::Num,
         b: Self::Num,
     ) -> Result<Self::Num, Error> {
@@ -273,7 +261,7 @@ impl<F: FieldExt> AddInstructions<F> for AddChip<F> {
 
     fn add(
         &self,
-        layouter: &mut impl Layouter<F>,
+        mut layouter: impl Layouter<F>,
         a: Self::Num,
         b: Self::Num,
     ) -> Result<Self::Num, Error> {
@@ -331,19 +319,31 @@ impl<F: FieldExt> AddInstructions<F> for AddChip<F> {
 }
 // ANCHOR END: add-instructions-impl
 
-// ANCHOR: mul-chip-impl
+// ANCHOR: mul-chip-trait-impl
 impl<F: FieldExt> Chip<F> for MulChip<F> {
     type Config = MulConfigEnum;
     type Loaded = ();
 
+    fn config(&self) -> &Self::Config {
+        &self.config
+    }
+
+    fn loaded(&self) -> &Self::Loaded {
+        &()
+    }
+}
+// ANCHOR END: mul-chip-trait-impl
+
+// ANCHOR: mul-chip-impl
+impl<F: FieldExt> MulChip<F> {
     fn new() -> Self {
         Self {
-            config: Self::Config::empty(),
+            config: <Self as Chip<F>>::Config::empty(),
             _marker: PhantomData,
         }
     }
 
-    fn construct(config: Self::Config, _loaded: Self::Loaded) -> Self {
+    fn construct(config: <Self as Chip<F>>::Config, _loaded: <Self as Chip<F>>::Loaded) -> Self {
         Self {
             config,
             _marker: PhantomData,
@@ -353,15 +353,9 @@ impl<F: FieldExt> Chip<F> for MulChip<F> {
     fn configure(
         &mut self,
         meta: &mut ConstraintSystem<F>,
-        _selectors: BTreeMap<&str, Selector>,
-        columns: BTreeMap<&str, Column<Any>>,
-        perms: BTreeMap<&str, Permutation>,
-    ) -> Self::Config {
-        let advice = [
-            *columns.get("advice0").unwrap(),
-            *columns.get("advice1").unwrap(),
-        ];
-        let perm = perms.get("perm").unwrap();
+        advice: [Column<Advice>; 2],
+        perm: Permutation,
+    ) -> <Self as Chip<F>>::Config {
         let s_mul = meta.selector();
 
         // Define our multiplication gate!
@@ -378,9 +372,9 @@ impl<F: FieldExt> Chip<F> for MulChip<F> {
             // offset adds a cost to the proof. The most common offsets are 0 (the
             // current row), 1 (the next row), and -1 (the previous row), for which
             // `Rotation` has specific constructors.
-            let lhs = meta.query_any(advice[0], Rotation::cur());
-            let rhs = meta.query_any(advice[1], Rotation::cur());
-            let out = meta.query_any(advice[0], Rotation::next());
+            let lhs = meta.query_advice(advice[0], Rotation::cur());
+            let rhs = meta.query_advice(advice[1], Rotation::cur());
+            let out = meta.query_advice(advice[0], Rotation::next());
             let s_mul = meta.query_selector(s_mul, Rotation::cur());
 
             // The polynomial expression returned from `create_gate` will be
@@ -392,39 +386,22 @@ impl<F: FieldExt> Chip<F> for MulChip<F> {
         });
 
         let config = MulConfigEnum::Config(MulConfig {
-            advice: [
-                Column::<Advice>::try_from(advice[0]).unwrap(),
-                Column::<Advice>::try_from(advice[1]).unwrap(),
-            ],
-            perm: perm.clone(),
+            advice,
+            perm,
             s_mul,
         });
         self.config = config.clone();
         config
     }
-
-    fn config(&self) -> &Self::Config {
-        &self.config
-    }
-
-    fn load(&mut self, _layouter: &mut impl Layouter<F>) -> Result<(), halo2::plonk::Error> {
-        // None of the instructions implemented by this chip have any fixed state.
-        // But if we required e.g. a lookup table, this is where we would load it.
-        Ok(())
-    }
-
-    fn loaded(&self) -> &Self::Loaded {
-        &()
-    }
 }
-// ANCHOR END: mul-chip-impl
+// ANCHOR_END: mul-chip-impl
 
 // ANCHOR: mul-instructions-impl
 impl<F: FieldExt> MulInstructions<F> for FieldChip<F> {
     type Num = Number<F>;
     fn mul(
         &self,
-        layouter: &mut impl Layouter<F>,
+        layouter: impl Layouter<F>,
         a: Self::Num,
         b: Self::Num,
     ) -> Result<Self::Num, Error> {
@@ -442,7 +419,7 @@ impl<F: FieldExt> MulInstructions<F> for MulChip<F> {
 
     fn mul(
         &self,
-        layouter: &mut impl Layouter<F>,
+        mut layouter: impl Layouter<F>,
         a: Self::Num,
         b: Self::Num,
     ) -> Result<Self::Num, Error> {
@@ -500,19 +477,31 @@ impl<F: FieldExt> MulInstructions<F> for MulChip<F> {
 }
 // ANCHOR END: mul-instructions-impl
 
-// ANCHOR: field-chip-impl
+// ANCHOR: field-chip-trait-impl
 impl<F: FieldExt> Chip<F> for FieldChip<F> {
     type Config = FieldConfigEnum;
     type Loaded = ();
 
+    fn config(&self) -> &Self::Config {
+        &self.config
+    }
+
+    fn loaded(&self) -> &Self::Loaded {
+        &()
+    }
+}
+// ANCHOR_END: field-chip-trait-impl
+
+// ANCHOR: field-chip-impl
+impl<F: FieldExt> FieldChip<F> {
     fn new() -> Self {
         Self {
-            config: Self::Config::empty(),
+            config: <Self as Chip<F>>::Config::empty(),
             _marker: PhantomData,
         }
     }
 
-    fn construct(config: Self::Config, _loaded: Self::Loaded) -> Self {
+    fn construct(config: <Self as Chip<F>>::Config, _loaded: <Self as Chip<F>>::Loaded) -> Self {
         Self {
             config,
             _marker: PhantomData,
@@ -522,16 +511,9 @@ impl<F: FieldExt> Chip<F> for FieldChip<F> {
     fn configure(
         &mut self,
         meta: &mut ConstraintSystem<F>,
-        _selectors: BTreeMap<&str, Selector>,
-        columns: BTreeMap<&str, Column<Any>>,
-        _perms: BTreeMap<&str, Permutation>,
-    ) -> Self::Config {
-        let advice = [
-            *columns.get("advice0").unwrap(),
-            *columns.get("advice1").unwrap(),
-        ];
-        let instance = *columns.get("instance").unwrap();
-
+        advice: [Column<Advice>; 2],
+        instance: Column<Instance>,
+    ) -> <Self as Chip<F>>::Config {
         let perm = Permutation::new(
             meta,
             &advice
@@ -545,8 +527,8 @@ impl<F: FieldExt> Chip<F> for FieldChip<F> {
         meta.create_gate("public input", |meta| {
             // We choose somewhat-arbitrarily that we will use the second advice
             // column for exposing numbers as public inputs.
-            let a = meta.query_any(advice[1], Rotation::cur());
-            let p = meta.query_any(instance, Rotation::cur());
+            let a = meta.query_advice(advice[1], Rotation::cur());
+            let p = meta.query_instance(instance, Rotation::cur());
             let s = meta.query_selector(s_pub, Rotation::cur());
 
             // We simply constrain the advice cell to be equal to the instance cell,
@@ -554,42 +536,21 @@ impl<F: FieldExt> Chip<F> for FieldChip<F> {
             s * (p + a * -F::one())
         });
 
-        let mut perms = BTreeMap::new();
-        perms.insert("perm", perm.clone());
-
         let mut add_chip = AddChip::new();
-        let add_config =
-            add_chip.configure(meta, BTreeMap::default(), columns.clone(), perms.clone());
+        let add_config = add_chip.configure(meta, advice.clone(), perm.clone());
 
         let mut mul_chip = MulChip::new();
-        let mul_config = mul_chip.configure(meta, BTreeMap::default(), columns, perms);
+        let mul_config = mul_chip.configure(meta, advice.clone(), perm.clone());
 
         let config = FieldConfigEnum::Config(FieldConfig {
-            advice: [
-                Column::<Advice>::try_from(advice[0]).unwrap(),
-                Column::<Advice>::try_from(advice[1]).unwrap(),
-            ],
-            perm: perm,
-            s_pub: s_pub,
-            add_config: add_config,
-            mul_config: mul_config,
+            advice,
+            perm,
+            s_pub,
+            add_config,
+            mul_config,
         });
         self.config = config.clone();
         config
-    }
-
-    fn config(&self) -> &Self::Config {
-        &self.config
-    }
-
-    fn load(&mut self, _layouter: &mut impl Layouter<F>) -> Result<(), halo2::plonk::Error> {
-        // None of the instructions implemented by this chip have any fixed state.
-        // But if we required e.g. a lookup table, this is where we would load it.
-        Ok(())
-    }
-
-    fn loaded(&self) -> &Self::Loaded {
-        &()
     }
 }
 // ANCHOR_END: field-chip-impl
@@ -600,7 +561,7 @@ impl<F: FieldExt> FieldInstructions<F> for FieldChip<F> {
 
     fn load_private(
         &self,
-        layouter: &mut impl Layouter<F>,
+        mut layouter: impl Layouter<F>,
         value: Option<F>,
     ) -> Result<<Self as FieldInstructions<F>>::Num, Error> {
         let config = match self.config() {
@@ -633,21 +594,13 @@ impl<F: FieldExt> FieldInstructions<F> for FieldChip<F> {
         b: <Self as FieldInstructions<F>>::Num,
         c: <Self as FieldInstructions<F>>::Num,
     ) -> Result<<Self as FieldInstructions<F>>::Num, Error> {
-        let config = match self.config() {
-            FieldConfigEnum::Config(config) => config,
-            _ => unreachable!(),
-        };
-
-        let add_chip = AddChip::<F>::construct(config.add_config.clone(), ());
-        let ab = add_chip.add(layouter, a, b)?;
-
-        let mul_chip = MulChip::<F>::construct(config.mul_config.clone(), ());
-        mul_chip.mul(layouter, ab, c)
+        let ab = self.add(layouter.namespace(|| "a + b"), a, b)?;
+        self.mul(layouter.namespace(|| "(a + b) * c"), ab, c)
     }
 
     fn expose_public(
         &self,
-        layouter: &mut impl Layouter<F>,
+        mut layouter: impl Layouter<F>,
         num: <Self as FieldInstructions<F>>::Num,
     ) -> Result<(), Error> {
         let config = match self.config() {
@@ -697,15 +650,13 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
 
     fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
         // We create the two advice columns that FieldChip uses for I/O.
-        // We also need an instance column to store public inputs.
+        let advice = [meta.advice_column(), meta.advice_column()];
 
-        let mut columns: BTreeMap<&str, Column<Any>> = BTreeMap::new();
-        columns.insert("advice0", meta.advice_column().into());
-        columns.insert("advice1", meta.advice_column().into());
-        columns.insert("instance", meta.instance_column().into());
+        // We also need an instance column to store public inputs.
+        let instance = meta.instance_column();
 
         let mut field_chip = FieldChip::new();
-        field_chip.configure(meta, BTreeMap::default(), columns, BTreeMap::default())
+        field_chip.configure(meta, advice, instance)
     }
 
     fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error> {
@@ -713,15 +664,15 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         let field_chip = FieldChip::<F>::construct(config, ());
 
         // Load our private values into the circuit.
-        let a = field_chip.load_private(&mut layouter, self.a)?;
-        let b = field_chip.load_private(&mut layouter, self.b)?;
-        let c = field_chip.load_private(&mut layouter, self.c)?;
+        let a = field_chip.load_private(layouter.namespace(|| "load a"), self.a)?;
+        let b = field_chip.load_private(layouter.namespace(|| "load b"), self.b)?;
+        let c = field_chip.load_private(layouter.namespace(|| "load c"), self.c)?;
 
         // Use `add_and_mul` to get `d = (a + b) * c`.
         let d = field_chip.add_and_mul(&mut layouter, a, b, c)?;
 
         // Expose the result as a public input to the circuit.
-        field_chip.expose_public(&mut layouter, d)
+        field_chip.expose_public(layouter.namespace(|| "expose d"), d)
     }
 }
 // ANCHOR_END: circuit
