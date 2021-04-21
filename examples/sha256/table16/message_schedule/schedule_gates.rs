@@ -53,7 +53,7 @@ impl<F: FieldExt> ScheduleGate<F> {
         d: Expression<F>,
         tag_d: Expression<F>,
         word: Expression<F>,
-    ) -> Self {
+    ) -> Vec<Self> {
         let decompose_check = a
             + b * F::from_u64(1 << 3)
             + c * F::from_u64(1 << 7)
@@ -61,7 +61,11 @@ impl<F: FieldExt> ScheduleGate<F> {
             + word * (-F::one());
         let range_check_tag_c = Gate::range_check(tag_c, 0, 2);
         let range_check_tag_d = Gate::range_check(tag_d, 0, 4);
-        ScheduleGate(s_decompose_1 * (decompose_check + range_check_tag_c + range_check_tag_d))
+
+        [decompose_check, range_check_tag_c, range_check_tag_d]
+            .iter()
+            .map(|expr| ScheduleGate(s_decompose_1.clone() * expr.clone()))
+            .collect::<Vec<_>>()
     }
 
     /// s_decompose_2 for W_14 to W_48
@@ -80,7 +84,7 @@ impl<F: FieldExt> ScheduleGate<F> {
         g: Expression<F>,
         tag_g: Expression<F>,
         word: Expression<F>,
-    ) -> Self {
+    ) -> Vec<Self> {
         let decompose_check = a
             + b * F::from_u64(1 << 3)
             + c * F::from_u64(1 << 7)
@@ -91,7 +95,10 @@ impl<F: FieldExt> ScheduleGate<F> {
             + word * (-F::one());
         let range_check_tag_d = Gate::range_check(tag_d, 0, 0);
         let range_check_tag_g = Gate::range_check(tag_g, 0, 3);
-        ScheduleGate(s_decompose_2 * (decompose_check + range_check_tag_g + range_check_tag_d))
+        [decompose_check, range_check_tag_g, range_check_tag_d]
+            .iter()
+            .map(|expr| ScheduleGate(s_decompose_2.clone() * expr.clone()))
+            .collect::<Vec<_>>()
     }
 
     /// s_decompose_3 for W_49 to W_61
@@ -106,7 +113,7 @@ impl<F: FieldExt> ScheduleGate<F> {
         d: Expression<F>,
         tag_d: Expression<F>,
         word: Expression<F>,
-    ) -> Self {
+    ) -> Vec<Self> {
         let decompose_check = a
             + b * F::from_u64(1 << 10)
             + c * F::from_u64(1 << 17)
@@ -115,7 +122,10 @@ impl<F: FieldExt> ScheduleGate<F> {
         let range_check_tag_a = Gate::range_check(tag_a, 0, 1);
         let range_check_tag_d = Gate::range_check(tag_d, 0, 3);
 
-        ScheduleGate(s_decompose_3 * (decompose_check + range_check_tag_a + range_check_tag_d))
+        [decompose_check, range_check_tag_a, range_check_tag_d]
+            .iter()
+            .map(|expr| ScheduleGate(s_decompose_3.clone() * expr.clone()))
+            .collect::<Vec<_>>()
     }
 
     /// b_lo + 2^2 * b_mid = b, on W_[1..49]
@@ -153,7 +163,7 @@ impl<F: FieldExt> ScheduleGate<F> {
         spread_b_hi: Expression<F>,
         spread_c: Expression<F>,
         spread_d: Expression<F>,
-    ) -> Self {
+    ) -> Vec<Self> {
         let check_spread_and_range =
             Gate::two_bit_spread_and_range(b_lo.clone(), spread_b_lo.clone())
                 + Gate::two_bit_spread_and_range(b_hi.clone(), spread_b_hi.clone())
@@ -178,10 +188,14 @@ impl<F: FieldExt> ScheduleGate<F> {
             + spread_c * F::from_u64(1 << 42);
         let xor = xor_0 + xor_1 + xor_2;
 
-        ScheduleGate(
-            s_lower_sigma_0
-                * (check_spread_and_range + check_b + spread_witness + (xor * -F::one())),
-        )
+        [
+            check_spread_and_range,
+            check_b,
+            spread_witness + xor * -F::one(),
+        ]
+        .iter()
+        .map(|expr| ScheduleGate(s_lower_sigma_0.clone() * expr.clone()))
+        .collect::<Vec<_>>()
     }
 
     /// sigma_1 v1 on W_49 to W_61
@@ -204,7 +218,7 @@ impl<F: FieldExt> ScheduleGate<F> {
         c: Expression<F>,
         spread_c: Expression<F>,
         spread_d: Expression<F>,
-    ) -> Self {
+    ) -> Vec<Self> {
         let check_spread_and_range =
             Gate::two_bit_spread_and_range(b_lo.clone(), spread_b_lo.clone())
                 + Gate::two_bit_spread_and_range(b_mid.clone(), spread_b_mid.clone())
@@ -233,10 +247,14 @@ impl<F: FieldExt> ScheduleGate<F> {
             + spread_c * F::from_u64(1 << 60);
         let xor = xor_0 + xor_1 + xor_2;
 
-        ScheduleGate(
-            s_lower_sigma_1
-                * (check_spread_and_range + check_b1 + spread_witness + (xor * -F::one())),
-        )
+        [
+            check_spread_and_range,
+            check_b1,
+            spread_witness + xor * -F::one(),
+        ]
+        .iter()
+        .map(|expr| ScheduleGate(s_lower_sigma_1.clone() * expr.clone()))
+        .collect::<Vec<_>>()
     }
 
     /// sigma_0 v2 on W_14 to W_48
@@ -261,7 +279,7 @@ impl<F: FieldExt> ScheduleGate<F> {
         spread_e: Expression<F>,
         spread_f: Expression<F>,
         spread_g: Expression<F>,
-    ) -> Self {
+    ) -> Vec<Self> {
         let check_spread_and_range =
             Gate::two_bit_spread_and_range(b_lo.clone(), spread_b_lo.clone())
                 + Gate::two_bit_spread_and_range(b_hi.clone(), spread_b_hi.clone())
@@ -296,10 +314,14 @@ impl<F: FieldExt> ScheduleGate<F> {
             + spread_e * F::from_u64(1 << 62);
         let xor = xor_0 + xor_1 + xor_2;
 
-        ScheduleGate(
-            s_lower_sigma_0_v2
-                * (check_spread_and_range + check_b + spread_witness + (xor * -F::one())),
-        )
+        [
+            check_spread_and_range,
+            check_b,
+            spread_witness + xor * -F::one(),
+        ]
+        .iter()
+        .map(|expr| ScheduleGate(s_lower_sigma_0_v2.clone() * expr.clone()))
+        .collect::<Vec<_>>()
     }
 
     /// sigma_1 v2 on W_14 to W_48
@@ -324,7 +346,7 @@ impl<F: FieldExt> ScheduleGate<F> {
         spread_e: Expression<F>,
         spread_f: Expression<F>,
         spread_g: Expression<F>,
-    ) -> Self {
+    ) -> Vec<Self> {
         let check_spread_and_range =
             Gate::two_bit_spread_and_range(b_lo.clone(), spread_b_lo.clone())
                 + Gate::two_bit_spread_and_range(b_hi.clone(), spread_b_hi.clone())
@@ -356,9 +378,13 @@ impl<F: FieldExt> ScheduleGate<F> {
             + spread_f * F::from_u64(1 << 62);
         let xor = xor_0 + xor_1 + xor_2;
 
-        ScheduleGate(
-            s_lower_sigma_1_v2
-                * (check_spread_and_range + check_b + spread_witness + (xor * -F::one())),
-        )
+        [
+            check_spread_and_range,
+            check_b,
+            spread_witness + xor * -F::one(),
+        ]
+        .iter()
+        .map(|expr| ScheduleGate(s_lower_sigma_1_v2.clone() * expr.clone()))
+        .collect::<Vec<_>>()
     }
 }

@@ -1,8 +1,10 @@
-use super::super::{
-    util::*, CellValue16, CellValue32, SpreadVar, SpreadWord, Table16Assignment, Table16Chip,
+use super::super::{util::*, CellValue16, CellValue32, SpreadVar, SpreadWord, Table16Assignment};
+use super::{schedule_util::*, MessageScheduleConfig, MessageWord};
+use halo2::{
+    arithmetic::FieldExt,
+    circuit::{Core, Region},
+    plonk::Error,
 };
-use super::{schedule_util::*, MessageSchedule, MessageWord};
-use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
 
 // A word in subregion 3
 // (10, 7, 2, 13)-bit chunks
@@ -18,11 +20,11 @@ pub struct Subregion3Word {
     spread_d: CellValue32,
 }
 
-impl MessageSchedule {
+impl MessageScheduleConfig {
     // W_[49..62]
-    pub fn assign_subregion3<F: FieldExt>(
+    pub fn assign_subregion3<F: FieldExt, C: Core<F>>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         lower_sigma_0_v2_output: Vec<(CellValue16, CellValue16)>,
         w: &mut Vec<MessageWord>,
         w_halves: &mut Vec<(CellValue16, CellValue16)>,
@@ -148,9 +150,9 @@ impl MessageSchedule {
         Ok(())
     }
 
-    fn decompose_subregion3_word<F: FieldExt>(
+    fn decompose_subregion3_word<F: FieldExt, C: Core<F>>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         word: u32,
         index: usize,
     ) -> Result<Subregion3Word, Error> {
@@ -164,7 +166,7 @@ impl MessageSchedule {
 
         // Assign `a` (10-bit piece)
         let spread_a = SpreadWord::new(pieces[0] as u16);
-        let spread_a = SpreadVar::with_lookup(region, &self.lookup, row + 1, spread_a)?;
+        let spread_a = SpreadVar::with_lookup(region, &self.lookup_inputs, row + 1, spread_a)?;
 
         // Assign `b` (7-bit piece)
         let b = region.assign_advice(|| "b", a_4, row + 1, || Ok(F::from_u64(pieces[1] as u64)))?;
@@ -174,22 +176,28 @@ impl MessageSchedule {
 
         // Assign `d` (13-bit piece) lookup
         let spread_d = SpreadWord::new(pieces[3] as u16);
-        let spread_d = SpreadVar::with_lookup(region, &self.lookup, row, spread_d)?;
+        let spread_d = SpreadVar::with_lookup(region, &self.lookup_inputs, row, spread_d)?;
 
         Ok(Subregion3Word {
             index,
-            a: CellValue32::new(spread_a.dense.var, spread_a.dense.value.unwrap().into()),
-            b: CellValue32::new(b, pieces[1]),
-            c: CellValue32::new(c, pieces[2]),
-            d: CellValue32::new(spread_d.dense.var, spread_d.dense.value.unwrap().into()),
-            spread_a: CellValue32::new(spread_a.spread.var, spread_a.spread.value.unwrap()),
-            spread_d: CellValue32::new(spread_d.spread.var, spread_d.spread.value.unwrap()),
+            a: CellValue32::new(
+                spread_a.dense.cell,
+                spread_a.dense.value.map(|val| val.into()),
+            ),
+            b: CellValue32::new(b, Some(pieces[1])),
+            c: CellValue32::new(c, Some(pieces[2])),
+            d: CellValue32::new(
+                spread_d.dense.cell,
+                spread_d.dense.value.map(|val| val.into()),
+            ),
+            spread_a: CellValue32::new(spread_a.spread.cell, spread_a.spread.value),
+            spread_d: CellValue32::new(spread_d.spread.cell, spread_d.spread.value),
         })
     }
 
-    fn lower_sigma_1<F: FieldExt>(
+    fn lower_sigma_1<F: FieldExt, C: Core<F>>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         word: Subregion3Word,
     ) -> Result<(CellValue16, CellValue16), Error> {
         let a_3 = self.extras[0];
@@ -283,7 +291,7 @@ impl MessageSchedule {
 
         self.assign_sigma_outputs(
             region,
-            &self.lookup,
+            &self.lookup_inputs,
             a_3,
             &self.perm,
             row,

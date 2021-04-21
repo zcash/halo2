@@ -1,16 +1,16 @@
-use super::super::{super::DIGEST_SIZE, BlockWord, CellValue16, Table16Assignment, Table16Chip};
-use super::{compression_util::*, Compression, State};
+use super::super::{super::DIGEST_SIZE, BlockWord, CellValue16, Table16Assignment};
+use super::{compression_util::*, CompressionConfig, State};
 use halo2::{
     arithmetic::FieldExt,
-    circuit::Region,
+    circuit::{Core, Region},
     plonk::{Advice, Column, Error},
 };
 
-impl Compression {
+impl CompressionConfig {
     #[allow(clippy::many_single_char_names)]
-    pub fn assign_digest<F: FieldExt>(
+    pub fn assign_digest<F: FieldExt, C: Core<F>>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         state: State,
     ) -> Result<[BlockWord; DIGEST_SIZE], Error> {
         let a_3 = self.extras[0];
@@ -89,9 +89,9 @@ impl Compression {
         ])
     }
 
-    fn assign_digest_word<F: FieldExt>(
+    fn assign_digest_word<F: FieldExt, C: Core<F>>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         row: usize,
         lo_col: Column<Advice>,
         hi_col: Column<Advice>,

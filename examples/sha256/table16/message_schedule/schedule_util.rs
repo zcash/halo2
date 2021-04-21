@@ -1,8 +1,8 @@
-use super::super::{CellValue16, Table16Chip};
-use super::MessageSchedule;
+use super::super::CellValue16;
+use super::MessageScheduleConfig;
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Cell, Region},
+    circuit::{Cell, Core, Region},
     plonk::Error,
 };
 
@@ -148,11 +148,11 @@ pub const MSG_SCHEDULE_TEST_OUTPUT: [u32; ROUNDS] = [
     0b00010010101100011110110111101011,
 ];
 
-impl MessageSchedule {
+impl MessageScheduleConfig {
     // Assign a word and its hi and lo halves
-    pub fn assign_word_and_halves<F: FieldExt>(
+    pub fn assign_word_and_halves<F: FieldExt, C: Core<F>>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         word: u32,
         word_idx: usize,
     ) -> Result<(Cell, (CellValue16, CellValue16)), Error> {
@@ -188,8 +188,8 @@ impl MessageSchedule {
         Ok((
             var,
             (
-                CellValue16::new(w_lo_cell, w_lo),
-                CellValue16::new(w_hi_cell, w_hi),
+                CellValue16::new(w_lo_cell, Some(w_lo)),
+                CellValue16::new(w_hi_cell, Some(w_hi)),
             ),
         ))
     }

@@ -1,11 +1,10 @@
 use halo2::{
     arithmetic::FieldExt,
-    circuit::Chip,
-    circuit::{layouter, Layouter},
-    pasta::EqAffine,
+    circuit::{layouter::SingleCoreLayouter, Core},
+    pasta::{EqAffine, Fp},
     plonk::{
-        create_proof, keygen_pk, keygen_vk, verify_proof, Assignment, Circuit, ConstraintSystem,
-        Error, VerifyingKey,
+        create_proof, keygen_pk, keygen_vk, verify_proof, Assembly, Assignment, Circuit,
+        ConstraintSystem, Error, VerifyingKey, WitnessCollection,
     },
     poly::commitment::Params,
     transcript::{Blake2bRead, Blake2bWrite},
@@ -14,31 +13,39 @@ use halo2::{
 use std::{
     fs::File,
     io::{prelude::*, BufReader},
+    marker::PhantomData,
     path::Path,
 };
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use crate::{BlockWord, Sha256, Table16Chip, Table16Config, BLOCK_SIZE};
+use crate::{BlockWord, Sha256, Table16Chip, Table16Config, Table16Core, BLOCK_SIZE};
 
 #[allow(dead_code)]
 fn bench(name: &str, k: u32, c: &mut Criterion) {
-    struct MyCircuit {}
+    struct MyCircuit<'a, F: FieldExt, CS: Assignment<F>> {
+        marker: PhantomData<F>,
+        marker_cs: PhantomData<&'a CS>,
+    }
 
-    impl<F: FieldExt> Circuit<F> for MyCircuit {
+    impl<'a, F: FieldExt, CS: Assignment<F> + 'a> Circuit<F> for MyCircuit<'a, F, CS> {
+        type Chip = Table16Chip<F, Self::Layouter>;
+        type Core = Table16Core<F, Self::Layouter>;
+        type Layouter = SingleCoreLayouter<'a, F, CS>;
         type Config = Table16Config;
+        type CS = CS;
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> Table16Config {
-            Table16Chip::configure(meta)
+        fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            Table16Core::<F, ()>::configure(meta)
         }
 
-        fn synthesize(
-            &self,
-            cs: &mut impl Assignment<F>,
-            config: Table16Config,
-        ) -> Result<(), Error> {
-            let mut layouter = layouter::SingleChip::<Table16Chip<F>, _>::new(cs, config)?;
-            Table16Chip::load(&mut layouter)?;
+        fn synthesize(&self, cs: &mut CS, config: Self::Config) -> Result<(), Error> {
+            let mut core = Table16Core {
+                config,
+                layouter: SingleCoreLayouter::new(cs),
+                _marker: std::marker::PhantomData,
+            };
+            core.load()?;
 
             // Test vector: "abc"
             let test_input = [
@@ -65,7 +72,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
                 input.extend_from_slice(&test_input);
             }
 
-            Sha256::digest(layouter.namespace(|| "test vector"), &input)?;
+            Sha256::digest(&mut core, &input)?;
 
             Ok(())
         }
@@ -88,7 +95,10 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     let params: Params<EqAffine> =
         Params::read::<_>(&mut BufReader::new(params_fs)).expect("Failed to read params");
 
-    let empty_circuit: MyCircuit = MyCircuit {};
+    let empty_circuit: MyCircuit<'_, Fp, Assembly<Fp>> = MyCircuit {
+        marker: PhantomData,
+        marker_cs: PhantomData,
+    };
 
     // Initialize the proving key
     let vk_path = Path::new("./benches/sha256_assets/sha256_vk");
@@ -104,13 +114,18 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     }
 
     let vk_fs = File::open(&vk_path).expect("couldn't load sha256_params");
-    let vk: VerifyingKey<EqAffine> =
-        VerifyingKey::<EqAffine>::read::<_, MyCircuit>(&mut BufReader::new(vk_fs), &params)
-            .expect("Failed to read vk");
+    let vk: VerifyingKey<EqAffine> = VerifyingKey::<EqAffine>::read::<
+        _,
+        MyCircuit<'_, Fp, Assembly<Fp>>,
+    >(&mut BufReader::new(vk_fs), &params)
+    .expect("Failed to read vk");
 
     let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
 
-    let circuit: MyCircuit = MyCircuit {};
+    let circuit: MyCircuit<'_, Fp, WitnessCollection<Fp>> = MyCircuit {
+        marker: PhantomData,
+        marker_cs: PhantomData,
+    };
 
     // let prover_name = name.to_string() + "-prover";
     let verifier_name = name.to_string() + "-verifier";

@@ -1,12 +1,16 @@
-use super::super::{RoundWordDense, RoundWordSpread, StateWord, Table16Chip, STATE};
-use super::{compression_util::*, Compression, State};
-use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
+use super::super::{RoundWordDense, RoundWordSpread, StateWord, STATE};
+use super::{compression_util::*, CompressionConfig, State};
+use halo2::{
+    arithmetic::FieldExt,
+    circuit::{Core, Region},
+    plonk::Error,
+};
 
-impl Compression {
+impl CompressionConfig {
     #[allow(clippy::many_single_char_names)]
-    pub fn initialize_iv<F: FieldExt>(
+    pub fn initialize_iv<F: FieldExt, C: Core<F>>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         iv: [u32; STATE],
     ) -> Result<State, Error> {
         let a_7 = self.extras[3];
@@ -50,9 +54,9 @@ impl Compression {
     }
 
     #[allow(clippy::many_single_char_names)]
-    pub fn initialize_state<F: FieldExt>(
+    pub fn initialize_state<F: FieldExt, C: Core<F>>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         state: State,
     ) -> Result<State, Error> {
         let a_7 = self.extras[3];
@@ -104,9 +108,9 @@ impl Compression {
         ))
     }
 
-    fn decompose_b<F: FieldExt>(
+    fn decompose_b<F: FieldExt, C: Core<F>>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         idx: i32,
         b_val: u32,
     ) -> Result<RoundWordSpread, Error> {
@@ -117,9 +121,9 @@ impl Compression {
         Ok(RoundWordSpread::new(dense_halves, spread_halves))
     }
 
-    fn decompose_c<F: FieldExt>(
+    fn decompose_c<F: FieldExt, C: Core<F>>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         idx: i32,
         c_val: u32,
     ) -> Result<RoundWordSpread, Error> {
@@ -130,9 +134,9 @@ impl Compression {
         Ok(RoundWordSpread::new(dense_halves, spread_halves))
     }
 
-    fn decompose_f<F: FieldExt>(
+    fn decompose_f<F: FieldExt, C: Core<F>>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         idx: i32,
         f_val: u32,
     ) -> Result<RoundWordSpread, Error> {
@@ -143,9 +147,9 @@ impl Compression {
         Ok(RoundWordSpread::new(dense_halves, spread_halves))
     }
 
-    fn decompose_g<F: FieldExt>(
+    fn decompose_g<F: FieldExt, C: Core<F>>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F, C>,
         idx: i32,
         g_val: u32,
     ) -> Result<RoundWordSpread, Error> {

@@ -31,7 +31,7 @@ impl<F: FieldExt> CompressionGate<F> {
         spread_word_lo: Expression<F>,
         word_hi: Expression<F>,
         spread_word_hi: Expression<F>,
-    ) -> Self {
+    ) -> Vec<Self> {
         let check_spread_and_range =
             Gate::three_bit_spread_and_range(c_lo.clone(), spread_c_lo.clone())
                 + Gate::three_bit_spread_and_range(c_mid.clone(), spread_c_mid.clone())
@@ -56,14 +56,16 @@ impl<F: FieldExt> CompressionGate<F> {
             + spread_word_lo * (-F::one())
             + spread_word_hi * F::from_u64(1 << 32) * (-F::one());
 
-        CompressionGate(
-            s_decompose_abcd
-                * (range_check_tag_b
-                    + range_check_tag_d
-                    + dense_check
-                    + spread_check
-                    + check_spread_and_range),
-        )
+        [
+            range_check_tag_b,
+            range_check_tag_d,
+            dense_check,
+            spread_check,
+            check_spread_and_range,
+        ]
+        .iter()
+        .map(|expr| CompressionGate(s_decompose_abcd.clone() * expr.clone()))
+        .collect::<Vec<_>>()
     }
 
     // Decompose `E,F,G,H` words
@@ -89,7 +91,7 @@ impl<F: FieldExt> CompressionGate<F> {
         spread_word_lo: Expression<F>,
         word_hi: Expression<F>,
         spread_word_hi: Expression<F>,
-    ) -> Self {
+    ) -> Vec<Self> {
         let check_spread_and_range =
             Gate::three_bit_spread_and_range(a_lo.clone(), spread_a_lo.clone())
                 + Gate::three_bit_spread_and_range(a_hi.clone(), spread_a_hi.clone())
@@ -114,14 +116,16 @@ impl<F: FieldExt> CompressionGate<F> {
             + spread_word_lo * (-F::one())
             + spread_word_hi * F::from_u64(1 << 32) * (-F::one());
 
-        CompressionGate(
-            s_decompose_efgh
-                * (range_check_tag_c
-                    + range_check_tag_d
-                    + dense_check
-                    + spread_check
-                    + check_spread_and_range),
-        )
+        [
+            range_check_tag_c,
+            range_check_tag_d,
+            dense_check,
+            spread_check,
+            check_spread_and_range,
+        ]
+        .iter()
+        .map(|expr| CompressionGate(s_decompose_efgh.clone() * expr.clone()))
+        .collect::<Vec<_>>()
     }
 
     // s_upper_sigma_0 on abcd words
@@ -247,7 +251,7 @@ impl<F: FieldExt> CompressionGate<F> {
         spread_e_neg_hi: Expression<F>,
         spread_g_lo: Expression<F>,
         spread_g_hi: Expression<F>,
-    ) -> Self {
+    ) -> Vec<Self> {
         let neg_check = Self::neg_check(
             spread_e_lo,
             spread_e_hi,
@@ -262,7 +266,10 @@ impl<F: FieldExt> CompressionGate<F> {
         let rhs_odd = spread_q0_odd + spread_q1_odd * F::from_u64(1 << 32);
         let rhs = rhs_even + rhs_odd * F::from_u64(2);
 
-        CompressionGate(s_ch_neg * (neg_check + lhs + rhs * -F::one()))
+        [neg_check, lhs + rhs * -F::one()]
+            .iter()
+            .map(|expr| CompressionGate(s_ch_neg.clone() * expr.clone()))
+            .collect::<Vec<_>>()
     }
 
     // Majority gate on (A, B, C)
@@ -410,13 +417,15 @@ impl<F: FieldExt> CompressionGate<F> {
         lo_3: Expression<F>,
         hi_3: Expression<F>,
         word_3: Expression<F>,
-    ) -> Self {
-        CompressionGate(
-            s_digest
-                * (Self::check_lo_hi(lo_0, hi_0, word_0)
-                    + Self::check_lo_hi(lo_1, hi_1, word_1)
-                    + Self::check_lo_hi(lo_2, hi_2, word_2)
-                    + Self::check_lo_hi(lo_3, hi_3, word_3)),
-        )
+    ) -> Vec<Self> {
+        [
+            Self::check_lo_hi(lo_0, hi_0, word_0),
+            Self::check_lo_hi(lo_1, hi_1, word_1),
+            Self::check_lo_hi(lo_2, hi_2, word_2),
+            Self::check_lo_hi(lo_3, hi_3, word_3),
+        ]
+        .iter()
+        .map(|expr| CompressionGate(s_digest.clone() * expr.clone()))
+        .collect::<Vec<_>>()
     }
 }
