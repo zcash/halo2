@@ -33,7 +33,10 @@ impl SpendingKey {
     /// Returns `None` if the bytes do not correspond to a valid Orchard spending key.
     pub fn from_bytes(sk: [u8; 32]) -> CtOption<Self> {
         let sk = SpendingKey(sk);
-        // If ask = 0, discard this key.
+        // If ask = 0, discard this key. We call `derive_inner` rather than
+        // `SpendAuthorizingKey::from` here because we only need to know
+        // whether ask = 0; the adjustment to potentially negate ask is not
+        // needed. Also, `from` would panic on ask = 0.
         let ask = SpendAuthorizingKey::derive_inner(&sk);
         // If ivk = ⊥, discard this key.
         let ivk = IncomingViewingKey::derive_inner(&(&sk).into());
