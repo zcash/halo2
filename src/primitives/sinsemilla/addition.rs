@@ -1,7 +1,7 @@
 use std::ops::Add;
 
-use group::Curve;
-use pasta_curves::{arithmetic::CurveAffine, pallas};
+use group::Group;
+use pasta_curves::pallas;
 use subtle::{ConstantTimeEq, CtOption};
 
 /// P ∪ {⊥}
@@ -33,14 +33,13 @@ impl Add for IncompletePoint {
             rhs.0.and_then(|q| {
                 // 0 ⊹ 0 = ⊥
                 // 0 ⊹ P = ⊥
-                p.to_affine().coordinates().and_then(|c_p| {
-                    // P ⊹ 0 = ⊥
-                    q.to_affine().coordinates().and_then(|c_q| {
-                        // (x, y) ⊹ (x', y') = ⊥ if x == x'
-                        // (x, y) ⊹ (x', y') = (x, y) + (x', y') if x != x'
-                        CtOption::new(p + q, !c_p.x().ct_eq(c_q.x()))
-                    })
-                })
+                // P ⊹ 0 = ⊥
+                // (x, y) ⊹ (x', y') = ⊥ if x == x'
+                // (x, y) ⊹ (x', y') = (x, y) + (x', y') if x != x'
+                CtOption::new(
+                    p + q,
+                    !(p.is_identity() | q.is_identity() | p.ct_eq(&q) | p.ct_eq(&-q)),
+                )
             })
         }))
     }
