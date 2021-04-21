@@ -2,7 +2,7 @@ use std::iter;
 
 use bitvec::{array::BitArray, order::Lsb0};
 use ff::PrimeField;
-use pasta_curves::pallas;
+use pasta_curves::{arithmetic::FieldExt, pallas};
 use subtle::CtOption;
 
 use crate::{
@@ -58,6 +58,13 @@ impl NoteCommitment {
 /// The x-coordinate of the commitment to a note.
 #[derive(Clone, Debug)]
 pub struct ExtractedNoteCommitment(pub(super) pallas::Base);
+
+impl ExtractedNoteCommitment {
+    /// Deserialize the extracted note commitment from a byte array.
+    pub fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        pallas::Base::from_bytes(bytes).map(ExtractedNoteCommitment)
+    }
+}
 
 impl From<NoteCommitment> for ExtractedNoteCommitment {
     fn from(cm: NoteCommitment) -> Self {

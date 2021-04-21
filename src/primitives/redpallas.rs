@@ -96,6 +96,12 @@ impl VerificationKey<SpendAuth> {
 #[derive(Debug)]
 pub struct Signature<T: SigType>(reddsa::Signature<T>);
 
+impl<T: SigType> From<[u8; 64]> for Signature<T> {
+    fn from(bytes: [u8; 64]) -> Self {
+        Signature(bytes.into())
+    }
+}
+
 pub(crate) mod private {
     use super::{Binding, SpendAuth};
 

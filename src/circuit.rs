@@ -156,6 +156,11 @@ impl Proof {
             Err(plonk::Error::ConstraintSystemFailure)
         }
     }
+
+    /// Construct a new Proof value.
+    pub fn new(bytes: Vec<u8>) -> Self {
+        Proof(bytes)
+    }
 }
 
 #[cfg(test)]
@@ -174,6 +179,7 @@ mod tests {
         value::{ValueCommitTrapdoor, ValueCommitment},
     };
 
+    // TODO: recast as a proptest
     #[test]
     fn round_trip() {
         let mut rng = OsRng;

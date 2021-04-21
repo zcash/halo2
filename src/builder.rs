@@ -16,7 +16,7 @@ use crate::{
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::{Anchor, MerklePath},
     value::{self, NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum},
-    Address, EncryptedNote, Note,
+    Address, TransmittedNoteCiphertext, Note,
 };
 
 const MIN_ACTIONS: usize = 2;
@@ -137,7 +137,11 @@ impl ActionInfo {
         let cm_new = note.commitment();
 
         // TODO: Note encryption
-        let encrypted_note = EncryptedNote;
+        let encrypted_note = TransmittedNoteCiphertext {
+            epk_bytes: [0u8; 32],
+            enc_ciphertext: [0u8; 580],
+            out_ciphertext: [0u8; 80],
+        };
 
         (
             Action::from_parts(

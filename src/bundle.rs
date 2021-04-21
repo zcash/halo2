@@ -4,7 +4,7 @@ use nonempty::NonEmpty;
 
 use crate::{
     circuit::{Instance, Proof},
-    note::{EncryptedNote, ExtractedNoteCommitment, Nullifier},
+    note::{ExtractedNoteCommitment, Nullifier, TransmittedNoteCiphertext},
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::Anchor,
     value::{ValueCommitment, ValueSum},
@@ -19,19 +19,19 @@ use crate::{
 /// Internally, this may both consume a note and create a note, or it may do only one of
 /// the two. TODO: Determine which is more efficient (circuit size vs bundle size).
 #[derive(Debug)]
-pub struct Action<T> {
+pub struct Action<A> {
     /// The nullifier of the note being spent.
     nf: Nullifier,
     /// The randomized verification key for the note being spent.
     rk: redpallas::VerificationKey<SpendAuth>,
     /// A commitment to the new note being created.
     cmx: ExtractedNoteCommitment,
-    /// The encrypted output note.
-    encrypted_note: EncryptedNote,
+    /// The transmitted note ciphertext
+    encrypted_note: TransmittedNoteCiphertext,
     /// A commitment to the net value created or consumed by this action.
     cv_net: ValueCommitment,
     /// The authorization for this action.
-    authorization: T,
+    authorization: A,
 }
 
 impl<T> Action<T> {
@@ -40,7 +40,7 @@ impl<T> Action<T> {
         nf: Nullifier,
         rk: redpallas::VerificationKey<SpendAuth>,
         cmx: ExtractedNoteCommitment,
-        encrypted_note: EncryptedNote,
+        encrypted_note: TransmittedNoteCiphertext,
         cv_net: ValueCommitment,
         authorization: T,
     ) -> Self {
@@ -70,7 +70,7 @@ impl<T> Action<T> {
     }
 
     /// Returns the encrypted note ciphertext.
-    pub fn encrypted_note(&self) -> &EncryptedNote {
+    pub fn encrypted_note(&self) -> &TransmittedNoteCiphertext {
         &self.encrypted_note
     }
 
@@ -170,6 +170,35 @@ impl Flags {
 pub trait Authorization {
     /// The authorization type of an Orchard action.
     type SpendAuth;
+}
+
+/// Marker for an unauthorized bundle with no proofs or signatures.
+#[derive(Debug)]
+pub struct Unauthorized {}
+
+impl Authorization for Unauthorized {
+    type SpendAuth = ();
+}
+
+/// Authorizing data for a bundle of actions, ready to be committed to the ledger.
+#[derive(Debug)]
+pub struct Authorized {
+    proof: Proof,
+    binding_signature: redpallas::Signature<Binding>,
+}
+
+impl Authorized {
+    /// Construct a new value with authorizing data.
+    pub fn new(proof: Proof, binding_signature: redpallas::Signature<Binding>) -> Self {
+        Authorized {
+            proof,
+            binding_signature,
+        }
+    }
+}
+
+impl Authorization for Authorized {
+    type SpendAuth = redpallas::Signature<SpendAuth>;
 }
 
 /// A bundle of actions to be applied to the ledger.
@@ -287,13 +316,56 @@ impl<T: Authorization> Bundle<T> {
 
 /// Authorizing data for a bundle of actions, ready to be committed to the ledger.
 #[derive(Debug)]
-pub struct Authorized {
-    proof: Proof,
-    binding_signature: redpallas::Signature<Binding>,
+pub struct BundleAuth {
+    /// The authorizing data for the actions in a bundle
+    pub action_authorizations: NonEmpty<<Authorized as Authorization>::SpendAuth>,
+    /// The authorizing data that covers the bundle as a whole
+    pub authorization: Authorized,
 }
 
-impl Authorization for Authorized {
-    type SpendAuth = redpallas::Signature<SpendAuth>;
+/// Errors that may be generated in the process of constructing bundle authorizing data.
+#[derive(Debug)]
+pub enum BundleAuthError<E> {
+    /// An error produced by the underlying computation of authorizing data for a bundle
+    Wrapped(E),
+    /// Authorizing data for the bundle could not be matched to bundle contents.
+    AuthLengthMismatch(usize, usize),
+}
+
+impl Bundle<Unauthorized> {
+    /// Compute the authorizing data for a bundle and apply it to the bundle, returning the
+    /// authorized result.
+    pub fn with_auth<E, F: FnOnce(&Self) -> Result<BundleAuth, E>>(
+        self,
+        f: F,
+    ) -> Result<Bundle<Authorized>, BundleAuthError<E>> {
+        let auth = f(&self).map_err(BundleAuthError::Wrapped)?;
+        let actions_len = self.actions.len();
+
+        if actions_len != auth.action_authorizations.len() {
+            Err(BundleAuthError::AuthLengthMismatch(
+                actions_len,
+                auth.action_authorizations.len(),
+            ))
+        } else {
+            let actions = NonEmpty::from_vec(
+                self.actions
+                    .into_iter()
+                    .zip(auth.action_authorizations.into_iter())
+                    .map(|(act, a)| act.map(|_| a))
+                    .collect(),
+            )
+            .ok_or(BundleAuthError::AuthLengthMismatch(actions_len, 0))?;
+
+            Ok(Bundle {
+                actions,
+                flags: self.flags,
+                value_balance: self.value_balance,
+                anchor: self.anchor,
+                authorization: auth.authorization,
+            })
+        }
+    }
 }
 
 impl Authorized {

@@ -1,7 +1,8 @@
 use group::Group;
 use halo2::arithmetic::CurveExt;
-use pasta_curves::pallas;
+use pasta_curves::{arithmetic::FieldExt, pallas};
 use rand::RngCore;
+use subtle::CtOption;
 
 use super::NoteCommitment;
 use crate::{
@@ -28,6 +29,11 @@ impl Nullifier {
     /// the base field to make the chance of sapling a colliding nullifier negligible.
     pub(crate) fn dummy(rng: &mut impl RngCore) -> Self {
         Nullifier(extract_p(&pallas::Point::random(rng)))
+    }
+
+    /// Deserialize the nullifier from a byte array.
+    pub fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        pallas::Base::from_bytes(bytes).map(Nullifier)
     }
 
     /// $DeriveNullifier$.

@@ -29,4 +29,9 @@ mod tree;
 pub mod value;
 
 pub use address::Address;
-pub use note::{EncryptedNote, Note, NoteCommitment, Nullifier};
+pub use bundle::{Action, Authorization, Authorized, Bundle, Unauthorized};
+pub use circuit::Proof;
+pub use note::{
+    ExtractedNoteCommitment, Note, NoteCommitment, Nullifier, TransmittedNoteCiphertext,
+};
+pub use tree::Anchor;
