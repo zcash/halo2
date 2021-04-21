@@ -38,7 +38,7 @@ rev = "b55a6960dfafd7f767e2820ddf1adaa499322f98"
 
 [dependencies.reddsa]
 git = "https://github.com/str4d/redjubjub.git"
-rev = "f8ff124a52d86e122e0705e8e9272f2099fe4c46"
+rev = "62a26a02fda5165b68a4b4773aa18ea6eb749dbc"
 
 [dev-dependencies]
 criterion = "0.3"
