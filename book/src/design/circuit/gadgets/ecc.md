@@ -1,17 +1,19 @@
 # Elliptic Curve Cryptography
 
 ## Incomplete addition
-Inputs: $P = (x_P, y_P), Q = (x_Q, y_Q)$
-Output: $A = P + Q = (x_A, y_A)$
+- Inputs: $P = (x_p, y_p), Q = (x_q, y_q)$
+- Output: $R = P + Q = (x_r, y_r)$
 
 Formulae:
 - $\lambda \cdot (x_p - x_q) = y_p - y_q$
-- $x_a = \lambda^2 - x_q - x_p$
-- $y_a = \lambda(x_q - x_a) - y_q$
+- $x_r = \lambda^2 - x_q - x_p$
+- $y_r = \lambda(x_q - x_r) - y_q$
 
 Substituting for $\lambda$, we get the constraints:
-- $(x_a + x_q + x_p) \cdot (x_p - x_q)^2 - (y_p - y_q)^2 = 0$
-- $(y_a + y_q)(x_p - x_q) - (y_p - y_q)(x_q - x_a) = 0$
+- $(x_r + x_q + x_p) \cdot (x_p - x_q)^2 - (y_p - y_q)^2 = 0$
+  - Note that this constraint is unsatisfiable for $P + (-P)$, and so cannot be used with arbitrary inputs.
+- $(y_r + y_q)(x_p - x_q) - (y_p - y_q)(x_q - x_r) = 0$
+
 
 ## Complete addition
 
@@ -36,7 +38,7 @@ P + Q &= R\\
 (x_p, y_p) + (x_q, y_q) &= (x_r, y_r) \\
                 \lambda &= \frac{y_p - y_q}{x_p - x_q} \\
                     x_r &= \lambda^2 - x_q - x_p \\
-                    y_r &= \lambda(x_p - x_r) - y_p
+                    y_r &= \lambda(x_q - x_r) - y_q
 \end{aligned}
 $$
 
@@ -73,4 +75,4 @@ A \cdot \left(2y_p \cdot \lambda - 3{x_p}^2\right) &=& 0 & A \wedge y_p \neq 0 &
 \end{array}
 $
 
-Max degree: 4
+Max degree: $4$

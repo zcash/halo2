@@ -19,8 +19,8 @@ Then, we precompute multiples of the fixed base $B$ for each window. This takes 
 
 The additional $(k + 1)$ term lets us avoid adding the point at infinity in the case $k = 0$. We offset these accumulated terms by subtracting them in the final window, i.e. we subtract $\sum\limits_{j=0}^{83} (2^3)^j$.
 
-For each window of fixed-base multiples $M[w] = (M[w][0], \cdots, M[w][7]), w \in [0..84]$:
-- Define a Lagrange interpolation polynomial $\mathcal{L}_x(k)$ that maps $k \in [0..7]$ to the $x$-coordinate of the multiple $M[w][k]$, i.e.
+For each window of fixed-base multiples $M[w] = (M[w][0], \cdots, M[w][7]), w \in [0..84)$:
+- Define a Lagrange interpolation polynomial $\mathcal{L}_x(k)$ that maps $k \in [0..8)$ to the $x$-coordinate of the multiple $M[w][k]$, i.e.
   $$
   \mathcal{L}_x(k) = \begin{cases}
     ([(k + 1) \cdot 8^w] B)_x &\text{for } w \in [0..84); \\
@@ -32,7 +32,7 @@ For each window of fixed-base multiples $M[w] = (M[w][0], \cdots, M[w][7]), w \i
 Repeating this for all $85$ windows, we end up with:
 - an $85 \times 8$ table $\mathcal{L}_x$ storing $8$ coefficients interpolating the $x-$coordinate for each window. Each $x$-coordinate interpolation polynomial will be of the form
 $$\mathcal{L}_x[w](k) = c_0 + c_1 \cdot k + c_2 \cdot k^2 + \cdots + c_7 \cdot k^7,$$
-where $k \in [0..7], w \in [0..84]$ and $c_k$'s are the coefficients for each power of $k$; and
+where $k \in [0..8), w \in [0..85)$ and $c_k$'s are the coefficients for each power of $k$; and
 - a length-$85$ array $Z$ of $z_w$'s.
 
 We load these precomputed values into fixed columns whenever we do fixed-base scalar multiplication in the circuit.
