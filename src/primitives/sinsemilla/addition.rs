@@ -25,6 +25,7 @@ impl From<IncompletePoint> for CtOption<pallas::Point> {
 impl Add for IncompletePoint {
     type Output = IncompletePoint;
 
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn add(self, rhs: Self) -> Self::Output {
         // ⊥ ⊹ ⊥ = ⊥
         // ⊥ ⊹ P = ⊥
