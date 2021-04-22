@@ -35,6 +35,25 @@ pub struct Action<T> {
 }
 
 impl<T> Action<T> {
+    /// Constructs an `Action` from its constituent parts.
+    pub fn from_parts(
+        nf: Nullifier,
+        rk: redpallas::VerificationKey<SpendAuth>,
+        cmx: ExtractedNoteCommitment,
+        encrypted_note: EncryptedNote,
+        cv_net: ValueCommitment,
+        authorization: T,
+    ) -> Self {
+        Action {
+            nf,
+            rk,
+            cmx,
+            encrypted_note,
+            cv_net,
+            authorization,
+        }
+    }
+
     /// Transitions this action from one authorization state to another.
     pub fn map<U>(self, step: impl FnOnce(T) -> U) -> Action<U> {
         Action {
@@ -84,6 +103,23 @@ pub struct Bundle<T: Authorization> {
 }
 
 impl<T: Authorization> Bundle<T> {
+    /// Constructs a `Bundle` from its constituent parts.
+    pub fn from_parts(
+        actions: NonEmpty<Action<T::SpendAuth>>,
+        flags: Flags,
+        value_balance: ValueSum,
+        anchor: Anchor,
+        authorization: T,
+    ) -> Self {
+        Bundle {
+            actions,
+            flags,
+            value_balance,
+            anchor,
+            authorization,
+        }
+    }
+
     /// Computes a commitment to the effects of this bundle, suitable for inclusion within
     /// a transaction ID.
     pub fn commitment(&self) -> BundleCommitment {
@@ -148,6 +184,16 @@ pub struct Authorized {
 
 impl Authorization for Authorized {
     type SpendAuth = redpallas::Signature<SpendAuth>;
+}
+
+impl Authorized {
+    /// Constructs the authorizing data for a bundle of actions from its constituent parts.
+    pub fn from_parts(proof: Proof, binding_signature: redpallas::Signature<Binding>) -> Self {
+        Authorized {
+            proof,
+            binding_signature,
+        }
+    }
 }
 
 impl Bundle<Authorized> {
