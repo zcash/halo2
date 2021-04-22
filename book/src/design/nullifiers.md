@@ -2,7 +2,7 @@
 
 The nullifier design we use for Orchard is
 
-$$\mathsf{nf} = [F_{\mathsf{nk}}(\rho) + \psi \pmod{p}] \mathcal{G} + \mathsf{cm},$$
+$$\mathsf{nf} = \mathsf{Extract}_{\mathbb{P}}\big([F_{\mathsf{nk}}(\rho) + \psi \pmod{p}] \mathcal{G} + \mathsf{cm}\big),$$
 
 where:
 
@@ -15,6 +15,7 @@ where:
   is derived from both $\rho$ and a sender-selected random value $\mathsf{rseed}$:
   $$\psi = KDF^\psi(\rho, \mathsf{rseed}).$$
 - $\mathcal{G}$ is a fixed independent base.
+- $\mathsf{Extract}_{\mathbb{P}}$ extracts the $x$-coordinate of a Pallas curve point.
 
 This gives a note structure of
 
@@ -94,6 +95,11 @@ $\mathcal{G}$, not to attacker-specified inputs.
 $\color{red}{\textsf{⚠ Caution}}$: be skeptical of the claims in this table about what
 problem(s) each security property depends on. They may not be accurate and are definitely
 not fully rigorous.
+
+The entries in this table omit the application of $\mathsf{Extract}_{\mathbb{P}}$,
+which is an optimization to halve the nullifier length. That optimization requires its
+own security analysis, but because it is a deterministic mapping, only Faerie Resistance
+could be affected by it.
 
 $$
 \begin{array}{|c|l|c|c|c|c|c|}
