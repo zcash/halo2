@@ -54,6 +54,36 @@ impl<T> Action<T> {
         }
     }
 
+    /// Returns the nullifier of the note being spent.
+    pub fn nullifier(&self) -> &Nullifier {
+        &self.nf
+    }
+
+    /// Returns the randomized verification key for the note being spent.
+    pub fn rk(&self) -> &redpallas::VerificationKey<SpendAuth> {
+        &self.rk
+    }
+
+    /// Returns the commitment to the new note being created.
+    pub fn cmx(&self) -> &ExtractedNoteCommitment {
+        &self.cmx
+    }
+
+    /// Returns the encrypted note ciphertext.
+    pub fn encrypted_note(&self) -> &EncryptedNote {
+        &self.encrypted_note
+    }
+
+    /// Returns the commitment to the net value created or consumed by this action.
+    pub fn cv_net(&self) -> &ValueCommitment {
+        &self.cv_net
+    }
+
+    /// Returns the authorization for this action.
+    pub fn authorization(&self) -> &T {
+        &self.authorization
+    }
+
     /// Transitions this action from one authorization state to another.
     pub fn map<U>(self, step: impl FnOnce(T) -> U) -> Action<U> {
         Action {
@@ -118,6 +148,35 @@ impl<T: Authorization> Bundle<T> {
             anchor,
             authorization,
         }
+    }
+
+    /// Returns the list of actions that make up this bundle.
+    pub fn actions(&self) -> &NonEmpty<Action<T::SpendAuth>> {
+        &self.actions
+    }
+
+    /// Returns the Orchard-specific transaction-level flags for this bundle.
+    pub fn flags(&self) -> &Flags {
+        &self.flags
+    }
+
+    /// Returns the net value moved into or out of the Orchard shielded pool.
+    ///
+    /// This is the sum of Orchard spends minus the sum Orchard outputs.
+    pub fn value_balance(&self) -> &ValueSum {
+        &self.value_balance
+    }
+
+    /// Returns the root of the Orchard commitment tree that this bundle commits to.
+    pub fn anchor(&self) -> &Anchor {
+        &self.anchor
+    }
+
+    /// Returns the authorization for this bundle.
+    ///
+    /// In the case of a `Bundle<Authorized>`, this is the proof and binding signature.
+    pub fn authorization(&self) -> &T {
+        &self.authorization
     }
 
     /// Computes a commitment to the effects of this bundle, suitable for inclusion within
