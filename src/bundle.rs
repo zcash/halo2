@@ -139,9 +139,9 @@ pub struct Bundle<T: Authorization> {
     actions: NonEmpty<Action<T::SpendAuth>>,
     /// Orchard-specific transaction-level flags for this bundle.
     flags: Flags,
-    /// The net value moved into or out of the Orchard shielded pool.
+    /// The net value moved out of the Orchard shielded pool.
     ///
-    /// This is the sum of Orchard spends minus the sum Orchard outputs.
+    /// This is the sum of Orchard spends minus the sum of Orchard outputs.
     value_balance: ValueSum,
     /// The root of the Orchard commitment tree that this bundle commits to.
     anchor: Anchor,
@@ -203,7 +203,7 @@ impl<T: Authorization> Bundle<T> {
     }
 
     /// Transitions this bundle from one authorization state to another.
-    pub fn map<U: Authorization>(
+    pub fn authorize<U: Authorization>(
         self,
         mut spend_auth: impl FnMut(&T, T::SpendAuth) -> U::SpendAuth,
         step: impl FnOnce(T) -> U,
@@ -221,7 +221,7 @@ impl<T: Authorization> Bundle<T> {
     }
 
     /// Transitions this bundle from one authorization state to another.
-    pub fn try_map<U: Authorization, E>(
+    pub fn try_authorize<U: Authorization, E>(
         self,
         mut spend_auth: impl FnMut(&T, T::SpendAuth) -> Result<U::SpendAuth, E>,
         step: impl FnOnce(T) -> Result<U, E>,
