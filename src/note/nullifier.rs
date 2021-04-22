@@ -1,4 +1,4 @@
-use ff::Field;
+use group::Group;
 use halo2::arithmetic::CurveExt;
 use pasta_curves::pallas;
 use rand::RngCore;
@@ -27,7 +27,7 @@ impl Nullifier {
     /// Instead of explicitly sampling for a unique nullifier, we rely here on the size of
     /// the base field to make the chance of sapling a colliding nullifier negligible.
     pub(crate) fn dummy(rng: &mut impl RngCore) -> Self {
-        Nullifier(pallas::Base::random(rng))
+        Nullifier(extract_p(&pallas::Point::random(rng)))
     }
 
     /// $DeriveNullifier$.
