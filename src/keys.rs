@@ -8,6 +8,7 @@ use fpe::ff1::{BinaryNumeralString, FF1};
 use group::GroupEncoding;
 use halo2::arithmetic::FieldExt;
 use pasta_curves::pallas;
+use rand::RngCore;
 use subtle::CtOption;
 
 use crate::{
@@ -28,6 +29,23 @@ use crate::{
 pub struct SpendingKey([u8; 32]);
 
 impl SpendingKey {
+    /// Generates a random spending key.
+    ///
+    /// This is only used when generating dummy notes. Real spending keys should be
+    /// derived according to [ZIP 32].
+    ///
+    /// [ZIP 32]: https://zips.z.cash/zip-0032
+    pub(crate) fn random(rng: &mut impl RngCore) -> Self {
+        loop {
+            let mut bytes = [0; 32];
+            rng.fill_bytes(&mut bytes);
+            let sk = SpendingKey::from_bytes(bytes);
+            if sk.is_some().into() {
+                break sk.unwrap();
+            }
+        }
+    }
+
     /// Constructs an Orchard spending key from uniformly-random bytes.
     ///
     /// Returns `None` if the bytes do not correspond to a valid Orchard spending key.
