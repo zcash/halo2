@@ -112,7 +112,17 @@ impl<T> Action<T> {
 /// Orchard-specific flags.
 #[derive(Clone, Copy, Debug)]
 pub struct Flags {
+    /// Flag denoting whether Orchard spends are enabled in the transaction.
+    ///
+    /// If `true`, spent notes within [`Action`]s in the transaction's [`Bundle`] are
+    /// guaranteed to be dummy notes. If `false`, the spent notes may be either real or
+    /// dummy notes.
     spends_enabled: bool,
+    /// Flag denoting whether Orchard outputs are enabled in the transaction.
+    ///
+    /// If `true`, created notes within [`Action`]s in the transaction's [`Bundle`] are
+    /// guaranteed to be dummy notes. If `false`, the created notes may be either real or
+    /// dummy notes.
     outputs_enabled: bool,
 }
 
@@ -125,10 +135,17 @@ pub trait Authorization {
 /// A bundle of actions to be applied to the ledger.
 #[derive(Debug)]
 pub struct Bundle<T: Authorization> {
+    /// The list of actions that make up this bundle.
     actions: NonEmpty<Action<T::SpendAuth>>,
+    /// Orchard-specific transaction-level flags for this bundle.
     flags: Flags,
+    /// The net value moved into or out of the Orchard shielded pool.
+    ///
+    /// This is the sum of Orchard spends minus the sum Orchard outputs.
     value_balance: ValueSum,
+    /// The root of the Orchard commitment tree that this bundle commits to.
     anchor: Anchor,
+    /// The authorization for this bundle.
     authorization: T,
 }
 
