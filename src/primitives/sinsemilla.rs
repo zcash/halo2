@@ -1,10 +1,13 @@
 //! The Sinsemilla hash function and commitment scheme.
 
-use group::Group;
 use halo2::arithmetic::CurveExt;
 use pasta_curves::pallas;
+use subtle::CtOption;
 
-use crate::spec::extract_p;
+use crate::spec::extract_p_bottom;
+
+mod addition;
+use self::addition::IncompletePoint;
 
 mod constants;
 pub use constants::*;
@@ -95,8 +98,12 @@ impl HashDomain {
     /// $\mathsf{SinsemillaHashToPoint}$ from [§ 5.4.1.9][concretesinsemillahash].
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
+    pub(crate) fn hash_to_point(&self, msg: impl Iterator<Item = bool>) -> CtOption<pallas::Point> {
+        self.hash_to_point_inner(msg).into()
+    }
+
     #[allow(non_snake_case)]
-    pub(crate) fn hash_to_point(&self, msg: impl Iterator<Item = bool>) -> pallas::Point {
+    fn hash_to_point_inner(&self, msg: impl Iterator<Item = bool>) -> IncompletePoint {
         let padded: Vec<_> = Pad::new(msg).collect();
 
         let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
@@ -104,14 +111,16 @@ impl HashDomain {
 
         padded
             .chunks(K)
-            .fold(self.Q, |acc, chunk| acc.double() + S(chunk))
+            .fold(IncompletePoint::from(self.Q), |acc, chunk| {
+                (acc + S(chunk)) + acc
+            })
     }
 
     /// $\mathsf{SinsemillaHash}$ from [§ 5.4.1.9][concretesinsemillahash].
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
-    pub(crate) fn hash(&self, msg: impl Iterator<Item = bool>) -> pallas::Base {
-        extract_p(&self.hash_to_point(msg))
+    pub(crate) fn hash(&self, msg: impl Iterator<Item = bool>) -> CtOption<pallas::Base> {
+        extract_p_bottom(self.hash_to_point(msg))
     }
 
     /// Returns the Sinsemilla $Q$ constant for this domain.
@@ -151,8 +160,8 @@ impl CommitDomain {
         &self,
         msg: impl Iterator<Item = bool>,
         r: &pallas::Scalar,
-    ) -> pallas::Point {
-        self.M.hash_to_point(msg) + self.R * r
+    ) -> CtOption<pallas::Point> {
+        (self.M.hash_to_point_inner(msg) + self.R * r).into()
     }
 
     /// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
@@ -162,8 +171,8 @@ impl CommitDomain {
         &self,
         msg: impl Iterator<Item = bool>,
         r: &pallas::Scalar,
-    ) -> pallas::Base {
-        extract_p(&self.commit(msg, r))
+    ) -> CtOption<pallas::Base> {
+        extract_p_bottom(self.commit(msg, r))
     }
 
     /// Returns the Sinsemilla $R$ constant for this domain.

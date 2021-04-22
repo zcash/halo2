@@ -4,7 +4,7 @@ use nonempty::NonEmpty;
 
 use crate::{
     circuit::Proof,
-    note::{EncryptedNote, NoteCommitment, Nullifier},
+    note::{EncryptedNote, ExtractedNoteCommitment, Nullifier},
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::Anchor,
     value::{ValueCommitment, ValueSum},
@@ -25,7 +25,7 @@ pub struct Action<T> {
     /// The randomized verification key for the note being spent.
     rk: redpallas::VerificationKey<SpendAuth>,
     /// A commitment to the new note being created.
-    cm_new: NoteCommitment,
+    cm_new: ExtractedNoteCommitment,
     /// The encrypted output note.
     encrypted_note: EncryptedNote,
     /// A commitment to the net value created or consumed by this action.
