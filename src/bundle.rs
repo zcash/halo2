@@ -21,11 +21,11 @@ use crate::{
 #[derive(Debug)]
 pub struct Action<T> {
     /// The nullifier of the note being spent.
-    nf_old: Nullifier,
+    nf: Nullifier,
     /// The randomized verification key for the note being spent.
     rk: redpallas::VerificationKey<SpendAuth>,
     /// A commitment to the new note being created.
-    cm_new: ExtractedNoteCommitment,
+    cmx: ExtractedNoteCommitment,
     /// The encrypted output note.
     encrypted_note: EncryptedNote,
     /// A commitment to the net value created or consumed by this action.
@@ -38,9 +38,9 @@ impl<T> Action<T> {
     /// Transitions this action from one authorization state to another.
     pub fn map<U>(self, step: impl FnOnce(T) -> U) -> Action<U> {
         Action {
-            nf_old: self.nf_old,
+            nf: self.nf,
             rk: self.rk,
-            cm_new: self.cm_new,
+            cmx: self.cmx,
             encrypted_note: self.encrypted_note,
             cv_net: self.cv_net,
             authorization: step(self.authorization),
@@ -50,9 +50,9 @@ impl<T> Action<T> {
     /// Transitions this action from one authorization state to another.
     pub fn try_map<U, E>(self, step: impl FnOnce(T) -> Result<U, E>) -> Result<Action<U>, E> {
         Ok(Action {
-            nf_old: self.nf_old,
+            nf: self.nf,
             rk: self.rk,
-            cm_new: self.cm_new,
+            cmx: self.cmx,
             encrypted_note: self.encrypted_note,
             cv_net: self.cv_net,
             authorization: step(self.authorization)?,
@@ -77,7 +77,7 @@ pub trait Authorization {
 #[derive(Debug)]
 pub struct Bundle<T: Authorization> {
     actions: NonEmpty<Action<T::SpendAuth>>,
-    flag: Flags,
+    flags: Flags,
     value_balance: ValueSum,
     anchor: Anchor,
     authorization: T,
@@ -101,7 +101,7 @@ impl<T: Authorization> Bundle<T> {
             actions: self
                 .actions
                 .map(|a| a.map(|a_auth| spend_auth(&authorization, a_auth))),
-            flag: self.flag,
+            flags: self.flags,
             value_balance: self.value_balance,
             anchor: self.anchor,
             authorization: step(authorization),
@@ -123,7 +123,7 @@ impl<T: Authorization> Bundle<T> {
 
         Ok(Bundle {
             actions: NonEmpty::from_vec(new_actions).unwrap(),
-            flag: self.flag,
+            flags: self.flags,
             value_balance: self.value_balance,
             anchor: self.anchor,
             authorization: step(authorization)?,
