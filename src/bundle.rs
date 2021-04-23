@@ -126,6 +126,31 @@ pub struct Flags {
     outputs_enabled: bool,
 }
 
+impl Flags {
+    /// Construct a set of flags from its constituent parts
+    pub fn from_parts(spends_enabled: bool, outputs_enabled: bool) -> Self {
+        Flags { spends_enabled, outputs_enabled }
+    }
+
+    /// Flag denoting whether Orchard spends are enabled in the transaction.
+    ///
+    /// If `true`, spent notes within [`Action`]s in the transaction's [`Bundle`] are
+    /// guaranteed to be dummy notes. If `false`, the spent notes may be either real or
+    /// dummy notes.
+    pub fn spends_enabled(&self) -> bool {
+        self.spends_enabled
+    }
+
+    /// Flag denoting whether Orchard outputs are enabled in the transaction.
+    ///
+    /// If `true`, created notes within [`Action`]s in the transaction's [`Bundle`] are
+    /// guaranteed to be dummy notes. If `false`, the created notes may be either real or
+    /// dummy notes.
+    pub fn outputs_enabled(&self) -> bool {
+        self.outputs_enabled
+    }
+}
+
 /// Defines the authorization type of an Orchard bundle.
 pub trait Authorization {
     /// The authorization type of an Orchard action.
