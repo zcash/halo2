@@ -16,36 +16,36 @@ pub const Q_PERSONALIZATION: &str = "z.cash:SinsemillaQ";
 /// Generator used in SinsemillaHashToPoint for note commitment
 pub const Q_NOTE_COMMITMENT_M_GENERATOR: ([u8; 32], [u8; 32]) = (
     [
-        17, 166, 94, 204, 113, 234, 240, 126, 87, 121, 119, 126, 2, 201, 212, 93, 41, 34, 212, 208,
-        68, 169, 141, 7, 220, 238, 38, 95, 90, 247, 70, 18,
+        93, 116, 168, 64, 9, 186, 14, 50, 42, 221, 70, 253, 90, 15, 150, 197, 93, 237, 176, 121,
+        180, 242, 159, 247, 13, 205, 251, 86, 160, 7, 128, 23,
     ],
     [
-        112, 75, 165, 87, 136, 232, 105, 167, 146, 87, 199, 38, 162, 29, 25, 74, 210, 48, 46, 194,
-        238, 187, 31, 185, 170, 183, 90, 145, 96, 225, 82, 11,
+        99, 172, 73, 115, 90, 10, 39, 135, 158, 94, 219, 129, 136, 18, 34, 136, 44, 201, 244, 110,
+        217, 194, 190, 78, 131, 112, 198, 138, 147, 88, 160, 50,
     ],
 );
 
 /// Generator used in SinsemillaHashToPoint for IVK commitment
 pub const Q_COMMIT_IVK_M_GENERATOR: ([u8; 32], [u8; 32]) = (
     [
-        15, 244, 194, 152, 48, 102, 16, 30, 201, 92, 40, 155, 68, 183, 67, 44, 99, 163, 152, 38,
-        99, 82, 136, 230, 79, 7, 246, 126, 5, 115, 236, 38,
+        242, 130, 15, 121, 146, 47, 203, 107, 50, 162, 40, 81, 36, 204, 27, 66, 250, 65, 162, 90,
+        184, 129, 204, 125, 17, 200, 169, 74, 241, 12, 188, 5,
     ],
     [
-        111, 190, 31, 34, 22, 64, 206, 247, 250, 75, 120, 48, 132, 183, 190, 222, 242, 10, 244,
-        189, 244, 158, 82, 19, 17, 77, 71, 93, 148, 240, 120, 16,
+        190, 222, 173, 207, 206, 229, 90, 190, 241, 165, 109, 201, 29, 53, 196, 70, 75, 5, 222, 32,
+        70, 7, 89, 239, 230, 190, 26, 212, 246, 76, 1, 27,
     ],
 );
 
 /// Generator used in SinsemillaHashToPoint for Merkle collision-resistant hash
 pub const Q_MERKLE_CRH: ([u8; 32], [u8; 32]) = (
     [
-        109, 131, 41, 145, 131, 167, 124, 146, 255, 59, 69, 88, 173, 99, 176, 39, 6, 29, 234, 237,
-        189, 119, 140, 28, 209, 251, 3, 251, 133, 240, 159, 32,
+        160, 198, 41, 127, 249, 199, 185, 248, 112, 16, 141, 192, 85, 185, 190, 201, 153, 14, 137,
+        239, 90, 54, 15, 160, 185, 24, 168, 99, 150, 210, 22, 22,
     ],
     [
-        203, 59, 20, 136, 4, 179, 213, 0, 24, 204, 101, 110, 131, 91, 228, 86, 81, 18, 56, 67, 12,
-        153, 160, 95, 190, 61, 129, 107, 108, 54, 79, 41,
+        98, 234, 242, 37, 206, 174, 233, 134, 150, 21, 116, 5, 234, 150, 28, 226, 121, 89, 163, 79,
+        62, 242, 196, 45, 153, 32, 175, 227, 163, 66, 134, 53,
     ],
 );
 
@@ -78,14 +78,14 @@ mod tests {
     fn q_note_commitment_m() {
         let domain = CommitDomain::new(NOTE_COMMITMENT_PERSONALIZATION);
         let point = domain.M.Q;
-        let (x, y) = point.to_affine().get_xy().unwrap();
+        let coords = point.to_affine().coordinates().unwrap();
 
         assert_eq!(
-            x,
+            *coords.x(),
             pallas::Base::from_bytes(&Q_NOTE_COMMITMENT_M_GENERATOR.0).unwrap()
         );
         assert_eq!(
-            y,
+            *coords.y(),
             pallas::Base::from_bytes(&Q_NOTE_COMMITMENT_M_GENERATOR.1).unwrap()
         );
     }
@@ -94,14 +94,14 @@ mod tests {
     fn q_commit_ivk_m() {
         let domain = CommitDomain::new(COMMIT_IVK_PERSONALIZATION);
         let point = domain.M.Q;
-        let (x, y) = point.to_affine().get_xy().unwrap();
+        let coords = point.to_affine().coordinates().unwrap();
 
         assert_eq!(
-            x,
+            *coords.x(),
             pallas::Base::from_bytes(&Q_COMMIT_IVK_M_GENERATOR.0).unwrap()
         );
         assert_eq!(
-            y,
+            *coords.y(),
             pallas::Base::from_bytes(&Q_COMMIT_IVK_M_GENERATOR.1).unwrap()
         );
     }
@@ -110,9 +110,15 @@ mod tests {
     fn q_merkle_crh() {
         let domain = HashDomain::new(MERKLE_CRH_PERSONALIZATION);
         let point = domain.Q;
-        let (x, y) = point.to_affine().get_xy().unwrap();
+        let coords = point.to_affine().coordinates().unwrap();
 
-        assert_eq!(x, pallas::Base::from_bytes(&Q_MERKLE_CRH.0).unwrap());
-        assert_eq!(y, pallas::Base::from_bytes(&Q_MERKLE_CRH.1).unwrap());
+        assert_eq!(
+            *coords.x(),
+            pallas::Base::from_bytes(&Q_MERKLE_CRH.0).unwrap()
+        );
+        assert_eq!(
+            *coords.y(),
+            pallas::Base::from_bytes(&Q_MERKLE_CRH.1).unwrap()
+        );
     }
 }

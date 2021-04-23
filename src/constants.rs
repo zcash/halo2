@@ -193,7 +193,7 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
             .map(|window_points| {
                 let x_window_points: Vec<_> = window_points
                     .iter()
-                    .map(|point| point.get_xy().unwrap().0)
+                    .map(|point| *point.coordinates().unwrap().x())
                     .collect();
                 lagrange_interpolate(&points, &x_window_points)
                     .iter()
@@ -216,7 +216,7 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
 
             let ys: Vec<_> = window_points
                 .iter()
-                .map(|point| point.get_xy().unwrap().1)
+                .map(|point| *point.coordinates().unwrap().y())
                 .collect();
             let z_for_single_y = |y: C::Base, z: u64| {
                 let sum_y_is_square: bool = (y + C::Base::from_u64(z)).sqrt().is_some().into();
@@ -234,7 +234,7 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
         };
 
         let window_table = self.compute_window_table(num_windows);
-        window_table[21..22]
+        window_table
             .iter()
             .map(|window_points| find_z(window_points))
             .collect()
@@ -269,7 +269,7 @@ impl<C: CurveAffine> TestFixedBase<C> for OrchardFixedBase<C> {
                     let point = self.0
                         * C::Scalar::from_u64(bits as u64 + 1)
                         * C::Scalar::from_u64(H as u64).pow(&[idx as u64, 0, 0, 0]);
-                    let x = point.to_affine().get_xy().unwrap().0;
+                    let x = *point.to_affine().coordinates().unwrap().x();
 
                     // Check that the interpolated x-coordinate matches the actual one.
                     assert_eq!(x, interpolated_x);
@@ -291,7 +291,7 @@ impl<C: CurveAffine> TestFixedBase<C> for OrchardFixedBase<C> {
                 * C::Scalar::from_u64(H as u64).pow(&[(num_windows - 1) as u64, 0, 0, 0])
                 - offset;
             let point = self.0 * scalar;
-            let x = point.to_affine().get_xy().unwrap().0;
+            let x = *point.to_affine().coordinates().unwrap().x();
 
             // Check that the interpolated x-coordinate matches the actual one.
             assert_eq!(x, interpolated_x);
@@ -303,7 +303,7 @@ impl<C: CurveAffine> TestFixedBase<C> for OrchardFixedBase<C> {
 
         for ((u, z), window_points) in u.iter().zip(z.iter()).zip(window_table) {
             for (u, point) in u.iter().zip(window_points.iter()) {
-                let y = point.get_xy().unwrap().1;
+                let y = *point.coordinates().unwrap().y();
                 let u = C::Base::from_bytes(&u).unwrap();
                 assert_eq!((C::Base::from_u64(*z) + y).sqrt().unwrap(), u);
                 assert_eq!((C::Base::from_u64(*z) - y).sqrt().is_some().unwrap_u8(), 0);
