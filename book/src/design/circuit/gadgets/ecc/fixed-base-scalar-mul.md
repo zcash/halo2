@@ -67,4 +67,5 @@ $$
 
 Then compute $P = [m] \mathcal{V}$, and conditionally negate $P$ using $(x, y) \mapsto (x, s \cdot y)$.
 
-We can reuse the window table from full-width fixed-base scalar multiplication, but with only $\mathsf{ceil}(64 / 3) = 22$ windows.
+We compute the window table in a similar way to full-width fixed-base scalar multiplication,
+but with only $\mathsf{ceil}(64 / 3) = 22$ windows.

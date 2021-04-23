@@ -11,7 +11,8 @@ Formulae:
 
 Substituting for $\lambda$, we get the constraints:
 - $(x_r + x_q + x_p) \cdot (x_p - x_q)^2 - (y_p - y_q)^2 = 0$
-  - Note that this constraint is unsatisfiable for $P + (-P)$, and so cannot be used with arbitrary inputs.
+  - Note that this constraint is unsatisfiable for $P \;⸭\; (-P)$ (when $P \neq \mathcal{O}$),
+    and so cannot be used with arbitrary inputs.
 - $(y_r + y_q)(x_p - x_q) - (y_p - y_q)(x_q - x_r) = 0$
 
 
@@ -76,3 +77,8 @@ A \cdot \left(2y_p \cdot \lambda - 3{x_p}^2\right) &=& 0 & A \wedge y_p \neq 0 &
 $
 
 Max degree: $4$
+
+Note: It is the cross-interaction of the two $B$ constraints that fully constrain
+the implications. For example, the contrapositive of the first constraint's implication
+$x_p = 0 \implies B$ is $¬B \implies x_p \neq 0$, which is the other half of the
+second constraint's implication. The same applies to $C$.
