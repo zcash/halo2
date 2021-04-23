@@ -14,8 +14,8 @@
 //! [`Action`]: crate::bundle::Action
 //! [`Bundle`]: crate::bundle::Bundle
 
-use std::convert::TryInto;
-use std::fmt;
+use std::convert::{TryInto, TryFrom};
+use std::fmt::{self, Debug};
 use std::iter::Sum;
 use std::ops::{Add, Sub};
 
@@ -65,19 +65,20 @@ impl NoteValue {
     }
 }
 
+
 impl Sub for NoteValue {
-    type Output = Result<ValueSum, OverflowError>;
+    type Output = Option<ValueSum>;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        let a: i64 = self.0.try_into().map_err(|_| OverflowError)?;
-        let b: i64 = rhs.0.try_into().map_err(|_| OverflowError)?;
-        Ok(ValueSum(a - b))
+        let a = self.0 as i128;
+        let b = rhs.0 as i128;
+	a.checked_sub(b).filter(|v| v > &(-(std::u64::MAX as i128))).map(ValueSum)
     }
 }
 
-/// A sum of Orchard note values.
+/// A sum of Orchard note values
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct ValueSum(i64);
+pub struct ValueSum(i128);
 
 impl ValueSum {
     pub(crate) fn zero() -> Self {
@@ -90,21 +91,29 @@ impl ValueSum {
     /// This only enforces that the value is a signed 63-bit integer. Callers should
     /// enforce any additional constraints on the value's valid range themselves.
     pub fn from_raw(value: i64) -> Self {
-        ValueSum(value)
+        ValueSum(value as i128)
     }
 }
 
 impl Add for ValueSum {
-    type Output = Result<ValueSum, OverflowError>;
+    type Output = Option<ValueSum>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        self.0.checked_add(rhs.0).map(ValueSum).ok_or(OverflowError)
+        self.0.checked_add(rhs.0).filter(|v| v < &(std::u64::MAX as i128)).map(ValueSum)
     }
 }
 
 impl<'a> Sum<&'a ValueSum> for Result<ValueSum, OverflowError> {
     fn sum<I: Iterator<Item = &'a ValueSum>>(iter: I) -> Self {
-        iter.fold(Ok(ValueSum(0)), |acc, cv| acc? + *cv)
+        iter.fold(Ok(ValueSum(0)), |acc, cv| (acc? + *cv).ok_or(OverflowError))
+    }
+}
+
+impl TryFrom<ValueSum> for i64 {
+    type Error = OverflowError;
+
+    fn try_from(v: ValueSum) -> Result<i64, Self::Error> {
+        i64::try_from(v.0).map_err(|_| OverflowError)
     }
 }
 
@@ -190,11 +199,12 @@ impl ValueCommitment {
         let hasher = pallas::Point::hash_to_curve("z.cash:Orchard-cv");
         let V = hasher(b"v");
         let R = hasher(b"r");
+        let value = i64::try_from(value.0).expect("value must be in valid range");
 
-        let value = if value.0.is_negative() {
-            -pallas::Scalar::from_u64((-value.0) as u64)
+        let value = if value.is_negative() {
+            -pallas::Scalar::from_u64((-value) as u64)
         } else {
-            pallas::Scalar::from_u64(value.0 as u64)
+            pallas::Scalar::from_u64(value as u64)
         };
 
         ValueCommitment(V * value + R * rcv.0)
@@ -265,10 +275,5 @@ mod tests {
 
             assert_eq!(redpallas::VerificationKey::from(&bsk), bvk);
         }
-    }
-
-    /// Serialize the value commitment to its canonical byte representation.
-    pub fn to_bytes(&self) -> [u8; 32] {
-        self.0.to_bytes()
     }
 }

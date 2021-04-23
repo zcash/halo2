@@ -1,6 +1,8 @@
 //! Logic for building Orchard components of transactions.
 
+use std::convert::TryFrom;
 use std::iter;
+use std::marker::PhantomData;
 
 use ff::Field;
 use nonempty::NonEmpty;
@@ -110,7 +112,7 @@ impl ActionInfo {
     }
 
     /// Returns the value sum for this action.
-    fn value_sum(&self) -> Result<ValueSum, value::OverflowError> {
+    fn value_sum(&self) -> Option<ValueSum> {
         self.spend.note.value() - self.output.value
     }
 
@@ -119,7 +121,7 @@ impl ActionInfo {
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
     ///
     /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
-    fn build(self, mut rng: impl RngCore) -> (Action<SigningMetadata>, Circuit) {
+    fn build<V: TryFrom<i64>(self, mut rng: impl RngCore) -> (Action<SigningMetadata>, Circuit) {
         let v_net = self.value_sum().expect("already checked this");
         let cv_net = ValueCommitment::derive(v_net, self.rcv);
 
@@ -237,11 +239,11 @@ impl Builder {
     ///
     /// This API assumes that none of the notes being spent are controlled by (threshold)
     /// multisignatures, and immediately constructs the bundle proof.
-    fn build(
+    fn build<V: TryFrom<i64>>(
         mut self,
         mut rng: impl RngCore,
         pk: &ProvingKey,
-    ) -> Result<Bundle<Unauthorized>, Error> {
+    ) -> Result<Bundle<Unauthorized, V>, Error> {
         // Pair up the spends and recipients, extending with dummy values as necessary.
         //
         // TODO: Do we want to shuffle the order like we do for Sapling? And if we do, do
@@ -276,11 +278,11 @@ impl Builder {
         let anchor = self.anchor;
 
         // Determine the value balance for this bundle, ensuring it is valid.
-        let value_balance: ValueSum = pre_actions
+        let value_balance = pre_actions
             .iter()
-            .fold(Ok(ValueSum::zero()), |acc, action| {
+            .fold(Some(ValueSum::zero()), |acc, action| {
                 acc? + action.value_sum()?
-            })?;
+            }).ok_or(Error::ValueSum(value::OverflowError))?;
 
         // Compute the transaction binding signing key.
         let bsk = pre_actions
@@ -291,7 +293,7 @@ impl Builder {
 
         // Create the actions.
         let (actions, circuits): (Vec<_>, Vec<_>) =
-            pre_actions.into_iter().map(|a| a.build(&mut rng)).unzip();
+            pre_actions.into_iter().map(|a| a.build(&mut rng, PhantomData::<V>)).unzip();
 
         // Verify that bsk and bvk are consistent.
         let bvk = (actions.iter().map(|a| a.cv_net()).sum::<ValueCommitment>()
@@ -305,6 +307,8 @@ impl Builder {
             .map(|a| a.to_instance(flags, anchor.clone()))
             .collect();
         let proof = Proof::create(pk, &circuits, &instances)?;
+
+        let value_balance: V = i64::try_from(value_balance).map_err(Error::ValueSum).and_then(|i| V::try_from(i).map_err(|_| Error::ValueSum(value::OverflowError)))?;
 
         Ok(Bundle::from_parts(
             NonEmpty::from_vec(actions).unwrap(),
@@ -353,7 +357,7 @@ impl Authorization for PartiallyAuthorized {
     type SpendAuth = (Option<redpallas::Signature<SpendAuth>>, SpendValidatingKey);
 }
 
-impl Bundle<Unauthorized> {
+impl<V> Bundle<Unauthorized, V> {
     /// Loads the sighash into this bundle, preparing it for signing.
     ///
     /// This API ensures that all signatures are created over the same sighash.
@@ -361,7 +365,7 @@ impl Bundle<Unauthorized> {
         self,
         mut rng: R,
         sighash: [u8; 32],
-    ) -> Bundle<PartiallyAuthorized> {
+    ) -> Bundle<PartiallyAuthorized, V> {
         self.authorize(
             &mut rng,
             |rng, _, SigningMetadata { dummy_ask, ak }| {
@@ -385,7 +389,7 @@ impl Bundle<Unauthorized> {
         mut rng: R,
         sighash: [u8; 32],
         signing_keys: &[SpendAuthorizingKey],
-    ) -> Result<Bundle<Authorized>, Error> {
+    ) -> Result<Bundle<Authorized, V>, Error> {
         signing_keys
             .iter()
             .fold(self.prepare(&mut rng, sighash), |partial, ask| {
@@ -395,7 +399,7 @@ impl Bundle<Unauthorized> {
     }
 }
 
-impl Bundle<PartiallyAuthorized> {
+impl<V> Bundle<PartiallyAuthorized, V> {
     /// Signs this bundle with the given [`SpendAuthorizingKey`].
     ///
     /// This will apply signatures for all notes controlled by this spending key.
@@ -426,7 +430,7 @@ impl Bundle<PartiallyAuthorized> {
     /// Finalizes this bundle, enabling it to be included in a transaction.
     ///
     /// Returns an error if any signatures are missing.
-    pub fn finalize(self) -> Result<Bundle<Authorized>, Error> {
+    pub fn finalize(self) -> Result<Bundle<Authorized, V>, Error> {
         self.try_authorize(
             &mut (),
             |_, _, (sig, _)| match sig {

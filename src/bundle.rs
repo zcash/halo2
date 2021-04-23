@@ -7,7 +7,7 @@ use crate::{
     note::{ExtractedNoteCommitment, Nullifier, TransmittedNoteCiphertext},
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::Anchor,
-    value::{ValueCommitment, ValueSum},
+    value::{ValueCommitment},
 };
 
 /// An action applied to the global ledger.
@@ -213,7 +213,7 @@ impl Authorization for Authorized {
 
 /// A bundle of actions to be applied to the ledger.
 #[derive(Debug)]
-pub struct Bundle<T: Authorization> {
+pub struct Bundle<T: Authorization, V> {
     /// The list of actions that make up this bundle.
     actions: NonEmpty<Action<T::SpendAuth>>,
     /// Orchard-specific transaction-level flags for this bundle.
@@ -221,19 +221,19 @@ pub struct Bundle<T: Authorization> {
     /// The net value moved out of the Orchard shielded pool.
     ///
     /// This is the sum of Orchard spends minus the sum of Orchard outputs.
-    value_balance: ValueSum,
+    value_balance: V,
     /// The root of the Orchard commitment tree that this bundle commits to.
     anchor: Anchor,
     /// The authorization for this bundle.
     authorization: T,
 }
 
-impl<T: Authorization> Bundle<T> {
+impl<T: Authorization, V> Bundle<T, V> {
     /// Constructs a `Bundle` from its constituent parts.
     pub fn from_parts(
         actions: NonEmpty<Action<T::SpendAuth>>,
         flags: Flags,
-        value_balance: ValueSum,
+        value_balance: V,
         anchor: Anchor,
         authorization: T,
     ) -> Self {
@@ -259,7 +259,7 @@ impl<T: Authorization> Bundle<T> {
     /// Returns the net value moved into or out of the Orchard shielded pool.
     ///
     /// This is the sum of Orchard spends minus the sum Orchard outputs.
-    pub fn value_balance(&self) -> &ValueSum {
+    pub fn value_balance(&self) -> &V {
         &self.value_balance
     }
 
@@ -287,7 +287,7 @@ impl<T: Authorization> Bundle<T> {
         context: &mut R,
         mut spend_auth: impl FnMut(&mut R, &T, T::SpendAuth) -> U::SpendAuth,
         step: impl FnOnce(&mut R, T) -> U,
-    ) -> Bundle<U> {
+    ) -> Bundle<U, V> {
         let authorization = self.authorization;
         Bundle {
             actions: self
@@ -306,7 +306,7 @@ impl<T: Authorization> Bundle<T> {
         context: &mut R,
         mut spend_auth: impl FnMut(&mut R, &T, T::SpendAuth) -> Result<U::SpendAuth, E>,
         step: impl FnOnce(&mut R, T) -> Result<U, E>,
-    ) -> Result<Bundle<U>, E> {
+    ) -> Result<Bundle<U, V>, E> {
         let authorization = self.authorization;
         let new_actions = self
             .actions
@@ -342,13 +342,13 @@ pub enum BundleAuthError<E> {
     AuthLengthMismatch(usize, usize),
 }
 
-impl Bundle<Unauthorized> {
+impl<V> Bundle<Unauthorized, V> {
     /// Compute the authorizing data for a bundle and apply it to the bundle, returning the
     /// authorized result.
     pub fn with_auth<E, F: FnOnce(&Self) -> Result<BundleAuth, E>>(
         self,
         f: F,
-    ) -> Result<Bundle<Authorized>, BundleAuthError<E>> {
+    ) -> Result<Bundle<Authorized, V>, BundleAuthError<E>> {
         let auth = f(&self).map_err(BundleAuthError::Wrapped)?;
         let actions_len = self.actions.len();
 
@@ -388,7 +388,7 @@ impl Authorized {
     }
 }
 
-impl Bundle<Authorized> {
+impl<V> Bundle<Authorized, V> {
     /// Computes a commitment to the authorizing data within for this bundle.
     ///
     /// This together with `Bundle::commitment` bind the entire bundle.
