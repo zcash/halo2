@@ -354,7 +354,7 @@ fn test_opening_proof() {
     commitment_msm.append_term(Field::one(), p);
     let guard = verify_proof(&params, commitment_msm, &mut transcript, *x, v).unwrap();
     let ch_verifier = transcript.squeeze_challenge();
-    assert_eq!(ch_prover, ch_verifier);
+    assert_eq!(*ch_prover, *ch_verifier);
 
     // Test guard behavior prior to checking another proof
     {

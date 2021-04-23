@@ -16,7 +16,7 @@ pub fn verify_proof<'a, C: CurveAffine, S: ChallengeSpace<C>, T: TranscriptRead<
     msm: MSM<'a, C>,
     instance_commitments: &[&[C]],
     transcript: &mut T,
-) -> Result<Guard<'a, C>, Error> {
+) -> Result<Guard<'a, C, S>, Error> {
     // Check that instance_commitments matches the expected number of instance columns
     for instance_commitments in instance_commitments.iter() {
         if instance_commitments.len() != vk.cs.num_instance_columns {

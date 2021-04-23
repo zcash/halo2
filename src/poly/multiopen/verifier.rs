@@ -23,7 +23,7 @@ pub fn verify_proof<'b, 'a: 'b, I, C: CurveAffine, S: ChallengeSpace<C>, T: Tran
     transcript: &mut T,
     queries: I,
     mut msm: MSM<'a, C>,
-) -> Result<Guard<'a, C>, Error>
+) -> Result<Guard<'a, C, S>, Error>
 where
     I: IntoIterator<Item = VerifierQuery<'b, C>> + Clone,
 {
