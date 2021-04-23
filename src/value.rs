@@ -14,7 +14,7 @@
 //! [`Action`]: crate::bundle::Action
 //! [`Bundle`]: crate::bundle::Bundle
 
-use std::convert::{TryInto, TryFrom};
+use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug};
 use std::iter::Sum;
 use std::ops::{Add, Sub};
@@ -27,6 +27,7 @@ use pasta_curves::{
     pallas,
 };
 use rand::RngCore;
+use subtle::CtOption;
 
 use crate::primitives::redpallas::{self, Binding};
 
@@ -213,6 +214,16 @@ impl ValueCommitment {
     pub(crate) fn into_bvk(self) -> redpallas::VerificationKey<Binding> {
         // TODO: impl From<pallas::Point> for redpallas::VerificationKey.
         self.0.to_bytes().try_into().unwrap()
+    }
+
+    /// Deserialize a value commitment from its byte representation
+    pub fn from_bytes(bytes: &[u8; 32]) -> CtOption<ValueCommitment> {
+        pallas::Point::from_bytes(bytes).map(ValueCommitment)
+    }
+
+    /// Serialize this value commitment to its canonical byte representation.
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
     }
 }
 

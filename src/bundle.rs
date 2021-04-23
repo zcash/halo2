@@ -7,7 +7,7 @@ use crate::{
     note::{ExtractedNoteCommitment, Nullifier, TransmittedNoteCiphertext},
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::Anchor,
-    value::{ValueCommitment},
+    value::ValueCommitment,
 };
 
 /// An action applied to the global ledger.
