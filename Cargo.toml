@@ -7,7 +7,7 @@ authors = [
 ]
 edition = "2018"
 description = "Sapling on stilts!"
-license = "BOSL"
+license-file = "LICENSE-BOSL"
 repository = "https://github.com/zcash/orchard"
 documentation = "https://docs.rs/orchard"
 readme = "README.md"
