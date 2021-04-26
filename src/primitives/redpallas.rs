@@ -2,6 +2,8 @@
 
 use std::convert::{TryFrom, TryInto};
 
+use pasta_curves::pallas;
+
 /// A RedPallas signature type.
 pub trait SigType: reddsa::SigType + private::Sealed {}
 
@@ -70,6 +72,15 @@ impl<'a, T: SigType> From<&'a SigningKey<T>> for VerificationKey<T> {
 impl<T: SigType> PartialEq for VerificationKey<T> {
     fn eq(&self, other: &Self) -> bool {
         <[u8; 32]>::from(self).eq(&<[u8; 32]>::from(other))
+    }
+}
+
+impl VerificationKey<SpendAuth> {
+    /// Randomizes this verification key with the given `randomizer`.
+    ///
+    /// Randomization is only supported for `SpendAuth` keys.
+    pub fn randomize(&self, randomizer: &pallas::Scalar) -> Self {
+        VerificationKey(self.0.randomize(randomizer))
     }
 }
 

@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// A unique nullifier for a note.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Nullifier(pub(super) pallas::Base);
 
 impl Nullifier {
