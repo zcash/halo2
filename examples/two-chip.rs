@@ -537,10 +537,10 @@ impl<F: FieldExt> FieldChip<F> {
         });
 
         let mut add_chip = AddChip::new();
-        let add_config = add_chip.configure(meta, advice.clone(), perm.clone());
+        let add_config = add_chip.configure(meta, advice, perm.clone());
 
         let mut mul_chip = MulChip::new();
-        let mul_config = mul_chip.configure(meta, advice.clone(), perm.clone());
+        let mul_config = mul_chip.configure(meta, advice, perm.clone());
 
         let config = FieldConfigEnum::Config(FieldConfig {
             advice,
@@ -677,6 +677,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
 }
 // ANCHOR_END: circuit
 
+#[allow(clippy::many_single_char_names)]
 fn main() {
     use halo2::{dev::MockProver, pasta::Fp};
 

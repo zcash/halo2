@@ -31,8 +31,8 @@ impl Loaded for () {
 /// [`Chip::Config`], which can be fetched via [`Chip::config`].
 ///
 /// The chip also loads any fixed configuration needed at synthesis time
-/// using [`Chip::load`], and stores it in [`Chip::Loaded`]. This can be
-/// accessed via [`Chip::loaded`].
+/// using its own implementation of `load`, and stores it in [`Chip::Loaded`].
+/// This can be accessed via [`Chip::loaded`].
 pub trait Chip<F: FieldExt>: Sized {
     /// A type that holds the configuration for this chip, and any other state it may need
     /// during circuit synthesis, that can be derived during [`Circuit::configure`].
@@ -211,7 +211,7 @@ pub trait Layouter<F: FieldExt> {
     ///
     /// ```ignore
     /// fn assign_region(&mut self, || "region name", |region| {
-    ///     let config = chip.config().clone();
+    ///     let config = chip.config();
     ///     region.assign_advice(config.a, offset, || { Some(value)});
     /// });
     /// ```
