@@ -114,14 +114,14 @@ impl<T> Action<T> {
 pub struct Flags {
     /// Flag denoting whether Orchard spends are enabled in the transaction.
     ///
-    /// If `true`, spent notes within [`Action`]s in the transaction's [`Bundle`] are
-    /// guaranteed to be dummy notes. If `false`, the spent notes may be either real or
+    /// If `false`, spent notes within [`Action`]s in the transaction's [`Bundle`] are
+    /// guaranteed to be dummy notes. If `true`, the spent notes may be either real or
     /// dummy notes.
     spends_enabled: bool,
     /// Flag denoting whether Orchard outputs are enabled in the transaction.
     ///
-    /// If `true`, created notes within [`Action`]s in the transaction's [`Bundle`] are
-    /// guaranteed to be dummy notes. If `false`, the created notes may be either real or
+    /// If `false`, created notes within [`Action`]s in the transaction's [`Bundle`] are
+    /// guaranteed to be dummy notes. If `true`, the created notes may be either real or
     /// dummy notes.
     outputs_enabled: bool,
 }
@@ -134,8 +134,8 @@ impl Flags {
 
     /// Flag denoting whether Orchard spends are enabled in the transaction.
     ///
-    /// If `true`, spent notes within [`Action`]s in the transaction's [`Bundle`] are
-    /// guaranteed to be dummy notes. If `false`, the spent notes may be either real or
+    /// If `false`, spent notes within [`Action`]s in the transaction's [`Bundle`] are
+    /// guaranteed to be dummy notes. If `true`, the spent notes may be either real or
     /// dummy notes.
     pub fn spends_enabled(&self) -> bool {
         self.spends_enabled
@@ -143,8 +143,8 @@ impl Flags {
 
     /// Flag denoting whether Orchard outputs are enabled in the transaction.
     ///
-    /// If `true`, created notes within [`Action`]s in the transaction's [`Bundle`] are
-    /// guaranteed to be dummy notes. If `false`, the created notes may be either real or
+    /// If `false`, created notes within [`Action`]s in the transaction's [`Bundle`] are
+    /// guaranteed to be dummy notes. If `true`, the created notes may be either real or
     /// dummy notes.
     pub fn outputs_enabled(&self) -> bool {
         self.outputs_enabled
