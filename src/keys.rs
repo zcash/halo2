@@ -25,7 +25,7 @@ use crate::{
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SpendingKey([u8; 32]);
 
 impl SpendingKey {

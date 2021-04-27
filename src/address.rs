@@ -49,7 +49,7 @@ pub mod testing {
     use super::Address;
 
     prop_compose! {
-        /// Generate an arbitrary random seed
+        /// Generates an arbitrary payment address.
         pub(crate) fn arb_address()(sk in arb_spending_key()) -> Address {
             let fvk = FullViewingKey::from(&sk);
             fvk.default_address()

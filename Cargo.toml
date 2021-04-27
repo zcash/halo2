@@ -46,6 +46,7 @@ rev = "f1e76dbc9abf2b68cc609e874fe39f2a15b75b12"
 [dev-dependencies]
 criterion = "0.3"
 hex = "0.4"
+proptest = "1.0.0"
 
 [lib]
 bench = false

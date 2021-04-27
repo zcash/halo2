@@ -10,7 +10,6 @@ pub struct MerklePath;
 impl MerklePath {
     /// Generates a dummy Merkle path for use in dummy spent notes.
     pub(crate) fn dummy(_rng: &mut impl RngCore) -> Self {
-        // TODO
         MerklePath
     }
 }

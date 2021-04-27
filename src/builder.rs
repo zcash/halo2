@@ -2,7 +2,6 @@
 
 use std::convert::TryFrom;
 use std::iter;
-use std::marker::PhantomData;
 
 use ff::Field;
 use nonempty::NonEmpty;
@@ -17,16 +16,21 @@ use crate::{
     },
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::{Anchor, MerklePath},
-    value::{self, NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum},
+    value::{self, NoteValue, OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum},
     Address, Note, TransmittedNoteCiphertext,
 };
 
 const MIN_ACTIONS: usize = 2;
 
+/// An error type for the kinds of errors that can occur during bundle construction.
 #[derive(Debug)]
 pub enum Error {
+    /// A bundle could not be built because required signatures were missing.
     MissingSignatures,
+    /// An error occurred in the process of producing a proof for a bundle.
     Proof(halo2::plonk::Error),
+    /// An overflow error occurred while attempting to construct the value
+    /// for a bundle.
     ValueSum(value::OverflowError),
 }
 
@@ -121,7 +125,7 @@ impl ActionInfo {
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
     ///
     /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
-    fn build<V: TryFrom<i64>(self, mut rng: impl RngCore) -> (Action<SigningMetadata>, Circuit) {
+    fn build(self, mut rng: impl RngCore) -> (Action<SigningMetadata>, Circuit) {
         let v_net = self.value_sum().expect("already checked this");
         let cv_net = ValueCommitment::derive(v_net, self.rcv);
 
@@ -164,6 +168,7 @@ impl ActionInfo {
 
 /// A builder that constructs a [`Bundle`] from a set of notes to be spent, and recipients
 /// to receive funds.
+#[derive(Debug)]
 pub struct Builder {
     spends: Vec<SpendInfo>,
     recipients: Vec<RecipientInfo>,
@@ -172,6 +177,7 @@ pub struct Builder {
 }
 
 impl Builder {
+    /// Construct a new empty builder for an Orchard bundle.
     pub fn new(flags: Flags, anchor: Anchor) -> Self {
         Builder {
             spends: vec![],
@@ -282,7 +288,8 @@ impl Builder {
             .iter()
             .fold(Some(ValueSum::zero()), |acc, action| {
                 acc? + action.value_sum()?
-            }).ok_or(Error::ValueSum(value::OverflowError))?;
+            })
+            .ok_or(OverflowError)?;
 
         // Compute the transaction binding signing key.
         let bsk = pre_actions
@@ -292,10 +299,8 @@ impl Builder {
             .into_bsk();
 
         // Create the actions.
-        let (actions, circuits): (Vec<_>, Vec<_>) = pre_actions
-            .into_iter()
-            .map(|a| a.build(&mut rng, PhantomData::<V>))
-            .unzip();
+        let (actions, circuits): (Vec<_>, Vec<_>) =
+            pre_actions.into_iter().map(|a| a.build(&mut rng)).unzip();
 
         // Verify that bsk and bvk are consistent.
         let bvk = (actions.iter().map(|a| a.cv_net()).sum::<ValueCommitment>()
@@ -310,7 +315,9 @@ impl Builder {
             .collect();
         let proof = Proof::create(pk, &circuits, &instances)?;
 
-        let value_balance: V = i64::try_from(value_balance).map_err(Error::ValueSum).and_then(|i| V::try_from(i).map_err(|_| Error::ValueSum(value::OverflowError)))?;
+        let value_balance: V = i64::try_from(value_balance)
+            .map_err(Error::ValueSum)
+            .and_then(|i| V::try_from(i).map_err(|_| Error::ValueSum(value::OverflowError)))?;
 
         Ok(Bundle::from_parts(
             NonEmpty::from_vec(actions).unwrap(),
@@ -453,27 +460,80 @@ impl<V> Bundle<PartiallyAuthorized, V> {
 #[cfg(any(test, feature = "test-dependencies"))]
 pub mod testing {
     use rand::rngs::OsRng;
+    use std::convert::TryFrom;
+    use std::fmt::Debug;
 
     use proptest::collection::vec;
     use proptest::prelude::*;
-
-    //use pasta_curves::{pallas};
 
     use crate::{
         address::testing::arb_address,
         bundle::{Authorized, Bundle, Flags},
         circuit::ProvingKey,
-        keys::{FullViewingKey, OutgoingViewingKey, SpendingKey},
+        keys::{
+            testing::arb_spending_key, FullViewingKey, OutgoingViewingKey, SpendAuthorizingKey,
+            SpendingKey,
+        },
         note::testing::arb_note,
         tree::{Anchor, MerklePath},
-        value::testing::{arb_positive_note_value, MAX_MONEY},
+        value::{
+            testing::{arb_positive_note_value, MAX_MONEY},
+            NoteValue,
+        },
+        Address, Note,
     };
 
     use super::Builder;
 
+    /// An intermediate type used for construction of arbitrary
+    /// bundle values. This type is required because of a limitation
+    /// of the proptest prop_compose! macro which does not correctly
+    /// handle polymorphic generator functions. Instead of generating
+    /// a bundle directly, we generate the bundle inputs, and then
+    /// are able to use the `build` function to construct the bundle
+    /// from these inputs, but using a `ValueBalance` implementation that
+    /// is defined by the end user.
+    #[derive(Debug)]
+    struct ArbitraryBundleInputs {
+        sk: SpendingKey,
+        anchor: Anchor,
+        notes: Vec<Note>,
+        recipient_amounts: Vec<(Address, NoteValue)>,
+    }
+
+    impl ArbitraryBundleInputs {
+        /// Create a bundle from the set of arbitrary bundle inputs.
+        fn into_bundle<V: TryFrom<i64>>(self) -> Bundle<Authorized, V> {
+            let fvk = FullViewingKey::from(&self.sk);
+            let ovk = OutgoingViewingKey::from(&fvk);
+            let flags = Flags::from_parts(true, true);
+            let mut builder = Builder::new(flags, self.anchor);
+
+            for note in self.notes.into_iter() {
+                builder.add_spend(fvk.clone(), note, MerklePath).unwrap();
+            }
+
+            for (addr, value) in self.recipient_amounts.into_iter() {
+                builder
+                    .add_recipient(Some(ovk.clone()), addr, value, None)
+                    .unwrap();
+            }
+
+            let mut rng = OsRng;
+            let pk = ProvingKey::build();
+            builder
+                .build(&mut rng, &pk)
+                .unwrap()
+                .prepare(rand_7::rngs::OsRng, [0; 32])
+                .sign(rand_7::rngs::OsRng, &SpendAuthorizingKey::from(&self.sk))
+                .finalize()
+                .unwrap()
+        }
+    }
+
     prop_compose! {
         /// Produce a random valid Orchard bundle.
-        pub fn arb_bundle(sk: SpendingKey)(
+        fn arb_bundle_inputs(sk: SpendingKey)(
             anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor),
             // generate note values that we're certain won't exceed MAX_MONEY in total
             notes in vec(arb_positive_note_value(MAX_MONEY as u64 / 10000).prop_flat_map(arb_note), 1..30),
@@ -483,29 +543,28 @@ pub mod testing {
                 ),
                 1..30
             ),
-        ) -> Bundle<Authorized, i64> {
-            let fvk = FullViewingKey::from(&sk);
-            let ovk = OutgoingViewingKey::from(&fvk);
-            let flags = Flags::from_parts(true, true);
-            let mut builder = Builder::new(flags, anchor);
-
-            for note in notes.into_iter() {
-                builder.add_spend(fvk.clone(), note, MerklePath).unwrap();
+        ) -> ArbitraryBundleInputs {
+            ArbitraryBundleInputs {
+                sk: sk.clone(),
+                anchor,
+                notes,
+                recipient_amounts
             }
-
-            for (addr, value) in recipient_amounts.into_iter() {
-                builder.add_recipient(Some(ovk.clone()), addr, value, None).unwrap();
-            }
-
-            let mut rng = OsRng;
-            let pk = ProvingKey::build();
-            builder
-                .build(&mut rng, &pk)
-                .unwrap()
-                .prepare(rand_7::rngs::OsRng, [0; 32])
-                .finalize()
-                .unwrap()
         }
+    }
+
+    /// Produce an arbitrary valid Orchard bundle using a random spending key.
+    pub fn arb_bundle<V: TryFrom<i64> + Debug>() -> impl Strategy<Value = Bundle<Authorized, V>> {
+        arb_spending_key()
+            .prop_flat_map(arb_bundle_inputs)
+            .prop_map(|inputs| inputs.into_bundle::<V>())
+    }
+
+    /// Produce an arbitrary valid Orchard bundle using a specified spending key.
+    pub fn arb_bundle_with_key<V: TryFrom<i64> + Debug>(
+        k: SpendingKey,
+    ) -> impl Strategy<Value = Bundle<Authorized, V>> {
+        arb_bundle_inputs(k).prop_map(|inputs| inputs.into_bundle::<V>())
     }
 }
 

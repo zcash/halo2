@@ -72,7 +72,9 @@ impl Sub for NoteValue {
     fn sub(self, rhs: Self) -> Self::Output {
         let a = self.0 as i128;
         let b = rhs.0 as i128;
-	a.checked_sub(b).filter(|v| v > &(-(std::u64::MAX as i128))).map(ValueSum)
+        a.checked_sub(b)
+            .filter(|v| v > &(-(std::u64::MAX as i128)))
+            .map(ValueSum)
     }
 }
 
@@ -99,7 +101,10 @@ impl Add for ValueSum {
     type Output = Option<ValueSum>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        self.0.checked_add(rhs.0).filter(|v| v < &(std::u64::MAX as i128)).map(ValueSum)
+        self.0
+            .checked_add(rhs.0)
+            .filter(|v| v < &(std::u64::MAX as i128))
+            .map(ValueSum)
     }
 }
 
@@ -284,7 +289,7 @@ mod tests {
 
     use super::{
         testing::{arb_trapdoor, arb_value_sum, MAX_MONEY},
-        OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum
+        OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum,
     };
     use crate::primitives::redpallas;
 

@@ -172,37 +172,6 @@ pub trait Authorization {
     type SpendAuth;
 }
 
-/// Authorizing data for a bundle of actions, ready to be committed to the ledger.
-#[derive(Debug)]
-pub struct Authorized {
-    proof: Proof,
-    binding_signature: redpallas::Signature<Binding>,
-}
-
-impl Authorized {
-    /// Construct a new value with authorizing data.
-    pub fn new(proof: Proof, binding_signature: redpallas::Signature<Binding>) -> Self {
-        Authorized {
-            proof,
-            binding_signature,
-        }
-    }
-
-    /// Return the proof component of the authorizing data.
-    pub fn proof(&self) -> &Proof {
-        &self.proof
-    }
-
-    /// Return the binding signature.
-    pub fn binding_signature(&self) -> &redpallas::Signature<Binding> {
-        &self.binding_signature
-    }
-}
-
-impl Authorization for Authorized {
-    type SpendAuth = redpallas::Signature<SpendAuth>;
-}
-
 /// A bundle of actions to be applied to the ledger.
 #[derive(Debug)]
 pub struct Bundle<T: Authorization, V> {
@@ -318,57 +287,14 @@ impl<T: Authorization, V> Bundle<T, V> {
 
 /// Authorizing data for a bundle of actions, ready to be committed to the ledger.
 #[derive(Debug)]
-pub struct BundleAuth {
-    /// The authorizing data for the actions in a bundle
-    pub action_authorizations: NonEmpty<<Authorized as Authorization>::SpendAuth>,
-    /// The authorizing data that covers the bundle as a whole
-    pub authorization: Authorized,
+pub struct Authorized {
+    proof: Proof,
+    binding_signature: redpallas::Signature<Binding>,
 }
 
-/// Errors that may be generated in the process of constructing bundle authorizing data.
-#[derive(Debug)]
-pub enum BundleAuthError<E> {
-    /// An error produced by the underlying computation of authorizing data for a bundle
-    Wrapped(E),
-    /// Authorizing data for the bundle could not be matched to bundle contents.
-    AuthLengthMismatch(usize, usize),
+impl Authorization for Authorized {
+    type SpendAuth = redpallas::Signature<SpendAuth>;
 }
-
-//impl<V> Bundle<Unauthorized, V> {
-//    /// Compute the authorizing data for a bundle and apply it to the bundle, returning the
-//    /// authorized result.
-//    pub fn with_auth<E, F: FnOnce(&Self) -> Result<BundleAuth, E>>(
-//        self,
-//        f: F,
-//    ) -> Result<Bundle<Authorized, V>, BundleAuthError<E>> {
-//        let auth = f(&self).map_err(BundleAuthError::Wrapped)?;
-//        let actions_len = self.actions.len();
-//
-//        if actions_len != auth.action_authorizations.len() {
-//            Err(BundleAuthError::AuthLengthMismatch(
-//                actions_len,
-//                auth.action_authorizations.len(),
-//            ))
-//        } else {
-//            let actions = NonEmpty::from_vec(
-//                self.actions
-//                    .into_iter()
-//                    .zip(auth.action_authorizations.into_iter())
-//                    .map(|(act, a)| act.map(|_| a))
-//                    .collect(),
-//            )
-//            .ok_or(BundleAuthError::AuthLengthMismatch(actions_len, 0))?;
-//
-//            Ok(Bundle {
-//                actions,
-//                flags: self.flags,
-//                value_balance: self.value_balance,
-//                anchor: self.anchor,
-//                authorization: auth.authorization,
-//            })
-//        }
-//    }
-//}
 
 impl Authorized {
     /// Constructs the authorizing data for a bundle of actions from its constituent parts.
@@ -377,6 +303,16 @@ impl Authorized {
             proof,
             binding_signature,
         }
+    }
+
+    /// Return the proof component of the authorizing data.
+    pub fn proof(&self) -> &Proof {
+        &self.proof
+    }
+
+    /// Return the binding signature.
+    pub fn binding_signature(&self) -> &redpallas::Signature<Binding> {
+        &self.binding_signature
     }
 }
 
@@ -417,8 +353,7 @@ pub mod testing {
         },
         primitives::redpallas::testing::arb_spendauth_verification_key,
         value::{
-            testing::{arb_note_value},
-            NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum,
+            testing::arb_note_value, NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum,
         },
         Anchor,
     };
@@ -489,7 +424,7 @@ pub mod testing {
                 NonEmpty::from_vec(actions).unwrap(),
                 flags,
                 values.into_iter().fold(
-                    ValueSum::zero(), 
+                    ValueSum::zero(),
                     |acc, cv| (acc + (cv - NoteValue::zero()).unwrap()).unwrap()
                 ),
                 anchor,
