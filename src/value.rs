@@ -80,6 +80,11 @@ impl Sub for NoteValue {
 pub struct ValueSum(i64);
 
 impl ValueSum {
+    pub(crate) fn zero() -> Self {
+        // Default for i64 is zero.
+        Default::default()
+    }
+
     /// Creates a value sum from its raw numeric value.
     ///
     /// This only enforces that the value is a signed 63-bit integer. Callers should

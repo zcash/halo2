@@ -86,7 +86,7 @@ impl RecipientInfo {
         RecipientInfo {
             ovk: None,
             recipient,
-            value: NoteValue::default(),
+            value: NoteValue::zero(),
             memo: None,
         }
     }
@@ -280,7 +280,7 @@ impl Builder {
         // Determine the value balance for this bundle, ensuring it is valid.
         let value_balance: ValueSum = pre_actions
             .iter()
-            .fold(Ok(ValueSum::default()), |acc, action| {
+            .fold(Ok(ValueSum::zero()), |acc, action| {
                 acc? + action.value_sum()?
             })?;
 
