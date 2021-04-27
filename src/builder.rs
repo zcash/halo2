@@ -18,7 +18,7 @@ use crate::{
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::{Anchor, MerklePath},
     value::{self, NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum},
-    Address, TransmittedNoteCiphertext, Note,
+    Address, Note, TransmittedNoteCiphertext,
 };
 
 const MIN_ACTIONS: usize = 2;
@@ -292,8 +292,10 @@ impl Builder {
             .into_bsk();
 
         // Create the actions.
-        let (actions, circuits): (Vec<_>, Vec<_>) =
-            pre_actions.into_iter().map(|a| a.build(&mut rng, PhantomData::<V>)).unzip();
+        let (actions, circuits): (Vec<_>, Vec<_>) = pre_actions
+            .into_iter()
+            .map(|a| a.build(&mut rng, PhantomData::<V>))
+            .unzip();
 
         // Verify that bsk and bvk are consistent.
         let bvk = (actions.iter().map(|a| a.cv_net()).sum::<ValueCommitment>()
@@ -447,17 +449,77 @@ impl<V> Bundle<PartiallyAuthorized, V> {
     }
 }
 
+/// Generators for property testing.
+#[cfg(any(test, feature = "test-dependencies"))]
+pub mod testing {
+    use rand::rngs::OsRng;
+
+    use proptest::collection::vec;
+    use proptest::prelude::*;
+
+    //use pasta_curves::{pallas};
+
+    use crate::{
+        address::testing::arb_address,
+        bundle::{Authorized, Bundle, Flags},
+        circuit::ProvingKey,
+        keys::{FullViewingKey, OutgoingViewingKey, SpendingKey},
+        note::testing::arb_note,
+        tree::{Anchor, MerklePath},
+        value::testing::{arb_positive_note_value, MAX_MONEY},
+    };
+
+    use super::Builder;
+
+    prop_compose! {
+        /// Produce a random valid Orchard bundle.
+        pub fn arb_bundle(sk: SpendingKey)(
+            anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor),
+            // generate note values that we're certain won't exceed MAX_MONEY in total
+            notes in vec(arb_positive_note_value(MAX_MONEY as u64 / 10000).prop_flat_map(arb_note), 1..30),
+            recipient_amounts in vec(
+                arb_address().prop_flat_map(
+                    |a| arb_positive_note_value(MAX_MONEY as u64 / 10000).prop_map(move |v| (a.clone(), v))
+                ),
+                1..30
+            ),
+        ) -> Bundle<Authorized, i64> {
+            let fvk = FullViewingKey::from(&sk);
+            let ovk = OutgoingViewingKey::from(&fvk);
+            let flags = Flags::from_parts(true, true);
+            let mut builder = Builder::new(flags, anchor);
+
+            for note in notes.into_iter() {
+                builder.add_spend(fvk.clone(), note, MerklePath).unwrap();
+            }
+
+            for (addr, value) in recipient_amounts.into_iter() {
+                builder.add_recipient(Some(ovk.clone()), addr, value, None).unwrap();
+            }
+
+            let mut rng = OsRng;
+            let pk = ProvingKey::build();
+            builder
+                .build(&mut rng, &pk)
+                .unwrap()
+                .prepare(rand_7::rngs::OsRng, [0; 32])
+                .finalize()
+                .unwrap()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::rngs::OsRng;
 
     use super::Builder;
     use crate::{
-        bundle::Flags,
+        bundle::{Authorized, Bundle, Flags},
         circuit::ProvingKey,
         keys::{FullViewingKey, SpendingKey},
         tree::Anchor,
-        value::{NoteValue, ValueSum},
+        value::NoteValue,
     };
 
     #[test]
@@ -469,16 +531,16 @@ mod tests {
         let fvk = FullViewingKey::from(&sk);
         let recipient = fvk.default_address();
 
-        let mut builder = Builder::new(Flags::from_parts(true, true), Anchor);
+        let mut builder = Builder::new(Flags::from_parts(true, true), Anchor([0; 32]));
         builder
             .add_recipient(None, recipient, NoteValue::from_raw(5000), None)
             .unwrap();
-        let bundle = dbg!(builder
+        let bundle: Bundle<Authorized, i64> = dbg!(builder
             .build(&mut rng, &pk)
             .unwrap()
             .prepare(rand_7::rngs::OsRng, [0; 32]))
         .finalize()
         .unwrap();
-        assert_eq!(bundle.value_balance(), &ValueSum::from_raw(-5000))
+        assert_eq!(bundle.value_balance(), &(-5000))
     }
 }

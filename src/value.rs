@@ -66,7 +66,6 @@ impl NoteValue {
     }
 }
 
-
 impl Sub for NoteValue {
     type Output = Option<ValueSum>;
 
@@ -227,20 +226,21 @@ impl ValueCommitment {
     }
 }
 
-#[cfg(test)]
-mod tests {
+/// Generators for property testing.
+#[cfg(any(test, feature = "test-dependencies"))]
+pub mod testing {
     use pasta_curves::{arithmetic::FieldExt, pallas};
     use proptest::prelude::*;
 
-    use super::{OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum};
-    use crate::primitives::redpallas;
+    use super::{NoteValue, ValueCommitTrapdoor, ValueSum};
 
     /// Zcash's maximum money amount. Used as a bound in proptests so we don't artifically
     /// overflow `ValueSum`'s size.
-    const MAX_MONEY: i64 = 21_000_000 * 1_0000_0000;
+    pub const MAX_MONEY: i64 = 21_000_000 * 1_0000_0000;
 
     prop_compose! {
-        fn arb_scalar()(bytes in prop::array::uniform32(0u8..)) -> pallas::Scalar {
+        /// Generate an arbitrary Pallas scalar.
+        pub fn arb_scalar()(bytes in prop::array::uniform32(0u8..)) -> pallas::Scalar {
             // Instead of rejecting out-of-range bytes, let's reduce them.
             let mut buf = [0; 64];
             buf[..32].copy_from_slice(&bytes);
@@ -249,16 +249,44 @@ mod tests {
     }
 
     prop_compose! {
-        fn arb_value_sum(bound: i64)(value in -bound..bound) -> ValueSum {
-            ValueSum(value)
+        /// Generate an arbitrary [`ValueSum`] in the range of valid Zcash values.
+        pub fn arb_value_sum(bound: i64)(value in -bound..bound) -> ValueSum {
+            ValueSum(value as i128)
         }
     }
 
     prop_compose! {
-        fn arb_trapdoor()(rcv in arb_scalar()) -> ValueCommitTrapdoor {
+        /// Generate an arbitrary ValueCommitTrapdoor
+        pub fn arb_trapdoor()(rcv in arb_scalar()) -> ValueCommitTrapdoor {
             ValueCommitTrapdoor(rcv)
         }
     }
+
+    prop_compose! {
+        /// Generate an arbitrary value in the range of valid nonnegative Zcash amounts.
+        pub fn arb_note_value()(value in 0u64..(MAX_MONEY as u64)) -> NoteValue {
+            NoteValue(value)
+        }
+    }
+
+    prop_compose! {
+        /// Generate an arbitrary value in the range of valid positive Zcash amounts
+        /// less than a specified value.
+        pub fn arb_positive_note_value(max: u64)(value in 1u64..max) -> NoteValue {
+            NoteValue(value)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+
+    use super::{
+        testing::{arb_trapdoor, arb_value_sum, MAX_MONEY},
+        OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum
+    };
+    use crate::primitives::redpallas;
 
     proptest! {
         #[test]

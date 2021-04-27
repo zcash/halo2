@@ -11,8 +11,8 @@ use crate::{
 };
 
 /// A unique nullifier for a note.
-#[derive(Clone, Debug)]
-pub struct Nullifier(pub(super) pallas::Base);
+#[derive(Debug, Clone)]
+pub struct Nullifier(pub(crate) pallas::Base);
 
 impl Nullifier {
     /// Generates a dummy nullifier for use as $\rho$ in dummy spent notes.
@@ -55,5 +55,22 @@ impl Nullifier {
         let k = pallas::Point::hash_to_curve("z.cash:Orchard")(b"K");
 
         Nullifier(extract_p(&(k * mod_r_p(nk.prf_nf(rho) + psi) + cm.0)))
+    }
+}
+
+/// Generators for property testing.
+#[cfg(any(test, feature = "test-dependencies"))]
+pub mod testing {
+    use proptest::prelude::*;
+
+    use pasta_curves::pallas;
+
+    use super::Nullifier;
+
+    prop_compose! {
+        /// Generate a uniformly distributed nullifier value.
+        pub fn arb_nullifier()(elems in prop::array::uniform4(prop::num::u64::ANY)) -> Nullifier {
+            Nullifier(pallas::Base::from_raw(elems))
+        }
     }
 }

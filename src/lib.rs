@@ -29,7 +29,7 @@ mod tree;
 pub mod value;
 
 pub use address::Address;
-pub use bundle::{Action, Authorization, Authorized, Bundle, Unauthorized};
+pub use bundle::{Action, Authorization, Authorized, Bundle};
 pub use circuit::Proof;
 pub use note::{
     ExtractedNoteCommitment, Note, NoteCommitment, Nullifier, TransmittedNoteCiphertext,

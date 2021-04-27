@@ -172,14 +172,6 @@ pub trait Authorization {
     type SpendAuth;
 }
 
-/// Marker for an unauthorized bundle with no proofs or signatures.
-#[derive(Debug)]
-pub struct Unauthorized {}
-
-impl Authorization for Unauthorized {
-    type SpendAuth = ();
-}
-
 /// Authorizing data for a bundle of actions, ready to be committed to the ledger.
 #[derive(Debug)]
 pub struct Authorized {
@@ -342,41 +334,41 @@ pub enum BundleAuthError<E> {
     AuthLengthMismatch(usize, usize),
 }
 
-impl<V> Bundle<Unauthorized, V> {
-    /// Compute the authorizing data for a bundle and apply it to the bundle, returning the
-    /// authorized result.
-    pub fn with_auth<E, F: FnOnce(&Self) -> Result<BundleAuth, E>>(
-        self,
-        f: F,
-    ) -> Result<Bundle<Authorized, V>, BundleAuthError<E>> {
-        let auth = f(&self).map_err(BundleAuthError::Wrapped)?;
-        let actions_len = self.actions.len();
-
-        if actions_len != auth.action_authorizations.len() {
-            Err(BundleAuthError::AuthLengthMismatch(
-                actions_len,
-                auth.action_authorizations.len(),
-            ))
-        } else {
-            let actions = NonEmpty::from_vec(
-                self.actions
-                    .into_iter()
-                    .zip(auth.action_authorizations.into_iter())
-                    .map(|(act, a)| act.map(|_| a))
-                    .collect(),
-            )
-            .ok_or(BundleAuthError::AuthLengthMismatch(actions_len, 0))?;
-
-            Ok(Bundle {
-                actions,
-                flags: self.flags,
-                value_balance: self.value_balance,
-                anchor: self.anchor,
-                authorization: auth.authorization,
-            })
-        }
-    }
-}
+//impl<V> Bundle<Unauthorized, V> {
+//    /// Compute the authorizing data for a bundle and apply it to the bundle, returning the
+//    /// authorized result.
+//    pub fn with_auth<E, F: FnOnce(&Self) -> Result<BundleAuth, E>>(
+//        self,
+//        f: F,
+//    ) -> Result<Bundle<Authorized, V>, BundleAuthError<E>> {
+//        let auth = f(&self).map_err(BundleAuthError::Wrapped)?;
+//        let actions_len = self.actions.len();
+//
+//        if actions_len != auth.action_authorizations.len() {
+//            Err(BundleAuthError::AuthLengthMismatch(
+//                actions_len,
+//                auth.action_authorizations.len(),
+//            ))
+//        } else {
+//            let actions = NonEmpty::from_vec(
+//                self.actions
+//                    .into_iter()
+//                    .zip(auth.action_authorizations.into_iter())
+//                    .map(|(act, a)| act.map(|_| a))
+//                    .collect(),
+//            )
+//            .ok_or(BundleAuthError::AuthLengthMismatch(actions_len, 0))?;
+//
+//            Ok(Bundle {
+//                actions,
+//                flags: self.flags,
+//                value_balance: self.value_balance,
+//                anchor: self.anchor,
+//                authorization: auth.authorization,
+//            })
+//        }
+//    }
+//}
 
 impl Authorized {
     /// Constructs the authorizing data for a bundle of actions from its constituent parts.
@@ -407,3 +399,102 @@ pub struct BundleCommitment;
 /// A commitment to the authorizing data within a bundle of actions.
 #[derive(Debug)]
 pub struct BundleAuthorizingCommitment;
+
+/// Generators for property testing.
+#[cfg(any(test, feature = "test-dependencies"))]
+pub mod testing {
+    use nonempty::NonEmpty;
+
+    use proptest::collection::vec;
+    use proptest::prelude::*;
+
+    //use pasta_curves::{pallas};
+
+    use crate::{
+        note::{
+            commitment::ExtractedNoteCommitment, nullifier::testing::arb_nullifier,
+            testing::arb_note, TransmittedNoteCiphertext,
+        },
+        primitives::redpallas::testing::arb_spendauth_verification_key,
+        value::{
+            testing::{arb_note_value},
+            NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum,
+        },
+        Anchor,
+    };
+
+    use super::{Action, Authorization, Bundle, Flags};
+
+    /// Marker for an unauthorized bundle with no proofs or signatures.
+    #[derive(Debug)]
+    pub struct Unauthorized;
+
+    impl Authorization for Unauthorized {
+        type SpendAuth = ();
+    }
+
+    prop_compose! {
+        /// Generate an action without authorization data.
+        pub fn arb_unauthorized_action(value: NoteValue)(
+            nf in arb_nullifier(),
+            rk in arb_spendauth_verification_key(),
+            note in arb_note(value),
+        ) -> Action<()> {
+            let cmx = ExtractedNoteCommitment::from(note.commitment());
+            let cv_net = ValueCommitment::derive(
+                (note.value() - NoteValue::zero()).unwrap(),
+                ValueCommitTrapdoor::zero()
+            );
+            // FIXME: make a real one from the note.
+            let encrypted_note = TransmittedNoteCiphertext {
+                epk_bytes: [0u8; 32],
+                enc_ciphertext: [0u8; 580],
+                out_ciphertext: [0u8; 80]
+            };
+            Action {
+                nf,
+                rk,
+                cmx,
+                encrypted_note,
+                cv_net,
+                authorization: ()
+            }
+        }
+    }
+
+    prop_compose! {
+        /// Create an arbitrary set of flags.
+        pub fn arb_flags()(spends_enabled in prop::bool::ANY, outputs_enabled in prop::bool::ANY) -> Flags {
+            Flags::from_parts(spends_enabled, outputs_enabled)
+        }
+    }
+
+    prop_compose! {
+        /// Generate an arbitrary unauthorized bundle. This bundle does not
+        /// necessarily respect consensus rules; for that use
+        /// [`crate::builder::testing::arb_bundle`]
+        pub fn arb_unauthorized_bundle()(
+            acts in vec(
+                arb_note_value().prop_flat_map(|v|
+                    arb_unauthorized_action(v).prop_map(move |a| (v, a))
+                ),
+                1..10
+            ),
+            flags in arb_flags(),
+            anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor)
+        ) -> Bundle<Unauthorized, ValueSum> {
+            let (values, actions): (Vec<NoteValue>, Vec<Action<()>>) = acts.into_iter().unzip();
+
+            Bundle::from_parts(
+                NonEmpty::from_vec(actions).unwrap(),
+                flags,
+                values.into_iter().fold(
+                    ValueSum::zero(), 
+                    |acc, cv| (acc + (cv - NoteValue::zero()).unwrap()).unwrap()
+                ),
+                anchor,
+                Unauthorized
+            )
+        }
+    }
+}

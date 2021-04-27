@@ -207,7 +207,7 @@ mod tests {
                 (
                     Circuit {},
                     Instance {
-                        anchor: Anchor,
+                        anchor: Anchor([0; 32]),
                         cv_net,
                         nf_old,
                         rk,

@@ -18,7 +18,7 @@ impl SigType for Binding {}
 
 /// A RedPallas signing key.
 #[derive(Debug)]
-pub struct SigningKey<T: SigType>(reddsa::SigningKey<T>);
+pub struct SigningKey<T: SigType>(pub(crate) reddsa::SigningKey<T>);
 
 impl<T: SigType> From<SigningKey<T>> for [u8; 32] {
     fn from(sk: SigningKey<T>) -> [u8; 32] {
@@ -116,4 +116,50 @@ pub(crate) mod private {
     impl Sealed for SpendAuth {}
 
     impl Sealed for Binding {}
+}
+
+/// Generators for property testing.
+#[cfg(any(test, feature = "test-dependencies"))]
+pub mod testing {
+    use std::convert::TryFrom;
+
+    use proptest::prelude::*;
+
+    use super::{Binding, SigningKey, SpendAuth, VerificationKey};
+
+    prop_compose! {
+        /// Generate a uniformly distributed nullifier value.
+        pub fn arb_spendauth_signing_key()(
+            sk in prop::array::uniform32(prop::num::u8::ANY)
+                .prop_map(reddsa::SigningKey::try_from)
+                .prop_filter("Values must be parseable as valid signing keys", |r| r.is_ok())
+        ) -> SigningKey<SpendAuth> {
+            SigningKey(sk.unwrap())
+        }
+    }
+
+    prop_compose! {
+        /// Generate a uniformly distributed nullifier value.
+        pub fn arb_binding_signing_key()(
+            sk in prop::array::uniform32(prop::num::u8::ANY)
+                .prop_map(reddsa::SigningKey::try_from)
+                .prop_filter("Values must be parseable as valid signing keys", |r| r.is_ok())
+        ) -> SigningKey<Binding> {
+            SigningKey(sk.unwrap())
+        }
+    }
+
+    prop_compose! {
+        /// Generate a uniformly distributed nullifier value.
+        pub fn arb_spendauth_verification_key()(sk in arb_spendauth_signing_key()) -> VerificationKey<SpendAuth> {
+            VerificationKey::from(&sk)
+        }
+    }
+
+    prop_compose! {
+        /// Generate a uniformly distributed nullifier value.
+        pub fn arb_binding_verification_key()(sk in arb_binding_signing_key()) -> VerificationKey<Binding> {
+            VerificationKey::from(&sk)
+        }
+    }
 }
