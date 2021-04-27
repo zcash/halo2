@@ -114,16 +114,44 @@ impl<T> Action<T> {
 pub struct Flags {
     /// Flag denoting whether Orchard spends are enabled in the transaction.
     ///
-    /// If `true`, spent notes within [`Action`]s in the transaction's [`Bundle`] are
-    /// guaranteed to be dummy notes. If `false`, the spent notes may be either real or
+    /// If `false`, spent notes within [`Action`]s in the transaction's [`Bundle`] are
+    /// guaranteed to be dummy notes. If `true`, the spent notes may be either real or
     /// dummy notes.
     spends_enabled: bool,
     /// Flag denoting whether Orchard outputs are enabled in the transaction.
     ///
-    /// If `true`, created notes within [`Action`]s in the transaction's [`Bundle`] are
-    /// guaranteed to be dummy notes. If `false`, the created notes may be either real or
+    /// If `false`, created notes within [`Action`]s in the transaction's [`Bundle`] are
+    /// guaranteed to be dummy notes. If `true`, the created notes may be either real or
     /// dummy notes.
     outputs_enabled: bool,
+}
+
+impl Flags {
+    /// Construct a set of flags from its constituent parts
+    pub fn from_parts(spends_enabled: bool, outputs_enabled: bool) -> Self {
+        Flags {
+            spends_enabled,
+            outputs_enabled,
+        }
+    }
+
+    /// Flag denoting whether Orchard spends are enabled in the transaction.
+    ///
+    /// If `false`, spent notes within [`Action`]s in the transaction's [`Bundle`] are
+    /// guaranteed to be dummy notes. If `true`, the spent notes may be either real or
+    /// dummy notes.
+    pub fn spends_enabled(&self) -> bool {
+        self.spends_enabled
+    }
+
+    /// Flag denoting whether Orchard outputs are enabled in the transaction.
+    ///
+    /// If `false`, created notes within [`Action`]s in the transaction's [`Bundle`] are
+    /// guaranteed to be dummy notes. If `true`, the created notes may be either real or
+    /// dummy notes.
+    pub fn outputs_enabled(&self) -> bool {
+        self.outputs_enabled
+    }
 }
 
 /// Defines the authorization type of an Orchard bundle.
@@ -203,34 +231,36 @@ impl<T: Authorization> Bundle<T> {
     }
 
     /// Transitions this bundle from one authorization state to another.
-    pub fn authorize<U: Authorization>(
+    pub fn authorize<R, U: Authorization>(
         self,
-        mut spend_auth: impl FnMut(&T, T::SpendAuth) -> U::SpendAuth,
-        step: impl FnOnce(T) -> U,
+        context: &mut R,
+        mut spend_auth: impl FnMut(&mut R, &T, T::SpendAuth) -> U::SpendAuth,
+        step: impl FnOnce(&mut R, T) -> U,
     ) -> Bundle<U> {
         let authorization = self.authorization;
         Bundle {
             actions: self
                 .actions
-                .map(|a| a.map(|a_auth| spend_auth(&authorization, a_auth))),
+                .map(|a| a.map(|a_auth| spend_auth(context, &authorization, a_auth))),
             flags: self.flags,
             value_balance: self.value_balance,
             anchor: self.anchor,
-            authorization: step(authorization),
+            authorization: step(context, authorization),
         }
     }
 
     /// Transitions this bundle from one authorization state to another.
-    pub fn try_authorize<U: Authorization, E>(
+    pub fn try_authorize<R, U: Authorization, E>(
         self,
-        mut spend_auth: impl FnMut(&T, T::SpendAuth) -> Result<U::SpendAuth, E>,
-        step: impl FnOnce(T) -> Result<U, E>,
+        context: &mut R,
+        mut spend_auth: impl FnMut(&mut R, &T, T::SpendAuth) -> Result<U::SpendAuth, E>,
+        step: impl FnOnce(&mut R, T) -> Result<U, E>,
     ) -> Result<Bundle<U>, E> {
         let authorization = self.authorization;
         let new_actions = self
             .actions
             .into_iter()
-            .map(|a| a.try_map(|a_auth| spend_auth(&authorization, a_auth)))
+            .map(|a| a.try_map(|a_auth| spend_auth(context, &authorization, a_auth)))
             .collect::<Result<Vec<_>, E>>()?;
 
         Ok(Bundle {
@@ -238,17 +268,9 @@ impl<T: Authorization> Bundle<T> {
             flags: self.flags,
             value_balance: self.value_balance,
             anchor: self.anchor,
-            authorization: step(authorization)?,
+            authorization: step(context, authorization)?,
         })
     }
-}
-
-/// Marker for an unauthorized bundle with no proofs or signatures.
-#[derive(Debug)]
-pub struct Unauthorized {}
-
-impl Authorization for Unauthorized {
-    type SpendAuth = ();
 }
 
 /// Authorizing data for a bundle of actions, ready to be committed to the ledger.

@@ -65,8 +65,12 @@ impl Note {
     /// Defined in [Zcash Protocol Spec § 4.8.3: Dummy Notes (Orchard)][orcharddummynotes].
     ///
     /// [orcharddummynotes]: https://zips.z.cash/protocol/nu5.pdf#orcharddummynotes
-    pub(crate) fn dummy(rng: &mut impl RngCore, rho: Option<Nullifier>) -> (FullViewingKey, Self) {
-        let fvk: FullViewingKey = (&SpendingKey::random(rng)).into();
+    pub(crate) fn dummy(
+        rng: &mut impl RngCore,
+        rho: Option<Nullifier>,
+    ) -> (SpendingKey, FullViewingKey, Self) {
+        let sk = SpendingKey::random(rng);
+        let fvk: FullViewingKey = (&sk).into();
         let recipient = fvk.default_address();
 
         let note = Note {
@@ -76,7 +80,7 @@ impl Note {
             rseed: RandomSeed::random(rng),
         };
 
-        (fvk, note)
+        (sk, fvk, note)
     }
 
     /// Returns the value of this note.
