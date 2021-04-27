@@ -52,6 +52,14 @@ impl NoteValue {
         Default::default()
     }
 
+    /// Creates a note value from its raw numeric value.
+    ///
+    /// This only enforces that the value is an unsigned 64-bit integer. Callers should
+    /// enforce any additional constraints on the value's valid range themselves.
+    pub fn from_raw(value: u64) -> Self {
+        NoteValue(value)
+    }
+
     pub(crate) fn to_le_bits(self) -> BitArray<Lsb0, [u8; 8]> {
         BitArray::<Lsb0, _>::new(self.0.to_le_bytes())
     }
@@ -70,6 +78,16 @@ impl Sub for NoteValue {
 /// A sum of Orchard note values.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ValueSum(i64);
+
+impl ValueSum {
+    /// Creates a value sum from its raw numeric value.
+    ///
+    /// This only enforces that the value is a signed 63-bit integer. Callers should
+    /// enforce any additional constraints on the value's valid range themselves.
+    pub fn from_raw(value: i64) -> Self {
+        ValueSum(value)
+    }
+}
 
 impl Add for ValueSum {
     type Output = Result<ValueSum, OverflowError>;
