@@ -273,14 +273,6 @@ impl<T: Authorization> Bundle<T> {
     }
 }
 
-/// Marker for an unauthorized bundle with no proofs or signatures.
-#[derive(Debug)]
-pub struct Unauthorized {}
-
-impl Authorization for Unauthorized {
-    type SpendAuth = ();
-}
-
 /// Authorizing data for a bundle of actions, ready to be committed to the ledger.
 #[derive(Debug)]
 pub struct Authorized {
