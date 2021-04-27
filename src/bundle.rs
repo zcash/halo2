@@ -228,34 +228,36 @@ impl<T: Authorization> Bundle<T> {
     }
 
     /// Transitions this bundle from one authorization state to another.
-    pub fn authorize<U: Authorization>(
+    pub fn authorize<R, U: Authorization>(
         self,
-        mut spend_auth: impl FnMut(&T, T::SpendAuth) -> U::SpendAuth,
-        step: impl FnOnce(T) -> U,
+        context: &mut R,
+        mut spend_auth: impl FnMut(&mut R, &T, T::SpendAuth) -> U::SpendAuth,
+        step: impl FnOnce(&mut R, T) -> U,
     ) -> Bundle<U> {
         let authorization = self.authorization;
         Bundle {
             actions: self
                 .actions
-                .map(|a| a.map(|a_auth| spend_auth(&authorization, a_auth))),
+                .map(|a| a.map(|a_auth| spend_auth(context, &authorization, a_auth))),
             flags: self.flags,
             value_balance: self.value_balance,
             anchor: self.anchor,
-            authorization: step(authorization),
+            authorization: step(context, authorization),
         }
     }
 
     /// Transitions this bundle from one authorization state to another.
-    pub fn try_authorize<U: Authorization, E>(
+    pub fn try_authorize<R, U: Authorization, E>(
         self,
-        mut spend_auth: impl FnMut(&T, T::SpendAuth) -> Result<U::SpendAuth, E>,
-        step: impl FnOnce(T) -> Result<U, E>,
+        context: &mut R,
+        mut spend_auth: impl FnMut(&mut R, &T, T::SpendAuth) -> Result<U::SpendAuth, E>,
+        step: impl FnOnce(&mut R, T) -> Result<U, E>,
     ) -> Result<Bundle<U>, E> {
         let authorization = self.authorization;
         let new_actions = self
             .actions
             .into_iter()
-            .map(|a| a.try_map(|a_auth| spend_auth(&authorization, a_auth)))
+            .map(|a| a.try_map(|a_auth| spend_auth(context, &authorization, a_auth)))
             .collect::<Result<Vec<_>, E>>()?;
 
         Ok(Bundle {
@@ -263,7 +265,7 @@ impl<T: Authorization> Bundle<T> {
             flags: self.flags,
             value_balance: self.value_balance,
             anchor: self.anchor,
-            authorization: step(authorization)?,
+            authorization: step(context, authorization)?,
         })
     }
 }
