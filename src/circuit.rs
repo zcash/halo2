@@ -180,13 +180,13 @@ mod tests {
 
         let (circuits, instances): (Vec<_>, Vec<_>) = iter::once(())
             .map(|()| {
-                let (fvk, spent_note) = Note::dummy(&mut rng, None);
+                let (_, fvk, spent_note) = Note::dummy(&mut rng, None);
                 let nf_old = spent_note.nullifier(&fvk);
                 let ak: SpendValidatingKey = fvk.into();
                 let alpha = pallas::Scalar::random(&mut rng);
                 let rk = ak.randomize(&alpha);
 
-                let (_, output_note) = Note::dummy(&mut rng, Some(nf_old.clone()));
+                let (_, _, output_note) = Note::dummy(&mut rng, Some(nf_old.clone()));
                 let cmx = output_note.commitment().into();
 
                 let value = spent_note.value() - output_note.value();
