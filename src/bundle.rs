@@ -129,7 +129,10 @@ pub struct Flags {
 impl Flags {
     /// Construct a set of flags from its constituent parts
     pub fn from_parts(spends_enabled: bool, outputs_enabled: bool) -> Self {
-        Flags { spends_enabled, outputs_enabled }
+        Flags {
+            spends_enabled,
+            outputs_enabled,
+        }
     }
 
     /// Flag denoting whether Orchard spends are enabled in the transaction.
