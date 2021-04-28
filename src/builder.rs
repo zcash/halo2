@@ -190,7 +190,7 @@ impl Builder {
         }
 
         // Consistency check: all anchors must be equal.
-        let cm = note.commitment();
+        let _cm = note.commitment();
         // TODO: Once we have tree logic.
         // let path_root: bls12_381::Scalar = merkle_path.root(cmu).into();
         // if path_root != anchor {
@@ -362,12 +362,8 @@ impl Bundle<Unauthorized> {
             &mut rng,
             |rng, _, SigningMetadata { dummy_ask, ak }| {
                 (
-                    if let Some(ask) = dummy_ask {
-                        // We can create signatures for dummy spends immediately.
-                        Some(ask.sign(rng, &sighash))
-                    } else {
-                        None
-                    },
+                    // We can create signatures for dummy spends immediately.
+                    dummy_ask.map(|ask| ask.sign(rng, &sighash)),
                     ak,
                 )
             },
