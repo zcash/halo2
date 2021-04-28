@@ -16,8 +16,8 @@ mod nullifier;
 pub use self::nullifier::Nullifier;
 
 /// The ZIP 212 seed randomness for a note.
-#[derive(Debug)]
-struct RandomSeed([u8; 32]);
+#[derive(Clone, Debug)]
+pub(crate) struct RandomSeed([u8; 32]);
 
 impl RandomSeed {
     pub(crate) fn random(rng: &mut impl RngCore) -> Self {
@@ -60,6 +60,25 @@ pub struct Note {
 }
 
 impl Note {
+    /// Generates a new note.
+    ///
+    /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
+    ///
+    /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
+    pub(crate) fn new(
+        recipient: Address,
+        value: NoteValue,
+        rho: Nullifier,
+        mut rng: impl RngCore,
+    ) -> Self {
+        Note {
+            recipient,
+            value,
+            rho,
+            rseed: RandomSeed::random(&mut rng),
+        }
+    }
+
     /// Generates a dummy spent note.
     ///
     /// Defined in [Zcash Protocol Spec § 4.8.3: Dummy Notes (Orchard)][orcharddummynotes].

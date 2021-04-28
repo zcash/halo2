@@ -17,6 +17,7 @@
 #![deny(unsafe_code)]
 
 mod address;
+mod builder;
 pub mod bundle;
 mod circuit;
 mod constants;

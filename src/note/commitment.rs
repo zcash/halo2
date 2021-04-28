@@ -56,7 +56,7 @@ impl NoteCommitment {
 }
 
 /// The x-coordinate of the commitment to a note.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ExtractedNoteCommitment(pub(super) pallas::Base);
 
 impl From<NoteCommitment> for ExtractedNoteCommitment {
