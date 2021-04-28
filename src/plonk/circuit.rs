@@ -164,7 +164,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// }
 ///
 /// fn circuit_logic<F: FieldExt, C: Chip<F>>(chip: C, mut layouter: impl Layouter<F>) -> Result<(), Error> {
-///     let config = chip.config().clone();
+///     let config = chip.config();
 ///     # let config: Config = todo!();
 ///     layouter.assign_region(|| "bar", |mut region| {
 ///         region.assign_advice(|| "a", config.a, 0, || Ok(F::one()))?;
