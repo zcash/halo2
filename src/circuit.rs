@@ -87,22 +87,6 @@ pub struct Cell {
     column: Column<Any>,
 }
 
-/// A structure containing a cell and its assigned value.
-#[derive(Clone, Debug)]
-pub struct CellValue<T> {
-    /// The cell of this `CellValue`
-    pub cell: Cell,
-    /// The value assigned to this `CellValue`
-    pub value: Option<T>,
-}
-
-impl<T> CellValue<T> {
-    /// Construct a `CellValue`.
-    pub fn new(cell: Cell, value: Option<T>) -> Self {
-        CellValue { cell, value }
-    }
-}
-
 /// A region of the circuit in which a [`Chip`] can assign cells.
 ///
 /// Inside a region, the chip may freely use relative offsets; the [`Layouter`] will
