@@ -119,13 +119,7 @@ impl ActionInfo {
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
     ///
     /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
-    fn build(
-        self,
-        mut rng: impl RngCore,
-    ) -> (
-        Action<(Option<SpendAuthorizingKey>, SpendValidatingKey)>,
-        Circuit,
-    ) {
+    fn build(self, mut rng: impl RngCore) -> (Action<SigningMetadata>, Circuit) {
         let v_net = self.value_sum().expect("already checked this");
         let cv_net = ValueCommitment::derive(v_net, self.rcv);
 
@@ -152,10 +146,10 @@ impl ActionInfo {
                 cm_new.into(),
                 encrypted_note,
                 cv_net,
-                (
-                    self.spend.dummy_sk.as_ref().map(SpendAuthorizingKey::from),
+                SigningMetadata {
+                    dummy_ask: self.spend.dummy_sk.as_ref().map(SpendAuthorizingKey::from),
                     ak,
-                ),
+                },
             ),
             Circuit {},
         )
@@ -326,7 +320,21 @@ pub struct Unauthorized {
 }
 
 impl Authorization for Unauthorized {
-    type SpendAuth = (Option<SpendAuthorizingKey>, SpendValidatingKey);
+    type SpendAuth = SigningMetadata;
+}
+
+/// Container for metadata needed to sign an [`Action`].
+#[derive(Debug)]
+pub struct SigningMetadata {
+    /// If this action is spending a dummy note, this field holds that note's spend
+    /// authorizing key.
+    ///
+    /// These keys are used automatically in [`Bundle<Unauthorized>::prepare`] or
+    /// [`Bundle<Unauthorized>::apply_signatures`] to sign dummy spends.
+    dummy_ask: Option<SpendAuthorizingKey>,
+    /// The spend validating key for this action. Used to match spend authorizing keys to
+    /// actions they can create signatures for.
+    ak: SpendValidatingKey,
 }
 
 /// Marker for a partially-authorized bundle, in the process of being signed.
@@ -352,7 +360,7 @@ impl Bundle<Unauthorized> {
     ) -> Bundle<PartiallyAuthorized> {
         self.authorize(
             &mut rng,
-            |rng, _, (dummy_ask, ak)| {
+            |rng, _, SigningMetadata { dummy_ask, ak }| {
                 (
                     if let Some(ask) = dummy_ask {
                         // We can create signatures for dummy spends immediately.
