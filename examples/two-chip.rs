@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{layouter::SingleChipLayouter, Cell, Chip, Config, Layouter, Region},
+    circuit::{layouter::SingleChipLayouter, Cell, Chip, Layouter, Region},
     dev::VerifyFailure,
     plonk::{
         Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Instance, Permutation,
@@ -13,6 +13,7 @@ use halo2::{
     poly::Rotation,
 };
 
+// ANCHOR: field-instructions
 /// A variable representing a number.
 #[derive(Clone)]
 struct Number<F: FieldExt> {
@@ -20,7 +21,6 @@ struct Number<F: FieldExt> {
     value: Option<F>,
 }
 
-// ANCHOR: field-instructions
 trait FieldInstructions<F: FieldExt>: AddInstructions<F> + MulInstructions<F> {
     /// Variable representing a number.
     type Num;
@@ -98,20 +98,8 @@ struct FieldConfig {
     // The selector for the public-input gate, which uses one of the advice columns.
     s_pub: Selector,
 
-    add_config: AddConfigEnum,
-    mul_config: MulConfigEnum,
-}
-
-#[derive(Clone, Debug)]
-enum FieldConfigEnum {
-    Empty,
-    Config(FieldConfig),
-}
-
-impl Config for FieldConfigEnum {
-    fn empty() -> Self {
-        Self::Empty
-    }
+    add_config: AddConfig,
+    mul_config: MulConfig,
 }
 // ANCHOR END: field-config
 
@@ -122,18 +110,6 @@ struct AddConfig {
     perm: Permutation,
     s_add: Selector,
 }
-
-#[derive(Clone, Debug)]
-enum AddConfigEnum {
-    Empty,
-    Config(AddConfig),
-}
-
-impl Config for AddConfigEnum {
-    fn empty() -> Self {
-        Self::Empty
-    }
-}
 // ANCHOR_END: add-config
 
 // ANCHOR: mul-config
@@ -143,45 +119,33 @@ struct MulConfig {
     perm: Permutation,
     s_mul: Selector,
 }
-
-#[derive(Clone, Debug)]
-enum MulConfigEnum {
-    Empty,
-    Config(MulConfig),
-}
-
-impl Config for MulConfigEnum {
-    fn empty() -> Self {
-        Self::Empty
-    }
-}
 // ANCHOR END: mul-config
 
 // ANCHOR: field-chip
 /// The top-level chip that will implement the `FieldInstructions`.
 struct FieldChip<F: FieldExt> {
-    config: FieldConfigEnum,
+    config: FieldConfig,
     _marker: PhantomData<F>,
 }
 // ANCHOR_END: field-chip
 
 // ANCHOR: add-chip
 struct AddChip<F: FieldExt> {
-    config: AddConfigEnum,
+    config: AddConfig,
     _marker: PhantomData<F>,
 }
 // ANCHOR END: add-chip
 
 // ANCHOR: mul-chip
 struct MulChip<F: FieldExt> {
-    config: MulConfigEnum,
+    config: MulConfig,
     _marker: PhantomData<F>,
 }
 // ANCHOR_END: mul-chip
 
 // ANCHOR: add-chip-trait-impl
 impl<F: FieldExt> Chip<F> for AddChip<F> {
-    type Config = AddConfigEnum;
+    type Config = AddConfig;
     type Loaded = ();
 
     fn config(&self) -> &Self::Config {
@@ -196,13 +160,6 @@ impl<F: FieldExt> Chip<F> for AddChip<F> {
 
 // ANCHOR: add-chip-impl
 impl<F: FieldExt> AddChip<F> {
-    fn new() -> Self {
-        Self {
-            config: <Self as Chip<F>>::Config::empty(),
-            _marker: PhantomData,
-        }
-    }
-
     fn construct(config: <Self as Chip<F>>::Config, _loaded: <Self as Chip<F>>::Loaded) -> Self {
         Self {
             config,
@@ -211,7 +168,6 @@ impl<F: FieldExt> AddChip<F> {
     }
 
     fn configure(
-        &mut self,
         meta: &mut ConstraintSystem<F>,
         advice: [Column<Advice>; 2],
         perm: Permutation,
@@ -227,13 +183,11 @@ impl<F: FieldExt> AddChip<F> {
             s_add * (lhs + rhs + out * -F::one())
         });
 
-        let config = AddConfigEnum::Config(AddConfig {
+        AddConfig {
             advice,
             perm,
             s_add,
-        });
-        self.config = config.clone();
-        config
+        }
     }
 }
 // ANCHOR END: add-chip-impl
@@ -247,10 +201,8 @@ impl<F: FieldExt> AddInstructions<F> for FieldChip<F> {
         a: Self::Num,
         b: Self::Num,
     ) -> Result<Self::Num, Error> {
-        let config = match self.config() {
-            FieldConfigEnum::Config(config) => config.add_config.clone(),
-            _ => unreachable!(),
-        };
+        let config = self.config().add_config.clone();
+
         let add_chip = AddChip::<F>::construct(config, ());
         add_chip.add(layouter, a, b)
     }
@@ -265,10 +217,7 @@ impl<F: FieldExt> AddInstructions<F> for AddChip<F> {
         a: Self::Num,
         b: Self::Num,
     ) -> Result<Self::Num, Error> {
-        let config = match self.config() {
-            AddConfigEnum::Config(config) => config.clone(),
-            _ => unreachable!(),
-        };
+        let config = self.config();
 
         let mut out = None;
         layouter.assign_region(
@@ -321,7 +270,7 @@ impl<F: FieldExt> AddInstructions<F> for AddChip<F> {
 
 // ANCHOR: mul-chip-trait-impl
 impl<F: FieldExt> Chip<F> for MulChip<F> {
-    type Config = MulConfigEnum;
+    type Config = MulConfig;
     type Loaded = ();
 
     fn config(&self) -> &Self::Config {
@@ -336,13 +285,6 @@ impl<F: FieldExt> Chip<F> for MulChip<F> {
 
 // ANCHOR: mul-chip-impl
 impl<F: FieldExt> MulChip<F> {
-    fn new() -> Self {
-        Self {
-            config: <Self as Chip<F>>::Config::empty(),
-            _marker: PhantomData,
-        }
-    }
-
     fn construct(config: <Self as Chip<F>>::Config, _loaded: <Self as Chip<F>>::Loaded) -> Self {
         Self {
             config,
@@ -351,7 +293,6 @@ impl<F: FieldExt> MulChip<F> {
     }
 
     fn configure(
-        &mut self,
         meta: &mut ConstraintSystem<F>,
         advice: [Column<Advice>; 2],
         perm: Permutation,
@@ -385,13 +326,11 @@ impl<F: FieldExt> MulChip<F> {
             s_mul * (lhs * rhs + out * -F::one())
         });
 
-        let config = MulConfigEnum::Config(MulConfig {
+        MulConfig {
             advice,
             perm,
             s_mul,
-        });
-        self.config = config.clone();
-        config
+        }
     }
 }
 // ANCHOR_END: mul-chip-impl
@@ -405,10 +344,7 @@ impl<F: FieldExt> MulInstructions<F> for FieldChip<F> {
         a: Self::Num,
         b: Self::Num,
     ) -> Result<Self::Num, Error> {
-        let config = match self.config() {
-            FieldConfigEnum::Config(config) => config.mul_config.clone(),
-            _ => unreachable!(),
-        };
+        let config = self.config().mul_config.clone();
         let mul_chip = MulChip::<F>::construct(config, ());
         mul_chip.mul(layouter, a, b)
     }
@@ -423,10 +359,7 @@ impl<F: FieldExt> MulInstructions<F> for MulChip<F> {
         a: Self::Num,
         b: Self::Num,
     ) -> Result<Self::Num, Error> {
-        let config = match self.config() {
-            MulConfigEnum::Config(config) => config.clone(),
-            _ => unreachable!(),
-        };
+        let config = self.config();
 
         let mut out = None;
         layouter.assign_region(
@@ -479,7 +412,7 @@ impl<F: FieldExt> MulInstructions<F> for MulChip<F> {
 
 // ANCHOR: field-chip-trait-impl
 impl<F: FieldExt> Chip<F> for FieldChip<F> {
-    type Config = FieldConfigEnum;
+    type Config = FieldConfig;
     type Loaded = ();
 
     fn config(&self) -> &Self::Config {
@@ -494,13 +427,6 @@ impl<F: FieldExt> Chip<F> for FieldChip<F> {
 
 // ANCHOR: field-chip-impl
 impl<F: FieldExt> FieldChip<F> {
-    fn new() -> Self {
-        Self {
-            config: <Self as Chip<F>>::Config::empty(),
-            _marker: PhantomData,
-        }
-    }
-
     fn construct(config: <Self as Chip<F>>::Config, _loaded: <Self as Chip<F>>::Loaded) -> Self {
         Self {
             config,
@@ -509,7 +435,6 @@ impl<F: FieldExt> FieldChip<F> {
     }
 
     fn configure(
-        &mut self,
         meta: &mut ConstraintSystem<F>,
         advice: [Column<Advice>; 2],
         instance: Column<Instance>,
@@ -536,21 +461,16 @@ impl<F: FieldExt> FieldChip<F> {
             s * (p + a * -F::one())
         });
 
-        let mut add_chip = AddChip::new();
-        let add_config = add_chip.configure(meta, advice, perm.clone());
+        let add_config = AddChip::configure(meta, advice, perm.clone());
+        let mul_config = MulChip::configure(meta, advice, perm.clone());
 
-        let mut mul_chip = MulChip::new();
-        let mul_config = mul_chip.configure(meta, advice, perm.clone());
-
-        let config = FieldConfigEnum::Config(FieldConfig {
+        FieldConfig {
             advice,
             perm,
             s_pub,
             add_config,
             mul_config,
-        });
-        self.config = config.clone();
-        config
+        }
     }
 }
 // ANCHOR_END: field-chip-impl
@@ -564,10 +484,7 @@ impl<F: FieldExt> FieldInstructions<F> for FieldChip<F> {
         mut layouter: impl Layouter<F>,
         value: Option<F>,
     ) -> Result<<Self as FieldInstructions<F>>::Num, Error> {
-        let config = match self.config() {
-            FieldConfigEnum::Config(config) => config.clone(),
-            _ => unreachable!(),
-        };
+        let config = self.config();
 
         let mut num = None;
         layouter.assign_region(
@@ -603,10 +520,7 @@ impl<F: FieldExt> FieldInstructions<F> for FieldChip<F> {
         mut layouter: impl Layouter<F>,
         num: <Self as FieldInstructions<F>>::Num,
     ) -> Result<(), Error> {
-        let config = match self.config() {
-            FieldConfigEnum::Config(config) => config.clone(),
-            _ => unreachable!(),
-        };
+        let config = self.config();
 
         layouter.assign_region(
             || "expose public",
@@ -646,7 +560,7 @@ struct MyCircuit<F: FieldExt> {
 
 impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
     // Since we are using a single chip for everything, we can just reuse its config.
-    type Config = FieldConfigEnum;
+    type Config = FieldConfig;
 
     fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
         // We create the two advice columns that FieldChip uses for I/O.
@@ -655,8 +569,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         // We also need an instance column to store public inputs.
         let instance = meta.instance_column();
 
-        let mut field_chip = FieldChip::new();
-        field_chip.configure(meta, advice, instance)
+        FieldChip::configure(meta, advice, instance)
     }
 
     fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error> {

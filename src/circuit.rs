@@ -9,22 +9,6 @@ use crate::{
 
 pub mod layouter;
 
-/// A chip's configuration (i.e. columns, selectors, permutations).
-pub trait Config: fmt::Debug + Clone {
-    /// An empty config
-    fn empty() -> Self;
-}
-
-/// A chip's loaded configuration (i.e. lookups, pre-computed fixed constants).
-pub trait Loaded: fmt::Debug + Clone {
-    /// An empty loaded configuration
-    fn empty() -> Self;
-}
-
-impl Loaded for () {
-    fn empty() -> Self {}
-}
-
 /// A chip implements a set of instructions that can be used by gadgets.
 ///
 /// The chip stores state that is required at circuit synthesis time in
@@ -38,13 +22,13 @@ pub trait Chip<F: FieldExt>: Sized {
     /// during circuit synthesis, that can be derived during [`Circuit::configure`].
     ///
     /// [`Circuit::configure`]: crate::plonk::Circuit::configure
-    type Config: Config;
+    type Config: fmt::Debug + Clone;
 
     /// A type that holds any general chip state that needs to be loaded at the start of
     /// [`Circuit::synthesize`]. This might simply be `()` for some chips.
     ///
     /// [`Circuit::synthesize`]: crate::plonk::Circuit::synthesize
-    type Loaded: Loaded;
+    type Loaded: fmt::Debug + Clone;
 
     /// The chip holds its own configuration.
     fn config(&self) -> &Self::Config;
