@@ -459,7 +459,7 @@ impl<V> Bundle<PartiallyAuthorized, V> {
 /// Generators for property testing.
 #[cfg(any(test, feature = "test-dependencies"))]
 pub mod testing {
-    use rand::rngs::OsRng;
+    use rand::{rngs::StdRng, CryptoRng, SeedableRng};
     use std::convert::TryFrom;
     use std::fmt::Debug;
 
@@ -494,16 +494,18 @@ pub mod testing {
     /// from these inputs, but using a `ValueBalance` implementation that
     /// is defined by the end user.
     #[derive(Debug)]
-    struct ArbitraryBundleInputs {
+    struct ArbitraryBundleInputs<R, R7> {
+        rng: R,
+        rng_7: R7,
         sk: SpendingKey,
         anchor: Anchor,
         notes: Vec<Note>,
         recipient_amounts: Vec<(Address, NoteValue)>,
     }
 
-    impl ArbitraryBundleInputs {
+    impl<R: RngCore + CryptoRng, R7: rand_7::RngCore + rand_7::CryptoRng> ArbitraryBundleInputs<R, R7> {
         /// Create a bundle from the set of arbitrary bundle inputs.
-        fn into_bundle<V: TryFrom<i64>>(self) -> Bundle<Authorized, V> {
+        fn into_bundle<V: TryFrom<i64>>(mut self) -> Bundle<Authorized, V> {
             let fvk = FullViewingKey::from(&self.sk);
             let ovk = OutgoingViewingKey::from(&fvk);
             let flags = Flags::from_parts(true, true);
@@ -519,13 +521,12 @@ pub mod testing {
                     .unwrap();
             }
 
-            let mut rng = OsRng;
             let pk = ProvingKey::build();
             builder
-                .build(&mut rng, &pk)
+                .build(&mut self.rng, &pk)
                 .unwrap()
-                .prepare(rand_7::rngs::OsRng, [0; 32])
-                .sign(rand_7::rngs::OsRng, &SpendAuthorizingKey::from(&self.sk))
+                .prepare(&mut self.rng_7, [0; 32])
+                .sign(&mut self.rng_7, &SpendAuthorizingKey::from(&self.sk))
                 .finalize()
                 .unwrap()
         }
@@ -543,8 +544,11 @@ pub mod testing {
                 ),
                 1..30
             ),
-        ) -> ArbitraryBundleInputs {
+            rng_seed in prop::array::uniform32(prop::num::u8::ANY)
+        ) -> ArbitraryBundleInputs<StdRng, rand_7::rngs::StdRng> {
             ArbitraryBundleInputs {
+                rng: StdRng::from_seed(rng_seed),
+                rng_7: <rand_7::rngs::StdRng as rand_7::SeedableRng>::from_seed(rng_seed),
                 sk: sk.clone(),
                 anchor,
                 notes,
