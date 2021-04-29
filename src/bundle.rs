@@ -340,25 +340,30 @@ pub struct BundleAuthorizingCommitment;
 #[cfg(any(test, feature = "test-dependencies"))]
 pub mod testing {
     use nonempty::NonEmpty;
+    use rand_7::{rngs::StdRng, SeedableRng};
 
     use proptest::collection::vec;
     use proptest::prelude::*;
 
-    //use pasta_curves::{pallas};
-
     use crate::{
+        circuit::Proof,
         note::{
             commitment::ExtractedNoteCommitment, nullifier::testing::arb_nullifier,
             testing::arb_note, TransmittedNoteCiphertext,
         },
-        primitives::redpallas::testing::arb_spendauth_verification_key,
+        primitives::redpallas::{
+            self,
+            testing::{
+                arb_binding_signing_key, arb_spendauth_signing_key, arb_spendauth_verification_key,
+            },
+        },
         value::{
             testing::arb_note_value, NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum,
         },
         Anchor,
     };
 
-    use super::{Action, Authorization, Bundle, Flags};
+    use super::{Action, Authorization, Authorized, Bundle, Flags};
 
     /// Marker for an unauthorized bundle with no proofs or signatures.
     #[derive(Debug)]
@@ -398,6 +403,41 @@ pub mod testing {
     }
 
     prop_compose! {
+        /// Generate an action with invalid (random) authorization data.
+        pub fn arb_action(value: NoteValue)(
+            nf in arb_nullifier(),
+            sk in arb_spendauth_signing_key(),
+            note in arb_note(value),
+            rng_seed in prop::array::uniform32(prop::num::u8::ANY),
+            fake_sighash in prop::array::uniform32(prop::num::u8::ANY),
+        ) -> Action<redpallas::Signature<reddsa::orchard::SpendAuth>> {
+            let cmx = ExtractedNoteCommitment::from(note.commitment());
+            let cv_net = ValueCommitment::derive(
+                (note.value() - NoteValue::zero()).unwrap(),
+                ValueCommitTrapdoor::zero()
+            );
+
+            // FIXME: make a real one from the note.
+            let encrypted_note = TransmittedNoteCiphertext {
+                epk_bytes: [0u8; 32],
+                enc_ciphertext: [0u8; 580],
+                out_ciphertext: [0u8; 80]
+            };
+
+            let rng = StdRng::from_seed(rng_seed);
+
+            Action {
+                nf,
+                rk: redpallas::VerificationKey::from(&sk),
+                cmx,
+                encrypted_note,
+                cv_net,
+                authorization: sk.sign(rng, &fake_sighash),
+            }
+        }
+    }
+
+    prop_compose! {
         /// Create an arbitrary set of flags.
         pub fn arb_flags()(spends_enabled in prop::bool::ANY, outputs_enabled in prop::bool::ANY) -> Flags {
             Flags::from_parts(spends_enabled, outputs_enabled)
@@ -429,6 +469,43 @@ pub mod testing {
                 ),
                 anchor,
                 Unauthorized
+            )
+        }
+    }
+
+    prop_compose! {
+        /// Generate an arbitrary bundle with fake authorization data. This bundle does not
+        /// necessarily respect consensus rules; for that use
+        /// [`crate::builder::testing::arb_bundle`]
+        pub fn arb_bundle()(
+            acts in vec(
+                arb_note_value().prop_flat_map(|v|
+                    arb_action(v).prop_map(move |a| (v, a))
+                ),
+                1..10
+            ),
+            flags in arb_flags(),
+            anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor),
+            sk in arb_binding_signing_key(),
+            rng_seed in prop::array::uniform32(prop::num::u8::ANY),
+            fake_proof in vec(prop::num::u8::ANY, 1973),
+            fake_sighash in prop::array::uniform32(prop::num::u8::ANY),
+        ) -> Bundle<Authorized, ValueSum> {
+            let (values, actions): (Vec<NoteValue>, Vec<Action<redpallas::Signature<reddsa::orchard::SpendAuth>>>) = acts.into_iter().unzip();
+            let rng = StdRng::from_seed(rng_seed);
+
+            Bundle::from_parts(
+                NonEmpty::from_vec(actions).unwrap(),
+                flags,
+                values.into_iter().fold(
+                    ValueSum::zero(),
+                    |acc, cv| (acc + (cv - NoteValue::zero()).unwrap()).unwrap()
+                ),
+                anchor,
+                Authorized {
+                    proof: Proof(fake_proof),
+                    binding_signature: sk.sign(rng, &fake_sighash),
+                }
             )
         }
     }

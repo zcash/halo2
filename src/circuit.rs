@@ -118,7 +118,7 @@ impl Instance {
 ///
 /// [`Bundle`]: crate::bundle::Bundle
 #[derive(Debug)]
-pub struct Proof(Vec<u8>);
+pub struct Proof(pub(crate) Vec<u8>);
 
 impl<'a> From<&'a Proof> for &'a Vec<u8> {
     fn from(proof: &'a Proof) -> &'a Vec<u8> {
