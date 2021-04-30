@@ -128,7 +128,7 @@ pub mod testing {
     use super::{Binding, SigningKey, SpendAuth, VerificationKey};
 
     prop_compose! {
-        /// Generate a uniformly distributed nullifier value.
+        /// Generate a uniformly distributed RedDSA spend authorization signing key.
         pub fn arb_spendauth_signing_key()(
             sk in prop::array::uniform32(prop::num::u8::ANY)
                 .prop_map(reddsa::SigningKey::try_from)
@@ -139,7 +139,7 @@ pub mod testing {
     }
 
     prop_compose! {
-        /// Generate a uniformly distributed nullifier value.
+        /// Generate a uniformly distributed RedDSA binding signing key.
         pub fn arb_binding_signing_key()(
             sk in prop::array::uniform32(prop::num::u8::ANY)
                 .prop_map(reddsa::SigningKey::try_from)
@@ -150,14 +150,14 @@ pub mod testing {
     }
 
     prop_compose! {
-        /// Generate a uniformly distributed nullifier value.
+        /// Generate a uniformly distributed RedDSA spend authorization verification key.
         pub fn arb_spendauth_verification_key()(sk in arb_spendauth_signing_key()) -> VerificationKey<SpendAuth> {
             VerificationKey::from(&sk)
         }
     }
 
     prop_compose! {
-        /// Generate a uniformly distributed nullifier value.
+        /// Generate a uniformly distributed RedDSA binding verification key.
         pub fn arb_binding_verification_key()(sk in arb_binding_signing_key()) -> VerificationKey<Binding> {
             VerificationKey::from(&sk)
         }
