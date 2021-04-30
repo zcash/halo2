@@ -242,6 +242,21 @@ impl<T: Authorization, V> Bundle<T, V> {
         todo!()
     }
 
+    /// Construct a new bundle by applying a transformation that might fail
+    /// to the value balance.
+    pub fn try_map_value_balance<V0, E, F: FnOnce(V) -> Result<V0, E>>(
+        self,
+        f: F,
+    ) -> Result<Bundle<T, V0>, E> {
+        Ok(Bundle {
+            actions: self.actions,
+            flags: self.flags,
+            value_balance: f(self.value_balance)?,
+            anchor: self.anchor,
+            authorization: self.authorization,
+        })
+    }
+
     /// Transitions this bundle from one authorization state to another.
     pub fn authorize<R, U: Authorization>(
         self,
