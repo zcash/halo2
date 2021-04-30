@@ -110,7 +110,13 @@ impl Add for ValueSum {
 
 impl<'a> Sum<&'a ValueSum> for Result<ValueSum, OverflowError> {
     fn sum<I: Iterator<Item = &'a ValueSum>>(iter: I) -> Self {
-        iter.fold(Ok(ValueSum(0)), |acc, cv| (acc? + *cv).ok_or(OverflowError))
+        iter.fold(Ok(ValueSum(0)), |acc, v| (acc? + *v).ok_or(OverflowError))
+    }
+}
+
+impl Sum<ValueSum> for Result<ValueSum, OverflowError> {
+    fn sum<I: Iterator<Item = ValueSum>>(iter: I) -> Self {
+        iter.fold(Ok(ValueSum(0)), |acc, v| (acc? + v).ok_or(OverflowError))
     }
 }
 
@@ -119,6 +125,12 @@ impl TryFrom<ValueSum> for i64 {
 
     fn try_from(v: ValueSum) -> Result<i64, Self::Error> {
         i64::try_from(v.0).map_err(|_| OverflowError)
+    }
+}
+
+impl From<NoteValue> for ValueSum {
+    fn from(v: NoteValue) -> Self {
+        ValueSum(v.0 as i128)
     }
 }
 

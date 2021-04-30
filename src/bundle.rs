@@ -358,7 +358,8 @@ pub mod testing {
             },
         },
         value::{
-            testing::arb_note_value, NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum,
+            testing::{arb_positive_note_value, MAX_MONEY},
+            NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum,
         },
         Anchor,
     };
@@ -450,7 +451,7 @@ pub mod testing {
         /// [`crate::builder::testing::arb_bundle`]
         pub fn arb_unauthorized_bundle()(
             acts in vec(
-                arb_note_value().prop_flat_map(|v|
+                arb_positive_note_value(MAX_MONEY as u64 / 10000).prop_flat_map(|v|
                     arb_unauthorized_action(v).prop_map(move |a| (v, a))
                 ),
                 1..10
@@ -458,15 +459,12 @@ pub mod testing {
             flags in arb_flags(),
             anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor)
         ) -> Bundle<Unauthorized, ValueSum> {
-            let (values, actions): (Vec<NoteValue>, Vec<Action<()>>) = acts.into_iter().unzip();
+            let (note_values, actions): (Vec<NoteValue>, Vec<Action<_>>) = acts.into_iter().unzip();
 
             Bundle::from_parts(
                 NonEmpty::from_vec(actions).unwrap(),
                 flags,
-                values.into_iter().fold(
-                    ValueSum::zero(),
-                    |acc, cv| (acc + (cv - NoteValue::zero()).unwrap()).unwrap()
-                ),
+                note_values.into_iter().map(ValueSum::from).sum::<Result<ValueSum, _>>().unwrap(),
                 anchor,
                 Unauthorized
             )
@@ -479,7 +477,7 @@ pub mod testing {
         /// [`crate::builder::testing::arb_bundle`]
         pub fn arb_bundle()(
             acts in vec(
-                arb_note_value().prop_flat_map(|v|
+                arb_positive_note_value(MAX_MONEY as u64 / 10000).prop_flat_map(|v|
                     arb_action(v).prop_map(move |a| (v, a))
                 ),
                 1..10
@@ -491,16 +489,13 @@ pub mod testing {
             fake_proof in vec(prop::num::u8::ANY, 1973),
             fake_sighash in prop::array::uniform32(prop::num::u8::ANY),
         ) -> Bundle<Authorized, ValueSum> {
-            let (values, actions): (Vec<NoteValue>, Vec<Action<redpallas::Signature<reddsa::orchard::SpendAuth>>>) = acts.into_iter().unzip();
+            let (note_values, actions): (Vec<NoteValue>, Vec<Action<_>>) = acts.into_iter().unzip();
             let rng = StdRng::from_seed(rng_seed);
 
             Bundle::from_parts(
                 NonEmpty::from_vec(actions).unwrap(),
                 flags,
-                values.into_iter().fold(
-                    ValueSum::zero(),
-                    |acc, cv| (acc + (cv - NoteValue::zero()).unwrap()).unwrap()
-                ),
+                note_values.into_iter().map(ValueSum::from).sum::<Result<ValueSum, _>>().unwrap(),
                 anchor,
                 Authorized {
                     proof: Proof(fake_proof),
