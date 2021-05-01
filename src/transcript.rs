@@ -18,15 +18,7 @@ pub trait Transcript<C: CurveAffine, I, E: EncodedChallenge<C, I>> {
     /// Squeeze a typed challenge (in the scalar field) from the transcript.
     fn squeeze_challenge_scalar<T>(&mut self) -> ChallengeScalar<C, T> {
         ChallengeScalar {
-            inner: E::get_scalar(&self.squeeze_challenge()),
-            _marker: PhantomData,
-        }
-    }
-
-    /// Cast an encoded challenge as a typed `ChallengeScalar`.
-    fn as_challenge_scalar<T>(challenge: &E) -> ChallengeScalar<C, T> {
-        ChallengeScalar {
-            inner: E::get_scalar(challenge),
+            inner: self.squeeze_challenge().get_scalar(),
             _marker: PhantomData,
         }
     }
@@ -231,7 +223,7 @@ pub trait Challenge: Copy + Clone + std::fmt::Debug {
 /// The scalar representation of a verifier challenge.
 ///
 /// The `Type` type can be used to scope the challenge to a specific context, or
-/// set to `Default` if no context is required.
+/// set to `()` if no context is required.
 #[derive(Copy, Clone, Debug)]
 pub struct ChallengeScalar<C: CurveAffine, T> {
     inner: C::Scalar,
@@ -254,11 +246,18 @@ pub trait EncodedChallenge<C: CurveAffine, I> {
     fn new(challenge_input: &I) -> Self;
 
     /// Get a scalar field element from an encoded challenge.
-    fn get_scalar(challenge: &Self) -> C::Scalar;
+    fn get_scalar(&self) -> C::Scalar;
+
+    /// Cast an encoded challenge as a typed `ChallengeScalar`.
+    fn as_challenge_scalar<T>(&self) -> ChallengeScalar<C, T> {
+        ChallengeScalar {
+            inner: self.get_scalar(),
+            _marker: PhantomData,
+        }
+    }
 }
 
-/// The scalar challenge space that applies the mapping of Algorithm 1 from the
-/// [Halo](https://eprint.iacr.org/2019/1021) paper.
+/// A 128-bit challenge.
 #[derive(Copy, Clone, Debug)]
 pub struct Challenge128(u128);
 
@@ -275,12 +274,13 @@ impl<C: CurveAffine> EncodedChallenge<C, C::Base> for Challenge128 {
         Challenge128(challenge_input.get_lower_128())
     }
 
-    fn get_scalar(challenge: &Self) -> C::Scalar {
+    // This applies the mapping of Algorithm 1 from the [Halo](https://eprint.iacr.org/2019/1021) paper.
+    fn get_scalar(&self) -> C::Scalar {
         let mut acc = (C::Scalar::ZETA + &C::Scalar::one()).double();
 
         for i in (0..64).rev() {
-            let should_negate = ((challenge.0 >> ((i << 1) + 1)) & 1) == 1;
-            let should_endo = ((challenge.0 >> (i << 1)) & 1) == 1;
+            let should_negate = ((self.0 >> ((i << 1) + 1)) & 1) == 1;
+            let should_endo = ((self.0 >> (i << 1)) & 1) == 1;
 
             let q = if should_negate {
                 -C::Scalar::one()
@@ -295,7 +295,7 @@ impl<C: CurveAffine> EncodedChallenge<C, C::Base> for Challenge128 {
     }
 }
 
-/// The scalar challenge space that samples from the full-width field.
+/// A 255-bit challenge.
 #[derive(Copy, Clone, Debug)]
 pub struct Challenge255([u8; 32]);
 
@@ -311,8 +311,8 @@ impl<C: CurveAffine> EncodedChallenge<C, [u8; 64]> for Challenge255 {
     fn new(challenge_input: &[u8; 64]) -> Self {
         Challenge255(C::Scalar::from_bytes_wide(challenge_input).to_bytes())
     }
-    fn get_scalar(challenge: &Self) -> C::Scalar {
-        C::Scalar::from_bytes(&challenge.0).unwrap()
+    fn get_scalar(&self) -> C::Scalar {
+        C::Scalar::from_bytes(&self.0).unwrap()
     }
 }
 

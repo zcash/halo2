@@ -101,7 +101,7 @@ pub fn verify_proof<
         let r = transcript.read_point().map_err(|_| Error::OpeningError)?;
 
         let challenge_packed = transcript.squeeze_challenge();
-        let challenge = *T::as_challenge_scalar::<()>(&challenge_packed);
+        let challenge = *challenge_packed.as_challenge_scalar::<()>();
 
         rounds.push((
             l,
