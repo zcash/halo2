@@ -1,7 +1,10 @@
 use ff::Field;
 use std::iter;
 
-use super::{vanishing, Error, VerifyingKey};
+use super::{
+    vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
+    VerifyingKey,
+};
 use crate::arithmetic::{CurveAffine, FieldExt};
 use crate::poly::{
     commitment::{Guard, Params, MSM},
@@ -52,7 +55,7 @@ pub fn verify_proof<
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample theta challenge for keeping lookup columns linearly independent
-    let theta = transcript.squeeze_challenge_scalar();
+    let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
 
     let lookups_permuted = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
@@ -66,10 +69,10 @@ pub fn verify_proof<
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample beta challenge
-    let beta = transcript.squeeze_challenge_scalar();
+    let beta: ChallengeBeta<_> = transcript.squeeze_challenge_scalar();
 
     // Sample gamma challenge
-    let gamma = transcript.squeeze_challenge_scalar();
+    let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
 
     let permutations_committed = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
@@ -94,12 +97,12 @@ pub fn verify_proof<
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample y challenge, which keeps the gates linearly independent.
-    let y = transcript.squeeze_challenge_scalar();
+    let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
     let vanishing = vanishing::Argument::read_commitments(vk, transcript)?;
 
     // Sample x challenge, which is used to ensure the circuit is
     // satisfied with high probability.
-    let x = transcript.squeeze_challenge_scalar();
+    let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
     let instance_evals = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
             read_n_scalars(transcript, vk.cs.instance_queries.len())

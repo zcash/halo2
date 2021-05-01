@@ -4,7 +4,8 @@ use std::iter;
 
 use super::{
     circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed},
-    lookup, permutation, vanishing, Error, Permutation, ProvingKey,
+    lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
+    ChallengeY, Error, Permutation, ProvingKey,
 };
 use crate::arithmetic::{eval_polynomial, CurveAffine, FieldExt};
 use crate::poly::{
@@ -245,7 +246,7 @@ pub fn create_proof<
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample theta challenge for keeping lookup columns linearly independent
-    let theta = transcript.squeeze_challenge_scalar();
+    let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
 
     let lookups: Vec<Vec<lookup::prover::Permuted<C>>> = instance
         .iter()
@@ -276,10 +277,10 @@ pub fn create_proof<
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample beta challenge
-    let beta = transcript.squeeze_challenge_scalar();
+    let beta: ChallengeBeta<_> = transcript.squeeze_challenge_scalar();
 
     // Sample gamma challenge
-    let gamma = transcript.squeeze_challenge_scalar();
+    let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
 
     let permutations: Vec<Vec<permutation::prover::Committed<C>>> = instance
         .iter()
@@ -320,7 +321,7 @@ pub fn create_proof<
         .collect::<Result<Vec<_>, _>>()?;
 
     // Obtain challenge for keeping all separate gates linearly independent
-    let y = transcript.squeeze_challenge_scalar();
+    let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
 
     let (permutations, permutation_expressions): (Vec<Vec<_>>, Vec<Vec<_>>) = permutations
         .into_iter()
@@ -393,7 +394,7 @@ pub fn create_proof<
     // Construct the vanishing argument
     let vanishing = vanishing::Argument::construct(params, domain, expressions, y, transcript)?;
 
-    let x = transcript.squeeze_challenge_scalar();
+    let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
 
     // Compute and hash instance evals for each circuit instance
     for instance in instance.iter() {

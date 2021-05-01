@@ -257,7 +257,8 @@ pub trait EncodedChallenge<C: CurveAffine, I> {
     }
 }
 
-/// A 128-bit challenge.
+/// A 128-bit challenge. Note that using this challenge space may result
+/// in less than 128-bit security.
 #[derive(Copy, Clone, Debug)]
 pub struct Challenge128(u128);
 

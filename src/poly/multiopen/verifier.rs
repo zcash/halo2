@@ -41,11 +41,11 @@ where
     msm.scale(C::Scalar::rand());
 
     // Sample x_1 for compressing openings at the same point sets together
-    let x_1 = transcript.squeeze_challenge_scalar::<ChallengeX1<C>>();
+    let x_1: ChallengeX1<_> = transcript.squeeze_challenge_scalar();
 
     // Sample a challenge x_2 for keeping the multi-point quotient
     // polynomial terms linearly independent.
-    let x_2 = transcript.squeeze_challenge_scalar::<ChallengeX2<C>>();
+    let x_2: ChallengeX2<_> = transcript.squeeze_challenge_scalar();
 
     let (commitment_map, point_sets) = construct_intermediate_sets(queries);
 
@@ -85,7 +85,7 @@ where
 
     // Sample a challenge x_3 for checking that f(X) was committed to
     // correctly.
-    let x_3 = transcript.squeeze_challenge_scalar::<ChallengeX3<C>>();
+    let x_3: ChallengeX3<_> = transcript.squeeze_challenge_scalar();
 
     let mut q_evals = Vec::with_capacity(q_eval_sets.len());
     for _ in 0..q_eval_sets.len() {
@@ -112,7 +112,7 @@ where
 
     // Sample a challenge x_4 that we will use to collapse the openings of
     // the various remaining polynomials at x_3 together.
-    let x_4 = transcript.squeeze_challenge_scalar::<ChallengeX4<C>>();
+    let x_4: ChallengeX4<_> = transcript.squeeze_challenge_scalar();
 
     // Compute the final commitment that has to be opened
     msm.append_term(C::Scalar::one(), f_commitment);
