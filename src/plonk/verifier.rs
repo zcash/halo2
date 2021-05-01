@@ -7,16 +7,21 @@ use crate::poly::{
     commitment::{Guard, Params, MSM},
     multiopen::{self, VerifierQuery},
 };
-use crate::transcript::{read_n_points, read_n_scalars, ChallengeSpace, TranscriptRead};
+use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
 
 /// Returns a boolean indicating whether or not the proof is valid
-pub fn verify_proof<'a, C: CurveAffine, S: ChallengeSpace<C>, T: TranscriptRead<C, S>>(
+pub fn verify_proof<
+    'a,
+    C: CurveAffine,
+    E: EncodedChallenge<C, [u8; 64]>,
+    T: TranscriptRead<C, [u8; 64], E>,
+>(
     params: &'a Params<C>,
     vk: &VerifyingKey<C>,
     msm: MSM<'a, C>,
     instance_commitments: &[&[C]],
     transcript: &mut T,
-) -> Result<Guard<'a, C, S>, Error> {
+) -> Result<Guard<'a, C, [u8; 64], E>, Error> {
     // Check that instance_commitments matches the expected number of instance columns
     for instance_commitments in instance_commitments.iter() {
         if instance_commitments.len() != vk.cs.num_instance_columns {

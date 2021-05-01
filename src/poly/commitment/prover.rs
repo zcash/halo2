@@ -5,7 +5,7 @@ use super::{Blind, Params};
 use crate::arithmetic::{
     best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine, FieldExt,
 };
-use crate::transcript::{ChallengeSpace, TranscriptWrite};
+use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use group::Curve;
 use std::io;
@@ -23,7 +23,7 @@ use std::io;
 /// opening v, and the point x. It's probably also nice for the transcript
 /// to have seen the elliptic curve description and the URS, if you want to
 /// be rigorous.
-pub fn create_proof<C: CurveAffine, S: ChallengeSpace<C>, T: TranscriptWrite<C, S>>(
+pub fn create_proof<C: CurveAffine, I, E: EncodedChallenge<C, I>, T: TranscriptWrite<C, I, E>>(
     params: &Params<C>,
     transcript: &mut T,
     px: &Polynomial<C::Scalar, Coeff>,

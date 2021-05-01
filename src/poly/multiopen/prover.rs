@@ -8,7 +8,7 @@ use super::{
 };
 
 use crate::arithmetic::{eval_polynomial, kate_division, CurveAffine, FieldExt};
-use crate::transcript::{ChallengeSpace, TranscriptWrite};
+use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use ff::Field;
 use group::Curve;
@@ -24,7 +24,14 @@ struct CommitmentData<C: CurveAffine> {
 }
 
 /// Create a multi-opening proof
-pub fn create_proof<'a, I, C: CurveAffine, S: ChallengeSpace<C>, T: TranscriptWrite<C, S>>(
+pub fn create_proof<
+    'a,
+    I,
+    IN,
+    C: CurveAffine,
+    E: EncodedChallenge<C, IN>,
+    T: TranscriptWrite<C, IN, E>,
+>(
     params: &Params<C>,
     transcript: &mut T,
     queries: I,

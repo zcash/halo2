@@ -1,33 +1,36 @@
 use ff::Field;
 use group::Curve;
+use std::marker::PhantomData;
 
 use super::super::Error;
 use super::{Params, MSM};
-use crate::transcript::{ChallengeSpace, TranscriptRead};
+use crate::transcript::{EncodedChallenge, TranscriptRead};
 
 use crate::arithmetic::{best_multiexp, BatchInvert, CurveAffine};
 
 /// A guard returned by the verifier
 #[derive(Debug, Clone)]
-pub struct Guard<'a, C: CurveAffine, S: ChallengeSpace<C>> {
+pub struct Guard<'a, C: CurveAffine, I, E: EncodedChallenge<C, I>> {
     msm: MSM<'a, C>,
     neg_a: C::Scalar,
     challenges: Vec<C::Scalar>,
-    challenges_packed: Vec<S::Challenge>,
+    challenges_packed: Vec<E>,
+    _marker: PhantomData<I>,
 }
 
 /// An accumulator instance consisting of an evaluation claim and a proof.
 #[derive(Debug, Clone)]
-pub struct Accumulator<C: CurveAffine, S: ChallengeSpace<C>> {
+pub struct Accumulator<C: CurveAffine, I, E: EncodedChallenge<C, I>> {
     /// The claimed output of the linear-time polycommit opening protocol
     pub g: C,
 
     /// A vector of 128-bit challenges sampled by the verifier, to be used in
     /// computing g.
-    pub challenges_packed: Vec<S::Challenge>,
+    pub challenges_packed: Vec<E>,
+    _marker: PhantomData<I>,
 }
 
-impl<'a, C: CurveAffine, S: ChallengeSpace<C>> Guard<'a, C, S> {
+impl<'a, C: CurveAffine, I, E: EncodedChallenge<C, I>> Guard<'a, C, I, E> {
     /// Lets caller supply the challenges and obtain an MSM with updated
     /// scalars and points.
     pub fn use_challenges(mut self) -> MSM<'a, C> {
@@ -40,12 +43,13 @@ impl<'a, C: CurveAffine, S: ChallengeSpace<C>> Guard<'a, C, S> {
 
     /// Lets caller supply the purported G point and simply appends
     /// [-a] G to return an updated MSM.
-    pub fn use_g(mut self, g: C) -> (MSM<'a, C>, Accumulator<C, S>) {
+    pub fn use_g(mut self, g: C) -> (MSM<'a, C>, Accumulator<C, I, E>) {
         self.msm.append_term(self.neg_a, g);
 
         let accumulator = Accumulator {
             g,
             challenges_packed: self.challenges_packed,
+            _marker: PhantomData,
         };
 
         (self.msm, accumulator)
@@ -64,13 +68,19 @@ impl<'a, C: CurveAffine, S: ChallengeSpace<C>> Guard<'a, C, S> {
 /// Checks to see if the proof represented within `transcript` is valid, and a
 /// point `x` that the polynomial commitment `P` opens purportedly to the value
 /// `v`. The provided `msm` should evaluate to the commitment `P` being opened.
-pub fn verify_proof<'a, C: CurveAffine, S: ChallengeSpace<C>, T: TranscriptRead<C, S>>(
+pub fn verify_proof<
+    'a,
+    C: CurveAffine,
+    I,
+    E: EncodedChallenge<C, I>,
+    T: TranscriptRead<C, I, E>,
+>(
     params: &'a Params<C>,
     mut msm: MSM<'a, C>,
     transcript: &mut T,
     x: C::Scalar,
     v: C::Scalar,
-) -> Result<Guard<'a, C, S>, Error> {
+) -> Result<Guard<'a, C, I, E>, Error> {
     let k = params.k as usize;
 
     //     P - [v] G_0 + S * iota
@@ -91,7 +101,7 @@ pub fn verify_proof<'a, C: CurveAffine, S: ChallengeSpace<C>, T: TranscriptRead<
         let r = transcript.read_point().map_err(|_| Error::OpeningError)?;
 
         let challenge_packed = transcript.squeeze_challenge();
-        let challenge = *S::to_challenge_scalar::<()>(challenge_packed);
+        let challenge = *T::as_challenge_scalar::<()>(&challenge_packed);
 
         rounds.push((
             l,
@@ -108,7 +118,7 @@ pub fn verify_proof<'a, C: CurveAffine, S: ChallengeSpace<C>, T: TranscriptRead<
         .batch_invert();
 
     let mut challenges = Vec::with_capacity(k);
-    let mut challenges_packed: Vec<S::Challenge> = Vec::with_capacity(k);
+    let mut challenges_packed: Vec<E> = Vec::with_capacity(k);
     for (l, r, challenge, challenge_inv, challenge_packed) in rounds {
         msm.append_term(challenge_inv, l);
         msm.append_term(challenge, r);
@@ -143,6 +153,7 @@ pub fn verify_proof<'a, C: CurveAffine, S: ChallengeSpace<C>, T: TranscriptRead<
         neg_a,
         challenges,
         challenges_packed,
+        _marker: PhantomData,
     };
 
     Ok(guard)

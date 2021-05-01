@@ -12,7 +12,7 @@ use crate::poly::{
     commitment::Params, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff,
     PinnedEvaluationDomain, Polynomial,
 };
-use crate::transcript::{ChallengeScalar, ChallengeSpace, Transcript};
+use crate::transcript::{ChallengeScalar, EncodedChallenge, Transcript};
 
 mod circuit;
 mod keygen;
@@ -79,7 +79,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
     }
 
     /// Hashes a verification key into a transcript.
-    pub fn hash_into<S: ChallengeSpace<C>, T: Transcript<C, S>>(
+    pub fn hash_into<E: EncodedChallenge<C, [u8; 64]>, T: Transcript<C, [u8; 64], E>>(
         &self,
         transcript: &mut T,
     ) -> io::Result<()> {

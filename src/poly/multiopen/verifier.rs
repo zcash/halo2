@@ -9,7 +9,7 @@ use super::{
     VerifierQuery,
 };
 use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine, FieldExt};
-use crate::transcript::{ChallengeSpace, TranscriptRead};
+use crate::transcript::{EncodedChallenge, TranscriptRead};
 #[derive(Debug, Clone)]
 struct CommitmentData<C: CurveAffine> {
     set_index: usize,
@@ -18,12 +18,20 @@ struct CommitmentData<C: CurveAffine> {
 }
 
 /// Verify a multi-opening proof
-pub fn verify_proof<'b, 'a: 'b, I, C: CurveAffine, S: ChallengeSpace<C>, T: TranscriptRead<C, S>>(
+pub fn verify_proof<
+    'b,
+    'a: 'b,
+    I,
+    IN,
+    C: CurveAffine,
+    E: EncodedChallenge<C, IN>,
+    T: TranscriptRead<C, IN, E>,
+>(
     params: &'a Params<C>,
     transcript: &mut T,
     queries: I,
     mut msm: MSM<'a, C>,
-) -> Result<Guard<'a, C, S>, Error>
+) -> Result<Guard<'a, C, IN, E>, Error>
 where
     I: IntoIterator<Item = VerifierQuery<'b, C>> + Clone,
 {

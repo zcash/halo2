@@ -12,15 +12,15 @@ use crate::poly::{
     multiopen::{self, ProverQuery},
     Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
 };
-use crate::transcript::{ChallengeSpace, TranscriptWrite};
+use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
 /// generated previously for the same circuit.
 pub fn create_proof<
     C: CurveAffine,
-    S: ChallengeSpace<C>,
-    T: TranscriptWrite<C, S>,
+    E: EncodedChallenge<C, [u8; 64]>,
+    T: TranscriptWrite<C, [u8; 64], E>,
     ConcreteCircuit: Circuit<C::Scalar>,
 >(
     params: &Params<C>,

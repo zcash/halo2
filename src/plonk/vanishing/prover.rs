@@ -10,7 +10,7 @@ use crate::{
         multiopen::ProverQuery,
         Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial,
     },
-    transcript::{ChallengeSpace, TranscriptWrite},
+    transcript::{EncodedChallenge, TranscriptWrite},
 };
 
 pub(in crate::plonk) struct Constructed<C: CurveAffine> {
@@ -23,7 +23,7 @@ pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Argument<C> {
-    pub(in crate::plonk) fn construct<S: ChallengeSpace<C>, T: TranscriptWrite<C, S>>(
+    pub(in crate::plonk) fn construct<I, E: EncodedChallenge<C, I>, T: TranscriptWrite<C, I, E>>(
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
         expressions: impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
@@ -69,7 +69,7 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(in crate::plonk) fn evaluate<S: ChallengeSpace<C>, T: TranscriptWrite<C, S>>(
+    pub(in crate::plonk) fn evaluate<I, E: EncodedChallenge<C, I>, T: TranscriptWrite<C, I, E>>(
         self,
         x: ChallengeX<C>,
         transcript: &mut T,

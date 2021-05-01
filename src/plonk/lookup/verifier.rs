@@ -8,7 +8,7 @@ use crate::{
     arithmetic::{CurveAffine, FieldExt},
     plonk::{Error, VerifyingKey},
     poly::{multiopen::VerifierQuery, Rotation},
-    transcript::{ChallengeSpace, TranscriptRead},
+    transcript::{EncodedChallenge, TranscriptRead},
 };
 use ff::Field;
 
@@ -34,8 +34,9 @@ pub struct Evaluated<C: CurveAffine> {
 impl<F: FieldExt> Argument<F> {
     pub(in crate::plonk) fn read_permuted_commitments<
         C: CurveAffine,
-        S: ChallengeSpace<C>,
-        T: TranscriptRead<C, S>,
+        I,
+        E: EncodedChallenge<C, I>,
+        T: TranscriptRead<C, I, E>,
     >(
         &self,
         transcript: &mut T,
@@ -56,8 +57,9 @@ impl<F: FieldExt> Argument<F> {
 
 impl<C: CurveAffine> PermutationCommitments<C> {
     pub(in crate::plonk) fn read_product_commitment<
-        S: ChallengeSpace<C>,
-        T: TranscriptRead<C, S>,
+        I,
+        E: EncodedChallenge<C, I>,
+        T: TranscriptRead<C, I, E>,
     >(
         self,
         transcript: &mut T,
@@ -74,7 +76,7 @@ impl<C: CurveAffine> PermutationCommitments<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(crate) fn evaluate<S: ChallengeSpace<C>, T: TranscriptRead<C, S>>(
+    pub(crate) fn evaluate<I, E: EncodedChallenge<C, I>, T: TranscriptRead<C, I, E>>(
         self,
         transcript: &mut T,
     ) -> Result<Evaluated<C>, Error> {

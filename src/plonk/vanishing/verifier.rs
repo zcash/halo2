@@ -4,7 +4,7 @@ use crate::{
     arithmetic::CurveAffine,
     plonk::{Error, VerifyingKey},
     poly::multiopen::VerifierQuery,
-    transcript::{read_n_points, read_n_scalars, ChallengeSpace, TranscriptRead},
+    transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead},
 };
 
 use super::super::{ChallengeX, ChallengeY};
@@ -20,7 +20,11 @@ pub struct Evaluated<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Argument<C> {
-    pub(in crate::plonk) fn read_commitments<S: ChallengeSpace<C>, T: TranscriptRead<C, S>>(
+    pub(in crate::plonk) fn read_commitments<
+        I,
+        E: EncodedChallenge<C, I>,
+        T: TranscriptRead<C, I, E>,
+    >(
         vk: &VerifyingKey<C>,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
@@ -33,7 +37,7 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(in crate::plonk) fn evaluate<S: ChallengeSpace<C>, T: TranscriptRead<C, S>>(
+    pub(in crate::plonk) fn evaluate<I, E: EncodedChallenge<C, I>, T: TranscriptRead<C, I, E>>(
         self,
         transcript: &mut T,
     ) -> Result<Evaluated<C>, Error> {

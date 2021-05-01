@@ -12,7 +12,7 @@ use crate::{
         multiopen::ProverQuery,
         Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
     },
-    transcript::{ChallengeSpace, TranscriptWrite},
+    transcript::{EncodedChallenge, TranscriptWrite},
 };
 
 pub(crate) struct Committed<C: CurveAffine> {
@@ -34,8 +34,9 @@ pub(crate) struct Evaluated<C: CurveAffine> {
 impl Argument {
     pub(in crate::plonk) fn commit<
         C: CurveAffine,
-        S: ChallengeSpace<C>,
-        T: TranscriptWrite<C, S>,
+        I,
+        E: EncodedChallenge<C, I>,
+        T: TranscriptWrite<C, I, E>,
     >(
         &self,
         params: &Params<C>,
@@ -257,7 +258,7 @@ impl<C: CurveAffine> super::ProvingKey<C> {
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(in crate::plonk) fn evaluate<S: ChallengeSpace<C>, T: TranscriptWrite<C, S>>(
+    pub(in crate::plonk) fn evaluate<I, E: EncodedChallenge<C, I>, T: TranscriptWrite<C, I, E>>(
         self,
         pk: &plonk::ProvingKey<C>,
         pkey: &ProvingKey<C>,
