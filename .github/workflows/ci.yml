@@ -84,46 +84,6 @@ jobs:
       - name: Test halo2 book
         run: mdbook test -L target/debug/deps book/
 
-  clippy:
-    name: Clippy (stable)
-    timeout-minutes: 30
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          components: clippy
-          override: true
-      - name: Run clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          name: Clippy (stable)
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --all-targets -- -D warnings
-
-  clippy-beta:
-    name: Clippy (beta)
-    timeout-minutes: 30
-    runs-on: ubuntu-latest
-    continue-on-error: true
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: beta
-          components: clippy
-          override: true
-      - name: Run Clippy (beta)
-        uses: actions-rs/clippy-check@v1
-        continue-on-error: true
-        with:
-          name: Clippy (beta)
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --all-targets -- -W clippy::all
-
   codecov:
     name: Code coverage
     runs-on: ubuntu-latest
