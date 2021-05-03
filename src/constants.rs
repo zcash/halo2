@@ -20,8 +20,8 @@ pub(crate) const L_ORCHARD_BASE: usize = 255;
 /// $\ell_\mathsf{value}$
 pub(crate) const L_VALUE: usize = 64;
 
-// SWU hash-to-curve personalizations
-/// This is used for the spending key base point and the nullifier base point K^Orchard
+/// SWU hash-to-curve personalization for the spending key base point and
+/// the nullifier base point K^Orchard
 pub const ORCHARD_PERSONALIZATION: &str = "z.cash:Orchard";
 
 /// SWU hash-to-curve personalization for the group hash for key diversification
@@ -53,7 +53,8 @@ pub const NUM_WINDOWS: usize =
 pub const NUM_WINDOWS_SHORT: usize =
     (L_VALUE + FIXED_BASE_WINDOW_SIZE - 1) / FIXED_BASE_WINDOW_SIZE;
 
-/// Number of bits used in complete addition (for variable-base scalar mul)
+/// Number of bits for which complete addition needs to be used in variable-base
+/// scalar multiplication
 pub const NUM_COMPLETE_BITS: usize = 3;
 
 pub trait OrchardFixedBases {
@@ -247,8 +248,8 @@ pub trait TestFixedBase<C: CurveAffine> {
     fn test_lagrange_coeffs(&self, num_windows: usize);
 
     // Test that the z-values and u-values satisfy the conditions:
-    //      1. y + z = u^2,
-    //      2. y - z is not a square
+    //      1. z + y = u^2,
+    //      2. z - y is not a square
     // for the y-coordinate of each fixed-base multiple in each window.
     fn test_z(&self, z: &[u64], u: &[[[u8; 32]; H]], num_windows: usize);
 }
