@@ -226,7 +226,7 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
                         }
                     })
                     .collect::<Option<ArrayVec<C::Base, H>>>()
-                    .and_then(|us| Some((z, us.into_inner().unwrap())))
+                    .map(|us| (z, us.into_inner().unwrap()))
             })
         };
 
