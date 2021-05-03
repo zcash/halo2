@@ -1,4 +1,5 @@
 //! Constants used in the Orchard protocol.
+use arrayvec::ArrayVec;
 use ff::{Field, PrimeField};
 use group::Curve;
 use halo2::{
@@ -134,7 +135,7 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
         let mut window_table: Vec<[C; H]> = Vec::with_capacity(num_windows);
 
         // Generate window table entries for all windows but the last.
-        // For these first `num_windows - 1` windows, we compute the multiple $[(k+1)*(8^w)]B.
+        // For these first `num_windows - 1` windows, we compute the multiple [(k+1)*(8^w)]B.
         // Here, w ranges from [0..`num_windows - 1`)
         for w in 0..(num_windows - 1) {
             window_table.push(
@@ -145,11 +146,9 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
                             * C::ScalarExt::from_u64(H as u64).pow(&[w as u64, 0, 0, 0]);
                         (self.0 * scalar).to_affine()
                     })
-                    .enumerate()
-                    .fold([C::identity(); H], |mut window, (index, entry)| {
-                        window[index] = entry;
-                        window
-                    }),
+                    .collect::<ArrayVec<C, H>>()
+                    .into_inner()
+                    .unwrap(),
             );
         }
 
@@ -173,11 +172,9 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
                         - sum;
                     (self.0 * scalar).to_affine()
                 })
-                .enumerate()
-                .fold([C::identity(); H], |mut window, (index, entry)| {
-                    window[index] = entry;
-                    window
-                }),
+                .collect::<ArrayVec<C, H>>()
+                .into_inner()
+                .unwrap(),
         );
 
         window_table
@@ -197,12 +194,10 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
                     .map(|point| *point.coordinates().unwrap().x())
                     .collect();
                 lagrange_interpolate(&points, &x_window_points)
-                    .iter()
-                    .enumerate()
-                    .fold([C::Base::default(); H], |mut window, (index, entry)| {
-                        window[index] = *entry;
-                        window
-                    })
+                    .into_iter()
+                    .collect::<ArrayVec<C::Base, H>>()
+                    .into_inner()
+                    .unwrap()
             })
             .collect()
     }
