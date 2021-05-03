@@ -1,7 +1,5 @@
-use super::{NoteCommitR, OrchardFixedBase, NOTE_COMMITMENT_PERSONALIZATION};
+use super::{NoteCommitR, OrchardFixedBase};
 use halo2::arithmetic::{CurveAffine, FieldExt};
-
-pub const PERSONALIZATION: &str = NOTE_COMMITMENT_PERSONALIZATION;
 
 /// Generator used in SinsemillaCommit randomness for note commitment
 pub const GENERATOR: ([u8; 32], [u8; 32]) = (
@@ -2932,7 +2930,7 @@ pub fn generator<C: CurveAffine>() -> NoteCommitR<C> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{TestFixedBase, NUM_WINDOWS};
+    use super::super::{TestFixedBase, NOTE_COMMITMENT_PERSONALIZATION, NUM_WINDOWS};
     use super::*;
     use crate::primitives::sinsemilla::CommitDomain;
     use group::Curve;
@@ -2943,7 +2941,7 @@ mod tests {
 
     #[test]
     fn generator() {
-        let domain = CommitDomain::new(PERSONALIZATION);
+        let domain = CommitDomain::new(NOTE_COMMITMENT_PERSONALIZATION);
         let point = domain.R();
         let coords = point.to_affine().coordinates().unwrap();
 

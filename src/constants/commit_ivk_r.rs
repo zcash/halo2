@@ -1,7 +1,5 @@
-use super::{CommitIvkR, OrchardFixedBase, COMMIT_IVK_PERSONALIZATION};
+use super::{CommitIvkR, OrchardFixedBase};
 use halo2::arithmetic::{CurveAffine, FieldExt};
-
-pub const PERSONALIZATION: &str = COMMIT_IVK_PERSONALIZATION;
 
 /// Generator used in SinsemillaCommit randomness for IVK commitment
 pub const GENERATOR: ([u8; 32], [u8; 32]) = (
@@ -2932,7 +2930,7 @@ pub fn generator<C: CurveAffine>() -> CommitIvkR<C> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{TestFixedBase, NUM_WINDOWS};
+    use super::super::{TestFixedBase, COMMIT_IVK_PERSONALIZATION, NUM_WINDOWS};
     use super::*;
     use crate::primitives::sinsemilla::CommitDomain;
     use group::Curve;
@@ -2943,7 +2941,7 @@ mod tests {
 
     #[test]
     fn generator() {
-        let domain = CommitDomain::new(PERSONALIZATION);
+        let domain = CommitDomain::new(COMMIT_IVK_PERSONALIZATION);
         let point = domain.R();
         let coords = point.to_affine().coordinates().unwrap();
 

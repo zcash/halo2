@@ -1,7 +1,5 @@
-use crate::constants::{NullifierK, OrchardFixedBase, ORCHARD_PERSONALIZATION};
+use crate::constants::{NullifierK, OrchardFixedBase};
 use halo2::arithmetic::{CurveAffine, FieldExt};
-
-pub const PERSONALIZATION: &str = ORCHARD_PERSONALIZATION;
 
 pub const GENERATOR: ([u8; 32], [u8; 32]) = (
     [
@@ -2931,7 +2929,7 @@ pub fn generator<C: CurveAffine>() -> NullifierK<C> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{TestFixedBase, NUM_WINDOWS};
+    use super::super::{TestFixedBase, NUM_WINDOWS, ORCHARD_PERSONALIZATION};
     use super::*;
     use group::Curve;
     use halo2::{
@@ -2941,7 +2939,7 @@ mod tests {
 
     #[test]
     fn generator() {
-        let hasher = pallas::Point::hash_to_curve(PERSONALIZATION);
+        let hasher = pallas::Point::hash_to_curve(ORCHARD_PERSONALIZATION);
         let point = hasher(b"K");
         let coords = point.to_affine().coordinates().unwrap();
 

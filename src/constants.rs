@@ -127,7 +127,8 @@ pub trait FixedBase<C: CurveAffine> {
     /// For each window, $z$ is a field element such that for each point $(x, y)$ in the window:
     /// - $z + y = u^2$ (some square in the field); and
     /// - $z - y$ is not a square.
-    fn find_zs(&self, num_windows: usize) -> Option<Vec<u64>>;
+    /// If successful, return a vector of `(z: u64, us: [C::Base; H])` for each window.
+    fn find_zs_and_us(&self, num_windows: usize) -> Option<Vec<(u64, [C::Base; H])>>;
 }
 
 impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
@@ -180,7 +181,7 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
         window_table
     }
 
-    fn compute_lagrange_coeffs(&self, num_windows: usize) -> Vec<[C::Base; 8]> {
+    fn compute_lagrange_coeffs(&self, num_windows: usize) -> Vec<[C::Base; H]> {
         // We are interpolating over the 3-bit window, k \in [0..8)
         let points: Vec<_> = (0..H).map(|i| C::Base::from_u64(i as u64)).collect();
 
@@ -205,34 +206,34 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
     /// For each window, z is a field element such that for each point (x, y) in the window:
     /// - z + y = u^2 (some square in the field); and
     /// - z - y is not a square.
-    fn find_zs(&self, num_windows: usize) -> Option<Vec<u64>> {
-        // Closure to find z for one window
-        let find_z = |window_points: &[C]| {
+    /// If successful, return a vector of `(z: u64, us: [C::Base; H])` for each window.
+    fn find_zs_and_us(&self, num_windows: usize) -> Option<Vec<(u64, [C::Base; H])>> {
+        // Closure to find z and u's for one window
+        let find_z_and_us = |window_points: &[C]| {
             assert_eq!(H, window_points.len());
 
             let ys: Vec<_> = window_points
                 .iter()
                 .map(|point| *point.coordinates().unwrap().y())
                 .collect();
-            let z_for_single_y = |y: C::Base, z: u64| {
-                let sum_y_is_square: bool = (y + C::Base::from_u64(z)).sqrt().is_some().into();
-                let sum_neg_y_is_square: bool = (-y + C::Base::from_u64(z)).sqrt().is_some().into();
-                sum_y_is_square && !sum_neg_y_is_square
-            };
-
-            for z in 0..(1000 * (1 << (2 * H))) {
-                if ys.iter().all(|y| z_for_single_y(*y, z)) {
-                    return Some(z);
-                }
-            }
-
-            None
+            (0..(1000 * (1 << (2 * H)))).find_map(|z| {
+                ys.iter()
+                    .map(|&y| {
+                        if (-y + C::Base::from_u64(z)).sqrt().is_none().into() {
+                            (y + C::Base::from_u64(z)).sqrt().into()
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Option<ArrayVec<C::Base, H>>>()
+                    .and_then(|us| Some((z, us.into_inner().unwrap())))
+            })
         };
 
         let window_table = self.compute_window_table(num_windows);
         window_table
             .iter()
-            .map(|window_points| find_z(window_points))
+            .map(|window_points| find_z_and_us(window_points))
             .collect()
     }
 }
@@ -301,8 +302,8 @@ impl<C: CurveAffine> TestFixedBase<C> for OrchardFixedBase<C> {
             for (u, point) in u.iter().zip(window_points.iter()) {
                 let y = *point.coordinates().unwrap().y();
                 let u = C::Base::from_bytes(&u).unwrap();
-                assert_eq!((C::Base::from_u64(*z) + y).sqrt().unwrap(), u);
-                assert_eq!((C::Base::from_u64(*z) - y).sqrt().is_some().unwrap_u8(), 0);
+                assert_eq!(C::Base::from_u64(*z) + y, u * u); // allow either square root
+                assert!(bool::from((C::Base::from_u64(*z) - y).sqrt().is_none()));
             }
         }
     }

@@ -37,10 +37,9 @@ pub fn decompose_scalar_fixed<C: CurveAffine>(
 
 /// Evaluate y = f(x) given the coefficients of f(x)
 pub fn evaluate<C: CurveAffine>(x: u8, coeffs: &[C::Base]) -> C::Base {
+    let x = C::Base::from_u64(x as u64);
     coeffs
         .iter()
-        .enumerate()
-        .fold(C::Base::default(), |acc, (pow, coeff)| {
-            acc + (*coeff) * C::Base::from_u64(x as u64).pow(&[pow as u64, 0, 0, 0])
-        })
+        .rev()
+        .fold(C::Base::default(), |acc, coeff| acc * x + coeff)
 }
