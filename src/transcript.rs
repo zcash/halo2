@@ -61,7 +61,7 @@ pub trait TranscriptWrite<C: CurveAffine, I, E: EncodedChallenge<C, I>>:
 pub struct Blake2bRead<R: Read, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> {
     state: Blake2bState,
     reader: R,
-    _marker: PhantomData<C>,
+    _marker_c: PhantomData<C>,
     _marker_e: PhantomData<E>,
 }
 
@@ -74,7 +74,7 @@ impl<R: Read, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> Blake2bRead<R, C
                 .personal(b"Halo2-Transcript")
                 .to_state(),
             reader,
-            _marker: PhantomData,
+            _marker_c: PhantomData,
             _marker_e: PhantomData,
         }
     }
@@ -144,7 +144,7 @@ impl<R: Read, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> Transcript<C, [u
 pub struct Blake2bWrite<W: Write, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> {
     state: Blake2bState,
     writer: W,
-    _marker: PhantomData<C>,
+    _marker_c: PhantomData<C>,
     _marker_e: PhantomData<E>,
 }
 
@@ -157,7 +157,7 @@ impl<W: Write, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> Blake2bWrite<W,
                 .personal(b"Halo2-Transcript")
                 .to_state(),
             writer,
-            _marker: PhantomData,
+            _marker_c: PhantomData,
             _marker_e: PhantomData,
         }
     }
