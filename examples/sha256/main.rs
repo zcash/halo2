@@ -2,6 +2,7 @@
 //!
 //! [SHA-256]: https://tools.ietf.org/html/rfc6234
 
+/*
 use std::cmp::min;
 use std::convert::TryInto;
 use std::fmt;
@@ -158,5 +159,6 @@ impl<Sha256Chip: Sha256Instructions> Sha256<Sha256Chip> {
         hasher.finalize(layouter.namespace(|| "finalize"))
     }
 }
+*/
 
 fn main() {}

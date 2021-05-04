@@ -7,11 +7,7 @@ use std::{
 };
 
 use super::{lookup, permutation, Error};
-use crate::{
-    arithmetic::FieldExt,
-    circuit::{Chip, Region},
-    poly::Rotation,
-};
+use crate::{arithmetic::FieldExt, circuit::Region, poly::Rotation};
 
 /// A column type
 pub trait ColumnType: 'static + Sized + std::fmt::Debug {}
@@ -157,7 +153,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// Selectors are disabled on all rows by default, and must be explicitly enabled on each
 /// row when required:
 /// ```
-/// use halo2::{circuit::{Chip, Layouter}, plonk::{Advice, Column, Error, Selector}};
+/// use halo2::{arithmetic::FieldExt, circuit::{Chip, Layouter}, plonk::{Advice, Column, Error, Selector}};
 /// # use ff::Field;
 /// # use halo2::plonk::Fixed;
 ///
@@ -167,12 +163,12 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 ///     s: Selector,
 /// }
 ///
-/// fn circuit_logic<C: Chip>(mut layouter: impl Layouter<C>) -> Result<(), Error> {
-///     let config = layouter.config().clone();
+/// fn circuit_logic<F: FieldExt, C: Chip<F>>(chip: C, mut layouter: impl Layouter<F>) -> Result<(), Error> {
+///     let config = chip.config();
 ///     # let config: Config = todo!();
 ///     layouter.assign_region(|| "bar", |mut region| {
-///         region.assign_advice(|| "a", config.a, 0, || Ok(C::Field::one()))?;
-///         region.assign_advice(|| "a", config.b, 1, || Ok(C::Field::one()))?;
+///         region.assign_advice(|| "a", config.a, 0, || Ok(F::one()))?;
+///         region.assign_advice(|| "a", config.b, 1, || Ok(F::one()))?;
 ///         config.s.enable(&mut region, 1)
 ///     })?;
 ///     Ok(())
@@ -183,14 +179,14 @@ pub struct Selector(Column<Fixed>);
 
 impl Selector {
     /// Enable this selector at the given offset within the given region.
-    pub fn enable<C: Chip>(&self, region: &mut Region<C>, offset: usize) -> Result<(), Error> {
+    pub fn enable<F: FieldExt>(&self, region: &mut Region<F>, offset: usize) -> Result<(), Error> {
         // TODO: Ensure that the default for a selector's cells is always zero, if we
         // alter the proving system to change the global default.
         // TODO: Add Region::enable_selector method to allow the layouter to control the
         // selector's assignment.
         // https://github.com/zcash/halo2/issues/116
         region
-            .assign_fixed(|| "", self.0, offset, || Ok(C::Field::one()))
+            .assign_fixed(|| "", self.0, offset, || Ok(F::one()))
             .map(|_| ())
     }
 }
