@@ -69,11 +69,12 @@ impl NoteValue {
 impl Sub for NoteValue {
     type Output = Option<ValueSum>;
 
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn sub(self, rhs: Self) -> Self::Output {
         let a = self.0 as i128;
         let b = rhs.0 as i128;
         a.checked_sub(b)
-            .filter(|v| v > &(-(std::u64::MAX as i128)))
+            .filter(|v| v > &(-(std::u64::MAX as i128)) && v < &(std::u64::MAX as i128))
             .map(ValueSum)
     }
 }
@@ -100,10 +101,11 @@ impl ValueSum {
 impl Add for ValueSum {
     type Output = Option<ValueSum>;
 
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn add(self, rhs: Self) -> Self::Output {
         self.0
             .checked_add(rhs.0)
-            .filter(|v| v < &(std::u64::MAX as i128))
+            .filter(|v| v > &(-(std::u64::MAX as i128)) && v < &(std::u64::MAX as i128))
             .map(ValueSum)
     }
 }
