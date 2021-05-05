@@ -120,9 +120,9 @@ impl Instance {
 #[derive(Debug)]
 pub struct Proof(pub(crate) Vec<u8>);
 
-impl<'a> From<&'a Proof> for &'a Vec<u8> {
-    fn from(proof: &'a Proof) -> &'a Vec<u8> {
-        &proof.0
+impl AsRef<[u8]> for Proof {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
     }
 }
 
@@ -163,7 +163,7 @@ impl Proof {
         }
     }
 
-    /// Construct a new Proof value.
+    /// Constructs a new Proof value.
     pub fn new(bytes: Vec<u8>) -> Self {
         Proof(bytes)
     }
