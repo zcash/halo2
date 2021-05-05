@@ -221,12 +221,12 @@ impl ValueCommitment {
         let hasher = pallas::Point::hash_to_curve("z.cash:Orchard-cv");
         let V = hasher(b"v");
         let R = hasher(b"r");
-        let value = i64::try_from(value.0).expect("value must be in valid range");
+        let abs_value = u64::try_from(value.0.abs()).expect("value must be in valid range");
 
-        let value = if value.is_negative() {
-            -pallas::Scalar::from_u64((-value) as u64)
+        let value = if value.0.is_negative() {
+            -pallas::Scalar::from_u64(abs_value)
         } else {
-            pallas::Scalar::from_u64(value as u64)
+            pallas::Scalar::from_u64(abs_value)
         };
 
         ValueCommitment(V * value + R * rcv.0)
@@ -254,7 +254,7 @@ pub mod testing {
     use pasta_curves::{arithmetic::FieldExt, pallas};
     use proptest::prelude::*;
 
-    use super::{NoteValue, ValueCommitTrapdoor, ValueSum};
+    use super::{NoteValue, ValueCommitTrapdoor, ValueSum, VALUE_SUM_RANGE};
 
     /// Maximum note value.
     pub const MAX_NOTE_VALUE: u64 = u64::MAX - 1;
@@ -271,7 +271,7 @@ pub mod testing {
 
     prop_compose! {
         /// Generate an arbitrary [`ValueSum`] in the range of valid Zcash values.
-        pub fn arb_value_sum(bound: i64)(value in -bound..bound) -> ValueSum {
+        pub fn arb_value_sum()(value in VALUE_SUM_RANGE) -> ValueSum {
             ValueSum(value as i128)
         }
     }
@@ -317,12 +317,10 @@ mod tests {
     };
     use crate::primitives::redpallas;
 
-    const MAX_MONEY: i64 = 21_000_000 * 1_0000_0000;
-
     proptest! {
         #[test]
         fn bsk_consistent_with_bvk(
-            values in prop::collection::vec((arb_value_sum(MAX_MONEY), arb_trapdoor()), 1..10),
+            values in prop::collection::vec((arb_value_sum(), arb_trapdoor()), 1..10),
         ) {
             let value_balance = values
                 .iter()
