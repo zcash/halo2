@@ -1,3 +1,4 @@
+//! Data structures used for note construction.
 use group::GroupEncoding;
 use pasta_curves::pallas;
 use rand::RngCore;
