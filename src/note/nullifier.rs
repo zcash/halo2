@@ -63,14 +63,21 @@ impl Nullifier {
 pub mod testing {
     use proptest::prelude::*;
 
+    use group::GroupEncoding;
     use pasta_curves::pallas;
 
     use super::Nullifier;
+    use crate::spec::extract_p;
 
     prop_compose! {
         /// Generate a uniformly distributed nullifier value.
-        pub fn arb_nullifier()(elems in prop::array::uniform4(prop::num::u64::ANY)) -> Nullifier {
-            Nullifier(pallas::Base::from_raw(elems))
+        pub fn arb_nullifier()(
+            coord in prop::array::uniform32(any::<u8>()).prop_map(|b| pallas::Point::from_bytes(&b)).prop_filter(
+                "Must generate a valid Pallas point",
+                |p| p.is_some().into()
+            )
+        ) -> Nullifier {
+            Nullifier(extract_p(&coord.unwrap()))
         }
     }
 }
