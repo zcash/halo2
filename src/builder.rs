@@ -477,10 +477,7 @@ pub mod testing {
         },
         note::testing::arb_note,
         tree::{Anchor, MerklePath},
-        value::{
-            testing::{arb_positive_note_value, MAX_NOTE_VALUE},
-            NoteValue,
-        },
+        value::{testing::arb_positive_note_value, NoteValue, MAX_NOTE_VALUE},
         Address, Note,
     };
 

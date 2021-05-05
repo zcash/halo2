@@ -33,12 +33,16 @@ use crate::primitives::redpallas::{self, Binding};
 
 use std::ops::RangeInclusive;
 
+/// Maximum note value.
+pub const MAX_NOTE_VALUE: u64 = u64::MAX;
+
 /// The valid range of the scalar multiplication used in ValueCommit^Orchard.
 ///
 /// Defined in a note in [Zcash Protocol Spec § 4.17.4: Action Statement (Orchard)][actionstatement].
 ///
 /// [actionstatement]: https://zips.z.cash/protocol/nu5.pdf#actionstatement
-pub const VALUE_SUM_RANGE: RangeInclusive<i128> = -(u64::MAX as i128)..=u64::MAX as i128;
+pub const VALUE_SUM_RANGE: RangeInclusive<i128> =
+    -(MAX_NOTE_VALUE as i128)..=MAX_NOTE_VALUE as i128;
 
 /// A value operation overflowed.
 #[derive(Debug)]
@@ -254,10 +258,7 @@ pub mod testing {
     use pasta_curves::{arithmetic::FieldExt, pallas};
     use proptest::prelude::*;
 
-    use super::{NoteValue, ValueCommitTrapdoor, ValueSum, VALUE_SUM_RANGE};
-
-    /// Maximum note value.
-    pub const MAX_NOTE_VALUE: u64 = u64::MAX - 1;
+    use super::{NoteValue, ValueCommitTrapdoor, ValueSum, MAX_NOTE_VALUE, VALUE_SUM_RANGE};
 
     prop_compose! {
         /// Generate an arbitrary Pallas scalar.
@@ -319,8 +320,8 @@ mod tests {
     use proptest::prelude::*;
 
     use super::{
-        testing::{arb_trapdoor, arb_value_sum_bounded, arb_nonnegative_note_value, MAX_NOTE_VALUE},
-        OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum
+        testing::{arb_nonnegative_note_value, arb_trapdoor, arb_value_sum_bounded},
+        OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum, MAX_NOTE_VALUE,
     };
     use crate::primitives::redpallas;
 

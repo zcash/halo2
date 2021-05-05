@@ -375,8 +375,8 @@ pub mod testing {
             Signature,
         },
         value::{
-            testing::{arb_nonnegative_note_value, MAX_NOTE_VALUE},
-            NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum,
+            testing::arb_nonnegative_note_value, NoteValue, ValueCommitTrapdoor, ValueCommitment,
+            ValueSum, MAX_NOTE_VALUE,
         },
         Anchor,
     };
