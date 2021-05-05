@@ -423,11 +423,14 @@ pub mod testing {
     /// Generate an unauthorized action having spend and output values less than MAX_NOTE_VALUE / n_actions.
     pub fn arb_unauthorized_action_n(
         n_actions: usize,
+        flags: Flags,
     ) -> impl Strategy<Value = (ValueSum, Action<()>)> {
         arb_nonnegative_note_value(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
             move |spend_value| {
                 arb_nonnegative_note_value(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
                     move |output_value| {
+                        let spend_value = if flags.spends_enabled { spend_value } else { NoteValue::zero() };
+                        let output_value = if flags.outputs_enabled { output_value } else { NoteValue::zero() };
                         arb_unauthorized_action(spend_value, output_value)
                             .prop_map(move |a| ((spend_value - output_value).unwrap(), a))
                     },
@@ -474,11 +477,14 @@ pub mod testing {
     /// Generate an authorized action having spend and output values less than MAX_NOTE_VALUE / n_actions.
     pub fn arb_action_n(
         n_actions: usize,
+        flags: Flags,
     ) -> impl Strategy<Value = (ValueSum, Action<Signature<SpendAuth>>)> {
         arb_nonnegative_note_value(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
             move |spend_value| {
                 arb_nonnegative_note_value(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
                     move |output_value| {
+                        let spend_value = if flags.spends_enabled { spend_value } else { NoteValue::zero() };
+                        let output_value = if flags.outputs_enabled { output_value } else { NoteValue::zero() };
                         arb_action(spend_value, output_value)
                             .prop_map(move |a| ((spend_value - output_value).unwrap(), a))
                     },
@@ -499,11 +505,14 @@ pub mod testing {
         /// necessarily respect consensus rules; for that use
         /// [`crate::builder::testing::arb_bundle`]
         pub fn arb_unauthorized_bundle()
-        ( n_actions in 1usize..100 )
-        (
-            acts in vec(arb_unauthorized_action_n(n_actions), n_actions),
+        ( 
+            n_actions in 1usize..100,
             flags in arb_flags(),
-            anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor)
+        )
+        (
+            acts in vec(arb_unauthorized_action_n(n_actions, flags), n_actions),
+            anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor),
+            flags in Just(flags)
         ) -> Bundle<Unauthorized, ValueSum> {
             let (balances, actions): (Vec<ValueSum>, Vec<Action<_>>) = acts.into_iter().unzip();
 
@@ -522,15 +531,18 @@ pub mod testing {
         /// necessarily respect consensus rules; for that use
         /// [`crate::builder::testing::arb_bundle`]
         pub fn arb_bundle()
-        ( n_actions in 1usize..100 )
-        (
-            acts in vec(arb_action_n(n_actions), n_actions),
+        ( 
+            n_actions in 1usize..100,
             flags in arb_flags(),
+        )
+        (
+            acts in vec(arb_action_n(n_actions, flags), n_actions),
             anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor),
             sk in arb_binding_signing_key(),
             rng_seed in prop::array::uniform32(prop::num::u8::ANY),
             fake_proof in vec(prop::num::u8::ANY, 1973),
             fake_sighash in prop::array::uniform32(prop::num::u8::ANY),
+            flags in Just(flags)
         ) -> Bundle<Authorized, ValueSum> {
             let (balances, actions): (Vec<ValueSum>, Vec<Action<_>>) = acts.into_iter().unzip();
             let rng = StdRng::from_seed(rng_seed);
