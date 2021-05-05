@@ -372,7 +372,6 @@ pub mod testing {
             testing::{
                 arb_binding_signing_key, arb_spendauth_signing_key, arb_spendauth_verification_key,
             },
-            Signature,
         },
         value::{
             testing::arb_note_value_bounded, NoteValue, ValueCommitTrapdoor, ValueCommitment,
@@ -431,22 +430,18 @@ pub mod testing {
             Strategy::boxed(Just(NoteValue::zero()))
         };
 
-        spend_value_gen.prop_flat_map(
-            move |spend_value| {
-                let output_value_gen = if flags.outputs_enabled {
-                    Strategy::boxed(arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64))
-                } else {
-                    Strategy::boxed(Just(NoteValue::zero()))
-                };
+        spend_value_gen.prop_flat_map(move |spend_value| {
+            let output_value_gen = if flags.outputs_enabled {
+                Strategy::boxed(arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64))
+            } else {
+                Strategy::boxed(Just(NoteValue::zero()))
+            };
 
-                output_value_gen.prop_flat_map(
-                    move |output_value| {
-                        arb_unauthorized_action(spend_value, output_value)
-                            .prop_map(move |a| ((spend_value - output_value).unwrap(), a))
-                    },
-                )
-            },
-        )
+            output_value_gen.prop_flat_map(move |output_value| {
+                arb_unauthorized_action(spend_value, output_value)
+                    .prop_map(move |a| ((spend_value - output_value).unwrap(), a))
+            })
+        })
     }
 
     prop_compose! {
@@ -457,7 +452,7 @@ pub mod testing {
             note in arb_note(output_value),
             rng_seed in prop::array::uniform32(prop::num::u8::ANY),
             fake_sighash in prop::array::uniform32(prop::num::u8::ANY),
-        ) -> Action<Signature<SpendAuth>> {
+        ) -> Action<redpallas::Signature<SpendAuth>> {
             let cmx = ExtractedNoteCommitment::from(note.commitment());
             let cv_net = ValueCommitment::derive(
                 (spend_value - output_value).unwrap(),
@@ -488,29 +483,25 @@ pub mod testing {
     pub fn arb_action_n(
         n_actions: usize,
         flags: Flags,
-    ) -> impl Strategy<Value = (ValueSum, Action<Signature<SpendAuth>>)> {
+    ) -> impl Strategy<Value = (ValueSum, Action<redpallas::Signature<SpendAuth>>)> {
         let spend_value_gen = if flags.spends_enabled {
             Strategy::boxed(arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64))
         } else {
             Strategy::boxed(Just(NoteValue::zero()))
         };
 
-        spend_value_gen.prop_flat_map(
-            move |spend_value| {
-                let output_value_gen = if flags.outputs_enabled {
-                    Strategy::boxed(arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64))
-                } else {
-                    Strategy::boxed(Just(NoteValue::zero()))
-                };
+        spend_value_gen.prop_flat_map(move |spend_value| {
+            let output_value_gen = if flags.outputs_enabled {
+                Strategy::boxed(arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64))
+            } else {
+                Strategy::boxed(Just(NoteValue::zero()))
+            };
 
-                output_value_gen.prop_flat_map(
-                    move |output_value| {
-                        arb_action(spend_value, output_value)
-                            .prop_map(move |a| ((spend_value - output_value).unwrap(), a))
-                    },
-                )
-            },
-        )
+            output_value_gen.prop_flat_map(move |output_value| {
+                arb_action(spend_value, output_value)
+                    .prop_map(move |a| ((spend_value - output_value).unwrap(), a))
+            })
+        })
     }
 
     prop_compose! {
