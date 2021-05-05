@@ -18,7 +18,7 @@ impl SigType for Binding {}
 
 /// A RedPallas signing key.
 #[derive(Debug)]
-pub struct SigningKey<T: SigType>(pub(crate) reddsa::SigningKey<T>);
+pub struct SigningKey<T: SigType>(reddsa::SigningKey<T>);
 
 impl<T: SigType> From<SigningKey<T>> for [u8; 32] {
     fn from(sk: SigningKey<T>) -> [u8; 32] {
