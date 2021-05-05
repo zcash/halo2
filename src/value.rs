@@ -277,6 +277,13 @@ pub mod testing {
     }
 
     prop_compose! {
+        /// Generate an arbitrary [`ValueSum`] in the range of valid Zcash values.
+        pub fn arb_value_sum_bounded(bound: NoteValue)(value in -(bound.0 as i128)..=(bound.0 as i128)) -> ValueSum {
+            ValueSum(value as i128)
+        }
+    }
+
+    prop_compose! {
         /// Generate an arbitrary ValueCommitTrapdoor
         pub fn arb_trapdoor()(rcv in arb_scalar()) -> ValueCommitTrapdoor {
             ValueCommitTrapdoor(rcv)
@@ -312,15 +319,19 @@ mod tests {
     use proptest::prelude::*;
 
     use super::{
-        testing::{arb_trapdoor, arb_value_sum},
-        OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum,
+        testing::{arb_trapdoor, arb_value_sum_bounded, arb_nonnegative_note_value, MAX_NOTE_VALUE},
+        OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum
     };
     use crate::primitives::redpallas;
 
     proptest! {
         #[test]
         fn bsk_consistent_with_bvk(
-            values in prop::collection::vec((arb_value_sum(), arb_trapdoor()), 1..10),
+            values in (1usize..10).prop_flat_map(|n_values|
+                arb_nonnegative_note_value(MAX_NOTE_VALUE / n_values as u64).prop_flat_map(move |bound|
+                    prop::collection::vec((arb_value_sum_bounded(bound), arb_trapdoor()), n_values)
+                )
+            )
         ) {
             let value_balance = values
                 .iter()
