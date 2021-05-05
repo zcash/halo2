@@ -301,7 +301,7 @@ pub mod testing {
     prop_compose! {
         /// Generate an arbitrary value in the range of valid positive Zcash amounts
         /// less than a specified value.
-        pub fn arb_nonnegative_note_value(max: u64)(value in 0u64..max) -> NoteValue {
+        pub fn arb_note_value_bounded(max: u64)(value in 0u64..max) -> NoteValue {
             NoteValue(value)
         }
     }
@@ -320,7 +320,7 @@ mod tests {
     use proptest::prelude::*;
 
     use super::{
-        testing::{arb_nonnegative_note_value, arb_trapdoor, arb_value_sum_bounded},
+        testing::{arb_note_value_bounded, arb_trapdoor, arb_value_sum_bounded},
         OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum, MAX_NOTE_VALUE,
     };
     use crate::primitives::redpallas;
@@ -329,7 +329,7 @@ mod tests {
         #[test]
         fn bsk_consistent_with_bvk(
             values in (1usize..10).prop_flat_map(|n_values|
-                arb_nonnegative_note_value(MAX_NOTE_VALUE / n_values as u64).prop_flat_map(move |bound|
+                arb_note_value_bounded(MAX_NOTE_VALUE / n_values as u64).prop_flat_map(move |bound|
                     prop::collection::vec((arb_value_sum_bounded(bound), arb_trapdoor()), n_values)
                 )
             )

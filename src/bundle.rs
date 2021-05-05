@@ -375,7 +375,7 @@ pub mod testing {
             Signature,
         },
         value::{
-            testing::arb_nonnegative_note_value, NoteValue, ValueCommitTrapdoor, ValueCommitment,
+            testing::arb_note_value_bounded, NoteValue, ValueCommitTrapdoor, ValueCommitment,
             ValueSum, MAX_NOTE_VALUE,
         },
         Anchor,
@@ -425,9 +425,9 @@ pub mod testing {
         n_actions: usize,
         flags: Flags,
     ) -> impl Strategy<Value = (ValueSum, Action<()>)> {
-        arb_nonnegative_note_value(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
+        arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
             move |spend_value| {
-                arb_nonnegative_note_value(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
+                arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
                     move |output_value| {
                         let spend_value = if flags.spends_enabled {
                             spend_value
@@ -487,9 +487,9 @@ pub mod testing {
         n_actions: usize,
         flags: Flags,
     ) -> impl Strategy<Value = (ValueSum, Action<Signature<SpendAuth>>)> {
-        arb_nonnegative_note_value(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
+        arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
             move |spend_value| {
-                arb_nonnegative_note_value(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
+                arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
                     move |output_value| {
                         let spend_value = if flags.spends_enabled {
                             spend_value
