@@ -425,20 +425,22 @@ pub mod testing {
         n_actions: usize,
         flags: Flags,
     ) -> impl Strategy<Value = (ValueSum, Action<()>)> {
-        arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
+        let spend_value_gen = if flags.spends_enabled {
+            Strategy::boxed(arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64))
+        } else {
+            Strategy::boxed(Just(NoteValue::zero()))
+        };
+
+        spend_value_gen.prop_flat_map(
             move |spend_value| {
-                arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
+                let output_value_gen = if flags.outputs_enabled {
+                    Strategy::boxed(arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64))
+                } else {
+                    Strategy::boxed(Just(NoteValue::zero()))
+                };
+
+                output_value_gen.prop_flat_map(
                     move |output_value| {
-                        let spend_value = if flags.spends_enabled {
-                            spend_value
-                        } else {
-                            NoteValue::zero()
-                        };
-                        let output_value = if flags.outputs_enabled {
-                            output_value
-                        } else {
-                            NoteValue::zero()
-                        };
                         arb_unauthorized_action(spend_value, output_value)
                             .prop_map(move |a| ((spend_value - output_value).unwrap(), a))
                     },
@@ -487,20 +489,22 @@ pub mod testing {
         n_actions: usize,
         flags: Flags,
     ) -> impl Strategy<Value = (ValueSum, Action<Signature<SpendAuth>>)> {
-        arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
+        let spend_value_gen = if flags.spends_enabled {
+            Strategy::boxed(arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64))
+        } else {
+            Strategy::boxed(Just(NoteValue::zero()))
+        };
+
+        spend_value_gen.prop_flat_map(
             move |spend_value| {
-                arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
+                let output_value_gen = if flags.outputs_enabled {
+                    Strategy::boxed(arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64))
+                } else {
+                    Strategy::boxed(Just(NoteValue::zero()))
+                };
+
+                output_value_gen.prop_flat_map(
                     move |output_value| {
-                        let spend_value = if flags.spends_enabled {
-                            spend_value
-                        } else {
-                            NoteValue::zero()
-                        };
-                        let output_value = if flags.outputs_enabled {
-                            output_value
-                        } else {
-                            NoteValue::zero()
-                        };
                         arb_action(spend_value, output_value)
                             .prop_map(move |a| ((spend_value - output_value).unwrap(), a))
                     },
