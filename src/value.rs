@@ -31,6 +31,15 @@ use subtle::CtOption;
 
 use crate::primitives::redpallas::{self, Binding};
 
+use std::ops::RangeInclusive;
+
+/// The valid range of the scalar multiplication used in ValueCommit^Orchard.
+///
+/// Defined in a note in [Zcash Protocol Spec § 4.17.4: Action Statement (Orchard)][actionstatement].
+///
+/// [actionstatement]: https://zips.z.cash/protocol/nu5.pdf#actionstatement
+pub const VALUE_SUM_RANGE: RangeInclusive<i128> = -(u64::MAX as i128)..=u64::MAX as i128;
+
 /// A value operation overflowed.
 #[derive(Debug)]
 pub struct OverflowError;
@@ -74,7 +83,7 @@ impl Sub for NoteValue {
         let a = self.0 as i128;
         let b = rhs.0 as i128;
         a.checked_sub(b)
-            .filter(|v| v > &(-(std::u64::MAX as i128)) && v < &(std::u64::MAX as i128))
+            .filter(|v| VALUE_SUM_RANGE.contains(v))
             .map(ValueSum)
     }
 }
@@ -105,7 +114,7 @@ impl Add for ValueSum {
     fn add(self, rhs: Self) -> Self::Output {
         self.0
             .checked_add(rhs.0)
-            .filter(|v| v > &(-(std::u64::MAX as i128)) && v < &(std::u64::MAX as i128))
+            .filter(|v| VALUE_SUM_RANGE.contains(v))
             .map(ValueSum)
     }
 }
@@ -253,9 +262,8 @@ pub mod testing {
 
     use super::{NoteValue, ValueCommitTrapdoor, ValueSum};
 
-    /// Zcash's maximum money amount. Used as a bound in proptests so we don't artifically
-    /// overflow `ValueSum`'s size.
-    pub const MAX_MONEY: i64 = 21_000_000 * 1_0000_0000;
+    /// Maximum note value.
+    pub const MAX_NOTE_VALUE: u64 = u64::MAX - 1;
 
     prop_compose! {
         /// Generate an arbitrary Pallas scalar.
@@ -283,7 +291,15 @@ pub mod testing {
 
     prop_compose! {
         /// Generate an arbitrary value in the range of valid nonnegative Zcash amounts.
-        pub fn arb_note_value()(value in 0u64..(MAX_MONEY as u64)) -> NoteValue {
+        pub fn arb_note_value()(value in 0u64..MAX_NOTE_VALUE) -> NoteValue {
+            NoteValue(value)
+        }
+    }
+
+    prop_compose! {
+        /// Generate an arbitrary value in the range of valid positive Zcash amounts
+        /// less than a specified value.
+        pub fn arb_nonnegative_note_value(max: u64)(value in 0u64..max) -> NoteValue {
             NoteValue(value)
         }
     }
@@ -302,10 +318,12 @@ mod tests {
     use proptest::prelude::*;
 
     use super::{
-        testing::{arb_trapdoor, arb_value_sum, MAX_MONEY},
+        testing::{arb_trapdoor, arb_value_sum},
         OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum,
     };
     use crate::primitives::redpallas;
+
+    const MAX_MONEY: i64 = 21_000_000 * 1_0000_0000;
 
     proptest! {
         #[test]

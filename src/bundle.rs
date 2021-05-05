@@ -26,7 +26,7 @@ pub struct Action<A> {
     rk: redpallas::VerificationKey<SpendAuth>,
     /// A commitment to the new note being created.
     cmx: ExtractedNoteCommitment,
-    /// The transmitted note ciphertext
+    /// The transmitted note ciphertext.
     encrypted_note: TransmittedNoteCiphertext,
     /// A commitment to the net value created or consumed by this action.
     cv_net: ValueCommitment,
@@ -356,6 +356,7 @@ pub struct BundleAuthorizingCommitment;
 pub mod testing {
     use nonempty::NonEmpty;
     use rand_7::{rngs::StdRng, SeedableRng};
+    use reddsa::orchard::SpendAuth;
 
     use proptest::collection::vec;
     use proptest::prelude::*;
@@ -371,9 +372,10 @@ pub mod testing {
             testing::{
                 arb_binding_signing_key, arb_spendauth_signing_key, arb_spendauth_verification_key,
             },
+            Signature,
         },
         value::{
-            testing::{arb_positive_note_value, MAX_MONEY},
+            testing::{arb_nonnegative_note_value, MAX_NOTE_VALUE},
             NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum,
         },
         Anchor,
@@ -391,14 +393,14 @@ pub mod testing {
 
     prop_compose! {
         /// Generate an action without authorization data.
-        pub fn arb_unauthorized_action(value: NoteValue)(
+        pub fn arb_unauthorized_action(spend_value: NoteValue, output_value: NoteValue)(
             nf in arb_nullifier(),
             rk in arb_spendauth_verification_key(),
-            note in arb_note(value),
+            note in arb_note(output_value),
         ) -> Action<()> {
             let cmx = ExtractedNoteCommitment::from(note.commitment());
             let cv_net = ValueCommitment::derive(
-                (note.value() - NoteValue::zero()).unwrap(),
+                (spend_value - output_value).unwrap(),
                 ValueCommitTrapdoor::zero()
             );
             // FIXME: make a real one from the note.
@@ -418,18 +420,34 @@ pub mod testing {
         }
     }
 
+    /// Generate an unauthorized action having spend and output values less than MAX_NOTE_VALUE / n_actions.
+    pub fn arb_unauthorized_action_n(
+        n_actions: usize,
+    ) -> impl Strategy<Value = (ValueSum, Action<()>)> {
+        arb_nonnegative_note_value(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
+            move |spend_value| {
+                arb_nonnegative_note_value(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
+                    move |output_value| {
+                        arb_unauthorized_action(spend_value, output_value)
+                            .prop_map(move |a| ((spend_value - output_value).unwrap(), a))
+                    },
+                )
+            },
+        )
+    }
+
     prop_compose! {
         /// Generate an action with invalid (random) authorization data.
-        pub fn arb_action(value: NoteValue)(
+        pub fn arb_action(spend_value: NoteValue, output_value: NoteValue)(
             nf in arb_nullifier(),
             sk in arb_spendauth_signing_key(),
-            note in arb_note(value),
+            note in arb_note(output_value),
             rng_seed in prop::array::uniform32(prop::num::u8::ANY),
             fake_sighash in prop::array::uniform32(prop::num::u8::ANY),
-        ) -> Action<redpallas::Signature<reddsa::orchard::SpendAuth>> {
+        ) -> Action<Signature<SpendAuth>> {
             let cmx = ExtractedNoteCommitment::from(note.commitment());
             let cv_net = ValueCommitment::derive(
-                (note.value() - NoteValue::zero()).unwrap(),
+                (spend_value - output_value).unwrap(),
                 ValueCommitTrapdoor::zero()
             );
 
@@ -453,6 +471,22 @@ pub mod testing {
         }
     }
 
+    /// Generate an authorized action having spend and output values less than MAX_NOTE_VALUE / n_actions.
+    pub fn arb_action_n(
+        n_actions: usize,
+    ) -> impl Strategy<Value = (ValueSum, Action<Signature<SpendAuth>>)> {
+        arb_nonnegative_note_value(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
+            move |spend_value| {
+                arb_nonnegative_note_value(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
+                    move |output_value| {
+                        arb_action(spend_value, output_value)
+                            .prop_map(move |a| ((spend_value - output_value).unwrap(), a))
+                    },
+                )
+            },
+        )
+    }
+
     prop_compose! {
         /// Create an arbitrary set of flags.
         pub fn arb_flags()(spends_enabled in prop::bool::ANY, outputs_enabled in prop::bool::ANY) -> Flags {
@@ -464,22 +498,19 @@ pub mod testing {
         /// Generate an arbitrary unauthorized bundle. This bundle does not
         /// necessarily respect consensus rules; for that use
         /// [`crate::builder::testing::arb_bundle`]
-        pub fn arb_unauthorized_bundle()(
-            acts in vec(
-                arb_positive_note_value(MAX_MONEY as u64 / 10000).prop_flat_map(|v|
-                    arb_unauthorized_action(v).prop_map(move |a| (v, a))
-                ),
-                1..10
-            ),
+        pub fn arb_unauthorized_bundle()
+        ( n_actions in 1usize..100 )
+        (
+            acts in vec(arb_unauthorized_action_n(n_actions), n_actions),
             flags in arb_flags(),
             anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor)
         ) -> Bundle<Unauthorized, ValueSum> {
-            let (note_values, actions): (Vec<NoteValue>, Vec<Action<_>>) = acts.into_iter().unzip();
+            let (balances, actions): (Vec<ValueSum>, Vec<Action<_>>) = acts.into_iter().unzip();
 
             Bundle::from_parts(
                 NonEmpty::from_vec(actions).unwrap(),
                 flags,
-                note_values.into_iter().map(ValueSum::from).sum::<Result<ValueSum, _>>().unwrap(),
+                balances.into_iter().sum::<Result<ValueSum, _>>().unwrap(),
                 anchor,
                 Unauthorized
             )
@@ -490,13 +521,10 @@ pub mod testing {
         /// Generate an arbitrary bundle with fake authorization data. This bundle does not
         /// necessarily respect consensus rules; for that use
         /// [`crate::builder::testing::arb_bundle`]
-        pub fn arb_bundle()(
-            acts in vec(
-                arb_positive_note_value(MAX_MONEY as u64 / 10000).prop_flat_map(|v|
-                    arb_action(v).prop_map(move |a| (v, a))
-                ),
-                1..10
-            ),
+        pub fn arb_bundle()
+        ( n_actions in 1usize..100 )
+        (
+            acts in vec(arb_action_n(n_actions), n_actions),
             flags in arb_flags(),
             anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor),
             sk in arb_binding_signing_key(),
@@ -504,13 +532,13 @@ pub mod testing {
             fake_proof in vec(prop::num::u8::ANY, 1973),
             fake_sighash in prop::array::uniform32(prop::num::u8::ANY),
         ) -> Bundle<Authorized, ValueSum> {
-            let (note_values, actions): (Vec<NoteValue>, Vec<Action<_>>) = acts.into_iter().unzip();
+            let (balances, actions): (Vec<ValueSum>, Vec<Action<_>>) = acts.into_iter().unzip();
             let rng = StdRng::from_seed(rng_seed);
 
             Bundle::from_parts(
                 NonEmpty::from_vec(actions).unwrap(),
                 flags,
-                note_values.into_iter().map(ValueSum::from).sum::<Result<ValueSum, _>>().unwrap(),
+                balances.into_iter().sum::<Result<ValueSum, _>>().unwrap(),
                 anchor,
                 Authorized {
                     proof: Proof(fake_proof),

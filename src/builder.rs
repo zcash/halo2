@@ -177,7 +177,7 @@ pub struct Builder {
 }
 
 impl Builder {
-    /// Construct a new empty builder for an Orchard bundle.
+    /// Constructs a new empty builder for an Orchard bundle.
     pub fn new(flags: Flags, anchor: Anchor) -> Self {
         Builder {
             spends: vec![],
@@ -291,6 +291,10 @@ impl Builder {
             })
             .ok_or(OverflowError)?;
 
+        let result_value_balance: V = i64::try_from(value_balance)
+            .map_err(Error::ValueSum)
+            .and_then(|i| V::try_from(i).map_err(|_| Error::ValueSum(value::OverflowError)))?;
+
         // Compute the transaction binding signing key.
         let bsk = pre_actions
             .iter()
@@ -315,14 +319,10 @@ impl Builder {
             .collect();
         let proof = Proof::create(pk, &circuits, &instances)?;
 
-        let value_balance: V = i64::try_from(value_balance)
-            .map_err(Error::ValueSum)
-            .and_then(|i| V::try_from(i).map_err(|_| Error::ValueSum(value::OverflowError)))?;
-
         Ok(Bundle::from_parts(
             NonEmpty::from_vec(actions).unwrap(),
             flags,
-            value_balance,
+            result_value_balance,
             anchor,
             Unauthorized { proof, bsk },
         ))
@@ -477,7 +477,7 @@ pub mod testing {
         note::testing::arb_note,
         tree::{Anchor, MerklePath},
         value::{
-            testing::{arb_positive_note_value, MAX_MONEY},
+            testing::{arb_positive_note_value, MAX_NOTE_VALUE},
             NoteValue,
         },
         Address, Note,
@@ -534,15 +534,24 @@ pub mod testing {
 
     prop_compose! {
         /// Produce a random valid Orchard bundle.
-        fn arb_bundle_inputs(sk: SpendingKey)(
+        fn arb_bundle_inputs(sk: SpendingKey)
+        (
+            n_notes in 1..30,
+            n_recipients in 1..30,
+        )
+        (
             anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor),
-            // generate note values that we're certain won't exceed MAX_MONEY in total
-            notes in vec(arb_positive_note_value(MAX_MONEY as u64 / 10000).prop_flat_map(arb_note), 1..30),
+            // generate note values that we're certain won't exceed MAX_NOTE_VALUE in total
+            notes in vec(
+                arb_positive_note_value(MAX_NOTE_VALUE / n_notes as u64).prop_flat_map(arb_note),
+                n_notes as usize
+            ),
             recipient_amounts in vec(
-                arb_address().prop_flat_map(
-                    |a| arb_positive_note_value(MAX_MONEY as u64 / 10000).prop_map(move |v| (a.clone(), v))
-                ),
-                1..30
+                arb_address().prop_flat_map(move |a| {
+                    arb_positive_note_value(MAX_NOTE_VALUE / n_recipients as u64)
+                        .prop_map(move |v| (a.clone(), v))
+                }),
+                n_recipients as usize
             ),
             rng_seed in prop::array::uniform32(prop::num::u8::ANY)
         ) -> ArbitraryBundleInputs<StdRng, rand_7::rngs::StdRng> {
