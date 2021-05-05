@@ -7,11 +7,10 @@ use halo2::{
 use pasta_curves::{pallas, vesta};
 
 use crate::{
-    note::ExtractedNoteCommitment,
+    note::{nullifier::Nullifier, ExtractedNoteCommitment},
     primitives::redpallas::{SpendAuth, VerificationKey},
     tree::Anchor,
     value::ValueCommitment,
-    Nullifier,
 };
 
 pub(crate) mod gadget;
@@ -118,7 +117,7 @@ impl Instance {
 ///
 /// [`Bundle`]: crate::bundle::Bundle
 #[derive(Debug)]
-pub struct Proof(pub(crate) Vec<u8>);
+pub struct Proof(Vec<u8>);
 
 impl AsRef<[u8]> for Proof {
     fn as_ref(&self) -> &[u8] {

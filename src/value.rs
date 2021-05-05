@@ -139,12 +139,6 @@ impl TryFrom<ValueSum> for i64 {
     }
 }
 
-impl From<NoteValue> for ValueSum {
-    fn from(v: NoteValue) -> Self {
-        ValueSum(v.0 as i128)
-    }
-}
-
 /// The blinding factor for a [`ValueCommitment`].
 #[derive(Clone, Debug)]
 pub struct ValueCommitTrapdoor(pallas::Scalar);

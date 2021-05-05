@@ -429,8 +429,16 @@ pub mod testing {
             move |spend_value| {
                 arb_nonnegative_note_value(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
                     move |output_value| {
-                        let spend_value = if flags.spends_enabled { spend_value } else { NoteValue::zero() };
-                        let output_value = if flags.outputs_enabled { output_value } else { NoteValue::zero() };
+                        let spend_value = if flags.spends_enabled {
+                            spend_value
+                        } else {
+                            NoteValue::zero()
+                        };
+                        let output_value = if flags.outputs_enabled {
+                            output_value
+                        } else {
+                            NoteValue::zero()
+                        };
                         arb_unauthorized_action(spend_value, output_value)
                             .prop_map(move |a| ((spend_value - output_value).unwrap(), a))
                     },
@@ -483,8 +491,16 @@ pub mod testing {
             move |spend_value| {
                 arb_nonnegative_note_value(MAX_NOTE_VALUE / n_actions as u64).prop_flat_map(
                     move |output_value| {
-                        let spend_value = if flags.spends_enabled { spend_value } else { NoteValue::zero() };
-                        let output_value = if flags.outputs_enabled { output_value } else { NoteValue::zero() };
+                        let spend_value = if flags.spends_enabled {
+                            spend_value
+                        } else {
+                            NoteValue::zero()
+                        };
+                        let output_value = if flags.outputs_enabled {
+                            output_value
+                        } else {
+                            NoteValue::zero()
+                        };
                         arb_action(spend_value, output_value)
                             .prop_map(move |a| ((spend_value - output_value).unwrap(), a))
                     },
@@ -505,7 +521,7 @@ pub mod testing {
         /// necessarily respect consensus rules; for that use
         /// [`crate::builder::testing::arb_bundle`]
         pub fn arb_unauthorized_bundle()
-        ( 
+        (
             n_actions in 1usize..100,
             flags in arb_flags(),
         )
@@ -531,7 +547,7 @@ pub mod testing {
         /// necessarily respect consensus rules; for that use
         /// [`crate::builder::testing::arb_bundle`]
         pub fn arb_bundle()
-        ( 
+        (
             n_actions in 1usize..100,
             flags in arb_flags(),
         )
@@ -553,7 +569,7 @@ pub mod testing {
                 balances.into_iter().sum::<Result<ValueSum, _>>().unwrap(),
                 anchor,
                 Authorized {
-                    proof: Proof(fake_proof),
+                    proof: Proof::new(fake_proof),
                     binding_signature: sk.sign(rng, &fake_sighash),
                 }
             )

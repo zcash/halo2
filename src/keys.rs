@@ -385,9 +385,9 @@ pub mod testing {
     prop_compose! {
         /// Generate a uniformly distributed fake note commitment value.
         pub fn arb_spending_key()(
-            key in prop::array::uniform32(prop::num::u8::ANY).
-                prop_map(SpendingKey::from_bytes).
-                prop_filter(
+            key in prop::array::uniform32(prop::num::u8::ANY)
+                .prop_map(SpendingKey::from_bytes)
+                .prop_filter(
                     "Values must correspond to valid Orchard spending keys.",
                     |opt| bool::from(opt.is_some())
                 )

@@ -9,15 +9,16 @@ use pasta_curves::pallas;
 use rand::RngCore;
 
 use crate::{
+    address::Address,
     bundle::{Action, Authorization, Authorized, Bundle, Flags},
     circuit::{Circuit, Proof, ProvingKey},
     keys::{
         FullViewingKey, OutgoingViewingKey, SpendAuthorizingKey, SpendValidatingKey, SpendingKey,
     },
+    note::{Note, TransmittedNoteCiphertext},
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::{Anchor, MerklePath},
     value::{self, NoteValue, OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum},
-    Address, Note, TransmittedNoteCiphertext,
 };
 
 const MIN_ACTIONS: usize = 2;
