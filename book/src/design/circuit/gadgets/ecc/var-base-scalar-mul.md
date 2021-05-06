@@ -82,28 +82,94 @@ So the last three iterations of the loop ($i = 2..0$) need to use [complete addi
     }
     return (k_0 = 0) ? (Acc + (-T)) : Acc  // complete addition
 
-## Constraint program for optimized double-and-add
-For each round $i$ of incomplete addition, we are computing $A_{i+1} = A_i + P_i + A_i$, where $A = (x_a, y_a)$ is the accumulated sum and $P = (x_p, y_p)$ is the point we are adding.
-
-We compute $\lambda_{1, i}, \lambda_{2, i}$:
-- $\lambda_{1, i} = \frac{y_{A,i} - y_{P, i}}{x_{A,i} - x_{P, i}},$
-- $\lambda_{2, i} = \frac{y_{A, i} + y_{A, i+1}}{x_{A,i} - x_{A, i+1}}$
-
-and similarly for $\lambda_{1, i+1}, \lambda_{2, i+1}$.
-
-We witness $x_{A,i}, x_{P,i}, x_{A, i+1},$ and $\lambda_{1, i}, \lambda_{2, i}, \lambda_{1, i+1}, \lambda_{2, i+1},$ and specify the following constraints on them (copied from ["Faster variable-base scalar multiplication in zk-SNARK circuits"](https://github.com/zcash/zcash/issues/3924), with some variable name changes):
-
-$$
-\lambda_{2,i}^2 - (x_{A,i+1} + (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}) + x_{A,i}) = 0,
-$$
+## Constraint program for optimized double-and-add (incomplete addition)
+Define a running sum $\mathbf{z_j} = \sum_{i=j}^{n} (\mathbf{k}_{i} \cdot 2^{i-j})$, where $n = 254$ and:
 
 $$
 \begin{aligned}
-2 \cdot &\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - \big( \\
-    &\begin{aligned}
-        (\lambda_{1,i} + \lambda_{2,i}) &\cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i})) + \\
-        (\lambda_{1,i+1} + \lambda_{2,i+1}) &\cdot (x_{A,i+1} - (\lambda_{1,i+1}^2 - x_{A,i+1} - x_{P,i+1})) \\
-    \end{aligned} \\
-\big) &= 0.
+    &\mathbf{z}_{n+1} = 0,\\
+    &\mathbf{z}_{n} = \mathbf{k}_{n}, \hspace{2em}\text{(most significant bit)}\\
+	&\mathbf{z}_0 = k.\\
 \end{aligned}
+$$
+
+Initialize $A_{254} = [2] T$
+
+
+for $i$ from $254$ down to $4$:
+
+$$
+\begin{aligned}
+    &(\mathbf{k}_i)(\mathbf{k}_i-1) = 0\\
+    &\mathbf{z}_{i} = 2\mathbf{z}_{i+1} + \mathbf{k}_{i}\\
+    & x_{U,i} = x_T\\
+    & y_{U,i} = (2 \mathbf{k}_i - 1) \cdot y_T  \hspace{2em}\text{(conditionally negate)}\\
+    & \lambda_{1,i} \cdot (x_{A,i} - x_{U,i}) = y_{A,i} - y_{U,i}\\
+    & \lambda_{1,i}^2 = x_{R,i} + x_{A,i} + x_{U,i}\\
+    & (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) = 2 y_{\mathsf{A},i}\\
+    & \lambda_{2,i}^2 = x_{A,i-1} + x_{R,i} + x_{A,i}\\
+    & \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A,i-1}\\
+
+\end{aligned}
+$$
+
+After substitution of $y_{P,i}$, $x_{R,i}$, $y_{A,i}$, and $y_{A,i+1}$, this becomes:
+
+Initialize $A_{254} = [2] T$
+
+
+for $i$ from $254$ down to $4$:
+
+$$
+\begin{aligned}
+    &// \text{let } \mathbf{k}_i = \mathbf{z}_{i+1} - 2\mathbf{z}_i\\
+    &// \text{let } x_{R,i} = (\lambda_{1,i}^2 - x_{A,i} - x_T)\\
+    &// \text{let } y_{A,i} = \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2}\\
+    &(\mathbf{z}_{i+1} - 2\mathbf{z}_i)(\mathbf{z}_{i+1} - 2\mathbf{z}_i - 1) = 0\\
+    &\lambda_{1,i} \cdot (x_{A,i} - x_T) = \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2} - (2 \cdot (\mathbf{z}_{i+1} - 2\mathbf{z}_i) - 1) \cdot y_T\\
+    &\lambda_{2,i}^2 = x_{A,i-1} + (\lambda_{1,i}^2 - x_{A,i} - x_T) + x_{A,i}\\
+    &\text{if } i > 3 \text{ then } 2 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) =\\
+        &\hspace{2em}(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T)) +\\
+        &\hspace{2em}(\lambda_{1,i-1} + \lambda_{2,i-1}) \cdot (x_{A,i-1} - (\lambda_{1,i-1}^2 - x_{A,i-1} - x_T))\\
+\end{aligned}
+$$
+
+$\lambda_{2,3} \cdot (x_{A,3} - x_{A,2}) = \frac{(\lambda_{1,3} + \lambda_{2,3}) \cdot (x_{A,3} - (\lambda_{1,3}^2 - x_{A,3} - x_T))\hspace{2em}}{2} + y_{A,2}$
+
+The bits $\mathbf{k}_{3 \dots 1}$ are used in double-and-add using [complete addition](./complete-add.md).
+
+If the least significant bit is set $\mathbf{k_0} = 1,$ we return the accumulator $A$. Else, if $\mathbf{k_0} = 0,$ we return $A - T$ (also using complete addition).
+
+Output $(x_{A,0}, y_{A,0})$
+
+### Circuit design
+We need six advice columns to witness $(x_T, y_T, \lambda_1, \lambda_2, x_{A,i}, \mathbf{z}_i)$. However, since $(x_T, y_T)$ are the same, we can perform two incomplete additions in a single row, reusing the same $(x_T, y_T)$. We split the scalar bits used in incomplete addition into $hi$ and $lo$ halves and process them in parallel:
+
+$$
+\begin{array}{|c|c|c|c|c|c|c|c|c|c|}
+\hline
+    x_T   &  y_T   &          z^{hi}           &    x_A^{hi}   &  \lambda_1^{hi}  &  \lambda_2^{hi}      &         z^{lo}        &  x_A^{lo}   &  \lambda_1^{lo}     &  \lambda_2^{lo}       \\\hline
+          &        &           0               &   2[T]_x      &                  &                      &   \mathbf{z}_{129}    & x_{A,129}   &                     &                       \\\hline
+    x_T   &  y_T   &    \mathbf{z}_{254}       &   x_{A,254}   & \lambda_{1,254}  & \lambda_{2,254}      &   \mathbf{z}_{128}    & x_{A,128}   & \lambda_{1,128}     & \lambda_{2,128}     \\\hline
+    x_T   &  y_T   &    \mathbf{z}_{253}       &   x_{A,253}   & \lambda_{1,253}  & \lambda_{2,253}      &   \mathbf{z}_{127}    & x_{A,127}   & \lambda_{1,127}     & \lambda_{2,127}       \\\hline
+   \vdots & \vdots &         \vdots            &    \vdots     &      \vdots      &      \vdots          &        \vdots         &  \vdots     &      \vdots         &      \vdots           \\\hline
+    x_T   &  y_T   &    \mathbf{z}_{130}       &   x_{A,130}   & \lambda_{1,130}  & \lambda_{2,130}      &   \mathbf{z}_4        & x_{A,4}     & \lambda_{1,4}       & \lambda_{2,4}         \\\hline
+    x_T   &  y_T   &    \mathbf{z}_{129}       &   x_{A,129}   & \lambda_{1,129}  & \lambda_{2,129}      &   \mathbf{z}_3        & x_{A,3}     & \lambda_{1,3}       & \lambda_{2,3}         \\\hline
+\end{array}
+$$
+
+For each $hi$ and $lo$ half, the following constraints are enforced:
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+2   & q_{ECC,i} \cdot (\mathbf{z}_{i+1} - 2\mathbf{z}_i - \mathbf{k}_i) = 0 \\\hline
+3 & q_{ECC,i} \cdot \mathbf{k}_i \cdot (\mathbf{k}_i - 1) = 0 \\\hline
+4 & q_{ECC,i} \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{P,i}\right) = 0 \\\hline
+4 & q_{ECC,i} \cdot \left((\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i})) - 2 y_{A,i}\right) = 0 \\\hline
+3 & q_{ECC,i} \cdot \left(\lambda_{2,i}^2 - x_{A,i+1} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}) - x_{A,i}\right) = 0 \\\hline
+3   & q_{ECC,i} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - y_{A,i} - y_{A,i+1}\right) = 0 \\\hline
+2   & q_{ECC,i} \cdot \left(x_{P,i} - x_{P,i-1}\right) = 0 \\\hline
+2   & q_{ECC,i} \cdot \left(y_{P,i} - y_{P,i-1}\right) = 0 \\\hline
+\end{array}
 $$
