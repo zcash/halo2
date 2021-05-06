@@ -58,49 +58,20 @@ pub const NUM_WINDOWS_SHORT: usize =
 /// scalar multiplication
 pub const NUM_COMPLETE_BITS: usize = 3;
 
-pub trait OrchardFixedBases {
-    fn name(&self) -> &[u8];
-}
-
 #[derive(Copy, Clone, Debug)]
 pub struct CommitIvkR<C: CurveAffine>(pub OrchardFixedBase<C>);
-impl<C: CurveAffine> OrchardFixedBases for CommitIvkR<C> {
-    fn name(&self) -> &[u8] {
-        b"CommitIvkR"
-    }
-}
 
 #[derive(Copy, Clone, Debug)]
 pub struct NoteCommitR<C: CurveAffine>(pub OrchardFixedBase<C>);
-impl<C: CurveAffine> OrchardFixedBases for NoteCommitR<C> {
-    fn name(&self) -> &[u8] {
-        b"NoteCommitR"
-    }
-}
 
 #[derive(Copy, Clone, Debug)]
 pub struct NullifierK<C: CurveAffine>(pub OrchardFixedBase<C>);
-impl<C: CurveAffine> OrchardFixedBases for NullifierK<C> {
-    fn name(&self) -> &[u8] {
-        b"NullifierK"
-    }
-}
 
 #[derive(Copy, Clone, Debug)]
 pub struct ValueCommitR<C: CurveAffine>(pub OrchardFixedBase<C>);
-impl<C: CurveAffine> OrchardFixedBases for ValueCommitR<C> {
-    fn name(&self) -> &[u8] {
-        b"ValueCommitR"
-    }
-}
 
 #[derive(Copy, Clone, Debug)]
 pub struct ValueCommitV<C: CurveAffine>(pub OrchardFixedBase<C>);
-impl<C: CurveAffine> OrchardFixedBases for ValueCommitV<C> {
-    fn name(&self) -> &[u8] {
-        b"ValueCommitV"
-    }
-}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct OrchardFixedBase<C: CurveAffine>(C);
