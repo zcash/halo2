@@ -7,11 +7,10 @@ use halo2::{
 use pasta_curves::{pallas, vesta};
 
 use crate::{
-    note::ExtractedNoteCommitment,
+    note::{nullifier::Nullifier, ExtractedNoteCommitment},
     primitives::redpallas::{SpendAuth, VerificationKey},
     tree::Anchor,
     value::ValueCommitment,
-    Nullifier,
 };
 
 pub(crate) mod gadget;
@@ -120,6 +119,12 @@ impl Instance {
 #[derive(Debug)]
 pub struct Proof(Vec<u8>);
 
+impl AsRef<[u8]> for Proof {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 impl Proof {
     /// Creates a proof for the given circuits and instances.
     pub fn create(
@@ -156,6 +161,11 @@ impl Proof {
             Err(plonk::Error::ConstraintSystemFailure)
         }
     }
+
+    /// Constructs a new Proof value.
+    pub fn new(bytes: Vec<u8>) -> Self {
+        Proof(bytes)
+    }
 }
 
 #[cfg(test)]
@@ -174,6 +184,7 @@ mod tests {
         value::{ValueCommitTrapdoor, ValueCommitment},
     };
 
+    // TODO: recast as a proptest
     #[test]
     fn round_trip() {
         let mut rng = OsRng;
@@ -195,7 +206,7 @@ mod tests {
                 (
                     Circuit {},
                     Instance {
-                        anchor: Anchor,
+                        anchor: Anchor([0; 32]),
                         cv_net,
                         nf_old,
                         rk,

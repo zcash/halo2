@@ -1,3 +1,4 @@
+//! Data structures used for note construction.
 use group::GroupEncoding;
 use pasta_curves::pallas;
 use rand::RngCore;
@@ -9,10 +10,10 @@ use crate::{
     Address,
 };
 
-mod commitment;
+pub(crate) mod commitment;
 pub use self::commitment::{ExtractedNoteCommitment, NoteCommitment};
 
-mod nullifier;
+pub(crate) mod nullifier;
 pub use self::nullifier::Nullifier;
 
 /// The ZIP 212 seed randomness for a note.
@@ -135,4 +136,47 @@ impl Note {
 
 /// An encrypted note.
 #[derive(Debug)]
-pub struct EncryptedNote;
+pub struct TransmittedNoteCiphertext {
+    /// The serialization of the ephemeral public key
+    pub epk_bytes: [u8; 32],
+    /// The encrypted note ciphertext
+    pub enc_ciphertext: [u8; 580],
+    /// An encrypted value that allows the holder of the outgoing cipher
+    /// key for the note to recover the note plaintext.
+    pub out_ciphertext: [u8; 80],
+}
+
+/// Generators for property testing.
+#[cfg(any(test, feature = "test-dependencies"))]
+pub mod testing {
+    use proptest::prelude::*;
+
+    use crate::{
+        address::testing::arb_address, note::nullifier::testing::arb_nullifier, value::NoteValue,
+    };
+
+    use super::{Note, RandomSeed};
+
+    prop_compose! {
+        /// Generate an arbitrary random seed
+        pub(crate) fn arb_rseed()(elems in prop::array::uniform32(prop::num::u8::ANY)) -> RandomSeed {
+            RandomSeed(elems)
+        }
+    }
+
+    prop_compose! {
+        /// Generate an action without authorization data.
+        pub fn arb_note(value: NoteValue)(
+            recipient in arb_address(),
+            rho in arb_nullifier(),
+            rseed in arb_rseed(),
+        ) -> Note {
+            Note {
+                recipient,
+                value,
+                rho,
+                rseed,
+            }
+        }
+    }
+}

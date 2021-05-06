@@ -17,16 +17,19 @@
 #![deny(unsafe_code)]
 
 mod address;
-mod builder;
+pub mod builder;
 pub mod bundle;
 mod circuit;
 mod constants;
 pub mod keys;
-mod note;
+pub mod note;
 pub mod primitives;
 mod spec;
 mod tree;
 pub mod value;
 
 pub use address::Address;
-pub use note::{EncryptedNote, Note, NoteCommitment, Nullifier};
+pub use bundle::Bundle;
+pub use circuit::Proof;
+pub use note::Note;
+pub use tree::Anchor;

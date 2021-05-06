@@ -15,7 +15,7 @@ use crate::{
 /// let sk = SpendingKey::from_bytes([7; 32]).unwrap();
 /// let address = FullViewingKey::from(&sk).default_address();
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Address {
     d: Diversifier,
     pk_d: DiversifiedTransmissionKey,
@@ -36,5 +36,23 @@ impl Address {
 
     pub(crate) fn pk_d(&self) -> &DiversifiedTransmissionKey {
         &self.pk_d
+    }
+}
+
+/// Generators for property testing.
+#[cfg(any(test, feature = "test-dependencies"))]
+pub mod testing {
+    use proptest::prelude::*;
+
+    use crate::keys::{testing::arb_spending_key, FullViewingKey};
+
+    use super::Address;
+
+    prop_compose! {
+        /// Generates an arbitrary payment address.
+        pub(crate) fn arb_address()(sk in arb_spending_key()) -> Address {
+            let fvk = FullViewingKey::from(&sk);
+            fvk.default_address()
+        }
     }
 }

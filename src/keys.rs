@@ -25,7 +25,7 @@ use crate::{
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SpendingKey([u8; 32]);
 
 impl SpendingKey {
@@ -109,7 +109,7 @@ impl From<&SpendingKey> for SpendAuthorizingKey {
 /// $\mathsf{ak}$ but stored here as a RedPallas verification key.
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SpendValidatingKey(redpallas::VerificationKey<SpendAuth>);
 
 impl From<&SpendAuthorizingKey> for SpendValidatingKey {
@@ -138,7 +138,7 @@ impl SpendValidatingKey {
 /// [`Nullifier`]: crate::note::Nullifier
 /// [`Note`]: crate::note::Note
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct NullifierDerivingKey(pallas::Base);
 
 impl From<&SpendingKey> for NullifierDerivingKey {
@@ -158,7 +158,7 @@ impl NullifierDerivingKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct CommitIvkRandomness(pallas::Scalar);
 
 impl From<&SpendingKey> for CommitIvkRandomness {
@@ -175,7 +175,7 @@ impl From<&SpendingKey> for CommitIvkRandomness {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FullViewingKey {
     ak: SpendValidatingKey,
     nk: NullifierDerivingKey,
@@ -287,7 +287,7 @@ impl DiversifierKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Diversifier([u8; 11]);
 
 impl Diversifier {
@@ -343,7 +343,7 @@ impl IncomingViewingKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OutgoingViewingKey([u8; 32]);
 
 impl From<&FullViewingKey> for OutgoingViewingKey {
@@ -357,7 +357,7 @@ impl From<&FullViewingKey> for OutgoingViewingKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct DiversifiedTransmissionKey(pallas::Point);
 
 impl DiversifiedTransmissionKey {
@@ -372,5 +372,27 @@ impl DiversifiedTransmissionKey {
     /// $repr_P(self)$
     pub(crate) fn to_bytes(&self) -> [u8; 32] {
         self.0.to_bytes()
+    }
+}
+
+/// Generators for property testing.
+#[cfg(any(test, feature = "test-dependencies"))]
+pub mod testing {
+    use proptest::prelude::*;
+
+    use super::SpendingKey;
+
+    prop_compose! {
+        /// Generate a uniformly distributed fake note commitment value.
+        pub fn arb_spending_key()(
+            key in prop::array::uniform32(prop::num::u8::ANY)
+                .prop_map(SpendingKey::from_bytes)
+                .prop_filter(
+                    "Values must correspond to valid Orchard spending keys.",
+                    |opt| bool::from(opt.is_some())
+                )
+        ) -> SpendingKey {
+            key.unwrap()
+        }
     }
 }

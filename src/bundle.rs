@@ -4,10 +4,10 @@ use nonempty::NonEmpty;
 
 use crate::{
     circuit::{Instance, Proof},
-    note::{EncryptedNote, ExtractedNoteCommitment, Nullifier},
+    note::{ExtractedNoteCommitment, Nullifier, TransmittedNoteCiphertext},
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::Anchor,
-    value::{ValueCommitment, ValueSum},
+    value::ValueCommitment,
 };
 
 /// An action applied to the global ledger.
@@ -19,19 +19,19 @@ use crate::{
 /// Internally, this may both consume a note and create a note, or it may do only one of
 /// the two. TODO: Determine which is more efficient (circuit size vs bundle size).
 #[derive(Debug)]
-pub struct Action<T> {
+pub struct Action<A> {
     /// The nullifier of the note being spent.
     nf: Nullifier,
     /// The randomized verification key for the note being spent.
     rk: redpallas::VerificationKey<SpendAuth>,
     /// A commitment to the new note being created.
     cmx: ExtractedNoteCommitment,
-    /// The encrypted output note.
-    encrypted_note: EncryptedNote,
+    /// The transmitted note ciphertext.
+    encrypted_note: TransmittedNoteCiphertext,
     /// A commitment to the net value created or consumed by this action.
     cv_net: ValueCommitment,
     /// The authorization for this action.
-    authorization: T,
+    authorization: A,
 }
 
 impl<T> Action<T> {
@@ -40,7 +40,7 @@ impl<T> Action<T> {
         nf: Nullifier,
         rk: redpallas::VerificationKey<SpendAuth>,
         cmx: ExtractedNoteCommitment,
-        encrypted_note: EncryptedNote,
+        encrypted_note: TransmittedNoteCiphertext,
         cv_net: ValueCommitment,
         authorization: T,
     ) -> Self {
@@ -70,7 +70,7 @@ impl<T> Action<T> {
     }
 
     /// Returns the encrypted note ciphertext.
-    pub fn encrypted_note(&self) -> &EncryptedNote {
+    pub fn encrypted_note(&self) -> &TransmittedNoteCiphertext {
         &self.encrypted_note
     }
 
@@ -174,7 +174,7 @@ pub trait Authorization {
 
 /// A bundle of actions to be applied to the ledger.
 #[derive(Debug)]
-pub struct Bundle<T: Authorization> {
+pub struct Bundle<T: Authorization, V> {
     /// The list of actions that make up this bundle.
     actions: NonEmpty<Action<T::SpendAuth>>,
     /// Orchard-specific transaction-level flags for this bundle.
@@ -182,19 +182,19 @@ pub struct Bundle<T: Authorization> {
     /// The net value moved out of the Orchard shielded pool.
     ///
     /// This is the sum of Orchard spends minus the sum of Orchard outputs.
-    value_balance: ValueSum,
+    value_balance: V,
     /// The root of the Orchard commitment tree that this bundle commits to.
     anchor: Anchor,
     /// The authorization for this bundle.
     authorization: T,
 }
 
-impl<T: Authorization> Bundle<T> {
+impl<T: Authorization, V> Bundle<T, V> {
     /// Constructs a `Bundle` from its constituent parts.
     pub fn from_parts(
         actions: NonEmpty<Action<T::SpendAuth>>,
         flags: Flags,
-        value_balance: ValueSum,
+        value_balance: V,
         anchor: Anchor,
         authorization: T,
     ) -> Self {
@@ -220,7 +220,7 @@ impl<T: Authorization> Bundle<T> {
     /// Returns the net value moved into or out of the Orchard shielded pool.
     ///
     /// This is the sum of Orchard spends minus the sum Orchard outputs.
-    pub fn value_balance(&self) -> &ValueSum {
+    pub fn value_balance(&self) -> &V {
         &self.value_balance
     }
 
@@ -242,13 +242,28 @@ impl<T: Authorization> Bundle<T> {
         todo!()
     }
 
+    /// Construct a new bundle by applying a transformation that might fail
+    /// to the value balance.
+    pub fn try_map_value_balance<V0, E, F: FnOnce(V) -> Result<V0, E>>(
+        self,
+        f: F,
+    ) -> Result<Bundle<T, V0>, E> {
+        Ok(Bundle {
+            actions: self.actions,
+            flags: self.flags,
+            value_balance: f(self.value_balance)?,
+            anchor: self.anchor,
+            authorization: self.authorization,
+        })
+    }
+
     /// Transitions this bundle from one authorization state to another.
     pub fn authorize<R, U: Authorization>(
         self,
         context: &mut R,
         mut spend_auth: impl FnMut(&mut R, &T, T::SpendAuth) -> U::SpendAuth,
         step: impl FnOnce(&mut R, T) -> U,
-    ) -> Bundle<U> {
+    ) -> Bundle<U, V> {
         let authorization = self.authorization;
         Bundle {
             actions: self
@@ -267,7 +282,7 @@ impl<T: Authorization> Bundle<T> {
         context: &mut R,
         mut spend_auth: impl FnMut(&mut R, &T, T::SpendAuth) -> Result<U::SpendAuth, E>,
         step: impl FnOnce(&mut R, T) -> Result<U, E>,
-    ) -> Result<Bundle<U>, E> {
+    ) -> Result<Bundle<U, V>, E> {
         let authorization = self.authorization;
         let new_actions = self
             .actions
@@ -304,9 +319,19 @@ impl Authorized {
             binding_signature,
         }
     }
+
+    /// Return the proof component of the authorizing data.
+    pub fn proof(&self) -> &Proof {
+        &self.proof
+    }
+
+    /// Return the binding signature.
+    pub fn binding_signature(&self) -> &redpallas::Signature<Binding> {
+        &self.binding_signature
+    }
 }
 
-impl Bundle<Authorized> {
+impl<V> Bundle<Authorized, V> {
     /// Computes a commitment to the authorizing data within for this bundle.
     ///
     /// This together with `Bundle::commitment` bind the entire bundle.
@@ -325,3 +350,224 @@ pub struct BundleCommitment;
 /// A commitment to the authorizing data within a bundle of actions.
 #[derive(Debug)]
 pub struct BundleAuthorizingCommitment;
+
+/// Generators for property testing.
+#[cfg(any(test, feature = "test-dependencies"))]
+pub mod testing {
+    use nonempty::NonEmpty;
+    use rand_7::{rngs::StdRng, SeedableRng};
+    use reddsa::orchard::SpendAuth;
+
+    use proptest::collection::vec;
+    use proptest::prelude::*;
+
+    use crate::{
+        circuit::Proof,
+        note::{
+            commitment::ExtractedNoteCommitment, nullifier::testing::arb_nullifier,
+            testing::arb_note, TransmittedNoteCiphertext,
+        },
+        primitives::redpallas::{
+            self,
+            testing::{
+                arb_binding_signing_key, arb_spendauth_signing_key, arb_spendauth_verification_key,
+            },
+        },
+        value::{
+            testing::arb_note_value_bounded, NoteValue, ValueCommitTrapdoor, ValueCommitment,
+            ValueSum, MAX_NOTE_VALUE,
+        },
+        Anchor,
+    };
+
+    use super::{Action, Authorization, Authorized, Bundle, Flags};
+
+    /// Marker for an unauthorized bundle with no proofs or signatures.
+    #[derive(Debug)]
+    pub struct Unauthorized;
+
+    impl Authorization for Unauthorized {
+        type SpendAuth = ();
+    }
+
+    prop_compose! {
+        /// Generate an action without authorization data.
+        pub fn arb_unauthorized_action(spend_value: NoteValue, output_value: NoteValue)(
+            nf in arb_nullifier(),
+            rk in arb_spendauth_verification_key(),
+            note in arb_note(output_value),
+        ) -> Action<()> {
+            let cmx = ExtractedNoteCommitment::from(note.commitment());
+            let cv_net = ValueCommitment::derive(
+                (spend_value - output_value).unwrap(),
+                ValueCommitTrapdoor::zero()
+            );
+            // FIXME: make a real one from the note.
+            let encrypted_note = TransmittedNoteCiphertext {
+                epk_bytes: [0u8; 32],
+                enc_ciphertext: [0u8; 580],
+                out_ciphertext: [0u8; 80]
+            };
+            Action {
+                nf,
+                rk,
+                cmx,
+                encrypted_note,
+                cv_net,
+                authorization: ()
+            }
+        }
+    }
+
+    /// Generate an unauthorized action having spend and output values less than MAX_NOTE_VALUE / n_actions.
+    pub fn arb_unauthorized_action_n(
+        n_actions: usize,
+        flags: Flags,
+    ) -> impl Strategy<Value = (ValueSum, Action<()>)> {
+        let spend_value_gen = if flags.spends_enabled {
+            Strategy::boxed(arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64))
+        } else {
+            Strategy::boxed(Just(NoteValue::zero()))
+        };
+
+        spend_value_gen.prop_flat_map(move |spend_value| {
+            let output_value_gen = if flags.outputs_enabled {
+                Strategy::boxed(arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64))
+            } else {
+                Strategy::boxed(Just(NoteValue::zero()))
+            };
+
+            output_value_gen.prop_flat_map(move |output_value| {
+                arb_unauthorized_action(spend_value, output_value)
+                    .prop_map(move |a| ((spend_value - output_value).unwrap(), a))
+            })
+        })
+    }
+
+    prop_compose! {
+        /// Generate an action with invalid (random) authorization data.
+        pub fn arb_action(spend_value: NoteValue, output_value: NoteValue)(
+            nf in arb_nullifier(),
+            sk in arb_spendauth_signing_key(),
+            note in arb_note(output_value),
+            rng_seed in prop::array::uniform32(prop::num::u8::ANY),
+            fake_sighash in prop::array::uniform32(prop::num::u8::ANY),
+        ) -> Action<redpallas::Signature<SpendAuth>> {
+            let cmx = ExtractedNoteCommitment::from(note.commitment());
+            let cv_net = ValueCommitment::derive(
+                (spend_value - output_value).unwrap(),
+                ValueCommitTrapdoor::zero()
+            );
+
+            // FIXME: make a real one from the note.
+            let encrypted_note = TransmittedNoteCiphertext {
+                epk_bytes: [0u8; 32],
+                enc_ciphertext: [0u8; 580],
+                out_ciphertext: [0u8; 80]
+            };
+
+            let rng = StdRng::from_seed(rng_seed);
+
+            Action {
+                nf,
+                rk: redpallas::VerificationKey::from(&sk),
+                cmx,
+                encrypted_note,
+                cv_net,
+                authorization: sk.sign(rng, &fake_sighash),
+            }
+        }
+    }
+
+    /// Generate an authorized action having spend and output values less than MAX_NOTE_VALUE / n_actions.
+    pub fn arb_action_n(
+        n_actions: usize,
+        flags: Flags,
+    ) -> impl Strategy<Value = (ValueSum, Action<redpallas::Signature<SpendAuth>>)> {
+        let spend_value_gen = if flags.spends_enabled {
+            Strategy::boxed(arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64))
+        } else {
+            Strategy::boxed(Just(NoteValue::zero()))
+        };
+
+        spend_value_gen.prop_flat_map(move |spend_value| {
+            let output_value_gen = if flags.outputs_enabled {
+                Strategy::boxed(arb_note_value_bounded(MAX_NOTE_VALUE / n_actions as u64))
+            } else {
+                Strategy::boxed(Just(NoteValue::zero()))
+            };
+
+            output_value_gen.prop_flat_map(move |output_value| {
+                arb_action(spend_value, output_value)
+                    .prop_map(move |a| ((spend_value - output_value).unwrap(), a))
+            })
+        })
+    }
+
+    prop_compose! {
+        /// Create an arbitrary set of flags.
+        pub fn arb_flags()(spends_enabled in prop::bool::ANY, outputs_enabled in prop::bool::ANY) -> Flags {
+            Flags::from_parts(spends_enabled, outputs_enabled)
+        }
+    }
+
+    prop_compose! {
+        /// Generate an arbitrary unauthorized bundle. This bundle does not
+        /// necessarily respect consensus rules; for that use
+        /// [`crate::builder::testing::arb_bundle`]
+        pub fn arb_unauthorized_bundle()
+        (
+            n_actions in 1usize..100,
+            flags in arb_flags(),
+        )
+        (
+            acts in vec(arb_unauthorized_action_n(n_actions, flags), n_actions),
+            anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor),
+            flags in Just(flags)
+        ) -> Bundle<Unauthorized, ValueSum> {
+            let (balances, actions): (Vec<ValueSum>, Vec<Action<_>>) = acts.into_iter().unzip();
+
+            Bundle::from_parts(
+                NonEmpty::from_vec(actions).unwrap(),
+                flags,
+                balances.into_iter().sum::<Result<ValueSum, _>>().unwrap(),
+                anchor,
+                Unauthorized
+            )
+        }
+    }
+
+    prop_compose! {
+        /// Generate an arbitrary bundle with fake authorization data. This bundle does not
+        /// necessarily respect consensus rules; for that use
+        /// [`crate::builder::testing::arb_bundle`]
+        pub fn arb_bundle()
+        (
+            n_actions in 1usize..100,
+            flags in arb_flags(),
+        )
+        (
+            acts in vec(arb_action_n(n_actions, flags), n_actions),
+            anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor),
+            sk in arb_binding_signing_key(),
+            rng_seed in prop::array::uniform32(prop::num::u8::ANY),
+            fake_proof in vec(prop::num::u8::ANY, 1973),
+            fake_sighash in prop::array::uniform32(prop::num::u8::ANY),
+            flags in Just(flags)
+        ) -> Bundle<Authorized, ValueSum> {
+            let (balances, actions): (Vec<ValueSum>, Vec<Action<_>>) = acts.into_iter().unzip();
+            let rng = StdRng::from_seed(rng_seed);
+
+            Bundle::from_parts(
+                NonEmpty::from_vec(actions).unwrap(),
+                flags,
+                balances.into_iter().sum::<Result<ValueSum, _>>().unwrap(),
+                anchor,
+                Authorized {
+                    proof: Proof::new(fake_proof),
+                    binding_signature: sk.sign(rng, &fake_sighash),
+                }
+            )
+        }
+    }
+}

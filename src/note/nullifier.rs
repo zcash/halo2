@@ -1,7 +1,8 @@
 use group::Group;
 use halo2::arithmetic::CurveExt;
-use pasta_curves::pallas;
+use pasta_curves::{arithmetic::FieldExt, pallas};
 use rand::RngCore;
+use subtle::CtOption;
 
 use super::NoteCommitment;
 use crate::{
@@ -11,7 +12,7 @@ use crate::{
 
 /// A unique nullifier for a note.
 #[derive(Clone, Debug)]
-pub struct Nullifier(pub(super) pallas::Base);
+pub struct Nullifier(pub(crate) pallas::Base);
 
 impl Nullifier {
     /// Generates a dummy nullifier for use as $\rho$ in dummy spent notes.
@@ -30,6 +31,16 @@ impl Nullifier {
         Nullifier(extract_p(&pallas::Point::random(rng)))
     }
 
+    /// Deserialize the nullifier from a byte array.
+    pub fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        pallas::Base::from_bytes(bytes).map(Nullifier)
+    }
+
+    /// Serialize the nullifier to its canonical byte representation.
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
+    }
+
     /// $DeriveNullifier$.
     ///
     /// Defined in [Zcash Protocol Spec § 4.16: Note Commitments and Nullifiers][commitmentsandnullifiers].
@@ -44,5 +55,29 @@ impl Nullifier {
         let k = pallas::Point::hash_to_curve("z.cash:Orchard")(b"K");
 
         Nullifier(extract_p(&(k * mod_r_p(nk.prf_nf(rho) + psi) + cm.0)))
+    }
+}
+
+/// Generators for property testing.
+#[cfg(any(test, feature = "test-dependencies"))]
+pub mod testing {
+    use proptest::prelude::*;
+
+    use group::GroupEncoding;
+    use pasta_curves::pallas;
+
+    use super::Nullifier;
+    use crate::spec::extract_p;
+
+    prop_compose! {
+        /// Generate a uniformly distributed nullifier value.
+        pub fn arb_nullifier()(
+            coord in prop::array::uniform32(any::<u8>()).prop_map(|b| pallas::Point::from_bytes(&b)).prop_filter(
+                "Must generate a valid Pallas point",
+                |p| p.is_some().into()
+            )
+        ) -> Nullifier {
+            Nullifier(extract_p(&coord.unwrap()))
+        }
     }
 }

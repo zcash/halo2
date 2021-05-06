@@ -14,8 +14,8 @@
 //! [`Action`]: crate::bundle::Action
 //! [`Bundle`]: crate::bundle::Bundle
 
-use std::convert::TryInto;
-use std::fmt;
+use std::convert::{TryFrom, TryInto};
+use std::fmt::{self, Debug};
 use std::iter::Sum;
 use std::ops::{Add, Sub};
 
@@ -27,8 +27,22 @@ use pasta_curves::{
     pallas,
 };
 use rand::RngCore;
+use subtle::CtOption;
 
 use crate::primitives::redpallas::{self, Binding};
+
+use std::ops::RangeInclusive;
+
+/// Maximum note value.
+pub const MAX_NOTE_VALUE: u64 = u64::MAX;
+
+/// The valid range of the scalar multiplication used in ValueCommit^Orchard.
+///
+/// Defined in a note in [Zcash Protocol Spec § 4.17.4: Action Statement (Orchard)][actionstatement].
+///
+/// [actionstatement]: https://zips.z.cash/protocol/nu5.pdf#actionstatement
+pub const VALUE_SUM_RANGE: RangeInclusive<i128> =
+    -(MAX_NOTE_VALUE as i128)..=MAX_NOTE_VALUE as i128;
 
 /// A value operation overflowed.
 #[derive(Debug)]
@@ -66,18 +80,21 @@ impl NoteValue {
 }
 
 impl Sub for NoteValue {
-    type Output = Result<ValueSum, OverflowError>;
+    type Output = Option<ValueSum>;
 
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn sub(self, rhs: Self) -> Self::Output {
-        let a: i64 = self.0.try_into().map_err(|_| OverflowError)?;
-        let b: i64 = rhs.0.try_into().map_err(|_| OverflowError)?;
-        Ok(ValueSum(a - b))
+        let a = self.0 as i128;
+        let b = rhs.0 as i128;
+        a.checked_sub(b)
+            .filter(|v| VALUE_SUM_RANGE.contains(v))
+            .map(ValueSum)
     }
 }
 
-/// A sum of Orchard note values.
+/// A sum of Orchard note values
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct ValueSum(i64);
+pub struct ValueSum(i128);
 
 impl ValueSum {
     pub(crate) fn zero() -> Self {
@@ -90,21 +107,39 @@ impl ValueSum {
     /// This only enforces that the value is a signed 63-bit integer. Callers should
     /// enforce any additional constraints on the value's valid range themselves.
     pub fn from_raw(value: i64) -> Self {
-        ValueSum(value)
+        ValueSum(value as i128)
     }
 }
 
 impl Add for ValueSum {
-    type Output = Result<ValueSum, OverflowError>;
+    type Output = Option<ValueSum>;
 
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn add(self, rhs: Self) -> Self::Output {
-        self.0.checked_add(rhs.0).map(ValueSum).ok_or(OverflowError)
+        self.0
+            .checked_add(rhs.0)
+            .filter(|v| VALUE_SUM_RANGE.contains(v))
+            .map(ValueSum)
     }
 }
 
 impl<'a> Sum<&'a ValueSum> for Result<ValueSum, OverflowError> {
     fn sum<I: Iterator<Item = &'a ValueSum>>(iter: I) -> Self {
-        iter.fold(Ok(ValueSum(0)), |acc, cv| acc? + *cv)
+        iter.fold(Ok(ValueSum(0)), |acc, v| (acc? + *v).ok_or(OverflowError))
+    }
+}
+
+impl Sum<ValueSum> for Result<ValueSum, OverflowError> {
+    fn sum<I: Iterator<Item = ValueSum>>(iter: I) -> Self {
+        iter.fold(Ok(ValueSum(0)), |acc, v| (acc? + v).ok_or(OverflowError))
+    }
+}
+
+impl TryFrom<ValueSum> for i64 {
+    type Error = OverflowError;
+
+    fn try_from(v: ValueSum) -> Result<i64, Self::Error> {
+        i64::try_from(v.0).map_err(|_| OverflowError)
     }
 }
 
@@ -190,11 +225,12 @@ impl ValueCommitment {
         let hasher = pallas::Point::hash_to_curve("z.cash:Orchard-cv");
         let V = hasher(b"v");
         let R = hasher(b"r");
+        let abs_value = u64::try_from(value.0.abs()).expect("value must be in valid range");
 
         let value = if value.0.is_negative() {
-            -pallas::Scalar::from_u64((-value.0) as u64)
+            -pallas::Scalar::from_u64(abs_value)
         } else {
-            pallas::Scalar::from_u64(value.0 as u64)
+            pallas::Scalar::from_u64(abs_value)
         };
 
         ValueCommitment(V * value + R * rcv.0)
@@ -204,22 +240,29 @@ impl ValueCommitment {
         // TODO: impl From<pallas::Point> for redpallas::VerificationKey.
         self.0.to_bytes().try_into().unwrap()
     }
+
+    /// Deserialize a value commitment from its byte representation
+    pub fn from_bytes(bytes: &[u8; 32]) -> CtOption<ValueCommitment> {
+        pallas::Point::from_bytes(bytes).map(ValueCommitment)
+    }
+
+    /// Serialize this value commitment to its canonical byte representation.
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
+    }
 }
 
-#[cfg(test)]
-mod tests {
+/// Generators for property testing.
+#[cfg(any(test, feature = "test-dependencies"))]
+pub mod testing {
     use pasta_curves::{arithmetic::FieldExt, pallas};
     use proptest::prelude::*;
 
-    use super::{OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum};
-    use crate::primitives::redpallas;
-
-    /// Zcash's maximum money amount. Used as a bound in proptests so we don't artifically
-    /// overflow `ValueSum`'s size.
-    const MAX_MONEY: i64 = 21_000_000 * 1_0000_0000;
+    use super::{NoteValue, ValueCommitTrapdoor, ValueSum, MAX_NOTE_VALUE, VALUE_SUM_RANGE};
 
     prop_compose! {
-        fn arb_scalar()(bytes in prop::array::uniform32(0u8..)) -> pallas::Scalar {
+        /// Generate an arbitrary Pallas scalar.
+        pub fn arb_scalar()(bytes in prop::array::uniform32(0u8..)) -> pallas::Scalar {
             // Instead of rejecting out-of-range bytes, let's reduce them.
             let mut buf = [0; 64];
             buf[..32].copy_from_slice(&bytes);
@@ -228,21 +271,68 @@ mod tests {
     }
 
     prop_compose! {
-        fn arb_value_sum(bound: i64)(value in -bound..bound) -> ValueSum {
-            ValueSum(value)
+        /// Generate an arbitrary [`ValueSum`] in the range of valid Zcash values.
+        pub fn arb_value_sum()(value in VALUE_SUM_RANGE) -> ValueSum {
+            ValueSum(value as i128)
         }
     }
 
     prop_compose! {
-        fn arb_trapdoor()(rcv in arb_scalar()) -> ValueCommitTrapdoor {
+        /// Generate an arbitrary [`ValueSum`] in the range of valid Zcash values.
+        pub fn arb_value_sum_bounded(bound: NoteValue)(value in -(bound.0 as i128)..=(bound.0 as i128)) -> ValueSum {
+            ValueSum(value as i128)
+        }
+    }
+
+    prop_compose! {
+        /// Generate an arbitrary ValueCommitTrapdoor
+        pub fn arb_trapdoor()(rcv in arb_scalar()) -> ValueCommitTrapdoor {
             ValueCommitTrapdoor(rcv)
         }
     }
 
+    prop_compose! {
+        /// Generate an arbitrary value in the range of valid nonnegative Zcash amounts.
+        pub fn arb_note_value()(value in 0u64..MAX_NOTE_VALUE) -> NoteValue {
+            NoteValue(value)
+        }
+    }
+
+    prop_compose! {
+        /// Generate an arbitrary value in the range of valid positive Zcash amounts
+        /// less than a specified value.
+        pub fn arb_note_value_bounded(max: u64)(value in 0u64..max) -> NoteValue {
+            NoteValue(value)
+        }
+    }
+
+    prop_compose! {
+        /// Generate an arbitrary value in the range of valid positive Zcash amounts
+        /// less than a specified value.
+        pub fn arb_positive_note_value(max: u64)(value in 1u64..max) -> NoteValue {
+            NoteValue(value)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+
+    use super::{
+        testing::{arb_note_value_bounded, arb_trapdoor, arb_value_sum_bounded},
+        OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum, MAX_NOTE_VALUE,
+    };
+    use crate::primitives::redpallas;
+
     proptest! {
         #[test]
         fn bsk_consistent_with_bvk(
-            values in prop::collection::vec((arb_value_sum(MAX_MONEY), arb_trapdoor()), 1..10),
+            values in (1usize..10).prop_flat_map(|n_values|
+                arb_note_value_bounded(MAX_NOTE_VALUE / n_values as u64).prop_flat_map(move |bound|
+                    prop::collection::vec((arb_value_sum_bounded(bound), arb_trapdoor()), n_values)
+                )
+            )
         ) {
             let value_balance = values
                 .iter()

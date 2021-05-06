@@ -96,6 +96,18 @@ impl VerificationKey<SpendAuth> {
 #[derive(Debug)]
 pub struct Signature<T: SigType>(reddsa::Signature<T>);
 
+impl<T: SigType> From<[u8; 64]> for Signature<T> {
+    fn from(bytes: [u8; 64]) -> Self {
+        Signature(bytes.into())
+    }
+}
+
+impl<T: SigType> From<&Signature<T>> for [u8; 64] {
+    fn from(sig: &Signature<T>) -> Self {
+        sig.0.into()
+    }
+}
+
 pub(crate) mod private {
     use super::{Binding, SpendAuth};
 
@@ -104,4 +116,50 @@ pub(crate) mod private {
     impl Sealed for SpendAuth {}
 
     impl Sealed for Binding {}
+}
+
+/// Generators for property testing.
+#[cfg(any(test, feature = "test-dependencies"))]
+pub mod testing {
+    use std::convert::TryFrom;
+
+    use proptest::prelude::*;
+
+    use super::{Binding, SigningKey, SpendAuth, VerificationKey};
+
+    prop_compose! {
+        /// Generate a uniformly distributed RedDSA spend authorization signing key.
+        pub fn arb_spendauth_signing_key()(
+            sk in prop::array::uniform32(prop::num::u8::ANY)
+                .prop_map(reddsa::SigningKey::try_from)
+                .prop_filter("Values must be parseable as valid signing keys", |r| r.is_ok())
+        ) -> SigningKey<SpendAuth> {
+            SigningKey(sk.unwrap())
+        }
+    }
+
+    prop_compose! {
+        /// Generate a uniformly distributed RedDSA binding signing key.
+        pub fn arb_binding_signing_key()(
+            sk in prop::array::uniform32(prop::num::u8::ANY)
+                .prop_map(reddsa::SigningKey::try_from)
+                .prop_filter("Values must be parseable as valid signing keys", |r| r.is_ok())
+        ) -> SigningKey<Binding> {
+            SigningKey(sk.unwrap())
+        }
+    }
+
+    prop_compose! {
+        /// Generate a uniformly distributed RedDSA spend authorization verification key.
+        pub fn arb_spendauth_verification_key()(sk in arb_spendauth_signing_key()) -> VerificationKey<SpendAuth> {
+            VerificationKey::from(&sk)
+        }
+    }
+
+    prop_compose! {
+        /// Generate a uniformly distributed RedDSA binding verification key.
+        pub fn arb_binding_verification_key()(sk in arb_binding_signing_key()) -> VerificationKey<Binding> {
+            VerificationKey::from(&sk)
+        }
+    }
 }
