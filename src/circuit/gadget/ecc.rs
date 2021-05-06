@@ -34,6 +34,9 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     type FixedPoints: Clone + Debug;
     /// Variable representing a fixed elliptic curve point (constant in the circuit).
     type FixedPoint: Clone + Debug;
+    /// Variable representing a fixed elliptic curve point (constant in the circuit)
+    /// to be used in scalar multiplication with a short signed exponent.
+    type FixedPointShort: Clone + Debug;
 
     /// Witnesses the given base field element as a private input to the circuit for variable-base scalar mul.
     fn witness_scalar_var(
@@ -70,6 +73,13 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     /// The pre-loaded cells are used to set up equality constraints in other
     /// parts of the circuit where the fixed base is used.
     fn get_fixed(&self, fixed_points: Self::FixedPoints) -> Result<Self::FixedPoint, Error>;
+
+    /// Returns a fixed point to be used in scalar multiplication with a signed
+    /// short exponent.
+    fn get_fixed_short(
+        &self,
+        fixed_points: Self::FixedPoints,
+    ) -> Result<Self::FixedPointShort, Error>;
 
     /// Performs incomplete point addition, returning `a + b`.
     fn add_incomplete(
@@ -108,7 +118,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
         &self,
         layouter: &mut impl Layouter<C::Base>,
         scalar: &Self::ScalarFixedShort,
-        base: &Self::FixedPoint,
+        base: &Self::FixedPointShort,
     ) -> Result<Self::Point, Error>;
 }
 
@@ -299,13 +309,13 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> FixedPoint<C, 
 #[derive(Clone, Debug)]
 pub struct FixedPointShort<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> {
     chip: EccChip,
-    inner: EccChip::FixedPoint,
+    inner: EccChip::FixedPointShort,
 }
 
 impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> FixedPointShort<C, EccChip> {
     /// Gets a reference to the specified fixed point in the circuit.
     pub fn get(chip: EccChip, point: EccChip::FixedPoints) -> Result<Self, Error> {
-        chip.get_fixed(point)
+        chip.get_fixed_short(point)
             .map(|inner| FixedPointShort { chip, inner })
     }
 
