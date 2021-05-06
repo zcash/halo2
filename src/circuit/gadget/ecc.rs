@@ -207,11 +207,26 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> Point<C, EccCh
         Point { chip, inner }
     }
 
-    /// Returns `self + other`.
+    /// Returns `self + other` using complete addition.
     pub fn add(&self, mut layouter: impl Layouter<C::Base>, other: &Self) -> Result<Self, Error> {
         assert_eq!(format!("{:?}", self.chip), format!("{:?}", other.chip));
         self.chip
             .add(&mut layouter, &self.inner, &other.inner)
+            .map(|inner| Point {
+                chip: self.chip.clone(),
+                inner,
+            })
+    }
+
+    /// Returns `self + other` using incomplete addition.
+    pub fn add_incomplete(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        other: &Self,
+    ) -> Result<Self, Error> {
+        assert_eq!(format!("{:?}", self.chip), format!("{:?}", other.chip));
+        self.chip
+            .add_incomplete(&mut layouter, &self.inner, &other.inner)
             .map(|inner| Point {
                 chip: self.chip.clone(),
                 inner,
