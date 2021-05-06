@@ -4,7 +4,6 @@
 - [Concepts](concepts.md)
   - [Proof systems](concepts/proofs.md)
   - [UltraPLONK Arithmetization](concepts/arithmetization.md)
-  - [Cores](concepts/cores.md)
   - [Chips](concepts/chips.md)
   - [Gadgets](concepts/gadgets.md)
 - [User Documentation](user.md)
