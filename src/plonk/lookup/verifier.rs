@@ -34,9 +34,8 @@ pub struct Evaluated<C: CurveAffine> {
 impl<F: FieldExt> Argument<F> {
     pub(in crate::plonk) fn read_permuted_commitments<
         C: CurveAffine,
-        I,
-        E: EncodedChallenge<C, I>,
-        T: TranscriptRead<C, I, E>,
+        E: EncodedChallenge<C>,
+        T: TranscriptRead<C, E>,
     >(
         &self,
         transcript: &mut T,
@@ -57,9 +56,8 @@ impl<F: FieldExt> Argument<F> {
 
 impl<C: CurveAffine> PermutationCommitments<C> {
     pub(in crate::plonk) fn read_product_commitment<
-        I,
-        E: EncodedChallenge<C, I>,
-        T: TranscriptRead<C, I, E>,
+        E: EncodedChallenge<C>,
+        T: TranscriptRead<C, E>,
     >(
         self,
         transcript: &mut T,
@@ -76,7 +74,7 @@ impl<C: CurveAffine> PermutationCommitments<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(crate) fn evaluate<I, E: EncodedChallenge<C, I>, T: TranscriptRead<C, I, E>>(
+    pub(crate) fn evaluate<E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
         self,
         transcript: &mut T,
     ) -> Result<Evaluated<C>, Error> {

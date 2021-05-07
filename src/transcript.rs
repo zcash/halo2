@@ -11,7 +11,7 @@ use std::io::{self, Read, Write};
 use std::marker::PhantomData;
 
 /// Generic transcript view (from either the prover or verifier's perspective)
-pub trait Transcript<C: CurveAffine, I, E: EncodedChallenge<C, I>> {
+pub trait Transcript<C: CurveAffine, E: EncodedChallenge<C>> {
     /// Squeeze an encoded verifier challenge from the transcript.
     fn squeeze_challenge(&mut self) -> E;
 
@@ -34,9 +34,7 @@ pub trait Transcript<C: CurveAffine, I, E: EncodedChallenge<C, I>> {
 
 /// Transcript view from the perspective of a verifier that has access to an
 /// input stream of data from the prover to the verifier.
-pub trait TranscriptRead<C: CurveAffine, I, E: EncodedChallenge<C, I>>:
-    Transcript<C, I, E>
-{
+pub trait TranscriptRead<C: CurveAffine, E: EncodedChallenge<C>>: Transcript<C, E> {
     /// Read a curve point from the prover.
     fn read_point(&mut self) -> io::Result<C>;
 
@@ -46,9 +44,7 @@ pub trait TranscriptRead<C: CurveAffine, I, E: EncodedChallenge<C, I>>:
 
 /// Transcript view from the perspective of a prover that has access to an
 /// output stream of messages from the prover to the verifier.
-pub trait TranscriptWrite<C: CurveAffine, I, E: EncodedChallenge<C, I>>:
-    Transcript<C, I, E>
-{
+pub trait TranscriptWrite<C: CurveAffine, E: EncodedChallenge<C>>: Transcript<C, E> {
     /// Write a curve point to the proof and the transcript.
     fn write_point(&mut self, point: C) -> io::Result<()>;
 
@@ -58,14 +54,14 @@ pub trait TranscriptWrite<C: CurveAffine, I, E: EncodedChallenge<C, I>>:
 
 /// We will replace BLAKE2b with an algebraic hash function in a later version.
 #[derive(Debug, Clone)]
-pub struct Blake2bRead<R: Read, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> {
+pub struct Blake2bRead<R: Read, C: CurveAffine, E: EncodedChallenge<C>> {
     state: Blake2bState,
     reader: R,
     _marker_c: PhantomData<C>,
     _marker_e: PhantomData<E>,
 }
 
-impl<R: Read, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> Blake2bRead<R, C, E> {
+impl<R: Read, C: CurveAffine, E: EncodedChallenge<C>> Blake2bRead<R, C, E> {
     /// Initialize a transcript given an input buffer and a key.
     pub fn init(reader: R) -> Self {
         Blake2bRead {
@@ -80,8 +76,8 @@ impl<R: Read, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> Blake2bRead<R, C
     }
 }
 
-impl<R: Read, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> TranscriptRead<C, [u8; 64], E>
-    for Blake2bRead<R, C, E>
+impl<R: Read, C: CurveAffine> TranscriptRead<C, Challenge255<C>>
+    for Blake2bRead<R, C, Challenge255<C>>
 {
     fn read_point(&mut self) -> io::Result<C> {
         let mut compressed = C::Repr::default();
@@ -109,14 +105,14 @@ impl<R: Read, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> TranscriptRead<C
     }
 }
 
-impl<R: Read, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> Transcript<C, [u8; 64], E>
-    for Blake2bRead<R, C, E>
+impl<R: Read, C: CurveAffine> Transcript<C, Challenge255<C>>
+    for Blake2bRead<R, C, Challenge255<C>>
 {
-    fn squeeze_challenge(&mut self) -> E {
+    fn squeeze_challenge(&mut self) -> Challenge255<C> {
         let hasher = self.state.clone();
         let result: [u8; 64] = hasher.finalize().as_bytes().try_into().unwrap();
         self.state.update(&result[..]);
-        E::new(&result)
+        Challenge255::<C>::new(&result)
     }
 
     fn common_point(&mut self, point: C) -> io::Result<()> {
@@ -141,14 +137,14 @@ impl<R: Read, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> Transcript<C, [u
 
 /// We will replace BLAKE2b with an algebraic hash function in a later version.
 #[derive(Debug, Clone)]
-pub struct Blake2bWrite<W: Write, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> {
+pub struct Blake2bWrite<W: Write, C: CurveAffine, E: EncodedChallenge<C>> {
     state: Blake2bState,
     writer: W,
     _marker_c: PhantomData<C>,
     _marker_e: PhantomData<E>,
 }
 
-impl<W: Write, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> Blake2bWrite<W, C, E> {
+impl<W: Write, C: CurveAffine, E: EncodedChallenge<C>> Blake2bWrite<W, C, E> {
     /// Initialize a transcript given an output buffer and a key.
     pub fn init(writer: W) -> Self {
         Blake2bWrite {
@@ -169,8 +165,8 @@ impl<W: Write, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> Blake2bWrite<W,
     }
 }
 
-impl<W: Write, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> TranscriptWrite<C, [u8; 64], E>
-    for Blake2bWrite<W, C, E>
+impl<W: Write, C: CurveAffine> TranscriptWrite<C, Challenge255<C>>
+    for Blake2bWrite<W, C, Challenge255<C>>
 {
     fn write_point(&mut self, point: C) -> io::Result<()> {
         self.common_point(point)?;
@@ -184,14 +180,14 @@ impl<W: Write, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> TranscriptWrite
     }
 }
 
-impl<W: Write, C: CurveAffine, E: EncodedChallenge<C, [u8; 64]>> Transcript<C, [u8; 64], E>
-    for Blake2bWrite<W, C, E>
+impl<W: Write, C: CurveAffine> Transcript<C, Challenge255<C>>
+    for Blake2bWrite<W, C, Challenge255<C>>
 {
-    fn squeeze_challenge(&mut self) -> E {
+    fn squeeze_challenge(&mut self) -> Challenge255<C> {
         let hasher = self.state.clone();
         let result: [u8; 64] = hasher.finalize().as_bytes().try_into().unwrap();
         self.state.update(&result[..]);
-        E::new(&result)
+        Challenge255::<C>::new(&result)
     }
 
     fn common_point(&mut self, point: C) -> io::Result<()> {
@@ -238,12 +234,17 @@ impl<C: CurveAffine, T> std::ops::Deref for ChallengeScalar<C, T> {
     }
 }
 
-/// `EncodedChallenge<C, I>` defines a challenge encoding where `I` is the input
+/// `EncodedChallenge<C>` defines a challenge encoding with a [`Self::Input`]
 /// that is used to derive the challenge encoding and `get_challenge` obtains
 /// the _real_ `C::Scalar` that the challenge encoding represents.
-pub trait EncodedChallenge<C: CurveAffine, I> {
+pub trait EncodedChallenge<C: CurveAffine> {
+    /// The Input type used to derive the challenge encoding. For example,
+    /// an input from the Poseidon hash would be a base field element;
+    /// an input from the Blake2b hash would be a [u8; 64].
+    type Input;
+
     /// Get an encoded challenge from a given input challenge.
-    fn new(challenge_input: &I) -> Self;
+    fn new(challenge_input: &Self::Input) -> Self;
 
     /// Get a scalar field element from an encoded challenge.
     fn get_scalar(&self) -> C::Scalar;
@@ -270,7 +271,9 @@ impl std::ops::Deref for Challenge128 {
     }
 }
 
-impl<C: CurveAffine> EncodedChallenge<C, C::Base> for Challenge128 {
+impl<C: CurveAffine> EncodedChallenge<C> for Challenge128 {
+    type Input = C::Base;
+
     fn new(challenge_input: &C::Base) -> Self {
         Challenge128(challenge_input.get_lower_128())
     }
@@ -298,9 +301,9 @@ impl<C: CurveAffine> EncodedChallenge<C, C::Base> for Challenge128 {
 
 /// A 255-bit challenge.
 #[derive(Copy, Clone, Debug)]
-pub struct Challenge255([u8; 32]);
+pub struct Challenge255<C: CurveAffine>([u8; 32], PhantomData<C>);
 
-impl std::ops::Deref for Challenge255 {
+impl<C: CurveAffine> std::ops::Deref for Challenge255<C> {
     type Target = [u8; 32];
 
     fn deref(&self) -> &Self::Target {
@@ -308,33 +311,28 @@ impl std::ops::Deref for Challenge255 {
     }
 }
 
-impl<C: CurveAffine> EncodedChallenge<C, [u8; 64]> for Challenge255 {
+impl<C: CurveAffine> EncodedChallenge<C> for Challenge255<C> {
+    type Input = [u8; 64];
+
     fn new(challenge_input: &[u8; 64]) -> Self {
-        Challenge255(C::Scalar::from_bytes_wide(challenge_input).to_bytes())
+        Challenge255(
+            C::Scalar::from_bytes_wide(challenge_input).to_bytes(),
+            PhantomData,
+        )
     }
     fn get_scalar(&self) -> C::Scalar {
         C::Scalar::from_bytes(&self.0).unwrap()
     }
 }
 
-pub(crate) fn read_n_points<
-    C: CurveAffine,
-    I,
-    E: EncodedChallenge<C, I>,
-    T: TranscriptRead<C, I, E>,
->(
+pub(crate) fn read_n_points<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
     transcript: &mut T,
     n: usize,
 ) -> io::Result<Vec<C>> {
     (0..n).map(|_| transcript.read_point()).collect()
 }
 
-pub(crate) fn read_n_scalars<
-    C: CurveAffine,
-    I,
-    E: EncodedChallenge<C, I>,
-    T: TranscriptRead<C, I, E>,
->(
+pub(crate) fn read_n_scalars<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
     transcript: &mut T,
     n: usize,
 ) -> io::Result<Vec<C::Scalar>> {

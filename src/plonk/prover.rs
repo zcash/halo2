@@ -20,8 +20,8 @@ use crate::transcript::{EncodedChallenge, TranscriptWrite};
 /// generated previously for the same circuit.
 pub fn create_proof<
     C: CurveAffine,
-    E: EncodedChallenge<C, [u8; 64]>,
-    T: TranscriptWrite<C, [u8; 64], E>,
+    E: EncodedChallenge<C>,
+    T: TranscriptWrite<C, E>,
     ConcreteCircuit: Circuit<C::Scalar>,
 >(
     params: &Params<C>,

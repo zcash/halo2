@@ -23,7 +23,7 @@ use std::io;
 /// opening v, and the point x. It's probably also nice for the transcript
 /// to have seen the elliptic curve description and the URS, if you want to
 /// be rigorous.
-pub fn create_proof<C: CurveAffine, I, E: EncodedChallenge<C, I>, T: TranscriptWrite<C, I, E>>(
+pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
     params: &Params<C>,
     transcript: &mut T,
     px: &Polynomial<C::Scalar, Coeff>,

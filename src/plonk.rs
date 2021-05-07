@@ -79,7 +79,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
     }
 
     /// Hashes a verification key into a transcript.
-    pub fn hash_into<E: EncodedChallenge<C, [u8; 64]>, T: Transcript<C, [u8; 64], E>>(
+    pub fn hash_into<E: EncodedChallenge<C>, T: Transcript<C, E>>(
         &self,
         transcript: &mut T,
     ) -> io::Result<()> {

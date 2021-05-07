@@ -24,14 +24,7 @@ struct CommitmentData<C: CurveAffine> {
 }
 
 /// Create a multi-opening proof
-pub fn create_proof<
-    'a,
-    I,
-    IN,
-    C: CurveAffine,
-    E: EncodedChallenge<C, IN>,
-    T: TranscriptWrite<C, IN, E>,
->(
+pub fn create_proof<'a, I, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
     params: &Params<C>,
     transcript: &mut T,
     queries: I,

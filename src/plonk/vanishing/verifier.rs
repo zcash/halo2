@@ -20,11 +20,7 @@ pub struct Evaluated<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Argument<C> {
-    pub(in crate::plonk) fn read_commitments<
-        I,
-        E: EncodedChallenge<C, I>,
-        T: TranscriptRead<C, I, E>,
-    >(
+    pub(in crate::plonk) fn read_commitments<E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
         vk: &VerifyingKey<C>,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
@@ -37,7 +33,7 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(in crate::plonk) fn evaluate<I, E: EncodedChallenge<C, I>, T: TranscriptRead<C, I, E>>(
+    pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
         self,
         transcript: &mut T,
     ) -> Result<Evaluated<C>, Error> {

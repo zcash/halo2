@@ -326,7 +326,7 @@ fn test_opening_proof() {
 
     let p = params.commit(&px, blind).to_affine();
 
-    let mut transcript = Blake2bWrite::<Vec<u8>, EpAffine, Challenge255>::init(vec![]);
+    let mut transcript = Blake2bWrite::<Vec<u8>, EpAffine, Challenge255<EpAffine>>::init(vec![]);
     transcript.write_point(p).unwrap();
     let x = transcript.squeeze_challenge_scalar::<()>();
     // Evaluate the polynomial
@@ -340,7 +340,7 @@ fn test_opening_proof() {
     };
 
     // Verify the opening proof
-    let mut transcript = Blake2bRead::<&[u8], EpAffine, Challenge255>::init(&proof[..]);
+    let mut transcript = Blake2bRead::<&[u8], EpAffine, Challenge255<EpAffine>>::init(&proof[..]);
     let p_prime = transcript.read_point().unwrap();
     assert_eq!(p, p_prime);
     let x_prime = transcript.squeeze_challenge_scalar::<()>();

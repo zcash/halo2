@@ -22,16 +22,15 @@ pub fn verify_proof<
     'b,
     'a: 'b,
     I,
-    IN,
     C: CurveAffine,
-    E: EncodedChallenge<C, IN>,
-    T: TranscriptRead<C, IN, E>,
+    E: EncodedChallenge<C>,
+    T: TranscriptRead<C, E>,
 >(
     params: &'a Params<C>,
     transcript: &mut T,
     queries: I,
     mut msm: MSM<'a, C>,
-) -> Result<Guard<'a, C, IN, E>, Error>
+) -> Result<Guard<'a, C, E>, Error>
 where
     I: IntoIterator<Item = VerifierQuery<'b, C>> + Clone,
 {

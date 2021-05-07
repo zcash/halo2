@@ -24,9 +24,8 @@ pub struct Evaluated<C: CurveAffine> {
 impl Argument {
     pub(crate) fn read_product_commitment<
         C: CurveAffine,
-        I,
-        E: EncodedChallenge<C, I>,
-        T: TranscriptRead<C, I, E>,
+        E: EncodedChallenge<C>,
+        T: TranscriptRead<C, E>,
     >(
         &self,
         transcript: &mut T,
@@ -42,7 +41,7 @@ impl Argument {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(crate) fn evaluate<I, E: EncodedChallenge<C, I>, T: TranscriptRead<C, I, E>>(
+    pub(crate) fn evaluate<E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
         self,
         vkey: &VerifyingKey<C>,
         transcript: &mut T,

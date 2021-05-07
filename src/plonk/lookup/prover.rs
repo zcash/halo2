@@ -75,9 +75,8 @@ impl<F: FieldExt> Argument<F> {
     pub(in crate::plonk) fn commit_permuted<
         'a,
         C,
-        I,
-        E: EncodedChallenge<C, I>,
-        T: TranscriptWrite<C, I, E>,
+        E: EncodedChallenge<C>,
+        T: TranscriptWrite<C, E>,
     >(
         &self,
         pk: &ProvingKey<C>,
@@ -250,11 +249,7 @@ impl<C: CurveAffine> Permuted<C> {
     /// grand product polynomial over the lookup. The grand product polynomial
     /// is used to populate the Product<C> struct. The Product<C> struct is
     /// added to the Lookup and finally returned by the method.
-    pub(in crate::plonk) fn commit_product<
-        I,
-        E: EncodedChallenge<C, I>,
-        T: TranscriptWrite<C, I, E>,
-    >(
+    pub(in crate::plonk) fn commit_product<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
         self,
         pk: &ProvingKey<C>,
         params: &Params<C>,
@@ -498,7 +493,7 @@ impl<'a, C: CurveAffine> Committed<C> {
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(in crate::plonk) fn evaluate<I, E: EncodedChallenge<C, I>, T: TranscriptWrite<C, I, E>>(
+    pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
         self,
         pk: &ProvingKey<C>,
         x: ChallengeX<C>,
