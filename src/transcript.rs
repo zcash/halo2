@@ -2,7 +2,6 @@
 //! transcripts.
 
 use blake2b_simd::{Params as Blake2bParams, State as Blake2bState};
-use ff::Field;
 use std::convert::TryInto;
 
 use crate::arithmetic::{Coordinates, CurveAffine, FieldExt};
@@ -255,47 +254,6 @@ pub trait EncodedChallenge<C: CurveAffine> {
             inner: self.get_scalar(),
             _marker: PhantomData,
         }
-    }
-}
-
-/// A 128-bit challenge. Note that using this challenge space may result
-/// in less than 128-bit security.
-#[derive(Copy, Clone, Debug)]
-pub struct Challenge128(u128);
-
-impl std::ops::Deref for Challenge128 {
-    type Target = u128;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<C: CurveAffine> EncodedChallenge<C> for Challenge128 {
-    type Input = C::Base;
-
-    fn new(challenge_input: &C::Base) -> Self {
-        Challenge128(challenge_input.get_lower_128())
-    }
-
-    // This applies the mapping of Algorithm 1 from the [Halo](https://eprint.iacr.org/2019/1021) paper.
-    fn get_scalar(&self) -> C::Scalar {
-        let mut acc = (C::Scalar::ZETA + &C::Scalar::one()).double();
-
-        for i in (0..64).rev() {
-            let should_negate = ((self.0 >> ((i << 1) + 1)) & 1) == 1;
-            let should_endo = ((self.0 >> (i << 1)) & 1) == 1;
-
-            let q = if should_negate {
-                -C::Scalar::one()
-            } else {
-                C::Scalar::one()
-            };
-            let q = if should_endo { q * &C::Scalar::ZETA } else { q };
-            acc = acc + &q + &acc;
-        }
-
-        acc
     }
 }
 
