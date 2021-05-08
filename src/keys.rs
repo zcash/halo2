@@ -8,7 +8,7 @@ use fpe::ff1::{BinaryNumeralString, FF1};
 use group::GroupEncoding;
 use halo2::arithmetic::FieldExt;
 use pasta_curves::pallas;
-use rand::RngCore;
+use rand::{CryptoRng, RngCore};
 use subtle::CtOption;
 
 use crate::{
@@ -77,7 +77,7 @@ impl SpendAuthorizingKey {
     }
 
     /// Creates a spend authorization signature over the given message.
-    pub fn sign<R: rand_7::RngCore + rand_7::CryptoRng>(
+    pub fn sign<R: RngCore + CryptoRng>(
         &self,
         rng: R,
         msg: &[u8],

@@ -3,7 +3,7 @@
 use std::convert::{TryFrom, TryInto};
 
 use pasta_curves::pallas;
-use rand_7::{CryptoRng, RngCore};
+use rand::{CryptoRng, RngCore};
 
 /// A RedPallas signature type.
 pub trait SigType: reddsa::SigType + private::Sealed {}

@@ -6,7 +6,7 @@ use std::iter;
 use ff::Field;
 use nonempty::NonEmpty;
 use pasta_curves::pallas;
-use rand::RngCore;
+use rand::{CryptoRng, RngCore};
 
 use crate::{
     address::Address,
@@ -371,7 +371,7 @@ impl<V> Bundle<Unauthorized, V> {
     /// Loads the sighash into this bundle, preparing it for signing.
     ///
     /// This API ensures that all signatures are created over the same sighash.
-    pub fn prepare<R: rand_7::RngCore + rand_7::CryptoRng>(
+    pub fn prepare<R: RngCore + CryptoRng>(
         self,
         mut rng: R,
         sighash: [u8; 32],
@@ -394,7 +394,7 @@ impl<V> Bundle<Unauthorized, V> {
     }
 
     /// Applies signatures to this bundle, in order to authorize it.
-    pub fn apply_signatures<R: rand_7::RngCore + rand_7::CryptoRng>(
+    pub fn apply_signatures<R: RngCore + CryptoRng>(
         self,
         mut rng: R,
         sighash: [u8; 32],
@@ -413,11 +413,7 @@ impl<V> Bundle<PartiallyAuthorized, V> {
     /// Signs this bundle with the given [`SpendAuthorizingKey`].
     ///
     /// This will apply signatures for all notes controlled by this spending key.
-    pub fn sign<R: rand_7::RngCore + rand_7::CryptoRng>(
-        self,
-        mut rng: R,
-        ask: &SpendAuthorizingKey,
-    ) -> Self {
+    pub fn sign<R: RngCore + CryptoRng>(self, mut rng: R, ask: &SpendAuthorizingKey) -> Self {
         let expected_ak = ask.into();
         self.authorize(
             &mut rng,
@@ -492,16 +488,15 @@ pub mod testing {
     /// from these inputs, but using a `ValueBalance` implementation that
     /// is defined by the end user.
     #[derive(Debug)]
-    struct ArbitraryBundleInputs<R, R7> {
+    struct ArbitraryBundleInputs<R> {
         rng: R,
-        rng_7: R7,
         sk: SpendingKey,
         anchor: Anchor,
         notes: Vec<Note>,
         recipient_amounts: Vec<(Address, NoteValue)>,
     }
 
-    impl<R: RngCore + CryptoRng, R7: rand_7::RngCore + rand_7::CryptoRng> ArbitraryBundleInputs<R, R7> {
+    impl<R: RngCore + CryptoRng> ArbitraryBundleInputs<R> {
         /// Create a bundle from the set of arbitrary bundle inputs.
         fn into_bundle<V: TryFrom<i64>>(mut self) -> Bundle<Authorized, V> {
             let fvk = FullViewingKey::from(&self.sk);
@@ -523,8 +518,8 @@ pub mod testing {
             builder
                 .build(&mut self.rng, &pk)
                 .unwrap()
-                .prepare(&mut self.rng_7, [0; 32])
-                .sign(&mut self.rng_7, &SpendAuthorizingKey::from(&self.sk))
+                .prepare(&mut self.rng, [0; 32])
+                .sign(&mut self.rng, &SpendAuthorizingKey::from(&self.sk))
                 .finalize()
                 .unwrap()
         }
@@ -552,10 +547,9 @@ pub mod testing {
                 n_recipients as usize
             ),
             rng_seed in prop::array::uniform32(prop::num::u8::ANY)
-        ) -> ArbitraryBundleInputs<StdRng, rand_7::rngs::StdRng> {
+        ) -> ArbitraryBundleInputs<StdRng> {
             ArbitraryBundleInputs {
                 rng: StdRng::from_seed(rng_seed),
-                rng_7: <rand_7::rngs::StdRng as rand_7::SeedableRng>::from_seed(rng_seed),
                 sk: sk.clone(),
                 anchor,
                 notes,
@@ -608,7 +602,7 @@ mod tests {
         let bundle: Bundle<Authorized, i64> = dbg!(builder
             .build(&mut rng, &pk)
             .unwrap()
-            .prepare(rand_7::rngs::OsRng, [0; 32]))
+            .prepare(&mut rng, [0; 32]))
         .finalize()
         .unwrap();
         assert_eq!(bundle.value_balance(), &(-5000))

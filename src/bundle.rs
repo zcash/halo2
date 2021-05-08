@@ -355,7 +355,7 @@ pub struct BundleAuthorizingCommitment;
 #[cfg(any(test, feature = "test-dependencies"))]
 pub mod testing {
     use nonempty::NonEmpty;
-    use rand_7::{rngs::StdRng, SeedableRng};
+    use rand::{rngs::StdRng, SeedableRng};
     use reddsa::orchard::SpendAuth;
 
     use proptest::collection::vec;
