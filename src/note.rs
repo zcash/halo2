@@ -6,7 +6,7 @@ use subtle::CtOption;
 
 use crate::{
     keys::{FullViewingKey, SpendingKey},
-    spec::{prf_expand, to_base, to_scalar},
+    spec::{prf_expand_vec, to_base, to_scalar},
     value::NoteValue,
     Address,
 };
@@ -31,15 +31,25 @@ impl RandomSeed {
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
     ///
     /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
-    fn psi(&self) -> pallas::Base {
-        to_base(prf_expand(&self.0, &[0x09]))
+    fn psi(&self, rho: &Nullifier) -> pallas::Base {
+        to_base(prf_expand_vec(&self.0, &[&[0x09], &rho.to_bytes()[..]]))
     }
 
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
     ///
     /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
-    fn esk(&self) -> pallas::Scalar {
-        to_scalar(prf_expand(&self.0, &[0x04]))
+    fn esk(&self, rho: &Nullifier) -> pallas::Scalar {
+        to_scalar(prf_expand_vec(&self.0, &[&[0x04], &rho.to_bytes()[..]]))
+    }
+
+    /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
+    ///
+    /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
+    fn rcm(&self, rho: &Nullifier) -> commitment::NoteCommitTrapdoor {
+        commitment::NoteCommitTrapdoor(to_scalar(prf_expand_vec(
+            &self.0,
+            &[&[0x05], &rho.to_bytes()[..]],
+        )))
     }
 }
 
@@ -141,14 +151,19 @@ impl Note {
             self.recipient.pk_d().to_bytes(),
             self.value,
             self.rho.0,
-            self.rseed.psi(),
-            (&self.rseed).into(),
+            self.rseed.psi(&self.rho),
+            self.rseed.rcm(&self.rho),
         )
     }
 
     /// Derives the nullifier for this note.
     pub fn nullifier(&self, fvk: &FullViewingKey) -> Nullifier {
-        Nullifier::derive(fvk.nk(), self.rho.0, self.rseed.psi(), self.commitment())
+        Nullifier::derive(
+            fvk.nk(),
+            self.rho.0,
+            self.rseed.psi(&self.rho),
+            self.commitment(),
+        )
     }
 }
 
