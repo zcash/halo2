@@ -18,7 +18,7 @@ use crate::{
 const PRF_EXPAND_PERSONALIZATION: &[u8; 16] = b"Zcash_ExpandSeed";
 
 /// A Pallas point that is guaranteed to not be the identity.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct NonIdentityPallasPoint(pallas::Point);
 
 impl Deref for NonIdentityPallasPoint {

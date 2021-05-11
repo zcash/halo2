@@ -2,6 +2,7 @@
 use group::GroupEncoding;
 use pasta_curves::pallas;
 use rand::RngCore;
+use subtle::CtOption;
 
 use crate::{
     keys::{FullViewingKey, SpendingKey},
@@ -72,11 +73,16 @@ impl Note {
         rho: Nullifier,
         mut rng: impl RngCore,
     ) -> Self {
-        Note {
-            recipient,
-            value,
-            rho,
-            rseed: RandomSeed::random(&mut rng),
+        loop {
+            let note = Note {
+                recipient,
+                value,
+                rho,
+                rseed: RandomSeed::random(&mut rng),
+            };
+            if note.commitment_inner().is_some().into() {
+                break note;
+            }
         }
     }
 
@@ -93,12 +99,12 @@ impl Note {
         let fvk: FullViewingKey = (&sk).into();
         let recipient = fvk.default_address();
 
-        let note = Note {
+        let note = Note::new(
             recipient,
-            value: NoteValue::zero(),
-            rho: rho.unwrap_or_else(|| Nullifier::dummy(rng)),
-            rseed: RandomSeed::random(rng),
-        };
+            NoteValue::zero(),
+            rho.unwrap_or_else(|| Nullifier::dummy(rng)),
+            rng,
+        );
 
         (sk, fvk, note)
     }
@@ -114,9 +120,22 @@ impl Note {
     ///
     /// [notes]: https://zips.z.cash/protocol/nu5.pdf#notes
     pub fn commitment(&self) -> NoteCommitment {
+        // `Note` will always have a note commitment by construction.
+        self.commitment_inner().unwrap()
+    }
+
+    /// Derives the commitment to this note.
+    ///
+    /// This is the internal fallible API, used to check at construction time that the
+    /// note has a commitment. Once you have a [`Note`] object, use `note.commitment()`
+    /// instead.
+    ///
+    /// Defined in [Zcash Protocol Spec § 3.2: Notes][notes].
+    ///
+    /// [notes]: https://zips.z.cash/protocol/nu5.pdf#notes
+    fn commitment_inner(&self) -> CtOption<NoteCommitment> {
         let g_d = self.recipient.g_d();
 
-        // `Note` will always have a note commitment by construction.
         NoteCommitment::derive(
             g_d.to_bytes(),
             self.recipient.pk_d().to_bytes(),
@@ -125,7 +144,6 @@ impl Note {
             self.rseed.psi(),
             (&self.rseed).into(),
         )
-        .unwrap()
     }
 
     /// Derives the nullifier for this note.

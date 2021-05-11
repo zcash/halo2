@@ -288,7 +288,7 @@ impl DiversifierKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug, Clone)]
+#[derive(Clone, Copy, Debug)]
 pub struct Diversifier([u8; 11]);
 
 impl Diversifier {
@@ -408,7 +408,7 @@ impl From<&FullViewingKey> for OutgoingViewingKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug, Clone)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct DiversifiedTransmissionKey(NonIdentityPallasPoint);
 
 impl DiversifiedTransmissionKey {

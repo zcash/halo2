@@ -13,7 +13,7 @@ use crate::{
 /// let sk = SpendingKey::from_bytes([7; 32]).unwrap();
 /// let address = FullViewingKey::from(&sk).default_address();
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone, Copy, Debug)]
 pub struct Address {
     d: Diversifier,
     pk_d: DiversifiedTransmissionKey,
