@@ -16,7 +16,7 @@ use crate::{
     primitives::redpallas::{self, SpendAuth},
     spec::{
         commit_ivk, diversify_hash, extract_p, ka_orchard, prf_expand, prf_expand_vec, prf_nf,
-        to_base, to_scalar,
+        to_base, to_scalar, NonZeroPallasBase, NonZeroPallasScalar,
     },
 };
 
@@ -309,20 +309,25 @@ impl Diversifier {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
+//
+// We store ivk in memory as a scalar instead of a base, so that we aren't incurring an
+// expensive serialize-and-parse step every time we use it (for e.g. deriving addresses).
+// When we actually want to serialize ivk, we're guaranteed to get a valid base field
+// element encoding, because we always construct ivk from an integer in the correct range.
 #[derive(Debug)]
-pub struct IncomingViewingKey(pallas::Scalar);
+pub struct IncomingViewingKey(NonZeroPallasScalar);
 
 impl From<&FullViewingKey> for IncomingViewingKey {
     fn from(fvk: &FullViewingKey) -> Self {
-        let ivk = IncomingViewingKey::derive_inner(fvk);
         // IncomingViewingKey cannot be constructed such that this unwrap would fail.
-        IncomingViewingKey(ivk.unwrap())
+        let ivk = IncomingViewingKey::derive_inner(fvk).unwrap();
+        IncomingViewingKey(ivk.into())
     }
 }
 
 impl IncomingViewingKey {
     /// Derives ask from sk. Internal use only, does not enforce all constraints.
-    fn derive_inner(fvk: &FullViewingKey) -> CtOption<pallas::Scalar> {
+    fn derive_inner(fvk: &FullViewingKey) -> CtOption<NonZeroPallasBase> {
         let ak = extract_p(&pallas::Point::from_bytes(&(&fvk.ak.0).into()).unwrap());
         commit_ivk(&ak, &fvk.nk.0, &fvk.rivk.0)
     }

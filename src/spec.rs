@@ -1,9 +1,10 @@
 //! Helper functions defined in the Zcash Protocol Specification.
 
 use std::iter;
+use std::ops::Deref;
 
 use blake2b_simd::Params;
-use ff::PrimeField;
+use ff::{Field, PrimeField};
 use group::{Curve, Group};
 use halo2::arithmetic::{CurveAffine, CurveExt, FieldExt};
 use pasta_curves::pallas;
@@ -15,6 +16,51 @@ use crate::{
 };
 
 const PRF_EXPAND_PERSONALIZATION: &[u8; 16] = b"Zcash_ExpandSeed";
+
+/// An integer in [1..q_P].
+pub(crate) struct NonZeroPallasBase(pallas::Base);
+
+impl NonZeroPallasBase {
+    /// Constructs a wrapper for a base field element that is guaranteed to be non-zero.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `s.is_zero()`.
+    fn guaranteed(s: pallas::Base) -> Self {
+        assert!(!s.is_zero());
+        NonZeroPallasBase(s)
+    }
+}
+
+/// An integer in [1..r_P].
+#[derive(Debug)]
+pub(crate) struct NonZeroPallasScalar(pallas::Scalar);
+
+impl From<NonZeroPallasBase> for NonZeroPallasScalar {
+    fn from(s: NonZeroPallasBase) -> Self {
+        NonZeroPallasScalar::guaranteed(mod_r_p(s.0))
+    }
+}
+
+impl NonZeroPallasScalar {
+    /// Constructs a wrapper for a scalar field element that is guaranteed to be non-zero.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `s.is_zero()`.
+    fn guaranteed(s: pallas::Scalar) -> Self {
+        assert!(!s.is_zero());
+        NonZeroPallasScalar(s)
+    }
+}
+
+impl Deref for NonZeroPallasScalar {
+    type Target = pallas::Scalar;
+
+    fn deref(&self) -> &pallas::Scalar {
+        &self.0
+    }
+}
 
 /// $\mathsf{ToBase}^\mathsf{Orchard}(x) := LEOS2IP_{\ell_\mathsf{PRFexpand}}(x) (mod q_P)$
 ///
@@ -49,7 +95,7 @@ pub(crate) fn commit_ivk(
     ak: &pallas::Base,
     nk: &pallas::Base,
     rivk: &pallas::Scalar,
-) -> CtOption<pallas::Scalar> {
+) -> CtOption<NonZeroPallasBase> {
     // We rely on the API contract that to_le_bits() returns at least PrimeField::NUM_BITS
     // bits, which is equal to L_ORCHARD_BASE.
     let domain = sinsemilla::CommitDomain::new(&"z.cash:Orchard-CommitIvk");
@@ -60,7 +106,13 @@ pub(crate) fn commit_ivk(
                 .chain(nk.to_le_bits().iter().by_val().take(L_ORCHARD_BASE)),
             rivk,
         )
-        .map(mod_r_p)
+        // Commit^ivk.Output is specified as [1..q_P] ∪ {⊥}. We get this from
+        // sinsemilla::CommitDomain::short_commit by construction:
+        // - 0 is not a valid x-coordinate for any Pallas point.
+        // - sinsemilla::CommitDomain::short_commit calls extract_p_bottom, which replaces
+        //   the identity (which has no affine coordinates) with 0. but Sinsemilla is
+        //   defined using incomplete addition, and thus will never produce the identity.
+        .map(NonZeroPallasBase::guaranteed)
 }
 
 /// Defined in [Zcash Protocol Spec § 5.4.1.6: DiversifyHash^Sapling and DiversifyHash^Orchard Hash Functions][concretediversifyhash].
