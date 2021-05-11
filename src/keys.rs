@@ -57,7 +57,7 @@ impl SpendingKey {
         // needed. Also, `from` would panic on ask = 0.
         let ask = SpendAuthorizingKey::derive_inner(&sk);
         // If ivk = ⊥, discard this key.
-        let ivk = IncomingViewingKey::derive_inner(&(&sk).into());
+        let ivk = KeyAgreementPrivateKey::derive_inner(&(&sk).into());
         CtOption::new(sk, !(ask.ct_is_zero() | ivk.is_none()))
     }
 }
@@ -218,17 +218,18 @@ impl FullViewingKey {
 
     /// Returns the default payment address for this key.
     pub fn default_address(&self) -> Address {
-        self.address(DiversifierKey::from(self).default_diversifier())
+        IncomingViewingKey::from(self).default_address()
     }
 
     /// Returns the payment address for this key at the given index.
     pub fn address_at(&self, j: impl Into<DiversifierIndex>) -> Address {
-        self.address(DiversifierKey::from(self).get(j))
+        IncomingViewingKey::from(self).address_at(j)
     }
 
     /// Returns the payment address for this key corresponding to the given diversifier.
     pub fn address(&self, d: Diversifier) -> Address {
-        IncomingViewingKey::from(self).address(d)
+        // Shortcut: we don't need to derive DiversifierKey.
+        KeyAgreementPrivateKey::from(self).address(d)
     }
 }
 
@@ -297,6 +298,49 @@ impl Diversifier {
     }
 }
 
+/// The private key $\mathsf{ivk}$ used in $KA^{Orchard}$, for decrypting incoming notes.
+///
+/// In Sapling this is what was encoded as an incoming viewing key. For Orchard, we store
+/// both this and [`DiversifierKey`] inside [`IncomingViewingKey`] for usability (to
+/// enable deriving the default address for an incoming viewing key), while this separate
+/// type represents $\mathsf{ivk}$.
+///
+/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
+///
+/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
+///
+/// # Implementation notes
+///
+/// We store $\mathsf{ivk}$ in memory as a scalar instead of a base, so that we aren't
+/// incurring an expensive serialize-and-parse step every time we use it (e.g. for trial
+/// decryption of notes). When we actually want to serialize ivk, we're guaranteed to get
+/// a valid base field element encoding, because we always construct ivk from an integer
+/// in the correct range.
+#[derive(Debug)]
+struct KeyAgreementPrivateKey(NonZeroPallasScalar);
+
+impl From<&FullViewingKey> for KeyAgreementPrivateKey {
+    fn from(fvk: &FullViewingKey) -> Self {
+        // KeyAgreementPrivateKey cannot be constructed such that this unwrap would fail.
+        let ivk = KeyAgreementPrivateKey::derive_inner(fvk).unwrap();
+        KeyAgreementPrivateKey(ivk.into())
+    }
+}
+
+impl KeyAgreementPrivateKey {
+    /// Derives ask from sk. Internal use only, does not enforce all constraints.
+    fn derive_inner(fvk: &FullViewingKey) -> CtOption<NonZeroPallasBase> {
+        let ak = extract_p(&pallas::Point::from_bytes(&(&fvk.ak.0).into()).unwrap());
+        commit_ivk(&ak, &fvk.nk.0, &fvk.rivk.0)
+    }
+
+    /// Returns the payment address for this key corresponding to the given diversifier.
+    fn address(&self, d: Diversifier) -> Address {
+        let pk_d = DiversifiedTransmissionKey::derive(self, &d);
+        Address::from_parts(d, pk_d)
+    }
+}
+
 /// A key that provides the capability to detect and decrypt incoming notes from the block
 /// chain, without being able to spend the notes or detect when they are spent.
 ///
@@ -306,36 +350,38 @@ impl Diversifier {
 /// This key is not suitable for use on its own in a wallet, as it cannot maintain
 /// accurate balance. You should use a [`FullViewingKey`] instead.
 ///
-/// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
+/// Defined in [Zcash Protocol Spec § 5.6.4.3: Orchard Raw Incoming Viewing Keys][orchardinviewingkeyencoding].
 ///
-/// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-//
-// We store ivk in memory as a scalar instead of a base, so that we aren't incurring an
-// expensive serialize-and-parse step every time we use it (for e.g. deriving addresses).
-// When we actually want to serialize ivk, we're guaranteed to get a valid base field
-// element encoding, because we always construct ivk from an integer in the correct range.
+/// [orchardinviewingkeyencoding]: https://zips.z.cash/protocol/nu5.pdf#orchardinviewingkeyencoding
 #[derive(Debug)]
-pub struct IncomingViewingKey(NonZeroPallasScalar);
+pub struct IncomingViewingKey {
+    dk: DiversifierKey,
+    ivk: KeyAgreementPrivateKey,
+}
 
 impl From<&FullViewingKey> for IncomingViewingKey {
     fn from(fvk: &FullViewingKey) -> Self {
-        // IncomingViewingKey cannot be constructed such that this unwrap would fail.
-        let ivk = IncomingViewingKey::derive_inner(fvk).unwrap();
-        IncomingViewingKey(ivk.into())
+        IncomingViewingKey {
+            dk: fvk.into(),
+            ivk: fvk.into(),
+        }
     }
 }
 
 impl IncomingViewingKey {
-    /// Derives ask from sk. Internal use only, does not enforce all constraints.
-    fn derive_inner(fvk: &FullViewingKey) -> CtOption<NonZeroPallasBase> {
-        let ak = extract_p(&pallas::Point::from_bytes(&(&fvk.ak.0).into()).unwrap());
-        commit_ivk(&ak, &fvk.nk.0, &fvk.rivk.0)
+    /// Returns the default payment address for this key.
+    pub fn default_address(&self) -> Address {
+        self.address(self.dk.default_diversifier())
+    }
+
+    /// Returns the payment address for this key at the given index.
+    pub fn address_at(&self, j: impl Into<DiversifierIndex>) -> Address {
+        self.address(self.dk.get(j))
     }
 
     /// Returns the payment address for this key corresponding to the given diversifier.
     pub fn address(&self, d: Diversifier) -> Address {
-        let pk_d = DiversifiedTransmissionKey::derive(self, &d);
-        Address::from_parts(d, pk_d)
+        self.ivk.address(d)
     }
 }
 
@@ -369,7 +415,7 @@ impl DiversifiedTransmissionKey {
     /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
     ///
     /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-    fn derive(ivk: &IncomingViewingKey, d: &Diversifier) -> Self {
+    fn derive(ivk: &KeyAgreementPrivateKey, d: &Diversifier) -> Self {
         let g_d = diversify_hash(&d.as_array());
         DiversifiedTransmissionKey(ka_orchard(&ivk.0, &g_d))
     }
