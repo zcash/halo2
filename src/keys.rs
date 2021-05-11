@@ -16,7 +16,7 @@ use crate::{
     primitives::redpallas::{self, SpendAuth},
     spec::{
         commit_ivk, diversify_hash, extract_p, ka_orchard, prf_expand, prf_expand_vec, prf_nf,
-        to_base, to_scalar, NonZeroPallasBase, NonZeroPallasScalar,
+        to_base, to_scalar, NonIdentityPallasPoint, NonZeroPallasBase, NonZeroPallasScalar,
     },
 };
 
@@ -363,7 +363,7 @@ impl From<&FullViewingKey> for OutgoingViewingKey {
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Debug, Clone)]
-pub(crate) struct DiversifiedTransmissionKey(pallas::Point);
+pub(crate) struct DiversifiedTransmissionKey(NonIdentityPallasPoint);
 
 impl DiversifiedTransmissionKey {
     /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].

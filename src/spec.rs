@@ -17,6 +17,18 @@ use crate::{
 
 const PRF_EXPAND_PERSONALIZATION: &[u8; 16] = b"Zcash_ExpandSeed";
 
+/// A Pallas point that is guaranteed to not be the identity.
+#[derive(Clone, Debug)]
+pub(crate) struct NonIdentityPallasPoint(pallas::Point);
+
+impl Deref for NonIdentityPallasPoint {
+    type Target = pallas::Point;
+
+    fn deref(&self) -> &pallas::Point {
+        &self.0
+    }
+}
+
 /// An integer in [1..q_P].
 pub(crate) struct NonZeroPallasBase(pallas::Base);
 
@@ -118,15 +130,11 @@ pub(crate) fn commit_ivk(
 /// Defined in [Zcash Protocol Spec § 5.4.1.6: DiversifyHash^Sapling and DiversifyHash^Orchard Hash Functions][concretediversifyhash].
 ///
 /// [concretediversifyhash]: https://zips.z.cash/protocol/nu5.pdf#concretediversifyhash
-pub(crate) fn diversify_hash(d: &[u8; 11]) -> pallas::Point {
+pub(crate) fn diversify_hash(d: &[u8; 11]) -> NonIdentityPallasPoint {
     let hasher = pallas::Point::hash_to_curve("z.cash:Orchard-gd");
     let pk_d = hasher(d);
-    if pk_d.is_identity().into() {
-        // If the identity occurs, we replace it with a different fixed point.
-        hasher(&[])
-    } else {
-        pk_d
-    }
+    // If the identity occurs, we replace it with a different fixed point.
+    NonIdentityPallasPoint(CtOption::new(pk_d, !pk_d.is_identity()).unwrap_or_else(|| hasher(&[])))
 }
 
 /// $PRF^\mathsf{expand}(sk, t) := BLAKE2b-512("Zcash_ExpandSeed", sk || t)$
@@ -162,8 +170,11 @@ pub(crate) fn prf_nf(nk: pallas::Base, rho: pallas::Base) -> pallas::Base {
 /// Defined in [Zcash Protocol Spec § 5.4.5.5: Orchard Key Agreement][concreteorchardkeyagreement].
 ///
 /// [concreteorchardkeyagreement]: https://zips.z.cash/protocol/nu5.pdf#concreteorchardkeyagreement
-pub(crate) fn ka_orchard(sk: &pallas::Scalar, b: &pallas::Point) -> pallas::Point {
-    b * sk
+pub(crate) fn ka_orchard(
+    sk: &NonZeroPallasScalar,
+    b: &NonIdentityPallasPoint,
+) -> NonIdentityPallasPoint {
+    NonIdentityPallasPoint(b.deref() * sk.deref())
 }
 
 /// Coordinate extractor for Pallas.
