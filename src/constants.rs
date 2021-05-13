@@ -209,7 +209,7 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
     }
 }
 
-pub trait TestFixedBase<C: CurveAffine> {
+trait TestFixedBase<C: CurveAffine> {
     // Test that Lagrange interpolation coefficients reproduce the correct x-coordinate
     // for each fixed-base multiple in each window.
     fn test_lagrange_coeffs(&self, num_windows: usize);

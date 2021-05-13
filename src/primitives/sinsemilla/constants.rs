@@ -58,11 +58,8 @@ pub const S_PERSONALIZATION: &str = "z.cash:SinsemillaS";
 /// Creates the Sinsemilla S generators used in each round of the Sinsemilla hash
 pub fn sinsemilla_s_generators<C: CurveAffine>() -> impl Iterator<Item = (C::Base, C::Base)> {
     let hasher = C::CurveExt::hash_to_curve(S_PERSONALIZATION);
-    (0..(1 << K)).map(move |j| {
-        let point = hasher(&(j as u32).to_le_bytes())
-            .to_affine()
-            .coordinates()
-            .unwrap();
+    (0..(1u32 << K)).map(move |j| {
+        let point = hasher(&j.to_le_bytes()).to_affine().coordinates().unwrap();
         (*point.x(), *point.y())
     })
 }
@@ -81,9 +78,10 @@ mod tests {
     #[test]
     fn sinsemilla_s() {
         use super::super::sinsemilla_s::SINSEMILLA_S;
-        let mut sinsemilla_s = sinsemilla_s_generators::<pallas::Affine>();
-        for s in SINSEMILLA_S.iter() {
-            assert_eq!(sinsemilla_s.next().unwrap(), (s.0, s.1));
+        let sinsemilla_s: Vec<_> = sinsemilla_s_generators::<pallas::Affine>().collect();
+        assert_eq!(sinsemilla_s.len(), SINSEMILLA_S.len());
+        for (expected, actual) in sinsemilla_s.iter().zip(&SINSEMILLA_S[..]) {
+            assert_eq!(expected, actual);
         }
     }
 
