@@ -116,7 +116,7 @@ impl Instance {
 /// A proof of the validity of an Orchard [`Bundle`].
 ///
 /// [`Bundle`]: crate::bundle::Bundle
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Proof(Vec<u8>);
 
 impl AsRef<[u8]> for Proof {

@@ -93,7 +93,7 @@ impl VerificationKey<SpendAuth> {
 }
 
 /// A RedPallas signature.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Signature<T: SigType>(reddsa::Signature<T>);
 
 impl<T: SigType> From<[u8; 64]> for Signature<T> {
