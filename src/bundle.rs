@@ -18,7 +18,7 @@ use crate::{
 ///
 /// Internally, this may both consume a note and create a note, or it may do only one of
 /// the two. TODO: Determine which is more efficient (circuit size vs bundle size).
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Action<A> {
     /// The nullifier of the note being spent.
     nf: Nullifier,
@@ -173,7 +173,7 @@ pub trait Authorization {
 }
 
 /// A bundle of actions to be applied to the ledger.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Bundle<T: Authorization, V> {
     /// The list of actions that make up this bundle.
     actions: NonEmpty<Action<T::SpendAuth>>,
@@ -301,7 +301,7 @@ impl<T: Authorization, V> Bundle<T, V> {
 }
 
 /// Authorizing data for a bundle of actions, ready to be committed to the ledger.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Authorized {
     proof: Proof,
     binding_signature: redpallas::Signature<Binding>,

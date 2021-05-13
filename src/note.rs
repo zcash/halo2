@@ -135,7 +135,7 @@ impl Note {
 }
 
 /// An encrypted note.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TransmittedNoteCiphertext {
     /// The serialization of the ephemeral public key
     pub epk_bytes: [u8; 32],
