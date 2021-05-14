@@ -560,9 +560,9 @@ struct MyCircuit<F: FieldExt> {
 
 impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
     // Since we are using a single chip for everything, we can just reuse its config.
-    type Config = FieldConfig;
+    type Chip = FieldChip<F>;
 
-    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+    fn configure(meta: &mut ConstraintSystem<F>) -> FieldConfig {
         // We create the two advice columns that FieldChip uses for I/O.
         let advice = [meta.advice_column(), meta.advice_column()];
 
@@ -572,7 +572,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         FieldChip::configure(meta, advice, instance)
     }
 
-    fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error> {
+    fn synthesize(&self, cs: &mut impl Assignment<F>, config: FieldConfig) -> Result<(), Error> {
         let mut layouter = SingleChipLayouter::new(cs)?;
         let field_chip = FieldChip::<F>::construct(config, ());
 

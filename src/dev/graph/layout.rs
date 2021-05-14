@@ -6,8 +6,11 @@ use plotters::{
 use std::cmp;
 use std::collections::HashSet;
 
-use crate::plonk::{
-    Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation,
+use crate::{
+    arithmetic::FieldExt,
+    plonk::{
+        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation,
+    },
 };
 
 /// Renders the circuit layout on the given drawing area.
@@ -32,7 +35,7 @@ use crate::plonk::{
 /// let circuit = MyCircuit::default();
 /// circuit_layout(&circuit, &drawing_area).unwrap();
 /// ```
-pub fn circuit_layout<F: Field, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>(
+pub fn circuit_layout<F: FieldExt, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>(
     circuit: &ConcreteCircuit,
     drawing_area: &DrawingArea<DB, Shift>,
 ) -> Result<(), DrawingAreaErrorKind<DB::ErrorType>> {

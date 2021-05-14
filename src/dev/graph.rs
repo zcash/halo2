@@ -1,8 +1,11 @@
 use ff::Field;
 use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
-use crate::plonk::{
-    Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation,
+use crate::{
+    arithmetic::FieldExt,
+    plonk::{
+        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation,
+    },
 };
 
 pub mod layout;
@@ -13,7 +16,7 @@ pub mod layout;
 /// inside the gadgets and chips that it uses.
 ///
 /// [`Layouter::namespace`]: crate::circuit::Layouter#method.namespace
-pub fn circuit_dot_graph<F: Field, ConcreteCircuit: Circuit<F>>(
+pub fn circuit_dot_graph<F: FieldExt, ConcreteCircuit: Circuit<F>>(
     circuit: &ConcreteCircuit,
 ) -> String {
     // Collect the graph details.
