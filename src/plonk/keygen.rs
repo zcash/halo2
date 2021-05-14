@@ -5,18 +5,18 @@ use super::{
     circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed},
     permutation, Error, LagrangeCoeff, Permutation, Polynomial, ProvingKey, VerifyingKey,
 };
-use crate::arithmetic::CurveAffine;
 use crate::poly::{
     commitment::{Blind, Params},
     EvaluationDomain, Rotation,
 };
+use crate::{arithmetic::CurveAffine, circuit::Chip};
 
 pub(crate) fn create_domain<C, ConcreteCircuit>(
     params: &Params<C>,
 ) -> (
     EvaluationDomain<C::Scalar>,
     ConstraintSystem<C::Scalar>,
-    ConcreteCircuit::Config,
+    <ConcreteCircuit::Chip as Chip<C::Scalar>>::Config,
 )
 where
     C: CurveAffine,
