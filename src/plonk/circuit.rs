@@ -7,7 +7,11 @@ use std::{
 };
 
 use super::{lookup, permutation, Error};
-use crate::{arithmetic::FieldExt, circuit::Region, poly::Rotation};
+use crate::{
+    arithmetic::FieldExt,
+    circuit::{Chip, Region},
+    poly::Rotation,
+};
 
 /// A column type
 pub trait ColumnType: 'static + Sized + std::fmt::Debug {}
@@ -298,18 +302,22 @@ pub trait Assignment<F: Field> {
 /// This is a trait that circuits provide implementations for so that the
 /// backend prover can ask the circuit to synthesize using some given
 /// [`ConstraintSystem`] implementation.
-pub trait Circuit<F: Field> {
+pub trait Circuit<F: FieldExt> {
     /// This is a configuration object that stores things like columns.
-    type Config: Clone;
+    type Chip: Chip<F>;
 
     /// The circuit is given an opportunity to describe the exact gate
     /// arrangement, column arrangement, etc.
-    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config;
+    fn configure(meta: &mut ConstraintSystem<F>) -> <Self::Chip as Chip<F>>::Config;
 
     /// Given the provided `cs`, synthesize the circuit. The concrete type of
     /// the caller will be different depending on the context, and they may or
     /// may not expect to have a witness present.
-    fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error>;
+    fn synthesize(
+        &self,
+        cs: &mut impl Assignment<F>,
+        config: <Self::Chip as Chip<F>>::Config,
+    ) -> Result<(), Error>;
 }
 
 /// Low-degree expression representing an identity that must hold over the committed columns.

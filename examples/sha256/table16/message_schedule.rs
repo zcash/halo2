@@ -456,16 +456,16 @@ mod tests {
         struct MyCircuit {}
 
         impl<F: FieldExt> Circuit<F> for MyCircuit {
-            type Config = Table16Config;
+            type Chip = Table16Chip<F>;
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystem<F>) -> Table16Config {
                 Table16Chip::configure(meta)
             }
 
             fn synthesize(
                 &self,
                 cs: &mut impl Assignment<F>,
-                config: Self::Config,
+                config: Table16Config,
             ) -> Result<(), Error> {
                 let mut layouter = SingleChipLayouter::new(cs)?;
 

@@ -1,5 +1,6 @@
 use halo2::{
     arithmetic::FieldExt,
+    circuit::Chip,
     dev::circuit_layout,
     pasta::Fp,
     plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation},
@@ -14,7 +15,7 @@ fn main() {
     #[derive(Copy, Clone, Debug)]
     pub struct Variable(Column<Advice>, usize);
 
-    #[derive(Clone)]
+    #[derive(Clone, Debug)]
     struct PLONKConfig {
         a: Column<Advice>,
         b: Column<Advice>,
@@ -32,6 +33,112 @@ fn main() {
 
         perm: Permutation,
         perm2: Permutation,
+    }
+
+    #[derive(Clone, Debug)]
+    struct PLONKChip<F: FieldExt> {
+        config: PLONKConfig,
+        _marker: PhantomData<F>,
+    }
+
+    impl<F: FieldExt> PLONKChip<F> {
+        /// Configures this chip for use in a circuit.
+        pub fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
+            let e = meta.advice_column();
+            let a = meta.advice_column();
+            let b = meta.advice_column();
+            let sf = meta.fixed_column();
+            let c = meta.advice_column();
+            let d = meta.advice_column();
+            let p = meta.instance_column();
+
+            let perm = meta.permutation(&[a.into(), b.into(), c.into()]);
+            let perm2 = meta.permutation(&[a.into(), b.into(), c.into()]);
+
+            let sm = meta.fixed_column();
+            let sa = meta.fixed_column();
+            let sb = meta.fixed_column();
+            let sc = meta.fixed_column();
+            let sp = meta.fixed_column();
+            let sl = meta.fixed_column();
+            let sl2 = meta.fixed_column();
+
+            /*
+             *   A         B      ...  sl        sl2
+             * [
+             *   instance  0      ...  0         0
+             *   a         a      ...  0         0
+             *   a         a^2    ...  0         0
+             *   a         a      ...  0         0
+             *   a         a^2    ...  0         0
+             *   ...       ...    ...  ...       ...
+             *   ...       ...    ...  instance  0
+             *   ...       ...    ...  a         a
+             *   ...       ...    ...  a         a^2
+             *   ...       ...    ...  0         0
+             * ]
+             */
+            let a_ = meta.query_any(a.into(), Rotation::cur());
+            let b_ = meta.query_any(b.into(), Rotation::cur());
+            let sl_ = meta.query_any(sl.into(), Rotation::cur());
+            let sl2_ = meta.query_any(sl2.into(), Rotation::cur());
+            meta.lookup(&[a_.clone()], &[sl_.clone()]);
+            meta.lookup(&[a_ * b_], &[sl_ * sl2_]);
+
+            meta.create_gate("Combined add-mult", |meta| {
+                let d = meta.query_advice(d, Rotation::next());
+                let a = meta.query_advice(a, Rotation::cur());
+                let sf = meta.query_fixed(sf, Rotation::cur());
+                let e = meta.query_advice(e, Rotation::prev());
+                let b = meta.query_advice(b, Rotation::cur());
+                let c = meta.query_advice(c, Rotation::cur());
+
+                let sa = meta.query_fixed(sa, Rotation::cur());
+                let sb = meta.query_fixed(sb, Rotation::cur());
+                let sc = meta.query_fixed(sc, Rotation::cur());
+                let sm = meta.query_fixed(sm, Rotation::cur());
+
+                a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one())) + sf * (d * e)
+            });
+
+            meta.create_gate("Public input", |meta| {
+                let a = meta.query_advice(a, Rotation::cur());
+                let p = meta.query_instance(p, Rotation::cur());
+                let sp = meta.query_fixed(sp, Rotation::cur());
+
+                sp * (a + p * (-F::one()))
+            });
+
+            PLONKConfig {
+                a,
+                b,
+                c,
+                d,
+                e,
+                sa,
+                sb,
+                sc,
+                sm,
+                sp,
+                sl,
+                sl2,
+                perm,
+                perm2,
+            }
+        }
+    }
+
+    impl<F: FieldExt> Chip<F> for PLONKChip<F> {
+        type Config = PLONKConfig;
+        type Loaded = ();
+
+        fn config(&self) -> &Self::Config {
+            &self.config
+        }
+
+        fn loaded(&self) -> &Self::Loaded {
+            &()
+        }
     }
 
     trait StandardCS<FF: FieldExt> {
@@ -238,90 +345,10 @@ fn main() {
     }
 
     impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
-        type Config = PLONKConfig;
+        type Chip = PLONKChip<F>;
 
         fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
-            let e = meta.advice_column();
-            let a = meta.advice_column();
-            let b = meta.advice_column();
-            let sf = meta.fixed_column();
-            let c = meta.advice_column();
-            let d = meta.advice_column();
-            let p = meta.instance_column();
-
-            let perm = meta.permutation(&[a.into(), b.into(), c.into()]);
-            let perm2 = meta.permutation(&[a.into(), b.into(), c.into()]);
-
-            let sm = meta.fixed_column();
-            let sa = meta.fixed_column();
-            let sb = meta.fixed_column();
-            let sc = meta.fixed_column();
-            let sp = meta.fixed_column();
-            let sl = meta.fixed_column();
-            let sl2 = meta.fixed_column();
-
-            /*
-             *   A         B      ...  sl        sl2
-             * [
-             *   instance  0      ...  0         0
-             *   a         a      ...  0         0
-             *   a         a^2    ...  0         0
-             *   a         a      ...  0         0
-             *   a         a^2    ...  0         0
-             *   ...       ...    ...  ...       ...
-             *   ...       ...    ...  instance  0
-             *   ...       ...    ...  a         a
-             *   ...       ...    ...  a         a^2
-             *   ...       ...    ...  0         0
-             * ]
-             */
-            let a_ = meta.query_any(a.into(), Rotation::cur());
-            let b_ = meta.query_any(b.into(), Rotation::cur());
-            let sl_ = meta.query_any(sl.into(), Rotation::cur());
-            let sl2_ = meta.query_any(sl2.into(), Rotation::cur());
-            meta.lookup(&[a_.clone()], &[sl_.clone()]);
-            meta.lookup(&[a_, b_], &[sl_, sl2_]);
-
-            meta.create_gate("Combined add-mult", |meta| {
-                let d = meta.query_advice(d, Rotation::next());
-                let a = meta.query_advice(a, Rotation::cur());
-                let sf = meta.query_fixed(sf, Rotation::cur());
-                let e = meta.query_advice(e, Rotation::prev());
-                let b = meta.query_advice(b, Rotation::cur());
-                let c = meta.query_advice(c, Rotation::cur());
-
-                let sa = meta.query_fixed(sa, Rotation::cur());
-                let sb = meta.query_fixed(sb, Rotation::cur());
-                let sc = meta.query_fixed(sc, Rotation::cur());
-                let sm = meta.query_fixed(sm, Rotation::cur());
-
-                a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one())) + sf * (d * e)
-            });
-
-            meta.create_gate("Public input", |meta| {
-                let a = meta.query_advice(a, Rotation::cur());
-                let p = meta.query_instance(p, Rotation::cur());
-                let sp = meta.query_fixed(sp, Rotation::cur());
-
-                sp * (a + p * (-F::one()))
-            });
-
-            PLONKConfig {
-                a,
-                b,
-                c,
-                d,
-                e,
-                sa,
-                sb,
-                sc,
-                sm,
-                sp,
-                sl,
-                sl2,
-                perm,
-                perm2,
-            }
+            PLONKChip::configure(meta)
         }
 
         fn synthesize(

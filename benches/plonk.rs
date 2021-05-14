@@ -3,6 +3,7 @@ extern crate criterion;
 
 extern crate halo2;
 use halo2::arithmetic::FieldExt;
+use halo2::circuit::Chip;
 use halo2::pasta::{EqAffine, Fp};
 use halo2::plonk::*;
 use halo2::poly::{commitment::Params, Rotation};
@@ -20,7 +21,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     // Initialize the polynomial commitment parameters
     let params: Params<EqAffine> = Params::new(k);
 
-    #[derive(Clone)]
+    #[derive(Clone, Debug)]
     struct PLONKConfig {
         a: Column<Advice>,
         b: Column<Advice>,
@@ -32,6 +33,65 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         sm: Column<Fixed>,
 
         perm: Permutation,
+    }
+
+    #[derive(Clone, Debug)]
+    struct PLONKChip<F: FieldExt> {
+        config: PLONKConfig,
+        _marker: PhantomData<F>,
+    }
+
+    impl<F: FieldExt> PLONKChip<F> {
+        /// Configures this chip for use in a circuit.
+        pub fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
+            let a = meta.advice_column();
+            let b = meta.advice_column();
+            let c = meta.advice_column();
+
+            let perm = meta.permutation(&[a.into(), b.into(), c.into()]);
+
+            let sm = meta.fixed_column();
+            let sa = meta.fixed_column();
+            let sb = meta.fixed_column();
+            let sc = meta.fixed_column();
+
+            meta.create_gate("Combined add-mult", |meta| {
+                let a = meta.query_advice(a, Rotation::cur());
+                let b = meta.query_advice(b, Rotation::cur());
+                let c = meta.query_advice(c, Rotation::cur());
+
+                let sa = meta.query_fixed(sa, Rotation::cur());
+                let sb = meta.query_fixed(sb, Rotation::cur());
+                let sc = meta.query_fixed(sc, Rotation::cur());
+                let sm = meta.query_fixed(sm, Rotation::cur());
+
+                a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))
+            });
+
+            PLONKConfig {
+                a,
+                b,
+                c,
+                sa,
+                sb,
+                sc,
+                sm,
+                perm,
+            }
+        }
+    }
+
+    impl<F: FieldExt> Chip<F> for PLONKChip<F> {
+        type Config = PLONKConfig;
+        type Loaded = ();
+
+        fn config(&self) -> &Self::Config {
+            &self.config
+        }
+
+        fn loaded(&self) -> &Self::Loaded {
+            &()
+        }
     }
 
     trait StandardCS<FF: FieldExt> {
@@ -167,43 +227,10 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     }
 
     impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
-        type Config = PLONKConfig;
+        type Chip = PLONKChip<F>;
 
         fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
-            let a = meta.advice_column();
-            let b = meta.advice_column();
-            let c = meta.advice_column();
-
-            let perm = meta.permutation(&[a.into(), b.into(), c.into()]);
-
-            let sm = meta.fixed_column();
-            let sa = meta.fixed_column();
-            let sb = meta.fixed_column();
-            let sc = meta.fixed_column();
-
-            meta.create_gate("Combined add-mult", |meta| {
-                let a = meta.query_advice(a, Rotation::cur());
-                let b = meta.query_advice(b, Rotation::cur());
-                let c = meta.query_advice(c, Rotation::cur());
-
-                let sa = meta.query_fixed(sa, Rotation::cur());
-                let sb = meta.query_fixed(sb, Rotation::cur());
-                let sc = meta.query_fixed(sc, Rotation::cur());
-                let sm = meta.query_fixed(sm, Rotation::cur());
-
-                a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))
-            });
-
-            PLONKConfig {
-                a,
-                b,
-                c,
-                sa,
-                sb,
-                sc,
-                sm,
-                perm,
-            }
+            PLONKChip::configure(meta)
         }
 
         fn synthesize(

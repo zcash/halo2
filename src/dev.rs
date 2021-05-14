@@ -68,6 +68,7 @@ pub enum VerifyFailure {
 /// ```
 /// use halo2::{
 ///     arithmetic::FieldExt,
+///     circuit::Chip,
 ///     dev::{MockProver, VerifyFailure},
 ///     pasta::Fp,
 ///     plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error},
@@ -75,22 +76,20 @@ pub enum VerifyFailure {
 /// };
 /// const K: u32 = 5;
 ///
-/// #[derive(Copy, Clone)]
+/// #[derive(Copy, Clone, Debug)]
 /// struct MyConfig {
 ///     a: Column<Advice>,
 ///     b: Column<Advice>,
 ///     c: Column<Advice>,
 /// }
 ///
-/// #[derive(Clone)]
-/// struct MyCircuit {
-///     a: Option<u64>,
-///     b: Option<u64>,
+/// #[derive(Clone, Debug)]
+/// struct MyChip<F: FieldExt> {
+///     config: MyConfig,
+///     _marker: std::marker::PhantomData<F>,
 /// }
 ///
-/// impl<F: FieldExt> Circuit<F> for MyCircuit {
-///     type Config = MyConfig;
-///
+/// impl<F: FieldExt> MyChip<F> {
 ///     fn configure(meta: &mut ConstraintSystem<F>) -> MyConfig {
 ///         let a = meta.advice_column();
 ///         let b = meta.advice_column();
@@ -106,6 +105,33 @@ pub enum VerifyFailure {
 ///         });
 ///
 ///         MyConfig { a, b, c }
+///     }
+/// }
+///
+/// impl<F: FieldExt> Chip<F> for MyChip<F> {
+///     type Config = MyConfig;
+///     type Loaded = ();
+///
+///     fn config(&self) -> &Self::Config {
+///         &self.config
+///     }
+///
+///     fn loaded(&self) -> &Self::Loaded {
+///         &()
+///     }
+/// }
+///
+/// #[derive(Clone)]
+/// struct MyCircuit {
+///     a: Option<u64>,
+///     b: Option<u64>,
+/// }
+///
+/// impl<F: FieldExt> Circuit<F> for MyCircuit {
+///     type Chip = MyChip<F>;
+///
+///     fn configure(meta: &mut ConstraintSystem<F>) -> MyConfig {
+///         MyChip::configure(meta)
 ///     }
 ///
 ///     fn synthesize(&self, cs: &mut impl Assignment<F>, config: MyConfig) -> Result<(), Error> {
