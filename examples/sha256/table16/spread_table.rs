@@ -286,9 +286,9 @@ mod tests {
         struct MyCircuit {}
 
         impl<F: FieldExt> Circuit<F> for MyCircuit {
-            type Config = SpreadTableConfig;
+            type Chip = SpreadTableChip<F>;
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystem<F>) -> SpreadTableConfig {
                 let input_tag = meta.advice_column();
                 let input_dense = meta.advice_column();
                 let input_spread = meta.advice_column();
@@ -299,7 +299,7 @@ mod tests {
             fn synthesize(
                 &self,
                 cs: &mut impl Assignment<F>,
-                config: Self::Config,
+                config: SpreadTableConfig,
             ) -> Result<(), Error> {
                 let mut layouter = SingleChipLayouter::new(cs)?;
                 SpreadTableChip::load(config.clone(), &mut layouter)?;
