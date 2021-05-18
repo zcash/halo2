@@ -4,13 +4,18 @@ use halo2::arithmetic::{CurveAffine, FieldExt};
 /// Decompose a scalar into `window_num_bits` bits (little-endian)
 /// For a window size of `w`, this returns [k_0, ..., k_n] where each `k_i`
 /// is a `w`-bit value, and `scalar = k_0 + k_1 * w + k_n * w^n`.
-/// Note that we are returning a `Vec<u8>` which means the window size is
-/// limited to <= 8 bits.
+///
+/// # Panics
+///
+/// We are returning a `Vec<u8>` which means the window size is limited to
+/// <= 8 bits.
 pub fn decompose_scalar_fixed<C: CurveAffine>(
     scalar: C::Scalar,
     scalar_num_bits: usize,
     window_num_bits: usize,
 ) -> Vec<u8> {
+    assert!(window_num_bits <= 8);
+
     // Pad bits to multiple of window_num_bits
     let padding = (window_num_bits - (scalar_num_bits % window_num_bits)) % window_num_bits;
     let bits: Vec<bool> = scalar
@@ -42,6 +47,7 @@ mod tests {
     use pasta_curves::{arithmetic::FieldExt, pallas};
     use proptest::prelude::*;
     use std::convert::TryInto;
+    use std::iter;
 
     prop_compose! {
         fn arb_scalar()(bytes in prop::array::uniform32(0u8..)) -> pallas::Scalar {
@@ -62,19 +68,16 @@ mod tests {
             let decomposed = decompose_scalar_fixed::<pallas::Affine>(scalar, pallas::Scalar::NUM_BITS as usize, window_num_bits as usize);
 
             // Flatten bits
-            let mut bits: Vec<bool> = decomposed.iter().map(|window| (0..window_num_bits).map(|mask| (window & (1 << mask)) != 0).collect::<Vec<bool>>()
-            ).flatten().collect();
+            let bits = decomposed
+                .iter()
+                .flat_map(|window| (0..window_num_bits).map(move |mask| (window & (1 << mask)) != 0));
+
+            // Ensure this decomposition contains 256 or fewer set bits.
+            assert!(!bits.clone().skip(32*8).any(|b| b));
 
             // Pad or truncate bits to 32 bytes
-            if bits.len() >= 32 * 8 {
-                for bit in bits[32*8..].iter() {
-                    assert!(!bit);
-                }
-                bits = bits[0..32*8].to_vec()
-            } else {
-                let padding = 32 * 8 - bits.len();
-                bits.extend_from_slice(&vec![false; padding]);
-            }
+            let bits: Vec<bool> = bits.chain(iter::repeat(false)).take(32*8).collect();
+
             let bytes: Vec<u8> = bits.chunks_exact(8).map(|chunk| chunk.iter().rev().fold(0, |acc, b| (acc << 1) + (*b as u8))).collect();
 
             // Check that original scalar is recovered from decomposition
