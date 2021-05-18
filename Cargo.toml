@@ -20,6 +20,7 @@ rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 
 [dependencies]
 aes = "0.6"
+arrayvec = "0.7.0"
 bitvec = "0.20"
 blake2b_simd = "0.5"
 ff = "0.9"
@@ -33,7 +34,7 @@ subtle = "2.3"
 
 [dependencies.halo2]
 git = "https://github.com/zcash/halo2.git"
-rev = "6acacf1aca12f34fc311aa59056e40adc0e6d8bd"
+rev = "cae6f6af725cf1f5bc94e126a0b41e9ac602a302"
 
 [dependencies.pasta_curves]
 git = "https://github.com/zcash/pasta_curves.git"

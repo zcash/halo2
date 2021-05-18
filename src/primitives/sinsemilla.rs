@@ -10,6 +10,7 @@ mod addition;
 use self::addition::IncompletePoint;
 
 mod constants;
+mod sinsemilla_s;
 pub use constants::*;
 
 fn lebs2ip_k(bits: &[bool]) -> u32 {
