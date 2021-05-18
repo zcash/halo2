@@ -626,11 +626,11 @@ fn main() {
     let prover = MockProver::run(k, &circuit, vec![public_inputs]).unwrap();
     assert_eq!(
         prover.verify(),
-        Err(VerifyFailure::Gate {
+        Err(vec![VerifyFailure::Gate {
             gate_index: 0,
             gate_name: "public input",
             row: 7,
-        })
+        }])
     );
     // ANCHOR_END: test-circuit
 }
