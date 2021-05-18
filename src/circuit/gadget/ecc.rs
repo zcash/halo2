@@ -290,7 +290,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
         mut layouter: impl Layouter<C::Base>,
         by: &ScalarVar<C, EccChip>,
     ) -> Result<Self, Error> {
-        assert_eq!(format!("{:?}", self.chip), format!("{:?}", by.chip));
+        assert_eq!(self.chip, by.chip);
         self.chip
             .mul(&mut layouter, &by.inner, &self.inner)
             .map(|inner| Point {
@@ -315,8 +315,8 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> X<C, EccC
     }
 }
 
-/// A constant elliptic curve point over the given curve, for which scalar multiplication
-/// is more efficient.
+/// A constant elliptic curve point over the given curve, for which window tables have
+/// been provided to make scalar multiplication more efficient.
 #[derive(Clone, Debug)]
 pub struct FixedPoint<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
     chip: EccChip,
@@ -336,7 +336,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> FixedPoin
         mut layouter: impl Layouter<C::Base>,
         by: &ScalarFixed<C, EccChip>,
     ) -> Result<Point<C, EccChip>, Error> {
-        assert_eq!(format!("{:?}", self.chip), format!("{:?}", by.chip));
+        assert_eq!(self.chip, by.chip);
         self.chip
             .mul_fixed(&mut layouter, &by.inner, &self.inner)
             .map(|inner| Point {
@@ -367,7 +367,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> FixedPoin
         mut layouter: impl Layouter<C::Base>,
         by: &ScalarFixedShort<C, EccChip>,
     ) -> Result<Point<C, EccChip>, Error> {
-        assert_eq!(format!("{:?}", self.chip), format!("{:?}", by.chip));
+        assert_eq!(self.chip, by.chip);
         self.chip
             .mul_fixed_short(&mut layouter, &by.inner, &self.inner)
             .map(|inner| Point {
