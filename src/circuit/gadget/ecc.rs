@@ -23,20 +23,23 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     /// to be in the base field of the curve. (See non-normative notes in
     /// https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents.)
     type ScalarVar: Clone + Debug;
-    /// Variable representing a full-width element of the elliptic curve's scalar field, to be used for fixed-base scalar mul.
+    /// Variable representing a full-width element of the elliptic curve's
+    /// scalar field, to be used for fixed-base scalar mul.
     type ScalarFixed: Clone + Debug;
-    /// Variable representing a signed short element of the elliptic curve's scalar field, to be used for fixed-base scalar mul.
+    /// Variable representing a signed short element of the elliptic curve's
+    /// scalar field, to be used for fixed-base scalar mul.
     ///
     /// A `ScalarFixedShort` must be in the range [-(2^64 - 1), 2^64 - 1].
     type ScalarFixedShort: Clone + Debug;
     /// Variable representing an elliptic curve point.
     type Point: Clone + Debug;
-    /// Variable representing the x-coordinate of an elliptic curve point.
+    /// Variable representing the affine short Weierstrass x-coordinate of an
+    /// elliptic curve point.
     type X: Clone + Debug;
     /// Variable representing the set of fixed bases in the circuit.
     type FixedPoints: Clone + Debug;
-    /// Variable representing the set of fixed bases to be used in scalar multiplication
-    /// with a short signed exponent.
+    /// Variable representing the set of fixed bases to be used in scalar
+    /// multiplication with a short signed exponent.
     type FixedPointsShort: Clone + Debug;
     /// Variable representing a fixed elliptic curve point (constant in the circuit).
     type FixedPoint: Clone + Debug;
@@ -44,21 +47,24 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     /// to be used in scalar multiplication with a short signed exponent.
     type FixedPointShort: Clone + Debug;
 
-    /// Witnesses the given base field element as a private input to the circuit for variable-base scalar mul.
+    /// Witnesses the given base field element as a private input to the circuit
+    /// for variable-base scalar mul.
     fn witness_scalar_var(
         &self,
         layouter: &mut impl Layouter<C::Base>,
         value: Option<C::Base>,
     ) -> Result<Self::ScalarVar, Error>;
 
-    /// Witnesses the given full-width scalar as a private input to the circuit for fixed-base scalar mul.
+    /// Witnesses the given full-width scalar as a private input to the circuit
+    /// for fixed-base scalar mul.
     fn witness_scalar_fixed(
         &self,
         layouter: &mut impl Layouter<C::Base>,
         value: Option<C::Scalar>,
     ) -> Result<Self::ScalarFixed, Error>;
 
-    /// Witnesses the given signed short scalar as a private input to the circuit for fixed-base scalar mul.
+    /// Witnesses the given signed short scalar as a private input to the circuit
+    /// for fixed-base scalar mul.
     fn witness_scalar_fixed_short(
         &self,
         layouter: &mut impl Layouter<C::Base>,
