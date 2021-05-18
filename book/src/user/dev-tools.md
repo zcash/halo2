@@ -42,7 +42,7 @@ chips that it uses.
 The `cost-model` binary takes high-level parameters for a circuit design, and estimates
 the verification cost, as well as resulting proof size.
 
-```
+```plaintext
 Usage: cargo run --example cost-model -- [OPTIONS] k
 
 Positional arguments:
