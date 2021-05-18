@@ -148,12 +148,12 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
 /// to be in the base field of the curve. (See non-normative notes in
 /// https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents.)
 #[derive(Debug)]
-pub struct ScalarVar<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> {
+pub struct ScalarVar<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
     chip: EccChip,
     inner: EccChip::ScalarVar,
 }
 
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> ScalarVar<C, EccChip> {
+impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> ScalarVar<C, EccChip> {
     /// Constructs a new ScalarVar with the given value.
     pub fn new(
         chip: EccChip,
@@ -167,12 +167,12 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> ScalarVar<C, E
 
 /// A full-width element of the given elliptic curve's scalar field, to be used for fixed-base scalar mul.
 #[derive(Debug)]
-pub struct ScalarFixed<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> {
+pub struct ScalarFixed<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
     chip: EccChip,
     inner: EccChip::ScalarFixed,
 }
 
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> ScalarFixed<C, EccChip> {
+impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> ScalarFixed<C, EccChip> {
     /// Constructs a new ScalarFixed with the given value.
     pub fn new(
         chip: EccChip,
@@ -186,12 +186,14 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> ScalarFixed<C,
 
 /// A signed short element of the given elliptic curve's scalar field, to be used for fixed-base scalar mul.
 #[derive(Debug)]
-pub struct ScalarFixedShort<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> {
+pub struct ScalarFixedShort<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
     chip: EccChip,
     inner: EccChip::ScalarFixedShort,
 }
 
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> ScalarFixedShort<C, EccChip> {
+impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
+    ScalarFixedShort<C, EccChip>
+{
     /// Constructs a new ScalarFixedShort with the given value.
     ///
     /// # Panics
@@ -223,12 +225,12 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> ScalarFixedSho
 
 /// An elliptic curve point over the given curve.
 #[derive(Debug)]
-pub struct Point<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> {
+pub struct Point<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
     chip: EccChip,
     inner: EccChip::Point,
 }
 
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> Point<C, EccChip> {
+impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, EccChip> {
     /// Constructs a new point with the given value.
     pub fn new(
         chip: EccChip,
@@ -251,7 +253,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> Point<C, EccCh
 
     /// Returns `self + other` using complete addition.
     pub fn add(&self, mut layouter: impl Layouter<C::Base>, other: &Self) -> Result<Self, Error> {
-        assert_eq!(format!("{:?}", self.chip), format!("{:?}", other.chip));
+        assert_eq!(self.chip, other.chip);
         self.chip
             .add(&mut layouter, &self.inner, &other.inner)
             .map(|inner| Point {
@@ -266,7 +268,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> Point<C, EccCh
         mut layouter: impl Layouter<C::Base>,
         other: &Self,
     ) -> Result<Self, Error> {
-        assert_eq!(format!("{:?}", self.chip), format!("{:?}", other.chip));
+        assert_eq!(self.chip, other.chip);
         self.chip
             .add_incomplete(&mut layouter, &self.inner, &other.inner)
             .map(|inner| Point {
@@ -293,12 +295,12 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> Point<C, EccCh
 
 /// The x-coordinate of an elliptic curve point over the given curve.
 #[derive(Debug)]
-pub struct X<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> {
+pub struct X<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
     chip: EccChip,
     inner: EccChip::X,
 }
 
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> X<C, EccChip> {
+impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> X<C, EccChip> {
     /// Wraps the given x-coordinate (obtained directly from an instruction) in a gadget.
     pub fn from_inner(chip: EccChip, inner: EccChip::X) -> Self {
         X { chip, inner }
@@ -308,12 +310,12 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> X<C, EccChip> 
 /// A constant elliptic curve point over the given curve, for which scalar multiplication
 /// is more efficient.
 #[derive(Clone, Debug)]
-pub struct FixedPoint<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> {
+pub struct FixedPoint<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
     chip: EccChip,
     inner: EccChip::FixedPoint,
 }
 
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> FixedPoint<C, EccChip> {
+impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> FixedPoint<C, EccChip> {
     /// Gets a reference to the specified fixed point in the circuit.
     pub fn get(chip: EccChip, point: EccChip::FixedPoints) -> Result<Self, Error> {
         chip.get_fixed(point)
@@ -339,12 +341,12 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> FixedPoint<C, 
 /// A constant elliptic curve point over the given curve, used in scalar multiplication
 /// with a short signed exponent
 #[derive(Clone, Debug)]
-pub struct FixedPointShort<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> {
+pub struct FixedPointShort<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
     chip: EccChip,
     inner: EccChip::FixedPointShort,
 }
 
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> FixedPointShort<C, EccChip> {
+impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> FixedPointShort<C, EccChip> {
     /// Gets a reference to the specified fixed point in the circuit.
     pub fn get(chip: EccChip, point: EccChip::FixedPointsShort) -> Result<Self, Error> {
         chip.get_fixed_short(point)
