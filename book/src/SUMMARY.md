@@ -8,6 +8,7 @@
   - [Chips](concepts/chips.md)
   - [Gadgets](concepts/gadgets.md)
 - [User Documentation](user.md)
+  - [Developer tools](user/dev-tools.md)
   - [A simple example](user/simple-example.md)
   - [Lookup tables](user/lookup-tables.md)
   - [Gadgets](user/gadgets.md)
