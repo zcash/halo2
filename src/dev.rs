@@ -339,21 +339,21 @@ impl<F: FieldExt> MockProver<F> {
                         &|index| {
                             let query = self.cs.fixed_queries[index];
                             let column_index = query.0.index();
-                            let rotation = query.1 .0;
+                            let rotation = query.1.0;
                             self.fixed[column_index]
                                 [(row as i32 + n + rotation) as usize % n as usize]
                         },
                         &|index| {
                             let query = self.cs.advice_queries[index];
                             let column_index = query.0.index();
-                            let rotation = query.1 .0;
+                            let rotation = query.1.0;
                             self.advice[column_index]
                                 [(row as i32 + n + rotation) as usize % n as usize]
                         },
                         &|index| {
                             let query = self.cs.instance_queries[index];
                             let column_index = query.0.index();
-                            let rotation = query.1 .0;
+                            let rotation = query.1.0;
                             self.instance[column_index]
                                 [(row as i32 + n + rotation) as usize % n as usize]
                         },
