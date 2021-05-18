@@ -35,6 +35,9 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     type X: Clone + Debug;
     /// Variable representing the set of fixed bases in the circuit.
     type FixedPoints: Clone + Debug;
+    /// Variable representing the set of fixed bases to be used in scalar multiplication
+    /// with a short signed exponent.
+    type FixedPointsShort: Clone + Debug;
     /// Variable representing a fixed elliptic curve point (constant in the circuit).
     type FixedPoint: Clone + Debug;
     /// Variable representing a fixed elliptic curve point (constant in the circuit)
@@ -81,7 +84,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     /// short exponent.
     fn get_fixed_short(
         &self,
-        fixed_points: Self::FixedPoints,
+        fixed_points: Self::FixedPointsShort,
     ) -> Result<Self::FixedPointShort, Error>;
 
     /// Performs incomplete point addition, returning `a + b`.
@@ -335,7 +338,7 @@ pub struct FixedPointShort<C: CurveAffine, EccChip: EccInstructions<C> + Clone +
 
 impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> FixedPointShort<C, EccChip> {
     /// Gets a reference to the specified fixed point in the circuit.
-    pub fn get(chip: EccChip, point: EccChip::FixedPoints) -> Result<Self, Error> {
+    pub fn get(chip: EccChip, point: EccChip::FixedPointsShort) -> Result<Self, Error> {
         chip.get_fixed_short(point)
             .map(|inner| FixedPointShort { chip, inner })
     }
