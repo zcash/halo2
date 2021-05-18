@@ -111,6 +111,13 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
         b: &Self::Point,
     ) -> Result<Self::Point, Error>;
 
+    /// Performs point doubling, returning `[2] a`.
+    fn double(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        a: &Self::Point,
+    ) -> Result<Self::Point, Error>;
+
     /// Performs variable-base scalar multiplication, returning `[scalar] base`.
     fn mul(
         &self,
@@ -293,7 +300,8 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
     }
 }
 
-/// The x-coordinate of an elliptic curve point over the given curve.
+/// The affine short Weierstrass x-coordinate of an elliptic curve point over the
+/// given curve.
 #[derive(Debug)]
 pub struct X<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
     chip: EccChip,
