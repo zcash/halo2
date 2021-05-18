@@ -135,11 +135,11 @@ pub enum VerifyFailure {
 /// let prover = MockProver::<Fp>::run(K, &circuit, instance).unwrap();
 /// assert_eq!(
 ///     prover.verify(),
-///     Err(VerifyFailure::Gate {
+///     Err(vec![VerifyFailure::Gate {
 ///         gate_index: 0,
 ///         gate_name: "R1CS constraint",
 ///         row: 0
-///     })
+///     }])
 /// );
 /// ```
 #[derive(Debug)]
@@ -289,133 +289,168 @@ impl<F: FieldExt> MockProver<F> {
         Ok(prover)
     }
 
-    /// Returns `Ok(())` if this `MockProver` is satisfied, or an error indicating the
-    /// first encountered reason that the circuit is not satisfied.
-    pub fn verify(&self) -> Result<(), VerifyFailure> {
+    /// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating
+    /// the reasons that the circuit is not satisfied.
+    pub fn verify(&self) -> Result<(), Vec<VerifyFailure>> {
         let n = self.n as i32;
 
         // Check that all gates are satisfied for all rows.
-        for (gate_index, (gate_name, gate)) in self.cs.gates.iter().enumerate() {
-            // We iterate from n..2n so we can just reduce to handle wrapping.
-            for row in n..(2 * n) {
-                fn load<'a, F: FieldExt, T: ColumnType>(
-                    n: i32,
-                    row: i32,
-                    queries: &'a [(Column<T>, Rotation)],
-                    cells: &'a [Vec<F>],
-                ) -> impl Fn(usize) -> F + 'a {
-                    move |index| {
-                        let (column, at) = &queries[index];
-                        let resolved_row = (row + at.0) % n;
-                        cells[column.index()][resolved_row as usize]
-                    }
-                }
+        let gate_errors =
+            self.cs
+                .gates
+                .iter()
+                .enumerate()
+                .flat_map(|(gate_index, (gate_name, gate))| {
+                    // We iterate from n..2n so we can just reduce to handle wrapping.
+                    (n..(2 * n)).filter_map(move |row| {
+                        fn load<'a, F: FieldExt, T: ColumnType>(
+                            n: i32,
+                            row: i32,
+                            queries: &'a [(Column<T>, Rotation)],
+                            cells: &'a [Vec<F>],
+                        ) -> impl Fn(usize) -> F + 'a {
+                            move |index| {
+                                let (column, at) = &queries[index];
+                                let resolved_row = (row + at.0) % n;
+                                cells[column.index()][resolved_row as usize]
+                            }
+                        }
 
-                if gate.evaluate(
-                    &|scalar| scalar,
-                    &load(n, row, &self.cs.fixed_queries, &self.fixed),
-                    &load(n, row, &self.cs.advice_queries, &self.advice),
-                    &load(n, row, &self.cs.instance_queries, &self.instance),
-                    &|a, b| a + &b,
-                    &|a, b| a * &b,
-                    &|a, scalar| a * scalar,
-                ) != F::zero()
-                {
-                    return Err(VerifyFailure::Gate {
-                        gate_index,
-                        gate_name,
-                        row: (row - n) as usize,
-                    });
-                }
-            }
-        }
+                        if gate.evaluate(
+                            &|scalar| scalar,
+                            &load(n, row, &self.cs.fixed_queries, &self.fixed),
+                            &load(n, row, &self.cs.advice_queries, &self.advice),
+                            &load(n, row, &self.cs.instance_queries, &self.instance),
+                            &|a, b| a + &b,
+                            &|a, b| a * &b,
+                            &|a, scalar| a * scalar,
+                        ) == F::zero()
+                        {
+                            None
+                        } else {
+                            Some(VerifyFailure::Gate {
+                                gate_index,
+                                gate_name,
+                                row: (row - n) as usize,
+                            })
+                        }
+                    })
+                });
 
         // Check that all lookups exist in their respective tables.
-        for (lookup_index, lookup) in self.cs.lookups.iter().enumerate() {
-            for input_row in 0..n {
-                let load = |expression: &Expression<F>, row| {
-                    expression.evaluate(
-                        &|scalar| scalar,
-                        &|index| {
-                            let query = self.cs.fixed_queries[index];
-                            let column_index = query.0.index();
-                            let rotation = query.1.0;
-                            self.fixed[column_index]
-                                [(row as i32 + n + rotation) as usize % n as usize]
-                        },
-                        &|index| {
-                            let query = self.cs.advice_queries[index];
-                            let column_index = query.0.index();
-                            let rotation = query.1.0;
-                            self.advice[column_index]
-                                [(row as i32 + n + rotation) as usize % n as usize]
-                        },
-                        &|index| {
-                            let query = self.cs.instance_queries[index];
-                            let column_index = query.0.index();
-                            let rotation = query.1.0;
-                            self.instance[column_index]
-                                [(row as i32 + n + rotation) as usize % n as usize]
-                        },
-                        &|a, b| a + b,
-                        &|a, b| a * b,
-                        &|a, scalar| a * scalar,
-                    )
-                };
+        let lookup_errors =
+            self.cs
+                .lookups
+                .iter()
+                .enumerate()
+                .flat_map(|(lookup_index, lookup)| {
+                    (0..n).filter_map(move |input_row| {
+                        let load = |expression: &Expression<F>, row| {
+                            expression.evaluate(
+                                &|scalar| scalar,
+                                &|index| {
+                                    let query = self.cs.fixed_queries[index];
+                                    let column_index = query.0.index();
+                                    let rotation = query.1 .0;
+                                    self.fixed[column_index]
+                                        [(row as i32 + n + rotation) as usize % n as usize]
+                                },
+                                &|index| {
+                                    let query = self.cs.advice_queries[index];
+                                    let column_index = query.0.index();
+                                    let rotation = query.1 .0;
+                                    self.advice[column_index]
+                                        [(row as i32 + n + rotation) as usize % n as usize]
+                                },
+                                &|index| {
+                                    let query = self.cs.instance_queries[index];
+                                    let column_index = query.0.index();
+                                    let rotation = query.1 .0;
+                                    self.instance[column_index]
+                                        [(row as i32 + n + rotation) as usize % n as usize]
+                                },
+                                &|a, b| a + b,
+                                &|a, b| a * b,
+                                &|a, scalar| a * scalar,
+                            )
+                        };
 
-                let inputs: Vec<_> = lookup
-                    .input_expressions
-                    .iter()
-                    .map(|c| load(c, input_row))
-                    .collect();
-                let lookup_passes = (0..n)
-                    .map(|table_row| {
-                        lookup
-                            .table_expressions
+                        let inputs: Vec<_> = lookup
+                            .input_expressions
                             .iter()
-                            .map(move |c| load(c, table_row))
+                            .map(|c| load(c, input_row))
+                            .collect();
+                        let lookup_passes = (0..n)
+                            .map(|table_row| {
+                                lookup
+                                    .table_expressions
+                                    .iter()
+                                    .map(move |c| load(c, table_row))
+                            })
+                            .any(|table_row| table_row.eq(inputs.iter().cloned()));
+                        if lookup_passes {
+                            None
+                        } else {
+                            Some(VerifyFailure::Lookup {
+                                lookup_index,
+                                row: input_row as usize,
+                            })
+                        }
                     })
-                    .any(|table_row| table_row.eq(inputs.iter().cloned()));
-                if !lookup_passes {
-                    return Err(VerifyFailure::Lookup {
-                        lookup_index,
-                        row: input_row as usize,
-                    });
-                }
-            }
-        }
+                });
 
         // Check that permutations preserve the original values of the cells.
-        for (perm_index, assembly) in self.permutations.iter().enumerate() {
-            // Original values of columns involved in the permutation
-            let original = self.cs.permutations[perm_index]
-                .get_columns()
+        let perm_errors =
+            self.permutations
                 .iter()
-                .map(|c| match c.column_type() {
-                    Any::Advice => self.advice[c.index()].clone(),
-                    Any::Fixed => self.fixed[c.index()].clone(),
-                    Any::Instance => self.instance[c.index()].clone(),
-                })
-                .collect::<Vec<_>>();
+                .enumerate()
+                .flat_map(|(perm_index, assembly)| {
+                    // Original values of columns involved in the permutation
+                    let original = |perm_index: usize, column, row| {
+                        self.cs.permutations[perm_index]
+                            .get_columns()
+                            .iter()
+                            .map(|c| match c.column_type() {
+                                Any::Advice => &self.advice[c.index()][..],
+                                Any::Fixed => &self.fixed[c.index()][..],
+                                Any::Instance => &self.instance[c.index()][..],
+                            })
+                            .nth(column)
+                            .unwrap()[row]
+                    };
 
-            // Iterate over each column of the permutation
-            for (column, values) in assembly.mapping.iter().enumerate() {
-                // Iterate over each row of the column to check that the cell's
-                // value is preserved by the mapping.
-                for (row, cell) in values.iter().enumerate() {
-                    let original_cell = original[column][row];
-                    let permuted_cell = original[cell.0][cell.1];
-                    if original_cell != permuted_cell {
-                        return Err(VerifyFailure::Permutation {
-                            perm_index,
-                            column,
-                            row,
-                        });
-                    }
-                }
-            }
+                    // Iterate over each column of the permutation
+                    assembly
+                        .mapping
+                        .iter()
+                        .enumerate()
+                        .flat_map(move |(column, values)| {
+                            // Iterate over each row of the column to check that the cell's
+                            // value is preserved by the mapping.
+                            values.iter().enumerate().filter_map(move |(row, cell)| {
+                                let original_cell = original(perm_index, column, row);
+                                let permuted_cell = original(perm_index, cell.0, cell.1);
+                                if original_cell == permuted_cell {
+                                    None
+                                } else {
+                                    Some(VerifyFailure::Permutation {
+                                        perm_index,
+                                        column,
+                                        row,
+                                    })
+                                }
+                            })
+                        })
+                });
+
+        let errors: Vec<_> = gate_errors
+            .chain(lookup_errors)
+            .chain(perm_errors)
+            .collect();
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
         }
-
-        Ok(())
     }
 }
