@@ -600,6 +600,7 @@ impl<F: FieldExt> Pow5T3State<F> {
 
 #[cfg(test)]
 mod tests {
+    use ff::PrimeField;
     use halo2::{
         arithmetic::FieldExt,
         circuit::{layouter, Layouter},
@@ -607,6 +608,7 @@ mod tests {
         pasta::Fp,
         plonk::{Assignment, Circuit, ConstraintSystem, Error},
     };
+    use pasta_curves::pallas;
 
     use super::{PoseidonInstructions, Pow5T3Chip, Pow5T3Config, StateWord, WIDTH};
     use crate::{
@@ -702,6 +704,9 @@ mod tests {
 
     struct HashCircuit {
         message: Option<[Fp; 2]>,
+        // For the purpose of this test, witness the result.
+        // TODO: Move this into an instance column.
+        output: Option<Fp>,
     }
 
     impl Circuit<Fp> for HashCircuit {
@@ -748,12 +753,6 @@ mod tests {
             let hasher = Hash::init(chip, layouter.namespace(|| "init"), ConstantLength::<2>)?;
             let output = hasher.hash(layouter.namespace(|| "hash"), message)?;
 
-            // For the purpose of this test, compute the real final state inline.
-            // TODO: Move this into an instance column.
-            let expected_output = self.message.map(|message_vals| {
-                poseidon::Hash::init(OrchardNullifier, ConstantLength::<2>).hash(message_vals)
-            });
-
             layouter.assign_region(
                 || "constrain output",
                 |mut region| {
@@ -761,7 +760,7 @@ mod tests {
                         || "load output",
                         config.state[0],
                         0,
-                        || expected_output.ok_or(Error::SynthesisError),
+                        || self.output.ok_or(Error::SynthesisError),
                     )?;
                     let word: StateWord<_> = output.inner;
                     region.constrain_equal(&config.state_permutation, word.var, expected_var)
@@ -773,13 +772,34 @@ mod tests {
     #[test]
     fn poseidon_hash() {
         let message = [Fp::rand(), Fp::rand()];
+        let output = poseidon::Hash::init(OrchardNullifier, ConstantLength::<2>).hash(message);
 
         let k = 6;
         let circuit = HashCircuit {
             message: Some(message),
+            output: Some(output),
         };
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[test]
+    fn hash_test_vectors() {
+        for tv in crate::primitives::poseidon::test_vectors::hash() {
+            let message = [
+                pallas::Base::from_repr(tv.input[0]).unwrap(),
+                pallas::Base::from_repr(tv.input[1]).unwrap(),
+            ];
+            let output = poseidon::Hash::init(OrchardNullifier, ConstantLength).hash(message);
+
+            let k = 6;
+            let circuit = HashCircuit {
+                message: Some(message),
+                output: Some(output),
+            };
+            let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+            assert_eq!(prover.verify(), Ok(()));
+        }
     }
 
     #[cfg(feature = "dev-graph")]
@@ -793,7 +813,10 @@ mod tests {
             .titled("Poseidon Chip Layout", ("sans-serif", 60))
             .unwrap();
 
-        let circuit = HashCircuit { message: None };
+        let circuit = HashCircuit {
+            message: None,
+            output: None,
+        };
         halo2::dev::circuit_layout(&circuit, &root).unwrap();
     }
 }

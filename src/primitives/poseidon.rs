@@ -8,6 +8,9 @@ use halo2::arithmetic::FieldExt;
 pub(crate) mod grain;
 pub(crate) mod mds;
 
+#[cfg(test)]
+pub(crate) mod test_vectors;
+
 mod nullifier;
 pub use nullifier::OrchardNullifier;
 

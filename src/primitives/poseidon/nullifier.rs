@@ -1507,12 +1507,13 @@ const MDS_INV: [[pallas::Base; 3]; 3] = [
 mod tests {
     use std::marker::PhantomData;
 
+    use ff::PrimeField;
     use halo2::arithmetic::FieldExt;
     use pasta_curves::pallas;
 
-    use crate::primitives::poseidon::{permute, Spec};
+    use crate::primitives::poseidon::{permute, ConstantLength, Hash, Spec};
 
-    use super::{MDS, MDS_INV, ROUND_CONSTANTS};
+    use super::{OrchardNullifier, MDS, MDS_INV, ROUND_CONSTANTS};
 
     /// The same Poseidon specification as poseidon::OrchardNullifier, but constructed
     /// such that its constants will be generated at runtime.
@@ -1550,7 +1551,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vectors() {
+    fn verify_constants() {
         let poseidon = P128Pow5T3Plus::<pallas::Base>::new(0);
         let (round_constants, mds, mds_inv) = poseidon.constants();
 
@@ -1625,5 +1626,38 @@ mod tests {
             &ROUND_CONSTANTS,
         );
         assert_eq!(input, expected_output);
+    }
+
+    #[test]
+    fn permute_test_vectors() {
+        let (round_constants, mds, _) = OrchardNullifier.constants();
+
+        for tv in crate::primitives::poseidon::test_vectors::permute() {
+            let mut state = [
+                pallas::Base::from_repr(tv.initial_state[0]).unwrap(),
+                pallas::Base::from_repr(tv.initial_state[1]).unwrap(),
+                pallas::Base::from_repr(tv.initial_state[2]).unwrap(),
+            ];
+
+            permute::<pallas::Base, OrchardNullifier, 3, 2>(&mut state, &mds, &round_constants);
+
+            for (expected, actual) in tv.final_state.iter().zip(state.iter()) {
+                assert_eq!(&actual.to_repr(), expected);
+            }
+        }
+    }
+
+    #[test]
+    fn hash_test_vectors() {
+        for tv in crate::primitives::poseidon::test_vectors::hash() {
+            let message = [
+                pallas::Base::from_repr(tv.input[0]).unwrap(),
+                pallas::Base::from_repr(tv.input[1]).unwrap(),
+            ];
+
+            let result = Hash::init(OrchardNullifier, ConstantLength).hash(message);
+
+            assert_eq!(result.to_repr(), tv.output);
+        }
     }
 }
