@@ -88,6 +88,8 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     ) -> Result<Self::FixedPointShort, Error>;
 
     /// Performs incomplete point addition, returning `a + b`.
+    ///
+    /// This returns an error in exceptional cases.
     fn add_incomplete(
         &self,
         layouter: &mut impl Layouter<C::Base>,
