@@ -1,9 +1,10 @@
 //! Gadgets for elliptic curve operations.
 
+use ff::Field;
 use std::fmt::Debug;
 
 use halo2::{
-    arithmetic::CurveAffine,
+    arithmetic::{CurveAffine, FieldExt},
     circuit::{Chip, Layouter},
     plonk::Error,
 };
@@ -25,6 +26,8 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     /// Variable representing a full-width element of the elliptic curve's scalar field, to be used for fixed-base scalar mul.
     type ScalarFixed: Clone + Debug;
     /// Variable representing a signed short element of the elliptic curve's scalar field, to be used for fixed-base scalar mul.
+    ///
+    /// A `ScalarFixedShort` must be in the range [-(2^64 - 1), 2^64 - 1].
     type ScalarFixedShort: Clone + Debug;
     /// Variable representing an elliptic curve point.
     type Point: Clone + Debug;
@@ -179,11 +182,29 @@ pub struct ScalarFixedShort<C: CurveAffine, EccChip: EccInstructions<C> + Clone 
 
 impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug> ScalarFixedShort<C, EccChip> {
     /// Constructs a new ScalarFixedShort with the given value.
+    ///
+    /// # Panics
+    ///
+    /// The short scalar must be in the range [-(2^64 - 1), (2^64 - 1)].
     pub fn new(
         chip: EccChip,
         mut layouter: impl Layouter<C::Base>,
         value: Option<C::Scalar>,
     ) -> Result<Self, Error> {
+        // Check that the scalar is in the range [-(2^64 - 1), (2^64 - 1)]
+        if let Some(value) = value {
+            let mut sign = C::Scalar::one();
+
+            // T = (p-1) / 2
+            let t = (C::Scalar::zero() - C::Scalar::one()) * C::Scalar::TWO_INV;
+
+            if value > t {
+                sign = -sign;
+            }
+            let magnitude = value * sign;
+            assert!(magnitude < C::Scalar::from_u128(1 << 64));
+        }
+
         chip.witness_scalar_fixed_short(&mut layouter, value)
             .map(|inner| ScalarFixedShort { chip, inner })
     }
