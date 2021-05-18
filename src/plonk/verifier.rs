@@ -24,7 +24,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
     // Check that instances matches the expected number of instance columns
     for instances in instances.iter() {
         if instances.len() != vk.cs.num_instance_columns {
-            return Err(Error::IncompatibleParams);
+            return Err(Error::InvalidInstances);
         }
     }
 

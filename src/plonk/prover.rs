@@ -43,7 +43,7 @@ pub fn create_proof<
 ) -> Result<(), Error> {
     for instance in instances.iter() {
         if instance.len() != pk.vk.cs.num_instance_columns {
-            return Err(Error::IncompatibleParams);
+            return Err(Error::InvalidInstances);
         }
     }
 
