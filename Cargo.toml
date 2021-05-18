@@ -23,9 +23,6 @@ publish = false
 all-features = true
 rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 
-[dev-dependencies]
-criterion = "0.3"
-
 [[bench]]
 name = "arithmetic"
 harness = false
@@ -57,6 +54,10 @@ tabbycat = { version = "0.1", features = ["attributes"], optional = true }
 [dependencies.pasta_curves]
 git = "https://github.com/zcash/pasta_curves.git"
 rev = "b55a6960dfafd7f767e2820ddf1adaa499322f98"
+
+[dev-dependencies]
+criterion = "0.3"
+gumdrop = "0.8"
 
 [features]
 dev-graph = ["plotters", "tabbycat"]
