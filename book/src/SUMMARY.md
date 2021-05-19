@@ -1,6 +1,7 @@
 # The halo2 Book
 
 [halo2](README.md)
+- [Protocol (WIP)](protocol.md)
 - [Concepts](concepts.md)
   - [Proof systems](concepts/proofs.md)
   - [UltraPLONK Arithmetization](concepts/arithmetization.md)

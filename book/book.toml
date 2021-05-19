@@ -11,3 +11,4 @@ src = "src"
 title = "The halo2 Book"
 
 [preprocessor.katex]
+macros = "macros.txt"
