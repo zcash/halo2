@@ -2,7 +2,7 @@
 
 ## Incomplete addition
 - Inputs: $P = (x_p, y_p), Q = (x_q, y_q)$
-- Output: $R = P + Q = (x_r, y_r)$
+- Output: $R = P \;⸭\; Q = (x_r, y_r)$
 
 Formulae:
 - $\lambda \cdot (x_p - x_q) = y_p - y_q$
