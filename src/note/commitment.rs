@@ -5,22 +5,9 @@ use ff::PrimeField;
 use pasta_curves::{arithmetic::FieldExt, pallas};
 use subtle::CtOption;
 
-use crate::{
-    constants::L_ORCHARD_BASE,
-    primitives::sinsemilla,
-    spec::{extract_p, prf_expand, to_scalar},
-    value::NoteValue,
-};
+use crate::{constants::L_ORCHARD_BASE, primitives::sinsemilla, spec::extract_p, value::NoteValue};
 
-use super::RandomSeed;
-
-pub(super) struct NoteCommitTrapdoor(pallas::Scalar);
-
-impl From<&RandomSeed> for NoteCommitTrapdoor {
-    fn from(rseed: &RandomSeed) -> Self {
-        NoteCommitTrapdoor(to_scalar(prf_expand(&rseed.0, &[0x05])))
-    }
-}
+pub(super) struct NoteCommitTrapdoor(pub(super) pallas::Scalar);
 
 /// A commitment to a note.
 #[derive(Debug)]

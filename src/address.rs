@@ -1,8 +1,6 @@
-use pasta_curves::pallas;
-
 use crate::{
     keys::{DiversifiedTransmissionKey, Diversifier},
-    spec::diversify_hash,
+    spec::{diversify_hash, NonIdentityPallasPoint},
 };
 
 /// A shielded payment address.
@@ -15,7 +13,7 @@ use crate::{
 /// let sk = SpendingKey::from_bytes([7; 32]).unwrap();
 /// let address = FullViewingKey::from(&sk).default_address();
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone, Copy, Debug)]
 pub struct Address {
     d: Diversifier,
     pk_d: DiversifiedTransmissionKey,
@@ -30,7 +28,7 @@ impl Address {
         Address { d, pk_d }
     }
 
-    pub(crate) fn g_d(&self) -> pallas::Point {
+    pub(crate) fn g_d(&self) -> NonIdentityPallasPoint {
         diversify_hash(self.d.as_array())
     }
 
