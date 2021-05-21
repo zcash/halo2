@@ -134,6 +134,7 @@ pub(crate) fn diversify_hash(d: &[u8; 11]) -> NonIdentityPallasPoint {
     let hasher = pallas::Point::hash_to_curve("z.cash:Orchard-gd");
     let pk_d = hasher(d);
     // If the identity occurs, we replace it with a different fixed point.
+    // TODO: Replace the unwrap_or_else with a cached fixed point.
     NonIdentityPallasPoint(CtOption::new(pk_d, !pk_d.is_identity()).unwrap_or_else(|| hasher(&[])))
 }
 

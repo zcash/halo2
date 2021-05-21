@@ -328,7 +328,7 @@ impl From<&FullViewingKey> for KeyAgreementPrivateKey {
 }
 
 impl KeyAgreementPrivateKey {
-    /// Derives ask from sk. Internal use only, does not enforce all constraints.
+    /// Derives ivk from fvk. Internal use only, does not enforce all constraints.
     fn derive_inner(fvk: &FullViewingKey) -> CtOption<NonZeroPallasBase> {
         let ak = extract_p(&pallas::Point::from_bytes(&(&fvk.ak.0).into()).unwrap());
         commit_ivk(&ak, &fvk.nk.0, &fvk.rivk.0)
