@@ -32,6 +32,6 @@ Note that for $\mathsf{ivk}$, we also deviate from Sapling in two ways:
   Sapling, we relied on BLAKE2s to make $\mathsf{ivk} = 0$ infeasible to produce, but it was still
   technically possible. For Orchard, we get this by construction:
   - $0$ is not a valid x-coordinate for any Pallas point.
-  - $\mathit{ShortCommit}$ internally maps points to field elements by replacing the identity (which
-    has no affine coordinates) with $0$. But Sinsemilla is defined using incomplete addition, and
+  - $\mathsf{SinsemillaShortCommit}$ internally maps points to field elements by replacing the identity (which
+    has no affine coordinates) with $0$. But $\mathsf{SinsemillaCommit}$ is defined using incomplete addition, and
     thus will never produce the identity.
