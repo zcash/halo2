@@ -12,7 +12,7 @@ The general approach is to split the message into $k$-bit pieces, and for each p
 ## Specification
 Let $\mathbb{G}$ be a cryptographic group of prime order $q$. We write $\mathbb{G}$ additively, with identity $\mathcal{O}$, and using $[m] P$ for scalar multiplication of $P$ by $m$.
 
-Let $k \geq 1$ be an integer chosen based on efficiency considerations (the table size will be $2^k$). Let $n$ be a **fixed** integer such that messages are $kn$ bits, where $2^n \leq \frac{q-1}{2}$. Message padding is out of scope for this note.
+Let $k \geq 1$ be an integer chosen based on efficiency considerations (the table size will be $2^k$). Let $n$ be a **fixed** integer such that messages are $kn$ bits, where $2^n \leq \frac{q-1}{2}$. We use zero-padding to the next multiple of $k$ bits if necessary.
 
 $\textsf{Setup}$: Choose $Q$ and $P[0..2^k - 1]$ as $2^k + 1$ independent, verifiably random generators of $\mathbb{G}$, using a suitable hash into $\mathbb{G}$, such that none of $Q$ or $P[0..2^k - 1]$ are $\mathcal{O}$.
 
@@ -23,7 +23,7 @@ $\textsf{Hash}(M)$:
         $A_{i+1} := [2] A_i + P[m_i] = (A_i + P[m_i]) + A_i$
     return $A_{n+1}$
 
-If $\mathbb{G}$ is a prime-order elliptic curve in short Weierstrass form, then let $\textsf{ShortHash}(M)$ be the $x\text{-coordinate}$ of $\textsf{Hash}(M)$.
+Let $\textsf{ShortHash}(M)$ be the $x\text{-coordinate}$ of $\textsf{Hash}(M)$. (This assumes that mathbb{G}$ is a prime-order elliptic curve in short Weierstrass form, as is the case for Pallas and Vesta.)
 
 ### Use as a commitment scheme
 Choose another generator $H$ independently of $Q$ and $P[0..2^k - 1]$.
@@ -32,7 +32,7 @@ The randomness $r$ for a commitment is chosen uniformly on $[0, q)$.
 
 Let $\textsf{Commit}_r(M) = \textsf{Hash}(M) + [r] H$.
 
-If $\mathbb{G}$ is a prime-order elliptic curve in short Weierstrass form, then let $\textsf{ShortCommit}_r(M)$ be the $x\text{-coordinate}$ of $\textsf{Commit}_r(M)$.
+Let $\textsf{ShortCommit}_r(M)$ be the $x\text{-coordinate}$ of $\textsf{Commit}_r(M)$. (This again assumes that $\mathbb{G}$ is a prime-order elliptic curve in short Weierstrass form.)
 
 Note that unlike a simple Pedersen commitment, this commitment scheme ($\textsf{Commit}$ or $\textsf{ShortCommit}$) is not additively homomorphic.
 
@@ -91,7 +91,7 @@ We have an $n$-bit message $m = m_1 + 2^k m_2 + ... + 2^{k\cdot (n-1)} m_n$. (No
 
 Initialise the running sum $z_0 = \alpha$ and define $z_{i + 1} := \frac{z_{i} - m_{i+1}}{2^K}$. We will end up with $z_n = 0.$
 
-Rearranging gives us an expression for each word the original message $m_{i+1} = z_{i} - 2^k \cdot z_{i + 1}$, which we can look up in the table.
+Rearranging gives us an expression for each word of the original message $m_{i+1} = z_{i} - 2^k \cdot z_{i + 1}$, which we can look up in the table.
 
 $$
 \begin{array}{|c|c|c|c|c|c|c|c|c|c|c|}
@@ -125,7 +125,7 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-4?   & q_{Sinsemilla1} \Rightarrow (z_{i} - 2^k \cdot z_{i+1},\, x_{P,i},\, \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}))}{2} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i})) \in \mathcal{P} \\\hline
+5*  & q_{Sinsemilla1} \Rightarrow (z_{i} - 2^k \cdot z_{i+1},\, x_{P,i},\, \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}))}{2} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i})) \in \mathcal{P} \\\hline
 3   & q_{Sinsemilla1,i} \cdot (\lambda_{2,i}^2 - (x_{A,i+1} + (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}) + x_{A,i})) \\\hline
 5   & q_{Sinsemilla2,i} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - y_{A,i} - y_{A,i+1}\right) = 0 \\\hline
 \end{array}
@@ -138,6 +138,7 @@ y_{A,i+1} &= (\lambda_{1,i+1} + \lambda_{2,i+1}) \cdot (x_{A,i+1} - (\lambda_{1,
 \end{aligned}
 $$
 
+* The degree of a lookup gate is 2 + the degree of the polynomial expression being looked up (after tuple compression). TODO check this.
 A further optimization is to toggle the lookup expression on $q_{Sinsemilla1}.$ This removes the need to fill in unused cells with dummy values to pass the lookup argument. The optimized lookup argument would be:
 
 $$
@@ -145,9 +146,11 @@ $$
 &(\\&
 && q_S \cdot (z_{i} - 2^k \cdot z_{i+1}) + (1 - q_S) \cdot 0, \\
 &&& q_S \cdot x_{P, i} + (1 - q_S) \cdot x_{P, 0}, \\
-&&& q_S \cdot y_p + (1 - q_S) \cdot y_{P, 0} \\
+&&& q_S \cdot y_{P, i} + (1 - q_S) \cdot y_{P, 0} \\
 &),&
 \end{array}
 $$
 
 where $y_{P,i} \equiv \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}))}{2} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}).$
+
+This increases the degree of the lookup gate to 6. TODO: check.
