@@ -1,5 +1,18 @@
 # Elliptic Curve Cryptography
 
+## Point doubling
+- Input: $P = (x_p, y_p)$
+- Output: $[2]P = (x_r, y_r)$
+
+Formulae:
+$\lambda = \frac{3 x_p^2}{2 \cdot y_p}$
+$x_r = \lambda^2 - 2 \cdot x_p$
+$y_r = \lambda(x_p - x_r) - y_p$
+
+Substituting for $\lambda$, we get the constraints:
+- $4 \cdot y_p^2(x_r + 2 \cdot x_p) - 9 x_p^4 = 0$
+- $2 \cdot y_p(y_r + y_p) - 3 x_p^2(x_p - x_r) = 0$
+
 ## Incomplete addition
 - Inputs: $P = (x_p, y_p), Q = (x_q, y_q)$
 - Output: $R = P \;⸭\; Q = (x_r, y_r)$
