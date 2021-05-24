@@ -209,12 +209,6 @@ impl<W: Write, C: CurveAffine> Transcript<C, Challenge255<C>>
     }
 }
 
-/// `Challenge` trait implemented for challenges of different lengths
-pub trait Challenge: Copy + Clone + std::fmt::Debug {
-    /// Try to create challenge of appropriate length.
-    fn new(challenge: &[u8]) -> Self;
-}
-
 /// The scalar representation of a verifier challenge.
 ///
 /// The `Type` type can be used to scope the challenge to a specific context, or
