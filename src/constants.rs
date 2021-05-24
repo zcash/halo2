@@ -107,14 +107,14 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
         let mut window_table: Vec<[C; H]> = Vec::with_capacity(num_windows);
 
         // Generate window table entries for all windows but the last.
-        // For these first `num_windows - 1` windows, we compute the multiple [(k+1)*(8^w)]B.
+        // For these first `num_windows - 1` windows, we compute the multiple [(k+2)*(2^3)^w]B.
         // Here, w ranges from [0..`num_windows - 1`)
         for w in 0..(num_windows - 1) {
             window_table.push(
                 (0..H)
                     .map(|k| {
-                        // scalar = (k+1)*(8^w)
-                        let scalar = C::ScalarExt::from_u64(k as u64 + 1)
+                        // scalar = (k+2)*(8^w)
+                        let scalar = C::ScalarExt::from_u64(k as u64 + 2)
                             * C::ScalarExt::from_u64(H as u64).pow(&[w as u64, 0, 0, 0]);
                         (self.0 * scalar).to_affine()
                     })
@@ -125,15 +125,20 @@ impl<C: CurveAffine> FixedBase<C> for OrchardFixedBase<C> {
         }
 
         // Generate window table entries for the last window, w = `num_windows - 1`.
-        // For the last window, we compute [k * (8^w) - sum]B, where sum is defined
-        // as sum = \sum_{j = 0}^{`num_windows - 2`} 8^j
-        let sum = (0..(num_windows - 1)).fold(C::ScalarExt::zero(), |acc, w| {
-            acc + C::ScalarExt::from_u64(H as u64).pow(&[w as u64, 0, 0, 0])
+        // For the last window, we compute [k * (2^3)^w - sum]B, where sum is defined
+        // as sum = \sum_{j = 0}^{`num_windows - 2`} 2^{3j+1}
+        let sum = (0..(num_windows - 1)).fold(C::ScalarExt::zero(), |acc, j| {
+            acc + C::ScalarExt::from_u64(2).pow(&[
+                FIXED_BASE_WINDOW_SIZE as u64 * j as u64 + 1,
+                0,
+                0,
+                0,
+            ])
         });
         window_table.push(
             (0..H)
                 .map(|k| {
-                    // scalar = k * (8^w) - sum, where w = `num_windows - 1`
+                    // scalar = k * (2^3)^w - sum, where w = `num_windows - 1`
                     let scalar = C::ScalarExt::from_u64(k as u64)
                         * C::ScalarExt::from_u64(H as u64).pow(&[
                             (num_windows - 1) as u64,
@@ -218,7 +223,7 @@ trait TestFixedBase<C: CurveAffine> {
     //      1. z + y = u^2,
     //      2. z - y is not a square
     // for the y-coordinate of each fixed-base multiple in each window.
-    fn test_z(&self, z: &[u64], u: &[[[u8; 32]; H]], num_windows: usize);
+    fn test_zs_and_us(&self, z: &[u64], u: &[[[u8; 32]; H]], num_windows: usize);
 }
 
 impl<C: CurveAffine> TestFixedBase<C> for OrchardFixedBase<C> {
@@ -233,9 +238,9 @@ impl<C: CurveAffine> TestFixedBase<C> for OrchardFixedBase<C> {
                     // Interpolate the x-coordinate using this window's coefficients
                     let interpolated_x = util::evaluate::<C>(bits, coeffs);
 
-                    // Compute the actual x-coordinate of the multiple [(k+1)*(8^w)]B.
+                    // Compute the actual x-coordinate of the multiple [(k+2)*(8^w)]B.
                     let point = self.0
-                        * C::Scalar::from_u64(bits as u64 + 1)
+                        * C::Scalar::from_u64(bits as u64 + 2)
                         * C::Scalar::from_u64(H as u64).pow(&[idx as u64, 0, 0, 0]);
                     let x = *point.to_affine().coordinates().unwrap().x();
 
@@ -251,9 +256,14 @@ impl<C: CurveAffine> TestFixedBase<C> for OrchardFixedBase<C> {
             let interpolated_x = util::evaluate::<C>(bits, &lagrange_coeffs[num_windows - 1]);
 
             // Compute the actual x-coordinate of the multiple [k * (8^84) - offset]B,
-            // where offset = \sum_{j = 0}^{83} 8^j
+            // where offset = \sum_{j = 0}^{83} 2^{3j+1}
             let offset = (0..(num_windows - 1)).fold(C::Scalar::zero(), |acc, w| {
-                acc + C::Scalar::from_u64(H as u64).pow(&[w as u64, 0, 0, 0])
+                acc + C::Scalar::from_u64(2).pow(&[
+                    FIXED_BASE_WINDOW_SIZE as u64 * w as u64 + 1,
+                    0,
+                    0,
+                    0,
+                ])
             });
             let scalar = C::Scalar::from_u64(bits as u64)
                 * C::Scalar::from_u64(H as u64).pow(&[(num_windows - 1) as u64, 0, 0, 0])
@@ -266,7 +276,7 @@ impl<C: CurveAffine> TestFixedBase<C> for OrchardFixedBase<C> {
         }
     }
 
-    fn test_z(&self, z: &[u64], u: &[[[u8; 32]; H]], num_windows: usize) {
+    fn test_zs_and_us(&self, z: &[u64], u: &[[[u8; 32]; H]], num_windows: usize) {
         let window_table = self.compute_window_table(num_windows);
 
         for ((u, z), window_points) in u.iter().zip(z.iter()).zip(window_table) {

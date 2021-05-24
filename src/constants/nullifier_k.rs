@@ -2956,6 +2956,6 @@ mod tests {
     #[test]
     fn z() {
         let base = super::generator::<pallas::Affine>();
-        base.0.test_z(&Z, &U, NUM_WINDOWS);
+        base.0.test_zs_and_us(&Z, &U, NUM_WINDOWS);
     }
 }

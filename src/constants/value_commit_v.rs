@@ -811,6 +811,6 @@ mod tests {
     #[test]
     fn z_short() {
         let base = super::generator::<pallas::Affine>();
-        base.0.test_z(&Z_SHORT, &U_SHORT, NUM_WINDOWS_SHORT);
+        base.0.test_zs_and_us(&Z_SHORT, &U_SHORT, NUM_WINDOWS_SHORT);
     }
 }
