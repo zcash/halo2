@@ -10,16 +10,16 @@ use crate::poly::{
     commitment::{Guard, Params, MSM},
     multiopen::{self, VerifierQuery},
 };
-use crate::transcript::{read_n_points, read_n_scalars, TranscriptRead};
+use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
 
 /// Returns a boolean indicating whether or not the proof is valid
-pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
+pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
     params: &'a Params<C>,
     vk: &VerifyingKey<C>,
     msm: MSM<'a, C>,
     instance_commitments: &[&[C]],
     transcript: &mut T,
-) -> Result<Guard<'a, C>, Error> {
+) -> Result<Guard<'a, C, E>, Error> {
     // Check that instance_commitments matches the expected number of instance columns
     for instance_commitments in instance_commitments.iter() {
         if instance_commitments.len() != vk.cs.num_instance_columns {
@@ -50,7 +50,7 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample theta challenge for keeping lookup columns linearly independent
-    let theta = ChallengeTheta::get(transcript);
+    let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
 
     let lookups_permuted = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
@@ -64,10 +64,10 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample beta challenge
-    let beta = ChallengeBeta::get(transcript);
+    let beta: ChallengeBeta<_> = transcript.squeeze_challenge_scalar();
 
     // Sample gamma challenge
-    let gamma = ChallengeGamma::get(transcript);
+    let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
 
     let permutations_committed = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
@@ -92,14 +92,12 @@ pub fn verify_proof<'a, C: CurveAffine, T: TranscriptRead<C>>(
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample y challenge, which keeps the gates linearly independent.
-    let y = ChallengeY::get(transcript);
-
+    let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
     let vanishing = vanishing::Argument::read_commitments(vk, transcript)?;
 
     // Sample x challenge, which is used to ensure the circuit is
     // satisfied with high probability.
-    let x = ChallengeX::get(transcript);
-
+    let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
     let instance_evals = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
             read_n_scalars(transcript, vk.cs.instance_queries.len())

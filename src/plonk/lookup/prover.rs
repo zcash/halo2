@@ -10,7 +10,7 @@ use crate::{
         multiopen::ProverQuery,
         Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
     },
-    transcript::TranscriptWrite,
+    transcript::{EncodedChallenge, TranscriptWrite},
 };
 use ff::Field;
 use group::Curve;
@@ -72,7 +72,12 @@ impl<F: FieldExt> Argument<F> {
     /// - constructs Permuted<C> struct using permuted_input_value = A', and
     ///   permuted_table_expression = S'.
     /// The Permuted<C> struct is used to update the Lookup, and is then returned.
-    pub(in crate::plonk) fn commit_permuted<'a, C, T: TranscriptWrite<C>>(
+    pub(in crate::plonk) fn commit_permuted<
+        'a,
+        C,
+        E: EncodedChallenge<C>,
+        T: TranscriptWrite<C, E>,
+    >(
         &self,
         pk: &ProvingKey<C>,
         params: &Params<C>,
@@ -244,7 +249,7 @@ impl<C: CurveAffine> Permuted<C> {
     /// grand product polynomial over the lookup. The grand product polynomial
     /// is used to populate the Product<C> struct. The Product<C> struct is
     /// added to the Lookup and finally returned by the method.
-    pub(in crate::plonk) fn commit_product<T: TranscriptWrite<C>>(
+    pub(in crate::plonk) fn commit_product<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
         self,
         pk: &ProvingKey<C>,
         params: &Params<C>,
@@ -488,7 +493,7 @@ impl<'a, C: CurveAffine> Committed<C> {
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(in crate::plonk) fn evaluate<T: TranscriptWrite<C>>(
+    pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
         self,
         pk: &ProvingKey<C>,
         x: ChallengeX<C>,

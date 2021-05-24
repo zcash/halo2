@@ -2,17 +2,17 @@ use ff::Field;
 use group::Curve;
 use std::iter;
 
-use super::super::circuit::Any;
+use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
 use super::{Argument, ProvingKey};
 use crate::{
     arithmetic::{eval_polynomial, parallelize, BatchInvert, CurveAffine, FieldExt},
-    plonk::{self, ChallengeBeta, ChallengeGamma, ChallengeX, Error},
+    plonk::{self, Error},
     poly::{
         commitment::{Blind, Params},
         multiopen::ProverQuery,
         Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
     },
-    transcript::TranscriptWrite,
+    transcript::{EncodedChallenge, TranscriptWrite},
 };
 
 pub(crate) struct Committed<C: CurveAffine> {
@@ -32,7 +32,11 @@ pub(crate) struct Evaluated<C: CurveAffine> {
 }
 
 impl Argument {
-    pub(in crate::plonk) fn commit<C: CurveAffine, T: TranscriptWrite<C>>(
+    pub(in crate::plonk) fn commit<
+        C: CurveAffine,
+        E: EncodedChallenge<C>,
+        T: TranscriptWrite<C, E>,
+    >(
         &self,
         params: &Params<C>,
         pk: &plonk::ProvingKey<C>,
@@ -253,7 +257,7 @@ impl<C: CurveAffine> super::ProvingKey<C> {
 }
 
 impl<C: CurveAffine> Constructed<C> {
-    pub(in crate::plonk) fn evaluate<T: TranscriptWrite<C>>(
+    pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
         self,
         pk: &plonk::ProvingKey<C>,
         pkey: &ProvingKey<C>,

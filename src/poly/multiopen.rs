@@ -211,6 +211,7 @@ fn test_roundtrip() {
     use super::commitment::{Blind, Params};
     use crate::arithmetic::{eval_polynomial, FieldExt};
     use crate::pasta::{EqAffine, Fp};
+    use crate::transcript::Challenge255;
 
     const K: u32 = 4;
 
@@ -244,7 +245,7 @@ fn test_roundtrip() {
     let bvx = eval_polynomial(&bx, x);
     let cvy = eval_polynomial(&cx, y);
 
-    let mut transcript = crate::transcript::Blake2bWrite::init(vec![]);
+    let mut transcript = crate::transcript::Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
     create_proof(
         &params,
         &mut transcript,
@@ -270,7 +271,8 @@ fn test_roundtrip() {
 
     {
         let mut proof = &proof[..];
-        let mut transcript = crate::transcript::Blake2bRead::init(&mut proof);
+        let mut transcript =
+            crate::transcript::Blake2bRead::<_, _, Challenge255<_>>::init(&mut proof);
         let msm = params.empty_msm();
 
         let guard = verify_proof(
@@ -303,7 +305,8 @@ fn test_roundtrip() {
     {
         let mut proof = &proof[..];
 
-        let mut transcript = crate::transcript::Blake2bRead::init(&mut proof);
+        let mut transcript =
+            crate::transcript::Blake2bRead::<_, _, Challenge255<_>>::init(&mut proof);
         let msm = params.empty_msm();
 
         let guard = verify_proof(

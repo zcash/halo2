@@ -5,7 +5,7 @@ use super::{Blind, Params};
 use crate::arithmetic::{
     best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine, FieldExt,
 };
-use crate::transcript::{Challenge, ChallengeScalar, TranscriptWrite};
+use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use group::Curve;
 use std::io;
@@ -23,7 +23,7 @@ use std::io;
 /// opening v, and the point x. It's probably also nice for the transcript
 /// to have seen the elliptic curve description and the URS, if you want to
 /// be rigorous.
-pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>>(
+pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
     params: &Params<C>,
     transcript: &mut T,
     px: &Polynomial<C::Scalar, Coeff>,
@@ -53,11 +53,11 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>>(
     // Challenge that will ensure that the prover cannot change P but can only
     // witness a random polynomial commitment that agrees with P at x, with high
     // probability.
-    let iota = *ChallengeScalar::<C, ()>::get(transcript);
+    let iota = *transcript.squeeze_challenge_scalar::<()>();
 
     // Challenge that ensures that the prover did not interfere with the U term
     // in their commitments.
-    let z = *ChallengeScalar::<C, ()>::get(transcript);
+    let z = *transcript.squeeze_challenge_scalar::<()>();
 
     // We'll be opening `s_poly_commitment * iota + P - [v] G_0` to ensure it
     // has a root at zero.
@@ -110,8 +110,7 @@ pub fn create_proof<C: CurveAffine, T: TranscriptWrite<C>>(
         transcript.write_point(l)?;
         transcript.write_point(r)?;
 
-        let challenge_packed = Challenge::get(transcript);
-        let challenge = *ChallengeScalar::<C, ()>::from(challenge_packed);
+        let challenge = *transcript.squeeze_challenge_scalar::<()>();
         let challenge_inv = challenge.invert().unwrap(); // TODO, bubble this up
 
         // Collapse `a` and `b`.
