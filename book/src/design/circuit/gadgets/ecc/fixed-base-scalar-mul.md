@@ -14,17 +14,17 @@ $$\alpha = k_0 + k_1 \cdot (2^3)^1 + \cdots + k_{84} \cdot (2^3)^{84}, k_i \in [
 ## Load fixed base
 Then, we precompute multiples of the fixed base $B$ for each window. This takes the form of a window table: $M[0..85)[0..8)$ such that:
 
-- for the first 84 rows $M[0..84)[0..8)$: $$M[w][k] = [(k+1) \cdot (2^3)^w]B$$
-- in the last row $M[84][0..8)$: $$M[w][k] = [k \cdot (2^3)^w - \sum\limits_{j=0}^{83} (2^3)^j]B$$
+- for the first 84 rows $M[0..84)[0..8)$: $$M[w][k] = [(k+2) \cdot (2^3)^w]B$$
+- in the last row $M[84][0..8)$: $$M[w][k] = [k \cdot (2^3)^w - \sum\limits_{j=0}^{83} 2^{3j+1}]B$$
 
-The additional $(k + 1)$ term lets us avoid adding the point at infinity in the case $k = 0$. We offset these accumulated terms by subtracting them in the final window, i.e. we subtract $\sum\limits_{j=0}^{83} (2^3)^j$.
+The additional $(k + 2)$ term lets us avoid adding the point at infinity in the case $k = 0$. We offset these accumulated terms by subtracting them in the final window, i.e. we subtract $\sum\limits_{j=0}^{83} 2^{3j+1}$.
 
 For each window of fixed-base multiples $M[w] = (M[w][0], \cdots, M[w][7]), w \in [0..84)$:
 - Define a Lagrange interpolation polynomial $\mathcal{L}_x(k)$ that maps $k \in [0..8)$ to the $x$-coordinate of the multiple $M[w][k]$, i.e.
   $$
   \mathcal{L}_x(k) = \begin{cases}
-    ([(k + 1) \cdot 8^w] B)_x &\text{for } w \in [0..84); \\
-    ([k \cdot (8)^w - \sum\limits_{j=0}^{83} (8)^j] B)_x &\text{for } w = 84; \text{ and}
+    ([(k + 2) \cdot (2^3)^w] B)_x &\text{for } w \in [0..84); \\
+    ([k \cdot (2^3)^w - \sum\limits_{j=0}^{83} 2^{3j+1}] B)_x &\text{for } w = 84; \text{ and}
   \end{cases}
   $$
 - Find a value $z_w$ such that $z_w + (M[w][k])_y$ is a square $u^2$ in the field, but the wrong-sign $y$-coordinate $z_w - (M[w][k])_y$ does not produce a square.
