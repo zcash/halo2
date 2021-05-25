@@ -58,40 +58,42 @@ $$
 
 For the doubling case, $\lambda$ has to instead be computed as $\frac{3x^2}{2y}$.
 
-Witness $\lambda, \alpha, \beta, \gamma, \delta, A, B, C, D$.
+Define $\mathsf{inv0}(x) = \begin{cases} 0, &\text{if } x = 0 \\ 1/x, &\text{otherwise.} \end{cases}$
 
-$
-\begin{array}{rcl|rcl}
-\text{Constraint} &&& \text{Meaning} \\\hline
-            A \cdot (1-A) &=& 0 & A \in \mathbb{B} \\
-            B \cdot (1-B) &=& 0 & B \in \mathbb{B} \\
-            C \cdot (1-C) &=& 0 & C \in \mathbb{B} \\
-            D \cdot (1-D) &=& 0 & D \in \mathbb{B} \\
- (x_q - x_p) \cdot \alpha &=& 1-A & x_q = x_p &\implies& A \\
-          x_p \cdot \beta &=& 1-B & x_p = 0 &\implies& B \\
-              B \cdot x_p &=& 0 & B &\implies& x_p = 0 \\
-         x_q \cdot \gamma &=& 1-C & x_q = 0 &\implies& C \\
-              C \cdot x_q &=& 0 & C &\implies& x_q = 0 \\
- (y_q + y_p) \cdot \delta &=& 1-D & y_q = -y_p &\implies& D \\
-(x_q - x_p) \cdot ((x_q - x_p) \cdot \lambda - (y_q - y_p)) &=& 0 & x_q \neq x_p &\implies& \lambda = \frac{y_q - y_p}{x_q - x_p} \\
-A \cdot \left(2y_p \cdot \lambda - 3{x_p}^2\right) &=& 0 & A \wedge y_p \neq 0 &\implies& \lambda = \frac{3{x_p}^2}{2y_p} \\
-\\
-(1-B) \cdot (1-C) \cdot (\lambda^2 - x_p - x_q - x_r) && & (¬B \wedge ¬C &\implies& x_r = \lambda^2 - x_p - x_q) \\
-+ B \cdot (x_r - x_q) &=& 0 & \wedge (B &\implies& x_r = x_q) \\
-\\
-(1-B) \cdot (1-C) \cdot (\lambda \cdot (x_p - x_r) - y_p - y_r) && & (¬B \wedge ¬C &\implies& y_r = \lambda \cdot (x_p - x_r) - y_p) \\
-+ B \cdot (y_r - y_q) &=& 0 & \wedge (B &\implies& y_r = y_q) \\
-\\
-      C \cdot (x_r - x_p) &=& 0 & C &\implies& x_r = x_p \\
-      C \cdot (y_r - y_p) &=& 0 & C &\implies& y_r = y_p \\
-              D \cdot x_r &=& 0 & D &\implies& x_r = 0 \\
-              D \cdot y_r &=& 0 & D &\implies& y_r = 0 \\
+Witness $\alpha, \beta, \gamma, \delta, \lambda$ where:
+
+* $\alpha = \mathsf{inv0}(x_q - x_p)$
+* $\beta = \mathsf{inv0}(x_p)$
+* $\gamma = \mathsf{inv0}(x_q)$
+* $\delta = \begin{cases}
+              \mathsf{inv0}(y_q + y_p), &\text{if } x_q = x_p \\
+              0, &\text{otherwise}
+            \end{cases}$
+* $\lambda = \begin{cases}
+               \frac{y_q - y_p}{x_q - x_p}, &\text{if } x_q \neq x_p \\[0.5ex]
+               \frac{3{x_p}^2}{2y_p} &\text{if } x_q = x_p \wedge y_p \neq 0 \\[0.5ex]
+               0, &\text{otherwise.}
+             \end{cases}$
+
+### Constraints
+
+$$
+\begin{array}{|c|rcl|l|}
+\hline
+\text{Degree} & \text{Constraint}\hspace{7em} &&& \text{Meaning} \\\hline
+4 & q_\mathit{Complete} \cdot (x_q - x_p) \cdot ((x_q - x_p) \cdot \lambda - (y_q - y_p)) &=& 0 & x_q \neq x_p \implies \lambda = \frac{y_q - y_p}{x_q - x_p} \\\hline
+5 & q_\mathit{Complete} \cdot (1 - (x_q - x_p) \cdot \alpha) \cdot \left(2y_p \cdot \lambda - 3{x_p}^2\right) &=& 0 & \begin{cases} x_q = x_p \wedge y_p \neq 0 \implies \lambda = \frac{3{x_p}^2}{2y_p} \\ x_q = x_p \wedge y_p = 0 \implies x_p = 0 \end{cases} \\\hline
+6 & q_\mathit{Complete} \cdot x_p \cdot x_q \cdot (x_q - x_p) \cdot (\lambda^2 - x_p - x_q - x_r) &=& 0 & x_p \neq 0 \wedge x_q \neq 0 \wedge x_q \neq x_p \implies x_r = \lambda^2 - x_p - x_q \\
+6 & q_\mathit{Complete} \cdot x_p \cdot x_q \cdot (x_q - x_p) \cdot (\lambda \cdot (x_p - x_r) - y_p - y_r) &=& 0 & x_p \neq 0 \wedge x_q \neq 0 \wedge x_q \neq x_p \implies y_r = \lambda \cdot (x_p - x_r) - y_p \\
+6 & q_\mathit{Complete} \cdot x_p \cdot x_q \cdot (y_q + y_p) \cdot (\lambda^2 - x_p - x_q - x_r) &=& 0 & x_p \neq 0 \wedge x_q \neq 0 \wedge y_q \neq -y_p \implies x_r = \lambda^2 - x_p - x_q \\
+6 & q_\mathit{Complete} \cdot x_p \cdot x_q \cdot (y_q + y_p) \cdot (\lambda \cdot (x_p - x_r) - y_p - y_r) &=& 0 & x_p \neq 0 \wedge x_q \neq 0 \wedge y_q \neq -y_p \implies y_r = \lambda \cdot (x_p - x_r) - y_p \\\hline
+4 & q_\mathit{Complete} \cdot (1 - x_p \cdot \beta) \cdot (x_r - x_q) &=& 0 & x_p = 0 \implies x_r = x_q \\
+4 & q_\mathit{Complete} \cdot (1 - x_p \cdot \beta) \cdot (y_r - y_q) &=& 0 & x_p = 0 \implies y_r = y_q \\\hline
+4 & q_\mathit{Complete} \cdot (1 - x_q \cdot \gamma) \cdot (x_r - x_p) &=& 0 & x_q = 0 \implies x_r = x_p \\
+4 & q_\mathit{Complete} \cdot (1 - x_q \cdot \gamma) \cdot (y_r - y_p) &=& 0 & x_q = 0 \implies y_r = y_p \\\hline
+4 & q_\mathit{Complete} \cdot (1 - (x_q - x_p) \cdot \alpha - (y_q + y_p) \cdot \delta) \cdot x_r &=& 0 & x_q = x_p \wedge y_q = -y_p \implies x_r = 0 \\
+4 & q_\mathit{Complete} \cdot (1 - (x_q - x_p) \cdot \alpha - (y_q + y_p) \cdot \delta) \cdot y_r &=& 0 & x_q = x_p \wedge y_q = -y_p \implies y_r = 0 \\\hline
 \end{array}
-$
+$$
 
-Max degree: $4$
-
-Note: It is the cross-interaction of the two $B$ constraints that fully constrain
-the implications. For example, the contrapositive of the first constraint's implication
-$x_p = 0 \implies B$ is $¬B \implies x_p \neq 0$, which is the other half of the
-second constraint's implication. The same applies to $C$.
+Max degree: 6
