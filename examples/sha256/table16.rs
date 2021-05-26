@@ -187,13 +187,8 @@ impl<F: FieldExt> Table16Chip<F> {
             perm.clone(),
         );
 
-        let message_schedule = MessageScheduleConfig::configure(
-            meta,
-            lookup_inputs,
-            message_schedule,
-            extras,
-            perm,
-        );
+        let message_schedule =
+            MessageScheduleConfig::configure(meta, lookup_inputs, message_schedule, extras, perm);
 
         Table16Config {
             lookup,
