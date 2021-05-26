@@ -556,19 +556,18 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Add a lookup argument for some input expressions and table expressions.
-    /// The function will panic if the number of input expressions and table
-    /// expressions are not the same.
+    ///
+    /// `table_map` returns a map between input expressions and the table expressions
+    /// they need to match.
     pub fn lookup(
         &mut self,
-        input_expressions: &[Expression<F>],
-        table_expressions: &[Expression<F>],
+        table_map: impl FnOnce(&mut Self) -> Vec<(Expression<F>, Expression<F>)>,
     ) -> usize {
-        assert_eq!(input_expressions.len(), table_expressions.len());
+        let table_map = table_map(self);
 
         let index = self.lookups.len();
 
-        self.lookups
-            .push(lookup::Argument::new(input_expressions, table_expressions));
+        self.lookups.push(lookup::Argument::new(table_map));
 
         index
     }

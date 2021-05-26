@@ -11,11 +11,14 @@ pub(crate) struct Argument<F: Field> {
 }
 
 impl<F: Field> Argument<F> {
-    pub fn new(input_expressions: &[Expression<F>], table_expressions: &[Expression<F>]) -> Self {
-        assert_eq!(input_expressions.len(), table_expressions.len());
+    /// Constructs a new lookup argument.
+    ///
+    /// `table_map` is a sequence of `(input, table)` tuples.
+    pub fn new(table_map: Vec<(Expression<F>, Expression<F>)>) -> Self {
+        let (input_expressions, table_expressions) = table_map.into_iter().unzip();
         Argument {
-            input_expressions: input_expressions.to_vec(),
-            table_expressions: table_expressions.to_vec(),
+            input_expressions,
+            table_expressions,
         }
     }
 
