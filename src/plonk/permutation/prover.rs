@@ -173,9 +173,7 @@ impl Argument {
                 permutation_product_commitment_projective.to_affine();
 
             // Hash the permutation product commitment
-            transcript
-                .write_point(permutation_product_commitment)
-                .map_err(|_| Error::TranscriptError)?;
+            transcript.write_point(permutation_product_commitment)?;
 
             sets.push(CommittedSet {
                 permutation_product_poly,
@@ -330,9 +328,7 @@ impl<C: CurveAffine> super::ProvingKey<C> {
     ) -> Result<(), Error> {
         // Hash permutation evals
         for eval in self.polys.iter().map(|poly| eval_polynomial(poly, *x)) {
-            transcript
-                .write_scalar(eval)
-                .map_err(|_| Error::TranscriptError)?;
+            transcript.write_scalar(eval)?;
         }
 
         Ok(())
@@ -365,9 +361,7 @@ impl<C: CurveAffine> Constructed<C> {
                     .chain(Some(&permutation_product_eval))
                     .chain(Some(&permutation_product_next_eval))
                 {
-                    transcript
-                        .write_scalar(*eval)
-                        .map_err(|_| Error::TranscriptError)?;
+                    transcript.write_scalar(*eval)?;
                 }
 
                 // If we have any remaining sets to process, evaluate this set at omega^u
@@ -379,9 +373,7 @@ impl<C: CurveAffine> Constructed<C> {
                         domain.rotate_omega(*x, Rotation(-((blinding_factors + 1) as i32))),
                     );
 
-                    transcript
-                        .write_scalar(permutation_product_last_eval)
-                        .map_err(|_| Error::TranscriptError)?;
+                    transcript.write_scalar(permutation_product_last_eval)?;
                 }
             }
         }

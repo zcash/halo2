@@ -8,7 +8,10 @@ and this project adheres to Rust's notion of
 ## [Unreleased]
 ### Changed
 - `halo2::plonk::Error` has been overhauled:
+  - `Error` no longer implements `PartialEq`. Tests can check for specific error
+    cases with `assert!(matches!(..))`.
   - `Error::IncompatibleParams` is now `Error::InvalidInstances`.
+  - `Error::TranscriptError` stores the underlying `io::Error`.
 
 ### Removed
 - `halo2::arithmetic::BatchInvert` (use `ff::BatchInvert` instead).

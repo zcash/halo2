@@ -210,14 +210,10 @@ impl<F: FieldExt> Argument<F> {
             commit_values(&permuted_table_expression);
 
         // Hash permuted input commitment
-        transcript
-            .write_point(permuted_input_commitment)
-            .map_err(|_| Error::TranscriptError)?;
+        transcript.write_point(permuted_input_commitment)?;
 
         // Hash permuted table commitment
-        transcript
-            .write_point(permuted_table_commitment)
-            .map_err(|_| Error::TranscriptError)?;
+        transcript.write_point(permuted_table_commitment)?;
 
         let permuted_input_coset = pk.vk.domain.coeff_to_extended(permuted_input_poly.clone());
         let permuted_table_coset = pk.vk.domain.coeff_to_extended(permuted_table_poly.clone());
@@ -391,9 +387,7 @@ impl<C: CurveAffine> Permuted<C> {
         let product_coset = pk.vk.domain.coeff_to_extended(z.clone());
 
         // Hash product commitment
-        transcript
-            .write_point(product_commitment)
-            .map_err(|_| Error::TranscriptError)?;
+        transcript.write_point(product_commitment)?;
 
         Ok(Committed::<C> {
             permuted: self,
@@ -541,9 +535,7 @@ impl<C: CurveAffine> Constructed<C> {
             .chain(Some(permuted_input_inv_eval))
             .chain(Some(permuted_table_eval))
         {
-            transcript
-                .write_scalar(eval)
-                .map_err(|_| Error::TranscriptError)?;
+            transcript.write_scalar(eval)?;
         }
 
         Ok(Evaluated { constructed: self })

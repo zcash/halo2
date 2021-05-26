@@ -40,12 +40,8 @@ impl<F: FieldExt> Argument<F> {
         &self,
         transcript: &mut T,
     ) -> Result<PermutationCommitments<C>, Error> {
-        let permuted_input_commitment = transcript
-            .read_point()
-            .map_err(|_| Error::TranscriptError)?;
-        let permuted_table_commitment = transcript
-            .read_point()
-            .map_err(|_| Error::TranscriptError)?;
+        let permuted_input_commitment = transcript.read_point()?;
+        let permuted_table_commitment = transcript.read_point()?;
 
         Ok(PermutationCommitments {
             permuted_input_commitment,
@@ -62,9 +58,7 @@ impl<C: CurveAffine> PermutationCommitments<C> {
         self,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
-        let product_commitment = transcript
-            .read_point()
-            .map_err(|_| Error::TranscriptError)?;
+        let product_commitment = transcript.read_point()?;
 
         Ok(Committed {
             permuted: self,
@@ -78,21 +72,11 @@ impl<C: CurveAffine> Committed<C> {
         self,
         transcript: &mut T,
     ) -> Result<Evaluated<C>, Error> {
-        let product_eval = transcript
-            .read_scalar()
-            .map_err(|_| Error::TranscriptError)?;
-        let product_next_eval = transcript
-            .read_scalar()
-            .map_err(|_| Error::TranscriptError)?;
-        let permuted_input_eval = transcript
-            .read_scalar()
-            .map_err(|_| Error::TranscriptError)?;
-        let permuted_input_inv_eval = transcript
-            .read_scalar()
-            .map_err(|_| Error::TranscriptError)?;
-        let permuted_table_eval = transcript
-            .read_scalar()
-            .map_err(|_| Error::TranscriptError)?;
+        let product_eval = transcript.read_scalar()?;
+        let product_next_eval = transcript.read_scalar()?;
+        let permuted_input_eval = transcript.read_scalar()?;
+        let permuted_input_inv_eval = transcript.read_scalar()?;
+        let permuted_table_eval = transcript.read_scalar()?;
 
         Ok(Evaluated {
             committed: self,
