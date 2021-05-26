@@ -599,5 +599,5 @@ pub fn create_proof<
         // We query the h(X) polynomial at x
         .chain(vanishing.open(x));
 
-    multiopen::create_proof(params, transcript, instances).map_err(|_| Error::OpeningError)
+    multiopen::create_proof(params, transcript, instances).map_err(|_| Error::Opening)
 }

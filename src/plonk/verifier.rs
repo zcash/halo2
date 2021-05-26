@@ -285,5 +285,5 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
 
     // We are now convinced the circuit is satisfied so long as the
     // polynomial commitments open to the correct values.
-    multiopen::verify_proof(params, transcript, queries, msm).map_err(|_| Error::OpeningError)
+    multiopen::verify_proof(params, transcript, queries, msm).map_err(|_| Error::Opening)
 }

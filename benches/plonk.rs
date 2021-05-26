@@ -90,20 +90,20 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
                         0,
                         || {
                             value = Some(f()?);
-                            Ok(value.ok_or(Error::SynthesisError)?.0)
+                            Ok(value.ok_or(Error::Synthesis)?.0)
                         },
                     )?;
                     let rhs = region.assign_advice(
                         || "rhs",
                         self.config.b,
                         0,
-                        || Ok(value.ok_or(Error::SynthesisError)?.1),
+                        || Ok(value.ok_or(Error::Synthesis)?.1),
                     )?;
                     let out = region.assign_advice(
                         || "out",
                         self.config.c,
                         0,
-                        || Ok(value.ok_or(Error::SynthesisError)?.2),
+                        || Ok(value.ok_or(Error::Synthesis)?.2),
                     )?;
 
                     region.assign_fixed(|| "a", self.config.sa, 0, || Ok(FF::zero()))?;
@@ -132,20 +132,20 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
                         0,
                         || {
                             value = Some(f()?);
-                            Ok(value.ok_or(Error::SynthesisError)?.0)
+                            Ok(value.ok_or(Error::Synthesis)?.0)
                         },
                     )?;
                     let rhs = region.assign_advice(
                         || "rhs",
                         self.config.b,
                         0,
-                        || Ok(value.ok_or(Error::SynthesisError)?.1),
+                        || Ok(value.ok_or(Error::Synthesis)?.1),
                     )?;
                     let out = region.assign_advice(
                         || "out",
                         self.config.c,
                         0,
-                        || Ok(value.ok_or(Error::SynthesisError)?.2),
+                        || Ok(value.ok_or(Error::Synthesis)?.2),
                     )?;
 
                     region.assign_fixed(|| "a", self.config.sa, 0, || Ok(FF::one()))?;
@@ -226,17 +226,17 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
                 let (a0, _, c0) = cs.raw_multiply(&mut layouter, || {
                     a_squared = self.a.map(|a| a.square());
                     Ok((
-                        self.a.ok_or(Error::SynthesisError)?,
-                        self.a.ok_or(Error::SynthesisError)?,
-                        a_squared.ok_or(Error::SynthesisError)?,
+                        self.a.ok_or(Error::Synthesis)?,
+                        self.a.ok_or(Error::Synthesis)?,
+                        a_squared.ok_or(Error::Synthesis)?,
                     ))
                 })?;
                 let (a1, b1, _) = cs.raw_add(&mut layouter, || {
                     let fin = a_squared.and_then(|a2| self.a.map(|a| a + a2));
                     Ok((
-                        self.a.ok_or(Error::SynthesisError)?,
-                        a_squared.ok_or(Error::SynthesisError)?,
-                        fin.ok_or(Error::SynthesisError)?,
+                        self.a.ok_or(Error::Synthesis)?,
+                        a_squared.ok_or(Error::Synthesis)?,
+                        fin.ok_or(Error::Synthesis)?,
                     ))
                 })?;
                 cs.copy(&mut layouter, a0, a1)?;

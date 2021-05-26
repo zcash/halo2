@@ -6,7 +6,7 @@ use std::io;
 pub enum Error {
     /// This is an error that can occur during synthesis of the circuit, for
     /// example, when the witness is not present.
-    SynthesisError,
+    Synthesis,
     /// The provided instances do not match the circuit parameters.
     InvalidInstances,
     /// The constraint system is not satisfied.
@@ -14,9 +14,9 @@ pub enum Error {
     /// Out of bounds index passed to a backend
     BoundsFailure,
     /// Opening error
-    OpeningError,
+    Opening,
     /// Transcript error
-    TranscriptError(io::Error),
+    Transcript(io::Error),
     /// Instance provided has more rows than supported by circuit
     NotEnoughRowsAvailable,
     /// Instance provided exceeds number of available rows
@@ -29,6 +29,6 @@ pub enum Error {
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Self {
         // The only place we can get io::Error from is the transcript.
-        Error::TranscriptError(error)
+        Error::Transcript(error)
     }
 }

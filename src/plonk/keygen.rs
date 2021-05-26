@@ -160,7 +160,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
             .ok_or(Error::BoundsFailure)?;
 
         for row in self.usable_rows.clone().skip(from_row) {
-            col[row] = to.ok_or(Error::SynthesisError)?;
+            col[row] = to.ok_or(Error::Synthesis)?;
         }
 
         Ok(())
