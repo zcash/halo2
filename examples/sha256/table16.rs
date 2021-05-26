@@ -189,7 +189,7 @@ impl<F: FieldExt> Table16Chip<F> {
 
         let message_schedule = MessageScheduleConfig::configure(
             meta,
-            lookup_inputs.clone(),
+            lookup_inputs,
             message_schedule,
             extras,
             perm,
@@ -237,7 +237,7 @@ impl<F: FieldExt> Sha256Instructions<F> for Table16Chip<F> {
         initialized_state: &Self::State,
         input: [Self::BlockWord; super::BLOCK_SIZE],
     ) -> Result<Self::State, Error> {
-        let config = self.config().clone();
+        let config = self.config();
         let (_, w_halves) = config.message_schedule.process(layouter, input)?;
         config
             .compression
