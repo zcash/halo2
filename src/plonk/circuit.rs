@@ -561,20 +561,16 @@ impl<F: Field> ConstraintSystem<F> {
     /// they need to match.
     pub fn lookup(
         &mut self,
-        table_map: impl FnOnce(&mut Self) -> Vec<(Expression<F>, Expression<F>)>,
+        table_map: impl FnOnce(&mut Registers<'_, F>) -> Vec<(Expression<F>, Expression<F>)>,
     ) -> usize {
-        let table_map = table_map(self);
+        let mut registers = Registers::new(self);
+        let table_map = table_map(&mut registers);
 
         let index = self.lookups.len();
 
         self.lookups.push(lookup::Argument::new(table_map));
 
         index
-    }
-
-    /// Query a selector at a relative position.
-    pub fn query_selector(&mut self, selector: Selector, at: Rotation) -> Expression<F> {
-        Expression::Fixed(self.query_fixed_index(selector.0, at))
     }
 
     fn query_fixed_index(&mut self, column: Column<Fixed>, at: Rotation) -> usize {
@@ -592,11 +588,6 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
-    /// Query a fixed column at a relative position
-    pub fn query_fixed(&mut self, column: Column<Fixed>, at: Rotation) -> Expression<F> {
-        Expression::Fixed(self.query_fixed_index(column, at))
-    }
-
     pub(crate) fn query_advice_index(&mut self, column: Column<Advice>, at: Rotation) -> usize {
         // Return existing query, if it exists
         for (index, advice_query) in self.advice_queries.iter().enumerate() {
@@ -610,11 +601,6 @@ impl<F: Field> ConstraintSystem<F> {
         self.advice_queries.push((column, at));
 
         index
-    }
-
-    /// Query an advice column at a relative position
-    pub fn query_advice(&mut self, column: Column<Advice>, at: Rotation) -> Expression<F> {
-        Expression::Advice(self.query_advice_index(column, at))
     }
 
     fn query_instance_index(&mut self, column: Column<Instance>, at: Rotation) -> usize {
@@ -632,11 +618,6 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
-    /// Query an instance column at a relative position
-    pub fn query_instance(&mut self, column: Column<Instance>, at: Rotation) -> Expression<F> {
-        Expression::Instance(self.query_instance_index(column, at))
-    }
-
     fn query_any_index(&mut self, column: Column<Any>, at: Rotation) -> usize {
         match column.column_type() {
             Any::Advice => self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
@@ -644,21 +625,6 @@ impl<F: Field> ConstraintSystem<F> {
             Any::Instance => {
                 self.query_instance_index(Column::<Instance>::try_from(column).unwrap(), at)
             }
-        }
-    }
-
-    /// Query an Any column at a relative position
-    pub fn query_any(&mut self, column: Column<Any>, at: Rotation) -> Expression<F> {
-        match column.column_type() {
-            Any::Advice => Expression::Advice(
-                self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
-            ),
-            Any::Fixed => Expression::Fixed(
-                self.query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
-            ),
-            Any::Instance => Expression::Instance(
-                self.query_instance_index(Column::<Instance>::try_from(column).unwrap(), at),
-            ),
         }
     }
 
@@ -707,8 +673,13 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Create a new gate
-    pub fn create_gate(&mut self, name: &'static str, f: impl FnOnce(&mut Self) -> Expression<F>) {
-        let poly = f(self);
+    pub fn create_gate(
+        &mut self,
+        name: &'static str,
+        f: impl FnOnce(&mut Registers<'_, F>) -> Expression<F>,
+    ) {
+        let mut registers = Registers::new(self);
+        let poly = f(&mut registers);
         self.gates.push((name, poly));
     }
 
@@ -779,5 +750,56 @@ impl<F: Field> ConstraintSystem<F> {
         }
 
         degree
+    }
+}
+
+/// Exposes the "virtual registers" that can be queried while creating a custom gate or
+/// lookup table.
+#[derive(Debug)]
+pub struct Registers<'a, F: Field> {
+    meta: &'a mut ConstraintSystem<F>,
+}
+
+impl<'a, F: Field> Registers<'a, F> {
+    fn new(meta: &'a mut ConstraintSystem<F>) -> Self {
+        Registers { meta }
+    }
+
+    /// Query a selector at a relative position.
+    pub fn query_selector(&mut self, selector: Selector, at: Rotation) -> Expression<F> {
+        Expression::Fixed(self.meta.query_fixed_index(selector.0, at))
+    }
+
+    /// Query a fixed column at a relative position
+    pub fn query_fixed(&mut self, column: Column<Fixed>, at: Rotation) -> Expression<F> {
+        Expression::Fixed(self.meta.query_fixed_index(column, at))
+    }
+
+    /// Query an advice column at a relative position
+    pub fn query_advice(&mut self, column: Column<Advice>, at: Rotation) -> Expression<F> {
+        Expression::Advice(self.meta.query_advice_index(column, at))
+    }
+
+    /// Query an instance column at a relative position
+    pub fn query_instance(&mut self, column: Column<Instance>, at: Rotation) -> Expression<F> {
+        Expression::Instance(self.meta.query_instance_index(column, at))
+    }
+
+    /// Query an Any column at a relative position
+    pub fn query_any(&mut self, column: Column<Any>, at: Rotation) -> Expression<F> {
+        match column.column_type() {
+            Any::Advice => Expression::Advice(
+                self.meta
+                    .query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
+            ),
+            Any::Fixed => Expression::Fixed(
+                self.meta
+                    .query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
+            ),
+            Any::Instance => Expression::Instance(
+                self.meta
+                    .query_instance_index(Column::<Instance>::try_from(column).unwrap(), at),
+            ),
+        }
     }
 }
