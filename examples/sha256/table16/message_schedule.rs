@@ -1,8 +1,6 @@
 use std::convert::TryInto;
 
-use super::{
-    super::BLOCK_SIZE, BlockWord, CellValue16, SpreadInputs, Table16Assignment, Table16Chip, ROUNDS,
-};
+use super::{super::BLOCK_SIZE, BlockWord, CellValue16, SpreadInputs, Table16Assignment, ROUNDS};
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Cell, Layouter},
@@ -29,7 +27,7 @@ pub(super) struct MessageWord {
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct MessageSchedule {
+pub(super) struct MessageScheduleConfig {
     lookup: SpreadInputs,
     message_schedule: Column<Advice>,
     extras: [Column<Advice>; 6],
@@ -55,9 +53,9 @@ pub(super) struct MessageSchedule {
     perm: Permutation,
 }
 
-impl<F: FieldExt> Table16Assignment<F> for MessageSchedule {}
+impl<F: FieldExt> Table16Assignment<F> for MessageScheduleConfig {}
 
-impl MessageSchedule {
+impl MessageScheduleConfig {
     /// Configures the message schedule.
     ///
     /// `message_schedule` is the column into which the message schedule will be placed.
@@ -289,7 +287,7 @@ impl MessageSchedule {
             .0
         });
 
-        MessageSchedule {
+        MessageScheduleConfig {
             lookup,
             message_schedule,
             extras,
@@ -309,7 +307,7 @@ impl MessageSchedule {
     #[allow(clippy::type_complexity)]
     pub(super) fn process<F: FieldExt>(
         &self,
-        layouter: &mut impl Layouter<Table16Chip<F>>,
+        layouter: &mut impl Layouter<F>,
         input: [BlockWord; BLOCK_SIZE],
     ) -> Result<([MessageWord; ROUNDS], [(CellValue16, CellValue16); ROUNDS]), Error> {
         let mut w = Vec::<MessageWord>::with_capacity(ROUNDS);
@@ -439,57 +437,18 @@ impl MessageSchedule {
 
         Ok((w.try_into().unwrap(), w_halves.try_into().unwrap()))
     }
-
-    /// Empty configuration without gates. Useful for fast testing
-    #[cfg(test)]
-    pub(super) fn empty_configure<F: FieldExt>(
-        meta: &mut ConstraintSystem<F>,
-        lookup: SpreadInputs,
-        message_schedule: Column<Advice>,
-        extras: [Column<Advice>; 6],
-        perm: Permutation,
-    ) -> Self {
-        // Create fixed columns for the selectors we will require.
-        let s_word = meta.fixed_column();
-        let s_decompose_0 = meta.fixed_column();
-        let s_decompose_1 = meta.fixed_column();
-        let s_decompose_2 = meta.fixed_column();
-        let s_decompose_3 = meta.fixed_column();
-        let s_lower_sigma_0 = meta.fixed_column();
-        let s_lower_sigma_1 = meta.fixed_column();
-        let s_lower_sigma_0_v2 = meta.fixed_column();
-        let s_lower_sigma_1_v2 = meta.fixed_column();
-
-        MessageSchedule {
-            lookup,
-            message_schedule,
-            extras,
-            s_word,
-            s_decompose_0,
-            s_decompose_1,
-            s_decompose_2,
-            s_decompose_3,
-            s_lower_sigma_0,
-            s_lower_sigma_1,
-            s_lower_sigma_0_v2,
-            s_lower_sigma_1_v2,
-            perm,
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::{
-        super::BLOCK_SIZE, BlockWord, Compression, SpreadTable, Table16Chip, Table16Config,
-    };
-    use super::{schedule_util::*, MessageSchedule};
+    use super::super::{super::BLOCK_SIZE, BlockWord, SpreadTableChip, Table16Chip, Table16Config};
+    use super::schedule_util::*;
     use halo2::{
         arithmetic::FieldExt,
-        circuit::{layouter, Layouter},
+        circuit::layouter::SingleChipLayouter,
         dev::MockProver,
         pasta::Fp,
-        plonk::{Assignment, Circuit, ConstraintSystem, Error, Permutation},
+        plonk::{Assignment, Circuit, ConstraintSystem, Error},
     };
 
     #[test]
@@ -500,64 +459,7 @@ mod tests {
             type Config = Table16Config;
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
-                let a = meta.advice_column();
-                let b = meta.advice_column();
-                let c = meta.advice_column();
-
-                let (lookup_inputs, lookup_table) = SpreadTable::configure(meta, a, b, c);
-
-                let message_schedule = meta.advice_column();
-                let extras = [
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                ];
-
-                // Rename these here for ease of matching the gates to the specification.
-                let _a_0 = lookup_inputs.tag;
-                let a_1 = lookup_inputs.dense;
-                let a_2 = lookup_inputs.spread;
-                let a_3 = extras[0];
-                let a_4 = extras[1];
-                let a_5 = message_schedule;
-                let a_6 = extras[2];
-                let a_7 = extras[3];
-                let a_8 = extras[4];
-                let _a_9 = extras[5];
-
-                let perm = Permutation::new(
-                    meta,
-                    &[
-                        a_1.into(),
-                        a_2.into(),
-                        a_3.into(),
-                        a_4.into(),
-                        a_5.into(),
-                        a_6.into(),
-                        a_7.into(),
-                        a_8.into(),
-                    ],
-                );
-
-                let compression = Compression::empty_configure(
-                    meta,
-                    lookup_inputs.clone(),
-                    message_schedule,
-                    extras,
-                    perm.clone(),
-                );
-
-                let message_schedule =
-                    MessageSchedule::configure(meta, lookup_inputs, message_schedule, extras, perm);
-
-                Table16Config {
-                    lookup_table,
-                    message_schedule,
-                    compression,
-                }
+                Table16Chip::configure(meta)
             }
 
             fn synthesize(
@@ -565,19 +467,17 @@ mod tests {
                 cs: &mut impl Assignment<F>,
                 config: Self::Config,
             ) -> Result<(), Error> {
-                let mut layouter = layouter::SingleChip::<Table16Chip<F>, _>::new(cs, config)?;
+                let mut layouter = SingleChipLayouter::new(cs)?;
 
-                // Load table
-                let table = layouter.config().lookup_table.clone();
-                table.load(&mut layouter)?;
+                // Load lookup table
+                SpreadTableChip::load(config.lookup.clone(), &mut layouter)?;
 
                 // Provide input
                 // Test vector: "abc"
                 let inputs: [BlockWord; BLOCK_SIZE] = get_msg_schedule_test_input();
 
                 // Run message_scheduler to get W_[0..64]
-                let message_schedule = layouter.config().message_schedule.clone();
-                let (w, _) = message_schedule.process(&mut layouter, inputs)?;
+                let (w, _) = config.message_schedule.process(&mut layouter, inputs)?;
                 for (word, test_word) in w.iter().zip(MSG_SCHEDULE_TEST_OUTPUT.iter()) {
                     let word = word.value.unwrap();
                     assert_eq!(word, *test_word);

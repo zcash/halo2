@@ -100,26 +100,41 @@ impl Into<CellValue32> for CellValue16 {
 /// Configuration for a [`Table16Chip`].
 #[derive(Clone, Debug)]
 pub struct Table16Config {
-    lookup_table: SpreadTable,
-    message_schedule: MessageSchedule,
-    compression: Compression,
+    lookup: SpreadTableConfig,
+    message_schedule: MessageScheduleConfig,
+    compression: CompressionConfig,
 }
 
 /// A chip that implements SHA-256 with a maximum lookup table size of $2^16$.
 #[derive(Clone, Debug)]
 pub struct Table16Chip<F: FieldExt> {
+    config: Table16Config,
     _marker: PhantomData<F>,
 }
 
-impl<F: FieldExt> Table16Chip<F> {
-    /// Configures this chip for use in a circuit.
-    pub fn configure(meta: &mut ConstraintSystem<F>) -> Table16Config {
-        // Columns required by this chip:
-        // - Three advice columns to interact with the lookup table.
-        let tag = meta.advice_column();
-        let dense = meta.advice_column();
-        let spread = meta.advice_column();
+impl<F: FieldExt> Chip<F> for Table16Chip<F> {
+    type Config = Table16Config;
+    type Loaded = ();
 
+    fn config(&self) -> &Self::Config {
+        &self.config
+    }
+
+    fn loaded(&self) -> &Self::Loaded {
+        &()
+    }
+}
+
+impl<F: FieldExt> Table16Chip<F> {
+    pub fn construct(config: <Self as Chip<F>>::Config) -> Self {
+        Self {
+            config,
+            _marker: PhantomData,
+        }
+    }
+
+    pub fn configure(meta: &mut ConstraintSystem<F>) -> <Self as Chip<F>>::Config {
+        // Columns required by this chip:
         let message_schedule = meta.advice_column();
         let extras = [
             meta.advice_column(),
@@ -130,7 +145,13 @@ impl<F: FieldExt> Table16Chip<F> {
             meta.advice_column(),
         ];
 
-        let (lookup_inputs, lookup_table) = SpreadTable::configure(meta, tag, dense, spread);
+        // - Three advice columns to interact with the lookup table.
+        let input_tag = meta.advice_column();
+        let input_dense = meta.advice_column();
+        let input_spread = meta.advice_column();
+
+        let lookup = SpreadTableChip::configure(meta, input_tag, input_dense, input_spread);
+        let lookup_inputs = lookup.input.clone();
 
         // Rename these here for ease of matching the gates to the specification.
         let _a_0 = lookup_inputs.tag;
@@ -158,7 +179,7 @@ impl<F: FieldExt> Table16Chip<F> {
             ],
         );
 
-        let compression = Compression::configure(
+        let compression = CompressionConfig::configure(
             meta,
             lookup_inputs.clone(),
             message_schedule,
@@ -167,28 +188,21 @@ impl<F: FieldExt> Table16Chip<F> {
         );
 
         let message_schedule =
-            MessageSchedule::configure(meta, lookup_inputs, message_schedule, extras, perm);
+            MessageScheduleConfig::configure(meta, lookup_inputs, message_schedule, extras, perm);
 
         Table16Config {
-            lookup_table,
+            lookup,
             message_schedule,
             compression,
         }
     }
-}
 
-impl<F: FieldExt> Chip for Table16Chip<F> {
-    type Field = F;
-    type Config = Table16Config;
-    type Loaded = ();
-
-    fn load(layouter: &mut impl Layouter<Self>) -> Result<(), Error> {
-        let table = layouter.config().lookup_table.clone();
-        table.load(layouter)
+    pub fn load(config: Table16Config, layouter: &mut impl Layouter<F>) -> Result<(), Error> {
+        SpreadTableChip::load(config.lookup, layouter)
     }
 }
 
-impl<F: FieldExt> Sha256Instructions for Table16Chip<F> {
+impl<F: FieldExt> Sha256Instructions<F> for Table16Chip<F> {
     type State = State;
     type BlockWord = BlockWord;
 
@@ -196,17 +210,16 @@ impl<F: FieldExt> Sha256Instructions for Table16Chip<F> {
         BlockWord::new(0)
     }
 
-    fn initialization_vector(layouter: &mut impl Layouter<Self>) -> Result<State, Error> {
-        let config = layouter.config().clone();
-        config.compression.initialize_with_iv(layouter, IV)
+    fn initialization_vector(&self, layouter: &mut impl Layouter<F>) -> Result<State, Error> {
+        self.config().compression.initialize_with_iv(layouter, IV)
     }
 
     fn initialization(
-        layouter: &mut impl Layouter<Table16Chip<F>>,
+        &self,
+        layouter: &mut impl Layouter<F>,
         init_state: &Self::State,
     ) -> Result<Self::State, Error> {
-        let config = layouter.config().clone();
-        config
+        self.config()
             .compression
             .initialize_with_state(layouter, init_state.clone())
     }
@@ -214,26 +227,26 @@ impl<F: FieldExt> Sha256Instructions for Table16Chip<F> {
     // Given an initialized state and an input message block, compress the
     // message block and return the final state.
     fn compress(
-        layouter: &mut impl Layouter<Self>,
+        &self,
+        layouter: &mut impl Layouter<F>,
         initialized_state: &Self::State,
         input: [Self::BlockWord; super::BLOCK_SIZE],
     ) -> Result<Self::State, Error> {
-        let config = layouter.config().clone();
+        let config = self.config();
         let (_, w_halves) = config.message_schedule.process(layouter, input)?;
-
         config
             .compression
             .compress(layouter, initialized_state.clone(), w_halves)
     }
 
     fn digest(
-        layouter: &mut impl Layouter<Self>,
+        &self,
+        layouter: &mut impl Layouter<F>,
         state: &Self::State,
     ) -> Result<[Self::BlockWord; super::DIGEST_SIZE], Error> {
         // Copy the dense forms of the state variable chunks down to this gate.
         // Reconstruct the 32-bit dense words.
-        let config = layouter.config().clone();
-        config.compression.digest(layouter, state.clone())
+        self.config().compression.digest(layouter, state.clone())
     }
 }
 
@@ -244,7 +257,7 @@ trait Table16Assignment<F: FieldExt> {
     #[allow(clippy::type_complexity)]
     fn assign_spread_outputs(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
         perm: &Permutation,
@@ -285,7 +298,7 @@ trait Table16Assignment<F: FieldExt> {
     #[allow(clippy::too_many_arguments)]
     fn assign_sigma_outputs(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
         perm: &Permutation,
@@ -305,7 +318,7 @@ trait Table16Assignment<F: FieldExt> {
     // Assign a cell the same value as another cell and set up a copy constraint between them
     fn assign_and_constrain<A, AR>(
         &self,
-        region: &mut Region<'_, Table16Chip<F>>,
+        region: &mut Region<'_, F>,
         annotation: A,
         column: Column<Advice>,
         row: usize,
@@ -326,12 +339,11 @@ trait Table16Assignment<F: FieldExt> {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "dev-graph")]
+    use super::super::{BlockWord, Sha256, BLOCK_SIZE};
+    use super::{Table16Chip, Table16Config};
     use halo2::{
         arithmetic::FieldExt,
-        circuit::Chip,
-        circuit::{layouter, Layouter},
-        gadget::sha256::{BlockWord, Sha256, Table16Chip, Table16Config, BLOCK_SIZE},
+        circuit::{layouter::SingleChipLayouter, Layouter},
         pasta::Fq,
         plonk::{Assignment, Circuit, ConstraintSystem, Error},
     };
@@ -344,17 +356,18 @@ mod tests {
         impl<F: FieldExt> Circuit<F> for MyCircuit {
             type Config = Table16Config;
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Table16Config {
+            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 Table16Chip::configure(meta)
             }
 
             fn synthesize(
                 &self,
                 cs: &mut impl Assignment<F>,
-                config: Table16Config,
+                config: Self::Config,
             ) -> Result<(), Error> {
-                let mut layouter = layouter::SingleChip::<Table16Chip<F>, _>::new(cs, config)?;
-                Table16Chip::load(&mut layouter)?;
+                let mut layouter = SingleChipLayouter::new(cs)?;
+                let table16_chip = Table16Chip::<F>::construct(config.clone());
+                Table16Chip::<F>::load(config, &mut layouter)?;
 
                 // Test vector: "abc"
                 let test_input = [
@@ -381,14 +394,14 @@ mod tests {
                     input.extend_from_slice(&test_input);
                 }
 
-                Sha256::digest(layouter.namespace(|| "'abc' * 31"), &input)?;
+                Sha256::digest(table16_chip, layouter.namespace(|| "'abc' * 31"), &input)?;
 
                 Ok(())
             }
         }
 
         let circuit: MyCircuit = MyCircuit {};
-        eprintln!("{}", crate::dev::circuit_dot_graph::<Fq, _>(&circuit));
+        eprintln!("{}", halo2::dev::circuit_dot_graph::<Fq, _>(&circuit));
     }
 
     #[cfg(feature = "dev-graph")]
@@ -400,17 +413,18 @@ mod tests {
         impl<F: FieldExt> Circuit<F> for MyCircuit {
             type Config = Table16Config;
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Table16Config {
+            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 Table16Chip::configure(meta)
             }
 
             fn synthesize(
                 &self,
                 cs: &mut impl Assignment<F>,
-                config: Table16Config,
+                config: Self::Config,
             ) -> Result<(), Error> {
-                let mut layouter = layouter::SingleChip::<Table16Chip<F>, _>::new(cs, config)?;
-                Table16Chip::load(&mut layouter)?;
+                let mut layouter = SingleChipLayouter::new(cs)?;
+                let table16_chip = Table16Chip::<F>::construct(config.clone());
+                Table16Chip::<F>::load(config, &mut layouter)?;
 
                 // Test vector: "abc"
                 let test_input = [
@@ -437,7 +451,7 @@ mod tests {
                     input.extend_from_slice(&test_input);
                 }
 
-                Sha256::digest(layouter.namespace(|| "'abc' * 2"), &input)?;
+                Sha256::digest(table16_chip, layouter.namespace(|| "'abc' * 2"), &input)?;
 
                 Ok(())
             }
@@ -451,6 +465,6 @@ mod tests {
             .unwrap();
 
         let circuit = MyCircuit {};
-        crate::dev::circuit_layout::<Fq, _, _>(&circuit, &root).unwrap();
+        halo2::dev::circuit_layout::<Fq, _, _>(&circuit, &root).unwrap();
     }
 }

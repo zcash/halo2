@@ -1,6 +1,6 @@
 use super::{
     super::DIGEST_SIZE, BlockWord, CellValue16, CellValue32, SpreadInputs, SpreadVar,
-    Table16Assignment, Table16Chip, ROUNDS, STATE,
+    Table16Assignment, ROUNDS, STATE,
 };
 use halo2::{
     arithmetic::FieldExt,
@@ -231,7 +231,7 @@ pub enum StateWord {
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct Compression {
+pub(super) struct CompressionConfig {
     lookup: SpreadInputs,
     message_schedule: Column<Advice>,
     extras: [Column<Advice>; 6],
@@ -256,9 +256,9 @@ pub(super) struct Compression {
     perm: Permutation,
 }
 
-impl<F: FieldExt> Table16Assignment<F> for Compression {}
+impl<F: FieldExt> Table16Assignment<F> for CompressionConfig {}
 
-impl Compression {
+impl CompressionConfig {
     pub(super) fn configure<F: FieldExt>(
         meta: &mut ConstraintSystem<F>,
         lookup: SpreadInputs,
@@ -656,7 +656,7 @@ impl Compression {
             .0
         });
 
-        Compression {
+        CompressionConfig {
             lookup,
             message_schedule,
             extras,
@@ -679,7 +679,7 @@ impl Compression {
     /// Returns an initialized state.
     pub(super) fn initialize_with_iv<F: FieldExt>(
         &self,
-        layouter: &mut impl Layouter<Table16Chip<F>>,
+        layouter: &mut impl Layouter<F>,
         init_state: [u32; STATE],
     ) -> Result<State, Error> {
         let mut new_state = State::empty_state();
@@ -697,7 +697,7 @@ impl Compression {
     /// output from a previous compression round.
     pub(super) fn initialize_with_state<F: FieldExt>(
         &self,
-        layouter: &mut impl Layouter<Table16Chip<F>>,
+        layouter: &mut impl Layouter<F>,
         init_state: State,
     ) -> Result<State, Error> {
         let mut new_state = State::empty_state();
@@ -714,7 +714,7 @@ impl Compression {
     /// Given an initialized state and a message schedule, perform 64 compression rounds.
     pub(super) fn compress<F: FieldExt>(
         &self,
-        layouter: &mut impl Layouter<Table16Chip<F>>,
+        layouter: &mut impl Layouter<F>,
         initialized_state: State,
         w_halves: [(CellValue16, CellValue16); ROUNDS],
     ) -> Result<State, Error> {
@@ -736,7 +736,7 @@ impl Compression {
     /// After the final round, convert the state into the final digest.
     pub(super) fn digest<F: FieldExt>(
         &self,
-        layouter: &mut impl Layouter<Table16Chip<F>>,
+        layouter: &mut impl Layouter<F>,
         state: State,
     ) -> Result<[BlockWord; DIGEST_SIZE], Error> {
         let mut digest = [BlockWord::new(0); DIGEST_SIZE];
@@ -750,65 +750,19 @@ impl Compression {
         )?;
         Ok(digest)
     }
-
-    #[cfg(test)]
-    pub(super) fn empty_configure<F: FieldExt>(
-        meta: &mut ConstraintSystem<F>,
-        lookup: SpreadInputs,
-        message_schedule: Column<Advice>,
-        extras: [Column<Advice>; 6],
-        perm: Permutation,
-    ) -> Self {
-        let s_ch = meta.fixed_column();
-        let s_ch_neg = meta.fixed_column();
-        let s_maj = meta.fixed_column();
-        let s_h_prime = meta.fixed_column();
-        let s_a_new = meta.fixed_column();
-        let s_e_new = meta.fixed_column();
-
-        let s_upper_sigma_0 = meta.fixed_column();
-        let s_upper_sigma_1 = meta.fixed_column();
-
-        // Decomposition gate for AbcdVar
-        let s_decompose_abcd = meta.fixed_column();
-        // Decomposition gate for EfghVar
-        let s_decompose_efgh = meta.fixed_column();
-
-        let s_digest = meta.fixed_column();
-
-        Compression {
-            lookup,
-            message_schedule,
-            extras,
-            s_ch,
-            s_ch_neg,
-            s_maj,
-            s_h_prime,
-            s_a_new,
-            s_e_new,
-            s_upper_sigma_0,
-            s_upper_sigma_1,
-            s_decompose_abcd,
-            s_decompose_efgh,
-            s_digest,
-            perm,
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::super::{
-        super::BLOCK_SIZE, get_msg_schedule_test_input, BlockWord, MessageSchedule, SpreadTable,
-        Table16Chip, Table16Config, IV,
+        super::BLOCK_SIZE, get_msg_schedule_test_input, BlockWord, Table16Chip, Table16Config, IV,
     };
-    use super::Compression;
     use halo2::{
         arithmetic::FieldExt,
-        circuit::{layouter, Layouter},
+        circuit::layouter::SingleChipLayouter,
         dev::MockProver,
         pasta::Fp,
-        plonk::{Assignment, Circuit, ConstraintSystem, Error, Permutation},
+        plonk::{Assignment, Circuit, ConstraintSystem, Error},
     };
 
     #[test]
@@ -819,69 +773,7 @@ mod tests {
             type Config = Table16Config;
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
-                let a = meta.advice_column();
-                let b = meta.advice_column();
-                let c = meta.advice_column();
-
-                let (lookup_inputs, lookup_table) = SpreadTable::configure(meta, a, b, c);
-
-                let message_schedule = meta.advice_column();
-                let extras = [
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                ];
-
-                // Rename these here for ease of matching the gates to the specification.
-                let _a_0 = lookup_inputs.tag;
-                let a_1 = lookup_inputs.dense;
-                let a_2 = lookup_inputs.spread;
-                let a_3 = extras[0];
-                let a_4 = extras[1];
-                let a_5 = message_schedule;
-                let a_6 = extras[2];
-                let a_7 = extras[3];
-                let a_8 = extras[4];
-                let _a_9 = extras[5];
-
-                let perm = Permutation::new(
-                    meta,
-                    &[
-                        a_1.into(),
-                        a_2.into(),
-                        a_3.into(),
-                        a_4.into(),
-                        a_5.into(),
-                        a_6.into(),
-                        a_7.into(),
-                        a_8.into(),
-                    ],
-                );
-
-                let compression = Compression::configure(
-                    meta,
-                    lookup_inputs.clone(),
-                    message_schedule,
-                    extras,
-                    perm.clone(),
-                );
-
-                let message_schedule = MessageSchedule::configure(
-                    meta,
-                    lookup_inputs.clone(),
-                    message_schedule,
-                    extras,
-                    perm.clone(),
-                );
-
-                Table16Config {
-                    lookup_table,
-                    message_schedule,
-                    compression,
-                }
+                Table16Chip::configure(meta)
             }
 
             fn synthesize(
@@ -889,16 +781,12 @@ mod tests {
                 cs: &mut impl Assignment<F>,
                 config: Self::Config,
             ) -> Result<(), Error> {
-                let mut layouter = layouter::SingleChip::<Table16Chip<F>, _>::new(cs, config)?;
-
-                // Load table
-                let table = layouter.config().lookup_table.clone();
-                table.load(&mut layouter)?;
+                let mut layouter = SingleChipLayouter::new(cs)?;
+                Table16Chip::<F>::load(config.clone(), &mut layouter)?;
 
                 // Test vector: "abc"
                 let input: [BlockWord; BLOCK_SIZE] = get_msg_schedule_test_input();
 
-                let config = layouter.config().clone();
                 let (_, w_halves) = config.message_schedule.process(&mut layouter, input)?;
 
                 let compression = config.compression.clone();
