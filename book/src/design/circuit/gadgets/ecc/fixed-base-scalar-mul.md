@@ -19,6 +19,14 @@ Then, we precompute multiples of the fixed base $B$ for each window. This takes 
 
 The additional $(k + 2)$ term lets us avoid adding the point at infinity in the case $k = 0$. We offset these accumulated terms by subtracting them in the final window, i.e. we subtract $\sum\limits_{j=0}^{83} 2^{3j+1}$.
 
+> Note: Although an offset of $(k + 1)$ would naively suffice, it introduces an edge case when $k_0 = 7, k_1= 0$.
+> In this case, the window table entries evaluate to the same point:
+> * $M[0][k_0] = [(7+1)*(2^3)^0]B = [8]B,$
+> * $M[1][k_1] = [(0+1)*(2^3)^1]B = [8]B.$
+>
+> In fixed-base scalar multiplication, we summing the multiples of $B$ at each window using incomplete addition.
+> Since the point doubling case is not handled by incomplete addition, we avoid it by using an offset of $(k+2).$
+
 For each window of fixed-base multiples $M[w] = (M[w][0], \cdots, M[w][7]), w \in [0..84)$:
 - Define a Lagrange interpolation polynomial $\mathcal{L}_x(k)$ that maps $k \in [0..8)$ to the $x$-coordinate of the multiple $M[w][k]$, i.e.
   $$
@@ -43,7 +51,10 @@ Given a decomposed scalar $\alpha$ and a fixed base $B$, we compute $[\alpha]B$ 
 1. For each $k_w, w \in [0..85), k_w \in [0..8)$ in the scalar decomposition, witness the $x$- and $y$-coordinates $(x_w,y_w) = M[w][k_w].$
 2. Check that $(x_w, y_w)$ is on the curve: $y_w^2 = x_w^3 + b$.
 3. Witness $u_w$ such that $y_w + z_w = u_w^2$.
-4. Use [incomplete addition](./incomplete-add.md) to sum the $M[w][k_w]$'s, resulting in $[\alpha]B$.
+4. For all windows but the last, use [incomplete addition](./incomplete-add.md) to sum the $M[w][k_w]$'s, resulting in $[\alpha]B$.
+5. For the last window, use complete addition $M[83][k_{83}] + M[84][k_{84}]$ and return the final result.
+
+> Note: complete addition is required in the final step to correctly map $[0]B$ to a representation of the point at infinity, $(0,0)$.
 
 Constraints:
  - $x_w = \mathcal{L}_x[w](k_w)$;
