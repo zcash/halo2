@@ -304,13 +304,7 @@ fn parallel_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32, log_cpus: u
 /// This evaluates a provided polynomial (in coefficient form) at `point`.
 pub fn eval_polynomial<F: Field>(poly: &[F], point: F) -> F {
     // TODO: parallelize?
-    let mut acc = F::zero();
-    let mut cur = F::one();
-    for coeff in poly {
-        acc += &(cur * coeff);
-        cur *= &point;
-    }
-    acc
+    poly.iter().rev().fold(F::zero(), |acc, coeff| acc * point + coeff)
 }
 
 /// This computes the inner product of two vectors `a` and `b`.
