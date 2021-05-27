@@ -388,16 +388,18 @@ pub fn create_proof<
             |(((advice, instance), permutation_expressions), lookup_expressions)| {
                 iter::empty()
                     // Custom constraints
-                    .chain(meta.gates.iter().map(move |gate| {
-                        gate.poly().evaluate(
-                            &|scalar| pk.vk.domain.constant_extended(scalar),
-                            &|index| pk.fixed_cosets[index].clone(),
-                            &|index| advice.advice_cosets[index].clone(),
-                            &|index| instance.instance_cosets[index].clone(),
-                            &|a, b| a + &b,
-                            &|a, b| a * &b,
-                            &|a, scalar| a * scalar,
-                        )
+                    .chain(meta.gates.iter().flat_map(move |gate| {
+                        gate.polynomials().iter().map(move |poly| {
+                            poly.evaluate(
+                                &|scalar| pk.vk.domain.constant_extended(scalar),
+                                &|index| pk.fixed_cosets[index].clone(),
+                                &|index| advice.advice_cosets[index].clone(),
+                                &|index| instance.instance_cosets[index].clone(),
+                                &|a, b| a + &b,
+                                &|a, b| a * &b,
+                                &|a, scalar| a * scalar,
+                            )
+                        })
                     }))
                     // Permutation constraints, if any.
                     .chain(permutation_expressions.into_iter().flatten())

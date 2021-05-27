@@ -301,7 +301,13 @@ fn main() {
                 let sc = meta.query_fixed(sc, Rotation::cur());
                 let sm = meta.query_fixed(sm, Rotation::cur());
 
-                a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one())) + sf * (d * e)
+                vec![
+                    a.clone() * sa
+                        + b.clone() * sb
+                        + a * b * sm
+                        + (c * sc * (-F::one()))
+                        + sf * (d * e),
+                ]
             });
 
             meta.create_gate("Public input", |meta| {
@@ -309,7 +315,7 @@ fn main() {
                 let p = meta.query_instance(p, Rotation::cur());
                 let sp = meta.query_fixed(sp, Rotation::cur());
 
-                sp * (a + p * (-F::one()))
+                vec![sp * (a + p * (-F::one()))]
             });
 
             PLONKConfig {
