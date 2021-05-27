@@ -460,6 +460,22 @@ impl<F> Mul<F> for Expression<F> {
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct PointIndex(pub usize);
 
+#[derive(Clone, Debug)]
+pub(crate) struct Gate<F: Field> {
+    name: &'static str,
+    poly: Expression<F>,
+}
+
+impl<F: Field> Gate<F> {
+    pub(crate) fn name(&self) -> &'static str {
+        self.name
+    }
+
+    pub(crate) fn poly(&self) -> &Expression<F> {
+        &self.poly
+    }
+}
+
 /// This is a description of the circuit environment, such as the gate, column and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
@@ -467,7 +483,7 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) num_fixed_columns: usize,
     pub(crate) num_advice_columns: usize,
     pub(crate) num_instance_columns: usize,
-    pub(crate) gates: Vec<(&'static str, Expression<F>)>,
+    pub(crate) gates: Vec<Gate<F>>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
     pub(crate) instance_queries: Vec<(Column<Instance>, Rotation)>,
     pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
@@ -495,12 +511,12 @@ pub struct PinnedConstraintSystem<'a, F: Field> {
     lookups: &'a Vec<lookup::Argument<F>>,
 }
 
-struct PinnedGates<'a, F: Field>(&'a Vec<(&'static str, Expression<F>)>);
+struct PinnedGates<'a, F: Field>(&'a Vec<Gate<F>>);
 
 impl<'a, F: Field> std::fmt::Debug for PinnedGates<'a, F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.debug_list()
-            .entries(self.0.iter().map(|(_, expr)| expr))
+            .entries(self.0.iter().map(|gate| gate.poly()))
             .finish()
     }
 }
@@ -680,7 +696,7 @@ impl<F: Field> ConstraintSystem<F> {
     ) {
         let mut registers = Registers::new(self);
         let poly = f(&mut registers);
-        self.gates.push((name, poly));
+        self.gates.push(Gate { name, poly });
     }
 
     /// Allocate a new selector.
@@ -745,8 +761,8 @@ impl<F: Field> ConstraintSystem<F> {
 
         // Account for each gate to ensure our quotient polynomial is the
         // correct degree and that our extended domain is the right size.
-        for (_, poly) in self.gates.iter() {
-            degree = std::cmp::max(degree, poly.degree());
+        for gate in &self.gates {
+            degree = std::cmp::max(degree, gate.poly().degree());
         }
 
         degree

@@ -295,47 +295,47 @@ impl<F: FieldExt> MockProver<F> {
         let n = self.n as i32;
 
         // Check that all gates are satisfied for all rows.
-        let gate_errors =
-            self.cs
-                .gates
-                .iter()
-                .enumerate()
-                .flat_map(|(gate_index, (gate_name, gate))| {
-                    // We iterate from n..2n so we can just reduce to handle wrapping.
-                    (n..(2 * n)).filter_map(move |row| {
-                        fn load<'a, F: FieldExt, T: ColumnType>(
-                            n: i32,
-                            row: i32,
-                            queries: &'a [(Column<T>, Rotation)],
-                            cells: &'a [Vec<F>],
-                        ) -> impl Fn(usize) -> F + 'a {
-                            move |index| {
-                                let (column, at) = &queries[index];
-                                let resolved_row = (row + at.0) % n;
-                                cells[column.index()][resolved_row as usize]
-                            }
+        let gate_errors = self
+            .cs
+            .gates
+            .iter()
+            .enumerate()
+            .flat_map(|(gate_index, gate)| {
+                // We iterate from n..2n so we can just reduce to handle wrapping.
+                (n..(2 * n)).filter_map(move |row| {
+                    fn load<'a, F: FieldExt, T: ColumnType>(
+                        n: i32,
+                        row: i32,
+                        queries: &'a [(Column<T>, Rotation)],
+                        cells: &'a [Vec<F>],
+                    ) -> impl Fn(usize) -> F + 'a {
+                        move |index| {
+                            let (column, at) = &queries[index];
+                            let resolved_row = (row + at.0) % n;
+                            cells[column.index()][resolved_row as usize]
                         }
+                    }
 
-                        if gate.evaluate(
-                            &|scalar| scalar,
-                            &load(n, row, &self.cs.fixed_queries, &self.fixed),
-                            &load(n, row, &self.cs.advice_queries, &self.advice),
-                            &load(n, row, &self.cs.instance_queries, &self.instance),
-                            &|a, b| a + &b,
-                            &|a, b| a * &b,
-                            &|a, scalar| a * scalar,
-                        ) == F::zero()
-                        {
-                            None
-                        } else {
-                            Some(VerifyFailure::Gate {
-                                gate_index,
-                                gate_name,
-                                row: (row - n) as usize,
-                            })
-                        }
-                    })
-                });
+                    if gate.poly().evaluate(
+                        &|scalar| scalar,
+                        &load(n, row, &self.cs.fixed_queries, &self.fixed),
+                        &load(n, row, &self.cs.advice_queries, &self.advice),
+                        &load(n, row, &self.cs.instance_queries, &self.instance),
+                        &|a, b| a + &b,
+                        &|a, b| a * &b,
+                        &|a, scalar| a * scalar,
+                    ) == F::zero()
+                    {
+                        None
+                    } else {
+                        Some(VerifyFailure::Gate {
+                            gate_index,
+                            gate_name: gate.name(),
+                            row: (row - n) as usize,
+                        })
+                    }
+                })
+            });
 
         // Check that all lookups exist in their respective tables.
         let lookup_errors =
