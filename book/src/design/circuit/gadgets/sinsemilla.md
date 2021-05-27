@@ -23,7 +23,7 @@ $\textsf{Hash}(M)$:
         $A_{i+1} := [2] A_i + P[m_i] = (A_i + P[m_i]) + A_i$
     return $A_{n+1}$
 
-Let $\textsf{ShortHash}(M)$ be the $x\text{-coordinate}$ of $\textsf{Hash}(M)$. (This assumes that mathbb{G}$ is a prime-order elliptic curve in short Weierstrass form, as is the case for Pallas and Vesta.)
+Let $\textsf{ShortHash}(M)$ be the $x$-coordinate of $\textsf{Hash}(M)$. (This assumes that $\mathbb{G}$ is a prime-order elliptic curve in short Weierstrass form, as is the case for Pallas and Vesta.)
 
 ### Use as a commitment scheme
 Choose another generator $H$ independently of $Q$ and $P[0..2^k - 1]$.
@@ -139,6 +139,7 @@ y_{A,i+1} &= (\lambda_{1,i+1} + \lambda_{2,i+1}) \cdot (x_{A,i+1} - (\lambda_{1,
 $$
 
 * The degree of a lookup gate is 2 + the degree of the polynomial expression being looked up (after tuple compression). TODO check this.
+
 A further optimization is to toggle the lookup expression on $q_{Sinsemilla1}.$ This removes the need to fill in unused cells with dummy values to pass the lookup argument. The optimized lookup argument would be:
 
 $$
