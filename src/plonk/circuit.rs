@@ -20,6 +20,11 @@ pub struct Column<C: ColumnType> {
 }
 
 impl<C: ColumnType> Column<C> {
+    #[cfg(test)]
+    pub(crate) fn new(index: usize, column_type: C) -> Self {
+        Column { index, column_type }
+    }
+
     pub(crate) fn index(&self) -> usize {
         self.index
     }

@@ -21,6 +21,19 @@ pub use graph::{circuit_dot_graph, layout::circuit_layout};
 /// The reasons why a particular circuit is not satisfied.
 #[derive(Debug, PartialEq)]
 pub enum VerifyFailure {
+    /// A cell used in an active gate was not assigned to.
+    Cell {
+        /// The column in which this cell is located.
+        column: Column<Any>,
+        /// The row in which this cell is located.
+        row: usize,
+        /// The index of the active gate. These indices are assigned in the order in which
+        /// `ConstraintSystem::create_gate` is called during `Circuit::configure`.
+        gate_index: usize,
+        /// The name of the active gate. These are specified by the gate creator (such as
+        /// a chip implementation), and may not be unique.
+        gate_name: &'static str,
+    },
     /// A gate was not satisfied for a particular row.
     Gate {
         /// The index of the gate that is not satisfied. These indices are assigned in the
@@ -469,5 +482,91 @@ impl<F: FieldExt> MockProver<F> {
         } else {
             Err(errors)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use pasta_curves::Fp;
+
+    use super::{MockProver, VerifyFailure};
+    use crate::{
+        circuit::{layouter::SingleChipLayouter, Layouter},
+        plonk::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Selector},
+        poly::Rotation,
+    };
+
+    #[test]
+    fn unassigned_cell() {
+        const K: u32 = 4;
+        const FAULTY_ROW: usize = 2;
+
+        #[derive(Clone)]
+        struct FaultyCircuitConfig {
+            a: Column<Advice>,
+            q: Selector,
+        }
+
+        struct FaultyCircuit {}
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let b = meta.advice_column();
+                let q = meta.selector();
+
+                meta.create_gate("Equality check", |cells| {
+                    let a = cells.query_advice(a, Rotation::prev());
+                    let b = cells.query_advice(b, Rotation::cur());
+                    let q = cells.query_selector(q, Rotation::cur());
+
+                    // If q is enabled, a and b must be assigned to.
+                    vec![q * (a - b)]
+                });
+
+                FaultyCircuitConfig { a, q }
+            }
+
+            fn synthesize(
+                &self,
+                cs: &mut impl Assignment<Fp>,
+                config: Self::Config,
+            ) -> Result<(), Error> {
+                let mut layouter = SingleChipLayouter::new(cs)?;
+                layouter.assign_region(
+                    || "Faulty synthesis",
+                    |mut region| {
+                        // Enable the equality gate.
+                        config.q.enable(&mut region, FAULTY_ROW)?;
+
+                        // Assign a = 0.
+                        region.assign_advice(
+                            || "a",
+                            config.a,
+                            FAULTY_ROW - 1,
+                            || Ok(Fp::zero()),
+                        )?;
+
+                        // BUG: Forget to assign b = 0! This could go unnoticed during
+                        // development, because cell values default to zero, which in this
+                        // case is fine, but for other assignments would be broken.
+                        Ok(())
+                    },
+                )
+            }
+        }
+
+        let prover = MockProver::run(K, &FaultyCircuit {}, vec![]).unwrap();
+        assert_eq!(
+            prover.verify(),
+            Err(vec![VerifyFailure::Cell {
+                column: Column::new(1, Any::Advice),
+                row: FAULTY_ROW,
+                gate_index: 0,
+                gate_name: "Equality check"
+            }])
+        );
     }
 }
