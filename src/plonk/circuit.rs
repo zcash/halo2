@@ -460,17 +460,17 @@ impl<F> Mul<F> for Expression<F> {
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct PointIndex(pub usize);
 
-/// A "virtual register" is a PLONK cell that has been queried at a particular relative
-/// offset within a custom gate.
+/// A "virtual cell" is a PLONK cell that has been queried at a particular relative offset
+/// within a custom gate.
 #[derive(Clone, Debug)]
-struct VirtualRegister {
+struct VirtualCell {
     column: Column<Any>,
     rotation: Rotation,
 }
 
-impl<Col: Into<Column<Any>>> From<(Col, Rotation)> for VirtualRegister {
+impl<Col: Into<Column<Any>>> From<(Col, Rotation)> for VirtualCell {
     fn from((column, rotation): (Col, Rotation)) -> Self {
-        VirtualRegister {
+        VirtualCell {
             column: column.into(),
             rotation,
         }
@@ -481,10 +481,10 @@ impl<Col: Into<Column<Any>>> From<(Col, Rotation)> for VirtualRegister {
 pub(crate) struct Gate<F: Field> {
     name: &'static str,
     poly: Expression<F>,
-    /// We track queried selectors separately from other registers, so that we can use
-    /// them to trigger debug checks on gates.
-    queried_selectors: Vec<VirtualRegister>,
-    queried_registers: Vec<VirtualRegister>,
+    /// We track queried selectors separately from other cells, so that we can use them to
+    /// trigger debug checks on gates.
+    queried_selectors: Vec<VirtualCell>,
+    queried_cells: Vec<VirtualCell>,
 }
 
 impl<F: Field> Gate<F> {
@@ -598,10 +598,10 @@ impl<F: Field> ConstraintSystem<F> {
     /// they need to match.
     pub fn lookup(
         &mut self,
-        table_map: impl FnOnce(&mut Registers<'_, F>) -> Vec<(Expression<F>, Expression<F>)>,
+        table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, Expression<F>)>,
     ) -> usize {
-        let mut registers = Registers::new(self);
-        let table_map = table_map(&mut registers);
+        let mut cells = VirtualCells::new(self);
+        let table_map = table_map(&mut cells);
 
         let index = self.lookups.len();
 
@@ -713,18 +713,18 @@ impl<F: Field> ConstraintSystem<F> {
     pub fn create_gate(
         &mut self,
         name: &'static str,
-        f: impl FnOnce(&mut Registers<'_, F>) -> Expression<F>,
+        f: impl FnOnce(&mut VirtualCells<'_, F>) -> Expression<F>,
     ) {
-        let mut registers = Registers::new(self);
-        let poly = f(&mut registers);
-        let queried_selectors = registers.queried_selectors;
-        let queried_registers = registers.queried_registers;
+        let mut cells = VirtualCells::new(self);
+        let poly = f(&mut cells);
+        let queried_selectors = cells.queried_selectors;
+        let queried_cells = cells.queried_cells;
 
         self.gates.push(Gate {
             name,
             poly,
             queried_selectors,
-            queried_registers,
+            queried_cells,
         });
     }
 
@@ -798,21 +798,21 @@ impl<F: Field> ConstraintSystem<F> {
     }
 }
 
-/// Exposes the "virtual registers" that can be queried while creating a custom gate or
-/// lookup table.
+/// Exposes the "virtual cells" that can be queried while creating a custom gate or lookup
+/// table.
 #[derive(Debug)]
-pub struct Registers<'a, F: Field> {
+pub struct VirtualCells<'a, F: Field> {
     meta: &'a mut ConstraintSystem<F>,
-    queried_selectors: Vec<VirtualRegister>,
-    queried_registers: Vec<VirtualRegister>,
+    queried_selectors: Vec<VirtualCell>,
+    queried_cells: Vec<VirtualCell>,
 }
 
-impl<'a, F: Field> Registers<'a, F> {
+impl<'a, F: Field> VirtualCells<'a, F> {
     fn new(meta: &'a mut ConstraintSystem<F>) -> Self {
-        Registers {
+        VirtualCells {
             meta,
             queried_selectors: vec![],
-            queried_registers: vec![],
+            queried_cells: vec![],
         }
     }
 
@@ -824,25 +824,25 @@ impl<'a, F: Field> Registers<'a, F> {
 
     /// Query a fixed column at a relative position
     pub fn query_fixed(&mut self, column: Column<Fixed>, at: Rotation) -> Expression<F> {
-        self.queried_registers.push((column, at).into());
+        self.queried_cells.push((column, at).into());
         Expression::Fixed(self.meta.query_fixed_index(column, at))
     }
 
     /// Query an advice column at a relative position
     pub fn query_advice(&mut self, column: Column<Advice>, at: Rotation) -> Expression<F> {
-        self.queried_registers.push((column, at).into());
+        self.queried_cells.push((column, at).into());
         Expression::Advice(self.meta.query_advice_index(column, at))
     }
 
     /// Query an instance column at a relative position
     pub fn query_instance(&mut self, column: Column<Instance>, at: Rotation) -> Expression<F> {
-        self.queried_registers.push((column, at).into());
+        self.queried_cells.push((column, at).into());
         Expression::Instance(self.meta.query_instance_index(column, at))
     }
 
     /// Query an Any column at a relative position
     pub fn query_any(&mut self, column: Column<Any>, at: Rotation) -> Expression<F> {
-        self.queried_registers.push((column, at).into());
+        self.queried_cells.push((column, at).into());
         match column.column_type() {
             Any::Advice => Expression::Advice(
                 self.meta
