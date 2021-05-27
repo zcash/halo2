@@ -460,10 +460,31 @@ impl<F> Mul<F> for Expression<F> {
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct PointIndex(pub usize);
 
+/// A "virtual register" is a PLONK cell that has been queried at a particular relative
+/// offset within a custom gate.
+#[derive(Clone, Debug)]
+struct VirtualRegister {
+    column: Column<Any>,
+    rotation: Rotation,
+}
+
+impl<Col: Into<Column<Any>>> From<(Col, Rotation)> for VirtualRegister {
+    fn from((column, rotation): (Col, Rotation)) -> Self {
+        VirtualRegister {
+            column: column.into(),
+            rotation,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct Gate<F: Field> {
     name: &'static str,
     poly: Expression<F>,
+    /// We track queried selectors separately from other registers, so that we can use
+    /// them to trigger debug checks on gates.
+    queried_selectors: Vec<VirtualRegister>,
+    queried_registers: Vec<VirtualRegister>,
 }
 
 impl<F: Field> Gate<F> {
@@ -696,7 +717,15 @@ impl<F: Field> ConstraintSystem<F> {
     ) {
         let mut registers = Registers::new(self);
         let poly = f(&mut registers);
-        self.gates.push(Gate { name, poly });
+        let queried_selectors = registers.queried_selectors;
+        let queried_registers = registers.queried_registers;
+
+        self.gates.push(Gate {
+            name,
+            poly,
+            queried_selectors,
+            queried_registers,
+        });
     }
 
     /// Allocate a new selector.
@@ -774,35 +803,46 @@ impl<F: Field> ConstraintSystem<F> {
 #[derive(Debug)]
 pub struct Registers<'a, F: Field> {
     meta: &'a mut ConstraintSystem<F>,
+    queried_selectors: Vec<VirtualRegister>,
+    queried_registers: Vec<VirtualRegister>,
 }
 
 impl<'a, F: Field> Registers<'a, F> {
     fn new(meta: &'a mut ConstraintSystem<F>) -> Self {
-        Registers { meta }
+        Registers {
+            meta,
+            queried_selectors: vec![],
+            queried_registers: vec![],
+        }
     }
 
     /// Query a selector at a relative position.
     pub fn query_selector(&mut self, selector: Selector, at: Rotation) -> Expression<F> {
+        self.queried_selectors.push((selector.0, at).into());
         Expression::Fixed(self.meta.query_fixed_index(selector.0, at))
     }
 
     /// Query a fixed column at a relative position
     pub fn query_fixed(&mut self, column: Column<Fixed>, at: Rotation) -> Expression<F> {
+        self.queried_registers.push((column, at).into());
         Expression::Fixed(self.meta.query_fixed_index(column, at))
     }
 
     /// Query an advice column at a relative position
     pub fn query_advice(&mut self, column: Column<Advice>, at: Rotation) -> Expression<F> {
+        self.queried_registers.push((column, at).into());
         Expression::Advice(self.meta.query_advice_index(column, at))
     }
 
     /// Query an instance column at a relative position
     pub fn query_instance(&mut self, column: Column<Instance>, at: Rotation) -> Expression<F> {
+        self.queried_registers.push((column, at).into());
         Expression::Instance(self.meta.query_instance_index(column, at))
     }
 
     /// Query an Any column at a relative position
     pub fn query_any(&mut self, column: Column<Any>, at: Rotation) -> Expression<F> {
+        self.queried_registers.push((column, at).into());
         match column.column_type() {
             Any::Advice => Expression::Advice(
                 self.meta
