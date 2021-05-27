@@ -175,19 +175,12 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug)]
-pub struct Selector(Column<Fixed>);
+pub struct Selector(pub(crate) Column<Fixed>);
 
 impl Selector {
     /// Enable this selector at the given offset within the given region.
     pub fn enable<F: FieldExt>(&self, region: &mut Region<F>, offset: usize) -> Result<(), Error> {
-        // TODO: Ensure that the default for a selector's cells is always zero, if we
-        // alter the proving system to change the global default.
-        // TODO: Add Region::enable_selector method to allow the layouter to control the
-        // selector's assignment.
-        // https://github.com/zcash/halo2/issues/116
-        region
-            .assign_fixed(|| "", self.0, offset, || Ok(F::one()))
-            .map(|_| ())
+        region.enable_selector(|| "", self, offset)
     }
 }
 
@@ -240,6 +233,17 @@ pub trait Assignment<F: Field> {
     ///
     /// [`Layouter::assign_region`]: crate::circuit::Layouter#method.assign_region
     fn exit_region(&mut self);
+
+    /// Enables a selector at the given row.
+    fn enable_selector<A, AR>(
+        &mut self,
+        annotation: A,
+        selector: &Selector,
+        row: usize,
+    ) -> Result<(), Error>
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>;
 
     /// Assign an advice column value (witness)
     fn assign_advice<V, A, AR>(

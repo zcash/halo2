@@ -3,7 +3,7 @@ use group::Curve;
 use std::iter;
 
 use super::{
-    circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed},
+    circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, Selector},
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
     ChallengeY, Error, Permutation, ProvingKey,
 };
@@ -121,6 +121,21 @@ pub fn create_proof<
 
                 fn exit_region(&mut self) {
                     // Do nothing; we don't care about regions in this context.
+                }
+
+                fn enable_selector<A, AR>(
+                    &mut self,
+                    _: A,
+                    _: &Selector,
+                    _: usize,
+                ) -> Result<(), Error>
+                where
+                    A: FnOnce() -> AR,
+                    AR: Into<String>,
+                {
+                    // We only care about advice columns here
+
+                    Ok(())
                 }
 
                 fn assign_advice<V, A, AR>(

@@ -2,7 +2,7 @@ use ff::Field;
 use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
 use crate::plonk::{
-    Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation,
+    Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation, Selector,
 };
 
 pub mod layout;
@@ -84,6 +84,15 @@ impl<F: Field> Assignment<F> for Graph {
 
     fn exit_region(&mut self) {
         // Do nothing; we don't care about regions in this context.
+    }
+
+    fn enable_selector<A, AR>(&mut self, _: A, _: &Selector, _: usize) -> Result<(), Error>
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // Do nothing; we don't care about cells in this context.
+        Ok(())
     }
 
     fn assign_advice<V, A, AR>(

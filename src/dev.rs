@@ -6,7 +6,7 @@ use crate::{
     arithmetic::{FieldExt, Group},
     plonk::{
         permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Expression, Fixed, Permutation,
+        Expression, Fixed, Permutation, Selector,
     },
     poly::Rotation,
 };
@@ -166,6 +166,21 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
     }
 
     fn exit_region(&mut self) {}
+
+    fn enable_selector<A, AR>(
+        &mut self,
+        annotation: A,
+        selector: &Selector,
+        row: usize,
+    ) -> Result<(), Error>
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // Selectors are just fixed columns.
+        // TODO: Track which gates are enabled by this selector.
+        self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
+    }
 
     fn assign_advice<V, A, AR>(
         &mut self,

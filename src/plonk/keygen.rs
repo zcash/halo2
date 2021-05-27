@@ -2,7 +2,7 @@ use ff::Field;
 use group::Curve;
 
 use super::{
-    circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed},
+    circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, Selector},
     permutation, Error, LagrangeCoeff, Permutation, Polynomial, ProvingKey, VerifyingKey,
 };
 use crate::arithmetic::CurveAffine;
@@ -51,6 +51,24 @@ impl<F: Field> Assignment<F> for Assembly<F> {
 
     fn exit_region(&mut self) {
         // Do nothing; we don't care about regions in this context.
+    }
+
+    fn enable_selector<A, AR>(
+        &mut self,
+        annotation: A,
+        selector: &Selector,
+        row: usize,
+    ) -> Result<(), Error>
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // Selectors are just fixed columns.
+        // TODO: Ensure that the default for a selector's cells is always zero, if we
+        // alter the proving system to change the global default.
+        // TODO: Implement selector combining optimization
+        // https://github.com/zcash/halo2/issues/116
+        self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
     }
 
     fn assign_advice<V, A, AR>(

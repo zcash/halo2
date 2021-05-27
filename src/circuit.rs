@@ -4,7 +4,7 @@ use std::{fmt, marker::PhantomData};
 
 use crate::{
     arithmetic::FieldExt,
-    plonk::{Advice, Any, Column, Error, Fixed, Permutation},
+    plonk::{Advice, Any, Column, Error, Fixed, Permutation, Selector},
 };
 
 pub mod layouter;
@@ -110,6 +110,21 @@ impl<'r, F: FieldExt> From<&'r mut dyn layouter::RegionLayouter<F>> for Region<'
 }
 
 impl<'r, F: FieldExt> Region<'r, F> {
+    /// Enables a selector at the given offset.
+    pub(crate) fn enable_selector<A, AR>(
+        &mut self,
+        annotation: A,
+        selector: &Selector,
+        offset: usize,
+    ) -> Result<(), Error>
+    where
+        A: Fn() -> AR,
+        AR: Into<String>,
+    {
+        self.region
+            .enable_selector(&|| annotation().into(), selector, offset)
+    }
+
     /// Assign an advice column value (witness).
     ///
     /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
