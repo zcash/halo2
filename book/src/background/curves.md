@@ -152,16 +152,26 @@ corresponding numerators such that $X/Z = x'$ and $Y/Z = y'$. This completely av
 need to perform an inversion when doubling, and something analogous to this can be done
 when adding two distinct points.
 
-### TODO: Point addition
+### Point addition
+We now add two points with distinct $x$-coordinates, $P = (x_0, y_0)$ and $Q = (x_1, y_1),$
+where $x_0 \neq x_1,$ to obtain $R = P + Q = (x_2, y_2).$ The line $\overline{PQ}$ has slope
+$$\lambda = frac{y_1 - y_0}{x_1 - x_0} \implies y - y_0 = \lambda \cdot (x - x_0).$$
+
+Using the expression for $\overline{PQ}$, we compute $y$-coordinate $-y_2$ of $-R$ as:
+$$-y_2 - y_0 = \lambda \cdot (x_2 - x_0) \implies \boxed{y_2 = (x_0 - x_2) - y_0}.$$
+
+Plugging the expression for $\overline{PQ}$ into the curve equation $y^2 = x^3 + b$ yields
 $$
 \begin{aligned}
-P + Q &= R\\
-(x_p, y_p) + (x_q, y_q) &= (x_r, y_r) \\
-\lambda &= \frac{y_q - y_p}{x_q - x_p} \\
-x_r &= \lambda^2 - x_p - x_q \\
-y_r &= \lambda(x_p - x_r) - y_p
+y^2 = x^3 + b &\implies (\lambda \cdot (x - x_0) + y_0)^2 = x^3 + b \\
+&\implies x^3 - \lambda^2 x^2 + \cdots = 0 \leftarrow\text{(rearranging terms)} \\
+&= (x - x_0)(x - x_1)(x - x_2) \leftarrow\text{(known roots $x_0, x_1, x_2$)} \\
+&= x^3 - (x_0 + x_1 + x_2)x^2 + \cdots.
 \end{aligned}
 $$
+
+Comparing coefficients for the $x^2$ term gives us
+$\lambda^2 = x_0 + x_1 + x_2 \implies \boxed{x_2 = \lambda^2 - x_0 - x_1}$.
 
 ----------
 
@@ -191,7 +201,42 @@ complicated, but when the curve has a prime $q$ number of points (and thus a pri
 $\mathbb{F}_q$ which is also a primitive cube root $\zeta_q$ in the scalar field.
 
 ## Curve point compression
-TODO
+Given a point on the curve $P = (x,y)$, we know that its negation $-P = (x, -y)$ is also
+on the curve. To uniquely specify a point, we need only encode its $x$-coordinate along
+with the sign of its $y$-coordinate.
+
+### Serialization
+As mentioned in the [Fields](./fields.md) section, we can interpret the least significant
+bit of a field element as its "sign", since its additive inverse will always have the
+opposite LSB. So we record the LSB of the $y$-coordinate as `sign`.
+
+Pallas and Vesta are defined over the $\mathbb{F}_p$ and $\mathbb{F}_q$ fields, which
+elements can be expressed in $255$ bits. This conveniently leaves one unused bit in a
+32-byte representation. We pack the $y$-coordinate `sign` bit into the highest bit in
+the representation of the $x$-coordinate:
+
+```text
+         <----------------------------------- x --------------------------------->
+Enc(P) = [_ _ _ _ _ _ _ _] [_ _ _ _ _ _ _ _] ... [_ _ _ _ _ _ _ _] [_ _ _ _ _ _ _ sign]
+          ^                <------------------------------------->                 ^
+         LSB                              30 bytes                                MSB
+```
+
+The "point at infinity" $\mathcal{O}$ that serves as the group identity, does not have an
+affine $(x, y)$ representation. However, it turns out that there are no points on either
+the Pallas or Vesta curve with $x = 0$ or $y = 0$. We therefore use the "fake" affine
+coordinates $(0, 0)$ to encode $\mathcal{O}$, which results in the all-zeroes 32-byte
+array.
+
+### Deserialization
+When deserializing a compressed curve point, we first read the most significant bit as
+`ysign`, the sign of the $y$-coordinate. Then, we set this bit to zero to recover the
+original $x$-coordinate.
+
+If $x = 0, y = 0,$ we return the "point at infinity" $\mathcal{O}$. Otherwise, we proceed
+to compute $y = \sqrt{x^3 + b}.$ Here, we read the least significant bit of $y$ as `sign`.
+If `sign == ysign`, we already have the correct sign and simply return the curve point
+$(x, y)$. Otherwise, we negate $y$ and return $(x, -y)$.
 
 ## Cycles of curves
 Let $E_p$ be an elliptic curve over a finite field $\mathbb{F}_p,$ where $p$ is a prime.
