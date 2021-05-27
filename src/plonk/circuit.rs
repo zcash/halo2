@@ -179,7 +179,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 ///     Ok(())
 /// }
 /// ```
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Selector(pub(crate) Column<Fixed>);
 
 impl Selector {
@@ -472,9 +472,9 @@ pub(crate) struct PointIndex(pub usize);
 /// A "virtual cell" is a PLONK cell that has been queried at a particular relative offset
 /// within a custom gate.
 #[derive(Clone, Debug)]
-struct VirtualCell {
-    column: Column<Any>,
-    rotation: Rotation,
+pub(crate) struct VirtualCell {
+    pub(crate) column: Column<Any>,
+    pub(crate) rotation: Rotation,
 }
 
 impl<Col: Into<Column<Any>>> From<(Col, Rotation)> for VirtualCell {
@@ -503,6 +503,14 @@ impl<F: Field> Gate<F> {
 
     pub(crate) fn polynomials(&self) -> &[Expression<F>] {
         &self.polys
+    }
+
+    pub(crate) fn queried_selectors(&self) -> &[VirtualCell] {
+        &self.queried_selectors
+    }
+
+    pub(crate) fn queried_cells(&self) -> &[VirtualCell] {
+        &self.queried_cells
     }
 }
 
