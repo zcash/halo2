@@ -154,8 +154,8 @@ when adding two distinct points.
 
 ### Point addition
 We now add two points with distinct $x$-coordinates, $P = (x_0, y_0)$ and $Q = (x_1, y_1),$
-where $x_0 \neq x_1$, to obtain $R = P + Q = (x_2, y_2).$ The line $\overline{PQ}$ has slope
-$\lambda = (y_1 - y_0)/(x_1 - x_0) \implies y - y_0 = \lambda \cdot (x - x_0).$
+where $x_0 \neq x_1,$ to obtain $R = P + Q = (x_2, y_2).$ The line $\overline{PQ}$ has slope
+$$\lambda = frac{y_1 - y_0}{x_1 - x_0} \implies y - y_0 = \lambda \cdot (x - x_0).$$
 
 Using the expression for $\overline{PQ}$, we compute $y$-coordinate $-y_2$ of $-R$ as:
 $$-y_2 - y_0 = \lambda \cdot (x_2 - x_0) \implies \boxed{y_2 = (x_0 - x_2) - y_0}.$$
@@ -215,19 +215,25 @@ elements can be expressed in $255$ bits. This conveniently leaves one unused bit
 32-byte representation. We pack the $y$-coordinate `sign` bit into the highest bit in
 the representation of the $x$-coordinate:
 
-```
+```text
          <----------------------------------- x --------------------------------->
 Enc(P) = [_ _ _ _ _ _ _ _] [_ _ _ _ _ _ _ _] ... [_ _ _ _ _ _ _ _] [_ _ _ _ _ _ _ sign]
           ^                <------------------------------------->                 ^
          LSB                              30 bytes                                MSB
 ```
 
+The "point at infinity" $\mathcal{O}$ that serves as the group identity, does not have an
+affine $(x, y)$ representation. However, it turns out that there are no points on either
+the Pallas or Vesta curve with $x = 0$ or $y = 0$. We therefore use the "fake" affine
+coordinates $(0, 0)$ to encode $\mathcal{O}$, which results in the all-zeroes 32-byte
+array.
+
 ### Deserialization
 When deserializing a compressed curve point, we first read the most significant bit as
 `ysign`, the sign of the $y$-coordinate. Then, we set this bit to zero to recover the
 original $x$-coordinate.
 
-If $x = 0, y = 0,$ we return the additive identity $(0, 0, 0)$. Otherwise, we proceed
+If $x = 0, y = 0,$ we return the "point at infinity" $\mathcal{O}$. Otherwise, we proceed
 to compute $y = \sqrt{x^3 + b}.$ Here, we read the least significant bit of $y$ as `sign`.
 If `sign == ysign`, we already have the correct sign and simply return the curve point
 $(x, y)$. Otherwise, we negate $y$ and return $(x, -y)$.
