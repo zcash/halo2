@@ -6,7 +6,7 @@ use subtle::CtOption;
 
 use crate::{
     keys::{FullViewingKey, SpendingKey},
-    spec::{prf_expand_vec, to_base, to_scalar},
+    spec::{to_base, to_scalar, PrfExpand},
     value::NoteValue,
     Address,
 };
@@ -32,24 +32,23 @@ impl RandomSeed {
     ///
     /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
     fn psi(&self, rho: &Nullifier) -> pallas::Base {
-        to_base(prf_expand_vec(&self.0, &[&[0x09], &rho.to_bytes()[..]]))
+        to_base(PrfExpand::Psi.with_ad(&self.0, &rho.to_bytes()[..]))
     }
 
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
     ///
     /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
     fn esk(&self, rho: &Nullifier) -> pallas::Scalar {
-        to_scalar(prf_expand_vec(&self.0, &[&[0x04], &rho.to_bytes()[..]]))
+        to_scalar(PrfExpand::Esk.with_ad(&self.0, &rho.to_bytes()[..]))
     }
 
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
     ///
     /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
     fn rcm(&self, rho: &Nullifier) -> commitment::NoteCommitTrapdoor {
-        commitment::NoteCommitTrapdoor(to_scalar(prf_expand_vec(
-            &self.0,
-            &[&[0x05], &rho.to_bytes()[..]],
-        )))
+        commitment::NoteCommitTrapdoor(to_scalar(
+            PrfExpand::Rcm.with_ad(&self.0, &rho.to_bytes()[..]),
+        ))
     }
 }
 

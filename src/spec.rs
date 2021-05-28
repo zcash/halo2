@@ -15,7 +15,7 @@ use crate::{
 };
 
 mod prf_expand;
-pub(crate) use prf_expand::{prf_expand, prf_expand_vec};
+pub(crate) use prf_expand::PrfExpand;
 
 /// A Pallas point that is guaranteed to not be the identity.
 #[derive(Clone, Copy, Debug)]
