@@ -112,7 +112,7 @@ impl<T> Action<T> {
         Instance {
             anchor,
             cv_net: self.cv_net.clone(),
-            nf_old: self.nf.clone(),
+            nf_old: self.nf,
             rk: self.rk.clone(),
             cmx: self.cmx.clone(),
             enable_spend: flags.spends_enabled,
