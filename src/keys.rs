@@ -421,7 +421,7 @@ impl DiversifiedTransmissionKey {
     }
 
     /// $repr_P(self)$
-    pub(crate) fn to_bytes(&self) -> [u8; 32] {
+    pub(crate) fn to_bytes(self) -> [u8; 32] {
         self.0.to_bytes()
     }
 }

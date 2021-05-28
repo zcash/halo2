@@ -197,7 +197,7 @@ mod tests {
                 let alpha = pallas::Scalar::random(&mut rng);
                 let rk = ak.randomize(&alpha);
 
-                let (_, _, output_note) = Note::dummy(&mut rng, Some(nf_old.clone()));
+                let (_, _, output_note) = Note::dummy(&mut rng, Some(nf_old));
                 let cmx = output_note.commitment().into();
 
                 let value = spent_note.value() - output_note.value();

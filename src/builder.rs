@@ -135,12 +135,7 @@ impl ActionInfo {
         let alpha = pallas::Scalar::random(&mut rng);
         let rk = ak.randomize(&alpha);
 
-        let note = Note::new(
-            self.output.recipient,
-            self.output.value,
-            nf_old.clone(),
-            rng,
-        );
+        let note = Note::new(self.output.recipient, self.output.value, nf_old, rng);
         let cm_new = note.commitment();
 
         // TODO: Note encryption
@@ -542,7 +537,7 @@ pub mod testing {
             recipient_amounts in vec(
                 arb_address().prop_flat_map(move |a| {
                     arb_positive_note_value(MAX_NOTE_VALUE / n_recipients as u64)
-                        .prop_map(move |v| (a.clone(), v))
+                        .prop_map(move |v| (a, v))
                 }),
                 n_recipients as usize
             ),
