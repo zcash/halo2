@@ -15,7 +15,7 @@ mod subregion_digest;
 mod subregion_initial;
 mod subregion_main;
 
-use compression_gates::CompressionGate;
+use compression_gates as gate;
 
 /// A variable that represents the `[A,B,C,D]` words of the SHA-256 internal state.
 ///
@@ -318,7 +318,7 @@ impl CompressionConfig {
             let word_hi = meta.query_advice(a_7, Rotation::next());
             let spread_word_hi = meta.query_advice(a_8, Rotation::next());
 
-            CompressionGate::s_decompose_abcd(
+            gate::s_decompose_abcd(
                 s_decompose_abcd,
                 a,
                 spread_a,
@@ -339,7 +339,6 @@ impl CompressionConfig {
                 word_hi,
                 spread_word_hi,
             )
-            .0
         });
 
         // Decompose `E,F,G,H` words into (6, 5, 14, 7)-bit chunks.
@@ -366,7 +365,7 @@ impl CompressionConfig {
             let word_hi = meta.query_advice(a_7, Rotation::next());
             let spread_word_hi = meta.query_advice(a_8, Rotation::next());
 
-            CompressionGate::s_decompose_efgh(
+            gate::s_decompose_efgh(
                 s_decompose_efgh,
                 a_lo,
                 spread_a_lo,
@@ -387,7 +386,6 @@ impl CompressionConfig {
                 word_hi,
                 spread_word_hi,
             )
-            .0
         });
 
         // s_upper_sigma_0 on abcd words
@@ -406,7 +404,7 @@ impl CompressionConfig {
             let spread_c_hi = meta.query_advice(a_4, Rotation::next());
             let spread_d = meta.query_advice(a_4, Rotation::cur());
 
-            CompressionGate::s_upper_sigma_0(
+            gate::s_upper_sigma_0(
                 s_upper_sigma_0,
                 spread_r0_even,
                 spread_r0_odd,
@@ -419,7 +417,6 @@ impl CompressionConfig {
                 spread_c_hi,
                 spread_d,
             )
-            .0
         });
 
         // s_upper_sigma_1 on efgh words
@@ -437,7 +434,7 @@ impl CompressionConfig {
             let spread_c = meta.query_advice(a_5, Rotation::cur());
             let spread_d = meta.query_advice(a_4, Rotation::cur());
 
-            CompressionGate::s_upper_sigma_1(
+            gate::s_upper_sigma_1(
                 s_upper_sigma_1,
                 spread_r0_even,
                 spread_r0_odd,
@@ -450,7 +447,6 @@ impl CompressionConfig {
                 spread_c,
                 spread_d,
             )
-            .0
         });
 
         // s_ch on efgh words
@@ -466,7 +462,7 @@ impl CompressionConfig {
             let spread_f_lo = meta.query_advice(a_3, Rotation::next());
             let spread_f_hi = meta.query_advice(a_4, Rotation::next());
 
-            CompressionGate::s_ch(
+            gate::s_ch(
                 s_ch,
                 spread_p0_even,
                 spread_p0_odd,
@@ -477,7 +473,6 @@ impl CompressionConfig {
                 spread_f_lo,
                 spread_f_hi,
             )
-            .0
         });
 
         // s_ch_neg on efgh words
@@ -495,7 +490,7 @@ impl CompressionConfig {
             let spread_g_lo = meta.query_advice(a_3, Rotation::next());
             let spread_g_hi = meta.query_advice(a_4, Rotation::next());
 
-            CompressionGate::s_ch_neg(
+            gate::s_ch_neg(
                 s_ch_neg,
                 spread_q0_even,
                 spread_q0_odd,
@@ -508,7 +503,6 @@ impl CompressionConfig {
                 spread_g_lo,
                 spread_g_hi,
             )
-            .0
         });
 
         // s_maj on abcd words
@@ -525,7 +519,7 @@ impl CompressionConfig {
             let spread_c_lo = meta.query_advice(a_4, Rotation::next());
             let spread_c_hi = meta.query_advice(a_5, Rotation::next());
 
-            CompressionGate::s_maj(
+            gate::s_maj(
                 s_maj,
                 spread_m0_even,
                 spread_m0_odd,
@@ -538,7 +532,6 @@ impl CompressionConfig {
                 spread_c_lo,
                 spread_c_hi,
             )
-            .0
         });
 
         // s_h_prime to compute H' = H + Ch(E, F, G) + s_upper_sigma_1(E) + K + W
@@ -560,7 +553,7 @@ impl CompressionConfig {
             let w_lo = meta.query_advice(a_8, Rotation::prev());
             let w_hi = meta.query_advice(a_8, Rotation::cur());
 
-            CompressionGate::s_h_prime(
+            gate::s_h_prime(
                 s_h_prime,
                 h_prime_lo,
                 h_prime_hi,
@@ -578,7 +571,6 @@ impl CompressionConfig {
                 w_lo,
                 w_hi,
             )
-            .0
         });
 
         // s_a_new
@@ -594,7 +586,7 @@ impl CompressionConfig {
             let h_prime_lo = meta.query_advice(a_7, Rotation::prev());
             let h_prime_hi = meta.query_advice(a_8, Rotation::prev());
 
-            CompressionGate::s_a_new(
+            gate::s_a_new(
                 s_a_new,
                 a_new_lo,
                 a_new_hi,
@@ -606,7 +598,6 @@ impl CompressionConfig {
                 h_prime_lo,
                 h_prime_hi,
             )
-            .0
         });
 
         // s_e_new
@@ -620,7 +611,7 @@ impl CompressionConfig {
             let h_prime_lo = meta.query_advice(a_7, Rotation::prev());
             let h_prime_hi = meta.query_advice(a_8, Rotation::prev());
 
-            CompressionGate::s_e_new(
+            gate::s_e_new(
                 s_e_new,
                 e_new_lo,
                 e_new_hi,
@@ -630,7 +621,6 @@ impl CompressionConfig {
                 h_prime_lo,
                 h_prime_hi,
             )
-            .0
         });
 
         // s_digest for final round
@@ -649,11 +639,10 @@ impl CompressionConfig {
             let hi_3 = meta.query_advice(a_7, Rotation::next());
             let word_3 = meta.query_advice(a_8, Rotation::next());
 
-            CompressionGate::s_digest(
+            gate::s_digest(
                 s_digest, lo_0, hi_0, word_0, lo_1, hi_1, word_1, lo_2, hi_2, word_2, lo_3, hi_3,
                 word_3,
             )
-            .0
         });
 
         CompressionConfig {

@@ -14,7 +14,6 @@ mod spread_table;
 mod util;
 
 use compression::*;
-use gates::*;
 use message_schedule::*;
 use spread_table::*;
 
