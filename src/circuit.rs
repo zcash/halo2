@@ -136,7 +136,7 @@ impl<'r, F: FieldExt> Region<'r, F> {
         mut to: V,
     ) -> Result<Cell, Error>
     where
-        V: FnMut() -> Result<F, Error> + 'v,
+        V: FnMut() -> Option<F> + 'v,
         A: Fn() -> AR,
         AR: Into<String>,
     {
@@ -155,7 +155,7 @@ impl<'r, F: FieldExt> Region<'r, F> {
         mut to: V,
     ) -> Result<Cell, Error>
     where
-        V: FnMut() -> Result<F, Error> + 'v,
+        V: FnMut() -> Option<F> + 'v,
         A: Fn() -> AR,
         AR: Into<String>,
     {

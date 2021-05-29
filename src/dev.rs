@@ -132,15 +132,14 @@ pub enum VerifyFailure {
 ///
 ///     fn synthesize(&self, cs: &mut impl Assignment<F>, config: MyConfig) -> Result<(), Error> {
 ///         cs.assign_advice(|| "a", config.a, 0, || {
-///             self.a.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
+///             self.a.map(|v| F::from_u64(v))
 ///         })?;
 ///         cs.assign_advice(|| "b", config.b, 0, || {
-///             self.b.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
+///             self.b.map(|v| F::from_u64(v))
 ///         })?;
 ///         cs.assign_advice(|| "c", config.c, 0, || {
 ///             self.a
 ///                 .and_then(|a| self.b.map(|b| F::from_u64(a * b)))
-///                 .ok_or(Error::SynthesisError)
 ///         })
 ///     }
 /// }
@@ -210,7 +209,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .push(row);
 
         // Selectors are just fixed columns.
-        self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
+        self.assign_fixed(annotation, selector.0, row, || Some(F::one()))
     }
 
     fn assign_advice<V, A, AR>(
@@ -221,7 +220,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Option<F>,
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
@@ -229,7 +228,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .advice
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? = Some(to()?);
+            .ok_or(Error::BoundsFailure)? = to();
 
         Ok(())
     }
@@ -242,7 +241,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Option<F>,
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
@@ -250,7 +249,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .fixed
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? = Some(to()?);
+            .ok_or(Error::BoundsFailure)? = to();
 
         Ok(())
     }
@@ -637,7 +636,7 @@ mod tests {
                             || "a",
                             config.a,
                             FAULTY_ROW - 1,
-                            || Ok(Fp::zero()),
+                            || Some(Fp::zero()),
                         )?;
 
                         // BUG: Forget to assign b = 0! This could go unnoticed during

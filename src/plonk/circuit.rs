@@ -172,8 +172,8 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 ///     let config = chip.config();
 ///     # let config: Config = todo!();
 ///     layouter.assign_region(|| "bar", |mut region| {
-///         region.assign_advice(|| "a", config.a, 0, || Ok(F::one()))?;
-///         region.assign_advice(|| "a", config.b, 1, || Ok(F::one()))?;
+///         region.assign_advice(|| "a", config.a, 0, || Some(F::one()))?;
+///         region.assign_advice(|| "a", config.b, 1, || Some(F::one()))?;
 ///         config.s.enable(&mut region, 1)
 ///     })?;
 ///     Ok(())
@@ -259,7 +259,7 @@ pub trait Assignment<F: Field> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Option<F>,
         A: FnOnce() -> AR,
         AR: Into<String>;
 
@@ -272,7 +272,7 @@ pub trait Assignment<F: Field> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Option<F>,
         A: FnOnce() -> AR,
         AR: Into<String>;
 

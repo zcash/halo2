@@ -52,7 +52,7 @@ pub trait RegionLayouter<F: FieldExt>: fmt::Debug {
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Option<F> + 'v),
     ) -> Result<Cell, Error>;
 
     /// Assign a fixed value
@@ -61,7 +61,7 @@ pub trait RegionLayouter<F: FieldExt>: fmt::Debug {
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Option<F> + 'v),
     ) -> Result<Cell, Error>;
 
     /// Constraint two cells to have the same value.
@@ -220,7 +220,7 @@ impl<F: FieldExt> RegionLayouter<F> for RegionShape {
         _: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
-        _to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+        _to: &'v mut (dyn FnMut() -> Option<F> + 'v),
     ) -> Result<Cell, Error> {
         self.columns.insert(column.into());
         self.row_count = cmp::max(self.row_count, offset + 1);
@@ -237,7 +237,7 @@ impl<F: FieldExt> RegionLayouter<F> for RegionShape {
         _: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
-        _to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+        _to: &'v mut (dyn FnMut() -> Option<F> + 'v),
     ) -> Result<Cell, Error> {
         self.columns.insert(column.into());
         self.row_count = cmp::max(self.row_count, offset + 1);
@@ -306,7 +306,7 @@ impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> RegionLayouter<F>
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Option<F> + 'v),
     ) -> Result<Cell, Error> {
         self.layouter.cs.assign_advice(
             annotation,
@@ -327,7 +327,7 @@ impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> RegionLayouter<F>
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Option<F> + 'v),
     ) -> Result<Cell, Error> {
         self.layouter.cs.assign_fixed(
             annotation,

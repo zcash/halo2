@@ -146,7 +146,7 @@ pub fn create_proof<
                     to: V,
                 ) -> Result<(), Error>
                 where
-                    V: FnOnce() -> Result<F, Error>,
+                    V: FnOnce() -> Option<F>,
                     A: FnOnce() -> AR,
                     AR: Into<String>,
                 {
@@ -154,7 +154,7 @@ pub fn create_proof<
                         .advice
                         .get_mut(column.index())
                         .and_then(|v| v.get_mut(row))
-                        .ok_or(Error::BoundsFailure)? = to()?;
+                        .ok_or(Error::BoundsFailure)? = to().ok_or(Error::SynthesisError)?;
 
                     Ok(())
                 }
@@ -167,7 +167,7 @@ pub fn create_proof<
                     _: V,
                 ) -> Result<(), Error>
                 where
-                    V: FnOnce() -> Result<F, Error>,
+                    V: FnOnce() -> Option<F>,
                     A: FnOnce() -> AR,
                     AR: Into<String>,
                 {

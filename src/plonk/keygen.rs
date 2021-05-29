@@ -68,7 +68,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         // alter the proving system to change the global default.
         // TODO: Implement selector combining optimization
         // https://github.com/zcash/halo2/issues/116
-        self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
+        self.assign_fixed(annotation, selector.0, row, || Some(F::one()))
     }
 
     fn assign_advice<V, A, AR>(
@@ -79,7 +79,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Option<F>,
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
@@ -95,7 +95,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Option<F>,
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
@@ -103,7 +103,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
             .fixed
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? = to()?;
+            .ok_or(Error::BoundsFailure)? = to().ok_or(Error::SynthesisError)?;
 
         Ok(())
     }
