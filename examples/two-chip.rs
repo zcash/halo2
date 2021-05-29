@@ -233,29 +233,14 @@ impl<F: FieldExt> AddInstructions<F> for AddChip<F> {
                 // but we can only rely on relative offsets inside this region. So we
                 // assign new cells inside the region and constrain them to have the
                 // same values as the inputs.
-                let lhs = region.assign_advice(
-                    || "lhs",
-                    config.advice[0],
-                    0,
-                    || a.value.ok_or(Error::SynthesisError),
-                )?;
-                let rhs = region.assign_advice(
-                    || "rhs",
-                    config.advice[1],
-                    0,
-                    || b.value.ok_or(Error::SynthesisError),
-                )?;
+                let lhs = region.assign_advice(|| "lhs", config.advice[0], 0, || a.value)?;
+                let rhs = region.assign_advice(|| "rhs", config.advice[1], 0, || b.value)?;
                 region.constrain_equal(&config.perm, a.cell, lhs)?;
                 region.constrain_equal(&config.perm, b.cell, rhs)?;
 
                 // Now we can assign the multiplication result into the output position.
                 let value = a.value.and_then(|a| b.value.map(|b| a + b));
-                let cell = region.assign_advice(
-                    || "lhs * rhs",
-                    config.advice[0],
-                    1,
-                    || value.ok_or(Error::SynthesisError),
-                )?;
+                let cell = region.assign_advice(|| "lhs * rhs", config.advice[0], 1, || value)?;
 
                 // Finally, we return a variable representing the output,
                 // to be used in another part of the circuit.
@@ -375,29 +360,14 @@ impl<F: FieldExt> MulInstructions<F> for MulChip<F> {
                 // but we can only rely on relative offsets inside this region. So we
                 // assign new cells inside the region and constrain them to have the
                 // same values as the inputs.
-                let lhs = region.assign_advice(
-                    || "lhs",
-                    config.advice[0],
-                    0,
-                    || a.value.ok_or(Error::SynthesisError),
-                )?;
-                let rhs = region.assign_advice(
-                    || "rhs",
-                    config.advice[1],
-                    0,
-                    || b.value.ok_or(Error::SynthesisError),
-                )?;
+                let lhs = region.assign_advice(|| "lhs", config.advice[0], 0, || a.value)?;
+                let rhs = region.assign_advice(|| "rhs", config.advice[1], 0, || b.value)?;
                 region.constrain_equal(&config.perm, a.cell, lhs)?;
                 region.constrain_equal(&config.perm, b.cell, rhs)?;
 
                 // Now we can assign the multiplication result into the output position.
                 let value = a.value.and_then(|a| b.value.map(|b| a * b));
-                let cell = region.assign_advice(
-                    || "lhs * rhs",
-                    config.advice[0],
-                    1,
-                    || value.ok_or(Error::SynthesisError),
-                )?;
+                let cell = region.assign_advice(|| "lhs * rhs", config.advice[0], 1, || value)?;
 
                 // Finally, we return a variable representing the output,
                 // to be used in another part of the circuit.
@@ -491,12 +461,8 @@ impl<F: FieldExt> FieldInstructions<F> for FieldChip<F> {
         layouter.assign_region(
             || "load private",
             |mut region| {
-                let cell = region.assign_advice(
-                    || "private input",
-                    config.advice[0],
-                    0,
-                    || value.ok_or(Error::SynthesisError),
-                )?;
+                let cell =
+                    region.assign_advice(|| "private input", config.advice[0], 0, || value)?;
                 num = Some(Number { cell, value });
                 Ok(())
             },
@@ -530,12 +496,8 @@ impl<F: FieldExt> FieldInstructions<F> for FieldChip<F> {
                 config.s_pub.enable(&mut region, 0)?;
 
                 // Load the output into the correct advice column.
-                let out = region.assign_advice(
-                    || "public advice",
-                    config.advice[1],
-                    0,
-                    || num.value.ok_or(Error::SynthesisError),
-                )?;
+                let out =
+                    region.assign_advice(|| "public advice", config.advice[1], 0, || num.value)?;
                 region.constrain_equal(&config.perm, num.cell, out)?;
 
                 // We don't assign to the instance column inside the circuit;

@@ -98,43 +98,43 @@ fn plonk_api() {
                 self.config.a,
                 index,
                 || {
-                    value = Some(f()?);
-                    Ok(value.ok_or(Error::SynthesisError)?.0)
+                    value = f().ok();
+                    value.map(|value| value.0)
                 },
             )?;
             self.cs.assign_advice(
                 || "lhs^4",
                 self.config.d,
                 index,
-                || Ok(value.ok_or(Error::SynthesisError)?.0.square().square()),
+                || value.map(|value| value.0.square().square()),
             )?;
             self.cs.assign_advice(
                 || "rhs",
                 self.config.b,
                 index,
-                || Ok(value.ok_or(Error::SynthesisError)?.1),
+                || value.map(|value| value.1),
             )?;
             self.cs.assign_advice(
                 || "rhs^4",
                 self.config.e,
                 index,
-                || Ok(value.ok_or(Error::SynthesisError)?.1.square().square()),
+                || value.map(|value| value.1.square().square()),
             )?;
             self.cs.assign_advice(
                 || "out",
                 self.config.c,
                 index,
-                || Ok(value.ok_or(Error::SynthesisError)?.2),
+                || value.map(|value| value.2),
             )?;
 
             self.cs
-                .assign_fixed(|| "a", self.config.sa, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "a", self.config.sa, index, || Some(FF::zero()))?;
             self.cs
-                .assign_fixed(|| "b", self.config.sb, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "b", self.config.sb, index, || Some(FF::zero()))?;
             self.cs
-                .assign_fixed(|| "c", self.config.sc, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "c", self.config.sc, index, || Some(FF::one()))?;
             self.cs
-                .assign_fixed(|| "a * b", self.config.sm, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "a * b", self.config.sm, index, || Some(FF::one()))?;
             Ok((
                 Variable(self.config.a, index),
                 Variable(self.config.b, index),
@@ -153,43 +153,43 @@ fn plonk_api() {
                 self.config.a,
                 index,
                 || {
-                    value = Some(f()?);
-                    Ok(value.ok_or(Error::SynthesisError)?.0)
+                    value = f().ok();
+                    value.map(|value| value.0)
                 },
             )?;
             self.cs.assign_advice(
                 || "lhs^4",
                 self.config.d,
                 index,
-                || Ok(value.ok_or(Error::SynthesisError)?.0.square().square()),
+                || value.map(|value| value.0.square().square()),
             )?;
             self.cs.assign_advice(
                 || "rhs",
                 self.config.b,
                 index,
-                || Ok(value.ok_or(Error::SynthesisError)?.1),
+                || value.map(|value| value.1),
             )?;
             self.cs.assign_advice(
                 || "rhs^4",
                 self.config.e,
                 index,
-                || Ok(value.ok_or(Error::SynthesisError)?.1.square().square()),
+                || value.map(|value| value.1.square().square()),
             )?;
             self.cs.assign_advice(
                 || "out",
                 self.config.c,
                 index,
-                || Ok(value.ok_or(Error::SynthesisError)?.2),
+                || value.map(|value| value.2),
             )?;
 
             self.cs
-                .assign_fixed(|| "a", self.config.sa, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "a", self.config.sa, index, || Some(FF::one()))?;
             self.cs
-                .assign_fixed(|| "b", self.config.sb, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "b", self.config.sb, index, || Some(FF::one()))?;
             self.cs
-                .assign_fixed(|| "c", self.config.sc, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "c", self.config.sc, index, || Some(FF::one()))?;
             self.cs
-                .assign_fixed(|| "a * b", self.config.sm, index, || Ok(FF::zero()))?;
+                .assign_fixed(|| "a * b", self.config.sm, index, || Some(FF::zero()))?;
             Ok((
                 Variable(self.config.a, index),
                 Variable(self.config.b, index),
@@ -219,9 +219,9 @@ fn plonk_api() {
             let index = self.current_gate;
             self.current_gate += 1;
             self.cs
-                .assign_advice(|| "value", self.config.a, index, || f())?;
+                .assign_advice(|| "value", self.config.a, index, || f().ok())?;
             self.cs
-                .assign_fixed(|| "public", self.config.sp, index, || Ok(FF::one()))?;
+                .assign_fixed(|| "public", self.config.sp, index, || Some(FF::one()))?;
 
             Ok(Variable(self.config.a, index))
         }
@@ -231,9 +231,9 @@ fn plonk_api() {
 
                 self.current_gate += 1;
                 self.cs
-                    .assign_fixed(|| "table col 1", self.config.sl, index, || Ok(value_0))?;
+                    .assign_fixed(|| "table col 1", self.config.sl, index, || Some(value_0))?;
                 self.cs
-                    .assign_fixed(|| "table col 2", self.config.sl2, index, || Ok(value_1))?;
+                    .assign_fixed(|| "table col 2", self.config.sl2, index, || Some(value_1))?;
             }
             Ok(())
         }
