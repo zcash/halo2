@@ -31,7 +31,9 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
         // Placeholder gate so there is something for the prover to operate on.
         let advice = meta.advice_column();
-        meta.create_gate("TODO", |meta| meta.query_advice(advice, Rotation::cur()));
+        meta.create_gate("TODO", |meta| {
+            vec![meta.query_advice(advice, Rotation::cur())]
+        });
     }
 
     fn synthesize(
@@ -138,7 +140,7 @@ impl Proof {
             .collect();
         let instances: Vec<_> = instances.iter().map(|i| &i[..]).collect();
 
-        let mut transcript = Blake2bWrite::<_, vesta::Affine>::init(vec![]);
+        let mut transcript = Blake2bWrite::<_, vesta::Affine, _>::init(vec![]);
         plonk::create_proof(&pk.params, &pk.pk, circuits, &instances, &mut transcript)?;
         Ok(Proof(transcript.finalize()))
     }
