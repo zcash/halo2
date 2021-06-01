@@ -190,7 +190,7 @@ impl Selector {
 }
 
 /// A permutation.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Permutation {
     /// The index of this permutation.
     index: usize,
