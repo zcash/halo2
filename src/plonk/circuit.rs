@@ -146,7 +146,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 ///
 ///     // On rows where the selector is enabled, a is constrained to equal b.
 ///     // On rows where the selector is disabled, a and b can take any value.
-///     s * (a - b)
+///     vec![s * (a - b)]
 /// });
 /// ```
 ///
@@ -484,7 +484,7 @@ impl<Col: Into<Column<Any>>> From<(Col, Rotation)> for VirtualCell {
 #[derive(Clone, Debug)]
 pub(crate) struct Gate<F: Field> {
     name: &'static str,
-    poly: Expression<F>,
+    polys: Vec<Expression<F>>,
     /// We track queried selectors separately from other cells, so that we can use them to
     /// trigger debug checks on gates.
     queried_selectors: Vec<VirtualCell>,
@@ -496,8 +496,8 @@ impl<F: Field> Gate<F> {
         self.name
     }
 
-    pub(crate) fn poly(&self) -> &Expression<F> {
-        &self.poly
+    pub(crate) fn polynomials(&self) -> &[Expression<F>] {
+        &self.polys
     }
 }
 
@@ -541,7 +541,7 @@ struct PinnedGates<'a, F: Field>(&'a Vec<Gate<F>>);
 impl<'a, F: Field> std::fmt::Debug for PinnedGates<'a, F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.debug_list()
-            .entries(self.0.iter().map(|gate| gate.poly()))
+            .entries(self.0.iter().flat_map(|gate| gate.polynomials().iter()))
             .finish()
     }
 }
@@ -717,16 +717,16 @@ impl<F: Field> ConstraintSystem<F> {
     pub fn create_gate(
         &mut self,
         name: &'static str,
-        f: impl FnOnce(&mut VirtualCells<'_, F>) -> Expression<F>,
+        f: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<Expression<F>>,
     ) {
         let mut cells = VirtualCells::new(self);
-        let poly = f(&mut cells);
+        let polys = f(&mut cells);
         let queried_selectors = cells.queried_selectors;
         let queried_cells = cells.queried_cells;
 
         self.gates.push(Gate {
             name,
-            poly,
+            polys,
             queried_selectors,
             queried_cells,
         });
@@ -794,9 +794,14 @@ impl<F: Field> ConstraintSystem<F> {
 
         // Account for each gate to ensure our quotient polynomial is the
         // correct degree and that our extended domain is the right size.
-        for gate in &self.gates {
-            degree = std::cmp::max(degree, gate.poly().degree());
-        }
+        degree = std::cmp::max(
+            degree,
+            self.gates
+                .iter()
+                .flat_map(|gate| gate.polynomials().iter().map(|poly| poly.degree()))
+                .max()
+                .unwrap_or(0),
+        );
 
         degree
     }

@@ -102,7 +102,7 @@ pub enum VerifyFailure {
 ///             let c = meta.query_advice(c, Rotation::cur());
 ///
 ///             // BUG: Should be a * b - c
-///             a * b + c
+///             vec![a * b + c]
 ///         });
 ///
 ///         MyConfig { a, b, c }
@@ -317,7 +317,7 @@ impl<F: FieldExt> MockProver<F> {
             .enumerate()
             .flat_map(|(gate_index, gate)| {
                 // We iterate from n..2n so we can just reduce to handle wrapping.
-                (n..(2 * n)).filter_map(move |row| {
+                (n..(2 * n)).flat_map(move |row| {
                     fn load<'a, F: FieldExt, T: ColumnType>(
                         n: i32,
                         row: i32,
@@ -331,24 +331,26 @@ impl<F: FieldExt> MockProver<F> {
                         }
                     }
 
-                    if gate.poly().evaluate(
-                        &|scalar| scalar,
-                        &load(n, row, &self.cs.fixed_queries, &self.fixed),
-                        &load(n, row, &self.cs.advice_queries, &self.advice),
-                        &load(n, row, &self.cs.instance_queries, &self.instance),
-                        &|a, b| a + &b,
-                        &|a, b| a * &b,
-                        &|a, scalar| a * scalar,
-                    ) == F::zero()
-                    {
-                        None
-                    } else {
-                        Some(VerifyFailure::Gate {
-                            gate_index,
-                            gate_name: gate.name(),
-                            row: (row - n) as usize,
-                        })
-                    }
+                    gate.polynomials().iter().filter_map(move |poly| {
+                        if poly.evaluate(
+                            &|scalar| scalar,
+                            &load(n, row, &self.cs.fixed_queries, &self.fixed),
+                            &load(n, row, &self.cs.advice_queries, &self.advice),
+                            &load(n, row, &self.cs.instance_queries, &self.instance),
+                            &|a, b| a + &b,
+                            &|a, b| a * &b,
+                            &|a, scalar| a * scalar,
+                        ) == F::zero()
+                        {
+                            None
+                        } else {
+                            Some(VerifyFailure::Gate {
+                                gate_index,
+                                gate_name: gate.name(),
+                                row: (row - n) as usize,
+                            })
+                        }
+                    })
                 })
             });
 

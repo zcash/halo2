@@ -180,7 +180,8 @@ impl<F: FieldExt> AddChip<F> {
             let rhs = meta.query_advice(advice[1], Rotation::cur());
             let out = meta.query_advice(advice[0], Rotation::next());
             let s_add = meta.query_selector(s_add, Rotation::cur());
-            s_add * (lhs + rhs + out * -F::one())
+
+            vec![s_add * (lhs + rhs + out * -F::one())]
         });
 
         AddConfig {
@@ -323,7 +324,7 @@ impl<F: FieldExt> MulChip<F> {
             // has the following properties:
             // - When s_mul = 0, any value is allowed in lhs, rhs, and out.
             // - When s_mul != 0, this constrains lhs * rhs = out.
-            s_mul * (lhs * rhs + out * -F::one())
+            vec![s_mul * (lhs * rhs + out * -F::one())]
         });
 
         MulConfig {
@@ -458,7 +459,7 @@ impl<F: FieldExt> FieldChip<F> {
 
             // We simply constrain the advice cell to be equal to the instance cell,
             // when the selector is enabled.
-            s * (p + a * -F::one())
+            vec![s * (p + a * -F::one())]
         });
 
         let add_config = AddChip::configure(meta, advice, perm.clone());

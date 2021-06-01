@@ -110,12 +110,15 @@ impl<F: FieldExt> FieldChip<F> {
             let out = meta.query_advice(advice[0], Rotation::next());
             let s_mul = meta.query_selector(s_mul, Rotation::cur());
 
-            // The polynomial expression returned from `create_gate` will be
+            // Finally, we return the polynomial expressions that constrain this gate.
+            // For our multiplication gate, we only need a single polynomial constraint.
+            //
+            // The polynomial expressions returned from `create_gate` will be
             // constrained by the proving system to equal zero. Our expression
             // has the following properties:
             // - When s_mul = 0, any value is allowed in lhs, rhs, and out.
             // - When s_mul != 0, this constrains lhs * rhs = out.
-            s_mul * (lhs * rhs + out * -F::one())
+            vec![s_mul * (lhs * rhs + out * -F::one())]
         });
 
         // Define our public-input gate!
@@ -128,7 +131,7 @@ impl<F: FieldExt> FieldChip<F> {
 
             // We simply constrain the advice cell to be equal to the instance cell,
             // when the selector is enabled.
-            s * (p + a * -F::one())
+            vec![s * (p + a * -F::one())]
         });
 
         FieldConfig {
