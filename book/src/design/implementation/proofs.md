@@ -47,6 +47,7 @@ order to share common proof components and protocol logic.
 
 In the encoding description below, we will use the following circuit-specific constants:
 
+- $k$ - the size parameter of the circuit (which has $2^k$ rows).
 - $A$ - the number of advice columns.
 - $F$ - the number of fixed columns.
 - $I$ - the number of instance columns.
