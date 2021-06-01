@@ -6,7 +6,7 @@ use crate::{
     arithmetic::{FieldExt, Group},
     plonk::{
         permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Expression, Fixed, Permutation,
+        Expression, Fixed, Permutation, Selector,
     },
     poly::Rotation,
 };
@@ -167,6 +167,21 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
 
     fn exit_region(&mut self) {}
 
+    fn enable_selector<A, AR>(
+        &mut self,
+        annotation: A,
+        selector: &Selector,
+        row: usize,
+    ) -> Result<(), Error>
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // Selectors are just fixed columns.
+        // TODO: Track which gates are enabled by this selector.
+        self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
+    }
+
     fn assign_advice<V, A, AR>(
         &mut self,
         _: A,
@@ -295,47 +310,47 @@ impl<F: FieldExt> MockProver<F> {
         let n = self.n as i32;
 
         // Check that all gates are satisfied for all rows.
-        let gate_errors =
-            self.cs
-                .gates
-                .iter()
-                .enumerate()
-                .flat_map(|(gate_index, (gate_name, gate))| {
-                    // We iterate from n..2n so we can just reduce to handle wrapping.
-                    (n..(2 * n)).filter_map(move |row| {
-                        fn load<'a, F: FieldExt, T: ColumnType>(
-                            n: i32,
-                            row: i32,
-                            queries: &'a [(Column<T>, Rotation)],
-                            cells: &'a [Vec<F>],
-                        ) -> impl Fn(usize) -> F + 'a {
-                            move |index| {
-                                let (column, at) = &queries[index];
-                                let resolved_row = (row + at.0) % n;
-                                cells[column.index()][resolved_row as usize]
-                            }
+        let gate_errors = self
+            .cs
+            .gates
+            .iter()
+            .enumerate()
+            .flat_map(|(gate_index, gate)| {
+                // We iterate from n..2n so we can just reduce to handle wrapping.
+                (n..(2 * n)).filter_map(move |row| {
+                    fn load<'a, F: FieldExt, T: ColumnType>(
+                        n: i32,
+                        row: i32,
+                        queries: &'a [(Column<T>, Rotation)],
+                        cells: &'a [Vec<F>],
+                    ) -> impl Fn(usize) -> F + 'a {
+                        move |index| {
+                            let (column, at) = &queries[index];
+                            let resolved_row = (row + at.0) % n;
+                            cells[column.index()][resolved_row as usize]
                         }
+                    }
 
-                        if gate.evaluate(
-                            &|scalar| scalar,
-                            &load(n, row, &self.cs.fixed_queries, &self.fixed),
-                            &load(n, row, &self.cs.advice_queries, &self.advice),
-                            &load(n, row, &self.cs.instance_queries, &self.instance),
-                            &|a, b| a + &b,
-                            &|a, b| a * &b,
-                            &|a, scalar| a * scalar,
-                        ) == F::zero()
-                        {
-                            None
-                        } else {
-                            Some(VerifyFailure::Gate {
-                                gate_index,
-                                gate_name,
-                                row: (row - n) as usize,
-                            })
-                        }
-                    })
-                });
+                    if gate.poly().evaluate(
+                        &|scalar| scalar,
+                        &load(n, row, &self.cs.fixed_queries, &self.fixed),
+                        &load(n, row, &self.cs.advice_queries, &self.advice),
+                        &load(n, row, &self.cs.instance_queries, &self.instance),
+                        &|a, b| a + &b,
+                        &|a, b| a * &b,
+                        &|a, scalar| a * scalar,
+                    ) == F::zero()
+                    {
+                        None
+                    } else {
+                        Some(VerifyFailure::Gate {
+                            gate_index,
+                            gate_name: gate.name(),
+                            row: (row - n) as usize,
+                        })
+                    }
+                })
+            });
 
         // Check that all lookups exist in their respective tables.
         let lookup_errors =

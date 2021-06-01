@@ -7,7 +7,7 @@ use std::marker::PhantomData;
 
 use super::{Cell, Layouter, Region, RegionIndex, RegionStart};
 use crate::arithmetic::FieldExt;
-use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation};
+use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation, Selector};
 
 /// Helper trait for implementing a custom [`Layouter`].
 ///
@@ -38,6 +38,14 @@ use crate::plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation};
 /// "logical" columns that are guaranteed to correspond to the chip (and have come from
 /// `Chip::Config`).
 pub trait RegionLayouter<F: FieldExt>: fmt::Debug {
+    /// Enables a selector at the given offset.
+    fn enable_selector<'v>(
+        &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        selector: &Selector,
+        offset: usize,
+    ) -> Result<(), Error>;
+
     /// Assign an advice column value (witness)
     fn assign_advice<'v>(
         &'v mut self,
@@ -194,6 +202,19 @@ impl RegionShape {
 }
 
 impl<F: FieldExt> RegionLayouter<F> for RegionShape {
+    fn enable_selector<'v>(
+        &'v mut self,
+        _: &'v (dyn Fn() -> String + 'v),
+        selector: &Selector,
+        offset: usize,
+    ) -> Result<(), Error> {
+        // Track the selector's fixed column as part of the region's shape.
+        // TODO: Avoid exposing selector internals?
+        self.columns.insert(selector.0.into());
+        self.row_count = cmp::max(self.row_count, offset + 1);
+        Ok(())
+    }
+
     fn assign_advice<'v>(
         &'v mut self,
         _: &'v (dyn Fn() -> String + 'v),
@@ -267,6 +288,19 @@ impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> SingleChipLayouterRegion<'r, '
 impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> RegionLayouter<F>
     for SingleChipLayouterRegion<'r, 'a, F, CS>
 {
+    fn enable_selector<'v>(
+        &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        selector: &Selector,
+        offset: usize,
+    ) -> Result<(), Error> {
+        self.layouter.cs.enable_selector(
+            annotation,
+            selector,
+            *self.layouter.regions[*self.region_index] + offset,
+        )
+    }
+
     fn assign_advice<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),

@@ -162,16 +162,20 @@ impl<F: FieldExt> SpreadTableChip<F> {
         let table_dense = meta.fixed_column();
         let table_spread = meta.fixed_column();
 
-        let tag_cur = meta.query_advice(input_tag, Rotation::cur());
-        let dense_cur = meta.query_advice(input_dense, Rotation::cur());
-        let spread_cur = meta.query_advice(input_spread, Rotation::cur());
-        let table_tag_cur = meta.query_fixed(table_tag, Rotation::cur());
-        let table_dense_cur = meta.query_fixed(table_dense, Rotation::cur());
-        let table_spread_cur = meta.query_fixed(table_spread, Rotation::cur());
-        meta.lookup(
-            &[tag_cur, dense_cur, spread_cur],
-            &[table_tag_cur, table_dense_cur, table_spread_cur],
-        );
+        meta.lookup(|meta| {
+            let tag_cur = meta.query_advice(input_tag, Rotation::cur());
+            let dense_cur = meta.query_advice(input_dense, Rotation::cur());
+            let spread_cur = meta.query_advice(input_spread, Rotation::cur());
+            let table_tag_cur = meta.query_fixed(table_tag, Rotation::cur());
+            let table_dense_cur = meta.query_fixed(table_dense, Rotation::cur());
+            let table_spread_cur = meta.query_fixed(table_spread, Rotation::cur());
+
+            vec![
+                (tag_cur, table_tag_cur),
+                (dense_cur, table_dense_cur),
+                (spread_cur, table_spread_cur),
+            ]
+        });
 
         SpreadTableConfig {
             input: SpreadInputs {

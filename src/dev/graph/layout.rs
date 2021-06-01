@@ -7,7 +7,7 @@ use std::cmp;
 use std::collections::HashSet;
 
 use crate::plonk::{
-    Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation,
+    Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation, Selector,
 };
 
 /// Renders the circuit layout on the given drawing area.
@@ -227,6 +227,20 @@ impl<F: Field> Assignment<F> for Layout {
     fn exit_region(&mut self) {
         assert!(self.current_region.is_some());
         self.current_region = None;
+    }
+
+    fn enable_selector<A, AR>(
+        &mut self,
+        annotation: A,
+        selector: &Selector,
+        row: usize,
+    ) -> Result<(), Error>
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // Selectors are just fixed columns.
+        self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
     }
 
     fn assign_advice<V, A, AR>(

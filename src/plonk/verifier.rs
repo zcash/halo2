@@ -164,8 +164,8 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
 
                     std::iter::empty()
                         // Evaluate the circuit using the custom gates provided
-                        .chain(vk.cs.gates.iter().map(move |(_, poly)| {
-                            poly.evaluate(
+                        .chain(vk.cs.gates.iter().map(move |gate| {
+                            gate.poly().evaluate(
                                 &|scalar| scalar,
                                 &|index| fixed_evals[index],
                                 &|index| advice_evals[index],

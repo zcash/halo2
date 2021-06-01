@@ -175,19 +175,12 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug)]
-pub struct Selector(Column<Fixed>);
+pub struct Selector(pub(crate) Column<Fixed>);
 
 impl Selector {
     /// Enable this selector at the given offset within the given region.
     pub fn enable<F: FieldExt>(&self, region: &mut Region<F>, offset: usize) -> Result<(), Error> {
-        // TODO: Ensure that the default for a selector's cells is always zero, if we
-        // alter the proving system to change the global default.
-        // TODO: Add Region::enable_selector method to allow the layouter to control the
-        // selector's assignment.
-        // https://github.com/zcash/halo2/issues/116
-        region
-            .assign_fixed(|| "", self.0, offset, || Ok(F::one()))
-            .map(|_| ())
+        region.enable_selector(|| "", self, offset)
     }
 }
 
@@ -240,6 +233,17 @@ pub trait Assignment<F: Field> {
     ///
     /// [`Layouter::assign_region`]: crate::circuit::Layouter#method.assign_region
     fn exit_region(&mut self);
+
+    /// Enables a selector at the given row.
+    fn enable_selector<A, AR>(
+        &mut self,
+        annotation: A,
+        selector: &Selector,
+        row: usize,
+    ) -> Result<(), Error>
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>;
 
     /// Assign an advice column value (witness)
     fn assign_advice<V, A, AR>(
@@ -460,6 +464,43 @@ impl<F> Mul<F> for Expression<F> {
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct PointIndex(pub usize);
 
+/// A "virtual cell" is a PLONK cell that has been queried at a particular relative offset
+/// within a custom gate.
+#[derive(Clone, Debug)]
+struct VirtualCell {
+    column: Column<Any>,
+    rotation: Rotation,
+}
+
+impl<Col: Into<Column<Any>>> From<(Col, Rotation)> for VirtualCell {
+    fn from((column, rotation): (Col, Rotation)) -> Self {
+        VirtualCell {
+            column: column.into(),
+            rotation,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct Gate<F: Field> {
+    name: &'static str,
+    poly: Expression<F>,
+    /// We track queried selectors separately from other cells, so that we can use them to
+    /// trigger debug checks on gates.
+    queried_selectors: Vec<VirtualCell>,
+    queried_cells: Vec<VirtualCell>,
+}
+
+impl<F: Field> Gate<F> {
+    pub(crate) fn name(&self) -> &'static str {
+        self.name
+    }
+
+    pub(crate) fn poly(&self) -> &Expression<F> {
+        &self.poly
+    }
+}
+
 /// This is a description of the circuit environment, such as the gate, column and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
@@ -467,7 +508,7 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) num_fixed_columns: usize,
     pub(crate) num_advice_columns: usize,
     pub(crate) num_instance_columns: usize,
-    pub(crate) gates: Vec<(&'static str, Expression<F>)>,
+    pub(crate) gates: Vec<Gate<F>>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
     pub(crate) instance_queries: Vec<(Column<Instance>, Rotation)>,
     pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
@@ -495,12 +536,12 @@ pub struct PinnedConstraintSystem<'a, F: Field> {
     lookups: &'a Vec<lookup::Argument<F>>,
 }
 
-struct PinnedGates<'a, F: Field>(&'a Vec<(&'static str, Expression<F>)>);
+struct PinnedGates<'a, F: Field>(&'a Vec<Gate<F>>);
 
 impl<'a, F: Field> std::fmt::Debug for PinnedGates<'a, F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.debug_list()
-            .entries(self.0.iter().map(|(_, expr)| expr))
+            .entries(self.0.iter().map(|gate| gate.poly()))
             .finish()
     }
 }
@@ -556,26 +597,21 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Add a lookup argument for some input expressions and table expressions.
-    /// The function will panic if the number of input expressions and table
-    /// expressions are not the same.
+    ///
+    /// `table_map` returns a map between input expressions and the table expressions
+    /// they need to match.
     pub fn lookup(
         &mut self,
-        input_expressions: &[Expression<F>],
-        table_expressions: &[Expression<F>],
+        table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, Expression<F>)>,
     ) -> usize {
-        assert_eq!(input_expressions.len(), table_expressions.len());
+        let mut cells = VirtualCells::new(self);
+        let table_map = table_map(&mut cells);
 
         let index = self.lookups.len();
 
-        self.lookups
-            .push(lookup::Argument::new(input_expressions, table_expressions));
+        self.lookups.push(lookup::Argument::new(table_map));
 
         index
-    }
-
-    /// Query a selector at a relative position.
-    pub fn query_selector(&mut self, selector: Selector, at: Rotation) -> Expression<F> {
-        Expression::Fixed(self.query_fixed_index(selector.0, at))
     }
 
     fn query_fixed_index(&mut self, column: Column<Fixed>, at: Rotation) -> usize {
@@ -593,11 +629,6 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
-    /// Query a fixed column at a relative position
-    pub fn query_fixed(&mut self, column: Column<Fixed>, at: Rotation) -> Expression<F> {
-        Expression::Fixed(self.query_fixed_index(column, at))
-    }
-
     pub(crate) fn query_advice_index(&mut self, column: Column<Advice>, at: Rotation) -> usize {
         // Return existing query, if it exists
         for (index, advice_query) in self.advice_queries.iter().enumerate() {
@@ -611,11 +642,6 @@ impl<F: Field> ConstraintSystem<F> {
         self.advice_queries.push((column, at));
 
         index
-    }
-
-    /// Query an advice column at a relative position
-    pub fn query_advice(&mut self, column: Column<Advice>, at: Rotation) -> Expression<F> {
-        Expression::Advice(self.query_advice_index(column, at))
     }
 
     fn query_instance_index(&mut self, column: Column<Instance>, at: Rotation) -> usize {
@@ -633,11 +659,6 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
-    /// Query an instance column at a relative position
-    pub fn query_instance(&mut self, column: Column<Instance>, at: Rotation) -> Expression<F> {
-        Expression::Instance(self.query_instance_index(column, at))
-    }
-
     fn query_any_index(&mut self, column: Column<Any>, at: Rotation) -> usize {
         match column.column_type() {
             Any::Advice => self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
@@ -645,21 +666,6 @@ impl<F: Field> ConstraintSystem<F> {
             Any::Instance => {
                 self.query_instance_index(Column::<Instance>::try_from(column).unwrap(), at)
             }
-        }
-    }
-
-    /// Query an Any column at a relative position
-    pub fn query_any(&mut self, column: Column<Any>, at: Rotation) -> Expression<F> {
-        match column.column_type() {
-            Any::Advice => Expression::Advice(
-                self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
-            ),
-            Any::Fixed => Expression::Fixed(
-                self.query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
-            ),
-            Any::Instance => Expression::Instance(
-                self.query_instance_index(Column::<Instance>::try_from(column).unwrap(), at),
-            ),
         }
     }
 
@@ -708,9 +714,22 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Create a new gate
-    pub fn create_gate(&mut self, name: &'static str, f: impl FnOnce(&mut Self) -> Expression<F>) {
-        let poly = f(self);
-        self.gates.push((name, poly));
+    pub fn create_gate(
+        &mut self,
+        name: &'static str,
+        f: impl FnOnce(&mut VirtualCells<'_, F>) -> Expression<F>,
+    ) {
+        let mut cells = VirtualCells::new(self);
+        let poly = f(&mut cells);
+        let queried_selectors = cells.queried_selectors;
+        let queried_cells = cells.queried_cells;
+
+        self.gates.push(Gate {
+            name,
+            poly,
+            queried_selectors,
+            queried_cells,
+        });
     }
 
     /// Allocate a new selector.
@@ -775,10 +794,72 @@ impl<F: Field> ConstraintSystem<F> {
 
         // Account for each gate to ensure our quotient polynomial is the
         // correct degree and that our extended domain is the right size.
-        for (_, poly) in self.gates.iter() {
-            degree = std::cmp::max(degree, poly.degree());
+        for gate in &self.gates {
+            degree = std::cmp::max(degree, gate.poly().degree());
         }
 
         degree
+    }
+}
+
+/// Exposes the "virtual cells" that can be queried while creating a custom gate or lookup
+/// table.
+#[derive(Debug)]
+pub struct VirtualCells<'a, F: Field> {
+    meta: &'a mut ConstraintSystem<F>,
+    queried_selectors: Vec<VirtualCell>,
+    queried_cells: Vec<VirtualCell>,
+}
+
+impl<'a, F: Field> VirtualCells<'a, F> {
+    fn new(meta: &'a mut ConstraintSystem<F>) -> Self {
+        VirtualCells {
+            meta,
+            queried_selectors: vec![],
+            queried_cells: vec![],
+        }
+    }
+
+    /// Query a selector at a relative position.
+    pub fn query_selector(&mut self, selector: Selector, at: Rotation) -> Expression<F> {
+        self.queried_selectors.push((selector.0, at).into());
+        Expression::Fixed(self.meta.query_fixed_index(selector.0, at))
+    }
+
+    /// Query a fixed column at a relative position
+    pub fn query_fixed(&mut self, column: Column<Fixed>, at: Rotation) -> Expression<F> {
+        self.queried_cells.push((column, at).into());
+        Expression::Fixed(self.meta.query_fixed_index(column, at))
+    }
+
+    /// Query an advice column at a relative position
+    pub fn query_advice(&mut self, column: Column<Advice>, at: Rotation) -> Expression<F> {
+        self.queried_cells.push((column, at).into());
+        Expression::Advice(self.meta.query_advice_index(column, at))
+    }
+
+    /// Query an instance column at a relative position
+    pub fn query_instance(&mut self, column: Column<Instance>, at: Rotation) -> Expression<F> {
+        self.queried_cells.push((column, at).into());
+        Expression::Instance(self.meta.query_instance_index(column, at))
+    }
+
+    /// Query an Any column at a relative position
+    pub fn query_any(&mut self, column: Column<Any>, at: Rotation) -> Expression<F> {
+        self.queried_cells.push((column, at).into());
+        match column.column_type() {
+            Any::Advice => Expression::Advice(
+                self.meta
+                    .query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
+            ),
+            Any::Fixed => Expression::Fixed(
+                self.meta
+                    .query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
+            ),
+            Any::Instance => Expression::Instance(
+                self.meta
+                    .query_instance_index(Column::<Instance>::try_from(column).unwrap(), at),
+            ),
+        }
     }
 }
