@@ -58,27 +58,27 @@ In the encoding description below, we will use the following circuit-specific co
 - $Q_A$ - the number of advice column queries.
 - $Q_F$ - the number of fixed column queries.
 - $Q_I$ - the number of instance column queries.
-- $N$ - the number of instances of the circuit that are being proven simultaneously.
+- $M$ - the number of instances of the circuit that are being proven simultaneously.
 
 As the proof encoding directly follows the transcript, we can break the encoding into
 sections matching the Halo 2 protocol:
 
 - PLONK commitments:
-  - $A$ points (repeated $N$ times).
-  - $2L$ points (repeated $N$ times).
-  - $P$ points (repeated $N$ times).
-  - $L$ points (repeated $N$ times).
+  - $A$ points (repeated $M$ times).
+  - $2L$ points (repeated $M$ times).
+  - $P$ points (repeated $M$ times).
+  - $L$ points (repeated $M$ times).
 
 - Vanishing argument:
   - $D - 1$ points.
-  - $Q_I$ scalars (repeated $N$ times).
-  - $Q_A$ scalars (repeated $N$ times).
+  - $Q_I$ scalars (repeated $M$ times).
+  - $Q_A$ scalars (repeated $M$ times).
   - $Q_F$ scalars.
   - $D - 1$ scalars.
 
 - PLONK evaluations:
-  - $(2 + \textsf{Col}_P) \times P$ scalars (repeated $N$ times).
-  - $5L$ scalars (repeated $N$ times).
+  - $(2 + \textsf{Col}_P) \times P$ scalars (repeated $M$ times).
+  - $5L$ scalars (repeated $M$ times).
 
 - Multiopening argument:
   - 1 point.
