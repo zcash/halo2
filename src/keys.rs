@@ -15,8 +15,8 @@ use crate::{
     address::Address,
     primitives::redpallas::{self, SpendAuth},
     spec::{
-        commit_ivk, diversify_hash, extract_p, ka_orchard, prf_expand, prf_expand_vec, prf_nf,
-        to_base, to_scalar, NonIdentityPallasPoint, NonZeroPallasBase, NonZeroPallasScalar,
+        commit_ivk, diversify_hash, extract_p, ka_orchard, prf_nf, to_base, to_scalar,
+        NonIdentityPallasPoint, NonZeroPallasBase, NonZeroPallasScalar, PrfExpand,
     },
 };
 
@@ -73,7 +73,7 @@ pub struct SpendAuthorizingKey(redpallas::SigningKey<SpendAuth>);
 impl SpendAuthorizingKey {
     /// Derives ask from sk. Internal use only, does not enforce all constraints.
     fn derive_inner(sk: &SpendingKey) -> pallas::Scalar {
-        to_scalar(prf_expand(&sk.0, &[0x06]))
+        to_scalar(PrfExpand::OrchardAsk.expand(&sk.0))
     }
 
     /// Creates a spend authorization signature over the given message.
@@ -143,7 +143,7 @@ pub(crate) struct NullifierDerivingKey(pallas::Base);
 
 impl From<&SpendingKey> for NullifierDerivingKey {
     fn from(sk: &SpendingKey) -> Self {
-        NullifierDerivingKey(to_base(prf_expand(&sk.0, &[0x07])))
+        NullifierDerivingKey(to_base(PrfExpand::OrchardNk.expand(&sk.0)))
     }
 }
 
@@ -163,7 +163,7 @@ struct CommitIvkRandomness(pallas::Scalar);
 
 impl From<&SpendingKey> for CommitIvkRandomness {
     fn from(sk: &SpendingKey) -> Self {
-        CommitIvkRandomness(to_scalar(prf_expand(&sk.0, &[0x08])))
+        CommitIvkRandomness(to_scalar(PrfExpand::OrchardRivk.expand(&sk.0)))
     }
 }
 
@@ -209,7 +209,7 @@ impl FullViewingKey {
     fn derive_dk_ovk(&self) -> (DiversifierKey, OutgoingViewingKey) {
         let k = self.rivk.0.to_bytes();
         let b = [(&self.ak.0).into(), self.nk.0.to_bytes()];
-        let r = prf_expand_vec(&k, &[&[0x82], &b[0][..], &b[1][..]]);
+        let r = PrfExpand::OrchardDkOvk.with_ad_slices(&k, &[&b[0][..], &b[1][..]]);
         (
             DiversifierKey(r[..32].try_into().unwrap()),
             OutgoingViewingKey(r[32..].try_into().unwrap()),
