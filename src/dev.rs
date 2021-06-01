@@ -1,5 +1,9 @@
 //! Tools for developing circuits.
 
+use std::collections::HashMap;
+use std::convert::TryInto;
+use std::iter;
+
 use ff::Field;
 
 use crate::{
@@ -18,9 +22,27 @@ mod graph;
 #[cfg_attr(docsrs, doc(cfg(feature = "dev-graph")))]
 pub use graph::{circuit_dot_graph, layout::circuit_layout};
 
+/// Cells that haven't been explicitly assigned to, default to zero.
+fn cell_value<F: Field>(cell: Option<F>) -> F {
+    cell.unwrap_or_else(F::zero)
+}
+
 /// The reasons why a particular circuit is not satisfied.
 #[derive(Debug, PartialEq)]
 pub enum VerifyFailure {
+    /// A cell used in an active gate was not assigned to.
+    Cell {
+        /// The column in which this cell is located.
+        column: Column<Any>,
+        /// The row in which this cell is located.
+        row: usize,
+        /// The index of the active gate. These indices are assigned in the order in which
+        /// `ConstraintSystem::create_gate` is called during `Circuit::configure`.
+        gate_index: usize,
+        /// The name of the active gate. These are specified by the gate creator (such as
+        /// a chip implementation), and may not be unique.
+        gate_name: &'static str,
+    },
     /// A gate was not satisfied for a particular row.
     Gate {
         /// The index of the gate that is not satisfied. These indices are assigned in the
@@ -147,10 +169,14 @@ pub struct MockProver<F: Group + Field> {
     n: u32,
     cs: ConstraintSystem<F>,
 
+    /// The selectors that have been enabled in the circuit. All other selectors are by
+    /// construction not enabled.
+    enabled_selectors: HashMap<Selector, Vec<usize>>,
+
     // The fixed cells in the circuit, arranged as [column][row].
-    fixed: Vec<Vec<F>>,
+    fixed: Vec<Vec<Option<F>>>,
     // The advice cells in the circuit, arranged as [column][row].
-    advice: Vec<Vec<F>>,
+    advice: Vec<Vec<Option<F>>>,
     // The instance cells in the circuit, arranged as [column][row].
     instance: Vec<Vec<F>>,
 
@@ -177,8 +203,13 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
+        // Track that this selector was enabled.
+        self.enabled_selectors
+            .entry(*selector)
+            .or_default()
+            .push(row);
+
         // Selectors are just fixed columns.
-        // TODO: Track which gates are enabled by this selector.
         self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
     }
 
@@ -198,7 +229,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .advice
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? = to()?;
+            .ok_or(Error::BoundsFailure)? = Some(to()?);
 
         Ok(())
     }
@@ -219,7 +250,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .fixed
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? = to()?;
+            .ok_or(Error::BoundsFailure)? = Some(to()?);
 
         Ok(())
     }
@@ -282,8 +313,8 @@ impl<F: FieldExt> MockProver<F> {
         let mut cs = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut cs);
 
-        let fixed = vec![vec![F::zero(); n as usize]; cs.num_fixed_columns];
-        let advice = vec![vec![F::zero(); n as usize]; cs.num_advice_columns];
+        let fixed = vec![vec![None; n as usize]; cs.num_fixed_columns];
+        let advice = vec![vec![None; n as usize]; cs.num_advice_columns];
         let permutations = cs
             .permutations
             .iter()
@@ -293,6 +324,7 @@ impl<F: FieldExt> MockProver<F> {
         let mut prover = MockProver {
             n,
             cs,
+            enabled_selectors: HashMap::default(),
             fixed,
             advice,
             instance,
@@ -309,6 +341,60 @@ impl<F: FieldExt> MockProver<F> {
     pub fn verify(&self) -> Result<(), Vec<VerifyFailure>> {
         let n = self.n as i32;
 
+        // Check that all cells used in instantiated gates have been assigned to.
+        let selector_errors = self
+            .cs
+            .gates
+            .iter()
+            .enumerate()
+            .flat_map(|(gate_index, gate)| {
+                gate.queried_selectors()
+                    .iter()
+                    .map(|vc| (Selector(vc.column.try_into().unwrap()), vc.rotation))
+                    // Assume that if a queried selector is enabled, the user wants to use the
+                    // corresponding gate in some way.
+                    //
+                    // TODO: This will trip up on the reverse case, where leaving a selector
+                    // un-enabled keeps a gate enabled. We could alternatively require that
+                    // every selector is explicitly enabled or disabled on every row? But that
+                    // seems messy and confusing.
+                    .filter_map(|(s, rotation)| {
+                        self.enabled_selectors.get(&s).map(|at| (at, rotation))
+                    })
+                    .flat_map(move |(at, rotation)| {
+                        at.iter().flat_map(move |selector_row| {
+                            // Determine the gate instance's logical row from the selector's
+                            // concrete row and its rotation in the gate.
+                            let gate_row = (*selector_row as i32 + n - rotation.0) % n;
+
+                            gate.queried_cells().iter().filter_map(move |cell| {
+                                // Determine where this cell should have been assigned.
+                                let cell_row = ((gate_row + n + cell.rotation.0) % n) as usize;
+
+                                // Check that it was assigned!
+                                if match cell.column.column_type() {
+                                    Any::Advice => {
+                                        self.advice[cell.column.index()][cell_row].is_some()
+                                    }
+                                    Any::Fixed => {
+                                        self.fixed[cell.column.index()][cell_row].is_some()
+                                    }
+                                    Any::Instance => unreachable!(),
+                                } {
+                                    None
+                                } else {
+                                    Some(VerifyFailure::Cell {
+                                        column: cell.column,
+                                        row: cell_row,
+                                        gate_index,
+                                        gate_name: gate.name(),
+                                    })
+                                }
+                            })
+                        })
+                    })
+            });
+
         // Check that all gates are satisfied for all rows.
         let gate_errors = self
             .cs
@@ -318,6 +404,19 @@ impl<F: FieldExt> MockProver<F> {
             .flat_map(|(gate_index, gate)| {
                 // We iterate from n..2n so we can just reduce to handle wrapping.
                 (n..(2 * n)).flat_map(move |row| {
+                    fn load_opt<'a, F: FieldExt, T: ColumnType>(
+                        n: i32,
+                        row: i32,
+                        queries: &'a [(Column<T>, Rotation)],
+                        cells: &'a [Vec<Option<F>>],
+                    ) -> impl Fn(usize) -> F + 'a {
+                        move |index| {
+                            let (column, at) = &queries[index];
+                            let resolved_row = (row + at.0) % n;
+                            cell_value(cells[column.index()][resolved_row as usize])
+                        }
+                    }
+
                     fn load<'a, F: FieldExt, T: ColumnType>(
                         n: i32,
                         row: i32,
@@ -334,8 +433,8 @@ impl<F: FieldExt> MockProver<F> {
                     gate.polynomials().iter().filter_map(move |poly| {
                         if poly.evaluate(
                             &|scalar| scalar,
-                            &load(n, row, &self.cs.fixed_queries, &self.fixed),
-                            &load(n, row, &self.cs.advice_queries, &self.advice),
+                            &load_opt(n, row, &self.cs.fixed_queries, &self.fixed),
+                            &load_opt(n, row, &self.cs.advice_queries, &self.advice),
                             &load(n, row, &self.cs.instance_queries, &self.instance),
                             &|a, b| a + &b,
                             &|a, b| a * &b,
@@ -369,15 +468,19 @@ impl<F: FieldExt> MockProver<F> {
                                     let query = self.cs.fixed_queries[index];
                                     let column_index = query.0.index();
                                     let rotation = query.1 .0;
-                                    self.fixed[column_index]
-                                        [(row as i32 + n + rotation) as usize % n as usize]
+                                    cell_value(
+                                        self.fixed[column_index]
+                                            [(row as i32 + n + rotation) as usize % n as usize],
+                                    )
                                 },
                                 &|index| {
                                     let query = self.cs.advice_queries[index];
                                     let column_index = query.0.index();
                                     let rotation = query.1 .0;
-                                    self.advice[column_index]
-                                        [(row as i32 + n + rotation) as usize % n as usize]
+                                    cell_value(
+                                        self.advice[column_index]
+                                            [(row as i32 + n + rotation) as usize % n as usize],
+                                    )
                                 },
                                 &|index| {
                                     let query = self.cs.instance_queries[index];
@@ -426,14 +529,13 @@ impl<F: FieldExt> MockProver<F> {
                     let original = |perm_index: usize, column, row| {
                         self.cs.permutations[perm_index]
                             .get_columns()
-                            .iter()
-                            .map(|c| match c.column_type() {
-                                Any::Advice => &self.advice[c.index()][..],
-                                Any::Fixed => &self.fixed[c.index()][..],
-                                Any::Instance => &self.instance[c.index()][..],
+                            .get(column)
+                            .map(|c: &Column<Any>| match c.column_type() {
+                                Any::Advice => cell_value(self.advice[c.index()][row]),
+                                Any::Fixed => cell_value(self.fixed[c.index()][row]),
+                                Any::Instance => self.instance[c.index()][row],
                             })
-                            .nth(column)
-                            .unwrap()[row]
+                            .unwrap()
                     };
 
                     // Iterate over each column of the permutation
@@ -460,7 +562,9 @@ impl<F: FieldExt> MockProver<F> {
                         })
                 });
 
-        let errors: Vec<_> = gate_errors
+        let errors: Vec<_> = iter::empty()
+            .chain(selector_errors)
+            .chain(gate_errors)
             .chain(lookup_errors)
             .chain(perm_errors)
             .collect();
@@ -469,5 +573,91 @@ impl<F: FieldExt> MockProver<F> {
         } else {
             Err(errors)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use pasta_curves::Fp;
+
+    use super::{MockProver, VerifyFailure};
+    use crate::{
+        circuit::{layouter::SingleChipLayouter, Layouter},
+        plonk::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Selector},
+        poly::Rotation,
+    };
+
+    #[test]
+    fn unassigned_cell() {
+        const K: u32 = 4;
+        const FAULTY_ROW: usize = 2;
+
+        #[derive(Clone)]
+        struct FaultyCircuitConfig {
+            a: Column<Advice>,
+            q: Selector,
+        }
+
+        struct FaultyCircuit {}
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let b = meta.advice_column();
+                let q = meta.selector();
+
+                meta.create_gate("Equality check", |cells| {
+                    let a = cells.query_advice(a, Rotation::prev());
+                    let b = cells.query_advice(b, Rotation::cur());
+                    let q = cells.query_selector(q, Rotation::cur());
+
+                    // If q is enabled, a and b must be assigned to.
+                    vec![q * (a - b)]
+                });
+
+                FaultyCircuitConfig { a, q }
+            }
+
+            fn synthesize(
+                &self,
+                cs: &mut impl Assignment<Fp>,
+                config: Self::Config,
+            ) -> Result<(), Error> {
+                let mut layouter = SingleChipLayouter::new(cs)?;
+                layouter.assign_region(
+                    || "Faulty synthesis",
+                    |mut region| {
+                        // Enable the equality gate.
+                        config.q.enable(&mut region, FAULTY_ROW)?;
+
+                        // Assign a = 0.
+                        region.assign_advice(
+                            || "a",
+                            config.a,
+                            FAULTY_ROW - 1,
+                            || Ok(Fp::zero()),
+                        )?;
+
+                        // BUG: Forget to assign b = 0! This could go unnoticed during
+                        // development, because cell values default to zero, which in this
+                        // case is fine, but for other assignments would be broken.
+                        Ok(())
+                    },
+                )
+            }
+        }
+
+        let prover = MockProver::run(K, &FaultyCircuit {}, vec![]).unwrap();
+        assert_eq!(
+            prover.verify(),
+            Err(vec![VerifyFailure::Cell {
+                column: Column::new(1, Any::Advice),
+                row: FAULTY_ROW,
+                gate_index: 0,
+                gate_name: "Equality check"
+            }])
+        );
     }
 }
