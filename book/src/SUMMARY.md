@@ -22,6 +22,7 @@
     - [Inner product argument](design/proving-system/inner-product.md)
     - [Comparison to other work](design/proving-system/comparison.md)
   - [Implementation](design/implementation.md)
+    - [Proofs](design/implementation/proofs.md)
     - [Fields](design/implementation/fields.md)
   - [Gadgets](design/gadgets.md)
     - [SHA-256](design/gadgets/sha256.md)
