@@ -558,7 +558,7 @@ mod tests {
         *,
     };
     use crate::{
-        note::{ExtractedNoteCommitment, Nullifier},
+        note::{ExtractedNoteCommitment, Nullifier, RandomSeed},
         value::NoteValue,
         Note,
     };
@@ -625,7 +625,7 @@ mod tests {
                 addr,
                 NoteValue::from_raw(tv.note_v),
                 rho,
-                tv.note_rseed.into(),
+                RandomSeed::from_bytes(tv.note_rseed, &rho).unwrap(),
             );
 
             let cmx: ExtractedNoteCommitment = note.commitment().into();
