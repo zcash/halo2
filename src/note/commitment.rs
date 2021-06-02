@@ -71,3 +71,9 @@ impl std::ops::Deref for ExtractedNoteCommitment {
         &self.0
     }
 }
+
+impl From<&ExtractedNoteCommitment> for [u8; 32] {
+    fn from(cmx: &ExtractedNoteCommitment) -> Self {
+        cmx.to_bytes()
+    }
+}

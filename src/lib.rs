@@ -23,6 +23,7 @@ mod circuit;
 mod constants;
 pub mod keys;
 pub mod note;
+mod note_encryption;
 pub mod primitives;
 mod spec;
 mod tree;

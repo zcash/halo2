@@ -5,7 +5,7 @@ use rand::RngCore;
 use subtle::CtOption;
 
 use crate::{
-    keys::{FullViewingKey, SpendingKey},
+    keys::{EphemeralSecretKey, FullViewingKey, SpendingKey},
     spec::{to_base, to_scalar, NonZeroPallasScalar, PrfExpand},
     value::NoteValue,
     Address,
@@ -37,6 +37,10 @@ impl RandomSeed {
         let rseed = RandomSeed(rseed);
         let esk = rseed.esk_inner(rho);
         CtOption::new(rseed, esk.is_some())
+    }
+
+    pub(crate) fn to_bytes(&self) -> &[u8; 32] {
+        &self.0
     }
 
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
@@ -92,7 +96,6 @@ pub struct Note {
 }
 
 impl Note {
-    #[cfg(test)]
     pub(crate) fn from_parts(
         recipient: Address,
         value: NoteValue,
@@ -154,9 +157,24 @@ impl Note {
         (sk, fvk, note)
     }
 
+    /// Returns the recipient of this note.
+    pub fn recipient(&self) -> Address {
+        self.recipient
+    }
+
     /// Returns the value of this note.
     pub fn value(&self) -> NoteValue {
         self.value
+    }
+
+    /// Derives the ephemeral secret key for this note.
+    pub(crate) fn rseed(&self) -> &RandomSeed {
+        &self.rseed
+    }
+
+    /// Derives the ephemeral secret key for this note.
+    pub(crate) fn esk(&self) -> EphemeralSecretKey {
+        EphemeralSecretKey(self.rseed.esk(&self.rho))
     }
 
     /// Derives the commitment to this note.

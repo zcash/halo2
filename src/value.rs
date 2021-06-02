@@ -74,6 +74,14 @@ impl NoteValue {
         NoteValue(value)
     }
 
+    pub(crate) fn from_bytes(bytes: [u8; 8]) -> Self {
+        NoteValue(u64::from_le_bytes(bytes))
+    }
+
+    pub(crate) fn to_bytes(self) -> [u8; 8] {
+        self.0.to_le_bytes()
+    }
+
     pub(crate) fn to_le_bits(self) -> BitArray<Lsb0, [u8; 8]> {
         BitArray::<Lsb0, _>::new(self.0.to_le_bytes())
     }

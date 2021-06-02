@@ -295,6 +295,10 @@ impl DiversifierKey {
 pub struct Diversifier([u8; 11]);
 
 impl Diversifier {
+    pub(crate) fn from_bytes(d: [u8; 11]) -> Self {
+        Diversifier(d)
+    }
+
     /// Returns the byte array corresponding to this diversifier.
     pub fn as_array(&self) -> &[u8; 11] {
         &self.0
@@ -339,7 +343,7 @@ impl KeyAgreementPrivateKey {
 
     /// Returns the payment address for this key corresponding to the given diversifier.
     fn address(&self, d: Diversifier) -> Address {
-        let pk_d = DiversifiedTransmissionKey::derive(self, &d);
+        let pk_d = DiversifiedTransmissionKey::derive_inner(self, &d);
         Address::from_parts(d, pk_d)
     }
 }
@@ -406,21 +410,36 @@ impl From<&FullViewingKey> for OutgoingViewingKey {
     }
 }
 
+impl AsRef<[u8; 32]> for OutgoingViewingKey {
+    fn as_ref(&self) -> &[u8; 32] {
+        &self.0
+    }
+}
+
 /// The diversified transmission key for a given payment address.
 ///
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct DiversifiedTransmissionKey(NonIdentityPallasPoint);
+pub struct DiversifiedTransmissionKey(NonIdentityPallasPoint);
 
 impl DiversifiedTransmissionKey {
     /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
     ///
     /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-    fn derive(ivk: &KeyAgreementPrivateKey, d: &Diversifier) -> Self {
+    pub(crate) fn derive(ivk: &IncomingViewingKey, d: &Diversifier) -> Self {
+        Self::derive_inner(&ivk.ivk, d)
+    }
+
+    fn derive_inner(ivk: &KeyAgreementPrivateKey, d: &Diversifier) -> Self {
         let g_d = diversify_hash(&d.as_array());
         DiversifiedTransmissionKey(ka_orchard(&ivk.0, &g_d))
+    }
+
+    /// $abst_P(bytes)$
+    pub(crate) fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        NonIdentityPallasPoint::from_bytes(bytes).map(DiversifiedTransmissionKey)
     }
 
     /// $repr_P(self)$

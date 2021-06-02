@@ -28,6 +28,10 @@ impl Address {
         Address { d, pk_d }
     }
 
+    pub(crate) fn diversifer(&self) -> Diversifier {
+        self.d
+    }
+
     pub(crate) fn g_d(&self) -> NonIdentityPallasPoint {
         diversify_hash(self.d.as_array())
     }
