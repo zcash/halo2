@@ -447,3 +447,60 @@ pub mod testing {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use ff::PrimeField;
+
+    use super::*;
+    use crate::{
+        note::{ExtractedNoteCommitment, Nullifier},
+        value::NoteValue,
+        Note,
+    };
+
+    #[test]
+    fn test_vectors() {
+        for tv in crate::test_vectors::keys::test_vectors() {
+            let sk = SpendingKey::from_bytes(tv.sk).unwrap();
+
+            let ask: SpendAuthorizingKey = (&sk).into();
+            assert_eq!(<[u8; 32]>::from(&ask.0), tv.ask);
+
+            let ak: SpendValidatingKey = (&ask).into();
+            assert_eq!(<[u8; 32]>::from(ak.0), tv.ak);
+
+            let nk: NullifierDerivingKey = (&sk).into();
+            assert_eq!(nk.0.to_repr(), tv.nk);
+
+            let rivk: CommitIvkRandomness = (&sk).into();
+            assert_eq!(rivk.0.to_repr(), tv.rivk);
+
+            let fvk: FullViewingKey = (&sk).into();
+            assert_eq!(<[u8; 32]>::from(&fvk.ak.0), tv.ak);
+            assert_eq!(fvk.nk().0.to_repr(), tv.nk);
+            assert_eq!(fvk.rivk.0.to_repr(), tv.rivk);
+
+            let ivk: KeyAgreementPrivateKey = (&fvk).into();
+            assert_eq!(ivk.0.to_repr(), tv.ivk);
+
+            let diversifier = Diversifier(tv.default_d);
+
+            let addr = fvk.address(diversifier);
+            assert_eq!(&addr.pk_d().to_bytes(), &tv.default_pk_d);
+
+            let rho = Nullifier::from_bytes(&tv.note_rho).unwrap();
+            let note = Note::from_parts(
+                addr,
+                NoteValue::from_raw(tv.note_v),
+                rho,
+                tv.note_rseed.into(),
+            );
+
+            let cmx: ExtractedNoteCommitment = note.commitment().into();
+            assert_eq!(cmx.to_bytes(), tv.note_cmx);
+
+            assert_eq!(note.nullifier(&fvk).to_bytes(), tv.note_nf);
+        }
+    }
+}

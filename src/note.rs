@@ -21,6 +21,12 @@ pub use self::nullifier::Nullifier;
 #[derive(Clone, Debug)]
 pub(crate) struct RandomSeed([u8; 32]);
 
+impl From<[u8; 32]> for RandomSeed {
+    fn from(rseed: [u8; 32]) -> Self {
+        RandomSeed(rseed)
+    }
+}
+
 impl RandomSeed {
     pub(crate) fn random(rng: &mut impl RngCore) -> Self {
         let mut bytes = [0; 32];
@@ -71,6 +77,21 @@ pub struct Note {
 }
 
 impl Note {
+    #[cfg(test)]
+    pub(crate) fn from_parts(
+        recipient: Address,
+        value: NoteValue,
+        rho: Nullifier,
+        rseed: RandomSeed,
+    ) -> Self {
+        Note {
+            recipient,
+            value,
+            rho,
+            rseed,
+        }
+    }
+
     /// Generates a new note.
     ///
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].

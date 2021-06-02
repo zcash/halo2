@@ -28,6 +28,9 @@ mod spec;
 mod tree;
 pub mod value;
 
+#[cfg(test)]
+mod test_vectors;
+
 pub use address::Address;
 pub use bundle::Bundle;
 pub use circuit::Proof;
