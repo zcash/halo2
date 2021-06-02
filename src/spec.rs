@@ -4,10 +4,11 @@ use std::iter;
 use std::ops::Deref;
 
 use ff::{Field, PrimeField, PrimeFieldBits};
+use group::GroupEncoding;
 use group::{Curve, Group};
 use halo2::arithmetic::{CurveAffine, CurveExt, FieldExt};
 use pasta_curves::pallas;
-use subtle::CtOption;
+use subtle::{ConditionallySelectable, CtOption};
 
 use crate::{
     constants::L_ORCHARD_BASE,
@@ -18,8 +19,21 @@ mod prf_expand;
 pub(crate) use prf_expand::PrfExpand;
 
 /// A Pallas point that is guaranteed to not be the identity.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct NonIdentityPallasPoint(pallas::Point);
+
+impl ConditionallySelectable for NonIdentityPallasPoint {
+    fn conditional_select(a: &Self, b: &Self, choice: subtle::Choice) -> Self {
+        NonIdentityPallasPoint(pallas::Point::conditional_select(&a.0, &b.0, choice))
+    }
+}
+
+impl NonIdentityPallasPoint {
+    pub(crate) fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        pallas::Point::from_bytes(bytes)
+            .and_then(|p| CtOption::new(NonIdentityPallasPoint(p), !p.is_identity()))
+    }
+}
 
 impl Deref for NonIdentityPallasPoint {
     type Target = pallas::Point;
@@ -45,7 +59,7 @@ impl NonZeroPallasBase {
 }
 
 /// An integer in [1..r_P].
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct NonZeroPallasScalar(pallas::Scalar);
 
 impl From<NonZeroPallasBase> for NonZeroPallasScalar {
@@ -54,7 +68,21 @@ impl From<NonZeroPallasBase> for NonZeroPallasScalar {
     }
 }
 
+impl ConditionallySelectable for NonZeroPallasScalar {
+    fn conditional_select(a: &Self, b: &Self, choice: subtle::Choice) -> Self {
+        NonZeroPallasScalar(pallas::Scalar::conditional_select(&a.0, &b.0, choice))
+    }
+}
+
 impl NonZeroPallasScalar {
+    pub(crate) fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        pallas::Scalar::from_bytes(bytes).and_then(NonZeroPallasScalar::from_scalar)
+    }
+
+    pub(crate) fn from_scalar(s: pallas::Scalar) -> CtOption<Self> {
+        CtOption::new(NonZeroPallasScalar(s), !s.ct_is_zero())
+    }
+
     /// Constructs a wrapper for a scalar field element that is guaranteed to be non-zero.
     ///
     /// # Panics
