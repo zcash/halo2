@@ -4,6 +4,8 @@ use halo2::{
 };
 use pasta_curves::arithmetic::FieldExt;
 
+mod plonk;
+
 /// A variable representing a number.
 #[derive(Copy, Clone, Debug)]
 pub struct CellValue<F: FieldExt> {
