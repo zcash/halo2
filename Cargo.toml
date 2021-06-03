@@ -31,6 +31,9 @@ rand = "0.8"
 nonempty = "0.6"
 subtle = "2.3"
 
+# Developer tooling dependencies
+plotters = { version = "0.3.0", optional = true }
+
 [dependencies.halo2]
 git = "https://github.com/zcash/halo2.git"
 rev = "0448584333c1e262e4a7dbaefa6fdd896bdaaefb"
@@ -52,6 +55,7 @@ proptest = "1.0.0"
 bench = false
 
 [features]
+dev-graph = ["halo2/dev-graph", "plotters"]
 test-dependencies = ["proptest"]
 
 [[bench]]

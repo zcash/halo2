@@ -1507,12 +1507,13 @@ const MDS_INV: [[pallas::Base; 3]; 3] = [
 mod tests {
     use std::marker::PhantomData;
 
+    use ff::PrimeField;
     use halo2::arithmetic::FieldExt;
     use pasta_curves::pallas;
 
-    use crate::primitives::poseidon::Spec;
+    use crate::primitives::poseidon::{permute, ConstantLength, Hash, Spec};
 
-    use super::{MDS, MDS_INV, ROUND_CONSTANTS};
+    use super::{OrchardNullifier, MDS, MDS_INV, ROUND_CONSTANTS};
 
     /// The same Poseidon specification as poseidon::OrchardNullifier, but constructed
     /// such that its constants will be generated at runtime.
@@ -1550,7 +1551,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vectors() {
+    fn verify_constants() {
         let poseidon = P128Pow5T3Plus::<pallas::Base>::new(0);
         let (round_constants, mds, mds_inv) = poseidon.constants();
 
@@ -1568,6 +1569,95 @@ mod tests {
 
         for (actual, expected) in mds_inv.iter().flatten().zip(MDS_INV.iter().flatten()) {
             assert_eq!(actual, expected);
+        }
+    }
+
+    #[test]
+    fn test_against_reference() {
+        // This is the test vector output by the reference code at
+        // <https://extgit.iaik.tugraz.at/krypto/hadeshash>, using parameters from
+        // `generate_parameters_grain.sage 1 0 255 3 8 58 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001`.
+
+        let mut input = [
+            pallas::Base::from_raw([
+                0x0000_0000_0000_0000,
+                0x0000_0000_0000_0000,
+                0x0000_0000_0000_0000,
+                0x0000_0000_0000_0000,
+            ]),
+            pallas::Base::from_raw([
+                0x0000_0000_0000_0001,
+                0x0000_0000_0000_0000,
+                0x0000_0000_0000_0000,
+                0x0000_0000_0000_0000,
+            ]),
+            pallas::Base::from_raw([
+                0x0000_0000_0000_0002,
+                0x0000_0000_0000_0000,
+                0x0000_0000_0000_0000,
+                0x0000_0000_0000_0000,
+            ]),
+        ];
+
+        let expected_output = [
+            pallas::Base::from_raw([
+                0x4586_0cdf_c122_4c90,
+                0x6ad2_1f3e_0511_2d6e,
+                0xe2d3_3be0_7ee5_db5c,
+                0x19a2_64db_f840_aaea,
+            ]),
+            pallas::Base::from_raw([
+                0x3dc3_ed1c_3434_091e,
+                0x31cc_06bf_df6b_d5fd,
+                0x8136_86b6_df10_cf99,
+                0x11b8_23d6_6e94_c285,
+            ]),
+            pallas::Base::from_raw([
+                0xc5dc_3d6d_756e_de28,
+                0xcbaa_5cae_abc5_96e3,
+                0x68a6_35c3_b4cb_b608,
+                0x1111_04f4_1966_d2ce,
+            ]),
+        ];
+
+        permute::<pallas::Base, P128Pow5T3Plus<pallas::Base>, 3, 2>(
+            &mut input,
+            &MDS,
+            &ROUND_CONSTANTS,
+        );
+        assert_eq!(input, expected_output);
+    }
+
+    #[test]
+    fn permute_test_vectors() {
+        let (round_constants, mds, _) = OrchardNullifier.constants();
+
+        for tv in crate::primitives::poseidon::test_vectors::permute() {
+            let mut state = [
+                pallas::Base::from_repr(tv.initial_state[0]).unwrap(),
+                pallas::Base::from_repr(tv.initial_state[1]).unwrap(),
+                pallas::Base::from_repr(tv.initial_state[2]).unwrap(),
+            ];
+
+            permute::<pallas::Base, OrchardNullifier, 3, 2>(&mut state, &mds, &round_constants);
+
+            for (expected, actual) in tv.final_state.iter().zip(state.iter()) {
+                assert_eq!(&actual.to_repr(), expected);
+            }
+        }
+    }
+
+    #[test]
+    fn hash_test_vectors() {
+        for tv in crate::primitives::poseidon::test_vectors::hash() {
+            let message = [
+                pallas::Base::from_repr(tv.input[0]).unwrap(),
+                pallas::Base::from_repr(tv.input[1]).unwrap(),
+            ];
+
+            let result = Hash::init(OrchardNullifier, ConstantLength).hash(message);
+
+            assert_eq!(result.to_repr(), tv.output);
         }
     }
 }
