@@ -486,9 +486,37 @@ impl<Col: Into<Column<Any>>> From<(Col, Rotation)> for VirtualCell {
     }
 }
 
+/// An individual polynomial constraint.
+///
+/// These are returned by the closures passed to `ConstraintSystem::create_gate`.
+#[derive(Debug)]
+pub struct Constraint<F: Field> {
+    name: &'static str,
+    poly: Expression<F>,
+}
+
+impl<F: Field> From<Expression<F>> for Constraint<F> {
+    fn from(poly: Expression<F>) -> Self {
+        Constraint { name: "", poly }
+    }
+}
+
+impl<F: Field> From<(&'static str, Expression<F>)> for Constraint<F> {
+    fn from((name, poly): (&'static str, Expression<F>)) -> Self {
+        Constraint { name, poly }
+    }
+}
+
+impl<F: Field> From<Expression<F>> for Vec<Constraint<F>> {
+    fn from(poly: Expression<F>) -> Self {
+        vec![Constraint { name: "", poly }]
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct Gate<F: Field> {
     name: &'static str,
+    constraint_names: Vec<&'static str>,
     polys: Vec<Expression<F>>,
     /// We track queried selectors separately from other cells, so that we can use them to
     /// trigger debug checks on gates.
@@ -499,6 +527,10 @@ pub(crate) struct Gate<F: Field> {
 impl<F: Field> Gate<F> {
     pub(crate) fn name(&self) -> &'static str {
         self.name
+    }
+
+    pub(crate) fn constraint_name(&self, constraint_index: usize) -> &'static str {
+        self.constraint_names[constraint_index]
     }
 
     pub(crate) fn polynomials(&self) -> &[Expression<F>] {
@@ -727,18 +759,25 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Create a new gate
-    pub fn create_gate(
+    pub fn create_gate<C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>>(
         &mut self,
         name: &'static str,
-        f: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<Expression<F>>,
+        f: impl FnOnce(&mut VirtualCells<'_, F>) -> Iter,
     ) {
         let mut cells = VirtualCells::new(self);
-        let polys = f(&mut cells);
+        let constraints = f(&mut cells);
         let queried_selectors = cells.queried_selectors;
         let queried_cells = cells.queried_cells;
 
+        let (constraint_names, polys) = constraints
+            .into_iter()
+            .map(|c| c.into())
+            .map(|c| (c.name, c.poly))
+            .unzip();
+
         self.gates.push(Gate {
             name,
+            constraint_names,
             polys,
             queried_selectors,
             queried_cells,

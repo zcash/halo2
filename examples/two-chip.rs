@@ -631,6 +631,7 @@ fn main() {
             gate_index: 0,
             gate_name: "public input",
             constraint_index: 0,
+            constraint_name: "",
             row: 7,
         }])
     );
