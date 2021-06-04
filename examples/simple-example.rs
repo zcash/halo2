@@ -360,9 +360,10 @@ fn main() {
     let prover = MockProver::run(k, &circuit, vec![public_inputs]).unwrap();
     assert_eq!(
         prover.verify(),
-        Err(vec![VerifyFailure::Gate {
+        Err(vec![VerifyFailure::Constraint {
             gate_index: 1,
             gate_name: "public input",
+            constraint_index: 0,
             row: 6,
         }])
     );

@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::convert::TryInto;
+use std::fmt;
 use std::iter;
 
 use ff::Field;
@@ -40,19 +41,25 @@ pub enum VerifyFailure {
         /// `ConstraintSystem::create_gate` is called during `Circuit::configure`.
         gate_index: usize,
         /// The name of the active gate. These are specified by the gate creator (such as
-        /// a chip implementation), and may not be unique.
+        /// a chip implementation), and is not enforced to be unique.
         gate_name: &'static str,
     },
-    /// A gate was not satisfied for a particular row.
-    Gate {
-        /// The index of the gate that is not satisfied. These indices are assigned in the
-        /// order in which `ConstraintSystem::create_gate` is called during
-        /// `Circuit::configure`.
+    /// A constraint was not satisfied for a particular row.
+    Constraint {
+        /// The index of the gate containing the unsatisfied constraint. These indices are
+        /// assigned in the order in which `ConstraintSystem::create_gate` is called
+        /// during `Circuit::configure`.
         gate_index: usize,
-        /// The name of the gate that is not satisfied. These are specified by the gate
-        /// creator (such as a chip implementation), and may not be unique.
+        /// The name of the gate containing the unsatisfied constraint. This is specified
+        /// by the gate creator (such as a chip implementation), and is not enforced to be
+        /// unique.
         gate_name: &'static str,
-        /// The row on which this gate is not satisfied.
+        /// The index of the polynomial constraint within the gate that is not satisfied.
+        /// These indices correspond to the order in which the constraints are returned
+        /// from the closure passed to `ConstraintSystem::create_gate` during
+        /// `Circuit::configure`.
+        constraint_index: usize,
+        /// The row on which this constraint is not satisfied.
         row: usize,
     },
     /// A lookup input did not exist in its corresponding table.
@@ -75,6 +82,51 @@ pub enum VerifyFailure {
         /// The row on which this permutation is not satisfied.
         row: usize,
     },
+}
+
+impl fmt::Display for VerifyFailure {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Cell {
+                column,
+                row,
+                gate_index,
+                gate_name,
+            } => {
+                write!(
+                    f,
+                    "Cell ({:?}, {}) was not assigned to, but it is used by active gate {} ('{}').",
+                    column, row, gate_index, gate_name
+                )
+            }
+            Self::Constraint {
+                gate_index,
+                gate_name,
+                constraint_index,
+                row,
+            } => {
+                write!(
+                    f,
+                    "Constraint {} in gate {} ('{}') is not satisfied on row {}",
+                    constraint_index, gate_index, gate_name, row
+                )
+            }
+            Self::Lookup { lookup_index, row } => {
+                write!(f, "Lookup {} is not satisfied on row {}", lookup_index, row)
+            }
+            Self::Permutation {
+                perm_index,
+                column,
+                row,
+            } => {
+                write!(
+                    f,
+                    "Permutation {} is not satisfied by cell ({:?}, {})",
+                    perm_index, column, row
+                )
+            }
+        }
+    }
 }
 
 /// A test prover for debugging circuits.
@@ -157,9 +209,10 @@ pub enum VerifyFailure {
 /// let prover = MockProver::<Fp>::run(K, &circuit, instance).unwrap();
 /// assert_eq!(
 ///     prover.verify(),
-///     Err(vec![VerifyFailure::Gate {
+///     Err(vec![VerifyFailure::Constraint {
 ///         gate_index: 0,
 ///         gate_name: "R1CS constraint",
+///         constraint_index: 0,
 ///         row: 0
 ///     }])
 /// );
@@ -379,7 +432,8 @@ impl<F: FieldExt> MockProver<F> {
                                     Any::Fixed => {
                                         self.fixed[cell.column.index()][cell_row].is_some()
                                     }
-                                    Any::Instance => unreachable!(),
+                                    // Instance column cells are assigned outside the circuit.
+                                    Any::Instance => true,
                                 } {
                                     None
                                 } else {
@@ -396,62 +450,65 @@ impl<F: FieldExt> MockProver<F> {
             });
 
         // Check that all gates are satisfied for all rows.
-        let gate_errors = self
-            .cs
-            .gates
-            .iter()
-            .enumerate()
-            .flat_map(|(gate_index, gate)| {
-                // We iterate from n..2n so we can just reduce to handle wrapping.
-                (n..(2 * n)).flat_map(move |row| {
-                    fn load_opt<'a, F: FieldExt, T: ColumnType>(
-                        n: i32,
-                        row: i32,
-                        queries: &'a [(Column<T>, Rotation)],
-                        cells: &'a [Vec<Option<F>>],
-                    ) -> impl Fn(usize) -> F + 'a {
-                        move |index| {
-                            let (column, at) = &queries[index];
-                            let resolved_row = (row + at.0) % n;
-                            cell_value(cells[column.index()][resolved_row as usize])
+        let gate_errors =
+            self.cs
+                .gates
+                .iter()
+                .enumerate()
+                .flat_map(|(gate_index, gate)| {
+                    // We iterate from n..2n so we can just reduce to handle wrapping.
+                    (n..(2 * n)).flat_map(move |row| {
+                        fn load_opt<'a, F: FieldExt, T: ColumnType>(
+                            n: i32,
+                            row: i32,
+                            queries: &'a [(Column<T>, Rotation)],
+                            cells: &'a [Vec<Option<F>>],
+                        ) -> impl Fn(usize) -> F + 'a {
+                            move |index| {
+                                let (column, at) = &queries[index];
+                                let resolved_row = (row + at.0) % n;
+                                cell_value(cells[column.index()][resolved_row as usize])
+                            }
                         }
-                    }
 
-                    fn load<'a, F: FieldExt, T: ColumnType>(
-                        n: i32,
-                        row: i32,
-                        queries: &'a [(Column<T>, Rotation)],
-                        cells: &'a [Vec<F>],
-                    ) -> impl Fn(usize) -> F + 'a {
-                        move |index| {
-                            let (column, at) = &queries[index];
-                            let resolved_row = (row + at.0) % n;
-                            cells[column.index()][resolved_row as usize]
+                        fn load<'a, F: FieldExt, T: ColumnType>(
+                            n: i32,
+                            row: i32,
+                            queries: &'a [(Column<T>, Rotation)],
+                            cells: &'a [Vec<F>],
+                        ) -> impl Fn(usize) -> F + 'a {
+                            move |index| {
+                                let (column, at) = &queries[index];
+                                let resolved_row = (row + at.0) % n;
+                                cells[column.index()][resolved_row as usize]
+                            }
                         }
-                    }
 
-                    gate.polynomials().iter().filter_map(move |poly| {
-                        if poly.evaluate(
-                            &|scalar| scalar,
-                            &load_opt(n, row, &self.cs.fixed_queries, &self.fixed),
-                            &load_opt(n, row, &self.cs.advice_queries, &self.advice),
-                            &load(n, row, &self.cs.instance_queries, &self.instance),
-                            &|a, b| a + &b,
-                            &|a, b| a * &b,
-                            &|a, scalar| a * scalar,
-                        ) == F::zero()
-                        {
-                            None
-                        } else {
-                            Some(VerifyFailure::Gate {
-                                gate_index,
-                                gate_name: gate.name(),
-                                row: (row - n) as usize,
-                            })
-                        }
+                        gate.polynomials().iter().enumerate().filter_map(
+                            move |(poly_index, poly)| {
+                                if poly.evaluate(
+                                    &|scalar| scalar,
+                                    &load_opt(n, row, &self.cs.fixed_queries, &self.fixed),
+                                    &load_opt(n, row, &self.cs.advice_queries, &self.advice),
+                                    &load(n, row, &self.cs.instance_queries, &self.instance),
+                                    &|a, b| a + &b,
+                                    &|a, b| a * &b,
+                                    &|a, scalar| a * scalar,
+                                ) == F::zero()
+                                {
+                                    None
+                                } else {
+                                    Some(VerifyFailure::Constraint {
+                                        gate_index,
+                                        gate_name: gate.name(),
+                                        constraint_index: poly_index,
+                                        row: (row - n) as usize,
+                                    })
+                                }
+                            },
+                        )
                     })
-                })
-            });
+                });
 
         // Check that all lookups exist in their respective tables.
         let lookup_errors =
