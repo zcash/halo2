@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::convert::TryInto;
+use std::fmt;
 use std::iter;
 
 use ff::Field;
@@ -80,6 +81,51 @@ pub enum VerifyFailure {
         /// The row on which this permutation is not satisfied.
         row: usize,
     },
+}
+
+impl fmt::Display for VerifyFailure {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Cell {
+                column,
+                row,
+                gate_index,
+                gate_name,
+            } => {
+                write!(
+                    f,
+                    "Cell ({:?}, {}) was not assigned to, but it is used by active gate {} ('{}').",
+                    column, row, gate_index, gate_name
+                )
+            }
+            Self::Constraint {
+                gate_index,
+                gate_name,
+                constraint_index,
+                row,
+            } => {
+                write!(
+                    f,
+                    "Constraint {} in gate {} ('{}') is not satisfied on row {}",
+                    constraint_index, gate_index, gate_name, row
+                )
+            }
+            Self::Lookup { lookup_index, row } => {
+                write!(f, "Lookup {} is not satisfied on row {}", lookup_index, row)
+            }
+            Self::Permutation {
+                perm_index,
+                column,
+                row,
+            } => {
+                write!(
+                    f,
+                    "Permutation {} is not satisfied by cell ({:?}, {})",
+                    perm_index, column, row
+                )
+            }
+        }
+    }
 }
 
 /// A test prover for debugging circuits.
