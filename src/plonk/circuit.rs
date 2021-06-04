@@ -147,7 +147,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// meta.create_gate("foo", |meta| {
 ///     let a = meta.query_advice(a, Rotation::prev());
 ///     let b = meta.query_advice(b, Rotation::cur());
-///     let s = meta.query_selector(s, Rotation::cur());
+///     let s = meta.query_selector(s);
 ///
 ///     // On rows where the selector is enabled, a is constrained to equal b.
 ///     // On rows where the selector is disabled, a and b can take any value.
@@ -492,7 +492,7 @@ pub(crate) struct Gate<F: Field> {
     polys: Vec<Expression<F>>,
     /// We track queried selectors separately from other cells, so that we can use them to
     /// trigger debug checks on gates.
-    queried_selectors: Vec<VirtualCell>,
+    queried_selectors: Vec<Selector>,
     queried_cells: Vec<VirtualCell>,
 }
 
@@ -505,7 +505,7 @@ impl<F: Field> Gate<F> {
         &self.polys
     }
 
-    pub(crate) fn queried_selectors(&self) -> &[VirtualCell] {
+    pub(crate) fn queried_selectors(&self) -> &[Selector] {
         &self.queried_selectors
     }
 
@@ -825,7 +825,7 @@ impl<F: Field> ConstraintSystem<F> {
 #[derive(Debug)]
 pub struct VirtualCells<'a, F: Field> {
     meta: &'a mut ConstraintSystem<F>,
-    queried_selectors: Vec<VirtualCell>,
+    queried_selectors: Vec<Selector>,
     queried_cells: Vec<VirtualCell>,
 }
 
@@ -838,10 +838,11 @@ impl<'a, F: Field> VirtualCells<'a, F> {
         }
     }
 
-    /// Query a selector at a relative position.
-    pub fn query_selector(&mut self, selector: Selector, at: Rotation) -> Expression<F> {
-        self.queried_selectors.push((selector.0, at).into());
-        Expression::Fixed(self.meta.query_fixed_index(selector.0, at))
+    /// Query a selector at the current position.
+    pub fn query_selector(&mut self, selector: Selector) -> Expression<F> {
+        // Selectors are always queried at the current row.
+        self.queried_selectors.push(selector);
+        Expression::Fixed(self.meta.query_fixed_index(selector.0, Rotation::cur()))
     }
 
     /// Query a fixed column at a relative position

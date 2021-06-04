@@ -179,7 +179,7 @@ impl<F: FieldExt> AddChip<F> {
             let lhs = meta.query_advice(advice[0], Rotation::cur());
             let rhs = meta.query_advice(advice[1], Rotation::cur());
             let out = meta.query_advice(advice[0], Rotation::next());
-            let s_add = meta.query_selector(s_add, Rotation::cur());
+            let s_add = meta.query_selector(s_add);
 
             vec![s_add * (lhs + rhs + out * -F::one())]
         });
@@ -317,7 +317,7 @@ impl<F: FieldExt> MulChip<F> {
             let lhs = meta.query_advice(advice[0], Rotation::cur());
             let rhs = meta.query_advice(advice[1], Rotation::cur());
             let out = meta.query_advice(advice[0], Rotation::next());
-            let s_mul = meta.query_selector(s_mul, Rotation::cur());
+            let s_mul = meta.query_selector(s_mul);
 
             // The polynomial expression returned from `create_gate` will be
             // constrained by the proving system to equal zero. Our expression
@@ -455,7 +455,7 @@ impl<F: FieldExt> FieldChip<F> {
             // column for exposing numbers as public inputs.
             let a = meta.query_advice(advice[1], Rotation::cur());
             let p = meta.query_instance(instance, Rotation::cur());
-            let s = meta.query_selector(s_pub, Rotation::cur());
+            let s = meta.query_selector(s_pub);
 
             // We simply constrain the advice cell to be equal to the instance cell,
             // when the selector is enabled.

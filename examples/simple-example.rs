@@ -108,7 +108,7 @@ impl<F: FieldExt> FieldChip<F> {
             let lhs = meta.query_advice(advice[0], Rotation::cur());
             let rhs = meta.query_advice(advice[1], Rotation::cur());
             let out = meta.query_advice(advice[0], Rotation::next());
-            let s_mul = meta.query_selector(s_mul, Rotation::cur());
+            let s_mul = meta.query_selector(s_mul);
 
             // Finally, we return the polynomial expressions that constrain this gate.
             // For our multiplication gate, we only need a single polynomial constraint.
@@ -127,7 +127,7 @@ impl<F: FieldExt> FieldChip<F> {
             // column for exposing numbers as public inputs.
             let a = meta.query_advice(advice[1], Rotation::cur());
             let p = meta.query_instance(instance, Rotation::cur());
-            let s = meta.query_selector(s_pub, Rotation::cur());
+            let s = meta.query_selector(s_pub);
 
             // We simply constrain the advice cell to be equal to the instance cell,
             // when the selector is enabled.
