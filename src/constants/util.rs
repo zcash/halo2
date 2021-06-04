@@ -1,4 +1,4 @@
-use ff::PrimeField;
+use ff::PrimeFieldBits;
 use halo2::arithmetic::{CurveAffine, FieldExt};
 
 /// Decompose a scalar into `window_num_bits` bits (little-endian)
@@ -9,8 +9,8 @@ use halo2::arithmetic::{CurveAffine, FieldExt};
 ///
 /// We are returning a `Vec<u8>` which means the window size is limited to
 /// <= 8 bits.
-pub fn decompose_scalar_fixed<C: CurveAffine>(
-    scalar: C::Scalar,
+pub fn decompose_scalar_fixed<F: PrimeFieldBits>(
+    scalar: F,
     scalar_num_bits: usize,
     window_num_bits: usize,
 ) -> Vec<u8> {
@@ -65,7 +65,7 @@ mod tests {
             window_num_bits in 1u8..9
         ) {
             // Get decomposition into `window_num_bits` bits
-            let decomposed = decompose_scalar_fixed::<pallas::Affine>(scalar, pallas::Scalar::NUM_BITS as usize, window_num_bits as usize);
+            let decomposed = decompose_scalar_fixed(scalar, pallas::Scalar::NUM_BITS as usize, window_num_bits as usize);
 
             // Flatten bits
             let bits = decomposed

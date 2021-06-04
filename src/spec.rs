@@ -3,7 +3,7 @@
 use std::iter;
 use std::ops::Deref;
 
-use ff::{Field, PrimeField};
+use ff::{Field, PrimeField, PrimeFieldBits};
 use group::{Curve, Group};
 use halo2::arithmetic::{CurveAffine, CurveExt, FieldExt};
 use pasta_curves::pallas;

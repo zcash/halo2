@@ -1,7 +1,7 @@
 use std::iter;
 
 use bitvec::{array::BitArray, order::Lsb0};
-use ff::PrimeField;
+use ff::PrimeFieldBits;
 use pasta_curves::{arithmetic::FieldExt, pallas};
 use subtle::CtOption;
 
