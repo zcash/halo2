@@ -21,11 +21,12 @@ rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 [dependencies]
 aes = "0.6"
 arrayvec = "0.7.0"
-bitvec = "0.20"
+bitvec = "0.22"
 blake2b_simd = "0.5"
-ff = "0.9"
+ff = "0.10"
 fpe = "0.4"
-group = "0.9"
+group = "0.10"
+pasta_curves = "0.1"
 proptest = { version = "1.0.0", optional = true }
 rand = "0.8"
 nonempty = "0.6"
@@ -36,15 +37,11 @@ plotters = { version = "0.3.0", optional = true }
 
 [dependencies.halo2]
 git = "https://github.com/zcash/halo2.git"
-rev = "0448584333c1e262e4a7dbaefa6fdd896bdaaefb"
-
-[dependencies.pasta_curves]
-git = "https://github.com/zcash/pasta_curves.git"
-rev = "b55a6960dfafd7f767e2820ddf1adaa499322f98"
+rev = "32cdcfa66fbc4ca3103115518d374f4cfe6c3b7a"
 
 [dependencies.reddsa]
 git = "https://github.com/str4d/redjubjub.git"
-rev = "daab5355bf8e85289aa37804656bf85182df9eea"
+rev = "d5d8c5f3bb704bad8ae88fe4a29ae1f744774cb2"
 
 [dev-dependencies]
 criterion = "0.3"
