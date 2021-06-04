@@ -59,7 +59,7 @@ pub enum VerifyFailure {
         /// `Circuit::configure`.
         constraint_index: usize,
         /// The name of the unsatisfied constraint. This is specified by the gate creator
-        /// (such as a chip implementation), and may not be unique.
+        /// (such as a chip implementation), and is not enforced to be unique.
         constraint_name: &'static str,
         /// The row on which this constraint is not satisfied.
         row: usize,
