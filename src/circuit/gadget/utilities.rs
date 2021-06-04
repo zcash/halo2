@@ -5,6 +5,7 @@ use halo2::{
 use pasta_curves::arithmetic::FieldExt;
 
 mod cond_swap;
+mod enable_flag;
 mod plonk;
 
 /// A variable representing a number.
