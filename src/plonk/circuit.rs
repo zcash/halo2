@@ -758,22 +758,32 @@ impl<F: Field> ConstraintSystem<F> {
         }
     }
 
-    /// Create a new gate
+    /// Creates a new gate.
+    ///
+    /// # Panics
+    ///
+    /// A gate is required to contain polynomial constraints. This method will panic if
+    /// `constraints` returns an empty iterator.
     pub fn create_gate<C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>>(
         &mut self,
         name: &'static str,
-        f: impl FnOnce(&mut VirtualCells<'_, F>) -> Iter,
+        constraints: impl FnOnce(&mut VirtualCells<'_, F>) -> Iter,
     ) {
         let mut cells = VirtualCells::new(self);
-        let constraints = f(&mut cells);
+        let constraints = constraints(&mut cells);
         let queried_selectors = cells.queried_selectors;
         let queried_cells = cells.queried_cells;
 
-        let (constraint_names, polys) = constraints
+        let (constraint_names, polys): (_, Vec<_>) = constraints
             .into_iter()
             .map(|c| c.into())
             .map(|c| (c.name, c.poly))
             .unzip();
+
+        assert!(
+            !polys.is_empty(),
+            "Gates must contain at least one constraint."
+        );
 
         self.gates.push(Gate {
             name,
