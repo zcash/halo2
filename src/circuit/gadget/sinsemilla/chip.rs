@@ -72,6 +72,13 @@ pub struct SinsemillaConfig {
     pub(super) lookup_config_4: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
 }
 
+impl SinsemillaConfig {
+    /// Returns an array of all advice columns in this config, in arbitrary order.
+    pub(super) fn advices(&self) -> [Column<Advice>; 5] {
+        [self.x_a, self.x_p, self.bits, self.lambda_1, self.lambda_2]
+    }
+}
+
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct SinsemillaChip {
     config: SinsemillaConfig,
