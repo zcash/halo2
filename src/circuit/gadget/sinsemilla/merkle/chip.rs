@@ -51,3 +51,106 @@ impl Chip<pallas::Base> for MerkleChip {
         &()
     }
 }
+
+impl UtilitiesInstructions<pallas::Base> for MerkleChip {
+    type Var = CellValue<pallas::Base>;
+}
+
+impl CondSwapInstructions<pallas::Base> for MerkleChip {
+    #[allow(clippy::type_complexity)]
+    fn swap(
+        &self,
+        layouter: impl Layouter<pallas::Base>,
+        pair: (Self::Var, Option<pallas::Base>),
+        swap: Option<bool>,
+    ) -> Result<(Self::Var, Self::Var), Error> {
+        let config = self.config().cond_swap_config.clone();
+        let chip = CondSwapChip::<pallas::Base>::construct(config);
+        chip.swap(layouter, pair, swap)
+    }
+}
+
+impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }> for MerkleChip {
+    type CellValue = <SinsemillaChip as SinsemillaInstructions<
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    >>::CellValue;
+
+    type Message = <SinsemillaChip as SinsemillaInstructions<
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    >>::Message;
+    type MessagePiece = <SinsemillaChip as SinsemillaInstructions<
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    >>::MessagePiece;
+
+    type X = <SinsemillaChip as SinsemillaInstructions<
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    >>::X;
+    type Point = <SinsemillaChip as SinsemillaInstructions<
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    >>::Point;
+
+    type HashDomains = <SinsemillaChip as SinsemillaInstructions<
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    >>::HashDomains;
+
+    fn witness_message_piece(
+        &self,
+        layouter: impl Layouter<pallas::Base>,
+        value: Option<pallas::Base>,
+        num_words: usize,
+    ) -> Result<Self::MessagePiece, Error> {
+        let config = self.config().sinsemilla_config.clone();
+        let chip = SinsemillaChip::construct(config);
+        chip.witness_message_piece(layouter, value, num_words)
+    }
+
+    #[allow(non_snake_case)]
+    #[allow(clippy::type_complexity)]
+    fn hash_to_point(
+        &self,
+        layouter: impl Layouter<pallas::Base>,
+        Q: pallas::Affine,
+        message: Self::Message,
+    ) -> Result<(Self::Point, Vec<Vec<Self::CellValue>>), Error> {
+        let config = self.config().sinsemilla_config.clone();
+        let chip = SinsemillaChip::construct(config);
+        chip.hash_to_point(layouter, Q, message)
+    }
+
+    fn extract(point: &Self::Point) -> Self::X {
+        SinsemillaChip::extract(point)
+    }
+}
+
+fn bitrange_subset(field_elem: pallas::Base, bitrange: std::ops::Range<usize>) -> pallas::Base {
+    let bits = &field_elem
+        .to_le_bits()
+        .iter()
+        .by_val()
+        .take(pallas::Base::NUM_BITS as usize)
+        .collect::<Vec<_>>()[bitrange];
+    let bits: Vec<bool> = bits
+        .iter()
+        .cloned()
+        .chain(std::iter::repeat(false))
+        .take(256)
+        .collect();
+    let bytearray: Vec<u8> = bits
+        .chunks_exact(8)
+        .map(|byte| byte.iter().rev().fold(0u8, |acc, bit| acc * 2 + *bit as u8))
+        .collect();
+
+    pallas::Base::from_bytes(&bytearray.try_into().unwrap()).unwrap()
+}
