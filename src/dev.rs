@@ -379,7 +379,8 @@ impl<F: FieldExt> MockProver<F> {
                                     Any::Fixed => {
                                         self.fixed[cell.column.index()][cell_row].is_some()
                                     }
-                                    Any::Instance => unreachable!(),
+                                    // Instance column cells are assigned outside the circuit.
+                                    Any::Instance => true,
                                 } {
                                     None
                                 } else {
