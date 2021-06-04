@@ -41,7 +41,7 @@ pub enum VerifyFailure {
         /// `ConstraintSystem::create_gate` is called during `Circuit::configure`.
         gate_index: usize,
         /// The name of the active gate. These are specified by the gate creator (such as
-        /// a chip implementation), and may not be unique.
+        /// a chip implementation), and is not enforced to be unique.
         gate_name: &'static str,
     },
     /// A constraint was not satisfied for a particular row.
@@ -51,7 +51,8 @@ pub enum VerifyFailure {
         /// during `Circuit::configure`.
         gate_index: usize,
         /// The name of the gate containing the unsatisfied constraint. This is specified
-        /// by the gate creator (such as a chip implementation), and may not be unique.
+        /// by the gate creator (such as a chip implementation), and is not enforced to be
+        /// unique.
         gate_name: &'static str,
         /// The index of the polynomial constraint within the gate that is not satisfied.
         /// These indices correspond to the order in which the constraints are returned
