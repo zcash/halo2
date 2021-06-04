@@ -61,10 +61,11 @@ impl Nullifier {
 /// Generators for property testing.
 #[cfg(any(test, feature = "test-dependencies"))]
 pub mod testing {
+    use group::Group;
+    use pasta_curves::{arithmetic::FieldExt, pallas};
+    use proptest::collection::vec;
     use proptest::prelude::*;
-
-    use group::GroupEncoding;
-    use pasta_curves::pallas;
+    use std::convert::TryFrom;
 
     use super::Nullifier;
     use crate::spec::extract_p;
@@ -72,12 +73,10 @@ pub mod testing {
     prop_compose! {
         /// Generate a uniformly distributed nullifier value.
         pub fn arb_nullifier()(
-            coord in prop::array::uniform32(any::<u8>()).prop_map(|b| pallas::Point::from_bytes(&b)).prop_filter(
-                "Must generate a valid Pallas point",
-                |p| p.is_some().into()
-            )
+            bytes in vec(any::<u8>(), 64)
         ) -> Nullifier {
-            Nullifier(extract_p(&coord.unwrap()))
+            let point = pallas::Point::generator() * pallas::Scalar::from_bytes_wide(&<[u8; 64]>::try_from(bytes).unwrap());
+            Nullifier(extract_p(&point))
         }
     }
 }
