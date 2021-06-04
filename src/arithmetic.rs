@@ -11,7 +11,8 @@ pub use pasta_curves::arithmetic::*;
 /// field elements to be inverted in a batch.
 pub trait BatchInvert<F: Field> {
     /// Consume this iterator and invert each field element (when nonzero),
-    /// returning the inverse of all nonzero field elements.
+    /// returning the inverse of all nonzero field elements. Zero elements
+    /// are left as zero.
     fn batch_invert(self) -> F;
 }
 
