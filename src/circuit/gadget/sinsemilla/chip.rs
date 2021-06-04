@@ -61,7 +61,7 @@ pub struct SinsemillaConfig {
     /// Fixed column shared by the whole circuit. This is used to load the
     /// x-coordinate of the domain $Q$, which is then constrained to equal the
     /// initial $x_a$.
-    constants: Column<Fixed>,
+    pub(super) constants: Column<Fixed>,
     /// Permutation over all advice columns and the `constants` fixed column.
     pub(super) perm: Permutation,
     /// Configure each advice column to be able to perform lookup range checks.
