@@ -10,6 +10,7 @@ use halo2::{
 pub mod commit_ivk_r;
 pub mod note_commit_r;
 pub mod nullifier_k;
+pub mod spend_auth_g;
 pub mod value_commit_r;
 pub mod value_commit_v;
 
@@ -72,6 +73,9 @@ pub struct ValueCommitR<C: CurveAffine>(pub OrchardFixedBase<C>);
 
 #[derive(Copy, Clone, Debug)]
 pub struct ValueCommitV<C: CurveAffine>(pub OrchardFixedBase<C>);
+
+#[derive(Copy, Clone, Debug)]
+pub struct SpendAuthG<C: CurveAffine>(pub OrchardFixedBase<C>);
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct OrchardFixedBase<C: CurveAffine>(C);
@@ -282,7 +286,7 @@ impl<C: CurveAffine> TestFixedBase<C> for OrchardFixedBase<C> {
         for ((u, z), window_points) in u.iter().zip(z.iter()).zip(window_table) {
             for (u, point) in u.iter().zip(window_points.iter()) {
                 let y = *point.coordinates().unwrap().y();
-                let u = C::Base::from_bytes(&u).unwrap();
+                let u = C::Base::from_bytes(u).unwrap();
                 assert_eq!(C::Base::from_u64(*z) + y, u * u); // allow either square root
                 assert!(bool::from((C::Base::from_u64(*z) - y).sqrt().is_none()));
             }
