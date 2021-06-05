@@ -9,6 +9,8 @@ use halo2::{
     plonk::Error,
 };
 
+pub mod chip;
+
 /// The set of circuit instructions required to use the ECC gadgets.
 pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     /// Variable representing an element of the elliptic curve's base field, that
