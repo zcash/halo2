@@ -1,4 +1,3 @@
-use super::{OrchardFixedBase, ValueCommitV};
 use halo2::arithmetic::{CurveAffine, FieldExt};
 
 /// The value commitment is used to check balance between inputs and outputs. The value is
@@ -772,19 +771,19 @@ pub const U_SHORT: [[[u8; 32]; super::H]; super::NUM_WINDOWS_SHORT] = [
     ],
 ];
 
-pub fn generator<C: CurveAffine>() -> ValueCommitV<C> {
-    ValueCommitV(OrchardFixedBase::<C>::new(
-        C::from_xy(
-            C::Base::from_bytes(&GENERATOR.0).unwrap(),
-            C::Base::from_bytes(&GENERATOR.1).unwrap(),
-        )
-        .unwrap(),
-    ))
+pub fn generator<C: CurveAffine>() -> C {
+    C::from_xy(
+        C::Base::from_bytes(&GENERATOR.0).unwrap(),
+        C::Base::from_bytes(&GENERATOR.1).unwrap(),
+    )
+    .unwrap()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::{TestFixedBase, NUM_WINDOWS_SHORT, VALUE_COMMITMENT_PERSONALIZATION};
+    use super::super::{
+        test_lagrange_coeffs, test_zs_and_us, NUM_WINDOWS_SHORT, VALUE_COMMITMENT_PERSONALIZATION,
+    };
     use super::*;
     use group::Curve;
     use halo2::{
@@ -805,12 +804,12 @@ mod tests {
     #[test]
     fn lagrange_coeffs_short() {
         let base = super::generator::<pallas::Affine>();
-        base.0.test_lagrange_coeffs(NUM_WINDOWS_SHORT);
+        test_lagrange_coeffs(base, NUM_WINDOWS_SHORT);
     }
 
     #[test]
     fn z_short() {
         let base = super::generator::<pallas::Affine>();
-        base.0.test_zs_and_us(&Z_SHORT, &U_SHORT, NUM_WINDOWS_SHORT);
+        test_zs_and_us(base, &Z_SHORT, &U_SHORT, NUM_WINDOWS_SHORT);
     }
 }
