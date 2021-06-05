@@ -1,6 +1,6 @@
 use super::{copy, CellValue, UtilitiesInstructions};
 use halo2::{
-    circuit::{Cell, Chip, Layouter},
+    circuit::{Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Permutation, Selector},
     poly::Rotation,
 };
@@ -11,9 +11,7 @@ pub trait CondSwapInstructions<F: FieldExt>: UtilitiesInstructions<F> {
     /// Variable representing cell with a certain value in the circuit.
     type Var;
 
-    /// Variable representing a `swap` boolean flag.
-    type Swap: From<<Self as CondSwapInstructions<F>>::Var>;
-
+    #[allow(clippy::type_complexity)]
     /// Given an input pair (x,y) and a `swap` boolean flag, return
     /// (y,x) if `swap` is set, else (x,y) if `swap` is not set.
     fn swap(
@@ -23,7 +21,7 @@ pub trait CondSwapInstructions<F: FieldExt>: UtilitiesInstructions<F> {
             <Self as CondSwapInstructions<F>>::Var,
             <Self as CondSwapInstructions<F>>::Var,
         ),
-        swap: Self::Swap,
+        swap: Option<bool>,
     ) -> Result<
         (
             <Self as CondSwapInstructions<F>>::Var,
@@ -55,40 +53,13 @@ impl<F: FieldExt> Chip<F> for CondSwapChip<F> {
 
 #[derive(Clone, Debug)]
 pub struct CondSwapConfig {
-    q_swap: Selector,
-    x: Column<Advice>,
-    y: Column<Advice>,
-    x_swapped: Column<Advice>,
-    y_swapped: Column<Advice>,
-    swap: Column<Advice>,
-    perm: Permutation,
-}
-
-/// A variable representing a `swap` boolean flag.
-#[derive(Copy, Clone)]
-pub struct Swap {
-    cell: Cell,
-    value: Option<bool>,
-}
-
-impl<F: FieldExt> From<CellValue<F>> for Swap {
-    fn from(var: CellValue<F>) -> Self {
-        let value = var.value.map(|value| {
-            let zero = value == F::zero();
-            let one = value == F::one();
-            if zero {
-                false
-            } else if one {
-                true
-            } else {
-                panic!("Value must be boolean.")
-            }
-        });
-        Swap {
-            cell: var.cell,
-            value,
-        }
-    }
+    pub q_swap: Selector,
+    pub x: Column<Advice>,
+    pub y: Column<Advice>,
+    pub x_swapped: Column<Advice>,
+    pub y_swapped: Column<Advice>,
+    pub swap: Column<Advice>,
+    pub perm: Permutation,
 }
 
 impl<F: FieldExt> UtilitiesInstructions<F> for CondSwapChip<F> {
@@ -97,8 +68,8 @@ impl<F: FieldExt> UtilitiesInstructions<F> for CondSwapChip<F> {
 
 impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
     type Var = CellValue<F>;
-    type Swap = Swap;
 
+    #[allow(clippy::type_complexity)]
     fn swap(
         &self,
         mut layouter: impl Layouter<F>,
@@ -106,7 +77,7 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
             <Self as CondSwapInstructions<F>>::Var,
             <Self as CondSwapInstructions<F>>::Var,
         ),
-        swap: Self::Swap,
+        swap: Option<bool>,
     ) -> Result<
         (
             <Self as CondSwapInstructions<F>>::Var,
@@ -128,27 +99,22 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                 // Copy in `y` value
                 let y = copy(&mut region, || "copy y", config.y, 0, &pair.1, &config.perm)?;
 
-                // Copy in `swap` value
-                let swap_val = swap.value;
-                let swap_cell = region.assign_advice(
+                // Witness `swap` value
+                let swap_val = swap.map(|swap| F::from_u64(swap as u64));
+                region.assign_advice(
                     || "swap",
                     config.swap,
                     0,
-                    || {
-                        swap_val
-                            .map(|swap| F::from_u64(swap as u64))
-                            .ok_or(Error::SynthesisError)
-                    },
+                    || swap_val.ok_or(Error::SynthesisError),
                 )?;
-                region.constrain_equal(&config.perm, swap_cell, swap.cell)?;
 
                 // Conditionally swap x
                 let x_swapped = {
-                    let x_swapped =
-                        x.value
-                            .zip(y.value)
-                            .zip(swap_val)
-                            .map(|((x, y), swap)| if swap { y } else { x });
+                    let x_swapped = x
+                        .value
+                        .zip(y.value)
+                        .zip(swap)
+                        .map(|((x, y), swap)| if swap { y } else { x });
                     let x_swapped_cell = region.assign_advice(
                         || "x_swapped",
                         config.x_swapped,
@@ -163,11 +129,11 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
 
                 // Conditionally swap y
                 let y_swapped = {
-                    let y_swapped =
-                        x.value
-                            .zip(y.value)
-                            .zip(swap_val)
-                            .map(|((x, y), swap)| if swap { x } else { y });
+                    let y_swapped = x
+                        .value
+                        .zip(y.value)
+                        .zip(swap)
+                        .map(|((x, y), swap)| if swap { x } else { y });
                     let y_swapped_cell = region.assign_advice(
                         || "y_swapped",
                         config.y_swapped,
@@ -266,7 +232,7 @@ mod tests {
         struct MyCircuit<F: FieldExt> {
             x: Option<F>,
             y: Option<F>,
-            swap: Option<F>,
+            swap: Option<bool>,
         }
 
         impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
@@ -302,15 +268,12 @@ mod tests {
                 // Load the pair and the swap flag into the circuit.
                 let x = chip.load_private(layouter.namespace(|| "x"), config.x, self.x)?;
                 let y = chip.load_private(layouter.namespace(|| "y"), config.y, self.y)?;
-                let swap =
-                    chip.load_private(layouter.namespace(|| "swap"), config.swap, self.swap)?;
-
                 // Return the swapped pair.
                 let swapped_pair =
-                    chip.swap(layouter.namespace(|| "swap"), (x, y).into(), swap.into())?;
+                    chip.swap(layouter.namespace(|| "swap"), (x, y).into(), self.swap)?;
 
                 if let Some(swap) = self.swap {
-                    if swap == F::one() {
+                    if swap {
                         // Check that `x` and `y` have been swapped
                         assert_eq!(swapped_pair.0.value.unwrap(), y.value.unwrap());
                         assert_eq!(swapped_pair.1.value.unwrap(), x.value.unwrap());
@@ -330,7 +293,7 @@ mod tests {
             let circuit: MyCircuit<Base> = MyCircuit {
                 x: Some(Base::rand()),
                 y: Some(Base::rand()),
-                swap: Some(Base::one()),
+                swap: Some(true),
             };
             let prover = match MockProver::<Base>::run(3, &circuit, vec![]) {
                 Ok(prover) => prover,
@@ -344,7 +307,7 @@ mod tests {
             let circuit: MyCircuit<Base> = MyCircuit {
                 x: Some(Base::rand()),
                 y: Some(Base::rand()),
-                swap: Some(Base::zero()),
+                swap: Some(false),
             };
             let prover = match MockProver::<Base>::run(3, &circuit, vec![]) {
                 Ok(prover) => prover,
