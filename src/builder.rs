@@ -613,12 +613,12 @@ mod tests {
         builder
             .add_recipient(None, recipient, NoteValue::from_raw(5000), None)
             .unwrap();
-        let bundle: Bundle<Authorized, i64> = dbg!(builder
+        let bundle: Bundle<Authorized, i64> = builder
             .build(&mut rng, &pk)
             .unwrap()
-            .prepare(&mut rng, [0; 32]))
-        .finalize()
-        .unwrap();
+            .prepare(&mut rng, [0; 32])
+            .finalize()
+            .unwrap();
         assert_eq!(bundle.value_balance(), &(-5000))
     }
 }
