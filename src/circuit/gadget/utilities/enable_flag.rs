@@ -108,7 +108,7 @@ impl<F: FieldExt> EnableFlagChip<F> {
         };
 
         meta.create_gate("Enable flag", |meta| {
-            let q_enable = meta.query_selector(config.q_enable, Rotation::cur());
+            let q_enable = meta.query_selector(config.q_enable);
             let value = meta.query_advice(config.value, Rotation::cur());
             let enable_flag = meta.query_advice(config.enable_flag, Rotation::cur());
 
@@ -218,9 +218,11 @@ mod tests {
             let prover = MockProver::<Base>::run(1, &circuit, vec![]).unwrap();
             assert_eq!(
                 prover.verify(),
-                Err(vec![VerifyFailure::Gate {
+                Err(vec![VerifyFailure::Constraint {
                     gate_index: 0,
                     gate_name: "Enable flag",
+                    constraint_index: 0,
+                    constraint_name: "",
                     row: 1,
                 }])
             );

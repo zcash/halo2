@@ -37,7 +37,7 @@ plotters = { version = "0.3.0", optional = true }
 
 [dependencies.halo2]
 git = "https://github.com/zcash/halo2.git"
-rev = "32cdcfa66fbc4ca3103115518d374f4cfe6c3b7a"
+rev = "d8e4f24df44da94ab5cacbc531517e2b63fe45ee"
 
 [dependencies.reddsa]
 git = "https://github.com/str4d/redjubjub.git"
