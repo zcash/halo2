@@ -40,6 +40,15 @@ impl<T: SigType> TryFrom<[u8; 32]> for SigningKey<T> {
     }
 }
 
+impl SigningKey<SpendAuth> {
+    /// Randomizes this signing key with the given `randomizer`.
+    ///
+    /// Randomization is only supported for `SpendAuth` keys.
+    pub fn randomize(&self, randomizer: &pallas::Scalar) -> Self {
+        SigningKey(self.0.randomize(randomizer))
+    }
+}
+
 impl<T: SigType> SigningKey<T> {
     /// Creates a signature of type `T` on `msg` using this `SigningKey`.
     pub fn sign<R: RngCore + CryptoRng>(&self, rng: R, msg: &[u8]) -> Signature<T> {

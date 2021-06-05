@@ -154,7 +154,7 @@ impl ActionInfo {
                 cv_net,
                 SigningMetadata {
                     dummy_ask: self.spend.dummy_sk.as_ref().map(SpendAuthorizingKey::from),
-                    ak,
+                    parts: SigningParts { ak, alpha },
                 },
             ),
             Circuit {},
@@ -325,6 +325,16 @@ impl Builder {
     }
 }
 
+/// The parts needed to sign an [`Action`].
+#[derive(Debug)]
+pub struct SigningParts {
+    /// The spend validating key for this action. Used to match spend authorizing keys to
+    /// actions they can create signatures for.
+    ak: SpendValidatingKey,
+    /// The randomization needed to derive the actual signing key for this note.
+    alpha: pallas::Scalar,
+}
+
 /// Marker for an unauthorized bundle, with a proof but no signatures.
 #[derive(Debug)]
 pub struct Unauthorized {
@@ -345,9 +355,7 @@ pub struct SigningMetadata {
     /// These keys are used automatically in [`Bundle<Unauthorized>::prepare`] or
     /// [`Bundle<Unauthorized>::apply_signatures`] to sign dummy spends.
     dummy_ask: Option<SpendAuthorizingKey>,
-    /// The spend validating key for this action. Used to match spend authorizing keys to
-    /// actions they can create signatures for.
-    ak: SpendValidatingKey,
+    parts: SigningParts,
 }
 
 /// Marker for a partially-authorized bundle, in the process of being signed.
@@ -359,7 +367,27 @@ pub struct PartiallyAuthorized {
 }
 
 impl Authorization for PartiallyAuthorized {
-    type SpendAuth = (Option<redpallas::Signature<SpendAuth>>, SpendValidatingKey);
+    type SpendAuth = MaybeSigned;
+}
+
+/// A heisen[`Signature`] for a particular [`Action`].
+///
+/// [`Signature`]: redpallas::Signature
+#[derive(Debug)]
+pub enum MaybeSigned {
+    /// The information needed to sign this [`Action`].
+    SigningMetadata(SigningParts),
+    /// The signature for this [`Action`].
+    Signature(redpallas::Signature<SpendAuth>),
+}
+
+impl MaybeSigned {
+    fn finalize(self) -> Result<redpallas::Signature<SpendAuth>, Error> {
+        match self {
+            Self::Signature(sig) => Ok(sig),
+            _ => Err(Error::MissingSignatures),
+        }
+    }
 }
 
 impl<V> Bundle<Unauthorized, V> {
@@ -373,12 +401,12 @@ impl<V> Bundle<Unauthorized, V> {
     ) -> Bundle<PartiallyAuthorized, V> {
         self.authorize(
             &mut rng,
-            |rng, _, SigningMetadata { dummy_ask, ak }| {
-                (
-                    // We can create signatures for dummy spends immediately.
-                    dummy_ask.map(|ask| ask.sign(rng, &sighash)),
-                    ak,
-                )
+            |rng, _, SigningMetadata { dummy_ask, parts }| {
+                // We can create signatures for dummy spends immediately.
+                dummy_ask
+                    .map(|ask| ask.randomize(&parts.alpha).sign(rng, &sighash))
+                    .map(MaybeSigned::Signature)
+                    .unwrap_or(MaybeSigned::SigningMetadata(parts))
             },
             |rng, unauth| PartiallyAuthorized {
                 proof: unauth.proof,
@@ -412,17 +440,11 @@ impl<V> Bundle<PartiallyAuthorized, V> {
         let expected_ak = ask.into();
         self.authorize(
             &mut rng,
-            |rng, partial, (sig, ak)| {
-                (
-                    sig.or_else(|| {
-                        if ak == expected_ak {
-                            Some(ask.sign(rng, &partial.sighash))
-                        } else {
-                            None
-                        }
-                    }),
-                    ak,
-                )
+            |rng, partial, maybe| match maybe {
+                MaybeSigned::SigningMetadata(parts) if parts.ak == expected_ak => {
+                    MaybeSigned::Signature(ask.randomize(&parts.alpha).sign(rng, &partial.sighash))
+                }
+                s => s,
             },
             |_, partial| partial,
         )
@@ -434,10 +456,7 @@ impl<V> Bundle<PartiallyAuthorized, V> {
     pub fn finalize(self) -> Result<Bundle<Authorized, V>, Error> {
         self.try_authorize(
             &mut (),
-            |_, _, (sig, _)| match sig {
-                Some(sig) => Ok(sig),
-                None => Err(Error::MissingSignatures),
-            },
+            |_, _, maybe| maybe.finalize(),
             |_, partial| {
                 Ok(Authorized::from_parts(
                     partial.proof,
