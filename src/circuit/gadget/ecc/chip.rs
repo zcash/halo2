@@ -15,7 +15,7 @@ pub(super) mod add_incomplete;
 pub(super) mod mul;
 // pub(super) mod mul_fixed;
 pub(super) mod witness_point;
-// pub(super) mod witness_scalar_fixed;
+pub(super) mod witness_scalar_fixed;
 
 /// A curve point represented in affine (x, y) coordinates. Each coordinate is
 /// assigned to a cell.
@@ -186,6 +186,19 @@ impl EccChip {
             mul_config.create_gate(meta);
         }
 
+        // Create witness scalar_fixed gate that applies to both full-width and
+        // short scalars
+        {
+            let config: witness_scalar_fixed::Config = (&config).into();
+            config.create_gate(meta);
+        }
+
+        // Create witness scalar_fixed gate that only apploes to short scalars
+        {
+            let config: witness_scalar_fixed::short::Config = (&config).into();
+            config.create_gate(meta);
+        }
+
         config
     }
 }
@@ -262,18 +275,26 @@ impl EccInstructions<pallas::Affine> for EccChip {
 
     fn witness_scalar_fixed(
         &self,
-        _layouter: &mut impl Layouter<pallas::Base>,
-        _value: Option<pallas::Scalar>,
+        layouter: &mut impl Layouter<pallas::Base>,
+        value: Option<pallas::Scalar>,
     ) -> Result<Self::ScalarFixed, Error> {
-        todo!()
+        let config: witness_scalar_fixed::full_width::Config = self.config().into();
+        layouter.assign_region(
+            || "witness scalar for fixed-base mul",
+            |mut region| config.assign_region(value, 0, &mut region),
+        )
     }
 
     fn witness_scalar_fixed_short(
         &self,
-        _layouter: &mut impl Layouter<pallas::Base>,
-        _value: Option<pallas::Scalar>,
+        layouter: &mut impl Layouter<pallas::Base>,
+        value: Option<pallas::Scalar>,
     ) -> Result<Self::ScalarFixedShort, Error> {
-        todo!()
+        let config: witness_scalar_fixed::short::Config = self.config().into();
+        layouter.assign_region(
+            || "witness short scalar for fixed-base mul",
+            |mut region| config.assign_region(value, 0, &mut region),
+        )
     }
 
     fn witness_point(
