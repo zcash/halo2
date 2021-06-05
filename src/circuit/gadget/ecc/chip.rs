@@ -14,7 +14,7 @@ use std::marker::PhantomData;
 // pub(super) mod add_incomplete;
 // pub(super) mod mul;
 // pub(super) mod mul_fixed;
-// pub(super) mod witness_point;
+pub(super) mod witness_point;
 // pub(super) mod witness_scalar_fixed;
 
 /// A curve point represented in affine (x, y) coordinates. Each coordinate is
@@ -145,7 +145,11 @@ where
             perm,
         };
 
-        // TODO: create gates
+        // Create witness point gate
+        {
+            let config: witness_point::Config = (&config).into();
+            config.create_gate::<C>(meta);
+        }
 
         config
     }
@@ -226,7 +230,11 @@ where
         layouter: &mut impl Layouter<C::Base>,
         value: Option<C>,
     ) -> Result<Self::Point, Error> {
-        todo!()
+        let config: witness_point::Config = self.config().into();
+        layouter.assign_region(
+            || "witness point",
+            |mut region| config.assign_region(value, 0, &mut region),
+        )
     }
 
     fn extract_p(point: &Self::Point) -> &Self::X {
