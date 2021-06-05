@@ -59,6 +59,9 @@ pub enum VerifyFailure {
         /// from the closure passed to `ConstraintSystem::create_gate` during
         /// `Circuit::configure`.
         constraint_index: usize,
+        /// The name of the unsatisfied constraint. This is specified by the gate creator
+        /// (such as a chip implementation), and is not enforced to be unique.
+        constraint_name: &'static str,
         /// The row on which this constraint is not satisfied.
         row: usize,
     },
@@ -103,12 +106,21 @@ impl fmt::Display for VerifyFailure {
                 gate_index,
                 gate_name,
                 constraint_index,
+                constraint_name,
                 row,
             } => {
                 write!(
                     f,
-                    "Constraint {} in gate {} ('{}') is not satisfied on row {}",
-                    constraint_index, gate_index, gate_name, row
+                    "Constraint {}{} in gate {} ('{}') is not satisfied on row {}",
+                    constraint_index,
+                    if constraint_name.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" ('{}')", constraint_name)
+                    },
+                    gate_index,
+                    gate_name,
+                    row
                 )
             }
             Self::Lookup { lookup_index, row } => {
@@ -176,7 +188,7 @@ impl fmt::Display for VerifyFailure {
 ///             let c = meta.query_advice(c, Rotation::cur());
 ///
 ///             // BUG: Should be a * b - c
-///             vec![a * b + c]
+///             Some(("buggy R1CS", a * b + c))
 ///         });
 ///
 ///         MyConfig { a, b, c }
@@ -213,6 +225,7 @@ impl fmt::Display for VerifyFailure {
 ///         gate_index: 0,
 ///         gate_name: "R1CS constraint",
 ///         constraint_index: 0,
+///         constraint_name: "buggy R1CS",
 ///         row: 0
 ///     }])
 /// );
@@ -502,6 +515,7 @@ impl<F: FieldExt> MockProver<F> {
                                         gate_index,
                                         gate_name: gate.name(),
                                         constraint_index: poly_index,
+                                        constraint_name: gate.constraint_name(poly_index),
                                         row: (row - n) as usize,
                                     })
                                 }
