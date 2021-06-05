@@ -1,4 +1,3 @@
-use crate::constants::{NullifierK, OrchardFixedBase};
 use halo2::arithmetic::{CurveAffine, FieldExt};
 
 pub const GENERATOR: ([u8; 32], [u8; 32]) = (
@@ -2917,19 +2916,19 @@ pub const U: [[[u8; 32]; super::H]; super::NUM_WINDOWS] = [
     ],
 ];
 
-pub fn generator<C: CurveAffine>() -> NullifierK<C> {
-    NullifierK(OrchardFixedBase::<C>::new(
-        C::from_xy(
-            C::Base::from_bytes(&GENERATOR.0).unwrap(),
-            C::Base::from_bytes(&GENERATOR.1).unwrap(),
-        )
-        .unwrap(),
-    ))
+pub fn generator<C: CurveAffine>() -> C {
+    C::from_xy(
+        C::Base::from_bytes(&GENERATOR.0).unwrap(),
+        C::Base::from_bytes(&GENERATOR.1).unwrap(),
+    )
+    .unwrap()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::{TestFixedBase, NUM_WINDOWS, ORCHARD_PERSONALIZATION};
+    use super::super::{
+        test_lagrange_coeffs, test_zs_and_us, NUM_WINDOWS, ORCHARD_PERSONALIZATION,
+    };
     use super::*;
     use group::Curve;
     use halo2::{
@@ -2950,12 +2949,12 @@ mod tests {
     #[test]
     fn lagrange_coeffs() {
         let base = super::generator::<pallas::Affine>();
-        base.0.test_lagrange_coeffs(NUM_WINDOWS);
+        test_lagrange_coeffs(base, NUM_WINDOWS);
     }
 
     #[test]
     fn z() {
         let base = super::generator::<pallas::Affine>();
-        base.0.test_zs_and_us(&Z, &U, NUM_WINDOWS);
+        test_zs_and_us(base, &Z, &U, NUM_WINDOWS);
     }
 }

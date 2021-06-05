@@ -1,4 +1,3 @@
-use super::{CommitIvkR, OrchardFixedBase};
 use halo2::arithmetic::{CurveAffine, FieldExt};
 
 /// Generator used in SinsemillaCommit randomness for IVK commitment
@@ -2918,19 +2917,19 @@ pub const U: [[[u8; 32]; super::H]; super::NUM_WINDOWS] = [
     ],
 ];
 
-pub fn generator<C: CurveAffine>() -> CommitIvkR<C> {
-    CommitIvkR(OrchardFixedBase::<C>::new(
-        C::from_xy(
-            C::Base::from_bytes(&GENERATOR.0).unwrap(),
-            C::Base::from_bytes(&GENERATOR.1).unwrap(),
-        )
-        .unwrap(),
-    ))
+pub fn generator<C: CurveAffine>() -> C {
+    C::from_xy(
+        C::Base::from_bytes(&GENERATOR.0).unwrap(),
+        C::Base::from_bytes(&GENERATOR.1).unwrap(),
+    )
+    .unwrap()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::{TestFixedBase, COMMIT_IVK_PERSONALIZATION, NUM_WINDOWS};
+    use super::super::{
+        test_lagrange_coeffs, test_zs_and_us, COMMIT_IVK_PERSONALIZATION, NUM_WINDOWS,
+    };
     use super::*;
     use crate::primitives::sinsemilla::CommitDomain;
     use group::Curve;
@@ -2952,12 +2951,12 @@ mod tests {
     #[test]
     fn lagrange_coeffs() {
         let base = super::generator::<pallas::Affine>();
-        base.0.test_lagrange_coeffs(NUM_WINDOWS);
+        test_lagrange_coeffs(base, NUM_WINDOWS);
     }
 
     #[test]
     fn z() {
         let base = super::generator::<pallas::Affine>();
-        base.0.test_zs_and_us(&Z, &U, NUM_WINDOWS);
+        test_zs_and_us(base, &Z, &U, NUM_WINDOWS);
     }
 }
