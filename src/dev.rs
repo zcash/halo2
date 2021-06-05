@@ -1,7 +1,6 @@
 //! Tools for developing circuits.
 
 use std::collections::HashMap;
-use std::convert::TryInto;
 use std::fmt;
 use std::iter;
 
@@ -416,7 +415,6 @@ impl<F: FieldExt> MockProver<F> {
             .flat_map(|(gate_index, gate)| {
                 gate.queried_selectors()
                     .iter()
-                    .map(|vc| (Selector(vc.column.try_into().unwrap()), vc.rotation))
                     // Assume that if a queried selector is enabled, the user wants to use the
                     // corresponding gate in some way.
                     //
@@ -424,14 +422,11 @@ impl<F: FieldExt> MockProver<F> {
                     // un-enabled keeps a gate enabled. We could alternatively require that
                     // every selector is explicitly enabled or disabled on every row? But that
                     // seems messy and confusing.
-                    .filter_map(|(s, rotation)| {
-                        self.enabled_selectors.get(&s).map(|at| (at, rotation))
-                    })
-                    .flat_map(move |(at, rotation)| {
+                    .filter_map(|s| self.enabled_selectors.get(&s))
+                    .flat_map(move |at| {
                         at.iter().flat_map(move |selector_row| {
-                            // Determine the gate instance's logical row from the selector's
-                            // concrete row and its rotation in the gate.
-                            let gate_row = (*selector_row as i32 + n - rotation.0) % n;
+                            // Selectors are queried with no rotation.
+                            let gate_row = *selector_row as i32;
 
                             gate.queried_cells().iter().filter_map(move |cell| {
                                 // Determine where this cell should have been assigned.
@@ -682,7 +677,7 @@ mod tests {
                 meta.create_gate("Equality check", |cells| {
                     let a = cells.query_advice(a, Rotation::prev());
                     let b = cells.query_advice(b, Rotation::cur());
-                    let q = cells.query_selector(q, Rotation::cur());
+                    let q = cells.query_selector(q);
 
                     // If q is enabled, a and b must be assigned to.
                     vec![q * (a - b)]
