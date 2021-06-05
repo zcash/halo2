@@ -11,7 +11,7 @@ use halo2::{
 use std::marker::PhantomData;
 
 // pub(super) mod add;
-// pub(super) mod add_incomplete;
+pub(super) mod add_incomplete;
 // pub(super) mod mul;
 // pub(super) mod mul_fixed;
 pub(super) mod witness_point;
@@ -151,6 +151,12 @@ where
             config.create_gate::<C>(meta);
         }
 
+        // Create incomplete point addition gate
+        {
+            let config: add_incomplete::Config = (&config).into();
+            config.create_gate(meta);
+        }
+
         config
     }
 }
@@ -247,7 +253,11 @@ where
         a: &Self::Point,
         b: &Self::Point,
     ) -> Result<Self::Point, Error> {
-        todo!()
+        let config: add_incomplete::Config = self.config().into();
+        layouter.assign_region(
+            || "incomplete point addition",
+            |mut region| config.assign_region(a, b, 0, &mut region),
+        )
     }
 
     fn add(
