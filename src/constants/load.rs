@@ -171,7 +171,7 @@ impl<F: FieldExt> From<&[[u8; 32]; H]> for WindowUs<F> {
         Self(
             window_us
                 .iter()
-                .map(|u| F::from_bytes(&u).unwrap())
+                .map(|u| F::from_bytes(u).unwrap())
                 .collect::<Vec<_>>()
                 .into_boxed_slice()
                 .try_into()

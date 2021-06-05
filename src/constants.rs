@@ -237,7 +237,7 @@ fn test_zs_and_us<C: CurveAffine>(base: C, z: &[u64], u: &[[[u8; 32]; H]], num_w
     for ((u, z), window_points) in u.iter().zip(z.iter()).zip(window_table) {
         for (u, point) in u.iter().zip(window_points.iter()) {
             let y = *point.coordinates().unwrap().y();
-            let u = C::Base::from_bytes(&u).unwrap();
+            let u = C::Base::from_bytes(u).unwrap();
             assert_eq!(C::Base::from_u64(*z) + y, u * u); // allow either square root
             assert!(bool::from((C::Base::from_u64(*z) - y).sqrt().is_none()));
         }
