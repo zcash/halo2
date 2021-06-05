@@ -92,8 +92,6 @@ impl<F: FieldExt> PLONKInstructions<F> for PLONKChip<F> {
             || "mul",
             |mut region| {
                 let config = self.config().clone();
-                let sc = sc.unwrap_or_else(F::one);
-                let sm = sm.unwrap_or_else(F::one);
 
                 // Copy in `a`
                 copy(&mut region, || "copy a", config.a, 0, &a, &config.perm)?;
@@ -105,16 +103,22 @@ impl<F: FieldExt> PLONKInstructions<F> for PLONKChip<F> {
                 copy(&mut region, || "copy c", config.c, 0, &c, &config.perm)?;
 
                 // Assign fixed columns
-                region.assign_fixed(|| "sc", config.sc, 0, || Ok(sc))?;
-                region.assign_fixed(|| "a * (sm) * b", config.sm, 0, || Ok(sm))?;
+                region.assign_fixed(|| "sc", config.sc, 0, || sc.ok_or(Error::SynthesisError))?;
+                region.assign_fixed(
+                    || "a * (sm) * b",
+                    config.sm,
+                    0,
+                    || sm.ok_or(Error::SynthesisError),
+                )?;
 
                 #[cfg(test)]
                 // Checks that a * sm * b = c * sc
                 {
-                    let a = a.value.unwrap();
-                    let b = b.value.unwrap();
-                    let c = c.value.unwrap();
-                    assert_eq!(a * sm * b, c * sc);
+                    if let (Some(a), Some(b), Some(c), Some(sm), Some(sc)) =
+                        (a.value, b.value, c.value, sm, sc)
+                    {
+                        assert_eq!(a * sm * b, c * sc);
+                    }
                 }
 
                 Ok(())
@@ -133,9 +137,6 @@ impl<F: FieldExt> PLONKInstructions<F> for PLONKChip<F> {
         sc: Option<F>,
     ) -> Result<(), Error> {
         let config = self.config().clone();
-        let sa = sa.unwrap_or_else(F::one);
-        let sb = sb.unwrap_or_else(F::one);
-        let sc = sc.unwrap_or_else(F::one);
 
         layouter.assign_region(
             || "add",
@@ -150,17 +151,18 @@ impl<F: FieldExt> PLONKInstructions<F> for PLONKChip<F> {
                 copy(&mut region, || "copy c", config.c, 0, &c, &config.perm)?;
 
                 // Assign fixed columns
-                region.assign_fixed(|| "a", config.sa, 0, || Ok(sa))?;
-                region.assign_fixed(|| "b", config.sb, 0, || Ok(sb))?;
-                region.assign_fixed(|| "c", config.sc, 0, || Ok(sc))?;
+                region.assign_fixed(|| "a", config.sa, 0, || sa.ok_or(Error::SynthesisError))?;
+                region.assign_fixed(|| "b", config.sb, 0, || sb.ok_or(Error::SynthesisError))?;
+                region.assign_fixed(|| "c", config.sc, 0, || sc.ok_or(Error::SynthesisError))?;
 
                 #[cfg(test)]
                 // Checks that a * sa + b * sb = c * sc
                 {
-                    let a = a.value.unwrap();
-                    let b = b.value.unwrap();
-                    let c = c.value.unwrap();
-                    assert_eq!(a * sa + b * sb, c * sc);
+                    if let (Some(a), Some(b), Some(c), Some(sa), Some(sb), Some(sc)) =
+                        (a.value, b.value, c.value, sa, sb, sc)
+                    {
+                        assert_eq!(a * sa + b * sb, c * sc);
+                    }
                 }
 
                 Ok(())
@@ -277,9 +279,9 @@ mod tests {
                         a,
                         b,
                         c,
-                        None,
-                        None,
-                        None,
+                        Some(F::one()),
+                        Some(F::one()),
+                        Some(F::one()),
                     )?;
                 }
 
@@ -287,7 +289,14 @@ mod tests {
                 {
                     let c = self.a.zip(self.b).map(|(a, b)| a * b);
                     let c = chip.load_private(layouter.namespace(|| "c"), config.c, c)?;
-                    chip.mul(layouter.namespace(|| "a * b = c"), a, b, c, None, None)?;
+                    chip.mul(
+                        layouter.namespace(|| "a * b = c"),
+                        a,
+                        b,
+                        c,
+                        Some(F::one()),
+                        Some(F::one()),
+                    )?;
                 }
 
                 // 2a + 3b = c
@@ -304,7 +313,7 @@ mod tests {
                         c,
                         Some(F::from_u64(2)),
                         Some(F::from_u64(3)),
-                        None,
+                        Some(F::one()),
                     )?;
                 }
 
