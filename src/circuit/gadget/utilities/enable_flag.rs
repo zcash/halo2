@@ -1,6 +1,6 @@
 use super::{copy, CellValue, UtilitiesInstructions, Var};
 use halo2::{
-    circuit::{Cell, Chip, Layouter},
+    circuit::{Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Permutation, Selector},
     poly::Rotation,
 };
@@ -11,16 +11,13 @@ pub trait EnableFlagInstructions<F: FieldExt>: UtilitiesInstructions<F> {
     /// Variable representing cell with a certain value in the circuit.
     type Var: Var<F>;
 
-    /// Variable representing an `enable` boolean flag.
-    type Flag: From<<Self as EnableFlagInstructions<F>>::Var>;
-
     /// Given a `value` and an `enable_flag`, check that either `value = 0`
     /// or `enable_flag = 1`.
     fn enable_flag(
         &self,
         layouter: impl Layouter<F>,
         value: <Self as EnableFlagInstructions<F>>::Var,
-        enable_flag: <Self as EnableFlagInstructions<F>>::Flag,
+        enable_flag: Option<bool>,
     ) -> Result<(), Error>;
 }
 
@@ -52,46 +49,18 @@ impl<F: FieldExt> Chip<F> for EnableFlagChip<F> {
     }
 }
 
-/// A variable representing an `enable` boolean flag.
-#[derive(Copy, Clone)]
-pub struct Flag {
-    cell: Cell,
-    value: Option<bool>,
-}
-
-impl<F: FieldExt> From<CellValue<F>> for Flag {
-    fn from(var: CellValue<F>) -> Self {
-        let value = var.value.map(|value| {
-            let zero = value == F::zero();
-            let one = value == F::one();
-            if zero {
-                false
-            } else if one {
-                true
-            } else {
-                panic!("Value must be boolean.")
-            }
-        });
-        Flag {
-            cell: var.cell,
-            value,
-        }
-    }
-}
-
 impl<F: FieldExt> UtilitiesInstructions<F> for EnableFlagChip<F> {
     type Var = CellValue<F>;
 }
 
 impl<F: FieldExt> EnableFlagInstructions<F> for EnableFlagChip<F> {
     type Var = CellValue<F>;
-    type Flag = Flag;
 
     fn enable_flag(
         &self,
         mut layouter: impl Layouter<F>,
         value: <Self as EnableFlagInstructions<F>>::Var,
-        enable_flag: <Self as EnableFlagInstructions<F>>::Flag,
+        enable_flag: Option<bool>,
     ) -> Result<(), Error> {
         let config = self.config().clone();
         layouter.assign_region(
@@ -100,19 +69,14 @@ impl<F: FieldExt> EnableFlagInstructions<F> for EnableFlagChip<F> {
                 // Enable `q_enable` selector
                 config.q_enable.enable(&mut region, 0)?;
 
-                // Copy in `enable_flag` value
-                let enable_flag_val = enable_flag.value;
-                let enable_flag_cell = region.assign_advice(
+                // Witness `enable_flag` value
+                let enable_flag_val = enable_flag.map(|flag| F::from_u64(flag as u64));
+                region.assign_advice(
                     || "enable_flag",
                     config.enable_flag,
                     0,
-                    || {
-                        enable_flag_val
-                            .map(|enable_flag| F::from_u64(enable_flag as u64))
-                            .ok_or(Error::SynthesisError)
-                    },
+                    || enable_flag_val.ok_or(Error::SynthesisError),
                 )?;
-                region.constrain_equal(&config.perm, enable_flag_cell, enable_flag.cell)?;
 
                 // Copy `value`
                 copy(
@@ -180,7 +144,7 @@ mod tests {
     fn enable_flag() {
         struct MyCircuit<F: FieldExt> {
             value: Option<F>,
-            enable_flag: Option<F>,
+            enable_flag: Option<bool>,
         }
 
         impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
@@ -210,14 +174,9 @@ mod tests {
                 // Load the value and the enable flag into the circuit.
                 let value =
                     chip.load_private(layouter.namespace(|| "value"), config.value, self.value)?;
-                let enable_flag = chip.load_private(
-                    layouter.namespace(|| "enable_flag"),
-                    config.enable_flag,
-                    self.enable_flag,
-                )?;
 
                 // Run the enable flag logic.
-                chip.enable_flag(layouter.namespace(|| "swap"), value, enable_flag.into())?;
+                chip.enable_flag(layouter.namespace(|| "swap"), value, self.enable_flag)?;
 
                 Ok(())
             }
@@ -227,7 +186,7 @@ mod tests {
         {
             let circuit: MyCircuit<Base> = MyCircuit {
                 value: Some(Base::one()),
-                enable_flag: Some(Base::one()),
+                enable_flag: Some(true),
             };
             let prover = match MockProver::<Base>::run(1, &circuit, vec![]) {
                 Ok(prover) => prover,
@@ -240,7 +199,7 @@ mod tests {
         {
             let circuit: MyCircuit<Base> = MyCircuit {
                 value: Some(Base::zero()),
-                enable_flag: Some(Base::zero()),
+                enable_flag: Some(false),
             };
             let prover = match MockProver::<Base>::run(1, &circuit, vec![]) {
                 Ok(prover) => prover,
@@ -253,7 +212,7 @@ mod tests {
         {
             let circuit: MyCircuit<Base> = MyCircuit {
                 value: Some(Base::zero()),
-                enable_flag: Some(Base::one()),
+                enable_flag: Some(true),
             };
             let prover = match MockProver::<Base>::run(1, &circuit, vec![]) {
                 Ok(prover) => prover,
@@ -266,7 +225,7 @@ mod tests {
         {
             let circuit: MyCircuit<Base> = MyCircuit {
                 value: Some(Base::one()),
-                enable_flag: Some(Base::zero()),
+                enable_flag: Some(false),
             };
             let prover = match MockProver::<Base>::run(1, &circuit, vec![]) {
                 Ok(prover) => prover,
