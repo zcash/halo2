@@ -136,13 +136,15 @@
                         </a>
                         
                         
+                        
+
                     </div>
                 </div>
 
                 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -164,16 +166,16 @@
                 <div id="content" class="content">
                     <main>
                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
-<h1><a class="header" href="#developer-tools" id="developer-tools">Developer tools</a></h1>
+<h1 id="developer-tools"><a class="header" href="#developer-tools">Developer tools</a></h1>
 <p>The <code>halo2</code> crate includes several utilities to help you design and implement your
 circuits.</p>
-<h2><a class="header" href="#mock-prover" id="mock-prover">Mock prover</a></h2>
+<h2 id="mock-prover"><a class="header" href="#mock-prover">Mock prover</a></h2>
 <p><code>halo2::dev::MockProver</code> is a tool for debugging circuits, as well as cheaply verifying
 their correctness in unit tests. The private and public inputs to the circuit are
 constructed as would normally be done to create a proof, but <code>MockProver::run</code> instead
 creates an object that will test every constraint in the circuit directly. It returns
 granular error messages that indicate which specific constraint (if any) is not satisfied.</p>
-<h2><a class="header" href="#circuit-visualizations" id="circuit-visualizations">Circuit visualizations</a></h2>
+<h2 id="circuit-visualizations"><a class="header" href="#circuit-visualizations">Circuit visualizations</a></h2>
 <p>The <code>dev-graph</code> feature flag exposes several helper methods for creating graphical
 representations of circuits.</p>
 <p><code>halo2::dev::circuit_layout</code> renders the circuit layout as a grid:</p>
@@ -196,7 +198,7 @@ the surrounding cells.</li>
 circuit, which can then be rendered witha variety of <a href="https://en.wikipedia.org/wiki/DOT_(graph_description_language)#Layout_programs">layout programs</a>. The graph is built
 from calls to <code>Layouter::namespace</code> both within the circuit, and inside the gadgets and
 chips that it uses.</p>
-<h2><a class="header" href="#cost-estimator" id="cost-estimator">Cost estimator</a></h2>
+<h2 id="cost-estimator"><a class="header" href="#cost-estimator">Cost estimator</a></h2>
 <p>The <code>cost-model</code> binary takes high-level parameters for a circuit design, and estimates
 the verification cost, as well as resulting proof size.</p>
 <pre><code class="language-plaintext">Usage: cargo run --example cost-model -- [OPTIONS] k

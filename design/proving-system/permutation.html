@@ -136,13 +136,15 @@
                         </a>
                         
                         
+                        
+
                     </div>
                 </div>
 
                 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -164,14 +166,14 @@
                 <div id="content" class="content">
                     <main>
                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
-<h1><a class="header" href="#permutation-argument" id="permutation-argument">Permutation argument</a></h1>
+<h1 id="permutation-argument"><a class="header" href="#permutation-argument">Permutation argument</a></h1>
 <p>Given that gates in halo2 circuits operate &quot;locally&quot; (on cells in the current row or
 defined relative rows), it is common to need to copy a value from some arbitrary cell into
 the current row for use in a gate. This is performed with an equality constraint, which
 enforces that the source and destination cells contain the same value.</p>
 <p>We implement these equality constraints by constructing a permutation that represents the
 constraints, and then using a permutation argument within the proof to enforce them.</p>
-<h2><a class="header" href="#notation" id="notation">Notation</a></h2>
+<h2 id="notation"><a class="header" href="#notation">Notation</a></h2>
 <p>A permutation is a one-to-one and onto mapping of a set onto itself. A permutation can be
 factored uniquely into a composition of cycles (up to ordering of cycles, and rotation of
 each cycle).</p>
@@ -181,8 +183,8 @@ to write permutations. Let <span class="katex"><span class="katex-html" aria-hid
 Writing two or more cycles next to each other denotes a composition of the corresponding
 permutations. For example, <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">a</span><span class="mspace"> </span><span class="mord mathnormal">b</span><span class="mclose">)</span><span class="mspace"> </span><span class="mopen">(</span><span class="mord mathnormal">c</span><span class="mspace"> </span><span class="mord mathnormal">d</span><span class="mclose">)</span></span></span></span> denotes the permutation that maps <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">a</span></span></span></span> to <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">b</span></span></span></span>,
 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">b</span></span></span></span> to <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">a</span></span></span></span>, <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">c</span></span></span></span> to <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">d</span></span></span></span>, and <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">d</span></span></span></span> to <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">c</span></span></span></span>.</p>
-<h2><a class="header" href="#constructing-the-permutation" id="constructing-the-permutation">Constructing the permutation</a></h2>
-<h3><a class="header" href="#goal" id="goal">Goal</a></h3>
+<h2 id="constructing-the-permutation"><a class="header" href="#constructing-the-permutation">Constructing the permutation</a></h2>
+<h3 id="goal"><a class="header" href="#goal">Goal</a></h3>
 <p>We want to construct a permutation in which each subset of variables that are in a
 equality-constraint set form a cycle. For example, suppose that we have a circuit that
 defines the following equality constraints:</p>
@@ -195,7 +197,7 @@ defines the following equality constraints:</p>
 construct the permutation:</p>
 <p><span class="katex-display"><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">a</span><span class="mspace"> </span><span class="mord mathnormal">b</span><span class="mspace"> </span><span class="mord mathnormal">c</span><span class="mclose">)</span><span class="mspace"> </span><span class="mopen">(</span><span class="mord mathnormal">d</span><span class="mspace"> </span><span class="mord mathnormal">e</span><span class="mclose">)</span></span></span></span></span></p>
 <p>which defines the mapping of <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord mathnormal">a</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">b</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">c</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">d</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">e</span><span class="mclose">]</span></span></span></span> to <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord mathnormal">b</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">c</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">a</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">e</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">d</span><span class="mclose">]</span></span></span></span>.</p>
-<h3><a class="header" href="#algorithm" id="algorithm">Algorithm</a></h3>
+<h3 id="algorithm"><a class="header" href="#algorithm">Algorithm</a></h3>
 <p>We need to keep track of the set of cycles, which is a
 <a href="https://en.wikipedia.org/wiki/Disjoint-set_data_structure">set of disjoint sets</a>.
 Efficient data structures for this problem are known; for the sake of simplicity we choose
@@ -252,7 +254,7 @@ D &lt;---+ C &lt;---+ E       F
                 +       v
                 H &lt;---+ G
 </code></pre>
-<h3><a class="header" href="#broken-alternatives" id="broken-alternatives">Broken alternatives</a></h3>
+<h3 id="broken-alternatives"><a class="header" href="#broken-alternatives">Broken alternatives</a></h3>
 <p>If we did not check whether <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord"><span class="mord mathit">left</span></span></span></span></span> and <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord"><span class="mord mathit">right</span></span></span></span></span> were already in the same
 cycle, then we could end up undoing an equality constraint. For example, if we have the
 following constraints:</p>
@@ -265,7 +267,7 @@ following constraints:</p>
 <p>and we tried to implement adding an equality constraint just using step 5 of the above
 algorithm, then we would end up constructing the cycle <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">a</span><span class="mspace"> </span><span class="mord mathnormal">b</span><span class="mclose">)</span><span class="mspace"> </span><span class="mopen">(</span><span class="mord mathnormal">c</span><span class="mspace"> </span><span class="mord mathnormal">d</span><span class="mclose">)</span></span></span></span>, rather than the
 correct <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">a</span><span class="mspace"> </span><span class="mord mathnormal">b</span><span class="mspace"> </span><span class="mord mathnormal">c</span><span class="mspace"> </span><span class="mord mathnormal">d</span><span class="mclose">)</span></span></span></span>.</p>
-<h2><a class="header" href="#argument-specification" id="argument-specification">Argument specification</a></h2>
+<h2 id="argument-specification"><a class="header" href="#argument-specification">Argument specification</a></h2>
 <p>We need to check a permutation of cells in <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">m</span></span></span></span> columns, represented in Lagrange basis by
 polynomials <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.638891em;vertical-align:-0.208331em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.30110799999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="minner">…</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.301108em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">m</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.208331em;"><span></span></span></span></span></span></span></span></span></span>.</p>
 <p>We first label each cell in those <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">m</span></span></span></span> columns with a unique element of <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.771331em;vertical-align:0em;"></span><span class="mord"><span class="mord mathbb">F</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.771331em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mbin mtight">×</span></span></span></span></span></span></span></span></span></span></span>.</p>

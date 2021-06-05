@@ -136,13 +136,15 @@
                         </a>
                         
                         
+                        
+
                     </div>
                 </div>
 
                 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -164,7 +166,7 @@
                 <div id="content" class="content">
                     <main>
                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
-<h1><a class="header" href="#chips" id="chips">Chips</a></h1>
+<h1 id="chips"><a class="header" href="#chips">Chips</a></h1>
 <p>The previous section gives a fairly low-level description of a circuit. When implementing circuits we will
 typically use a higher-level API which aims for the desirable characteristics of auditability,
 efficiency, modularity, and expressiveness.</p>
@@ -220,7 +222,7 @@ not require offset references, which allows them to be placed on any row.</p>
 argument, we can use a <em><strong>tag column</strong></em> to specify which table is used on each row. It is also
 possible to perform a lookup in the union of several tables (limited by the polynomial degree
 bound).</p>
-<h2><a class="header" href="#composing-chips" id="composing-chips">Composing chips</a></h2>
+<h2 id="composing-chips"><a class="header" href="#composing-chips">Composing chips</a></h2>
 <p>In order to combine functionality from several chips, we compose them in a tree. The top-level
 chip defines a set of fixed, advice, and instance columns, and then specifies how they
 should be distributed between lower-level chips.</p>

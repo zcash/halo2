@@ -136,13 +136,15 @@
                         </a>
                         
                         
+                        
+
                     </div>
                 </div>
 
                 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -164,8 +166,8 @@
                 <div id="content" class="content">
                     <main>
                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
-<h1><a class="header" href="#halo-2-proofs" id="halo-2-proofs">Halo 2 proofs</a></h1>
-<h2><a class="header" href="#proofs-as-opaque-byte-streams" id="proofs-as-opaque-byte-streams">Proofs as opaque byte streams</a></h2>
+<h1 id="halo-2-proofs"><a class="header" href="#halo-2-proofs">Halo 2 proofs</a></h1>
+<h2 id="proofs-as-opaque-byte-streams"><a class="header" href="#proofs-as-opaque-byte-streams">Proofs as opaque byte streams</a></h2>
 <p>In proving system implementations like <code>bellman</code>, there is a concrete <code>Proof</code> struct that
 encapsulates the proof data, is returned by a prover, and can be passed to a verifier.</p>
 <p><code>halo2</code> does not contain any proof-like structures, for several reasons:</p>
@@ -193,7 +195,7 @@ to some <code>std::io::Write</code> buffer at the same time that they hash thing
 and similarly for <code>TranscriptRead</code>/<code>std::io::Read</code>.</p>
 <p>As a bonus, treating proofs as opaque byte streams ensures that verification accounts for
 the cost of deserialization, which isn't negligible due to point compression.</p>
-<h2><a class="header" href="#proof-encoding" id="proof-encoding">Proof encoding</a></h2>
+<h2 id="proof-encoding"><a class="header" href="#proof-encoding">Proof encoding</a></h2>
 <p>A Halo 2 proof, constructed over a curve <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.036108em;vertical-align:-0.286108em;"></span><span class="mord mathnormal" style="margin-right:0.05764em;">E</span><span class="mopen">(</span><span class="mord"><span class="mord mathbb">F</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">p</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span>, is encoded as a stream of:</p>
 <ul>
 <li>Points <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.72243em;vertical-align:-0.0391em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">∈</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.036108em;vertical-align:-0.286108em;"></span><span class="mord mathnormal" style="margin-right:0.05764em;">E</span><span class="mopen">(</span><span class="mord"><span class="mord mathbb">F</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">p</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span>) (for commitments to polynomials), and</li>
