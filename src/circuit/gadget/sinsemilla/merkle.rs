@@ -139,3 +139,215 @@ where
         Ok(node)
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::{
+        chip::{MerkleChip, MerkleConfig},
+        MerklePath,
+    };
+
+    use crate::{
+        circuit::gadget::{
+            sinsemilla::chip::{SinsemillaChip, SinsemillaHashDomains},
+            utilities::{UtilitiesInstructions, Var},
+        },
+        constants::{L_ORCHARD_BASE, MERKLE_CRH_PERSONALIZATION, MERKLE_DEPTH_ORCHARD},
+        primitives::sinsemilla::HashDomain,
+        spec::i2lebsp,
+    };
+
+    use ff::PrimeFieldBits;
+    use halo2::{
+        arithmetic::FieldExt,
+        circuit::{layouter::SingleChipLayouter, Layouter},
+        dev::MockProver,
+        pasta::pallas,
+        plonk::{Assignment, Circuit, ConstraintSystem, Error},
+    };
+
+    use rand::random;
+    use std::convert::TryInto;
+
+    struct MyCircuit {
+        leaf: Option<pallas::Base>,
+        leaf_pos: Option<u32>,
+        merkle_path: Option<[pallas::Base; MERKLE_DEPTH_ORCHARD]>,
+    }
+
+    impl Circuit<pallas::Base> for MyCircuit {
+        type Config = (MerkleConfig, MerkleConfig);
+
+        fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+            let advices = [
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+            ];
+
+            // Shared fixed column for loading constants
+            // TODO: Replace with public inputs API
+            let constants_1 = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+            ];
+            let constants_2 = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+            ];
+
+            let perm = meta.permutation(
+                &advices
+                    .iter()
+                    .map(|advice| (*advice).into())
+                    .chain(constants_1.iter().map(|fixed| (*fixed).into()))
+                    .chain(constants_2.iter().map(|fixed| (*fixed).into()))
+                    .collect::<Vec<_>>(),
+            );
+
+            // Fixed columns for the Sinsemilla generator lookup table
+            let lookup = (
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+            );
+
+            let sinsemilla_config_1 = SinsemillaChip::configure(
+                meta,
+                advices[5..].try_into().unwrap(),
+                lookup,
+                constants_1,
+                perm.clone(),
+            );
+            let config1 = MerkleChip::configure(meta, sinsemilla_config_1);
+
+            let sinsemilla_config_2 = SinsemillaChip::configure(
+                meta,
+                advices[..5].try_into().unwrap(),
+                lookup,
+                constants_2,
+                perm,
+            );
+            let config2 = MerkleChip::configure(meta, sinsemilla_config_2);
+
+            (config1, config2)
+        }
+
+        fn synthesize(
+            &self,
+            cs: &mut impl Assignment<pallas::Base>,
+            config: Self::Config,
+        ) -> Result<(), Error> {
+            let mut layouter = SingleChipLayouter::new(cs)?;
+
+            // Load generator table (shared across both configs)
+            SinsemillaChip::load(config.0.sinsemilla_config.clone(), &mut layouter)?;
+
+            // Construct Merkle chips which will be placed side-by-side in the circuit.
+            let chip_1 = MerkleChip::construct(config.0.clone());
+            let chip_2 = MerkleChip::construct(config.1.clone());
+
+            let leaf = chip_1.load_private(
+                layouter.namespace(|| ""),
+                config.0.cond_swap_config.a,
+                self.leaf,
+            )?;
+
+            let path = MerklePath {
+                chip_1,
+                chip_2,
+                domain: SinsemillaHashDomains::MerkleCrh,
+                leaf_pos: self.leaf_pos,
+                path: self.merkle_path,
+            };
+
+            let computed_final_root =
+                path.calculate_root(layouter.namespace(|| "calculate root"), leaf)?;
+
+            // The expected final root
+            let pos_bool = i2lebsp::<32>(self.leaf_pos.unwrap() as u64);
+            let path: Option<Vec<pallas::Base>> = self.merkle_path.map(|path| path.to_vec());
+            let final_root = hash_path(self.leaf.unwrap(), &pos_bool, &path.unwrap());
+
+            // Check the computed final root against the expected final root.
+            assert_eq!(computed_final_root.value().unwrap(), final_root);
+
+            Ok(())
+        }
+    }
+
+    fn hash_path(leaf: pallas::Base, pos_bool: &[bool], path: &[pallas::Base]) -> pallas::Base {
+        let domain = HashDomain::new(MERKLE_CRH_PERSONALIZATION);
+
+        // Compute the root
+        let mut node = leaf;
+        for (l_star, (sibling, pos)) in path.iter().zip(pos_bool.iter()).enumerate() {
+            let (left, right) = if *pos {
+                (*sibling, node)
+            } else {
+                (node, *sibling)
+            };
+
+            let l_star = i2lebsp::<10>(l_star as u64);
+            let left: Vec<_> = left
+                .to_le_bits()
+                .iter()
+                .by_val()
+                .take(L_ORCHARD_BASE)
+                .collect();
+            let right: Vec<_> = right
+                .to_le_bits()
+                .iter()
+                .by_val()
+                .take(L_ORCHARD_BASE)
+                .collect();
+
+            let mut message = l_star.to_vec();
+            message.extend_from_slice(&left);
+            message.extend_from_slice(&right);
+
+            node = domain.hash(message.into_iter()).unwrap();
+        }
+        node
+    }
+
+    #[test]
+    fn merkle_chip() {
+        // Choose a random leaf and position
+        let leaf = pallas::Base::rand();
+        let pos = random::<u32>();
+        let pos_bool = i2lebsp::<32>(pos as u64);
+
+        // Choose a path of random inner nodes
+        let path: Vec<_> = (0..(MERKLE_DEPTH_ORCHARD))
+            .map(|_| pallas::Base::rand())
+            .collect();
+
+        // This root is provided as a public input in the Orchard circuit.
+        let _root = hash_path(leaf, &pos_bool, &path);
+
+        let circuit = MyCircuit {
+            leaf: Some(leaf),
+            leaf_pos: Some(pos),
+            merkle_path: Some(path.try_into().unwrap()),
+        };
+
+        let prover = MockProver::run(11, &circuit, vec![]).unwrap();
+        assert_eq!(prover.verify(), Ok(()))
+    }
+}
