@@ -388,14 +388,12 @@ mod tests {
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
-        pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
     use super::{
-        chip::SinsemillaHashDomains,
-        chip::{SinsemillaChip, SinsemillaConfig},
-        HashDomain, Message, MessagePiece,
+        chip::{SinsemillaChip, SinsemillaCommitDomains, SinsemillaConfig, SinsemillaHashDomains},
+        CommitDomain, HashDomain, Message, MessagePiece,
     };
 
     use crate::{
@@ -408,6 +406,7 @@ mod tests {
     };
 
     use group::Curve;
+    use pasta_curves::{arithmetic::FieldExt, pallas};
 
     use std::convert::TryInto;
 
@@ -559,7 +558,7 @@ mod tests {
                     };
 
                     Point::new(
-                        ecc_chip,
+                        ecc_chip.clone(),
                         layouter.namespace(|| "Witness expected parent"),
                         expected_parent,
                     )?
@@ -575,6 +574,22 @@ mod tests {
                     layouter.namespace(|| "parent == expected parent"),
                     &expected_parent,
                 )?;
+            }
+
+            {
+                let chip2 = SinsemillaChip::construct(config.2);
+
+                let commit_ivk =
+                    CommitDomain::new(chip2.clone(), ecc_chip, &SinsemillaCommitDomains::CommitIvk);
+                let r = Some(pallas::Scalar::rand());
+                let message: Vec<Option<bool>> =
+                    (0..500).map(|_| Some(rand::random::<bool>())).collect();
+                let message = Message::from_bitstring(
+                    chip2,
+                    layouter.namespace(|| "witness message"),
+                    message,
+                )?;
+                commit_ivk.commit(layouter.namespace(|| "commit"), message, r)?;
             }
 
             Ok(())
