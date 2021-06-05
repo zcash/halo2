@@ -13,7 +13,7 @@ use pasta_curves::{arithmetic::CurveAffine, pallas};
 pub(super) mod add;
 pub(super) mod add_incomplete;
 pub(super) mod mul;
-// pub(super) mod mul_fixed;
+pub(super) mod mul_fixed;
 pub(super) mod witness_point;
 pub(super) mod witness_scalar_fixed;
 
@@ -199,6 +199,20 @@ impl EccChip {
             config.create_gate(meta);
         }
 
+        // Create fixed-base scalar mul gate that os used in both full-width
+        // and short multiplication.
+        {
+            let mul_fixed_config: mul_fixed::Config<{ constants::NUM_WINDOWS }> = (&config).into();
+            mul_fixed_config.create_gate(meta);
+        }
+
+        // Create gate that is only used in short fixed-base scalar mul.
+        {
+            let short_config: mul_fixed::short::Config<{ constants::NUM_WINDOWS_SHORT }> =
+                (&config).into();
+            short_config.create_gate(meta);
+        }
+
         config
     }
 }
@@ -354,19 +368,29 @@ impl EccInstructions<pallas::Affine> for EccChip {
 
     fn mul_fixed(
         &self,
-        _layouter: &mut impl Layouter<pallas::Base>,
-        _scalar: &Self::ScalarFixed,
-        _base: &Self::FixedPoints,
+        layouter: &mut impl Layouter<pallas::Base>,
+        scalar: &Self::ScalarFixed,
+        base: &Self::FixedPoints,
     ) -> Result<Self::Point, Error> {
-        todo!()
+        let config: mul_fixed::full_width::Config<{ constants::NUM_WINDOWS }> =
+            self.config().into();
+        layouter.assign_region(
+            || format!("fixed-base mul of {:?}", base),
+            |mut region| config.assign_region(scalar, *base, 0, &mut region),
+        )
     }
 
     fn mul_fixed_short(
         &self,
-        _layouter: &mut impl Layouter<pallas::Base>,
-        _scalar: &Self::ScalarFixedShort,
-        _base: &Self::FixedPointsShort,
+        layouter: &mut impl Layouter<pallas::Base>,
+        scalar: &Self::ScalarFixedShort,
+        base: &Self::FixedPointsShort,
     ) -> Result<Self::Point, Error> {
-        todo!()
+        let config: mul_fixed::short::Config<{ constants::NUM_WINDOWS_SHORT }> =
+            self.config().into();
+        layouter.assign_region(
+            || format!("short fixed-base mul of {:?}", base),
+            |mut region| config.assign_region(scalar, base, 0, &mut region),
+        )
     }
 }
