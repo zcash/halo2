@@ -36,9 +36,13 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     type X;
     /// A point output of [`Self::hash_to_point`].
     type Point: Clone + Debug;
+    /// A type enumerating the fixed points used in `CommitDomains`.
+    type FixedPoints: Clone + Debug;
 
     /// HashDomains used in this instruction.
     type HashDomains: HashDomains<C>;
+    /// CommitDomains used in this instruction.
+    type CommitDomains: CommitDomains<C, Self::FixedPoints, Self::HashDomains>;
 
     /// Witness a message piece given a field element. Returns a [`Self::MessagePiece`]
     /// encoding the given message.
@@ -222,6 +226,7 @@ pub struct HashDomain<
     EccChip: EccInstructions<
             C,
             Point = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::Point,
+            FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
         > + Clone
         + Debug
         + Eq,
@@ -238,6 +243,7 @@ where
     EccChip: EccInstructions<
             C,
             Point = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::Point,
+            FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
         > + Clone
         + Debug
         + Eq,
@@ -284,10 +290,97 @@ where
     }
 }
 
+/// Trait allowing circuit's Sinsemilla CommitDomains to be enumerated.
+pub trait CommitDomains<C: CurveAffine, F: Clone + Debug, H: HashDomains<C>>:
+    Clone + Debug
+{
+    /// Returns the fixed point corresponding to the R constant for this CommitDomain.
+    fn r(&self) -> F;
+
+    /// Returns the HashDomain contained in this CommitDomain
+    fn hash_domain(&self) -> H;
+}
+
 /// Trait allowing circuit's Sinsemilla HashDomains to be enumerated.
 #[allow(non_snake_case)]
 pub trait HashDomains<C: CurveAffine>: Clone + Debug {
     fn Q(&self) -> C;
+}
+
+#[allow(non_snake_case)]
+pub struct CommitDomain<
+    C: CurveAffine,
+    SinsemillaChip,
+    EccChip,
+    const K: usize,
+    const MAX_WORDS: usize,
+> where
+    SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
+    EccChip: EccInstructions<
+            C,
+            Point = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::Point,
+            FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
+        > + Clone
+        + Debug
+        + Eq,
+{
+    M: HashDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>,
+    R: ecc::FixedPoint<C, EccChip>,
+}
+
+impl<C: CurveAffine, SinsemillaChip, EccChip, const K: usize, const MAX_WORDS: usize>
+    CommitDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>
+where
+    SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
+    EccChip: EccInstructions<
+            C,
+            Point = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::Point,
+            FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
+        > + Clone
+        + Debug
+        + Eq,
+{
+    /// Constructs a new `CommitDomain` for the given domain.
+    pub fn new(
+        sinsemilla_chip: SinsemillaChip,
+        ecc_chip: EccChip,
+        domain: &SinsemillaChip::CommitDomains,
+    ) -> Self {
+        CommitDomain {
+            M: HashDomain::new(sinsemilla_chip, ecc_chip.clone(), &domain.hash_domain()),
+            R: ecc::FixedPoint::from_inner(ecc_chip, domain.r()),
+        }
+    }
+
+    /// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
+    ///
+    /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
+    pub fn commit(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        message: Message<C, SinsemillaChip, K, MAX_WORDS>,
+        r: Option<C::Scalar>,
+    ) -> Result<ecc::Point<C, EccChip>, Error> {
+        assert_eq!(self.M.sinsemilla_chip, message.chip);
+        let (blind, _) = self.R.mul(layouter.namespace(|| "[r] R"), r)?;
+        self.M
+            .hash_to_point(layouter.namespace(|| "M"), message)?
+            .add_incomplete(layouter.namespace(|| "M ⸭ [r] R"), &blind)
+    }
+
+    /// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
+    ///
+    /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
+    pub fn short_commit(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        message: Message<C, SinsemillaChip, K, MAX_WORDS>,
+        r: Option<C::Scalar>,
+    ) -> Result<ecc::X<C, EccChip>, Error> {
+        assert_eq!(self.M.sinsemilla_chip, message.chip);
+        let p = self.commit(layouter.namespace(|| "commit"), message, r);
+        p.map(|p| p.extract_p())
+    }
 }
 
 #[cfg(test)]

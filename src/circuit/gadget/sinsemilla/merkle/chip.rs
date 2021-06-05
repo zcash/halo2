@@ -466,12 +466,22 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
         { sinsemilla::K },
         { sinsemilla::C },
     >>::Point;
+    type FixedPoints = <SinsemillaChip as SinsemillaInstructions<
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    >>::FixedPoints;
 
     type HashDomains = <SinsemillaChip as SinsemillaInstructions<
         pallas::Affine,
         { sinsemilla::K },
         { sinsemilla::C },
     >>::HashDomains;
+    type CommitDomains = <SinsemillaChip as SinsemillaInstructions<
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    >>::CommitDomains;
 
     fn witness_message_piece(
         &self,
