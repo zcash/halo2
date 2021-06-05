@@ -12,7 +12,7 @@ use pasta_curves::{arithmetic::CurveAffine, pallas};
 
 pub(super) mod add;
 pub(super) mod add_incomplete;
-// pub(super) mod mul;
+pub(super) mod mul;
 // pub(super) mod mul_fixed;
 pub(super) mod witness_point;
 // pub(super) mod witness_scalar_fixed;
@@ -86,6 +86,8 @@ pub struct EccConfig {
     pub q_mul_lo: Selector,
     /// Selector used in scalar decomposition for variable-base scalar mul
     pub q_mul_decompose_var: Selector,
+    /// Selector used in scalar decomposition for variable-base scalar mul
+    pub q_init_z: Selector,
     /// Variable-base scalar multiplication (final scalar)
     pub q_mul_complete: Selector,
     /// Fixed-base full-width scalar multiplication
@@ -150,6 +152,7 @@ impl EccChip {
             q_mul_hi: meta.selector(),
             q_mul_lo: meta.selector(),
             q_mul_decompose_var: meta.selector(),
+            q_init_z: meta.selector(),
             q_mul_complete: meta.selector(),
             q_mul_fixed: meta.selector(),
             q_mul_fixed_short: meta.selector(),
@@ -175,6 +178,12 @@ impl EccChip {
         {
             let add_config: add::Config = (&config).into();
             add_config.create_gate(meta);
+        }
+
+        // Create variable-base scalar mul gates
+        {
+            let mul_config: mul::Config = (&config).into();
+            mul_config.create_gate(meta);
         }
 
         config
@@ -311,11 +320,15 @@ impl EccInstructions<pallas::Affine> for EccChip {
 
     fn mul(
         &self,
-        _layouter: &mut impl Layouter<pallas::Base>,
-        _scalar: &Self::ScalarVar,
-        _base: &Self::Point,
+        layouter: &mut impl Layouter<pallas::Base>,
+        scalar: &Self::ScalarVar,
+        base: &Self::Point,
     ) -> Result<Self::Point, Error> {
-        todo!()
+        let config: mul::Config = self.config().into();
+        layouter.assign_region(
+            || "variable-base scalar mul",
+            |mut region| config.assign_region(scalar, base, 0, &mut region),
+        )
     }
 
     fn mul_fixed(
