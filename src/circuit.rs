@@ -235,9 +235,12 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
     fn synthesize(
         &self,
-        _config: Self::Config,
-        _layouter: impl Layouter<pallas::Base>,
+        config: Self::Config,
+        mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), plonk::Error> {
+        // Load the Sinsemilla generator lookup table used by the whole circuit.
+        SinsemillaChip::load(config.sinsemilla_config_1, &mut layouter)?;
+
         Ok(())
     }
 }
