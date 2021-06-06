@@ -1,6 +1,7 @@
 use pasta_curves::pallas;
 
 use ecc::chip::EccChip;
+use poseidon::Pow5T3Chip as PoseidonChip;
 use sinsemilla::merkle::chip::MerkleChip;
 use utilities::plonk::PLONKChip;
 
@@ -24,5 +25,9 @@ impl super::Config {
 
     pub(super) fn merkle_chip_2(&self) -> MerkleChip {
         MerkleChip::construct(self.merkle_config_2.clone())
+    }
+
+    pub(super) fn poseidon_chip(&self) -> PoseidonChip<pallas::Base> {
+        PoseidonChip::construct(self.poseidon_config.clone())
     }
 }

@@ -16,7 +16,7 @@ const WIDTH: usize = 3;
 /// Configuration for an [`Pow5T3Chip`].
 #[derive(Clone, Debug)]
 pub struct Pow5T3Config<F: FieldExt> {
-    state: [Column<Advice>; WIDTH],
+    pub(in crate::circuit) state: [Column<Advice>; WIDTH],
     partial_sbox: Column<Advice>,
     rc_a: [Column<Fixed>; WIDTH],
     rc_b: [Column<Fixed>; WIDTH],
