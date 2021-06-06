@@ -43,6 +43,11 @@ pub(crate) const L_ORCHARD_SCALAR: usize = 255;
 /// $\ell_\mathsf{value}$
 pub(crate) const L_VALUE: usize = 64;
 
+/// T_PRIME_BITS is the smallest multiple of 10 such that 2^T_PRIME_BITS
+/// is larger than t_P. t_P is defined in q_P = 2^254 + t_P for the
+/// Pallas base field.
+pub(crate) const PALLAS_T_PRIME_BITS: usize = 130;
+
 /// SWU hash-to-curve personalization for the spending key base point and
 /// the nullifier base point K^Orchard
 pub const ORCHARD_PERSONALIZATION: &str = "z.cash:Orchard";

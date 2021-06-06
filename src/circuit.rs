@@ -42,11 +42,13 @@ use gadget::{
         StateWord, Word,
     },
     sinsemilla::{
-        chip::{SinsemillaChip, SinsemillaConfig, SinsemillaHashDomains},
+        chip::{SinsemillaChip, SinsemillaCommitDomains, SinsemillaConfig, SinsemillaHashDomains},
+        commit_ivk::CommitIvkConfig,
         merkle::{
             chip::{MerkleChip, MerkleConfig},
             MerklePath,
         },
+        CommitDomain,
     },
     utilities::{
         copy,
@@ -78,6 +80,7 @@ pub struct Config {
     merkle_config_2: MerkleConfig,
     sinsemilla_config_1: SinsemillaConfig,
     sinsemilla_config_2: SinsemillaConfig,
+    commit_ivk_config: CommitIvkConfig,
 }
 
 /// The Orchard Action circuit.
@@ -233,6 +236,11 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             (sinsemilla_config_2, merkle_config_2)
         };
 
+        // Configuration to handle decomposition and canonicity checking
+        // for CommitIvk.
+        let commit_ivk_config =
+            CommitIvkConfig::configure(meta, advices, sinsemilla_config_1.clone());
+
         // TODO: Infrastructure to handle public inputs.
         let q_primary = meta.selector();
         let primary = meta.instance_column();
@@ -263,6 +271,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             merkle_config_2,
             sinsemilla_config_1,
             sinsemilla_config_2,
+            commit_ivk_config,
         }
     }
 
@@ -541,6 +550,27 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
             // [alpha] SpendAuthG + ak
             alpha_commitment.add(layouter.namespace(|| "rk"), &ak)?
+        };
+
+        // Diversified address integrity.
+        let _pk_d_old = {
+            let commit_ivk_config = config.commit_ivk_config.clone();
+
+            let ivk = {
+                let rivk = self.rivk.map(|rivk| *rivk);
+
+                commit_ivk_config.assign_region(
+                    config.sinsemilla_chip_1(),
+                    ecc_chip.clone(),
+                    layouter.namespace(|| "CommitIvk"),
+                    *ak.extract_p().inner(),
+                    nk,
+                    rivk,
+                )?
+            };
+
+            // [ivk] g_d_old
+            g_d_old.mul(layouter.namespace(|| "[ivk] g_d_old"), ivk.inner())?
         };
 
         Ok(())
