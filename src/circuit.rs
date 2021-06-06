@@ -529,6 +529,20 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 .extract_p()
         };
 
+        // Spend authority
+        // TODO: constrain to equal public input rk
+        let _rk = {
+            // alpha_commitment = [alpha] SpendAuthG
+            let (alpha_commitment, _) = {
+                let spend_auth_g = OrchardFixedBasesFull::SpendAuthG;
+                let spend_auth_g = FixedPoint::from_inner(ecc_chip.clone(), spend_auth_g);
+                spend_auth_g.mul(layouter.namespace(|| "[alpha] SpendAuthG"), self.alpha)?
+            };
+
+            // [alpha] SpendAuthG + ak
+            alpha_commitment.add(layouter.namespace(|| "rk"), &ak)?
+        };
+
         Ok(())
     }
 }
