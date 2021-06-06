@@ -11,10 +11,19 @@ use halo2::{
 use pasta_curves::{pallas, vesta};
 
 use crate::{
-    note::{nullifier::Nullifier, ExtractedNoteCommitment},
+    constants::MERKLE_DEPTH_ORCHARD,
+    keys::{
+        CommitIvkRandomness, DiversifiedTransmissionKey, NullifierDerivingKey, SpendValidatingKey,
+    },
+    note::{
+        commitment::{NoteCommitTrapdoor, NoteCommitment},
+        nullifier::Nullifier,
+        ExtractedNoteCommitment,
+    },
     primitives::redpallas::{SpendAuth, VerificationKey},
+    spec::NonIdentityPallasPoint,
     tree::Anchor,
-    value::ValueCommitment,
+    value::{NoteValue, ValueCommitTrapdoor, ValueCommitment},
 };
 
 pub(crate) mod gadget;
@@ -23,8 +32,28 @@ pub(crate) mod gadget;
 const K: u32 = 11;
 
 /// The Orchard Action circuit.
-#[derive(Debug)]
-pub struct Circuit {}
+#[derive(Debug, Default)]
+pub struct Circuit {
+    pub(crate) path: Option<[pallas::Base; MERKLE_DEPTH_ORCHARD]>,
+    pub(crate) pos: Option<u32>,
+    pub(crate) g_d_old: Option<NonIdentityPallasPoint>,
+    pub(crate) pk_d_old: Option<DiversifiedTransmissionKey>,
+    pub(crate) v_old: Option<NoteValue>,
+    pub(crate) rho_old: Option<Nullifier>,
+    pub(crate) psi_old: Option<pallas::Base>,
+    pub(crate) rcm_old: Option<NoteCommitTrapdoor>,
+    pub(crate) cm_old: Option<NoteCommitment>,
+    pub(crate) alpha: Option<pallas::Scalar>,
+    pub(crate) ak: Option<SpendValidatingKey>,
+    pub(crate) nk: Option<NullifierDerivingKey>,
+    pub(crate) rivk: Option<CommitIvkRandomness>,
+    pub(crate) g_d_new_star: Option<[u8; 32]>,
+    pub(crate) pk_d_new_star: Option<[u8; 32]>,
+    pub(crate) v_new: Option<NoteValue>,
+    pub(crate) psi_new: Option<pallas::Base>,
+    pub(crate) rcm_new: Option<NoteCommitTrapdoor>,
+    pub(crate) rcv: Option<ValueCommitTrapdoor>,
+}
 
 impl plonk::Circuit<pallas::Base> for Circuit {
     type Config = ();
@@ -72,7 +101,7 @@ impl VerifyingKey {
     /// Builds the verifying key.
     pub fn build() -> Self {
         let params = halo2::poly::commitment::Params::new(K);
-        let circuit = Circuit {}; // TODO
+        let circuit: Circuit = Default::default(); // TODO
 
         let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
@@ -91,7 +120,7 @@ impl ProvingKey {
     /// Builds the proving key.
     pub fn build() -> Self {
         let params = halo2::poly::commitment::Params::new(K);
-        let circuit = Circuit {}; // TODO
+        let circuit: Circuit = Default::default(); // TODO
 
         let vk = plonk::keygen_vk(&params, &circuit).unwrap();
         let pk = plonk::keygen_pk(&params, vk, &circuit).unwrap();
@@ -184,6 +213,7 @@ impl Proof {
 #[cfg(test)]
 mod tests {
     use ff::Field;
+    use group::GroupEncoding;
     use halo2::dev::MockProver;
     use pasta_curves::pallas;
     use rand::rngs::OsRng;
@@ -193,6 +223,7 @@ mod tests {
     use crate::{
         keys::SpendValidatingKey,
         note::Note,
+        tree::MerklePath,
         value::{ValueCommitTrapdoor, ValueCommitment},
     };
 
@@ -204,6 +235,9 @@ mod tests {
         let (circuits, instances): (Vec<_>, Vec<_>) = iter::once(())
             .map(|()| {
                 let (_, fvk, spent_note) = Note::dummy(&mut rng, None);
+                let sender_address = fvk.default_address();
+                let nk = *fvk.nk();
+                let rivk = *fvk.rivk();
                 let nf_old = spent_note.nullifier(&fvk);
                 let ak: SpendValidatingKey = fvk.into();
                 let alpha = pallas::Scalar::random(&mut rng);
@@ -215,10 +249,33 @@ mod tests {
                 let value = spent_note.value() - output_note.value();
                 let cv_net = ValueCommitment::derive(value.unwrap(), ValueCommitTrapdoor::zero());
 
+                let path = MerklePath::dummy(&mut rng);
+                let anchor = path.root(spent_note.commitment().into()).unwrap();
+
                 (
-                    Circuit {},
+                    Circuit {
+                        path: Some(path.auth_path()),
+                        pos: Some(path.position()),
+                        g_d_old: Some(sender_address.g_d()),
+                        pk_d_old: Some(*sender_address.pk_d()),
+                        v_old: Some(spent_note.value()),
+                        rho_old: Some(spent_note.rho()),
+                        psi_old: Some(spent_note.rseed().psi(&spent_note.rho())),
+                        rcm_old: Some(spent_note.rseed().rcm(&spent_note.rho())),
+                        cm_old: Some(spent_note.commitment()),
+                        alpha: Some(alpha),
+                        ak: Some(ak),
+                        nk: Some(nk),
+                        rivk: Some(rivk),
+                        g_d_new_star: Some((*output_note.recipient().g_d()).to_bytes()),
+                        pk_d_new_star: Some(output_note.recipient().pk_d().to_bytes()),
+                        v_new: Some(output_note.value()),
+                        psi_new: Some(output_note.rseed().psi(&output_note.rho())),
+                        rcm_new: Some(output_note.rseed().rcm(&output_note.rho())),
+                        rcv: Some(ValueCommitTrapdoor::zero()),
+                    },
                     Instance {
-                        anchor: pallas::Base::zero().into(),
+                        anchor,
                         cv_net,
                         nf_old,
                         rk,

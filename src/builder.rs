@@ -169,7 +169,7 @@ impl ActionInfo {
                     parts: SigningParts { ak, alpha },
                 },
             ),
-            Circuit {},
+            Default::default(), // TODO
         )
     }
 }
