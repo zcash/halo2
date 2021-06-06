@@ -12,7 +12,10 @@ use halo2::{
 use pasta_curves::{arithmetic::FieldExt, pallas, vesta};
 
 use crate::{
-    constants::MERKLE_DEPTH_ORCHARD,
+    constants::{
+        load::{OrchardFixedBasesFull, ValueCommitV},
+        MERKLE_DEPTH_ORCHARD,
+    },
     keys::{
         CommitIvkRandomness, DiversifiedTransmissionKey, NullifierDerivingKey, SpendValidatingKey,
     },
@@ -32,7 +35,7 @@ use crate::{
 use gadget::{
     ecc::{
         chip::{EccChip, EccConfig},
-        Point,
+        FixedPoint, FixedPointShort, Point,
     },
     poseidon::{Pow5T3Chip as PoseidonChip, Pow5T3Config as PoseidonConfig},
     sinsemilla::{
@@ -43,9 +46,10 @@ use gadget::{
         },
     },
     utilities::{
+        copy,
         enable_flag::{EnableFlagChip, EnableFlagConfig},
-        plonk::{PLONKChip, PLONKConfig},
-        CellValue, UtilitiesInstructions,
+        plonk::{PLONKChip, PLONKConfig, PLONKInstructions},
+        CellValue, UtilitiesInstructions, Var,
     },
 };
 
@@ -61,6 +65,7 @@ const K: u32 = 11;
 pub struct Config {
     q_primary: Selector,
     primary: Column<InstanceColumn>,
+    q_v_net: Selector,
     advices: [Column<Advice>; 10],
     enable_flag_config: EnableFlagConfig,
     ecc_config: EccConfig,
@@ -122,6 +127,18 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             meta.advice_column(),
             meta.advice_column(),
         ];
+
+        // Constrain v_old - v_new = magnitude * sign
+        let q_v_net = meta.selector();
+        meta.create_gate("v_old - v_new = magnitude * sign", |meta| {
+            let q_v_net = meta.query_selector(q_v_net);
+            let v_old = meta.query_advice(advices[0], Rotation::cur());
+            let v_new = meta.query_advice(advices[1], Rotation::cur());
+            let magnitude = meta.query_advice(advices[2], Rotation::cur());
+            let sign = meta.query_advice(advices[3], Rotation::cur());
+
+            vec![q_v_net * (v_old - v_new - magnitude * sign)]
+        });
 
         // Fixed columns for the Sinsemilla generator lookup table
         let table_idx = meta.fixed_column();
@@ -233,6 +250,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         Config {
             q_primary,
             primary,
+            q_v_net,
             advices,
             enable_flag_config,
             ecc_config,
@@ -332,6 +350,94 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             };
             let leaf = *cm_old.extract_p().inner();
             merkle_inputs.calculate_root(layouter.namespace(|| "MerkleCRH"), leaf)?
+        };
+
+        // Value commitment integrity.
+        // TODO: constrain to equal public input cv_net
+        let _cv_net = {
+            // v_net = v_old - v_new
+            let v_net = {
+                let v_net_val = self.v_old.zip(self.v_new).map(|(v_old, v_new)| {
+                    // Do the subtraction in the scalar field.
+                    let v_old = pallas::Scalar::from_u64(v_old.inner());
+                    let v_new = pallas::Scalar::from_u64(v_new.inner());
+                    v_old - v_new
+                });
+                // If v_net_val > (p - 1)/2, its sign is negative.
+                let is_negative =
+                    v_net_val.map(|val| val > (-pallas::Scalar::one()) * pallas::Scalar::TWO_INV);
+                let magnitude_sign =
+                    v_net_val
+                        .zip(is_negative)
+                        .map(|(signed_value, is_negative)| {
+                            let magnitude = {
+                                let magnitude = if is_negative {
+                                    -signed_value
+                                } else {
+                                    signed_value
+                                };
+                                assert!(magnitude < pallas::Scalar::from_u128(1 << 64));
+                                pallas::Base::from_bytes(&magnitude.to_bytes()).unwrap()
+                            };
+                            let sign = if is_negative {
+                                -pallas::Base::one()
+                            } else {
+                                pallas::Base::one()
+                            };
+                            (magnitude, sign)
+                        });
+                let magnitude = self.load_private(
+                    layouter.namespace(|| "v_net magnitude"),
+                    config.advices[9],
+                    magnitude_sign.map(|m_s| m_s.0),
+                )?;
+                let sign = self.load_private(
+                    layouter.namespace(|| "v_net sign"),
+                    config.advices[9],
+                    magnitude_sign.map(|m_s| m_s.1),
+                )?;
+                (magnitude, sign)
+            };
+
+            // Constrain v_old - v_new = magnitude * sign
+            layouter.assign_region(
+                || "v_old - v_new = magnitude * sign",
+                |mut region| {
+                    copy(&mut region, || "v_old", config.advices[0], 0, &v_old)?;
+                    copy(&mut region, || "v_new", config.advices[1], 0, &v_new)?;
+                    let (magnitude, sign) = v_net;
+                    copy(
+                        &mut region,
+                        || "v_net magnitude",
+                        config.advices[2],
+                        0,
+                        &magnitude,
+                    )?;
+                    copy(&mut region, || "v_net sign", config.advices[3], 0, &sign)?;
+
+                    config.q_v_net.enable(&mut region, 0)
+                },
+            )?;
+
+            // commitment = [v_net] ValueCommitV
+            let (commitment, _) = {
+                let value_commit_v = ValueCommitV::get();
+                let value_commit_v = FixedPointShort::from_inner(ecc_chip.clone(), value_commit_v);
+                value_commit_v.mul(layouter.namespace(|| "[v_net] ValueCommitV"), v_net)?
+            };
+
+            // blind = [rcv] ValueCommitR
+            let (blind, _) = {
+                let rcv = self.rcv.as_ref().map(|rcv| **rcv);
+                let value_commit_r = OrchardFixedBasesFull::ValueCommitR;
+                let value_commit_r = FixedPoint::from_inner(ecc_chip.clone(), value_commit_r);
+
+                // [rcv] ValueCommitR
+                value_commit_r.mul(layouter.namespace(|| "[rcv] ValueCommitR"), rcv)?
+            };
+
+            // [v_net] ValueCommitV + [rcv] ValueCommitR
+            commitment.add(layouter.namespace(|| "cv_net"), &blind)?
         };
 
         Ok(())
