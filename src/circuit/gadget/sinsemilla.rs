@@ -9,6 +9,7 @@ use pasta_curves::arithmetic::{CurveAffine, FieldExt};
 use std::{convert::TryInto, fmt::Debug};
 
 pub mod chip;
+pub mod commit_ivk;
 pub mod merkle;
 mod message;
 
@@ -30,7 +31,7 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     ///
     /// For example, in the case `K = 10`, `NUM_BITS = 255`, we can fit
     /// up to `N = 25` words in a single base field element.
-    type MessagePiece: Clone + Debug;
+    type MessagePiece: Copy + Clone + Debug;
 
     /// A cumulative sum `z` is used to decompose a Sinsemilla message. It
     /// produces intermediate values for each word in the message, such
@@ -153,13 +154,23 @@ where
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct MessagePiece<C: CurveAffine, SinsemillaChip, const K: usize, const MAX_WORDS: usize>
 where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
 {
     chip: SinsemillaChip,
     inner: SinsemillaChip::MessagePiece,
+}
+
+impl<C: CurveAffine, SinsemillaChip, const K: usize, const MAX_WORDS: usize>
+    MessagePiece<C, SinsemillaChip, K, MAX_WORDS>
+where
+    SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
+{
+    fn inner(&self) -> SinsemillaChip::MessagePiece {
+        self.inner
+    }
 }
 
 impl<C: CurveAffine, SinsemillaChip, const K: usize, const MAX_WORDS: usize>
