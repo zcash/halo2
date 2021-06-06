@@ -7,11 +7,20 @@ use subtle::{ConstantTimeEq, CtOption};
 
 use crate::{constants::L_ORCHARD_BASE, primitives::sinsemilla, spec::extract_p, value::NoteValue};
 
-pub(super) struct NoteCommitTrapdoor(pub(super) pallas::Scalar);
+#[derive(Debug)]
+pub(crate) struct NoteCommitTrapdoor(pub(super) pallas::Scalar);
 
 /// A commitment to a note.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct NoteCommitment(pub(super) pallas::Point);
+
+impl std::ops::Deref for NoteCommitment {
+    type Target = pallas::Point;
+
+    fn deref(&self) -> &pallas::Point {
+        &self.0
+    }
+}
 
 impl NoteCommitment {
     /// $NoteCommit^Orchard$.

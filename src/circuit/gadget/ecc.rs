@@ -185,6 +185,11 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
             .constrain_equal(&mut layouter, &self.inner, &other.inner)
     }
 
+    /// Returns the inner point.
+    pub fn inner(&self) -> &EccChip::Point {
+        &self.inner
+    }
+
     /// Extracts the x-coordinate of a point.
     pub fn extract_p(&self) -> X<C, EccChip> {
         X::from_inner(self.chip.clone(), EccChip::extract_p(&self.inner).clone())

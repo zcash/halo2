@@ -18,7 +18,7 @@ pub(crate) mod nullifier;
 pub use self::nullifier::Nullifier;
 
 /// The ZIP 212 seed randomness for a note.
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub(crate) struct RandomSeed([u8; 32]);
 
 impl RandomSeed {
@@ -46,7 +46,7 @@ impl RandomSeed {
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
     ///
     /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
-    fn psi(&self, rho: &Nullifier) -> pallas::Base {
+    pub(crate) fn psi(&self, rho: &Nullifier) -> pallas::Base {
         to_base(PrfExpand::Psi.with_ad(&self.0, &rho.to_bytes()[..]))
     }
 
@@ -70,7 +70,7 @@ impl RandomSeed {
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
     ///
     /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
-    fn rcm(&self, rho: &Nullifier) -> commitment::NoteCommitTrapdoor {
+    pub(crate) fn rcm(&self, rho: &Nullifier) -> commitment::NoteCommitTrapdoor {
         commitment::NoteCommitTrapdoor(to_scalar(
             PrfExpand::Rcm.with_ad(&self.0, &rho.to_bytes()[..]),
         ))
@@ -185,6 +185,11 @@ impl Note {
     /// Derives the ephemeral secret key for this note.
     pub(crate) fn esk(&self) -> EphemeralSecretKey {
         EphemeralSecretKey(self.rseed.esk(&self.rho))
+    }
+
+    /// Returns rho of this note.
+    pub fn rho(&self) -> Nullifier {
+        self.rho
     }
 
     /// Derives the commitment to this note.

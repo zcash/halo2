@@ -71,6 +71,10 @@ impl NoteValue {
         Default::default()
     }
 
+    pub(crate) fn inner(&self) -> u64 {
+        self.0
+    }
+
     /// Creates a note value from its raw numeric value.
     ///
     /// This only enforces that the value is an unsigned 64-bit integer. Callers should
@@ -159,6 +163,14 @@ impl TryFrom<ValueSum> for i64 {
 /// The blinding factor for a [`ValueCommitment`].
 #[derive(Clone, Debug)]
 pub struct ValueCommitTrapdoor(pallas::Scalar);
+
+impl std::ops::Deref for ValueCommitTrapdoor {
+    type Target = pallas::Scalar;
+
+    fn deref(&self) -> &pallas::Scalar {
+        &self.0
+    }
+}
 
 impl Add<&ValueCommitTrapdoor> for ValueCommitTrapdoor {
     type Output = ValueCommitTrapdoor;

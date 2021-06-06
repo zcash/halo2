@@ -121,6 +121,12 @@ impl From<&SpendAuthorizingKey> for SpendValidatingKey {
     }
 }
 
+impl From<&SpendValidatingKey> for pallas::Point {
+    fn from(spend_validating_key: &SpendValidatingKey) -> pallas::Point {
+        pallas::Point::from_bytes(&(&spend_validating_key.0).into()).unwrap()
+    }
+}
+
 impl PartialEq for SpendValidatingKey {
     fn eq(&self, other: &Self) -> bool {
         <[u8; 32]>::from(&self.0).eq(&<[u8; 32]>::from(&other.0))
@@ -141,8 +147,16 @@ impl SpendValidatingKey {
 /// [`Nullifier`]: crate::note::Nullifier
 /// [`Note`]: crate::note::Note
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug, Clone)]
+#[derive(Copy, Debug, Clone)]
 pub(crate) struct NullifierDerivingKey(pallas::Base);
+
+impl std::ops::Deref for NullifierDerivingKey {
+    type Target = pallas::Base;
+
+    fn deref(&self) -> &pallas::Base {
+        &self.0
+    }
+}
 
 impl From<&SpendingKey> for NullifierDerivingKey {
     fn from(sk: &SpendingKey) -> Self {
@@ -161,12 +175,20 @@ impl NullifierDerivingKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug, Clone)]
-struct CommitIvkRandomness(pallas::Scalar);
+#[derive(Copy, Debug, Clone)]
+pub(crate) struct CommitIvkRandomness(pallas::Scalar);
 
 impl From<&SpendingKey> for CommitIvkRandomness {
     fn from(sk: &SpendingKey) -> Self {
         CommitIvkRandomness(to_scalar(PrfExpand::OrchardRivk.expand(&sk.0)))
+    }
+}
+
+impl std::ops::Deref for CommitIvkRandomness {
+    type Target = pallas::Scalar;
+
+    fn deref(&self) -> &pallas::Scalar {
+        &self.0
     }
 }
 
@@ -204,6 +226,10 @@ impl From<FullViewingKey> for SpendValidatingKey {
 impl FullViewingKey {
     pub(crate) fn nk(&self) -> &NullifierDerivingKey {
         &self.nk
+    }
+
+    pub(crate) fn rivk(&self) -> &CommitIvkRandomness {
+        &self.rivk
     }
 
     /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
