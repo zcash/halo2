@@ -13,14 +13,14 @@ use super::MerkleInstructions;
 
 use crate::{
     circuit::gadget::utilities::{
+        bitrange_subset,
         cond_swap::{CondSwapChip, CondSwapConfig, CondSwapInstructions},
         copy, CellValue, UtilitiesInstructions, Var,
     },
     constants::{L_ORCHARD_BASE, MERKLE_DEPTH_ORCHARD},
     primitives::sinsemilla,
 };
-use ff::PrimeFieldBits;
-use std::{array, convert::TryInto};
+use std::array;
 
 #[derive(Clone, Debug)]
 pub struct MerkleConfig {
@@ -342,6 +342,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                 constants::MERKLE_CRH_PERSONALIZATION, primitives::sinsemilla::HashDomain,
                 spec::i2lebsp,
             };
+            use ff::PrimeFieldBits;
 
             if let (Some(left), Some(right)) = (left.value(), right.value()) {
                 let l_star = i2lebsp::<10>(l as u64);
@@ -468,24 +469,4 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
     fn extract(point: &Self::Point) -> Self::X {
         SinsemillaChip::extract(point)
     }
-}
-
-fn bitrange_subset(field_elem: pallas::Base, bitrange: std::ops::Range<usize>) -> pallas::Base {
-    assert!(bitrange.end <= L_ORCHARD_BASE);
-
-    let bits: Vec<bool> = field_elem
-        .to_le_bits()
-        .iter()
-        .by_val()
-        .skip(bitrange.start)
-        .take(bitrange.end - bitrange.start)
-        .chain(std::iter::repeat(false))
-        .take(256)
-        .collect();
-    let bytearray: Vec<u8> = bits
-        .chunks_exact(8)
-        .map(|byte| byte.iter().rev().fold(0u8, |acc, bit| acc * 2 + *bit as u8))
-        .collect();
-
-    pallas::Base::from_bytes(&bytearray.try_into().unwrap()).unwrap()
 }

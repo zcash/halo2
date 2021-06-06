@@ -36,8 +36,11 @@ use gadget::{
     },
     poseidon::{Pow5T3Chip as PoseidonChip, Pow5T3Config as PoseidonConfig},
     sinsemilla::{
-        chip::{SinsemillaChip, SinsemillaConfig},
-        merkle::chip::{MerkleChip, MerkleConfig},
+        chip::{SinsemillaChip, SinsemillaConfig, SinsemillaHashDomains},
+        merkle::{
+            chip::{MerkleChip, MerkleConfig},
+            MerklePath,
+        },
     },
     utilities::{
         enable_flag::{EnableFlagChip, EnableFlagConfig},
@@ -315,6 +318,20 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             )?;
 
             (rho_old, psi_old, cm_old, g_d_old, ak, nk, v_old, v_new)
+        };
+
+        // Merkle path validity check.
+        // TODO: constrain output to equal public input
+        let _anchor = {
+            let merkle_inputs = MerklePath {
+                chip_1: config.merkle_chip_1(),
+                chip_2: config.merkle_chip_2(),
+                domain: SinsemillaHashDomains::MerkleCrh,
+                leaf_pos: self.pos,
+                path: self.path,
+            };
+            let leaf = *cm_old.extract_p().inner();
+            merkle_inputs.calculate_root(layouter.namespace(|| "MerkleCRH"), leaf)?
         };
 
         Ok(())

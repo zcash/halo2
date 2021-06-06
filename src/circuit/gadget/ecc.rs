@@ -262,6 +262,11 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> X<C, EccC
     pub fn from_inner(chip: EccChip, inner: EccChip::X) -> Self {
         X { chip, inner }
     }
+
+    /// Returns the inner x-coordinate.
+    pub fn inner(&self) -> &EccChip::X {
+        &self.inner
+    }
 }
 
 /// A constant elliptic curve point over the given curve, for which window tables have

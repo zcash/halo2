@@ -14,7 +14,7 @@ use crate::{
 };
 use std::iter;
 
-pub(crate) mod chip;
+pub(in crate::circuit) mod chip;
 
 /// Instructions to check the validity of a Merkle path of a given `PATH_LENGTH`.
 /// The hash function used is a Sinsemilla instance with `K`-bit words.
@@ -54,12 +54,12 @@ pub struct MerklePath<
 > where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
-    chip_1: MerkleChip,
-    chip_2: MerkleChip,
-    domain: MerkleChip::HashDomains,
-    leaf_pos: Option<u32>,
+    pub(in crate::circuit) chip_1: MerkleChip,
+    pub(in crate::circuit) chip_2: MerkleChip,
+    pub(in crate::circuit) domain: MerkleChip::HashDomains,
+    pub(in crate::circuit) leaf_pos: Option<u32>,
     // The Merkle path is ordered from leaves to root.
-    path: Option<[C::Base; PATH_LENGTH]>,
+    pub(in crate::circuit) path: Option<[C::Base; PATH_LENGTH]>,
 }
 
 #[allow(non_snake_case)]
@@ -74,7 +74,7 @@ where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
     /// Calculates the root of the tree containing the given leaf at this Merkle path.
-    fn calculate_root(
+    pub(in crate::circuit) fn calculate_root(
         &self,
         mut layouter: impl Layouter<C::Base>,
         leaf: MerkleChip::Var,
