@@ -4,7 +4,7 @@ use std::mem;
 
 use halo2::{
     circuit::{Layouter, SimpleFloorPlanner},
-    plonk,
+    plonk::{self, Advice, Column, Instance as InstanceColumn, Selector},
     poly::Rotation,
     transcript::{Blake2bRead, Blake2bWrite},
 };
@@ -20,16 +20,49 @@ use crate::{
         nullifier::Nullifier,
         ExtractedNoteCommitment,
     },
-    primitives::redpallas::{SpendAuth, VerificationKey},
+    primitives::{
+        poseidon,
+        redpallas::{SpendAuth, VerificationKey},
+    },
     spec::NonIdentityPallasPoint,
     tree::Anchor,
     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment},
 };
+use gadget::{
+    ecc::chip::{EccChip, EccConfig},
+    poseidon::{Pow5T3Chip as PoseidonChip, Pow5T3Config as PoseidonConfig},
+    sinsemilla::{
+        chip::{SinsemillaChip, SinsemillaConfig},
+        merkle::chip::{MerkleChip, MerkleConfig},
+    },
+    utilities::{
+        enable_flag::{EnableFlagChip, EnableFlagConfig},
+        plonk::{PLONKChip, PLONKConfig},
+    },
+};
+
+use std::convert::TryInto;
 
 pub(crate) mod gadget;
 
 /// Size of the Orchard circuit.
 const K: u32 = 11;
+
+/// Configuration needed to use the Orchard Action circuit.
+#[derive(Clone, Debug)]
+pub struct Config {
+    q_primary: Selector,
+    primary: Column<InstanceColumn>,
+    advices: [Column<Advice>; 10],
+    enable_flag_config: EnableFlagConfig,
+    ecc_config: EccConfig,
+    poseidon_config: PoseidonConfig<pallas::Base>,
+    plonk_config: PLONKConfig,
+    merkle_config_1: MerkleConfig,
+    merkle_config_2: MerkleConfig,
+    sinsemilla_config_1: SinsemillaConfig,
+    sinsemilla_config_2: SinsemillaConfig,
+}
 
 /// The Orchard Action circuit.
 #[derive(Debug, Default)]
@@ -56,16 +89,121 @@ pub struct Circuit {
 }
 
 impl plonk::Circuit<pallas::Base> for Circuit {
-    type Config = ();
+    type Config = Config;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
-        Circuit {}
+        Self::default()
     }
 
     fn configure(meta: &mut plonk::ConstraintSystem<pallas::Base>) -> Self::Config {
-        // Placeholder so the proving key is correctly built.
-        meta.instance_column();
+        // Advice columns used in the Orchard circuit.
+        let advices = [
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+        ];
+
+        // Fixed columns for the Sinsemilla generator lookup table
+        let table_idx = meta.fixed_column();
+        let lookup = (table_idx, meta.fixed_column(), meta.fixed_column());
+
+        // Shared fixed column used to load constants.
+        // TODO: Replace with public inputs API
+        let ecc_constants = [meta.fixed_column(), meta.fixed_column()];
+        let sinsemilla_1_constants = [
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+        ];
+        let sinsemilla_2_constants = [
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+        ];
+
+        // Permutation over all advice columns and `constants` columns.
+        // TODO: Replace `*_constants` with public inputs API.
+        for advice in advices.iter() {
+            meta.enable_equality((*advice).into());
+        }
+        for fixed in ecc_constants.iter() {
+            meta.enable_equality((*fixed).into());
+        }
+        for fixed in sinsemilla_1_constants.iter() {
+            meta.enable_equality((*fixed).into());
+        }
+        for fixed in sinsemilla_2_constants.iter() {
+            meta.enable_equality((*fixed).into());
+        }
+
+        // Configuration for `enable_spends` and `enable_outputs` flags logic
+        // TODO: this may change with public inputs API.
+        let enable_flag_config = EnableFlagChip::configure(meta, [advices[0], advices[1]]);
+
+        // Configuration for curve point operations.
+        // This uses 10 advice columns and spans the whole circuit.
+        let ecc_config = EccChip::configure(meta, advices, table_idx, ecc_constants);
+
+        // Configuration for the Poseidon hash.
+        let poseidon_config = PoseidonChip::configure(
+            meta,
+            poseidon::OrchardNullifier,
+            [advices[0], advices[1], advices[2]],
+            advices[3],
+        );
+
+        // Configuration for standard PLONK (addition and multiplication).
+        let plonk_config = PLONKChip::configure(meta, [advices[0], advices[1], advices[2]]);
+
+        // Configuration for a Sinsemilla hash instantiation and a
+        // Merkle hash instantiation using this Sinsemilla instance.
+        // Since the Sinsemilla config uses only 5 advice columns,
+        // we can fit two instances side-by-side.
+        let (sinsemilla_config_1, merkle_config_1) = {
+            let sinsemilla_config_1 = SinsemillaChip::configure(
+                meta,
+                advices[..5].try_into().unwrap(),
+                lookup,
+                sinsemilla_1_constants,
+            );
+            let merkle_config_1 = MerkleChip::configure(meta, sinsemilla_config_1.clone());
+
+            (sinsemilla_config_1, merkle_config_1)
+        };
+
+        // Configuration for a Sinsemilla hash instantiation and a
+        // Merkle hash instantiation using this Sinsemilla instance.
+        // Since the Sinsemilla config uses only 5 advice columns,
+        // we can fit two instances side-by-side.
+        let (sinsemilla_config_2, merkle_config_2) = {
+            let sinsemilla_config_2 = SinsemillaChip::configure(
+                meta,
+                advices[5..].try_into().unwrap(),
+                lookup,
+                sinsemilla_2_constants,
+            );
+            let merkle_config_2 = MerkleChip::configure(meta, sinsemilla_config_2.clone());
+
+            (sinsemilla_config_2, merkle_config_2)
+        };
+
+        // TODO: Infrastructure to handle public inputs.
+        let q_primary = meta.selector();
+        let primary = meta.instance_column();
 
         // Placeholder gate so there is something for the prover to operate on.
         // We need a selector so that the gate is disabled by default, and doesn't
@@ -79,6 +217,20 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
             vec![s * a]
         });
+
+        Config {
+            q_primary,
+            primary,
+            advices,
+            enable_flag_config,
+            ecc_config,
+            poseidon_config,
+            plonk_config,
+            merkle_config_1,
+            merkle_config_2,
+            sinsemilla_config_1,
+            sinsemilla_config_2,
+        }
     }
 
     fn synthesize(

@@ -14,7 +14,7 @@ use crate::{
 };
 use std::iter;
 
-mod chip;
+pub(crate) mod chip;
 
 /// Instructions to check the validity of a Merkle path of a given `PATH_LENGTH`.
 /// The hash function used is a Sinsemilla instance with `K`-bit words.
