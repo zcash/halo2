@@ -12,6 +12,7 @@ pub mod chip;
 pub mod commit_ivk;
 pub mod merkle;
 mod message;
+pub mod note_commit;
 
 /// The set of circuit instructions required to use the [`Sinsemilla`](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html) gadget.
 /// This trait is bounded on two constant parameters: `K`, the number of bits
