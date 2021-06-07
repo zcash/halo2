@@ -42,13 +42,13 @@ use gadget::{
         StateWord, Word,
     },
     sinsemilla::{
-        chip::{SinsemillaChip, SinsemillaCommitDomains, SinsemillaConfig, SinsemillaHashDomains},
+        chip::{SinsemillaChip, SinsemillaConfig, SinsemillaHashDomains},
         commit_ivk::CommitIvkConfig,
         merkle::{
             chip::{MerkleChip, MerkleConfig},
             MerklePath,
         },
-        CommitDomain,
+        note_commit::NoteCommitConfig,
     },
     utilities::{
         copy,
@@ -63,7 +63,8 @@ use std::convert::TryInto;
 pub(crate) mod gadget;
 
 /// Size of the Orchard circuit.
-const K: u32 = 11;
+// FIXME: This circuit should fit within 2^11 rows.
+const K: u32 = 12;
 
 /// Configuration needed to use the Orchard Action circuit.
 #[derive(Clone, Debug)]
@@ -81,6 +82,7 @@ pub struct Config {
     sinsemilla_config_1: SinsemillaConfig,
     sinsemilla_config_2: SinsemillaConfig,
     commit_ivk_config: CommitIvkConfig,
+    old_note_commit_config: NoteCommitConfig,
 }
 
 /// The Orchard Action circuit.
@@ -241,6 +243,11 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let commit_ivk_config =
             CommitIvkConfig::configure(meta, advices, sinsemilla_config_1.clone());
 
+        // Configuration to handle decomposition and canonicity checking
+        // for NoteCommit_old.
+        let old_note_commit_config =
+            NoteCommitConfig::configure(meta, advices, sinsemilla_config_1.clone());
+
         // TODO: Infrastructure to handle public inputs.
         let q_primary = meta.selector();
         let primary = meta.instance_column();
@@ -272,6 +279,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             sinsemilla_config_1,
             sinsemilla_config_2,
             commit_ivk_config,
+            old_note_commit_config,
         }
     }
 
@@ -553,7 +561,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         };
 
         // Diversified address integrity.
-        let _pk_d_old = {
+        let (pk_d_old, _) = {
             let commit_ivk_config = config.commit_ivk_config.clone();
 
             let ivk = {
@@ -571,6 +579,28 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
             // [ivk] g_d_old
             g_d_old.mul(layouter.namespace(|| "[ivk] g_d_old"), ivk.inner())?
+        };
+
+        // Old note commitment integrity.
+        let _cm_old = {
+            let old_note_commit_config = config.old_note_commit_config.clone();
+
+            let rcm_old = self.rcm_old.as_ref().map(|rcm_old| **rcm_old);
+
+            // g★_d || pk★_d || i2lebsp_{64}(v) || i2lebsp_{255}(rho) || i2lebsp_{255}(psi)
+            old_note_commit_config.assign_region(
+                layouter.namespace(|| {
+                    "g★_d || pk★_d || i2lebsp_{64}(v) || i2lebsp_{255}(rho) || i2lebsp_{255}(psi)"
+                }),
+                config.sinsemilla_chip_1(),
+                config.ecc_chip(),
+                g_d_old.inner(),
+                pk_d_old.inner(),
+                v_old,
+                rho_old,
+                psi_old,
+                rcm_old,
+            )?
         };
 
         Ok(())

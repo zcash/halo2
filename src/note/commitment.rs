@@ -10,6 +10,14 @@ use crate::{constants::L_ORCHARD_BASE, primitives::sinsemilla, spec::extract_p, 
 #[derive(Debug)]
 pub(crate) struct NoteCommitTrapdoor(pub(super) pallas::Scalar);
 
+impl std::ops::Deref for NoteCommitTrapdoor {
+    type Target = pallas::Scalar;
+
+    fn deref(&self) -> &pallas::Scalar {
+        &self.0
+    }
+}
+
 /// A commitment to a note.
 #[derive(Clone, Debug)]
 pub struct NoteCommitment(pub(super) pallas::Point);
