@@ -1,4 +1,4 @@
-use super::{copy, CellValue, UtilitiesInstructions, Var};
+use super::{copy, CellValue, UtilitiesInstructions};
 use halo2::{
     circuit::{Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Permutation, Selector},
@@ -8,15 +8,12 @@ use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
 pub trait EnableFlagInstructions<F: FieldExt>: UtilitiesInstructions<F> {
-    /// Variable representing cell with a certain value in the circuit.
-    type Var: Var<F>;
-
     /// Given a `value` and an `enable_flag`, check that either `value = 0`
     /// or `enable_flag = 1`.
     fn enable_flag(
         &self,
         layouter: impl Layouter<F>,
-        value: <Self as EnableFlagInstructions<F>>::Var,
+        value: Self::Var,
         enable_flag: Option<bool>,
     ) -> Result<(), Error>;
 }
@@ -54,12 +51,10 @@ impl<F: FieldExt> UtilitiesInstructions<F> for EnableFlagChip<F> {
 }
 
 impl<F: FieldExt> EnableFlagInstructions<F> for EnableFlagChip<F> {
-    type Var = CellValue<F>;
-
     fn enable_flag(
         &self,
         mut layouter: impl Layouter<F>,
-        value: <Self as EnableFlagInstructions<F>>::Var,
+        value: Self::Var,
         enable_flag: Option<bool>,
     ) -> Result<(), Error> {
         let config = self.config().clone();

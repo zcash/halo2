@@ -10,15 +10,13 @@ use std::marker::PhantomData;
 #[allow(clippy::upper_case_acronyms)]
 #[allow(clippy::too_many_arguments)]
 pub trait PLONKInstructions<F: FieldExt>: UtilitiesInstructions<F> {
-    type Var;
-
     // Checks that a * sm * b = c * sc
     fn mul(
         &self,
         layouter: impl Layouter<F>,
-        a: <Self as PLONKInstructions<F>>::Var,
-        b: <Self as PLONKInstructions<F>>::Var,
-        c: <Self as PLONKInstructions<F>>::Var,
+        a: Self::Var,
+        b: Self::Var,
+        c: Self::Var,
         sc: Option<F>,
         sm: Option<F>,
     ) -> Result<(), Error>;
@@ -26,9 +24,9 @@ pub trait PLONKInstructions<F: FieldExt>: UtilitiesInstructions<F> {
     fn add(
         &self,
         layouter: impl Layouter<F>,
-        a: <Self as PLONKInstructions<F>>::Var,
-        b: <Self as PLONKInstructions<F>>::Var,
-        c: <Self as PLONKInstructions<F>>::Var,
+        a: Self::Var,
+        b: Self::Var,
+        c: Self::Var,
         sa: Option<F>,
         sb: Option<F>,
         sc: Option<F>,
@@ -77,14 +75,12 @@ impl<F: FieldExt> UtilitiesInstructions<F> for PLONKChip<F> {
 
 #[allow(clippy::upper_case_acronyms)]
 impl<F: FieldExt> PLONKInstructions<F> for PLONKChip<F> {
-    type Var = CellValue<F>;
-
     fn mul(
         &self,
         mut layouter: impl Layouter<F>,
-        a: <Self as PLONKInstructions<F>>::Var,
-        b: <Self as PLONKInstructions<F>>::Var,
-        c: <Self as PLONKInstructions<F>>::Var,
+        a: Self::Var,
+        b: Self::Var,
+        c: Self::Var,
         sc: Option<F>,
         sm: Option<F>,
     ) -> Result<(), Error> {
@@ -129,9 +125,9 @@ impl<F: FieldExt> PLONKInstructions<F> for PLONKChip<F> {
     fn add(
         &self,
         mut layouter: impl Layouter<F>,
-        a: <Self as PLONKInstructions<F>>::Var,
-        b: <Self as PLONKInstructions<F>>::Var,
-        c: <Self as PLONKInstructions<F>>::Var,
+        a: Self::Var,
+        b: Self::Var,
+        c: Self::Var,
         sa: Option<F>,
         sb: Option<F>,
         sc: Option<F>,

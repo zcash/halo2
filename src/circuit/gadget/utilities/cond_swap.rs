@@ -8,27 +8,15 @@ use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
 pub trait CondSwapInstructions<F: FieldExt>: UtilitiesInstructions<F> {
-    /// Variable representing cell with a certain value in the circuit.
-    type Var;
-
     #[allow(clippy::type_complexity)]
     /// Given an input pair (x,y) and a `swap` boolean flag, return
     /// (y,x) if `swap` is set, else (x,y) if `swap` is not set.
     fn swap(
         &self,
         layouter: impl Layouter<F>,
-        pair: (
-            <Self as CondSwapInstructions<F>>::Var,
-            <Self as CondSwapInstructions<F>>::Var,
-        ),
+        pair: (Self::Var, Self::Var),
         swap: Option<bool>,
-    ) -> Result<
-        (
-            <Self as CondSwapInstructions<F>>::Var,
-            <Self as CondSwapInstructions<F>>::Var,
-        ),
-        Error,
-    >;
+    ) -> Result<(Self::Var, Self::Var), Error>;
 }
 
 /// A chip implementing a conditional swap.
@@ -67,24 +55,13 @@ impl<F: FieldExt> UtilitiesInstructions<F> for CondSwapChip<F> {
 }
 
 impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
-    type Var = CellValue<F>;
-
     #[allow(clippy::type_complexity)]
     fn swap(
         &self,
         mut layouter: impl Layouter<F>,
-        pair: (
-            <Self as CondSwapInstructions<F>>::Var,
-            <Self as CondSwapInstructions<F>>::Var,
-        ),
+        pair: (Self::Var, Self::Var),
         swap: Option<bool>,
-    ) -> Result<
-        (
-            <Self as CondSwapInstructions<F>>::Var,
-            <Self as CondSwapInstructions<F>>::Var,
-        ),
-        Error,
-    > {
+    ) -> Result<(Self::Var, Self::Var), Error> {
         let config = self.config();
 
         layouter.assign_region(
