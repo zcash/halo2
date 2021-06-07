@@ -2,7 +2,7 @@
 
 use std::mem;
 
-use group::Curve;
+use group::{Curve, GroupEncoding};
 use halo2::{
     circuit::{Layouter, SimpleFloorPlanner},
     plonk::{self, Advice, Column, Instance as InstanceColumn, Selector},
@@ -83,6 +83,7 @@ pub struct Config {
     sinsemilla_config_2: SinsemillaConfig,
     commit_ivk_config: CommitIvkConfig,
     old_note_commit_config: NoteCommitConfig,
+    new_note_commit_config: NoteCommitConfig,
 }
 
 /// The Orchard Action circuit.
@@ -248,6 +249,11 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let old_note_commit_config =
             NoteCommitConfig::configure(meta, advices, sinsemilla_config_1.clone());
 
+        // Configuration to handle decomposition and canonicity checking
+        // for NoteCommit_new.
+        let new_note_commit_config =
+            NoteCommitConfig::configure(meta, advices, sinsemilla_config_2.clone());
+
         // TODO: Infrastructure to handle public inputs.
         let q_primary = meta.selector();
         let primary = meta.instance_column();
@@ -280,6 +286,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             sinsemilla_config_2,
             commit_ivk_config,
             old_note_commit_config,
+            new_note_commit_config,
         }
     }
 
@@ -462,7 +469,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
         // Nullifier integrity
         // TODO: constrain to equal public input nf_old
-        let _nf_old = {
+        let nf_old = {
             // nk_rho_old = poseidon_hash(nk, rho_old)
             let nk_rho_old = {
                 let message = [nk, rho_old];
@@ -601,6 +608,61 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 psi_old,
                 rcm_old,
             )?
+        };
+
+        // new note commitment integrity.
+        let _cmx = {
+            let new_note_commit_config = config.new_note_commit_config.clone();
+
+            // Witness g_d_new_star
+            let g_d_new = {
+                let g_d_new = self
+                    .g_d_new_star
+                    .map(|bytes| pallas::Affine::from_bytes(&bytes).unwrap());
+                Point::new(
+                    ecc_chip.clone(),
+                    layouter.namespace(|| "witness g_d_new_star"),
+                    g_d_new,
+                )?
+            };
+
+            // Witness pk_d_new_star
+            let pk_d_new = {
+                let pk_d_new = self
+                    .pk_d_new_star
+                    .map(|bytes| pallas::Affine::from_bytes(&bytes).unwrap());
+                Point::new(
+                    ecc_chip,
+                    layouter.namespace(|| "witness pk_d_new"),
+                    pk_d_new,
+                )?
+            };
+
+            // Witness psi_new
+            let psi_new = self.load_private(
+                layouter.namespace(|| "witness psi_new"),
+                config.advices[0],
+                self.psi_new,
+            )?;
+
+            let rcm_new = self.rcm_new.as_ref().map(|rcm_new| **rcm_new);
+
+            // g★_d || pk★_d || i2lebsp_{64}(v) || i2lebsp_{255}(rho) || i2lebsp_{255}(psi)
+            let cm_new = new_note_commit_config.assign_region(
+                layouter.namespace(|| {
+                    "g★_d || pk★_d || i2lebsp_{64}(v) || i2lebsp_{255}(rho) || i2lebsp_{255}(psi)"
+                }),
+                config.sinsemilla_chip_2(),
+                config.ecc_chip(),
+                g_d_new.inner(),
+                pk_d_new.inner(),
+                v_new,
+                *nf_old.inner(),
+                psi_new,
+                rcm_new,
+            )?;
+
+            cm_new.extract_p()
         };
 
         Ok(())
