@@ -8,8 +8,7 @@ use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
 pub trait EnableFlagInstructions<F: FieldExt>: UtilitiesInstructions<F> {
-    /// Given a `value` and an `enable_flag`, check that either `value = 0`
-    /// or `enable_flag = 1`.
+    /// Enforces that `value` be zero or, if non-zero, that `enable_flag` must be 1.
     fn enable_flag(
         &self,
         layouter: impl Layouter<F>,
