@@ -170,6 +170,9 @@ impl<F: FieldExt> PLONKInstructions<F> for PLONKChip<F> {
 #[allow(clippy::upper_case_acronyms)]
 impl<F: FieldExt> PLONKChip<F> {
     /// Configures this chip for use in a circuit.
+    ///
+    /// `perm` must cover `advices`, as well as any columns that will be passed
+    /// to this chip.
     pub fn configure(
         meta: &mut ConstraintSystem<F>,
         advices: [Column<Advice>; 3],
@@ -335,10 +338,7 @@ mod tests {
             a: Some(Base::rand()),
             b: Some(Base::rand()),
         };
-        let prover = match MockProver::<Base>::run(3, &circuit, vec![]) {
-            Ok(prover) => prover,
-            Err(e) => panic!("{:?}", e),
-        };
+        let prover = MockProver::<Base>::run(3, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()));
     }
 }

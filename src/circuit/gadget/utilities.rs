@@ -59,12 +59,15 @@ pub trait UtilitiesInstructions<F: FieldExt>: Chip<F> {
     }
 }
 
-/// Assign a cell the same value as another cell and set up a copy constraint between them.
+/// Assigns a cell at a specific offset within the given region, constraining it
+/// to the same value as another cell (which may be in any region).
+///
+/// Returns an error if either `column` or `copy` is not within `perm`.
 pub fn copy<A, AR, F: FieldExt>(
     region: &mut Region<'_, F>,
     annotation: A,
     column: Column<Advice>,
-    row: usize,
+    offset: usize,
     copy: &CellValue<F>,
     perm: &Permutation,
 ) -> Result<CellValue<F>, Error>
@@ -72,7 +75,7 @@ where
     A: Fn() -> AR,
     AR: Into<String>,
 {
-    let cell = region.assign_advice(annotation, column, row, || {
+    let cell = region.assign_advice(annotation, column, offset, || {
         copy.value.ok_or(Error::SynthesisError)
     })?;
 
