@@ -155,7 +155,7 @@ impl<F: FieldExt> CondSwapChip<F> {
         // TODO: optimise shape of gate for Merkle path validation
 
         meta.create_gate("a' = b ⋅ swap + a ⋅ (1-swap)", |meta| {
-            let q_swap = meta.query_selector(q_swap, Rotation::cur());
+            let q_swap = meta.query_selector(q_swap);
 
             let a = meta.query_advice(config.a, Rotation::cur());
             let b = meta.query_advice(config.b, Rotation::cur());
@@ -180,8 +180,7 @@ impl<F: FieldExt> CondSwapChip<F> {
             let bool_check = swap.clone() * (one - swap);
 
             array::IntoIter::new([a_check, b_check, bool_check])
-                .map(|poly| q_swap.clone() * poly)
-                .collect()
+                .map(move |poly| q_swap.clone() * poly)
         });
 
         config

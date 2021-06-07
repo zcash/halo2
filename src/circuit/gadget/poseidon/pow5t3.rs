@@ -109,7 +109,7 @@ impl<F: FieldExt> Pow5T3Chip<F> {
             let rc_1 = meta.query_fixed(rc_a[1], Rotation::cur());
             let rc_2 = meta.query_fixed(rc_a[2], Rotation::cur());
 
-            let s_full = meta.query_selector(s_full, Rotation::cur());
+            let s_full = meta.query_selector(s_full);
 
             let full_round = |next_idx: usize| {
                 s_full.clone()
@@ -138,7 +138,7 @@ impl<F: FieldExt> Pow5T3Chip<F> {
             let rc_b1 = meta.query_fixed(rc_b[1], Rotation::cur());
             let rc_b2 = meta.query_fixed(rc_b[2], Rotation::cur());
 
-            let s_partial = meta.query_selector(s_partial, Rotation::cur());
+            let s_partial = meta.query_selector(s_partial);
 
             let partial_round_linear = |idx: usize, rc_b: Expression<F>| {
                 s_partial.clone()
@@ -177,7 +177,7 @@ impl<F: FieldExt> Pow5T3Chip<F> {
             let output_state_1 = meta.query_advice(state[1], Rotation::next());
             let output_state_2 = meta.query_advice(state[2], Rotation::next());
 
-            let s_pad_and_add = meta.query_selector(s_pad_and_add, Rotation::cur());
+            let s_pad_and_add = meta.query_selector(s_pad_and_add);
 
             let pad_and_add = |initial_state, input, output_state| {
                 // We pad the input by storing the required padding in fixed columns and
