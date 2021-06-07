@@ -13,6 +13,11 @@ use crate::{
 mod single_pass;
 pub use single_pass::SingleChipLayouter;
 
+mod strategy;
+
+mod v1;
+pub use v1::{V1Pass, V1};
+
 /// Helper trait for implementing a custom [`Layouter`].
 ///
 /// This trait is used for implementing region assignments:
