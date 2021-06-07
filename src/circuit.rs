@@ -2,13 +2,14 @@
 
 use std::mem;
 
+use group::Curve;
 use halo2::{
     circuit::{Layouter, SimpleFloorPlanner},
     plonk::{self, Advice, Column, Instance as InstanceColumn, Selector},
     poly::Rotation,
     transcript::{Blake2bRead, Blake2bWrite},
 };
-use pasta_curves::{pallas, vesta};
+use pasta_curves::{arithmetic::FieldExt, pallas, vesta};
 
 use crate::{
     constants::MERKLE_DEPTH_ORCHARD,
@@ -29,7 +30,10 @@ use crate::{
     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment},
 };
 use gadget::{
-    ecc::chip::{EccChip, EccConfig},
+    ecc::{
+        chip::{EccChip, EccConfig},
+        Point,
+    },
     poseidon::{Pow5T3Chip as PoseidonChip, Pow5T3Config as PoseidonConfig},
     sinsemilla::{
         chip::{SinsemillaChip, SinsemillaConfig},
@@ -38,6 +42,7 @@ use gadget::{
     utilities::{
         enable_flag::{EnableFlagChip, EnableFlagConfig},
         plonk::{PLONKChip, PLONKConfig},
+        CellValue, UtilitiesInstructions,
     },
 };
 
@@ -86,6 +91,10 @@ pub struct Circuit {
     pub(crate) psi_new: Option<pallas::Base>,
     pub(crate) rcm_new: Option<NoteCommitTrapdoor>,
     pub(crate) rcv: Option<ValueCommitTrapdoor>,
+}
+
+impl UtilitiesInstructions<pallas::Base> for Circuit {
+    type Var = CellValue<pallas::Base>;
 }
 
 impl plonk::Circuit<pallas::Base> for Circuit {
@@ -239,7 +248,74 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), plonk::Error> {
         // Load the Sinsemilla generator lookup table used by the whole circuit.
-        SinsemillaChip::load(config.sinsemilla_config_1, &mut layouter)?;
+        SinsemillaChip::load(config.sinsemilla_config_1.clone(), &mut layouter)?;
+
+        // Construct the ECC chip.
+        let ecc_chip = config.ecc_chip();
+
+        // Witness private inputs that are used across multiple checks.
+        let (rho_old, psi_old, cm_old, g_d_old, ak, nk, v_old, v_new) = {
+            // Witness psi_old
+            let psi_old = self.load_private(
+                layouter.namespace(|| "witness psi_old"),
+                config.advices[0],
+                self.psi_old,
+            )?;
+
+            // Witness rho_old
+            let rho_old = self.load_private(
+                layouter.namespace(|| "witness rho_old"),
+                config.advices[0],
+                self.rho_old.map(|rho| rho.0),
+            )?;
+
+            // Witness cm_old
+            let cm_old = Point::new(
+                config.ecc_chip(),
+                layouter.namespace(|| "cm_old"),
+                self.cm_old.as_ref().map(|cm| cm.to_affine()),
+            )?;
+
+            // Witness g_d_old
+            let g_d_old = Point::new(
+                config.ecc_chip(),
+                layouter.namespace(|| "gd_old"),
+                self.g_d_old.as_ref().map(|gd| gd.to_affine()),
+            )?;
+
+            // Witness ak.
+            let ak: Option<pallas::Point> = self.ak.as_ref().map(|ak| ak.into());
+            let ak = Point::new(
+                ecc_chip.clone(),
+                layouter.namespace(|| "ak"),
+                ak.map(|ak| ak.to_affine()),
+            )?;
+
+            // Witness nk.
+            let nk = self.load_private(
+                layouter.namespace(|| "witness nk"),
+                config.advices[0],
+                self.nk.map(|nk| *nk),
+            )?;
+
+            // Witness v_old.
+            let v_old = self.load_private(
+                layouter.namespace(|| "witness v_old"),
+                config.advices[0],
+                self.v_old
+                    .map(|v_old| pallas::Base::from_u64(v_old.inner())),
+            )?;
+
+            // Witness v_new.
+            let v_new = self.load_private(
+                layouter.namespace(|| "witness v_new"),
+                config.advices[0],
+                self.v_new
+                    .map(|v_new| pallas::Base::from_u64(v_new.inner())),
+            )?;
+
+            (rho_old, psi_old, cm_old, g_d_old, ak, nk, v_old, v_new)
+        };
 
         Ok(())
     }
