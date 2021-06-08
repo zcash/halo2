@@ -5,6 +5,7 @@ use plotters::{
 };
 use std::cmp;
 use std::collections::HashSet;
+use std::ops::Range;
 
 use crate::plonk::{
     Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation, Selector,
@@ -33,9 +34,24 @@ use crate::plonk::{
 /// CircuitLayout::default().render(&circuit, &drawing_area).unwrap();
 /// ```
 #[derive(Debug, Default)]
-pub struct CircuitLayout {}
+pub struct CircuitLayout {
+    view_width: Option<Range<usize>>,
+    view_height: Option<Range<usize>>,
+}
 
 impl CircuitLayout {
+    /// Sets the view width for this layout, as a number of columns.
+    pub fn view_width(mut self, width: Range<usize>) -> Self {
+        self.view_width = Some(width);
+        self
+    }
+
+    /// Sets the view height for this layout, as a number of rows.
+    pub fn view_height(mut self, height: Range<usize>) -> Self {
+        self.view_height = Some(height);
+        self
+    }
+
     /// Renders the given circuit on the given drawing area.
     pub fn render<F: Field, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>(
         self,
@@ -63,31 +79,35 @@ impl CircuitLayout {
                 }
         };
 
+        let view_width = self.view_width.unwrap_or(0..total_columns);
+        let view_height = self.view_height.unwrap_or(0..layout.total_rows);
+        let view_bottom = view_height.end;
+
         // Prepare the grid layout. We render a red background for advice columns, white for
         // instance columns, and blue for fixed columns.
         let root =
             drawing_area.apply_coord_spec(Cartesian2d::<RangedCoordusize, RangedCoordusize>::new(
-                0..total_columns,
-                0..layout.total_rows,
+                view_width,
+                view_height,
                 drawing_area.get_pixel_range(),
             ));
         root.draw(&Rectangle::new(
-            [(0, 0), (total_columns, layout.total_rows)],
+            [(0, 0), (total_columns, view_bottom)],
             ShapeStyle::from(&WHITE).filled(),
         ))?;
         root.draw(&Rectangle::new(
-            [(0, 0), (cs.num_advice_columns, layout.total_rows)],
+            [(0, 0), (cs.num_advice_columns, view_bottom)],
             ShapeStyle::from(&RED.mix(0.2)).filled(),
         ))?;
         root.draw(&Rectangle::new(
             [
                 (cs.num_advice_columns + cs.num_instance_columns, 0),
-                (total_columns, layout.total_rows),
+                (total_columns, view_bottom),
             ],
             ShapeStyle::from(&BLUE.mix(0.2)).filled(),
         ))?;
         root.draw(&Rectangle::new(
-            [(0, 0), (total_columns, layout.total_rows)],
+            [(0, 0), (total_columns, view_bottom)],
             &BLACK,
         ))?;
 
