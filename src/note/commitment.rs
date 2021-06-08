@@ -63,3 +63,11 @@ impl From<NoteCommitment> for ExtractedNoteCommitment {
         ExtractedNoteCommitment(extract_p(&cm.0))
     }
 }
+
+impl std::ops::Deref for ExtractedNoteCommitment {
+    type Target = pallas::Base;
+
+    fn deref(&self) -> &pallas::Base {
+        &self.0
+    }
+}

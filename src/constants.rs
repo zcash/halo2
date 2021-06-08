@@ -19,6 +19,9 @@ pub mod util;
 
 pub use load::{OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV};
 
+/// $\mathsf{MerkleDepth^{Orchard}}$
+pub(crate) const MERKLE_DEPTH_ORCHARD: usize = 32;
+
 /// $\ell^\mathsf{Orchard}_\mathsf{base}$
 pub(crate) const L_ORCHARD_BASE: usize = 255;
 

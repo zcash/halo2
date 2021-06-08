@@ -5,6 +5,7 @@ use pasta_curves::pallas;
 use subtle::CtOption;
 
 use crate::spec::extract_p_bottom;
+use std::convert::TryInto;
 
 mod addition;
 use self::addition::IncompletePoint;
@@ -18,6 +19,18 @@ fn lebs2ip_k(bits: &[bool]) -> u32 {
     bits.iter()
         .enumerate()
         .fold(0u32, |acc, (i, b)| acc + if *b { 1 << i } else { 0 })
+}
+
+/// The sequence of K bits in little-endian order representing an integer
+/// up to `2^K` - 1.
+pub fn i2lebsp_k(int: usize) -> [bool; K] {
+    assert!(int < (1 << K));
+
+    (0..K)
+        .map(|mask| ((int & (1 << mask)) >> mask) == 1)
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap()
 }
 
 /// Pads the given iterator (which MUST have length $\leq K * C$) with zero-bits to a

@@ -198,12 +198,11 @@ impl Builder {
         }
 
         // Consistency check: all anchors must be equal.
-        let _cm = note.commitment();
-        // TODO: Once we have tree logic.
-        // let path_root: bls12_381::Scalar = merkle_path.root(cmu).into();
-        // if path_root != anchor {
-        //     return Err(Error::AnchorMismatch);
-        // }
+        let cm = note.commitment();
+        let path_root: Anchor = merkle_path.root(cm.into());
+        if path_root != self.anchor {
+            return Err("All anchors must be equal.");
+        }
 
         self.spends.push(SpendInfo {
             dummy_sk: None,
@@ -487,7 +486,7 @@ pub mod testing {
         rng: R,
         sk: SpendingKey,
         anchor: Anchor,
-        notes: Vec<Note>,
+        notes: Vec<(Note, MerklePath)>,
         recipient_amounts: Vec<(Address, NoteValue)>,
     }
 
@@ -499,8 +498,8 @@ pub mod testing {
             let flags = Flags::from_parts(true, true);
             let mut builder = Builder::new(flags, self.anchor);
 
-            for note in self.notes.into_iter() {
-                builder.add_spend(fvk.clone(), note, MerklePath).unwrap();
+            for (note, path) in self.notes.into_iter() {
+                builder.add_spend(fvk.clone(), note, path).unwrap();
             }
 
             for (addr, value) in self.recipient_amounts.into_iter() {
