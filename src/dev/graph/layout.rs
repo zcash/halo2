@@ -35,11 +35,20 @@ use crate::plonk::{
 /// ```
 #[derive(Debug, Default)]
 pub struct CircuitLayout {
+    hide_labels: bool,
     view_width: Option<Range<usize>>,
     view_height: Option<Range<usize>>,
 }
 
 impl CircuitLayout {
+    /// Sets the visibility of region labels.
+    ///
+    /// The default is to show labels.
+    pub fn show_labels(mut self, show: bool) -> Self {
+        self.hide_labels = !show;
+        self
+    }
+
     /// Sets the view width for this layout, as a number of columns.
     pub fn view_width(mut self, width: Range<usize>) -> Self {
         self.view_width = Some(width);
@@ -60,6 +69,8 @@ impl CircuitLayout {
     ) -> Result<(), DrawingAreaErrorKind<DB::ErrorType>> {
         use plotters::coord::types::RangedCoordusize;
         use plotters::prelude::*;
+
+        let show_labels = !self.hide_labels;
 
         // Collect the layout details.
         let mut cs = ConstraintSystem::default();
@@ -117,10 +128,13 @@ impl CircuitLayout {
                 ShapeStyle::from(&GREEN.mix(0.2)).filled(),
             ))?;
             root.draw(&Rectangle::new([top_left, bottom_right], &BLACK))?;
-            root.draw(
-                &(EmptyElement::at(top_left)
-                    + Text::new(label, (10, 10), ("sans-serif", 15.0).into_font())),
-            )
+            if show_labels {
+                root.draw(
+                    &(EmptyElement::at(top_left)
+                        + Text::new(label, (10, 10), ("sans-serif", 15.0).into_font())),
+                )?;
+            }
+            Ok(())
         };
 
         let draw_cell = |root: &DrawingArea<_, _>, column, row| {
