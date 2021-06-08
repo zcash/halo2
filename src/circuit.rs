@@ -59,7 +59,7 @@ impl std::ops::Deref for RegionIndex {
 }
 
 /// Starting row of a region in a layouter
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RegionStart(usize);
 
 impl From<usize> for RegionStart {

@@ -13,8 +13,6 @@ use crate::{
 mod single_pass;
 pub use single_pass::SingleChipLayouter;
 
-mod strategy;
-
 mod v1;
 pub use v1::{V1Pass, V1};
 
@@ -88,7 +86,7 @@ pub trait RegionLayouter<F: FieldExt>: fmt::Debug {
 
 /// The shape of a region. For a region at a certain index, we track
 /// the set of columns it uses as well as the number of rows it uses.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RegionShape {
     region_index: RegionIndex,
     columns: HashSet<Column<Any>>,

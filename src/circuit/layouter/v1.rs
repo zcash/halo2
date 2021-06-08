@@ -1,12 +1,14 @@
 use std::fmt;
 use std::marker::PhantomData;
 
-use super::{strategy, RegionLayouter, RegionShape};
+use super::{RegionLayouter, RegionShape};
 use crate::{
     arithmetic::FieldExt,
     circuit::{Cell, Layouter, Region, RegionIndex, RegionStart},
     plonk::{Advice, Assignment, Column, Error, Fixed, Permutation, Selector},
 };
+
+mod strategy;
 
 /// The version 1 [`Layouter`] provided by `halo2`.
 ///
@@ -51,8 +53,7 @@ impl<'a, F: FieldExt, CS: Assignment<F>> V1<'a, F, CS> {
             synthesis(V1Pass::measure(pass))?;
         }
 
-        // TODO: Implement more efficient layout strategy.
-        self.regions = strategy::slide_up(measure.regions);
+        self.regions = strategy::slot_in_biggest_advice_first(measure.regions);
 
         // Second pass: assign the regions.
         let mut assign = AssignmentPass::new(self);
