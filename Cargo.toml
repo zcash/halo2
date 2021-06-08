@@ -26,6 +26,7 @@ blake2b_simd = "0.5"
 ff = "0.10"
 fpe = "0.4"
 group = "0.10"
+lazy_static = "1"
 pasta_curves = "0.1"
 proptest = { version = "1.0.0", optional = true }
 rand = "0.8"

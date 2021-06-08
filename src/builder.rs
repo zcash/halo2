@@ -465,8 +465,7 @@ pub mod testing {
             testing::arb_spending_key, FullViewingKey, OutgoingViewingKey, SpendAuthorizingKey,
             SpendingKey,
         },
-        note::testing::arb_note,
-        tree::{Anchor, MerklePath},
+        tree::{testing::arb_tree, Anchor, MerklePath},
         value::{testing::arb_positive_note_value, NoteValue, MAX_NOTE_VALUE},
         Address, Note,
     };
@@ -527,12 +526,7 @@ pub mod testing {
             n_recipients in 1..30,
         )
         (
-            anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor),
-            // generate note values that we're certain won't exceed MAX_NOTE_VALUE in total
-            notes in vec(
-                arb_positive_note_value(MAX_NOTE_VALUE / n_notes as u64).prop_flat_map(arb_note),
-                n_notes as usize
-            ),
+            (notes_and_auth_paths, anchor) in arb_tree(n_notes),
             recipient_amounts in vec(
                 arb_address().prop_flat_map(move |a| {
                     arb_positive_note_value(MAX_NOTE_VALUE / n_recipients as u64)
@@ -546,7 +540,7 @@ pub mod testing {
                 rng: StdRng::from_seed(rng_seed),
                 sk: sk.clone(),
                 anchor,
-                notes,
+                notes: notes_and_auth_paths,
                 recipient_amounts
             }
         }

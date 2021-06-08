@@ -43,10 +43,15 @@ impl NoteCommitment {
 }
 
 /// The x-coordinate of the commitment to a note.
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct ExtractedNoteCommitment(pub(super) pallas::Base);
 
 impl ExtractedNoteCommitment {
+    /// ExtractedNoteCommitment for an uncommitted note.
+    pub fn uncommitted() -> Self {
+        Self(pallas::Base::zero())
+    }
+
     /// Deserialize the extracted note commitment from a byte array.
     pub fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
         pallas::Base::from_bytes(bytes).map(ExtractedNoteCommitment)

@@ -59,7 +59,7 @@ impl RandomSeed {
 }
 
 /// A discrete amount of funds received by an address.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Note {
     /// The recipient of the funds.
     recipient: Address,
