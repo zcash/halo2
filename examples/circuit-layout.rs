@@ -1,6 +1,6 @@
 use halo2::{
     arithmetic::FieldExt,
-    dev::circuit_layout,
+    dev::CircuitLayout,
     pasta::Fp,
     plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation},
     poly::Rotation,
@@ -396,5 +396,5 @@ fn main() {
         .titled("Example Circuit Layout", ("sans-serif", 60))
         .unwrap();
 
-    circuit_layout(&circuit, &root).unwrap();
+    CircuitLayout::default().render(&circuit, &root).unwrap();
 }

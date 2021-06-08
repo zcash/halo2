@@ -10,7 +10,7 @@ use crate::plonk::{
     Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation, Selector,
 };
 
-/// Renders the circuit layout on the given drawing area.
+/// Graphical renderer for circuit layouts.
 ///
 /// Cells that have been assigned to by the circuit will be shaded. If any cells are
 /// assigned to more than once (which is usually a mistake), they will be shaded darker
@@ -19,7 +19,7 @@ use crate::plonk::{
 /// # Examples
 ///
 /// ```ignore
-/// use halo2::dev::circuit_layout;
+/// use halo2::dev::CircuitLayout;
 /// use plotters::prelude::*;
 ///
 /// let drawing_area = BitMapBackend::new("example-circuit-layout.png", (1024, 768))
@@ -30,129 +30,136 @@ use crate::plonk::{
 ///     .unwrap();
 ///
 /// let circuit = MyCircuit::default();
-/// circuit_layout(&circuit, &drawing_area).unwrap();
+/// CircuitLayout::default().render(&circuit, &drawing_area).unwrap();
 /// ```
-pub fn circuit_layout<F: Field, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>(
-    circuit: &ConcreteCircuit,
-    drawing_area: &DrawingArea<DB, Shift>,
-) -> Result<(), DrawingAreaErrorKind<DB::ErrorType>> {
-    use plotters::coord::types::RangedCoordusize;
-    use plotters::prelude::*;
+#[derive(Debug, Default)]
+pub struct CircuitLayout {}
 
-    // Collect the layout details.
-    let mut cs = ConstraintSystem::default();
-    let config = ConcreteCircuit::configure(&mut cs);
-    let mut layout = Layout::default();
-    circuit.synthesize(&mut layout, config).unwrap();
+impl CircuitLayout {
+    /// Renders the given circuit on the given drawing area.
+    pub fn render<F: Field, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>(
+        self,
+        circuit: &ConcreteCircuit,
+        drawing_area: &DrawingArea<DB, Shift>,
+    ) -> Result<(), DrawingAreaErrorKind<DB::ErrorType>> {
+        use plotters::coord::types::RangedCoordusize;
+        use plotters::prelude::*;
 
-    // Figure out what order to render the columns in.
-    // TODO: For now, just render them in the order they were configured.
-    let total_columns = cs.num_advice_columns + cs.num_instance_columns + cs.num_fixed_columns;
-    let column_index = |column: &Column<Any>| {
-        column.index()
-            + match column.column_type() {
-                Any::Advice => 0,
-                Any::Instance => cs.num_advice_columns,
-                Any::Fixed => cs.num_advice_columns + cs.num_instance_columns,
-            }
-    };
+        // Collect the layout details.
+        let mut cs = ConstraintSystem::default();
+        let config = ConcreteCircuit::configure(&mut cs);
+        let mut layout = Layout::default();
+        circuit.synthesize(&mut layout, config).unwrap();
 
-    // Prepare the grid layout. We render a red background for advice columns, white for
-    // instance columns, and blue for fixed columns.
-    let root =
-        drawing_area.apply_coord_spec(Cartesian2d::<RangedCoordusize, RangedCoordusize>::new(
-            0..total_columns,
-            0..layout.total_rows,
-            drawing_area.get_pixel_range(),
-        ));
-    root.draw(&Rectangle::new(
-        [(0, 0), (total_columns, layout.total_rows)],
-        ShapeStyle::from(&WHITE).filled(),
-    ))?;
-    root.draw(&Rectangle::new(
-        [(0, 0), (cs.num_advice_columns, layout.total_rows)],
-        ShapeStyle::from(&RED.mix(0.2)).filled(),
-    ))?;
-    root.draw(&Rectangle::new(
-        [
-            (cs.num_advice_columns + cs.num_instance_columns, 0),
-            (total_columns, layout.total_rows),
-        ],
-        ShapeStyle::from(&BLUE.mix(0.2)).filled(),
-    ))?;
-    root.draw(&Rectangle::new(
-        [(0, 0), (total_columns, layout.total_rows)],
-        &BLACK,
-    ))?;
+        // Figure out what order to render the columns in.
+        // TODO: For now, just render them in the order they were configured.
+        let total_columns = cs.num_advice_columns + cs.num_instance_columns + cs.num_fixed_columns;
+        let column_index = |column: &Column<Any>| {
+            column.index()
+                + match column.column_type() {
+                    Any::Advice => 0,
+                    Any::Instance => cs.num_advice_columns,
+                    Any::Fixed => cs.num_advice_columns + cs.num_instance_columns,
+                }
+        };
 
-    let draw_region = |root: &DrawingArea<_, _>, top_left, bottom_right, label| {
+        // Prepare the grid layout. We render a red background for advice columns, white for
+        // instance columns, and blue for fixed columns.
+        let root =
+            drawing_area.apply_coord_spec(Cartesian2d::<RangedCoordusize, RangedCoordusize>::new(
+                0..total_columns,
+                0..layout.total_rows,
+                drawing_area.get_pixel_range(),
+            ));
         root.draw(&Rectangle::new(
-            [top_left, bottom_right],
-            ShapeStyle::from(&GREEN.mix(0.2)).filled(),
+            [(0, 0), (total_columns, layout.total_rows)],
+            ShapeStyle::from(&WHITE).filled(),
         ))?;
-        root.draw(&Rectangle::new([top_left, bottom_right], &BLACK))?;
-        root.draw(
-            &(EmptyElement::at(top_left)
-                + Text::new(label, (10, 10), ("sans-serif", 15.0).into_font())),
-        )
-    };
-
-    let draw_cell = |root: &DrawingArea<_, _>, column, row| {
         root.draw(&Rectangle::new(
-            [(column, row), (column + 1, row + 1)],
-            ShapeStyle::from(&BLACK.mix(0.1)).filled(),
-        ))
-    };
+            [(0, 0), (cs.num_advice_columns, layout.total_rows)],
+            ShapeStyle::from(&RED.mix(0.2)).filled(),
+        ))?;
+        root.draw(&Rectangle::new(
+            [
+                (cs.num_advice_columns + cs.num_instance_columns, 0),
+                (total_columns, layout.total_rows),
+            ],
+            ShapeStyle::from(&BLUE.mix(0.2)).filled(),
+        ))?;
+        root.draw(&Rectangle::new(
+            [(0, 0), (total_columns, layout.total_rows)],
+            &BLACK,
+        ))?;
 
-    // Render the regions!
-    for region in layout.regions {
-        if let Some(offset) = region.offset {
-            // Sort the region's columns according to the defined ordering.
-            let mut columns: Vec<_> = region.columns.into_iter().collect();
-            columns.sort_unstable_by_key(|a| column_index(a));
+        let draw_region = |root: &DrawingArea<_, _>, top_left, bottom_right, label| {
+            root.draw(&Rectangle::new(
+                [top_left, bottom_right],
+                ShapeStyle::from(&GREEN.mix(0.2)).filled(),
+            ))?;
+            root.draw(&Rectangle::new([top_left, bottom_right], &BLACK))?;
+            root.draw(
+                &(EmptyElement::at(top_left)
+                    + Text::new(label, (10, 10), ("sans-serif", 15.0).into_font())),
+            )
+        };
 
-            // Render contiguous parts of the same region as a single box.
-            let mut width = None;
-            for column in columns {
-                let column = column_index(&column);
-                match width {
-                    Some((start, end)) if end == column => width = Some((start, end + 1)),
-                    Some((start, end)) => {
-                        draw_region(
-                            &root,
-                            (start, offset),
-                            (end, offset + region.rows),
-                            region.name.clone(),
-                        )?;
-                        width = Some((column, column + 1));
+        let draw_cell = |root: &DrawingArea<_, _>, column, row| {
+            root.draw(&Rectangle::new(
+                [(column, row), (column + 1, row + 1)],
+                ShapeStyle::from(&BLACK.mix(0.1)).filled(),
+            ))
+        };
+
+        // Render the regions!
+        for region in layout.regions {
+            if let Some(offset) = region.offset {
+                // Sort the region's columns according to the defined ordering.
+                let mut columns: Vec<_> = region.columns.into_iter().collect();
+                columns.sort_unstable_by_key(|a| column_index(a));
+
+                // Render contiguous parts of the same region as a single box.
+                let mut width = None;
+                for column in columns {
+                    let column = column_index(&column);
+                    match width {
+                        Some((start, end)) if end == column => width = Some((start, end + 1)),
+                        Some((start, end)) => {
+                            draw_region(
+                                &root,
+                                (start, offset),
+                                (end, offset + region.rows),
+                                region.name.clone(),
+                            )?;
+                            width = Some((column, column + 1));
+                        }
+                        None => width = Some((column, column + 1)),
                     }
-                    None => width = Some((column, column + 1)),
+                }
+
+                // Render the last part of the region.
+                if let Some((start, end)) = width {
+                    draw_region(
+                        &root,
+                        (start, offset),
+                        (end, offset + region.rows),
+                        region.name.clone(),
+                    )?;
+                }
+
+                // Darken the cells of the region that have been assigned to.
+                for (column, row) in region.cells {
+                    draw_cell(&root, column_index(&column), row)?;
                 }
             }
-
-            // Render the last part of the region.
-            if let Some((start, end)) = width {
-                draw_region(
-                    &root,
-                    (start, offset),
-                    (end, offset + region.rows),
-                    region.name.clone(),
-                )?;
-            }
-
-            // Darken the cells of the region that have been assigned to.
-            for (column, row) in region.cells {
-                draw_cell(&root, column_index(&column), row)?;
-            }
         }
-    }
 
-    // Darken any loose cells that have been assigned to.
-    for (column, row) in layout.loose_cells {
-        draw_cell(&root, column_index(&column), row)?;
-    }
+        // Darken any loose cells that have been assigned to.
+        for (column, row) in layout.loose_cells {
+            draw_cell(&root, column_index(&column), row)?;
+        }
 
-    Ok(())
+        Ok(())
+    }
 }
 
 #[derive(Debug)]

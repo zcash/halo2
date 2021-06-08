@@ -20,7 +20,7 @@ mod graph;
 
 #[cfg(feature = "dev-graph")]
 #[cfg_attr(docsrs, doc(cfg(feature = "dev-graph")))]
-pub use graph::{circuit_dot_graph, layout::circuit_layout};
+pub use graph::{circuit_dot_graph, layout::CircuitLayout};
 
 /// Cells that haven't been explicitly assigned to, default to zero.
 fn cell_value<F: Field>(cell: Option<F>) -> F {
