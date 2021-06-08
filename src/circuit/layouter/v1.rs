@@ -110,16 +110,14 @@ impl<'p, 'a, F: FieldExt, CS: Assignment<F> + 'a> Layouter<F> for V1Pass<'p, 'a,
         NR: Into<String>,
         N: FnOnce() -> NR,
     {
-        match &mut self.0 {
-            Pass::Assignment(pass) => pass.layouter.cs.push_namespace(name_fn),
-            _ => (),
+        if let Pass::Assignment(pass) = &mut self.0 {
+            pass.layouter.cs.push_namespace(name_fn);
         }
     }
 
     fn pop_namespace(&mut self, gadget_name: Option<String>) {
-        match &mut self.0 {
-            Pass::Assignment(pass) => pass.layouter.cs.pop_namespace(gadget_name),
-            _ => (),
+        if let Pass::Assignment(pass) = &mut self.0 {
+            pass.layouter.cs.pop_namespace(gadget_name);
         }
     }
 }

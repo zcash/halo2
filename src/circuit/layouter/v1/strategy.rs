@@ -48,11 +48,11 @@ impl Allocations {
     /// Return all the *unallocated* nonempty intervals intersecting [start, end).
     ///
     /// `end = None` represents an unbounded end.
-    fn free_intervals<'a>(
-        &'a self,
+    fn free_intervals(
+        &self,
         start: usize,
         end: Option<usize>,
-    ) -> impl Iterator<Item = EmptySpace> + 'a {
+    ) -> impl Iterator<Item = EmptySpace> + '_ {
         self.0
             .iter()
             .map(Some)
@@ -75,15 +75,13 @@ impl Allocations {
 
                         ret
                     }
+                } else if end.map(|end| *row < end).unwrap_or(true) {
+                    Some(EmptySpace { start: *row, end })
                 } else {
-                    if end.map(|end| *row < end).unwrap_or(true) {
-                        Some(EmptySpace { start: *row, end })
-                    } else {
-                        None
-                    }
+                    None
                 })
             })
-            .filter_map(|x| x)
+            .flatten()
     }
 }
 
@@ -183,10 +181,7 @@ pub fn slot_in_biggest_advice_first(region_shapes: Vec<RegionShape>) -> Vec<Regi
         let advice_cols = shape
             .columns()
             .iter()
-            .filter(|c| match c.column_type() {
-                Any::Advice => true,
-                _ => false,
-            })
+            .filter(|c| matches!(c.column_type(), Any::Advice))
             .count();
         // Sort by advice area (since this has the most contention).
         advice_cols * shape.row_count()
@@ -225,7 +220,7 @@ fn test_slot_in() {
         },
     ];
     assert_eq!(
-        slot_in(regions.clone())
+        slot_in(regions)
             .into_iter()
             .map(|(i, _)| i)
             .collect::<Vec<_>>(),
