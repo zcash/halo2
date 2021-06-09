@@ -49,15 +49,15 @@ We use an optimized double-and-add algorithm is (copied from ["Faster variable-b
 
 The maximum value of $acc$ is:
 ```
-    <--n 1s--->
-  1011111111111
-= 1100000000000 - 1
+    <--- n 1s --->
+  1011111...111111
+= 1100000...000000 - 1
 ```
 = $2^{n+1} + 2^n - 1$
 
 > The assertion labelled X obviously cannot fail because $u \neq 0$. It is possible to see that acc is monotonically increasing except in the last conditional. It reaches its largest value when $k$ is maximal, i.e. $2^{n+1} + 2^n - 1$.
 
-So to entirely avoid exceptional cases, we would need $2^{n+1} + 2^n - 1 < (q-1)/2$. But we can use $n$ larger by $c$ if the last $c$ iterations use [complete addition](./complete-add.md).
+So to entirely avoid exceptional cases, we would need $2^{n+1} + 2^n - 1 < (q-1)/2$. But we can use $n$ larger by $c$ if the last $c$ iterations use [complete addition](./addition.md#Complete-addition).
 
 The first $i$ for which the algorithm using **only** incomplete addition fails is going to be $252$, since $2^{252+1} + 2^{252} - 1 > (q - 1)/2$. We need $n = 254$ to make the wraparound technique above work.
 
@@ -69,7 +69,7 @@ sage: 2^252 + 2^251 - 1 < (q-1)//2
 True
 ```
 
-So the last three iterations of the loop ($i = 2..0$) need to use [complete addition](./complete-add.md), as does the conditional subtraction at the end. Writing this out using ⸭ for incomplete addition (as we do in the spec), we have:
+So the last three iterations of the loop ($i = 2..0$) need to use [complete addition](./addition.md#Complete-addition), as does the conditional subtraction at the end. Writing this out using ⸭ for incomplete addition (as we do in the spec), we have:
 
     Acc := [2] T
     for i from 253 down to 3 {
@@ -136,7 +136,7 @@ $$
 
 $\lambda_{2,3} \cdot (x_{A,3} - x_{A,2}) = \frac{(\lambda_{1,3} + \lambda_{2,3}) \cdot (x_{A,3} - (\lambda_{1,3}^2 - x_{A,3} - x_T))\hspace{2em}}{2} + y_{A,2}$
 
-The bits $\mathbf{k}_{3 \dots 1}$ are used in double-and-add using [complete addition](./complete-add.md).
+The bits $\mathbf{k}_{3 \dots 1}$ are used in double-and-add using [complete addition](./addition.md#Complete-addition).
 
 If the least significant bit is set $\mathbf{k_0} = 1,$ we return the accumulator $A$. Else, if $\mathbf{k_0} = 0,$ we return $A - T$ (also using complete addition).
 
