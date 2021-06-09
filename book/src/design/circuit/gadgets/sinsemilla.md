@@ -142,7 +142,7 @@ y_{A,i+1} &= (\lambda_{1,i+1} + \lambda_{2,i+1}) \cdot (x_{A,i+1} - (\lambda_{1,
 \end{aligned}
 $$
 
-* The degree of a lookup gate is 2 + the degree of the polynomial expression being looked up (after tuple compression). TODO check this.
+* The degree of a lookup gate is $1 + \textsf{input\_degree} + \textsf{table\_degree}$, where $\textsf{input\_degree}$ is the maximum degree of the polynomial expressions being looked up, and $\textsf{table\_degree}$ is the maximum degree of the table expressions in the lookup.
 
 A further optimization is to toggle the lookup expression on $q_{Sinsemilla1}.$ This removes the need to fill in unused cells with dummy values to pass the lookup argument. The optimized lookup argument would be:
 
@@ -158,4 +158,4 @@ $$
 
 where $y_{P,i} \equiv \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}))}{2} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}).$
 
-This increases the degree of the lookup gate to 6. TODO: check.
+This increases the degree of the lookup gate to $6$.
