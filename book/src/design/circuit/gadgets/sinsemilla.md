@@ -10,6 +10,9 @@ Sinsemilla is roughly 4 times less efficient than the algebraic hashes Rescue an
 The general approach is to split the message into $k$-bit pieces, and for each piece, select from a table of $2^k$ bases in our cryptographic group. We combine the selected bases using a double-and-add algorithm. This ends up being provably as secure as a vector Pedersen hash, and makes advantageous use of the lookup facility supported by Halo 2.
 
 ## Specification
+
+This section is an outline of how Sinsemilla works: for the normative specification, refer to [§5.4.1.9 Sinsemilla Hash Function](https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash) in the protocol spec.
+
 Let $\mathbb{G}$ be a cryptographic group of prime order $q$. We write $\mathbb{G}$ additively, with identity $\mathcal{O}$, and using $[m] P$ for scalar multiplication of $P$ by $m$.
 
 Let $k \geq 1$ be an integer chosen based on efficiency considerations (the table size will be $2^k$). Let $n$ be a **fixed** integer such that messages are $kn$ bits, where $2^n \leq \frac{q-1}{2}$. We use zero-padding to the next multiple of $k$ bits if necessary.
@@ -20,7 +23,7 @@ $\textsf{Hash}(M)$:
 - Split $M$ into $n$ groups of $k$ bits. Interpret each group as a $k$-bit little-endian integer $m_i$.
 - $A_1 := Q$
 - for $i$ from $1$ up to $n$:
-  - $A_{i+1} := [2] A_i + P[m_i] = (A_i + P[m_i]) + A_i$
+  - $A_{i+1} := [2] A_i ⸭ P[m_i] = (A_i ⸭ P[m_i]) ⸭ A_i$
 - return $A_{n+1}$
 
 Let $\textsf{ShortHash}(M)$ be the $x$-coordinate of $\textsf{Hash}(M)$. (This assumes that $\mathbb{G}$ is a prime-order elliptic curve in short Weierstrass form, as is the case for Pallas and Vesta.)
@@ -30,7 +33,7 @@ Choose another generator $H$ independently of $Q$ and $P[0..2^k - 1]$.
 
 The randomness $r$ for a commitment is chosen uniformly on $[0, q)$.
 
-Let $\textsf{Commit}_r(M) = \textsf{Hash}(M) + [r] H$.
+Let $\textsf{Commit}_r(M) = \textsf{Hash}(M) ⸭ [r] H$.
 
 Let $\textsf{ShortCommit}_r(M)$ be the $x\text{-coordinate}$ of $\textsf{Commit}_r(M)$. (This again assumes that $\mathbb{G}$ is a prime-order elliptic curve in short Weierstrass form.)
 
@@ -39,7 +42,7 @@ Note that unlike a simple Pedersen commitment, this commitment scheme ($\textsf{
 ## Efficient implementation
 The aim of the design is to optimize the number of bits that can be processed for each step of the algorithm (which requires a doubling and addition in $\mathbb{G}$) for a given table size. Using a single table of size $2^k$ group elements, we can process $k$ bits at a time.
 
-Note that it is slightly more efficient to express a double-and-add $[2] A + R$ as $(A + R) + A$. We will show in the security argument section below that in the case where $\mathbb{G}$ is a prime-order short Weierstrass elliptic curve, provided a negligible probability of failure is acceptable, it suffices to use incomplete additions.
+Note that it is slightly more efficient to express a double-and-add $[2] A + R$ as $(A + R) + A$. It is shown in the [Sinsemilla security argument](https://zips.z.cash/protocol/protocol.pdf#sinsemillasecurity) that in the case where $\mathbb{G}$ is a prime-order short Weierstrass elliptic curve, provided a negligible probability of failure is acceptable, it suffices to use incomplete additions.
 
 ## Constraint program
 Let $\mathcal{P} = \left\{(j,\, x_{P[j]},\, y_{P[j]}) \text{ for } j \in \{0..2^k - 1\}\right\}$.
