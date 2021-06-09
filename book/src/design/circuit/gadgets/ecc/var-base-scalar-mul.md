@@ -19,7 +19,7 @@ Thus, given a scalar $\alpha$, we witness the boolean decomposition of $k = \alp
 $$k = k_{254} \cdot 2^{254} + k_{253} \cdot 2^{253} + \cdots + k_0.$$
 
 ## Variable-base scalar multiplication
-We use an optimized double-and-add algorithm is (copied from ["Faster variable-base scalar multiplication in zk-SNARK circuits"](https://github.com/zcash/zcash/issues/3924), with some variable name changes):
+We use an optimized double-and-add algorithm, copied from ["Faster variable-base scalar multiplication in zk-SNARK circuits"](https://github.com/zcash/zcash/issues/3924) with some variable name changes:
 > 
 >     Acc := [2] T
 >     for i from n-1 down to 0 {

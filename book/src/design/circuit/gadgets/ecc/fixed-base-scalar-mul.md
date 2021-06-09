@@ -25,7 +25,7 @@ The additional $(k + 2)$ term lets us avoid adding the point at infinity in the 
 > * $M[0][k_0] = [(7+1)*(2^3)^0]B = [8]B,$
 > * $M[1][k_1] = [(0+1)*(2^3)^1]B = [8]B.$
 >
-> In fixed-base scalar multiplication, we summing the multiples of $B$ at each window using incomplete addition.
+> In fixed-base scalar multiplication, we sum the multiples of $B$ at each window (except the last) using incomplete addition.
 > Since the point doubling case is not handled by incomplete addition, we avoid it by using an offset of $(k+2).$
 
 For each window of fixed-base multiples $M[w] = (M[w][0], \cdots, M[w][7]), w \in [0..84)$:
@@ -47,7 +47,7 @@ where $k \in [0..8), w \in [0..85)$ and $c_k$'s are the coefficients for each po
 We load these precomputed values into fixed columns whenever we do fixed-base scalar multiplication in the circuit.
 
 ## Fixed-base scalar multiplication
-Given a decomposed scalar $\alpha$ and a fixed base $B$, we compute $[\alpha]B$ as such:
+Given a decomposed scalar $\alpha$ and a fixed base $B$, we compute $[\alpha]B$ as follows:
 
 1. For each $k_w, w \in [0..85), k_w \in [0..8)$ in the scalar decomposition, witness the $x$- and $y$-coordinates $(x_w,y_w) = M[w][k_w].$
 2. Check that $(x_w, y_w)$ is on the curve: $y_w^2 = x_w^3 + b$.
@@ -55,7 +55,7 @@ Given a decomposed scalar $\alpha$ and a fixed base $B$, we compute $[\alpha]B$ 
 4. For all windows but the last, use [incomplete addition](./incomplete-add.md) to sum the $M[w][k_w]$'s, resulting in $[\alpha]B$.
 5. For the last window, use complete addition $M[83][k_{83}] + M[84][k_{84}]$ and return the final result.
 
-> Note: complete addition is required in the final step to correctly map $[0]B$ to a representation of the point at infinity, $(0,0)$.
+> Note: complete addition is required in the final step to correctly map $[0]B$ to a representation of the point at infinity, $(0,0)$; and also to handle a corner case for which the last step is a doubling.
 
 Constraints:
  - $x_w = \mathcal{L}_x[w](k_w)$;
