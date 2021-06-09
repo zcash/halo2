@@ -70,8 +70,6 @@ impl CircuitLayout {
         use plotters::coord::types::RangedCoordusize;
         use plotters::prelude::*;
 
-        let show_labels = !self.hide_labels;
-
         // Collect the layout details.
         let mut cs = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut cs);
@@ -122,18 +120,12 @@ impl CircuitLayout {
             &BLACK,
         ))?;
 
-        let draw_region = |root: &DrawingArea<_, _>, top_left, bottom_right, label| {
+        let draw_region = |root: &DrawingArea<_, _>, top_left, bottom_right| {
             root.draw(&Rectangle::new(
                 [top_left, bottom_right],
                 ShapeStyle::from(&GREEN.mix(0.2)).filled(),
             ))?;
             root.draw(&Rectangle::new([top_left, bottom_right], &BLACK))?;
-            if show_labels {
-                root.draw(
-                    &(EmptyElement::at(top_left)
-                        + Text::new(label, (10, 10), ("sans-serif", 15.0).into_font())),
-                )?;
-            }
             Ok(())
         };
 
@@ -145,6 +137,7 @@ impl CircuitLayout {
         };
 
         // Render the regions!
+        let mut labels = if self.hide_labels { None } else { Some(vec![]) };
         for region in layout.regions {
             if let Some(offset) = region.offset {
                 // Sort the region's columns according to the defined ordering.
@@ -158,12 +151,10 @@ impl CircuitLayout {
                     match width {
                         Some((start, end)) if end == column => width = Some((start, end + 1)),
                         Some((start, end)) => {
-                            draw_region(
-                                &root,
-                                (start, offset),
-                                (end, offset + region.rows),
-                                region.name.clone(),
-                            )?;
+                            draw_region(&root, (start, offset), (end, offset + region.rows))?;
+                            if let Some(labels) = &mut labels {
+                                labels.push((region.name.clone(), (start, offset)));
+                            }
                             width = Some((column, column + 1));
                         }
                         None => width = Some((column, column + 1)),
@@ -172,12 +163,10 @@ impl CircuitLayout {
 
                 // Render the last part of the region.
                 if let Some((start, end)) = width {
-                    draw_region(
-                        &root,
-                        (start, offset),
-                        (end, offset + region.rows),
-                        region.name.clone(),
-                    )?;
+                    draw_region(&root, (start, offset), (end, offset + region.rows))?;
+                    if let Some(labels) = &mut labels {
+                        labels.push((region.name.clone(), (start, offset)));
+                    }
                 }
 
                 // Darken the cells of the region that have been assigned to.
@@ -192,6 +181,15 @@ impl CircuitLayout {
             draw_cell(&root, column_index(&column), row)?;
         }
 
+        // Render labels last, on top of everything else.
+        if let Some(labels) = labels {
+            for (label, top_left) in labels {
+                root.draw(
+                    &(EmptyElement::at(top_left)
+                        + Text::new(label, (10, 10), ("sans-serif", 15.0).into_font())),
+                )?;
+            }
+        }
         Ok(())
     }
 }
