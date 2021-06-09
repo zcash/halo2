@@ -5,7 +5,6 @@ use pasta_curves::pallas;
 use subtle::CtOption;
 
 use crate::spec::extract_p_bottom;
-use std::convert::TryInto;
 
 mod addition;
 use self::addition::IncompletePoint;
@@ -26,11 +25,14 @@ fn lebs2ip_k(bits: &[bool]) -> u32 {
 pub fn i2lebsp_k(int: usize) -> [bool; K] {
     assert!(int < (1 << K));
 
-    (0..K)
-        .map(|mask| ((int & (1 << mask)) >> mask) == 1)
-        .collect::<Vec<_>>()
-        .try_into()
-        .unwrap()
+    let mut ret = [false; K];
+    for (bit, val) in ret
+        .iter_mut()
+        .zip((0..K).map(|mask| ((int & (1 << mask)) >> mask) == 1))
+    {
+        *bit = val;
+    }
+    ret
 }
 
 /// Pads the given iterator (which MUST have length $\leq K * C$) with zero-bits to a
@@ -199,7 +201,8 @@ impl CommitDomain {
 
 #[cfg(test)]
 mod tests {
-    use super::Pad;
+    use super::{i2lebsp_k, lebs2ip_k, Pad, K};
+    use rand::{self, rngs::OsRng, Rng};
 
     #[test]
     fn pad() {
@@ -237,5 +240,44 @@ mod tests {
                 false, false, false, false, false, false, false
             ]
         );
+    }
+
+    #[test]
+    fn lebs2ip_k_round_trip() {
+        let mut rng = OsRng;
+        {
+            let int = rng.gen_range(0..(1 << K));
+            assert_eq!(lebs2ip_k(&i2lebsp_k(int)) as usize, int);
+        }
+
+        assert_eq!(lebs2ip_k(&i2lebsp_k(0)) as usize, 0);
+        assert_eq!(lebs2ip_k(&i2lebsp_k((1 << K) - 1)) as usize, (1 << K) - 1);
+    }
+
+    #[test]
+    fn i2lebsp_k_round_trip() {
+        {
+            let bitstring = (0..K).map(|_| rand::random()).collect::<Vec<_>>();
+            assert_eq!(
+                i2lebsp_k(lebs2ip_k(&bitstring) as usize).to_vec(),
+                bitstring
+            );
+        }
+
+        {
+            let bitstring = [false; K];
+            assert_eq!(
+                i2lebsp_k(lebs2ip_k(&bitstring) as usize).to_vec(),
+                bitstring
+            );
+        }
+
+        {
+            let bitstring = [true; K];
+            assert_eq!(
+                i2lebsp_k(lebs2ip_k(&bitstring) as usize).to_vec(),
+                bitstring
+            );
+        }
     }
 }
