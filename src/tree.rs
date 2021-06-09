@@ -1,13 +1,13 @@
 use crate::{
-    constants::{MERKLE_CRH_PERSONALIZATION, MERKLE_DEPTH_ORCHARD},
+    constants::{util::gen_const_array, MERKLE_CRH_PERSONALIZATION, MERKLE_DEPTH_ORCHARD},
     note::commitment::ExtractedNoteCommitment,
     primitives::sinsemilla::{i2lebsp_k, HashDomain, K},
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
-use ff::{PrimeField, PrimeFieldBits};
+use ff::{Field, PrimeField, PrimeFieldBits};
 use rand::RngCore;
-use std::{convert::TryInto, iter};
+use std::iter;
 
 /// The root of an Orchard commitment tree.
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -28,13 +28,13 @@ pub struct MerklePath {
 impl MerklePath {
     /// Generates a dummy Merkle path for use in dummy spent notes.
     pub(crate) fn dummy(rng: &mut impl RngCore) -> Self {
+        fn dummy_inner(rng: &mut impl RngCore, _idx: usize) -> pallas::Base {
+            pallas::Base::random(rng)
+        }
+
         MerklePath {
             position: rng.next_u32(),
-            auth_path: (0..MERKLE_DEPTH_ORCHARD)
-                .map(|_| pallas::Base::rand())
-                .collect::<Vec<_>>()
-                .try_into()
-                .unwrap(),
+            auth_path: gen_const_array(rng, dummy_inner),
         }
     }
 

@@ -4,6 +4,7 @@ use halo2::arithmetic::CurveExt;
 use pasta_curves::pallas;
 use subtle::CtOption;
 
+use crate::constants::util::gen_const_array;
 use crate::spec::extract_p_bottom;
 
 mod addition;
@@ -24,15 +25,9 @@ fn lebs2ip_k(bits: &[bool]) -> u32 {
 /// up to `2^K` - 1.
 pub fn i2lebsp_k(int: usize) -> [bool; K] {
     assert!(int < (1 << K));
-
-    let mut ret = [false; K];
-    for (bit, val) in ret
-        .iter_mut()
-        .zip((0..K).map(|mask| ((int & (1 << mask)) >> mask) == 1))
-    {
-        *bit = val;
-    }
-    ret
+    gen_const_array(int, |int: &mut usize, mask: usize| {
+        ((*int & (1 << mask)) >> mask) == 1
+    })
 }
 
 /// Pads the given iterator (which MUST have length $\leq K * C$) with zero-bits to a
