@@ -122,13 +122,14 @@ for $i$ from $254$ down to $4$:
 
 $$
 \begin{aligned}
-    &// \text{let } \mathbf{k}_i = \mathbf{z}_{i+1} - 2\mathbf{z}_i\\
-    &// \text{let } x_{R,i} = (\lambda_{1,i}^2 - x_{A,i} - x_T)\\
-    &// \text{let } y_{A,i} = \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2}\\
+    &\texttt{// let } \mathbf{k}_i = \mathbf{z}_{i+1} - 2\mathbf{z}_i\\
+    &\texttt{// let } x_{R,i} = (\lambda_{1,i}^2 - x_{A,i} - x_T)\\
+    &\texttt{// let } y_{A,i} = \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2}\\
     &(\mathbf{z}_{i+1} - 2\mathbf{z}_i)(\mathbf{z}_{i+1} - 2\mathbf{z}_i - 1) = 0\\
     &\lambda_{1,i} \cdot (x_{A,i} - x_T) = \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2} - (2 \cdot (\mathbf{z}_{i+1} - 2\mathbf{z}_i) - 1) \cdot y_T\\
     &\lambda_{2,i}^2 = x_{A,i-1} + (\lambda_{1,i}^2 - x_{A,i} - x_T) + x_{A,i}\\
-    &\text{if } i > 3 \text{ then } 2 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) =\\
+    & \\
+    &\texttt{if } i > 3 \texttt{ then } 2 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) =\\
         &\hspace{2em}(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T)) +\\
         &\hspace{2em}(\lambda_{1,i-1} + \lambda_{2,i-1}) \cdot (x_{A,i-1} - (\lambda_{1,i-1}^2 - x_{A,i-1} - x_T))\\
 \end{aligned}

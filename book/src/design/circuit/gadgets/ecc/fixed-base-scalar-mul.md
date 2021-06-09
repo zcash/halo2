@@ -1,7 +1,8 @@
 # Fixed-base scalar multiplication
 
-There are $5$ fixed bases in the Orchard protocol:
+There are $6$ fixed bases in the Orchard protocol:
 - $\mathcal{K}^{\mathsf{Orchard}}$, used in deriving the nullifier;
+- $\mathcal{G}^{\mathsf{Orchard}}$, used in spend authorization;
 - $\mathcal{R}$ base for $\mathsf{NoteCommit}^{\mathsf{Orchard}}$;
 - $\mathcal{V}$ and $\mathcal{R}$ bases for $\mathsf{ValueCommit}^{\mathsf{Orchard}}$; and
 - $\mathcal{R}$ base for $\mathsf{Commit}^{\mathsf{ivk}}$.
