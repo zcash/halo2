@@ -93,7 +93,7 @@ impl CircuitLayout {
         let view_bottom = view_height.end;
 
         // Prepare the grid layout. We render a red background for advice columns, white for
-        // instance columns, and blue for fixed columns.
+        // instance columns, and blue for fixed columns (with a darker blue for selectors).
         let root =
             drawing_area.apply_coord_spec(Cartesian2d::<RangedCoordusize, RangedCoordusize>::new(
                 view_width,
@@ -115,12 +115,33 @@ impl CircuitLayout {
             ],
             ShapeStyle::from(&BLUE.mix(0.2)).filled(),
         ))?;
+        for selector in layout.selectors {
+            let index = selector.index();
+            root.draw(&Rectangle::new(
+                [
+                    (cs.num_advice_columns + cs.num_instance_columns + index, 0),
+                    (
+                        cs.num_advice_columns + cs.num_instance_columns + index + 1,
+                        view_bottom,
+                    ),
+                ],
+                ShapeStyle::from(&BLUE.mix(0.1)).filled(),
+            ))?;
+        }
         root.draw(&Rectangle::new(
             [(0, 0), (total_columns, view_bottom)],
             &BLACK,
         ))?;
 
         let draw_region = |root: &DrawingArea<_, _>, top_left, bottom_right| {
+            root.draw(&Rectangle::new(
+                [top_left, bottom_right],
+                ShapeStyle::from(&WHITE).filled(),
+            ))?;
+            root.draw(&Rectangle::new(
+                [top_left, bottom_right],
+                ShapeStyle::from(&RED.mix(0.2)).filled(),
+            ))?;
             root.draw(&Rectangle::new(
                 [top_left, bottom_right],
                 ShapeStyle::from(&GREEN.mix(0.2)).filled(),
@@ -217,6 +238,8 @@ struct Layout {
     /// Any cells assigned outside of a region. We store this as a `Vec` so that if any
     /// cells are double-assigned, they will be visibly darker.
     loose_cells: Vec<(Column<Any>, usize)>,
+    /// Columns we have observed are actually Selectors.
+    selectors: HashSet<Column<Any>>,
 }
 
 impl Layout {
@@ -278,6 +301,8 @@ impl<F: Field> Assignment<F> for Layout {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
+        // Remember that this column is a selector.
+        self.selectors.insert(selector.0.into());
         // Selectors are just fixed columns.
         self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
     }
