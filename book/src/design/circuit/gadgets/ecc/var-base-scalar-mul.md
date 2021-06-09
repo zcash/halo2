@@ -20,35 +20,39 @@ $$k = k_{254} \cdot 2^{254} + k_{253} \cdot 2^{253} + \cdots + k_0.$$
 
 ## Variable-base scalar multiplication
 We use an optimized double-and-add algorithm, copied from ["Faster variable-base scalar multiplication in zk-SNARK circuits"](https://github.com/zcash/zcash/issues/3924) with some variable name changes:
-> 
->     Acc := [2] T
->     for i from n-1 down to 0 {
->         P := k_{i+1} ? T : −T
->         Acc := (Acc + P) + Acc
->     }
->     return (k_0 = 0) ? (Acc - T) : Acc
 
-> It remains to check that the x-coordinates of each pair of points to be added are distinct.
-> 
-> When adding points in the large prime-order subgroup, we can rely on Theorem 3 from Appendix C of the [Halo paper](https://eprint.iacr.org/2019/1021.pdf), which says that if we have two such points with nonzero indices wrt a given odd-prime order base, where the indices taken in the range $-(q-1)/2..(q-1)/2$ are distinct disregarding sign, then they have different x-coordinates. This is helpful, because it is easier to reason about the indices of points occurring in the scalar multiplication algorithm than it is to reason about their x-coordinates directly.
-
-> So, the required check is equivalent to saying that the following "indexed version" of the above algorithm never asserts:
-> 
->     acc := 2
->     for i from n-1 down to 0 {
->         p = k_{i+1} ? 1 : −1
->         assert acc ≠ ± p
->         assert (acc + p) ≠ acc    // X
->         acc := (acc + p) + acc
->         assert 0 < acc ≤ (q-1)/2
->     }
->     if k_0 = 0 {
->         assert acc ≠ 1
->         acc := acc - 1
->     }
-
-The maximum value of $acc$ is:
+```ignore
+Acc := [2] T
+for i from n-1 down to 0 {
+    P := k_{i+1} ? T : −T
+    Acc := (Acc + P) + Acc
+}
+return (k_0 = 0) ? (Acc - T) : Acc
 ```
+
+It remains to check that the x-coordinates of each pair of points to be added are distinct.
+
+When adding points in the large prime-order subgroup, we can rely on Theorem 3 from Appendix C of the [Halo paper](https://eprint.iacr.org/2019/1021.pdf), which says that if we have two such points with nonzero indices wrt a given odd-prime order base, where the indices taken in the range $-(q-1)/2..(q-1)/2$ are distinct disregarding sign, then they have different x-coordinates. This is helpful, because it is easier to reason about the indices of points occurring in the scalar multiplication algorithm than it is to reason about their x-coordinates directly.
+
+So, the required check is equivalent to saying that the following "indexed version" of the above algorithm never asserts:
+
+```ignore
+acc := 2
+for i from n-1 down to 0 {
+    p = k_{i+1} ? 1 : −1
+    assert acc ≠ ± p
+    assert (acc + p) ≠ acc    // X
+    acc := (acc + p) + acc
+    assert 0 < acc ≤ (q-1)/2
+}
+if k_0 = 0 {
+    assert acc ≠ 1
+    acc := acc - 1
+}
+```
+
+The maximum value of `acc` is:
+```ignore
     <--- n 1s --->
   1011111...111111
 = 1100000...000000 - 1
@@ -71,16 +75,18 @@ True
 
 So the last three iterations of the loop ($i = 2..0$) need to use [complete addition](./addition.md#Complete-addition), as does the conditional subtraction at the end. Writing this out using ⸭ for incomplete addition (as we do in the spec), we have:
 
-    Acc := [2] T
-    for i from 253 down to 3 {
-        P := k_{i+1} ? T : −T
-        Acc := (Acc ⸭ P) ⸭ Acc
-    }
-    for i from 2 down to 0 {
-        P := k_{i+1} ? T : −T
-        Acc := (Acc + P) + Acc  // complete addition
-    }
-    return (k_0 = 0) ? (Acc + (-T)) : Acc  // complete addition
+```ignore
+Acc := [2] T
+for i from 253 down to 3 {
+    P := k_{i+1} ? T : −T
+    Acc := (Acc ⸭ P) ⸭ Acc
+}
+for i from 2 down to 0 {
+    P := k_{i+1} ? T : −T
+    Acc := (Acc + P) + Acc  // complete addition
+}
+return (k_0 = 0) ? (Acc + (-T)) : Acc  // complete addition
+```
 
 ## Constraint program for optimized double-and-add (incomplete addition)
 Define a running sum $\mathbf{z_j} = \sum_{i=j}^{n} (\mathbf{k}_{i} \cdot 2^{i-j})$, where $n = 254$ and:
@@ -95,9 +101,7 @@ $$
 
 Initialize $A_{254} = [2] T$
 
-
 for $i$ from $254$ down to $4$:
-
 $$
 \begin{aligned}
     &(\mathbf{k}_i)(\mathbf{k}_i-1) = 0\\
