@@ -17,11 +17,11 @@ Let $k \geq 1$ be an integer chosen based on efficiency considerations (the tabl
 $\textsf{Setup}$: Choose $Q$ and $P[0..2^k - 1]$ as $2^k + 1$ independent, verifiably random generators of $\mathbb{G}$, using a suitable hash into $\mathbb{G}$, such that none of $Q$ or $P[0..2^k - 1]$ are $\mathcal{O}$.
 
 $\textsf{Hash}(M)$:
-    Split $M$ into $n$ groups of $k$ bits. Interpret each group as a $k$-bit little-endian integer $m_i$.
-    $A_0 := Q$
-    for $i$ from $1$ up to $n$:
-        $A_{i+1} := [2] A_i + P[m_i] = (A_i + P[m_i]) + A_i$
-    return $A_{n+1}$
+- Split $M$ into $n$ groups of $k$ bits. Interpret each group as a $k$-bit little-endian integer $m_i$.
+- $A_1 := Q$
+- for $i$ from $1$ up to $n$:
+  - $A_{i+1} := [2] A_i + P[m_i] = (A_i + P[m_i]) + A_i$
+- return $A_{n+1}$
 
 Let $\textsf{ShortHash}(M)$ be the $x$-coordinate of $\textsf{Hash}(M)$. (This assumes that $\mathbb{G}$ is a prime-order elliptic curve in short Weierstrass form, as is the case for Pallas and Vesta.)
 
@@ -46,29 +46,30 @@ Let $\mathcal{P} = \left\{(j,\, x_{P[j]},\, y_{P[j]}) \text{ for } j \in \{0..2^
 
 Input: $m_i, i \in [1..n]$. (Note that the message words are 1-indexed as in the [protocol spec](https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash)).
 
-$(x_{A,1},\, y_{A,1}) = Q$
+Output: $(x_{A,n+1},\, y_{A,n+1})$.
 
-for $i$ from $1$ up to $n$:
-$$
+> $(x_{A,1},\, y_{A,1}) = Q$
+>
+> for $i$ from $1$ up to $n$:
+> $$
 \begin{aligned}
-    &y_{P,i} = y_{A,i} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i})\\
-    &x_{R,i} = \lambda_{1,i}^2 - x_{A,i} - x_{P,i}\\
-    &2 \cdot y_{A,i} = (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i})\\
-    &(m_i,\, x_{P,i},\, y_{P,i}) \in \mathcal{P}\\
-    &\lambda_{2,i}^2 = x_{A,i+1} + x_{R,i} + x_{A,i}\\
-    &\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) = y_{A,i} + y_{A,i+1}\\
+    y_{P,i} &= y_{A,i} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i})\\
+    x_{R,i} &= \lambda_{1,i}^2 - x_{A,i} - x_{P,i}\\
+    2 \cdot y_{A,i} &= (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i})\\
+    (m_i,\, x_{P,i},\, y_{P,i}) &\in \mathcal{P}\\
+    \lambda_{2,i}^2 &= x_{A,i+1} + x_{R,i} + x_{A,i}\\
+    \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) &= y_{A,i} + y_{A,i+1}\\
 \end{aligned}
 $$
-Output $(x_{A,n+1},\, y_{A,n+1})$
 
 After substitution of $y_{P,i}$, $x_{R,i}$, $y_{A,i}$, and $y_{A,i+1}$, this becomes:
 
-$(x_{A,1},\, y_{A,1}) = Q$
-
-$2 \cdot y_{A,1} = (\lambda_{1,1} + \lambda_{2,1}) \cdot (x_{A,1} - (\lambda_{1,1}^2 - x_{A,1} - x_{P,1}))$
-
-for $i$ from $1$ up to $n$:
-$$
+> $(x_{A,1},\, y_{A,1}) = Q$
+>
+> $2 \cdot y_{A,1} = (\lambda_{1,1} + \lambda_{2,1}) \cdot (x_{A,1} - (\lambda_{1,1}^2 - x_{A,1} - x_{P,1}))$
+>
+> for $i$ from $1$ up to $n$:
+> $$
 \begin{aligned}
     &\textsf{// let } y_{P,i} = y_{A,i} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) \\
     &\textsf{// let } x_{R,i} = \lambda_{1,i}^2 - x_{A,i} - x_{P,i} \\
@@ -81,8 +82,8 @@ $$
         &\hspace{2em}(\lambda_{1,i+1} + \lambda_{2,i+1}) \cdot (x_{A,i+1} - (\lambda_{1,i+1}^2 - x_{A,i+1} - x_{P,i+1}))\\
 \end{aligned}
 $$
-
-$\lambda_{2,n} \cdot (x_{A,n} - x_{A,n+1}) = (\lambda_{1,n} + \lambda_{2,n}) \cdot (x_{A,n} - (\lambda_{1,n}^2 - x_{A,n} - x_{P,n})) + y_{A,n+1}$
+>
+> $\lambda_{2,n} \cdot (x_{A,n} - x_{A,n+1}) = (\lambda_{1,n} + \lambda_{2,n}) \cdot (x_{A,n} - (\lambda_{1,n}^2 - x_{A,n} - x_{P,n})) + y_{A,n+1}$
 
 ## PLONK / Halo 2 constraints
 
