@@ -291,7 +291,7 @@ impl DiversifierKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Diversifier([u8; 11]);
 
 impl Diversifier {
@@ -376,6 +376,16 @@ impl From<&FullViewingKey> for IncomingViewingKey {
 }
 
 impl IncomingViewingKey {
+    /// Parses an Orchard incoming viewing key from its raw encoding.
+    pub fn from_bytes(bytes: &[u8; 64]) -> CtOption<Self> {
+        NonZeroPallasBase::from_bytes(bytes[32..].try_into().unwrap()).map(|ivk| {
+            IncomingViewingKey {
+                dk: DiversifierKey(bytes[..32].try_into().unwrap()),
+                ivk: KeyAgreementPrivateKey(ivk.into()),
+            }
+        })
+    }
+
     /// Returns the default payment address for this key.
     pub fn default_address(&self) -> Address {
         self.address(self.dk.default_diversifier())
@@ -410,6 +420,12 @@ impl From<&FullViewingKey> for OutgoingViewingKey {
     }
 }
 
+impl From<[u8; 32]> for OutgoingViewingKey {
+    fn from(ovk: [u8; 32]) -> Self {
+        OutgoingViewingKey(ovk)
+    }
+}
+
 impl AsRef<[u8; 32]> for OutgoingViewingKey {
     fn as_ref(&self) -> &[u8; 32] {
         &self.0
@@ -421,7 +437,7 @@ impl AsRef<[u8; 32]> for OutgoingViewingKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DiversifiedTransmissionKey(NonIdentityPallasPoint);
 
 impl DiversifiedTransmissionKey {
@@ -517,6 +533,12 @@ impl EphemeralPublicKey {
 pub struct SharedSecret(NonIdentityPallasPoint);
 
 impl SharedSecret {
+    /// For checking test vectors only.
+    #[cfg(test)]
+    pub(crate) fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
+    }
+
     /// Defined in [Zcash Protocol Spec § 5.4.5.6: Orchard Key Agreement][concreteorchardkdf].
     ///
     /// [concreteorchardkdf]: https://zips.z.cash/protocol/nu5.pdf#concreteorchardkdf

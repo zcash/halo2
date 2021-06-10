@@ -95,6 +95,16 @@ pub struct Note {
     rseed: RandomSeed,
 }
 
+impl PartialEq for Note {
+    fn eq(&self, other: &Self) -> bool {
+        // Notes are canonically defined by their commitments.
+        ExtractedNoteCommitment::from(self.commitment())
+            .eq(&ExtractedNoteCommitment::from(other.commitment()))
+    }
+}
+
+impl Eq for Note {}
+
 impl Note {
     pub(crate) fn from_parts(
         recipient: Address,

@@ -5,6 +5,9 @@ use std::convert::{TryFrom, TryInto};
 use pasta_curves::pallas;
 use rand::{CryptoRng, RngCore};
 
+#[cfg(test)]
+use rand::rngs::OsRng;
+
 /// A RedPallas signature type.
 pub trait SigType: reddsa::SigType + private::Sealed {}
 
@@ -93,6 +96,12 @@ impl<T: SigType> PartialEq for VerificationKey<T> {
 }
 
 impl VerificationKey<SpendAuth> {
+    /// Used in the note encryption tests.
+    #[cfg(test)]
+    pub(crate) fn dummy() -> Self {
+        VerificationKey((&reddsa::SigningKey::new(OsRng)).into())
+    }
+
     /// Randomizes this verification key with the given `randomizer`.
     ///
     /// Randomization is only supported for `SpendAuth` keys.
