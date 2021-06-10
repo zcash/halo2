@@ -374,3 +374,117 @@ where
         FixedPointShort { chip, inner }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use ff::PrimeFieldBits;
+    use group::{Curve, Group};
+    use halo2::{
+        arithmetic::CurveAffine,
+        circuit::{layouter::SingleChipLayouter, Layouter},
+        dev::MockProver,
+        pasta::pallas,
+        plonk::{Assignment, Circuit, ConstraintSystem, Error},
+    };
+
+    use super::chip::{EccChip, EccConfig};
+
+    struct MyCircuit<C: CurveAffine> {
+        _marker: std::marker::PhantomData<C>,
+    }
+
+    #[allow(non_snake_case)]
+    impl<C: CurveAffine> Circuit<C::Base> for MyCircuit<C>
+    where
+        C::Scalar: PrimeFieldBits,
+    {
+        type Config = EccConfig<C>;
+
+        fn configure(meta: &mut ConstraintSystem<C::Base>) -> Self::Config {
+            let advices = [
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+            ];
+
+            let perm = meta.permutation(
+                &advices
+                    .iter()
+                    .map(|advice| (*advice).into())
+                    .collect::<Vec<_>>(),
+            );
+
+            EccChip::<C>::configure(meta, advices, perm)
+        }
+
+        fn synthesize(
+            &self,
+            cs: &mut impl Assignment<C::Base>,
+            config: Self::Config,
+        ) -> Result<(), Error> {
+            let mut layouter = SingleChipLayouter::new(cs)?;
+            let chip = EccChip::construct(config);
+
+            // Generate a random point P
+            let p_val = C::CurveExt::random(rand::rngs::OsRng).to_affine(); // P
+            let p = super::Point::new(chip.clone(), layouter.namespace(|| "point"), Some(p_val))?;
+            let p_neg = -p_val;
+            let p_neg =
+                super::Point::new(chip.clone(), layouter.namespace(|| "point"), Some(p_neg))?;
+
+            // Generate a random point Q
+            let q_val = C::CurveExt::random(rand::rngs::OsRng).to_affine(); // P
+            let q = super::Point::new(chip.clone(), layouter.namespace(|| "point"), Some(q_val))?;
+
+            // Make sure P and Q are not the same point.
+            assert_ne!(p_val, q_val);
+
+            // Generate a (0,0) point to be used in other tests.
+            let zero = p.add(layouter.namespace(|| "P + (-P)"), &p_neg)?;
+
+            // Test complete addition
+            {
+                super::chip::add::tests::test_add(
+                    chip.clone(),
+                    layouter.namespace(|| "complete addition"),
+                    &zero,
+                    p_val,
+                    &p,
+                    q_val,
+                    &q,
+                    &p_neg,
+                )?;
+            }
+
+            // Test incomplete addition
+            {
+                super::chip::add_incomplete::tests::test_add_incomplete(
+                    layouter.namespace(|| "incomplete addition"),
+                    &zero,
+                    &p,
+                    &q,
+                    &p_neg,
+                )?;
+            }
+
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn ecc() {
+        let k = 5;
+        let circuit = MyCircuit::<pallas::Affine> {
+            _marker: std::marker::PhantomData,
+        };
+        let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+        assert_eq!(prover.verify(), Ok(()))
+    }
+}
