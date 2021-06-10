@@ -59,6 +59,16 @@ impl MerklePath {
             });
         Anchor(node.to_bytes())
     }
+
+    /// Returns the position of the leaf using this Merkle path.
+    pub fn position(&self) -> u32 {
+        self.position
+    }
+
+    /// Returns the authentication path.
+    pub fn auth_path(&self) -> [pallas::Base; MERKLE_DEPTH_ORCHARD] {
+        self.auth_path
+    }
 }
 
 struct Pair {
