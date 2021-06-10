@@ -8,10 +8,10 @@ use halo2::{
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Permutation, Selector},
     poly::Rotation,
 };
-use std::collections::HashSet;
+use std::{collections::HashSet, marker::PhantomData};
 
 #[derive(Clone, Debug)]
-pub struct Config {
+pub struct Config<C: CurveAffine> {
     q_add: Selector,
     // lambda
     lambda: Column<Advice>,
@@ -33,10 +33,11 @@ pub struct Config {
     delta: Column<Advice>,
     // Permutation
     perm: Permutation,
+    _marker: PhantomData<C>,
 }
 
-impl From<&EccConfig> for Config {
-    fn from(ecc_config: &EccConfig) -> Self {
+impl<C: CurveAffine> From<&EccConfig<C>> for Config<C> {
+    fn from(ecc_config: &EccConfig<C>) -> Self {
         Self {
             q_add: ecc_config.q_add,
             x_p: ecc_config.advices[0],
@@ -49,11 +50,12 @@ impl From<&EccConfig> for Config {
             gamma: ecc_config.advices[7],
             delta: ecc_config.advices[8],
             perm: ecc_config.perm.clone(),
+            _marker: PhantomData,
         }
     }
 }
 
-impl Config {
+impl<C: CurveAffine> Config<C> {
     pub(crate) fn advice_columns(&self) -> HashSet<Column<Advice>> {
         core::array::IntoIter::new([
             self.x_p,
@@ -69,7 +71,7 @@ impl Config {
         .collect()
     }
 
-    pub(crate) fn create_gate<F: FieldExt>(&self, meta: &mut ConstraintSystem<F>) {
+    pub(crate) fn create_gate(&self, meta: &mut ConstraintSystem<C::Base>) {
         meta.create_gate("complete addition gates", |meta| {
             let q_add = meta.query_selector(self.q_add);
             let x_p = meta.query_advice(self.x_p, Rotation::cur());
@@ -100,9 +102,9 @@ impl Config {
             let if_delta = (y_q.clone() + y_p.clone()) * delta;
 
             // Useful constants
-            let one = Expression::Constant(F::one());
-            let two = Expression::Constant(F::from_u64(2));
-            let three = Expression::Constant(F::from_u64(3));
+            let one = Expression::Constant(C::Base::one());
+            let two = Expression::Constant(C::Base::from_u64(2));
+            let three = Expression::Constant(C::Base::from_u64(3));
 
             // (x_q − x_p)⋅((x_q − x_p)⋅λ − (y_q−y_p)) = 0
             let poly1 = {
@@ -195,7 +197,7 @@ impl Config {
         });
     }
 
-    pub(super) fn assign_region<C: CurveAffine>(
+    pub(super) fn assign_region(
         &self,
         p: &EccPoint<C>,
         q: &EccPoint<C>,

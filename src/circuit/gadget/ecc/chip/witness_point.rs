@@ -7,27 +7,31 @@ use halo2::{
     poly::Rotation,
 };
 
+use std::marker::PhantomData;
+
 #[derive(Clone, Debug)]
-pub struct Config {
+pub struct Config<C: CurveAffine> {
     q_point: Selector,
     // x-coordinate
     pub x: Column<Advice>,
     // y-coordinate
     pub y: Column<Advice>,
+    _marker: PhantomData<C>,
 }
 
-impl From<&EccConfig> for Config {
-    fn from(ecc_config: &EccConfig) -> Self {
+impl<C: CurveAffine> From<&EccConfig<C>> for Config<C> {
+    fn from(ecc_config: &EccConfig<C>) -> Self {
         Self {
             q_point: ecc_config.q_point,
             x: ecc_config.advices[0],
             y: ecc_config.advices[1],
+            _marker: PhantomData,
         }
     }
 }
 
-impl Config {
-    pub(super) fn create_gate<C: CurveAffine>(&self, meta: &mut ConstraintSystem<C::Base>) {
+impl<C: CurveAffine> Config<C> {
+    pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<C::Base>) {
         meta.create_gate("witness point", |meta| {
             let q_point = meta.query_selector(self.q_point);
             let x = meta.query_advice(self.x, Rotation::cur());
@@ -41,7 +45,7 @@ impl Config {
         });
     }
 
-    pub(super) fn assign_region<C: CurveAffine>(
+    pub(super) fn assign_region(
         &self,
         value: Option<C>,
         offset: usize,

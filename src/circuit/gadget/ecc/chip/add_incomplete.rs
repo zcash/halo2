@@ -1,17 +1,17 @@
-use std::array;
+use std::{array, marker::PhantomData};
 
 use super::{copy, CellValue, EccConfig, EccPoint, Var};
 use ff::Field;
 use group::Curve;
 use halo2::{
-    arithmetic::{CurveAffine, FieldExt},
+    arithmetic::CurveAffine,
     circuit::Region,
     plonk::{Advice, Column, ConstraintSystem, Error, Permutation, Selector},
     poly::Rotation,
 };
 
 #[derive(Clone, Debug)]
-pub struct Config {
+pub struct Config<C: CurveAffine> {
     q_add_incomplete: Selector,
     // x-coordinate of P in P + Q = R
     pub x_p: Column<Advice>,
@@ -23,10 +23,11 @@ pub struct Config {
     pub y_qr: Column<Advice>,
     // Permutation
     perm: Permutation,
+    _marker: PhantomData<C>,
 }
 
-impl From<&EccConfig> for Config {
-    fn from(ecc_config: &EccConfig) -> Self {
+impl<C: CurveAffine> From<&EccConfig<C>> for Config<C> {
+    fn from(ecc_config: &EccConfig<C>) -> Self {
         Self {
             q_add_incomplete: ecc_config.q_add_incomplete,
             x_p: ecc_config.advices[0],
@@ -34,12 +35,13 @@ impl From<&EccConfig> for Config {
             x_qr: ecc_config.advices[2],
             y_qr: ecc_config.advices[3],
             perm: ecc_config.perm.clone(),
+            _marker: PhantomData,
         }
     }
 }
 
-impl Config {
-    pub(super) fn create_gate<F: FieldExt>(&self, meta: &mut ConstraintSystem<F>) {
+impl<C: CurveAffine> Config<C> {
+    pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<C::Base>) {
         meta.create_gate("incomplete addition gates", |meta| {
             let q_add_incomplete = meta.query_selector(self.q_add_incomplete);
             let x_p = meta.query_advice(self.x_p, Rotation::cur());
@@ -64,7 +66,7 @@ impl Config {
         });
     }
 
-    pub(super) fn assign_region<C: CurveAffine>(
+    pub(super) fn assign_region(
         &self,
         p: &EccPoint<C>,
         q: &EccPoint<C>,

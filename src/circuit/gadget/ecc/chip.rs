@@ -46,7 +46,7 @@ impl<C: CurveAffine> EccPoint<C> {
 /// Configuration for the ECC chip
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[allow(non_snake_case)]
-pub struct EccConfig {
+pub struct EccConfig<C: CurveAffine> {
     /// Advice columns needed by instructions in the ECC chip.
     pub advices: [Column<Advice>; 10],
 
@@ -79,17 +79,17 @@ pub struct EccConfig {
     pub q_scalar_fixed_short: Selector,
     /// Permutation
     pub perm: Permutation,
+    _marker: PhantomData<C>,
 }
 
 /// A chip implementing EccInstructions
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EccChip<C: CurveAffine> {
-    config: EccConfig,
-    _marker: PhantomData<C>,
+    config: EccConfig<C>,
 }
 
 impl<C: CurveAffine> Chip<C::Base> for EccChip<C> {
-    type Config = EccConfig;
+    type Config = EccConfig<C>;
     type Loaded = ();
 
     fn config(&self) -> &Self::Config {
@@ -106,10 +106,7 @@ where
     C::Scalar: PrimeFieldBits,
 {
     pub fn construct(config: <Self as Chip<C::Base>>::Config) -> Self {
-        Self {
-            config,
-            _marker: PhantomData,
-        }
+        Self { config }
     }
 
     #[allow(non_snake_case)]
@@ -118,7 +115,7 @@ where
         advices: [Column<Advice>; 10],
         perm: Permutation,
     ) -> <Self as Chip<C::Base>>::Config {
-        let config = EccConfig {
+        let config = EccConfig::<C> {
             advices,
             lagrange_coeffs: [
                 meta.fixed_column(),
@@ -143,23 +140,24 @@ where
             q_scalar_fixed: meta.selector(),
             q_scalar_fixed_short: meta.selector(),
             perm,
+            _marker: PhantomData,
         };
 
         // Create witness point gate
         {
-            let config: witness_point::Config = (&config).into();
-            config.create_gate::<C>(meta);
+            let config: witness_point::Config<C> = (&config).into();
+            config.create_gate(meta);
         }
 
         // Create incomplete point addition gate
         {
-            let config: add_incomplete::Config = (&config).into();
+            let config: add_incomplete::Config<C> = (&config).into();
             config.create_gate(meta);
         }
 
         // Create complete point addition gate
         {
-            let add_config: add::Config = (&config).into();
+            let add_config: add::Config<C> = (&config).into();
             add_config.create_gate(meta);
         }
 
@@ -204,35 +202,24 @@ where
 
     fn witness_scalar_var(
         &self,
-        layouter: &mut impl Layouter<C::Base>,
-        value: Option<C::Base>,
+        _layouter: &mut impl Layouter<C::Base>,
+        _value: Option<C::Base>,
     ) -> Result<Self::ScalarVar, Error> {
-        layouter.assign_region(
-            || "Witness scalar for variable-base mul",
-            |mut region| {
-                let cell = region.assign_advice(
-                    || "Scalar var",
-                    self.config().advices[0],
-                    0,
-                    || value.ok_or(Error::SynthesisError),
-                )?;
-                Ok(CellValue::new(cell, value))
-            },
-        )
+        todo!()
     }
 
     fn witness_scalar_fixed(
         &self,
-        layouter: &mut impl Layouter<C::Base>,
-        value: Option<C::Scalar>,
+        _layouter: &mut impl Layouter<C::Base>,
+        _value: Option<C::Scalar>,
     ) -> Result<Self::ScalarFixed, Error> {
         todo!()
     }
 
     fn witness_scalar_fixed_short(
         &self,
-        layouter: &mut impl Layouter<C::Base>,
-        value: Option<C::Scalar>,
+        _layouter: &mut impl Layouter<C::Base>,
+        _value: Option<C::Scalar>,
     ) -> Result<Self::ScalarFixedShort, Error> {
         todo!()
     }
@@ -242,7 +229,7 @@ where
         layouter: &mut impl Layouter<C::Base>,
         value: Option<C>,
     ) -> Result<Self::Point, Error> {
-        let config: witness_point::Config = self.config().into();
+        let config: witness_point::Config<C> = self.config().into();
         layouter.assign_region(
             || "witness point",
             |mut region| config.assign_region(value, 0, &mut region),
@@ -259,7 +246,7 @@ where
         a: &Self::Point,
         b: &Self::Point,
     ) -> Result<Self::Point, Error> {
-        let config: add_incomplete::Config = self.config().into();
+        let config: add_incomplete::Config<C> = self.config().into();
         layouter.assign_region(
             || "incomplete point addition",
             |mut region| config.assign_region(a, b, 0, &mut region),
@@ -272,7 +259,7 @@ where
         a: &Self::Point,
         b: &Self::Point,
     ) -> Result<Self::Point, Error> {
-        let config: add::Config = self.config().into();
+        let config: add::Config<C> = self.config().into();
         layouter.assign_region(
             || "complete point addition",
             |mut region| config.assign_region(a, b, 0, &mut region),
@@ -281,27 +268,27 @@ where
 
     fn mul(
         &self,
-        layouter: &mut impl Layouter<C::Base>,
-        scalar: &Self::ScalarVar,
-        base: &Self::Point,
+        _layouter: &mut impl Layouter<C::Base>,
+        _scalar: &Self::ScalarVar,
+        _base: &Self::Point,
     ) -> Result<Self::Point, Error> {
         todo!()
     }
 
     fn mul_fixed(
         &self,
-        layouter: &mut impl Layouter<C::Base>,
-        scalar: &Self::ScalarFixed,
-        base: &Self::FixedPoints,
+        _layouter: &mut impl Layouter<C::Base>,
+        _scalar: &Self::ScalarFixed,
+        _base: &Self::FixedPoints,
     ) -> Result<Self::Point, Error> {
         todo!()
     }
 
     fn mul_fixed_short(
         &self,
-        layouter: &mut impl Layouter<C::Base>,
-        scalar: &Self::ScalarFixedShort,
-        base: &Self::FixedPointsShort,
+        _layouter: &mut impl Layouter<C::Base>,
+        _scalar: &Self::ScalarFixedShort,
+        _base: &Self::FixedPointsShort,
     ) -> Result<Self::Point, Error> {
         todo!()
     }
