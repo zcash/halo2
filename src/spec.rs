@@ -19,8 +19,14 @@ mod prf_expand;
 pub(crate) use prf_expand::PrfExpand;
 
 /// A Pallas point that is guaranteed to not be the identity.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct NonIdentityPallasPoint(pallas::Point);
+
+impl Default for NonIdentityPallasPoint {
+    fn default() -> Self {
+        NonIdentityPallasPoint(pallas::Point::generator())
+    }
+}
 
 impl ConditionallySelectable for NonIdentityPallasPoint {
     fn conditional_select(a: &Self, b: &Self, choice: subtle::Choice) -> Self {
@@ -44,9 +50,30 @@ impl Deref for NonIdentityPallasPoint {
 }
 
 /// An integer in [1..q_P].
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct NonZeroPallasBase(pallas::Base);
 
+impl Default for NonZeroPallasBase {
+    fn default() -> Self {
+        NonZeroPallasBase(pallas::Base::one())
+    }
+}
+
+impl ConditionallySelectable for NonZeroPallasBase {
+    fn conditional_select(a: &Self, b: &Self, choice: subtle::Choice) -> Self {
+        NonZeroPallasBase(pallas::Base::conditional_select(&a.0, &b.0, choice))
+    }
+}
+
 impl NonZeroPallasBase {
+    pub(crate) fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        pallas::Base::from_bytes(bytes).and_then(NonZeroPallasBase::from_base)
+    }
+
+    pub(crate) fn from_base(b: pallas::Base) -> CtOption<Self> {
+        CtOption::new(NonZeroPallasBase(b), !b.ct_is_zero())
+    }
+
     /// Constructs a wrapper for a base field element that is guaranteed to be non-zero.
     ///
     /// # Panics
@@ -59,8 +86,14 @@ impl NonZeroPallasBase {
 }
 
 /// An integer in [1..r_P].
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct NonZeroPallasScalar(pallas::Scalar);
+
+impl Default for NonZeroPallasScalar {
+    fn default() -> Self {
+        NonZeroPallasScalar(pallas::Scalar::one())
+    }
+}
 
 impl From<NonZeroPallasBase> for NonZeroPallasScalar {
     fn from(s: NonZeroPallasBase) -> Self {
