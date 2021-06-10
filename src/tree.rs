@@ -39,17 +39,12 @@ impl MerklePath {
     }
 
     pub fn root(&self, cmx: ExtractedNoteCommitment) -> Anchor {
-        // Initialize `node` to the first hash.
-        let init_node = {
-            let pos = self.position % 2 == 1;
-            hash_layer(0, cond_swap(pos, *cmx, self.auth_path[0]))
-        };
-        let node = self.auth_path[1..]
+        let node = self
+            .auth_path
             .iter()
             .enumerate()
-            .fold(init_node, |node, (i, sibling)| {
-                let l_star = i + 1;
-                let swap = (self.position >> l_star) == 1;
+            .fold(*cmx, |node, (l_star, sibling)| {
+                let swap = self.position & (1 << l_star) != 0;
                 hash_layer(l_star, cond_swap(swap, node, *sibling))
             });
         Anchor(node.to_bytes())
