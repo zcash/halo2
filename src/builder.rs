@@ -522,7 +522,7 @@ pub mod testing {
         /// Produce a random valid Orchard bundle.
         fn arb_bundle_inputs(sk: SpendingKey)
         (
-            n_notes in 1..30,
+            n_notes in 1usize..30,
             n_recipients in 1..30,
         )
         (
