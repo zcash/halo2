@@ -22,6 +22,9 @@ pub use load::{OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV};
 /// $\mathsf{MerkleDepth^{Orchard}}$
 pub(crate) const MERKLE_DEPTH_ORCHARD: usize = 32;
 
+/// $\ell^\mathsf{Orchard}_\mathsf{Merkle}$
+pub(crate) const L_ORCHARD_MERKLE: usize = 255;
+
 /// $\ell^\mathsf{Orchard}_\mathsf{base}$
 pub(crate) const L_ORCHARD_BASE: usize = 255;
 
@@ -244,5 +247,29 @@ fn test_zs_and_us<C: CurveAffine>(base: C, z: &[u64], u: &[[[u8; 32]; H]], num_w
             assert_eq!(C::Base::from_u64(*z) + y, u * u); // allow either square root
             assert!(bool::from((C::Base::from_u64(*z) - y).sqrt().is_none()));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ff::PrimeField;
+    use pasta_curves::pallas;
+
+    #[test]
+    // Nodes in the Merkle tree are Pallas base field elements.
+    fn l_orchard_merkle() {
+        assert_eq!(super::L_ORCHARD_MERKLE, pallas::Base::NUM_BITS as usize);
+    }
+
+    #[test]
+    // Orchard uses the Pallas base field as its base field.
+    fn l_orchard_base() {
+        assert_eq!(super::L_ORCHARD_BASE, pallas::Base::NUM_BITS as usize);
+    }
+
+    #[test]
+    // Orchard uses the Pallas base field as its base field.
+    fn l_orchard_scalar() {
+        assert_eq!(super::L_ORCHARD_SCALAR, pallas::Scalar::NUM_BITS as usize);
     }
 }

@@ -1,11 +1,13 @@
 use crate::{
-    constants::{util::gen_const_array, MERKLE_CRH_PERSONALIZATION, MERKLE_DEPTH_ORCHARD},
+    constants::{
+        util::gen_const_array, L_ORCHARD_MERKLE, MERKLE_CRH_PERSONALIZATION, MERKLE_DEPTH_ORCHARD,
+    },
     note::commitment::ExtractedNoteCommitment,
-    primitives::sinsemilla::{i2lebsp_k, HashDomain, K},
+    primitives::sinsemilla::{i2lebsp_k, HashDomain},
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
-use ff::{Field, PrimeField, PrimeFieldBits};
+use ff::{Field, PrimeFieldBits};
 use rand::RngCore;
 use std::iter;
 
@@ -78,20 +80,20 @@ fn hash_layer(l_star: usize, pair: Pair) -> pallas::Base {
     domain
         .hash(
             iter::empty()
-                .chain(i2lebsp_k(l_star).iter().copied().take(K))
+                .chain(i2lebsp_k(l_star).iter().copied())
                 .chain(
                     pair.left
                         .to_le_bits()
                         .iter()
                         .by_val()
-                        .take(pallas::Base::NUM_BITS as usize),
+                        .take(L_ORCHARD_MERKLE),
                 )
                 .chain(
                     pair.right
                         .to_le_bits()
                         .iter()
                         .by_val()
-                        .take(pallas::Base::NUM_BITS as usize),
+                        .take(L_ORCHARD_MERKLE),
                 ),
         )
         .unwrap()
