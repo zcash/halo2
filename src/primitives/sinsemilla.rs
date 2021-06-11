@@ -25,9 +25,7 @@ fn lebs2ip_k(bits: &[bool]) -> u32 {
 /// up to `2^K` - 1.
 pub fn i2lebsp_k(int: usize) -> [bool; K] {
     assert!(int < (1 << K));
-    gen_const_array(int, |int: &mut usize, mask: usize| {
-        ((*int & (1 << mask)) >> mask) == 1
-    })
+    gen_const_array(|mask: usize| (int & (1 << mask)) != 0)
 }
 
 /// Pads the given iterator (which MUST have length $\leq K * C$) with zero-bits to a

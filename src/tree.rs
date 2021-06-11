@@ -29,14 +29,10 @@ pub struct MerklePath {
 
 impl MerklePath {
     /// Generates a dummy Merkle path for use in dummy spent notes.
-    pub(crate) fn dummy(rng: &mut impl RngCore) -> Self {
-        fn dummy_inner(rng: &mut impl RngCore, _idx: usize) -> pallas::Base {
-            pallas::Base::random(rng)
-        }
-
+    pub(crate) fn dummy(mut rng: &mut impl RngCore) -> Self {
         MerklePath {
             position: rng.next_u32(),
-            auth_path: gen_const_array(rng, dummy_inner),
+            auth_path: gen_const_array(|_| pallas::Base::random(&mut rng)),
         }
     }
 
