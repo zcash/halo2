@@ -118,7 +118,7 @@ impl Config {
 
             // (1 - (x_q - x_p)⋅α)⋅(2y_p ⋅λ - 3x_p^2) = 0
             let poly2 = {
-                let three_x_p_sq = three * x_p.clone() * x_p.clone(); // 3x_p^2
+                let three_x_p_sq = three * x_p.clone().square(); // 3x_p^2
                 let two_y_p = two * y_p.clone(); // 2y_p
                 let tangent_line = two_y_p * lambda.clone() - three_x_p_sq; // (2y_p ⋅λ - 3x_p^2)
 
@@ -127,13 +127,12 @@ impl Config {
             };
 
             // x_p⋅x_q⋅(x_q - x_p)⋅(λ^2 - x_p - x_q - x_r) = 0
+            let secant_line = lambda.clone().square() - x_p.clone() - x_q.clone() - x_r.clone(); // (λ^2 - x_p - x_q - x_r)
             let poly3 = {
                 let x_q_minus_x_p = x_q.clone() - x_p.clone(); // (x_q - x_p)
-                let secant_line =
-                    lambda.clone() * lambda.clone() - x_p.clone() - x_q.clone() - x_r.clone(); // (λ^2 - x_p - x_q - x_r)
 
                 // x_p⋅x_q⋅(x_q - x_p)⋅(λ^2 - x_p - x_q - x_r)
-                x_p.clone() * x_q.clone() * x_q_minus_x_p * secant_line
+                x_p.clone() * x_q.clone() * x_q_minus_x_p * secant_line.clone()
             };
 
             // x_p⋅x_q⋅(x_q - x_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r) = 0
@@ -151,11 +150,9 @@ impl Config {
             // x_p⋅x_q⋅(y_q + y_p)⋅(λ^2 - x_p - x_q - x_r) = 0
             let poly5 = {
                 let y_q_plus_y_p = y_q.clone() + y_p.clone(); // (y_q + y_p)
-                let output_line_x =
-                    lambda.clone() * lambda.clone() - x_p.clone() - x_q.clone() - x_r.clone(); // (λ^2 - x_p - x_q - x_r)
 
                 // x_p⋅x_q⋅(y_q + y_p)⋅(λ^2 - x_p - x_q - x_r)
-                x_p.clone() * x_q.clone() * y_q_plus_y_p * output_line_x
+                x_p.clone() * x_q.clone() * y_q_plus_y_p * secant_line
             };
 
             // x_p⋅x_q⋅(y_q + y_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r) = 0
@@ -301,7 +298,7 @@ impl Config {
                     } else {
                         if y_p != pallas::Base::zero() {
                             // 3(x_p)^2
-                            let three_x_p_sq = pallas::Base::from_u64(3) * x_p * x_p;
+                            let three_x_p_sq = pallas::Base::from_u64(3) * x_p.square();
                             // 1 / 2(y_p)
                             let inv_two_y_p = y_p.invert().unwrap() * pallas::Base::TWO_INV;
                             // λ = 3(x_p)^2 / 2(y_p)
@@ -318,27 +315,35 @@ impl Config {
             || lambda.ok_or(Error::SynthesisError),
         )?;
 
-        // Assign x_r
-        let x_r =
+        // Calculate (x_r, y_r)
+        let r =
             x_p.zip(y_p)
                 .zip(x_q)
                 .zip(y_q)
                 .zip(lambda)
                 .map(|((((x_p, y_p), x_q), y_q), lambda)| {
-                    if x_p == pallas::Base::zero() {
-                        // 0 + Q = Q
-                        x_q
-                    } else if x_q == pallas::Base::zero() {
-                        // P + 0 = P
-                        x_p
-                    } else if (x_q == x_p) && (y_q == -y_p) {
-                        // P + (-P) maps to (0,0)
-                        pallas::Base::zero()
-                    } else {
-                        // x_r = λ^2 - x_p - x_q
-                        lambda * lambda - x_p - x_q
+                    {
+                        if x_p == pallas::Base::zero() {
+                            // 0 + Q = Q
+                            (x_q, y_q)
+                        } else if x_q == pallas::Base::zero() {
+                            // P + 0 = P
+                            (x_p, y_p)
+                        } else if (x_q == x_p) && (y_q == -y_p) {
+                            // P + (-P) maps to (0,0)
+                            (pallas::Base::zero(), pallas::Base::zero())
+                        } else {
+                            // x_r = λ^2 - x_p - x_q
+                            let x_r = lambda.square() - x_p - x_q;
+                            // y_r = λ(x_p - x_r) - y_p
+                            let y_r = lambda * (x_p - x_r) - y_p;
+                            (x_r, y_r)
+                        }
                     }
                 });
+
+        // Assign x_r
+        let x_r = r.map(|r| r.0);
         let x_r_cell = region.assign_advice(
             || "x_r",
             self.x_qr,
@@ -347,23 +352,7 @@ impl Config {
         )?;
 
         // Assign y_r
-        let y_r = x_p.zip(y_p).zip(x_q).zip(y_q).zip(x_r).zip(lambda).map(
-            |(((((x_p, y_p), x_q), y_q), x_r), lambda)| {
-                if x_p == pallas::Base::zero() {
-                    // 0 + Q = Q
-                    y_q
-                } else if x_q == pallas::Base::zero() {
-                    // P + 0 = P
-                    y_p
-                } else if (x_q == x_p) && (y_q == -y_p) {
-                    // P + (-P) maps to (0,0)
-                    pallas::Base::zero()
-                } else {
-                    // y_r = λ(x_p - x_r) - y_p
-                    lambda * (x_p - x_r) - y_p
-                }
-            },
-        );
+        let y_r = r.map(|r| r.1);
         let y_r_cell = region.assign_advice(
             || "y_r",
             self.y_qr,
