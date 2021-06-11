@@ -140,19 +140,6 @@ impl<C: CurveAffine> Config<C> {
             y: CellValue::<C::Base>::new(y_r_var, y_r),
         };
 
-        #[cfg(test)]
-        // Check that the correct sum is obtained.
-        {
-            let p = p.point();
-            let q = q.point();
-            let real_sum = p.zip(q).map(|(p, q)| p + q);
-            let result = result.point();
-
-            if let (Some(real_sum), Some(result)) = (real_sum, result) {
-                assert_eq!(real_sum.to_affine(), result);
-            }
-        }
-
         Ok(result)
     }
 }
