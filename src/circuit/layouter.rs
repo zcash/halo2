@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use std::fmt;
 
 use super::{Cell, RegionIndex};
+use crate::plonk::Assigned;
 use crate::{
     arithmetic::FieldExt,
     plonk::{Advice, Any, Column, Error, Fixed, Permutation, Selector},
@@ -61,7 +62,7 @@ pub trait RegionLayouter<F: FieldExt>: fmt::Debug {
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error>;
 
     /// Assign a fixed value
@@ -70,7 +71,7 @@ pub trait RegionLayouter<F: FieldExt>: fmt::Debug {
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error>;
 
     /// Constraint two cells to have the same value.
@@ -138,7 +139,7 @@ impl<F: FieldExt> RegionLayouter<F> for RegionShape {
         _: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
-        _to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+        _to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error> {
         self.columns.insert(column.into());
         self.row_count = cmp::max(self.row_count, offset + 1);
@@ -155,7 +156,7 @@ impl<F: FieldExt> RegionLayouter<F> for RegionShape {
         _: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
-        _to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+        _to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error> {
         self.columns.insert(column.into());
         self.row_count = cmp::max(self.row_count, offset + 1);

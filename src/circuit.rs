@@ -4,7 +4,7 @@ use std::{fmt, marker::PhantomData};
 
 use crate::{
     arithmetic::FieldExt,
-    plonk::{Advice, Any, Column, Error, Fixed, Permutation, Selector},
+    plonk::{Advice, Any, Assigned, Column, Error, Fixed, Permutation, Selector},
 };
 
 pub mod layouter;
@@ -128,7 +128,7 @@ impl<'r, F: FieldExt> Region<'r, F> {
     /// Assign an advice column value (witness).
     ///
     /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
-    pub fn assign_advice<'v, V, A, AR>(
+    pub fn assign_advice<'v, V, VR, A, AR>(
         &'v mut self,
         annotation: A,
         column: Column<Advice>,
@@ -136,18 +136,21 @@ impl<'r, F: FieldExt> Region<'r, F> {
         mut to: V,
     ) -> Result<Cell, Error>
     where
-        V: FnMut() -> Result<F, Error> + 'v,
+        V: FnMut() -> Result<VR, Error> + 'v,
+        VR: Into<Assigned<F>>,
         A: Fn() -> AR,
         AR: Into<String>,
     {
         self.region
-            .assign_advice(&|| annotation().into(), column, offset, &mut to)
+            .assign_advice(&|| annotation().into(), column, offset, &mut || {
+                to().map(|v| v.into())
+            })
     }
 
     /// Assign a fixed value.
     ///
     /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
-    pub fn assign_fixed<'v, V, A, AR>(
+    pub fn assign_fixed<'v, V, VR, A, AR>(
         &'v mut self,
         annotation: A,
         column: Column<Fixed>,
@@ -155,12 +158,15 @@ impl<'r, F: FieldExt> Region<'r, F> {
         mut to: V,
     ) -> Result<Cell, Error>
     where
-        V: FnMut() -> Result<F, Error> + 'v,
+        V: FnMut() -> Result<VR, Error> + 'v,
+        VR: Into<Assigned<F>>,
         A: Fn() -> AR,
         AR: Into<String>,
     {
         self.region
-            .assign_fixed(&|| annotation().into(), column, offset, &mut to)
+            .assign_fixed(&|| annotation().into(), column, offset, &mut || {
+                to().map(|v| v.into())
+            })
     }
 
     /// Constraint two cells to have the same value.

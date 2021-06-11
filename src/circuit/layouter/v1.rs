@@ -2,6 +2,7 @@ use std::fmt;
 use std::marker::PhantomData;
 
 use super::{RegionLayouter, RegionShape};
+use crate::plonk::Assigned;
 use crate::{
     arithmetic::FieldExt,
     circuit::{Cell, Layouter, Region, RegionIndex, RegionStart},
@@ -231,7 +232,7 @@ impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error> {
         self.layouter.cs.assign_advice(
             annotation,
@@ -252,7 +253,7 @@ impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<F, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error> {
         self.layouter.cs.assign_fixed(
             annotation,
