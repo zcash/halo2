@@ -459,7 +459,7 @@ mod tests {
             // Test complete addition
             {
                 super::chip::add::tests::test_add(
-                    chip.clone(),
+                    chip,
                     layouter.namespace(|| "complete addition"),
                     &zero,
                     p_val,

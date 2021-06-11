@@ -22,9 +22,9 @@ pub(super) mod witness_point;
 #[derive(Clone, Debug)]
 pub struct EccPoint<C: CurveAffine> {
     /// x-coordinate
-    pub x: CellValue<C::Base>,
+    x: CellValue<C::Base>,
     /// y-coordinate
-    pub y: CellValue<C::Base>,
+    y: CellValue<C::Base>,
 }
 
 impl<C: CurveAffine> EccPoint<C> {
@@ -40,6 +40,16 @@ impl<C: CurveAffine> EccPoint<C> {
             }
             _ => None,
         }
+    }
+    /// The cell containing the affine short-Weierstrass x-coordinate,
+    /// or 0 for the zero point.
+    pub fn x(&self) -> CellValue<C::Base> {
+        self.x
+    }
+    /// The cell containing the affine short-Weierstrass y-coordinate,
+    /// or 0 for the zero point.
+    pub fn y(&self) -> CellValue<C::Base> {
+        self.y
     }
 }
 
