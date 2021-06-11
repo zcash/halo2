@@ -68,6 +68,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     ) -> Result<Self::ScalarFixedShort, Error>;
 
     /// Witnesses the given point as a private input to the circuit.
+    /// This maps the identity to (0, 0) in affine coordinates.
     fn witness_point(
         &self,
         layouter: &mut impl Layouter<C::Base>,
@@ -447,7 +448,13 @@ mod tests {
             assert_ne!(p_val, q_val);
 
             // Generate a (0,0) point to be used in other tests.
-            let zero = p.add(layouter.namespace(|| "P + (-P)"), &p_neg)?;
+            let zero = {
+                super::Point::new(
+                    chip.clone(),
+                    layouter.namespace(|| "identity"),
+                    Some(C::identity()),
+                )?
+            };
 
             // Test complete addition
             {

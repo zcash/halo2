@@ -1,5 +1,6 @@
 use super::{CellValue, EccConfig, EccPoint, Var};
 
+use ff::Field;
 use halo2::{
     arithmetic::CurveAffine,
     circuit::Region,
@@ -33,14 +34,22 @@ impl<C: CurveAffine> From<&EccConfig<C>> for Config<C> {
 impl<C: CurveAffine> Config<C> {
     pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<C::Base>) {
         meta.create_gate("witness point", |meta| {
+            // Check that either the point being witness is either:
+            // - the identity, which is mapped to (0, 0) in affine coordinates; or
+            // - a valid curve point y^2 = x^3 + b, where b = 5 in the Pallas equation
+
             let q_point = meta.query_selector(self.q_point);
             let x = meta.query_advice(self.x, Rotation::cur());
             let y = meta.query_advice(self.y, Rotation::cur());
 
-            // Check that y^2 = x^3 + b, where b = 5 in the Pallas equation
+            // y^2 = x^3 + b
+            let curve_eqn = y.clone() * y.clone()
+                - (x.clone() * x.clone() * x.clone())
+                - Expression::Constant(C::b());
+
             vec![
-                q_point
-                    * (y.clone() * y - (x.clone() * x.clone() * x) - Expression::Constant(C::b())),
+                q_point.clone() * x * curve_eqn.clone(),
+                q_point * y * curve_eqn,
             ]
         });
     }
@@ -54,10 +63,18 @@ impl<C: CurveAffine> Config<C> {
         // Enable `q_point` selector
         self.q_point.enable(region, offset)?;
 
-        let value = value.map(|value| value.coordinates().unwrap());
+        let value = value.map(|value| {
+            // Map the identity to (0, 0).
+            if value == C::identity() {
+                (C::Base::zero(), C::Base::zero())
+            } else {
+                let value = value.coordinates().unwrap();
+                (*value.x(), *value.y())
+            }
+        });
 
         // Assign `x` value
-        let x_val = value.map(|value| *value.x());
+        let x_val = value.map(|value| value.0);
         let x_var = region.assign_advice(
             || "x",
             self.x,
@@ -66,7 +83,7 @@ impl<C: CurveAffine> Config<C> {
         )?;
 
         // Assign `y` value
-        let y_val = value.map(|value| *value.y());
+        let y_val = value.map(|value| value.1);
         let y_var = region.assign_advice(
             || "y",
             self.y,
