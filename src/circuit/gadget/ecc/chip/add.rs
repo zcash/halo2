@@ -3,7 +3,7 @@ use std::array;
 use super::{copy, CellValue, EccConfig, EccPoint, Var};
 use ff::Field;
 use halo2::{
-    arithmetic::{CurveAffine, FieldExt},
+    arithmetic::{BatchInvert, CurveAffine, FieldExt},
     circuit::Region,
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Permutation, Selector},
     poly::Rotation,
@@ -218,8 +218,39 @@ impl<C: CurveAffine> Config<C> {
         let (x_p, y_p) = (p.x.value(), p.y.value());
         let (x_q, y_q) = (q.x.value(), q.y.value());
 
+        //   [alpha, beta, gamma, delta]
+        // = [inv0(x_q - x_p), inv0(x_p), inv0(x_q), inv0(y_q + y_p)]
+        // where inv0(x) = 0 if x = 0, 1/x otherwise.
+        //
+        let (alpha, beta, gamma, delta) = {
+            let inverses = x_p
+                .zip(x_q)
+                .zip(y_p)
+                .zip(y_q)
+                .map(|(((x_p, x_q), y_p), y_q)| {
+                    let alpha = x_q - x_p;
+                    let beta = x_p;
+                    let gamma = x_q;
+                    let delta = y_q + y_p;
+
+                    let mut inverses = vec![alpha, beta, gamma, delta];
+                    inverses.batch_invert();
+                    inverses
+                });
+
+            if let Some(inverses) = inverses {
+                (
+                    Some(inverses[0]),
+                    Some(inverses[1]),
+                    Some(inverses[2]),
+                    Some(inverses[3]),
+                )
+            } else {
+                (None, None, None, None)
+            }
+        };
+
         // Assign α = inv0(x_q - x_p)
-        let alpha = x_p.zip(x_q).map(|(x_p, x_q)| inv0(x_q - x_p));
         region.assign_advice(
             || "α",
             self.alpha,
@@ -232,10 +263,7 @@ impl<C: CurveAffine> Config<C> {
             || "β",
             self.beta,
             offset,
-            || {
-                let beta = x_p.map(inv0);
-                beta.ok_or(Error::SynthesisError)
-            },
+            || beta.ok_or(Error::SynthesisError),
         )?;
 
         // Assign γ = inv0(x_q)
@@ -243,10 +271,7 @@ impl<C: CurveAffine> Config<C> {
             || "γ",
             self.gamma,
             offset,
-            || {
-                let gamma = x_q.map(inv0);
-                gamma.ok_or(Error::SynthesisError)
-            },
+            || gamma.ok_or(Error::SynthesisError),
         )?;
 
         // Assign δ = inv0(y_q + y_p) if x_q = x_p, 0 otherwise
@@ -257,43 +282,42 @@ impl<C: CurveAffine> Config<C> {
             || {
                 let x_p = x_p.ok_or(Error::SynthesisError)?;
                 let x_q = x_q.ok_or(Error::SynthesisError)?;
-                let y_p = y_p.ok_or(Error::SynthesisError)?;
-                let y_q = y_q.ok_or(Error::SynthesisError)?;
 
                 let delta = if x_q == x_p {
-                    inv0(y_q + y_p)
+                    delta
                 } else {
-                    C::Base::zero()
+                    Some(C::Base::zero())
                 };
-                Ok(delta)
+                delta.ok_or(Error::SynthesisError)
             },
         )?;
 
         #[allow(clippy::collapsible_else_if)]
         // Assign lambda
-        let lambda = x_p
-            .zip(y_p)
-            .zip(x_q)
-            .zip(y_q)
-            .map(|(((x_p, y_p), x_q), y_q)| {
-                if x_q != x_p {
-                    // λ = (y_q - y_p)/(x_q - x_p)
-                    // Here, alpha = inv0(x_q - x_p), which suffices since we
-                    // know that x_q != x_p in this branch.
-                    (y_q - y_p) * alpha.unwrap()
-                } else {
-                    if y_p != C::Base::zero() {
-                        // 3(x_p)^2
-                        let three_x_p_sq = C::Base::from_u64(3) * x_p * x_p;
-                        // 2(y_p)
-                        let two_y_p = C::Base::from_u64(2) * y_p;
-                        // λ = 3(x_p)^2 / 2(y_p)
-                        three_x_p_sq * two_y_p.invert().unwrap()
+        let lambda =
+            x_p.zip(y_p)
+                .zip(x_q)
+                .zip(y_q)
+                .zip(alpha)
+                .map(|((((x_p, y_p), x_q), y_q), alpha)| {
+                    if x_q != x_p {
+                        // λ = (y_q - y_p)/(x_q - x_p)
+                        // Here, alpha = inv0(x_q - x_p), which suffices since we
+                        // know that x_q != x_p in this branch.
+                        (y_q - y_p) * alpha
                     } else {
-                        C::Base::zero()
+                        if y_p != C::Base::zero() {
+                            // 3(x_p)^2
+                            let three_x_p_sq = C::Base::from_u64(3) * x_p * x_p;
+                            // 1 / 2(y_p)
+                            let inv_two_y_p = y_p.invert().unwrap() * C::Base::TWO_INV;
+                            // λ = 3(x_p)^2 / 2(y_p)
+                            three_x_p_sq * inv_two_y_p
+                        } else {
+                            C::Base::zero()
+                        }
                     }
-                }
-            });
+                });
         region.assign_advice(
             || "λ",
             self.lambda,
@@ -375,15 +399,6 @@ impl<C: CurveAffine> Config<C> {
         }
 
         Ok(result)
-    }
-}
-
-// inv0(x) is 0 if x = 0, 1/x otherwise.
-fn inv0<F: FieldExt>(x: F) -> F {
-    if x == F::zero() {
-        F::zero()
-    } else {
-        x.invert().unwrap()
     }
 }
 
