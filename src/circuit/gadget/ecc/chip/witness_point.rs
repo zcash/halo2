@@ -1,38 +1,35 @@
 use super::{CellValue, EccConfig, EccPoint, Var};
 
-use ff::Field;
+use group::prime::PrimeCurveAffine;
+
 use halo2::{
-    arithmetic::CurveAffine,
     circuit::Region,
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
-
-use std::marker::PhantomData;
+use pasta_curves::{arithmetic::CurveAffine, pallas};
 
 #[derive(Clone, Debug)]
-pub struct Config<C: CurveAffine> {
+pub struct Config {
     q_point: Selector,
     // x-coordinate
     pub x: Column<Advice>,
     // y-coordinate
     pub y: Column<Advice>,
-    _marker: PhantomData<C>,
 }
 
-impl<C: CurveAffine> From<&EccConfig<C>> for Config<C> {
-    fn from(ecc_config: &EccConfig<C>) -> Self {
+impl From<&EccConfig> for Config {
+    fn from(ecc_config: &EccConfig) -> Self {
         Self {
             q_point: ecc_config.q_point,
             x: ecc_config.advices[0],
             y: ecc_config.advices[1],
-            _marker: PhantomData,
         }
     }
 }
 
-impl<C: CurveAffine> Config<C> {
-    pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<C::Base>) {
+impl Config {
+    pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("witness point", |meta| {
             // Check that either the point being witness is either:
             // - the identity, which is mapped to (0, 0) in affine coordinates; or
@@ -45,7 +42,7 @@ impl<C: CurveAffine> Config<C> {
             // y^2 = x^3 + b
             let curve_eqn = y.clone() * y.clone()
                 - (x.clone() * x.clone() * x.clone())
-                - Expression::Constant(C::b());
+                - Expression::Constant(pallas::Affine::b());
 
             vec![
                 q_point.clone() * x * curve_eqn.clone(),
@@ -56,17 +53,17 @@ impl<C: CurveAffine> Config<C> {
 
     pub(super) fn assign_region(
         &self,
-        value: Option<C>,
+        value: Option<pallas::Affine>,
         offset: usize,
-        region: &mut Region<'_, C::Base>,
-    ) -> Result<EccPoint<C>, Error> {
+        region: &mut Region<'_, pallas::Base>,
+    ) -> Result<EccPoint, Error> {
         // Enable `q_point` selector
         self.q_point.enable(region, offset)?;
 
         let value = value.map(|value| {
             // Map the identity to (0, 0).
-            if value == C::identity() {
-                (C::Base::zero(), C::Base::zero())
+            if value == pallas::Affine::identity() {
+                (pallas::Base::zero(), pallas::Base::zero())
             } else {
                 let value = value.coordinates().unwrap();
                 (*value.x(), *value.y())
@@ -92,8 +89,8 @@ impl<C: CurveAffine> Config<C> {
         )?;
 
         Ok(EccPoint {
-            x: CellValue::<C::Base>::new(x_var, x_val),
-            y: CellValue::<C::Base>::new(y_var, y_val),
+            x: CellValue::<pallas::Base>::new(x_var, x_val),
+            y: CellValue::<pallas::Base>::new(y_var, y_val),
         })
     }
 }

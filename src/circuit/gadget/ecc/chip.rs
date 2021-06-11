@@ -1,13 +1,13 @@
 use super::EccInstructions;
 use crate::circuit::gadget::utilities::{copy, CellValue, Var};
 use crate::constants;
-use ff::{Field, PrimeFieldBits};
+
+use group::prime::PrimeCurveAffine;
 use halo2::{
-    arithmetic::CurveAffine,
     circuit::{Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Permutation, Selector},
 };
-use std::marker::PhantomData;
+use pasta_curves::{arithmetic::CurveAffine, pallas};
 
 pub(super) mod add;
 pub(super) mod add_incomplete;
@@ -19,22 +19,22 @@ pub(super) mod witness_point;
 /// A curve point represented in affine (x, y) coordinates. Each coordinate is
 /// assigned to a cell.
 #[derive(Clone, Debug)]
-pub struct EccPoint<C: CurveAffine> {
+pub struct EccPoint {
     /// x-coordinate
-    x: CellValue<C::Base>,
+    x: CellValue<pallas::Base>,
     /// y-coordinate
-    y: CellValue<C::Base>,
+    y: CellValue<pallas::Base>,
 }
 
-impl<C: CurveAffine> EccPoint<C> {
+impl EccPoint {
     /// Returns the value of this curve point, if known.
-    pub fn point(&self) -> Option<C> {
+    pub fn point(&self) -> Option<pallas::Affine> {
         match (self.x.value(), self.y.value()) {
             (Some(x), Some(y)) => {
-                if x == C::Base::zero() && y == C::Base::zero() {
-                    Some(C::identity())
+                if x == pallas::Base::zero() && y == pallas::Base::zero() {
+                    Some(pallas::Affine::identity())
                 } else {
-                    Some(C::from_xy(x, y).unwrap())
+                    Some(pallas::Affine::from_xy(x, y).unwrap())
                 }
             }
             _ => None,
@@ -42,12 +42,12 @@ impl<C: CurveAffine> EccPoint<C> {
     }
     /// The cell containing the affine short-Weierstrass x-coordinate,
     /// or 0 for the zero point.
-    pub fn x(&self) -> CellValue<C::Base> {
+    pub fn x(&self) -> CellValue<pallas::Base> {
         self.x
     }
     /// The cell containing the affine short-Weierstrass y-coordinate,
     /// or 0 for the zero point.
-    pub fn y(&self) -> CellValue<C::Base> {
+    pub fn y(&self) -> CellValue<pallas::Base> {
         self.y
     }
 }
@@ -55,7 +55,7 @@ impl<C: CurveAffine> EccPoint<C> {
 /// Configuration for the ECC chip
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[allow(non_snake_case)]
-pub struct EccConfig<C: CurveAffine> {
+pub struct EccConfig {
     /// Advice columns needed by instructions in the ECC chip.
     pub advices: [Column<Advice>; 10],
 
@@ -88,17 +88,16 @@ pub struct EccConfig<C: CurveAffine> {
     pub q_scalar_fixed_short: Selector,
     /// Permutation
     pub perm: Permutation,
-    _marker: PhantomData<C>,
 }
 
 /// A chip implementing EccInstructions
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct EccChip<C: CurveAffine> {
-    config: EccConfig<C>,
+pub struct EccChip {
+    config: EccConfig,
 }
 
-impl<C: CurveAffine> Chip<C::Base> for EccChip<C> {
-    type Config = EccConfig<C>;
+impl Chip<pallas::Base> for EccChip {
+    type Config = EccConfig;
     type Loaded = ();
 
     fn config(&self) -> &Self::Config {
@@ -110,21 +109,18 @@ impl<C: CurveAffine> Chip<C::Base> for EccChip<C> {
     }
 }
 
-impl<C: CurveAffine> EccChip<C>
-where
-    C::Scalar: PrimeFieldBits,
-{
-    pub fn construct(config: <Self as Chip<C::Base>>::Config) -> Self {
+impl EccChip {
+    pub fn construct(config: <Self as Chip<pallas::Base>>::Config) -> Self {
         Self { config }
     }
 
     #[allow(non_snake_case)]
     pub fn configure(
-        meta: &mut ConstraintSystem<C::Base>,
+        meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 10],
         perm: Permutation,
-    ) -> <Self as Chip<C::Base>>::Config {
-        let config = EccConfig::<C> {
+    ) -> <Self as Chip<pallas::Base>>::Config {
+        let config = EccConfig {
             advices,
             lagrange_coeffs: [
                 meta.fixed_column(),
@@ -149,24 +145,23 @@ where
             q_scalar_fixed: meta.selector(),
             q_scalar_fixed_short: meta.selector(),
             perm,
-            _marker: PhantomData,
         };
 
         // Create witness point gate
         {
-            let config: witness_point::Config<C> = (&config).into();
+            let config: witness_point::Config = (&config).into();
             config.create_gate(meta);
         }
 
         // Create incomplete point addition gate
         {
-            let config: add_incomplete::Config<C> = (&config).into();
+            let config: add_incomplete::Config = (&config).into();
             config.create_gate(meta);
         }
 
         // Create complete point addition gate
         {
-            let add_config: add::Config<C> = (&config).into();
+            let add_config: add::Config = (&config).into();
             add_config.create_gate(meta);
         }
 
@@ -174,48 +169,45 @@ where
     }
 }
 
-impl<C: CurveAffine> EccInstructions<C> for EccChip<C>
-where
-    C::Scalar: PrimeFieldBits,
-{
+impl EccInstructions<pallas::Affine> for EccChip {
     type ScalarFixed = (); // TODO
     type ScalarFixedShort = (); // TODO
     type ScalarVar = (); // TODO
-    type Point = EccPoint<C>;
-    type X = CellValue<C::Base>;
+    type Point = EccPoint;
+    type X = CellValue<pallas::Base>;
     type FixedPoints = (); // TODO
     type FixedPointsShort = (); // TODO
 
     fn witness_scalar_var(
         &self,
-        _layouter: &mut impl Layouter<C::Base>,
-        _value: Option<C::Base>,
+        _layouter: &mut impl Layouter<pallas::Base>,
+        _value: Option<pallas::Base>,
     ) -> Result<Self::ScalarVar, Error> {
         todo!()
     }
 
     fn witness_scalar_fixed(
         &self,
-        _layouter: &mut impl Layouter<C::Base>,
-        _value: Option<C::Scalar>,
+        _layouter: &mut impl Layouter<pallas::Base>,
+        _value: Option<pallas::Scalar>,
     ) -> Result<Self::ScalarFixed, Error> {
         todo!()
     }
 
     fn witness_scalar_fixed_short(
         &self,
-        _layouter: &mut impl Layouter<C::Base>,
-        _value: Option<C::Scalar>,
+        _layouter: &mut impl Layouter<pallas::Base>,
+        _value: Option<pallas::Scalar>,
     ) -> Result<Self::ScalarFixedShort, Error> {
         todo!()
     }
 
     fn witness_point(
         &self,
-        layouter: &mut impl Layouter<C::Base>,
-        value: Option<C>,
+        layouter: &mut impl Layouter<pallas::Base>,
+        value: Option<pallas::Affine>,
     ) -> Result<Self::Point, Error> {
-        let config: witness_point::Config<C> = self.config().into();
+        let config: witness_point::Config = self.config().into();
         layouter.assign_region(
             || "witness point",
             |mut region| config.assign_region(value, 0, &mut region),
@@ -228,11 +220,11 @@ where
 
     fn add_incomplete(
         &self,
-        layouter: &mut impl Layouter<C::Base>,
+        layouter: &mut impl Layouter<pallas::Base>,
         a: &Self::Point,
         b: &Self::Point,
     ) -> Result<Self::Point, Error> {
-        let config: add_incomplete::Config<C> = self.config().into();
+        let config: add_incomplete::Config = self.config().into();
         layouter.assign_region(
             || "incomplete point addition",
             |mut region| config.assign_region(a, b, 0, &mut region),
@@ -241,11 +233,11 @@ where
 
     fn add(
         &self,
-        layouter: &mut impl Layouter<C::Base>,
+        layouter: &mut impl Layouter<pallas::Base>,
         a: &Self::Point,
         b: &Self::Point,
     ) -> Result<Self::Point, Error> {
-        let config: add::Config<C> = self.config().into();
+        let config: add::Config = self.config().into();
         layouter.assign_region(
             || "complete point addition",
             |mut region| config.assign_region(a, b, 0, &mut region),
@@ -254,7 +246,7 @@ where
 
     fn mul(
         &self,
-        _layouter: &mut impl Layouter<C::Base>,
+        _layouter: &mut impl Layouter<pallas::Base>,
         _scalar: &Self::ScalarVar,
         _base: &Self::Point,
     ) -> Result<Self::Point, Error> {
@@ -263,7 +255,7 @@ where
 
     fn mul_fixed(
         &self,
-        _layouter: &mut impl Layouter<C::Base>,
+        _layouter: &mut impl Layouter<pallas::Base>,
         _scalar: &Self::ScalarFixed,
         _base: &Self::FixedPoints,
     ) -> Result<Self::Point, Error> {
@@ -272,7 +264,7 @@ where
 
     fn mul_fixed_short(
         &self,
-        _layouter: &mut impl Layouter<C::Base>,
+        _layouter: &mut impl Layouter<pallas::Base>,
         _scalar: &Self::ScalarFixedShort,
         _base: &Self::FixedPointsShort,
     ) -> Result<Self::Point, Error> {

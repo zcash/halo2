@@ -3,15 +3,16 @@ use std::array;
 use super::{copy, CellValue, EccConfig, EccPoint, Var};
 use ff::Field;
 use halo2::{
-    arithmetic::{BatchInvert, CurveAffine, FieldExt},
+    arithmetic::BatchInvert,
     circuit::Region,
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Permutation, Selector},
     poly::Rotation,
 };
-use std::{collections::HashSet, marker::PhantomData};
+use pasta_curves::{arithmetic::FieldExt, pallas};
+use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
-pub struct Config<C: CurveAffine> {
+pub struct Config {
     q_add: Selector,
     // lambda
     lambda: Column<Advice>,
@@ -33,11 +34,10 @@ pub struct Config<C: CurveAffine> {
     delta: Column<Advice>,
     // Permutation
     perm: Permutation,
-    _marker: PhantomData<C>,
 }
 
-impl<C: CurveAffine> From<&EccConfig<C>> for Config<C> {
-    fn from(ecc_config: &EccConfig<C>) -> Self {
+impl From<&EccConfig> for Config {
+    fn from(ecc_config: &EccConfig) -> Self {
         Self {
             q_add: ecc_config.q_add,
             x_p: ecc_config.advices[0],
@@ -50,12 +50,11 @@ impl<C: CurveAffine> From<&EccConfig<C>> for Config<C> {
             gamma: ecc_config.advices[7],
             delta: ecc_config.advices[8],
             perm: ecc_config.perm.clone(),
-            _marker: PhantomData,
         }
     }
 }
 
-impl<C: CurveAffine> Config<C> {
+impl Config {
     pub(crate) fn advice_columns(&self) -> HashSet<Column<Advice>> {
         core::array::IntoIter::new([
             self.x_p,
@@ -71,7 +70,7 @@ impl<C: CurveAffine> Config<C> {
         .collect()
     }
 
-    pub(crate) fn create_gate(&self, meta: &mut ConstraintSystem<C::Base>) {
+    pub(crate) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("complete addition gates", |meta| {
             let q_add = meta.query_selector(self.q_add);
             let x_p = meta.query_advice(self.x_p, Rotation::cur());
@@ -102,9 +101,9 @@ impl<C: CurveAffine> Config<C> {
             let if_delta = (y_q.clone() + y_p.clone()) * delta;
 
             // Useful constants
-            let one = Expression::Constant(C::Base::one());
-            let two = Expression::Constant(C::Base::from_u64(2));
-            let three = Expression::Constant(C::Base::from_u64(3));
+            let one = Expression::Constant(pallas::Base::one());
+            let two = Expression::Constant(pallas::Base::from_u64(2));
+            let three = Expression::Constant(pallas::Base::from_u64(3));
 
             // (x_q − x_p)⋅((x_q − x_p)⋅λ − (y_q−y_p)) = 0
             let poly1 = {
@@ -199,11 +198,11 @@ impl<C: CurveAffine> Config<C> {
 
     pub(super) fn assign_region(
         &self,
-        p: &EccPoint<C>,
-        q: &EccPoint<C>,
+        p: &EccPoint,
+        q: &EccPoint,
         offset: usize,
-        region: &mut Region<'_, C::Base>,
-    ) -> Result<EccPoint<C>, Error> {
+        region: &mut Region<'_, pallas::Base>,
+    ) -> Result<EccPoint, Error> {
         // Enable `q_add` selector
         self.q_add.enable(region, offset)?;
 
@@ -281,7 +280,7 @@ impl<C: CurveAffine> Config<C> {
                 if x_q == x_p {
                     delta.ok_or(Error::SynthesisError)
                 } else {
-                    Ok(C::Base::zero())
+                    Ok(pallas::Base::zero())
                 }
             },
         )?;
@@ -300,15 +299,15 @@ impl<C: CurveAffine> Config<C> {
                         // know that x_q != x_p in this branch.
                         (y_q - y_p) * alpha
                     } else {
-                        if y_p != C::Base::zero() {
+                        if y_p != pallas::Base::zero() {
                             // 3(x_p)^2
-                            let three_x_p_sq = C::Base::from_u64(3) * x_p * x_p;
+                            let three_x_p_sq = pallas::Base::from_u64(3) * x_p * x_p;
                             // 1 / 2(y_p)
-                            let inv_two_y_p = y_p.invert().unwrap() * C::Base::TWO_INV;
+                            let inv_two_y_p = y_p.invert().unwrap() * pallas::Base::TWO_INV;
                             // λ = 3(x_p)^2 / 2(y_p)
                             three_x_p_sq * inv_two_y_p
                         } else {
-                            C::Base::zero()
+                            pallas::Base::zero()
                         }
                     }
                 });
@@ -326,15 +325,15 @@ impl<C: CurveAffine> Config<C> {
                 .zip(y_q)
                 .zip(lambda)
                 .map(|((((x_p, y_p), x_q), y_q), lambda)| {
-                    if x_p == C::Base::zero() {
+                    if x_p == pallas::Base::zero() {
                         // 0 + Q = Q
                         x_q
-                    } else if x_q == C::Base::zero() {
+                    } else if x_q == pallas::Base::zero() {
                         // P + 0 = P
                         x_p
                     } else if (x_q == x_p) && (y_q == -y_p) {
                         // P + (-P) maps to (0,0)
-                        C::Base::zero()
+                        pallas::Base::zero()
                     } else {
                         // x_r = λ^2 - x_p - x_q
                         lambda * lambda - x_p - x_q
@@ -350,15 +349,15 @@ impl<C: CurveAffine> Config<C> {
         // Assign y_r
         let y_r = x_p.zip(y_p).zip(x_q).zip(y_q).zip(x_r).zip(lambda).map(
             |(((((x_p, y_p), x_q), y_q), x_r), lambda)| {
-                if x_p == C::Base::zero() {
+                if x_p == pallas::Base::zero() {
                     // 0 + Q = Q
                     y_q
-                } else if x_q == C::Base::zero() {
+                } else if x_q == pallas::Base::zero() {
                     // P + 0 = P
                     y_p
                 } else if (x_q == x_p) && (y_q == -y_p) {
                     // P + (-P) maps to (0,0)
-                    C::Base::zero()
+                    pallas::Base::zero()
                 } else {
                     // y_r = λ(x_p - x_r) - y_p
                     lambda * (x_p - x_r) - y_p
@@ -372,9 +371,9 @@ impl<C: CurveAffine> Config<C> {
             || y_r.ok_or(Error::SynthesisError),
         )?;
 
-        let result = EccPoint::<C> {
-            x: CellValue::<C::Base>::new(x_r_cell, x_r),
-            y: CellValue::<C::Base>::new(y_r_cell, y_r),
+        let result = EccPoint {
+            x: CellValue::<pallas::Base>::new(x_r_cell, x_r),
+            y: CellValue::<pallas::Base>::new(y_r_cell, y_r),
         };
 
         #[cfg(test)]
@@ -398,25 +397,22 @@ impl<C: CurveAffine> Config<C> {
 
 #[cfg(test)]
 pub mod tests {
-    use group::Curve;
-    use halo2::{
-        arithmetic::{CurveAffine, CurveExt},
-        circuit::Layouter,
-        plonk::Error,
-    };
+    use group::{prime::PrimeCurveAffine, Curve};
+    use halo2::{circuit::Layouter, plonk::Error};
+    use pasta_curves::{arithmetic::CurveExt, pallas};
 
     use crate::circuit::gadget::ecc::{EccInstructions, Point};
 
     #[allow(clippy::too_many_arguments)]
-    pub fn test_add<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Eq + std::fmt::Debug>(
+    pub fn test_add<EccChip: EccInstructions<pallas::Affine> + Clone + Eq + std::fmt::Debug>(
         chip: EccChip,
-        mut layouter: impl Layouter<C::Base>,
-        zero: &Point<C, EccChip>,
-        p_val: C,
-        p: &Point<C, EccChip>,
-        q_val: C,
-        q: &Point<C, EccChip>,
-        p_neg: &Point<C, EccChip>,
+        mut layouter: impl Layouter<pallas::Base>,
+        zero: &Point<pallas::Affine, EccChip>,
+        p_val: pallas::Affine,
+        p: &Point<pallas::Affine, EccChip>,
+        q_val: pallas::Affine,
+        q: &Point<pallas::Affine, EccChip>,
+        p_neg: &Point<pallas::Affine, EccChip>,
     ) -> Result<(), Error> {
         // Make sure P and Q are not the same point.
         assert_ne!(p_val, q_val);

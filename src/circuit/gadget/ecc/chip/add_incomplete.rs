@@ -1,17 +1,16 @@
-use std::{array, marker::PhantomData};
+use std::array;
 
 use super::{copy, CellValue, EccConfig, EccPoint, Var};
-use ff::Field;
 use group::Curve;
 use halo2::{
-    arithmetic::CurveAffine,
     circuit::Region,
     plonk::{Advice, Column, ConstraintSystem, Error, Permutation, Selector},
     poly::Rotation,
 };
+use pasta_curves::{arithmetic::CurveAffine, pallas};
 
 #[derive(Clone, Debug)]
-pub struct Config<C: CurveAffine> {
+pub struct Config {
     q_add_incomplete: Selector,
     // x-coordinate of P in P + Q = R
     pub x_p: Column<Advice>,
@@ -23,11 +22,10 @@ pub struct Config<C: CurveAffine> {
     pub y_qr: Column<Advice>,
     // Permutation
     perm: Permutation,
-    _marker: PhantomData<C>,
 }
 
-impl<C: CurveAffine> From<&EccConfig<C>> for Config<C> {
-    fn from(ecc_config: &EccConfig<C>) -> Self {
+impl From<&EccConfig> for Config {
+    fn from(ecc_config: &EccConfig) -> Self {
         Self {
             q_add_incomplete: ecc_config.q_add_incomplete,
             x_p: ecc_config.advices[0],
@@ -35,13 +33,12 @@ impl<C: CurveAffine> From<&EccConfig<C>> for Config<C> {
             x_qr: ecc_config.advices[2],
             y_qr: ecc_config.advices[3],
             perm: ecc_config.perm.clone(),
-            _marker: PhantomData,
         }
     }
 }
 
-impl<C: CurveAffine> Config<C> {
-    pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<C::Base>) {
+impl Config {
+    pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("incomplete addition gates", |meta| {
             let q_add_incomplete = meta.query_selector(self.q_add_incomplete);
             let x_p = meta.query_advice(self.x_p, Rotation::cur());
@@ -68,11 +65,11 @@ impl<C: CurveAffine> Config<C> {
 
     pub(super) fn assign_region(
         &self,
-        p: &EccPoint<C>,
-        q: &EccPoint<C>,
+        p: &EccPoint,
+        q: &EccPoint,
         offset: usize,
-        region: &mut Region<'_, C::Base>,
-    ) -> Result<EccPoint<C>, Error> {
+        region: &mut Region<'_, pallas::Base>,
+    ) -> Result<EccPoint, Error> {
         // Enable `q_add_incomplete` selector
         self.q_add_incomplete.enable(region, offset)?;
 
@@ -84,9 +81,9 @@ impl<C: CurveAffine> Config<C> {
             .zip(y_q)
             .map(|(((x_p, y_p), x_q), y_q)| {
                 // P is point at infinity
-                if (x_p == C::Base::zero() && y_p == C::Base::zero())
+                if (x_p == pallas::Base::zero() && y_p == pallas::Base::zero())
                 // Q is point at infinity
-                || (x_q == C::Base::zero() && y_q == C::Base::zero())
+                || (x_q == pallas::Base::zero() && y_q == pallas::Base::zero())
                 // x_p = x_q
                 || (x_p == x_q)
                 {
@@ -135,9 +132,9 @@ impl<C: CurveAffine> Config<C> {
             || y_r.ok_or(Error::SynthesisError),
         )?;
 
-        let result = EccPoint::<C> {
-            x: CellValue::<C::Base>::new(x_r_var, x_r),
-            y: CellValue::<C::Base>::new(y_r_var, y_r),
+        let result = EccPoint {
+            x: CellValue::<pallas::Base>::new(x_r_var, x_r),
+            y: CellValue::<pallas::Base>::new(y_r_var, y_r),
         };
 
         Ok(result)
