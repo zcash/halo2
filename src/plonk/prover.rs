@@ -12,10 +12,13 @@ use crate::poly::{
     multiopen::{self, ProverQuery},
     Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
 };
-use crate::transcript::{EncodedChallenge, TranscriptWrite};
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine, FieldExt},
     plonk::Assigned,
+};
+use crate::{
+    poly::batch_invert_assigned,
+    transcript::{EncodedChallenge, TranscriptWrite},
 };
 
 /// This creates a proof for the provided `circuit` when given the public
@@ -109,7 +112,7 @@ pub fn create_proof<
         .iter()
         .map(|circuit| -> Result<AdviceSingle<C>, Error> {
             struct WitnessCollection<F: Field> {
-                pub advice: Vec<Polynomial<F, LagrangeCoeff>>,
+                pub advice: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
                 _marker: std::marker::PhantomData<F>,
             }
 
@@ -158,7 +161,7 @@ pub fn create_proof<
                         .advice
                         .get_mut(column.index())
                         .and_then(|v| v.get_mut(row))
-                        .ok_or(Error::BoundsFailure)? = to()?.into().evaluate();
+                        .ok_or(Error::BoundsFailure)? = to()?.into();
 
                     Ok(())
                 }
@@ -208,23 +211,18 @@ pub fn create_proof<
             }
 
             let mut witness = WitnessCollection {
-                advice: vec![domain.empty_lagrange(); meta.num_advice_columns],
+                advice: vec![domain.empty_lagrange_assigned(); meta.num_advice_columns],
                 _marker: std::marker::PhantomData,
             };
 
             // Synthesize the circuit to obtain the witness and other information.
             circuit.synthesize(&mut witness, config.clone())?;
 
-            let witness = witness;
+            let advice = batch_invert_assigned(&witness.advice);
 
             // Compute commitments to advice column polynomials
-            let advice_blinds: Vec<_> = witness
-                .advice
-                .iter()
-                .map(|_| Blind(C::Scalar::rand()))
-                .collect();
-            let advice_commitments_projective: Vec<_> = witness
-                .advice
+            let advice_blinds: Vec<_> = advice.iter().map(|_| Blind(C::Scalar::rand())).collect();
+            let advice_commitments_projective: Vec<_> = advice
                 .iter()
                 .zip(advice_blinds.iter())
                 .map(|(poly, blind)| params.commit_lagrange(poly, *blind))
@@ -240,8 +238,7 @@ pub fn create_proof<
                     .map_err(|_| Error::TranscriptError)?;
             }
 
-            let advice_polys: Vec<_> = witness
-                .advice
+            let advice_polys: Vec<_> = advice
                 .clone()
                 .into_iter()
                 .map(|poly| domain.lagrange_to_coeff(poly))
@@ -257,7 +254,7 @@ pub fn create_proof<
                 .collect();
 
             Ok(AdviceSingle {
-                advice_values: witness.advice,
+                advice_values: advice,
                 advice_polys,
                 advice_cosets,
                 advice_blinds,
