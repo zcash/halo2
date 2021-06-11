@@ -136,19 +136,22 @@ pub mod testing {
         note::{commitment::ExtractedNoteCommitment, testing::arb_note, Note},
         value::{testing::arb_positive_note_value, MAX_NOTE_VALUE},
     };
-    use pasta_curves::pallas;
+    use pasta_curves::{arithmetic::FieldExt, pallas};
 
     use proptest::collection::vec;
     use proptest::prelude::*;
 
     use super::{hash_layer, Anchor, MerklePath, Pair};
 
+    // The uncommitted leaf is defined as pallas::Base(2).
+    // <https://zips.z.cash/protocol/protocol.pdf#thmuncommittedorchard>
     lazy_static! {
         static ref EMPTY_ROOTS: Vec<pallas::Base> = {
             iter::empty()
-                .chain(Some(pallas::Base::zero()))
-                .chain(
-                    (0..MERKLE_DEPTH_ORCHARD).scan(pallas::Base::zero(), |state, l_star| {
+                .chain(Some(pallas::Base::from_u64(2)))
+                .chain((0..MERKLE_DEPTH_ORCHARD).scan(
+                    pallas::Base::from_u64(2),
+                    |state, l_star| {
                         *state = hash_layer(
                             l_star,
                             Pair {
@@ -157,10 +160,19 @@ pub mod testing {
                             },
                         );
                         Some(*state)
-                    }),
-                )
+                    },
+                ))
                 .collect()
         };
+    }
+
+    #[test]
+    fn test_vectors() {
+        let tv_empty_roots = crate::test_vectors::commitment_tree::test_vectors().empty_roots;
+
+        for (height, root) in EMPTY_ROOTS.iter().enumerate() {
+            assert_eq!(tv_empty_roots[height], root.to_bytes());
+        }
     }
 
     prop_compose! {
