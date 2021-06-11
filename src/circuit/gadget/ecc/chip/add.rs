@@ -233,18 +233,13 @@ impl<C: CurveAffine> Config<C> {
                     let gamma = x_q;
                     let delta = y_q + y_p;
 
-                    let mut inverses = vec![alpha, beta, gamma, delta];
+                    let mut inverses = [alpha, beta, gamma, delta];
                     inverses.batch_invert();
                     inverses
                 });
 
-            if let Some(inverses) = inverses {
-                (
-                    Some(inverses[0]),
-                    Some(inverses[1]),
-                    Some(inverses[2]),
-                    Some(inverses[3]),
-                )
+            if let Some([alpha, beta, gamma, delta]) = inverses {
+                (Some(alpha), Some(beta), Some(gamma), Some(delta))
             } else {
                 (None, None, None, None)
             }
@@ -283,12 +278,11 @@ impl<C: CurveAffine> Config<C> {
                 let x_p = x_p.ok_or(Error::SynthesisError)?;
                 let x_q = x_q.ok_or(Error::SynthesisError)?;
 
-                let delta = if x_q == x_p {
-                    delta
+                if x_q == x_p {
+                    delta.ok_or(Error::SynthesisError)
                 } else {
-                    Some(C::Base::zero())
-                };
-                delta.ok_or(Error::SynthesisError)
+                    Ok(C::Base::zero())
+                }
             },
         )?;
 
@@ -428,28 +422,28 @@ pub mod tests {
         assert_ne!(p_val, q_val);
 
         // Check complete addition P + (-P)
-        p.add(layouter.namespace(|| "P + (-P)"), &p_neg)?;
+        p.add(layouter.namespace(|| "P + (-P)"), p_neg)?;
 
         // Check complete addition 𝒪 + 𝒪
-        zero.add(layouter.namespace(|| "𝒪 + 𝒪"), &zero)?;
+        zero.add(layouter.namespace(|| "𝒪 + 𝒪"), zero)?;
 
         // Check P + Q
-        p.add(layouter.namespace(|| "P + Q"), &q)?;
+        p.add(layouter.namespace(|| "P + Q"), q)?;
 
         // P + P
-        p.add(layouter.namespace(|| "P + P"), &p)?;
+        p.add(layouter.namespace(|| "P + P"), p)?;
 
         // P + 𝒪
-        p.add(layouter.namespace(|| "P + 𝒪"), &zero)?;
+        p.add(layouter.namespace(|| "P + 𝒪"), zero)?;
 
         // 𝒪 + P
-        zero.add(layouter.namespace(|| "𝒪 + P"), &p)?;
+        zero.add(layouter.namespace(|| "𝒪 + P"), p)?;
 
         // (x, y) + (ζx, y) should behave like normal P + Q.
         let endo_p = p_val.to_curve().endo();
         let endo_p = Point::new(
             chip.clone(),
-            layouter.namespace(|| "point"),
+            layouter.namespace(|| "endo(P)"),
             Some(endo_p.to_affine()),
         )?;
         p.add(layouter.namespace(|| "P + endo(P)"), &endo_p)?;
@@ -458,7 +452,7 @@ pub mod tests {
         let endo_p_neg = (-p_val).to_curve().endo();
         let endo_p_neg = Point::new(
             chip.clone(),
-            layouter.namespace(|| "point"),
+            layouter.namespace(|| "endo(-P)"),
             Some(endo_p_neg.to_affine()),
         )?;
         p.add(layouter.namespace(|| "P + endo(-P)"), &endo_p_neg)?;
@@ -467,19 +461,19 @@ pub mod tests {
         let endo_2_p = p_val.to_curve().endo().endo();
         let endo_2_p = Point::new(
             chip.clone(),
-            layouter.namespace(|| "point"),
+            layouter.namespace(|| "endo^2(P)"),
             Some(endo_2_p.to_affine()),
         )?;
-        p.add(layouter.namespace(|| "P + endo(P)"), &endo_2_p)?;
+        p.add(layouter.namespace(|| "P + endo^2(P)"), &endo_2_p)?;
 
         // (x, y) + ((ζ^2)x, -y)
         let endo_2_p_neg = (-p_val).to_curve().endo().endo();
         let endo_2_p_neg = Point::new(
             chip,
-            layouter.namespace(|| "point"),
+            layouter.namespace(|| "endo^2(-P)"),
             Some(endo_2_p_neg.to_affine()),
         )?;
-        p.add(layouter.namespace(|| "P + endo(P)"), &endo_2_p_neg)?;
+        p.add(layouter.namespace(|| "P + endo^2(-P)"), &endo_2_p_neg)?;
 
         Ok(())
     }

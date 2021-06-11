@@ -435,14 +435,13 @@ mod tests {
 
             // Generate a random point P
             let p_val = C::CurveExt::random(rand::rngs::OsRng).to_affine(); // P
-            let p = super::Point::new(chip.clone(), layouter.namespace(|| "point"), Some(p_val))?;
+            let p = super::Point::new(chip.clone(), layouter.namespace(|| "P"), Some(p_val))?;
             let p_neg = -p_val;
-            let p_neg =
-                super::Point::new(chip.clone(), layouter.namespace(|| "point"), Some(p_neg))?;
+            let p_neg = super::Point::new(chip.clone(), layouter.namespace(|| "-P"), Some(p_neg))?;
 
             // Generate a random point Q
-            let q_val = C::CurveExt::random(rand::rngs::OsRng).to_affine(); // P
-            let q = super::Point::new(chip.clone(), layouter.namespace(|| "point"), Some(q_val))?;
+            let q_val = C::CurveExt::random(rand::rngs::OsRng).to_affine(); // Q
+            let q = super::Point::new(chip.clone(), layouter.namespace(|| "Q"), Some(q_val))?;
 
             // Make sure P and Q are not the same point.
             assert_ne!(p_val, q_val);

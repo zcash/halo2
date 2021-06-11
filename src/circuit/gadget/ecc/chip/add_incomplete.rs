@@ -161,26 +161,26 @@ pub mod tests {
         p_neg: &Point<C, EccChip>,
     ) -> Result<(), Error> {
         // P + Q
-        p.add_incomplete(layouter.namespace(|| "P + Q"), &q)?;
+        p.add_incomplete(layouter.namespace(|| "P + Q"), q)?;
 
         // P + P should return an error
-        p.add_incomplete(layouter.namespace(|| "P + P"), &p)
+        p.add_incomplete(layouter.namespace(|| "P + P"), p)
             .expect_err("P + P should return an error");
 
         // P + (-P) should return an error
-        p.add_incomplete(layouter.namespace(|| "P + (-P)"), &p_neg)
+        p.add_incomplete(layouter.namespace(|| "P + (-P)"), p_neg)
             .expect_err("P + (-P) should return an error");
 
         // P + 𝒪 should return an error
-        p.add_incomplete(layouter.namespace(|| "P + 𝒪"), &zero)
+        p.add_incomplete(layouter.namespace(|| "P + 𝒪"), zero)
             .expect_err("P + 0 should return an error");
 
         // 𝒪 + P should return an error
-        zero.add_incomplete(layouter.namespace(|| "𝒪 + P"), &p)
+        zero.add_incomplete(layouter.namespace(|| "𝒪 + P"), p)
             .expect_err("0 + P should return an error");
 
         // 𝒪 + 𝒪 should return an error
-        zero.add_incomplete(layouter.namespace(|| "𝒪 + 𝒪"), &zero)
+        zero.add_incomplete(layouter.namespace(|| "𝒪 + 𝒪"), zero)
             .expect_err("𝒪 + 𝒪 should return an error");
 
         Ok(())
