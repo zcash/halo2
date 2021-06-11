@@ -366,6 +366,14 @@ impl<F: Field> Assigned<F> {
         self.denominator
     }
 
+    /// Inverts this assigned value.
+    pub fn invert(&self) -> Self {
+        Assigned {
+            numerator: self.denominator,
+            denominator: self.numerator,
+        }
+    }
+
     /// Evaluates this assigned value directly, performing an unbatched inversion if
     /// necessary.
     ///
