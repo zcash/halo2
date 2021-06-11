@@ -23,7 +23,7 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 // <https://zips.z.cash/protocol/protocol.pdf#thmuncommittedorchard>
 lazy_static! {
     static ref UNCOMMITTED_ORCHARD: pallas::Base = pallas::Base::from_u64(2);
-    static ref EMPTY_ROOTS: Vec<pallas::Base> = {
+    pub(crate) static ref EMPTY_ROOTS: Vec<pallas::Base> = {
         iter::empty()
             .chain(Some(*UNCOMMITTED_ORCHARD))
             .chain(
