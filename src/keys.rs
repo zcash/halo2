@@ -8,7 +8,7 @@ use fpe::ff1::{BinaryNumeralString, FF1};
 use group::GroupEncoding;
 use halo2::arithmetic::FieldExt;
 use pasta_curves::pallas;
-use rand::{CryptoRng, RngCore};
+use rand::RngCore;
 use subtle::CtOption;
 
 use crate::{
@@ -76,13 +76,11 @@ impl SpendAuthorizingKey {
         to_scalar(PrfExpand::OrchardAsk.expand(&sk.0))
     }
 
-    /// Creates a spend authorization signature over the given message.
-    pub fn sign<R: RngCore + CryptoRng>(
-        &self,
-        rng: R,
-        msg: &[u8],
-    ) -> redpallas::Signature<SpendAuth> {
-        self.0.sign(rng, msg)
+    /// Randomizes this spend authorizing key with the given `randomizer`.
+    ///
+    /// The resulting key can be used to actually sign a spend.
+    pub fn randomize(&self, randomizer: &pallas::Scalar) -> redpallas::SigningKey<SpendAuth> {
+        self.0.randomize(randomizer)
     }
 }
 
