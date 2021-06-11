@@ -291,6 +291,70 @@ impl<F: Field> From<(F, F)> for Assigned<F> {
     }
 }
 
+impl<F: Field> Neg for Assigned<F> {
+    type Output = Assigned<F>;
+    fn neg(self) -> Self::Output {
+        Assigned {
+            numerator: -self.numerator,
+            denominator: self.denominator,
+        }
+    }
+}
+
+impl<F: Field> Add for Assigned<F> {
+    type Output = Assigned<F>;
+    fn add(self, rhs: Assigned<F>) -> Assigned<F> {
+        Assigned {
+            numerator: self.numerator * rhs.denominator + self.denominator * rhs.numerator,
+            denominator: self.denominator * rhs.denominator,
+        }
+    }
+}
+
+impl<F: Field> Add<F> for Assigned<F> {
+    type Output = Assigned<F>;
+    fn add(self, rhs: F) -> Assigned<F> {
+        Assigned {
+            numerator: self.numerator + self.denominator * rhs,
+            denominator: self.denominator,
+        }
+    }
+}
+
+impl<F: Field> Sub for Assigned<F> {
+    type Output = Assigned<F>;
+    fn sub(self, rhs: Assigned<F>) -> Assigned<F> {
+        self + (-rhs)
+    }
+}
+
+impl<F: Field> Sub<F> for Assigned<F> {
+    type Output = Assigned<F>;
+    fn sub(self, rhs: F) -> Assigned<F> {
+        self + (-rhs)
+    }
+}
+
+impl<F: Field> Mul for Assigned<F> {
+    type Output = Assigned<F>;
+    fn mul(self, rhs: Assigned<F>) -> Assigned<F> {
+        Assigned {
+            numerator: self.numerator * rhs.numerator,
+            denominator: self.denominator * rhs.denominator,
+        }
+    }
+}
+
+impl<F: Field> Mul<F> for Assigned<F> {
+    type Output = Assigned<F>;
+    fn mul(self, rhs: F) -> Assigned<F> {
+        Assigned {
+            numerator: self.numerator * rhs,
+            denominator: self.denominator,
+        }
+    }
+}
+
 impl<F: Field> Assigned<F> {
     /// Returns the numerator.
     pub fn numerator(&self) -> F {
