@@ -3,7 +3,7 @@ use group::Curve;
 
 use super::{
     circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, Selector},
-    permutation, Error, LagrangeCoeff, Permutation, Polynomial, ProvingKey, VerifyingKey,
+    permutation, Assigned, Error, LagrangeCoeff, Permutation, Polynomial, ProvingKey, VerifyingKey,
 };
 use crate::arithmetic::CurveAffine;
 use crate::poly::{
@@ -71,7 +71,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
     }
 
-    fn assign_advice<V, A, AR>(
+    fn assign_advice<V, VR, A, AR>(
         &mut self,
         _: A,
         _: Column<Advice>,
@@ -79,7 +79,8 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Result<VR, Error>,
+        VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
@@ -87,7 +88,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         Ok(())
     }
 
-    fn assign_fixed<V, A, AR>(
+    fn assign_fixed<V, VR, A, AR>(
         &mut self,
         _: A,
         column: Column<Fixed>,
@@ -95,7 +96,8 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Result<VR, Error>,
+        VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
@@ -103,7 +105,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
             .fixed
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? = to()?;
+            .ok_or(Error::BoundsFailure)? = to()?.into().evaluate();
 
         Ok(())
     }

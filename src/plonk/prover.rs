@@ -7,13 +7,16 @@ use super::{
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
     ChallengeY, Error, Permutation, ProvingKey,
 };
-use crate::arithmetic::{eval_polynomial, CurveAffine, FieldExt};
 use crate::poly::{
     commitment::{Blind, Params},
     multiopen::{self, ProverQuery},
     Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
 };
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
+use crate::{
+    arithmetic::{eval_polynomial, CurveAffine, FieldExt},
+    plonk::Assigned,
+};
 
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
@@ -138,7 +141,7 @@ pub fn create_proof<
                     Ok(())
                 }
 
-                fn assign_advice<V, A, AR>(
+                fn assign_advice<V, VR, A, AR>(
                     &mut self,
                     _: A,
                     column: Column<Advice>,
@@ -146,7 +149,8 @@ pub fn create_proof<
                     to: V,
                 ) -> Result<(), Error>
                 where
-                    V: FnOnce() -> Result<F, Error>,
+                    V: FnOnce() -> Result<VR, Error>,
+                    VR: Into<Assigned<F>>,
                     A: FnOnce() -> AR,
                     AR: Into<String>,
                 {
@@ -154,12 +158,12 @@ pub fn create_proof<
                         .advice
                         .get_mut(column.index())
                         .and_then(|v| v.get_mut(row))
-                        .ok_or(Error::BoundsFailure)? = to()?;
+                        .ok_or(Error::BoundsFailure)? = to()?.into().evaluate();
 
                     Ok(())
                 }
 
-                fn assign_fixed<V, A, AR>(
+                fn assign_fixed<V, VR, A, AR>(
                     &mut self,
                     _: A,
                     _: Column<Fixed>,
@@ -167,7 +171,8 @@ pub fn create_proof<
                     _: V,
                 ) -> Result<(), Error>
                 where
-                    V: FnOnce() -> Result<F, Error>,
+                    V: FnOnce() -> Result<VR, Error>,
+                    VR: Into<Assigned<F>>,
                     A: FnOnce() -> AR,
                     AR: Into<String>,
                 {

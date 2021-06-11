@@ -262,6 +262,59 @@ impl Permutation {
     }
 }
 
+/// A value assigned to a cell within a circuit.
+///
+/// Stored as a fraction, so the backend can use batch inversion.
+///
+/// A denominator of zero maps to an assigned value of zero.
+#[derive(Clone, Copy, Debug)]
+pub struct Assigned<F> {
+    numerator: F,
+    denominator: F,
+}
+
+impl<F: Field> From<F> for Assigned<F> {
+    fn from(numerator: F) -> Self {
+        Assigned {
+            numerator,
+            denominator: F::one(),
+        }
+    }
+}
+
+impl<F: Field> From<(F, F)> for Assigned<F> {
+    fn from((numerator, denominator): (F, F)) -> Self {
+        Assigned {
+            numerator,
+            denominator,
+        }
+    }
+}
+
+impl<F: Field> Assigned<F> {
+    /// Returns the numerator.
+    pub fn numerator(&self) -> F {
+        self.numerator
+    }
+
+    /// Returns the denominator.
+    pub fn denominator(&self) -> F {
+        self.denominator
+    }
+
+    /// Evaluates this assigned value directly, performing an unbatched inversion if
+    /// necessary.
+    ///
+    /// If the denominator is zero, this returns zero.
+    pub fn evaluate(self) -> F {
+        if self.denominator == F::one() {
+            self.numerator
+        } else {
+            self.numerator * self.denominator.invert().unwrap_or(F::zero())
+        }
+    }
+}
+
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
 pub trait Assignment<F: Field> {
@@ -298,7 +351,7 @@ pub trait Assignment<F: Field> {
         AR: Into<String>;
 
     /// Assign an advice column value (witness)
-    fn assign_advice<V, A, AR>(
+    fn assign_advice<V, VR, A, AR>(
         &mut self,
         annotation: A,
         column: Column<Advice>,
@@ -306,12 +359,13 @@ pub trait Assignment<F: Field> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Result<VR, Error>,
+        VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>;
 
     /// Assign a fixed value
-    fn assign_fixed<V, A, AR>(
+    fn assign_fixed<V, VR, A, AR>(
         &mut self,
         annotation: A,
         column: Column<Fixed>,
@@ -319,7 +373,8 @@ pub trait Assignment<F: Field> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Result<VR, Error>,
+        VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>;
 

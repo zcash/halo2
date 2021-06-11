@@ -8,7 +8,8 @@ use std::collections::HashSet;
 use std::ops::Range;
 
 use crate::plonk::{
-    Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation, Selector,
+    Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
+    Permutation, Selector,
 };
 
 /// Graphical renderer for circuit layouts.
@@ -307,7 +308,7 @@ impl<F: Field> Assignment<F> for Layout {
         self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
     }
 
-    fn assign_advice<V, A, AR>(
+    fn assign_advice<V, VR, A, AR>(
         &mut self,
         _: A,
         column: Column<Advice>,
@@ -315,7 +316,8 @@ impl<F: Field> Assignment<F> for Layout {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Result<VR, Error>,
+        VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
@@ -323,7 +325,7 @@ impl<F: Field> Assignment<F> for Layout {
         Ok(())
     }
 
-    fn assign_fixed<V, A, AR>(
+    fn assign_fixed<V, VR, A, AR>(
         &mut self,
         _: A,
         column: Column<Fixed>,
@@ -331,7 +333,8 @@ impl<F: Field> Assignment<F> for Layout {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Result<VR, Error>,
+        VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
     {

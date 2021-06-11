@@ -2,7 +2,8 @@ use ff::Field;
 use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
 use crate::plonk::{
-    Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation, Selector,
+    Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
+    Permutation, Selector,
 };
 
 pub mod layout;
@@ -95,7 +96,7 @@ impl<F: Field> Assignment<F> for Graph {
         Ok(())
     }
 
-    fn assign_advice<V, A, AR>(
+    fn assign_advice<V, VR, A, AR>(
         &mut self,
         _: A,
         _: Column<Advice>,
@@ -103,7 +104,8 @@ impl<F: Field> Assignment<F> for Graph {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Result<VR, Error>,
+        VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
@@ -111,7 +113,7 @@ impl<F: Field> Assignment<F> for Graph {
         Ok(())
     }
 
-    fn assign_fixed<V, A, AR>(
+    fn assign_fixed<V, VR, A, AR>(
         &mut self,
         _: A,
         _: Column<Fixed>,
@@ -119,7 +121,8 @@ impl<F: Field> Assignment<F> for Graph {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Result<VR, Error>,
+        VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
