@@ -86,14 +86,14 @@ fn cond_swap(swap: bool, node: pallas::Base, sibling: pallas::Base) -> Pair {
     }
 }
 
-// <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
-// The layer with 2^n nodes is called "layer n":
-//      - leaves are at layer MERKLE_DEPTH_ORCHARD = 32;
-//      - the root is at layer 0.
-// `l_star` is MERKLE_DEPTH_ORCHARD - layer - 1.
-//      - when hashing two leaves, we produce a node on the layer above the leaves, i.e.
-//        layer = 31, l_star = 0
-//      - when hashing to the final root, we produce the anchor with layer = 0, l_star = 31.
+/// <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
+/// The layer with 2^n nodes is called "layer n":
+///      - leaves are at layer MERKLE_DEPTH_ORCHARD = 32;
+///      - the root is at layer 0.
+/// `l_star` is MERKLE_DEPTH_ORCHARD - layer - 1.
+///      - when hashing two leaves, we produce a node on the layer above the leaves, i.e.
+///        layer = 31, l_star = 0
+///      - when hashing to the final root, we produce the anchor with layer = 0, l_star = 31.
 fn hash_layer(l_star: usize, pair: Pair) -> pallas::Base {
     // MerkleCRH Sinsemilla hash domain.
     let domain = HashDomain::new(MERKLE_CRH_PERSONALIZATION);
