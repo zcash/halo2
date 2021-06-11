@@ -1,7 +1,6 @@
 use super::EccInstructions;
 use crate::circuit::gadget::utilities::{copy, CellValue, Var};
-use crate::constants::{self, OrchardFixedBasesFull, ValueCommitV};
-use arrayvec::ArrayVec;
+use crate::constants;
 use ff::{Field, PrimeFieldBits};
 use halo2::{
     arithmetic::CurveAffine,
@@ -175,40 +174,17 @@ where
     }
 }
 
-/// A full-width scalar used for fixed-base scalar multiplication.
-/// This is decomposed in chunks of `window_width` bits in little-endian order.
-/// For example, if `window_width` = 3, we will have [k_0, k_1, ..., k_n]
-/// where `scalar = k_0 + k_1 * (2^3) + ... + k_n * (2^3)^n` and each `k_i` is
-/// in the range [0..2^3).
-#[derive(Clone, Debug)]
-pub struct EccScalarFixed<C: CurveAffine> {
-    value: Option<C::Scalar>,
-    windows: ArrayVec<CellValue<C::Base>, { constants::NUM_WINDOWS }>,
-}
-
-/// A signed short scalar used for fixed-base scalar multiplication.
-/// This is decomposed in chunks of `window_width` bits in little-endian order.
-/// For example, if `window_width` = 3, we will have [k_0, k_1, ..., k_n]
-/// where `scalar = k_0 + k_1 * (2^3) + ... + k_n * (2^3)^n` and each `k_i` is
-/// in the range [0..2^3).
-#[derive(Clone, Debug)]
-pub struct EccScalarFixedShort<C: CurveAffine> {
-    magnitude: Option<C::Scalar>,
-    sign: CellValue<C::Base>,
-    windows: ArrayVec<CellValue<C::Base>, { constants::NUM_WINDOWS_SHORT }>,
-}
-
 impl<C: CurveAffine> EccInstructions<C> for EccChip<C>
 where
     C::Scalar: PrimeFieldBits,
 {
-    type ScalarFixed = EccScalarFixed<C>;
-    type ScalarFixedShort = EccScalarFixedShort<C>;
-    type ScalarVar = CellValue<C::Base>;
+    type ScalarFixed = (); // TODO
+    type ScalarFixedShort = (); // TODO
+    type ScalarVar = (); // TODO
     type Point = EccPoint<C>;
     type X = CellValue<C::Base>;
-    type FixedPoints = OrchardFixedBasesFull<C>;
-    type FixedPointsShort = ValueCommitV<C>;
+    type FixedPoints = (); // TODO
+    type FixedPointsShort = (); // TODO
 
     fn witness_scalar_var(
         &self,
