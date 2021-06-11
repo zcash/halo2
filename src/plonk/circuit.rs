@@ -427,6 +427,11 @@ impl<F: Field> Expression<F> {
             Expression::Scaled(poly, _) => poly.degree(),
         }
     }
+
+    /// Square this expression.
+    pub fn square(self) -> Self {
+        self.clone() * self
+    }
 }
 
 impl<F: Field> Neg for Expression<F> {
