@@ -114,7 +114,7 @@ impl<T> Action<T> {
             cv_net: self.cv_net.clone(),
             nf_old: self.nf,
             rk: self.rk.clone(),
-            cmx: self.cmx.clone(),
+            cmx: self.cmx,
             enable_spend: flags.spends_enabled,
             enable_output: flags.outputs_enabled,
         }

@@ -4,6 +4,7 @@ use halo2::arithmetic::CurveExt;
 use pasta_curves::pallas;
 use subtle::CtOption;
 
+use crate::constants::util::gen_const_array;
 use crate::spec::extract_p_bottom;
 
 mod addition;
@@ -18,6 +19,13 @@ fn lebs2ip_k(bits: &[bool]) -> u32 {
     bits.iter()
         .enumerate()
         .fold(0u32, |acc, (i, b)| acc + if *b { 1 << i } else { 0 })
+}
+
+/// The sequence of K bits in little-endian order representing an integer
+/// up to `2^K` - 1.
+pub fn i2lebsp_k(int: usize) -> [bool; K] {
+    assert!(int < (1 << K));
+    gen_const_array(|mask: usize| (int & (1 << mask)) != 0)
 }
 
 /// Pads the given iterator (which MUST have length $\leq K * C$) with zero-bits to a
@@ -186,7 +194,8 @@ impl CommitDomain {
 
 #[cfg(test)]
 mod tests {
-    use super::Pad;
+    use super::{i2lebsp_k, lebs2ip_k, Pad, K};
+    use rand::{self, rngs::OsRng, Rng};
 
     #[test]
     fn pad() {
@@ -224,5 +233,44 @@ mod tests {
                 false, false, false, false, false, false, false
             ]
         );
+    }
+
+    #[test]
+    fn lebs2ip_k_round_trip() {
+        let mut rng = OsRng;
+        {
+            let int = rng.gen_range(0..(1 << K));
+            assert_eq!(lebs2ip_k(&i2lebsp_k(int)) as usize, int);
+        }
+
+        assert_eq!(lebs2ip_k(&i2lebsp_k(0)) as usize, 0);
+        assert_eq!(lebs2ip_k(&i2lebsp_k((1 << K) - 1)) as usize, (1 << K) - 1);
+    }
+
+    #[test]
+    fn i2lebsp_k_round_trip() {
+        {
+            let bitstring = (0..K).map(|_| rand::random()).collect::<Vec<_>>();
+            assert_eq!(
+                i2lebsp_k(lebs2ip_k(&bitstring) as usize).to_vec(),
+                bitstring
+            );
+        }
+
+        {
+            let bitstring = [false; K];
+            assert_eq!(
+                i2lebsp_k(lebs2ip_k(&bitstring) as usize).to_vec(),
+                bitstring
+            );
+        }
+
+        {
+            let bitstring = [true; K];
+            assert_eq!(
+                i2lebsp_k(lebs2ip_k(&bitstring) as usize).to_vec(),
+                bitstring
+            );
+        }
     }
 }

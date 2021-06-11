@@ -198,12 +198,11 @@ impl Builder {
         }
 
         // Consistency check: all anchors must be equal.
-        let _cm = note.commitment();
-        // TODO: Once we have tree logic.
-        // let path_root: bls12_381::Scalar = merkle_path.root(cmu).into();
-        // if path_root != anchor {
-        //     return Err(Error::AnchorMismatch);
-        // }
+        let cm = note.commitment();
+        let path_root: Anchor = merkle_path.root(cm.into());
+        if path_root != self.anchor {
+            return Err("All anchors must be equal.");
+        }
 
         self.spends.push(SpendInfo {
             dummy_sk: None,
@@ -485,8 +484,7 @@ pub mod testing {
             testing::arb_spending_key, FullViewingKey, OutgoingViewingKey, SpendAuthorizingKey,
             SpendingKey,
         },
-        note::testing::arb_note,
-        tree::{Anchor, MerklePath},
+        tree::{testing::arb_tree, Anchor, MerklePath},
         value::{testing::arb_positive_note_value, NoteValue, MAX_NOTE_VALUE},
         Address, Note,
     };
@@ -506,7 +504,7 @@ pub mod testing {
         rng: R,
         sk: SpendingKey,
         anchor: Anchor,
-        notes: Vec<Note>,
+        notes: Vec<(Note, MerklePath)>,
         recipient_amounts: Vec<(Address, NoteValue)>,
     }
 
@@ -518,8 +516,8 @@ pub mod testing {
             let flags = Flags::from_parts(true, true);
             let mut builder = Builder::new(flags, self.anchor);
 
-            for note in self.notes.into_iter() {
-                builder.add_spend(fvk.clone(), note, MerklePath).unwrap();
+            for (note, path) in self.notes.into_iter() {
+                builder.add_spend(fvk.clone(), note, path).unwrap();
             }
 
             for (addr, value) in self.recipient_amounts.into_iter() {
@@ -543,16 +541,11 @@ pub mod testing {
         /// Produce a random valid Orchard bundle.
         fn arb_bundle_inputs(sk: SpendingKey)
         (
-            n_notes in 1..30,
+            n_notes in 1usize..30,
             n_recipients in 1..30,
         )
         (
-            anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor),
-            // generate note values that we're certain won't exceed MAX_NOTE_VALUE in total
-            notes in vec(
-                arb_positive_note_value(MAX_NOTE_VALUE / n_notes as u64).prop_flat_map(arb_note),
-                n_notes as usize
-            ),
+            (notes_and_auth_paths, anchor) in arb_tree(n_notes),
             recipient_amounts in vec(
                 arb_address().prop_flat_map(move |a| {
                     arb_positive_note_value(MAX_NOTE_VALUE / n_recipients as u64)
@@ -566,7 +559,7 @@ pub mod testing {
                 rng: StdRng::from_seed(rng_seed),
                 sk: sk.clone(),
                 anchor,
-                notes,
+                notes: notes_and_auth_paths,
                 recipient_amounts
             }
         }

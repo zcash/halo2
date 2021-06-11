@@ -43,7 +43,7 @@ impl NoteCommitment {
 }
 
 /// The x-coordinate of the commitment to a note.
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct ExtractedNoteCommitment(pub(super) pallas::Base);
 
 impl ExtractedNoteCommitment {
@@ -61,5 +61,13 @@ impl ExtractedNoteCommitment {
 impl From<NoteCommitment> for ExtractedNoteCommitment {
     fn from(cm: NoteCommitment) -> Self {
         ExtractedNoteCommitment(extract_p(&cm.0))
+    }
+}
+
+impl std::ops::Deref for ExtractedNoteCommitment {
+    type Target = pallas::Base;
+
+    fn deref(&self) -> &pallas::Base {
+        &self.0
     }
 }
