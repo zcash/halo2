@@ -931,4 +931,132 @@ mod tests {
             }])
         );
     }
+
+    #[test]
+    fn overassigned_cells() {
+        const K: u32 = 4;
+        const FAULTY_DOUBLE: usize = 1;
+        const FAULTY_OVERWRITE: usize = 2;
+
+        #[derive(Clone)]
+        struct FaultyCircuitConfig {
+            a: Column<Advice>,
+            b: Column<Advice>,
+            q: Selector,
+        }
+
+        struct FaultyCircuit {}
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let b = meta.advice_column();
+                let q = meta.selector();
+
+                meta.create_gate("Equality check", |cells| {
+                    let a = cells.query_advice(a, Rotation::prev());
+                    let b = cells.query_advice(b, Rotation::cur());
+                    let q = cells.query_selector(q);
+
+                    // If q is enabled, a and b must be assigned to.
+                    vec![q * (a - b)]
+                });
+
+                FaultyCircuitConfig { a, b, q }
+            }
+
+            fn synthesize(
+                &self,
+                cs: &mut impl Assignment<Fp>,
+                config: Self::Config,
+            ) -> Result<(), Error> {
+                let mut layouter = SingleChipLayouter::new(cs)?;
+                layouter.assign_region(
+                    || "Faulty synthesis",
+                    |mut region| {
+                        // Enable the equality gates.
+                        config.q.enable(&mut region, FAULTY_DOUBLE)?;
+                        config.q.enable(&mut region, FAULTY_OVERWRITE)?;
+
+                        // Assign a = 7.
+                        region.assign_advice(
+                            || "a_1",
+                            config.a,
+                            FAULTY_DOUBLE - 1,
+                            || Ok(Fp::zero()),
+                        )?;
+
+                        // Assign b = 7.
+                        region.assign_advice(
+                            || "b_1",
+                            config.b,
+                            FAULTY_DOUBLE,
+                            || Ok(Fp::zero()),
+                        )?;
+
+                        // WARNING: Assign b = 7 again! This might be fine (and due to
+                        // reuse of sub-components) but could easily cause a problem.
+                        region.assign_advice(
+                            || "double b_1",
+                            config.b,
+                            FAULTY_DOUBLE,
+                            || Ok(Fp::zero()),
+                        )?;
+
+                        // Assign a = 12.
+                        region.assign_advice(
+                            || "a_2",
+                            config.a,
+                            FAULTY_OVERWRITE - 1,
+                            || Ok(Fp::zero()),
+                        )?;
+
+                        // Assign b = 13. This gate should fail!
+                        region.assign_advice(
+                            || "b_2",
+                            config.b,
+                            FAULTY_OVERWRITE,
+                            || Ok(Fp::zero()),
+                        )?;
+
+                        // BUG: Overwrite b = 12! The gate now passes, but only because
+                        // this assignment was processed second.
+                        region.assign_advice(
+                            || "bad b_2",
+                            config.b,
+                            FAULTY_OVERWRITE,
+                            || Ok(Fp::zero()),
+                        )?;
+
+                        Ok(())
+                    },
+                )
+            }
+        }
+
+        let prover = MockProver::run(K, &FaultyCircuit {}, vec![]).unwrap();
+        assert_eq!(
+            prover.verify(),
+            Err(vec![
+                VerifyFailure::Cell {
+                    region_index: 0,
+                    region_name: "Faulty synthesis".into(),
+                    column: Column::new(1, Any::Advice),
+                    offset: FAULTY_DOUBLE as isize,
+                    gate_index: 0,
+                    gate_name: "Equality check"
+                },
+                VerifyFailure::Cell {
+                    region_index: 0,
+                    region_name: "Faulty synthesis".into(),
+                    column: Column::new(1, Any::Advice),
+                    offset: FAULTY_OVERWRITE as isize,
+                    gate_index: 0,
+                    gate_name: "Equality check"
+                }
+            ])
+        );
+    }
 }
