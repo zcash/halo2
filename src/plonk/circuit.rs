@@ -10,7 +10,10 @@ use super::{lookup, permutation, Error};
 use crate::{arithmetic::FieldExt, circuit::Region, poly::Rotation};
 
 /// A column type
-pub trait ColumnType: 'static + Sized + std::fmt::Debug {}
+pub trait ColumnType:
+    'static + Sized + Copy + std::fmt::Debug + PartialEq + Eq + Into<Any>
+{
+}
 
 /// A column with an index and type
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -31,6 +34,32 @@ impl<C: ColumnType> Column<C> {
 
     pub(crate) fn column_type(&self) -> &C {
         &self.column_type
+    }
+}
+
+impl<C: ColumnType> Ord for Column<C> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // This ordering is consensus-critical! The layouters rely on deterministic column
+        // orderings.
+        match (self.column_type.into(), other.column_type.into()) {
+            // Indices are assigned within column types.
+            (Any::Advice, Any::Advice)
+            | (Any::Instance, Any::Instance)
+            | (Any::Fixed, Any::Fixed) => self.index.cmp(&other.index),
+            // Across column types, sort Advice < Instance < Fixed.
+            (Any::Advice, Any::Instance)
+            | (Any::Advice, Any::Fixed)
+            | (Any::Instance, Any::Fixed) => std::cmp::Ordering::Less,
+            (Any::Fixed, Any::Instance)
+            | (Any::Fixed, Any::Advice)
+            | (Any::Instance, Any::Advice) => std::cmp::Ordering::Greater,
+        }
+    }
+}
+
+impl<C: ColumnType> PartialOrd for Column<C> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -61,6 +90,24 @@ impl ColumnType for Advice {}
 impl ColumnType for Fixed {}
 impl ColumnType for Instance {}
 impl ColumnType for Any {}
+
+impl From<Advice> for Any {
+    fn from(_: Advice) -> Any {
+        Any::Advice
+    }
+}
+
+impl From<Fixed> for Any {
+    fn from(_: Fixed) -> Any {
+        Any::Fixed
+    }
+}
+
+impl From<Instance> for Any {
+    fn from(_: Instance) -> Any {
+        Any::Instance
+    }
+}
 
 impl From<Column<Advice>> for Column<Any> {
     fn from(advice: Column<Advice>) -> Column<Any> {
