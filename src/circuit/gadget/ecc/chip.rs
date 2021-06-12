@@ -233,10 +233,22 @@ impl EccInstructions<pallas::Affine> for EccChip {
 
     fn witness_scalar_var(
         &self,
-        _layouter: &mut impl Layouter<pallas::Base>,
-        _value: Option<pallas::Base>,
+        layouter: &mut impl Layouter<pallas::Base>,
+        value: Option<pallas::Base>,
     ) -> Result<Self::ScalarVar, Error> {
-        todo!()
+        let config = self.config().clone();
+        layouter.assign_region(
+            || "Witness scalar for variable-base mul",
+            |mut region| {
+                let cell = region.assign_advice(
+                    || "Witness scalar var",
+                    config.advices[0],
+                    0,
+                    || value.ok_or(Error::SynthesisError),
+                )?;
+                Ok(CellValue::new(cell, value))
+            },
+        )
     }
 
     fn witness_scalar_fixed(
