@@ -6,6 +6,7 @@ use pasta_curves::arithmetic::FieldExt;
 
 mod cond_swap;
 mod enable_flag;
+mod lookup_range_check;
 mod plonk;
 
 /// A variable representing a number.
