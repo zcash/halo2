@@ -1,51 +1,50 @@
 use std::convert::TryInto;
 
 use crate::constants::{self, compute_lagrange_coeffs, H, NUM_WINDOWS, NUM_WINDOWS_SHORT};
-use halo2::arithmetic::{CurveAffine, FieldExt};
-use std::marker::PhantomData;
+use pasta_curves::{arithmetic::FieldExt, pallas};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum OrchardFixedBasesFull<C: CurveAffine> {
-    CommitIvkR(PhantomData<C>),
-    NoteCommitR(PhantomData<C>),
-    NullifierK(PhantomData<C>),
-    ValueCommitR(PhantomData<C>),
-    SpendAuthG(PhantomData<C>),
+pub enum OrchardFixedBasesFull {
+    CommitIvkR,
+    NoteCommitR,
+    NullifierK,
+    ValueCommitR,
+    SpendAuthG,
 }
 
 /// A fixed base to be used in scalar multiplication with a full-width scalar.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct OrchardFixedBase<C: CurveAffine> {
-    pub generator: C,
-    pub lagrange_coeffs: LagrangeCoeffs<C::Base>,
-    pub z: Z<C::Base>,
-    pub u: U<C::Base>,
+pub struct OrchardFixedBase {
+    pub generator: pallas::Affine,
+    pub lagrange_coeffs: LagrangeCoeffs,
+    pub z: Z,
+    pub u: U,
 }
 
-impl<C: CurveAffine> From<OrchardFixedBasesFull<C>> for OrchardFixedBase<C> {
-    fn from(base: OrchardFixedBasesFull<C>) -> Self {
+impl From<OrchardFixedBasesFull> for OrchardFixedBase {
+    fn from(base: OrchardFixedBasesFull) -> Self {
         let (generator, z, u) = match base {
-            OrchardFixedBasesFull::CommitIvkR(_) => (
+            OrchardFixedBasesFull::CommitIvkR => (
                 super::commit_ivk_r::generator(),
                 super::commit_ivk_r::Z.into(),
                 super::commit_ivk_r::U.into(),
             ),
-            OrchardFixedBasesFull::NoteCommitR(_) => (
+            OrchardFixedBasesFull::NoteCommitR => (
                 super::note_commit_r::generator(),
                 super::note_commit_r::Z.into(),
                 super::note_commit_r::U.into(),
             ),
-            OrchardFixedBasesFull::NullifierK(_) => (
+            OrchardFixedBasesFull::NullifierK => (
                 super::nullifier_k::generator(),
                 super::nullifier_k::Z.into(),
                 super::nullifier_k::U.into(),
             ),
-            OrchardFixedBasesFull::ValueCommitR(_) => (
+            OrchardFixedBasesFull::ValueCommitR => (
                 super::value_commit_r::generator(),
                 super::value_commit_r::Z.into(),
                 super::value_commit_r::U.into(),
             ),
-            OrchardFixedBasesFull::SpendAuthG(_) => (
+            OrchardFixedBasesFull::SpendAuthG => (
                 super::spend_auth_g::generator(),
                 super::spend_auth_g::Z.into(),
                 super::spend_auth_g::U.into(),
@@ -63,14 +62,14 @@ impl<C: CurveAffine> From<OrchardFixedBasesFull<C>> for OrchardFixedBase<C> {
 
 /// A fixed base to be used in scalar multiplication with a short signed exponent.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ValueCommitV<C: CurveAffine> {
-    pub generator: C,
-    pub lagrange_coeffs_short: LagrangeCoeffsShort<C::Base>,
-    pub z_short: ZShort<C::Base>,
-    pub u_short: UShort<C::Base>,
+pub struct ValueCommitV {
+    pub generator: pallas::Affine,
+    pub lagrange_coeffs_short: LagrangeCoeffsShort,
+    pub z_short: ZShort,
+    pub u_short: UShort,
 }
 
-impl<C: CurveAffine> ValueCommitV<C> {
+impl ValueCommitV {
     pub fn get() -> Self {
         let generator = super::value_commit_v::generator();
         Self {
@@ -84,59 +83,57 @@ impl<C: CurveAffine> ValueCommitV<C> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 // 8 coefficients per window
-pub struct WindowLagrangeCoeffs<F: FieldExt>(pub Box<[F; H]>);
+pub struct WindowLagrangeCoeffs(pub Box<[pallas::Base; H]>);
 
-impl<F: FieldExt> From<&[F; H]> for WindowLagrangeCoeffs<F> {
-    fn from(array: &[F; H]) -> Self {
+impl From<&[pallas::Base; H]> for WindowLagrangeCoeffs {
+    fn from(array: &[pallas::Base; H]) -> Self {
         Self(Box::new(*array))
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 // 85 windows per base (with the exception of ValueCommitV)
-pub struct LagrangeCoeffs<F: FieldExt>(pub Box<[WindowLagrangeCoeffs<F>; constants::NUM_WINDOWS]>);
+pub struct LagrangeCoeffs(pub Box<[WindowLagrangeCoeffs; constants::NUM_WINDOWS]>);
 
-impl<F: FieldExt> From<Vec<WindowLagrangeCoeffs<F>>> for LagrangeCoeffs<F> {
-    fn from(windows: Vec<WindowLagrangeCoeffs<F>>) -> Self {
+impl From<Vec<WindowLagrangeCoeffs>> for LagrangeCoeffs {
+    fn from(windows: Vec<WindowLagrangeCoeffs>) -> Self {
         Self(windows.into_boxed_slice().try_into().unwrap())
     }
 }
 
-impl<F: FieldExt> From<Vec<[F; H]>> for LagrangeCoeffs<F> {
-    fn from(arrays: Vec<[F; H]>) -> Self {
-        let windows: Vec<WindowLagrangeCoeffs<F>> =
-            arrays.iter().map(|array| array.into()).collect();
+impl From<Vec<[pallas::Base; H]>> for LagrangeCoeffs {
+    fn from(arrays: Vec<[pallas::Base; H]>) -> Self {
+        let windows: Vec<WindowLagrangeCoeffs> = arrays.iter().map(|array| array.into()).collect();
         windows.into()
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 // 22 windows for ValueCommitV
-pub struct LagrangeCoeffsShort<F: FieldExt>(pub Box<[WindowLagrangeCoeffs<F>; NUM_WINDOWS_SHORT]>);
+pub struct LagrangeCoeffsShort(pub Box<[WindowLagrangeCoeffs; NUM_WINDOWS_SHORT]>);
 
-impl<F: FieldExt> From<Vec<WindowLagrangeCoeffs<F>>> for LagrangeCoeffsShort<F> {
-    fn from(windows: Vec<WindowLagrangeCoeffs<F>>) -> Self {
+impl From<Vec<WindowLagrangeCoeffs>> for LagrangeCoeffsShort {
+    fn from(windows: Vec<WindowLagrangeCoeffs>) -> Self {
         Self(windows.into_boxed_slice().try_into().unwrap())
     }
 }
 
-impl<F: FieldExt> From<Vec<[F; H]>> for LagrangeCoeffsShort<F> {
-    fn from(arrays: Vec<[F; H]>) -> Self {
-        let windows: Vec<WindowLagrangeCoeffs<F>> =
-            arrays.iter().map(|array| array.into()).collect();
+impl From<Vec<[pallas::Base; H]>> for LagrangeCoeffsShort {
+    fn from(arrays: Vec<[pallas::Base; H]>) -> Self {
+        let windows: Vec<WindowLagrangeCoeffs> = arrays.iter().map(|array| array.into()).collect();
         windows.into()
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 // 85 Z's per base (with the exception of ValueCommitV)
-pub struct Z<F: FieldExt>(pub Box<[F; NUM_WINDOWS]>);
+pub struct Z(pub Box<[pallas::Base; NUM_WINDOWS]>);
 
-impl<F: FieldExt> From<[u64; NUM_WINDOWS]> for Z<F> {
+impl From<[u64; NUM_WINDOWS]> for Z {
     fn from(zs: [u64; NUM_WINDOWS]) -> Self {
         Self(
             zs.iter()
-                .map(|z| F::from_u64(*z))
+                .map(|z| pallas::Base::from_u64(*z))
                 .collect::<Vec<_>>()
                 .into_boxed_slice()
                 .try_into()
@@ -147,13 +144,13 @@ impl<F: FieldExt> From<[u64; NUM_WINDOWS]> for Z<F> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 // 22 Z's for ValueCommitV
-pub struct ZShort<F: FieldExt>(pub Box<[F; NUM_WINDOWS_SHORT]>);
+pub struct ZShort(pub Box<[pallas::Base; NUM_WINDOWS_SHORT]>);
 
-impl<F: FieldExt> From<[u64; NUM_WINDOWS_SHORT]> for ZShort<F> {
+impl From<[u64; NUM_WINDOWS_SHORT]> for ZShort {
     fn from(zs: [u64; NUM_WINDOWS_SHORT]) -> Self {
         Self(
             zs.iter()
-                .map(|z| F::from_u64(*z))
+                .map(|z| pallas::Base::from_u64(*z))
                 .collect::<Vec<_>>()
                 .into_boxed_slice()
                 .try_into()
@@ -164,14 +161,14 @@ impl<F: FieldExt> From<[u64; NUM_WINDOWS_SHORT]> for ZShort<F> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 // 8 u's per window
-pub struct WindowUs<F: FieldExt>(pub Box<[F; H]>);
+pub struct WindowUs(pub Box<[pallas::Base; H]>);
 
-impl<F: FieldExt> From<&[[u8; 32]; H]> for WindowUs<F> {
+impl From<&[[u8; 32]; H]> for WindowUs {
     fn from(window_us: &[[u8; 32]; H]) -> Self {
         Self(
             window_us
                 .iter()
-                .map(|u| F::from_bytes(u).unwrap())
+                .map(|u| pallas::Base::from_bytes(u).unwrap())
                 .collect::<Vec<_>>()
                 .into_boxed_slice()
                 .try_into()
@@ -182,34 +179,34 @@ impl<F: FieldExt> From<&[[u8; 32]; H]> for WindowUs<F> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 // 85 windows per base (with the exception of ValueCommitV)
-pub struct U<F: FieldExt>(pub Box<[WindowUs<F>; NUM_WINDOWS]>);
+pub struct U(pub Box<[WindowUs; NUM_WINDOWS]>);
 
-impl<F: FieldExt> From<Vec<WindowUs<F>>> for U<F> {
-    fn from(windows: Vec<WindowUs<F>>) -> Self {
+impl From<Vec<WindowUs>> for U {
+    fn from(windows: Vec<WindowUs>) -> Self {
         Self(windows.into_boxed_slice().try_into().unwrap())
     }
 }
 
-impl<F: FieldExt> From<[[[u8; 32]; H]; NUM_WINDOWS]> for U<F> {
+impl From<[[[u8; 32]; H]; NUM_WINDOWS]> for U {
     fn from(window_us: [[[u8; 32]; H]; NUM_WINDOWS]) -> Self {
-        let windows: Vec<WindowUs<F>> = window_us.iter().map(|us| us.into()).collect();
+        let windows: Vec<WindowUs> = window_us.iter().map(|us| us.into()).collect();
         windows.into()
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 // 22 windows for ValueCommitV
-pub struct UShort<F: FieldExt>(pub Box<[WindowUs<F>; NUM_WINDOWS_SHORT]>);
+pub struct UShort(pub Box<[WindowUs; NUM_WINDOWS_SHORT]>);
 
-impl<F: FieldExt> From<Vec<WindowUs<F>>> for UShort<F> {
-    fn from(windows: Vec<WindowUs<F>>) -> Self {
+impl From<Vec<WindowUs>> for UShort {
+    fn from(windows: Vec<WindowUs>) -> Self {
         Self(windows.into_boxed_slice().try_into().unwrap())
     }
 }
 
-impl<F: FieldExt> From<[[[u8; 32]; H]; NUM_WINDOWS_SHORT]> for UShort<F> {
+impl From<[[[u8; 32]; H]; NUM_WINDOWS_SHORT]> for UShort {
     fn from(window_us: [[[u8; 32]; H]; NUM_WINDOWS_SHORT]) -> Self {
-        let windows: Vec<WindowUs<F>> = window_us.iter().map(|us| us.into()).collect();
+        let windows: Vec<WindowUs> = window_us.iter().map(|us| us.into()).collect();
         windows.into()
     }
 }

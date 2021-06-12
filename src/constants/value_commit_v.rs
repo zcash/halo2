@@ -1,4 +1,7 @@
-use halo2::arithmetic::{CurveAffine, FieldExt};
+use pasta_curves::{
+    arithmetic::{CurveAffine, FieldExt},
+    pallas,
+};
 
 /// The value commitment is used to check balance between inputs and outputs. The value is
 /// placed over this generator.
@@ -771,10 +774,10 @@ pub const U_SHORT: [[[u8; 32]; super::H]; super::NUM_WINDOWS_SHORT] = [
     ],
 ];
 
-pub fn generator<C: CurveAffine>() -> C {
-    C::from_xy(
-        C::Base::from_bytes(&GENERATOR.0).unwrap(),
-        C::Base::from_bytes(&GENERATOR.1).unwrap(),
+pub fn generator() -> pallas::Affine {
+    pallas::Affine::from_xy(
+        pallas::Base::from_bytes(&GENERATOR.0).unwrap(),
+        pallas::Base::from_bytes(&GENERATOR.1).unwrap(),
     )
     .unwrap()
 }
@@ -786,9 +789,9 @@ mod tests {
     };
     use super::*;
     use group::Curve;
-    use halo2::{
+    use pasta_curves::{
         arithmetic::{CurveAffine, CurveExt, FieldExt},
-        pasta::pallas,
+        pallas,
     };
 
     #[test]
@@ -803,13 +806,13 @@ mod tests {
 
     #[test]
     fn lagrange_coeffs_short() {
-        let base = super::generator::<pallas::Affine>();
+        let base = super::generator();
         test_lagrange_coeffs(base, NUM_WINDOWS_SHORT);
     }
 
     #[test]
     fn z_short() {
-        let base = super::generator::<pallas::Affine>();
+        let base = super::generator();
         test_zs_and_us(base, &Z_SHORT, &U_SHORT, NUM_WINDOWS_SHORT);
     }
 }

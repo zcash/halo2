@@ -2,9 +2,10 @@
 use arrayvec::ArrayVec;
 use ff::{Field, PrimeField};
 use group::Curve;
-use halo2::{
-    arithmetic::{lagrange_interpolate, CurveAffine, FieldExt},
-    pasta::pallas,
+use halo2::arithmetic::lagrange_interpolate;
+use pasta_curves::{
+    arithmetic::{CurveAffine, FieldExt},
+    pallas,
 };
 
 pub mod commit_ivk_r;
