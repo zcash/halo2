@@ -182,7 +182,6 @@ mod tests {
     use crate::{
         keys::SpendValidatingKey,
         note::Note,
-        tree::Anchor,
         value::{ValueCommitTrapdoor, ValueCommitment},
     };
 
@@ -208,7 +207,7 @@ mod tests {
                 (
                     Circuit {},
                     Instance {
-                        anchor: Anchor([0; 32]),
+                        anchor: pallas::Base::zero().into(),
                         cv_net,
                         nf_old,
                         rk,

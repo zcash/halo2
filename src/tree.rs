@@ -5,7 +5,7 @@ use crate::{
     note::commitment::ExtractedNoteCommitment,
     primitives::sinsemilla::{i2lebsp_k, HashDomain},
 };
-use pasta_curves::{arithmetic::FieldExt, pallas};
+use pasta_curves::pallas;
 
 use ff::{Field, PrimeFieldBits};
 use rand::RngCore;
@@ -13,11 +13,11 @@ use std::iter;
 
 /// The root of an Orchard commitment tree.
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub struct Anchor(pub [u8; 32]);
+pub struct Anchor(pallas::Base);
 
 impl From<pallas::Base> for Anchor {
     fn from(anchor_field: pallas::Base) -> Anchor {
-        Anchor(anchor_field.to_bytes())
+        Anchor(anchor_field)
     }
 }
 
@@ -53,7 +53,7 @@ impl MerklePath {
                 let swap = self.position & (1 << l_star) != 0;
                 hash_layer(l_star, cond_swap(swap, node, *sibling))
             });
-        Anchor(node.to_bytes())
+        Anchor(node)
     }
 
     /// Returns the position of the leaf using this Merkle path.
