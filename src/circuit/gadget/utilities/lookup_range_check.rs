@@ -1,13 +1,13 @@
 //! Make use of a K-bit lookup table to decompose a field element into K-bit
 //! words.
 
-use crate::primitives::sinsemilla::lebs2ip_k;
+use crate::spec::lebs2ip;
 use halo2::{
-    circuit::{Layouter, Region},
+    circuit::Region,
     plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Permutation},
     poly::Rotation,
 };
-use std::marker::PhantomData;
+use std::{convert::TryInto, marker::PhantomData};
 
 use ff::PrimeFieldBits;
 
@@ -15,7 +15,7 @@ use super::*;
 
 #[derive(Debug, Clone)]
 pub struct LookupRangeCheckConfig<F: FieldExt + PrimeFieldBits, const K: usize> {
-    q_lookup: Column<Fixed>, // This is passed in.
+    q_lookup: Column<Fixed>,
     running_sum: Column<Advice>,
     table_idx: Column<Fixed>,
     perm: Permutation,
@@ -23,6 +23,16 @@ pub struct LookupRangeCheckConfig<F: FieldExt + PrimeFieldBits, const K: usize> 
 }
 
 impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
+    /// The `q_lookup` column toggles the lookup on or off. It can be assigned
+    /// outside of this helper at the appropriate offsets.
+    ///
+    /// The `running_sum` advice column breaks the field element into `K`-bit
+    /// words. It is used to construct the input expression to the lookup
+    /// argument.
+    ///
+    /// The `table_idx` fixed column contains values from [0..2^K). Looking up
+    /// a value in `table_idx` constrains it to be within this range. The table
+    /// can be loaded outside this helper.
     pub fn configure(
         meta: &mut ConstraintSystem<F>,
         q_lookup: Column<Fixed>,
@@ -53,7 +63,11 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         config
     }
 
-    pub fn load(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error> {
+    #[cfg(test)]
+    // Loads the values [0..2^K) into `table_idx`. This is only used in testing
+    // for now, since the Sinsemilla chip provides a pre-loaded table in the
+    // Orchard context.
+    fn load(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error> {
         layouter.assign_region(
             || "table_idx",
             |mut gate| {
@@ -71,30 +85,37 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         )
     }
 
-    fn lookup_range_check(
+    // Only the lower `num_words * K` bits of the field element are constrained
+    // by this function. If the field element does not fit into this range, then
+    // the final cumulative sum `z_{num_words}` will be nonzero.
+    //
+    // It is up to the caller to constrain `z_{num_words}` == 0` outside this
+    // helper, or otherwise constrain upper bits not covered within the
+    // `num_words * K` range.
+    pub fn lookup_range_check(
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
-        words: CellValue<F>,
+        element: CellValue<F>,
         num_words: usize,
     ) -> Result<Vec<CellValue<F>>, Error> {
         // `num_words` must fit into a single field element.
         assert!(num_words <= F::NUM_BITS as usize / K);
         let num_bits = num_words * K;
 
-        // Take first num_bits bits of `words`.
-        let bits = words.value().map(|words| {
-            words
+        // Take first num_bits bits of `element`.
+        let bits = element.value().map(|element| {
+            element
                 .to_le_bits()
                 .into_iter()
                 .take(num_bits)
                 .collect::<Vec<_>>()
         });
 
-        // Chunk the first num_bits bits into K-bit chunks.
-        let bits: Option<Vec<Vec<bool>>> = bits.map(|bits| {
+        // Chunk the first num_bits bits into K-bit words.
+        let bits: Option<Vec<F>> = bits.map(|bits| {
             bits.chunks_exact(K)
-                .map(|chunk| chunk.to_vec())
+                .map(|word| F::from_u64(lebs2ip::<K>(&(word.try_into().unwrap()))))
                 .collect::<Vec<_>>()
         });
 
@@ -104,13 +125,13 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             vec![None; num_words]
         };
 
-        // Copy `words` and initialize running sum `z_0 = words` to decompose it.
+        // Copy `element` and initialize running sum `z_0 = element` to decompose it.
         let z_0 = copy(
             region,
-            || "copy words",
+            || "z_0",
             self.running_sum,
             offset,
-            &words,
+            &element,
             &self.perm,
         )?;
 
@@ -120,15 +141,15 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         //          z_i = 2^{K}⋅z_{i + 1} + a_i
         // => z_{i + 1} = (z_i - a_i) / (2^K)
         //
-        // For `words` = a_0 + 2^10 a_1 + ... + 2^{120} a_{12}}, initialize z_0 = `words`.
-        // If `words` fits in 130 bits, we end up with z_{13} = 0.
+        // Assign cumulative sum such that
+        //      z_{i+1} = 2^{K}⋅z_{i} + a_{i+1}
+        // => z_{i + 1} = (z_i - a_i) / (2^K)
+        //
+        // For `element` = a_0 + 2^10 a_1 + ... + 2^{120} a_{12}}, initialize z_0 = `element`.
+        // If `element` fits in 130 bits, we end up with z_{13} = 0.
         let mut z = z_0;
         let inv_2_pow_k = F::from_u64(1u64 << K).invert().unwrap();
-        for (idx, word) in bits.iter().enumerate() {
-            let word = word
-                .clone()
-                .map(|word| F::from_u64(lebs2ip_k(&word) as u64));
-
+        for (idx, word) in bits.into_iter().enumerate() {
             // z_next = (z_cur - m_cur) / 2^K
             z = {
                 let z_val = z
@@ -157,7 +178,9 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
 mod tests {
     use super::super::{CellValue, UtilitiesInstructions, Var};
     use super::LookupRangeCheckConfig;
-    use crate::primitives::sinsemilla::{lebs2ip_k, K};
+
+    use crate::primitives::sinsemilla::K;
+    use crate::spec::lebs2ip;
     use ff::PrimeFieldBits;
     use halo2::{
         circuit::{layouter::SingleChipLayouter, Layouter},
@@ -166,7 +189,7 @@ mod tests {
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
-    use std::marker::PhantomData;
+    use std::{convert::TryInto, marker::PhantomData};
 
     #[test]
     fn lookup_range_check() {
@@ -208,21 +231,29 @@ mod tests {
                 config.load(&mut layouter)?;
 
                 let num_words = 6;
-                let words_and_expected_final_zs = [
+                let elements_and_expected_final_zs = [
                     (F::from_u64((1 << (num_words * K)) - 1), F::zero()), // a word that is within num_words * K bits long
                     (F::from_u64(1 << (num_words * K)), F::one()), // a word that is just over num_words * K bits long
                 ];
 
-                for (words, expected_final_z) in words_and_expected_final_zs.iter() {
-                    let expected_zs = expected_zs::<F, K>(*words, num_words);
+                for (element, expected_final_z) in elements_and_expected_final_zs.iter() {
+                    let expected_zs = expected_zs::<F, K>(*element, num_words);
 
                     // Load the value to be decomposed into the circuit.
-                    let words = self.load_private(
-                        layouter.namespace(|| "words"),
+                    let element = self.load_private(
+                        layouter.namespace(|| "element"),
                         config.running_sum,
-                        Some(*words),
+                        Some(*element),
                     )?;
 
+                    // Although this fixed column assignment can be done
+                    // within the `lookup_range_check` method, in practice
+                    // the information needed to toggle the lookup depends
+                    // on some external business logic (e.g. whether the
+                    // top bit of `element` is set).
+                    //
+                    // Leaving the toggle assignment to the caller gives
+                    // them the freedom to define this business logic.
                     let zs = layouter.assign_region(
                         || "word within range",
                         |mut region| {
@@ -236,11 +267,11 @@ mod tests {
                                 )?;
                             }
 
-                            config.lookup_range_check(&mut region, 0, words, num_words)
+                            config.lookup_range_check(&mut region, 0, element, num_words)
                         },
                     )?;
 
-                    assert_eq!(expected_zs[expected_zs.len() - 1], *expected_final_z);
+                    assert_eq!(*expected_zs.last().unwrap(), *expected_final_z);
 
                     for (expected_z, z) in expected_zs.into_iter().zip(zs.iter()) {
                         if let Some(z) = z.value() {
@@ -264,28 +295,23 @@ mod tests {
 
     #[cfg(test)]
     fn expected_zs<F: FieldExt + PrimeFieldBits, const K: usize>(
-        words: F,
+        element: F,
         num_words: usize,
     ) -> Vec<F> {
         let chunks = {
-            words
+            element
                 .to_le_bits()
                 .iter()
                 .by_val()
                 .take(num_words * K)
                 .collect::<Vec<_>>()
                 .chunks_exact(K)
-                .collect::<Vec<_>>()
-                .iter()
-                .map(|chunk| {
-                    let int = lebs2ip_k(&chunk);
-                    F::from_u64(int as u64)
-                })
+                .map(|chunk| F::from_u64(lebs2ip::<K>(chunk.try_into().unwrap())))
                 .collect::<Vec<_>>()
         };
         let expected_zs = {
             let inv_2_pow_k = F::from_u64(1u64 << K).invert().unwrap();
-            chunks.iter().fold(vec![words], |mut zs, a_i| {
+            chunks.iter().fold(vec![element], |mut zs, a_i| {
                 // z_{i + 1} = (z_i - a_i) / 2^{K}
                 let z = (zs[zs.len() - 1] - a_i) * inv_2_pow_k;
                 zs.push(z);
