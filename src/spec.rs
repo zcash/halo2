@@ -240,6 +240,12 @@ pub(crate) fn extract_p_bottom(point: CtOption<pallas::Point>) -> CtOption<palla
     point.map(|p| extract_p(&p))
 }
 
+/// The field element representation of a u64 integer represented by
+/// an L-bit little-endian bitstring.
+pub fn lebs2ip_field<F: FieldExt, const L: usize>(bits: &[bool; L]) -> F {
+    F::from_u64(lebs2ip::<L>(bits))
+}
+
 /// The u64 integer represented by an L-bit little-endian bitstring.
 ///
 /// # Panics

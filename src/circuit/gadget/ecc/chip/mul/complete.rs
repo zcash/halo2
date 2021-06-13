@@ -1,4 +1,4 @@
-use super::super::{add, copy, CellValue, EccPoint, Var};
+use super::super::{add, copy, CellValue, EccConfig, EccPoint, Var};
 use super::{COMPLETE_RANGE, X, Y, Z};
 
 use halo2::{
@@ -11,23 +11,31 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 
 pub struct Config {
     // Selector used to constrain the cells used in complete addition.
-    q_mul_complete: Selector,
+    q_mul_z: Selector,
     // Advice column used to decompose scalar in complete addition.
-    z_complete: Column<Advice>,
+    pub z_complete: Column<Advice>,
     // Permutation
     perm: Permutation,
     // Configuration used in complete addition
     add_config: add::Config,
 }
 
-impl From<&super::Config> for Config {
-    fn from(config: &super::Config) -> Self {
-        Self {
-            q_mul_complete: config.q_mul_complete,
-            z_complete: config.z_complete,
-            perm: config.perm.clone(),
-            add_config: config.add_config.clone(),
-        }
+impl From<&EccConfig> for Config {
+    fn from(ecc_config: &EccConfig) -> Self {
+        let config = Self {
+            q_mul_z: ecc_config.q_mul_z,
+            z_complete: ecc_config.advices[9],
+            perm: ecc_config.perm.clone(),
+            add_config: ecc_config.into(),
+        };
+
+        let add_config_advices = config.add_config.advice_columns();
+        assert!(
+            !add_config_advices.contains(&config.z_complete),
+            "z_complete cannot overlap with complete addition columns."
+        );
+
+        config
     }
 }
 
@@ -40,7 +48,7 @@ impl Config {
         meta.create_gate(
             "Decompose scalar for complete bits of variable-base mul",
             |meta| {
-                let q_mul_complete = meta.query_selector(self.q_mul_complete);
+                let q_mul_z = meta.query_selector(self.q_mul_z);
                 let z_cur = meta.query_advice(self.z_complete, Rotation::cur());
                 let z_prev = meta.query_advice(self.z_complete, Rotation::prev());
 
@@ -49,7 +57,7 @@ impl Config {
                 // (k_i) ⋅ (k_i - 1) = 0
                 let bool_check = k.clone() * (k + Expression::Constant(-pallas::Base::one()));
 
-                vec![q_mul_complete * bool_check]
+                vec![q_mul_z * bool_check]
             },
         );
     }
@@ -76,9 +84,9 @@ impl Config {
             // Each iteration uses 2 rows (two complete additions)
             let row = 2 * row;
             // Check scalar decomposition for each iteration. Since the gate enabled by
-            // `q_mul_complete` queries the previous row, we enable the selector on
+            // `q_mul_z` queries the previous row, we enable the selector on
             // `row + offset + 1` (instead of `row + offset`).
-            self.q_mul_complete.enable(region, row + offset + 1)?;
+            self.q_mul_z.enable(region, row + offset + 1)?;
         }
 
         // Use x_a, y_a output from incomplete addition

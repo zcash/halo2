@@ -1,4 +1,4 @@
-use std::array;
+use std::{array, ops::Deref};
 
 use super::super::{copy, CellValue, EccConfig, EccPoint, Var};
 use super::{INCOMPLETE_HI_RANGE, INCOMPLETE_LO_RANGE, X, Y, Z};
@@ -32,11 +32,12 @@ pub(super) struct Config {
     pub(super) perm: Permutation,
 }
 
-impl Config {
-    // Columns used in processing the `hi` bits of the scalar.
-    // `x_p, y_p` are shared across the `hi` and `lo` halves.
-    pub(super) fn hi_config(ecc_config: &EccConfig) -> Self {
-        Self {
+// Columns used in processing the `hi` bits of the scalar.
+// `x_p, y_p` are shared across the `hi` and `lo` halves.
+pub(super) struct HiConfig(Config);
+impl From<&EccConfig> for HiConfig {
+    fn from(ecc_config: &EccConfig) -> Self {
+        let config = Config {
             num_bits: INCOMPLETE_HI_RANGE.len(),
             q_mul: ecc_config.q_mul_hi,
             x_p: ecc_config.advices[0],
@@ -46,13 +47,24 @@ impl Config {
             lambda1: ecc_config.advices[4],
             lambda2: ecc_config.advices[5],
             perm: ecc_config.perm.clone(),
-        }
+        };
+        Self(config)
     }
+}
+impl Deref for HiConfig {
+    type Target = Config;
 
-    // Columns used in processing the `lo` bits of the scalar.
-    // `x_p, y_p` are shared across the `hi` and `lo` halves.
-    pub(super) fn lo_config(ecc_config: &EccConfig) -> Self {
-        Self {
+    fn deref(&self) -> &Config {
+        &self.0
+    }
+}
+
+// Columns used in processing the `lo` bits of the scalar.
+// `x_p, y_p` are shared across the `hi` and `lo` halves.
+pub(super) struct LoConfig(Config);
+impl From<&EccConfig> for LoConfig {
+    fn from(ecc_config: &EccConfig) -> Self {
+        let config = Config {
             num_bits: INCOMPLETE_LO_RANGE.len(),
             q_mul: ecc_config.q_mul_lo,
             x_p: ecc_config.advices[0],
@@ -62,9 +74,19 @@ impl Config {
             lambda1: ecc_config.advices[8],
             lambda2: ecc_config.advices[2],
             perm: ecc_config.perm.clone(),
-        }
+        };
+        Self(config)
     }
+}
+impl Deref for LoConfig {
+    type Target = Config;
 
+    fn deref(&self) -> &Config {
+        &self.0
+    }
+}
+
+impl Config {
     // Gate for incomplete addition part of variable-base scalar multiplication.
     pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("Incomplete addition for variable-base scalar mul", |meta| {

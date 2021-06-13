@@ -427,6 +427,7 @@ mod tests {
                 meta.advice_column(),
             ];
 
+            let lookup_table = meta.fixed_column();
             let perm = meta.permutation(
                 &advices
                     .iter()
@@ -434,7 +435,7 @@ mod tests {
                     .collect::<Vec<_>>(),
             );
 
-            EccChip::configure(meta, advices, perm)
+            EccChip::configure(meta, advices, lookup_table, perm)
         }
 
         fn synthesize(
@@ -443,7 +444,11 @@ mod tests {
             config: Self::Config,
         ) -> Result<(), Error> {
             let mut layouter = SingleChipLayouter::new(cs)?;
-            let chip = EccChip::construct(config);
+            let chip = EccChip::construct(config.clone());
+
+            // Load 10-bit lookup table. In the Action circuit, this will be
+            // provided by the Sinsemilla chip.
+            config.lookup_config.load(&mut layouter)?;
 
             // Generate a random point P
             let p_val = pallas::Point::random(rand::rngs::OsRng).to_affine(); // P

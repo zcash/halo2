@@ -1,6 +1,11 @@
 use super::EccInstructions;
-use crate::circuit::gadget::utilities::{copy, CellValue, Var};
-use crate::constants::{self, OrchardFixedBasesFull, ValueCommitV};
+use crate::{
+    circuit::gadget::utilities::{
+        copy, lookup_range_check::LookupRangeCheckConfig, CellValue, Var,
+    },
+    constants::{self, OrchardFixedBasesFull, ValueCommitV},
+    primitives::sinsemilla,
+};
 use arrayvec::ArrayVec;
 
 use group::prime::PrimeCurveAffine;
@@ -78,8 +83,10 @@ pub struct EccConfig {
 
     /// Incomplete addition
     pub q_add_incomplete: Selector,
+
     /// Complete addition
     pub q_add: Selector,
+
     /// Variable-base scalar multiplication (hi half)
     pub q_mul_hi: Selector,
     /// Variable-base scalar multiplication (lo half)
@@ -89,19 +96,27 @@ pub struct EccConfig {
     /// Selector used in scalar decomposition for variable-base scalar mul
     pub q_init_z: Selector,
     /// Variable-base scalar multiplication (final scalar)
-    pub q_mul_complete: Selector,
+    pub q_mul_z: Selector,
+    /// Variable-base scalar multiplication (overflow check)
+    pub q_mul_overflow: Selector,
+
     /// Fixed-base full-width scalar multiplication
     pub q_mul_fixed: Selector,
+
     /// Fixed-base signed short scalar multiplication
     pub q_mul_fixed_short: Selector,
+
     /// Witness point
     pub q_point: Selector,
     /// Witness full-width scalar for fixed-base scalar mul
     pub q_scalar_fixed: Selector,
     /// Witness signed short scalar for full-width fixed-base scalar mul
     pub q_scalar_fixed_short: Selector,
+
     /// Permutation
     pub perm: Permutation,
+    /// 10-bit lookup
+    pub lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
 }
 
 /// A chip implementing EccInstructions
@@ -132,8 +147,12 @@ impl EccChip {
     pub fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 10],
+        lookup_table: Column<Fixed>,
         perm: Permutation,
     ) -> <Self as Chip<pallas::Base>>::Config {
+        let lookup_config =
+            LookupRangeCheckConfig::configure(meta, advices[9], lookup_table, perm.clone());
+
         let config = EccConfig {
             advices,
             lagrange_coeffs: [
@@ -153,13 +172,15 @@ impl EccChip {
             q_mul_lo: meta.selector(),
             q_mul_decompose_var: meta.selector(),
             q_init_z: meta.selector(),
-            q_mul_complete: meta.selector(),
+            q_mul_z: meta.selector(),
+            q_mul_overflow: meta.selector(),
             q_mul_fixed: meta.selector(),
             q_mul_fixed_short: meta.selector(),
             q_point: meta.selector(),
             q_scalar_fixed: meta.selector(),
             q_scalar_fixed_short: meta.selector(),
             perm,
+            lookup_config,
         };
 
         // Create witness point gate
@@ -193,13 +214,13 @@ impl EccChip {
             config.create_gate(meta);
         }
 
-        // Create witness scalar_fixed gate that only apploes to short scalars
+        // Create witness scalar_fixed gate that only applies to short scalars
         {
             let config: witness_scalar_fixed::short::Config = (&config).into();
             config.create_gate(meta);
         }
 
-        // Create fixed-base scalar mul gate that os used in both full-width
+        // Create fixed-base scalar mul gate that is used in both full-width
         // and short multiplication.
         {
             let mul_fixed_config: mul_fixed::Config<{ constants::NUM_WINDOWS }> = (&config).into();
@@ -214,6 +235,17 @@ impl EccChip {
         }
 
         config
+    }
+}
+
+/// A base-field element used as the scalar in variable-base scalar multiplication.
+#[derive(Copy, Clone, Debug)]
+pub struct EccScalarVar(CellValue<pallas::Base>);
+impl std::ops::Deref for EccScalarVar {
+    type Target = CellValue<pallas::Base>;
+
+    fn deref(&self) -> &CellValue<pallas::Base> {
+        &self.0
     }
 }
 
@@ -243,7 +275,7 @@ pub struct EccScalarFixedShort {
 impl EccInstructions<pallas::Affine> for EccChip {
     type ScalarFixed = EccScalarFixed;
     type ScalarFixedShort = EccScalarFixedShort;
-    type ScalarVar = CellValue<pallas::Base>;
+    type ScalarVar = EccScalarVar;
     type Point = EccPoint;
     type X = CellValue<pallas::Base>;
     type FixedPoints = OrchardFixedBasesFull;
@@ -277,12 +309,12 @@ impl EccInstructions<pallas::Affine> for EccChip {
             || "Witness scalar for variable-base mul",
             |mut region| {
                 let cell = region.assign_advice(
-                    || "Witness scalar var",
+                    || "witness scalar var",
                     config.advices[0],
                     0,
                     || value.ok_or(Error::SynthesisError),
                 )?;
-                Ok(CellValue::new(cell, value))
+                Ok(EccScalarVar(CellValue::new(cell, value)))
             },
         )
     }
@@ -360,9 +392,10 @@ impl EccInstructions<pallas::Affine> for EccChip {
         base: &Self::Point,
     ) -> Result<Self::Point, Error> {
         let config: mul::Config = self.config().into();
-        layouter.assign_region(
-            || "variable-base scalar mul",
-            |mut region| config.assign_region(scalar, base, 0, &mut region),
+        config.assign(
+            layouter.namespace(|| "variable-base scalar mul"),
+            *scalar,
+            base,
         )
     }
 
