@@ -1,5 +1,5 @@
 use halo2::{
-    circuit::{Cell, Chip, Layouter, Region},
+    circuit::{Cell, Layouter, Region},
     plonk::{Advice, Column, Error, Permutation},
 };
 use pasta_curves::arithmetic::FieldExt;
@@ -36,7 +36,7 @@ impl<F: FieldExt> Var<F> for CellValue<F> {
     }
 }
 
-pub trait UtilitiesInstructions<F: FieldExt>: Chip<F> {
+pub trait UtilitiesInstructions<F: FieldExt> {
     type Var: Var<F>;
 
     fn load_private(
