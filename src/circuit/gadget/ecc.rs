@@ -470,7 +470,7 @@ mod tests {
             // Test complete addition
             {
                 super::chip::add::tests::test_add(
-                    chip,
+                    chip.clone(),
                     layouter.namespace(|| "complete addition"),
                     &zero,
                     p_val,
@@ -484,9 +484,12 @@ mod tests {
             // Test incomplete addition
             {
                 super::chip::add_incomplete::tests::test_add_incomplete(
+                    chip,
                     layouter.namespace(|| "incomplete addition"),
                     &zero,
+                    p_val,
                     &p,
+                    q_val,
                     &q,
                     &p_neg,
                 )?;
@@ -498,7 +501,7 @@ mod tests {
 
     #[test]
     fn ecc() {
-        let k = 5;
+        let k = 6;
         let circuit = MyCircuit {};
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))

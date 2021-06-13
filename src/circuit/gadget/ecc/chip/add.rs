@@ -409,13 +409,13 @@ pub mod tests {
         // Check complete addition P + (-P)
         {
             let result = p.add(layouter.namespace(|| "P + (-P)"), p_neg)?;
-            result.constrain_equal(layouter.namespace(|| "P + (-P) = 0"), zero)?;
+            result.constrain_equal(layouter.namespace(|| "P + (-P) = 𝒪"), zero)?;
         }
 
         // Check complete addition 𝒪 + 𝒪
         {
             let result = zero.add(layouter.namespace(|| "𝒪 + 𝒪"), zero)?;
-            result.constrain_equal(layouter.namespace(|| "P + (-P) = 0"), zero)?;
+            result.constrain_equal(layouter.namespace(|| "𝒪 + 𝒪 = 𝒪"), zero)?;
         }
 
         // Check P + Q

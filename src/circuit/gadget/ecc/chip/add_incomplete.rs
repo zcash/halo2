@@ -53,7 +53,7 @@ impl Config {
                 (x_r.clone() + x_q.clone() + x_p.clone())
                     * (x_p.clone() - x_q.clone())
                     * (x_p.clone() - x_q.clone())
-                    - (y_p.clone() - y_q.clone()) * (y_p.clone() - y_q.clone())
+                    - (y_p.clone() - y_q.clone()).square()
             };
 
             // (y_r + y_q)(x_p − x_q) − (y_p − y_q)(x_q − x_r) = 0
@@ -143,22 +143,35 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
-    use halo2::{arithmetic::CurveAffine, circuit::Layouter, plonk::Error};
+    use group::Curve;
+    use halo2::{circuit::Layouter, plonk::Error};
+    use pasta_curves::pallas;
 
     use crate::circuit::gadget::ecc::{EccInstructions, Point};
 
+    #[allow(clippy::too_many_arguments)]
     pub fn test_add_incomplete<
-        C: CurveAffine,
-        EccChip: EccInstructions<C> + Clone + Eq + std::fmt::Debug,
+        EccChip: EccInstructions<pallas::Affine> + Clone + Eq + std::fmt::Debug,
     >(
-        mut layouter: impl Layouter<C::Base>,
-        zero: &Point<C, EccChip>,
-        p: &Point<C, EccChip>,
-        q: &Point<C, EccChip>,
-        p_neg: &Point<C, EccChip>,
+        chip: EccChip,
+        mut layouter: impl Layouter<pallas::Base>,
+        zero: &Point<pallas::Affine, EccChip>,
+        p_val: pallas::Affine,
+        p: &Point<pallas::Affine, EccChip>,
+        q_val: pallas::Affine,
+        q: &Point<pallas::Affine, EccChip>,
+        p_neg: &Point<pallas::Affine, EccChip>,
     ) -> Result<(), Error> {
         // P + Q
-        p.add_incomplete(layouter.namespace(|| "P + Q"), q)?;
+        {
+            let result = p.add_incomplete(layouter.namespace(|| "P + Q"), q)?;
+            let witnessed_result = Point::new(
+                chip,
+                layouter.namespace(|| "witnessed P + Q"),
+                Some((p_val + q_val).to_affine()),
+            )?;
+            result.constrain_equal(layouter.namespace(|| "constrain P + Q"), &witnessed_result)?;
+        }
 
         // P + P should return an error
         p.add_incomplete(layouter.namespace(|| "P + P"), p)

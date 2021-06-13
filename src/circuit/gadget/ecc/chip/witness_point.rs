@@ -40,8 +40,8 @@ impl Config {
             let y = meta.query_advice(self.y, Rotation::cur());
 
             // y^2 = x^3 + b
-            let curve_eqn = y.clone() * y.clone()
-                - (x.clone() * x.clone() * x.clone())
+            let curve_eqn = y.clone().square()
+                - (x.clone().square() * x.clone())
                 - Expression::Constant(pallas::Affine::b());
 
             vec![
