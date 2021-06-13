@@ -407,22 +407,50 @@ pub mod tests {
         assert_ne!(p_val, q_val);
 
         // Check complete addition P + (-P)
-        p.add(layouter.namespace(|| "P + (-P)"), p_neg)?;
+        {
+            let result = p.add(layouter.namespace(|| "P + (-P)"), p_neg)?;
+            result.constrain_equal(layouter.namespace(|| "P + (-P) = 0"), zero)?;
+        }
 
         // Check complete addition 𝒪 + 𝒪
-        zero.add(layouter.namespace(|| "𝒪 + 𝒪"), zero)?;
+        {
+            let result = zero.add(layouter.namespace(|| "𝒪 + 𝒪"), zero)?;
+            result.constrain_equal(layouter.namespace(|| "P + (-P) = 0"), zero)?;
+        }
 
         // Check P + Q
-        p.add(layouter.namespace(|| "P + Q"), q)?;
+        {
+            let result = p.add(layouter.namespace(|| "P + Q"), q)?;
+            let witnessed_result = Point::new(
+                chip.clone(),
+                layouter.namespace(|| "witnessed P + Q"),
+                Some((p_val + q_val).to_affine()),
+            )?;
+            result.constrain_equal(layouter.namespace(|| "constrain P + Q"), &witnessed_result)?;
+        }
 
         // P + P
-        p.add(layouter.namespace(|| "P + P"), p)?;
+        {
+            let result = p.add(layouter.namespace(|| "P + P"), p)?;
+            let witnessed_result = Point::new(
+                chip.clone(),
+                layouter.namespace(|| "witnessed P + P"),
+                Some((p_val + p_val).to_affine()),
+            )?;
+            result.constrain_equal(layouter.namespace(|| "constrain P + P"), &witnessed_result)?;
+        }
 
         // P + 𝒪
-        p.add(layouter.namespace(|| "P + 𝒪"), zero)?;
+        {
+            let result = p.add(layouter.namespace(|| "P + 𝒪"), zero)?;
+            result.constrain_equal(layouter.namespace(|| "P + 𝒪 = P"), p)?;
+        }
 
         // 𝒪 + P
-        zero.add(layouter.namespace(|| "𝒪 + P"), p)?;
+        {
+            let result = zero.add(layouter.namespace(|| "𝒪 + P"), p)?;
+            result.constrain_equal(layouter.namespace(|| "𝒪 + P = P"), p)?;
+        }
 
         // (x, y) + (ζx, y) should behave like normal P + Q.
         let endo_p = p_val.to_curve().endo();

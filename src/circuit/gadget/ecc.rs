@@ -43,6 +43,14 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     /// Enumeration of the set of fixed bases to be used in short signed scalar mul.
     type FixedPointsShort: Clone + Debug;
 
+    /// Constrains point `a` to be equal in value to point `b`.
+    fn constrain_equal(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        a: &Self::Point,
+        b: &Self::Point,
+    ) -> Result<(), Error>;
+
     /// Witnesses the given base field element as a private input to the circuit
     /// for variable-base scalar mul.
     fn witness_scalar_var(
@@ -235,6 +243,16 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
     ) -> Result<Self, Error> {
         let point = chip.witness_point(&mut layouter, value);
         point.map(|inner| Point { chip, inner })
+    }
+
+    /// Constrains this point to be equal in value to another point.
+    pub fn constrain_equal(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        other: &Self,
+    ) -> Result<(), Error> {
+        self.chip
+            .constrain_equal(&mut layouter, &self.inner, &other.inner)
     }
 
     /// Extracts the x-coordinate of a point.

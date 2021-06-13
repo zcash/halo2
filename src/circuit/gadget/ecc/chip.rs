@@ -178,6 +178,24 @@ impl EccInstructions<pallas::Affine> for EccChip {
     type FixedPoints = (); // TODO
     type FixedPointsShort = (); // TODO
 
+    fn constrain_equal(
+        &self,
+        layouter: &mut impl Layouter<pallas::Base>,
+        a: &Self::Point,
+        b: &Self::Point,
+    ) -> Result<(), Error> {
+        let config = self.config().clone();
+        layouter.assign_region(
+            || "constrain equal",
+            |mut region| {
+                // Constrain x-coordinates
+                region.constrain_equal(&config.perm, a.x().cell(), b.x().cell())?;
+                // Constrain x-coordinates
+                region.constrain_equal(&config.perm, a.y().cell(), b.y().cell())
+            },
+        )
+    }
+
     fn witness_scalar_var(
         &self,
         _layouter: &mut impl Layouter<pallas::Base>,
