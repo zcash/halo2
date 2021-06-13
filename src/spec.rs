@@ -179,6 +179,18 @@ pub(crate) fn extract_p_bottom(point: CtOption<pallas::Point>) -> CtOption<palla
     point.map(|p| extract_p(&p))
 }
 
+/// The u64 integer represented by an L-bit little-endian bitstring.
+///
+/// Panics
+///
+/// Panics if the bitstring is longer than 64 bits.
+pub fn lebs2ip<const L: usize>(bits: &[bool; L]) -> u64 {
+    assert!(L <= 64);
+    bits.iter()
+        .enumerate()
+        .fold(0u64, |acc, (i, b)| acc + if *b { 1 << i } else { 0 })
+}
+
 #[cfg(test)]
 mod tests {
     use group::Group;
