@@ -5,6 +5,8 @@ use std::convert::{TryFrom, TryInto};
 use pasta_curves::pallas;
 use rand::{CryptoRng, RngCore};
 
+pub use reddsa::batch;
+
 #[cfg(test)]
 use rand::rngs::OsRng;
 
@@ -107,6 +109,26 @@ impl VerificationKey<SpendAuth> {
     /// Randomization is only supported for `SpendAuth` keys.
     pub fn randomize(&self, randomizer: &pallas::Scalar) -> Self {
         VerificationKey(self.0.randomize(randomizer))
+    }
+
+    /// Creates a batch validation item from a `SpendAuth` signature.
+    pub fn create_batch_item<M: AsRef<[u8]>>(
+        &self,
+        sig: Signature<SpendAuth>,
+        msg: &M,
+    ) -> batch::Item<SpendAuth, Binding> {
+        batch::Item::from_spendauth(self.0.into(), sig.0, msg)
+    }
+}
+
+impl VerificationKey<Binding> {
+    /// Creates a batch validation item from a `Binding` signature.
+    pub fn create_batch_item<M: AsRef<[u8]>>(
+        &self,
+        sig: Signature<Binding>,
+        msg: &M,
+    ) -> batch::Item<SpendAuth, Binding> {
+        batch::Item::from_binding(self.0.into(), sig.0, msg)
     }
 }
 
