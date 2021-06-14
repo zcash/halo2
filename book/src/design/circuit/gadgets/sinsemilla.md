@@ -129,7 +129,7 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-5*  & q_{Sinsemilla1} \Rightarrow (z_{i} - 2^k \cdot z_{i+1},\, x_{P,i},\, \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}))}{2} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i})) \in \mathcal{P} \\\hline
+5*  & q_{Sinsemilla1} \Rightarrow (z_{i} - 2^k \cdot z_{i+1},\, x_{P,i},\, y_{P,i} \in \mathcal{P} \\\hline
 3   & q_{Sinsemilla1,i} \cdot (\lambda_{2,i}^2 - (x_{A,i+1} + (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}) + x_{A,i})) \\\hline
 5   & q_{Sinsemilla2,i} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - y_{A,i} - y_{A,i+1}\right) = 0 \\\hline
 \end{array}
@@ -137,8 +137,9 @@ $$
 where
 $$
 \begin{aligned}
-y_{A,i} &= (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}),\\
-y_{A,i+1} &= (\lambda_{1,i+1} + \lambda_{2,i+1}) \cdot (x_{A,i+1} - (\lambda_{1,i+1}^2 - x_{A,i+1} - x_{P,i+1})
+y_{A,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i})}{2},\\
+y_{A,i+1} &= \frac{(\lambda_{1,i+1} + \lambda_{2,i+1}) \cdot (x_{A,i+1} - (\lambda_{1,i+1}^2 - x_{A,i+1} - x_{P,i+1})}{2},\\
+y_{P,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}))}{2} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i})).
 \end{aligned}
 $$
 
@@ -155,7 +156,5 @@ $$
 &),&
 \end{array}
 $$
-
-where $y_{P,i} \equiv \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}))}{2} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}).$
 
 This increases the degree of the lookup gate to $6$.
