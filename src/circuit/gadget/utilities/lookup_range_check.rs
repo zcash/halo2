@@ -23,7 +23,7 @@ pub struct LookupRangeCheckConfig<F: FieldExt + PrimeFieldBits, const K: usize> 
 }
 
 impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
-    /// The `q_lookup` column toggles the lookup on or off. It can be assigned
+    /// The `q_lookup` column toggles the lookup on or off. It MUST be assigned
     /// outside of this helper at the appropriate offsets.
     ///
     /// The `running_sum` advice column breaks the field element into `K`-bit
@@ -85,13 +85,13 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         )
     }
 
-    // Only the lower `num_words * K` bits of the field element are constrained
-    // by this function. If the field element does not fit into this range, then
-    // the final cumulative sum `z_{num_words}` will be nonzero.
+    /// Only the lower `num_words * K` bits of the field element are constrained
+    /// by this function. If the field element does not fit into this range, then
+    /// the final cumulative sum `z_{num_words}` will be nonzero.
     //
-    // It is up to the caller to constrain `z_{num_words}` == 0` outside this
-    // helper, or otherwise constrain upper bits not covered within the
-    // `num_words * K` range.
+    /// It is up to the caller to constrain `z_{num_words}` == 0` outside this
+    /// helper, or otherwise constrain upper bits not covered within the
+    /// `num_words * K` range.
     pub fn lookup_range_check(
         &self,
         region: &mut Region<'_, F>,
@@ -100,29 +100,30 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         num_words: usize,
     ) -> Result<Vec<CellValue<F>>, Error> {
         // `num_words` must fit into a single field element.
-        assert!(num_words <= F::NUM_BITS as usize / K);
+        assert!(num_words * K <= F::CAPACITY as usize);
         let num_bits = num_words * K;
 
-        // Take first num_bits bits of `element`.
-        let bits = element.value().map(|element| {
-            element
-                .to_le_bits()
-                .into_iter()
-                .take(num_bits)
-                .collect::<Vec<_>>()
-        });
-
         // Chunk the first num_bits bits into K-bit words.
-        let bits: Option<Vec<F>> = bits.map(|bits| {
-            bits.chunks_exact(K)
-                .map(|word| F::from_u64(lebs2ip::<K>(&(word.try_into().unwrap()))))
-                .collect::<Vec<_>>()
-        });
+        let words = {
+            // Take first num_bits bits of `element`.
+            let bits = element.value().map(|element| {
+                element
+                    .to_le_bits()
+                    .into_iter()
+                    .take(num_bits)
+                    .collect::<Vec<_>>()
+            });
 
-        let bits = if let Some(bits) = bits {
-            bits.into_iter().map(Some).collect()
-        } else {
-            vec![None; num_words]
+            let words: Option<Vec<F>> = bits.map(|bits| {
+                bits.chunks_exact(K)
+                    .map(|word| F::from_u64(lebs2ip::<K>(&(word.try_into().unwrap()))))
+                    .collect::<Vec<_>>()
+            });
+            if let Some(words) = words {
+                words.into_iter().map(Some).collect()
+            } else {
+                vec![None; num_words]
+            }
         };
 
         // Copy `element` and initialize running sum `z_0 = element` to decompose it.
@@ -144,14 +145,14 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         // For `element` = a_0 + 2^10 a_1 + ... + 2^{120} a_{12}}, initialize z_0 = `element`.
         // If `element` fits in 130 bits, we end up with z_{13} = 0.
         let mut z = z_0;
-        let inv_2_pow_k = F::from_u64(1u64 << K).invert().unwrap();
-        for (idx, word) in bits.into_iter().enumerate() {
+        let inv_two_pow_k = F::from_u64(1u64 << K).invert().unwrap();
+        for (idx, word) in words.into_iter().enumerate() {
             // z_next = (z_cur - m_cur) / 2^K
             z = {
                 let z_val = z
                     .value()
                     .zip(word)
-                    .map(|(z, word)| (z - word) * inv_2_pow_k);
+                    .map(|(z, word)| (z - word) * inv_two_pow_k);
 
                 // Assign z_next
                 let z_cell = region.assign_advice(
