@@ -484,7 +484,7 @@ mod tests {
             // Test incomplete addition
             {
                 super::chip::add_incomplete::tests::test_add_incomplete(
-                    chip,
+                    chip.clone(),
                     layouter.namespace(|| "incomplete addition"),
                     &zero,
                     p_val,
@@ -495,13 +495,39 @@ mod tests {
                 )?;
             }
 
+            // Test variable-base scalar multiplication
+            {
+                super::chip::mul::tests::test_mul(
+                    chip.clone(),
+                    layouter.namespace(|| "variable-base scalar mul"),
+                    &zero,
+                    &p,
+                )?;
+            }
+
+            // Test full-width fixed-base scalar multiplication
+            {
+                super::chip::mul_fixed::full_width::tests::test_mul_fixed(
+                    chip.clone(),
+                    layouter.namespace(|| "full-width fixed-base scalar mul"),
+                )?;
+            }
+
+            // Test signed short fixed-base scalar multiplication
+            {
+                super::chip::mul_fixed::short::tests::test_mul_fixed_short(
+                    chip,
+                    layouter.namespace(|| "signed short fixed-base scalar mul"),
+                )?;
+            }
+
             Ok(())
         }
     }
 
     #[test]
     fn ecc() {
-        let k = 6;
+        let k = 12;
         let circuit = MyCircuit {};
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
