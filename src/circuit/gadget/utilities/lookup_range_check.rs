@@ -175,7 +175,7 @@ mod tests {
     use super::super::{CellValue, UtilitiesInstructions, Var};
     use super::LookupRangeCheckConfig;
 
-    use crate::primitives::sinsemilla::K;
+    use crate::primitives::sinsemilla::{INV_TWO_POW_K, K};
     use crate::spec::lebs2ip;
     use ff::PrimeFieldBits;
     use halo2::{
@@ -306,10 +306,10 @@ mod tests {
                 .collect::<Vec<_>>()
         };
         let expected_zs = {
-            let inv_2_pow_k = F::from_u64(1u64 << K).invert().unwrap();
+            let inv_two_pow_k = F::from_bytes(&INV_TWO_POW_K).unwrap();
             chunks.iter().fold(vec![element], |mut zs, a_i| {
                 // z_{i + 1} = (z_i - a_i) / 2^{K}
-                let z = (zs[zs.len() - 1] - a_i) * inv_2_pow_k;
+                let z = (zs[zs.len() - 1] - a_i) * inv_two_pow_k;
                 zs.push(z);
                 zs
             })
