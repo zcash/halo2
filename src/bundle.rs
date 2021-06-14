@@ -7,7 +7,7 @@ use crate::{
     note::{ExtractedNoteCommitment, Nullifier, TransmittedNoteCiphertext},
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::Anchor,
-    value::ValueCommitment,
+    value::{ValueCommitTrapdoor, ValueCommitment, ValueSum},
 };
 
 /// An action applied to the global ledger.
@@ -297,6 +297,22 @@ impl<T: Authorization, V> Bundle<T, V> {
             anchor: self.anchor,
             authorization: step(context, authorization)?,
         })
+    }
+}
+
+impl<T: Authorization, V: Copy + Into<ValueSum>> Bundle<T, V> {
+    /// Returns the transaction binding validating key for this bundle.
+    ///
+    /// This can be used to validate the [`Authorized::binding_signature`] returned from
+    /// [`Bundle::authorization`].
+    pub fn binding_validating_key(&self) -> redpallas::VerificationKey<Binding> {
+        (self
+            .actions
+            .iter()
+            .map(|a| a.cv_net())
+            .sum::<ValueCommitment>()
+            - ValueCommitment::derive(self.value_balance.into(), ValueCommitTrapdoor::zero()))
+        .into_bvk()
     }
 }
 
