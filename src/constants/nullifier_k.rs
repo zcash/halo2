@@ -1,4 +1,7 @@
-use halo2::arithmetic::{CurveAffine, FieldExt};
+use pasta_curves::{
+    arithmetic::{CurveAffine, FieldExt},
+    pallas,
+};
 
 pub const GENERATOR: ([u8; 32], [u8; 32]) = (
     [
@@ -2916,10 +2919,10 @@ pub const U: [[[u8; 32]; super::H]; super::NUM_WINDOWS] = [
     ],
 ];
 
-pub fn generator<C: CurveAffine>() -> C {
-    C::from_xy(
-        C::Base::from_bytes(&GENERATOR.0).unwrap(),
-        C::Base::from_bytes(&GENERATOR.1).unwrap(),
+pub fn generator() -> pallas::Affine {
+    pallas::Affine::from_xy(
+        pallas::Base::from_bytes(&GENERATOR.0).unwrap(),
+        pallas::Base::from_bytes(&GENERATOR.1).unwrap(),
     )
     .unwrap()
 }
@@ -2931,9 +2934,9 @@ mod tests {
     };
     use super::*;
     use group::Curve;
-    use halo2::{
-        arithmetic::{CurveAffine, CurveExt, FieldExt},
-        pasta::pallas,
+    use pasta_curves::{
+        arithmetic::{CurveExt, FieldExt},
+        pallas,
     };
 
     #[test]
@@ -2948,13 +2951,13 @@ mod tests {
 
     #[test]
     fn lagrange_coeffs() {
-        let base = super::generator::<pallas::Affine>();
+        let base = super::generator();
         test_lagrange_coeffs(base, NUM_WINDOWS);
     }
 
     #[test]
     fn z() {
-        let base = super::generator::<pallas::Affine>();
+        let base = super::generator();
         test_zs_and_us(base, &Z, &U, NUM_WINDOWS);
     }
 }
