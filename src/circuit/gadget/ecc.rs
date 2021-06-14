@@ -9,6 +9,8 @@ use halo2::{
     plonk::Error,
 };
 
+pub mod chip;
+
 /// The set of circuit instructions required to use the ECC gadgets.
 pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     /// Variable representing an element of the elliptic curve's base field, that
@@ -36,16 +38,18 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     /// Variable representing the affine short Weierstrass x-coordinate of an
     /// elliptic curve point.
     type X: Clone + Debug;
-    /// Variable representing the set of fixed bases in the circuit.
+    /// Enumeration of the set of fixed bases to be used in full-width scalar mul.
     type FixedPoints: Clone + Debug;
-    /// Variable representing the set of fixed bases to be used in scalar
-    /// multiplication with a short signed exponent.
+    /// Enumeration of the set of fixed bases to be used in short signed scalar mul.
     type FixedPointsShort: Clone + Debug;
-    /// Variable representing a fixed elliptic curve point (constant in the circuit).
-    type FixedPoint: Clone + Debug;
-    /// Variable representing a fixed elliptic curve point (constant in the circuit)
-    /// to be used in scalar multiplication with a short signed exponent.
-    type FixedPointShort: Clone + Debug;
+
+    /// Constrains point `a` to be equal in value to point `b`.
+    fn constrain_equal(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        a: &Self::Point,
+        b: &Self::Point,
+    ) -> Result<(), Error>;
 
     /// Witnesses the given base field element as a private input to the circuit
     /// for variable-base scalar mul.
@@ -72,6 +76,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     ) -> Result<Self::ScalarFixedShort, Error>;
 
     /// Witnesses the given point as a private input to the circuit.
+    /// This maps the identity to (0, 0) in affine coordinates.
     fn witness_point(
         &self,
         layouter: &mut impl Layouter<C::Base>,
@@ -80,18 +85,6 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
 
     /// Extracts the x-coordinate of a point.
     fn extract_p(point: &Self::Point) -> &Self::X;
-
-    /// Returns a fixed point that had been previously loaded into the circuit.
-    /// The pre-loaded cells are used to set up equality constraints in other
-    /// parts of the circuit where the fixed base is used.
-    fn get_fixed(&self, fixed_points: Self::FixedPoints) -> Result<Self::FixedPoint, Error>;
-
-    /// Returns a fixed point to be used in scalar multiplication with a signed
-    /// short exponent.
-    fn get_fixed_short(
-        &self,
-        fixed_points: Self::FixedPointsShort,
-    ) -> Result<Self::FixedPointShort, Error>;
 
     /// Performs incomplete point addition, returning `a + b`.
     ///
@@ -111,14 +104,8 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
         b: &Self::Point,
     ) -> Result<Self::Point, Error>;
 
-    /// Performs point doubling, returning `[2] a`.
-    fn double(
-        &self,
-        layouter: &mut impl Layouter<C::Base>,
-        a: &Self::Point,
-    ) -> Result<Self::Point, Error>;
-
     /// Performs variable-base scalar multiplication, returning `[scalar] base`.
+    /// Multiplication of the identity `[scalar] 𝒪 ` returns an error.
     fn mul(
         &self,
         layouter: &mut impl Layouter<C::Base>,
@@ -131,7 +118,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
         &self,
         layouter: &mut impl Layouter<C::Base>,
         scalar: &Self::ScalarFixed,
-        base: &Self::FixedPoint,
+        base: &Self::FixedPoints,
     ) -> Result<Self::Point, Error>;
 
     /// Performs fixed-base scalar multiplication using a short signed scalar, returning `[scalar] base`.
@@ -139,7 +126,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
         &self,
         layouter: &mut impl Layouter<C::Base>,
         scalar: &Self::ScalarFixedShort,
-        base: &Self::FixedPointShort,
+        base: &Self::FixedPointsShort,
     ) -> Result<Self::Point, Error>;
 }
 
@@ -174,12 +161,18 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> ScalarVar
 
 /// A full-width element of the given elliptic curve's scalar field, to be used for fixed-base scalar mul.
 #[derive(Debug)]
-pub struct ScalarFixed<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
+pub struct ScalarFixed<C: CurveAffine, EccChip>
+where
+    EccChip: EccInstructions<C> + Clone + Debug + Eq,
+{
     chip: EccChip,
     inner: EccChip::ScalarFixed,
 }
 
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> ScalarFixed<C, EccChip> {
+impl<C: CurveAffine, EccChip> ScalarFixed<C, EccChip>
+where
+    EccChip: EccInstructions<C> + Clone + Debug + Eq,
+{
     /// Constructs a new ScalarFixed with the given value.
     pub fn new(
         chip: EccChip,
@@ -193,13 +186,17 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> ScalarFix
 
 /// A signed short element of the given elliptic curve's scalar field, to be used for fixed-base scalar mul.
 #[derive(Debug)]
-pub struct ScalarFixedShort<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
+pub struct ScalarFixedShort<C: CurveAffine, EccChip>
+where
+    EccChip: EccInstructions<C> + Clone + Debug + Eq,
+{
     chip: EccChip,
     inner: EccChip::ScalarFixedShort,
 }
 
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
-    ScalarFixedShort<C, EccChip>
+impl<C: CurveAffine, EccChip> ScalarFixedShort<C, EccChip>
+where
+    EccChip: EccInstructions<C> + Clone + Debug + Eq,
 {
     /// Constructs a new ScalarFixedShort with the given value.
     ///
@@ -231,7 +228,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
 }
 
 /// An elliptic curve point over the given curve.
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct Point<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
     chip: EccChip,
     inner: EccChip::Point,
@@ -246,6 +243,16 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
     ) -> Result<Self, Error> {
         let point = chip.witness_point(&mut layouter, value);
         point.map(|inner| Point { chip, inner })
+    }
+
+    /// Constrains this point to be equal in value to another point.
+    pub fn constrain_equal(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        other: &Self,
+    ) -> Result<(), Error> {
+        self.chip
+            .constrain_equal(&mut layouter, &self.inner, &other.inner)
     }
 
     /// Extracts the x-coordinate of a point.
@@ -318,18 +325,18 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> X<C, EccC
 /// A constant elliptic curve point over the given curve, for which window tables have
 /// been provided to make scalar multiplication more efficient.
 #[derive(Clone, Debug)]
-pub struct FixedPoint<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
+pub struct FixedPoint<C: CurveAffine, EccChip>
+where
+    EccChip: EccInstructions<C> + Clone + Debug + Eq,
+{
     chip: EccChip,
-    inner: EccChip::FixedPoint,
+    inner: EccChip::FixedPoints,
 }
 
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> FixedPoint<C, EccChip> {
-    /// Gets a reference to the specified fixed point in the circuit.
-    pub fn get(chip: EccChip, point: EccChip::FixedPoints) -> Result<Self, Error> {
-        chip.get_fixed(point)
-            .map(|inner| FixedPoint { chip, inner })
-    }
-
+impl<C: CurveAffine, EccChip> FixedPoint<C, EccChip>
+where
+    EccChip: EccInstructions<C> + Clone + Debug + Eq,
+{
     /// Returns `[by] self`.
     pub fn mul(
         &self,
@@ -344,23 +351,28 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> FixedPoin
                 inner,
             })
     }
+
+    /// Wraps the given fixed base (obtained directly from an instruction) in a gadget.
+    pub fn from_inner(chip: EccChip, inner: EccChip::FixedPoints) -> Self {
+        FixedPoint { chip, inner }
+    }
 }
 
 /// A constant elliptic curve point over the given curve, used in scalar multiplication
 /// with a short signed exponent
 #[derive(Clone, Debug)]
-pub struct FixedPointShort<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
+pub struct FixedPointShort<C: CurveAffine, EccChip>
+where
+    EccChip: EccInstructions<C> + Clone + Debug + Eq,
+{
     chip: EccChip,
-    inner: EccChip::FixedPointShort,
+    inner: EccChip::FixedPointsShort,
 }
 
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> FixedPointShort<C, EccChip> {
-    /// Gets a reference to the specified fixed point in the circuit.
-    pub fn get(chip: EccChip, point: EccChip::FixedPointsShort) -> Result<Self, Error> {
-        chip.get_fixed_short(point)
-            .map(|inner| FixedPointShort { chip, inner })
-    }
-
+impl<C: CurveAffine, EccChip> FixedPointShort<C, EccChip>
+where
+    EccChip: EccInstructions<C> + Clone + Debug + Eq,
+{
     /// Returns `[by] self`.
     pub fn mul(
         &self,
@@ -374,5 +386,124 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> FixedPoin
                 chip: self.chip.clone(),
                 inner,
             })
+    }
+
+    /// Wraps the given fixed base (obtained directly from an instruction) in a gadget.
+    pub fn from_inner(chip: EccChip, inner: EccChip::FixedPointsShort) -> Self {
+        FixedPointShort { chip, inner }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use group::{prime::PrimeCurveAffine, Curve, Group};
+
+    use halo2::{
+        circuit::{layouter::SingleChipLayouter, Layouter},
+        dev::MockProver,
+        plonk::{Assignment, Circuit, ConstraintSystem, Error},
+    };
+    use pasta_curves::pallas;
+
+    use super::chip::{EccChip, EccConfig};
+
+    struct MyCircuit {}
+
+    #[allow(non_snake_case)]
+    impl Circuit<pallas::Base> for MyCircuit {
+        type Config = EccConfig;
+
+        fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+            let advices = [
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+            ];
+
+            let perm = meta.permutation(
+                &advices
+                    .iter()
+                    .map(|advice| (*advice).into())
+                    .collect::<Vec<_>>(),
+            );
+
+            EccChip::configure(meta, advices, perm)
+        }
+
+        fn synthesize(
+            &self,
+            cs: &mut impl Assignment<pallas::Base>,
+            config: Self::Config,
+        ) -> Result<(), Error> {
+            let mut layouter = SingleChipLayouter::new(cs)?;
+            let chip = EccChip::construct(config);
+
+            // Generate a random point P
+            let p_val = pallas::Point::random(rand::rngs::OsRng).to_affine(); // P
+            let p = super::Point::new(chip.clone(), layouter.namespace(|| "P"), Some(p_val))?;
+            let p_neg = -p_val;
+            let p_neg = super::Point::new(chip.clone(), layouter.namespace(|| "-P"), Some(p_neg))?;
+
+            // Generate a random point Q
+            let q_val = pallas::Point::random(rand::rngs::OsRng).to_affine(); // Q
+            let q = super::Point::new(chip.clone(), layouter.namespace(|| "Q"), Some(q_val))?;
+
+            // Make sure P and Q are not the same point.
+            assert_ne!(p_val, q_val);
+
+            // Generate a (0,0) point to be used in other tests.
+            let zero = {
+                super::Point::new(
+                    chip.clone(),
+                    layouter.namespace(|| "identity"),
+                    Some(pallas::Affine::identity()),
+                )?
+            };
+
+            // Test complete addition
+            {
+                super::chip::add::tests::test_add(
+                    chip.clone(),
+                    layouter.namespace(|| "complete addition"),
+                    &zero,
+                    p_val,
+                    &p,
+                    q_val,
+                    &q,
+                    &p_neg,
+                )?;
+            }
+
+            // Test incomplete addition
+            {
+                super::chip::add_incomplete::tests::test_add_incomplete(
+                    chip,
+                    layouter.namespace(|| "incomplete addition"),
+                    &zero,
+                    p_val,
+                    &p,
+                    q_val,
+                    &q,
+                    &p_neg,
+                )?;
+            }
+
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn ecc() {
+        let k = 6;
+        let circuit = MyCircuit {};
+        let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+        assert_eq!(prover.verify(), Ok(()))
     }
 }
