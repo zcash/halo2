@@ -5,6 +5,12 @@ use halo2::arithmetic::{CurveAffine, CurveExt};
 /// Number of bits of each message piece in $\mathsf{SinsemillaHashToPoint}$
 pub const K: usize = 10;
 
+/// $\frac{1}{2^K}$
+pub const INV_TWO_POW_K: [u8; 32] = [
+    1, 0, 192, 196, 160, 229, 70, 82, 221, 165, 74, 202, 85, 7, 62, 34, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 240, 63,
+];
+
 /// The largest integer such that $2^c \leq (r_P - 1) / 2$, where $r_P$ is the order
 /// of Pallas.
 pub const C: usize = 253;
@@ -131,5 +137,13 @@ mod tests {
             *coords.y(),
             pallas::Base::from_bytes(&Q_MERKLE_CRH.1).unwrap()
         );
+    }
+
+    #[test]
+    fn inv_two_pow_k() {
+        let two_pow_k = pallas::Base::from_u64(1u64 << K);
+        let inv_two_pow_k = pallas::Base::from_bytes(&INV_TWO_POW_K).unwrap();
+
+        assert_eq!(two_pow_k * inv_two_pow_k, pallas::Base::one());
     }
 }

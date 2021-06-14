@@ -1,11 +1,12 @@
 use halo2::{
-    circuit::{Cell, Chip, Layouter, Region},
+    circuit::{Cell, Layouter, Region},
     plonk::{Advice, Column, Error, Permutation},
 };
 use pasta_curves::arithmetic::FieldExt;
 
 mod cond_swap;
 mod enable_flag;
+mod lookup_range_check;
 mod plonk;
 
 /// A variable representing a number.
@@ -35,7 +36,7 @@ impl<F: FieldExt> Var<F> for CellValue<F> {
     }
 }
 
-pub trait UtilitiesInstructions<F: FieldExt>: Chip<F> {
+pub trait UtilitiesInstructions<F: FieldExt> {
     type Var: Var<F>;
 
     fn load_private(
