@@ -141,10 +141,6 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         //          z_i = 2^{K}⋅z_{i + 1} + a_i
         // => z_{i + 1} = (z_i - a_i) / (2^K)
         //
-        // Assign cumulative sum such that
-        //      z_{i+1} = 2^{K}⋅z_{i} + a_{i+1}
-        // => z_{i + 1} = (z_i - a_i) / (2^K)
-        //
         // For `element` = a_0 + 2^10 a_1 + ... + 2^{120} a_{12}}, initialize z_0 = `element`.
         // If `element` fits in 130 bits, we end up with z_{13} = 0.
         let mut z = z_0;
