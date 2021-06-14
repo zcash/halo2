@@ -5,8 +5,8 @@ use rand::RngCore;
 use subtle::CtOption;
 
 use crate::{
-    keys::{FullViewingKey, SpendingKey},
-    spec::{to_base, to_scalar, PrfExpand},
+    keys::{EphemeralSecretKey, FullViewingKey, SpendingKey},
+    spec::{to_base, to_scalar, NonZeroPallasScalar, PrfExpand},
     value::NoteValue,
     Address,
 };
@@ -21,17 +21,26 @@ pub use self::nullifier::Nullifier;
 #[derive(Clone, Debug)]
 pub(crate) struct RandomSeed([u8; 32]);
 
-impl From<[u8; 32]> for RandomSeed {
-    fn from(rseed: [u8; 32]) -> Self {
-        RandomSeed(rseed)
-    }
-}
-
 impl RandomSeed {
-    pub(crate) fn random(rng: &mut impl RngCore) -> Self {
-        let mut bytes = [0; 32];
-        rng.fill_bytes(&mut bytes);
-        RandomSeed(bytes)
+    pub(crate) fn random(rng: &mut impl RngCore, rho: &Nullifier) -> Self {
+        loop {
+            let mut bytes = [0; 32];
+            rng.fill_bytes(&mut bytes);
+            let rseed = RandomSeed::from_bytes(bytes, rho);
+            if rseed.is_some().into() {
+                break rseed.unwrap();
+            }
+        }
+    }
+
+    pub(crate) fn from_bytes(rseed: [u8; 32], rho: &Nullifier) -> CtOption<Self> {
+        let rseed = RandomSeed(rseed);
+        let esk = rseed.esk_inner(rho);
+        CtOption::new(rseed, esk.is_some())
+    }
+
+    pub(crate) fn to_bytes(&self) -> &[u8; 32] {
+        &self.0
     }
 
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
@@ -44,8 +53,18 @@ impl RandomSeed {
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
     ///
     /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
-    fn esk(&self, rho: &Nullifier) -> pallas::Scalar {
-        to_scalar(PrfExpand::Esk.with_ad(&self.0, &rho.to_bytes()[..]))
+    fn esk_inner(&self, rho: &Nullifier) -> CtOption<NonZeroPallasScalar> {
+        NonZeroPallasScalar::from_scalar(to_scalar(
+            PrfExpand::Esk.with_ad(&self.0, &rho.to_bytes()[..]),
+        ))
+    }
+
+    /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
+    ///
+    /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
+    fn esk(&self, rho: &Nullifier) -> NonZeroPallasScalar {
+        // We can't construct a RandomSeed for which this unwrap fails.
+        self.esk_inner(rho).unwrap()
     }
 
     /// Defined in [Zcash Protocol Spec § 4.7.3: Sending Notes (Orchard)][orchardsend].
@@ -76,8 +95,17 @@ pub struct Note {
     rseed: RandomSeed,
 }
 
+impl PartialEq for Note {
+    fn eq(&self, other: &Self) -> bool {
+        // Notes are canonically defined by their commitments.
+        ExtractedNoteCommitment::from(self.commitment())
+            .eq(&ExtractedNoteCommitment::from(other.commitment()))
+    }
+}
+
+impl Eq for Note {}
+
 impl Note {
-    #[cfg(test)]
     pub(crate) fn from_parts(
         recipient: Address,
         value: NoteValue,
@@ -108,7 +136,7 @@ impl Note {
                 recipient,
                 value,
                 rho,
-                rseed: RandomSeed::random(&mut rng),
+                rseed: RandomSeed::random(&mut rng, &rho),
             };
             if note.commitment_inner().is_some().into() {
                 break note;
@@ -139,9 +167,24 @@ impl Note {
         (sk, fvk, note)
     }
 
+    /// Returns the recipient of this note.
+    pub fn recipient(&self) -> Address {
+        self.recipient
+    }
+
     /// Returns the value of this note.
     pub fn value(&self) -> NoteValue {
         self.value
+    }
+
+    /// Derives the ephemeral secret key for this note.
+    pub(crate) fn rseed(&self) -> &RandomSeed {
+        &self.rseed
+    }
+
+    /// Derives the ephemeral secret key for this note.
+    pub(crate) fn esk(&self) -> EphemeralSecretKey {
+        EphemeralSecretKey(self.rseed.esk(&self.rho))
     }
 
     /// Derives the commitment to this note.

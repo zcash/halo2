@@ -4,10 +4,11 @@ use std::iter;
 use std::ops::Deref;
 
 use ff::{Field, PrimeField, PrimeFieldBits};
+use group::GroupEncoding;
 use group::{Curve, Group};
 use halo2::arithmetic::{CurveAffine, CurveExt, FieldExt};
 use pasta_curves::pallas;
-use subtle::CtOption;
+use subtle::{ConditionallySelectable, CtOption};
 
 use crate::{
     constants::L_ORCHARD_BASE,
@@ -18,8 +19,27 @@ mod prf_expand;
 pub(crate) use prf_expand::PrfExpand;
 
 /// A Pallas point that is guaranteed to not be the identity.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct NonIdentityPallasPoint(pallas::Point);
+
+impl Default for NonIdentityPallasPoint {
+    fn default() -> Self {
+        NonIdentityPallasPoint(pallas::Point::generator())
+    }
+}
+
+impl ConditionallySelectable for NonIdentityPallasPoint {
+    fn conditional_select(a: &Self, b: &Self, choice: subtle::Choice) -> Self {
+        NonIdentityPallasPoint(pallas::Point::conditional_select(&a.0, &b.0, choice))
+    }
+}
+
+impl NonIdentityPallasPoint {
+    pub(crate) fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        pallas::Point::from_bytes(bytes)
+            .and_then(|p| CtOption::new(NonIdentityPallasPoint(p), !p.is_identity()))
+    }
+}
 
 impl Deref for NonIdentityPallasPoint {
     type Target = pallas::Point;
@@ -30,9 +50,30 @@ impl Deref for NonIdentityPallasPoint {
 }
 
 /// An integer in [1..q_P].
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct NonZeroPallasBase(pallas::Base);
 
+impl Default for NonZeroPallasBase {
+    fn default() -> Self {
+        NonZeroPallasBase(pallas::Base::one())
+    }
+}
+
+impl ConditionallySelectable for NonZeroPallasBase {
+    fn conditional_select(a: &Self, b: &Self, choice: subtle::Choice) -> Self {
+        NonZeroPallasBase(pallas::Base::conditional_select(&a.0, &b.0, choice))
+    }
+}
+
 impl NonZeroPallasBase {
+    pub(crate) fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        pallas::Base::from_bytes(bytes).and_then(NonZeroPallasBase::from_base)
+    }
+
+    pub(crate) fn from_base(b: pallas::Base) -> CtOption<Self> {
+        CtOption::new(NonZeroPallasBase(b), !b.ct_is_zero())
+    }
+
     /// Constructs a wrapper for a base field element that is guaranteed to be non-zero.
     ///
     /// # Panics
@@ -45,8 +86,14 @@ impl NonZeroPallasBase {
 }
 
 /// An integer in [1..r_P].
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct NonZeroPallasScalar(pallas::Scalar);
+
+impl Default for NonZeroPallasScalar {
+    fn default() -> Self {
+        NonZeroPallasScalar(pallas::Scalar::one())
+    }
+}
 
 impl From<NonZeroPallasBase> for NonZeroPallasScalar {
     fn from(s: NonZeroPallasBase) -> Self {
@@ -54,7 +101,21 @@ impl From<NonZeroPallasBase> for NonZeroPallasScalar {
     }
 }
 
+impl ConditionallySelectable for NonZeroPallasScalar {
+    fn conditional_select(a: &Self, b: &Self, choice: subtle::Choice) -> Self {
+        NonZeroPallasScalar(pallas::Scalar::conditional_select(&a.0, &b.0, choice))
+    }
+}
+
 impl NonZeroPallasScalar {
+    pub(crate) fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        pallas::Scalar::from_bytes(bytes).and_then(NonZeroPallasScalar::from_scalar)
+    }
+
+    pub(crate) fn from_scalar(s: pallas::Scalar) -> CtOption<Self> {
+        CtOption::new(NonZeroPallasScalar(s), !s.ct_is_zero())
+    }
+
     /// Constructs a wrapper for a scalar field element that is guaranteed to be non-zero.
     ///
     /// # Panics

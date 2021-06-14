@@ -16,6 +16,7 @@ use crate::{
         FullViewingKey, OutgoingViewingKey, SpendAuthorizingKey, SpendValidatingKey, SpendingKey,
     },
     note::{Note, TransmittedNoteCiphertext},
+    note_encryption::OrchardNoteEncryption,
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::{Anchor, MerklePath},
     value::{self, NoteValue, OverflowError, ValueCommitTrapdoor, ValueCommitment, ValueSum},
@@ -79,7 +80,7 @@ struct RecipientInfo {
     ovk: Option<OutgoingViewingKey>,
     recipient: Address,
     value: NoteValue,
-    memo: Option<()>,
+    memo: Option<[u8; 512]>,
 }
 
 impl RecipientInfo {
@@ -135,21 +136,32 @@ impl ActionInfo {
         let alpha = pallas::Scalar::random(&mut rng);
         let rk = ak.randomize(&alpha);
 
-        let note = Note::new(self.output.recipient, self.output.value, nf_old, rng);
+        let note = Note::new(self.output.recipient, self.output.value, nf_old, &mut rng);
         let cm_new = note.commitment();
+        let cmx = cm_new.into();
 
-        // TODO: Note encryption
+        let encryptor = OrchardNoteEncryption::new(
+            self.output.ovk,
+            note,
+            self.output.recipient,
+            self.output.memo.unwrap_or_else(|| {
+                let mut memo = [0; 512];
+                memo[0] = 0xf6;
+                memo
+            }),
+        );
+
         let encrypted_note = TransmittedNoteCiphertext {
-            epk_bytes: [0u8; 32],
-            enc_ciphertext: [0u8; 580],
-            out_ciphertext: [0u8; 80],
+            epk_bytes: encryptor.epk().to_bytes().0,
+            enc_ciphertext: encryptor.encrypt_note_plaintext(),
+            out_ciphertext: encryptor.encrypt_outgoing_plaintext(&cv_net, &cmx, &mut rng),
         };
 
         (
             Action::from_parts(
                 nf_old,
                 rk,
-                cm_new.into(),
+                cmx,
                 encrypted_note,
                 cv_net,
                 SigningMetadata {
@@ -220,7 +232,7 @@ impl Builder {
         ovk: Option<OutgoingViewingKey>,
         recipient: Address,
         value: NoteValue,
-        memo: Option<()>,
+        memo: Option<[u8; 512]>,
     ) -> Result<(), &'static str> {
         if !self.flags.outputs_enabled() {
             return Err("Outputs are not enabled for this builder");

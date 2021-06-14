@@ -13,7 +13,7 @@ use crate::{
 /// let sk = SpendingKey::from_bytes([7; 32]).unwrap();
 /// let address = FullViewingKey::from(&sk).default_address();
 /// ```
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Address {
     d: Diversifier,
     pk_d: DiversifiedTransmissionKey,
@@ -26,6 +26,10 @@ impl Address {
         // modifying internals of encoded address formats. If they do, that can result in
         // lost funds, but we can't defend against that from here.
         Address { d, pk_d }
+    }
+
+    pub(crate) fn diversifer(&self) -> Diversifier {
+        self.d
     }
 
     pub(crate) fn g_d(&self) -> NonIdentityPallasPoint {

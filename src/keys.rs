@@ -4,12 +4,15 @@ use std::convert::TryInto;
 use std::mem;
 
 use aes::Aes256;
+use blake2b_simd::{Hash as Blake2bHash, Params};
 use fpe::ff1::{BinaryNumeralString, FF1};
 use group::GroupEncoding;
 use halo2::arithmetic::FieldExt;
 use pasta_curves::pallas;
 use rand::RngCore;
+use subtle::ConstantTimeEq;
 use subtle::CtOption;
+use zcash_note_encryption::EphemeralKeyBytes;
 
 use crate::{
     address::Address,
@@ -19,6 +22,8 @@ use crate::{
         NonIdentityPallasPoint, NonZeroPallasBase, NonZeroPallasScalar, PrfExpand,
     },
 };
+
+const KDF_ORCHARD_PERSONALIZATION: &[u8; 16] = b"Zcash_OrchardKDF";
 
 /// A spending key, from which all key material is derived.
 ///
@@ -286,10 +291,14 @@ impl DiversifierKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Diversifier([u8; 11]);
 
 impl Diversifier {
+    pub(crate) fn from_bytes(d: [u8; 11]) -> Self {
+        Diversifier(d)
+    }
+
     /// Returns the byte array corresponding to this diversifier.
     pub fn as_array(&self) -> &[u8; 11] {
         &self.0
@@ -334,7 +343,7 @@ impl KeyAgreementPrivateKey {
 
     /// Returns the payment address for this key corresponding to the given diversifier.
     fn address(&self, d: Diversifier) -> Address {
-        let pk_d = DiversifiedTransmissionKey::derive(self, &d);
+        let pk_d = DiversifiedTransmissionKey::derive_inner(self, &d);
         Address::from_parts(d, pk_d)
     }
 }
@@ -367,6 +376,16 @@ impl From<&FullViewingKey> for IncomingViewingKey {
 }
 
 impl IncomingViewingKey {
+    /// Parses an Orchard incoming viewing key from its raw encoding.
+    pub fn from_bytes(bytes: &[u8; 64]) -> CtOption<Self> {
+        NonZeroPallasBase::from_bytes(bytes[32..].try_into().unwrap()).map(|ivk| {
+            IncomingViewingKey {
+                dk: DiversifierKey(bytes[..32].try_into().unwrap()),
+                ivk: KeyAgreementPrivateKey(ivk.into()),
+            }
+        })
+    }
+
     /// Returns the default payment address for this key.
     pub fn default_address(&self) -> Address {
         self.address(self.dk.default_diversifier())
@@ -401,21 +420,42 @@ impl From<&FullViewingKey> for OutgoingViewingKey {
     }
 }
 
+impl From<[u8; 32]> for OutgoingViewingKey {
+    fn from(ovk: [u8; 32]) -> Self {
+        OutgoingViewingKey(ovk)
+    }
+}
+
+impl AsRef<[u8; 32]> for OutgoingViewingKey {
+    fn as_ref(&self) -> &[u8; 32] {
+        &self.0
+    }
+}
+
 /// The diversified transmission key for a given payment address.
 ///
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct DiversifiedTransmissionKey(NonIdentityPallasPoint);
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DiversifiedTransmissionKey(NonIdentityPallasPoint);
 
 impl DiversifiedTransmissionKey {
     /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
     ///
     /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-    fn derive(ivk: &KeyAgreementPrivateKey, d: &Diversifier) -> Self {
+    pub(crate) fn derive(ivk: &IncomingViewingKey, d: &Diversifier) -> Self {
+        Self::derive_inner(&ivk.ivk, d)
+    }
+
+    fn derive_inner(ivk: &KeyAgreementPrivateKey, d: &Diversifier) -> Self {
         let g_d = diversify_hash(&d.as_array());
         DiversifiedTransmissionKey(ka_orchard(&ivk.0, &g_d))
+    }
+
+    /// $abst_P(bytes)$
+    pub(crate) fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        NonIdentityPallasPoint::from_bytes(bytes).map(DiversifiedTransmissionKey)
     }
 
     /// $repr_P(self)$
@@ -424,12 +464,101 @@ impl DiversifiedTransmissionKey {
     }
 }
 
+/// An ephemeral secret key used to encrypt an output note on-chain.
+///
+/// `esk` is "ephemeral" in the sense that each secret key is only used once. In
+/// practice, `esk` is derived deterministically from the note that it is encrypting.
+///
+/// $\mathsf{KA}^\mathsf{Orchard}.\mathsf{Private} := \mathbb{F}^{\ast}_{r_P}$
+///
+/// Defined in [section 5.4.5.5: Orchard Key Agreement][concreteorchardkeyagreement].
+///
+/// [concreteorchardkeyagreement]: https://zips.z.cash/protocol/nu5.pdf#concreteorchardkeyagreement
+#[derive(Debug)]
+pub struct EphemeralSecretKey(pub(crate) NonZeroPallasScalar);
+
+impl ConstantTimeEq for EphemeralSecretKey {
+    fn ct_eq(&self, other: &Self) -> subtle::Choice {
+        self.0.ct_eq(&other.0)
+    }
+}
+
+impl EphemeralSecretKey {
+    pub(crate) fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        NonZeroPallasScalar::from_bytes(bytes).map(EphemeralSecretKey)
+    }
+
+    pub(crate) fn derive_public(&self, g_d: NonIdentityPallasPoint) -> EphemeralPublicKey {
+        EphemeralPublicKey(ka_orchard(&self.0, &g_d))
+    }
+
+    pub(crate) fn agree(&self, pk_d: &DiversifiedTransmissionKey) -> SharedSecret {
+        SharedSecret(ka_orchard(&self.0, &pk_d.0))
+    }
+}
+
+/// An ephemeral public key used to encrypt an output note on-chain.
+///
+/// `epk` is "ephemeral" in the sense that each public key is only used once. In practice,
+/// `epk` is derived deterministically from the note that it is encrypting.
+///
+/// $\mathsf{KA}^\mathsf{Orchard}.\mathsf{Public} := \mathbb{P}^{\ast}$
+///
+/// Defined in [section 5.4.5.5: Orchard Key Agreement][concreteorchardkeyagreement].
+///
+/// [concreteorchardkeyagreement]: https://zips.z.cash/protocol/nu5.pdf#concreteorchardkeyagreement
+#[derive(Debug)]
+pub struct EphemeralPublicKey(NonIdentityPallasPoint);
+
+impl EphemeralPublicKey {
+    pub(crate) fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        NonIdentityPallasPoint::from_bytes(bytes).map(EphemeralPublicKey)
+    }
+
+    pub(crate) fn to_bytes(&self) -> EphemeralKeyBytes {
+        EphemeralKeyBytes(self.0.to_bytes())
+    }
+
+    pub(crate) fn agree(&self, ivk: &IncomingViewingKey) -> SharedSecret {
+        SharedSecret(ka_orchard(&ivk.ivk.0, &self.0))
+    }
+}
+
+/// $\mathsf{KA}^\mathsf{Orchard}.\mathsf{SharedSecret} := \mathbb{P}^{\ast}$
+///
+/// Defined in [section 5.4.5.5: Orchard Key Agreement][concreteorchardkeyagreement].
+///
+/// [concreteorchardkeyagreement]: https://zips.z.cash/protocol/nu5.pdf#concreteorchardkeyagreement
+#[derive(Debug)]
+pub struct SharedSecret(NonIdentityPallasPoint);
+
+impl SharedSecret {
+    /// For checking test vectors only.
+    #[cfg(test)]
+    pub(crate) fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
+    }
+
+    /// Defined in [Zcash Protocol Spec § 5.4.5.6: Orchard Key Agreement][concreteorchardkdf].
+    ///
+    /// [concreteorchardkdf]: https://zips.z.cash/protocol/nu5.pdf#concreteorchardkdf
+    pub(crate) fn kdf_orchard(self, ephemeral_key: &EphemeralKeyBytes) -> Blake2bHash {
+        Params::new()
+            .hash_length(32)
+            .personal(KDF_ORCHARD_PERSONALIZATION)
+            .to_state()
+            .update(&self.0.to_bytes())
+            .update(&ephemeral_key.0)
+            .finalize()
+    }
+}
+
 /// Generators for property testing.
 #[cfg(any(test, feature = "test-dependencies"))]
 pub mod testing {
     use proptest::prelude::*;
 
-    use super::SpendingKey;
+    use super::{EphemeralSecretKey, SpendingKey};
 
     prop_compose! {
         /// Generate a uniformly distributed fake note commitment value.
@@ -444,18 +573,63 @@ pub mod testing {
             key.unwrap()
         }
     }
+
+    prop_compose! {
+        /// Generate a uniformly distributed fake note commitment value.
+        pub fn arb_esk()(
+            esk in prop::array::uniform32(prop::num::u8::ANY)
+                .prop_map(|b| EphemeralSecretKey::from_bytes(&b))
+                .prop_filter(
+                    "Values must correspond to valid Orchard ephemeral secret keys.",
+                    |opt| bool::from(opt.is_some())
+                )
+        ) -> EphemeralSecretKey {
+            esk.unwrap()
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use ff::PrimeField;
+    use proptest::prelude::*;
 
-    use super::*;
+    use super::{
+        testing::{arb_esk, arb_spending_key},
+        *,
+    };
     use crate::{
-        note::{ExtractedNoteCommitment, Nullifier},
+        note::{ExtractedNoteCommitment, Nullifier, RandomSeed},
         value::NoteValue,
         Note,
     };
+
+    #[test]
+    fn parsers_reject_invalid() {
+        assert!(bool::from(
+            EphemeralSecretKey::from_bytes(&[0xff; 32]).is_none()
+        ));
+        assert!(bool::from(
+            EphemeralPublicKey::from_bytes(&[0xff; 32]).is_none()
+        ));
+    }
+
+    proptest! {
+        #[test]
+        fn key_agreement(
+            sk in arb_spending_key(),
+            esk in arb_esk(),
+        ) {
+            let ivk = IncomingViewingKey::from(&(&sk).into());
+            let addr = ivk.default_address();
+
+            let epk = esk.derive_public(addr.g_d());
+
+            assert!(bool::from(
+                esk.agree(addr.pk_d()).0.ct_eq(&epk.agree(&ivk).0)
+            ));
+        }
+    }
 
     #[test]
     fn test_vectors() {
@@ -492,7 +666,7 @@ mod tests {
                 addr,
                 NoteValue::from_raw(tv.note_v),
                 rho,
-                tv.note_rseed.into(),
+                RandomSeed::from_bytes(tv.note_rseed, &rho).unwrap(),
             );
 
             let cmx: ExtractedNoteCommitment = note.commitment().into();

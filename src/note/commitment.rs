@@ -3,7 +3,7 @@ use std::iter;
 use bitvec::{array::BitArray, order::Lsb0};
 use ff::PrimeFieldBits;
 use pasta_curves::{arithmetic::FieldExt, pallas};
-use subtle::CtOption;
+use subtle::{ConstantTimeEq, CtOption};
 
 use crate::{constants::L_ORCHARD_BASE, primitives::sinsemilla, spec::extract_p, value::NoteValue};
 
@@ -71,3 +71,23 @@ impl std::ops::Deref for ExtractedNoteCommitment {
         &self.0
     }
 }
+
+impl From<&ExtractedNoteCommitment> for [u8; 32] {
+    fn from(cmx: &ExtractedNoteCommitment) -> Self {
+        cmx.to_bytes()
+    }
+}
+
+impl ConstantTimeEq for ExtractedNoteCommitment {
+    fn ct_eq(&self, other: &Self) -> subtle::Choice {
+        self.0.ct_eq(&other.0)
+    }
+}
+
+impl PartialEq for ExtractedNoteCommitment {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
+    }
+}
+
+impl Eq for ExtractedNoteCommitment {}

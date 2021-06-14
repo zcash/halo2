@@ -44,6 +44,10 @@ rev = "d04b532368d05b505e622f8cac4c0693574fbd93"
 git = "https://github.com/str4d/redjubjub.git"
 rev = "d5d8c5f3bb704bad8ae88fe4a29ae1f744774cb2"
 
+[dependencies.zcash_note_encryption]
+git = "https://github.com/zcash/librustzcash.git"
+rev = "cc533a9da4f6a7209a7be05f82b12a03969152c9"
+
 [dev-dependencies]
 criterion = "0.3"
 hex = "0.4"
