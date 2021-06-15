@@ -7,17 +7,29 @@ use crate::{
 };
 use pasta_curves::pallas;
 
-use ff::{Field, PrimeFieldBits};
+use ff::{Field, PrimeField, PrimeFieldBits};
 use rand::RngCore;
 use std::iter;
 
 /// The root of an Orchard commitment tree.
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(Eq, PartialEq, Clone, Copy, Debug)]
 pub struct Anchor(pallas::Base);
 
 impl From<pallas::Base> for Anchor {
     fn from(anchor_field: pallas::Base) -> Anchor {
         Anchor(anchor_field)
+    }
+}
+
+impl Anchor {
+    /// Parses an Orchard anchor from a byte encoding.
+    pub fn from_bytes(bytes: [u8; 32]) -> Option<Anchor> {
+        pallas::Base::from_repr(bytes).map(Anchor)
+    }
+
+    /// Returns the byte encoding of this anchor.
+    pub fn to_bytes(self) -> [u8; 32] {
+        self.0.to_repr()
     }
 }
 
