@@ -594,6 +594,7 @@ pub mod testing {
 
 #[cfg(test)]
 mod tests {
+    use pasta_curves::pallas;
     use rand::rngs::OsRng;
 
     use super::Builder;
@@ -601,7 +602,6 @@ mod tests {
         bundle::{Authorized, Bundle, Flags},
         circuit::ProvingKey,
         keys::{FullViewingKey, SpendingKey},
-        tree::Anchor,
         value::NoteValue,
     };
 
@@ -614,7 +614,7 @@ mod tests {
         let fvk = FullViewingKey::from(&sk);
         let recipient = fvk.default_address();
 
-        let mut builder = Builder::new(Flags::from_parts(true, true), Anchor([0; 32]));
+        let mut builder = Builder::new(Flags::from_parts(true, true), pallas::Base::zero().into());
         builder
             .add_recipient(None, recipient, NoteValue::from_raw(5000), None)
             .unwrap();

@@ -371,6 +371,7 @@ pub struct BundleAuthorizingCommitment;
 #[cfg(any(test, feature = "test-dependencies"))]
 pub mod testing {
     use nonempty::NonEmpty;
+    use pasta_curves::{arithmetic::FieldExt, pallas};
     use rand::{rngs::StdRng, SeedableRng};
     use reddsa::orchard::SpendAuth;
 
@@ -528,6 +529,15 @@ pub mod testing {
     }
 
     prop_compose! {
+        fn arb_base()(bytes in prop::array::uniform32(0u8..)) -> pallas::Base {
+            // Instead of rejecting out-of-range bytes, let's reduce them.
+            let mut buf = [0; 64];
+            buf[..32].copy_from_slice(&bytes);
+            pallas::Base::from_bytes_wide(&buf)
+        }
+    }
+
+    prop_compose! {
         /// Generate an arbitrary unauthorized bundle. This bundle does not
         /// necessarily respect consensus rules; for that use
         /// [`crate::builder::testing::arb_bundle`]
@@ -538,7 +548,7 @@ pub mod testing {
         )
         (
             acts in vec(arb_unauthorized_action_n(n_actions, flags), n_actions),
-            anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor),
+            anchor in arb_base().prop_map(Anchor::from),
             flags in Just(flags)
         ) -> Bundle<Unauthorized, ValueSum> {
             let (balances, actions): (Vec<ValueSum>, Vec<Action<_>>) = acts.into_iter().unzip();
@@ -564,7 +574,7 @@ pub mod testing {
         )
         (
             acts in vec(arb_action_n(n_actions, flags), n_actions),
-            anchor in prop::array::uniform32(prop::num::u8::ANY).prop_map(Anchor),
+            anchor in arb_base().prop_map(Anchor::from),
             sk in arb_binding_signing_key(),
             rng_seed in prop::array::uniform32(prop::num::u8::ANY),
             fake_proof in vec(prop::num::u8::ANY, 1973),
