@@ -268,7 +268,7 @@ fn test_zs_and_us<C: CurveAffine>(base: C, z: &[u64], u: &[[[u8; 32]; H]], num_w
 #[cfg(test)]
 mod tests {
     use ff::PrimeField;
-    use pasta_curves::pallas;
+    use pasta_curves::{arithmetic::FieldExt, pallas};
 
     #[test]
     // Nodes in the Merkle tree are Pallas base field elements.
@@ -286,5 +286,19 @@ mod tests {
     // Orchard uses the Pallas base field as its base field.
     fn l_orchard_scalar() {
         assert_eq!(super::L_ORCHARD_SCALAR, pallas::Scalar::NUM_BITS as usize);
+    }
+
+    #[test]
+    fn t_q() {
+        let t_q = pallas::Scalar::from_u128(super::T_Q);
+        let two_pow_254 = pallas::Scalar::from_u128(1 << 127).square();
+        assert_eq!(t_q + two_pow_254, pallas::Scalar::zero());
+    }
+
+    #[test]
+    fn t_p() {
+        let t_p = pallas::Base::from_u128(super::T_P);
+        let two_pow_254 = pallas::Base::from_u128(1 << 127).square();
+        assert_eq!(t_p + two_pow_254, pallas::Base::zero());
     }
 }
