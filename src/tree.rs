@@ -12,7 +12,7 @@ use rand::RngCore;
 use std::iter;
 
 /// The root of an Orchard commitment tree.
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(Eq, PartialEq, Clone, Copy, Debug)]
 pub struct Anchor(pallas::Base);
 
 impl From<pallas::Base> for Anchor {
