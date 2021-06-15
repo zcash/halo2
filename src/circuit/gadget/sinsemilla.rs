@@ -32,6 +32,16 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     /// up to `N = 25` words in a single base field element.
     type MessagePiece: Clone + Debug;
 
+    /// A cumulative sum `z` is used to decompose a Sinsemilla message. It
+    /// produces intermediate values for each word in the message, such
+    /// that `z_next` = (`z_cur` - `word_next`) / `2^K`.
+    ///
+    /// These intermediate values are useful for range checks on subsets
+    /// of the Sinsemilla message. Sinsemilla messages in the Orchard
+    /// protocol are composed of field elements, and we need to check
+    /// the canonicity of the field element encodings in certain cases.
+    type RunningSum;
+
     /// The x-coordinate of a point output of [`Self::hash_to_point`].
     type X;
     /// A point output of [`Self::hash_to_point`].
@@ -63,15 +73,6 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     /// decomposition in the form of intermediate values in a cumulative
     /// sum.
     ///
-    /// A cumulative sum `z` is used to decompose a Sinsemilla message. It
-    /// produces intermediate values for each word in the message, such
-    /// that `z_next` = (`z_cur` - `word_next`) / `2^K`.
-    ///  
-    /// These intermediate values are useful for range checks on subsets
-    /// of the Sinsemilla message. Sinsemilla messages in the Orchard
-    /// protocol are composed of field elements, and we need to check
-    /// the canonicity of the field element encodings in certain cases.
-    ///
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
     fn hash_to_point(
@@ -79,7 +80,7 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
         layouter: impl Layouter<C::Base>,
         Q: C,
         message: Self::Message,
-    ) -> Result<(Self::Point, Vec<Vec<Self::CellValue>>), Error>;
+    ) -> Result<(Self::Point, Vec<Self::RunningSum>), Error>;
 
     /// Extracts the x-coordinate of the output of a Sinsemilla hash.
     fn extract(point: &Self::Point) -> Self::X;
@@ -262,6 +263,7 @@ where
         }
     }
 
+    #[allow(clippy::type_complexity)]
     /// $\mathsf{SinsemillaHashToPoint}$ from [§ 5.4.1.9][concretesinsemillahash].
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
@@ -269,11 +271,13 @@ where
         &self,
         layouter: impl Layouter<C::Base>,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
-    ) -> Result<ecc::Point<C, EccChip>, Error> {
+    ) -> Result<(ecc::Point<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
         assert_eq!(self.sinsemilla_chip, message.chip);
-        self.sinsemilla_chip
-            .hash_to_point(layouter, self.Q, message.inner)
-            .map(|(point, _)| ecc::Point::from_inner(self.ecc_chip.clone(), point))
+        let (p, zs) = self
+            .sinsemilla_chip
+            .hash_to_point(layouter, self.Q, message.inner)?;
+        let p = ecc::Point::from_inner(self.ecc_chip.clone(), p);
+        Ok((p, zs))
     }
 
     /// $\mathsf{SinsemillaHash}$ from [§ 5.4.1.9][concretesinsemillahash].
@@ -285,8 +289,8 @@ where
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
     ) -> Result<ecc::X<C, EccChip>, Error> {
         assert_eq!(self.sinsemilla_chip, message.chip);
-        let p = self.hash_to_point(layouter, message);
-        p.map(|p| p.extract_p())
+        let (p, _) = self.hash_to_point(layouter, message)?;
+        Ok(p.extract_p())
     }
 }
 
@@ -353,6 +357,7 @@ where
         }
     }
 
+    #[allow(clippy::type_complexity)]
     /// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
     ///
     /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
@@ -361,14 +366,15 @@ where
         mut layouter: impl Layouter<C::Base>,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
         r: Option<C::Scalar>,
-    ) -> Result<ecc::Point<C, EccChip>, Error> {
+    ) -> Result<(ecc::Point<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
         assert_eq!(self.M.sinsemilla_chip, message.chip);
         let (blind, _) = self.R.mul(layouter.namespace(|| "[r] R"), r)?;
-        self.M
-            .hash_to_point(layouter.namespace(|| "M"), message)?
-            .add_incomplete(layouter.namespace(|| "M ⸭ [r] R"), &blind)
+        let (p, zs) = self.M.hash_to_point(layouter.namespace(|| "M"), message)?;
+        let commitment = p.add_incomplete(layouter.namespace(|| "M ⸭ [r] R"), &blind)?;
+        Ok((commitment, zs))
     }
 
+    #[allow(clippy::type_complexity)]
     /// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
     ///
     /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
@@ -377,10 +383,10 @@ where
         mut layouter: impl Layouter<C::Base>,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
         r: Option<C::Scalar>,
-    ) -> Result<ecc::X<C, EccChip>, Error> {
+    ) -> Result<(ecc::X<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
         assert_eq!(self.M.sinsemilla_chip, message.chip);
-        let p = self.commit(layouter.namespace(|| "commit"), message, r);
-        p.map(|p| p.extract_p())
+        let (p, zs) = self.commit(layouter.namespace(|| "commit"), message, r)?;
+        Ok((p.extract_p(), zs))
     }
 }
 
@@ -553,7 +559,7 @@ mod tests {
                 };
 
                 // Parent
-                let parent = {
+                let (parent, _) = {
                     let message = Message::from_pieces(chip1, vec![l, left, right]);
                     merkle_crh.hash_to_point(layouter.namespace(|| "parent"), message)?
                 };
@@ -576,7 +582,7 @@ mod tests {
                 let message: Vec<Option<bool>> =
                     (0..500).map(|_| Some(rand::random::<bool>())).collect();
 
-                let result = {
+                let (result, _) = {
                     let message = Message::from_bitstring(
                         chip2,
                         layouter.namespace(|| "witness message"),

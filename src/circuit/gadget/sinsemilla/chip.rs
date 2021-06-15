@@ -248,6 +248,8 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
     type Message = Message<pallas::Base, { sinsemilla::K }, { sinsemilla::C }>;
     type MessagePiece = MessagePiece<pallas::Base, { sinsemilla::K }>;
 
+    type RunningSum = Vec<Self::CellValue>;
+
     type X = CellValue<pallas::Base>;
     type Point = EccPoint;
     type FixedPoints = OrchardFixedBasesFull;
@@ -284,7 +286,7 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
         mut layouter: impl Layouter<pallas::Base>,
         Q: pallas::Affine,
         message: Self::Message,
-    ) -> Result<(Self::Point, Vec<Vec<Self::CellValue>>), Error> {
+    ) -> Result<(Self::Point, Vec<Self::RunningSum>), Error> {
         layouter.assign_region(
             || "hash_to_point",
             |mut region| self.hash_message(&mut region, Q, &message),
