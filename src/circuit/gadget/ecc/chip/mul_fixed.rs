@@ -211,7 +211,9 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         base: OrchardFixedBases,
         fixed_column: Column<Fixed>,
     ) -> Result<(), Error> {
-        let (lagrange_coeffs, z) = match base {
+        let mut constants = None;
+
+        let build_constants = || match base {
             OrchardFixedBases::ValueCommitV => {
                 assert_eq!(NUM_WINDOWS, constants::NUM_WINDOWS_SHORT);
                 let base = ValueCommitV::get();
@@ -250,7 +252,13 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
                     },
                     self.lagrange_coeffs[k],
                     window + offset,
-                    || Ok(lagrange_coeffs[window].0[k]),
+                    || {
+                        if constants.as_ref().is_none() {
+                            constants = Some(build_constants());
+                        }
+                        let lagrange_coeffs = &constants.as_ref().unwrap().0;
+                        Ok(lagrange_coeffs[window].0[k])
+                    },
                 )?;
             }
 
@@ -259,7 +267,10 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
                 || format!("z-value for window: {:?}", window),
                 self.fixed_z,
                 window + offset,
-                || Ok(z[window]),
+                || {
+                    let z = &constants.as_ref().unwrap().1;
+                    Ok(z[window])
+                }
             )?;
         }
 
