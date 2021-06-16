@@ -5,11 +5,13 @@ use crate::{
     note::commitment::ExtractedNoteCommitment,
     primitives::sinsemilla::{i2lebsp_k, HashDomain},
 };
-use pasta_curves::pallas;
+use incrementalmerkletree::{Hashable, Level};
+use pasta_curves::{arithmetic::FieldExt, pallas};
 
 use ff::{Field, PrimeField, PrimeFieldBits};
 use rand::RngCore;
 use std::iter;
+use subtle::CtOption;
 
 /// The root of an Orchard commitment tree.
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
@@ -63,7 +65,7 @@ impl MerklePath {
             .enumerate()
             .fold(*cmx, |node, (l_star, sibling)| {
                 let swap = self.position & (1 << l_star) != 0;
-                hash_layer(l_star, cond_swap(swap, node, *sibling))
+                hash_layer(l_star, cond_swap(swap, node, *sibling)).unwrap()
             });
         Anchor(node)
     }
@@ -106,30 +108,47 @@ fn cond_swap(swap: bool, node: pallas::Base, sibling: pallas::Base) -> Pair {
 ///      - when hashing two leaves, we produce a node on the layer above the leaves, i.e.
 ///        layer = 31, l_star = 0
 ///      - when hashing to the final root, we produce the anchor with layer = 0, l_star = 31.
-fn hash_layer(l_star: usize, pair: Pair) -> pallas::Base {
+fn hash_layer(l_star: usize, pair: Pair) -> CtOption<pallas::Base> {
     // MerkleCRH Sinsemilla hash domain.
     let domain = HashDomain::new(MERKLE_CRH_PERSONALIZATION);
 
-    domain
-        .hash(
-            iter::empty()
-                .chain(i2lebsp_k(l_star).iter().copied())
-                .chain(
-                    pair.left
-                        .to_le_bits()
-                        .iter()
-                        .by_val()
-                        .take(L_ORCHARD_MERKLE),
-                )
-                .chain(
-                    pair.right
-                        .to_le_bits()
-                        .iter()
-                        .by_val()
-                        .take(L_ORCHARD_MERKLE),
-                ),
-        )
-        .unwrap()
+    domain.hash(
+        iter::empty()
+            .chain(i2lebsp_k(l_star).iter().copied())
+            .chain(
+                pair.left
+                    .to_le_bits()
+                    .iter()
+                    .by_val()
+                    .take(L_ORCHARD_MERKLE),
+            )
+            .chain(
+                pair.right
+                    .to_le_bits()
+                    .iter()
+                    .by_val()
+                    .take(L_ORCHARD_MERKLE),
+            ),
+    )
+}
+
+#[derive(Clone)]
+struct OrchardIncrementalTreeDigest(CtOption<pallas::Base>);
+
+impl Hashable for OrchardIncrementalTreeDigest {
+    fn empty_leaf() -> Self {
+        OrchardIncrementalTreeDigest(CtOption::new(pallas::Base::from_u64(2), 1.into()))
+    }
+
+    fn combine(level: Level, left_opt: &Self, right_opt: &Self) -> Self {
+        let level: usize = level.into();
+        let l_star: usize = MERKLE_DEPTH_ORCHARD - 1 - level;
+        OrchardIncrementalTreeDigest(left_opt.0.and_then(|left| {
+            right_opt
+                .0
+                .and_then(|right| hash_layer(l_star, Pair { left, right }))
+        }))
+    }
 }
 
 /// Generators for property testing.
@@ -166,7 +185,8 @@ pub mod testing {
                                 left: *state,
                                 right: *state,
                             },
-                        );
+                        )
+                        .unwrap();
                         Some(*state)
                     },
                 ))
@@ -236,10 +256,10 @@ pub mod testing {
                             (None, None) => None,
                             (Some(left), None) => {
                                 let right = EMPTY_ROOTS[height - 1];
-                                Some(hash_layer(l_star, Pair {left, right}))
+                                Some(hash_layer(l_star, Pair {left, right}).unwrap())
                             },
                             (Some(left), Some(right)) => {
-                                Some(hash_layer(l_star, Pair {left, right}))
+                                Some(hash_layer(l_star, Pair {left, right}).unwrap())
                             },
                             (None, Some(_)) => {
                                 unreachable!("The perfect subtree is left-packed.")
