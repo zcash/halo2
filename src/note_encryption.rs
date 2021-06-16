@@ -259,7 +259,7 @@ impl<T> From<&Action<T>> for CompactAction {
     fn from(action: &Action<T>) -> Self {
         CompactAction {
             ephemeral_key: action.ephemeral_key(),
-            cmx: action.cmx().clone(),
+            cmx: *action.cmx(),
             enc_ciphertext: action.encrypted_note().enc_ciphertext[..52]
                 .try_into()
                 .unwrap(),

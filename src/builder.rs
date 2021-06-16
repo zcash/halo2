@@ -322,7 +322,7 @@ impl Builder {
         // Create the proof.
         let instances: Vec<_> = actions
             .iter()
-            .map(|a| a.to_instance(flags, anchor.clone()))
+            .map(|a| a.to_instance(flags, anchor))
             .collect();
         let proof = Proof::create(pk, &circuits, &instances)?;
 

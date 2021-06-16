@@ -53,7 +53,7 @@ impl ExtractedNoteCommitment {
     }
 
     /// Serialize the value commitment to its canonical byte representation.
-    pub fn to_bytes(&self) -> [u8; 32] {
+    pub fn to_bytes(self) -> [u8; 32] {
         self.0.to_bytes()
     }
 }
