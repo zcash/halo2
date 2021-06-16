@@ -110,7 +110,9 @@ impl<T> Action<T> {
         })
     }
 
-    pub(crate) fn to_instance(&self, flags: Flags, anchor: Anchor) -> Instance {
+    /// Prepares the public instance for this action, for creating and verifying the
+    /// bundle proof.
+    pub fn to_instance(&self, flags: Flags, anchor: Anchor) -> Instance {
         Instance {
             anchor,
             cv_net: self.cv_net.clone(),
