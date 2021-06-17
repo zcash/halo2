@@ -10,6 +10,9 @@ use crate::{
 use incrementalmerkletree::{Hashable, Level};
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
+use serde::{Serialize, Deserialize};
+use serde::ser::Serializer;
+use serde::de::Deserializer;
 use ff::{Field, PrimeField, PrimeFieldBits};
 use rand::RngCore;
 use std::iter;
@@ -152,6 +155,12 @@ impl OrchardIncrementalTreeDigest {
     pub fn to_bytes(&self) -> Option<[u8; 32]> {
         <Option<pallas::Base>>::from(self.0).map(|b| b.to_bytes())
     }
+
+    /// Parses a incremental tree leaf digest from the bytes of
+    /// a note commitment.
+    pub fn from_bytes(bytes: &[u8; 32]) -> Self {
+        OrchardIncrementalTreeDigest(pallas::Base::from_bytes(bytes))
+    }
 }
 
 /// This instance is should only be used for hashtable key comparisons.
@@ -185,6 +194,19 @@ impl Hashable for OrchardIncrementalTreeDigest {
                 .0
                 .and_then(|right| hash_layer(l_star, Pair { left, right }))
         }))
+    }
+}
+
+impl Serialize for OrchardIncrementalTreeDigest {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.to_bytes().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for OrchardIncrementalTreeDigest {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let parsed = <[u8; 32]>::deserialize(deserializer)?;
+        Ok(Self::from_bytes(&parsed))
     }
 }
 
