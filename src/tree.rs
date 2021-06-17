@@ -13,7 +13,7 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 use ff::{Field, PrimeField, PrimeFieldBits};
 use rand::RngCore;
 use std::iter;
-use subtle::CtOption;
+use subtle::{CtOption, ConstantTimeEq};
 
 /// The root of an Orchard commitment tree.
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
@@ -142,10 +142,33 @@ fn hash_layer(l_star: usize, pair: Pair) -> CtOption<pallas::Base> {
 pub struct OrchardIncrementalTreeDigest(CtOption<pallas::Base>);
 
 impl OrchardIncrementalTreeDigest {
-    /// Parses a incremental tree leaf digest from the bytes of
-    /// a note commitment.
-    pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        OrchardIncrementalTreeDigest(pallas::Base::from_bytes(bytes))
+    /// Creates an incremental tree life digest for the specified
+    /// Pallas base field element.
+    pub fn from_cmx(value: &ExtractedNoteCommitment) -> Self {
+        OrchardIncrementalTreeDigest(CtOption::new(**value, 1.into()))
+    }
+
+    /// Convert this digest to its canonical byte representation.
+    pub fn to_bytes(&self) -> Option<[u8; 32]> {
+        <Option<pallas::Base>>::from(self.0).map(|b| b.to_bytes())
+    }
+}
+
+/// This instance is should only be used for hashtable key comparisons.
+impl std::cmp::PartialEq for OrchardIncrementalTreeDigest {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.ct_eq(&other.0).into()
+    }
+}
+
+/// This instance is should only be used for hashtable key comparisons.
+impl std::cmp::Eq for OrchardIncrementalTreeDigest {
+}
+
+/// This instance is should only be used for hashtable key comparisons.
+impl std::hash::Hash for OrchardIncrementalTreeDigest {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        <Option<pallas::Base>>::from(self.0).map(|b| b.to_bytes()).hash(state)
     }
 }
 
