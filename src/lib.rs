@@ -26,7 +26,7 @@ pub mod note;
 mod note_encryption;
 pub mod primitives;
 mod spec;
-mod tree;
+pub mod tree;
 pub mod value;
 
 #[cfg(test)]

@@ -1,3 +1,5 @@
+//! Types related to Orchard note commitment trees and anchors.
+
 use crate::{
     constants::{
         util::gen_const_array, L_ORCHARD_MERKLE, MERKLE_CRH_PERSONALIZATION, MERKLE_DEPTH_ORCHARD,
@@ -35,6 +37,8 @@ impl Anchor {
     }
 }
 
+/// The Merkle path from a leaf of the note commitment tree
+/// to its anchor.
 #[derive(Debug)]
 pub struct MerklePath {
     position: u32,
@@ -132,8 +136,18 @@ fn hash_layer(l_star: usize, pair: Pair) -> CtOption<pallas::Base> {
     )
 }
 
-#[derive(Clone)]
-struct OrchardIncrementalTreeDigest(CtOption<pallas::Base>);
+/// A newtype wrapper for leaves and internal nodes in the Orchard
+/// incremental note commitment tree.
+#[derive(Clone, Debug)]
+pub struct OrchardIncrementalTreeDigest(CtOption<pallas::Base>);
+
+impl OrchardIncrementalTreeDigest {
+    /// Parses a incremental tree leaf digest from the bytes of
+    /// a note commitment.
+    pub fn from_bytes(bytes: &[u8; 32]) -> Self {
+        OrchardIncrementalTreeDigest(pallas::Base::from_bytes(bytes))
+    }
+}
 
 impl Hashable for OrchardIncrementalTreeDigest {
     fn empty_leaf() -> Self {
