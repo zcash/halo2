@@ -58,11 +58,16 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
     ) -> Result<EccPoint, Error> {
+        // Copy the scalar decomposition
+        self.super_config
+            .copy_scalar(region, offset, &scalar.into())?;
+
         let (acc, mul_b) = self.super_config.assign_region_inner(
             region,
             offset,
             &scalar.into(),
             base.clone().into(),
+            self.super_config.mul_fixed,
         )?;
 
         // Add to the cumulative sum to get `[magnitude]B`.

@@ -9,6 +9,8 @@ use halo2::{
     plonk::Error,
 };
 
+use crate::circuit::gadget::utilities::CellValue;
+
 pub mod chip;
 
 /// The set of circuit instructions required to use the ECC gadgets.
@@ -127,6 +129,16 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
         layouter: &mut impl Layouter<C::Base>,
         scalar: &Self::ScalarFixedShort,
         base: &Self::FixedPointsShort,
+    ) -> Result<Self::Point, Error>;
+
+    /// Performs fixed-base scalar multiplication using a base field element as the scalar.
+    /// In the current implementation, this base field element must be output from another
+    /// instruction.
+    fn mul_fixed_base_field_elem(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        base_field_elem: CellValue<C::Base>,
+        base: &Self::FixedPoints,
     ) -> Result<Self::Point, Error>;
 }
 
@@ -352,6 +364,21 @@ where
             })
     }
 
+    /// Multiplies `self` using a value encoded in a base field element
+    /// as the scalar.
+    pub fn mul_base_field_elem(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        by: CellValue<C::Base>,
+    ) -> Result<Point<C, EccChip>, Error> {
+        self.chip
+            .mul_fixed_base_field_elem(&mut layouter, by, &self.inner)
+            .map(|inner| Point {
+                chip: self.chip.clone(),
+                inner,
+            })
+    }
+
     /// Wraps the given fixed base (obtained directly from an instruction) in a gadget.
     pub fn from_inner(chip: EccChip, inner: EccChip::FixedPoints) -> Self {
         FixedPoint { chip, inner }
@@ -521,8 +548,16 @@ mod tests {
             // Test signed short fixed-base scalar multiplication
             {
                 super::chip::mul_fixed::short::tests::test_mul_fixed_short(
-                    chip,
+                    chip.clone(),
                     layouter.namespace(|| "signed short fixed-base scalar mul"),
+                )?;
+            }
+
+            // Test fixed-base scalar multiplication with a base field element
+            {
+                super::chip::mul_fixed::base_field_elem::tests::test_mul_fixed_base_field(
+                    chip,
+                    layouter.namespace(|| "fixed-base scalar mul with base field element"),
                 )?;
             }
 
@@ -532,7 +567,7 @@ mod tests {
 
     #[test]
     fn ecc() {
-        let k = 12;
+        let k = 13;
         let circuit = MyCircuit {};
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))

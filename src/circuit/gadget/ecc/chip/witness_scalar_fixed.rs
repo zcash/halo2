@@ -1,10 +1,9 @@
 use super::{CellValue, EccConfig, Var};
 use crate::constants::{self, util};
 use arrayvec::ArrayVec;
-use ff::PrimeFieldBits;
 use halo2::{
     circuit::Region,
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Permutation, Selector},
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -16,13 +15,15 @@ pub struct Config {
     q_scalar_fixed: Selector,
     // Decomposition of scalar into `k`-bit windows.
     window: Column<Advice>,
+    perm: Permutation,
 }
 
 impl From<&EccConfig> for Config {
     fn from(ecc_config: &EccConfig) -> Self {
         Self {
             q_scalar_fixed: ecc_config.q_scalar_fixed,
-            window: ecc_config.advices[0],
+            window: ecc_config.advices[9],
+            perm: ecc_config.perm.clone(),
         }
     }
 }
@@ -48,10 +49,7 @@ impl Config {
         scalar: Option<pallas::Scalar>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<ArrayVec<CellValue<pallas::Base>, NUM_WINDOWS>, Error>
-    where
-        pallas::Scalar: PrimeFieldBits,
-    {
+    ) -> Result<ArrayVec<CellValue<pallas::Base>, NUM_WINDOWS>, Error> {
         // Enable `q_scalar_fixed` selector
         for idx in 0..NUM_WINDOWS {
             self.q_scalar_fixed.enable(region, offset + idx)?;

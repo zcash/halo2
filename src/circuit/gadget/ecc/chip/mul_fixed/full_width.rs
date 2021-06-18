@@ -19,9 +19,16 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
     ) -> Result<EccPoint, Error> {
-        let (acc, mul_b) =
-            self.0
-                .assign_region_inner(region, offset, &scalar.into(), base.into())?;
+        // Copy the scalar decomposition
+        self.0.copy_scalar(region, offset, &scalar.into())?;
+
+        let (acc, mul_b) = self.0.assign_region_inner(
+            region,
+            offset,
+            &scalar.into(),
+            base.into(),
+            self.0.mul_fixed,
+        )?;
 
         // Add to the accumulator and return the final result as `[scalar]B`.
         let result = self
@@ -33,13 +40,9 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         // Check that the correct multiple is obtained.
         {
             use group::Curve;
-            use halo2::arithmetic::FieldExt;
 
             let base: super::OrchardFixedBases = base.into();
-            let scalar = scalar
-                .value
-                .map(|scalar| pallas::Scalar::from_bytes(&scalar.to_bytes()).unwrap());
-            let real_mul = scalar.map(|scalar| base.generator() * scalar);
+            let real_mul = scalar.value.map(|scalar| base.generator() * scalar);
             let result = result.point();
 
             if let (Some(real_mul), Some(result)) = (real_mul, result) {
@@ -159,11 +162,22 @@ pub mod tests {
         {
             let scalar_fixed = pallas::Scalar::zero();
             let scalar_fixed = ScalarFixed::new(
-                chip,
+                chip.clone(),
                 layouter.namespace(|| "ScalarFixed"),
                 Some(scalar_fixed),
             )?;
             base.mul(layouter.namespace(|| "mul by zero"), &scalar_fixed)?;
+        }
+
+        // [-1]B is the largest scalar field element.
+        {
+            let scalar_fixed = -pallas::Scalar::one();
+            let scalar_fixed = ScalarFixed::new(
+                chip,
+                layouter.namespace(|| "ScalarFixed"),
+                Some(scalar_fixed),
+            )?;
+            base.mul(layouter.namespace(|| "mul by -1"), &scalar_fixed)?;
         }
 
         Ok(())

@@ -101,10 +101,11 @@ pub struct EccConfig {
     pub q_mul_overflow: Selector,
 
     /// Fixed-base full-width scalar multiplication
-    pub q_mul_fixed: Selector,
-
+    pub mul_fixed: Column<Fixed>,
     /// Fixed-base signed short scalar multiplication
     pub q_mul_fixed_short: Selector,
+    /// Fixed-base multiplication using a base field element as the scalar
+    pub base_field_fixed: Column<Fixed>,
 
     /// Witness point
     pub q_point: Selector,
@@ -174,8 +175,9 @@ impl EccChip {
             q_init_z: meta.selector(),
             q_mul_z: meta.selector(),
             q_mul_overflow: meta.selector(),
-            q_mul_fixed: meta.selector(),
+            mul_fixed: meta.fixed_column(),
             q_mul_fixed_short: meta.selector(),
+            base_field_fixed: meta.fixed_column(),
             q_point: meta.selector(),
             q_scalar_fixed: meta.selector(),
             q_scalar_fixed_short: meta.selector(),
@@ -224,7 +226,7 @@ impl EccChip {
         // and short multiplication.
         {
             let mul_fixed_config: mul_fixed::Config<{ constants::NUM_WINDOWS }> = (&config).into();
-            mul_fixed_config.create_gate(meta);
+            mul_fixed_config.create_gate_scalar(meta);
         }
 
         // Create gate that is only used in short fixed-base scalar mul.
@@ -232,6 +234,12 @@ impl EccChip {
             let short_config: mul_fixed::short::Config<{ constants::NUM_WINDOWS_SHORT }> =
                 (&config).into();
             short_config.create_gate(meta);
+        }
+
+        // Create gate ths is only used in fixed-base mul using a base field element.
+        {
+            let base_field_config: mul_fixed::base_field_elem::Config = (&config).into();
+            base_field_config.create_gate(meta);
         }
 
         config
@@ -250,10 +258,10 @@ impl std::ops::Deref for EccScalarVar {
 }
 
 /// A full-width scalar used for fixed-base scalar multiplication.
-/// This is decomposed in chunks of `window_width` bits in little-endian order.
-/// For example, if `window_width` = 3, we will have [k_0, k_1, ..., k_n]
-/// where `scalar = k_0 + k_1 * (2^3) + ... + k_n * (2^3)^n` and each `k_i` is
-/// in the range [0..2^3).
+/// This is decomposed into 85 3-bit windows in little-endian order,
+/// i.e. `windows` = [k_0, k_1, ..., k_84] (for a 255-bit scalar)
+/// where `scalar = k_0 + k_1 * (2^3) + ... + k_84 * (2^3)^84` and
+/// each `k_i` is in the range [0..2^3).
 #[derive(Clone, Debug)]
 pub struct EccScalarFixed {
     value: Option<pallas::Scalar>,
@@ -261,15 +269,38 @@ pub struct EccScalarFixed {
 }
 
 /// A signed short scalar used for fixed-base scalar multiplication.
-/// This is decomposed in chunks of `window_width` bits in little-endian order.
-/// For example, if `window_width` = 3, we will have [k_0, k_1, ..., k_n]
-/// where `scalar = k_0 + k_1 * (2^3) + ... + k_n * (2^3)^n` and each `k_i` is
-/// in the range [0..2^3).
+/// A short scalar must have magnitude in the range [0..2^64), with
+/// a sign of either 1 or -1.
+/// This is decomposed into 22 3-bit windows in little-endian order,
+/// i.e. `windows` = [k_0, k_1, ..., k_21] (for a 64-bit magnitude)
+/// where `scalar = k_0 + k_1 * (2^3) + ... + k_84 * (2^3)^84` and
+/// each `k_i` is in the range [0..2^3).
+/// k_21 must be a single bit, i.e. 0 or 1.
 #[derive(Clone, Debug)]
 pub struct EccScalarFixedShort {
     magnitude: Option<pallas::Scalar>,
     sign: CellValue<pallas::Base>,
     windows: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS_SHORT }>,
+}
+
+/// A base field element used for fixed-base scalar multiplication.
+/// This is decomposed into 3-bit windows in little-endian order
+/// using a running sum `z`, where z_{i+1} = (z_i - a_i) / (2^3)
+/// for element α = a_0 + (2^3) a_1 + ... + (2^{3(n-1)}) a_{n-1}.
+/// Each `a_i` is in the range [0..2^3).
+///
+/// `windows` = [z_1, ..., z_85], where we expect z_85 = 0.
+/// Since z_0 is initialized as α, we store it as `base_field_elem`.
+#[derive(Clone, Debug)]
+struct EccBaseFieldElemFixed {
+    base_field_elem: CellValue<pallas::Base>,
+    running_sum: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS }>,
+}
+
+impl EccBaseFieldElemFixed {
+    fn base_field_elem(&self) -> CellValue<pallas::Base> {
+        self.base_field_elem
+    }
 }
 
 impl EccInstructions<pallas::Affine> for EccChip {
@@ -424,6 +455,19 @@ impl EccInstructions<pallas::Affine> for EccChip {
         layouter.assign_region(
             || format!("short fixed-base mul of {:?}", base),
             |mut region| config.assign_region(scalar, base, 0, &mut region),
+        )
+    }
+
+    fn mul_fixed_base_field_elem(
+        &self,
+        layouter: &mut impl Layouter<pallas::Base>,
+        base_field_elem: CellValue<pallas::Base>,
+        base: &Self::FixedPoints,
+    ) -> Result<Self::Point, Error> {
+        let config: mul_fixed::base_field_elem::Config = self.config().into();
+        layouter.assign_region(
+            || format!("base field elem fixed-base mul of {:?}", base),
+            |mut region| config.assign_region(base_field_elem, *base, 0, &mut region),
         )
     }
 }
