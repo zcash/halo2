@@ -1,5 +1,8 @@
 use super::{add, CellValue, EccConfig, EccPoint, EccScalarVar, Var};
-use crate::constants::{NUM_COMPLETE_BITS, T_Q};
+use crate::{
+    circuit::gadget::utilities::copy,
+    constants::{NUM_COMPLETE_BITS, T_Q},
+};
 use std::ops::{Deref, Range};
 
 use bigint::U256;
@@ -7,7 +10,7 @@ use ff::PrimeField;
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Layouter, Region},
-    plonk::{ConstraintSystem, Error, Permutation, Selector},
+    plonk::{ConstraintSystem, Error, Expression, Permutation, Selector},
     poly::Rotation,
 };
 
@@ -36,8 +39,10 @@ const COMPLETE_RANGE: Range<usize> = INCOMPLETE_LEN..(INCOMPLETE_LEN + NUM_COMPL
 pub struct Config {
     // Selector used to constrain the initialization of the running sum to be zero.
     q_init_z: Selector,
-    // Selector used to check z_0 = 2*z_1 + k_0
-    q_mul_z: Selector,
+    // Selector used to check z_i = 2*z_{i+1} + k_i
+    q_mul_decompose_var: Selector,
+    // Selector used to check switching logic on LSB
+    q_mul_lsb: Selector,
     // Permutation
     perm: Permutation,
     // Configuration used in complete addition
@@ -56,7 +61,8 @@ impl From<&EccConfig> for Config {
     fn from(ecc_config: &EccConfig) -> Self {
         let config = Self {
             q_init_z: ecc_config.q_init_z,
-            q_mul_z: ecc_config.q_mul_z,
+            q_mul_decompose_var: ecc_config.q_mul_decompose_var,
+            q_mul_lsb: ecc_config.q_mul_lsb,
             perm: ecc_config.perm.clone(),
             add_config: ecc_config.into(),
             hi_config: ecc_config.into(),
@@ -79,6 +85,10 @@ impl From<&EccConfig> for Config {
             !add_config_advices.contains(&config.hi_config.z),
             "hi_config z cannot overlap with complete addition columns."
         );
+        assert!(
+            !add_config_advices.contains(&config.complete_config.z_complete),
+            "complete_config z cannot overlap with complete addition columns."
+        );
 
         config
     }
@@ -92,6 +102,35 @@ impl Config {
             let z = meta.query_advice(self.hi_config.z, Rotation::cur());
 
             vec![q_init_z * z]
+        });
+
+        // If `lsb` is 0, (x, y) = (x_p, -y_p). If `lsb` is 1, (x, y) = (0,0).
+        meta.create_gate("LSB check", |meta| {
+            let q_mul_lsb = meta.query_selector(self.q_mul_lsb);
+
+            let z_1 = meta.query_advice(self.complete_config.z_complete, Rotation::prev());
+            let z_0 = meta.query_advice(self.complete_config.z_complete, Rotation::cur());
+            let x_p = meta.query_advice(self.add_config.x_p, Rotation::next());
+            let y_p = meta.query_advice(self.add_config.y_p, Rotation::next());
+            let x = meta.query_advice(self.add_config.x_qr, Rotation::next());
+            let y = meta.query_advice(self.add_config.y_qr, Rotation::next());
+
+            //    z_0 = 2 * z_1 + k_0
+            // => k_0 = z_0 - 2 * z_1
+            let lsb = z_0 - z_1 * pallas::Base::from_u64(2);
+
+            let one = Expression::Constant(pallas::Base::one());
+
+            // `lsb` = 0 => (x, y) = (x_p, -y_p)
+            let lsb0_x = (one.clone() - lsb.clone()) * (x.clone() - x_p);
+            let lsb0_y = (one - lsb.clone()) * (y.clone() + y_p);
+
+            // `lsb` = 1 => (x, y) = (0,0)
+            let lsb1_x = lsb.clone() * x;
+            let lsb1_y = lsb * y;
+
+            std::array::IntoIter::new([lsb0_x, lsb0_y, lsb1_x, lsb1_y])
+                .map(move |poly| q_mul_lsb.clone() * poly)
         });
 
         self.hi_config.create_gate(meta);
@@ -245,6 +284,9 @@ impl Config {
         z_1: Z<pallas::Base>,
         lsb: Option<bool>,
     ) -> Result<(EccPoint, Z<pallas::Base>), Error> {
+        // Enforce switching logic on LSB using a custom gate
+        self.q_mul_lsb.enable(region, offset)?;
+
         // Assign z_0 = 2⋅z_1 + k_0
         let z_0 = {
             let z_0_val = z_1.value().zip(lsb).map(|(z_1, lsb)| {
@@ -259,13 +301,33 @@ impl Config {
             )?;
 
             // Check that z_0 was properly derived from z_1.
-            self.q_mul_z.enable(region, offset)?;
+            self.q_mul_decompose_var.enable(region, offset)?;
 
             Z(CellValue::new(z_0_cell, z_0_val))
         };
 
+        let offset = offset + 1;
+
+        // Copy in `x_p`, `y_p` to use in the LSB gate
+        copy(
+            region,
+            || "copy x_p",
+            self.add_config.x_p,
+            offset,
+            &base.x(),
+            &self.perm,
+        )?;
+        copy(
+            region,
+            || "copy y_p",
+            self.add_config.y_p,
+            offset,
+            &base.y(),
+            &self.perm,
+        )?;
+
         // If `lsb` is 0, return `Acc + (-P)`. If `lsb` is 1, simply return `Acc + 0`.
-        let x_p = if let Some(lsb) = lsb {
+        let x = if let Some(lsb) = lsb {
             if !lsb {
                 base.x.value()
             } else {
@@ -274,7 +336,8 @@ impl Config {
         } else {
             None
         };
-        let y_p = if let Some(lsb) = lsb {
+
+        let y = if let Some(lsb) = lsb {
             if !lsb {
                 base.y.value().map(|y_p| -y_p)
             } else {
@@ -284,24 +347,26 @@ impl Config {
             None
         };
 
-        let x_p_cell = region.assign_advice(
-            || "x_p",
-            self.add_config.x_p,
+        let x_cell = region.assign_advice(
+            || "x",
+            self.add_config.x_qr,
             offset,
-            || x_p.ok_or(Error::SynthesisError),
+            || x.ok_or(Error::SynthesisError),
         )?;
 
-        let y_p_cell = region.assign_advice(
-            || "y_p",
-            self.add_config.y_p,
+        let y_cell = region.assign_advice(
+            || "y",
+            self.add_config.y_qr,
             offset,
-            || y_p.ok_or(Error::SynthesisError),
+            || y.ok_or(Error::SynthesisError),
         )?;
 
         let p = EccPoint {
-            x: CellValue::<pallas::Base>::new(x_p_cell, x_p),
-            y: CellValue::<pallas::Base>::new(y_p_cell, y_p),
+            x: CellValue::<pallas::Base>::new(x_cell, x),
+            y: CellValue::<pallas::Base>::new(y_cell, y),
         };
+
+        let offset = offset + 1;
 
         // Return the result of the final complete addition as `[scalar]B`
         let result = self.add_config.assign_region(&p, &acc, offset, region)?;

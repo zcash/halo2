@@ -91,12 +91,12 @@ pub struct EccConfig {
     pub q_mul_hi: Selector,
     /// Variable-base scalar multiplication (lo half)
     pub q_mul_lo: Selector,
-    /// Selector used in scalar decomposition for variable-base scalar mul
-    pub q_mul_decompose_var: Selector,
-    /// Selector used in scalar decomposition for variable-base scalar mul
+    /// Selector used to initialize running sum to zero in variable-base scalar mul
     pub q_init_z: Selector,
-    /// Variable-base scalar multiplication (final scalar)
-    pub q_mul_z: Selector,
+    /// Selector used to enforce boolean decomposition in variable-base scalar mul
+    pub q_mul_decompose_var: Selector,
+    /// Selector used to enforce switching logic on LSB in variable-base scalar mul
+    pub q_mul_lsb: Selector,
     /// Variable-base scalar multiplication (overflow check)
     pub q_mul_overflow: Selector,
 
@@ -171,10 +171,10 @@ impl EccChip {
             q_add: meta.selector(),
             q_mul_hi: meta.selector(),
             q_mul_lo: meta.selector(),
-            q_mul_decompose_var: meta.selector(),
             q_init_z: meta.selector(),
-            q_mul_z: meta.selector(),
+            q_mul_decompose_var: meta.selector(),
             q_mul_overflow: meta.selector(),
+            q_mul_lsb: meta.selector(),
             mul_fixed: meta.fixed_column(),
             q_mul_fixed_short: meta.selector(),
             base_field_fixed: meta.fixed_column(),

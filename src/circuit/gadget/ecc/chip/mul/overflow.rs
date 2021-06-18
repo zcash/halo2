@@ -17,7 +17,7 @@ use std::iter;
 
 pub struct Config {
     // Selector to check decomposition of lsb
-    q_mul_z: Selector,
+    q_mul_decompose_var: Selector,
     // Selector to check z_0 = alpha + t_q (mod p)
     q_mul_overflow: Selector,
     // 10-bit lookup table
@@ -31,7 +31,7 @@ pub struct Config {
 impl From<&EccConfig> for Config {
     fn from(ecc_config: &EccConfig) -> Self {
         Self {
-            q_mul_z: ecc_config.q_mul_z,
+            q_mul_decompose_var: ecc_config.q_mul_decompose_var,
             q_mul_overflow: ecc_config.q_mul_overflow,
             lookup_config: ecc_config.lookup_config.clone(),
             advices: [

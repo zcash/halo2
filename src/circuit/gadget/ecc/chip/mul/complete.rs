@@ -11,7 +11,7 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 
 pub struct Config {
     // Selector used to constrain the cells used in complete addition.
-    q_mul_z: Selector,
+    q_mul_decompose_var: Selector,
     // Advice column used to decompose scalar in complete addition.
     pub z_complete: Column<Advice>,
     // Permutation
@@ -23,7 +23,7 @@ pub struct Config {
 impl From<&EccConfig> for Config {
     fn from(ecc_config: &EccConfig) -> Self {
         let config = Self {
-            q_mul_z: ecc_config.q_mul_z,
+            q_mul_decompose_var: ecc_config.q_mul_decompose_var,
             z_complete: ecc_config.advices[9],
             perm: ecc_config.perm.clone(),
             add_config: ecc_config.into(),
@@ -48,7 +48,7 @@ impl Config {
         meta.create_gate(
             "Decompose scalar for complete bits of variable-base mul",
             |meta| {
-                let q_mul_z = meta.query_selector(self.q_mul_z);
+                let q_mul_decompose_var = meta.query_selector(self.q_mul_decompose_var);
                 let z_cur = meta.query_advice(self.z_complete, Rotation::cur());
                 let z_prev = meta.query_advice(self.z_complete, Rotation::prev());
 
@@ -57,7 +57,7 @@ impl Config {
                 // (k_i) ⋅ (k_i - 1) = 0
                 let bool_check = k.clone() * (k + Expression::Constant(-pallas::Base::one()));
 
-                vec![q_mul_z * bool_check]
+                vec![q_mul_decompose_var * bool_check]
             },
         );
     }
@@ -84,9 +84,9 @@ impl Config {
             // Each iteration uses 2 rows (two complete additions)
             let row = 2 * row;
             // Check scalar decomposition for each iteration. Since the gate enabled by
-            // `q_mul_z` queries the previous row, we enable the selector on
+            // `q_mul_decompose_var` queries the previous row, we enable the selector on
             // `row + offset + 1` (instead of `row + offset`).
-            self.q_mul_z.enable(region, row + offset + 1)?;
+            self.q_mul_decompose_var.enable(region, row + offset + 1)?;
         }
 
         // Use x_a, y_a output from incomplete addition

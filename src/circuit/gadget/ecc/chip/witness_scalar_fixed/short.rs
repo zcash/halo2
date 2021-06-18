@@ -33,7 +33,7 @@ impl Config {
             let one = Expression::Constant(pallas::Base::one());
 
             let last_window_check = last_window.clone() * (one.clone() - last_window);
-            let sign_check = (one.clone() + sign.clone()) * (one - sign);
+            let sign_check = sign.clone() * sign - one;
 
             vec![
                 q_scalar_fixed_short.clone() * last_window_check,
