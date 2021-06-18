@@ -30,7 +30,7 @@ $\textsf{Hash}(M)$:
 
 Let $\textsf{ShortHash}(M)$ be the $x$-coordinate of $\textsf{Hash}(M)$. (This assumes that $\mathbb{G}$ is a prime-order elliptic curve in short Weierstrass form, as is the case for Pallas and Vesta.)
 
-> For efficiency we use incomplete addition in the above algorithm, because we are able to prove ([Theorem 5.4.4](https://zips.z.cash/protocol/protocol.pdf#thmsinsemillaex) in the protocol specification) that an exceptional case for addition would lead to finding a discrete logarithm, which can be assumed to occur with negligible probability even for adversarial input.
+> It is slightly more efficient to express a double-and-add $[2] A + R$ as $(A + R) + A$. We also use incomplete additions: it is shown in the [Sinsemilla security argument](https://zips.z.cash/protocol/protocol.pdf#sinsemillasecurity) that in the case where $\mathbb{G}$ is a prime-order short Weierstrass elliptic curve, an exceptional case for addition would lead to finding a discrete logarithm, which can be assumed to occur with negligible probability even for adversarial input.
 
 ### Use as a commitment scheme
 Choose another generator $H$ independently of $Q$ and $P[0..2^k - 1]$.
@@ -45,8 +45,6 @@ Note that unlike a simple Pedersen commitment, this commitment scheme ($\textsf{
 
 ## Efficient implementation
 The aim of the design is to optimize the number of bits that can be processed for each step of the algorithm (which requires a doubling and addition in $\mathbb{G}$) for a given table size. Using a single table of size $2^k$ group elements, we can process $k$ bits at a time.
-
-Note that it is slightly more efficient to express a double-and-add $[2] A + R$ as $(A + R) + A$. It is shown in the [Sinsemilla security argument](https://zips.z.cash/protocol/protocol.pdf#sinsemillasecurity) that in the case where $\mathbb{G}$ is a prime-order short Weierstrass elliptic curve, provided a negligible probability of failure is acceptable, it suffices to use incomplete additions.
 
 ## Constraint program
 Let $\mathcal{P} = \left\{(j,\, x_{P[j]},\, y_{P[j]}) \text{ for } j \in \{0..2^k - 1\}\right\}$.
