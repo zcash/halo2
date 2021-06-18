@@ -268,35 +268,34 @@ impl Permutation {
 ///
 /// A denominator of zero maps to an assigned value of zero.
 #[derive(Clone, Copy, Debug)]
-pub struct Assigned<F> {
-    numerator: F,
-    denominator: F,
+pub enum Assigned<F> {
+    /// The field element zero.
+    Zero,
+    /// A value that does not require inversion to evaluate.
+    Trivial(F),
+    /// A value stored as a fraction to enable batch inversion.
+    Rational(F, F),
 }
 
 impl<F: Field> From<F> for Assigned<F> {
     fn from(numerator: F) -> Self {
-        Assigned {
-            numerator,
-            denominator: F::one(),
-        }
+        Assigned::Trivial(numerator)
     }
 }
 
 impl<F: Field> From<(F, F)> for Assigned<F> {
     fn from((numerator, denominator): (F, F)) -> Self {
-        Assigned {
-            numerator,
-            denominator,
-        }
+        Assigned::Rational(numerator, denominator)
     }
 }
 
 impl<F: Field> Neg for Assigned<F> {
     type Output = Assigned<F>;
     fn neg(self) -> Self::Output {
-        Assigned {
-            numerator: -self.numerator,
-            denominator: self.denominator,
+        match self {
+            Self::Zero => Self::Zero,
+            Self::Trivial(numerator) => Self::Trivial(-numerator),
+            Self::Rational(numerator, denominator) => Self::Rational(-numerator, denominator),
         }
     }
 }
@@ -304,9 +303,21 @@ impl<F: Field> Neg for Assigned<F> {
 impl<F: Field> Add for Assigned<F> {
     type Output = Assigned<F>;
     fn add(self, rhs: Assigned<F>) -> Assigned<F> {
-        Assigned {
-            numerator: self.numerator * rhs.denominator + self.denominator * rhs.numerator,
-            denominator: self.denominator * rhs.denominator,
+        match (self, rhs) {
+            (Self::Zero, _) => rhs,
+            (_, Self::Zero) => self,
+            (Self::Trivial(lhs), Self::Trivial(rhs)) => Self::Trivial(lhs + rhs),
+            (Self::Rational(numerator, denominator), Self::Trivial(other))
+            | (Self::Trivial(other), Self::Rational(numerator, denominator)) => {
+                Self::Rational(numerator + denominator * other, denominator)
+            }
+            (
+                Self::Rational(lhs_numerator, lhs_denominator),
+                Self::Rational(rhs_numerator, rhs_denominator),
+            ) => Self::Rational(
+                lhs_numerator * rhs_denominator + lhs_denominator * rhs_numerator,
+                lhs_denominator * rhs_denominator,
+            ),
         }
     }
 }
@@ -314,10 +325,7 @@ impl<F: Field> Add for Assigned<F> {
 impl<F: Field> Add<F> for Assigned<F> {
     type Output = Assigned<F>;
     fn add(self, rhs: F) -> Assigned<F> {
-        Assigned {
-            numerator: self.numerator + self.denominator * rhs,
-            denominator: self.denominator,
-        }
+        self + Self::Trivial(rhs)
     }
 }
 
@@ -338,9 +346,20 @@ impl<F: Field> Sub<F> for Assigned<F> {
 impl<F: Field> Mul for Assigned<F> {
     type Output = Assigned<F>;
     fn mul(self, rhs: Assigned<F>) -> Assigned<F> {
-        Assigned {
-            numerator: self.numerator * rhs.numerator,
-            denominator: self.denominator * rhs.denominator,
+        match (self, rhs) {
+            (Self::Zero, _) | (_, Self::Zero) => Self::Zero,
+            (Self::Trivial(lhs), Self::Trivial(rhs)) => Self::Trivial(lhs * rhs),
+            (Self::Rational(numerator, denominator), Self::Trivial(other))
+            | (Self::Trivial(other), Self::Rational(numerator, denominator)) => {
+                Self::Rational(numerator * other, denominator)
+            }
+            (
+                Self::Rational(lhs_numerator, lhs_denominator),
+                Self::Rational(rhs_numerator, rhs_denominator),
+            ) => Self::Rational(
+                lhs_numerator * rhs_numerator,
+                lhs_denominator * rhs_denominator,
+            ),
         }
     }
 }
@@ -348,29 +367,35 @@ impl<F: Field> Mul for Assigned<F> {
 impl<F: Field> Mul<F> for Assigned<F> {
     type Output = Assigned<F>;
     fn mul(self, rhs: F) -> Assigned<F> {
-        Assigned {
-            numerator: self.numerator * rhs,
-            denominator: self.denominator,
-        }
+        self * Self::Trivial(rhs)
     }
 }
 
 impl<F: Field> Assigned<F> {
     /// Returns the numerator.
     pub fn numerator(&self) -> F {
-        self.numerator
+        match self {
+            Self::Zero => F::zero(),
+            Self::Trivial(x) => *x,
+            Self::Rational(numerator, _) => *numerator,
+        }
     }
 
-    /// Returns the denominator.
-    pub fn denominator(&self) -> F {
-        self.denominator
+    /// Returns the denominator, if non-trivial.
+    pub fn denominator(&self) -> Option<F> {
+        match self {
+            Self::Zero => None,
+            Self::Trivial(_) => None,
+            Self::Rational(_, denominator) => Some(*denominator),
+        }
     }
 
     /// Inverts this assigned value.
     pub fn invert(&self) -> Self {
-        Assigned {
-            numerator: self.denominator,
-            denominator: self.numerator,
+        match self {
+            Self::Zero => Self::Zero,
+            Self::Trivial(x) => Self::Rational(F::one(), *x),
+            Self::Rational(numerator, denominator) => Self::Rational(*denominator, *numerator),
         }
     }
 
@@ -379,10 +404,16 @@ impl<F: Field> Assigned<F> {
     ///
     /// If the denominator is zero, this returns zero.
     pub fn evaluate(self) -> F {
-        if self.denominator == F::one() {
-            self.numerator
-        } else {
-            self.numerator * self.denominator.invert().unwrap_or(F::zero())
+        match self {
+            Self::Zero => F::zero(),
+            Self::Trivial(x) => x,
+            Self::Rational(numerator, denominator) => {
+                if denominator == F::one() {
+                    numerator
+                } else {
+                    numerator * denominator.invert().unwrap_or(F::zero())
+                }
+            }
         }
     }
 }
