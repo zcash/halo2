@@ -1,6 +1,5 @@
 use super::super::{CellValue, EccConfig, EccScalarFixedShort, Var};
 use crate::constants::{L_VALUE, NUM_WINDOWS_SHORT};
-use ff::PrimeFieldBits;
 use halo2::{
     circuit::Region,
     plonk::{ConstraintSystem, Error, Expression, Selector},
@@ -25,14 +24,20 @@ impl From<&EccConfig> for Config {
 impl Config {
     pub fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // Check that sign is either 1 or -1.
-        meta.create_gate("check sign", |meta| {
+        // Check that last window is either 0 or 1.
+        meta.create_gate("Check sign and last window", |meta| {
             let q_scalar_fixed_short = meta.query_selector(self.q_scalar_fixed_short);
+            let last_window = meta.query_advice(self.super_config.window, Rotation::prev());
             let sign = meta.query_advice(self.super_config.window, Rotation::cur());
 
+            let one = Expression::Constant(pallas::Base::one());
+
+            let last_window_check = last_window.clone() * (one.clone() - last_window);
+            let sign_check = (one.clone() + sign.clone()) * (one - sign);
+
             vec![
-                q_scalar_fixed_short
-                    * (sign.clone() + Expression::Constant(pallas::Base::one()))
-                    * (sign - Expression::Constant(pallas::Base::one())),
+                q_scalar_fixed_short.clone() * last_window_check,
+                q_scalar_fixed_short * sign_check,
             ]
         });
     }
@@ -45,10 +50,7 @@ impl Config {
         value: Option<pallas::Scalar>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<EccScalarFixedShort, Error>
-    where
-        pallas::Scalar: PrimeFieldBits,
-    {
+    ) -> Result<EccScalarFixedShort, Error> {
         // Enable `q_scalar_fixed_short`
         self.q_scalar_fixed_short
             .enable(region, offset + NUM_WINDOWS_SHORT)?;
