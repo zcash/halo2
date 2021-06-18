@@ -134,10 +134,12 @@ $$
 
 By gating the lookup expression on $q_{S1}$, we avoid the need to fill in unused cells with dummy values to pass the lookup argument. The optimized lookup value (using a default index of $0$) is:
 
-\begin{array}{lll}
+$$
+\begin{array}{ll}
 (&q_{S1} \cdot m_{i+1}, \\
- &q_{S1} \cdot x_{P,i} &+& (1 - q_{S1}) \cdot x_{P,0}, \\
- &q_{S1} \cdot y_{P,i} &+& (1 - q_{S1}) \cdot y_{P,0} \;\;\;)
+ &q_{S1} \cdot x_{P,i} + (1 - q_{S1}) \cdot x_{P,0}, \\
+ &q_{S1} \cdot y_{P,i} + (1 - q_{S1}) \cdot y_{P,0} \;\;\;)
 \end{array}
+$$
 
 This increases the degree of the lookup argument to $6$.
