@@ -32,6 +32,14 @@ fn cell_value<F: Field>(cell: Option<F>) -> F {
 pub enum VerifyFailure {
     /// A cell used in an active gate was not assigned to.
     Cell {
+        /// The index of the region in which this cell should be assigned. These indices
+        /// are assigned in the order in which `Layouter::assign_region` is called during
+        /// `Circuit::synthesize`.
+        region_index: usize,
+        /// The name of the region in which this cell should be assigned. This is
+        /// specified by the region creator (such as a chip implementation), and is not
+        /// enforced to be unique.
+        region_name: String,
         /// The column in which this cell is located.
         column: Column<Any>,
         /// The row in which this cell is located.
@@ -90,6 +98,8 @@ impl fmt::Display for VerifyFailure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Cell {
+                region_index,
+                region_name,
                 column,
                 row,
                 gate_index,
@@ -97,8 +107,8 @@ impl fmt::Display for VerifyFailure {
             } => {
                 write!(
                     f,
-                    "Cell ({:?}, {}) was not assigned to, but it is used by active gate {} ('{}').",
-                    column, row, gate_index, gate_name
+                    "Cell ({:?}, {}) was not assigned to in region {} ('{}'), but it is used by active gate {} ('{}').",
+                    column, row, region_index, region_name, gate_index, gate_name
                 )
             }
             Self::Constraint {
@@ -138,6 +148,18 @@ impl fmt::Display for VerifyFailure {
             }
         }
     }
+}
+
+#[derive(Debug)]
+struct Region {
+    /// The name of the region. Not required to be unique.
+    name: String,
+    /// The selectors that have been enabled in this region. All other selectors are by
+    /// construction not enabled.
+    enabled_selectors: HashMap<Selector, Vec<usize>>,
+    /// The cells assigned in this region. We store this as a `Vec` so that if any cells
+    /// are double-assigned, they will be visibly darker.
+    cells: Vec<(Column<Any>, usize)>,
 }
 
 /// A test prover for debugging circuits.
@@ -234,9 +256,11 @@ pub struct MockProver<F: Group + Field> {
     n: u32,
     cs: ConstraintSystem<F>,
 
-    /// The selectors that have been enabled in the circuit. All other selectors are by
-    /// construction not enabled.
-    enabled_selectors: HashMap<Selector, Vec<usize>>,
+    /// The regions in the circuit.
+    regions: Vec<Region>,
+    /// The current region being assigned to. Will be `None` after the circuit has been
+    /// synthesized.
+    current_region: Option<Region>,
 
     // The fixed cells in the circuit, arranged as [column][row].
     fixed: Vec<Vec<Option<F>>>,
@@ -249,14 +273,22 @@ pub struct MockProver<F: Group + Field> {
 }
 
 impl<F: Field + Group> Assignment<F> for MockProver<F> {
-    fn enter_region<NR, N>(&mut self, _: N)
+    fn enter_region<NR, N>(&mut self, name: N)
     where
         NR: Into<String>,
         N: FnOnce() -> NR,
     {
+        assert!(self.current_region.is_none());
+        self.current_region = Some(Region {
+            name: name().into(),
+            enabled_selectors: HashMap::default(),
+            cells: vec![],
+        });
     }
 
-    fn exit_region(&mut self) {}
+    fn exit_region(&mut self) {
+        self.regions.push(self.current_region.take().unwrap());
+    }
 
     fn enable_selector<A, AR>(
         &mut self,
@@ -268,8 +300,12 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
-        // Track that this selector was enabled.
-        self.enabled_selectors
+        // Track that this selector was enabled. We require that all selectors are enabled
+        // inside some region (i.e. no floating selectors).
+        self.current_region
+            .as_mut()
+            .unwrap()
+            .enabled_selectors
             .entry(*selector)
             .or_default()
             .push(row);
@@ -290,6 +326,10 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
+        if let Some(region) = self.current_region.as_mut() {
+            region.cells.push((column.into(), row));
+        }
+
         *self
             .advice
             .get_mut(column.index())
@@ -311,6 +351,10 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
+        if let Some(region) = self.current_region.as_mut() {
+            region.cells.push((column.into(), row));
+        }
+
         *self
             .fixed
             .get_mut(column.index())
@@ -389,7 +433,8 @@ impl<F: FieldExt> MockProver<F> {
         let mut prover = MockProver {
             n,
             cs,
-            enabled_selectors: HashMap::default(),
+            regions: vec![],
+            current_region: None,
             fixed,
             advice,
             instance,
@@ -406,14 +451,13 @@ impl<F: FieldExt> MockProver<F> {
     pub fn verify(&self) -> Result<(), Vec<VerifyFailure>> {
         let n = self.n as i32;
 
-        // Check that all cells used in instantiated gates have been assigned to.
-        let selector_errors = self
-            .cs
-            .gates
-            .iter()
-            .enumerate()
-            .flat_map(|(gate_index, gate)| {
-                gate.queried_selectors()
+        // Check that within each region, all cells used in instantiated gates have been
+        // assigned to.
+        let selector_errors = self.regions.iter().enumerate().flat_map(|(r_i, r)| {
+            r.enabled_selectors.iter().flat_map(move |(selector, at)| {
+                // Find the gates enabled by this selector
+                self.cs
+                    .gates
                     .iter()
                     // Assume that if a queried selector is enabled, the user wants to use the
                     // corresponding gate in some way.
@@ -422,8 +466,9 @@ impl<F: FieldExt> MockProver<F> {
                     // un-enabled keeps a gate enabled. We could alternatively require that
                     // every selector is explicitly enabled or disabled on every row? But that
                     // seems messy and confusing.
-                    .filter_map(|s| self.enabled_selectors.get(&s))
-                    .flat_map(move |at| {
+                    .enumerate()
+                    .filter(move |(_, g)| g.queried_selectors().contains(&selector))
+                    .flat_map(move |(gate_index, gate)| {
                         at.iter().flat_map(move |selector_row| {
                             // Selectors are queried with no rotation.
                             let gate_row = *selector_row as i32;
@@ -433,19 +478,12 @@ impl<F: FieldExt> MockProver<F> {
                                 let cell_row = ((gate_row + n + cell.rotation.0) % n) as usize;
 
                                 // Check that it was assigned!
-                                if match cell.column.column_type() {
-                                    Any::Advice => {
-                                        self.advice[cell.column.index()][cell_row].is_some()
-                                    }
-                                    Any::Fixed => {
-                                        self.fixed[cell.column.index()][cell_row].is_some()
-                                    }
-                                    // Instance column cells are assigned outside the circuit.
-                                    Any::Instance => true,
-                                } {
+                                if r.cells.contains(&(cell.column, cell_row)) {
                                     None
                                 } else {
                                     Some(VerifyFailure::Cell {
+                                        region_index: r_i,
+                                        region_name: r.name.clone(),
                                         column: cell.column,
                                         row: cell_row,
                                         gate_index,
@@ -455,7 +493,8 @@ impl<F: FieldExt> MockProver<F> {
                             })
                         })
                     })
-            });
+            })
+        });
 
         // Check that all gates are satisfied for all rows.
         let gate_errors =
@@ -719,6 +758,8 @@ mod tests {
         assert_eq!(
             prover.verify(),
             Err(vec![VerifyFailure::Cell {
+                region_index: 0,
+                region_name: "Faulty synthesis".to_owned(),
                 column: Column::new(1, Any::Advice),
                 row: FAULTY_ROW,
                 gate_index: 0,
