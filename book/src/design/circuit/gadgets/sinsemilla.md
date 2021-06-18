@@ -53,14 +53,14 @@ Input: $m_{1..=n}$. (The message words are 1-indexed here, as in the [protocol s
 
 Output: $(x_{A,n},\, y_{A,n})$.
 
-$(x_{A,0},\, y_{A,0}) = Q$
-for $i$ from $0$ up to $n-1$:
-    $y_{P,i} = y_{A,i} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i})$
-    $x_{R,i} = \lambda_{1,i}^2 - x_{A,i} - x_{P,i}$
-    $2 \cdot y_{A,i} = (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i})$
-    $(m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P}$
-    $\lambda_{2,i}^2 = x_{A,i+1} + x_{R,i} + x_{A,i}$
-    $\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) = y_{A,i} + y_{A,i+1}$
+- $(x_{A,0},\, y_{A,0}) = Q$
+- for $i$ from $0$ up to $n-1$:
+  - $y_{P,i} = y_{A,i} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i})$
+  - $x_{R,i} = \lambda_{1,i}^2 - x_{A,i} - x_{P,i}$
+  - $2 \cdot y_{A,i} = (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i})$
+  - $(m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P}$
+  - $\lambda_{2,i}^2 = x_{A,i+1} + x_{R,i} + x_{A,i}$
+  - $\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) = y_{A,i} + y_{A,i+1}$
 
 
 ## PLONK / Halo 2 constraints
@@ -102,24 +102,22 @@ $$
 
 ### Optimized Sinsemilla gate
 
-$$
-\begin{array}{lrcl}
+$\begin{array}{lrcl}
 \text{For } i \in [0, n), \text{ let} &x_{R,i} &=& \lambda_{1,i}^2 - x_{A,i} - x_{P,i} \\
                                       &Y_{A,i} &=& (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) \\
                                       &y_{P,i} &=& Y_{A,i}/2 - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) \\
                                       &m_{i+1} &=& z_{i} - 2^k \cdot q_{S2,i} \cdot z_{i+1} \\
                                       &q_{S3}  &=& q_{S2} \cdot (q_{S2} - 1)
-\end{array}
-$$
+\end{array}$
 
 The Halo 2 circuit API can automatically substitute $y_{P,i}$, $x_{R,i}$, $y_{A,i}$, and $y_{A,i+1}$, so we don't need to do that manually.
 
-$x_{A,0} = x_Q$
-$2 \cdot y_Q = Y_{A,0}$
-for $i$ from $0$ up to $n-1$:
-    $(m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P}$
-    $\lambda_{2,i}^2 = x_{A,i+1} + x_{R,i} + x_{A,i}$
-    $4 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) = 2 \cdot Y_{A,i} + (2 - q_{S3}) \cdot Y_{A,i+1} + 2 q_{S3} \cdot y_{A,n}$
+- $x_{A,0} = x_Q$
+- $2 \cdot y_Q = Y_{A,0}$
+- for $i$ from $0$ up to $n-1$:
+  - $(m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P}$
+  - $\lambda_{2,i}^2 = x_{A,i+1} + x_{R,i} + x_{A,i}$
+  - $4 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) = 2 \cdot Y_{A,i} + (2 - q_{S3}) \cdot Y_{A,i+1} + 2 q_{S3} \cdot y_{A,n}$
 
 Note that each term of the last constraint is multiplied by $4$ relative to the constraint program given earlier. This is a small optimization that avoids divisions by $2$.
 
@@ -127,7 +125,7 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-4   & fixed\_q_y \cdot (2 \cdot fixed\_q_y - Y_{A,0}) = 0 \\\hline
+4   & fixed\rule{0.4em}{0.02ex}y_Q \cdot (2 \cdot fixed\rule{0.4em}{0.02ex}y_Q - Y_{A,0}) = 0 \\\hline
 5   & q_{S1,i} \Rightarrow (m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P} \\\hline
 3   & q_{S1,i} \cdot \big(\lambda_{2,i}^2 - (x_{A,i+1} + x_{R,i} + x_{A,i})\big) \\\hline
 6   & q_{S1,i} \cdot \left(4 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - (2 \cdot Y_{A,i} + (2 - q_{S3,i}) \cdot Y_{A,i+1} + 2 \cdot q_{S3,i} \cdot y_{A,n})\right) = 0 \\\hline
