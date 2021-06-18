@@ -9,24 +9,28 @@ Sinsemilla is roughly 4 times less efficient than the algebraic hashes Rescue an
 
 The general approach is to split the message into $k$-bit pieces, and for each piece, select from a table of $2^k$ bases in our cryptographic group. We combine the selected bases using a double-and-add algorithm. This ends up being provably as secure as a vector Pedersen hash, and makes advantageous use of the lookup facility supported by Halo 2.
 
-## Specification
+## Description
 
-This section is an outline of how Sinsemilla works: for the normative specification, refer to [§5.4.1.9 Sinsemilla Hash Function](https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash) in the protocol spec.
+This section is an outline of how Sinsemilla works: for the normative specification, refer to [§5.4.1.9 Sinsemilla Hash Function](https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash) in the protocol spec. The incomplete point addition operator, ⸭, that we use below is also defined there.
 
 Let $\mathbb{G}$ be a cryptographic group of prime order $q$. We write $\mathbb{G}$ additively, with identity $\mathcal{O}$, and using $[m] P$ for scalar multiplication of $P$ by $m$.
 
-Let $k \geq 1$ be an integer chosen based on efficiency considerations (the table size will be $2^k$). Let $n$ be a **fixed** integer such that messages are $kn$ bits, where $2^n \leq \frac{q-1}{2}$. We use zero-padding to the next multiple of $k$ bits if necessary.
+Let $k \geq 1$ be an integer chosen based on efficiency considerations (the table size will be $2^k$). Let $n$ be an integer, fixed for each instantiation, such that messages are $kn$ bits, where $2^n \leq \frac{q-1}{2}$. We use zero-padding to the next multiple of $k$ bits if necessary.
 
 $\textsf{Setup}$: Choose $Q$ and $P[0..2^k - 1]$ as $2^k + 1$ independent, verifiably random generators of $\mathbb{G}$, using a suitable hash into $\mathbb{G}$, such that none of $Q$ or $P[0..2^k - 1]$ are $\mathcal{O}$.
 
+> In Orchard, we define $Q$ to be dependent on a domain separator $D$. The protocol specification uses $\mathcal{Q}(D)$ in place of $Q$ and $\mathcal{S}(m)$ in place of $P[m]$.
+
 $\textsf{Hash}(M)$:
 - Split $M$ into $n$ groups of $k$ bits. Interpret each group as a $k$-bit little-endian integer $m_i$.
-- $A_1 := Q$
-- for $i$ from $1$ up to $n$:
-  - $A_{i+1} := [2] A_i ⸭ P[m_i] = (A_i ⸭ P[m_i]) ⸭ A_i$
-- return $A_{n+1}$
+- let $\mathsf{Acc}_0 := Q$
+- for $i$ from $0$ up to $n-1$:
+  - let $\mathsf{Acc}_{i+1} := (\mathsf{Acc}_i \;⸭\; P[m_{i+1}]) \;⸭\; \mathsf{Acc}_i$
+- return $\mathsf{Acc}_n$
 
 Let $\textsf{ShortHash}(M)$ be the $x$-coordinate of $\textsf{Hash}(M)$. (This assumes that $\mathbb{G}$ is a prime-order elliptic curve in short Weierstrass form, as is the case for Pallas and Vesta.)
+
+> For efficiency we use incomplete addition in the above algorithm, because we are able to prove ([Theorem 5.4.4](https://zips.z.cash/protocol/protocol.pdf#thmsinsemillaex) in the protocol specification) that an exceptional case for addition would lead to finding a discrete logarithm, which can be assumed to occur with negligible probability even for adversarial input.
 
 ### Use as a commitment scheme
 Choose another generator $H$ independently of $Q$ and $P[0..2^k - 1]$.
@@ -91,9 +95,13 @@ $$
 ## PLONK / Halo 2 constraints
 
 ### Message decomposition
-We have an $n$-bit message $m = m_1 + 2^k m_2 + ... + 2^{k\cdot (n-1)} m_n$. (Note that the message words are 1-indexed as in the protocol spec: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash)
+We have an $n$-bit message $m = m_1 + 2^k m_2 + ... + 2^{k\cdot (n-1)} m_n$. (Note that the message words are 1-indexed as in the [protocol spec](https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash).)
 
 Initialise the running sum $z_0 = \alpha$ and define $z_{i + 1} := \frac{z_{i} - m_{i+1}}{2^K}$. We will end up with $z_n = 0.$
+
+> For a little-endian decomposition as used here, the running sum is initialized to the scalar and ends at 0. For a big-endian decomposition as used in [variable-base scalar multiplication](ecc/var-base-scalar-mul.md), the running sum would start at 0 and end with recovering the original scalar.
+>
+> The running sum only applies to message words within a single field element, i.e. if $n \geq \mathtt{PrimeField::NUM\_BITS}$ then we will have several disjoint running sums. A longer message can be constructed by splitting the message words across several field elements, and then running several instances of the constraints below. Copy constraints are needed from each output to the next input in order to continue the Sinsemilla accumulation, even though the running sums restart.
 
 Rearranging gives us an expression for each word of the original message $m_{i+1} = z_{i} - 2^k \cdot z_{i + 1}$, which we can look up in the table.
 
@@ -145,12 +153,12 @@ $$
 
 * The degree of a lookup gate is $1 + \textsf{input\_degree} + \textsf{table\_degree}$, where $\textsf{input\_degree}$ is the maximum degree of the polynomial expressions being looked up, and $\textsf{table\_degree}$ is the maximum degree of the table expressions in the lookup.
 
-A further optimization is to toggle the lookup expression on $q_{Sinsemilla1}.$ This removes the need to fill in unused cells with dummy values to pass the lookup argument. The optimized lookup argument would be:
+A further optimization is to toggle the lookup expression on $q_{Sinsemilla1}.$ This removes the need to fill in unused cells with dummy values to pass the lookup argument. The optimized lookup argument (using a default lookup value of `0`) is:
 
 $$
 \begin{array}{}
 &(\\&
-&& q_S \cdot (z_{i} - 2^k \cdot z_{i+1}) + (1 - q_S) \cdot 0, \\
+&& q_S \cdot (z_{i} - 2^k \cdot z_{i+1}), \\
 &&& q_S \cdot x_{P, i} + (1 - q_S) \cdot x_{P, 0}, \\
 &&& q_S \cdot y_{P, i} + (1 - q_S) \cdot y_{P, 0} \\
 &),&
