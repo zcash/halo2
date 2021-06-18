@@ -37,7 +37,7 @@ Choose another generator $H$ independently of $Q$ and $P[0..2^k - 1]$.
 
 The randomness $r$ for a commitment is chosen uniformly on $[0, q)$.
 
-Let $\textsf{Commit}_r(M) = \textsf{Hash}(M) ⸭ [r] H$.
+Let $\textsf{Commit}_r(M) = \textsf{Hash}(M) \;⸭\; [r] H$.
 
 Let $\textsf{ShortCommit}_r(M)$ be the $x\text{-coordinate}$ of $\textsf{Commit}_r(M)$. (This again assumes that $\mathbb{G}$ is a prime-order elliptic curve in short Weierstrass form.)
 
@@ -51,46 +51,19 @@ Note that it is slightly more efficient to express a double-and-add $[2] A + R$ 
 ## Constraint program
 Let $\mathcal{P} = \left\{(j,\, x_{P[j]},\, y_{P[j]}) \text{ for } j \in \{0..2^k - 1\}\right\}$.
 
-Input: $m_i, i \in [1..n]$. (Note that the message words are 1-indexed as in the [protocol spec](https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash)).
+Input: $m_{1..=n}$. (The message words are 1-indexed here, as in the [protocol spec](https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash), but we start the loop from $i = 0$ so that $(x_{A,i}, y_{A,i})$ corresponds to $\mathsf{Acc}_i$ in the protocol spec.)
 
-Output: $(x_{A,n+1},\, y_{A,n+1})$.
+Output: $(x_{A,n},\, y_{A,n})$.
 
-> $(x_{A,1},\, y_{A,1}) = Q$
->
-> for $i$ from $1$ up to $n$:
-> $$
-\begin{aligned}
-    y_{P,i} &= y_{A,i} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i})\\
-    x_{R,i} &= \lambda_{1,i}^2 - x_{A,i} - x_{P,i}\\
-    2 \cdot y_{A,i} &= (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i})\\
-    (m_i,\, x_{P,i},\, y_{P,i}) &\in \mathcal{P}\\
-    \lambda_{2,i}^2 &= x_{A,i+1} + x_{R,i} + x_{A,i}\\
-    \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) &= y_{A,i} + y_{A,i+1}\\
-\end{aligned}
-$$
+$(x_{A,0},\, y_{A,0}) = Q$
+for $i$ from $0$ up to $n-1$:
+    $y_{P,i} = y_{A,i} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i})$
+    $x_{R,i} = \lambda_{1,i}^2 - x_{A,i} - x_{P,i}$
+    $2 \cdot y_{A,i} = (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i})$
+    $(m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P}$
+    $\lambda_{2,i}^2 = x_{A,i+1} + x_{R,i} + x_{A,i}$
+    $\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) = y_{A,i} + y_{A,i+1}$
 
-After substitution of $y_{P,i}$, $x_{R,i}$, $y_{A,i}$, and $y_{A,i+1}$, this becomes:
-
-> $(x_{A,1},\, y_{A,1}) = Q$
->
-> $2 \cdot y_{A,1} = (\lambda_{1,1} + \lambda_{2,1}) \cdot (x_{A,1} - (\lambda_{1,1}^2 - x_{A,1} - x_{P,1}))$
->
-> for $i$ from $1$ up to $n$:
-> $$
-\begin{aligned}
-    &\textsf{// let } y_{P,i} = y_{A,i} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) \\
-    &\textsf{// let } x_{R,i} = \lambda_{1,i}^2 - x_{A,i} - x_{P,i} \\
-    &\textsf{// let } y_{A,i} = \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}))}{2} \\
-    &(m_i,\, x_{P,i},\, \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}))}{2} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i})) \in \mathcal{P} \\
-    &\lambda_{2,i}^2 = x_{A,i+1} + (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}) + x_{A,i} \\
-    &\textsf{if } i < n: \\
-        &\hspace{2em} 2 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) =\\
-        &\hspace{2em}(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}))\, +\\
-        &\hspace{2em}(\lambda_{1,i+1} + \lambda_{2,i+1}) \cdot (x_{A,i+1} - (\lambda_{1,i+1}^2 - x_{A,i+1} - x_{P,i+1}))\\
-\end{aligned}
-$$
->
-> $\lambda_{2,n} \cdot (x_{A,n} - x_{A,n+1}) = (\lambda_{1,n} + \lambda_{2,n}) \cdot (x_{A,n} - (\lambda_{1,n}^2 - x_{A,n} - x_{P,n})) + y_{A,n+1}$
 
 ## PLONK / Halo 2 constraints
 
@@ -105,64 +78,70 @@ Initialise the running sum $z_0 = \alpha$ and define $z_{i + 1} := \frac{z_{i} -
 
 Rearranging gives us an expression for each word of the original message $m_{i+1} = z_{i} - 2^k \cdot z_{i + 1}$, which we can look up in the table.
 
+In other words, $z_{n-i} = \sum\limits_{h=0}^{i-1} 2^{kh} \cdot m_{h+1}$.
+
+### Layout
+
+Note: $q_{S3}$ is synthesized from $q_{S1}$ and $q_{S2}$; it is shown here only for clarity.
+
 $$
-\begin{array}{|c|c|c|c|c|c|c|c|c|c|c|}
+\begin{array}{|c|c|c|c|c|c|c|c|c|c|c|c|c|}
 \hline
-\text{Step} &    x_A    &     bits  &    \lambda_1    &   \lambda_2     &    x_P       & q_{Sinsemilla1}& q_{Sinsemilla2} & table_{idx}&    table_x     &    table_y      \\\hline
-    1       & x_Q       &   z_0     & \lambda_{1,1}   & \lambda_{2,1}   & x_{P[m_1]}   & 1              & 1               &     0      & x_{P[0]}       & y_{P[0]}        \\\hline
-    2       & x_{A,2}   &   z_1     & \lambda_{1,2}   & \lambda_{2,2}   & x_{P[m_2]}   & 1              & 1               &     1      & x_{P[1]}       & y_{P[1]}        \\\hline
-    3       & x_{A,3}   &   z_2     & \lambda_{1,3}   & \lambda_{2,3}   & x_{P[m_3]}   & 1              & 1               &     2      & x_{P[2]}       & y_{P[2]}        \\\hline
-  \vdots    & \vdots    &   \vdots  & \vdots          & \vdots          & \vdots       & 1              & 1               &   \vdots   & \vdots         & \vdots          \\\hline
-    n       & x_{A,n}   &   z_{n-1} & \lambda_{1,n}   & \lambda_{2,n}   & x_{P[m_{n}]} & 1              & 0               &   \vdots   & \vdots         & \vdots          \\\hline
-            & x_{A,n+1} &   z_n     &                 &                 &              &                &                 &   \vdots   & \vdots         & \vdots          \\\hline
-  \vdots    &           &           &                 &                 &              &                &                 &  2^k - 1   & x_{P[2^k - 1]} & y_{P[2^k - 1]}  \\\hline
+\text{Step} &    x_A     &   bits    &    \lambda_1     &   \lambda_2      &    x_P       & q_{S1} & q_{S2} & q_{S3} & fixed\_y_Q  &table_{idx}&    table_x     &    table_y      \\\hline
+    0       & x_Q        &   z_0     & \lambda_{1,0}    & \lambda_{2,0}    & x_{P[m_1]}   & 1      & 1      & 0      &   y_Q      &    0      & x_{P[0]}       & y_{P[0]}        \\\hline
+    1       & x_{A,1}    &   z_1     & \lambda_{1,1}    & \lambda_{2,1}    & x_{P[m_2]}   & 1      & 1      & 0      &     0       &    1      & x_{P[1]}       & y_{P[1]}        \\\hline
+    2       & x_{A,2}    &   z_2     & \lambda_{1,2}    & \lambda_{2,2}    & x_{P[m_3]}   & 1      & 1      & 0      &     0       &    2      & x_{P[2]}       & y_{P[2]}        \\\hline
+  \vdots    & \vdots     &   \vdots  & \vdots           & \vdots           & \vdots       & 1      & 1      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
+   n-1      & x_{A,n-1}  &   z_{n-1} & \lambda_{1,n-1}  & \lambda_{2,n-1}  & x_{P[m_n]}   & 1      & 0      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
+    0'      & x'_{A,0}   &   z'_0    & \lambda'_{1,0}   & \lambda'_{2,0}   & x_{P[m'_1]}  & 1      & 1      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
+    1'      & x'_{A,1}   &   z'_1    & \lambda'_{1,1}   & \lambda'_{2,1}   & x_{P[m'_2]}  & 1      & 1      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
+    2'      & x'_{A,2}   &   z'_2    & \lambda'_{1,2}   & \lambda'_{2,2}   & x_{P[m'_3]}  & 1      & 1      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
+  \vdots    & \vdots     &   \vdots  & \vdots           & \vdots           & \vdots       & 1      & 1      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
+   n-1'     & x'_{A,n-1} &   z'_{n-1}& \lambda'_{1,n-1} & \lambda'_{2,n-1} & x_{P[m'_n]}  & 1      & 2      & 2      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
+    n'      & x'_{A,n}   &   0       & y_{A,n}          &                  &              & 0      & 0      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
 \end{array}
 $$
 
-### Specification of Sinsemilla gate:
+### Optimized Sinsemilla gate
+
+$$
+\begin{array}{lrcl}
+\text{For } i \in [0, n), \text{ let} &x_{R,i} &=& \lambda_{1,i}^2 - x_{A,i} - x_{P,i} \\
+                                      &Y_{A,i} &=& (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) \\
+                                      &y_{P,i} &=& Y_{A,i}/2 - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) \\
+                                      &m_{i+1} &=& z_{i} - 2^k \cdot q_{S2,i} \cdot z_{i+1} \\
+                                      &q_{S3}  &=& q_{S2} \cdot (q_{S2} - 1)
+\end{array}
+$$
+
+The Halo 2 circuit API can automatically substitute $y_{P,i}$, $x_{R,i}$, $y_{A,i}$, and $y_{A,i+1}$, so we don't need to do that manually.
+
+$x_{A,0} = x_Q$
+$2 \cdot y_Q = Y_{A,0}$
+for $i$ from $0$ up to $n-1$:
+    $(m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P}$
+    $\lambda_{2,i}^2 = x_{A,i+1} + x_{R,i} + x_{A,i}$
+    $4 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) = 2 \cdot Y_{A,i} + (2 - q_{S3}) \cdot Y_{A,i+1} + 2 q_{S3} \cdot y_{A,n}$
+
+Note that each term of the last constraint is multiplied by $4$ relative to the constraint program given earlier. This is a small optimization that avoids divisions by $2$.
+
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-3   & q_{Sinsemilla,i} \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) - y_{A,i} + y_{P,i}\right) = 0 \\\hline
-4   & q_{Sinsemilla,i} \cdot \left((\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i})) - 2 y_{A,i}\right) = 0 \\\hline
-3   & q_{Sinsemilla,i} \cdot \left(\lambda_{2,i}^2 - x_{A,i+1} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}) - x_{A,i}\right) = 0 \\\hline
-3   & q_{Sinsemilla,i} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - y_{A,i} - y_{A,i+1}\right) = 0 \\\hline
+4   & fixed\_q_y \cdot (2 \cdot fixed\_q_y - Y_{A,0}) = 0 \\\hline
+5   & q_{S1,i} \Rightarrow (m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P} \\\hline
+3   & q_{S1,i} \cdot \big(\lambda_{2,i}^2 - (x_{A,i+1} + x_{R,i} + x_{A,i})\big) \\\hline
+6   & q_{S1,i} \cdot \left(4 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - (2 \cdot Y_{A,i} + (2 - q_{S3,i}) \cdot Y_{A,i+1} + 2 \cdot q_{S3,i} \cdot y_{A,n})\right) = 0 \\\hline
 \end{array}
 $$
 
-Optimized:
+By gating the lookup expression on $q_{S1}$, we avoid the need to fill in unused cells with dummy values to pass the lookup argument. The optimized lookup value (using a default index of $0$) is:
 
-$$
-\begin{array}{|c|l|}
-\hline
-\text{Degree} & \text{Constraint} \\\hline
-5*  & q_{Sinsemilla1} \Rightarrow (z_{i} - 2^k \cdot z_{i+1},\, x_{P,i},\, y_{P,i} \in \mathcal{P} \\\hline
-3   & q_{Sinsemilla1,i} \cdot (\lambda_{2,i}^2 - (x_{A,i+1} + (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}) + x_{A,i})) \\\hline
-5   & q_{Sinsemilla2,i} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - y_{A,i} - y_{A,i+1}\right) = 0 \\\hline
+\begin{array}{lll}
+(&q_{S1} \cdot m_{i+1}, \\
+ &q_{S1} \cdot x_{P,i} &+& (1 - q_{S1}) \cdot x_{P,0}, \\
+ &q_{S1} \cdot y_{P,i} &+& (1 - q_{S1}) \cdot y_{P,0} \;\;\;)
 \end{array}
-$$
-where
-$$
-\begin{aligned}
-y_{A,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i})}{2},\\
-y_{A,i+1} &= \frac{(\lambda_{1,i+1} + \lambda_{2,i+1}) \cdot (x_{A,i+1} - (\lambda_{1,i+1}^2 - x_{A,i+1} - x_{P,i+1})}{2},\\
-y_{P,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}))}{2} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i})).
-\end{aligned}
-$$
 
-* The degree of a lookup gate is $1 + \textsf{input\_degree} + \textsf{table\_degree}$, where $\textsf{input\_degree}$ is the maximum degree of the polynomial expressions being looked up, and $\textsf{table\_degree}$ is the maximum degree of the table expressions in the lookup.
-
-A further optimization is to toggle the lookup expression on $q_{Sinsemilla1}.$ This removes the need to fill in unused cells with dummy values to pass the lookup argument. The optimized lookup argument (using a default lookup value of `0`) is:
-
-$$
-\begin{array}{}
-&(\\&
-&& q_S \cdot (z_{i} - 2^k \cdot z_{i+1}), \\
-&&& q_S \cdot x_{P, i} + (1 - q_S) \cdot x_{P, 0}, \\
-&&& q_S \cdot y_{P, i} + (1 - q_S) \cdot y_{P, 0} \\
-&),&
-\end{array}
-$$
-
-This increases the degree of the lookup gate to $6$.
+This increases the degree of the lookup argument to $6$.
