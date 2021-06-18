@@ -40,10 +40,12 @@ pub enum VerifyFailure {
         /// specified by the region creator (such as a chip implementation), and is not
         /// enforced to be unique.
         region_name: String,
-        /// The column in which this cell is located.
+        /// The column in which this cell should be assigned.
         column: Column<Any>,
-        /// The row in which this cell is located.
-        row: usize,
+        /// The offset (relative to the start of the region) at which this cell should be
+        /// assigned. This may be negative (for example, if a selector enables a gate at
+        /// offset 0, but the gate uses `Rotation::prev()`).
+        offset: isize,
         /// The index of the active gate. These indices are assigned in the order in which
         /// `ConstraintSystem::create_gate` is called during `Circuit::configure`.
         gate_index: usize,
@@ -101,14 +103,14 @@ impl fmt::Display for VerifyFailure {
                 region_index,
                 region_name,
                 column,
-                row,
+                offset,
                 gate_index,
                 gate_name,
             } => {
                 write!(
                     f,
-                    "Cell ({:?}, {}) was not assigned to in region {} ('{}'), but it is used by active gate {} ('{}').",
-                    column, row, region_index, region_name, gate_index, gate_name
+                    "Region {} ('{}') uses gate {} ('{}'), which requires cell in column {:?} at offset {} to be assigned.",
+                    region_index, region_name, gate_index, gate_name, column, offset
                 )
             }
             Self::Constraint {
@@ -154,12 +156,26 @@ impl fmt::Display for VerifyFailure {
 struct Region {
     /// The name of the region. Not required to be unique.
     name: String,
+    /// The row that this region starts on, if known.
+    start: Option<usize>,
     /// The selectors that have been enabled in this region. All other selectors are by
     /// construction not enabled.
     enabled_selectors: HashMap<Selector, Vec<usize>>,
     /// The cells assigned in this region. We store this as a `Vec` so that if any cells
     /// are double-assigned, they will be visibly darker.
     cells: Vec<(Column<Any>, usize)>,
+}
+
+impl Region {
+    fn update_start(&mut self, row: usize) {
+        // The region start is the earliest row assigned to.
+        let mut start = self.start.unwrap_or(row);
+        if row < start {
+            // The first row assigned was not at start 0 within the region.
+            start = row;
+        }
+        self.start = Some(start);
+    }
 }
 
 /// A test prover for debugging circuits.
@@ -281,6 +297,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         assert!(self.current_region.is_none());
         self.current_region = Some(Region {
             name: name().into(),
+            start: None,
             enabled_selectors: HashMap::default(),
             cells: vec![],
         });
@@ -327,6 +344,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         AR: Into<String>,
     {
         if let Some(region) = self.current_region.as_mut() {
+            region.update_start(row);
             region.cells.push((column.into(), row));
         }
 
@@ -352,6 +370,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         AR: Into<String>,
     {
         if let Some(region) = self.current_region.as_mut() {
+            region.update_start(row);
             region.cells.push((column.into(), row));
         }
 
@@ -485,7 +504,7 @@ impl<F: FieldExt> MockProver<F> {
                                         region_index: r_i,
                                         region_name: r.name.clone(),
                                         column: cell.column,
-                                        row: cell_row,
+                                        offset: cell_row as isize - r.start.unwrap() as isize,
                                         gate_index,
                                         gate_name: gate.name(),
                                     })
@@ -695,7 +714,6 @@ mod tests {
     #[test]
     fn unassigned_cell() {
         const K: u32 = 4;
-        const FAULTY_ROW: usize = 2;
 
         #[derive(Clone)]
         struct FaultyCircuitConfig {
@@ -735,15 +753,10 @@ mod tests {
                     || "Faulty synthesis",
                     |mut region| {
                         // Enable the equality gate.
-                        config.q.enable(&mut region, FAULTY_ROW)?;
+                        config.q.enable(&mut region, 1)?;
 
                         // Assign a = 0.
-                        region.assign_advice(
-                            || "a",
-                            config.a,
-                            FAULTY_ROW - 1,
-                            || Ok(Fp::zero()),
-                        )?;
+                        region.assign_advice(|| "a", config.a, 0, || Ok(Fp::zero()))?;
 
                         // BUG: Forget to assign b = 0! This could go unnoticed during
                         // development, because cell values default to zero, which in this
@@ -761,7 +774,7 @@ mod tests {
                 region_index: 0,
                 region_name: "Faulty synthesis".to_owned(),
                 column: Column::new(1, Any::Advice),
-                row: FAULTY_ROW,
+                offset: 1,
                 gate_index: 0,
                 gate_name: "Equality check"
             }])
