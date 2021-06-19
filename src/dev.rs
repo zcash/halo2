@@ -6,6 +6,7 @@ use std::iter;
 
 use ff::Field;
 
+use crate::plonk::Assigned;
 use crate::{
     arithmetic::{FieldExt, Group},
     plonk::{
@@ -331,7 +332,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
     }
 
-    fn assign_advice<V, A, AR>(
+    fn assign_advice<V, VR, A, AR>(
         &mut self,
         _: A,
         column: Column<Advice>,
@@ -339,7 +340,8 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Result<VR, Error>,
+        VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
@@ -352,12 +354,12 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .advice
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? = Some(to()?);
+            .ok_or(Error::BoundsFailure)? = Some(to()?.into().evaluate());
 
         Ok(())
     }
 
-    fn assign_fixed<V, A, AR>(
+    fn assign_fixed<V, VR, A, AR>(
         &mut self,
         _: A,
         column: Column<Fixed>,
@@ -365,7 +367,8 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Result<VR, Error>,
+        VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
@@ -378,7 +381,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .fixed
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? = Some(to()?);
+            .ok_or(Error::BoundsFailure)? = Some(to()?.into().evaluate());
 
         Ok(())
     }

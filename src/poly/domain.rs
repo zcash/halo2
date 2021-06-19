@@ -1,7 +1,10 @@
 //! Contains utilities for performing polynomial arithmetic over an evaluation
 //! domain that is of a suitable size for the application.
 
-use crate::arithmetic::{best_fft, parallelize, BatchInvert, FieldExt, Group};
+use crate::{
+    arithmetic::{best_fft, parallelize, BatchInvert, FieldExt, Group},
+    plonk::Assigned,
+};
 
 use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation};
 
@@ -173,6 +176,18 @@ impl<G: Group> EvaluationDomain<G> {
     pub fn empty_lagrange(&self) -> Polynomial<G, LagrangeCoeff> {
         Polynomial {
             values: vec![G::group_zero(); self.n as usize],
+            _marker: PhantomData,
+        }
+    }
+
+    /// Returns an empty (zero) polynomial in the Lagrange coefficient basis, with
+    /// deferred inversions.
+    pub(crate) fn empty_lagrange_assigned(&self) -> Polynomial<Assigned<G>, LagrangeCoeff>
+    where
+        G: Field,
+    {
+        Polynomial {
+            values: vec![G::group_zero().into(); self.n as usize],
             _marker: PhantomData,
         }
     }

@@ -3,13 +3,13 @@ use group::Curve;
 
 use super::{
     circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, Selector},
-    permutation, Error, LagrangeCoeff, Permutation, Polynomial, ProvingKey, VerifyingKey,
+    permutation, Assigned, Error, LagrangeCoeff, Permutation, Polynomial, ProvingKey, VerifyingKey,
 };
-use crate::arithmetic::CurveAffine;
 use crate::poly::{
     commitment::{Blind, Params},
     EvaluationDomain, Rotation,
 };
+use crate::{arithmetic::CurveAffine, poly::batch_invert_assigned};
 
 pub(crate) fn create_domain<C, ConcreteCircuit>(
     params: &Params<C>,
@@ -35,7 +35,7 @@ where
 /// Assembly to be used in circuit synthesis.
 #[derive(Debug)]
 struct Assembly<F: Field> {
-    fixed: Vec<Polynomial<F, LagrangeCoeff>>,
+    fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
     permutations: Vec<permutation::keygen::Assembly>,
     _marker: std::marker::PhantomData<F>,
 }
@@ -71,7 +71,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
     }
 
-    fn assign_advice<V, A, AR>(
+    fn assign_advice<V, VR, A, AR>(
         &mut self,
         _: A,
         _: Column<Advice>,
@@ -79,7 +79,8 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Result<VR, Error>,
+        VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
@@ -87,7 +88,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         Ok(())
     }
 
-    fn assign_fixed<V, A, AR>(
+    fn assign_fixed<V, VR, A, AR>(
         &mut self,
         _: A,
         column: Column<Fixed>,
@@ -95,7 +96,8 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<F, Error>,
+        V: FnOnce() -> Result<VR, Error>,
+        VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
@@ -103,7 +105,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
             .fixed
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? = to()?;
+            .ok_or(Error::BoundsFailure)? = to()?.into();
 
         Ok(())
     }
@@ -165,7 +167,7 @@ where
     let (domain, cs, config) = create_domain::<C, ConcreteCircuit>(params);
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
-        fixed: vec![domain.empty_lagrange(); cs.num_fixed_columns],
+        fixed: vec![domain.empty_lagrange_assigned(); cs.num_fixed_columns],
         permutations: cs
             .permutations
             .iter()
@@ -177,6 +179,8 @@ where
     // Synthesize the circuit to obtain URS
     circuit.synthesize(&mut assembly, config)?;
 
+    let fixed = batch_invert_assigned(&assembly.fixed);
+
     let permutation_helper = permutation::keygen::Assembly::build_helper(params, &cs, &domain);
 
     let permutation_vks = cs
@@ -186,8 +190,7 @@ where
         .map(|(p, assembly)| assembly.build_vk(params, &domain, &permutation_helper, p))
         .collect();
 
-    let fixed_commitments = assembly
-        .fixed
+    let fixed_commitments = fixed
         .iter()
         .map(|poly| params.commit_lagrange(poly, Blind::default()).to_affine())
         .collect();
@@ -214,7 +217,7 @@ where
     let config = ConcreteCircuit::configure(&mut cs);
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
-        fixed: vec![vk.domain.empty_lagrange(); vk.cs.num_fixed_columns],
+        fixed: vec![vk.domain.empty_lagrange_assigned(); vk.cs.num_fixed_columns],
         permutations: vk
             .cs
             .permutations
@@ -227,8 +230,9 @@ where
     // Synthesize the circuit to obtain URS
     circuit.synthesize(&mut assembly, config)?;
 
-    let fixed_polys: Vec<_> = assembly
-        .fixed
+    let fixed = batch_invert_assigned(&assembly.fixed);
+
+    let fixed_polys: Vec<_> = fixed
         .iter()
         .map(|poly| vk.domain.lagrange_to_coeff(poly.clone()))
         .collect();
@@ -264,7 +268,7 @@ where
     Ok(ProvingKey {
         vk,
         l0,
-        fixed_values: assembly.fixed,
+        fixed_values: fixed,
         fixed_polys,
         fixed_cosets,
         permutations: permutation_pks,

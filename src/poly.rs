@@ -3,8 +3,11 @@
 //! the committed polynomials at arbitrary points.
 
 use crate::arithmetic::parallelize;
+use crate::arithmetic::BatchInvert;
+use crate::plonk::Assigned;
 
 use ff::Field;
+use pasta_curves::arithmetic::FieldExt;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, RangeFrom, RangeFull, Sub};
@@ -125,6 +128,55 @@ impl<F, B> Polynomial<F, B> {
     /// coefficients used to describe it.
     pub fn num_coeffs(&self) -> usize {
         self.values.len()
+    }
+}
+
+pub(crate) fn batch_invert_assigned<F: FieldExt>(
+    assigned: &[Polynomial<Assigned<F>, LagrangeCoeff>],
+) -> Vec<Polynomial<F, LagrangeCoeff>> {
+    let mut assigned_denominators: Vec<_> = assigned
+        .iter()
+        .map(|f| {
+            f.iter()
+                .map(|value| value.denominator())
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    assigned_denominators
+        .iter_mut()
+        .flat_map(|f| {
+            f.iter_mut()
+                // If the denominator is trivial, we can skip it, reducing the
+                // size of the batch inversion.
+                .filter_map(|d| d.as_mut())
+        })
+        .batch_invert();
+
+    assigned
+        .iter()
+        .zip(assigned_denominators.into_iter())
+        .map(|(poly, inv_denoms)| {
+            poly.invert(inv_denoms.into_iter().map(|d| d.unwrap_or_else(F::one)))
+        })
+        .collect()
+}
+
+impl<F: Field> Polynomial<Assigned<F>, LagrangeCoeff> {
+    pub(crate) fn invert(
+        &self,
+        inv_denoms: impl Iterator<Item = F> + ExactSizeIterator,
+    ) -> Polynomial<F, LagrangeCoeff> {
+        assert_eq!(inv_denoms.len(), self.values.len());
+        Polynomial {
+            values: self
+                .values
+                .iter()
+                .zip(inv_denoms.into_iter())
+                .map(|(a, inv_den)| a.numerator() * inv_den)
+                .collect(),
+            _marker: self._marker,
+        }
     }
 }
 
