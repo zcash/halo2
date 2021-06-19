@@ -9,8 +9,6 @@ use std::fmt::Debug;
 pub mod chip;
 mod message;
 
-// pub use chip::{SinsemillaChip, SinsemillaConfig};
-
 /// The set of circuit instructions required to use the [`Sinsemilla`](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html) gadget.
 /// This trait is bounded on two constant parameters: `K`, the number of bits
 /// in each word accepted by the Sinsemilla hash, and `MAX_WORDS`, the maximum
@@ -230,4 +228,184 @@ where
 #[allow(non_snake_case)]
 pub trait HashDomains<C: CurveAffine>: Clone + Debug {
     fn Q(&self) -> C;
+}
+
+#[cfg(test)]
+mod tests {
+    use halo2::{
+        circuit::{layouter::SingleChipLayouter, Layouter},
+        dev::MockProver,
+        pasta::pallas,
+        plonk::{Assignment, Circuit, ConstraintSystem, Error},
+    };
+
+    use super::{
+        chip::SinsemillaHashDomains,
+        chip::{SinsemillaChip, SinsemillaConfig},
+        HashDomain, Message, SinsemillaInstructions,
+    };
+
+    use crate::{
+        circuit::gadget::ecc::{
+            chip::{EccChip, EccConfig},
+            Point,
+        },
+        constants::MERKLE_CRH_PERSONALIZATION,
+        primitives::sinsemilla::{self, K},
+    };
+
+    use group::Curve;
+
+    use std::convert::TryInto;
+
+    struct MyCircuit {}
+
+    impl Circuit<pallas::Base> for MyCircuit {
+        type Config = (EccConfig, SinsemillaConfig, SinsemillaConfig);
+
+        #[allow(non_snake_case)]
+        fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+            let advices = [
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+            ];
+
+            let constants = meta.fixed_column();
+            let perm = meta.permutation(
+                &advices
+                    .iter()
+                    .map(|advice| (*advice).into())
+                    .chain(Some(constants.into()))
+                    .collect::<Vec<_>>(),
+            );
+
+            let ecc_config = EccChip::configure(meta, advices, perm.clone());
+
+            // Fixed columns for the Sinsemilla generator lookup table
+            let lookup = (
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+            );
+
+            let config1 = SinsemillaChip::configure(
+                meta,
+                advices[..5].try_into().unwrap(),
+                lookup,
+                constants,
+                perm.clone(),
+            );
+            let config2 = SinsemillaChip::configure(
+                meta,
+                advices[5..].try_into().unwrap(),
+                lookup,
+                constants,
+                perm,
+            );
+            (ecc_config, config1, config2)
+        }
+
+        fn synthesize(
+            &self,
+            cs: &mut impl Assignment<pallas::Base>,
+            config: Self::Config,
+        ) -> Result<(), Error> {
+            let mut layouter = SingleChipLayouter::new(cs)?;
+            let ecc_chip = EccChip::construct(config.0);
+
+            // The two `SinsemillaChip`s share the same lookup table.
+            SinsemillaChip::load(config.1.clone(), &mut layouter)?;
+
+            // This MerkleCRH example is purely for illustrative purposes.
+            // It is not an implementation of the Orchard protocol spec.
+            {
+                let chip1 = SinsemillaChip::construct(config.1);
+
+                let merkle_crh = HashDomain::new(
+                    chip1.clone(),
+                    ecc_chip.clone(),
+                    &SinsemillaHashDomains::MerkleCrh,
+                );
+
+                // Layer 31, l = MERKLE_DEPTH_ORCHARD - 1 - layer = 0
+                let l_bitstring = vec![Some(false); K];
+                let l = chip1
+                    .witness_message_piece_bitstring(layouter.namespace(|| "l"), &l_bitstring)?;
+
+                // Left leaf
+                let left_bitstring: Vec<Option<bool>> =
+                    (0..250).map(|_| Some(rand::random::<bool>())).collect();
+                let left = chip1.witness_message_piece_bitstring(
+                    layouter.namespace(|| "left"),
+                    &left_bitstring,
+                )?;
+
+                // Right leaf
+                let right_bitstring: Vec<Option<bool>> =
+                    (0..250).map(|_| Some(rand::random::<bool>())).collect();
+                let right = chip1.witness_message_piece_bitstring(
+                    layouter.namespace(|| "right"),
+                    &right_bitstring,
+                )?;
+
+                let l_bitstring: Option<Vec<bool>> = l_bitstring.into_iter().collect();
+                let left_bitstring: Option<Vec<bool>> = left_bitstring.into_iter().collect();
+                let right_bitstring: Option<Vec<bool>> = right_bitstring.into_iter().collect();
+
+                // Witness expected parent
+                let expected_parent = {
+                    let expected_parent = if let (Some(l), Some(left), Some(right)) =
+                        (l_bitstring, left_bitstring, right_bitstring)
+                    {
+                        let merkle_crh = sinsemilla::HashDomain::new(MERKLE_CRH_PERSONALIZATION);
+                        let point = merkle_crh
+                            .hash_to_point(
+                                l.into_iter()
+                                    .chain(left.into_iter())
+                                    .chain(right.into_iter()),
+                            )
+                            .unwrap();
+                        Some(point.to_affine())
+                    } else {
+                        None
+                    };
+
+                    Point::new(
+                        ecc_chip,
+                        layouter.namespace(|| "Witness expected parent"),
+                        expected_parent,
+                    )?
+                };
+
+                // Parent
+                let parent = {
+                    let message = Message::from_pieces(chip1, vec![l, left, right]);
+                    merkle_crh.hash_to_point(layouter.namespace(|| "parent"), message)?
+                };
+
+                parent.constrain_equal(
+                    layouter.namespace(|| "parent == expected parent"),
+                    &expected_parent,
+                )?;
+            }
+
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn sinsemilla_chip() {
+        let k = 11;
+        let circuit = MyCircuit {};
+        let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+        assert_eq!(prover.verify(), Ok(()))
+    }
 }
