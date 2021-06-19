@@ -70,13 +70,15 @@ We have an $n$-bit message $m = m_1 + 2^k m_2 + ... + 2^{k\cdot (n-1)} m_n$. (No
 
 Initialise the running sum $z_0 = \alpha$ and define $z_{i + 1} := \frac{z_{i} - m_{i+1}}{2^K}$. We will end up with $z_n = 0.$
 
-> For a little-endian decomposition as used here, the running sum is initialized to the scalar and ends at 0. For a big-endian decomposition as used in [variable-base scalar multiplication](ecc/var-base-scalar-mul.md), the running sum would start at 0 and end with recovering the original scalar.
->
-> The running sum only applies to message words within a single field element, i.e. if $n \geq \mathtt{PrimeField::NUM\_BITS}$ then we will have several disjoint running sums. A longer message can be constructed by splitting the message words across several field elements, and then running several instances of the constraints below. Copy constraints are needed from each output to the next input in order to continue the Sinsemilla accumulation, even though the running sums restart.
-
 Rearranging gives us an expression for each word of the original message $m_{i+1} = z_{i} - 2^k \cdot z_{i + 1}$, which we can look up in the table.
 
 In other words, $z_{n-i} = \sum\limits_{h=0}^{i-1} 2^{kh} \cdot m_{h+1}$.
+
+> For a little-endian decomposition as used here, the running sum is initialized to the scalar and ends at 0. For a big-endian decomposition as used in [variable-base scalar multiplication](https://hackmd.io/o9EzZBwxSWSi08kQ_fMIOw), the running sum would start at 0 and end with recovering the original scalar.
+>
+> The running sum only applies to message words within a single field element, i.e. if $n \geq \mathtt{PrimeField::NUM\_BITS}$ then we will have several disjoint running sums. A longer message can be constructed by splitting the message words across several field elements, and then running several instances of the constraints below. An additional $q_{S2}$ selector is set to $0$ for the last step of each element, except for the last element where it is set to $2$.
+>
+> In order to support chaining multiple field elements without a gap, we will use a slightly more complicated expression for $m_{i+1}$ that effectively forces $\mathbf{z}_n$ to zero for the last step of each element, as indicated by $q_{S2}$. This allows the cell that would have been $\mathbf{z}_n$ to be used to reinitialize the running sum for the next element.
 
 ### Layout
 
@@ -86,7 +88,7 @@ $$
 \begin{array}{|c|c|c|c|c|c|c|c|c|c|c|c|c|}
 \hline
 \text{Step} &    x_A     &   bits    &    \lambda_1     &   \lambda_2      &    x_P       & q_{S1} & q_{S2} & q_{S3} & fixed\_y_Q  &table_{idx}&    table_x     &    table_y      \\\hline
-    0       & x_Q        &   z_0     & \lambda_{1,0}    & \lambda_{2,0}    & x_{P[m_1]}   & 1      & 1      & 0      &   y_Q      &    0      & x_{P[0]}       & y_{P[0]}        \\\hline
+    0       & x_Q        &   z_0     & \lambda_{1,0}    & \lambda_{2,0}    & x_{P[m_1]}   & 1      & 1      & 0      &    y_Q      &    0      & x_{P[0]}       & y_{P[0]}        \\\hline
     1       & x_{A,1}    &   z_1     & \lambda_{1,1}    & \lambda_{2,1}    & x_{P[m_2]}   & 1      & 1      & 0      &     0       &    1      & x_{P[1]}       & y_{P[1]}        \\\hline
     2       & x_{A,2}    &   z_2     & \lambda_{1,2}    & \lambda_{2,2}    & x_{P[m_3]}   & 1      & 1      & 0      &     0       &    2      & x_{P[2]}       & y_{P[2]}        \\\hline
   \vdots    & \vdots     &   \vdots  & \vdots           & \vdots           & \vdots       & 1      & 1      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
@@ -96,7 +98,7 @@ $$
     2'      & x'_{A,2}   &   z'_2    & \lambda'_{1,2}   & \lambda'_{2,2}   & x_{P[m'_3]}  & 1      & 1      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
   \vdots    & \vdots     &   \vdots  & \vdots           & \vdots           & \vdots       & 1      & 1      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
    n-1'     & x'_{A,n-1} &   z'_{n-1}& \lambda'_{1,n-1} & \lambda'_{2,n-1} & x_{P[m'_n]}  & 1      & 2      & 2      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
-    n'      & x'_{A,n}   &   0       & y_{A,n}          &                  &              & 0      & 0      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
+    n'      & x'_{A,n}   &           & y_{A,n}          &                  &              & 0      & 0      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
 \end{array}
 $$
 
@@ -106,7 +108,7 @@ $\begin{array}{lrcl}
 \text{For } i \in [0, n), \text{ let} &x_{R,i} &=& \lambda_{1,i}^2 - x_{A,i} - x_{P,i} \\
                                       &Y_{A,i} &=& (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) \\
                                       &y_{P,i} &=& Y_{A,i}/2 - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) \\
-                                      &m_{i+1} &=& z_{i} - 2^k \cdot q_{S2,i} \cdot z_{i+1} \\
+                                      &m_{i+1} &=& z_{i} - 2^k \cdot (q_{S2,i} - q_{S3,i}) \cdot z_{i+1} \\
                                       &q_{S3}  &=& q_{S2} \cdot (q_{S2} - 1)
 \end{array}$
 
