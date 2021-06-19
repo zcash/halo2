@@ -6,7 +6,7 @@ use crate::circuit::gadget::{
 use halo2::{arithmetic::CurveAffine, circuit::Layouter, plonk::Error};
 use std::fmt::Debug;
 
-// pub mod chip;
+pub mod chip;
 mod message;
 
 // pub use chip::{SinsemillaChip, SinsemillaConfig};
