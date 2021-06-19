@@ -23,9 +23,9 @@ use pasta_curves::pallas;
 
 use std::convert::TryInto;
 
-// mod generator_table;
-// pub use generator_table::get_s_by_idx;
-// use generator_table::GeneratorTableConfig;
+mod generator_table;
+pub use generator_table::get_s_by_idx;
+use generator_table::GeneratorTableConfig;
 
 // mod hash_to_point;
 
@@ -54,6 +54,9 @@ pub struct SinsemillaConfig {
     // Advice column used to store the lambda_2 intermediate value at each
     // iteration.
     lambda_2: Column<Advice>,
+    // The lookup table where (idx, x_p, y_p) are loaded for the 2^K generators
+    // of the Sinsemilla hash.
+    generator_table: GeneratorTableConfig,
     // Fixed column shared by the whole circuit. This is used to load the
     // x-coordinate of the domain Q, which is then constrained to equal the
     // initial x_a.
@@ -89,7 +92,8 @@ impl SinsemillaChip {
         config: SinsemillaConfig,
         layouter: &mut impl Layouter<pallas::Base>,
     ) -> Result<<Self as Chip<pallas::Base>>::Loaded, Error> {
-        todo!()
+        // Load the lookup table.
+        config.generator_table.load(layouter)
     }
 
     #[allow(clippy::too_many_arguments)]

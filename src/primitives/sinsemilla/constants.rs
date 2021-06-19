@@ -1,6 +1,7 @@
 //! Sinsemilla generators
 use group::Curve;
 use halo2::arithmetic::{CurveAffine, CurveExt};
+use pasta_curves::pallas;
 
 /// Number of bits of each message piece in $\mathsf{SinsemillaHashToPoint}$
 pub const K: usize = 10;
@@ -62,8 +63,8 @@ pub const Q_MERKLE_CRH: ([u8; 32], [u8; 32]) = (
 pub const S_PERSONALIZATION: &str = "z.cash:SinsemillaS";
 
 /// Creates the Sinsemilla S generators used in each round of the Sinsemilla hash
-pub fn sinsemilla_s_generators<C: CurveAffine>() -> impl Iterator<Item = (C::Base, C::Base)> {
-    let hasher = C::CurveExt::hash_to_curve(S_PERSONALIZATION);
+pub fn sinsemilla_s_generators() -> impl Iterator<Item = (pallas::Base, pallas::Base)> {
+    let hasher = pallas::Point::hash_to_curve(S_PERSONALIZATION);
     (0..(1u32 << K)).map(move |j| {
         let point = hasher(&j.to_le_bytes()).to_affine().coordinates().unwrap();
         (*point.x(), *point.y())
@@ -84,7 +85,7 @@ mod tests {
     #[test]
     fn sinsemilla_s() {
         use super::super::sinsemilla_s::SINSEMILLA_S;
-        let sinsemilla_s: Vec<_> = sinsemilla_s_generators::<pallas::Affine>().collect();
+        let sinsemilla_s: Vec<_> = sinsemilla_s_generators().collect();
         assert_eq!(sinsemilla_s.len(), SINSEMILLA_S.len());
         for (expected, actual) in sinsemilla_s.iter().zip(&SINSEMILLA_S[..]) {
             assert_eq!(expected, actual);
