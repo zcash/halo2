@@ -63,7 +63,7 @@ impl SinsemillaChip {
         // Hash each piece in the message except the final piece.
         for piece in message[0..(message.len() - 1)].iter() {
             // The value of the accumulator after this piece is processed.
-            let (x, y, zs, _) = self.hash_piece(region, offset, piece, x_a, y_a)?;
+            let (x, y, zs) = self.hash_piece(region, offset, piece, x_a, y_a)?;
 
             // Since each message word takes one row to process, we increase
             // the offset by `piece.num_words` on each iteration.
@@ -79,25 +79,11 @@ impl SinsemillaChip {
         let y_a = {
             let piece = &message[message.len() - 1];
             // The value of the accumulator after this piece is processed.
-            let (x, y, mut zs, z_n) = self.hash_piece(region, offset, piece, x_a, y_a)?;
+            let (x, y, zs) = self.hash_piece(region, offset, piece, x_a, y_a)?;
 
             // Since each message word takes one row to process, we increase
             // the offset by `piece.num_words` on each iteration.
             offset += piece.num_words();
-
-            // Assign the final z_n
-            let z_n = {
-                let cell = region.assign_advice(
-                    || "z_n",
-                    config.bits,
-                    offset,
-                    || z_n.ok_or(Error::SynthesisError),
-                )?;
-                CellValue::new(cell, z_n)
-            };
-
-            // The last piece of a message will return the message's final `z_n`.
-            zs.push(z_n);
 
             // Update the accumulator to the latest value.
             x_a = x;
@@ -200,7 +186,6 @@ impl SinsemillaChip {
             X<pallas::Base>,
             Y<pallas::Base>,
             Vec<CellValue<pallas::Base>>,
-            Option<pallas::Base>,
         ),
         Error,
     > {
@@ -273,7 +258,7 @@ impl SinsemillaChip {
         };
 
         // Decompose message into `K`-bit pieces with a running sum `z`.
-        let (zs, z_n) = {
+        let zs = {
             let mut zs = Vec::with_capacity(piece.num_words() + 1);
 
             // Copy message and initialize running sum `z` to decompose message in-circuit
@@ -295,7 +280,7 @@ impl SinsemillaChip {
             let mut z = piece.field_elem();
             let inv_2_k = pallas::Base::from_bytes(&INV_TWO_POW_K).unwrap();
 
-            // We do not assign the final z_n.
+            // We do not assign the final z_n as it is constrained to be zero.
             for (idx, word) in words[0..(words.len() - 1)].iter().enumerate() {
                 // z_{i + 1} = (z_i - m_{i + 1}) / 2^K
                 z = z
@@ -310,13 +295,7 @@ impl SinsemillaChip {
                 zs.push(CellValue::new(cell, z))
             }
 
-            let z_n = {
-                let word = words[words.len() - 1];
-                z.zip(word)
-                    .map(|(z, word)| (z - pallas::Base::from_u64(word as u64)) * inv_2_k)
-            };
-
-            (zs, z_n)
+            zs
         };
 
         // Copy in the accumulator x-coordinate
@@ -425,7 +404,7 @@ impl SinsemillaChip {
             y_a = y_a_new;
         }
 
-        Ok((x_a, y_a, zs, z_n))
+        Ok((x_a, y_a, zs))
     }
 }
 

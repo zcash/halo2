@@ -36,18 +36,22 @@ impl GeneratorTableConfig {
         meta.lookup(|meta| {
             let q_s1 = meta.query_selector(config.q_sinsemilla1);
             let q_s2 = meta.query_fixed(config.q_sinsemilla2, Rotation::cur());
+            let q_s3 = {
+                let one = Expression::Constant(pallas::Base::one());
+                q_s2.clone() * (q_s2.clone() - one)
+            };
 
             let table_idx_cur = meta.query_fixed(table_idx, Rotation::cur());
             let table_x_cur = meta.query_fixed(table_x, Rotation::cur());
             let table_y_cur = meta.query_fixed(table_y, Rotation::cur());
 
-            // m_{i+1} = z_{i} - 2^K * q_s2 * z_{i + 1}
+            // m_{i+1} = z_{i} - 2^K * (q_s2 - q_s3) * z_{i + 1}
             // Note that the message words m_i's are 1-indexed while the
             // running sum z_i's are 0-indexed.
             let word = {
                 let z_cur = meta.query_advice(config.bits, Rotation::cur());
                 let z_next = meta.query_advice(config.bits, Rotation::next());
-                z_cur - (q_s2 * z_next * pallas::Base::from_u64(1 << sinsemilla::K))
+                z_cur - ((q_s2 - q_s3) * z_next * pallas::Base::from_u64(1 << sinsemilla::K))
             };
 
             let x_p = meta.query_advice(config.x_p, Rotation::cur());
