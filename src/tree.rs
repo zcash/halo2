@@ -7,7 +7,7 @@ use crate::{
     note::commitment::ExtractedNoteCommitment,
     primitives::sinsemilla::{i2lebsp_k, HashDomain},
 };
-use incrementalmerkletree::{Hashable, Level};
+use incrementalmerkletree::{Hashable, Altitude};
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
 use serde::{Serialize, Deserialize};
@@ -186,7 +186,7 @@ impl Hashable for OrchardIncrementalTreeDigest {
         OrchardIncrementalTreeDigest(CtOption::new(pallas::Base::from_u64(2), 1.into()))
     }
 
-    fn combine(level: Level, left_opt: &Self, right_opt: &Self) -> Self {
+    fn combine(level: Altitude, left_opt: &Self, right_opt: &Self) -> Self {
         let level: usize = level.into();
         let l_star: usize = MERKLE_DEPTH_ORCHARD - 1 - level;
         OrchardIncrementalTreeDigest(left_opt.0.and_then(|left| {
