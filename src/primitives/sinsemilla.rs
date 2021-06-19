@@ -14,7 +14,7 @@ mod constants;
 mod sinsemilla_s;
 pub use constants::*;
 
-fn lebs2ip_k(bits: &[bool]) -> u32 {
+pub(crate) fn lebs2ip_k(bits: &[bool]) -> u32 {
     assert!(bits.len() == K);
     bits.iter()
         .enumerate()

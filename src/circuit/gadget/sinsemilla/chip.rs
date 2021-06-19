@@ -27,7 +27,7 @@ mod generator_table;
 pub use generator_table::get_s_by_idx;
 use generator_table::GeneratorTableConfig;
 
-// mod hash_to_point;
+mod hash_to_point;
 
 /// Configuration for the Sinsemilla hash chip
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -330,7 +330,10 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
         Q: pallas::Affine,
         message: Self::Message,
     ) -> Result<(Self::Point, Vec<Vec<Self::CellValue>>), Error> {
-        todo!()
+        layouter.assign_region(
+            || "hash_to_point",
+            |mut region| self.hash_message(&mut region, Q, &message),
+        )
     }
 
     fn extract(point: &Self::Point) -> Self::X {
