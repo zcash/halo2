@@ -91,8 +91,6 @@ pub struct EccConfig {
     pub q_mul_hi: Selector,
     /// Variable-base scalar multiplication (lo half)
     pub q_mul_lo: Selector,
-    /// Selector used to initialize running sum to zero in variable-base scalar mul
-    pub q_init_z: Selector,
     /// Selector used to enforce boolean decomposition in variable-base scalar mul
     pub q_mul_decompose_var: Selector,
     /// Selector used to enforce switching logic on LSB in variable-base scalar mul
@@ -109,14 +107,19 @@ pub struct EccConfig {
 
     /// Witness point
     pub q_point: Selector,
+
     /// Witness full-width scalar for fixed-base scalar mul
     pub q_scalar_fixed: Selector,
     /// Witness signed short scalar for full-width fixed-base scalar mul
     pub q_scalar_fixed_short: Selector,
 
-    /// Permutation
+    /// Shared fixed column used for loading constants. This is included in
+    /// the permutation so that cells in advice columns can be constrained to
+    /// equal cells in this fixed column.
+    pub constants: Column<Fixed>,
+    /// Permutation over all advice columns and the `constants` fixed column.
     pub perm: Permutation,
-    /// 10-bit lookup
+    /// 10-bit lookup table
     pub lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
 }
 
@@ -149,10 +152,17 @@ impl EccChip {
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 10],
         lookup_table: Column<Fixed>,
+        // TODO: Replace with public inputs API
+        constants: [Column<Fixed>; 2],
         perm: Permutation,
     ) -> <Self as Chip<pallas::Base>>::Config {
-        let lookup_config =
-            LookupRangeCheckConfig::configure(meta, advices[9], lookup_table, perm.clone());
+        let lookup_config = LookupRangeCheckConfig::configure(
+            meta,
+            advices[9],
+            constants[0],
+            lookup_table,
+            perm.clone(),
+        );
 
         let config = EccConfig {
             advices,
@@ -171,7 +181,6 @@ impl EccChip {
             q_add: meta.selector(),
             q_mul_hi: meta.selector(),
             q_mul_lo: meta.selector(),
-            q_init_z: meta.selector(),
             q_mul_decompose_var: meta.selector(),
             q_mul_overflow: meta.selector(),
             q_mul_lsb: meta.selector(),
@@ -181,6 +190,7 @@ impl EccChip {
             q_point: meta.selector(),
             q_scalar_fixed: meta.selector(),
             q_scalar_fixed_short: meta.selector(),
+            constants: constants[1],
             perm,
             lookup_config,
         };

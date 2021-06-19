@@ -10,7 +10,7 @@ use ff::PrimeField;
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Layouter, Region},
-    plonk::{ConstraintSystem, Error, Expression, Permutation, Selector},
+    plonk::{Column, ConstraintSystem, Error, Expression, Fixed, Permutation, Selector},
     poly::Rotation,
 };
 
@@ -37,8 +37,8 @@ const INCOMPLETE_LO_RANGE: Range<usize> = (INCOMPLETE_LEN / 2)..INCOMPLETE_LEN;
 const COMPLETE_RANGE: Range<usize> = INCOMPLETE_LEN..(INCOMPLETE_LEN + NUM_COMPLETE_BITS);
 
 pub struct Config {
-    // Selector used to constrain the initialization of the running sum to be zero.
-    q_init_z: Selector,
+    // Fixed column used to constrain the initialization of the running sum to be zero.
+    constants: Column<Fixed>,
     // Selector used to check z_i = 2*z_{i+1} + k_i
     q_mul_decompose_var: Selector,
     // Selector used to check switching logic on LSB
@@ -60,7 +60,7 @@ pub struct Config {
 impl From<&EccConfig> for Config {
     fn from(ecc_config: &EccConfig) -> Self {
         let config = Self {
-            q_init_z: ecc_config.q_init_z,
+            constants: ecc_config.constants,
             q_mul_decompose_var: ecc_config.q_mul_decompose_var,
             q_mul_lsb: ecc_config.q_mul_lsb,
             perm: ecc_config.perm.clone(),
@@ -96,14 +96,6 @@ impl From<&EccConfig> for Config {
 
 impl Config {
     pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
-        // Gate used to check that the running sum for scalar decomposition is initialized to zero.
-        meta.create_gate("Initialize running sum for variable-base mul", |meta| {
-            let q_init_z = meta.query_selector(self.q_init_z);
-            let z = meta.query_advice(self.hi_config.z, Rotation::cur());
-
-            vec![q_init_z * z]
-        });
-
         // If `lsb` is 0, (x, y) = (x_p, -y_p). If `lsb` is 1, (x, y) = (0,0).
         meta.create_gate("LSB check", |meta| {
             let q_mul_lsb = meta.query_selector(self.q_mul_lsb);
@@ -168,7 +160,12 @@ impl Config {
                 // Initialize the running sum for scalar decomposition to zero
                 let z_init = {
                     // Constrain the initialization of `z` to equal zero.
-                    self.q_init_z.enable(&mut region, offset)?;
+                    let fixed_zero_cell = region.assign_fixed(
+                        || "fixed z_init = 0",
+                        self.constants,
+                        offset,
+                        || Ok(pallas::Base::zero()),
+                    )?;
 
                     let z_val = pallas::Base::zero();
                     let z_cell = region.assign_advice(
@@ -177,6 +174,8 @@ impl Config {
                         offset,
                         || Ok(z_val),
                     )?;
+
+                    region.constrain_equal(&self.perm, fixed_zero_cell, z_cell)?;
 
                     Z(CellValue::new(z_cell, Some(z_val)))
                 };

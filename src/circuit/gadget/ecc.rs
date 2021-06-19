@@ -454,15 +454,17 @@ mod tests {
                 meta.advice_column(),
             ];
 
-            let lookup_table = meta.fixed_column();
+            let constants = [meta.fixed_column(), meta.fixed_column()];
             let perm = meta.permutation(
                 &advices
                     .iter()
                     .map(|advice| (*advice).into())
+                    .chain(constants.iter().map(|fixed| (*fixed).into()))
                     .collect::<Vec<_>>(),
             );
 
-            EccChip::configure(meta, advices, lookup_table, perm)
+            let lookup_table = meta.fixed_column();
+            EccChip::configure(meta, advices, lookup_table, constants, perm)
         }
 
         fn synthesize(

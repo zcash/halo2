@@ -238,6 +238,7 @@ impl Config {
             layouter.namespace(|| "Decompose low 130 bits of s"),
             s,
             num_words,
+            false,
         )?;
         Ok(zs[zs.len() - 1])
     }

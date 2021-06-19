@@ -270,7 +270,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
                 || {
                     let z = &constants.as_ref().unwrap().1;
                     Ok(z[window])
-                }
+                },
             )?;
         }
 
