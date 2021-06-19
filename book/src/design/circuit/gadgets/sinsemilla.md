@@ -102,6 +102,8 @@ $$
 \end{array}
 $$
 
+$x_Q$, $\mathbf{z}_0$, $\mathbf{z}'_0$, etc. would be copied in using equality constraints.
+
 ### Optimized Sinsemilla gate
 
 $\begin{array}{lrcl}
