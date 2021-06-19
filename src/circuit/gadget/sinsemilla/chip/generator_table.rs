@@ -15,9 +15,9 @@ use group::Curve;
 /// Table containing independent generators S[0..2^k]
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub struct GeneratorTableConfig {
-    table_idx: Column<Fixed>,
-    table_x: Column<Fixed>,
-    table_y: Column<Fixed>,
+    pub table_idx: Column<Fixed>,
+    pub table_x: Column<Fixed>,
+    pub table_y: Column<Fixed>,
 }
 
 impl GeneratorTableConfig {
