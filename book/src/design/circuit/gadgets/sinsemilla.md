@@ -87,22 +87,22 @@ Note: $q_{S3}$ is synthesized from $q_{S1}$ and $q_{S2}$; it is shown here only 
 $$
 \begin{array}{|c|c|c|c|c|c|c|c|c|c|c|c|c|}
 \hline
-\text{Step} &    x_A     &   bits    &    \lambda_1     &   \lambda_2      &    x_P       & q_{S1} & q_{S2} & q_{S3} & fixed\_y_Q  &table_{idx}&    table_x     &    table_y      \\\hline
-    0       & x_Q        &   z_0     & \lambda_{1,0}    & \lambda_{2,0}    & x_{P[m_1]}   & 1      & 1      & 0      &    y_Q      &    0      & x_{P[0]}       & y_{P[0]}        \\\hline
-    1       & x_{A,1}    &   z_1     & \lambda_{1,1}    & \lambda_{2,1}    & x_{P[m_2]}   & 1      & 1      & 0      &     0       &    1      & x_{P[1]}       & y_{P[1]}        \\\hline
-    2       & x_{A,2}    &   z_2     & \lambda_{1,2}    & \lambda_{2,2}    & x_{P[m_3]}   & 1      & 1      & 0      &     0       &    2      & x_{P[2]}       & y_{P[2]}        \\\hline
-  \vdots    & \vdots     &   \vdots  & \vdots           & \vdots           & \vdots       & 1      & 1      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
-   n-1      & x_{A,n-1}  &   z_{n-1} & \lambda_{1,n-1}  & \lambda_{2,n-1}  & x_{P[m_n]}   & 1      & 0      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
-    0'      & x'_{A,0}   &   z'_0    & \lambda'_{1,0}   & \lambda'_{2,0}   & x_{P[m'_1]}  & 1      & 1      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
-    1'      & x'_{A,1}   &   z'_1    & \lambda'_{1,1}   & \lambda'_{2,1}   & x_{P[m'_2]}  & 1      & 1      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
-    2'      & x'_{A,2}   &   z'_2    & \lambda'_{1,2}   & \lambda'_{2,2}   & x_{P[m'_3]}  & 1      & 1      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
-  \vdots    & \vdots     &   \vdots  & \vdots           & \vdots           & \vdots       & 1      & 1      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
-   n-1'     & x'_{A,n-1} &   z'_{n-1}& \lambda'_{1,n-1} & \lambda'_{2,n-1} & x_{P[m'_n]}  & 1      & 2      & 2      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
-    n'      & x'_{A,n}   &           & y_{A,n}          &                  &              & 0      & 0      & 0      &     0       &  \vdots   & \vdots         & \vdots          \\\hline
+\text{Step} &    x_A     &   bits   &    \lambda_1     &   \lambda_2      &    x_P      & q_{S1} & q_{S2} & q_{S3} & fixed\_y_Q & table_{idx} & table_x  & table_y  \\\hline
+    0       & x_Q        & z_0      & \lambda_{1,0}    & \lambda_{2,0}    & x_{P[m_1]}  & 1      & 1      & 0      &    y_Q     & 0           & x_{P[0]} & y_{P[0]} \\\hline
+    1       & x_{A,1}    & z_1      & \lambda_{1,1}    & \lambda_{2,1}    & x_{P[m_2]}  & 1      & 1      & 0      &     0      & 1           & x_{P[1]} & y_{P[1]} \\\hline
+    2       & x_{A,2}    & z_2      & \lambda_{1,2}    & \lambda_{2,2}    & x_{P[m_3]}  & 1      & 1      & 0      &     0      & 2           & x_{P[2]} & y_{P[2]} \\\hline
+  \vdots    & \vdots     & \vdots   & \vdots           & \vdots           & \vdots      & 1      & 1      & 0      &     0      & \vdots      & \vdots   & \vdots   \\\hline
+   n-1      & x_{A,n-1}  & z_{n-1}  & \lambda_{1,n-1}  & \lambda_{2,n-1}  & x_{P[m_n]}  & 1      & 0      & 0      &     0      & \vdots      & \vdots   & \vdots   \\\hline
+    0'      & x'_{A,0}   & z'_0     & \lambda'_{1,0}   & \lambda'_{2,0}   & x_{P[m'_1]} & 1      & 1      & 0      &     0      & \vdots      & \vdots   & \vdots   \\\hline
+    1'      & x'_{A,1}   & z'_1     & \lambda'_{1,1}   & \lambda'_{2,1}   & x_{P[m'_2]} & 1      & 1      & 0      &     0      & \vdots      & \vdots   & \vdots   \\\hline
+    2'      & x'_{A,2}   & z'_2     & \lambda'_{1,2}   & \lambda'_{2,2}   & x_{P[m'_3]} & 1      & 1      & 0      &     0      & \vdots      & \vdots   & \vdots   \\\hline
+  \vdots    & \vdots     & \vdots   & \vdots           & \vdots           & \vdots      & 1      & 1      & 0      &     0      & \vdots      & \vdots   & \vdots   \\\hline
+   n-1'     & x'_{A,n-1} & z'_{n-1} & \lambda'_{1,n-1} & \lambda'_{2,n-1} & x_{P[m'_n]} & 1      & 2      & 2      &     0      & \vdots      & \vdots   & \vdots   \\\hline
+    n'      & x'_{A,n}   &          & y_{A,n}          &                  &             & 0      & 0      & 0      &     0      & \vdots      & \vdots   & \vdots   \\\hline
 \end{array}
 $$
 
-$x_Q$, $\mathbf{z}_0$, $\mathbf{z}'_0$, etc. would be copied in using equality constraints.
+$x_Q$, $z_0$, $z'_0$, etc. would be copied in using equality constraints.
 
 ### Optimized Sinsemilla gate
 
