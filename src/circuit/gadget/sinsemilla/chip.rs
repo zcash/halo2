@@ -160,21 +160,6 @@ impl SinsemillaChip {
             vec![fixed_y_q.clone() * (two.clone() * fixed_y_q - Y_A)]
         });
 
-        meta.create_gate("Secant line", |meta| {
-            let q_s1 = meta.query_selector(config.q_sinsemilla1);
-            let lambda_2 = meta.query_advice(config.lambda_2, Rotation::cur());
-            let x_a_cur = meta.query_advice(config.x_a, Rotation::cur());
-            let x_a_next = meta.query_advice(config.x_a, Rotation::next());
-
-            // x_r = lambda_1^2 - x_a_cur - x_p
-            let x_r = x_r(meta, Rotation::cur());
-
-            // lambda2^2 - (x_a_next + x_r + x_a_cur) = 0
-            let secant_line = lambda_2.square() - (x_a_next + x_r + x_a_cur);
-
-            vec![q_s1 * secant_line]
-        });
-
         meta.create_gate("Sinsemilla gate", |meta| {
             let q_s1 = meta.query_selector(config.q_sinsemilla1);
             let q_s2 = meta.query_fixed(config.q_sinsemilla2, Rotation::cur());
@@ -182,10 +167,14 @@ impl SinsemillaChip {
                 let one = Expression::Constant(pallas::Base::one());
                 q_s2.clone() * (q_s2 - one)
             };
+
+            let lambda_1_next = meta.query_advice(config.lambda_1, Rotation::next());
+            let lambda_2_cur = meta.query_advice(config.lambda_2, Rotation::cur());
             let x_a_cur = meta.query_advice(config.x_a, Rotation::cur());
             let x_a_next = meta.query_advice(config.x_a, Rotation::next());
-            let lambda_2_cur = meta.query_advice(config.lambda_2, Rotation::cur());
-            let lambda_1_next = meta.query_advice(config.lambda_1, Rotation::next());
+
+            // x_r = lambda_1^2 - x_a_cur - x_p
+            let x_r = x_r(meta, Rotation::cur());
 
             // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
             let Y_A_cur = Y_A(meta, Rotation::cur());
@@ -193,20 +182,33 @@ impl SinsemillaChip {
             // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
             let Y_A_next = Y_A(meta, Rotation::next());
 
-            // lhs = 4 * lambda_2_cur * (x_a_cur - x_a_next)
-            let lhs = lambda_2_cur * pallas::Base::from_u64(4) * (x_a_cur - x_a_next);
+            // lambda2^2 - (x_a_next + x_r + x_a_cur) = 0
+            let secant_line =
+                lambda_2_cur.clone().square() - (x_a_next.clone() + x_r + x_a_cur.clone());
 
-            // rhs = 2 * Y_A_cur + (2 - q_s3) * Y_A_next + 2 * q_s3 * y_a_final
-            let rhs = {
-                // y_a_final is assigned to the lambda1 column on the next offset.
-                let y_a_final = lambda_1_next;
+            // lhs - rhs = 0, where
+            //    - lhs = 4 * lambda_2_cur * (x_a_cur - x_a_next)
+            //    - rhs = (2 * Y_A_cur + (2 - q_s3) * Y_A_next + 2 * q_s3 * y_a_final)
+            let expr = {
+                // lhs = 4 * lambda_2_cur * (x_a_cur - x_a_next)
+                let lhs = lambda_2_cur * pallas::Base::from_u64(4) * (x_a_cur - x_a_next);
 
-                two.clone() * Y_A_cur
-                    + (two.clone() - q_s3.clone()) * Y_A_next
-                    + two * q_s3 * y_a_final
+                // rhs = 2 * Y_A_cur + (2 - q_s3) * Y_A_next + 2 * q_s3 * y_a_final
+                let rhs = {
+                    // y_a_final is assigned to the lambda1 column on the next offset.
+                    let y_a_final = lambda_1_next;
+
+                    two.clone() * Y_A_cur
+                        + (two.clone() - q_s3.clone()) * Y_A_next
+                        + two * q_s3 * y_a_final
+                };
+                lhs - rhs
             };
 
-            vec![q_s1 * (lhs - rhs)]
+            vec![
+                ("Secant line", q_s1.clone() * secant_line),
+                ("Sinsemilla gate", q_s1 * expr),
+            ]
         });
 
         config
