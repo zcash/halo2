@@ -41,13 +41,20 @@ impl SinsemillaChip {
         // Initialize the accumulator to `Q`.
         let (mut x_a, mut y_a): (X<pallas::Base>, Y<pallas::Base>) = {
             // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
-            let fixed_x_q =
-                region.assign_fixed(|| "fixed x_q", config.constants, offset, || Ok(x_q))?;
-            let x_q_cell = region.assign_advice(|| "x_q", config.x_a, offset, || Ok(x_q))?;
-            region.constrain_equal(&config.perm, fixed_x_q, x_q_cell)?;
+            let fixed_x_q = {
+                let cell =
+                    region.assign_fixed(|| "fixed x_q", config.constants, offset, || Ok(x_q))?;
+                CellValue::new(cell, Some(x_q))
+            };
 
-            // This cell gets copied into itself by the first call to `hash_piece` below.
-            let x_a = CellValue::new(x_q_cell, Some(x_q));
+            let x_a = copy(
+                region,
+                || "x_q",
+                config.x_a,
+                offset,
+                &fixed_x_q,
+                &config.perm,
+            )?;
 
             // Constrain the initial x_a, lambda_1, lambda_2, x_p using the fixed y_q
             // initializer.
@@ -88,7 +95,8 @@ impl SinsemillaChip {
             )?;
 
             // Assign lambda_2 and x_p zero values since they are queried
-            // in the gate.
+            // in the gate. (The actual values do not matter since they are
+            // multiplied by zero.)
             {
                 region.assign_advice(
                     || "dummy lambda2",
@@ -138,6 +146,8 @@ impl SinsemillaChip {
                 let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
                 let S = |chunk: &[bool]| hasher_S(&lebs2ip_k(chunk).to_le_bytes());
 
+                // We can use complete addition here because it differs from
+                // incomplete addition with negligible probability.
                 let expected_point = bitstring
                     .chunks(K)
                     .fold(Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
@@ -257,13 +267,13 @@ impl SinsemillaChip {
             vec![None; piece.num_words()]
         };
 
-        // Decompose message into `K`-bit pieces with a running sum `z`.
+        // Decompose message piece into `K`-bit pieces with a running sum `z`.
         let zs = {
             let mut zs = Vec::with_capacity(piece.num_words() + 1);
 
             // Copy message and initialize running sum `z` to decompose message in-circuit
             let cell = region.assign_advice(
-                || "z_0 (copy of message)",
+                || "z_0 (copy of message piece)",
                 config.bits,
                 offset,
                 || piece.field_elem().ok_or(Error::SynthesisError),
@@ -271,12 +281,13 @@ impl SinsemillaChip {
             region.constrain_equal(&config.perm, piece.cell(), cell)?;
             zs.push(CellValue::new(cell, piece.field_elem()));
 
-            // Assign cumulative sum such that
+            // Assign cumulative sum such that for 0 <= i < n,
             //          z_i = 2^K * z_{i + 1} + m_{i + 1}
             // => z_{i + 1} = (z_i - m_{i + 1}) / 2^K
             //
-            // For a message m = m_1 + 2^K m_2 + ... + 2^{K(n-1)} m_n}, initialize z_0 = m.
-            // We end up with z_n = 0.
+            // For a message piece m = m_1 + 2^K m_2 + ... + 2^{K(n-1)} m_n}, initialize z_0 = m.
+            // We end up with z_n = 0. (z_n is not directly encoded as a cell value;
+            // it is implicitly taken as 0 by adjusting the definition of m_{i+1}.)
             let mut z = piece.field_elem();
             let inv_2_k = pallas::Base::from_bytes(&INV_TWO_POW_K).unwrap();
 
@@ -369,7 +380,7 @@ impl SinsemillaChip {
                 let x_a_new = lambda_2
                     .zip(x_a.value())
                     .zip(x_r)
-                    .map(|((lambda_2, x_a), x_r)| lambda_2 * lambda_2 - x_a - x_r);
+                    .map(|((lambda_2, x_a), x_r)| lambda_2.square() - x_a - x_r);
 
                 let x_a_cell = region.assign_advice(
                     || "x_a",

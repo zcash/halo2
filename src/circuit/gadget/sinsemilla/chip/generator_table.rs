@@ -23,9 +23,9 @@ pub struct GeneratorTableConfig {
 impl GeneratorTableConfig {
     #[allow(clippy::too_many_arguments)]
     #[allow(non_snake_case)]
-    // Even though the lookup table can be used in other parts of the circuit,
-    // this specific configuration sets up Sinsemilla-specific constraints
-    // controlled by `q_sinsemilla`, and would likely not apply to other chips.
+    /// Even though the lookup table can be used in other parts of the circuit,
+    /// this specific configuration sets up Sinsemilla-specific constraints
+    /// controlled by `q_sinsemilla`, and would likely not apply to other chips.
     pub fn configure(meta: &mut ConstraintSystem<pallas::Base>, config: super::SinsemillaConfig) {
         let (table_idx, table_x, table_y) = (
             config.generator_table.table_idx,
