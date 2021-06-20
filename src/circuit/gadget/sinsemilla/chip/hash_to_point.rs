@@ -161,11 +161,12 @@ impl SinsemillaChip {
     }
 
     #[allow(clippy::type_complexity)]
-    // Hash a message piece containing `piece.length` number of `K`-bit words.
-    // To avoid a duplicate assignment, the accumulator x-coordinate provided
-    // by the caller is not copied. This only works because `hash_piece()` is
-    // an internal API. Before this call to `hash_piece()`, x_a MUST have been
-    // already assigned within this region at the correct offset.
+    /// Hashes a message piece containing `piece.length` number of `K`-bit words.
+    ///
+    /// To avoid a duplicate assignment, the accumulator x-coordinate provided
+    /// by the caller is not copied. This only works because `hash_piece()` is
+    /// an internal API. Before this call to `hash_piece()`, x_a MUST have been
+    /// already assigned within this region at the correct offset.
     fn hash_piece(
         &self,
         region: &mut Region<'_, pallas::Base>,
@@ -409,7 +410,7 @@ impl SinsemillaChip {
     }
 }
 
-// The x-coordinate of the accumulator in a Sinsemilla hash instance.
+/// The x-coordinate of the accumulator in a Sinsemilla hash instance.
 struct X<F: FieldExt>(CellValue<F>);
 
 impl<F: FieldExt> From<CellValue<F>> for X<F> {
@@ -426,10 +427,11 @@ impl<F: FieldExt> Deref for X<F> {
     }
 }
 
-// The y-coordinate of the accumulator in a Sinsemilla hash instance.
-// This is never actually witnessed until the last round, since it
-// can be derived from other variables. Thus it only exists as a field
-// element, not a `CellValue`.
+/// The y-coordinate of the accumulator in a Sinsemilla hash instance.
+///
+/// This is never actually witnessed until the last round, since it
+/// can be derived from other variables. Thus it only exists as a field
+/// element, not a `CellValue`.
 struct Y<F: FieldExt>(Option<F>);
 
 impl<F: FieldExt> From<Option<F>> for Y<F> {

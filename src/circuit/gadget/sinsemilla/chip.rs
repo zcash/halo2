@@ -35,36 +35,37 @@ mod hash_to_point;
 /// Configuration for the Sinsemilla hash chip
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct SinsemillaConfig {
-    // Selector used in the lookup argument as well as Sinsemilla custom gates.
+    /// Selector used in the lookup argument as well as Sinsemilla custom gates.
     q_sinsemilla1: Selector,
-    // Fixed column used in Sinsemilla custom gates.
+    /// Fixed column used in Sinsemilla custom gates, to toggle behaviour at the ends of
+    /// message pieces.
     q_sinsemilla2: Column<Fixed>,
-    // Fixed column used to constrain hash initialization to be consistent with
-    // the y-coordinate of the domain Q.
+    /// Fixed column used to constrain hash initialization to be consistent with
+    /// the y-coordinate of the domain $Q$.
     fixed_y_q: Column<Fixed>,
-    // Advice column used to store the x-coordinate of the accumulator at each
-    // iteration of the hash.
+    /// Advice column used to store the x-coordinate of the accumulator at each
+    /// iteration of the hash.
     x_a: Column<Advice>,
-    // Advice column used to store the x-coordinate of the generator corresponding
-    // to the message word at each iteration of the hash. This is looked up in the
-    // generator table.
+    /// Advice column used to store the x-coordinate of the generator corresponding
+    /// to the message word at each iteration of the hash. This is looked up in the
+    /// generator table.
     x_p: Column<Advice>,
-    // Advice column used to load the message.
+    /// Advice column used to load the message.
     bits: Column<Advice>,
-    // Advice column used to store the lambda_1 intermediate value at each
-    // iteration.
+    /// Advice column used to store the $\lambda_1$ intermediate value at each
+    /// iteration.
     lambda_1: Column<Advice>,
-    // Advice column used to store the lambda_2 intermediate value at each
-    // iteration.
+    /// Advice column used to store the $\lambda_2$ intermediate value at each
+    /// iteration.
     lambda_2: Column<Advice>,
-    // The lookup table where (idx, x_p, y_p) are loaded for the 2^K generators
-    // of the Sinsemilla hash.
+    /// The lookup table where $(\mathsf{idx}, x_p, y_p)$ are loaded for the $2^K$
+    /// generators of the Sinsemilla hash.
     generator_table: GeneratorTableConfig,
-    // Fixed column shared by the whole circuit. This is used to load the
-    // x-coordinate of the domain Q, which is then constrained to equal the
-    // initial x_a.
+    /// Fixed column shared by the whole circuit. This is used to load the
+    /// x-coordinate of the domain $Q$, which is then constrained to equal the
+    /// initial $x_a$.
     constants: Column<Fixed>,
-    // Permutation over all advice columns and the `constants` fixed column.
+    /// Permutation over all advice columns and the `constants` fixed column.
     perm: Permutation,
 }
 

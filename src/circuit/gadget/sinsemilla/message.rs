@@ -36,7 +36,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize, const MAX_WORDS: usize> std::
 pub struct MessagePiece<F: FieldExt, const K: usize> {
     cell: Cell,
     field_elem: Option<F>,
-    // The number of K-bit words in this message piece.
+    /// The number of K-bit words in this message piece.
     num_words: usize,
 }
 
