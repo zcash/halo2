@@ -152,6 +152,10 @@ impl SinsemillaChip {
 
     #[allow(clippy::type_complexity)]
     // Hash a message piece containing `piece.length` number of `K`-bit words.
+    // To avoid a duplicate assignment, the accumulator x-coordinate provided
+    // by the caller is not copied. This only works because `hash_piece()` is
+    // an internal API. Before this call to `hash_piece()`, x_a MUST have been
+    // already assigned within this region at the correct offset.
     fn hash_piece(
         &self,
         region: &mut Region<'_, pallas::Base>,
@@ -161,8 +165,8 @@ impl SinsemillaChip {
             { sinsemilla::K },
             { sinsemilla::C },
         >>::MessagePiece,
-        x_a: X<pallas::Base>,
-        y_a: Y<pallas::Base>,
+        mut x_a: X<pallas::Base>,
+        mut y_a: Y<pallas::Base>,
         final_piece: bool,
     ) -> Result<
         (
@@ -294,18 +298,8 @@ impl SinsemillaChip {
             zs
         };
 
-        // Copy in the accumulator x-coordinate
-        let mut x_a: X<pallas::Base> = copy(
-            region,
-            || "Initialize accumulator x-coordinate",
-            config.x_a,
-            offset,
-            &x_a.0,
-            &config.perm,
-        )?
-        .into();
-
-        let mut y_a = y_a;
+        // The accumulator x-coordinate provided by the caller MUST have been assigned
+        // within this region.
 
         let generators: Vec<Option<(pallas::Base, pallas::Base)>> =
             if let Some(generators) = generators {
