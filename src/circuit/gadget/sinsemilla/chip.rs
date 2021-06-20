@@ -123,6 +123,9 @@ impl SinsemillaChip {
             perm,
         };
 
+        // Set up lookup argument
+        GeneratorTableConfig::configure(meta, config.clone());
+
         let two = Expression::Constant(pallas::Base::from_u64(2));
         // Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.
         meta.create_gate("Initial y_Q", |meta| {

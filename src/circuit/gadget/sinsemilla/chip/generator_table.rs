@@ -56,7 +56,7 @@ impl GeneratorTableConfig {
 
             let x_p = meta.query_advice(config.x_p, Rotation::cur());
 
-            // y_{p,i} = (Y_{A,i} / 2) - lambda1 * (x_{A,i} - x_{R,i}),
+            // y_{p,i} = (Y_{A,i} / 2) - lambda1 * (x_{A,i} - x_{P,i}),
             // where Y_{A,i} = (lambda1_i + lambda2_i) * (x_{A,i} - x_{R,i}),
             //       x_{R,i} = lambda1^2 - x_{A,i} - x_{P,i}
             //
@@ -66,9 +66,9 @@ impl GeneratorTableConfig {
                 let x_a = meta.query_advice(config.x_a, Rotation::cur());
 
                 let x_r = lambda1.clone().square() - x_a.clone() - x_p.clone();
-                let Y_A = (lambda1.clone() + lambda2) * (x_a.clone() - x_r.clone());
+                let Y_A = (lambda1.clone() + lambda2) * (x_a.clone() - x_r);
 
-                (Y_A * pallas::Base::TWO_INV) * (lambda1 * (x_a - x_r))
+                (Y_A * pallas::Base::TWO_INV) - (lambda1 * (x_a - x_p.clone()))
             };
 
             // Lookup expressions default to the first entry when `q_s1`
