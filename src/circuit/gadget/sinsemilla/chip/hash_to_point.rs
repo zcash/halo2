@@ -57,8 +57,20 @@ impl SinsemillaChip {
             )?;
 
             // Constrain the initial x_a, lambda_1, lambda_2, x_p using the fixed y_q
-            // initializer.
-            region.assign_fixed(|| "fixed y_q", config.fixed_y_q, offset, || Ok(y_q))?;
+            // initializer. Assign `fixed_y_q` to be zero on every other row.
+            {
+                region.assign_fixed(|| "fixed y_q", config.fixed_y_q, offset, || Ok(y_q))?;
+
+                let total_num_words = message.iter().map(|piece| piece.num_words()).sum();
+                for row in 1..total_num_words {
+                    region.assign_fixed(
+                        || "fixed y_q",
+                        config.fixed_y_q,
+                        offset + row,
+                        || Ok(pallas::Base::zero()),
+                    )?;
+                }
+            }
 
             let y_a = Some(y_q);
 
@@ -68,7 +80,7 @@ impl SinsemillaChip {
         let mut zs_sum: Vec<Vec<CellValue<pallas::Base>>> = Vec::new();
 
         // Hash each piece in the message.
-        for (idx, piece) in message[0..message.len()].iter().enumerate() {
+        for (idx, piece) in message.iter().enumerate() {
             let final_piece = idx == message.len() - 1;
 
             // The value of the accumulator after this piece is processed.

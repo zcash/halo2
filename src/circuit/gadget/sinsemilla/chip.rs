@@ -150,17 +150,6 @@ impl SinsemillaChip {
             (lambda_1 + lambda_2) * (x_a - x_r(meta, rotation))
         };
 
-        // Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.
-        meta.create_gate("Initial y_Q", |meta| {
-            let fixed_y_q = meta.query_fixed(config.fixed_y_q, Rotation::cur());
-
-            // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
-            let Y_A = Y_A(meta, Rotation::cur());
-
-            // fixed_y_q * (2 * fixed_y_q - Y_{A,0}) = 0
-            vec![fixed_y_q.clone() * (two.clone() * fixed_y_q - Y_A)]
-        });
-
         meta.create_gate("Sinsemilla gate", |meta| {
             let q_s1 = meta.query_selector(config.q_sinsemilla1);
             let q_s2 = meta.query_fixed(config.q_sinsemilla2, Rotation::cur());
@@ -168,6 +157,7 @@ impl SinsemillaChip {
                 let one = Expression::Constant(pallas::Base::one());
                 q_s2.clone() * (q_s2 - one)
             };
+            let fixed_y_q = meta.query_fixed(config.fixed_y_q, Rotation::cur());
 
             let lambda_1_next = meta.query_advice(config.lambda_1, Rotation::next());
             let lambda_2_cur = meta.query_advice(config.lambda_2, Rotation::cur());
@@ -182,6 +172,10 @@ impl SinsemillaChip {
 
             // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
             let Y_A_next = Y_A(meta, Rotation::next());
+
+            // Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.
+            // fixed_y_q * (2 * fixed_y_q - Y_{A,0}) = 0
+            let init_y_q_check = fixed_y_q.clone() * (two.clone() * fixed_y_q - Y_A_cur.clone());
 
             // lambda2^2 - (x_a_next + x_r + x_a_cur) = 0
             let secant_line =
@@ -207,6 +201,7 @@ impl SinsemillaChip {
             };
 
             vec![
+                ("Initial y_q", init_y_q_check),
                 ("Secant line", q_s1.clone() * secant_line),
                 ("Sinsemilla gate", q_s1 * expr),
             ]
