@@ -2,6 +2,8 @@
 
 use std::{fmt, marker::PhantomData};
 
+use ff::Field;
+
 use crate::{
     arithmetic::FieldExt,
     plonk::{Advice, Any, Assigned, Column, Error, Fixed, Permutation, Selector},
@@ -99,17 +101,17 @@ pub struct Cell {
 /// "logical" columns that are guaranteed to correspond to the chip (and have come from
 /// `Chip::Config`).
 #[derive(Debug)]
-pub struct Region<'r, F: FieldExt> {
+pub struct Region<'r, F: Field> {
     region: &'r mut dyn layouter::RegionLayouter<F>,
 }
 
-impl<'r, F: FieldExt> From<&'r mut dyn layouter::RegionLayouter<F>> for Region<'r, F> {
+impl<'r, F: Field> From<&'r mut dyn layouter::RegionLayouter<F>> for Region<'r, F> {
     fn from(region: &'r mut dyn layouter::RegionLayouter<F>) -> Self {
         Region { region }
     }
 }
 
-impl<'r, F: FieldExt> Region<'r, F> {
+impl<'r, F: Field> Region<'r, F> {
     /// Enables a selector at the given offset.
     pub(crate) fn enable_selector<A, AR>(
         &mut self,
@@ -187,7 +189,7 @@ impl<'r, F: FieldExt> Region<'r, F> {
 ///
 /// This abstracts over the circuit assignments, handling row indices etc.
 ///
-pub trait Layouter<F: FieldExt> {
+pub trait Layouter<F: Field> {
     /// Represents the type of the "root" of this layouter, so that nested namespaces
     /// can minimize indirection.
     type Root: Layouter<F>;
@@ -243,9 +245,9 @@ pub trait Layouter<F: FieldExt> {
 /// This is a "namespaced" layouter which borrows a `Layouter` (pushing a namespace
 /// context) and, when dropped, pops out of the namespace context.
 #[derive(Debug)]
-pub struct NamespacedLayouter<'a, F: FieldExt, L: Layouter<F> + 'a>(&'a mut L, PhantomData<F>);
+pub struct NamespacedLayouter<'a, F: Field, L: Layouter<F> + 'a>(&'a mut L, PhantomData<F>);
 
-impl<'a, F: FieldExt, L: Layouter<F> + 'a> Layouter<F> for NamespacedLayouter<'a, F, L> {
+impl<'a, F: Field, L: Layouter<F> + 'a> Layouter<F> for NamespacedLayouter<'a, F, L> {
     type Root = L::Root;
 
     fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>
@@ -274,7 +276,7 @@ impl<'a, F: FieldExt, L: Layouter<F> + 'a> Layouter<F> for NamespacedLayouter<'a
     }
 }
 
-impl<'a, F: FieldExt, L: Layouter<F> + 'a> Drop for NamespacedLayouter<'a, F, L> {
+impl<'a, F: Field, L: Layouter<F> + 'a> Drop for NamespacedLayouter<'a, F, L> {
     fn drop(&mut self) {
         let gadget_name = {
             #[cfg(feature = "gadget-traces")]
