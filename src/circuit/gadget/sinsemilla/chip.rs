@@ -16,7 +16,10 @@ use ff::PrimeField;
 use halo2::{
     arithmetic::{CurveAffine, FieldExt},
     circuit::{Chip, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Permutation, Selector},
+    plonk::{
+        Advice, Column, ConstraintSystem, Error, Expression, Fixed, Permutation, Selector,
+        VirtualCells,
+    },
     poly::Rotation,
 };
 use pasta_curves::pallas;
@@ -126,25 +129,32 @@ impl SinsemillaChip {
         // Set up lookup argument
         GeneratorTableConfig::configure(meta, config.clone());
 
+        // Constant expressions
         let two = Expression::Constant(pallas::Base::from_u64(2));
+
+        // Closures for expressions that are derived multiple times
+        // x_r = lambda_1^2 - x_a - x_p
+        let x_r = |meta: &mut VirtualCells<pallas::Base>, rotation| {
+            let x_a = meta.query_advice(config.x_a, rotation);
+            let x_p = meta.query_advice(config.x_p, rotation);
+            let lambda_1 = meta.query_advice(config.lambda_1, rotation);
+            lambda_1.square() - x_a - x_p
+        };
+
+        // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
+        let Y_A = |meta: &mut VirtualCells<pallas::Base>, rotation| {
+            let x_a = meta.query_advice(config.x_a, rotation);
+            let lambda_1 = meta.query_advice(config.lambda_1, rotation);
+            let lambda_2 = meta.query_advice(config.lambda_2, rotation);
+            (lambda_1 + lambda_2) * (x_a - x_r(meta, rotation))
+        };
+
         // Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.
         meta.create_gate("Initial y_Q", |meta| {
             let fixed_y_q = meta.query_fixed(config.fixed_y_q, Rotation::cur());
 
             // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
-            let Y_A = {
-                let lambda_1 = meta.query_advice(config.lambda_1, Rotation::cur());
-                let lambda_2 = meta.query_advice(config.lambda_2, Rotation::cur());
-                let x_a = meta.query_advice(config.x_a, Rotation::cur());
-
-                // x_r = lambda_1^2 - x_a - x_p
-                let x_r = {
-                    let x_p = meta.query_advice(config.x_p, Rotation::cur());
-                    lambda_1.clone().square() - x_a.clone() - x_p
-                };
-
-                (lambda_1 + lambda_2) * (x_a - x_r)
-            };
+            let Y_A = Y_A(meta, Rotation::cur());
 
             // fixed_y_q * (2 * fixed_y_q - Y_{A,0}) = 0
             vec![fixed_y_q.clone() * (two.clone() * fixed_y_q - Y_A)]
@@ -152,16 +162,12 @@ impl SinsemillaChip {
 
         meta.create_gate("Secant line", |meta| {
             let q_s1 = meta.query_selector(config.q_sinsemilla1);
-            let lambda_1 = meta.query_advice(config.lambda_1, Rotation::cur());
             let lambda_2 = meta.query_advice(config.lambda_2, Rotation::cur());
             let x_a_cur = meta.query_advice(config.x_a, Rotation::cur());
             let x_a_next = meta.query_advice(config.x_a, Rotation::next());
 
             // x_r = lambda_1^2 - x_a_cur - x_p
-            let x_r = {
-                let x_p = meta.query_advice(config.x_p, Rotation::cur());
-                lambda_1.square() - x_a_cur.clone() - x_p
-            };
+            let x_r = x_r(meta, Rotation::cur());
 
             // lambda2^2 - (x_a_next + x_r + x_a_cur) = 0
             let secant_line = lambda_2.square() - (x_a_next + x_r + x_a_cur);
@@ -178,32 +184,14 @@ impl SinsemillaChip {
             };
             let x_a_cur = meta.query_advice(config.x_a, Rotation::cur());
             let x_a_next = meta.query_advice(config.x_a, Rotation::next());
-            let lambda_1_cur = meta.query_advice(config.lambda_1, Rotation::cur());
             let lambda_2_cur = meta.query_advice(config.lambda_2, Rotation::cur());
             let lambda_1_next = meta.query_advice(config.lambda_1, Rotation::next());
-            let lambda_2_next = meta.query_advice(config.lambda_2, Rotation::next());
 
             // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
-            let Y_A_cur = {
-                // x_r = lambda_1^2 - x_a - x_p
-                let x_r = {
-                    let x_p = meta.query_advice(config.x_p, Rotation::cur());
-                    lambda_1_cur.clone().square() - x_a_cur.clone() - x_p
-                };
-
-                (lambda_1_cur + lambda_2_cur.clone()) * (x_a_cur.clone() - x_r)
-            };
+            let Y_A_cur = Y_A(meta, Rotation::cur());
 
             // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
-            let Y_A_next = {
-                // x_r = lambda_1^2 - x_a - x_p
-                let x_r = {
-                    let x_p = meta.query_advice(config.x_p, Rotation::next());
-                    lambda_1_next.clone().square() - x_a_next.clone() - x_p
-                };
-
-                (lambda_1_next.clone() + lambda_2_next) * (x_a_next.clone() - x_r)
-            };
+            let Y_A_next = Y_A(meta, Rotation::next());
 
             // lhs = 4 * lambda_2_cur * (x_a_cur - x_a_next)
             let lhs = lambda_2_cur * pallas::Base::from_u64(4) * (x_a_cur - x_a_next);
