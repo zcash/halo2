@@ -16,3 +16,5 @@
   - [Nullifiers](design/nullifiers.md)
   - [Signatures](design/signatures.md)
   - [Circuit](design/circuit.md)
+    - [Gadgets](design/circuit/gadgets.md)
+      - [Sinsemilla](design/circuit/gadgets/sinsemilla.md)
