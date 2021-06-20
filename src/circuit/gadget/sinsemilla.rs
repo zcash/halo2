@@ -408,4 +408,18 @@ mod tests {
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
     }
+
+    #[cfg(feature = "dev-graph")]
+    #[test]
+    fn print_sinsemilla_chip() {
+        use plotters::prelude::*;
+
+        let root =
+            BitMapBackend::new("sinsemilla-hash-layout.png", (1024, 7680)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root.titled("SinsemillaHash", ("sans-serif", 60)).unwrap();
+
+        let circuit = MyCircuit {};
+        halo2::dev::circuit_layout(&circuit, &root).unwrap();
+    }
 }
