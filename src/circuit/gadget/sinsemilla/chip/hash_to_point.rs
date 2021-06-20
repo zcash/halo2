@@ -60,10 +60,12 @@ impl SinsemillaChip {
 
         let mut zs_sum: Vec<Vec<CellValue<pallas::Base>>> = Vec::new();
 
-        // Hash each piece in the message except the final piece.
-        for piece in message[0..(message.len() - 1)].iter() {
+        // Hash each piece in the message.
+        for (idx, piece) in message[0..message.len()].iter().enumerate() {
+            let final_piece = idx == message.len() - 1;
+
             // The value of the accumulator after this piece is processed.
-            let (x, y, zs) = self.hash_piece(region, offset, piece, x_a, y_a)?;
+            let (x, y, zs) = self.hash_piece(region, offset, piece, x_a, y_a, final_piece)?;
 
             // Since each message word takes one row to process, we increase
             // the offset by `piece.num_words` on each iteration.
@@ -75,29 +77,9 @@ impl SinsemillaChip {
             zs_sum.push(zs);
         }
 
-        // Hash the final message piece.
+        // Assign the final y_a.
         let y_a = {
-            let piece = &message[message.len() - 1];
-            // The value of the accumulator after this piece is processed.
-            let (x, y, zs) = self.hash_piece(region, offset, piece, x_a, y_a)?;
-
-            // Since each message word takes one row to process, we increase
-            // the offset by `piece.num_words` on each iteration.
-            offset += piece.num_words();
-
-            // Update the accumulator to the latest value.
-            x_a = x;
-            y_a = y;
-            zs_sum.push(zs);
-
-            // Assign and constrain the final `y_a`.
-            region.assign_fixed(
-                || "qs_2 = 2 on final row",
-                config.q_sinsemilla2,
-                offset - 1,
-                || Ok(pallas::Base::from_u64(2)),
-            )?;
-
+            // Assign the final y_a.
             let y_a_cell = region.assign_advice(
                 || "y_a",
                 config.lambda_1,
@@ -181,6 +163,7 @@ impl SinsemillaChip {
         >>::MessagePiece,
         x_a: X<pallas::Base>,
         y_a: Y<pallas::Base>,
+        final_piece: bool,
     ) -> Result<
         (
             X<pallas::Base>,
@@ -208,12 +191,25 @@ impl SinsemillaChip {
                 )?;
             }
 
-            // Set `q_sinsemilla2` fixed column to 0 on the last row.
+            // Set `q_sinsemilla2` fixed column to 0 on the last row if this is
+            // not the final piece, or to 2 on the last row of the final piece.
             region.assign_fixed(
-                || "q_s2 = 1",
+                || {
+                    if final_piece {
+                        "q_s2 for final piece"
+                    } else {
+                        "q_s2 between pieces"
+                    }
+                },
                 config.q_sinsemilla2,
                 offset + piece.num_words() - 1,
-                || Ok(pallas::Base::zero()),
+                || {
+                    Ok(if final_piece {
+                        pallas::Base::from_u64(2)
+                    } else {
+                        pallas::Base::zero()
+                    })
+                },
             )?;
         }
 
