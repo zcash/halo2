@@ -1,3 +1,5 @@
+//! The Orchard Action circuit implementation.
+
 use group::Curve;
 use halo2::{
     plonk,

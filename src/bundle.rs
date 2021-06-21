@@ -3,7 +3,7 @@
 use nonempty::NonEmpty;
 
 use crate::{
-    circuit::{Instance, Proof},
+    circuit::{Instance, Proof, VerifyingKey},
     note::{ExtractedNoteCommitment, Nullifier, TransmittedNoteCiphertext},
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::Anchor,
@@ -298,6 +298,13 @@ impl<T: Authorization, V> Bundle<T, V> {
             authorization: step(context, authorization)?,
         })
     }
+
+    pub(crate) fn to_instances(&self) -> Vec<Instance> {
+        self.actions
+            .iter()
+            .map(|a| a.to_instance(self.flags, self.anchor))
+            .collect()
+    }
 }
 
 impl<T: Authorization, V: Copy + Into<ValueSum>> Bundle<T, V> {
@@ -353,6 +360,13 @@ impl<V> Bundle<Authorized, V> {
     /// This together with `Bundle::commitment` bind the entire bundle.
     pub fn authorizing_commitment(&self) -> BundleAuthorizingCommitment {
         todo!()
+    }
+
+    /// Verifies the proof for this bundle.
+    pub fn verify_proof(&self, vk: &VerifyingKey) -> Result<(), halo2::plonk::Error> {
+        self.authorization()
+            .proof()
+            .verify(vk, &self.to_instances())
     }
 }
 

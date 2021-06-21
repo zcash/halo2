@@ -19,7 +19,7 @@
 mod address;
 pub mod builder;
 pub mod bundle;
-mod circuit;
+pub mod circuit;
 mod constants;
 pub mod keys;
 pub mod note;
