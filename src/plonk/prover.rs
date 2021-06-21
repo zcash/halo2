@@ -276,13 +276,13 @@ pub fn create_proof<
                 .iter()
                 .map(|lookup| {
                     lookup.commit_permuted(
-                        &pk,
-                        &params,
-                        &domain,
+                        pk,
+                        params,
+                        domain,
                         theta,
                         &advice.advice_values,
                         &pk.fixed_values,
-                        &instance.instance_values,
+                        instance.instance_values,
                         &advice.advice_cosets,
                         &pk.fixed_cosets,
                         &instance.instance_cosets,
@@ -316,7 +316,7 @@ pub fn create_proof<
                         pkey,
                         &advice.advice_values,
                         &pk.fixed_values,
-                        &instance.instance_values,
+                        instance.instance_values,
                         beta,
                         gamma,
                         transcript,
@@ -332,7 +332,7 @@ pub fn create_proof<
             // Construct and commit to products for each lookup
             lookups
                 .into_iter()
-                .map(|lookup| lookup.commit_product(&pk, &params, theta, beta, gamma, transcript))
+                .map(|lookup| lookup.commit_product(pk, params, theta, beta, gamma, transcript))
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;

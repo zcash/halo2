@@ -173,7 +173,7 @@ impl<F: FieldExt> Argument<F> {
         let commit_values = |values: &Polynomial<C::Scalar, LagrangeCoeff>| {
             let poly = pk.vk.domain.lagrange_to_coeff(values.clone());
             let blind = Blind(C::Scalar::rand());
-            let commitment = params.commit_lagrange(&values, blind).to_affine();
+            let commitment = params.commit_lagrange(values, blind).to_affine();
             (poly, blind, commitment)
         };
 
@@ -604,7 +604,7 @@ fn permute_expression_pair<C: CurveAffine>(
             if row == 0 || *input_value != permuted_input_expression[row - 1] {
                 *table_value = *input_value;
                 // Remove one instance of input_value from leftover_table_map
-                if let Some(count) = leftover_table_map.get_mut(&input_value) {
+                if let Some(count) = leftover_table_map.get_mut(input_value) {
                     assert!(*count > 0);
                     *count -= 1;
                     None

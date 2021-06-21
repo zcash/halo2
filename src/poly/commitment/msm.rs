@@ -39,7 +39,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         self.other_bases.extend(other.other_bases.iter());
 
         if let Some(g_scalars) = &other.g_scalars {
-            self.add_to_g_scalars(&g_scalars);
+            self.add_to_g_scalars(g_scalars);
         }
 
         if let Some(h_scalar) = &other.h_scalar {

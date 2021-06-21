@@ -114,7 +114,7 @@ where
         },
     );
 
-    commitment::create_proof(&params, transcript, &f_poly, f_blind_try, *x_3)
+    commitment::create_proof(params, transcript, &f_poly, f_blind_try, *x_3)
 }
 
 #[doc(hidden)]
