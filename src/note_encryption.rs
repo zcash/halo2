@@ -129,7 +129,7 @@ impl Domain for OrchardDomain {
     }
 
     fn kdf(secret: Self::SharedSecret, ephemeral_key: &EphemeralKeyBytes) -> Self::SymmetricKey {
-        secret.kdf_orchard(&ephemeral_key)
+        secret.kdf_orchard(ephemeral_key)
     }
 
     fn note_plaintext_bytes(
@@ -189,7 +189,7 @@ impl Domain for OrchardDomain {
         ivk: &Self::IncomingViewingKey,
         plaintext: &[u8],
     ) -> Option<(Self::Note, Self::Recipient)> {
-        orchard_parse_note_plaintext_without_memo(&self, plaintext, |diversifier| {
+        orchard_parse_note_plaintext_without_memo(self, plaintext, |diversifier| {
             Some(DiversifiedTransmissionKey::derive(ivk, diversifier))
         })
     }
@@ -201,7 +201,7 @@ impl Domain for OrchardDomain {
         ephemeral_key: &EphemeralKeyBytes,
         plaintext: &[u8],
     ) -> Option<(Self::Note, Self::Recipient)> {
-        orchard_parse_note_plaintext_without_memo(&self, plaintext, |diversifier| {
+        orchard_parse_note_plaintext_without_memo(self, plaintext, |diversifier| {
             if esk
                 .derive_public(diversify_hash(diversifier.as_array()))
                 .to_bytes()
@@ -351,7 +351,7 @@ mod tests {
                 rho,
                 // We don't need a valid rk for this test.
                 redpallas::VerificationKey::dummy(),
-                cmx.clone(),
+                cmx,
                 TransmittedNoteCiphertext {
                     epk_bytes: ephemeral_key.0,
                     enc_ciphertext: tv.c_enc,

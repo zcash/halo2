@@ -149,7 +149,7 @@ impl<
                     layouter.namespace(|| "PoseidonDuplex"),
                     &self.domain,
                     &mut self.state,
-                    &input,
+                    input,
                 )?;
                 self.sponge = Sponge::absorb(value.inner);
             }
@@ -175,7 +175,7 @@ impl<
                         layouter.namespace(|| "PoseidonDuplex"),
                         &self.domain,
                         &mut self.state,
-                        &input,
+                        input,
                     )?);
                 }
                 Sponge::Squeezing(ref mut output) => {
