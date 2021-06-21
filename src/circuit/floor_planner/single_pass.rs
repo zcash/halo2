@@ -5,12 +5,35 @@ use std::marker::PhantomData;
 
 use ff::Field;
 
-use super::{RegionLayouter, RegionShape};
-use crate::plonk::Assigned;
 use crate::{
-    circuit::{Cell, Layouter, Region, RegionIndex, RegionStart},
-    plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation, Selector},
+    circuit::{
+        layouter::{RegionLayouter, RegionShape},
+        Cell, Layouter, Region, RegionIndex, RegionStart,
+    },
+    plonk::{
+        Advice, Any, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner,
+        Permutation, Selector,
+    },
 };
+
+/// A simple [`FloorPlanner`] that performs minimal optimizations.
+///
+/// This floor planner is suitable for debugging circuits. It aims to reflect the circuit
+/// "business logic" in the circuit layout as closely as possible. It uses a single-pass
+/// layouter that does not reorder regions for optimal packing.
+#[derive(Debug)]
+pub struct SimpleFloorPlanner;
+
+impl FloorPlanner for SimpleFloorPlanner {
+    fn synthesize<F: Field, CS: Assignment<F>, C: Circuit<F>>(
+        cs: &mut CS,
+        circuit: &C,
+        config: C::Config,
+    ) -> Result<(), Error> {
+        let layouter = SingleChipLayouter::new(cs)?;
+        circuit.synthesize(config, layouter)
+    }
+}
 
 /// A [`Layouter`] for a single-chip circuit.
 pub struct SingleChipLayouter<'a, F: Field, CS: Assignment<F> + 'a> {

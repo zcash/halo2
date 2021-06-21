@@ -3,8 +3,7 @@ extern crate criterion;
 
 extern crate halo2;
 use halo2::arithmetic::FieldExt;
-use halo2::circuit::layouter::SingleChipLayouter;
-use halo2::circuit::{Cell, Layouter};
+use halo2::circuit::{Cell, Layouter, SimpleFloorPlanner};
 use halo2::pasta::{EqAffine, Fp};
 use halo2::plonk::*;
 use halo2::poly::{commitment::Params, Rotation};
@@ -174,6 +173,11 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
 
     impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         type Config = PLONKConfig;
+        type FloorPlanner = SimpleFloorPlanner;
+
+        fn without_witnesses(&self) -> Self {
+            Self { a: None, k: self.k }
+        }
 
         fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
             let a = meta.advice_column();
@@ -214,10 +218,9 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
 
         fn synthesize(
             &self,
-            cs: &mut impl Assignment<F>,
             config: PLONKConfig,
+            mut layouter: impl Layouter<F>,
         ) -> Result<(), Error> {
-            let mut layouter = SingleChipLayouter::new(cs)?;
             let cs = StandardPLONK::new(config);
 
             for _ in 0..(1 << (self.k - 1)) {

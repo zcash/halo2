@@ -3,65 +3,79 @@ use std::marker::PhantomData;
 
 use ff::Field;
 
-use super::{RegionLayouter, RegionShape};
-use crate::plonk::Assigned;
 use crate::{
-    circuit::{Cell, Layouter, Region, RegionIndex, RegionStart},
-    plonk::{Advice, Assignment, Column, Error, Fixed, Permutation, Selector},
+    circuit::{
+        layouter::{RegionLayouter, RegionShape},
+        Cell, Layouter, Region, RegionIndex, RegionStart,
+    },
+    plonk::{
+        Advice, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Permutation,
+        Selector,
+    },
 };
 
 mod strategy;
 
-/// The version 1 [`Layouter`] provided by `halo2`.
+/// The version 1 [`FloorPlanner`] provided by `halo2`.
 ///
-/// It is a dual-pass layouter, that has visibility into the entire `Circuit::synthesize`
-/// step.
-pub struct V1<'a, F: Field, CS: Assignment<F> + 'a> {
+/// - No column optimizations are performed. Circuit configuration is left entirely to the
+///   circuit designer.
+/// - A dual-pass layouter is used to measures regions prior to assignment.
+/// - Regions are measured as rectangles, bounded on the cells they assign.
+/// - Regions are layed out using a greedy first-fit strategy, after sorting regions by
+///   their "advice area" (number of advice columns * rows).
+#[derive(Debug)]
+pub struct V1;
+
+struct V1Plan<'a, F: Field, CS: Assignment<F> + 'a> {
     cs: &'a mut CS,
     /// Stores the starting row for each region.
     regions: Vec<RegionStart>,
     _marker: PhantomData<F>,
 }
 
-impl<'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for V1<'a, F, CS> {
+impl<'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for V1Plan<'a, F, CS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("layouter::V1").finish()
+        f.debug_struct("floor_planner::V1Plan").finish()
     }
 }
 
-impl<'a, F: Field, CS: Assignment<F>> V1<'a, F, CS> {
+impl<'a, F: Field, CS: Assignment<F>> V1Plan<'a, F, CS> {
     /// Creates a new v1 layouter.
     pub fn new(cs: &'a mut CS) -> Result<Self, Error> {
-        let ret = V1 {
+        let ret = V1Plan {
             cs,
             regions: vec![],
             _marker: PhantomData,
         };
         Ok(ret)
     }
+}
 
-    /// Runs the layouter to synthesize the circuit.
-    ///
-    /// Even though `synthesis` has `FnMut` bounds, any value-assignment closures
-    /// contained within it are guaranteed to be called at most once.
-    pub fn run<S>(&mut self, mut synthesis: S) -> Result<(), Error>
-    where
-        S: FnMut(V1Pass<F, CS>) -> Result<(), Error>,
-    {
+impl FloorPlanner for V1 {
+    fn synthesize<F: Field, CS: Assignment<F>, C: Circuit<F>>(
+        cs: &mut CS,
+        circuit: &C,
+        config: C::Config,
+    ) -> Result<(), Error> {
+        let mut plan = V1Plan::new(cs)?;
+
         // First pass: measure the regions within the circuit.
         let mut measure = MeasurementPass::new();
         {
             let pass = &mut measure;
-            synthesis(V1Pass::measure(pass))?;
+            circuit
+                .without_witnesses()
+                .synthesize(config.clone(), V1Pass::<_, CS>::measure(pass))?;
         }
 
-        self.regions = strategy::slot_in_biggest_advice_first(measure.regions);
+        plan.regions = strategy::slot_in_biggest_advice_first(measure.regions);
 
         // Second pass: assign the regions.
-        let mut assign = AssignmentPass::new(self);
+        let mut assign = AssignmentPass::new(&mut plan);
         {
             let pass = &mut assign;
-            synthesis(V1Pass::assign(pass))?;
+            circuit.synthesize(config, V1Pass::assign(pass))?;
         }
 
         Ok(())
@@ -113,13 +127,13 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for V1Pass<'p, 'a, F,
         N: FnOnce() -> NR,
     {
         if let Pass::Assignment(pass) = &mut self.0 {
-            pass.layouter.cs.push_namespace(name_fn);
+            pass.plan.cs.push_namespace(name_fn);
         }
     }
 
     fn pop_namespace(&mut self, gadget_name: Option<String>) {
         if let Pass::Assignment(pass) = &mut self.0 {
-            pass.layouter.cs.pop_namespace(gadget_name);
+            pass.plan.cs.pop_namespace(gadget_name);
         }
     }
 }
@@ -156,15 +170,15 @@ impl MeasurementPass {
 /// Assigns the circuit.
 #[derive(Debug)]
 pub struct AssignmentPass<'p, 'a, F: Field, CS: Assignment<F> + 'a> {
-    layouter: &'p mut V1<'a, F, CS>,
+    plan: &'p mut V1Plan<'a, F, CS>,
     /// Counter tracking which region we need to assign next.
     region_index: usize,
 }
 
 impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
-    fn new(layouter: &'p mut V1<'a, F, CS>) -> Self {
+    fn new(plan: &'p mut V1Plan<'a, F, CS>) -> Self {
         AssignmentPass {
-            layouter,
+            plan,
             region_index: 0,
         }
     }
@@ -179,38 +193,35 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
         let region_index = self.region_index;
         self.region_index += 1;
 
-        self.layouter.cs.enter_region(name);
-        let mut region = V1Region::new(self.layouter, region_index.into());
+        self.plan.cs.enter_region(name);
+        let mut region = V1Region::new(self.plan, region_index.into());
         let result = {
             let region: &mut dyn RegionLayouter<F> = &mut region;
             assignment(region.into())
         }?;
-        self.layouter.cs.exit_region();
+        self.plan.cs.exit_region();
 
         Ok(result)
     }
 }
 
 struct V1Region<'r, 'a, F: Field, CS: Assignment<F> + 'a> {
-    layouter: &'r mut V1<'a, F, CS>,
+    plan: &'r mut V1Plan<'a, F, CS>,
     region_index: RegionIndex,
 }
 
 impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for V1Region<'r, 'a, F, CS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("V1Region")
-            .field("layouter", &self.layouter)
+            .field("plan", &self.plan)
             .field("region_index", &self.region_index)
             .finish()
     }
 }
 
 impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> V1Region<'r, 'a, F, CS> {
-    fn new(layouter: &'r mut V1<'a, F, CS>, region_index: RegionIndex) -> Self {
-        V1Region {
-            layouter,
-            region_index,
-        }
+    fn new(plan: &'r mut V1Plan<'a, F, CS>, region_index: RegionIndex) -> Self {
+        V1Region { plan, region_index }
     }
 }
 
@@ -221,10 +232,10 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
         selector: &Selector,
         offset: usize,
     ) -> Result<(), Error> {
-        self.layouter.cs.enable_selector(
+        self.plan.cs.enable_selector(
             annotation,
             selector,
-            *self.layouter.regions[*self.region_index] + offset,
+            *self.plan.regions[*self.region_index] + offset,
         )
     }
 
@@ -235,10 +246,10 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
         offset: usize,
         to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error> {
-        self.layouter.cs.assign_advice(
+        self.plan.cs.assign_advice(
             annotation,
             column,
-            *self.layouter.regions[*self.region_index] + offset,
+            *self.plan.regions[*self.region_index] + offset,
             to,
         )?;
 
@@ -256,10 +267,10 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
         offset: usize,
         to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error> {
-        self.layouter.cs.assign_fixed(
+        self.plan.cs.assign_fixed(
             annotation,
             column,
-            *self.layouter.regions[*self.region_index] + offset,
+            *self.plan.regions[*self.region_index] + offset,
             to,
         )?;
 
@@ -276,12 +287,12 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
         left: Cell,
         right: Cell,
     ) -> Result<(), Error> {
-        self.layouter.cs.copy(
+        self.plan.cs.copy(
             permutation,
             left.column,
-            *self.layouter.regions[*left.region_index] + left.row_offset,
+            *self.plan.regions[*left.region_index] + left.row_offset,
             right.column,
-            *self.layouter.regions[*right.region_index] + right.row_offset,
+            *self.plan.regions[*right.region_index] + right.row_offset,
         )?;
 
         Ok(())

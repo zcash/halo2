@@ -9,7 +9,7 @@ use std::ops::Range;
 
 use crate::plonk::{
     Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-    Permutation, Selector,
+    FloorPlanner, Permutation, Selector,
 };
 
 /// Graphical renderer for circuit layouts.
@@ -75,7 +75,7 @@ impl CircuitLayout {
         let mut cs = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut cs);
         let mut layout = Layout::default();
-        circuit.synthesize(&mut layout, config).unwrap();
+        ConcreteCircuit::FloorPlanner::synthesize(&mut layout, circuit, config).unwrap();
 
         // Figure out what order to render the columns in.
         // TODO: For now, just render them in the order they were configured.

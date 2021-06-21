@@ -3,7 +3,9 @@ use group::Curve;
 use std::iter;
 
 use super::{
-    circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, Selector},
+    circuit::{
+        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Selector,
+    },
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
     ChallengeY, Error, Permutation, ProvingKey,
 };
@@ -216,7 +218,7 @@ pub fn create_proof<
             };
 
             // Synthesize the circuit to obtain the witness and other information.
-            circuit.synthesize(&mut witness, config.clone())?;
+            ConcreteCircuit::FloorPlanner::synthesize(&mut witness, circuit, config.clone())?;
 
             let advice = batch_invert_assigned(&witness.advice);
 

@@ -1,9 +1,9 @@
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{layouter::SingleChipLayouter, Cell, Layouter, Region},
+    circuit::{Cell, Layouter, Region, SimpleFloorPlanner},
     dev::CircuitLayout,
     pasta::Fp,
-    plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation},
+    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation},
     poly::Rotation,
 };
 use plotters::prelude::*;
@@ -222,6 +222,14 @@ fn main() {
 
     impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         type Config = PLONKConfig;
+        type FloorPlanner = SimpleFloorPlanner;
+
+        fn without_witnesses(&self) -> Self {
+            Self {
+                a: None,
+                lookup_tables: self.lookup_tables.clone(),
+            }
+        }
 
         fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
             let e = meta.advice_column();
@@ -321,10 +329,9 @@ fn main() {
 
         fn synthesize(
             &self,
-            cs: &mut impl Assignment<F>,
             config: PLONKConfig,
+            mut layouter: impl Layouter<F>,
         ) -> Result<(), Error> {
-            let mut layouter = SingleChipLayouter::new(cs)?;
             let cs = StandardPLONK::new(config);
 
             let _ = cs.public_input(&mut layouter.namespace(|| "input"), || {

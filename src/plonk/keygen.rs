@@ -2,7 +2,9 @@ use ff::Field;
 use group::Curve;
 
 use super::{
-    circuit::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, Selector},
+    circuit::{
+        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Selector,
+    },
     permutation, Assigned, Error, LagrangeCoeff, Permutation, Polynomial, ProvingKey, VerifyingKey,
 };
 use crate::poly::{
@@ -177,7 +179,7 @@ where
     };
 
     // Synthesize the circuit to obtain URS
-    circuit.synthesize(&mut assembly, config)?;
+    ConcreteCircuit::FloorPlanner::synthesize(&mut assembly, circuit, config)?;
 
     let fixed = batch_invert_assigned(&assembly.fixed);
 
@@ -228,7 +230,7 @@ where
     };
 
     // Synthesize the circuit to obtain URS
-    circuit.synthesize(&mut assembly, config)?;
+    ConcreteCircuit::FloorPlanner::synthesize(&mut assembly, circuit, config)?;
 
     let fixed = batch_invert_assigned(&assembly.fixed);
 

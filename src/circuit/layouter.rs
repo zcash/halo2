@@ -10,12 +10,6 @@ use super::{Cell, RegionIndex};
 use crate::plonk::Assigned;
 use crate::plonk::{Advice, Any, Column, Error, Fixed, Permutation, Selector};
 
-mod single_pass;
-pub use single_pass::SingleChipLayouter;
-
-mod v1;
-pub use v1::{V1Pass, V1};
-
 /// Helper trait for implementing a custom [`Layouter`].
 ///
 /// This trait is used for implementing region assignments:
@@ -88,9 +82,9 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
 /// the set of columns it uses as well as the number of rows it uses.
 #[derive(Clone, Debug)]
 pub struct RegionShape {
-    region_index: RegionIndex,
-    columns: HashSet<Column<Any>>,
-    row_count: usize,
+    pub(super) region_index: RegionIndex,
+    pub(super) columns: HashSet<Column<Any>>,
+    pub(super) row_count: usize,
 }
 
 impl RegionShape {

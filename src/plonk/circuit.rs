@@ -7,6 +7,7 @@ use std::{
 };
 
 use super::{lookup, permutation, Error};
+use crate::circuit::Layouter;
 use crate::{arithmetic::FieldExt, circuit::Region, poly::Rotation};
 
 /// A column type
@@ -509,12 +510,38 @@ pub trait Assignment<F: Field> {
     fn pop_namespace(&mut self, gadget_name: Option<String>);
 }
 
+/// A floor planning strategy for a circuit.
+///
+/// The floor planner is chip-agnostic and applies its strategy to the circuit it is used
+/// within.
+pub trait FloorPlanner {
+    /// Given the provided `cs`, synthesize the given circuit.
+    ///
+    /// Internally, a floor planner will perform the following operations:
+    /// - Instantiate a [`Layouter`] for this floor planner.
+    /// - Perform any necessary setup or measurement tasks, which may involve one or more
+    ///   calls to `Circuit::default().synthesize(config, &mut layouter)`.
+    /// - Call `circuit.synthesize(config, &mut layouter)` exactly once.
+    fn synthesize<F: Field, CS: Assignment<F>, C: Circuit<F>>(
+        cs: &mut CS,
+        circuit: &C,
+        config: C::Config,
+    ) -> Result<(), Error>;
+}
+
 /// This is a trait that circuits provide implementations for so that the
 /// backend prover can ask the circuit to synthesize using some given
 /// [`ConstraintSystem`] implementation.
 pub trait Circuit<F: Field> {
     /// This is a configuration object that stores things like columns.
     type Config: Clone;
+    /// The floor planner used for this circuit. This is an associated type of the
+    /// `Circuit` trait because its behaviour is circuit-critical.
+    type FloorPlanner: FloorPlanner;
+
+    /// Returns a copy of this circuit with no witness values (i.e. all witnesses set to
+    /// `None`). For most circuits, this will be equal to `Self::default()`.
+    fn without_witnesses(&self) -> Self;
 
     /// The circuit is given an opportunity to describe the exact gate
     /// arrangement, column arrangement, etc.
@@ -523,7 +550,7 @@ pub trait Circuit<F: Field> {
     /// Given the provided `cs`, synthesize the circuit. The concrete type of
     /// the caller will be different depending on the context, and they may or
     /// may not expect to have a witness present.
-    fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error>;
+    fn synthesize(&self, config: Self::Config, layouter: impl Layouter<F>) -> Result<(), Error>;
 }
 
 /// Low-degree expression representing an identity that must hold over the committed columns.
