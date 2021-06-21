@@ -346,7 +346,7 @@ pub fn create_proof<
         .zip(instance.iter())
         .map(|((permutations, advice), instance)| {
             // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints, if any.
-            let tmp: Vec<_> = permutations
+            permutations
                 .into_iter()
                 .zip(pk.vk.cs.permutations.iter())
                 .zip(pk.permutations.iter())
@@ -362,9 +362,7 @@ pub fn create_proof<
                         gamma,
                     )
                 })
-                .collect();
-
-            tmp.into_iter().unzip()
+                .unzip()
         })
         .unzip();
 
@@ -372,12 +370,10 @@ pub fn create_proof<
         .into_iter()
         .map(|lookups| {
             // Evaluate the h(X) polynomial's constraint system expressions for the lookup constraints, if any.
-            let tmp: Vec<_> = lookups
+            lookups
                 .into_iter()
                 .map(|p| p.construct(pk, theta, beta, gamma))
-                .collect();
-
-            tmp.into_iter().unzip()
+                .unzip()
         })
         .unzip();
 
