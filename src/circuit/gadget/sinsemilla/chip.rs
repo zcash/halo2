@@ -60,13 +60,19 @@ pub struct SinsemillaConfig {
     lambda_2: Column<Advice>,
     /// The lookup table where $(\mathsf{idx}, x_p, y_p)$ are loaded for the $2^K$
     /// generators of the Sinsemilla hash.
-    generator_table: GeneratorTableConfig,
+    pub(super) generator_table: GeneratorTableConfig,
     /// Fixed column shared by the whole circuit. This is used to load the
     /// x-coordinate of the domain $Q$, which is then constrained to equal the
     /// initial $x_a$.
     constants: Column<Fixed>,
-    /// Permutation over all advice columns and the `constants` fixed column.
-    perm: Permutation,
+    // Permutation over all advice columns and the `constants` fixed column.
+    pub(super) perm: Permutation,
+}
+
+impl SinsemillaConfig {
+    pub fn advices(&self) -> [Column<Advice>; 5] {
+        [self.bits, self.lambda_1, self.lambda_2, self.x_a, self.x_p]
+    }
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
