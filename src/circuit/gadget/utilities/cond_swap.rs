@@ -1,4 +1,4 @@
-use super::{copy, CellValue, UtilitiesInstructions};
+use super::{copy, CellValue, UtilitiesInstructions, Var};
 use halo2::{
     circuit::{Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Permutation, Selector},
@@ -11,10 +11,14 @@ pub trait CondSwapInstructions<F: FieldExt>: UtilitiesInstructions<F> {
     #[allow(clippy::type_complexity)]
     /// Given an input pair (a,b) and a `swap` boolean flag, returns
     /// (b,a) if `swap` is set, else (a,b) if `swap` is not set.
+    ///
+    ///
+    /// The second element of the pair is required to be a witnessed
+    /// value, not a variable that already exists in the circuit.
     fn swap(
         &self,
         layouter: impl Layouter<F>,
-        pair: (Self::Var, Self::Var),
+        pair: (Self::Var, Option<F>),
         swap: Option<bool>,
     ) -> Result<(Self::Var, Self::Var), Error>;
 }
@@ -59,7 +63,7 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
     fn swap(
         &self,
         mut layouter: impl Layouter<F>,
-        pair: (Self::Var, Self::Var),
+        pair: (Self::Var, Option<F>),
         swap: Option<bool>,
     ) -> Result<(Self::Var, Self::Var), Error> {
         let config = self.config();
@@ -73,8 +77,16 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                 // Copy in `a` value
                 let a = copy(&mut region, || "copy a", config.a, 0, &pair.0, &config.perm)?;
 
-                // Copy in `b` value
-                let b = copy(&mut region, || "copy b", config.b, 0, &pair.1, &config.perm)?;
+                // Witness `b` value
+                let b = {
+                    let cell = region.assign_advice(
+                        || "witness b",
+                        config.b,
+                        0,
+                        || pair.1.ok_or(Error::SynthesisError),
+                    )?;
+                    CellValue::new(cell, pair.1)
+                };
 
                 // Witness `swap` value
                 let swap_val = swap.map(|swap| F::from_u64(swap as u64));
@@ -245,19 +257,19 @@ mod tests {
 
                 // Load the pair and the swap flag into the circuit.
                 let a = chip.load_private(layouter.namespace(|| "a"), config.a, self.a)?;
-                let b = chip.load_private(layouter.namespace(|| "b"), config.b, self.b)?;
                 // Return the swapped pair.
-                let swapped_pair = chip.swap(layouter.namespace(|| "swap"), (a, b), self.swap)?;
+                let swapped_pair =
+                    chip.swap(layouter.namespace(|| "swap"), (a, self.b), self.swap)?;
 
                 if let Some(swap) = self.swap {
                     if swap {
                         // Check that `a` and `b` have been swapped
-                        assert_eq!(swapped_pair.0.value.unwrap(), b.value.unwrap());
+                        assert_eq!(swapped_pair.0.value.unwrap(), self.b.unwrap());
                         assert_eq!(swapped_pair.1.value.unwrap(), a.value.unwrap());
                     } else {
                         // Check that `a` and `b` have not been swapped
                         assert_eq!(swapped_pair.0.value.unwrap(), a.value.unwrap());
-                        assert_eq!(swapped_pair.1.value.unwrap(), b.value.unwrap());
+                        assert_eq!(swapped_pair.1.value.unwrap(), self.b.unwrap());
                     }
                 }
 
