@@ -184,7 +184,7 @@ impl SinsemillaChip {
             // lhs - rhs = 0, where
             //    - lhs = 4 * lambda_2_cur * (x_a_cur - x_a_next)
             //    - rhs = (2 * Y_A_cur + (2 - q_s3) * Y_A_next + 2 * q_s3 * y_a_final)
-            let expr = {
+            let y_check = {
                 // lhs = 4 * lambda_2_cur * (x_a_cur - x_a_next)
                 let lhs = lambda_2_cur * pallas::Base::from_u64(4) * (x_a_cur - x_a_next);
 
@@ -203,7 +203,7 @@ impl SinsemillaChip {
             vec![
                 ("Initial y_q", init_y_q_check),
                 ("Secant line", q_s1.clone() * secant_line),
-                ("Sinsemilla gate", q_s1 * expr),
+                ("y check", q_s1 * y_check),
             ]
         });
 
