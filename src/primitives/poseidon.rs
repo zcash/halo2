@@ -197,7 +197,7 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> Duplex
                 // We've already absorbed as many elements as we can
                 let _ = poseidon_duplex::<F, S, T, RATE>(
                     &mut self.state,
-                    &input,
+                    input,
                     &self.pad_and_add,
                     &self.mds_matrix,
                     &self.round_constants,
@@ -218,7 +218,7 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> Duplex
                 Sponge::Absorbing(ref input) => {
                     self.sponge = Sponge::Squeezing(poseidon_duplex::<F, S, T, RATE>(
                         &mut self.state,
-                        &input,
+                        input,
                         &self.pad_and_add,
                         &self.mds_matrix,
                         &self.round_constants,

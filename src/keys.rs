@@ -449,7 +449,7 @@ impl DiversifiedTransmissionKey {
     }
 
     fn derive_inner(ivk: &KeyAgreementPrivateKey, d: &Diversifier) -> Self {
-        let g_d = diversify_hash(&d.as_array());
+        let g_d = diversify_hash(d.as_array());
         DiversifiedTransmissionKey(ka_orchard(&ivk.0, &g_d))
     }
 
