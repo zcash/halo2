@@ -7,16 +7,16 @@ use crate::{
     note::commitment::ExtractedNoteCommitment,
     primitives::sinsemilla::{i2lebsp_k, HashDomain},
 };
-use incrementalmerkletree::{Hashable, Altitude};
+use incrementalmerkletree::{Altitude, Hashable};
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
-use serde::{Serialize, Deserialize};
-use serde::ser::Serializer;
-use serde::de::Deserializer;
 use ff::{Field, PrimeField, PrimeFieldBits};
 use rand::RngCore;
+use serde::de::Deserializer;
+use serde::ser::Serializer;
+use serde::{Deserialize, Serialize};
 use std::iter;
-use subtle::{CtOption, ConstantTimeEq};
+use subtle::{ConstantTimeEq, CtOption};
 
 /// The root of an Orchard commitment tree.
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
@@ -171,13 +171,14 @@ impl std::cmp::PartialEq for OrchardIncrementalTreeDigest {
 }
 
 /// This instance is should only be used for hashtable key comparisons.
-impl std::cmp::Eq for OrchardIncrementalTreeDigest {
-}
+impl std::cmp::Eq for OrchardIncrementalTreeDigest {}
 
 /// This instance is should only be used for hashtable key comparisons.
 impl std::hash::Hash for OrchardIncrementalTreeDigest {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        <Option<pallas::Base>>::from(self.0).map(|b| b.to_bytes()).hash(state)
+        <Option<pallas::Base>>::from(self.0)
+            .map(|b| b.to_bytes())
+            .hash(state)
     }
 }
 
@@ -186,13 +187,11 @@ impl Hashable for OrchardIncrementalTreeDigest {
         OrchardIncrementalTreeDigest(CtOption::new(pallas::Base::from_u64(2), 1.into()))
     }
 
-    fn combine(level: Altitude, left_opt: &Self, right_opt: &Self) -> Self {
-        let level: usize = level.into();
-        let l_star: usize = MERKLE_DEPTH_ORCHARD - 1 - level;
+    fn combine(altitude: Altitude, left_opt: &Self, right_opt: &Self) -> Self {
         OrchardIncrementalTreeDigest(left_opt.0.and_then(|left| {
             right_opt
                 .0
-                .and_then(|right| hash_layer(l_star, Pair { left, right }))
+                .and_then(|right| hash_layer(altitude.into(), Pair { left, right }))
         }))
     }
 }
@@ -213,6 +212,7 @@ impl<'de> Deserialize<'de> for OrchardIncrementalTreeDigest {
 /// Generators for property testing.
 #[cfg(any(test, feature = "test-dependencies"))]
 pub mod testing {
+    use incrementalmerkletree::{Altitude, Hashable};
     use lazy_static::lazy_static;
     use std::convert::TryInto;
     use std::iter;
@@ -227,7 +227,7 @@ pub mod testing {
     use proptest::collection::vec;
     use proptest::prelude::*;
 
-    use super::{hash_layer, Anchor, MerklePath, Pair};
+    use super::{hash_layer, Anchor, MerklePath, OrchardIncrementalTreeDigest, Pair};
 
     // The uncommitted leaf is defined as pallas::Base(2).
     // <https://zips.z.cash/protocol/protocol.pdf#thmuncommittedorchard>
@@ -380,6 +380,23 @@ pub mod testing {
                 let computed_anchor = auth_path.root(note.commitment().into());
                 assert_eq!(anchor, computed_anchor);
             }
+        }
+    }
+
+    #[test]
+    fn empty_roots_incremental() {
+        let tv_empty_roots = crate::test_vectors::commitment_tree::test_vectors().empty_roots;
+
+        for (altitude, tv_root) in tv_empty_roots.iter().enumerate() {
+            assert_eq!(
+                OrchardIncrementalTreeDigest::empty_root(Altitude::from(altitude as u32))
+                    .0
+                    .unwrap()
+                    .to_bytes(),
+                *tv_root,
+                "Empty root mismatch at altitude {}",
+                altitude
+            );
         }
     }
 }
