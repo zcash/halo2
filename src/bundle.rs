@@ -566,9 +566,8 @@ pub mod testing {
         /// Generate an arbitrary unauthorized bundle. This bundle does not
         /// necessarily respect consensus rules; for that use
         /// [`crate::builder::testing::arb_bundle`]
-        pub fn arb_unauthorized_bundle()
+        pub fn arb_unauthorized_bundle(n_actions: usize)
         (
-            n_actions in 1usize..100,
             flags in arb_flags(),
         )
         (
@@ -592,9 +591,8 @@ pub mod testing {
         /// Generate an arbitrary bundle with fake authorization data. This bundle does not
         /// necessarily respect consensus rules; for that use
         /// [`crate::builder::testing::arb_bundle`]
-        pub fn arb_bundle()
+        pub fn arb_bundle(n_actions: usize)
         (
-            n_actions in 1usize..100,
             flags in arb_flags(),
         )
         (
