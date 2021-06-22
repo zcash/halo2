@@ -3,16 +3,17 @@ use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
 
+use ff::Field;
+
 use super::{RegionLayouter, RegionShape};
 use crate::plonk::Assigned;
 use crate::{
-    arithmetic::FieldExt,
     circuit::{Cell, Layouter, Region, RegionIndex, RegionStart},
     plonk::{Advice, Any, Assignment, Column, Error, Fixed, Permutation, Selector},
 };
 
 /// A [`Layouter`] for a single-chip circuit.
-pub struct SingleChipLayouter<'a, F: FieldExt, CS: Assignment<F> + 'a> {
+pub struct SingleChipLayouter<'a, F: Field, CS: Assignment<F> + 'a> {
     cs: &'a mut CS,
     /// Stores the starting row for each region.
     regions: Vec<RegionStart>,
@@ -21,7 +22,7 @@ pub struct SingleChipLayouter<'a, F: FieldExt, CS: Assignment<F> + 'a> {
     _marker: PhantomData<F>,
 }
 
-impl<'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for SingleChipLayouter<'a, F, CS> {
+impl<'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for SingleChipLayouter<'a, F, CS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SingleChipLayouter")
             .field("regions", &self.regions)
@@ -30,7 +31,7 @@ impl<'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for SingleChipLayouter<
     }
 }
 
-impl<'a, F: FieldExt, CS: Assignment<F>> SingleChipLayouter<'a, F, CS> {
+impl<'a, F: Field, CS: Assignment<F>> SingleChipLayouter<'a, F, CS> {
     /// Creates a new single-chip layouter.
     pub fn new(cs: &'a mut CS) -> Result<Self, Error> {
         let ret = SingleChipLayouter {
@@ -43,7 +44,7 @@ impl<'a, F: FieldExt, CS: Assignment<F>> SingleChipLayouter<'a, F, CS> {
     }
 }
 
-impl<'a, F: FieldExt, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a, F, CS> {
+impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a, F, CS> {
     type Root = Self;
 
     fn assign_region<A, AR, N, NR>(&mut self, name: N, mut assignment: A) -> Result<AR, Error>
@@ -102,12 +103,12 @@ impl<'a, F: FieldExt, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter
     }
 }
 
-struct SingleChipLayouterRegion<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> {
+struct SingleChipLayouterRegion<'r, 'a, F: Field, CS: Assignment<F> + 'a> {
     layouter: &'r mut SingleChipLayouter<'a, F, CS>,
     region_index: RegionIndex,
 }
 
-impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug
+impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug
     for SingleChipLayouterRegion<'r, 'a, F, CS>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -118,7 +119,7 @@ impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug
     }
 }
 
-impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> SingleChipLayouterRegion<'r, 'a, F, CS> {
+impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> SingleChipLayouterRegion<'r, 'a, F, CS> {
     fn new(layouter: &'r mut SingleChipLayouter<'a, F, CS>, region_index: RegionIndex) -> Self {
         SingleChipLayouterRegion {
             layouter,
@@ -127,7 +128,7 @@ impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> SingleChipLayouterRegion<'r, '
     }
 }
 
-impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> RegionLayouter<F>
+impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F>
     for SingleChipLayouterRegion<'r, 'a, F, CS>
 {
     fn enable_selector<'v>(

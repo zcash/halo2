@@ -4,12 +4,11 @@ use std::cmp;
 use std::collections::HashSet;
 use std::fmt;
 
+use ff::Field;
+
 use super::{Cell, RegionIndex};
 use crate::plonk::Assigned;
-use crate::{
-    arithmetic::FieldExt,
-    plonk::{Advice, Any, Column, Error, Fixed, Permutation, Selector},
-};
+use crate::plonk::{Advice, Any, Column, Error, Fixed, Permutation, Selector};
 
 mod single_pass;
 pub use single_pass::SingleChipLayouter;
@@ -47,7 +46,7 @@ pub use v1::{V1Pass, V1};
 /// `Chip::Config`).
 ///
 /// [`Layouter`]: super::Layouter
-pub trait RegionLayouter<F: FieldExt>: fmt::Debug {
+pub trait RegionLayouter<F: Field>: fmt::Debug {
     /// Enables a selector at the given offset.
     fn enable_selector<'v>(
         &'v mut self,
@@ -120,7 +119,7 @@ impl RegionShape {
     }
 }
 
-impl<F: FieldExt> RegionLayouter<F> for RegionShape {
+impl<F: Field> RegionLayouter<F> for RegionShape {
     fn enable_selector<'v>(
         &'v mut self,
         _: &'v (dyn Fn() -> String + 'v),

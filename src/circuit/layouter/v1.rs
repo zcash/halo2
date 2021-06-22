@@ -1,10 +1,11 @@
 use std::fmt;
 use std::marker::PhantomData;
 
+use ff::Field;
+
 use super::{RegionLayouter, RegionShape};
 use crate::plonk::Assigned;
 use crate::{
-    arithmetic::FieldExt,
     circuit::{Cell, Layouter, Region, RegionIndex, RegionStart},
     plonk::{Advice, Assignment, Column, Error, Fixed, Permutation, Selector},
 };
@@ -15,20 +16,20 @@ mod strategy;
 ///
 /// It is a dual-pass layouter, that has visibility into the entire `Circuit::synthesize`
 /// step.
-pub struct V1<'a, F: FieldExt, CS: Assignment<F> + 'a> {
+pub struct V1<'a, F: Field, CS: Assignment<F> + 'a> {
     cs: &'a mut CS,
     /// Stores the starting row for each region.
     regions: Vec<RegionStart>,
     _marker: PhantomData<F>,
 }
 
-impl<'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for V1<'a, F, CS> {
+impl<'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for V1<'a, F, CS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("layouter::V1").finish()
     }
 }
 
-impl<'a, F: FieldExt, CS: Assignment<F>> V1<'a, F, CS> {
+impl<'a, F: Field, CS: Assignment<F>> V1<'a, F, CS> {
     /// Creates a new v1 layouter.
     pub fn new(cs: &'a mut CS) -> Result<Self, Error> {
         let ret = V1 {
@@ -68,16 +69,16 @@ impl<'a, F: FieldExt, CS: Assignment<F>> V1<'a, F, CS> {
 }
 
 #[derive(Debug)]
-enum Pass<'p, 'a, F: FieldExt, CS: Assignment<F> + 'a> {
+enum Pass<'p, 'a, F: Field, CS: Assignment<F> + 'a> {
     Measurement(&'p mut MeasurementPass),
     Assignment(&'p mut AssignmentPass<'p, 'a, F, CS>),
 }
 
 /// A single pass of the [`V1`] layouter.
 #[derive(Debug)]
-pub struct V1Pass<'p, 'a, F: FieldExt, CS: Assignment<F> + 'a>(Pass<'p, 'a, F, CS>);
+pub struct V1Pass<'p, 'a, F: Field, CS: Assignment<F> + 'a>(Pass<'p, 'a, F, CS>);
 
-impl<'p, 'a, F: FieldExt, CS: Assignment<F> + 'a> V1Pass<'p, 'a, F, CS> {
+impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> V1Pass<'p, 'a, F, CS> {
     fn measure(pass: &'p mut MeasurementPass) -> Self {
         V1Pass(Pass::Measurement(pass))
     }
@@ -87,7 +88,7 @@ impl<'p, 'a, F: FieldExt, CS: Assignment<F> + 'a> V1Pass<'p, 'a, F, CS> {
     }
 }
 
-impl<'p, 'a, F: FieldExt, CS: Assignment<F> + 'a> Layouter<F> for V1Pass<'p, 'a, F, CS> {
+impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for V1Pass<'p, 'a, F, CS> {
     type Root = Self;
 
     fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>
@@ -134,7 +135,7 @@ impl MeasurementPass {
         MeasurementPass { regions: vec![] }
     }
 
-    fn assign_region<F: FieldExt, A, AR>(&mut self, mut assignment: A) -> Result<AR, Error>
+    fn assign_region<F: Field, A, AR>(&mut self, mut assignment: A) -> Result<AR, Error>
     where
         A: FnMut(Region<'_, F>) -> Result<AR, Error>,
     {
@@ -154,13 +155,13 @@ impl MeasurementPass {
 
 /// Assigns the circuit.
 #[derive(Debug)]
-pub struct AssignmentPass<'p, 'a, F: FieldExt, CS: Assignment<F> + 'a> {
+pub struct AssignmentPass<'p, 'a, F: Field, CS: Assignment<F> + 'a> {
     layouter: &'p mut V1<'a, F, CS>,
     /// Counter tracking which region we need to assign next.
     region_index: usize,
 }
 
-impl<'p, 'a, F: FieldExt, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
+impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
     fn new(layouter: &'p mut V1<'a, F, CS>) -> Self {
         AssignmentPass {
             layouter,
@@ -190,12 +191,12 @@ impl<'p, 'a, F: FieldExt, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> 
     }
 }
 
-struct V1Region<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> {
+struct V1Region<'r, 'a, F: Field, CS: Assignment<F> + 'a> {
     layouter: &'r mut V1<'a, F, CS>,
     region_index: RegionIndex,
 }
 
-impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for V1Region<'r, 'a, F, CS> {
+impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for V1Region<'r, 'a, F, CS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("V1Region")
             .field("layouter", &self.layouter)
@@ -204,7 +205,7 @@ impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> fmt::Debug for V1Region<'r, 'a
     }
 }
 
-impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> V1Region<'r, 'a, F, CS> {
+impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> V1Region<'r, 'a, F, CS> {
     fn new(layouter: &'r mut V1<'a, F, CS>, region_index: RegionIndex) -> Self {
         V1Region {
             layouter,
@@ -213,7 +214,7 @@ impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> V1Region<'r, 'a, F, CS> {
     }
 }
 
-impl<'r, 'a, F: FieldExt, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r, 'a, F, CS> {
+impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r, 'a, F, CS> {
     fn enable_selector<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
