@@ -56,12 +56,11 @@ pub trait TranscriptWrite<C: CurveAffine, E: EncodedChallenge<C>>: Transcript<C,
 pub struct Blake2bRead<R: Read, C: CurveAffine, E: EncodedChallenge<C>> {
     state: Blake2bState,
     reader: R,
-    _marker_c: PhantomData<C>,
-    _marker_e: PhantomData<E>,
+    _marker: PhantomData<(C, E)>,
 }
 
 impl<R: Read, C: CurveAffine, E: EncodedChallenge<C>> Blake2bRead<R, C, E> {
-    /// Initialize a transcript given an input buffer and a key.
+    /// Initialize a transcript given an input buffer.
     pub fn init(reader: R) -> Self {
         Blake2bRead {
             state: Blake2bParams::new()
@@ -69,8 +68,7 @@ impl<R: Read, C: CurveAffine, E: EncodedChallenge<C>> Blake2bRead<R, C, E> {
                 .personal(b"Halo2-Transcript")
                 .to_state(),
             reader,
-            _marker_c: PhantomData,
-            _marker_e: PhantomData,
+            _marker: PhantomData,
         }
     }
 }
@@ -139,12 +137,11 @@ impl<R: Read, C: CurveAffine> Transcript<C, Challenge255<C>>
 pub struct Blake2bWrite<W: Write, C: CurveAffine, E: EncodedChallenge<C>> {
     state: Blake2bState,
     writer: W,
-    _marker_c: PhantomData<C>,
-    _marker_e: PhantomData<E>,
+    _marker: PhantomData<(C, E)>,
 }
 
 impl<W: Write, C: CurveAffine, E: EncodedChallenge<C>> Blake2bWrite<W, C, E> {
-    /// Initialize a transcript given an output buffer and a key.
+    /// Initialize a transcript given an output buffer.
     pub fn init(writer: W) -> Self {
         Blake2bWrite {
             state: Blake2bParams::new()
@@ -152,8 +149,7 @@ impl<W: Write, C: CurveAffine, E: EncodedChallenge<C>> Blake2bWrite<W, C, E> {
                 .personal(b"Halo2-Transcript")
                 .to_state(),
             writer,
-            _marker_c: PhantomData,
-            _marker_e: PhantomData,
+            _marker: PhantomData,
         }
     }
 
