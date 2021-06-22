@@ -4,12 +4,9 @@ use std::marker::PhantomData;
 
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{layouter::SingleChipLayouter, Cell, Chip, Layouter, Region},
+    circuit::{Cell, Chip, Layouter, Region, SimpleFloorPlanner},
     dev::VerifyFailure,
-    plonk::{
-        Advice, Assignment, Circuit, Column, ConstraintSystem, Error, Instance, Permutation,
-        Selector,
-    },
+    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance, Permutation, Selector},
     poly::Rotation,
 };
 
@@ -553,6 +550,7 @@ impl<F: FieldExt> FieldInstructions<F> for FieldChip<F> {
 /// In this struct we store the private input variables. We use `Option<F>` because
 /// they won't have any value during key generation. During proving, if any of these
 /// were `None` we would get an error.
+#[derive(Default)]
 struct MyCircuit<F: FieldExt> {
     a: Option<F>,
     b: Option<F>,
@@ -562,6 +560,11 @@ struct MyCircuit<F: FieldExt> {
 impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
     // Since we are using a single chip for everything, we can just reuse its config.
     type Config = FieldConfig;
+    type FloorPlanner = SimpleFloorPlanner;
+
+    fn without_witnesses(&self) -> Self {
+        Self::default()
+    }
 
     fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
         // We create the two advice columns that FieldChip uses for I/O.
@@ -573,8 +576,11 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         FieldChip::configure(meta, advice, instance)
     }
 
-    fn synthesize(&self, cs: &mut impl Assignment<F>, config: Self::Config) -> Result<(), Error> {
-        let mut layouter = SingleChipLayouter::new(cs)?;
+    fn synthesize(
+        &self,
+        config: Self::Config,
+        mut layouter: impl Layouter<F>,
+    ) -> Result<(), Error> {
         let field_chip = FieldChip::<F>::construct(config, ());
 
         // Load our private values into the circuit.

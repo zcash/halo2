@@ -3,7 +3,7 @@ use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
 use crate::plonk::{
     Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-    Permutation, Selector,
+    FloorPlanner, Permutation, Selector,
 };
 
 pub mod layout;
@@ -21,7 +21,7 @@ pub fn circuit_dot_graph<F: Field, ConcreteCircuit: Circuit<F>>(
     let mut cs = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut cs);
     let mut graph = Graph::default();
-    circuit.synthesize(&mut graph, config).unwrap();
+    ConcreteCircuit::FloorPlanner::synthesize(&mut graph, circuit, config).unwrap();
 
     // Construct the node labels. We need to store these, because tabbycat operates on
     // string references, and we need those references to live long enough.

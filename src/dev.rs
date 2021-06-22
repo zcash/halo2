@@ -11,7 +11,7 @@ use crate::{
     arithmetic::{FieldExt, Group},
     plonk::{
         permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Expression, Fixed, Permutation, Selector,
+        Expression, Fixed, FloorPlanner, Permutation, Selector,
     },
     poly::Rotation,
 };
@@ -192,9 +192,10 @@ impl Region {
 /// ```
 /// use halo2::{
 ///     arithmetic::FieldExt,
+///     circuit::{Layouter, SimpleFloorPlanner},
 ///     dev::{MockProver, VerifyFailure},
 ///     pasta::Fp,
-///     plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error},
+///     plonk::{Advice, Circuit, Column, ConstraintSystem, Error},
 ///     poly::Rotation,
 /// };
 /// const K: u32 = 5;
@@ -206,7 +207,7 @@ impl Region {
 ///     c: Column<Advice>,
 /// }
 ///
-/// #[derive(Clone)]
+/// #[derive(Clone, Default)]
 /// struct MyCircuit {
 ///     a: Option<u64>,
 ///     b: Option<u64>,
@@ -214,6 +215,11 @@ impl Region {
 ///
 /// impl<F: FieldExt> Circuit<F> for MyCircuit {
 ///     type Config = MyConfig;
+///     type FloorPlanner = SimpleFloorPlanner;
+///
+///     fn without_witnesses(&self) -> Self {
+///         Self::default()
+///     }
 ///
 ///     fn configure(meta: &mut ConstraintSystem<F>) -> MyConfig {
 ///         let a = meta.advice_column();
@@ -232,17 +238,20 @@ impl Region {
 ///         MyConfig { a, b, c }
 ///     }
 ///
-///     fn synthesize(&self, cs: &mut impl Assignment<F>, config: MyConfig) -> Result<(), Error> {
-///         cs.assign_advice(|| "a", config.a, 0, || {
-///             self.a.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
-///         })?;
-///         cs.assign_advice(|| "b", config.b, 0, || {
-///             self.b.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
-///         })?;
-///         cs.assign_advice(|| "c", config.c, 0, || {
-///             self.a
-///                 .and_then(|a| self.b.map(|b| F::from_u64(a * b)))
-///                 .ok_or(Error::SynthesisError)
+///     fn synthesize(&self, config: MyConfig, mut layouter: impl Layouter<F>) -> Result<(), Error> {
+///         layouter.assign_region(|| "Example region", |mut region| {
+///             region.assign_advice(|| "a", config.a, 0, || {
+///                 self.a.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
+///             })?;
+///             region.assign_advice(|| "b", config.b, 0, || {
+///                 self.b.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
+///             })?;
+///             region.assign_advice(|| "c", config.c, 0, || {
+///                 self.a
+///                     .and_then(|a| self.b.map(|b| F::from_u64(a * b)))
+///                     .ok_or(Error::SynthesisError)
+///             })?;
+///             Ok(())
 ///         })
 ///     }
 /// }
@@ -463,7 +472,7 @@ impl<F: FieldExt> MockProver<F> {
             permutations,
         };
 
-        circuit.synthesize(&mut prover, config)?;
+        ConcreteCircuit::FloorPlanner::synthesize(&mut prover, circuit, config)?;
 
         Ok(prover)
     }
@@ -709,8 +718,8 @@ mod tests {
 
     use super::{MockProver, VerifyFailure};
     use crate::{
-        circuit::{layouter::SingleChipLayouter, Layouter},
-        plonk::{Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Selector},
+        circuit::{Layouter, SimpleFloorPlanner},
+        plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector},
         poly::Rotation,
     };
 
@@ -728,6 +737,7 @@ mod tests {
 
         impl Circuit<Fp> for FaultyCircuit {
             type Config = FaultyCircuitConfig;
+            type FloorPlanner = SimpleFloorPlanner;
 
             fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
                 let a = meta.advice_column();
@@ -746,12 +756,15 @@ mod tests {
                 FaultyCircuitConfig { a, q }
             }
 
+            fn without_witnesses(&self) -> Self {
+                Self {}
+            }
+
             fn synthesize(
                 &self,
-                cs: &mut impl Assignment<Fp>,
                 config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
             ) -> Result<(), Error> {
-                let mut layouter = SingleChipLayouter::new(cs)?;
                 layouter.assign_region(
                     || "Faulty synthesis",
                     |mut region| {

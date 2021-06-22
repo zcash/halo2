@@ -9,6 +9,9 @@ use crate::{
     plonk::{Advice, Any, Assigned, Column, Error, Fixed, Permutation, Selector},
 };
 
+pub mod floor_planner;
+pub use floor_planner::single_pass::SimpleFloorPlanner;
+
 pub mod layouter;
 
 /// A chip implements a set of instructions that can be used by gadgets.

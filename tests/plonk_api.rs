@@ -3,12 +3,12 @@
 
 use group::Curve;
 use halo2::arithmetic::FieldExt;
-use halo2::circuit::{layouter::SingleChipLayouter, Cell, Layouter};
+use halo2::circuit::{Cell, Layouter, SimpleFloorPlanner};
 use halo2::dev::MockProver;
 use halo2::pasta::{EqAffine, Fp};
 use halo2::plonk::{
-    create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Assignment, Circuit, Column,
-    ConstraintSystem, Error, Fixed, Permutation, VerifyingKey,
+    create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column, ConstraintSystem,
+    Error, Fixed, Permutation, VerifyingKey,
 };
 use halo2::poly::{
     commitment::{Blind, Params},
@@ -264,6 +264,14 @@ fn plonk_api() {
 
     impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         type Config = PLONKConfig;
+        type FloorPlanner = SimpleFloorPlanner;
+
+        fn without_witnesses(&self) -> Self {
+            Self {
+                a: None,
+                lookup_tables: self.lookup_tables.clone(),
+            }
+        }
 
         fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
             let e = meta.advice_column();
@@ -363,10 +371,9 @@ fn plonk_api() {
 
         fn synthesize(
             &self,
-            cs: &mut impl Assignment<F>,
             config: PLONKConfig,
+            mut layouter: impl Layouter<F>,
         ) -> Result<(), Error> {
-            let mut layouter = SingleChipLayouter::new(cs)?;
             let cs = StandardPLONK::new(config);
 
             let _ = cs.public_input(&mut layouter, || Ok(F::one() + F::one()))?;
