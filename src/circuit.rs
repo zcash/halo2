@@ -1,5 +1,7 @@
 //! The Orchard Action circuit implementation.
 
+use std::mem;
+
 use group::Curve;
 use halo2::{
     plonk,
@@ -130,6 +132,11 @@ impl AsRef<[u8]> for Proof {
 }
 
 impl Proof {
+    /// Returns the amount of heap-allocated memory used by this proof.
+    pub(crate) fn dynamic_usage(&self) -> usize {
+        self.0.capacity() * mem::size_of::<u8>()
+    }
+
     /// Creates a proof for the given circuits and instances.
     pub fn create(
         pk: &ProvingKey,
