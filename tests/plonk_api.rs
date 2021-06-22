@@ -3,6 +3,7 @@
 
 use group::Curve;
 use halo2::arithmetic::FieldExt;
+use halo2::circuit::{layouter::SingleChipLayouter, Cell, Layouter};
 use halo2::dev::MockProver;
 use halo2::pasta::{EqAffine, Fp};
 use halo2::plonk::{
@@ -48,17 +49,29 @@ fn plonk_api() {
     }
 
     trait StandardCS<FF: FieldExt> {
-        fn raw_multiply<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
+        fn raw_multiply<F>(
+            &self,
+            layouter: &mut impl Layouter<FF>,
+            f: F,
+        ) -> Result<(Cell, Cell, Cell), Error>
         where
-            F: FnOnce() -> Result<(FF, FF, FF), Error>;
-        fn raw_add<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
+            F: FnMut() -> Result<(FF, FF, FF), Error>;
+        fn raw_add<F>(
+            &self,
+            layouter: &mut impl Layouter<FF>,
+            f: F,
+        ) -> Result<(Cell, Cell, Cell), Error>
         where
-            F: FnOnce() -> Result<(FF, FF, FF), Error>;
-        fn copy(&mut self, a: Variable, b: Variable) -> Result<(), Error>;
-        fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
+            F: FnMut() -> Result<(FF, FF, FF), Error>;
+        fn copy(&self, layouter: &mut impl Layouter<FF>, a: Cell, b: Cell) -> Result<(), Error>;
+        fn public_input<F>(&self, layouter: &mut impl Layouter<FF>, f: F) -> Result<Cell, Error>
         where
-            F: FnOnce() -> Result<FF, Error>;
-        fn lookup_table(&mut self, values: &[Vec<FF>]) -> Result<(), Error>;
+            F: FnMut() -> Result<FF, Error>;
+        fn lookup_table(
+            &self,
+            layouter: &mut impl Layouter<FF>,
+            values: &[Vec<FF>],
+        ) -> Result<(), Error>;
     }
 
     #[derive(Clone)]
@@ -67,174 +80,184 @@ fn plonk_api() {
         lookup_tables: Vec<Vec<F>>,
     }
 
-    struct StandardPLONK<'a, F: FieldExt, CS: Assignment<F> + 'a> {
-        cs: &'a mut CS,
+    struct StandardPLONK<F: FieldExt> {
         config: PLONKConfig,
-        current_gate: usize,
         _marker: PhantomData<F>,
     }
 
-    impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardPLONK<'a, FF, CS> {
-        fn new(cs: &'a mut CS, config: PLONKConfig) -> Self {
+    impl<FF: FieldExt> StandardPLONK<FF> {
+        fn new(config: PLONKConfig) -> Self {
             StandardPLONK {
-                cs,
                 config,
-                current_gate: 0,
                 _marker: PhantomData,
             }
         }
     }
 
-    impl<'a, FF: FieldExt, CS: Assignment<FF>> StandardCS<FF> for StandardPLONK<'a, FF, CS> {
-        fn raw_multiply<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
+    impl<FF: FieldExt> StandardCS<FF> for StandardPLONK<FF> {
+        fn raw_multiply<F>(
+            &self,
+            layouter: &mut impl Layouter<FF>,
+            mut f: F,
+        ) -> Result<(Cell, Cell, Cell), Error>
         where
-            F: FnOnce() -> Result<(FF, FF, FF), Error>,
+            F: FnMut() -> Result<(FF, FF, FF), Error>,
         {
-            let index = self.current_gate;
-            self.current_gate += 1;
-            let mut value = None;
-            self.cs.assign_advice(
-                || "lhs",
-                self.config.a,
-                index,
-                || {
-                    value = Some(f()?);
-                    Ok(value.ok_or(Error::SynthesisError)?.0)
-                },
-            )?;
-            self.cs.assign_advice(
-                || "lhs^4",
-                self.config.d,
-                index,
-                || Ok(value.ok_or(Error::SynthesisError)?.0.square().square()),
-            )?;
-            self.cs.assign_advice(
-                || "rhs",
-                self.config.b,
-                index,
-                || Ok(value.ok_or(Error::SynthesisError)?.1),
-            )?;
-            self.cs.assign_advice(
-                || "rhs^4",
-                self.config.e,
-                index,
-                || Ok(value.ok_or(Error::SynthesisError)?.1.square().square()),
-            )?;
-            self.cs.assign_advice(
-                || "out",
-                self.config.c,
-                index,
-                || Ok(value.ok_or(Error::SynthesisError)?.2),
-            )?;
+            layouter.assign_region(
+                || "raw_multiply",
+                |mut region| {
+                    let mut value = None;
+                    let lhs = region.assign_advice(
+                        || "lhs",
+                        self.config.a,
+                        0,
+                        || {
+                            value = Some(f()?);
+                            Ok(value.ok_or(Error::SynthesisError)?.0)
+                        },
+                    )?;
+                    region.assign_advice(
+                        || "lhs^4",
+                        self.config.d,
+                        0,
+                        || Ok(value.ok_or(Error::SynthesisError)?.0.square().square()),
+                    )?;
+                    let rhs = region.assign_advice(
+                        || "rhs",
+                        self.config.b,
+                        0,
+                        || Ok(value.ok_or(Error::SynthesisError)?.1),
+                    )?;
+                    region.assign_advice(
+                        || "rhs^4",
+                        self.config.e,
+                        0,
+                        || Ok(value.ok_or(Error::SynthesisError)?.1.square().square()),
+                    )?;
+                    let out = region.assign_advice(
+                        || "out",
+                        self.config.c,
+                        0,
+                        || Ok(value.ok_or(Error::SynthesisError)?.2),
+                    )?;
 
-            self.cs
-                .assign_fixed(|| "a", self.config.sa, index, || Ok(FF::zero()))?;
-            self.cs
-                .assign_fixed(|| "b", self.config.sb, index, || Ok(FF::zero()))?;
-            self.cs
-                .assign_fixed(|| "c", self.config.sc, index, || Ok(FF::one()))?;
-            self.cs
-                .assign_fixed(|| "a * b", self.config.sm, index, || Ok(FF::one()))?;
-            Ok((
-                Variable(self.config.a, index),
-                Variable(self.config.b, index),
-                Variable(self.config.c, index),
-            ))
-        }
-        fn raw_add<F>(&mut self, f: F) -> Result<(Variable, Variable, Variable), Error>
-        where
-            F: FnOnce() -> Result<(FF, FF, FF), Error>,
-        {
-            let index = self.current_gate;
-            self.current_gate += 1;
-            let mut value = None;
-            self.cs.assign_advice(
-                || "lhs",
-                self.config.a,
-                index,
-                || {
-                    value = Some(f()?);
-                    Ok(value.ok_or(Error::SynthesisError)?.0)
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Ok(FF::zero()))?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Ok(FF::zero()))?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Ok(FF::one()))?;
+                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Ok(FF::one()))?;
+                    Ok((lhs, rhs, out))
                 },
-            )?;
-            self.cs.assign_advice(
-                || "lhs^4",
-                self.config.d,
-                index,
-                || Ok(value.ok_or(Error::SynthesisError)?.0.square().square()),
-            )?;
-            self.cs.assign_advice(
-                || "rhs",
-                self.config.b,
-                index,
-                || Ok(value.ok_or(Error::SynthesisError)?.1),
-            )?;
-            self.cs.assign_advice(
-                || "rhs^4",
-                self.config.e,
-                index,
-                || Ok(value.ok_or(Error::SynthesisError)?.1.square().square()),
-            )?;
-            self.cs.assign_advice(
-                || "out",
-                self.config.c,
-                index,
-                || Ok(value.ok_or(Error::SynthesisError)?.2),
-            )?;
-
-            self.cs
-                .assign_fixed(|| "a", self.config.sa, index, || Ok(FF::one()))?;
-            self.cs
-                .assign_fixed(|| "b", self.config.sb, index, || Ok(FF::one()))?;
-            self.cs
-                .assign_fixed(|| "c", self.config.sc, index, || Ok(FF::one()))?;
-            self.cs
-                .assign_fixed(|| "a * b", self.config.sm, index, || Ok(FF::zero()))?;
-            Ok((
-                Variable(self.config.a, index),
-                Variable(self.config.b, index),
-                Variable(self.config.c, index),
-            ))
-        }
-        fn copy(&mut self, left: Variable, right: Variable) -> Result<(), Error> {
-            self.cs.copy(
-                &self.config.perm,
-                left.0.into(),
-                left.1,
-                right.0.into(),
-                right.1,
-            )?;
-            self.cs.copy(
-                &self.config.perm2,
-                left.0.into(),
-                left.1,
-                right.0.into(),
-                right.1,
             )
         }
-        fn public_input<F>(&mut self, f: F) -> Result<Variable, Error>
+        fn raw_add<F>(
+            &self,
+            layouter: &mut impl Layouter<FF>,
+            mut f: F,
+        ) -> Result<(Cell, Cell, Cell), Error>
         where
-            F: FnOnce() -> Result<FF, Error>,
+            F: FnMut() -> Result<(FF, FF, FF), Error>,
         {
-            let index = self.current_gate;
-            self.current_gate += 1;
-            self.cs
-                .assign_advice(|| "value", self.config.a, index, || f())?;
-            self.cs
-                .assign_fixed(|| "public", self.config.sp, index, || Ok(FF::one()))?;
+            layouter.assign_region(
+                || "raw_add",
+                |mut region| {
+                    let mut value = None;
+                    let lhs = region.assign_advice(
+                        || "lhs",
+                        self.config.a,
+                        0,
+                        || {
+                            value = Some(f()?);
+                            Ok(value.ok_or(Error::SynthesisError)?.0)
+                        },
+                    )?;
+                    region.assign_advice(
+                        || "lhs^4",
+                        self.config.d,
+                        0,
+                        || Ok(value.ok_or(Error::SynthesisError)?.0.square().square()),
+                    )?;
+                    let rhs = region.assign_advice(
+                        || "rhs",
+                        self.config.b,
+                        0,
+                        || Ok(value.ok_or(Error::SynthesisError)?.1),
+                    )?;
+                    region.assign_advice(
+                        || "rhs^4",
+                        self.config.e,
+                        0,
+                        || Ok(value.ok_or(Error::SynthesisError)?.1.square().square()),
+                    )?;
+                    let out = region.assign_advice(
+                        || "out",
+                        self.config.c,
+                        0,
+                        || Ok(value.ok_or(Error::SynthesisError)?.2),
+                    )?;
 
-            Ok(Variable(self.config.a, index))
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Ok(FF::one()))?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Ok(FF::one()))?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Ok(FF::one()))?;
+                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Ok(FF::zero()))?;
+                    Ok((lhs, rhs, out))
+                },
+            )
         }
-        fn lookup_table(&mut self, values: &[Vec<FF>]) -> Result<(), Error> {
-            for (&value_0, &value_1) in values[0].iter().zip(values[1].iter()) {
-                let index = self.current_gate;
+        fn copy(
+            &self,
+            layouter: &mut impl Layouter<FF>,
+            left: Cell,
+            right: Cell,
+        ) -> Result<(), Error> {
+            layouter.assign_region(
+                || "copy",
+                |mut region| {
+                    region.constrain_equal(&self.config.perm, left, right)?;
+                    region.constrain_equal(&self.config.perm2, left, right)
+                },
+            )
+        }
+        fn public_input<F>(&self, layouter: &mut impl Layouter<FF>, mut f: F) -> Result<Cell, Error>
+        where
+            F: FnMut() -> Result<FF, Error>,
+        {
+            layouter.assign_region(
+                || "public_input",
+                |mut region| {
+                    let value = region.assign_advice(|| "value", self.config.a, 0, || f())?;
+                    region.assign_fixed(|| "public", self.config.sp, 0, || Ok(FF::one()))?;
 
-                self.current_gate += 1;
-                self.cs
-                    .assign_fixed(|| "table col 1", self.config.sl, index, || Ok(value_0))?;
-                self.cs
-                    .assign_fixed(|| "table col 2", self.config.sl2, index, || Ok(value_1))?;
-            }
+                    Ok(value)
+                },
+            )
+        }
+        fn lookup_table(
+            &self,
+            layouter: &mut impl Layouter<FF>,
+            values: &[Vec<FF>],
+        ) -> Result<(), Error> {
+            layouter.assign_region(
+                || "",
+                |mut region| {
+                    for (index, (&value_0, &value_1)) in
+                        values[0].iter().zip(values[1].iter()).enumerate()
+                    {
+                        region.assign_fixed(
+                            || "table col 1",
+                            self.config.sl,
+                            index,
+                            || Ok(value_0),
+                        )?;
+                        region.assign_fixed(
+                            || "table col 2",
+                            self.config.sl2,
+                            index,
+                            || Ok(value_1),
+                        )?;
+                    }
+                    Ok(())
+                },
+            )?;
             Ok(())
         }
     }
@@ -343,13 +366,14 @@ fn plonk_api() {
             cs: &mut impl Assignment<F>,
             config: PLONKConfig,
         ) -> Result<(), Error> {
-            let mut cs = StandardPLONK::new(cs, config);
+            let mut layouter = SingleChipLayouter::new(cs)?;
+            let cs = StandardPLONK::new(config);
 
-            let _ = cs.public_input(|| Ok(F::one() + F::one()))?;
+            let _ = cs.public_input(&mut layouter, || Ok(F::one() + F::one()))?;
 
             for _ in 0..10 {
                 let mut a_squared = None;
-                let (a0, _, c0) = cs.raw_multiply(|| {
+                let (a0, _, c0) = cs.raw_multiply(&mut layouter, || {
                     a_squared = self.a.map(|a| a.square());
                     Ok((
                         self.a.ok_or(Error::SynthesisError)?,
@@ -357,7 +381,7 @@ fn plonk_api() {
                         a_squared.ok_or(Error::SynthesisError)?,
                     ))
                 })?;
-                let (a1, b1, _) = cs.raw_add(|| {
+                let (a1, b1, _) = cs.raw_add(&mut layouter, || {
                     let fin = a_squared.and_then(|a2| self.a.map(|a| a + a2));
                     Ok((
                         self.a.ok_or(Error::SynthesisError)?,
@@ -365,11 +389,11 @@ fn plonk_api() {
                         fin.ok_or(Error::SynthesisError)?,
                     ))
                 })?;
-                cs.copy(a0, a1)?;
-                cs.copy(b1, c0)?;
+                cs.copy(&mut layouter, a0, a1)?;
+                cs.copy(&mut layouter, b1, c0)?;
             }
 
-            cs.lookup_table(&self.lookup_tables)?;
+            cs.lookup_table(&mut layouter, &self.lookup_tables)?;
 
             Ok(())
         }
@@ -773,8 +797,8 @@ fn plonk_api() {
         (0x374a656456a0aae7429b23336f825752b575dd5a44290ff614946ee59d6a20c0, 0x054491e187e6e3460e7601fb54ae10836d34d420026f96316f0c5c62f86db9b8),
         (0x02e62cd68370b13711139a08cbcdd889e800a272b9ea10acc90880fff9d89199, 0x1a96c468cb0ce77065d3a58f1e55fea9b72d15e44c01bba1e110bd0cbc6e9bc6),
         (0x224ef42758215157d3ee48fb8d769da5bddd35e5929a90a4a89736f5c4b5ae9b, 0x11bc3a1e08eb320cde764f1492ecef956d71e996e2165f7a9a30ad2febb511c1),
-        (0x0009ccc670d8d139c168165a3bdffc9b06620c8440df66c2b35757572763a04f, 0x3e12747aa6df89dd554200e592026cc43dd529fb32de6fc6f252128d1e596a8a),
-        (0x12ed9a5b874da7ed995fcff158687dad0d642a4f1af67a6524078bb6fb8754b0, 0x097ac5730034c8fa454dac57d700af4b92d82691ef76c0bf9e6e6fa719a936c2),
+        (0x3c145eb1e4f1e49d9eed351a4e2d9f3deed13bc5ba028d3b425084d606418cc8, 0x045d846e7df4e563ce57cd5483d17bad87f0345e18409bf15abc3d71953ae71c),
+        (0x27b1cd6c0408a2fe7a764e6ac7abda4f6c7e7a4b3f7375532fe11f3af579de64, 0x19dcda088f6c8ad67408650554cfdd5c8c2e5385cf59c662554c837cf3f42c2d),
     ],
     permutations: [
         VerifyingKey {
