@@ -621,3 +621,190 @@ struct GateCells {
     b2_c_prime: CellValue<pallas::Base>,
     b2_c_prime_decomposition: CellValue<pallas::Base>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::CommitIvkConfig;
+    use crate::{
+        circuit::gadget::{
+            ecc::chip::{EccChip, EccConfig},
+            sinsemilla::chip::SinsemillaChip,
+            utilities::{CellValue, UtilitiesInstructions},
+        },
+        constants::T_Q,
+    };
+    use halo2::{
+        circuit::{Layouter, SimpleFloorPlanner},
+        dev::MockProver,
+        plonk::{Circuit, ConstraintSystem, Error},
+    };
+    use pasta_curves::{arithmetic::FieldExt, pallas};
+
+    use std::convert::TryInto;
+
+    #[test]
+    fn commit_ivk() {
+        #[derive(Default)]
+        struct MyCircuit {
+            ak: Option<pallas::Base>,
+            nk: Option<pallas::Base>,
+        }
+
+        impl UtilitiesInstructions<pallas::Base> for MyCircuit {
+            type Var = CellValue<pallas::Base>;
+        }
+
+        impl Circuit<pallas::Base> for MyCircuit {
+            type Config = (CommitIvkConfig, EccConfig);
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                Self::default()
+            }
+
+            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+                let advices = [
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                ];
+
+                // Shared fixed columns for loading constants.
+                // TODO: Replace with public inputs API.
+                let ecc_constants = [meta.fixed_column(), meta.fixed_column()];
+                let sinsemilla_constants = [
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                ];
+
+                for advice in advices.iter() {
+                    meta.enable_equality((*advice).into());
+                }
+                for fixed in ecc_constants.iter() {
+                    meta.enable_equality((*fixed).into());
+                }
+                for fixed in sinsemilla_constants.iter() {
+                    meta.enable_equality((*fixed).into());
+                }
+
+                let table_idx = meta.fixed_column();
+                let lookup = (table_idx, meta.fixed_column(), meta.fixed_column());
+
+                let sinsemilla_config = SinsemillaChip::configure(
+                    meta,
+                    advices[..5].try_into().unwrap(),
+                    lookup,
+                    sinsemilla_constants,
+                );
+                let commit_ivk_config =
+                    CommitIvkConfig::configure(meta, advices, sinsemilla_config);
+
+                let ecc_config = EccChip::configure(meta, advices, table_idx, ecc_constants);
+
+                (commit_ivk_config, ecc_config)
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<pallas::Base>,
+            ) -> Result<(), Error> {
+                let (commit_ivk_config, ecc_config) = config;
+
+                // Load the Sinsemilla generator lookup table used by the whole circuit.
+                SinsemillaChip::load(commit_ivk_config.sinsemilla_config.clone(), &mut layouter)?;
+
+                // Construct a Sinsemilla chip
+                let sinsemilla_chip =
+                    SinsemillaChip::construct(commit_ivk_config.sinsemilla_config.clone());
+
+                // Construct an ECC chip
+                let ecc_chip = EccChip::construct(ecc_config);
+
+                // Witness ak
+                let ak = self.load_private(
+                    layouter.namespace(|| "load ak"),
+                    commit_ivk_config.advices[0],
+                    self.ak,
+                )?;
+
+                // Witness nk
+                let nk = self.load_private(
+                    layouter.namespace(|| "load nk"),
+                    commit_ivk_config.advices[0],
+                    self.nk,
+                )?;
+
+                // Use a random scalar for rivk
+                let rivk = Some(pallas::Scalar::rand());
+
+                let _ivk = commit_ivk_config.assign_region(
+                    sinsemilla_chip,
+                    ecc_chip,
+                    layouter.namespace(|| "CommitIvk"),
+                    ak,
+                    nk,
+                    rivk,
+                )?;
+
+                Ok(())
+            }
+        }
+
+        let two_pow_254 = pallas::Base::from_u128(1 << 127).square();
+        // Test different values of `ak`, `nk`
+        let circuits = [
+            // `ak` = 0, `nk` = 0
+            MyCircuit {
+                ak: Some(pallas::Base::zero()),
+                nk: Some(pallas::Base::zero()),
+            },
+            // `ak` = T_Q - 1, `nk` = T_Q - 1
+            MyCircuit {
+                ak: Some(pallas::Base::from_u128(T_Q - 1)),
+                nk: Some(pallas::Base::from_u128(T_Q - 1)),
+            },
+            // `ak` = T_Q, `nk` = T_Q
+            MyCircuit {
+                ak: Some(pallas::Base::from_u128(T_Q)),
+                nk: Some(pallas::Base::from_u128(T_Q)),
+            },
+            // `ak` = 2^127 - 1, `nk` = 2^127 - 1
+            MyCircuit {
+                ak: Some(pallas::Base::from_u128((1 << 127) - 1)),
+                nk: Some(pallas::Base::from_u128((1 << 127) - 1)),
+            },
+            // `ak` = 2^127, `nk` = 2^127
+            MyCircuit {
+                ak: Some(pallas::Base::from_u128(1 << 127)),
+                nk: Some(pallas::Base::from_u128(1 << 127)),
+            },
+            // `ak` = 2^254 - 1, `nk` = 2^254 - 1
+            MyCircuit {
+                ak: Some(two_pow_254 - pallas::Base::one()),
+                nk: Some(two_pow_254 - pallas::Base::one()),
+            },
+            // `ak` = 2^254, `nk` = 2^254
+            MyCircuit {
+                ak: Some(two_pow_254),
+                nk: Some(two_pow_254),
+            },
+        ];
+
+        for circuit in circuits.iter() {
+            let prover = MockProver::<pallas::Base>::run(11, circuit, vec![]).unwrap();
+            assert_eq!(prover.verify(), Ok(()));
+        }
+    }
+}
