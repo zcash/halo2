@@ -27,6 +27,17 @@ pub struct EccPoint {
 }
 
 impl EccPoint {
+    /// Constructs a point from its coordinates, without checking they are on the curve.
+    ///
+    /// This is an internal API that we only use where we know we have a valid curve point
+    /// (specifically inside Sinsemilla).
+    pub(in crate::circuit::gadget) fn from_coordinates_unchecked(
+        x: CellValue<pallas::Base>,
+        y: CellValue<pallas::Base>,
+    ) -> Self {
+        EccPoint { x, y }
+    }
+
     /// Returns the value of this curve point, if known.
     pub fn point(&self) -> Option<pallas::Affine> {
         match (self.x.value(), self.y.value()) {
