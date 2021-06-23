@@ -634,10 +634,7 @@ fn main() {
     assert_eq!(
         prover.verify(),
         Err(vec![VerifyFailure::Constraint {
-            gate_index: 0,
-            gate_name: "public input",
-            constraint_index: 0,
-            constraint_name: "",
+            constraint: ((0, "public input").into(), 0, "").into(),
             row: 7,
         }])
     );
