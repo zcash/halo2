@@ -187,9 +187,9 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
                                     p.expressions(
                                         vk,
                                         argument,
-                                        &advice_evals,
+                                        advice_evals,
                                         &fixed_evals_copy,
-                                        &instance_evals,
+                                        instance_evals,
                                         l_0,
                                         beta,
                                         gamma,
@@ -209,9 +209,9 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
                                         theta,
                                         beta,
                                         gamma,
-                                        &advice_evals,
+                                        advice_evals,
                                         &fixed_evals_copy_copy,
-                                        &instance_evals,
+                                        instance_evals,
                                     )
                                 })
                                 .into_iter(),

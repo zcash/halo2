@@ -498,7 +498,7 @@ impl<F: FieldExt> MockProver<F> {
                     // every selector is explicitly enabled or disabled on every row? But that
                     // seems messy and confusing.
                     .enumerate()
-                    .filter(move |(_, g)| g.queried_selectors().contains(&selector))
+                    .filter(move |(_, g)| g.queried_selectors().contains(selector))
                     .flat_map(move |(gate_index, gate)| {
                         at.iter().flat_map(move |selector_row| {
                             // Selectors are queried with no rotation.

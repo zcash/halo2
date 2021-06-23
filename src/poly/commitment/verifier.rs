@@ -173,7 +173,7 @@ fn compute_s<F: Field>(challenges: &[F], init: F) -> Vec<F> {
     {
         let (left, right) = v.split_at_mut(len);
         let right = &mut right[0..len];
-        right.copy_from_slice(&left);
+        right.copy_from_slice(left);
         for v in right {
             *v *= challenge;
         }

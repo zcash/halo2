@@ -51,7 +51,7 @@ impl<C: CurveAffine> Argument<C> {
         let h_commitments_projective: Vec<_> = h_pieces
             .iter()
             .zip(h_blinds.iter())
-            .map(|(h_piece, blind)| params.commit(&h_piece, *blind))
+            .map(|(h_piece, blind)| params.commit(h_piece, *blind))
             .collect();
         let mut h_commitments = vec![C::identity(); h_commitments_projective.len()];
         C::Curve::batch_normalize(&h_commitments_projective, &mut h_commitments);
