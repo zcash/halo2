@@ -360,9 +360,7 @@ impl<V> Bundle<Authorized, V> {
     /// Returns the amount of heap-allocated memory used by this bundle.
     pub fn dynamic_usage(&self) -> usize {
         // NonEmpty<T> stores its head element separately from its tail Vec<T>.
-        // TODO: This underestimates the dynamic usage; switch to NonEmpty::capacity once
-        // https://github.com/cloudhead/nonempty/issues/33 is closed.
-        (self.actions.len() - 1) * mem::size_of::<Action<redpallas::Signature<SpendAuth>>>()
+        (self.actions.capacity() - 1) * mem::size_of::<Action<redpallas::Signature<SpendAuth>>>()
             + self.authorization.proof.dynamic_usage()
     }
 
