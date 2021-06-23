@@ -16,7 +16,7 @@ fn main() {
     pub struct Variable(Column<Advice>, usize);
 
     #[derive(Clone)]
-    struct PLONKConfig {
+    struct PlonkConfig {
         a: Column<Advice>,
         b: Column<Advice>,
         c: Column<Advice>,
@@ -35,7 +35,7 @@ fn main() {
         perm2: Permutation,
     }
 
-    trait StandardCS<FF: FieldExt> {
+    trait StandardCs<FF: FieldExt> {
         fn raw_multiply<F>(
             &self,
             region: &mut Region<FF>,
@@ -62,21 +62,21 @@ fn main() {
         lookup_tables: Vec<Vec<F>>,
     }
 
-    struct StandardPLONK<F: FieldExt> {
-        config: PLONKConfig,
+    struct StandardPlonk<F: FieldExt> {
+        config: PlonkConfig,
         _marker: PhantomData<F>,
     }
 
-    impl<FF: FieldExt> StandardPLONK<FF> {
-        fn new(config: PLONKConfig) -> Self {
-            StandardPLONK {
+    impl<FF: FieldExt> StandardPlonk<FF> {
+        fn new(config: PlonkConfig) -> Self {
+            StandardPlonk {
                 config,
                 _marker: PhantomData,
             }
         }
     }
 
-    impl<FF: FieldExt> StandardCS<FF> for StandardPLONK<FF> {
+    impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
         fn raw_multiply<F>(
             &self,
             region: &mut Region<FF>,
@@ -221,7 +221,7 @@ fn main() {
     }
 
     impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
-        type Config = PLONKConfig;
+        type Config = PlonkConfig;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
@@ -231,7 +231,7 @@ fn main() {
             }
         }
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
+        fn configure(meta: &mut ConstraintSystem<F>) -> PlonkConfig {
             let e = meta.advice_column();
             let a = meta.advice_column();
             let b = meta.advice_column();
@@ -309,7 +309,7 @@ fn main() {
                 vec![sp * (a + p * (-F::one()))]
             });
 
-            PLONKConfig {
+            PlonkConfig {
                 a,
                 b,
                 c,
@@ -329,10 +329,10 @@ fn main() {
 
         fn synthesize(
             &self,
-            config: PLONKConfig,
+            config: PlonkConfig,
             mut layouter: impl Layouter<F>,
         ) -> Result<(), Error> {
-            let cs = StandardPLONK::new(config);
+            let cs = StandardPlonk::new(config);
 
             let _ = cs.public_input(&mut layouter.namespace(|| "input"), || {
                 Ok(F::one() + F::one())
