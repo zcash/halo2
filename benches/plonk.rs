@@ -22,7 +22,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     let params: Params<EqAffine> = Params::new(k);
 
     #[derive(Clone)]
-    struct PLONKConfig {
+    struct PlonkConfig {
         a: Column<Advice>,
         b: Column<Advice>,
         c: Column<Advice>,
@@ -35,7 +35,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         perm: Permutation,
     }
 
-    trait StandardCS<FF: FieldExt> {
+    trait StandardCs<FF: FieldExt> {
         fn raw_multiply<F>(
             &self,
             layouter: &mut impl Layouter<FF>,
@@ -59,21 +59,21 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         k: u32,
     }
 
-    struct StandardPLONK<F: FieldExt> {
-        config: PLONKConfig,
+    struct StandardPlonk<F: FieldExt> {
+        config: PlonkConfig,
         _marker: PhantomData<F>,
     }
 
-    impl<FF: FieldExt> StandardPLONK<FF> {
-        fn new(config: PLONKConfig) -> Self {
-            StandardPLONK {
+    impl<FF: FieldExt> StandardPlonk<FF> {
+        fn new(config: PlonkConfig) -> Self {
+            StandardPlonk {
                 config,
                 _marker: PhantomData,
             }
         }
     }
 
-    impl<FF: FieldExt> StandardCS<FF> for StandardPLONK<FF> {
+    impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
         fn raw_multiply<F>(
             &self,
             layouter: &mut impl Layouter<FF>,
@@ -172,14 +172,14 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     }
 
     impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
-        type Config = PLONKConfig;
+        type Config = PlonkConfig;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
             Self { a: None, k: self.k }
         }
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> PLONKConfig {
+        fn configure(meta: &mut ConstraintSystem<F>) -> PlonkConfig {
             let a = meta.advice_column();
             let b = meta.advice_column();
             let c = meta.advice_column();
@@ -204,7 +204,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
                 vec![a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))]
             });
 
-            PLONKConfig {
+            PlonkConfig {
                 a,
                 b,
                 c,
@@ -218,10 +218,10 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
 
         fn synthesize(
             &self,
-            config: PLONKConfig,
+            config: PlonkConfig,
             mut layouter: impl Layouter<F>,
         ) -> Result<(), Error> {
-            let cs = StandardPLONK::new(config);
+            let cs = StandardPlonk::new(config);
 
             for _ in 0..(1 << (self.k - 1)) {
                 let mut a_squared = None;
