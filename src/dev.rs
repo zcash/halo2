@@ -16,6 +16,8 @@ use crate::{
     poly::Rotation,
 };
 
+pub mod metadata;
+
 #[cfg(feature = "dev-graph")]
 mod graph;
 
@@ -33,45 +35,21 @@ fn cell_value<F: Field>(cell: Option<F>) -> F {
 pub enum VerifyFailure {
     /// A cell used in an active gate was not assigned to.
     Cell {
-        /// The index of the region in which this cell should be assigned. These indices
-        /// are assigned in the order in which `Layouter::assign_region` is called during
-        /// `Circuit::synthesize`.
-        region_index: usize,
-        /// The name of the region in which this cell should be assigned. This is
-        /// specified by the region creator (such as a chip implementation), and is not
-        /// enforced to be unique.
-        region_name: String,
+        /// The index of the active gate.
+        gate: metadata::Gate,
+        /// The region in which this cell should be assigned.
+        region: metadata::Region,
         /// The column in which this cell should be assigned.
         column: Column<Any>,
         /// The offset (relative to the start of the region) at which this cell should be
         /// assigned. This may be negative (for example, if a selector enables a gate at
         /// offset 0, but the gate uses `Rotation::prev()`).
         offset: isize,
-        /// The index of the active gate. These indices are assigned in the order in which
-        /// `ConstraintSystem::create_gate` is called during `Circuit::configure`.
-        gate_index: usize,
-        /// The name of the active gate. These are specified by the gate creator (such as
-        /// a chip implementation), and is not enforced to be unique.
-        gate_name: &'static str,
     },
     /// A constraint was not satisfied for a particular row.
     Constraint {
-        /// The index of the gate containing the unsatisfied constraint. These indices are
-        /// assigned in the order in which `ConstraintSystem::create_gate` is called
-        /// during `Circuit::configure`.
-        gate_index: usize,
-        /// The name of the gate containing the unsatisfied constraint. This is specified
-        /// by the gate creator (such as a chip implementation), and is not enforced to be
-        /// unique.
-        gate_name: &'static str,
-        /// The index of the polynomial constraint within the gate that is not satisfied.
-        /// These indices correspond to the order in which the constraints are returned
-        /// from the closure passed to `ConstraintSystem::create_gate` during
-        /// `Circuit::configure`.
-        constraint_index: usize,
-        /// The name of the unsatisfied constraint. This is specified by the gate creator
-        /// (such as a chip implementation), and is not enforced to be unique.
-        constraint_name: &'static str,
+        /// The polynomial constraint that is not satisfied.
+        constraint: metadata::Constraint,
         /// The row on which this constraint is not satisfied.
         row: usize,
     },
@@ -101,39 +79,19 @@ impl fmt::Display for VerifyFailure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Cell {
-                region_index,
-                region_name,
+                gate,
+                region,
                 column,
                 offset,
-                gate_index,
-                gate_name,
             } => {
                 write!(
                     f,
-                    "Region {} ('{}') uses gate {} ('{}'), which requires cell in column {:?} at offset {} to be assigned.",
-                    region_index, region_name, gate_index, gate_name, column, offset
+                    "{} uses {}, which requires cell in column {:?} at offset {} to be assigned.",
+                    region, gate, column, offset
                 )
             }
-            Self::Constraint {
-                gate_index,
-                gate_name,
-                constraint_index,
-                constraint_name,
-                row,
-            } => {
-                write!(
-                    f,
-                    "Constraint {}{} in gate {} ('{}') is not satisfied on row {}",
-                    constraint_index,
-                    if constraint_name.is_empty() {
-                        String::new()
-                    } else {
-                        format!(" ('{}')", constraint_name)
-                    },
-                    gate_index,
-                    gate_name,
-                    row
-                )
+            Self::Constraint { constraint, row } => {
+                write!(f, "{} is not satisfied on row {}", constraint, row)
             }
             Self::Lookup { lookup_index, row } => {
                 write!(f, "Lookup {} is not satisfied on row {}", lookup_index, row)
@@ -269,10 +227,7 @@ impl Region {
 /// assert_eq!(
 ///     prover.verify(),
 ///     Err(vec![VerifyFailure::Constraint {
-///         gate_index: 0,
-///         gate_name: "R1CS constraint",
-///         constraint_index: 0,
-///         constraint_name: "buggy R1CS",
+///         constraint: ((0, "R1CS constraint").into(), 0, "buggy R1CS").into(),
 ///         row: 0
 ///     }])
 /// );
@@ -513,12 +468,10 @@ impl<F: FieldExt> MockProver<F> {
                                     None
                                 } else {
                                     Some(VerifyFailure::Cell {
-                                        region_index: r_i,
-                                        region_name: r.name.clone(),
+                                        gate: (gate_index, gate.name()).into(),
+                                        region: (r_i, r.name.clone()).into(),
                                         column: cell.column,
                                         offset: cell_row as isize - r.start.unwrap() as isize,
-                                        gate_index,
-                                        gate_name: gate.name(),
                                     })
                                 }
                             })
@@ -577,10 +530,12 @@ impl<F: FieldExt> MockProver<F> {
                                     None
                                 } else {
                                     Some(VerifyFailure::Constraint {
-                                        gate_index,
-                                        gate_name: gate.name(),
-                                        constraint_index: poly_index,
-                                        constraint_name: gate.constraint_name(poly_index),
+                                        constraint: (
+                                            (gate_index, gate.name()).into(),
+                                            poly_index,
+                                            gate.constraint_name(poly_index),
+                                        )
+                                            .into(),
                                         row: (row - n) as usize,
                                     })
                                 }
@@ -787,12 +742,10 @@ mod tests {
         assert_eq!(
             prover.verify(),
             Err(vec![VerifyFailure::Cell {
-                region_index: 0,
-                region_name: "Faulty synthesis".to_owned(),
+                gate: (0, "Equality check").into(),
+                region: (0, "Faulty synthesis".to_owned()).into(),
                 column: Column::new(1, Any::Advice),
                 offset: 1,
-                gate_index: 0,
-                gate_name: "Equality check"
             }])
         );
     }
