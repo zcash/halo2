@@ -9,6 +9,15 @@ use crate::arithmetic::{Coordinates, CurveAffine, FieldExt};
 use std::io::{self, Read, Write};
 use std::marker::PhantomData;
 
+/// Prefix to a prover's message soliciting a challenge
+const BLAKE2B_PREFIX_CHALLENGE: u8 = 0;
+
+/// Prefix to a prover's message containing a curve point
+const BLAKE2B_PREFIX_POINT: u8 = 1;
+
+/// Prefix to a prover's message containing a scalar
+const BLAKE2B_PREFIX_SCALAR: u8 = 2;
+
 /// Generic transcript view (from either the prover or verifier's perspective)
 pub trait Transcript<C: CurveAffine, E: EncodedChallenge<C>> {
     /// Squeeze an encoded verifier challenge from the transcript.
@@ -56,12 +65,11 @@ pub trait TranscriptWrite<C: CurveAffine, E: EncodedChallenge<C>>: Transcript<C,
 pub struct Blake2bRead<R: Read, C: CurveAffine, E: EncodedChallenge<C>> {
     state: Blake2bState,
     reader: R,
-    _marker_c: PhantomData<C>,
-    _marker_e: PhantomData<E>,
+    _marker: PhantomData<(C, E)>,
 }
 
 impl<R: Read, C: CurveAffine, E: EncodedChallenge<C>> Blake2bRead<R, C, E> {
-    /// Initialize a transcript given an input buffer and a key.
+    /// Initialize a transcript given an input buffer.
     pub fn init(reader: R) -> Self {
         Blake2bRead {
             state: Blake2bParams::new()
@@ -69,8 +77,7 @@ impl<R: Read, C: CurveAffine, E: EncodedChallenge<C>> Blake2bRead<R, C, E> {
                 .personal(b"Halo2-Transcript")
                 .to_state(),
             reader,
-            _marker_c: PhantomData,
-            _marker_e: PhantomData,
+            _marker: PhantomData,
         }
     }
 }
@@ -108,13 +115,14 @@ impl<R: Read, C: CurveAffine> Transcript<C, Challenge255<C>>
     for Blake2bRead<R, C, Challenge255<C>>
 {
     fn squeeze_challenge(&mut self) -> Challenge255<C> {
+        self.state.update(&[BLAKE2B_PREFIX_CHALLENGE]);
         let hasher = self.state.clone();
         let result: [u8; 64] = hasher.finalize().as_bytes().try_into().unwrap();
-        self.state.update(&result[..]);
         Challenge255::<C>::new(&result)
     }
 
     fn common_point(&mut self, point: C) -> io::Result<()> {
+        self.state.update(&[BLAKE2B_PREFIX_POINT]);
         let coords: Coordinates<C> = Option::from(point.coordinates()).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::Other,
@@ -128,6 +136,7 @@ impl<R: Read, C: CurveAffine> Transcript<C, Challenge255<C>>
     }
 
     fn common_scalar(&mut self, scalar: C::Scalar) -> io::Result<()> {
+        self.state.update(&[BLAKE2B_PREFIX_SCALAR]);
         self.state.update(&scalar.to_bytes());
 
         Ok(())
@@ -139,12 +148,11 @@ impl<R: Read, C: CurveAffine> Transcript<C, Challenge255<C>>
 pub struct Blake2bWrite<W: Write, C: CurveAffine, E: EncodedChallenge<C>> {
     state: Blake2bState,
     writer: W,
-    _marker_c: PhantomData<C>,
-    _marker_e: PhantomData<E>,
+    _marker: PhantomData<(C, E)>,
 }
 
 impl<W: Write, C: CurveAffine, E: EncodedChallenge<C>> Blake2bWrite<W, C, E> {
-    /// Initialize a transcript given an output buffer and a key.
+    /// Initialize a transcript given an output buffer.
     pub fn init(writer: W) -> Self {
         Blake2bWrite {
             state: Blake2bParams::new()
@@ -152,8 +160,7 @@ impl<W: Write, C: CurveAffine, E: EncodedChallenge<C>> Blake2bWrite<W, C, E> {
                 .personal(b"Halo2-Transcript")
                 .to_state(),
             writer,
-            _marker_c: PhantomData,
-            _marker_e: PhantomData,
+            _marker: PhantomData,
         }
     }
 
@@ -183,13 +190,14 @@ impl<W: Write, C: CurveAffine> Transcript<C, Challenge255<C>>
     for Blake2bWrite<W, C, Challenge255<C>>
 {
     fn squeeze_challenge(&mut self) -> Challenge255<C> {
+        self.state.update(&[BLAKE2B_PREFIX_CHALLENGE]);
         let hasher = self.state.clone();
         let result: [u8; 64] = hasher.finalize().as_bytes().try_into().unwrap();
-        self.state.update(&result[..]);
         Challenge255::<C>::new(&result)
     }
 
     fn common_point(&mut self, point: C) -> io::Result<()> {
+        self.state.update(&[BLAKE2B_PREFIX_POINT]);
         let coords: Coordinates<C> = Option::from(point.coordinates()).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::Other,
@@ -203,6 +211,7 @@ impl<W: Write, C: CurveAffine> Transcript<C, Challenge255<C>>
     }
 
     fn common_scalar(&mut self, scalar: C::Scalar) -> io::Result<()> {
+        self.state.update(&[BLAKE2B_PREFIX_SCALAR]);
         self.state.update(&scalar.to_bytes());
 
         Ok(())
