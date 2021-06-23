@@ -857,10 +857,7 @@ in the circuit, and tell us exactly what is failing (if anything).</p>
     assert_eq!(
         prover.verify(),
         Err(vec![VerifyFailure::Constraint {
-            gate_index: 1,
-            gate_name: &quot;public input&quot;,
-            constraint_index: 0,
-            constraint_name: &quot;&quot;,
+            constraint: ((1, &quot;public input&quot;).into(), 0, &quot;&quot;).into(),
             row: 6,
         }])
     );
