@@ -11,12 +11,36 @@ use incrementalmerkletree::{Altitude, Hashable};
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
 use ff::{Field, PrimeField, PrimeFieldBits};
+use lazy_static::lazy_static;
 use rand::RngCore;
 use serde::de::Deserializer;
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 use std::iter;
 use subtle::{ConstantTimeEq, CtOption};
+
+// The uncommitted leaf is defined as pallas::Base(2).
+// <https://zips.z.cash/protocol/protocol.pdf#thmuncommittedorchard>
+lazy_static! {
+    static ref EMPTY_ROOTS: Vec<pallas::Base> = {
+        iter::empty()
+            .chain(Some(pallas::Base::from_u64(2)))
+            .chain(
+                (0..MERKLE_DEPTH_ORCHARD).scan(pallas::Base::from_u64(2), |state, l| {
+                    *state = hash_with_l(
+                        l,
+                        Pair {
+                            left: *state,
+                            right: *state,
+                        },
+                    )
+                    .unwrap();
+                    Some(*state)
+                }),
+            )
+            .collect()
+    };
+}
 
 /// The root of an Orchard commitment tree.
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
@@ -61,18 +85,18 @@ impl MerklePath {
     /// The layer with 2^n nodes is called "layer n":
     ///      - leaves are at layer MERKLE_DEPTH_ORCHARD = 32;
     ///      - the root is at layer 0.
-    /// `l_star` is MERKLE_DEPTH_ORCHARD - layer - 1.
+    /// `l` is MERKLE_DEPTH_ORCHARD - layer - 1.
     ///      - when hashing two leaves, we produce a node on the layer above the leaves, i.e.
-    ///        layer = 31, l_star = 0
-    ///      - when hashing to the final root, we produce the anchor with layer = 0, l_star = 31.
+    ///        layer = 31, l = 0
+    ///      - when hashing to the final root, we produce the anchor with layer = 0, l = 31.
     pub fn root(&self, cmx: ExtractedNoteCommitment) -> Anchor {
         let node = self
             .auth_path
             .iter()
             .enumerate()
-            .fold(*cmx, |node, (l_star, sibling)| {
-                let swap = self.position & (1 << l_star) != 0;
-                hash_layer(l_star, cond_swap(swap, node, *sibling)).unwrap()
+            .fold(*cmx, |node, (l, sibling)| {
+                let swap = self.position & (1 << l) != 0;
+                hash_with_l(l, cond_swap(swap, node, *sibling)).unwrap()
             });
         Anchor(node)
     }
@@ -111,17 +135,17 @@ fn cond_swap(swap: bool, node: pallas::Base, sibling: pallas::Base) -> Pair {
 /// The layer with 2^n nodes is called "layer n":
 ///      - leaves are at layer MERKLE_DEPTH_ORCHARD = 32;
 ///      - the root is at layer 0.
-/// `l_star` is MERKLE_DEPTH_ORCHARD - layer - 1.
+/// `l` is MERKLE_DEPTH_ORCHARD - layer - 1.
 ///      - when hashing two leaves, we produce a node on the layer above the leaves, i.e.
-///        layer = 31, l_star = 0
-///      - when hashing to the final root, we produce the anchor with layer = 0, l_star = 31.
-fn hash_layer(l_star: usize, pair: Pair) -> CtOption<pallas::Base> {
+///        layer = 31, l = 0
+///      - when hashing to the final root, we produce the anchor with layer = 0, l = 31.
+fn hash_with_l(l: usize, pair: Pair) -> CtOption<pallas::Base> {
     // MerkleCRH Sinsemilla hash domain.
     let domain = HashDomain::new(MERKLE_CRH_PERSONALIZATION);
 
     domain.hash(
         iter::empty()
-            .chain(i2lebsp_k(l_star).iter().copied())
+            .chain(i2lebsp_k(l).iter().copied())
             .chain(
                 pair.left
                     .to_le_bits()
@@ -191,8 +215,12 @@ impl Hashable for OrchardIncrementalTreeDigest {
         OrchardIncrementalTreeDigest(left_opt.0.and_then(|left| {
             right_opt
                 .0
-                .and_then(|right| hash_layer(altitude.into(), Pair { left, right }))
+                .and_then(|right| hash_with_l(altitude.into(), Pair { left, right }))
         }))
+    }
+
+    fn empty_root(alt: Altitude) -> Self {
+        OrchardIncrementalTreeDigest(CtOption::new(EMPTY_ROOTS[<usize>::from(alt)], 1.into()))
     }
 }
 
@@ -212,10 +240,11 @@ impl<'de> Deserialize<'de> for OrchardIncrementalTreeDigest {
 /// Generators for property testing.
 #[cfg(any(test, feature = "test-dependencies"))]
 pub mod testing {
-    use incrementalmerkletree::{Altitude, Hashable};
-    use lazy_static::lazy_static;
+    use incrementalmerkletree::{
+        bridgetree::Frontier as BridgeFrontier, Altitude, Frontier, Hashable,
+    };
     use std::convert::TryInto;
-    use std::iter;
+    use subtle::CtOption;
 
     use crate::{
         constants::MERKLE_DEPTH_ORCHARD,
@@ -227,31 +256,7 @@ pub mod testing {
     use proptest::collection::vec;
     use proptest::prelude::*;
 
-    use super::{hash_layer, Anchor, MerklePath, OrchardIncrementalTreeDigest, Pair};
-
-    // The uncommitted leaf is defined as pallas::Base(2).
-    // <https://zips.z.cash/protocol/protocol.pdf#thmuncommittedorchard>
-    lazy_static! {
-        static ref EMPTY_ROOTS: Vec<pallas::Base> = {
-            iter::empty()
-                .chain(Some(pallas::Base::from_u64(2)))
-                .chain((0..MERKLE_DEPTH_ORCHARD).scan(
-                    pallas::Base::from_u64(2),
-                    |state, l_star| {
-                        *state = hash_layer(
-                            l_star,
-                            Pair {
-                                left: *state,
-                                right: *state,
-                            },
-                        )
-                        .unwrap();
-                        Some(*state)
-                    },
-                ))
-                .collect()
-        };
-    }
+    use super::{hash_with_l, Anchor, MerklePath, OrchardIncrementalTreeDigest, Pair, EMPTY_ROOTS};
 
     #[test]
     fn test_vectors() {
@@ -302,23 +307,22 @@ pub mod testing {
                 // The layer with 2^n nodes is called "layer n":
                 //      - leaves are at layer MERKLE_DEPTH_ORCHARD = 32;
                 //      - the root is at layer 0.
-                // `l_star` is MERKLE_DEPTH_ORCHARD - layer - 1.
+                // `l` is MERKLE_DEPTH_ORCHARD - layer - 1.
                 //      - when hashing two leaves, we produce a node on the layer above the leaves, i.e.
-                //        layer = 31, l_star = 0
-                //      - when hashing to the final root, we produce the anchor with layer = 0, l_star = 31.
-                for height in 1..perfect_subtree_depth {
-                    let l_star = height - 1;
-                    let inner_nodes = (0..(n_leaves >> height)).map(|pos| {
-                        let left = perfect_subtree[height - 1][pos * 2];
-                        let right = perfect_subtree[height - 1][pos * 2 + 1];
+                //        layer = 31, l = 0
+                //      - when hashing to the final root, we produce the anchor with layer = 0, l = 31.
+                for l in 0..perfect_subtree_depth {
+                    let inner_nodes = (0..(n_leaves >> (l + 1))).map(|pos| {
+                        let left = perfect_subtree[l][pos * 2];
+                        let right = perfect_subtree[l][pos * 2 + 1];
                         match (left, right) {
                             (None, None) => None,
                             (Some(left), None) => {
-                                let right = EMPTY_ROOTS[height - 1];
-                                Some(hash_layer(l_star, Pair {left, right}).unwrap())
+                                let right = EMPTY_ROOTS[l];
+                                Some(hash_with_l(l, Pair {left, right}).unwrap())
                             },
                             (Some(left), Some(right)) => {
-                                Some(hash_layer(l_star, Pair {left, right}).unwrap())
+                                Some(hash_with_l(l, Pair {left, right}).unwrap())
                             },
                             (None, Some(_)) => {
                                 unreachable!("The perfect subtree is left-packed.")
@@ -371,6 +375,7 @@ pub mod testing {
     }
 
     proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10))]
         #[allow(clippy::redundant_closure)]
         #[test]
         fn tree(
@@ -389,7 +394,7 @@ pub mod testing {
 
         for (altitude, tv_root) in tv_empty_roots.iter().enumerate() {
             assert_eq!(
-                OrchardIncrementalTreeDigest::empty_root(Altitude::from(altitude as u32))
+                OrchardIncrementalTreeDigest::empty_root(Altitude::from(altitude as u8))
                     .0
                     .unwrap()
                     .to_bytes(),
@@ -398,5 +403,55 @@ pub mod testing {
                 altitude
             );
         }
+    }
+
+    #[test]
+    fn anchor_incremental() {
+        let commitments = [
+            [
+                0x68, 0x13, 0x5c, 0xf4, 0x99, 0x33, 0x22, 0x90, 0x99, 0xa4, 0x4e, 0xc9, 0x9a, 0x75,
+                0xe1, 0xe1, 0xcb, 0x46, 0x40, 0xf9, 0xb5, 0xbd, 0xec, 0x6b, 0x32, 0x23, 0x85, 0x6f,
+                0xea, 0x16, 0x39, 0x0a,
+            ],
+            [
+                0x78, 0x31, 0x50, 0x08, 0xfb, 0x29, 0x98, 0xb4, 0x30, 0xa5, 0x73, 0x1d, 0x67, 0x26,
+                0x20, 0x7d, 0xc0, 0xf0, 0xec, 0x81, 0xea, 0x64, 0xaf, 0x5c, 0xf6, 0x12, 0x95, 0x69,
+                0x01, 0xe7, 0x2f, 0x0e,
+            ],
+            [
+                0xee, 0x94, 0x88, 0x05, 0x3a, 0x30, 0xc5, 0x96, 0xb4, 0x30, 0x14, 0x10, 0x5d, 0x34,
+                0x77, 0xe6, 0xf5, 0x78, 0xc8, 0x92, 0x40, 0xd1, 0xd1, 0xee, 0x17, 0x43, 0xb7, 0x7b,
+                0xb6, 0xad, 0xc4, 0x0a,
+            ],
+            [
+                0x9d, 0xdc, 0xe7, 0xf0, 0x65, 0x01, 0xf3, 0x63, 0x76, 0x8c, 0x5b, 0xca, 0x3f, 0x26,
+                0x46, 0x60, 0x83, 0x4d, 0x4d, 0xf4, 0x46, 0xd1, 0x3e, 0xfc, 0xd7, 0xc6, 0xf1, 0x7b,
+                0x16, 0x7a, 0xac, 0x1a,
+            ],
+            [
+                0xbd, 0x86, 0x16, 0x81, 0x1c, 0x6f, 0x5f, 0x76, 0x9e, 0xa4, 0x53, 0x9b, 0xba, 0xff,
+                0x0f, 0x19, 0x8a, 0x6c, 0xdf, 0x3b, 0x28, 0x0d, 0xd4, 0x99, 0x26, 0x16, 0x3b, 0xd5,
+                0x3f, 0x53, 0xa1, 0x21,
+            ],
+        ];
+
+        let anchor = [
+            0xc8, 0x75, 0xbe, 0x2d, 0x60, 0x87, 0x3f, 0x8b, 0xcd, 0xeb, 0x91, 0x28, 0x2e, 0x64,
+            0x2e, 0x0c, 0xc6, 0x5f, 0xf7, 0xd0, 0x64, 0x2d, 0x13, 0x7b, 0x28, 0xcf, 0x28, 0xcc,
+            0x9c, 0x52, 0x7f, 0x0e,
+        ];
+
+        let mut frontier = BridgeFrontier::<OrchardIncrementalTreeDigest, 32>::new();
+        for commitment in commitments.iter() {
+            let cmx = OrchardIncrementalTreeDigest(CtOption::new(
+                pallas::Base::from_bytes(commitment).unwrap(),
+                1.into(),
+            ));
+            frontier.append(&cmx);
+        }
+        assert_eq!(
+            frontier.root().0.unwrap(),
+            pallas::Base::from_bytes(&anchor).unwrap()
+        );
     }
 }
