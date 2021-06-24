@@ -176,8 +176,8 @@ fn hash_with_l(l: usize, pair: Pair) -> CtOption<pallas::Base> {
 pub struct OrchardIncrementalTreeDigest(CtOption<pallas::Base>);
 
 impl OrchardIncrementalTreeDigest {
-    /// Creates an incremental tree life digest for the specified
-    /// Pallas base field element.
+    /// Creates an incremental tree leaf digest from the specified
+    /// Orchard extracted note commitment.
     pub fn from_cmx(value: &ExtractedNoteCommitment) -> Self {
         OrchardIncrementalTreeDigest(CtOption::new(**value, 1.into()))
     }
@@ -420,6 +420,9 @@ pub mod testing {
 
     #[test]
     fn anchor_incremental() {
+        // These commitment values are derived from the bundle data that was generated for
+        // testing commitment tree construction inside of zcashd here.
+        // https://github.com/zcash/zcash/blob/ecec1f9769a5e37eb3f7fd89a4fcfb35bc28eed7/src/test/data/merkle_roots_orchard.h
         let commitments = [
             [
                 0x68, 0x13, 0x5c, 0xf4, 0x99, 0x33, 0x22, 0x90, 0x99, 0xa4, 0x4e, 0xc9, 0x9a, 0x75,
@@ -448,6 +451,8 @@ pub mod testing {
             ],
         ];
 
+        // This value was produced by the python test vector generation code implemented here:
+        // https://github.com/zcash-hackworks/zcash-test-vectors/blob/f4d756410c8f2456f5d84cedf6dac6eb8c068eed/orchard_merkle_tree.py
         let anchor = [
             0xc8, 0x75, 0xbe, 0x2d, 0x60, 0x87, 0x3f, 0x8b, 0xcd, 0xeb, 0x91, 0x28, 0x2e, 0x64,
             0x2e, 0x0c, 0xc6, 0x5f, 0xf7, 0xd0, 0x64, 0x2d, 0x13, 0x7b, 0x28, 0xcf, 0x28, 0xcc,
