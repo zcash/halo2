@@ -45,6 +45,12 @@ pub const KEY_DIVERSIFICATION_PERSONALIZATION: &str = "z.cash:Orchard-gd";
 /// SWU hash-to-curve personalization for the value commitment generator
 pub const VALUE_COMMITMENT_PERSONALIZATION: &str = "z.cash:Orchard-cv";
 
+/// SWU hash-to-curve value for the value commitment generator
+pub const VALUE_COMMITMENT_V_BYTES: [u8; 1] = *b"v";
+
+/// SWU hash-to-curve value for the value commitment generator
+pub const VALUE_COMMITMENT_R_BYTES: [u8; 1] = *b"r";
+
 /// SWU hash-to-curve personalization for the note commitment generator
 pub const NOTE_COMMITMENT_PERSONALIZATION: &str = "z.cash:Orchard-NoteCommit";
 

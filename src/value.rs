@@ -29,7 +29,12 @@ use pasta_curves::{
 use rand::RngCore;
 use subtle::CtOption;
 
-use crate::primitives::redpallas::{self, Binding};
+use crate::{
+    constants::{
+        VALUE_COMMITMENT_PERSONALIZATION, VALUE_COMMITMENT_R_BYTES, VALUE_COMMITMENT_V_BYTES,
+    },
+    primitives::redpallas::{self, Binding},
+};
 
 use std::ops::RangeInclusive;
 
@@ -230,9 +235,9 @@ impl ValueCommitment {
     /// [concretehomomorphiccommit]: https://zips.z.cash/protocol/nu5.pdf#concretehomomorphiccommit
     #[allow(non_snake_case)]
     pub(crate) fn derive(value: ValueSum, rcv: ValueCommitTrapdoor) -> Self {
-        let hasher = pallas::Point::hash_to_curve("z.cash:Orchard-cv");
-        let V = hasher(b"v");
-        let R = hasher(b"r");
+        let hasher = pallas::Point::hash_to_curve(VALUE_COMMITMENT_PERSONALIZATION);
+        let V = hasher(&VALUE_COMMITMENT_V_BYTES);
+        let R = hasher(&VALUE_COMMITMENT_R_BYTES);
         let abs_value = u64::try_from(value.0.abs()).expect("value must be in valid range");
 
         let value = if value.0.is_negative() {
