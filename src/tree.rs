@@ -19,14 +19,17 @@ use serde::{Deserialize, Serialize};
 use std::iter;
 use subtle::{ConstantTimeEq, CtOption};
 
+
 // The uncommitted leaf is defined as pallas::Base(2).
 // <https://zips.z.cash/protocol/protocol.pdf#thmuncommittedorchard>
 lazy_static! {
+    static ref UNCOMMITTED_ORCHARD: pallas::Base = pallas::Base::from_u64(2);
+
     static ref EMPTY_ROOTS: Vec<pallas::Base> = {
         iter::empty()
-            .chain(Some(pallas::Base::from_u64(2)))
+            .chain(Some(*UNCOMMITTED_ORCHARD))
             .chain(
-                (0..MERKLE_DEPTH_ORCHARD).scan(pallas::Base::from_u64(2), |state, l| {
+                (0..MERKLE_DEPTH_ORCHARD).scan(*UNCOMMITTED_ORCHARD, |state, l| {
                     *state = hash_with_l(
                         l,
                         Pair {
@@ -216,7 +219,7 @@ impl std::hash::Hash for OrchardIncrementalTreeDigest {
 
 impl Hashable for OrchardIncrementalTreeDigest {
     fn empty_leaf() -> Self {
-        OrchardIncrementalTreeDigest(CtOption::new(pallas::Base::from_u64(2), 1.into()))
+        OrchardIncrementalTreeDigest(CtOption::new(*UNCOMMITTED_ORCHARD, 1.into()))
     }
 
     fn combine(altitude: Altitude, left_opt: &Self, right_opt: &Self) -> Self {
