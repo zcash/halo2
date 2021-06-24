@@ -3,8 +3,8 @@
 
 use crate::spec::lebs2ip;
 use halo2::{
-    circuit::Region,
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Permutation},
+    circuit::{Layouter, Region},
+    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Permutation, Selector},
     poly::Rotation,
 };
 use std::{convert::TryInto, marker::PhantomData};
@@ -13,19 +13,19 @@ use ff::PrimeFieldBits;
 
 use super::*;
 
-#[derive(Debug, Clone)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub struct LookupRangeCheckConfig<F: FieldExt + PrimeFieldBits, const K: usize> {
-    q_lookup: Column<Fixed>,
-    running_sum: Column<Advice>,
+    pub q_lookup: Selector,
+    pub q_lookup_short: Selector,
+    pub short_lookup_bitshift: Column<Fixed>,
+    pub running_sum: Column<Advice>,
+    constants: Column<Fixed>,
     table_idx: Column<Fixed>,
     perm: Permutation,
     _marker: PhantomData<F>,
 }
 
 impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
-    /// The `q_lookup` column toggles the lookup on or off. It MUST be assigned
-    /// outside of this helper at the appropriate offsets.
-    ///
     /// The `running_sum` advice column breaks the field element into `K`-bit
     /// words. It is used to construct the input expression to the lookup
     /// argument.
@@ -35,21 +35,28 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     /// can be loaded outside this helper.
     pub fn configure(
         meta: &mut ConstraintSystem<F>,
-        q_lookup: Column<Fixed>,
         running_sum: Column<Advice>,
+        constants: Column<Fixed>,
         table_idx: Column<Fixed>,
         perm: Permutation,
     ) -> Self {
+        let q_lookup = meta.selector();
+        let q_lookup_short = meta.selector();
+        let short_lookup_bitshift = meta.fixed_column();
         let config = LookupRangeCheckConfig {
             q_lookup,
+            q_lookup_short,
+            short_lookup_bitshift,
             running_sum,
+            constants,
             table_idx,
             perm,
             _marker: PhantomData,
         };
 
+        // Lookup for range checks K bits and above.
         meta.lookup(|meta| {
-            let q_lookup = meta.query_fixed(config.q_lookup, Rotation::cur());
+            let q_lookup = meta.query_selector(config.q_lookup);
             let z_cur = meta.query_advice(config.running_sum, Rotation::cur());
             let z_next = meta.query_advice(config.running_sum, Rotation::next());
             //    z_i = 2^{K}⋅z_{i + 1} + a_i
@@ -60,6 +67,28 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             vec![(q_lookup * word, table)]
         });
 
+        // Lookup for range checks up to S bits, where S < K.
+        meta.lookup(|meta| {
+            let q_lookup_short = meta.query_selector(config.q_lookup_short);
+            let word = meta.query_advice(config.running_sum, Rotation::cur());
+            let table = meta.query_fixed(config.table_idx, Rotation::cur());
+
+            vec![(q_lookup_short * word, table)]
+        });
+
+        // For short lookups, check that the word has been shifted by the correct number of bits.
+        meta.create_gate("Short lookup bitshift", |meta| {
+            let inv_two_pow_s = meta.query_fixed(config.short_lookup_bitshift, Rotation::cur());
+            let word = meta.query_advice(config.running_sum, Rotation::prev());
+            let shifted_word = meta.query_advice(config.running_sum, Rotation::cur());
+
+            let two_pow_k = F::from_u64(1 << K);
+
+            // shifted_word = word * 2^{K-s}
+            //              = word * 2^K * inv_two_pow_s
+            vec![inv_two_pow_s.clone() * (word * two_pow_k * inv_two_pow_s - shifted_word)]
+        });
+
         config
     }
 
@@ -67,7 +96,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     // Loads the values [0..2^K) into `table_idx`. This is only used in testing
     // for now, since the Sinsemilla chip provides a pre-loaded table in the
     // Orchard context.
-    fn load(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error> {
+    pub fn load(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error> {
         layouter.assign_region(
             || "table_idx",
             |mut gate| {
@@ -85,19 +114,73 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         )
     }
 
-    /// Only the lower `num_words * K` bits of the field element are constrained
-    /// by this function. If the field element does not fit into this range, then
-    /// the final cumulative sum `z_{num_words}` will be nonzero.
-    //
-    /// It is up to the caller to constrain `z_{num_words}` == 0` outside this
-    /// helper, or otherwise constrain upper bits not covered within the
-    /// `num_words * K` range.
-    pub fn lookup_range_check(
+    /// Range check on an existing cell that is copied into this helper.
+    pub fn copy_check(
         &self,
-        region: &mut Region<'_, F>,
-        offset: usize,
+        mut layouter: impl Layouter<F>,
         element: CellValue<F>,
         num_words: usize,
+        strict: bool,
+    ) -> Result<Vec<CellValue<F>>, Error> {
+        layouter.assign_region(
+            || format!("{:?} words range check", num_words),
+            |mut region| {
+                // Copy `element` and initialize running sum `z_0 = element` to decompose it.
+                let z_0 = copy(
+                    &mut region,
+                    || "z_0",
+                    self.running_sum,
+                    0,
+                    &element,
+                    &self.perm,
+                )?;
+
+                self.range_check(&mut region, z_0, num_words, strict)
+            },
+        )
+    }
+
+    /// Range check on a value that is witnessed in this helper.
+    pub fn witness_check(
+        &self,
+        mut layouter: impl Layouter<F>,
+        value: Option<F>,
+        num_words: usize,
+        strict: bool,
+    ) -> Result<(CellValue<F>, Vec<CellValue<F>>), Error> {
+        layouter.assign_region(
+            || "Witness element",
+            |mut region| {
+                let z_0 = {
+                    let cell = region.assign_advice(
+                        || "Witness element",
+                        self.running_sum,
+                        0,
+                        || value.ok_or(Error::SynthesisError),
+                    )?;
+                    CellValue::new(cell, value)
+                };
+
+                let zs = self.range_check(&mut region, z_0, num_words, strict)?;
+
+                Ok((z_0, zs))
+            },
+        )
+    }
+
+    /// If `strict` is set to "true", the field element must fit into
+    /// `num_words * K` bits. In other words, the the final cumulative sum `z_{num_words}`
+    /// must be zero.
+    ///
+    /// If `strict` is set to "false", the final `z_{num_words}` is not constrained.
+    ///
+    /// `element` must have been assigned to `self.running_sum` at offset 0.
+    fn range_check(
+        &self,
+        region: &mut Region<'_, F>,
+        element: CellValue<F>,
+        num_words: usize,
+        strict: bool,
     ) -> Result<Vec<CellValue<F>>, Error> {
         // `num_words` must fit into a single field element.
         assert!(num_words * K <= F::CAPACITY as usize);
@@ -126,17 +209,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             }
         };
 
-        // Copy `element` and initialize running sum `z_0 = element` to decompose it.
-        let z_0 = copy(
-            region,
-            || "z_0",
-            self.running_sum,
-            offset,
-            &element,
-            &self.perm,
-        )?;
-
-        let mut zs = vec![z_0];
+        let mut zs = vec![element];
 
         // Assign cumulative sum such that
         //          z_i = 2^{K}⋅z_{i + 1} + a_i
@@ -144,21 +217,24 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         //
         // For `element` = a_0 + 2^10 a_1 + ... + 2^{120} a_{12}}, initialize z_0 = `element`.
         // If `element` fits in 130 bits, we end up with z_{13} = 0.
-        let mut z = z_0;
+        let mut z = element;
         let inv_two_pow_k = F::from_u64(1u64 << K).invert().unwrap();
-        for (idx, word) in words.into_iter().enumerate() {
+        for (idx, word) in words.iter().enumerate() {
+            // Enable lookup on this row
+            self.q_lookup.enable(region, idx)?;
+
             // z_next = (z_cur - m_cur) / 2^K
             z = {
                 let z_val = z
                     .value()
-                    .zip(word)
+                    .zip(*word)
                     .map(|(z, word)| (z - word) * inv_two_pow_k);
 
                 // Assign z_next
                 let z_cell = region.assign_advice(
                     || format!("z_{:?}", idx + 1),
                     self.running_sum,
-                    offset + idx + 1,
+                    idx + 1,
                     || z_val.ok_or(Error::SynthesisError),
                 )?;
 
@@ -167,21 +243,136 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             zs.push(z);
         }
 
+        if strict {
+            // Constrain the final `z` to be zero.
+            let cell =
+                region.assign_fixed(|| "zero", self.constants, words.len(), || Ok(F::zero()))?;
+            region.constrain_equal(&self.perm, z.cell(), cell)?;
+        }
+
         Ok(zs)
+    }
+
+    /// Short range check on an existing cell that is copied into this helper.
+    ///
+    /// # Panics
+    ///
+    /// Panics if NUM_BITS is equal to or larger than K.
+    pub fn copy_short_check(
+        &self,
+        mut layouter: impl Layouter<F>,
+        element: CellValue<F>,
+        num_bits: usize,
+    ) -> Result<(), Error> {
+        assert!(num_bits < K);
+        layouter.assign_region(
+            || format!("Range check {:?} bits", num_bits),
+            |mut region| {
+                // Copy `element` to use in the k-bit lookup.
+                let element = copy(
+                    &mut region,
+                    || "element",
+                    self.running_sum,
+                    0,
+                    &element,
+                    &self.perm,
+                )?;
+
+                self.short_range_check(&mut region, element, num_bits)
+            },
+        )
+    }
+
+    /// Short range check on value that is witnessed in this helper.
+    ///
+    /// # Panics
+    ///
+    /// Panics if num_bits is larger than K.
+    pub fn witness_short_check(
+        &self,
+        mut layouter: impl Layouter<F>,
+        element: Option<F>,
+        num_bits: usize,
+    ) -> Result<CellValue<F>, Error> {
+        assert!(num_bits <= K);
+        layouter.assign_region(
+            || format!("Range check {:?} bits", num_bits),
+            |mut region| {
+                // Witness `element` to use in the k-bit lookup.
+                let element = {
+                    let cell = region.assign_advice(
+                        || "Witness element",
+                        self.running_sum,
+                        0,
+                        || element.ok_or(Error::SynthesisError),
+                    )?;
+                    CellValue::new(cell, element)
+                };
+
+                self.short_range_check(&mut region, element, num_bits)?;
+
+                Ok(element)
+            },
+        )
+    }
+
+    /// Constrain `x` to be a NUM_BITS word.
+    ///
+    /// `element` must have been assigned to `self.running_sum` at offset 0.
+    fn short_range_check(
+        &self,
+        region: &mut Region<'_, F>,
+        element: CellValue<F>,
+        num_bits: usize,
+    ) -> Result<(), Error> {
+        // Enable lookup for `element`, to constrain it to 10 bits.
+        self.q_lookup_short.enable(region, 0)?;
+
+        // Assign 2^{-num_bits} in a fixed column.
+        {
+            // 2^{-num_bits}
+            let inv_two_pow_s = F::from_u64(1 << num_bits).invert().unwrap();
+            region.assign_fixed(
+                || format!("2^(-{})", num_bits),
+                self.short_lookup_bitshift,
+                1,
+                || Ok(inv_two_pow_s),
+            )?;
+        }
+
+        // Assign shifted `element * 2^{K - num_bits}`
+        let shifted = element.value().map(|element| {
+            let shift = F::from_u64(1 << (K - num_bits));
+            element * shift
+        });
+        print!("element: {:?}", element.value());
+        print!("shifted: {:?}", shifted);
+
+        region.assign_advice(
+            || format!("element * 2^({}-{})", K, num_bits),
+            self.running_sum,
+            1,
+            || shifted.ok_or(Error::SynthesisError),
+        )?;
+
+        // Enable lookup for shifted element, to constrain it to 10 bits.
+        self.q_lookup_short.enable(region, 1)?;
+
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::{CellValue, UtilitiesInstructions, Var};
+    use super::super::Var;
     use super::LookupRangeCheckConfig;
 
     use crate::primitives::sinsemilla::{INV_TWO_POW_K, K};
     use crate::spec::lebs2ip;
-    use ff::PrimeFieldBits;
+    use ff::{Field, PrimeFieldBits};
     use halo2::{
         circuit::{layouter::SingleChipLayouter, Layouter},
-        dev::MockProver,
+        dev::{MockProver, VerifyFailure},
         plonk::{Assignment, Circuit, ConstraintSystem, Error},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -191,11 +382,8 @@ mod tests {
     #[test]
     fn lookup_range_check() {
         struct MyCircuit<F: FieldExt + PrimeFieldBits> {
+            num_words: usize,
             _marker: PhantomData<F>,
-        }
-
-        impl<F: FieldExt + PrimeFieldBits> UtilitiesInstructions<F> for MyCircuit<F> {
-            type Var = CellValue<F>;
         }
 
         impl<F: FieldExt + PrimeFieldBits> Circuit<F> for MyCircuit<F> {
@@ -203,15 +391,14 @@ mod tests {
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let running_sum = meta.advice_column();
+                let constants = meta.fixed_column();
                 let table_idx = meta.fixed_column();
-                let q_lookup = meta.fixed_column();
-
-                let perm = meta.permutation(&[running_sum.into()]);
+                let perm = meta.permutation(&[running_sum.into(), constants.into()]);
 
                 LookupRangeCheckConfig::<F, K>::configure(
                     meta,
-                    q_lookup,
                     running_sum,
+                    constants,
                     table_idx,
                     perm,
                 )
@@ -227,45 +414,51 @@ mod tests {
                 // Load table_idx
                 config.load(&mut layouter)?;
 
-                let num_words = 6;
+                // Lookup constraining element to be no longer than num_words * K bits.
                 let elements_and_expected_final_zs = [
-                    (F::from_u64((1 << (num_words * K)) - 1), F::zero()), // a word that is within num_words * K bits long
-                    (F::from_u64(1 << (num_words * K)), F::one()), // a word that is just over num_words * K bits long
+                    (
+                        F::from_u64((1 << (self.num_words * K)) - 1),
+                        F::zero(),
+                        true,
+                    ), // a word that is within self.num_words * K bits long
+                    (F::from_u64(1 << (self.num_words * K)), F::one(), false), // a word that is just over self.num_words * K bits long
                 ];
 
-                for (element, expected_final_z) in elements_and_expected_final_zs.iter() {
-                    let expected_zs = expected_zs::<F, K>(*element, num_words);
+                fn expected_zs<F: FieldExt + PrimeFieldBits, const K: usize>(
+                    element: F,
+                    num_words: usize,
+                ) -> Vec<F> {
+                    let chunks = {
+                        element
+                            .to_le_bits()
+                            .iter()
+                            .by_val()
+                            .take(num_words * K)
+                            .collect::<Vec<_>>()
+                            .chunks_exact(K)
+                            .map(|chunk| F::from_u64(lebs2ip::<K>(chunk.try_into().unwrap())))
+                            .collect::<Vec<_>>()
+                    };
+                    let expected_zs = {
+                        let inv_two_pow_k = F::from_bytes(&INV_TWO_POW_K).unwrap();
+                        chunks.iter().fold(vec![element], |mut zs, a_i| {
+                            // z_{i + 1} = (z_i - a_i) / 2^{K}
+                            let z = (zs[zs.len() - 1] - a_i) * inv_two_pow_k;
+                            zs.push(z);
+                            zs
+                        })
+                    };
+                    expected_zs
+                }
 
-                    // Load the value to be decomposed into the circuit.
-                    let element = self.load_private(
-                        layouter.namespace(|| "element"),
-                        config.running_sum,
+                for (element, expected_final_z, strict) in elements_and_expected_final_zs.iter() {
+                    let expected_zs = expected_zs::<F, K>(*element, self.num_words);
+
+                    let (_, zs) = config.witness_check(
+                        layouter.namespace(|| format!("Lookup {:?}", self.num_words)),
                         Some(*element),
-                    )?;
-
-                    // Although this fixed column assignment can be done
-                    // within the `lookup_range_check` method, in practice
-                    // the information needed to toggle the lookup depends
-                    // on some external business logic (e.g. whether the
-                    // top bit of `element` is set).
-                    //
-                    // Leaving the toggle assignment to the caller gives
-                    // them the freedom to define this business logic.
-                    let zs = layouter.assign_region(
-                        || "word within range",
-                        |mut region| {
-                            for idx in 0..num_words {
-                                // Assign fixed column to activate lookup.
-                                region.assign_fixed(
-                                    || format!("lookup on row {}", idx),
-                                    config.q_lookup,
-                                    idx,
-                                    || Ok(F::one()),
-                                )?;
-                            }
-
-                            config.lookup_range_check(&mut region, 0, element, num_words)
-                        },
+                        self.num_words,
+                        *strict,
                     )?;
 
                     assert_eq!(*expected_zs.last().unwrap(), *expected_final_z);
@@ -276,13 +469,13 @@ mod tests {
                         }
                     }
                 }
-
                 Ok(())
             }
         }
 
         {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                num_words: 6,
                 _marker: PhantomData,
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
@@ -290,31 +483,150 @@ mod tests {
         }
     }
 
-    #[cfg(test)]
-    fn expected_zs<F: FieldExt + PrimeFieldBits, const K: usize>(
-        element: F,
-        num_words: usize,
-    ) -> Vec<F> {
-        let chunks = {
-            element
-                .to_le_bits()
-                .iter()
-                .by_val()
-                .take(num_words * K)
-                .collect::<Vec<_>>()
-                .chunks_exact(K)
-                .map(|chunk| F::from_u64(lebs2ip::<K>(chunk.try_into().unwrap())))
-                .collect::<Vec<_>>()
-        };
-        let expected_zs = {
-            let inv_two_pow_k = F::from_bytes(&INV_TWO_POW_K).unwrap();
-            chunks.iter().fold(vec![element], |mut zs, a_i| {
-                // z_{i + 1} = (z_i - a_i) / 2^{K}
-                let z = (zs[zs.len() - 1] - a_i) * inv_two_pow_k;
-                zs.push(z);
-                zs
-            })
-        };
-        expected_zs
+    #[test]
+    fn short_range_check() {
+        struct MyCircuit<F: FieldExt + PrimeFieldBits> {
+            element: Option<F>,
+            num_bits: usize,
+            _marker: PhantomData<F>,
+        }
+
+        impl<F: FieldExt + PrimeFieldBits> Circuit<F> for MyCircuit<F> {
+            type Config = LookupRangeCheckConfig<F, K>;
+
+            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+                let running_sum = meta.advice_column();
+                let constants = meta.fixed_column();
+                let table_idx = meta.fixed_column();
+                let perm = meta.permutation(&[running_sum.into()]);
+
+                LookupRangeCheckConfig::<F, K>::configure(
+                    meta,
+                    running_sum,
+                    constants,
+                    table_idx,
+                    perm,
+                )
+            }
+
+            fn synthesize(
+                &self,
+                cs: &mut impl Assignment<F>,
+                config: Self::Config,
+            ) -> Result<(), Error> {
+                let mut layouter = SingleChipLayouter::new(cs)?;
+
+                // Load table_idx
+                config.load(&mut layouter)?;
+
+                // Lookup constraining element to be no longer than num_bits.
+                config.witness_short_check(
+                    layouter.namespace(|| format!("Lookup {:?} bits", self.num_bits)),
+                    self.element,
+                    self.num_bits,
+                )?;
+
+                Ok(())
+            }
+        }
+
+        // Edge case: zero bits
+        {
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                element: Some(pallas::Base::zero()),
+                num_bits: 0,
+                _marker: PhantomData,
+            };
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(prover.verify(), Ok(()));
+        }
+
+        // Edge case: K bits
+        {
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                element: Some(pallas::Base::from_u64((1 << K) - 1)),
+                num_bits: K,
+                _marker: PhantomData,
+            };
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(prover.verify(), Ok(()));
+        }
+
+        // Element within `num_bits`
+        {
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                element: Some(pallas::Base::from_u64((1 << 6) - 1)),
+                num_bits: 6,
+                _marker: PhantomData,
+            };
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(prover.verify(), Ok(()));
+        }
+
+        // Element larger than `num_bits` but within K bits
+        {
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                element: Some(pallas::Base::from_u64(1 << 6)),
+                num_bits: 6,
+                _marker: PhantomData,
+            };
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(
+                prover.verify(),
+                Err(vec![VerifyFailure::Lookup {
+                    lookup_index: 1,
+                    row: 1
+                }])
+            );
+        }
+
+        // Element larger than K bits
+        {
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                element: Some(pallas::Base::from_u64(1 << K)),
+                num_bits: 6,
+                _marker: PhantomData,
+            };
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(
+                prover.verify(),
+                Err(vec![
+                    VerifyFailure::Lookup {
+                        lookup_index: 1,
+                        row: 0
+                    },
+                    VerifyFailure::Lookup {
+                        lookup_index: 1,
+                        row: 1
+                    },
+                ])
+            );
+        }
+
+        // Element which is not within `num_bits`, but which has a shifted value within
+        // num_bits
+        {
+            let num_bits = 6;
+            let shifted = pallas::Base::from_u64((1 << num_bits) - 1);
+            // Recall that shifted = element * 2^{K-s}
+            //          => element = shifted * 2^{s-K}
+            let element = shifted
+                * pallas::Base::from_u64(1 << (K as u64 - num_bits))
+                    .invert()
+                    .unwrap();
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                element: Some(element),
+                num_bits: num_bits as usize,
+                _marker: PhantomData,
+            };
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(
+                prover.verify(),
+                Err(vec![VerifyFailure::Lookup {
+                    lookup_index: 1,
+                    row: 0
+                }])
+            );
+        }
     }
 }
