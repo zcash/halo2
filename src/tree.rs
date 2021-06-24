@@ -13,7 +13,7 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 use ff::{Field, PrimeField, PrimeFieldBits};
 use lazy_static::lazy_static;
 use rand::RngCore;
-use serde::de::Deserializer;
+use serde::de::{Deserializer, Error};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 use std::iter;
@@ -164,6 +164,11 @@ fn hash_with_l(l: usize, pair: Pair) -> CtOption<pallas::Base> {
 
 /// A newtype wrapper for leaves and internal nodes in the Orchard
 /// incremental note commitment tree.
+///
+/// This wraps a CtOption<pallas::Base> because Sinsemilla hashes
+/// can produce a bottom value which needs to be accounted for in
+/// the production of a Merkle root. Leaf nodes are always wrapped
+/// with the `Some` constructor.
 #[derive(Clone, Debug)]
 pub struct OrchardIncrementalTreeDigest(CtOption<pallas::Base>);
 
@@ -181,8 +186,12 @@ impl OrchardIncrementalTreeDigest {
 
     /// Parses a incremental tree leaf digest from the bytes of
     /// a note commitment.
-    pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        OrchardIncrementalTreeDigest(pallas::Base::from_bytes(bytes))
+    ///
+    /// Returns the empty `CtOption` if the provided bytes represent
+    /// a non-canonical encoding.
+    pub fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+        pallas::Base::from_bytes(bytes)
+            .map(|b| OrchardIncrementalTreeDigest(CtOption::new(b, 1.into())))
     }
 }
 
@@ -232,7 +241,9 @@ impl Serialize for OrchardIncrementalTreeDigest {
 impl<'de> Deserialize<'de> for OrchardIncrementalTreeDigest {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let parsed = <[u8; 32]>::deserialize(deserializer)?;
-        Ok(Self::from_bytes(&parsed))
+        <Option<_>>::from(Self::from_bytes(&parsed)).ok_or(Error::custom(
+            "Attempted to deserialize non-canonical representaion of a Pallas base field element.",
+        ))
     }
 }
 
