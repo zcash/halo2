@@ -211,7 +211,8 @@ impl Builder {
 
         // Consistency check: all anchors must be equal.
         let cm = note.commitment();
-        let path_root: Anchor = merkle_path.root(cm.into());
+        let path_root: Anchor =
+            <Option<_>>::from(merkle_path.root(cm.into())).ok_or("Derived the bottom anchor")?;
         if path_root != self.anchor {
             return Err("All anchors must be equal.");
         }
