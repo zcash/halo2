@@ -12,7 +12,6 @@ use crate::{
     },
 };
 
-use ff::PrimeField;
 use halo2::{
     arithmetic::{CurveAffine, FieldExt},
     circuit::{Chip, Layouter},
@@ -23,8 +22,6 @@ use halo2::{
     poly::Rotation,
 };
 use pasta_curves::pallas;
-
-use std::convert::TryInto;
 
 mod generator_table;
 pub use generator_table::get_s_by_idx;
@@ -231,71 +228,7 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
 
     type HashDomains = SinsemillaHashDomains;
 
-    #[allow(non_snake_case)]
-    fn witness_message(
-        &self,
-        mut layouter: impl Layouter<pallas::Base>,
-        message: Vec<Option<bool>>,
-    ) -> Result<Self::Message, Error> {
-        // Message must be composed of `K`-bit words.
-        assert_eq!(message.len() % sinsemilla::K, 0);
-
-        // Message must have at most `sinsemilla::C` words.
-        assert!(message.len() / sinsemilla::K <= sinsemilla::C);
-
-        // Message piece must be at most `ceil(pallas::Base::NUM_BITS / sinsemilla::K)` bits
-        let piece_num_words = pallas::Base::NUM_BITS as usize / sinsemilla::K;
-        let pieces: Result<Vec<_>, _> = message
-            .chunks(piece_num_words * sinsemilla::K)
-            .enumerate()
-            .map(|(i, piece)| -> Result<Self::MessagePiece, Error> {
-                self.witness_message_piece_bitstring(
-                    layouter.namespace(|| format!("message piece {}", i)),
-                    piece,
-                )
-            })
-            .collect();
-
-        pieces.map(|pieces| pieces.into())
-    }
-
-    #[allow(non_snake_case)]
-    fn witness_message_piece_bitstring(
-        &self,
-        layouter: impl Layouter<pallas::Base>,
-        message_piece: &[Option<bool>],
-    ) -> Result<Self::MessagePiece, Error> {
-        // Message must be composed of `K`-bit words.
-        assert_eq!(message_piece.len() % sinsemilla::K, 0);
-        let num_words = message_piece.len() / sinsemilla::K;
-
-        // Message piece must be at most `ceil(C::Base::NUM_BITS / sinsemilla::K)` bits
-        let piece_max_num_words = pallas::Base::NUM_BITS as usize / sinsemilla::K;
-        assert!(num_words <= piece_max_num_words as usize);
-
-        // Closure to parse a bitstring (little-endian) into a base field element.
-        let to_base_field = |bits: &[Option<bool>]| -> Option<pallas::Base> {
-            assert!(bits.len() <= pallas::Base::NUM_BITS as usize);
-
-            let bits: Option<Vec<bool>> = bits.iter().cloned().collect();
-            let bytes: Option<Vec<u8>> = bits.map(|bits| {
-                // Pad bits to 256 bits
-                let pad_len = 256 - bits.len();
-                let mut bits = bits;
-                bits.extend_from_slice(&vec![false; pad_len]);
-
-                bits.chunks_exact(8)
-                    .map(|byte| byte.iter().rev().fold(0u8, |acc, bit| acc * 2 + *bit as u8))
-                    .collect()
-            });
-            bytes.map(|bytes| pallas::Base::from_bytes(&bytes.try_into().unwrap()).unwrap())
-        };
-
-        let piece_value = to_base_field(message_piece);
-        self.witness_message_piece_field(layouter, piece_value, num_words)
-    }
-
-    fn witness_message_piece_field(
+    fn witness_message_piece(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         field_elem: Option<pallas::Base>,

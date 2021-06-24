@@ -3,8 +3,10 @@ use crate::circuit::gadget::{
     ecc::{self, EccInstructions},
     utilities::Var,
 };
-use halo2::{arithmetic::CurveAffine, circuit::Layouter, plonk::Error};
-use std::fmt::Debug;
+use ff::PrimeField;
+use halo2::{circuit::Layouter, plonk::Error};
+use pasta_curves::arithmetic::{CurveAffine, FieldExt};
+use std::{convert::TryInto, fmt::Debug};
 
 pub mod chip;
 mod message;
@@ -27,7 +29,7 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     ///
     /// For example, in the case `K = 10`, `NUM_BITS = 255`, we can fit
     /// up to `N = 25` words in a single base field element.
-    type MessagePiece;
+    type MessagePiece: Clone + Debug;
 
     /// The x-coordinate of a point output of [`Self::hash_to_point`].
     type X;
@@ -37,37 +39,6 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     /// HashDomains used in this instruction.
     type HashDomains: HashDomains<C>;
 
-    /// Witness a message in the given bitstring.
-    /// Returns a vector of [`Self::MessagePiece`]s encoding the given message.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the message length is not a multiple of `K`.
-    ///
-    /// Panics if the message length exceeds `K * MAX_WORDS`.
-    fn witness_message(
-        &self,
-        layouter: impl Layouter<C::Base>,
-        message: Vec<Option<bool>>,
-    ) -> Result<Self::Message, Error>;
-
-    /// Witnesses a message piece given a field element and the intended number of `K`-bit
-    /// words it contains.
-    ///
-    /// Returns a [`Self::MessagePiece`] encoding the given message.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the message length is not a multiple of `K`.
-    ///
-    /// Panics if the message length exceeds the maximum number of words
-    /// that can fit in a field element.
-    fn witness_message_piece_bitstring(
-        &self,
-        layouter: impl Layouter<C::Base>,
-        message: &[Option<bool>],
-    ) -> Result<Self::MessagePiece, Error>;
-
     /// Witness a message piece given a field element. Returns a [`Self::MessagePiece`]
     /// encoding the given message.
     ///
@@ -75,7 +46,7 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     ///
     /// Panics if `num_words` exceed the maximum number of `K`-bit words that
     /// can fit into a single base field element.
-    fn witness_message_piece_field(
+    fn witness_message_piece(
         &self,
         layouter: impl Layouter<C::Base>,
         value: Option<C::Base>,
@@ -130,21 +101,109 @@ where
 {
     fn from_bitstring(
         chip: SinsemillaChip,
-        layouter: impl Layouter<C::Base>,
+        mut layouter: impl Layouter<C::Base>,
         bitstring: Vec<Option<bool>>,
     ) -> Result<Self, Error> {
-        let inner = chip.witness_message(layouter, bitstring)?;
-        Ok(Self { chip, inner })
+        // Message must be composed of `K`-bit words.
+        assert_eq!(bitstring.len() % K, 0);
+
+        // Message must have at most `MAX_WORDS` words.
+        assert!(bitstring.len() / K <= MAX_WORDS);
+
+        // Message piece must be at most `ceil(C::NUM_BITS / K)` bits
+        let piece_num_words = C::Base::NUM_BITS as usize / K;
+        let pieces: Result<Vec<_>, _> = bitstring
+            .chunks(piece_num_words * K)
+            .enumerate()
+            .map(
+                |(i, piece)| -> Result<MessagePiece<C, SinsemillaChip, K, MAX_WORDS>, Error> {
+                    MessagePiece::from_bitstring(
+                        chip.clone(),
+                        layouter.namespace(|| format!("message piece {}", i)),
+                        piece,
+                    )
+                },
+            )
+            .collect();
+
+        pieces.map(|pieces| Self::from_pieces(chip, pieces))
     }
 
     /// Constructs a message from a vector of [`MessagePiece`]s.
     ///
     /// [`MessagePiece`]: SinsemillaInstructions::MessagePiece
-    fn from_pieces(chip: SinsemillaChip, pieces: Vec<SinsemillaChip::MessagePiece>) -> Self {
+    fn from_pieces(
+        chip: SinsemillaChip,
+        pieces: Vec<MessagePiece<C, SinsemillaChip, K, MAX_WORDS>>,
+    ) -> Self {
         Self {
             chip,
-            inner: pieces.into(),
+            inner: pieces
+                .iter()
+                .map(|piece| piece.inner.clone())
+                .collect::<Vec<_>>()
+                .into(),
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct MessagePiece<C: CurveAffine, SinsemillaChip, const K: usize, const MAX_WORDS: usize>
+where
+    SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
+{
+    chip: SinsemillaChip,
+    inner: SinsemillaChip::MessagePiece,
+}
+
+impl<C: CurveAffine, SinsemillaChip, const K: usize, const MAX_WORDS: usize>
+    MessagePiece<C, SinsemillaChip, K, MAX_WORDS>
+where
+    SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
+{
+    fn from_bitstring(
+        chip: SinsemillaChip,
+        layouter: impl Layouter<C::Base>,
+        bitstring: &[Option<bool>],
+    ) -> Result<Self, Error> {
+        // Message must be composed of `K`-bit words.
+        assert_eq!(bitstring.len() % K, 0);
+        let num_words = bitstring.len() / K;
+
+        // Message piece must be at most `ceil(C::Base::NUM_BITS / K)` bits
+        let piece_max_num_words = C::Base::NUM_BITS as usize / K;
+        assert!(num_words <= piece_max_num_words as usize);
+
+        // Closure to parse a bitstring (little-endian) into a base field element.
+        let to_base_field = |bits: &[Option<bool>]| -> Option<C::Base> {
+            assert!(bits.len() <= C::Base::NUM_BITS as usize);
+
+            let bits: Option<Vec<bool>> = bits.iter().cloned().collect();
+            let bytes: Option<Vec<u8>> = bits.map(|bits| {
+                // Pad bits to 256 bits
+                let pad_len = 256 - bits.len();
+                let mut bits = bits;
+                bits.extend_from_slice(&vec![false; pad_len]);
+
+                bits.chunks_exact(8)
+                    .map(|byte| byte.iter().rev().fold(0u8, |acc, bit| acc * 2 + *bit as u8))
+                    .collect()
+            });
+            bytes.map(|bytes| C::Base::from_bytes(&bytes.try_into().unwrap()).unwrap())
+        };
+
+        let piece_value = to_base_field(bitstring);
+        Self::from_field_elem(chip, layouter, piece_value, num_words)
+    }
+
+    fn from_field_elem(
+        chip: SinsemillaChip,
+        layouter: impl Layouter<C::Base>,
+        field_elem: Option<C::Base>,
+        num_words: usize,
+    ) -> Result<Self, Error> {
+        let inner = chip.witness_message_piece(layouter, field_elem, num_words)?;
+        Ok(Self { chip, inner })
     }
 }
 
@@ -242,7 +301,7 @@ mod tests {
     use super::{
         chip::SinsemillaHashDomains,
         chip::{SinsemillaChip, SinsemillaConfig},
-        HashDomain, Message, SinsemillaInstructions,
+        HashDomain, Message, MessagePiece,
     };
 
     use crate::{
@@ -337,13 +396,17 @@ mod tests {
 
                 // Layer 31, l = MERKLE_DEPTH_ORCHARD - 1 - layer = 0
                 let l_bitstring = vec![Some(false); K];
-                let l = chip1
-                    .witness_message_piece_bitstring(layouter.namespace(|| "l"), &l_bitstring)?;
+                let l = MessagePiece::from_bitstring(
+                    chip1.clone(),
+                    layouter.namespace(|| "l"),
+                    &l_bitstring,
+                )?;
 
                 // Left leaf
                 let left_bitstring: Vec<Option<bool>> =
                     (0..250).map(|_| Some(rand::random::<bool>())).collect();
-                let left = chip1.witness_message_piece_bitstring(
+                let left = MessagePiece::from_bitstring(
+                    chip1.clone(),
                     layouter.namespace(|| "left"),
                     &left_bitstring,
                 )?;
@@ -351,7 +414,8 @@ mod tests {
                 // Right leaf
                 let right_bitstring: Vec<Option<bool>> =
                     (0..250).map(|_| Some(rand::random::<bool>())).collect();
-                let right = chip1.witness_message_piece_bitstring(
+                let right = MessagePiece::from_bitstring(
+                    chip1.clone(),
                     layouter.namespace(|| "right"),
                     &right_bitstring,
                 )?;
