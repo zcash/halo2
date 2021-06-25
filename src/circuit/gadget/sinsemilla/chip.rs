@@ -5,7 +5,7 @@ use super::{
 use crate::{
     circuit::gadget::{
         ecc::chip::EccPoint,
-        utilities::{CellValue, Var},
+        utilities::{lookup_range_check::LookupRangeCheckConfig, CellValue, Var},
     },
     primitives::sinsemilla::{
         self, Q_COMMIT_IVK_M_GENERATOR, Q_MERKLE_CRH, Q_NOTE_COMMITMENT_M_GENERATOR,
@@ -62,8 +62,14 @@ pub struct SinsemillaConfig {
     /// x-coordinate of the domain $Q$, which is then constrained to equal the
     /// initial $x_a$.
     constants: Column<Fixed>,
-    // Permutation over all advice columns and the `constants` fixed column.
+    /// Permutation over all advice columns and the `constants` fixed column.
     pub(super) perm: Permutation,
+    /// Configure each advice column to be able to perform lookup range checks.
+    pub(super) lookup_config_0: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    pub(super) lookup_config_1: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    pub(super) lookup_config_2: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    pub(super) lookup_config_3: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    pub(super) lookup_config_4: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
 }
 
 impl SinsemillaConfig {
@@ -109,7 +115,7 @@ impl SinsemillaChip {
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 5],
         lookup: (Column<Fixed>, Column<Fixed>, Column<Fixed>),
-        constants: Column<Fixed>,
+        constants: [Column<Fixed>; 6], // TODO: replace with public inputs API
         perm: Permutation,
     ) -> <Self as Chip<pallas::Base>>::Config {
         let config = SinsemillaConfig {
@@ -126,7 +132,42 @@ impl SinsemillaChip {
                 table_x: lookup.1,
                 table_y: lookup.2,
             },
-            constants,
+            constants: constants[5],
+            lookup_config_0: LookupRangeCheckConfig::configure(
+                meta,
+                advices[0],
+                constants[0],
+                lookup.0,
+                perm.clone(),
+            ),
+            lookup_config_1: LookupRangeCheckConfig::configure(
+                meta,
+                advices[1],
+                constants[1],
+                lookup.0,
+                perm.clone(),
+            ),
+            lookup_config_2: LookupRangeCheckConfig::configure(
+                meta,
+                advices[2],
+                constants[2],
+                lookup.0,
+                perm.clone(),
+            ),
+            lookup_config_3: LookupRangeCheckConfig::configure(
+                meta,
+                advices[3],
+                constants[3],
+                lookup.0,
+                perm.clone(),
+            ),
+            lookup_config_4: LookupRangeCheckConfig::configure(
+                meta,
+                advices[4],
+                constants[4],
+                lookup.0,
+                perm.clone(),
+            ),
             perm,
         };
 
