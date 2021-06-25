@@ -123,6 +123,8 @@ impl MerkleChip {
             let b_1 = meta.query_advice(advices[2], Rotation::next());
             // b_2 has been constrained to be 5 bits outside this gate.
             let b_2 = meta.query_advice(advices[3], Rotation::next());
+            // Constrain b_1 + 2^5 b_2 = z1_b
+            let b1_b2_check = z1_b.clone() - (b_1.clone() + b_2.clone() * two_pow_5);
             // Derive b_0 (constrained by SinsemillaHash to be 10 bits)
             let b_0 = b_whole - (z1_b * two_pow_10);
 
@@ -140,7 +142,7 @@ impl MerkleChip {
             // Check that right = b_2 (5 bits) || c (250 bits)
             let right_check = b_2 + c_whole * two_pow_5 - right_node;
 
-            array::IntoIter::new([l_star_check, left_check, right_check])
+            array::IntoIter::new([l_star_check, left_check, right_check, b1_b2_check])
                 .map(move |poly| l_star_plus1_whole.clone() * poly)
         });
 
