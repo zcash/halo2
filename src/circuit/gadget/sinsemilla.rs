@@ -337,12 +337,32 @@ mod tests {
                 meta.advice_column(),
             ];
 
-            let constants = meta.fixed_column();
+            // TODO: Replace with public inputs API
+            let constants_1 = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+            ];
+            let constants_2 = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+            ];
+            let constants_3 = meta.fixed_column();
+
             let perm = meta.permutation(
                 &advices
                     .iter()
                     .map(|advice| (*advice).into())
-                    .chain(Some(constants.into()))
+                    .chain(Some(constants_3.into()))
+                    .chain(constants_1.iter().map(|fixed| (*fixed).into()))
+                    .chain(constants_2.iter().map(|fixed| (*fixed).into()))
                     .collect::<Vec<_>>(),
             );
 
@@ -359,14 +379,14 @@ mod tests {
                 meta,
                 advices[..5].try_into().unwrap(),
                 lookup,
-                constants,
+                constants_1,
                 perm.clone(),
             );
             let config2 = SinsemillaChip::configure(
                 meta,
                 advices[5..].try_into().unwrap(),
                 lookup,
-                constants,
+                constants_2,
                 perm,
             );
             (ecc_config, config1, config2)
