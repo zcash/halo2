@@ -90,7 +90,7 @@ impl<I: Iterator<Item = bool>> Iterator for Pad<I> {
 
 /// A domain in which $\mathsf{SinsemillaHashToPoint}$ and $\mathsf{SinsemillaHash}$ can
 /// be used.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(non_snake_case)]
 pub struct HashDomain {
     Q: pallas::Point,
