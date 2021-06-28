@@ -7,10 +7,12 @@ use pasta_curves::arithmetic::CurveAffine;
 use super::{HashDomains, SinsemillaInstructions};
 
 use crate::{
-    circuit::gadget::utilities::{cond_swap::CondSwapInstructions, UtilitiesInstructions},
+    circuit::gadget::utilities::{
+        cond_swap::CondSwapInstructions, transpose_option_array, UtilitiesInstructions,
+    },
     spec::i2lebsp,
 };
-use std::{convert::TryInto, iter};
+use std::iter;
 
 mod chip;
 
@@ -28,14 +30,15 @@ pub trait MerkleInstructions<
     + UtilitiesInstructions<C::Base>
     + Chip<C::Base>
 {
-    /// Compute MerkleCRH for a given `layer`. The root is at `layer 0`, and the
-    /// leaves are at `layer MERKLE_DEPTH_ORCHARD` = `layer 32`.
+    /// Compute MerkleCRH for a given `layer`. The hash that computes the root
+    /// is at layer 0, and the hashes that are applied to two leaves are at
+    /// layer `MERKLE_DEPTH_ORCHARD - 1` = layer 31.
     #[allow(non_snake_case)]
     fn hash_layer(
         &self,
         layouter: impl Layouter<C::Base>,
         Q: C,
-        l_star: usize,
+        l: usize,
         left: Self::Var,
         right: Self::Var,
     ) -> Result<Self::Var, Error>;
@@ -55,6 +58,7 @@ pub struct MerklePath<
     chip_2: MerkleChip,
     domain: MerkleChip::HashDomains,
     leaf_pos: Option<u32>,
+    // The Merkle path is ordered from leaves to root.
     path: Option<[C::Base; PATH_LENGTH]>,
 }
 
@@ -82,41 +86,26 @@ where
             .chain(iter::repeat(self.chip_1.clone()).take(PATH_LENGTH / 2))
             .chain(iter::repeat(self.chip_2.clone()));
 
-        let path = if let Some(path) = self.path {
-            path.iter()
-                .map(|node| Some(*node))
-                .collect::<Vec<_>>()
-                .try_into()
-                .unwrap()
-        } else {
-            [None; PATH_LENGTH]
-        };
+        // The Merkle path is ordered from leaves to root, which is consistent with the
+        // little-endian representation of `pos` below.
+        let path = transpose_option_array(self.path);
 
         // Get position as a PATH_LENGTH-bit bitstring (little-endian bit order).
         let pos: [Option<bool>; PATH_LENGTH] = {
             let pos: Option<[bool; PATH_LENGTH]> = self.leaf_pos.map(|pos| i2lebsp(pos as u64));
-            let pos: [Option<bool>; PATH_LENGTH] = if let Some(pos) = pos {
-                pos.iter()
-                    .map(|pos| Some(*pos))
-                    .collect::<Vec<_>>()
-                    .try_into()
-                    .unwrap()
-            } else {
-                [None; PATH_LENGTH]
-            };
-            pos
+            transpose_option_array(pos)
         };
 
         let Q = self.domain.Q();
 
         let mut node = leaf;
-        for (l_star, ((sibling, pos), chip)) in path.iter().zip(pos.iter()).zip(chips).enumerate() {
-            // `l_star` = MERKLE_DEPTH_ORCHARD - layer - 1, which is the index obtained from
+        for (l, ((sibling, pos), chip)) in path.iter().zip(pos.iter()).zip(chips).enumerate() {
+            // `l` = MERKLE_DEPTH_ORCHARD - layer - 1, which is the index obtained from
             // enumerating this Merkle path (going from leaf to root).
             // For example, when `layer = 31` (the first sibling on the Merkle path),
-            // we have `l_star` = 32 - 31 - 1 = 0.
+            // we have `l` = 32 - 31 - 1 = 0.
             // On the other hand, when `layer = 0` (the final sibling on the Merkle path),
-            // we have `l_star` = 32 - 0 - 1 = 31.
+            // we have `l` = 32 - 0 - 1 = 31.
             let pair = {
                 let pair = (node, *sibling);
 
@@ -125,12 +114,12 @@ where
             };
 
             // Each `hash_layer` consists of 52 Sinsemilla words:
-            //  - l_star (10 bits) = 1 word
+            //  - l (10 bits) = 1 word
             //  - left (255 bits) || right (255 bits) = 51 words (510 bits)
             node = chip.hash_layer(
-                layouter.namespace(|| format!("hash l_star {}", l_star)),
+                layouter.namespace(|| format!("hash l {}", l)),
                 Q,
-                l_star,
+                l,
                 pair.0,
                 pair.1,
             )?;
@@ -296,14 +285,14 @@ pub mod tests {
 
         // Compute the root
         let mut node = leaf;
-        for (l_star, (sibling, pos)) in path.iter().zip(pos_bool.iter()).enumerate() {
+        for (l, (sibling, pos)) in path.iter().zip(pos_bool.iter()).enumerate() {
             let (left, right) = if *pos {
                 (*sibling, node)
             } else {
                 (node, *sibling)
             };
 
-            let l_star = i2lebsp::<10>(l_star as u64);
+            let l_star = i2lebsp::<10>(l as u64);
             let left: Vec<_> = left
                 .to_le_bits()
                 .iter()

@@ -27,7 +27,7 @@ use std::{array, convert::TryInto};
 #[derive(Clone, Debug)]
 pub struct MerkleConfig {
     advices: [Column<Advice>; 5],
-    l_star_plus1: Column<Fixed>,
+    l_plus_1: Column<Fixed>,
     perm: Permutation,
     lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     pub(super) cond_swap_config: CondSwapConfig,
@@ -74,7 +74,7 @@ impl MerkleChip {
         //  - Disabling the entire decomposition gate (when set to zero)
         //    (i.e. replacing a Selector).
 
-        let l_star_plus1 = meta.fixed_column();
+        let l_plus_1 = meta.fixed_column();
 
         // Check that pieces have been decomposed correctly for Sinsemilla hash.
         // <https://zips.z.cash/protocol/nu5.pdf#orchardmerklecrh>
@@ -88,7 +88,7 @@ impl MerkleChip {
         // 250 bits, 20 bits, and 250 bits respectively.
         //
         meta.create_gate("Decomposition check", |meta| {
-            let l_star_plus1_whole = meta.query_fixed(l_star_plus1, Rotation::cur());
+            let l_plus_1_whole = meta.query_fixed(l_plus_1, Rotation::cur());
 
             let two_pow_5 = pallas::Base::from_u64(1 << 5);
             let two_pow_10 = two_pow_5.square();
@@ -111,7 +111,7 @@ impl MerkleChip {
             // a_0 = a - (a_1 * 2^10)
             let a_0 = a_whole - a_1.clone() * pallas::Base::from_u64(1 << 10);
             let l_star_check =
-                a_0 - (l_star_plus1_whole.clone() - Expression::Constant(pallas::Base::one()));
+                a_0 - (l_plus_1_whole.clone() - Expression::Constant(pallas::Base::one()));
 
             // b = b_0||b_1||b_2
             //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
@@ -143,12 +143,12 @@ impl MerkleChip {
             let right_check = b_2 + c_whole * two_pow_5 - right_node;
 
             array::IntoIter::new([l_star_check, left_check, right_check, b1_b2_check])
-                .map(move |poly| l_star_plus1_whole.clone() * poly)
+                .map(move |poly| l_plus_1_whole.clone() * poly)
         });
 
         MerkleConfig {
             advices,
-            l_star_plus1,
+            l_plus_1,
             perm: sinsemilla_config.perm.clone(),
             cond_swap_config,
             lookup_config,
@@ -268,13 +268,13 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
             layouter.assign_region(
                 || "Check piece decomposition",
                 |mut region| {
-                    // Set the fixed column `l_star_plus1` to the current l_star + 1.
-                    let l_star_plus1 = (l_star as u64) + 1;
+                    // Set the fixed column `l_plus_1` to the current l_star + 1.
+                    let l_plus_1 = (l_star as u64) + 1;
                     region.assign_fixed(
-                        || format!("l_star_plus1 {}", l_star_plus1),
-                        config.l_star_plus1,
+                        || format!("l_plus_1 {}", l_plus_1),
+                        config.l_plus_1,
                         0,
-                        || Ok(pallas::Base::from_u64(l_star_plus1)),
+                        || Ok(pallas::Base::from_u64(l_plus_1)),
                     )?;
 
                     // Offset 0
