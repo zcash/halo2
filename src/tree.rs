@@ -196,17 +196,17 @@ impl OrchardIncrementalTreeDigest {
     }
 }
 
-/// This instance is should only be used for hashtable key comparisons.
+/// This instance should only be used for hash table key comparisons.
 impl std::cmp::PartialEq for OrchardIncrementalTreeDigest {
     fn eq(&self, other: &Self) -> bool {
         self.0.ct_eq(&other.0).into()
     }
 }
 
-/// This instance is should only be used for hashtable key comparisons.
+/// This instance should only be used for hash table key comparisons.
 impl std::cmp::Eq for OrchardIncrementalTreeDigest {}
 
-/// This instance is should only be used for hashtable key comparisons.
+/// This instance should only be used for hash table key hashing.
 impl std::hash::Hash for OrchardIncrementalTreeDigest {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         <Option<pallas::Base>>::from(self.0)
@@ -228,8 +228,8 @@ impl Hashable for OrchardIncrementalTreeDigest {
         }))
     }
 
-    fn empty_root(alt: Altitude) -> Self {
-        OrchardIncrementalTreeDigest(CtOption::new(EMPTY_ROOTS[<usize>::from(alt)], 1.into()))
+    fn empty_root(altitude: Altitude) -> Self {
+        OrchardIncrementalTreeDigest(CtOption::new(EMPTY_ROOTS[<usize>::from(altitude)], 1.into()))
     }
 }
 
@@ -244,7 +244,7 @@ impl<'de> Deserialize<'de> for OrchardIncrementalTreeDigest {
         let parsed = <[u8; 32]>::deserialize(deserializer)?;
         <Option<_>>::from(Self::from_bytes(&parsed)).ok_or_else(|| {
             Error::custom(
-            "Attempted to deserialize non-canonical representaion of a Pallas base field element.",
+            "Attempted to deserialize a non-canonical representation of a Pallas base field element.",
         )
         })
     }
@@ -458,7 +458,7 @@ pub mod testing {
             ],
         ];
 
-        // This value was produced by the python test vector generation code implemented here:
+        // This value was produced by the Python test vector generation code implemented here:
         // https://github.com/zcash-hackworks/zcash-test-vectors/blob/f4d756410c8f2456f5d84cedf6dac6eb8c068eed/orchard_merkle_tree.py
         let anchor = [
             0xc8, 0x75, 0xbe, 0x2d, 0x60, 0x87, 0x3f, 0x8b, 0xcd, 0xeb, 0x91, 0x28, 0x2e, 0x64,
