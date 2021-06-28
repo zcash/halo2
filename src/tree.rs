@@ -229,7 +229,10 @@ impl Hashable for OrchardIncrementalTreeDigest {
     }
 
     fn empty_root(altitude: Altitude) -> Self {
-        OrchardIncrementalTreeDigest(CtOption::new(EMPTY_ROOTS[<usize>::from(altitude)], 1.into()))
+        OrchardIncrementalTreeDigest(CtOption::new(
+            EMPTY_ROOTS[<usize>::from(altitude)],
+            1.into(),
+        ))
     }
 }
 
