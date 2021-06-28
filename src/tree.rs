@@ -242,19 +242,24 @@ impl Serialize for OrchardIncrementalTreeDigest {
 impl<'de> Deserialize<'de> for OrchardIncrementalTreeDigest {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let parsed = <[u8; 32]>::deserialize(deserializer)?;
-        <Option<_>>::from(Self::from_bytes(&parsed)).ok_or(Error::custom(
+        <Option<_>>::from(Self::from_bytes(&parsed)).ok_or_else(|| {
+            Error::custom(
             "Attempted to deserialize non-canonical representaion of a Pallas base field element.",
-        ))
+        )
+        })
     }
 }
 
 /// Generators for property testing.
 #[cfg(any(test, feature = "test-dependencies"))]
 pub mod testing {
+    #[cfg(test)]
     use incrementalmerkletree::{
         bridgetree::Frontier as BridgeFrontier, Altitude, Frontier, Hashable,
     };
+
     use std::convert::TryInto;
+    #[cfg(test)]
     use subtle::CtOption;
 
     use crate::{
@@ -262,12 +267,16 @@ pub mod testing {
         note::{commitment::ExtractedNoteCommitment, testing::arb_note, Note},
         value::{testing::arb_positive_note_value, MAX_NOTE_VALUE},
     };
-    use pasta_curves::{arithmetic::FieldExt, pallas};
+    #[cfg(test)]
+    use pasta_curves::arithmetic::FieldExt;
+    use pasta_curves::pallas;
 
     use proptest::collection::vec;
     use proptest::prelude::*;
 
-    use super::{hash_with_l, Anchor, MerklePath, OrchardIncrementalTreeDigest, Pair, EMPTY_ROOTS};
+    #[cfg(test)]
+    use super::OrchardIncrementalTreeDigest;
+    use super::{hash_with_l, Anchor, MerklePath, Pair, EMPTY_ROOTS};
 
     #[test]
     fn test_vectors() {
