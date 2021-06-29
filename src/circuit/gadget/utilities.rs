@@ -4,19 +4,19 @@ use halo2::{
 };
 use pasta_curves::arithmetic::FieldExt;
 
-mod cond_swap;
-mod enable_flag;
-mod lookup_range_check;
-mod plonk;
+pub(crate) mod cond_swap;
+pub(crate) mod enable_flag;
+pub(crate) mod lookup_range_check;
+pub(crate) mod plonk;
 
-/// A variable representing a number.
+/// A variable representing a field element.
 #[derive(Copy, Clone, Debug)]
 pub struct CellValue<F: FieldExt> {
     cell: Cell,
     value: Option<F>,
 }
 
-pub trait Var<F: FieldExt> {
+pub trait Var<F: FieldExt>: Copy + Clone + std::fmt::Debug {
     fn new(cell: Cell, value: Option<F>) -> Self;
     fn cell(&self) -> Cell;
     fn value(&self) -> Option<F>;
