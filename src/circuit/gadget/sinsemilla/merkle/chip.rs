@@ -14,8 +14,7 @@ use super::MerkleInstructions;
 use crate::{
     circuit::gadget::utilities::{
         cond_swap::{CondSwapChip, CondSwapConfig, CondSwapInstructions},
-        copy,
-        CellValue, UtilitiesInstructions, Var,
+        copy, CellValue, UtilitiesInstructions, Var,
     },
     constants::{L_ORCHARD_BASE, MERKLE_DEPTH_ORCHARD},
     primitives::sinsemilla,
