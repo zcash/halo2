@@ -67,7 +67,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             vec![(q_lookup * word, table)]
         });
 
-        // Lookup for range checks up to S bits, where S < K.
+        // Lookup used in range checks up to S bits, where S < K.
         meta.lookup(|meta| {
             let q_lookup_short = meta.query_selector(config.q_lookup_short);
             let word = meta.query_advice(config.running_sum, Rotation::cur());
@@ -345,8 +345,6 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             let shift = F::from_u64(1 << (K - num_bits));
             element * shift
         });
-        print!("element: {:?}", element.value());
-        print!("shifted: {:?}", shifted);
 
         region.assign_advice(
             || format!("element * 2^({}-{})", K, num_bits),

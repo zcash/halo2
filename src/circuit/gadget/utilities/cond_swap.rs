@@ -12,7 +12,6 @@ pub trait CondSwapInstructions<F: FieldExt>: UtilitiesInstructions<F> {
     /// Given an input pair (a,b) and a `swap` boolean flag, returns
     /// (b,a) if `swap` is set, else (a,b) if `swap` is not set.
     ///
-    ///
     /// The second element of the pair is required to be a witnessed
     /// value, not a variable that already exists in the circuit.
     fn swap(
