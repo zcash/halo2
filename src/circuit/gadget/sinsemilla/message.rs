@@ -34,25 +34,17 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize, const MAX_WORDS: usize> std::
 /// cannot exceed the base field's `NUM_BITS`.
 #[derive(Copy, Clone, Debug)]
 pub struct MessagePiece<F: FieldExt, const K: usize> {
-    cell: Cell,
-    field_elem: Option<F>,
+    cell_value: CellValue<F>,
     /// The number of K-bit words in this message piece.
     num_words: usize,
-}
-
-#[allow(clippy::from_over_into)]
-impl<F: FieldExt + PrimeFieldBits, const K: usize> Into<CellValue<F>> for MessagePiece<F, K> {
-    fn into(self) -> CellValue<F> {
-        CellValue::new(self.cell(), self.field_elem())
-    }
 }
 
 impl<F: FieldExt + PrimeFieldBits, const K: usize> MessagePiece<F, K> {
     pub fn new(cell: Cell, field_elem: Option<F>, num_words: usize) -> Self {
         assert!(num_words * K < F::NUM_BITS as usize);
+        let cell_value = CellValue::new(cell, field_elem);
         Self {
-            cell,
-            field_elem,
+            cell_value,
             num_words,
         }
     }
@@ -62,10 +54,14 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> MessagePiece<F, K> {
     }
 
     pub fn cell(&self) -> Cell {
-        self.cell
+        self.cell_value.cell()
     }
 
     pub fn field_elem(&self) -> Option<F> {
-        self.field_elem
+        self.cell_value.value()
+    }
+
+    pub fn cell_value(&self) -> CellValue<F> {
+        self.cell_value
     }
 }

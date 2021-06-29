@@ -5,14 +5,13 @@ use super::{
 use crate::{
     circuit::gadget::{
         ecc::chip::EccPoint,
-        utilities::{CellValue, Var},
+        utilities::{lookup_range_check::LookupRangeCheckConfig, CellValue, Var},
     },
     primitives::sinsemilla::{
         self, Q_COMMIT_IVK_M_GENERATOR, Q_MERKLE_CRH, Q_NOTE_COMMITMENT_M_GENERATOR,
     },
 };
 
-use ff::PrimeField;
 use halo2::{
     arithmetic::{CurveAffine, FieldExt},
     circuit::{Chip, Layouter},
@@ -23,8 +22,6 @@ use halo2::{
     poly::Rotation,
 };
 use pasta_curves::pallas;
-
-use std::convert::TryInto;
 
 mod generator_table;
 pub use generator_table::get_s_by_idx;
@@ -60,13 +57,19 @@ pub struct SinsemillaConfig {
     lambda_2: Column<Advice>,
     /// The lookup table where $(\mathsf{idx}, x_p, y_p)$ are loaded for the $2^K$
     /// generators of the Sinsemilla hash.
-    generator_table: GeneratorTableConfig,
+    pub(super) generator_table: GeneratorTableConfig,
     /// Fixed column shared by the whole circuit. This is used to load the
     /// x-coordinate of the domain $Q$, which is then constrained to equal the
     /// initial $x_a$.
     constants: Column<Fixed>,
     /// Permutation over all advice columns and the `constants` fixed column.
-    perm: Permutation,
+    pub(super) perm: Permutation,
+    /// Configure each advice column to be able to perform lookup range checks.
+    pub(super) lookup_config_0: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    pub(super) lookup_config_1: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    pub(super) lookup_config_2: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    pub(super) lookup_config_3: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    pub(super) lookup_config_4: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -106,7 +109,7 @@ impl SinsemillaChip {
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 5],
         lookup: (Column<Fixed>, Column<Fixed>, Column<Fixed>),
-        constants: Column<Fixed>,
+        constants: [Column<Fixed>; 6], // TODO: replace with public inputs API
         perm: Permutation,
     ) -> <Self as Chip<pallas::Base>>::Config {
         let config = SinsemillaConfig {
@@ -123,7 +126,42 @@ impl SinsemillaChip {
                 table_x: lookup.1,
                 table_y: lookup.2,
             },
-            constants,
+            constants: constants[5],
+            lookup_config_0: LookupRangeCheckConfig::configure(
+                meta,
+                advices[0],
+                constants[0],
+                lookup.0,
+                perm.clone(),
+            ),
+            lookup_config_1: LookupRangeCheckConfig::configure(
+                meta,
+                advices[1],
+                constants[1],
+                lookup.0,
+                perm.clone(),
+            ),
+            lookup_config_2: LookupRangeCheckConfig::configure(
+                meta,
+                advices[2],
+                constants[2],
+                lookup.0,
+                perm.clone(),
+            ),
+            lookup_config_3: LookupRangeCheckConfig::configure(
+                meta,
+                advices[3],
+                constants[3],
+                lookup.0,
+                perm.clone(),
+            ),
+            lookup_config_4: LookupRangeCheckConfig::configure(
+                meta,
+                advices[4],
+                constants[4],
+                lookup.0,
+                perm.clone(),
+            ),
             perm,
         };
 
@@ -225,71 +263,7 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
 
     type HashDomains = SinsemillaHashDomains;
 
-    #[allow(non_snake_case)]
-    fn witness_message(
-        &self,
-        mut layouter: impl Layouter<pallas::Base>,
-        message: Vec<Option<bool>>,
-    ) -> Result<Self::Message, Error> {
-        // Message must be composed of `K`-bit words.
-        assert_eq!(message.len() % sinsemilla::K, 0);
-
-        // Message must have at most `sinsemilla::C` words.
-        assert!(message.len() / sinsemilla::K <= sinsemilla::C);
-
-        // Message piece must be at most `ceil(pallas::Base::NUM_BITS / sinsemilla::K)` bits
-        let piece_num_words = pallas::Base::NUM_BITS as usize / sinsemilla::K;
-        let pieces: Result<Vec<_>, _> = message
-            .chunks(piece_num_words * sinsemilla::K)
-            .enumerate()
-            .map(|(i, piece)| -> Result<Self::MessagePiece, Error> {
-                self.witness_message_piece_bitstring(
-                    layouter.namespace(|| format!("message piece {}", i)),
-                    piece,
-                )
-            })
-            .collect();
-
-        pieces.map(|pieces| pieces.into())
-    }
-
-    #[allow(non_snake_case)]
-    fn witness_message_piece_bitstring(
-        &self,
-        layouter: impl Layouter<pallas::Base>,
-        message_piece: &[Option<bool>],
-    ) -> Result<Self::MessagePiece, Error> {
-        // Message must be composed of `K`-bit words.
-        assert_eq!(message_piece.len() % sinsemilla::K, 0);
-        let num_words = message_piece.len() / sinsemilla::K;
-
-        // Message piece must be at most `ceil(C::Base::NUM_BITS / sinsemilla::K)` bits
-        let piece_max_num_words = pallas::Base::NUM_BITS as usize / sinsemilla::K;
-        assert!(num_words <= piece_max_num_words as usize);
-
-        // Closure to parse a bitstring (little-endian) into a base field element.
-        let to_base_field = |bits: &[Option<bool>]| -> Option<pallas::Base> {
-            assert!(bits.len() <= pallas::Base::NUM_BITS as usize);
-
-            let bits: Option<Vec<bool>> = bits.iter().cloned().collect();
-            let bytes: Option<Vec<u8>> = bits.map(|bits| {
-                // Pad bits to 256 bits
-                let pad_len = 256 - bits.len();
-                let mut bits = bits;
-                bits.extend_from_slice(&vec![false; pad_len]);
-
-                bits.chunks_exact(8)
-                    .map(|byte| byte.iter().rev().fold(0u8, |acc, bit| acc * 2 + *bit as u8))
-                    .collect()
-            });
-            bytes.map(|bytes| pallas::Base::from_bytes(&bytes.try_into().unwrap()).unwrap())
-        };
-
-        let piece_value = to_base_field(message_piece);
-        self.witness_message_piece_field(layouter, piece_value, num_words)
-    }
-
-    fn witness_message_piece_field(
+    fn witness_message_piece(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         field_elem: Option<pallas::Base>,
