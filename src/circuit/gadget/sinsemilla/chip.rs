@@ -61,7 +61,7 @@ pub struct SinsemillaConfig {
     /// Fixed column shared by the whole circuit. This is used to load the
     /// x-coordinate of the domain $Q$, which is then constrained to equal the
     /// initial $x_a$.
-    constants: Column<Fixed>,
+    pub(super) constants: Column<Fixed>,
     /// Permutation over all advice columns and the `constants` fixed column.
     pub(super) perm: Permutation,
     /// Configure each advice column to be able to perform lookup range checks.
@@ -70,6 +70,13 @@ pub struct SinsemillaConfig {
     pub(super) lookup_config_2: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     pub(super) lookup_config_3: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     pub(super) lookup_config_4: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+}
+
+impl SinsemillaConfig {
+    /// Returns an array of all advice columns in this config, in arbitrary order.
+    pub(super) fn advices(&self) -> [Column<Advice>; 5] {
+        [self.x_a, self.x_p, self.bits, self.lambda_1, self.lambda_2]
+    }
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]

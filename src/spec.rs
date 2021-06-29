@@ -11,7 +11,7 @@ use pasta_curves::pallas;
 use subtle::{ConditionallySelectable, CtOption};
 
 use crate::{
-    constants::L_ORCHARD_BASE,
+    constants::{util::gen_const_array, L_ORCHARD_BASE},
     primitives::{poseidon, sinsemilla},
 };
 
@@ -252,16 +252,72 @@ pub fn lebs2ip<const L: usize>(bits: &[bool; L]) -> u64 {
         .fold(0u64, |acc, (i, b)| acc + if *b { 1 << i } else { 0 })
 }
 
+/// The sequence of bits representing a u64 in little-endian order.
+///
+/// # Panics
+///
+/// Panics if the expected length of the sequence `NUM_BITS` exceeds
+/// 64.
+pub fn i2lebsp<const NUM_BITS: usize>(int: u64) -> [bool; NUM_BITS] {
+    assert!(NUM_BITS <= 64);
+    gen_const_array(|mask: usize| (int & (1 << mask)) != 0)
+}
+
 #[cfg(test)]
 mod tests {
+    use super::{i2lebsp, lebs2ip};
+
     use group::Group;
     use halo2::arithmetic::CurveExt;
     use pasta_curves::pallas;
+    use rand::{rngs::OsRng, RngCore};
+    use std::convert::TryInto;
 
     #[test]
     fn diversify_hash_substitution() {
         assert!(!bool::from(
             pallas::Point::hash_to_curve("z.cash:Orchard-gd")(&[]).is_identity()
         ));
+    }
+
+    #[test]
+    fn lebs2ip_round_trip() {
+        let mut rng = OsRng;
+        {
+            let int = rng.next_u64();
+            assert_eq!(lebs2ip::<64>(&i2lebsp(int)), int);
+        }
+
+        assert_eq!(lebs2ip::<64>(&i2lebsp(0)), 0);
+        assert_eq!(
+            lebs2ip::<64>(&i2lebsp(0xFFFFFFFFFFFFFFFF)),
+            0xFFFFFFFFFFFFFFFF
+        );
+    }
+
+    #[test]
+    fn i2lebsp_round_trip() {
+        {
+            let bitstring = (0..64).map(|_| rand::random()).collect::<Vec<_>>();
+            assert_eq!(
+                i2lebsp::<64>(lebs2ip::<64>(&bitstring.clone().try_into().unwrap())).to_vec(),
+                bitstring
+            );
+        }
+
+        {
+            let bitstring = [false; 64];
+            assert_eq!(i2lebsp(lebs2ip(&bitstring)), bitstring);
+        }
+
+        {
+            let bitstring = [true; 64];
+            assert_eq!(i2lebsp(lebs2ip(&bitstring)), bitstring);
+        }
+
+        {
+            let bitstring = [];
+            assert_eq!(i2lebsp(lebs2ip(&bitstring)), bitstring);
+        }
     }
 }

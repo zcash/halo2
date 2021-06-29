@@ -9,6 +9,7 @@ use pasta_curves::arithmetic::{CurveAffine, FieldExt};
 use std::{convert::TryInto, fmt::Debug};
 
 pub mod chip;
+pub mod merkle;
 mod message;
 
 /// The set of circuit instructions required to use the [`Sinsemilla`](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html) gadget.
