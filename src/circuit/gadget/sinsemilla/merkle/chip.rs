@@ -71,13 +71,13 @@ impl MerkleChip {
         // This fixed column serves two purposes:
         //  - Fixing the value of l* for rows in which a Merkle path layer
         //    is decomposed.
-        //  - Disabling the entire decomposition gate (when set to zero)
+        //  - Disabling the entire decomposition gate when set to zero
         //    (i.e. replacing a Selector).
 
         let l_plus_1 = meta.fixed_column();
 
         // Check that pieces have been decomposed correctly for Sinsemilla hash.
-        // <https://zips.z.cash/protocol/nu5.pdf#orchardmerklecrh>
+        // <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
         //
         // a = a_0||a_1 = l_star || (bits 0..=239 of left)
         // b = b_0||b_1||b_2
@@ -87,6 +87,13 @@ impl MerkleChip {
         // The message pieces `a`, `b`, `c` are constrained by Sinsemilla to be
         // 250 bits, 20 bits, and 250 bits respectively.
         //
+        /*
+            The pieces and subpieces are arranged in the following configuration:
+            |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | l_plus_1 |
+            ----------------------------------------------------
+            |   a   |   b   |   c   |  left | right |   l + 1  |
+            |  z1_a |  z1_b |  b_1  |  b_2  |       |          |
+        */
         meta.create_gate("Decomposition check", |meta| {
             let l_plus_1_whole = meta.query_fixed(l_plus_1, Rotation::cur());
 
@@ -115,6 +122,8 @@ impl MerkleChip {
 
             // b = b_0||b_1||b_2
             //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
+            // The Orchard specification allows this representation to be non-canonical.
+            // <https://zips.z.cash/protocol/protocol.pdf#merklepath>
             //
             //    z_1 of SinsemillaHash(b) = b_1 + 2^5 b_2
             // => b_0 = b - (z1_b * 2^10)
@@ -132,18 +141,23 @@ impl MerkleChip {
             let left_check = {
                 let reconstructed = {
                     let two_pow_240 = pallas::Base::from_u128(1 << 120).square();
-                    let b0_shifted = b_0 * two_pow_240;
-                    let b1_shifted = b_1 * two_pow_240 * two_pow_10;
-                    a_1 + b0_shifted + b1_shifted
+                    a_1 + (b_0 + b_1 * two_pow_10) * two_pow_240
                 };
                 reconstructed - left_node
             };
 
             // Check that right = b_2 (5 bits) || c (250 bits)
+            // The Orchard specification allows this representation to be non-canonical.
+            // <https://zips.z.cash/protocol/protocol.pdf#merklepath>
             let right_check = b_2 + c_whole * two_pow_5 - right_node;
 
-            array::IntoIter::new([l_star_check, left_check, right_check, b1_b2_check])
-                .map(move |poly| l_plus_1_whole.clone() * poly)
+            array::IntoIter::new([
+                ("l_star_check", l_star_check),
+                ("left_check", left_check),
+                ("right_check", right_check),
+                ("b1_b2_check", b1_b2_check),
+            ])
+            .map(move |(name, poly)| (name, l_plus_1_whole.clone() * poly))
         });
 
         MerkleConfig {
@@ -169,13 +183,14 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         Q: pallas::Affine,
-        l_star: usize,
-        left: <Self as UtilitiesInstructions<pallas::Base>>::Var,
-        right: <Self as UtilitiesInstructions<pallas::Base>>::Var,
-    ) -> Result<<Self as UtilitiesInstructions<pallas::Base>>::Var, Error> {
+        // l = MERKLE_DEPTH_ORCHARD - layer - 1
+        l: usize,
+        left: Self::Var,
+        right: Self::Var,
+    ) -> Result<Self::Var, Error> {
         let config = self.config().clone();
 
-        // <https://zips.z.cash/protocol/nu5.pdf#orchardmerklecrh>
+        // <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
         // We need to hash `l_star || left || right`, where `l_star` is a 10-bit value.
         // We allow `left` and `right` to be non-canonical 255-bit encodings.
         //
@@ -184,11 +199,11 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
         //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
         // c = bits 5..=254 of right
 
-        // `a = a_0||a_1` = `l` || (bits 0..=239 of `left`)
+        // `a = a_0||a_1` = `l_star` || (bits 0..=239 of `left`)
         let a = {
             let a = {
                 // a_0 = l_star
-                let a_0 = bitrange_subset(pallas::Base::from_u64(l_star as u64), 0..10);
+                let a_0 = bitrange_subset(pallas::Base::from_u64(l as u64), 0..10);
 
                 // a_1 = (bits 0..=239 of `left`)
                 let a_1 = left.value().map(|value| bitrange_subset(value, 0..240));
@@ -199,7 +214,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
             self.witness_message_piece(layouter.namespace(|| "Witness a = a_0 || a_1"), a, 25)?
         };
 
-        // b = b_0||b_1||b_2
+        // b = b_0 || b_1 || b_2
         //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
         let (b_1, b_2, b) = {
             // b_0 = (bits 240..=249 of `left`)
@@ -238,7 +253,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                             + b_2 * pallas::Base::from_u64(1 << 15)
                     });
                 self.witness_message_piece(
-                    layouter.namespace(|| "Witness b = b_0||b_1||b_2||b_3"),
+                    layouter.namespace(|| "Witness b = b_0 || b_1 || b_2"),
                     b,
                     2,
                 )?
@@ -256,7 +271,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
         };
 
         let (point, zs) = self.hash_to_point(
-            layouter.namespace(|| format!("l_star {}", l_star)),
+            layouter.namespace(|| format!("hash at l = {}", l)),
             Q,
             vec![a, b, c].into(),
         )?;
@@ -264,12 +279,21 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
         let z1_b = zs[1][1];
 
         // Check that the pieces have been decomposed properly.
+        /*
+            The pieces and subpieces are arranged in the following configuration:
+            |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | l_plus_1 |
+            ----------------------------------------------------
+            |   a   |   b   |   c   |  left | right |   l + 1  |
+            |  z1_a |  z1_b |  b_1  |  b_2  |       |          |
+        */
         {
             layouter.assign_region(
                 || "Check piece decomposition",
                 |mut region| {
-                    // Set the fixed column `l_plus_1` to the current l_star + 1.
-                    let l_plus_1 = (l_star as u64) + 1;
+                    // Set the fixed column `l_plus_1` to the current l + 1.
+                    // Recall that l = MERKLE_DEPTH_ORCHARD - layer - 1.
+                    // The layer with 2^n nodes is called "layer n".
+                    let l_plus_1 = (l as u64) + 1;
                     region.assign_fixed(
                         || format!("l_plus_1 {}", l_plus_1),
                         config.l_plus_1,
@@ -328,7 +352,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                     // Copy and assign z_1 of SinsemillaHash(a) = a_1
                     copy(
                         &mut region,
-                        || "a_0",
+                        || "z1_a",
                         config.advices[0],
                         1,
                         &z1_a,
@@ -337,7 +361,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                     // Copy and assign z_1 of SinsemillaHash(b) = b_1
                     copy(
                         &mut region,
-                        || "b_0",
+                        || "z1_b",
                         config.advices[1],
                         1,
                         &z1_b,
@@ -378,7 +402,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
             };
 
             if let (Some(left), Some(right)) = (left.value(), right.value()) {
-                let l_star = i2lebsp::<10>(l_star as u64);
+                let l_star = i2lebsp::<10>(l as u64);
                 let left: Vec<_> = left
                     .to_le_bits()
                     .iter()
