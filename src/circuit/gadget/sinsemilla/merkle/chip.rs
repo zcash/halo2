@@ -15,7 +15,6 @@ use crate::{
     circuit::gadget::utilities::{
         cond_swap::{CondSwapChip, CondSwapConfig, CondSwapInstructions},
         copy,
-        lookup_range_check::LookupRangeCheckConfig,
         CellValue, UtilitiesInstructions, Var,
     },
     constants::{L_ORCHARD_BASE, MERKLE_DEPTH_ORCHARD},
@@ -29,7 +28,6 @@ pub struct MerkleConfig {
     advices: [Column<Advice>; 5],
     l_plus_1: Column<Fixed>,
     perm: Permutation,
-    lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     pub(super) cond_swap_config: CondSwapConfig,
     pub(super) sinsemilla_config: SinsemillaConfig,
 }
@@ -60,13 +58,6 @@ impl MerkleChip {
         let advices = sinsemilla_config.advices();
         let cond_swap_config =
             CondSwapChip::configure(meta, advices, sinsemilla_config.perm.clone());
-        let lookup_config = LookupRangeCheckConfig::configure(
-            meta,
-            advices[0],
-            sinsemilla_config.constants,
-            sinsemilla_config.generator_table.table_idx,
-            sinsemilla_config.perm.clone(),
-        );
 
         // This fixed column serves two purposes:
         //  - Fixing the value of l* for rows in which a Merkle path layer
@@ -165,7 +156,6 @@ impl MerkleChip {
             l_plus_1,
             perm: sinsemilla_config.perm.clone(),
             cond_swap_config,
-            lookup_config,
             sinsemilla_config,
         }
     }
