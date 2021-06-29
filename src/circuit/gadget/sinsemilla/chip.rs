@@ -72,12 +72,6 @@ pub struct SinsemillaConfig {
     pub(super) lookup_config_4: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
 }
 
-impl SinsemillaConfig {
-    pub fn advices(&self) -> [Column<Advice>; 5] {
-        [self.bits, self.lambda_1, self.lambda_2, self.x_a, self.x_p]
-    }
-}
-
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct SinsemillaChip {
     config: SinsemillaConfig,

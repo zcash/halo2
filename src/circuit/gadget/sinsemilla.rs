@@ -139,8 +139,8 @@ where
         Self {
             chip,
             inner: pieces
-                .iter()
-                .map(|piece| piece.inner.clone())
+                .into_iter()
+                .map(|piece| piece.inner)
                 .collect::<Vec<_>>()
                 .into(),
         }
@@ -354,13 +354,11 @@ mod tests {
                 meta.fixed_column(),
                 meta.fixed_column(),
             ];
-            let constants_3 = meta.fixed_column();
 
             let perm = meta.permutation(
                 &advices
                     .iter()
                     .map(|advice| (*advice).into())
-                    .chain(Some(constants_3.into()))
                     .chain(constants_1.iter().map(|fixed| (*fixed).into()))
                     .chain(constants_2.iter().map(|fixed| (*fixed).into()))
                     .collect::<Vec<_>>(),
