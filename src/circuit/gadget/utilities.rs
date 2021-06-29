@@ -3,7 +3,7 @@ use halo2::{
     plonk::{Advice, Column, Error, Permutation},
 };
 use pasta_curves::arithmetic::FieldExt;
-use std::convert::TryInto;
+use std::array;
 
 pub(crate) mod cond_swap;
 pub(crate) mod enable_flag;
@@ -89,13 +89,11 @@ where
 pub fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize>(
     option_array: Option<[T; LEN]>,
 ) -> [Option<T>; LEN] {
+    let mut ret = [None; LEN];
     if let Some(arr) = option_array {
-        arr.iter()
-            .map(|el| Some(*el))
-            .collect::<Vec<_>>()
-            .try_into()
-            .unwrap()
-    } else {
-        [None; LEN]
+        for (entry, value) in ret.iter_mut().zip(array::IntoIter::new(arr)) {
+            *entry = Some(value);
+        }
     }
+    ret
 }
