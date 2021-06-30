@@ -157,6 +157,11 @@ fn compute_lagrange_coeffs<C: CurveAffine>(base: C, num_windows: usize) -> Vec<[
 /// - $z + y = u^2$ (some square in the field); and
 /// - $z - y$ is not a square.
 /// If successful, return a vector of `(z: u64, us: [C::Base; H])` for each window.
+///
+/// This function was used to generate the `z`s and `u`s for the Orchard fixed
+/// bases. The outputs of this function have been stored as constants, and it
+/// is not called anywhere in this codebase. However, we keep this function here
+/// as a utility for those who wish to use it with different parameters.
 fn find_zs_and_us<C: CurveAffine>(base: C, num_windows: usize) -> Option<Vec<(u64, [C::Base; H])>> {
     // Closure to find z and u's for one window
     let find_z_and_us = |window_points: &[C]| {
