@@ -84,6 +84,12 @@ pub struct OrchardDomain {
     rho: Nullifier,
 }
 
+impl OrchardDomain {
+    pub fn for_action<T>(act: &Action<T>) -> Self {
+        OrchardDomain { rho: *act.nullifier() }
+    }
+}
+
 impl Domain for OrchardDomain {
     type EphemeralSecretKey = EphemeralSecretKey;
     type EphemeralPublicKey = EphemeralPublicKey;
