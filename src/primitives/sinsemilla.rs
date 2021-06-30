@@ -127,6 +127,10 @@ impl HashDomain {
     /// $\mathsf{SinsemillaHash}$ from [§ 5.4.1.9][concretesinsemillahash].
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
+    ///
+    /// # Panics
+    ///
+    /// This panics if the message length is greater than [`K`] * [`C`]
     pub(crate) fn hash(&self, msg: impl Iterator<Item = bool>) -> CtOption<pallas::Base> {
         extract_p_bottom(self.hash_to_point(msg))
     }
