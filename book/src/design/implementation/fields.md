@@ -29,7 +29,7 @@ $$
 
 $$
 invtab = \begin{bmatrix}
-(g^{2^{-24}})^0 & (g^{2^{-24}})^1 & ... & (g^{2^{-24}})^{2^8 - 1}
+(g^{-2^{24}})^0 & (g^{-2^{24}})^1 & ... & (g^{-2^{24}})^{2^8 - 1}
 \end{bmatrix}
 $$
 
@@ -41,7 +41,7 @@ Let $x_3 = x, x_2 = x_3^{2^8}, x_1 = x_2^{2^8}, x_0 = x_1^{2^8}.$
 ### i = 0, 1
 Using $invtab$, we lookup $t_0$ such that
 $$
-x_0 = (g^{2^{-24}})^{t_0} \implies x_0 \cdot g^{t_0 \cdot 2^{24}} = 1.
+x_0 = (g^{-2^{24}})^{t_0} \implies x_0 \cdot g^{t_0 \cdot 2^{24}} = 1.
 $$
 
 Define $\alpha_1 = x_1 \cdot (g^{2^{16}})^{t_0}.$
@@ -50,7 +50,7 @@ Define $\alpha_1 = x_1 \cdot (g^{2^{16}})^{t_0}.$
 Lookup $t_1$ s.t. 
 $$
 \begin{array}{ll}
-\alpha_1 = (g^{2^{-24}})^{t_1} &\implies x_1 \cdot (g^{2^{16}})^{t_0} = (g^{2^{-24}})^{t_1} \\
+\alpha_1 = (g^{-2^{24}})^{t_1} &\implies x_1 \cdot (g^{2^{16}})^{t_0} = (g^{-2^{24}})^{t_1} \\
 &\implies
 x_1 \cdot g^{(t_0 + 2^8 \cdot t_1) \cdot 2^{16}} = 1.
 \end{array}
@@ -63,7 +63,7 @@ Lookup $t_2$ s.t.
 
 $$
 \begin{array}{ll}
-\alpha_2 = (g^{2^{-24}})^{t_2} &\implies x_2 \cdot (g^{2^8})^{t_0 + 2^8\cdot {t_1}} = (g^{2^{-24}})^{t_2} \\
+\alpha_2 = (g^{-2^{24}})^{t_2} &\implies x_2 \cdot (g^{2^8})^{t_0 + 2^8\cdot {t_1}} = (g^{-2^{24}})^{t_2} \\
 &\implies x_2 \cdot g^{(t_0 + 2^8 \cdot t_1 + 2^{16} \cdot t_2) \cdot 2^8} = 1.
 \end{array}
 $$
@@ -75,7 +75,7 @@ Lookup $t_3$ such that
 
 $$
 \begin{array}{ll}
-\alpha_3 = (g^{2^{-24}})^{t_3} &\implies x_3 \cdot g^{t_0 + 2^8\cdot {t_1} + 2^{16} \cdot t_2} = (g^{2^{-24}})^{t_3} \\
+\alpha_3 = (g^{-2^{24}})^{t_3} &\implies x_3 \cdot g^{t_0 + 2^8\cdot {t_1} + 2^{16} \cdot t_2} = (g^{-2^{24}})^{t_3} \\
 &\implies x_3 \cdot g^{t_0 + 2^8 \cdot t_1 + 2^{16} \cdot t_2 + 2^{24} \cdot t_3} = 1.
 \end{array}
 $$
