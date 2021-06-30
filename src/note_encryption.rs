@@ -87,7 +87,9 @@ pub struct OrchardDomain {
 impl OrchardDomain {
     /// Constructs a domain that can be used to trial-decrypt this action's output note.
     pub fn for_action<T>(act: &Action<T>) -> Self {
-        OrchardDomain { rho: *act.nullifier() }
+        OrchardDomain {
+            rho: *act.nullifier(),
+        }
     }
 }
 
