@@ -17,7 +17,7 @@ use serde::de::{Deserializer, Error};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 use std::iter;
-use subtle::{ConstantTimeEq, CtOption};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 // The uncommitted leaf is defined as pallas::Base(2).
 // <https://zips.z.cash/protocol/protocol.pdf#thmuncommittedorchard>
@@ -170,19 +170,19 @@ fn hash_with_l(l: usize, pair: Pair) -> CtOption<pallas::Base> {
 /// can produce a bottom value which needs to be accounted for in
 /// the production of a Merkle root. Leaf nodes are always wrapped
 /// with the `Some` constructor.
-#[derive(Clone, Debug)]
-pub struct OrchardIncrementalTreeDigest(CtOption<pallas::Base>);
+#[derive(Copy, Clone, Debug)]
+pub struct OrchardIncrementalTreeDigest(pallas::Base);
 
 impl OrchardIncrementalTreeDigest {
     /// Creates an incremental tree leaf digest from the specified
     /// Orchard extracted note commitment.
     pub fn from_cmx(value: &ExtractedNoteCommitment) -> Self {
-        OrchardIncrementalTreeDigest(CtOption::new(**value, 1.into()))
+        OrchardIncrementalTreeDigest(**value)
     }
 
     /// Convert this digest to its canonical byte representation.
-    pub fn to_bytes(&self) -> Option<[u8; 32]> {
-        <Option<pallas::Base>>::from(self.0).map(|b| b.to_bytes())
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
     }
 
     /// Parses a incremental tree leaf digest from the bytes of
@@ -191,8 +191,7 @@ impl OrchardIncrementalTreeDigest {
     /// Returns the empty `CtOption` if the provided bytes represent
     /// a non-canonical encoding.
     pub fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
-        pallas::Base::from_bytes(bytes)
-            .map(|b| OrchardIncrementalTreeDigest(CtOption::new(b, 1.into())))
+        pallas::Base::from_bytes(bytes).map(OrchardIncrementalTreeDigest)
     }
 }
 
@@ -215,24 +214,31 @@ impl std::hash::Hash for OrchardIncrementalTreeDigest {
     }
 }
 
+impl ConditionallySelectable for OrchardIncrementalTreeDigest {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        OrchardIncrementalTreeDigest(pallas::Base::conditional_select(&a.0, &b.0, choice))
+    }
+}
+
 impl Hashable for OrchardIncrementalTreeDigest {
     fn empty_leaf() -> Self {
-        OrchardIncrementalTreeDigest(CtOption::new(*UNCOMMITTED_ORCHARD, 1.into()))
+        OrchardIncrementalTreeDigest(*UNCOMMITTED_ORCHARD)
     }
 
-    fn combine(altitude: Altitude, left_opt: &Self, right_opt: &Self) -> Self {
-        OrchardIncrementalTreeDigest(left_opt.0.and_then(|left| {
-            right_opt
-                .0
-                .and_then(|right| hash_with_l(altitude.into(), Pair { left, right }))
-        }))
+    fn combine(altitude: Altitude, left: &Self, right: &Self) -> Self {
+        hash_with_l(
+            altitude.into(),
+            Pair {
+                left: left.0,
+                right: right.0,
+            },
+        )
+        .map(OrchardIncrementalTreeDigest)
+        .unwrap_or_else(|| OrchardIncrementalTreeDigest(pallas::Base::zero()))
     }
 
     fn empty_root(altitude: Altitude) -> Self {
-        OrchardIncrementalTreeDigest(CtOption::new(
-            EMPTY_ROOTS[<usize>::from(altitude)],
-            1.into(),
-        ))
+        OrchardIncrementalTreeDigest(EMPTY_ROOTS[<usize>::from(altitude)])
     }
 }
 
@@ -262,8 +268,6 @@ pub mod testing {
     };
 
     use std::convert::TryInto;
-    #[cfg(test)]
-    use subtle::CtOption;
 
     use crate::{
         constants::MERKLE_DEPTH_ORCHARD,
@@ -419,7 +423,6 @@ pub mod testing {
             assert_eq!(
                 OrchardIncrementalTreeDigest::empty_root(Altitude::from(altitude as u8))
                     .0
-                    .unwrap()
                     .to_bytes(),
                 *tv_root,
                 "Empty root mismatch at altitude {}",
@@ -471,14 +474,11 @@ pub mod testing {
 
         let mut frontier = BridgeFrontier::<OrchardIncrementalTreeDigest, 32>::new();
         for commitment in commitments.iter() {
-            let cmx = OrchardIncrementalTreeDigest(CtOption::new(
-                pallas::Base::from_bytes(commitment).unwrap(),
-                1.into(),
-            ));
+            let cmx = OrchardIncrementalTreeDigest(pallas::Base::from_bytes(commitment).unwrap());
             frontier.append(&cmx);
         }
         assert_eq!(
-            frontier.root().0.unwrap(),
+            frontier.root().0,
             pallas::Base::from_bytes(&anchor).unwrap()
         );
     }
