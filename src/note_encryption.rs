@@ -84,6 +84,13 @@ pub struct OrchardDomain {
     rho: Nullifier,
 }
 
+impl OrchardDomain {
+    /// Constructs a domain that can be used to trial-decrypt this action's output note.
+    pub fn for_action<T>(act: &Action<T>) -> Self {
+        OrchardDomain { rho: *act.nullifier() }
+    }
+}
+
 impl Domain for OrchardDomain {
     type EphemeralSecretKey = EphemeralSecretKey;
     type EphemeralPublicKey = EphemeralPublicKey;
