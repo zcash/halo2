@@ -36,4 +36,5 @@ pub use address::Address;
 pub use bundle::Bundle;
 pub use circuit::Proof;
 pub use note::Note;
+pub use note_encryption::OrchardDomain;
 pub use tree::Anchor;
