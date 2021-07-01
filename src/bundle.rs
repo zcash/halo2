@@ -1,10 +1,15 @@
 //! Structs related to bundles of Orchard actions.
 
+pub mod commitments;
+
+use std::io;
 use std::mem;
 
+use blake2b_simd::Hash as Blake2bHash;
 use nonempty::NonEmpty;
 
 use crate::{
+    bundle::commitments::{hash_bundle_auth_data, hash_bundle_txid_data},
     circuit::{Instance, Proof, VerifyingKey},
     note::{ExtractedNoteCommitment, Nullifier, TransmittedNoteCiphertext},
     primitives::redpallas::{self, Binding, SpendAuth},
@@ -140,6 +145,10 @@ pub struct Flags {
     outputs_enabled: bool,
 }
 
+const FLAG_SPENDS_ENABLED: u8 = 0b0000_0001;
+const FLAG_OUTPUTS_ENABLED: u8 = 0b0000_0010;
+const FLAGS_EXPECTED_UNSET: u8 = !(FLAG_SPENDS_ENABLED | FLAG_OUTPUTS_ENABLED);
+
 impl Flags {
     /// Construct a set of flags from its constituent parts
     pub fn from_parts(spends_enabled: bool, outputs_enabled: bool) -> Self {
@@ -165,6 +174,39 @@ impl Flags {
     /// dummy notes.
     pub fn outputs_enabled(&self) -> bool {
         self.outputs_enabled
+    }
+
+    /// Serialize flags to a byte as defined in [Zcash Protocol Spec § 7.1: Transaction
+    /// Encoding And Consensus][txencoding].
+    ///
+    /// [txencoding]: https://zips.z.cash/protocol/nu5.pdf#txnencoding
+    pub fn to_byte(&self) -> u8 {
+        let mut value = 0u8;
+        if self.spends_enabled {
+            value |= FLAG_SPENDS_ENABLED;
+        }
+        if self.outputs_enabled {
+            value |= FLAG_OUTPUTS_ENABLED;
+        }
+        value
+    }
+
+    /// Parse from a single byte as defined in [Zcash Protocol Spec § 7.1: Transaction
+    /// Encoding And Consensus][txencoding].
+    ///
+    /// [txencoding]: https://zips.z.cash/protocol/nu5.pdf#txnencoding
+    pub fn from_byte(value: u8) -> io::Result<Self> {
+        if value & FLAGS_EXPECTED_UNSET == 0 {
+            Ok(Self::from_parts(
+                value & FLAG_SPENDS_ENABLED != 0,
+                value & FLAG_OUTPUTS_ENABLED != 0,
+            ))
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Unexpected bits set in Orchard flags value.",
+            ))
+        }
     }
 }
 
@@ -240,8 +282,11 @@ impl<T: Authorization, V> Bundle<T, V> {
 
     /// Computes a commitment to the effects of this bundle, suitable for inclusion within
     /// a transaction ID.
-    pub fn commitment(&self) -> BundleCommitment {
-        todo!()
+    pub fn commitment<'a>(&'a self) -> BundleCommitment
+    where
+        i64: From<&'a V>,
+    {
+        BundleCommitment(hash_bundle_txid_data(self))
     }
 
     /// Construct a new bundle by applying a transformation that might fail
@@ -368,7 +413,7 @@ impl<V> Bundle<Authorized, V> {
     ///
     /// This together with `Bundle::commitment` bind the entire bundle.
     pub fn authorizing_commitment(&self) -> BundleAuthorizingCommitment {
-        todo!()
+        BundleAuthorizingCommitment(hash_bundle_auth_data(self))
     }
 
     /// Verifies the proof for this bundle.
@@ -384,11 +429,11 @@ impl<V> Bundle<Authorized, V> {
 /// This commitment is non-malleable, in the sense that a bundle's commitment will only
 /// change if the effects of the bundle are altered.
 #[derive(Debug)]
-pub struct BundleCommitment;
+pub struct BundleCommitment(pub Blake2bHash);
 
 /// A commitment to the authorizing data within a bundle of actions.
 #[derive(Debug)]
-pub struct BundleAuthorizingCommitment;
+pub struct BundleAuthorizingCommitment(pub Blake2bHash);
 
 /// Generators for property testing.
 #[cfg(any(test, feature = "test-dependencies"))]
