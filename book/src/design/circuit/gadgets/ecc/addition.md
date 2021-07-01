@@ -17,12 +17,12 @@ Substituting for $\lambda$, we get the constraints:
 ## Complete addition
 
 $\begin{array}{rcll}
-\mathcal{O} &+& \mathcal{O} &= \mathcal{O} ✓\\
-\mathcal{O} &+& (x_q, y_q)  &= (x_q, y_q) ✓\\
- (x_p, y_p) &+& \mathcal{O} &= (x_p, y_p) ✓\\
-   (x, y)   &+& (x, y)      &= [2] (x, y) ✓\\
-   (x, y)   &+& (x, -y)     &= \mathcal{O} ✓\\
- (x_p, y_p) &+& (x_q, y_q)  &= (x_p, y_p) \;⸭\; (x_q, y_q), \text{if } x_p \neq x_q ✓
+\mathcal{O} &+& \mathcal{O} &= \mathcal{O} \\
+\mathcal{O} &+& (x_q, y_q)  &= (x_q, y_q) \\
+ (x_p, y_p) &+& \mathcal{O} &= (x_p, y_p) \\
+   (x, y)   &+& (x, y)      &= [2] (x, y) \\
+   (x, y)   &+& (x, -y)     &= \mathcal{O} \\
+ (x_p, y_p) &+& (x_q, y_q)  &= (x_p, y_p) \;⸭\; (x_q, y_q), \text{if } x_p \neq x_q
 \end{array}$
 
 Suppose that we represent $\mathcal{O}$ as $(0, 0)$. ($0$ is not an $x$-coordinate of a valid point because we would need $y^2 = x^3 + 5$, and $5$ is not square in $\mathbb{F}_q$. Also $0$ is not a $y$-coordinate of a valid point because $-5$ is not a cube in $\mathbb{F}_q$.)
