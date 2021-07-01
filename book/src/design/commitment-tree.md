@@ -26,8 +26,8 @@ appended to the tree as a regular leaf.
 
 Orchard note commitments are the $x$-coordinates of Pallas points; thus we take the same
 approach as Sapling, using a value that is not the $x$-coordinate of any Pallas point as the
-uncommitted leaf value. It happens that $0$ is the smallest such value for both Pallas and
-Vesta, because $0^3 + 5$ is not a square in either $F_p$ or $F_q$:
+uncommitted leaf value. We use the value $2$ for both Pallas and Vesta, because $2^3 + 5$ is
+not a square in either $F_p$ or $F_q$:
 
 ```python
 sage: p = 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001
@@ -36,11 +36,16 @@ sage: EllipticCurve(GF(p), [0, 5]).count_points() == q
 True
 sage: EllipticCurve(GF(q), [0, 5]).count_points() == p
 True
-sage: Mod(5, p).is_square()
+sage: Mod(13, p).is_square()
 False
-sage: Mod(5, q).is_square()
+sage: Mod(13, q).is_square()
 False
 ```
+
+> Note: There are also no Pallas points with $x$-coordinate $0$, but we map the identity to
+> $(0, 0)$ within the circuit. Although $\mathsf{SinsemillaCommit}$ cannot return the identity
+> (the incomplete addition would return $\perp$ instead), it would arguably be confusing to
+> rely on that.
 
 ## Considered alternatives
 

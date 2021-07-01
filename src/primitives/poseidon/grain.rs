@@ -44,7 +44,7 @@ impl SboxType {
 }
 
 pub(super) struct Grain<F: FieldExt> {
-    state: bitarr!(for 80, in Msb0, u8),
+    state: BitArr!(for 80, in Msb0, u8),
     next_bit: usize,
     _field: PhantomData<F>,
 }

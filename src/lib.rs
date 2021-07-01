@@ -17,15 +17,24 @@
 #![deny(unsafe_code)]
 
 mod address;
+pub mod builder;
 pub mod bundle;
-mod circuit;
+pub mod circuit;
 mod constants;
 pub mod keys;
-mod note;
+pub mod note;
+mod note_encryption;
 pub mod primitives;
 mod spec;
-mod tree;
+pub mod tree;
 pub mod value;
 
+#[cfg(test)]
+mod test_vectors;
+
 pub use address::Address;
-pub use note::{EncryptedNote, Note, NoteCommitment, Nullifier};
+pub use bundle::Bundle;
+pub use circuit::Proof;
+pub use note::Note;
+pub use note_encryption::OrchardDomain;
+pub use tree::Anchor;

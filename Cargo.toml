@@ -7,12 +7,12 @@ authors = [
 ]
 edition = "2018"
 description = "Sapling on stilts!"
-license = "TGPPL"
+license-file = "LICENSE-BOSL"
 repository = "https://github.com/zcash/orchard"
 documentation = "https://docs.rs/orchard"
 readme = "README.md"
 
-# We can't publish to crates.io under TGPPL yet.
+# We are not publishing this yet.
 publish = false
 
 [package.metadata.docs.rs]
@@ -20,33 +20,46 @@ rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 
 [dependencies]
 aes = "0.6"
-bitvec = "0.20"
+arrayvec = "0.7.0"
+bitvec = "0.22"
 blake2b_simd = "0.5"
-ff = "0.9"
+ff = "0.10"
 fpe = "0.4"
-group = "0.9"
-nonempty = "0.6"
+group = "0.10"
+halo2 = "0.0"
+lazy_static = "1"
+pasta_curves = "0.1"
+proptest = { version = "1.0.0", optional = true }
+rand = "0.8"
+nonempty = "0.7"
+serde = { version = "1.0", features = ["derive"] }
 subtle = "2.3"
+zcash_note_encryption = "0.0"
+incrementalmerkletree = "0.1"
 
-[dependencies.halo2]
-git = "https://github.com/zcash/halo2.git"
-rev = "b079624ea78b4a07d44cb3c725dd734093577062"
-
-[dependencies.pasta_curves]
-git = "https://github.com/zcash/pasta_curves.git"
-rev = "0a6b2f6eb5acbe1dabc9e77ed0bcb748cc640196"
+# Developer tooling dependencies
+plotters = { version = "0.3.0", optional = true }
 
 [dependencies.reddsa]
 git = "https://github.com/str4d/redjubjub.git"
-rev = "f8ff124a52d86e122e0705e8e9272f2099fe4c46"
+rev = "d5d8c5f3bb704bad8ae88fe4a29ae1f744774cb2"
 
 [dev-dependencies]
 criterion = "0.3"
 hex = "0.4"
+proptest = "1.0.0"
 
 [lib]
 bench = false
 
+[features]
+dev-graph = ["halo2/dev-graph", "plotters"]
+test-dependencies = ["proptest"]
+
 [[bench]]
 name = "small"
 harness = false
+
+[patch.crates-io]
+halo2 = { git = "https://github.com/zcash/halo2.git", rev = "d04b532368d05b505e622f8cac4c0693574fbd93" }
+zcash_note_encryption = { git = "https://github.com/zcash/librustzcash.git", rev = "cc533a9da4f6a7209a7be05f82b12a03969152c9" }

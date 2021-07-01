@@ -1,19 +1,30 @@
 //! The Sinsemilla hash function and commitment scheme.
 
-use group::Group;
 use halo2::arithmetic::CurveExt;
 use pasta_curves::pallas;
+use subtle::CtOption;
 
-use crate::spec::extract_p;
+use crate::spec::{extract_p_bottom, i2lebsp};
+
+mod addition;
+use self::addition::IncompletePoint;
 
 mod constants;
+mod sinsemilla_s;
 pub use constants::*;
 
-fn lebs2ip_k(bits: &[bool]) -> u32 {
+pub(crate) fn lebs2ip_k(bits: &[bool]) -> u32 {
     assert!(bits.len() == K);
     bits.iter()
         .enumerate()
         .fold(0u32, |acc, (i, b)| acc + if *b { 1 << i } else { 0 })
+}
+
+/// The sequence of K bits in little-endian order representing an integer
+/// up to `2^K` - 1.
+pub fn i2lebsp_k(int: usize) -> [bool; K] {
+    assert!(int < (1 << K));
+    i2lebsp(int as u64)
 }
 
 /// Pads the given iterator (which MUST have length $\leq K * C$) with zero-bits to a
@@ -78,7 +89,7 @@ impl<I: Iterator<Item = bool>> Iterator for Pad<I> {
 
 /// A domain in which $\mathsf{SinsemillaHashToPoint}$ and $\mathsf{SinsemillaHash}$ can
 /// be used.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(non_snake_case)]
 pub struct HashDomain {
     Q: pallas::Point,
@@ -95,8 +106,12 @@ impl HashDomain {
     /// $\mathsf{SinsemillaHashToPoint}$ from [§ 5.4.1.9][concretesinsemillahash].
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
+    pub(crate) fn hash_to_point(&self, msg: impl Iterator<Item = bool>) -> CtOption<pallas::Point> {
+        self.hash_to_point_inner(msg).into()
+    }
+
     #[allow(non_snake_case)]
-    pub(crate) fn hash_to_point(&self, msg: impl Iterator<Item = bool>) -> pallas::Point {
+    fn hash_to_point_inner(&self, msg: impl Iterator<Item = bool>) -> IncompletePoint {
         let padded: Vec<_> = Pad::new(msg).collect();
 
         let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
@@ -104,14 +119,16 @@ impl HashDomain {
 
         padded
             .chunks(K)
-            .fold(self.Q, |acc, chunk| acc.double() + S(chunk))
+            .fold(IncompletePoint::from(self.Q), |acc, chunk| {
+                (acc + S(chunk)) + acc
+            })
     }
 
     /// $\mathsf{SinsemillaHash}$ from [§ 5.4.1.9][concretesinsemillahash].
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
-    pub(crate) fn hash(&self, msg: impl Iterator<Item = bool>) -> pallas::Base {
-        extract_p(&self.hash_to_point(msg))
+    pub(crate) fn hash(&self, msg: impl Iterator<Item = bool>) -> CtOption<pallas::Base> {
+        extract_p_bottom(self.hash_to_point(msg))
     }
 
     /// Returns the Sinsemilla $Q$ constant for this domain.
@@ -151,8 +168,8 @@ impl CommitDomain {
         &self,
         msg: impl Iterator<Item = bool>,
         r: &pallas::Scalar,
-    ) -> pallas::Point {
-        self.M.hash_to_point(msg) + self.R * r
+    ) -> CtOption<pallas::Point> {
+        (self.M.hash_to_point_inner(msg) + self.R * r).into()
     }
 
     /// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
@@ -162,8 +179,8 @@ impl CommitDomain {
         &self,
         msg: impl Iterator<Item = bool>,
         r: &pallas::Scalar,
-    ) -> pallas::Base {
-        extract_p(&self.commit(msg, r))
+    ) -> CtOption<pallas::Base> {
+        extract_p_bottom(self.commit(msg, r))
     }
 
     /// Returns the Sinsemilla $R$ constant for this domain.
@@ -176,7 +193,8 @@ impl CommitDomain {
 
 #[cfg(test)]
 mod tests {
-    use super::Pad;
+    use super::{i2lebsp_k, lebs2ip_k, Pad, K};
+    use rand::{self, rngs::OsRng, Rng};
 
     #[test]
     fn pad() {
@@ -214,5 +232,44 @@ mod tests {
                 false, false, false, false, false, false, false
             ]
         );
+    }
+
+    #[test]
+    fn lebs2ip_k_round_trip() {
+        let mut rng = OsRng;
+        {
+            let int = rng.gen_range(0..(1 << K));
+            assert_eq!(lebs2ip_k(&i2lebsp_k(int)) as usize, int);
+        }
+
+        assert_eq!(lebs2ip_k(&i2lebsp_k(0)) as usize, 0);
+        assert_eq!(lebs2ip_k(&i2lebsp_k((1 << K) - 1)) as usize, (1 << K) - 1);
+    }
+
+    #[test]
+    fn i2lebsp_k_round_trip() {
+        {
+            let bitstring = (0..K).map(|_| rand::random()).collect::<Vec<_>>();
+            assert_eq!(
+                i2lebsp_k(lebs2ip_k(&bitstring) as usize).to_vec(),
+                bitstring
+            );
+        }
+
+        {
+            let bitstring = [false; K];
+            assert_eq!(
+                i2lebsp_k(lebs2ip_k(&bitstring) as usize).to_vec(),
+                bitstring
+            );
+        }
+
+        {
+            let bitstring = [true; K];
+            assert_eq!(
+                i2lebsp_k(lebs2ip_k(&bitstring) as usize).to_vec(),
+                bitstring
+            );
+        }
     }
 }

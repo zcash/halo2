@@ -34,13 +34,25 @@ We make several structural changes, building on the lessons learned from Sapling
   being specified to be infallible. This removes significant complexity from the use cases
   for diversified addresses.
 
-Other than the above, Orchard retains the same design rationale for its keys and addresses
-as Sapling, and the same bech32 encoding. For example, diversifiers remain at 11 bytes, so
-that Orchard addresses are the same length as Sapling addresses.
+- The fact that Pallas is a prime-order curve simplifies the protocol and removes the need
+  for cofactor multiplication in key agreement. Unlike Sapling, we define public (including
+  ephemeral) and private keys used for note encryption to exclude the zero point and the
+  zero scalar. Without this change, the implementation of the Orchard Action circuit would
+  need special cases for the zero point, since Pallas is a short Weierstrass rather than
+  an Edwards curve. This also has the advantage of ensuring that the key agreement has
+  "contributory behaviour" — that is, if *either* party contributes a random scalar, then
+  the shared secret will be random to an observer who does not know that scalar and cannot
+  break Diffie–Hellman.
 
-The "human-readable part" for Orchard payment addresses is "zo", i.e. all addresses
-have the prefix "zo1". Other prefixes and key formats will be described in section 5.6
-of the protocol specification. 
+Other than the above, Orchard retains the same design rationale for its keys and addresses
+as Sapling. For example, diversifiers remain at 11 bytes, so that a raw Orchard address is
+the same length as a raw Sapling address.
+
+Orchard payment addresses do not have a stand-alone string encoding. Instead, we define
+"unified addresses" that can bundle together addresses of different types, including
+Orchard. Unified addresses have a Human-Readable Part of "u" on Mainnet, i.e. they will
+have the prefix "u1". For specifications of this and other formats (e.g. for Orchard viewing
+and spending keys), see section 5.6.4 of the NU5 protocol specification [#NU5-orchardencodings].
 
 ## Hierarchical deterministic wallets
 
@@ -95,3 +107,4 @@ and more complicated "extended" ones defined by ZIP 32.)
 [BIP 32]: https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
 [BIP 44]: https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki
 [ZIP 32]: https://zips.z.cash/zip-0032
+[NU5-orchardencodings]: https://zips.z.cash/protocol/nu5.pdf#orchardencodings
