@@ -102,17 +102,16 @@ impl Config {
             )?;
 
             // Assign final `y_a` output from incomplete addition
-            let y_a_cell = region.assign_advice(
-                || "y_a",
+            let y_a = copy(
+                region,
+                || "y_a output from incomplete addition",
                 self.add_config.y_qr,
                 offset,
-                || y_a.ok_or(Error::SynthesisError),
+                &y_a.0,
+                &self.perm,
             )?;
 
-            EccPoint {
-                x: x_a,
-                y: CellValue::<pallas::Base>::new(y_a_cell, *y_a),
-            }
+            EccPoint { x: x_a, y: y_a }
         };
 
         // Copy running sum `z` from incomplete addition

@@ -39,8 +39,6 @@ const COMPLETE_RANGE: Range<usize> = INCOMPLETE_LEN..(INCOMPLETE_LEN + NUM_COMPL
 pub struct Config {
     // Fixed column used to constrain the initialization of the running sum to be zero.
     constants: Column<Fixed>,
-    // Selector used to check z_i = 2*z_{i+1} + k_i
-    q_mul_decompose_var: Selector,
     // Selector used to check switching logic on LSB
     q_mul_lsb: Selector,
     // Permutation
@@ -61,7 +59,6 @@ impl From<&EccConfig> for Config {
     fn from(ecc_config: &EccConfig) -> Self {
         let config = Self {
             constants: ecc_config.constants,
-            q_mul_decompose_var: ecc_config.q_mul_decompose_var,
             q_mul_lsb: ecc_config.q_mul_lsb,
             perm: ecc_config.perm.clone(),
             add_config: ecc_config.into(),
@@ -180,26 +177,23 @@ impl Config {
                     Z(CellValue::new(z_cell, Some(z_val)))
                 };
 
-                // Increase the offset by 1 after initializing `z`.
-                let offset = offset + 1;
-
                 // Double-and-add (incomplete addition) for the `hi` half of the scalar decomposition
                 let (x_a, y_a, zs_incomplete_hi) = self.hi_config.double_and_add(
                     &mut region,
                     offset,
                     &base,
                     bits_incomplete_hi,
-                    (X(acc.x), Y(acc.y.value()), z_init),
+                    (X(acc.x), Y(acc.y), z_init),
                 )?;
 
                 // Double-and-add (incomplete addition) for the `lo` half of the scalar decomposition
-                let z = &zs_incomplete_hi[zs_incomplete_hi.len() - 1];
+                let z = &zs_incomplete_hi.last().expect("should not be empty");
                 let (x_a, y_a, zs_incomplete_lo) = self.lo_config.double_and_add(
                     &mut region,
                     offset,
                     &base,
                     bits_incomplete_lo,
-                    (x_a, y_a, *z),
+                    (x_a, y_a, **z),
                 )?;
 
                 // Move from incomplete addition to complete addition.
@@ -299,9 +293,6 @@ impl Config {
                 || z_0_val.ok_or(Error::SynthesisError),
             )?;
 
-            // Check that z_0 was properly derived from z_1.
-            self.q_mul_decompose_var.enable(region, offset)?;
-
             Z(CellValue::new(z_0_cell, z_0_val))
         };
 
@@ -387,9 +378,9 @@ impl<F: FieldExt> Deref for X<F> {
 
 #[derive(Copy, Clone, Debug)]
 // `y`-coordinate of the accumulator.
-struct Y<F: FieldExt>(Option<F>);
+struct Y<F: FieldExt>(CellValue<F>);
 impl<F: FieldExt> Deref for Y<F> {
-    type Target = Option<F>;
+    type Target = CellValue<F>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
