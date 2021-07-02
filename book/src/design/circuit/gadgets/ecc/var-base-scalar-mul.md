@@ -149,13 +149,13 @@ $$
 \begin{array}{|c|c|c|c|c|c|c|c|c|c|c|c|}
 \hline
     x_T     &    y_T      &          z^{hi}           &    x_A^{hi}        &  \lambda_1^{hi}  &  \lambda_2^{hi}  &q_{mul}^{hi}&         z^{lo}        &  x_A^{lo}   &  \lambda_1^{lo}     &  \lambda_2^{lo}   &q_{mul}^{lo}\\\hline
-            &             &  \mathbf{z}_{255} = 0     &                    & y_{A,254}=2[T]_y &                  &     1      &   \mathbf{z}_{129}    &             &   y_{A,128}         &                   &    1       \\\hline
-    x_T     &    y_T      &    \mathbf{z}_{254}       & x_{A,254} = 2[T]_x & \lambda_{1,254}  & \lambda_{2,254}  &     2      &   \mathbf{z}_{128}    & x_{A,128}   & \lambda_{1,128}     & \lambda_{2,128}   &    2       \\\hline
-    x_T     &    y_T      &    \mathbf{z}_{253}       &     x_{A,253}      & \lambda_{1,253}  & \lambda_{2,253}  &     2      &   \mathbf{z}_{127}    & x_{A,127}   & \lambda_{1,127}     & \lambda_{2,127}   &    2       \\\hline
+            &             &  \mathbf{z}_{255} = 0     &                    & y_{A,254}=2[T]_y &                  &     1      &   \mathbf{z}_{130}    &             &   y_{A,129}         &                   &    1       \\\hline
+    x_T     &    y_T      &    \mathbf{z}_{254}       & x_{A,254} = 2[T]_x & \lambda_{1,254}  & \lambda_{2,254}  &     2      &   \mathbf{z}_{129}    & x_{A,129}   & \lambda_{1,129}     & \lambda_{2,129}   &    2       \\\hline
+    x_T     &    y_T      &    \mathbf{z}_{253}       &     x_{A,253}      & \lambda_{1,253}  & \lambda_{2,253}  &     2      &   \mathbf{z}_{128}    & x_{A,128}   & \lambda_{1,128}     & \lambda_{2,128}   &    2       \\\hline
    \vdots   &   \vdots    &         \vdots            &      \vdots        &      \vdots      &      \vdots      &   \vdots   &        \vdots         &  \vdots     &      \vdots         &      \vdots       &  \vdots    \\\hline
-    x_T     &    y_T      &    \mathbf{z}_{130}       &     x_{A,130}      & \lambda_{1,130}  & \lambda_{2,130}  &     2      &   \mathbf{z}_4        & x_{A,4}     & \lambda_{1,4}       & \lambda_{2,4}     &    2       \\\hline
-    x_T     &    y_T      &    \mathbf{z}_{129}       &     x_{A,129}      & \lambda_{1,129}  & \lambda_{2,129}  &     2      &                       & x_{A,3}     &       y_{A,3}       &                   &    3       \\\hline
-            &             &                           &     x_{A,128}      &    y_{A,128}     &                  &     3      &                       &             &                     &                   &            \\\hline
+    x_T     &    y_T      &    \mathbf{z}_{130}       &     x_{A,130}      & \lambda_{1,130}  & \lambda_{2,130}  &     2      &   \mathbf{z}_5        & x_{A,5}     & \lambda_{1,5}       & \lambda_{2,5}     &    2       \\\hline
+            &             &                           &     x_{A,129}      &    y_{A,129}     &                  &     3      &   \mathbf{z}_4        & x_{A,4}     & \lambda_{1,4}       & \lambda_{2,4}     &    2       \\\hline
+            &             &                           &                    &                  &                  &            &                       & x_{A,3}     &     y_{A,3}         &                   &    3       \\\hline
 \end{array}
 $$
 
