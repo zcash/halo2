@@ -261,8 +261,9 @@ impl Config {
                 || Ok(pallas::Base::one()),
             )?;
 
+            let offset = offset + 1;
             // q_mul = 2 on all rows after offset 0, excluding the last row.
-            for idx in 1..(self.num_bits) {
+            for idx in 0..(self.num_bits - 1) {
                 region.assign_fixed(
                     || "q_mul = 2",
                     self.q_mul,
@@ -275,7 +276,7 @@ impl Config {
             region.assign_fixed(
                 || "q_mul = 3",
                 self.q_mul,
-                offset + self.num_bits + 1,
+                offset + self.num_bits,
                 || Ok(pallas::Base::from_u64(3)),
             )?;
         }
