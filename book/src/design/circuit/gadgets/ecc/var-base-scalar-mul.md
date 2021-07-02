@@ -130,11 +130,14 @@ $$
     &(\mathbf{k}_i)(\mathbf{k}_i-1) = 0\\
     &\lambda_{1,i} \cdot (x_{A,i} - x_T) = y_{A,i} - (2 \mathbf{k}_i - 1) \cdot y_T\\
     &\lambda_{2,i}^2 = x_{A,i-1} + \lambda_{1,i}^2 - x_T\\
-    & \\
-    &\texttt{if } i > 4 \texttt{ then } \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A, i-1}\\
 \end{aligned}
 $$
-Outside the for loop, we witness $y_{A,3}$, and constrain $$\lambda_{2,4} \cdot (x_{A,4} - x_{A,3}) = \frac{(\lambda_{1,4} + \lambda_{2,4}) \cdot (x_{A,4} - (\lambda_{1,4}^2 - x_{A,4} - x_T))}{2} + y_{A,3}.$$
+$$
+\begin{cases}
+    \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A, i-1}, &\text{if } i > 4 \\[0.5ex]
+    \lambda_{2,4} \cdot (x_{A,4} - x_{A,3}) = y_{A,4} + y_{A,3}^\text{witnessed}, &\text{if } i = 4.
+\end{cases}
+$$
 
 The bits $\mathbf{k}_{3 \dots 1}$ are used in double-and-add using [complete addition](./addition.md#Complete-addition).
 
@@ -143,7 +146,10 @@ If the least significant bit is set $\mathbf{k_0} = 1,$ we return the accumulato
 Output $(x_{A,0}, y_{A,0})$
 
 ### Circuit design
-We need six advice columns to witness $(x_T, y_T, \lambda_1, \lambda_2, x_{A,i}, \mathbf{z}_i)$. However, since $(x_T, y_T)$ are the same, we can perform two incomplete additions in a single row, reusing the same $(x_T, y_T)$. We split the scalar bits used in incomplete addition into $hi$ and $lo$ halves and process them in parallel:
+We need six advice columns to witness $(x_T, y_T, \lambda_1, \lambda_2, x_{A,i}, \mathbf{z}_i)$. However, since $(x_T, y_T)$ are the same, we can perform two incomplete additions in a single row,
+reusing the same $(x_T, y_T)$. We split the scalar bits used in incomplete addition into $hi$ and $lo$ halves and process them in parallel. This means that we effectively have two for loops:
+- the first, covering the `hi` half for $i$ from $254$ down to $130$, with a special case at $i = 130$; and
+- the second, covering the `lo` half for the remaining $i$ from $129$ down to $4$, with a special case at $i = 4$.
 
 $$
 \begin{array}{|c|c|c|c|c|c|c|c|c|c|c|c|}
@@ -153,66 +159,74 @@ $$
     x_T     &    y_T      &    \mathbf{z}_{254}       & x_{A,254} = 2[T]_x & \lambda_{1,254}  & \lambda_{2,254}  &     2      &   \mathbf{z}_{129}    & x_{A,129}   & \lambda_{1,129}     & \lambda_{2,129}   &    2       \\\hline
     x_T     &    y_T      &    \mathbf{z}_{253}       &     x_{A,253}      & \lambda_{1,253}  & \lambda_{2,253}  &     2      &   \mathbf{z}_{128}    & x_{A,128}   & \lambda_{1,128}     & \lambda_{2,128}   &    2       \\\hline
    \vdots   &   \vdots    &         \vdots            &      \vdots        &      \vdots      &      \vdots      &   \vdots   &        \vdots         &  \vdots     &      \vdots         &      \vdots       &  \vdots    \\\hline
-    x_T     &    y_T      &    \mathbf{z}_{130}       &     x_{A,130}      & \lambda_{1,130}  & \lambda_{2,130}  &     2      &   \mathbf{z}_5        & x_{A,5}     & \lambda_{1,5}       & \lambda_{2,5}     &    2       \\\hline
-            &             &                           &     x_{A,129}      &    y_{A,129}     &                  &     3      &   \mathbf{z}_4        & x_{A,4}     & \lambda_{1,4}       & \lambda_{2,4}     &    2       \\\hline
-            &             &                           &                    &                  &                  &            &                       & x_{A,3}     &     y_{A,3}         &                   &    3       \\\hline
+    x_T     &    y_T      &    \mathbf{z}_{130}       &     x_{A,130}      & \lambda_{1,130}  & \lambda_{2,130}  &     3      &   \mathbf{z}_5        & x_{A,5}     & \lambda_{1,5}       & \lambda_{2,5}     &    2       \\\hline
+            &             &                           &     x_{A,129}      &    y_{A,129}     &                  &            &   \mathbf{z}_4        & x_{A,4}     & \lambda_{1,4}       & \lambda_{2,4}     &    3       \\\hline
+            &             &                           &                    &                  &                  &            &                       & x_{A,3}     &     y_{A,3}         &                   &            \\\hline
 \end{array}
 $$
 
-For each $hi$ and $lo$ half
+For each $hi$ and $lo$ half, we have three sets of gates. Note that $i$ is going from $255..=3$; $i$ is NOT indexing the rows.
 
-- on row 0: check that $\lambda_1, \lambda_2$ are initialized to values consistent with the initial $y_A.$
+#### $q_{mul} = 1$
+This gate is only used on the first row (before the for loop). We check that $\lambda_1, \lambda_2$ are initialized to values consistent with the initial $y_A.$
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-5 & q_{mul,i}^{one} \cdot \left(y_{A,i} - \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2}\right) = 0 \\\hline
+5 & q_{mul}^{one} \cdot \left(y_{A,n}^\text{witnessed} - y_{A,n}\right) = 0 \\\hline
 \end{array}
 $$
 where
 $$
 \begin{aligned}
-q_{mul,i}^{one} &= q_{mul,i} \cdot (2 - q_{mul, i}) \cdot (3 - q_{mul, i}),\\
-y_{A,i} &\text{ is witnessed.}
+q_{mul}^{one} &= q_{mul} \cdot (2 - q_{mul}) \cdot (3 - q_{mul}),\\
+y_{A,n} &= \frac{(\lambda_{1,n} + \lambda_{2,n}) \cdot (x_{A,n} - (\lambda_{1,n}^2 - x_{A,n} - x_T))}{2},\\
+y_{A,n}^\text{witnessed} &\text{ is witnessed.}
 \end{aligned}
 $$
 
-- on all rows excluding the last:
+#### $q_{mul} = 2$
+This gate is used on all rows corresponding to the for loop except the last.
+
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-4 & q_{mul,i}^{two} \cdot \left(x_{T,cur} - x_{T,next}\right) = 0 \\\hline
-4 & q_{mul,i}^{two} \cdot \left(y_{T,cur} - y_{T,next}\right) = 0 \\\hline
-5 & q_{mul,i}^{two} \cdot \mathbf{k}_i \cdot (\mathbf{k}_i - 1) = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
-6 & q_{mul,i}^{two} \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{T,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{T,i}\right) = 0 \\\hline
-5 & q_{mul,i}^{two} \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - \lambda_{1,i}^2 + x_{T,i}\right) = 0 \\\hline
-5 & q_{mul,i}^{two} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}\right) = 0 \\\hline
+4 & q_{mul}^{two} \cdot \left(x_{T,cur} - x_{T,next}\right) = 0 \\\hline
+4 & q_{mul}^{two} \cdot \left(y_{T,cur} - y_{T,next}\right) = 0 \\\hline
+5 & q_{mul}^{two} \cdot \mathbf{k}_i \cdot (\mathbf{k}_i - 1) = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
+6 & q_{mul}^{two} \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{T,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{T,i}\right) = 0 \\\hline
+5 & q_{mul}^{two} \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - \lambda_{1,i}^2 + x_{T,i}\right) = 0 \\\hline
+5 & q_{mul}^{two} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}\right) = 0 \\\hline
 \end{array}
 $$
 where
 $$
 \begin{aligned}
-q_{mul,i}^{two} &= q_{mul,i} \cdot (1 - q_{mul, i}) \cdot (3 - q_{mul, i}),\\
+q_{mul}^{two} &= q_{mul} \cdot (1 - q_{mul}) \cdot (3 - q_{mul}),\\
 y_{A,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2}, \\
 y_{A,i-1} &= \frac{(\lambda_{1,i-1} + \lambda_{2,i-1}) \cdot (x_{A,i-1} - (\lambda_{1,i-1}^2 - x_{A,i-1} - x_T))}{2}, \\
 \end{aligned}
 $$
 
-- on the last row: check that $y_A$ has been witnessed correctly.
+#### $q_{mul} = 3$
+This gate is used on the final iteration of the for loop, handling the special case where we check that the output $y_A$ has been witnessed correctly.
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-5 & q_{mul,i}^{three} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}\right) = 0 \\\hline
+5 & q_{mul}^{three} \cdot \mathbf{k}_i \cdot (\mathbf{k}_i - 1) = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
+6 & q_{mul}^{three} \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{T,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{T,i}\right) = 0 \\\hline
+5 & q_{mul}^{three} \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - \lambda_{1,i}^2 + x_{T,i}\right) = 0 \\\hline
+5 & q_{mul}^{three} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}^\text{witnessed}\right) = 0 \\\hline
 \end{array}
 $$
 where
 $$
 \begin{aligned}
-q_{mul,i}^{three} &= q_{mul,i} \cdot (1 - q_{mul, i}) \cdot (2 - q_{mul, i}),\\
-y_{A,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2}\\
-y_{A,i-1} &\text{ is witnessed.}
+q_{mul}^{three} &= q_{mul} \cdot (1 - q_{mul}) \cdot (2 - q_{mul}),\\
+y_{A,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2},\\
+y_{A,i-1}^\text{witnessed} &\text{ is witnessed.}
 \end{aligned}
 $$
 
@@ -254,7 +268,7 @@ Now, we can continue optimizing from $Ⓐ$:
 $\begin{array}{rcl}
 k \in [t_q, p + t_q) &\Leftrightarrow& \big(\mathbf{k}_{254} = 0 \implies (\alpha \in [0, 2^{130}) \;\vee\; k \in [2^{130}, 2^{254})\big) \;\wedge \\
                      &               & \big(\mathbf{k}_{254} = 1 \implies (k \in [2^{254}, 2^{254} + 2^{130}) \;\wedge\; (\alpha + 2^{130}) \bmod p \in [0, 2^{130}))\big) \\
-                     &               & \big(\mathbf{k}_{254} = 0 \implies (\alpha \in [0, 2^{130}) \;\vee\; \mathbf{k}_{253..130} \text{ are not all } 0)\big) \;\wedge \\
+                     &\Leftrightarrow& \big(\mathbf{k}_{254} = 0 \implies (\alpha \in [0, 2^{130}) \;\vee\; \mathbf{k}_{253..130} \text{ are not all } 0)\big) \;\wedge \\
                      &               & \big(\mathbf{k}_{254} = 1 \implies (\mathbf{k}_{253..130} \text{ are all } 0 \;\wedge\; (\alpha + 2^{130}) \bmod p \in [0, 2^{130}))\big)
 \end{array}$
 
