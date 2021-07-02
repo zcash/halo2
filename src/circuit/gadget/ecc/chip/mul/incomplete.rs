@@ -117,7 +117,6 @@ impl Config {
                 (lambda_1 + lambda_2) * (x_a - x_r(meta, rotation)) * pallas::Base::TWO_INV
             };
 
-            let y_a_cur = y_a(meta, Rotation::cur());
             let y_a_next = y_a(meta, Rotation::next());
 
             // q_mul == 1
@@ -126,14 +125,13 @@ impl Config {
                     q_mul.clone() * (two.clone() - q_mul.clone()) * (three.clone() - q_mul.clone());
                 let y_a_witnessed = meta.query_advice(self.lambda1, Rotation::cur());
                 let y_a = y_a_next.clone();
-                Some(("init y_a", q_mul_is_one * (y_a - y_a_witnessed)))
+                Some(("init y_a", q_mul_is_one * (y_a_witnessed - y_a)))
             };
 
-            // q_mul == 2
-            let q_mul_two_checks = {
-                let q_mul_is_two =
-                    q_mul.clone() * (one.clone() - q_mul.clone()) * (three - q_mul.clone());
-
+            // Constraints used for q_mul in {2, 3}
+            let for_loop = |meta: &mut VirtualCells<pallas::Base>,
+                            q_mul: Expression<pallas::Base>,
+                            y_a_next: Expression<pallas::Base>| {
                 // z_i
                 let z_cur = meta.query_advice(self.z, Rotation::cur());
                 // z_{i+1}
@@ -144,16 +142,14 @@ impl Config {
                 let x_a_next = meta.query_advice(self.x_a, Rotation::next());
                 // x_{P,i}
                 let x_p_cur = meta.query_advice(self.x_p, Rotation::cur());
-                // x_{P,i-1}
-                let x_p_next = meta.query_advice(self.x_p, Rotation::next());
                 // y_{P,i}
                 let y_p_cur = meta.query_advice(self.y_p, Rotation::cur());
-                // y_{P,i-1}
-                let y_p_next = meta.query_advice(self.y_p, Rotation::next());
                 // λ_{1,i}
                 let lambda1_cur = meta.query_advice(self.lambda1, Rotation::cur());
                 // λ_{2,i}
                 let lambda2_cur = meta.query_advice(self.lambda2, Rotation::cur());
+
+                let y_a_cur = y_a(meta, Rotation::cur());
 
                 // The current bit in the scalar decomposition, k_i = z_i - 2⋅z_{i+1}.
                 // Recall that we assigned the cumulative variable `z_i` in descending order,
@@ -162,13 +158,8 @@ impl Config {
                 // Check booleanity of decomposition.
                 let bool_check = k.clone() * (one.clone() - k.clone());
 
-                // The base used in double-and-add remains constant. We check that its
-                // x- and y- coordinates are the same throughout.
-                let x_p_check = x_p_cur.clone() - x_p_next;
-                let y_p_check = y_p_cur.clone() - y_p_next;
-
                 // λ_{1,i}⋅(x_{A,i} − x_{P,i}) − y_{A,i} + (2k_i - 1) y_{P,i} = 0
-                let poly1 = lambda1_cur * (x_a_cur.clone() - x_p_cur) - y_a_cur.clone()
+                let gradient_1 = lambda1_cur * (x_a_cur.clone() - x_p_cur) - y_a_cur.clone()
                     + (k * pallas::Base::from_u64(2) - one.clone()) * y_p_cur;
 
                 // λ_{2,i}^2 − x_{A,i-1} − x_{R,i} − x_{A,i} = 0
@@ -178,36 +169,46 @@ impl Config {
                     - x_a_cur.clone();
 
                 // λ_{2,i}⋅(x_{A,i} − x_{A,i-1}) − y_{A,i} − y_{A,i-1} = 0
-                let poly3 = lambda2_cur * (x_a_cur - x_a_next) - y_a_cur - y_a_next;
+                let gradient_2 = lambda2_cur * (x_a_cur - x_a_next) - y_a_cur - y_a_next;
 
                 std::iter::empty()
-                    .chain(Some((
-                        "bool_check when q_mul = 2",
-                        q_mul_is_two.clone() * bool_check,
-                    )))
+                    .chain(Some(("bool_check", q_mul.clone() * bool_check)))
+                    .chain(Some(("gradient_1", q_mul.clone() * gradient_1)))
+                    .chain(Some(("secant_line", q_mul.clone() * secant_line)))
+                    .chain(Some(("gradient_2", q_mul.clone() * gradient_2)))
+            };
+
+            // q_mul == 2
+            let q_mul_two_checks = {
+                let q_mul_is_two =
+                    q_mul.clone() * (one.clone() - q_mul.clone()) * (three - q_mul.clone());
+
+                // x_{P,i}
+                let x_p_cur = meta.query_advice(self.x_p, Rotation::cur());
+                // x_{P,i-1}
+                let x_p_next = meta.query_advice(self.x_p, Rotation::next());
+                // y_{P,i}
+                let y_p_cur = meta.query_advice(self.y_p, Rotation::cur());
+                // y_{P,i-1}
+                let y_p_next = meta.query_advice(self.y_p, Rotation::next());
+
+                // The base used in double-and-add remains constant. We check that its
+                // x- and y- coordinates are the same throughout.
+                let x_p_check = x_p_cur.clone() - x_p_next;
+                let y_p_check = y_p_cur.clone() - y_p_next;
+
+                std::iter::empty()
                     .chain(Some(("x_p_check", q_mul_is_two.clone() * x_p_check)))
                     .chain(Some(("y_p_check", q_mul_is_two.clone() * y_p_check)))
-                    .chain(Some(("poly1", q_mul_is_two.clone() * poly1)))
-                    .chain(Some(("secant_line", q_mul_is_two.clone() * secant_line)))
-                    .chain(Some(("poly3", q_mul_is_two * poly3)))
+                    .chain(for_loop(meta, q_mul_is_two.clone(), y_a_next))
             };
 
             // q_mul == 3
             let q_mul_three_checks = {
-                let q_mul_is_three = q_mul.clone() * (one - q_mul.clone()) * (two - q_mul);
-                let y_a_final = meta.query_advice(self.lambda1, Rotation::cur());
-                let x_a_final = meta.query_advice(self.x_a, Rotation::cur());
+                let q_mul_is_three = q_mul.clone() * (one.clone() - q_mul.clone()) * (two - q_mul);
+                let y_a_final = meta.query_advice(self.lambda1, Rotation::next());
 
-                // λ_{2,prev}⋅(x_{A,prev} − x_{A,final}) − y_{A,prev} − y_{A,final} = 0
-                let poly3 = {
-                    let lambda2_prev = meta.query_advice(self.lambda2, Rotation::prev());
-                    let x_a_prev = meta.query_advice(self.x_a, Rotation::prev());
-                    let y_a_prev = y_a(meta, Rotation::prev());
-
-                    lambda2_prev * (x_a_prev - x_a_final) - y_a_prev - y_a_final
-                };
-
-                Some(("final y_a", q_mul_is_three * poly3))
+                for_loop(meta, q_mul_is_three, y_a_final)
             };
 
             std::iter::empty()
@@ -276,7 +277,7 @@ impl Config {
             region.assign_fixed(
                 || "q_mul = 3",
                 self.q_mul,
-                offset + self.num_bits,
+                offset + self.num_bits - 1,
                 || Ok(pallas::Base::from_u64(3)),
             )?;
         }
