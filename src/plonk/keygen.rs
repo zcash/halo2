@@ -1,3 +1,5 @@
+#![allow(clippy::int_plus_one)]
+
 use ff::Field;
 use group::Curve;
 
@@ -277,8 +279,7 @@ where
     *(l_last[..]
         .iter_mut()
         .rev()
-        .skip(cs.blinding_factors())
-        .next()
+        .nth(cs.blinding_factors())
         .unwrap()) = C::Scalar::one();
     let l_last = vk.domain.lagrange_to_coeff(l_last);
     let l_last = vk.domain.coeff_to_extended(l_last, Rotation::cur());

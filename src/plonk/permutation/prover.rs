@@ -272,7 +272,7 @@ impl<C: CurveAffine> Committed<C> {
                     .zip(pkey.cosets.chunks(chunk_len))
                     .enumerate()
                     .map(move |(chunk_index, ((set, columns), cosets))| {
-                        let mut left = set.permutation_product_coset_next.clone();
+                        let mut left = set.permutation_product_coset_next;
                         for (values, permutation) in columns
                             .iter()
                             .map(|&column| match column.column_type() {
@@ -302,7 +302,7 @@ impl<C: CurveAffine> Committed<C> {
                             });
                         }
 
-                        let mut right = set.permutation_product_coset.clone();
+                        let mut right = set.permutation_product_coset;
                         let mut current_delta = *beta
                             * &C::Scalar::ZETA
                             * &(C::Scalar::DELTA.pow_vartime(&[(chunk_index * chunk_len) as u64]));
