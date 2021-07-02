@@ -32,7 +32,7 @@ return (k_0 = 0) ? (Acc - T) : Acc
 
 It remains to check that the x-coordinates of each pair of points to be added are distinct.
 
-When adding points in the large prime-order subgroup, we can rely on Theorem 3 from Appendix C of the [Halo paper](https://eprint.iacr.org/2019/1021.pdf), which says that if we have two such points with nonzero indices wrt a given odd-prime order base, where the indices taken in the range $-(q-1)/2..(q-1)/2$ are distinct disregarding sign, then they have different x-coordinates. This is helpful, because it is easier to reason about the indices of points occurring in the scalar multiplication algorithm than it is to reason about their x-coordinates directly.
+When adding points in a prime-order group, we can rely on Theorem 3 from Appendix C of the [Halo paper](https://eprint.iacr.org/2019/1021.pdf), which says that if we have two such points with nonzero indices wrt a given odd-prime order base, where the indices taken in the range $-(q-1)/2..(q-1)/2$ are distinct disregarding sign, then they have different x-coordinates. This is helpful, because it is easier to reason about the indices of points occurring in the scalar multiplication algorithm than it is to reason about their x-coordinates directly.
 
 So, the required check is equivalent to saying that the following "indexed version" of the above algorithm never asserts:
 
@@ -59,7 +59,7 @@ The maximum value of `acc` is:
 ```
 = $2^{n+1} + 2^n - 1$
 
-> The assertion labelled X obviously cannot fail because $u \neq 0$. It is possible to see that acc is monotonically increasing except in the last conditional. It reaches its largest value when $k$ is maximal, i.e. $2^{n+1} + 2^n - 1$.
+> The assertion labelled X obviously cannot fail because $p \neq 0$. It is possible to see that acc is monotonically increasing except in the last conditional. It reaches its largest value when $k$ is maximal, i.e. $2^{n+1} + 2^n - 1$.
 
 So to entirely avoid exceptional cases, we would need $2^{n+1} + 2^n - 1 < (q-1)/2$. But we can use $n$ larger by $c$ if the last $c$ iterations use [complete addition](./addition.md#Complete-addition).
 
@@ -99,47 +99,42 @@ $$
 \end{aligned}
 $$
 
-Initialize $A_{254} = [2] T$
+Initialize $A_{254} = [2] T.$
 
 for $i$ from $254$ down to $4$:
 $$
 \begin{aligned}
     &(\mathbf{k}_i)(\mathbf{k}_i-1) = 0\\
     &\mathbf{z}_{i} = 2\mathbf{z}_{i+1} + \mathbf{k}_{i}\\
-    & x_{U,i} = x_T\\
-    & y_{U,i} = (2 \mathbf{k}_i - 1) \cdot y_T  \hspace{2em}\text{(conditionally negate)}\\
-    & \lambda_{1,i} \cdot (x_{A,i} - x_{U,i}) = y_{A,i} - y_{U,i}\\
-    & \lambda_{1,i}^2 = x_{R,i} + x_{A,i} + x_{U,i}\\
+    & x_{P,i} = x_T\\
+    & y_{P,i} = (2 \mathbf{k}_i - 1) \cdot y_T  \hspace{2em}\text{(conditionally negate)}\\
+    & \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) = y_{A,i} - y_{P,i}\\
+    & \lambda_{1,i}^2 = x_{R,i} + x_{A,i} + x_{P,i}\\
     & (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) = 2 y_{\mathsf{A},i}\\
     & \lambda_{2,i}^2 = x_{A,i-1} + x_{R,i} + x_{A,i}\\
-    & \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A,i-1}\\
-
+    & \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A,i-1},\\
 \end{aligned}
 $$
 
-After substitution of $y_{P,i}$, $x_{R,i}$, $y_{A,i}$, and $y_{A,i+1}$, this becomes:
+where $x_{R,i} = (\lambda_{1,i}^2 - x_{A,i} - x_T).$ After substitution of $x_{P,i}, y_{P,i}, x_{R,i}, y_{A,i}$, and $y_{A,i-1}$, this becomes:
 
-Initialize $A_{254} = [2] T$
+Initialize $A_{254} = [2] T.$
 
 
 for $i$ from $254$ down to $4$:
 
 $$
 \begin{aligned}
-    &\texttt{// let } \mathbf{k}_i = \mathbf{z}_{i+1} - 2\mathbf{z}_i\\
-    &\texttt{// let } x_{R,i} = (\lambda_{1,i}^2 - x_{A,i} - x_T)\\
+    &\texttt{// let } \mathbf{k}_{i} = \mathbf{z}_{i} - 2\mathbf{z}_{i+1}\\
     &\texttt{// let } y_{A,i} = \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2}\\
-    &(\mathbf{z}_{i+1} - 2\mathbf{z}_i)(\mathbf{z}_{i+1} - 2\mathbf{z}_i - 1) = 0\\
-    &\lambda_{1,i} \cdot (x_{A,i} - x_T) = \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2} - (2 \cdot (\mathbf{z}_{i+1} - 2\mathbf{z}_i) - 1) \cdot y_T\\
-    &\lambda_{2,i}^2 = x_{A,i-1} + (\lambda_{1,i}^2 - x_{A,i} - x_T) + x_{A,i}\\
+    &(\mathbf{k}_i)(\mathbf{k}_i-1) = 0\\
+    &\lambda_{1,i} \cdot (x_{A,i} - x_T) = y_{A,i} - (2 \mathbf{k}_i - 1) \cdot y_T\\
+    &\lambda_{2,i}^2 = x_{A,i-1} + \lambda_{1,i}^2 - x_T\\
     & \\
-    &\texttt{if } i > 3 \texttt{ then } 2 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) =\\
-        &\hspace{2em}(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T)) +\\
-        &\hspace{2em}(\lambda_{1,i-1} + \lambda_{2,i-1}) \cdot (x_{A,i-1} - (\lambda_{1,i-1}^2 - x_{A,i-1} - x_T))\\
+    &\texttt{if } i > 4 \texttt{ then } \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A, i-1}\\
 \end{aligned}
 $$
-
-$\lambda_{2,3} \cdot (x_{A,3} - x_{A,2}) = \frac{(\lambda_{1,3} + \lambda_{2,3}) \cdot (x_{A,3} - (\lambda_{1,3}^2 - x_{A,3} - x_T))\hspace{2em}}{2} + y_{A,2}$
+Outside the for loop, we witness $y_{A,3}$, and constrain $$\lambda_{2,4} \cdot (x_{A,4} - x_{A,3}) = \frac{(\lambda_{1,4} + \lambda_{2,4}) \cdot (x_{A,4} - (\lambda_{1,4}^2 - x_{A,4} - x_T))}{2} + y_{A,3}.$$
 
 The bits $\mathbf{k}_{3 \dots 1}$ are used in double-and-add using [complete addition](./addition.md#Complete-addition).
 
@@ -151,32 +146,74 @@ Output $(x_{A,0}, y_{A,0})$
 We need six advice columns to witness $(x_T, y_T, \lambda_1, \lambda_2, x_{A,i}, \mathbf{z}_i)$. However, since $(x_T, y_T)$ are the same, we can perform two incomplete additions in a single row, reusing the same $(x_T, y_T)$. We split the scalar bits used in incomplete addition into $hi$ and $lo$ halves and process them in parallel:
 
 $$
-\begin{array}{|c|c|c|c|c|c|c|c|c|c|}
+\begin{array}{|c|c|c|c|c|c|c|c|c|c|c|c|}
 \hline
-    x_T   &  y_T   &          z^{hi}           &    x_A^{hi}   &  \lambda_1^{hi}  &  \lambda_2^{hi}      &         z^{lo}        &  x_A^{lo}   &  \lambda_1^{lo}     &  \lambda_2^{lo}       \\\hline
-          &        &           0               &   2[T]_x      &                  &                      &   \mathbf{z}_{129}    & x_{A,129}   &                     &                       \\\hline
-    x_T   &  y_T   &    \mathbf{z}_{254}       &   x_{A,254}   & \lambda_{1,254}  & \lambda_{2,254}      &   \mathbf{z}_{128}    & x_{A,128}   & \lambda_{1,128}     & \lambda_{2,128}     \\\hline
-    x_T   &  y_T   &    \mathbf{z}_{253}       &   x_{A,253}   & \lambda_{1,253}  & \lambda_{2,253}      &   \mathbf{z}_{127}    & x_{A,127}   & \lambda_{1,127}     & \lambda_{2,127}       \\\hline
-   \vdots & \vdots &         \vdots            &    \vdots     &      \vdots      &      \vdots          &        \vdots         &  \vdots     &      \vdots         &      \vdots           \\\hline
-    x_T   &  y_T   &    \mathbf{z}_{130}       &   x_{A,130}   & \lambda_{1,130}  & \lambda_{2,130}      &   \mathbf{z}_4        & x_{A,4}     & \lambda_{1,4}       & \lambda_{2,4}         \\\hline
-    x_T   &  y_T   &    \mathbf{z}_{129}       &   x_{A,129}   & \lambda_{1,129}  & \lambda_{2,129}      &   \mathbf{z}_3        & x_{A,3}     & \lambda_{1,3}       & \lambda_{2,3}         \\\hline
+    x_T     &    y_T      &          z^{hi}           &    x_A^{hi}        &  \lambda_1^{hi}  &  \lambda_2^{hi}  &q_{mul}^{hi}&         z^{lo}        &  x_A^{lo}   &  \lambda_1^{lo}     &  \lambda_2^{lo}   &q_{mul}^{lo}\\\hline
+            &             &  \mathbf{z}_{255} = 0     &                    & y_{A,254}=2[T]_y &                  &     1      &   \mathbf{z}_{129}    &             &   y_{A,128}         &                   &    1       \\\hline
+    x_T     &    y_T      &    \mathbf{z}_{254}       & x_{A,254} = 2[T]_x & \lambda_{1,254}  & \lambda_{2,254}  &     2      &   \mathbf{z}_{128}    & x_{A,128}   & \lambda_{1,128}     & \lambda_{2,128}   &    2       \\\hline
+    x_T     &    y_T      &    \mathbf{z}_{253}       &     x_{A,253}      & \lambda_{1,253}  & \lambda_{2,253}  &     2      &   \mathbf{z}_{127}    & x_{A,127}   & \lambda_{1,127}     & \lambda_{2,127}   &    2       \\\hline
+   \vdots   &   \vdots    &         \vdots            &      \vdots        &      \vdots      &      \vdots      &   \vdots   &        \vdots         &  \vdots     &      \vdots         &      \vdots       &  \vdots    \\\hline
+    x_T     &    y_T      &    \mathbf{z}_{130}       &     x_{A,130}      & \lambda_{1,130}  & \lambda_{2,130}  &     2      &   \mathbf{z}_4        & x_{A,4}     & \lambda_{1,4}       & \lambda_{2,4}     &    2       \\\hline
+    x_T     &    y_T      &    \mathbf{z}_{129}       &     x_{A,129}      & \lambda_{1,129}  & \lambda_{2,129}  &     2      &                       & x_{A,3}     &       y_{A,3}       &                   &    3       \\\hline
+            &             &                           &     x_{A,128}      &    y_{A,128}     &                  &     3      &                       &             &                     &                   &            \\\hline
 \end{array}
 $$
 
-For each $hi$ and $lo$ half, the following constraints are enforced:
+For each $hi$ and $lo$ half
+
+- on row 0: check that $\lambda_1, \lambda_2$ are initialized to values consistent with the initial $y_A.$
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-2   & q_{ECC,i} \cdot (\mathbf{z}_{i+1} - 2\mathbf{z}_i - \mathbf{k}_i) = 0 \\\hline
-3 & q_{ECC,i} \cdot \mathbf{k}_i \cdot (\mathbf{k}_i - 1) = 0 \\\hline
-4 & q_{ECC,i} \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{P,i}\right) = 0 \\\hline
-4 & q_{ECC,i} \cdot \left((\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i})) - 2 y_{A,i}\right) = 0 \\\hline
-3 & q_{ECC,i} \cdot \left(\lambda_{2,i}^2 - x_{A,i+1} - (\lambda_{1,i}^2 - x_{A,i} - x_{P,i}) - x_{A,i}\right) = 0 \\\hline
-3   & q_{ECC,i} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - y_{A,i} - y_{A,i+1}\right) = 0 \\\hline
-2   & q_{ECC,i} \cdot \left(x_{P,i} - x_{P,i-1}\right) = 0 \\\hline
-2   & q_{ECC,i} \cdot \left(y_{P,i} - y_{P,i-1}\right) = 0 \\\hline
+5 & q_{mul,i}^{one} \cdot \left(y_{A,i} - \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2}\right) = 0 \\\hline
 \end{array}
+$$
+where
+$$
+\begin{aligned}
+q_{mul,i}^{one} &= q_{mul,i} \cdot (2 - q_{mul, i}) \cdot (3 - q_{mul, i}),\\
+y_{A,i} &\text{ is witnessed.}
+\end{aligned}
+$$
+
+- on all rows excluding the last:
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+4 & q_{mul,i}^{two} \cdot \left(x_{T,cur} - x_{T,next}\right) = 0 \\\hline
+4 & q_{mul,i}^{two} \cdot \left(y_{T,cur} - y_{T,next}\right) = 0 \\\hline
+5 & q_{mul,i}^{two} \cdot \mathbf{k}_i \cdot (\mathbf{k}_i - 1) = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
+6 & q_{mul,i}^{two} \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{T,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{T,i}\right) = 0 \\\hline
+5 & q_{mul,i}^{two} \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - \lambda_{1,i}^2 + x_{T,i}\right) = 0 \\\hline
+5 & q_{mul,i}^{two} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}\right) = 0 \\\hline
+\end{array}
+$$
+where
+$$
+\begin{aligned}
+q_{mul,i}^{two} &= q_{mul,i} \cdot (1 - q_{mul, i}) \cdot (3 - q_{mul, i}),\\
+y_{A,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2}, \\
+y_{A,i-1} &= \frac{(\lambda_{1,i-1} + \lambda_{2,i-1}) \cdot (x_{A,i-1} - (\lambda_{1,i-1}^2 - x_{A,i-1} - x_T))}{2}, \\
+\end{aligned}
+$$
+
+- on the last row: check that $y_A$ has been witnessed correctly.
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+5 & q_{mul,i}^{three} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}\right) = 0 \\\hline
+\end{array}
+$$
+where
+$$
+\begin{aligned}
+q_{mul,i}^{three} &= q_{mul,i} \cdot (1 - q_{mul, i}) \cdot (2 - q_{mul, i}),\\
+y_{A,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2}\\
+y_{A,i-1} &\text{ is witnessed.}
+\end{aligned}
 $$
 
 ## Overflow check
