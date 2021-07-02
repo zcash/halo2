@@ -99,26 +99,24 @@ impl Config {
 
             let z_1 = meta.query_advice(self.complete_config.z_complete, Rotation::prev());
             let z_0 = meta.query_advice(self.complete_config.z_complete, Rotation::cur());
-            let x_p = meta.query_advice(self.add_config.x_p, Rotation::next());
-            let y_p = meta.query_advice(self.add_config.y_p, Rotation::next());
-            let x = meta.query_advice(self.add_config.x_qr, Rotation::next());
-            let y = meta.query_advice(self.add_config.y_qr, Rotation::next());
+            let x_p = meta.query_advice(self.add_config.x_p, Rotation::prev());
+            let y_p = meta.query_advice(self.add_config.y_p, Rotation::prev());
+            let base_x = meta.query_advice(self.add_config.x_p, Rotation::cur());
+            let base_y = meta.query_advice(self.add_config.y_p, Rotation::cur());
 
             //    z_0 = 2 * z_1 + k_0
             // => k_0 = z_0 - 2 * z_1
             let lsb = z_0 - z_1 * pallas::Base::from_u64(2);
+            let one_minus_lsb = Expression::Constant(pallas::Base::one()) - lsb.clone();
 
-            let one = Expression::Constant(pallas::Base::one());
+            let bool_check = lsb.clone() * one_minus_lsb.clone();
 
-            // `lsb` = 0 => (x, y) = (x_p, -y_p)
-            let lsb0_x = (one.clone() - lsb.clone()) * (x.clone() - x_p);
-            let lsb0_y = (one - lsb.clone()) * (y.clone() + y_p);
+            // `lsb` = 0 => (x_p, y_p) = (x, -y)
+            // `lsb` = 1 => (x_p, y_p) = (0,0)
+            let lsb_x = (lsb.clone() * x_p.clone()) + one_minus_lsb.clone() * (x_p - base_x);
+            let lsb_y = (lsb * y_p.clone()) + one_minus_lsb * (y_p + base_y);
 
-            // `lsb` = 1 => (x, y) = (0,0)
-            let lsb1_x = lsb.clone() * x;
-            let lsb1_y = lsb * y;
-
-            std::array::IntoIter::new([lsb0_x, lsb0_y, lsb1_x, lsb1_y])
+            std::array::IntoIter::new([bool_check, lsb_x, lsb_y])
                 .map(move |poly| q_mul_lsb.clone() * poly)
         });
 
@@ -157,24 +155,15 @@ impl Config {
                 // Initialize the running sum for scalar decomposition to zero
                 let z_init = {
                     // Constrain the initialization of `z` to equal zero.
-                    let fixed_zero_cell = region.assign_fixed(
+                    let z_init_val = pallas::Base::zero();
+                    let z_init_cell = region.assign_fixed(
                         || "fixed z_init = 0",
                         self.constants,
                         offset,
-                        || Ok(pallas::Base::zero()),
+                        || Ok(z_init_val),
                     )?;
 
-                    let z_val = pallas::Base::zero();
-                    let z_cell = region.assign_advice(
-                        || "initial z",
-                        self.hi_config.z,
-                        offset,
-                        || Ok(z_val),
-                    )?;
-
-                    region.constrain_equal(&self.perm, fixed_zero_cell, z_cell)?;
-
-                    Z(CellValue::new(z_cell, Some(z_val)))
+                    Z(CellValue::new(z_init_cell, Some(z_init_val)))
                 };
 
                 // Double-and-add (incomplete addition) for the `hi` half of the scalar decomposition
@@ -187,13 +176,13 @@ impl Config {
                 )?;
 
                 // Double-and-add (incomplete addition) for the `lo` half of the scalar decomposition
-                let z = &zs_incomplete_hi.last().expect("should not be empty");
+                let z = zs_incomplete_hi.last().expect("should not be empty");
                 let (x_a, y_a, zs_incomplete_lo) = self.lo_config.double_and_add(
                     &mut region,
                     offset,
                     &base,
                     bits_incomplete_lo,
-                    (x_a, y_a, **z),
+                    (x_a, y_a, *z),
                 )?;
 
                 // Move from incomplete addition to complete addition.
@@ -206,7 +195,7 @@ impl Config {
 
                 // Complete addition
                 let (acc, zs_complete) = {
-                    let z = &zs_incomplete_lo[zs_incomplete_lo.len() - 1];
+                    let z = zs_incomplete_lo.last().expect("should not be empty");
                     // Bits used in complete addition. k_{3} to k_{1} inclusive
                     // The LSB k_{0} is handled separately.
                     let bits_complete = &bits[COMPLETE_RANGE];
@@ -268,6 +257,21 @@ impl Config {
         Ok(result)
     }
 
+    /// Processes the final scalar bit `k_0`.
+    ///
+    /// Assumptions for this sub-region:
+    /// - `acc_x` and `acc_y` are assigned in row `offset` by the previous complete
+    ///   addition. They will be copied into themselves.
+    /// - `z_1 is assigned in row `offset` by the mul::complete region assignment. We only
+    ///   use its value here.
+    ///
+    /// `x_p` and `y_p` are assigned here, and then copied into themselves by the complete
+    /// addition subregion.
+    ///
+    /// ```text
+    /// | x_p  | y_p  | acc_x | acc_y | complete addition  | z_1 |
+    /// |base_x|base_y| res_x | res_y |   |   |    |   |   | z_0 | q_mul_lsb = 1
+    /// ```
     fn process_lsb(
         &self,
         region: &mut Region<'_, pallas::Base>,
@@ -278,8 +282,9 @@ impl Config {
         lsb: Option<bool>,
     ) -> Result<(EccPoint, Z<pallas::Base>), Error> {
         // Enforce switching logic on LSB using a custom gate
-        self.q_mul_lsb.enable(region, offset)?;
+        self.q_mul_lsb.enable(region, offset + 1)?;
 
+        // z_1 has been assigned at (z_complete, offset).
         // Assign z_0 = 2⋅z_1 + k_0
         let z_0 = {
             let z_0_val = z_1.value().zip(lsb).map(|(z_1, lsb)| {
@@ -289,29 +294,27 @@ impl Config {
             let z_0_cell = region.assign_advice(
                 || "z_0",
                 self.complete_config.z_complete,
-                offset,
+                offset + 1,
                 || z_0_val.ok_or(Error::SynthesisError),
             )?;
 
             Z(CellValue::new(z_0_cell, z_0_val))
         };
 
-        let offset = offset + 1;
-
-        // Copy in `x_p`, `y_p` to use in the LSB gate
+        // Copy in `base_x`, `base_y` to use in the LSB gate
         copy(
             region,
-            || "copy x_p",
+            || "copy base_x",
             self.add_config.x_p,
-            offset,
+            offset + 1,
             &base.x(),
             &self.perm,
         )?;
         copy(
             region,
-            || "copy y_p",
+            || "copy base_y",
             self.add_config.y_p,
-            offset,
+            offset + 1,
             &base.y(),
             &self.perm,
         )?;
@@ -339,14 +342,14 @@ impl Config {
 
         let x_cell = region.assign_advice(
             || "x",
-            self.add_config.x_qr,
+            self.add_config.x_p,
             offset,
             || x.ok_or(Error::SynthesisError),
         )?;
 
         let y_cell = region.assign_advice(
             || "y",
-            self.add_config.y_qr,
+            self.add_config.y_p,
             offset,
             || y.ok_or(Error::SynthesisError),
         )?;
@@ -355,8 +358,6 @@ impl Config {
             x: CellValue::<pallas::Base>::new(x_cell, x),
             y: CellValue::<pallas::Base>::new(y_cell, y),
         };
-
-        let offset = offset + 1;
 
         // Return the result of the final complete addition as `[scalar]B`
         let result = self.add_config.assign_region(&p, &acc, offset, region)?;
