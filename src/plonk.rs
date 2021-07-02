@@ -36,7 +36,7 @@ use std::io;
 pub struct VerifyingKey<C: CurveAffine> {
     domain: EvaluationDomain<C::Scalar>,
     fixed_commitments: Vec<C>,
-    permutations: Vec<permutation::VerifyingKey<C>>,
+    permutation: permutation::VerifyingKey<C>,
     cs: ConstraintSystem<C::Scalar>,
 }
 
@@ -46,9 +46,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
         for commitment in &self.fixed_commitments {
             writer.write_all(commitment.to_bytes().as_ref())?;
         }
-        for permutation in &self.permutations {
-            permutation.write(writer)?;
-        }
+        self.permutation.write(writer)?;
 
         Ok(())
     }
@@ -64,16 +62,12 @@ impl<C: CurveAffine> VerifyingKey<C> {
             .map(|_| C::read(reader))
             .collect::<Result<_, _>>()?;
 
-        let permutations: Vec<_> = cs
-            .permutations
-            .iter()
-            .map(|argument| permutation::VerifyingKey::read(reader, argument))
-            .collect::<Result<_, _>>()?;
+        let permutation = permutation::VerifyingKey::read(reader, &cs.permutation)?;
 
         Ok(VerifyingKey {
             domain,
             fixed_commitments,
-            permutations,
+            permutation,
             cs,
         })
     }
@@ -107,7 +101,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
             scalar_modulus: C::Scalar::MODULUS,
             domain: self.domain.pinned(),
             fixed_commitments: &self.fixed_commitments,
-            permutations: &self.permutations,
+            permutation: &self.permutation,
             cs: self.cs.pinned(),
         }
     }
@@ -122,19 +116,20 @@ pub struct PinnedVerificationKey<'a, C: CurveAffine> {
     domain: PinnedEvaluationDomain<'a, C::Scalar>,
     cs: PinnedConstraintSystem<'a, C::Scalar>,
     fixed_commitments: &'a Vec<C>,
-    permutations: &'a Vec<permutation::VerifyingKey<C>>,
+    permutation: &'a permutation::VerifyingKey<C>,
 }
 /// This is a proving key which allows for the creation of proofs for a
 /// particular circuit.
 #[derive(Debug)]
 pub struct ProvingKey<C: CurveAffine> {
     vk: VerifyingKey<C>,
-    // TODO: get rid of this?
     l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    l_cover: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    l_last: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     fixed_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
     fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
     fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
-    permutations: Vec<permutation::ProvingKey<C>>,
+    permutation: permutation::ProvingKey<C>,
 }
 
 /// This is an error that could occur during proving or circuit synthesis.

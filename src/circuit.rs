@@ -6,7 +6,7 @@ use ff::Field;
 
 use crate::{
     arithmetic::FieldExt,
-    plonk::{Advice, Any, Assigned, Column, Error, Fixed, Permutation, Selector},
+    plonk::{Advice, Any, Assigned, Column, Error, Fixed, Selector},
 };
 
 pub mod floor_planner;
@@ -177,13 +177,8 @@ impl<'r, F: Field> Region<'r, F> {
     /// Constraint two cells to have the same value.
     ///
     /// Returns an error if either of the cells is not within the given permutation.
-    pub fn constrain_equal(
-        &mut self,
-        permutation: &Permutation,
-        left: Cell,
-        right: Cell,
-    ) -> Result<(), Error> {
-        self.region.constrain_equal(permutation, left, right)
+    pub fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error> {
+        self.region.constrain_equal(left, right)
     }
 }
 

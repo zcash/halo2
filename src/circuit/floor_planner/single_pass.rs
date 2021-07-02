@@ -11,8 +11,7 @@ use crate::{
         Cell, Layouter, Region, RegionIndex, RegionStart,
     },
     plonk::{
-        Advice, Any, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner,
-        Permutation, Selector,
+        Advice, Any, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Selector,
     },
 };
 
@@ -209,14 +208,8 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F>
         })
     }
 
-    fn constrain_equal(
-        &mut self,
-        permutation: &Permutation,
-        left: Cell,
-        right: Cell,
-    ) -> Result<(), Error> {
+    fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error> {
         self.layouter.cs.copy(
-            permutation,
             left.column,
             *self.layouter.regions[*left.region_index] + left.row_offset,
             right.column,

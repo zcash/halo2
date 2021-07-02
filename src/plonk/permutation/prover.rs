@@ -1,6 +1,6 @@
 use ff::Field;
 use group::Curve;
-use std::iter;
+use std::iter::{self, ExactSizeIterator};
 
 use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
 use super::{Argument, ProvingKey};
@@ -15,16 +15,25 @@ use crate::{
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 
-pub(crate) struct Committed<C: CurveAffine> {
+pub struct CommittedSet<C: CurveAffine> {
     permutation_product_poly: Polynomial<C::Scalar, Coeff>,
     permutation_product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permutation_product_coset_next: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    permutation_product_coset_last: Option<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
+    permutation_product_blind: Blind<C::Scalar>,
+}
+
+pub(crate) struct Committed<C: CurveAffine> {
+    sets: Vec<CommittedSet<C>>,
+}
+
+pub struct ConstructedSet<C: CurveAffine> {
+    permutation_product_poly: Polynomial<C::Scalar, Coeff>,
     permutation_product_blind: Blind<C::Scalar>,
 }
 
 pub(crate) struct Constructed<C: CurveAffine> {
-    permutation_product_poly: Polynomial<C::Scalar, Coeff>,
-    permutation_product_blind: Blind<C::Scalar>,
+    sets: Vec<ConstructedSet<C>>,
 }
 
 pub(crate) struct Evaluated<C: CurveAffine> {
@@ -50,103 +59,145 @@ impl Argument {
     ) -> Result<Committed<C>, Error> {
         let domain = &pk.vk.domain;
 
-        // Goal is to compute the products of fractions
-        //
-        // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
-        // (p_j(\omega^i) + \beta s_j(\omega^i) + \gamma)
-        //
-        // where p_j(X) is the jth column in this permutation,
-        // and i is the ith row of the column.
+        // How many columns can be included in a single permutation polynomial?
+        // We need to multiply by z(X) and (1 - (l_last(X) + l_cover(X))). This
+        // will never underflow because of the requirement of at least a degree
+        // 3 circuit for the permutation argument.
+        let chunk_len = pk.vk.cs.degree() - 2;
+        let blinding_factors = pk.vk.cs.blinding_factors();
 
-        let mut modified_values = vec![C::Scalar::one(); params.n as usize];
-
-        // Iterate over each column of the permutation
-        for (&column, permuted_column_values) in self.columns.iter().zip(pkey.permutations.iter()) {
-            let values = match column.column_type() {
-                Any::Advice => advice,
-                Any::Fixed => fixed,
-                Any::Instance => instance,
-            };
-            parallelize(&mut modified_values, |modified_values, start| {
-                for ((modified_values, value), permuted_value) in modified_values
-                    .iter_mut()
-                    .zip(values[column.index()][start..].iter())
-                    .zip(permuted_column_values[start..].iter())
-                {
-                    *modified_values *= &(*beta * permuted_value + &*gamma + value);
-                }
-            });
-        }
-
-        // Invert to obtain the denominator for the permutation product polynomial
-        modified_values.batch_invert();
-
-        // Iterate over each column again, this time finishing the computation
-        // of the entire fraction by computing the numerators
+        // Each column gets its own delta power.
         let mut deltaomega = C::Scalar::one();
-        for &column in self.columns.iter() {
-            let omega = domain.get_omega();
-            let values = match column.column_type() {
-                Any::Advice => advice,
-                Any::Fixed => fixed,
-                Any::Instance => instance,
+
+        // Track the "last" value from the previous column set
+        let mut last_z = C::Scalar::one();
+
+        let mut sets = vec![];
+
+        let mut iter = self
+            .columns
+            .chunks(chunk_len)
+            .zip(pkey.permutations.chunks(chunk_len));
+
+        while let Some((columns, permutations)) = iter.next() {
+            // Goal is to compute the products of fractions
+            //
+            // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
+            // (p_j(\omega^i) + \beta s_j(\omega^i) + \gamma)
+            //
+            // where p_j(X) is the jth column in this permutation,
+            // and i is the ith row of the column.
+
+            let mut modified_values = vec![C::Scalar::one(); params.n as usize];
+
+            // Iterate over each column of the permutation
+            for (&column, permuted_column_values) in columns.iter().zip(permutations.iter()) {
+                let values = match column.column_type() {
+                    Any::Advice => advice,
+                    Any::Fixed => fixed,
+                    Any::Instance => instance,
+                };
+                parallelize(&mut modified_values, |modified_values, start| {
+                    for ((modified_values, value), permuted_value) in modified_values
+                        .iter_mut()
+                        .zip(values[column.index()][start..].iter())
+                        .zip(permuted_column_values[start..].iter())
+                    {
+                        *modified_values *= &(*beta * permuted_value + &*gamma + value);
+                    }
+                });
+            }
+
+            // Invert to obtain the denominator for the permutation product polynomial
+            modified_values.batch_invert();
+
+            // Iterate over each column again, this time finishing the computation
+            // of the entire fraction by computing the numerators
+            for &column in columns.iter() {
+                let omega = domain.get_omega();
+                let values = match column.column_type() {
+                    Any::Advice => advice,
+                    Any::Fixed => fixed,
+                    Any::Instance => instance,
+                };
+                parallelize(&mut modified_values, |modified_values, start| {
+                    let mut deltaomega = deltaomega * &omega.pow_vartime(&[start as u64, 0, 0, 0]);
+                    for (modified_values, value) in modified_values
+                        .iter_mut()
+                        .zip(values[column.index()][start..].iter())
+                    {
+                        // Multiply by p_j(\omega^i) + \delta^j \omega^i \beta
+                        *modified_values *= &(deltaomega * &*beta + &*gamma + value);
+                        deltaomega *= &omega;
+                    }
+                });
+                deltaomega *= &C::Scalar::DELTA;
+            }
+
+            // The modified_values vector is a vector of products of fractions
+            // of the form
+            //
+            // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
+            // (p_j(\omega^i) + \beta s_j(\omega^i) + \gamma)
+            //
+            // where i is the index into modified_values, for the jth column in
+            // the permutation
+
+            // Compute the evaluations of the permutation product polynomial
+            // over our domain, starting with z[0] = 1
+            let mut z = vec![last_z];
+            for row in 1..(params.n as usize) {
+                let mut tmp = z[row - 1];
+
+                tmp *= &modified_values[row - 1];
+                z.push(tmp);
+            }
+            let mut z = domain.lagrange_from_vec(z);
+            // Set blinding factors
+            for z in &mut z[params.n as usize - blinding_factors..] {
+                *z = C::Scalar::rand();
+            }
+            // Set new last_z
+            last_z = z[params.n as usize - (blinding_factors + 1)];
+
+            let blind = Blind(C::Scalar::rand());
+
+            let permutation_product_commitment_projective = params.commit_lagrange(&z, blind);
+            let permutation_product_blind = blind;
+            let z = domain.lagrange_to_coeff(z);
+            let permutation_product_poly = z.clone();
+
+            // We only keep these around if there's another set afterward.
+            let permutation_product_coset_last = if iter.len() > 0 {
+                // Keep the polynomial around, rotated to l_last.
+                Some(
+                    domain.coeff_to_extended(z.clone(), Rotation(-((blinding_factors + 1) as i32))),
+                )
+            } else {
+                None
             };
-            parallelize(&mut modified_values, |modified_values, start| {
-                let mut deltaomega = deltaomega * &omega.pow_vartime(&[start as u64, 0, 0, 0]);
-                for (modified_values, value) in modified_values
-                    .iter_mut()
-                    .zip(values[column.index()][start..].iter())
-                {
-                    // Multiply by p_j(\omega^i) + \delta^j \omega^i \beta
-                    *modified_values *= &(deltaomega * &*beta + &*gamma + value);
-                    deltaomega *= &omega;
-                }
+
+            let permutation_product_coset = domain.coeff_to_extended(z.clone(), Rotation::cur());
+            let permutation_product_coset_next = domain.coeff_to_extended(z, Rotation::next());
+
+            let permutation_product_commitment =
+                permutation_product_commitment_projective.to_affine();
+
+            // Hash the permutation product commitment
+            transcript
+                .write_point(permutation_product_commitment)
+                .map_err(|_| Error::TranscriptError)?;
+
+            sets.push(CommittedSet {
+                permutation_product_poly,
+                permutation_product_coset,
+                permutation_product_coset_next,
+                permutation_product_coset_last,
+                permutation_product_blind,
             });
-            deltaomega *= &C::Scalar::DELTA;
         }
 
-        // The modified_values vector is a vector of products of fractions
-        // of the form
-        //
-        // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
-        // (p_j(\omega^i) + \beta s_j(\omega^i) + \gamma)
-        //
-        // where i is the index into modified_values, for the jth column in
-        // the permutation
-
-        // Compute the evaluations of the permutation product polynomial
-        // over our domain, starting with z[0] = 1
-        let mut z = vec![C::Scalar::one()];
-        for row in 1..(params.n as usize) {
-            let mut tmp = z[row - 1];
-
-            tmp *= &modified_values[row - 1];
-            z.push(tmp);
-        }
-        let z = domain.lagrange_from_vec(z);
-
-        let blind = Blind(C::Scalar::rand());
-
-        let permutation_product_commitment_projective = params.commit_lagrange(&z, blind);
-        let permutation_product_blind = blind;
-        let z = domain.lagrange_to_coeff(z);
-        let permutation_product_poly = z.clone();
-        let permutation_product_coset = domain.coeff_to_extended(z.clone(), Rotation::cur());
-        let permutation_product_coset_next = domain.coeff_to_extended(z, Rotation::next());
-
-        let permutation_product_commitment = permutation_product_commitment_projective.to_affine();
-
-        // Hash the permutation product commitment
-        transcript
-            .write_point(permutation_product_commitment)
-            .map_err(|_| Error::TranscriptError)?;
-
-        Ok(Committed {
-            permutation_product_poly,
-            permutation_product_coset,
-            permutation_product_coset_next,
-            permutation_product_blind,
-        })
+        Ok(Committed { sets })
     }
 }
 
@@ -166,76 +217,125 @@ impl<C: CurveAffine> Committed<C> {
         impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>> + 'a,
     ) {
         let domain = &pk.vk.domain;
+        let chunk_len = pk.vk.cs.degree() - 2;
+
+        let constructed = Constructed {
+            sets: self
+                .sets
+                .iter()
+                .map(|set| ConstructedSet {
+                    permutation_product_poly: set.permutation_product_poly.clone(),
+                    permutation_product_blind: set.permutation_product_blind,
+                })
+                .collect(),
+        };
+
         let expressions = iter::empty()
-            // l_0(X) * (1 - z(X)) = 0
-            .chain(Some(
-                Polynomial::one_minus(self.permutation_product_coset.clone()) * &pk.l0,
-            ))
-            // z(omega X) \prod (p(X) + \beta s_i(X) + \gamma) - z(X) \prod (p(X) + \delta^i \beta X + \gamma)
-            .chain(Some({
-                let mut left = self.permutation_product_coset_next.clone();
-                for (values, permutation) in p
-                    .columns
+            // Enforce only for the first set.
+            // l_0(X) * (1 - z_0(X)) = 0
+            .chain(self.sets.first().map(|first_set| {
+                Polynomial::one_minus(first_set.permutation_product_coset.clone()) * &pk.l0
+            }))
+            // Enforce only for the last set.
+            // l_last(X) * (z_l(X)^2 - z_l(X)) = 0
+            .chain(self.sets.last().map(|last_set| {
+                ((last_set.permutation_product_coset.clone() * &last_set.permutation_product_coset)
+                    - &last_set.permutation_product_coset)
+                    * &pk.l_last
+            }))
+            // Except for the first set, enforce.
+            // l_0(X) * (z_i(X) - z_{i-1}(\omega^(last) X)) = 0
+            .chain(
+                self.sets
                     .iter()
-                    .map(|&column| match column.column_type() {
-                        Any::Advice => {
-                            &advice_cosets[pk.vk.cs.get_any_query_index(column, Rotation::cur())]
-                        }
-                        Any::Fixed => {
-                            &fixed_cosets[pk.vk.cs.get_any_query_index(column, Rotation::cur())]
-                        }
-                        Any::Instance => {
-                            &instance_cosets[pk.vk.cs.get_any_query_index(column, Rotation::cur())]
-                        }
+                    .skip(1)
+                    .zip(self.sets.iter())
+                    .map(|(set, last_set)| {
+                        (
+                            set.permutation_product_coset.clone(),
+                            last_set.permutation_product_coset_last.clone().unwrap(),
+                        )
                     })
-                    .zip(pkey.cosets.iter())
-                {
-                    parallelize(&mut left, |left, start| {
-                        for ((left, value), permutation) in left
-                            .iter_mut()
-                            .zip(values[start..].iter())
-                            .zip(permutation[start..].iter())
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .map(move |(coset, coset_last)| (coset - &coset_last) * &pk.l0),
+            )
+            // And for all the sets we enforce:
+            // (1 - (l_last + l_cover)) * (
+            //   z_i(\omega X) \prod (p(X) + \beta s_i(X) + \gamma)
+            // - z_i(X) \prod (p(X) + \delta^i \beta X + \gamma)
+            // )
+            .chain(
+                self.sets
+                    .into_iter()
+                    .zip(p.columns.chunks(chunk_len))
+                    .zip(pkey.cosets.chunks(chunk_len))
+                    .enumerate()
+                    .map(move |(chunk_index, ((set, columns), cosets))| {
+                        let mut left = set.permutation_product_coset_next.clone();
+                        for (values, permutation) in columns
+                            .iter()
+                            .map(|&column| match column.column_type() {
+                                Any::Advice => {
+                                    &advice_cosets
+                                        [pk.vk.cs.get_any_query_index(column, Rotation::cur())]
+                                }
+                                Any::Fixed => {
+                                    &fixed_cosets
+                                        [pk.vk.cs.get_any_query_index(column, Rotation::cur())]
+                                }
+                                Any::Instance => {
+                                    &instance_cosets
+                                        [pk.vk.cs.get_any_query_index(column, Rotation::cur())]
+                                }
+                            })
+                            .zip(cosets.iter())
                         {
-                            *left *= &(*value + &(*beta * permutation) + &*gamma);
+                            parallelize(&mut left, |left, start| {
+                                for ((left, value), permutation) in left
+                                    .iter_mut()
+                                    .zip(values[start..].iter())
+                                    .zip(permutation[start..].iter())
+                                {
+                                    *left *= &(*value + &(*beta * permutation) + &*gamma);
+                                }
+                            });
                         }
-                    });
-                }
 
-                let mut right = self.permutation_product_coset.clone();
-                let mut current_delta = *beta * &C::Scalar::ZETA;
-                let step = domain.get_extended_omega();
-                for values in p.columns.iter().map(|&column| match column.column_type() {
-                    Any::Advice => {
-                        &advice_cosets[pk.vk.cs.get_any_query_index(column, Rotation::cur())]
-                    }
-                    Any::Fixed => {
-                        &fixed_cosets[pk.vk.cs.get_any_query_index(column, Rotation::cur())]
-                    }
-                    Any::Instance => {
-                        &instance_cosets[pk.vk.cs.get_any_query_index(column, Rotation::cur())]
-                    }
-                }) {
-                    parallelize(&mut right, move |right, start| {
-                        let mut beta_term =
-                            current_delta * &step.pow_vartime(&[start as u64, 0, 0, 0]);
-                        for (right, value) in right.iter_mut().zip(values[start..].iter()) {
-                            *right *= &(*value + &beta_term + &*gamma);
-                            beta_term *= &step;
+                        let mut right = set.permutation_product_coset.clone();
+                        let mut current_delta = *beta
+                            * &C::Scalar::ZETA
+                            * &(C::Scalar::DELTA.pow_vartime(&[(chunk_index * chunk_len) as u64]));
+                        let step = domain.get_extended_omega();
+                        for values in columns.iter().map(|&column| match column.column_type() {
+                            Any::Advice => {
+                                &advice_cosets
+                                    [pk.vk.cs.get_any_query_index(column, Rotation::cur())]
+                            }
+                            Any::Fixed => {
+                                &fixed_cosets[pk.vk.cs.get_any_query_index(column, Rotation::cur())]
+                            }
+                            Any::Instance => {
+                                &instance_cosets
+                                    [pk.vk.cs.get_any_query_index(column, Rotation::cur())]
+                            }
+                        }) {
+                            parallelize(&mut right, move |right, start| {
+                                let mut beta_term =
+                                    current_delta * &step.pow_vartime(&[start as u64, 0, 0, 0]);
+                                for (right, value) in right.iter_mut().zip(values[start..].iter()) {
+                                    *right *= &(*value + &beta_term + &*gamma);
+                                    beta_term *= &step;
+                                }
+                            });
+                            current_delta *= &C::Scalar::DELTA;
                         }
-                    });
-                    current_delta *= &C::Scalar::DELTA;
-                }
 
-                left - &right
-            }));
+                        (left - &right) * &Polynomial::one_minus(pk.l_last.clone() + &pk.l_cover)
+                    }),
+            );
 
-        (
-            Constructed {
-                permutation_product_poly: self.permutation_product_poly,
-                permutation_product_blind: self.permutation_product_blind,
-            },
-            expressions,
-        )
+        (constructed, expressions)
     }
 }
 
@@ -265,25 +365,49 @@ impl<C: CurveAffine> Constructed<C> {
         transcript: &mut T,
     ) -> Result<Evaluated<C>, Error> {
         let domain = &pk.vk.domain;
+        let blinding_factors = pk.vk.cs.blinding_factors();
 
-        let permutation_product_eval = eval_polynomial(&self.permutation_product_poly, *x);
-
-        let permutation_product_next_eval = eval_polynomial(
-            &self.permutation_product_poly,
-            domain.rotate_omega(*x, Rotation::next()),
-        );
-
-        let permutation_evals = pkey.evaluate(x);
-
-        // Hash permutation product evals
-        for eval in iter::empty()
-            .chain(Some(&permutation_product_eval))
-            .chain(Some(&permutation_product_next_eval))
-            .chain(permutation_evals.iter())
-        {
+        // Hash permutation evals
+        // TODO: need to do this once for a single proof; as is this happens
+        // for every circuit instance in the proof.
+        for eval in pkey.evaluate(x).iter() {
             transcript
                 .write_scalar(*eval)
                 .map_err(|_| Error::TranscriptError)?;
+        }
+
+        {
+            let mut sets = self.sets.iter();
+
+            while let Some(set) = sets.next() {
+                let permutation_product_eval = eval_polynomial(&set.permutation_product_poly, *x);
+
+                let permutation_product_next_eval = eval_polynomial(
+                    &set.permutation_product_poly,
+                    domain.rotate_omega(*x, Rotation::next()),
+                );
+
+                // Hash permutation product evals
+                for eval in iter::empty()
+                    .chain(Some(&permutation_product_eval))
+                    .chain(Some(&permutation_product_next_eval))
+                {
+                    transcript
+                        .write_scalar(*eval)
+                        .map_err(|_| Error::TranscriptError)?;
+                }
+
+                if sets.len() > 0 {
+                    let permutation_product_last_eval = eval_polynomial(
+                        &set.permutation_product_poly,
+                        domain.rotate_omega(*x, Rotation(-((blinding_factors + 1) as i32))),
+                    );
+
+                    transcript
+                        .write_scalar(permutation_product_last_eval)
+                        .map_err(|_| Error::TranscriptError)?;
+                }
+            }
         }
 
         Ok(Evaluated { constructed: self })
@@ -297,20 +421,43 @@ impl<C: CurveAffine> Evaluated<C> {
         pkey: &'a ProvingKey<C>,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
+        let blinding_factors = pk.vk.cs.blinding_factors();
         let x_next = pk.vk.domain.rotate_omega(*x, Rotation::next());
+        let x_last = pk
+            .vk
+            .domain
+            .rotate_omega(*x, Rotation(-((blinding_factors + 1) as i32)));
 
         iter::empty()
-            // Open permutation product commitments at x and \omega^{-1} x
-            .chain(Some(ProverQuery {
-                point: *x,
-                poly: &self.constructed.permutation_product_poly,
-                blind: self.constructed.permutation_product_blind,
+            .chain(self.constructed.sets.iter().flat_map(move |set| {
+                iter::empty()
+                    // Open permutation product commitments at x and \omega^{-1} x
+                    .chain(Some(ProverQuery {
+                        point: *x,
+                        poly: &set.permutation_product_poly,
+                        blind: set.permutation_product_blind,
+                    }))
+                    .chain(Some(ProverQuery {
+                        point: x_next,
+                        poly: &set.permutation_product_poly,
+                        blind: set.permutation_product_blind,
+                    }))
             }))
-            .chain(Some(ProverQuery {
-                point: x_next,
-                poly: &self.constructed.permutation_product_poly,
-                blind: self.constructed.permutation_product_blind,
-            }))
+            // Open it at \omega^{last} x for all but the last set
+            .chain(
+                self.constructed
+                    .sets
+                    .iter()
+                    .rev()
+                    .skip(1)
+                    .flat_map(move |set| {
+                        Some(ProverQuery {
+                            point: x_last,
+                            poly: &set.permutation_product_poly,
+                            blind: set.permutation_product_blind,
+                        })
+                    }),
+            )
             // Open permutation polynomial commitments at x
             .chain(pkey.open(x))
     }

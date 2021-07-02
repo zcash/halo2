@@ -5,7 +5,7 @@ use super::{
     circuit::{
         Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Selector,
     },
-    permutation, Assigned, Error, LagrangeCoeff, Permutation, Polynomial, ProvingKey, VerifyingKey,
+    permutation, Assigned, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
 };
 use crate::poly::{
     commitment::{Blind, Params},
@@ -27,6 +27,16 @@ where
     let mut cs = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut cs);
 
+    let cs = cs;
+    // There needs to be enough room for at least one row.
+    assert!(
+        cs.blinding_factors() // m blinding factors
+        + 1 // for l_{-(m + 1)}
+        + 1 // for l_0
+        + 1 // for at least one row
+        <= (params.n as usize)
+    );
+
     let degree = cs.degree();
 
     let domain = EvaluationDomain::new(degree as u32, params.k);
@@ -38,7 +48,10 @@ where
 #[derive(Debug)]
 struct Assembly<F: Field> {
     fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
-    permutations: Vec<permutation::keygen::Assembly>,
+    permutation: permutation::keygen::Assembly,
+    // All rows including and above this one are off
+    // limits due to blinding factors.
+    upper_bound_cell_index: usize,
     _marker: std::marker::PhantomData<F>,
 }
 
@@ -65,6 +78,9 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
+        if row >= self.upper_bound_cell_index {
+            return Err(Error::BoundsFailure);
+        }
         // Selectors are just fixed columns.
         // TODO: Ensure that the default for a selector's cells is always zero, if we
         // alter the proving system to change the global default.
@@ -103,6 +119,10 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
+        if row >= self.upper_bound_cell_index {
+            return Err(Error::BoundsFailure);
+        }
+
         *self
             .fixed
             .get_mut(column.index())
@@ -114,34 +134,18 @@ impl<F: Field> Assignment<F> for Assembly<F> {
 
     fn copy(
         &mut self,
-        permutation: &Permutation,
         left_column: Column<Any>,
         left_row: usize,
         right_column: Column<Any>,
         right_row: usize,
     ) -> Result<(), Error> {
         // Check bounds first
-        if permutation.index() >= self.permutations.len() {
+        if left_row >= self.upper_bound_cell_index || right_row >= self.upper_bound_cell_index {
             return Err(Error::BoundsFailure);
         }
 
-        let left_column_index = permutation
-            .mapping()
-            .iter()
-            .position(|c| c == &left_column)
-            .ok_or(Error::SynthesisError)?;
-        let right_column_index = permutation
-            .mapping()
-            .iter()
-            .position(|c| c == &right_column)
-            .ok_or(Error::SynthesisError)?;
-
-        self.permutations[permutation.index()].copy(
-            left_column_index,
-            left_row,
-            right_column_index,
-            right_row,
-        )
+        self.permutation
+            .copy(left_column, left_row, right_column, right_row)
     }
 
     fn push_namespace<NR, N>(&mut self, _: N)
@@ -170,27 +174,19 @@ where
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
         fixed: vec![domain.empty_lagrange_assigned(); cs.num_fixed_columns],
-        permutations: cs
-            .permutations
-            .iter()
-            .map(|p| permutation::keygen::Assembly::new(params.n as usize, p))
-            .collect(),
+        permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
+        upper_bound_cell_index: params.n as usize - (cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
     };
 
     // Synthesize the circuit to obtain URS
     ConcreteCircuit::FloorPlanner::synthesize(&mut assembly, circuit, config)?;
 
-    let fixed = batch_invert_assigned(&assembly.fixed);
+    let fixed = batch_invert_assigned(assembly.fixed);
 
-    let permutation_helper = permutation::keygen::Assembly::build_helper(params, &cs, &domain);
-
-    let permutation_vks = cs
-        .permutations
-        .iter()
-        .zip(assembly.permutations.into_iter())
-        .map(|(p, assembly)| assembly.build_vk(params, &domain, &permutation_helper, p))
-        .collect();
+    let permutation_vk = assembly
+        .permutation
+        .build_vk(params, &domain, &cs.permutation);
 
     let fixed_commitments = fixed
         .iter()
@@ -200,7 +196,7 @@ where
     Ok(VerifyingKey {
         domain,
         fixed_commitments,
-        permutations: permutation_vks,
+        permutation: permutation_vk,
         cs,
     })
 }
@@ -218,21 +214,27 @@ where
     let mut cs = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut cs);
 
+    let cs = cs;
+    // There needs to be enough room for at least one row.
+    assert!(
+        cs.blinding_factors() // m blinding factors
+        + 1 // for l_{-(m + 1)}
+        + 1 // for l_0
+        + 1 // for at least one row
+        <= (params.n as usize)
+    );
+
     let mut assembly: Assembly<C::Scalar> = Assembly {
         fixed: vec![vk.domain.empty_lagrange_assigned(); vk.cs.num_fixed_columns],
-        permutations: vk
-            .cs
-            .permutations
-            .iter()
-            .map(|p| permutation::keygen::Assembly::new(params.n as usize, p))
-            .collect(),
+        permutation: permutation::keygen::Assembly::new(params.n as usize, &vk.cs.permutation),
+        upper_bound_cell_index: params.n as usize - (vk.cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
     };
 
     // Synthesize the circuit to obtain URS
     ConcreteCircuit::FloorPlanner::synthesize(&mut assembly, circuit, config)?;
 
-    let fixed = batch_invert_assigned(&assembly.fixed);
+    let fixed = batch_invert_assigned(assembly.fixed);
 
     let fixed_polys: Vec<_> = fixed
         .iter()
@@ -249,16 +251,9 @@ where
         })
         .collect();
 
-    let permutation_helper =
-        permutation::keygen::Assembly::build_helper(params, &vk.cs, &vk.domain);
-
-    let permutation_pks = vk
-        .cs
-        .permutations
-        .iter()
-        .zip(assembly.permutations.into_iter())
-        .map(|(p, assembly)| assembly.build_pk(&vk.domain, &permutation_helper, p))
-        .collect();
+    let permutation_pk = assembly
+        .permutation
+        .build_pk(params, &vk.domain, &vk.cs.permutation);
 
     // Compute l_0(X)
     // TODO: this can be done more efficiently
@@ -267,12 +262,35 @@ where
     let l0 = vk.domain.lagrange_to_coeff(l0);
     let l0 = vk.domain.coeff_to_extended(l0, Rotation::cur());
 
+    // Compute l_cover(X) which evaluates to 1 for each blinding factor row
+    // and 0 otherwise over the domain.
+    let mut l_cover = vk.domain.empty_lagrange();
+    for evaluation in l_cover[..].iter_mut().rev().take(cs.blinding_factors()) {
+        *evaluation = C::Scalar::one();
+    }
+    let l_cover = vk.domain.lagrange_to_coeff(l_cover);
+    let l_cover = vk.domain.coeff_to_extended(l_cover, Rotation::cur());
+
+    // Compute l_last(X) which evaluates to 1 on the first inactive row (just
+    // before the blinding factors) and 0 otherwise over the domain
+    let mut l_last = vk.domain.empty_lagrange();
+    *(l_last[..]
+        .iter_mut()
+        .rev()
+        .skip(cs.blinding_factors())
+        .next()
+        .unwrap()) = C::Scalar::one();
+    let l_last = vk.domain.lagrange_to_coeff(l_last);
+    let l_last = vk.domain.coeff_to_extended(l_last, Rotation::cur());
+
     Ok(ProvingKey {
         vk,
         l0,
+        l_cover,
+        l_last,
         fixed_values: fixed,
         fixed_polys,
         fixed_cosets,
-        permutations: permutation_pks,
+        permutation: permutation_pk,
     })
 }

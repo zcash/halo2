@@ -8,7 +8,7 @@ use ff::Field;
 
 use super::{Cell, RegionIndex};
 use crate::plonk::Assigned;
-use crate::plonk::{Advice, Any, Column, Error, Fixed, Permutation, Selector};
+use crate::plonk::{Advice, Any, Column, Error, Fixed, Selector};
 
 /// Helper trait for implementing a custom [`Layouter`].
 ///
@@ -70,12 +70,7 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
     /// Constraint two cells to have the same value.
     ///
     /// Returns an error if either of the cells is not within the given permutation.
-    fn constrain_equal(
-        &mut self,
-        permutation: &Permutation,
-        left: Cell,
-        right: Cell,
-    ) -> Result<(), Error>;
+    fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error>;
 }
 
 /// The shape of a region. For a region at a certain index, we track
@@ -161,12 +156,7 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         })
     }
 
-    fn constrain_equal(
-        &mut self,
-        _permutation: &Permutation,
-        _left: Cell,
-        _right: Cell,
-    ) -> Result<(), Error> {
+    fn constrain_equal(&mut self, _left: Cell, _right: Cell) -> Result<(), Error> {
         // Equality constraints don't affect the region shape.
         Ok(())
     }

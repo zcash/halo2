@@ -132,7 +132,7 @@ impl<F, B> Polynomial<F, B> {
 }
 
 pub(crate) fn batch_invert_assigned<F: FieldExt>(
-    assigned: &[Polynomial<Assigned<F>, LagrangeCoeff>],
+    assigned: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
 ) -> Vec<Polynomial<F, LagrangeCoeff>> {
     let mut assigned_denominators: Vec<_> = assigned
         .iter()

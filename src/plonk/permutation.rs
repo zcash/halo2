@@ -1,5 +1,3 @@
-//! Implementation of a PLONK permutation argument.
-
 use super::circuit::{Any, Column};
 use crate::{
     arithmetic::CurveAffine,
@@ -20,24 +18,49 @@ pub(crate) struct Argument {
 }
 
 impl Argument {
-    pub(crate) fn new(columns: Vec<Column<Any>>) -> Self {
-        Argument { columns }
+    pub(crate) fn new() -> Self {
+        Argument { columns: vec![] }
     }
 
     pub(crate) fn required_degree(&self) -> usize {
-        // The permutation argument will serve alongside the gates, so must be
-        // accounted for. There are constraints of degree 2 regardless of the
-        // number of columns involved. (It doesn't make sense to make a
-        // permutation argument with zero columns but to be rigorous we account
-        // for it here.)
-
         // degree 2:
         // l_0(X) * (1 - z(X)) = 0
         //
-        // degree columns + 1
-        // z(omega X) \prod (p(X) + \beta s_i(X) + \gamma)
+        // We will fit as many polynomials p_i(X) as possible
+        // into the required degree of the circuit, so the
+        // following will not affect the required degree of
+        // this middleware.
+        //
+        // (1 - (l_last + l_cover)) * (
+        //   z(\omega X) \prod (p(X) + \beta s_i(X) + \gamma)
         // - z(X) \prod (p(X) + \delta^i \beta X + \gamma)
-        std::cmp::max(self.columns.len() + 1, 2)
+        // )
+        //
+        // On the first sets of columns, except the first
+        // column, we will do
+        //
+        // l_0(X) * (z(X) - z'(\omega^(last) X)) = 0
+        //
+        // where z'(X) is the permutation for the last set
+        // of columns.
+        //
+        // On the final set of columns, we will do
+        //
+        // degree 3:
+        // l_last(X) * (z'(X)^2 - z'(X)) = 0
+        //
+        // which will allow the last value to be zero to
+        // ensure the argument is perfectly complete.
+
+        // There are constraints of degree 3 regardless of the
+        // number of columns involved.
+        3
+    }
+
+    pub(crate) fn add_column(&mut self, column: Column<Any>) {
+        if !self.columns.contains(&column) {
+            self.columns.push(column);
+        }
     }
 
     pub(crate) fn get_columns(&self) -> Vec<Column<Any>> {

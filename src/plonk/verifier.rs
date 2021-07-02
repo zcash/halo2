@@ -1,3 +1,4 @@
+use ff::Field;
 use std::iter;
 
 use super::{
@@ -69,13 +70,9 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
     let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
 
     let permutations_committed = (0..num_proofs)
-        .map(|_| -> Result<Vec<_>, _> {
+        .map(|_| {
             // Hash each permutation product commitment
-            vk.cs
-                .permutations
-                .iter()
-                .map(|argument| argument.read_product_commitment(transcript))
-                .collect::<Result<Vec<_>, _>>()
+            vk.cs.permutation.read_product_commitments(&vk, transcript)
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -121,13 +118,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
 
     let permutations_evaluated = permutations_committed
         .into_iter()
-        .map(|permutations| -> Result<Vec<_>, _> {
-            permutations
-                .into_iter()
-                .zip(vk.permutations.iter())
-                .map(|(permutation, vkey)| permutation.evaluate(vkey, transcript))
-                .collect::<Result<Vec<_>, _>>()
-        })
+        .map(|permutation| permutation.evaluate(&vk.permutation, transcript))
         .collect::<Result<Vec<_>, _>>()?;
 
     let lookups_evaluated = lookups_committed
@@ -146,8 +137,16 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
         // x^n
         let xn = x.pow(&[params.n as u64, 0, 0, 0]);
 
-        // l_0(x)
-        let l_0 = vk.domain.l_i_range(*x, xn, 0..=0)[0];
+        let blinding_factors = vk.cs.blinding_factors();
+        let l_evals = vk
+            .domain
+            .l_i_range(*x, xn, (-((blinding_factors + 1) as i32))..=0);
+        assert_eq!(l_evals.len(), 2 + blinding_factors);
+        let l_last = l_evals[0];
+        let l_cover: C::Scalar = l_evals[1..(1 + blinding_factors)]
+            .iter()
+            .fold(C::Scalar::zero(), |acc, eval| acc + eval);
+        let l_0 = l_evals[1 + blinding_factors];
 
         // Compute the expected value of h(x)
         let expressions = advice_evals
@@ -155,63 +154,55 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
             .zip(instance_evals.iter())
             .zip(permutations_evaluated.iter())
             .zip(lookups_evaluated.iter())
-            .flat_map(
-                |(((advice_evals, instance_evals), permutations), lookups)| {
-                    let fixed_evals = &fixed_evals;
-                    std::iter::empty()
-                        // Evaluate the circuit using the custom gates provided
-                        .chain(vk.cs.gates.iter().flat_map(move |gate| {
-                            gate.polynomials().iter().map(move |poly| {
-                                poly.evaluate(
-                                    &|scalar| scalar,
-                                    &|index| fixed_evals[index],
-                                    &|index| advice_evals[index],
-                                    &|index| instance_evals[index],
-                                    &|a, b| a + &b,
-                                    &|a, b| a * &b,
-                                    &|a, scalar| a * &scalar,
+            .flat_map(|(((advice_evals, instance_evals), permutation), lookups)| {
+                let fixed_evals = &fixed_evals;
+                std::iter::empty()
+                    // Evaluate the circuit using the custom gates provided
+                    .chain(vk.cs.gates.iter().flat_map(move |gate| {
+                        gate.polynomials().iter().map(move |poly| {
+                            poly.evaluate(
+                                &|scalar| scalar,
+                                &|index| fixed_evals[index],
+                                &|index| advice_evals[index],
+                                &|index| instance_evals[index],
+                                &|a, b| a + &b,
+                                &|a, b| a * &b,
+                                &|a, scalar| a * &scalar,
+                            )
+                        })
+                    }))
+                    .chain(permutation.expressions(
+                        vk,
+                        &vk.cs.permutation,
+                        &advice_evals,
+                        &fixed_evals,
+                        &instance_evals,
+                        l_0,
+                        l_last,
+                        l_cover,
+                        beta,
+                        gamma,
+                        x,
+                    ))
+                    .chain(
+                        lookups
+                            .iter()
+                            .zip(vk.cs.lookups.iter())
+                            .flat_map(move |(p, argument)| {
+                                p.expressions(
+                                    l_0,
+                                    argument,
+                                    theta,
+                                    beta,
+                                    gamma,
+                                    &advice_evals,
+                                    &fixed_evals,
+                                    &instance_evals,
                                 )
                             })
-                        }))
-                        .chain(
-                            permutations
-                                .iter()
-                                .zip(vk.cs.permutations.iter())
-                                .flat_map(move |(p, argument)| {
-                                    p.expressions(
-                                        vk,
-                                        argument,
-                                        &advice_evals,
-                                        &fixed_evals,
-                                        &instance_evals,
-                                        l_0,
-                                        beta,
-                                        gamma,
-                                        x,
-                                    )
-                                })
-                                .into_iter(),
-                        )
-                        .chain(
-                            lookups
-                                .iter()
-                                .zip(vk.cs.lookups.iter())
-                                .flat_map(move |(p, argument)| {
-                                    p.expressions(
-                                        l_0,
-                                        argument,
-                                        theta,
-                                        beta,
-                                        gamma,
-                                        &advice_evals,
-                                        &fixed_evals,
-                                        &instance_evals,
-                                    )
-                                })
-                                .into_iter(),
-                        )
-                },
-            );
+                            .into_iter(),
+                    )
+            });
 
         vanishing.verify(params, expressions, y, xn)
     };
@@ -227,7 +218,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
             |(
                 (
                     (((instance_commitments, instance_evals), advice_commitments), advice_evals),
-                    permutations,
+                    permutation,
                 ),
                 lookups,
             )| {
@@ -250,13 +241,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                             )
                         },
                     ))
-                    .chain(
-                        permutations
-                            .iter()
-                            .zip(vk.permutations.iter())
-                            .flat_map(move |(p, vkey)| p.queries(vk, vkey, x))
-                            .into_iter(),
-                    )
+                    .chain(permutation.queries(vk, &vk.permutation, x))
                     .chain(
                         lookups
                             .iter()

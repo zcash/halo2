@@ -4,19 +4,16 @@ use group::Curve;
 use super::{Argument, ProvingKey, VerifyingKey};
 use crate::{
     arithmetic::{CurveAffine, FieldExt},
-    plonk::{circuit::ConstraintSystem, Error},
+    plonk::{Any, Column, Error},
     poly::{
         commitment::{Blind, Params},
         EvaluationDomain, Rotation,
     },
 };
 
-pub(crate) struct AssemblyHelper<C: CurveAffine> {
-    deltaomega: Vec<Vec<C::Scalar>>,
-}
-
 #[derive(Debug)]
 pub(crate) struct Assembly {
+    columns: Vec<Column<Any>>,
     pub(crate) mapping: Vec<Vec<(usize, usize)>>,
     aux: Vec<Vec<(usize, usize)>>,
     sizes: Vec<Vec<usize>>,
@@ -36,6 +33,7 @@ impl Assembly {
         // in a 1-cycle; therefore mapping and aux are identical, because every cell is
         // its own distinguished element.
         Assembly {
+            columns: p.columns.clone(),
             mapping: columns.clone(),
             aux: columns,
             sizes: vec![vec![1usize; n]; p.columns.len()],
@@ -44,15 +42,24 @@ impl Assembly {
 
     pub(crate) fn copy(
         &mut self,
-        left_column: usize,
+        left_column: Column<Any>,
         left_row: usize,
-        right_column: usize,
+        right_column: Column<Any>,
         right_row: usize,
     ) -> Result<(), Error> {
-        // Check bounds first
-        if left_column >= self.mapping.len()
-            || left_row >= self.mapping[left_column].len()
-            || right_column >= self.mapping.len()
+        let left_column = self
+            .columns
+            .iter()
+            .position(|c| c == &left_column)
+            .ok_or(Error::SynthesisError)?;
+        let right_column = self
+            .columns
+            .iter()
+            .position(|c| c == &right_column)
+            .ok_or(Error::SynthesisError)?;
+
+        // Check bounds
+        if left_row >= self.mapping[left_column].len()
             || right_row >= self.mapping[right_column].len()
         {
             return Err(Error::BoundsFailure);
@@ -90,20 +97,12 @@ impl Assembly {
         Ok(())
     }
 
-    pub(crate) fn build_helper<C: CurveAffine>(
+    pub(crate) fn build_vk<C: CurveAffine>(
+        self,
         params: &Params<C>,
-        cs: &ConstraintSystem<C::Scalar>,
         domain: &EvaluationDomain<C::Scalar>,
-    ) -> AssemblyHelper<C> {
-        // Get the largest permutation argument length in terms of the number of
-        // advice columns involved.
-        let largest_permutation_length = cs
-            .permutations
-            .iter()
-            .map(|p| p.columns.len())
-            .max()
-            .unwrap_or_default();
-
+        p: &Argument,
+    ) -> VerifyingKey<C> {
         // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
         let mut omega_powers = Vec::with_capacity(params.n as usize);
         {
@@ -115,10 +114,10 @@ impl Assembly {
         }
 
         // Compute [omega_powers * \delta^0, omega_powers * \delta^1, ..., omega_powers * \delta^m]
-        let mut deltaomega = Vec::with_capacity(largest_permutation_length);
+        let mut deltaomega = Vec::with_capacity(p.columns.len());
         {
             let mut cur = C::Scalar::one();
-            for _ in 0..largest_permutation_length {
+            for _ in 0..p.columns.len() {
                 let mut omega_powers = omega_powers.clone();
                 for o in &mut omega_powers {
                     *o *= &cur;
@@ -130,16 +129,6 @@ impl Assembly {
             }
         }
 
-        AssemblyHelper { deltaomega }
-    }
-
-    pub(crate) fn build_vk<C: CurveAffine>(
-        self,
-        params: &Params<C>,
-        domain: &EvaluationDomain<C::Scalar>,
-        helper: &AssemblyHelper<C>,
-        p: &Argument,
-    ) -> VerifyingKey<C> {
         // Pre-compute commitments for the URS.
         let mut commitments = vec![];
         for i in 0..p.columns.len() {
@@ -148,7 +137,7 @@ impl Assembly {
             let mut permutation_poly = domain.empty_lagrange();
             for (j, p) in permutation_poly.iter_mut().enumerate() {
                 let (permuted_i, permuted_j) = self.mapping[i][j];
-                *p = helper.deltaomega[permuted_i][permuted_j];
+                *p = deltaomega[permuted_i][permuted_j];
             }
 
             // Compute commitment to permutation polynomial
@@ -163,10 +152,36 @@ impl Assembly {
 
     pub(crate) fn build_pk<C: CurveAffine>(
         self,
+        params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
-        helper: &AssemblyHelper<C>,
         p: &Argument,
     ) -> ProvingKey<C> {
+        // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
+        let mut omega_powers = Vec::with_capacity(params.n as usize);
+        {
+            let mut cur = C::Scalar::one();
+            for _ in 0..params.n {
+                omega_powers.push(cur);
+                cur *= &domain.get_omega();
+            }
+        }
+
+        // Compute [omega_powers * \delta^0, omega_powers * \delta^1, ..., omega_powers * \delta^m]
+        let mut deltaomega = Vec::with_capacity(p.columns.len());
+        {
+            let mut cur = C::Scalar::one();
+            for _ in 0..p.columns.len() {
+                let mut omega_powers = omega_powers.clone();
+                for o in &mut omega_powers {
+                    *o *= &cur;
+                }
+
+                deltaomega.push(omega_powers);
+
+                cur *= &C::Scalar::DELTA;
+            }
+        }
+
         // Compute permutation polynomials, convert to coset form.
         let mut permutations = vec![];
         let mut polys = vec![];
@@ -177,7 +192,7 @@ impl Assembly {
             let mut permutation_poly = domain.empty_lagrange();
             for (j, p) in permutation_poly.iter_mut().enumerate() {
                 let (permuted_i, permuted_j) = self.mapping[i][j];
-                *p = helper.deltaomega[permuted_i][permuted_j];
+                *p = deltaomega[permuted_i][permuted_j];
             }
 
             // Store permutation polynomial and precompute its coset evaluation
