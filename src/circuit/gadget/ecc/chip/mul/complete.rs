@@ -49,15 +49,28 @@ impl Config {
             "Decompose scalar for complete bits of variable-base mul",
             |meta| {
                 let q_mul_decompose_var = meta.query_selector(self.q_mul_decompose_var);
-                let z_cur = meta.query_advice(self.z_complete, Rotation::cur());
+                // z_{i + 1}
                 let z_prev = meta.query_advice(self.z_complete, Rotation::prev());
+                // z_i
+                let z_next = meta.query_advice(self.z_complete, Rotation::next());
 
                 // k_{i} = z_{i} - 2⋅z_{i+1}
-                let k = z_cur - Expression::Constant(pallas::Base::from_u64(2)) * z_prev;
+                let k = z_next - Expression::Constant(pallas::Base::from_u64(2)) * z_prev;
+                let k_minus_one = k.clone() - Expression::Constant(pallas::Base::one());
                 // (k_i) ⋅ (k_i - 1) = 0
-                let bool_check = k.clone() * (k + Expression::Constant(-pallas::Base::one()));
+                let bool_check = k.clone() * k_minus_one.clone();
 
-                vec![q_mul_decompose_var * bool_check]
+                // base_y
+                let base_y = meta.query_advice(self.z_complete, Rotation::cur());
+                // y_p
+                let y_p = meta.query_advice(self.add_config.y_p, Rotation::prev());
+
+                // k_i = 0 => y_p = -base_y
+                // k_i = 1 => y_p = base_y
+                let y_switch = k_minus_one * (base_y.clone() + y_p.clone()) + k * (base_y - y_p);
+
+                std::array::IntoIter::new([("bool_check", bool_check), ("y_switch", y_switch)])
+                    .map(move |(name, poly)| (name, q_mul_decompose_var.clone() * poly))
             },
         );
     }
@@ -90,29 +103,7 @@ impl Config {
         }
 
         // Use x_a, y_a output from incomplete addition
-        let mut acc = {
-            // Copy in x_a output from incomplete addition
-            let x_a = copy(
-                region,
-                || "x_a output from incomplete addition",
-                self.add_config.x_qr,
-                offset,
-                &x_a.0,
-                &self.perm,
-            )?;
-
-            // Assign final `y_a` output from incomplete addition
-            let y_a = copy(
-                region,
-                || "y_a output from incomplete addition",
-                self.add_config.y_qr,
-                offset,
-                &y_a.0,
-                &self.perm,
-            )?;
-
-            EccPoint { x: x_a, y: y_a }
-        };
+        let mut acc = EccPoint { x: *x_a, y: *y_a };
 
         // Copy running sum `z` from incomplete addition
         let mut z = {
@@ -135,16 +126,6 @@ impl Config {
             // Each iteration uses 2 rows (two complete additions)
             let row = 2 * iter;
 
-            // Copy `z` running sum from previous iteration.
-            copy(
-                region,
-                || "Copy `z` running sum from previous iteration",
-                self.z_complete,
-                row + offset,
-                &z,
-                &self.perm,
-            )?;
-
             // Update `z`.
             z = {
                 // z_next = z_cur * 2 + k_next
@@ -154,33 +135,29 @@ impl Config {
                 let z_cell = region.assign_advice(
                     || "z",
                     self.z_complete,
-                    row + offset + 1,
+                    row + offset + 2,
                     || z_val.ok_or(Error::SynthesisError),
                 )?;
                 Z(CellValue::new(z_cell, z_val))
             };
             zs.push(z);
 
-            // Assign `x_p` for complete addition
-            let x_p = {
-                let x_p_val = base.x.value();
-                let x_p_cell = region.assign_advice(
-                    || "x_p",
-                    self.add_config.x_p,
-                    row + offset,
-                    || x_p_val.ok_or(Error::SynthesisError),
-                )?;
-                CellValue::<pallas::Base>::new(x_p_cell, x_p_val)
-            };
-
             // Assign `y_p` for complete addition.
             let y_p = {
-                let y_p = base.y.value();
+                let base_y = copy(
+                    region,
+                    || "Copy `base.y`",
+                    self.z_complete,
+                    row + offset + 1,
+                    &base.y,
+                    &self.perm,
+                )?;
 
                 // If the bit is set, use `y`; if the bit is not set, use `-y`
-                let y_p = y_p
+                let y_p = base_y
+                    .value()
                     .zip(k.as_ref())
-                    .map(|(y_p, k)| if !k { -y_p } else { y_p });
+                    .map(|(base_y, k)| if !k { -base_y } else { base_y });
 
                 let y_p_cell = region.assign_advice(
                     || "y_p",
@@ -192,34 +169,12 @@ impl Config {
             };
 
             // U = P if the bit is set; U = -P is the bit is not set.
-            let U = EccPoint { x: x_p, y: y_p };
+            let U = EccPoint { x: base.x, y: y_p };
 
             // Acc + U
             let tmp_acc = self
                 .add_config
                 .assign_region(&U, &acc, row + offset, region)?;
-
-            // Copy acc from `x_a`, `y_a` over to `x_p`, `y_p` on the next row
-            acc = {
-                let acc_x = copy(
-                    region,
-                    || "copy acc x_a",
-                    self.add_config.x_p,
-                    row + offset + 1,
-                    &acc.x,
-                    &self.perm,
-                )?;
-                let acc_y = copy(
-                    region,
-                    || "copy acc y_a",
-                    self.add_config.y_p,
-                    row + offset + 1,
-                    &acc.y,
-                    &self.perm,
-                )?;
-
-                EccPoint { x: acc_x, y: acc_y }
-            };
 
             // Acc + U + Acc
             acc = self
