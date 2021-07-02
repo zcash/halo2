@@ -52,7 +52,7 @@ Given a decomposed scalar $\alpha$ and a fixed base $B$, we compute $[\alpha]B$ 
 1. For each $k_w, w \in [0..85), k_w \in [0..8)$ in the scalar decomposition, witness the $x$- and $y$-coordinates $(x_w,y_w) = M[w][k_w].$
 2. Check that $(x_w, y_w)$ is on the curve: $y_w^2 = x_w^3 + b$.
 3. Witness $u_w$ such that $y_w + z_w = u_w^2$.
-4. For all windows but the last, use [incomplete addition](./incomplete-add.md) to sum the $M[w][k_w]$'s, resulting in $[\alpha]B$.
+4. For all windows but the last, use [incomplete addition](./incomplete-add.md) to sum the $M[w][k_w]$'s, resulting in $[\alpha - k_{84} \cdot (2^3)^{84} + \sum\limits_{j=0}^{83} 2^{3j+1}]B$.
 5. For the last window, use complete addition $M[83][k_{83}] + M[84][k_{84}]$ and return the final result.
 
 > Note: complete addition is required in the final step to correctly map $[0]B$ to a representation of the point at infinity, $(0,0)$; and also to handle a corner case for which the last step is a doubling.
