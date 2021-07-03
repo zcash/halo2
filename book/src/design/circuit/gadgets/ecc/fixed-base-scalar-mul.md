@@ -58,9 +58,17 @@ Given a decomposed scalar $\alpha$ and a fixed base $B$, we compute $[\alpha]B$ 
 > Note: complete addition is required in the final step to correctly map $[0]B$ to a representation of the point at infinity, $(0,0)$; and also to handle a corner case for which the last step is a doubling.
 
 Constraints:
- - $x_w = \mathcal{L}_x[w](k_w)$;
- - $y_w^2 = x_w^3 + b,$ where $b = 5$ (from the Pallas curve equation);
- - $u_w^2 = y_w + Z[w].$
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+8 & q_\text{mul-fixed} \cdot \left( \mathcal{L}_x[w](k_w) - x_w \right) = 0 \\\hline
+4 & q_\text{mul-fixed} \cdot \left( y_w^2 - x_w^3 - b \right) = 0 \\\hline
+3 & q_\text{mul-fixed} \cdot \left( u_w^2 - y_w - Z[w] \right) = 0 \\\hline
+\end{array}
+$$
+
+where $b = 5$ (from the Pallas curve equation).
 
 ### Fixed-base scalar multiplication with signed short exponent
 This is used for $\mathsf{ValueCommit^{Orchard}}$. We want to compute $\mathsf{ValueCommit^{Orchard}_{rcv}}(\mathsf{v^{old}} - \mathsf{v^{new}}) = [\mathsf{v^{old}} - \mathsf{v^{new}}] \mathcal{V} + [\mathsf{rcv}] \mathcal{R}$, where
@@ -80,4 +88,14 @@ $$
 Then compute $P = [m] \mathcal{V}$, and conditionally negate $P$ using $(x, y) \mapsto (x, s \cdot y)$.
 
 We compute the window table in a similar way to full-width fixed-base scalar multiplication,
-but with only $\mathsf{ceil}(64 / 3) = 22$ windows.
+but with only $\mathsf{ceil}(64 / 3) = 22$ windows. In addition to the 21 full-width 3-bit
+constraints, we have two additional constraints:
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+3 & q_\text{scalar-fixed-short} \cdot \left(\mathbf{m}_0 \cdot (1 - \mathbf{m}_0)\right) = 0 \\\hline
+3 & q_\text{scalar-fixed-short} \cdot \left(s^2 - 1\right) = 0 \\\hline
+\end{array}
+$$

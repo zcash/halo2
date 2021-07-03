@@ -242,7 +242,7 @@ Since overflow can only occur in the final step that constrains $\mathbf{z}_0 = 
 
 ### Optimized check for $k \in [t_q, p + t_q)$
 
-Since $t_p + t_q < 2^{130}$, we have $[t_q, p + t_q) = [t_q, t_q + 2^{130}) \;\cup\; [2^{130}, 2^{254}) \;\cup\; \big([2^{254}, 2^{254} + 2^{130}) \;\cap\; [p + t_q - 2^{130}, p + t_q)\big).$
+Since $t_p + t_q < 2^{130}$, we have $$[t_q, p + t_q) = [t_q, t_q + 2^{130}) \;\cup\; [2^{130}, 2^{254}) \;\cup\; \big([2^{254}, 2^{254} + 2^{130}) \;\cap\; [p + t_q - 2^{130}, p + t_q)\big).$$
 
 We may assume that $k = \alpha + t_q \pmod{p}$.
 
@@ -250,8 +250,10 @@ Therefore,
 $\begin{array}{rcl}
 k \in [t_q, p + t_q) &\Leftrightarrow& \big(k \in [t_q, t_q + 2^{130}) \;\vee\; k \in [2^{130}, 2^{254})\big) \;\vee\; \\
                      &               & \big(k \in [2^{254}, 2^{254} + 2^{130}) \;\wedge\; k \in [p + t_q - 2^{130}, p + t_q)\big) \\
+                     \\
                      &\Leftrightarrow& \big(\mathbf{k}_{254} = 0 \implies (k \in [t_q, t_q + 2^{130}) \;\vee\; k \in [2^{130}, 2^{254}))\big) \;\wedge \\
                      &               & \big(\mathbf{k}_{254} = 1 \implies (k \in [2^{254}, 2^{254} + 2^{130}) \;\wedge\; k \in [p + t_q - 2^{130}, p + t_q)\big) \\
+                     \\
                      &\Leftrightarrow& \big(\mathbf{k}_{254} = 0 \implies (\alpha \in [0, 2^{130}) \;\vee\; k \in [2^{130}, 2^{254})\big) \;\wedge \\
                      &               & \big(\mathbf{k}_{254} = 1 \implies (k \in [2^{254}, 2^{254} + 2^{130}) \;\wedge\; (\alpha + 2^{130}) \bmod p \in [0, 2^{130}))\big) \;\;Ⓐ
 \end{array}$
@@ -268,6 +270,7 @@ Now, we can continue optimizing from $Ⓐ$:
 $\begin{array}{rcl}
 k \in [t_q, p + t_q) &\Leftrightarrow& \big(\mathbf{k}_{254} = 0 \implies (\alpha \in [0, 2^{130}) \;\vee\; k \in [2^{130}, 2^{254})\big) \;\wedge \\
                      &               & \big(\mathbf{k}_{254} = 1 \implies (k \in [2^{254}, 2^{254} + 2^{130}) \;\wedge\; (\alpha + 2^{130}) \bmod p \in [0, 2^{130}))\big) \\
+                     \\
                      &\Leftrightarrow& \big(\mathbf{k}_{254} = 0 \implies (\alpha \in [0, 2^{130}) \;\vee\; \mathbf{k}_{253..130} \text{ are not all } 0)\big) \;\wedge \\
                      &               & \big(\mathbf{k}_{254} = 1 \implies (\mathbf{k}_{253..130} \text{ are all } 0 \;\wedge\; (\alpha + 2^{130}) \bmod p \in [0, 2^{130}))\big)
 \end{array}$
@@ -290,9 +293,13 @@ Finally, we can merge the $130$-bit decompositions for the $\mathbf{k}_{254} = 0
 
 Let $s = \alpha + \mathbf{k}_{254} \cdot 2^{130}$. The constraints for the overflow check are:
 
-$\mathbf{z}_0 = \alpha + t_q \pmod{p}$
-$\mathbf{k}_{254} = 1 \implies \big(\mathbf{z}_{130} = 2^{124} \;\wedge\; s \bmod p \in [0, 2^{130})\big)$.
-$\mathbf{k}_{254} = 0 \implies \big(\mathbf{z}_{130} \neq 0 \;\vee\; s \bmod p \in [0, 2^{130})\big)$.
+$$
+\begin{aligned}
+\mathbf{z}_0 &= \alpha + t_q \pmod{p} \\
+\mathbf{k}_{254} = 1 \implies \big(\mathbf{z}_{130} &= 2^{124} \;\wedge\; s \bmod p \in [0, 2^{130})\big) \\
+\mathbf{k}_{254} = 0 \implies \big(\mathbf{z}_{130} &\neq 0 \;\vee\; s \bmod p \in [0, 2^{130})\big)
+\end{aligned}
+$$
 
 Define $\mathsf{inv0}(x) = \begin{cases} 0, &\text{if } x = 0 \\ 1/x, &\text{otherwise.} \end{cases}$
 
@@ -300,10 +307,16 @@ Witness $\eta = \mathsf{inv0}(\mathbf{z}_{130})$, and decompose $s \bmod p$ as $
 
 Then the needed gates are:
 
-$s = \alpha + \mathbf{k}_{254} \cdot 2^{130}$
-$\mathbf{z}_0 = \alpha + t_q \pmod{p}$
-$\mathbf{k}_{254} \cdot (\mathbf{z}_{130} - 2^{124}) = 0$
-$\mathbf{k}_{254} \cdot (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i) = 0$
-$(1 - \mathbf{k}_{254}) \cdot (1 - \mathbf{z}_{130} \cdot \eta) \cdot (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i) = 0$
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+2 & q_\text{mul}^\text{overflow} \cdot \left(s - (\alpha + \mathbf{k}_{254} \cdot 2^{130})\right) = 0 \\\hline
+2 & q_\text{mul}^\text{overflow} \cdot \left(\mathbf{z}_0 - \alpha - t_q\right) = 0 \\\hline
+3 & q_\text{mul}^\text{overflow} \cdot \left(\mathbf{k}_{254} \cdot (\mathbf{z}_{130} - 2^{124})\right) = 0 \\\hline
+3 & q_\text{mul}^\text{overflow} \cdot \left(\mathbf{k}_{254} \cdot (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)\right) = 0 \\\hline
+5 & q_\text{mul}^\text{overflow} \cdot \left((1 - \mathbf{k}_{254}) \cdot (1 - \mathbf{z}_{130} \cdot \eta) \cdot (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)\right) = 0 \\\hline
+\end{array}
+$$
 
 where $\sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i$ can be computed by another running sum. [TODO: be explicit about how to do that.]
