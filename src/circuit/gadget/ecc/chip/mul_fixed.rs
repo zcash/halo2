@@ -151,7 +151,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         meta: &mut VirtualCells<'_, pallas::Base>,
         toggle: Expression<pallas::Base>,
         window: Expression<pallas::Base>,
-    ) -> Vec<Expression<pallas::Base>> {
+    ) -> Vec<(&'static str, Expression<pallas::Base>)> {
         let y_p = meta.query_advice(self.y_p, Rotation::cur());
         let x_p = meta.query_advice(self.x_p, Rotation::cur());
         let z = meta.query_fixed(self.fixed_z, Rotation::cur());
@@ -173,11 +173,18 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         );
 
         // Check interpolation of x-coordinate
-        let x_check = interpolated_x - x_p;
+        let x_check = interpolated_x - x_p.clone();
         // Check that `y + z = u^2`, where `z` is fixed and `u`, `y` are witnessed
-        let y_check = u.clone() * u - y_p - z;
+        let y_check = u.square() - y_p.clone() - z;
+        // Check that (x, y) is on the curve
+        let on_curve =
+            y_p.square() - x_p.clone().square() * x_p - Expression::Constant(pallas::Affine::b());
 
-        vec![toggle.clone() * x_check, toggle * y_check]
+        vec![
+            ("check x", toggle.clone() * x_check),
+            ("check y", toggle.clone() * y_check),
+            ("on-curve", toggle * on_curve),
+        ]
     }
 
     #[allow(clippy::type_complexity)]
