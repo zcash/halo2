@@ -157,13 +157,14 @@ pub mod tests {
     use halo2::{circuit::Layouter, plonk::Error};
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
-    use crate::circuit::gadget::ecc::{chip::EccChip, FixedPointShort, ScalarFixedShort};
+    use crate::circuit::gadget::ecc::{chip::EccChip, FixedPointShort, Point, ScalarFixedShort};
     use crate::constants::load::ValueCommitV;
 
     #[allow(clippy::op_ref)]
     pub fn test_mul_fixed_short(
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
+        zero: &Point<pallas::Affine, EccChip>,
     ) -> Result<(), Error>
     where
         pallas::Scalar: PrimeFieldBits,
@@ -181,7 +182,8 @@ pub mod tests {
                 layouter.namespace(|| "ScalarFixedShort"),
                 Some(scalar_fixed),
             )?;
-            value_commit_v.mul(layouter.namespace(|| "mul"), &scalar_fixed)?;
+            let result = value_commit_v.mul(layouter.namespace(|| "mul by zero"), &scalar_fixed)?;
+            result.constrain_equal(layouter.namespace(|| "[0]B = 𝒪"), &zero)?;
         }
 
         // Random [a]B

@@ -62,13 +62,14 @@ pub mod tests {
 
     use crate::circuit::gadget::ecc::{
         chip::{EccChip, OrchardFixedBasesFull},
-        FixedPoint, ScalarFixed,
+        FixedPoint, Point, ScalarFixed,
     };
     use crate::constants;
 
     pub fn test_mul_fixed(
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
+        zero: &Point<pallas::Affine, EccChip>,
     ) -> Result<(), Error> {
         // commit_ivk_r
         let commit_ivk_r = OrchardFixedBasesFull::CommitIvkR;
@@ -77,6 +78,7 @@ pub mod tests {
             chip.clone(),
             layouter.namespace(|| "commit_ivk_r"),
             commit_ivk_r,
+            &zero,
         )?;
 
         // note_commit_r
@@ -86,6 +88,7 @@ pub mod tests {
             chip.clone(),
             layouter.namespace(|| "note_commit_r"),
             note_commit_r,
+            &zero,
         )?;
 
         // nullifier_k
@@ -95,6 +98,7 @@ pub mod tests {
             chip.clone(),
             layouter.namespace(|| "nullifier_k"),
             nullifier_k,
+            &zero,
         )?;
 
         // value_commit_r
@@ -104,12 +108,18 @@ pub mod tests {
             chip.clone(),
             layouter.namespace(|| "value_commit_r"),
             value_commit_r,
+            &zero,
         )?;
 
         // spend_auth_g
         let spend_auth_g = OrchardFixedBasesFull::SpendAuthG;
         let spend_auth_g = FixedPoint::from_inner(chip.clone(), spend_auth_g);
-        test_single_base(chip, layouter.namespace(|| "spend_auth_g"), spend_auth_g)?;
+        test_single_base(
+            chip,
+            layouter.namespace(|| "spend_auth_g"),
+            spend_auth_g,
+            &zero,
+        )?;
 
         Ok(())
     }
@@ -119,6 +129,7 @@ pub mod tests {
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
         base: FixedPoint<pallas::Affine, EccChip>,
+        zero: &Point<pallas::Affine, EccChip>,
     ) -> Result<(), Error>
     where
         pallas::Scalar: PrimeFieldBits,
@@ -166,7 +177,8 @@ pub mod tests {
                 layouter.namespace(|| "ScalarFixed"),
                 Some(scalar_fixed),
             )?;
-            base.mul(layouter.namespace(|| "mul by zero"), &scalar_fixed)?;
+            let result = base.mul(layouter.namespace(|| "mul by zero"), &scalar_fixed)?;
+            result.constrain_equal(layouter.namespace(|| "[0]B = 𝒪"), &zero)?;
         }
 
         // [-1]B is the largest scalar field element.

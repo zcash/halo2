@@ -248,7 +248,7 @@ pub mod tests {
     use crate::circuit::gadget::{
         ecc::{
             chip::{EccChip, OrchardFixedBasesFull},
-            FixedPoint,
+            FixedPoint, Point,
         },
         utilities::{CellValue, UtilitiesInstructions},
     };
@@ -257,6 +257,7 @@ pub mod tests {
     pub fn test_mul_fixed_base_field(
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
+        zero: &Point<pallas::Affine, EccChip>,
     ) -> Result<(), Error> {
         impl UtilitiesInstructions<pallas::Base> for EccChip {
             type Var = CellValue<pallas::Base>;
@@ -269,6 +270,7 @@ pub mod tests {
             chip.clone(),
             layouter.namespace(|| "commit_ivk_r"),
             commit_ivk_r,
+            &zero,
         )?;
 
         // note_commit_r
@@ -278,6 +280,7 @@ pub mod tests {
             chip.clone(),
             layouter.namespace(|| "note_commit_r"),
             note_commit_r,
+            &zero,
         )?;
 
         // nullifier_k
@@ -287,6 +290,7 @@ pub mod tests {
             chip.clone(),
             layouter.namespace(|| "nullifier_k"),
             nullifier_k,
+            &zero,
         )?;
 
         // value_commit_r
@@ -296,12 +300,18 @@ pub mod tests {
             chip.clone(),
             layouter.namespace(|| "value_commit_r"),
             value_commit_r,
+            &zero,
         )?;
 
         // spend_auth_g
         let spend_auth_g = OrchardFixedBasesFull::SpendAuthG;
         let spend_auth_g = FixedPoint::from_inner(chip.clone(), spend_auth_g);
-        test_single_base(chip, layouter.namespace(|| "spend_auth_g"), spend_auth_g)?;
+        test_single_base(
+            chip,
+            layouter.namespace(|| "spend_auth_g"),
+            spend_auth_g,
+            &zero,
+        )?;
 
         Ok(())
     }
@@ -311,6 +321,7 @@ pub mod tests {
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
         base: FixedPoint<pallas::Affine, EccChip>,
+        zero: &Point<pallas::Affine, EccChip>,
     ) -> Result<(), Error> {
         let column = chip.config().advices[0];
 
@@ -356,7 +367,9 @@ pub mod tests {
                 column,
                 Some(scalar_fixed),
             )?;
-            base.mul_base_field_elem(layouter.namespace(|| "mul by zero"), scalar_fixed)?;
+            let result =
+                base.mul_base_field_elem(layouter.namespace(|| "mul by zero"), scalar_fixed)?;
+            result.constrain_equal(layouter.namespace(|| "[0]B = 𝒪"), &zero)?;
         }
 
         // [-1]B is the largest base field element
