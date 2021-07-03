@@ -1,7 +1,7 @@
 //! This module provides common utilities, traits and structures for group,
 //! field and polynomial arithmetic.
 
-use crossbeam_utils::thread;
+use super::multicore;
 pub use ff::Field;
 use group::Group as _;
 
@@ -167,13 +167,13 @@ pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::C
 pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
     assert_eq!(coeffs.len(), bases.len());
 
-    let num_cpus = num_cpus::get();
-    if coeffs.len() > num_cpus {
-        let chunk = coeffs.len() / num_cpus;
+    let num_threads = multicore::current_num_threads();
+    if coeffs.len() > num_threads {
+        let chunk = coeffs.len() / num_threads;
         let num_chunks = coeffs.chunks(chunk).len();
         let mut results = vec![C::Curve::identity(); num_chunks];
-        thread::scope(|scope| {
-            let chunk = coeffs.len() / num_cpus;
+        multicore::scope(|scope| {
+            let chunk = coeffs.len() / num_threads;
 
             for ((coeffs, bases), acc) in coeffs
                 .chunks(chunk)
@@ -184,8 +184,7 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
                     multiexp_serial(coeffs, bases, acc);
                 });
             }
-        })
-        .unwrap();
+        });
         results.iter().fold(C::Curve::identity(), |a, b| a + b)
     } else {
         let mut acc = C::Curve::identity();
@@ -205,13 +204,13 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
 ///
 /// This will use multithreading if beneficial.
 pub fn best_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
-    let cpus = num_cpus::get();
-    let log_cpus = log2_floor(cpus);
+    let threads = multicore::current_num_threads();
+    let log_threads = log2_floor(threads);
 
-    if log_n <= log_cpus {
+    if log_n <= log_threads {
         serial_fft(a, omega, log_n);
     } else {
-        parallel_fft(a, omega, log_n, log_cpus);
+        parallel_fft(a, omega, log_n, log_threads);
     }
 }
 
@@ -258,15 +257,15 @@ fn serial_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
     }
 }
 
-fn parallel_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32, log_cpus: u32) {
-    assert!(log_n >= log_cpus);
+fn parallel_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32, log_threads: u32) {
+    assert!(log_n >= log_threads);
 
-    let num_cpus = 1 << log_cpus;
-    let log_new_n = log_n - log_cpus;
-    let mut tmp = vec![vec![G::group_zero(); 1 << log_new_n]; num_cpus];
-    let new_omega = omega.pow(&[num_cpus as u64, 0, 0, 0]);
+    let num_threads = 1 << log_threads;
+    let log_new_n = log_n - log_threads;
+    let mut tmp = vec![vec![G::group_zero(); 1 << log_new_n]; num_threads];
+    let new_omega = omega.pow(&[num_threads as u64, 0, 0, 0]);
 
-    thread::scope(|scope| {
+    multicore::scope(|scope| {
         let a = &*a;
 
         for (j, tmp) in tmp.iter_mut().enumerate() {
@@ -278,7 +277,7 @@ fn parallel_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32, log_cpus: u
                 let mut elt = G::Scalar::one();
 
                 for (i, tmp) in tmp.iter_mut().enumerate() {
-                    for s in 0..num_cpus {
+                    for s in 0..num_threads {
                         let idx = (i + (s << log_new_n)) % (1 << log_n);
                         let mut t = a[idx];
                         t.group_scale(&elt);
@@ -292,13 +291,12 @@ fn parallel_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32, log_cpus: u
                 serial_fft(tmp, new_omega, log_new_n);
             });
         }
-    })
-    .unwrap();
+    });
 
     // Unshuffle
-    let mask = (1 << log_cpus) - 1;
+    let mask = (1 << log_threads) - 1;
     for (idx, a) in a.iter_mut().enumerate() {
-        *a = tmp[idx & mask][idx >> log_cpus];
+        *a = tmp[idx & mask][idx >> log_threads];
     }
 }
 
@@ -350,15 +348,15 @@ where
 
 /// This simple utility function will parallelize an operation that is to be
 /// performed over a mutable slice.
-pub fn parallelize<T: Send, F: Fn(&mut [T], usize) + Send + Clone>(v: &mut [T], f: F) {
+pub fn parallelize<T: Send, F: Fn(&mut [T], usize) + Send + Sync + Clone>(v: &mut [T], f: F) {
     let n = v.len();
-    let num_cpus = num_cpus::get();
-    let mut chunk = (n as usize) / num_cpus;
-    if chunk < num_cpus {
+    let num_threads = multicore::current_num_threads();
+    let mut chunk = (n as usize) / num_threads;
+    if chunk < num_threads {
         chunk = n as usize;
     }
 
-    thread::scope(|scope| {
+    multicore::scope(|scope| {
         for (chunk_num, v) in v.chunks_mut(chunk).enumerate() {
             let f = f.clone();
             scope.spawn(move |_| {
@@ -366,8 +364,7 @@ pub fn parallelize<T: Send, F: Fn(&mut [T], usize) + Send + Clone>(v: &mut [T], 
                 f(v, start);
             });
         }
-    })
-    .unwrap();
+    });
 }
 
 fn log2_floor(num: usize) -> u32 {
