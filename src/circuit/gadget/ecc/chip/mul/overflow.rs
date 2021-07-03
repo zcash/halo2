@@ -67,8 +67,7 @@ impl Config {
 
             // q = 2^254 + t_q is the Pallas scalar field modulus.
             // We cast t_q into the base field to check alpha + t_q (mod p).
-            let t_q = pallas::Base::from_u128(T_Q);
-            let t_q = Expression::Constant(t_q);
+            let t_q = Expression::Constant(pallas::Base::from_u128(T_Q));
 
             // z_0 - alpha - t_q = 0 (mod p)
             let recovery = z_0 - alpha - t_q;
@@ -237,6 +236,7 @@ impl Config {
             num_words,
             false,
         )?;
+        // (s - (2^0 s_0 + 2^1 s_1 + ... + 2^129 s_129)) / 2^130
         Ok(zs[zs.len() - 1])
     }
 }

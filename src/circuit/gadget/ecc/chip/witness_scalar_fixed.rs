@@ -36,6 +36,8 @@ impl Config {
             let q_scalar_fixed = meta.query_selector(self.q_scalar_fixed);
             let window = meta.query_advice(self.window, Rotation::cur());
 
+            // Constrain each window to a 3-bit value:
+            // 1 * (window - 0) * (window - 1) * ... * (window - 7)
             let range_check =
                 (0..constants::H).fold(Expression::Constant(pallas::Base::one()), |acc, i| {
                     acc * (window.clone() - Expression::Constant(pallas::Base::from_u64(i as u64)))
@@ -44,6 +46,9 @@ impl Config {
         });
     }
 
+    /// Witnesses the given scalar as `NUM_WINDOWS` 3-bit windows.
+    ///
+    /// The scalar is allowed to be non-canonical.
     fn decompose_scalar_fixed<const NUM_WINDOWS: usize, const SCALAR_NUM_BITS: usize>(
         &self,
         scalar: Option<pallas::Scalar>,

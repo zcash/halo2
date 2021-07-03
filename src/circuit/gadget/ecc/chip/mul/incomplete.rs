@@ -175,7 +175,7 @@ impl Config {
                     .chain(Some(("bool_check", q_mul.clone() * bool_check)))
                     .chain(Some(("gradient_1", q_mul.clone() * gradient_1)))
                     .chain(Some(("secant_line", q_mul.clone() * secant_line)))
-                    .chain(Some(("gradient_2", q_mul.clone() * gradient_2)))
+                    .chain(Some(("gradient_2", q_mul * gradient_2)))
             };
 
             // q_mul == 2
@@ -194,13 +194,13 @@ impl Config {
 
                 // The base used in double-and-add remains constant. We check that its
                 // x- and y- coordinates are the same throughout.
-                let x_p_check = x_p_cur.clone() - x_p_next;
-                let y_p_check = y_p_cur.clone() - y_p_next;
+                let x_p_check = x_p_cur - x_p_next;
+                let y_p_check = y_p_cur - y_p_next;
 
                 std::iter::empty()
                     .chain(Some(("x_p_check", q_mul_is_two.clone() * x_p_check)))
                     .chain(Some(("y_p_check", q_mul_is_two.clone() * y_p_check)))
-                    .chain(for_loop(meta, q_mul_is_two.clone(), y_a_next))
+                    .chain(for_loop(meta, q_mul_is_two, y_a_next))
             };
 
             // q_mul == 3
@@ -312,7 +312,7 @@ impl Config {
         let offset = offset + 1;
 
         // Initialise vector to store all interstitial `z` running sum values.
-        let mut zs: Vec<Z<pallas::Base>> = Vec::new();
+        let mut zs: Vec<Z<pallas::Base>> = Vec::with_capacity(bits.len());
 
         // Incomplete addition
         for (row, k) in bits.iter().enumerate() {

@@ -119,7 +119,7 @@ impl Config {
         };
 
         // Store interstitial running sum `z`s in vector
-        let mut zs: Vec<Z<pallas::Base>> = Vec::new();
+        let mut zs: Vec<Z<pallas::Base>> = Vec::with_capacity(bits.len());
 
         // Complete addition
         for (iter, k) in bits.iter().enumerate() {

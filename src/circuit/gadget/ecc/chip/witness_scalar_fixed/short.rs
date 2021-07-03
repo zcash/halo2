@@ -85,7 +85,7 @@ impl Config {
         let sign_cell = region.assign_advice(
             || "sign",
             self.super_config.window,
-            NUM_WINDOWS_SHORT,
+            offset + NUM_WINDOWS_SHORT,
             || sign.ok_or(Error::SynthesisError),
         )?;
 

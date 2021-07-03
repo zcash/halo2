@@ -106,14 +106,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         self.q_mul_fixed_short
             .enable(region, offset + NUM_WINDOWS)?;
 
-        // Assign final `x, y` to `x_p, y_p` columns and return final point
-        let x_val = magnitude_mul.x.value();
-        let x_var = region.assign_advice(
-            || "x_var",
-            self.super_config.x_p,
-            offset + NUM_WINDOWS,
-            || x_val.ok_or(Error::SynthesisError),
-        )?;
+        // Assign final `y` to `y_p` column and return final point
         let y_var = region.assign_advice(
             || "y_var",
             self.super_config.y_p,
@@ -122,7 +115,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         )?;
 
         let result = EccPoint {
-            x: CellValue::new(x_var, x_val),
+            x: magnitude_mul.x,
             y: CellValue::new(y_var, y_val),
         };
 

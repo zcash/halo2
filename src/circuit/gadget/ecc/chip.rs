@@ -246,7 +246,7 @@ impl EccChip {
             short_config.create_gate(meta);
         }
 
-        // Create gate ths is only used in fixed-base mul using a base field element.
+        // Create gate that is only used in fixed-base mul using a base field element.
         {
             let base_field_config: mul_fixed::base_field_elem::Config = (&config).into();
             base_field_config.create_gate(meta);
@@ -300,7 +300,8 @@ pub struct EccScalarFixedShort {
 /// Each `a_i` is in the range [0..2^3).
 ///
 /// `windows` = [z_1, ..., z_85], where we expect z_85 = 0.
-/// Since z_0 is initialized as α, we store it as `base_field_elem`.
+/// Since z_0 is initialized as the scalar α, we store it as
+/// `base_field_elem`.
 #[derive(Clone, Debug)]
 struct EccBaseFieldElemFixed {
     base_field_elem: CellValue<pallas::Base>,

@@ -147,7 +147,7 @@ impl Config {
                 // Initialize the accumulator `acc = [2]base`
                 let acc = self
                     .add_config
-                    .assign_region(&base, &base, offset, &mut region)?;
+                    .assign_region(base, base, offset, &mut region)?;
 
                 // Increase the offset by 1 after complete addition.
                 let offset = offset + 1;
@@ -170,7 +170,7 @@ impl Config {
                 let (x_a, y_a, zs_incomplete_hi) = self.hi_config.double_and_add(
                     &mut region,
                     offset,
-                    &base,
+                    base,
                     bits_incomplete_hi,
                     (X(acc.x), Y(acc.y), z_init),
                 )?;
@@ -180,13 +180,13 @@ impl Config {
                 let (x_a, y_a, zs_incomplete_lo) = self.lo_config.double_and_add(
                     &mut region,
                     offset,
-                    &base,
+                    base,
                     bits_incomplete_lo,
                     (x_a, y_a, *z),
                 )?;
 
                 // Move from incomplete addition to complete addition.
-                // Inside incomplete::double_and_add, the offset was increase once after initialization
+                // Inside incomplete::double_and_add, the offset was increased once after initialization
                 // of the running sum.
                 // Then, the final assignment of double-and-add was made on row + offset + 1.
                 // Outside of incomplete addition, we must account for these offset increases by adding
@@ -235,11 +235,13 @@ impl Config {
                 }
 
                 let zs = {
-                    let mut zs = vec![z_init];
-                    zs.extend_from_slice(&zs_incomplete_hi);
-                    zs.extend_from_slice(&zs_incomplete_lo);
-                    zs.extend_from_slice(&zs_complete);
-                    zs.extend_from_slice(&[z_0]);
+                    let mut zs = std::iter::empty()
+                        .chain(Some(z_init))
+                        .chain(zs_incomplete_hi.into_iter())
+                        .chain(zs_incomplete_lo.into_iter())
+                        .chain(zs_complete.into_iter())
+                        .chain(Some(z_0))
+                        .collect::<Vec<_>>();
                     assert_eq!(zs.len(), pallas::Scalar::NUM_BITS as usize + 1);
 
                     // This reverses zs to give us [z_0, z_1, ..., z_{254}, z_{255}].
