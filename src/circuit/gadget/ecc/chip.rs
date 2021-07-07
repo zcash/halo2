@@ -99,11 +99,13 @@ pub struct EccConfig {
     pub q_mul_overflow: Selector,
 
     /// Fixed-base full-width scalar multiplication
-    pub mul_fixed: Column<Fixed>,
+    pub q_mul_fixed: Selector,
     /// Fixed-base signed short scalar multiplication
     pub q_mul_fixed_short: Selector,
     /// Fixed-base multiplication using a base field element as the scalar
-    pub base_field_fixed: Column<Fixed>,
+    pub base_field_fixed_mul: Selector,
+    /// Canonicity checks on base field element used as scalar in fixed-base mul
+    pub base_field_fixed_canon: Selector,
 
     /// Witness point
     pub q_point: Selector,
@@ -184,9 +186,10 @@ impl EccChip {
             q_mul_decompose_var: meta.selector(),
             q_mul_overflow: meta.selector(),
             q_mul_lsb: meta.selector(),
-            mul_fixed: meta.fixed_column(),
+            q_mul_fixed: meta.selector(),
             q_mul_fixed_short: meta.selector(),
-            base_field_fixed: meta.fixed_column(),
+            base_field_fixed_mul: meta.selector(),
+            base_field_fixed_canon: meta.selector(),
             q_point: meta.selector(),
             q_scalar_fixed: meta.selector(),
             q_scalar_fixed_short: meta.selector(),

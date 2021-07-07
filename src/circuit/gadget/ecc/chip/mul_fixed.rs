@@ -11,7 +11,8 @@ use group::Curve;
 use halo2::{
     circuit::Region,
     plonk::{
-        Advice, Column, ConstraintSystem, Error, Expression, Fixed, Permutation, VirtualCells,
+        Advice, Column, ConstraintSystem, Error, Expression, Fixed, Permutation, Selector,
+        VirtualCells,
     },
     poly::Rotation,
 };
@@ -62,7 +63,7 @@ impl OrchardFixedBases {
 
 #[derive(Clone, Debug)]
 pub struct Config<const NUM_WINDOWS: usize> {
-    mul_fixed: Column<Fixed>,
+    q_mul_fixed: Selector,
     // The fixed Lagrange interpolation coefficients for `x_p`.
     lagrange_coeffs: [Column<Fixed>; constants::H],
     // The fixed `z` for each window such that `y + z = u^2`.
@@ -87,7 +88,7 @@ pub struct Config<const NUM_WINDOWS: usize> {
 impl<const NUM_WINDOWS: usize> From<&EccConfig> for Config<NUM_WINDOWS> {
     fn from(ecc_config: &EccConfig) -> Self {
         let config = Self {
-            mul_fixed: ecc_config.mul_fixed,
+            q_mul_fixed: ecc_config.q_mul_fixed,
             lagrange_coeffs: ecc_config.lagrange_coeffs,
             fixed_z: ecc_config.fixed_z,
             x_p: ecc_config.advices[0],
@@ -138,7 +139,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         meta.create_gate(
             "x_p, y_p checks for ScalarFixed, ScalarFixedShort",
             |meta| {
-                let mul_fixed = meta.query_fixed(self.mul_fixed, Rotation::cur());
+                let mul_fixed = meta.query_selector(self.q_mul_fixed);
                 let window = meta.query_advice(self.window, Rotation::cur());
                 self.coords_check(meta, mul_fixed, window)
             },
@@ -194,7 +195,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         offset: usize,
         scalar: &ScalarFixed,
         base: OrchardFixedBases,
-        coords_check_toggle: Column<Fixed>,
+        coords_check_toggle: Selector,
     ) -> Result<(EccPoint, EccPoint), Error> {
         // Assign fixed columns for given fixed base
         self.assign_fixed_constants(region, offset, base, coords_check_toggle)?;
@@ -216,7 +217,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
         base: OrchardFixedBases,
-        fixed_column: Column<Fixed>,
+        coords_check_toggle: Selector,
     ) -> Result<(), Error> {
         let mut constants = None;
 
@@ -241,12 +242,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
 
         // Assign fixed columns for given fixed base
         for window in 0..NUM_WINDOWS {
-            region.assign_fixed(
-                || "Enable coords check",
-                fixed_column,
-                window + offset,
-                || Ok(pallas::Base::one()),
-            )?;
+            coords_check_toggle.enable(region, window + offset)?;
 
             // Assign x-coordinate Lagrange interpolation coefficients
             for k in 0..(constants::H) {

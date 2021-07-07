@@ -71,7 +71,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
                     offset,
                     &scalar.into(),
                     base.clone().into(),
-                    self.super_config.mul_fixed,
+                    self.super_config.q_mul_fixed,
                 )?;
 
                 // Add to the cumulative sum to get `[magnitude]B`.

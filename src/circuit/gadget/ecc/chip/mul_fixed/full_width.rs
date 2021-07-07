@@ -31,7 +31,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
                     offset,
                     &scalar.into(),
                     base.into(),
-                    self.0.mul_fixed,
+                    self.0.q_mul_fixed,
                 )?;
 
                 // Add to the accumulator and return the final result as `[scalar]B`.
