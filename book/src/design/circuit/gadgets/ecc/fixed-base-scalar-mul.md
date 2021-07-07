@@ -12,6 +12,16 @@ In most cases, we multiply the fixed bases by $255-$bit scalars from $\mathbb{F}
 
 $$\alpha = k_0 + k_1 \cdot (2^3)^1 + \cdots + k_{84} \cdot (2^3)^{84}, k_i \in [0..2^3).$$
 
+At the point of witnessing the scalar, we range-constrain each $3$-bit word of its decomposition.
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+9 & q_\text{witness-scalar-fixed} \cdot \texttt{range\_check}(k_i, 8) = 0 \\\hline
+\end{array}
+$$
+where $\texttt{range\_check}(k_i, \texttt{range}) = k_i \cdot (1 - k_i) \cdots (\texttt{range} - 1 - k_i).$
+
 ## Load fixed base
 Then, we precompute multiples of the fixed base $B$ for each window. This takes the form of a window table: $M[0..85)[0..8)$ such that:
 
@@ -88,14 +98,79 @@ $$
 Then compute $P = [m] \mathcal{V}$, and conditionally negate $P$ using $(x, y) \mapsto (x, s \cdot y)$.
 
 We compute the window table in a similar way to full-width fixed-base scalar multiplication,
-but with only $\mathsf{ceil}(64 / 3) = 22$ windows. In addition to the 21 full-width 3-bit
-constraints, we have two additional constraints:
+but with only $\mathsf{ceil}(64 / 3) = 22$ windows:
 
+$$\alpha_\textsf{short} = k_0 + k_1 \cdot (2^3)^1 + \cdots + k_{21} \cdot (2^3)^{21}, k_i \in [0..2^3).$$
+
+In addition to the $21$ full-width $3$-bit constraints, we have two additional constraints:
+
+$$
+\begin{array}{|c|l|l|}
+\hline
+\text{Degree} & \text{Constraint} & \text{Comment} \\\hline
+3 & q_\text{scalar-fixed-short} \cdot \left(k_{21} \cdot (1 - k_{21})\right) = 0 & \text{The last window must be a single bit.}\\\hline
+3 & q_\text{scalar-fixed-short} \cdot \left(s^2 - 1\right) = 0  &\text{The sign must be $1$ or $-1$.}\\\hline
+\end{array}
+$$
+
+### Fixed-base scalar multiplication using base field element
+We support using a base field element as the scalar in fixed-base multiplication.
+This is used in
+$\mathsf{DeriveNullifier_{nk}} = \mathsf{Extract}_\mathbb{P}\left(\left[(\mathsf{PRF_{nk}^{nfOrchard}}(\rho) + \psi) \bmod{q_\mathbb{P}}\right]\mathcal{K}^\mathsf{Orchard} + \mathsf{cm}\right)$: here, the scalar $$\left[(\mathsf{PRF_{nk}^{nfOrchard}}(\rho) + \psi) \bmod{q_\mathbb{P}}\right]$$ is the result of a base field addition.
+
+Decompose the base field element $\alpha$ into three-bit windows using a running sum $z$, where $z_{i+1} = (z_i - a_i) / (2^3)$ for $$\alpha = a_0 + (2^3) a_1 + ... + (2^{3(84)}) a_{84}.$$ (This running sum $z$ is not to be confused with the $Z$ array used to check the $y$-coordinate of a fixed-base window.)
+
+We set $z_0 = \alpha$, which means:
+$$
+\begin{aligned}
+z_1 &= (\alpha - k_0) / 2^3, \text{ (subtract the lowest 3 bits)}\\
+    &= k_1 + (2^3) k_2 + ... + 2^{3(83)} k_{84},\\
+z_2 &= (z_1 - k_1) / 2^3\\
+    &= k_2 + (2^3) k_3 + ... + 2^{3(82)} k_{84},\\
+    &\cdots,\\
+z_{84} &= k_{84}\\
+z_{85} &= (z_{84} - k_{84}) / 2^3\\
+       &= 0.
+\end{aligned}
+$$
+
+Since we don't directly witness this decomposition, we must range-constrain the difference at each step of the running sum. We also constrain the final output of the running sum to be $0$.
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-3 & q_\text{scalar-fixed-short} \cdot \left(\mathbf{m}_0 \cdot (1 - \mathbf{m}_0)\right) = 0 \\\hline
-3 & q_\text{scalar-fixed-short} \cdot \left(s^2 - 1\right) = 0 \\\hline
+9 & q_\text{decompose-base-field} \cdot \texttt{range\_check}(z_i - z_{i+1} \cdot (2^3), 8) = 0 \\\hline
+2 & q_\text{decompose-base-field} \cdot z_{85} = 0 \\\hline
+\end{array}
+$$
+
+We also enforce canonicity of this decomposition. That is, we want to check that $0 \leq \alpha < p,$ where $p$ the is Pallas base field modulus $$p = 2^{254} + t_p = 2^{254} + 45560315531419706090280762371685220353.$$ Note that $t_p < 2^{130}.$
+
+To do this, we decompose $\alpha$ into three pieces: $$\alpha = \alpha_0 \text{ (252 bits) }  || \alpha_1 \text{ (2 bits) } || \alpha_2 \text{ (1 bit) }.$$
+
+We check the correctness of this decomposition by:
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+5 & q_\text{canon-base-field} \cdot \texttt{range\_check}(\alpha_1), 4) = 0 \\\hline
+3 & q_\text{canon-base-field} \cdot \texttt{range\_check}(\alpha_2), 2) = 0 \\\hline
+2 & q_\text{canon-base-field} \cdot \left(z_{84} - (\alpha_1 + \alpha_2 \cdot 2^2)\right) = 0 \\\hline
+\end{array}
+$$
+If the MSB $\alpha_2 = 0$ is not set, then $\alpha < 2^{254} < p.$ However, in the case where $\alpha_2 = 1$, we must check:
+- $\alpha_2 = 1 \implies \alpha_1 = 0;$
+- $\alpha_2 = 1 \implies \alpha_0 < t_p$:
+  - $\alpha_2 = 1 \implies 0 ≤ \alpha_0 < 2^{130}$
+  - $\alpha_2 = 1 \implies 0 ≤ \alpha_0 + 2^{130} - t_p < 2^{130}$
+
+This will involve 13 ten-bit [lookups](../lookup_range_check.md) for each $\alpha_0$ and $\alpha_0' \equiv \alpha_0 + 2^{130} - t_p$, where we constrain the $z_{13}$ running sum output of each lookup to be $0$ if $\alpha_2 = 1.$
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \alpha_1 = 0 \\\hline
+3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot z_{13}(\texttt{lookup}(\alpha_0, 13)) = 0 \\\hline
+3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot z_{13}(\texttt{lookup}(\alpha_0', 13)) = 0 \\\hline
 \end{array}
 $$
