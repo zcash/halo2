@@ -126,7 +126,7 @@ impl Config {
                 let alpha_2_range_check = range_check(alpha_2.clone(), 1 << 1);
                 // Check that α_1 + 2^2 α_2 = z_84_alpha
                 let z_84_alpha_check = z_84_alpha.clone()
-                    - (alpha_1 + alpha_2.clone() * pallas::Base::from_u64(1 << 2));
+                    - (alpha_1.clone() + alpha_2.clone() * pallas::Base::from_u64(1 << 2));
 
                 // Check that the witnessed α_0 fulfils the constraint α_0 = α - z_84_alpha * 2^252
                 let two_pow_252 = pallas::Base::from_u128(1 << 126).square();
@@ -166,6 +166,7 @@ impl Config {
             //
             let canon_checks = {
                 std::iter::empty()
+                    .chain(Some(("MSB = 1 => alpha_1 = 0", alpha_2.clone() * alpha_1)))
                     .chain(Some((
                         "MSB = 1 => z_13_alpha_0 = 0",
                         alpha_2.clone() * z_13_alpha_0,
