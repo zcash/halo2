@@ -1,9 +1,11 @@
+use ff::PrimeFieldBits;
 use halo2::{
     circuit::{Cell, Layouter, Region},
     plonk::{Advice, Column, Error, Permutation},
 };
 use pasta_curves::arithmetic::FieldExt;
 use std::array;
+use std::convert::TryInto;
 
 pub(crate) mod cond_swap;
 pub(crate) mod enable_flag;
@@ -96,4 +98,28 @@ pub fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize>(
         }
     }
     ret
+}
+
+/// Subsets a field element to a specified bitrange (little-endian)
+pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(
+    field_elem: F,
+    bitrange: std::ops::Range<usize>,
+) -> F {
+    assert!(bitrange.end <= F::NUM_BITS as usize);
+
+    let bits: Vec<bool> = field_elem
+        .to_le_bits()
+        .iter()
+        .by_val()
+        .skip(bitrange.start)
+        .take(bitrange.end - bitrange.start)
+        .chain(std::iter::repeat(false))
+        .take(256)
+        .collect();
+    let bytearray: Vec<u8> = bits
+        .chunks_exact(8)
+        .map(|byte| byte.iter().rev().fold(0u8, |acc, bit| acc * 2 + *bit as u8))
+        .collect();
+
+    F::from_bytes(&bytearray.try_into().unwrap()).unwrap()
 }
