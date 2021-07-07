@@ -1,4 +1,4 @@
-use std::array;
+use std::{array, collections::HashSet};
 
 use super::{copy, CellValue, EccConfig, EccPoint, Var};
 use group::Curve;
@@ -38,6 +38,10 @@ impl From<&EccConfig> for Config {
 }
 
 impl Config {
+    pub(crate) fn advice_columns(&self) -> HashSet<Column<Advice>> {
+        core::array::IntoIter::new([self.x_p, self.y_p, self.x_qr, self.y_qr]).collect()
+    }
+
     pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("incomplete addition gates", |meta| {
             let q_add_incomplete = meta.query_selector(self.q_add_incomplete);
