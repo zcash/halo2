@@ -5,7 +5,7 @@ use crate::{
     constants::{self, util::decompose_scalar_fixed, NUM_WINDOWS},
 };
 use halo2::{
-    circuit::Region,
+    circuit::{Layouter, Region},
     plonk::{Column, ConstraintSystem, Error, Expression, Fixed},
     poly::Rotation,
 };
@@ -99,55 +99,61 @@ impl Config {
         });
     }
 
-    pub fn assign_region(
+    pub fn assign(
         &self,
+        mut layouter: impl Layouter<pallas::Base>,
         scalar: CellValue<pallas::Base>,
         base: OrchardFixedBasesFull,
-        offset: usize,
-        region: &mut Region<'_, pallas::Base>,
     ) -> Result<EccPoint, Error> {
-        // Decompose scalar
-        let scalar = self.decompose_base_field_elem(scalar, offset, region)?;
+        layouter.assign_region(
+            || "Base-field elem fixed-base mul",
+            |mut region| {
+                let offset = 0;
 
-        let (acc, mul_b) = self.super_config.assign_region_inner(
-            region,
-            offset,
-            &(&scalar).into(),
-            base.into(),
-            self.base_field_fixed,
-        )?;
+                // Decompose scalar
+                let scalar = self.decompose_base_field_elem(scalar, offset, &mut region)?;
 
-        // Increase offset by 1 because the running sum decomposition takes
-        // up 86 rows (1 more than the number of windows.)
-        let offset = offset + 1;
+                let (acc, mul_b) = self.super_config.assign_region_inner(
+                    &mut region,
+                    offset,
+                    &(&scalar).into(),
+                    base.into(),
+                    self.base_field_fixed,
+                )?;
 
-        // Add to the accumulator and return the final result as `[scalar]B`.
-        let result = self.super_config.add_config.assign_region(
-            &mul_b,
-            &acc,
-            offset + NUM_WINDOWS,
-            region,
-        )?;
+                // Increase offset by 1 because the running sum decomposition takes
+                // up 86 rows (1 more than the number of windows.)
+                let offset = offset + 1;
 
-        #[cfg(test)]
-        // Check that the correct multiple is obtained.
-        {
-            use group::Curve;
+                // Add to the accumulator and return the final result as `[scalar]B`.
+                let result = self.super_config.add_config.assign_region(
+                    &mul_b,
+                    &acc,
+                    offset + NUM_WINDOWS,
+                    &mut region,
+                )?;
 
-            let base: super::OrchardFixedBases = base.into();
-            let scalar = &scalar
-                .base_field_elem()
-                .value()
-                .map(|scalar| pallas::Scalar::from_bytes(&scalar.to_bytes()).unwrap());
-            let real_mul = scalar.map(|scalar| base.generator() * scalar);
-            let result = result.point();
+                #[cfg(test)]
+                // Check that the correct multiple is obtained.
+                {
+                    use group::Curve;
 
-            if let (Some(real_mul), Some(result)) = (real_mul, result) {
-                assert_eq!(real_mul.to_affine(), result);
-            }
-        }
+                    let base: super::OrchardFixedBases = base.into();
+                    let scalar = &scalar
+                        .base_field_elem()
+                        .value()
+                        .map(|scalar| pallas::Scalar::from_bytes(&scalar.to_bytes()).unwrap());
+                    let real_mul = scalar.map(|scalar| base.generator() * scalar);
+                    let result = result.point();
 
-        Ok(result)
+                    if let (Some(real_mul), Some(result)) = (real_mul, result) {
+                        assert_eq!(real_mul.to_affine(), result);
+                    }
+                }
+
+                Ok(result)
+            },
+        )
     }
 
     fn decompose_base_field_elem(

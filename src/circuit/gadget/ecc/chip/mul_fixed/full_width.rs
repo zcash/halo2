@@ -1,6 +1,6 @@
 use super::super::{EccConfig, EccPoint, EccScalarFixed, OrchardFixedBasesFull};
 
-use halo2::{circuit::Region, plonk::Error};
+use halo2::{circuit::Layouter, plonk::Error};
 use pasta_curves::pallas;
 
 pub struct Config<const NUM_WINDOWS: usize>(super::Config<NUM_WINDOWS>);
@@ -12,45 +12,53 @@ impl<const NUM_WINDOWS: usize> From<&EccConfig> for Config<NUM_WINDOWS> {
 }
 
 impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
-    pub fn assign_region(
+    pub fn assign(
         &self,
+        mut layouter: impl Layouter<pallas::Base>,
         scalar: &EccScalarFixed,
         base: OrchardFixedBasesFull,
-        offset: usize,
-        region: &mut Region<'_, pallas::Base>,
     ) -> Result<EccPoint, Error> {
-        // Copy the scalar decomposition
-        self.0.copy_scalar(region, offset, &scalar.into())?;
+        layouter.assign_region(
+            || "Full-width fixed-base mul",
+            |mut region| {
+                let offset = 0;
 
-        let (acc, mul_b) = self.0.assign_region_inner(
-            region,
-            offset,
-            &scalar.into(),
-            base.into(),
-            self.0.mul_fixed,
-        )?;
+                // Copy the scalar decomposition
+                self.0.copy_scalar(&mut region, offset, &scalar.into())?;
 
-        // Add to the accumulator and return the final result as `[scalar]B`.
-        let result = self
-            .0
-            .add_config
-            .assign_region(&mul_b, &acc, offset + NUM_WINDOWS, region)?;
+                let (acc, mul_b) = self.0.assign_region_inner(
+                    &mut region,
+                    offset,
+                    &scalar.into(),
+                    base.into(),
+                    self.0.mul_fixed,
+                )?;
 
-        #[cfg(test)]
-        // Check that the correct multiple is obtained.
-        {
-            use group::Curve;
+                // Add to the accumulator and return the final result as `[scalar]B`.
+                let result = self.0.add_config.assign_region(
+                    &mul_b,
+                    &acc,
+                    offset + NUM_WINDOWS,
+                    &mut region,
+                )?;
 
-            let base: super::OrchardFixedBases = base.into();
-            let real_mul = scalar.value.map(|scalar| base.generator() * scalar);
-            let result = result.point();
+                #[cfg(test)]
+                // Check that the correct multiple is obtained.
+                {
+                    use group::Curve;
 
-            if let (Some(real_mul), Some(result)) = (real_mul, result) {
-                assert_eq!(real_mul.to_affine(), result);
-            }
-        }
+                    let base: super::OrchardFixedBases = base.into();
+                    let real_mul = scalar.value.map(|scalar| base.generator() * scalar);
+                    let result = result.point();
 
-        Ok(result)
+                    if let (Some(real_mul), Some(result)) = (real_mul, result) {
+                        assert_eq!(real_mul.to_affine(), result);
+                    }
+                }
+
+                Ok(result)
+            },
+        )
     }
 }
 

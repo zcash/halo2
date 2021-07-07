@@ -449,9 +449,10 @@ impl EccInstructions<pallas::Affine> for EccChip {
     ) -> Result<Self::Point, Error> {
         let config: mul_fixed::full_width::Config<{ constants::NUM_WINDOWS }> =
             self.config().into();
-        layouter.assign_region(
-            || format!("fixed-base mul of {:?}", base),
-            |mut region| config.assign_region(scalar, *base, 0, &mut region),
+        config.assign(
+            layouter.namespace(|| format!("fixed-base mul of {:?}", base)),
+            scalar,
+            *base,
         )
     }
 
@@ -463,9 +464,10 @@ impl EccInstructions<pallas::Affine> for EccChip {
     ) -> Result<Self::Point, Error> {
         let config: mul_fixed::short::Config<{ constants::NUM_WINDOWS_SHORT }> =
             self.config().into();
-        layouter.assign_region(
-            || format!("short fixed-base mul of {:?}", base),
-            |mut region| config.assign_region(scalar, base, 0, &mut region),
+        config.assign(
+            layouter.namespace(|| format!("short fixed-base mul of {:?}", base)),
+            scalar,
+            base,
         )
     }
 
@@ -476,9 +478,10 @@ impl EccInstructions<pallas::Affine> for EccChip {
         base: &Self::FixedPoints,
     ) -> Result<Self::Point, Error> {
         let config: mul_fixed::base_field_elem::Config = self.config().into();
-        layouter.assign_region(
-            || format!("base field elem fixed-base mul of {:?}", base),
-            |mut region| config.assign_region(base_field_elem, *base, 0, &mut region),
+        config.assign(
+            layouter.namespace(|| format!("base-field elem fixed-base mul of {:?}", base)),
+            base_field_elem,
+            *base,
         )
     }
 }

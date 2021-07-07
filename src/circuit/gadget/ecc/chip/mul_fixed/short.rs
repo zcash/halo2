@@ -4,7 +4,7 @@ use super::super::{copy, CellValue, EccConfig, EccPoint, EccScalarFixedShort, Va
 use crate::constants::ValueCommitV;
 
 use halo2::{
-    circuit::Region,
+    circuit::Layouter,
     plonk::{ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
@@ -51,103 +51,110 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         });
     }
 
-    pub fn assign_region(
+    pub fn assign(
         &self,
+        mut layouter: impl Layouter<pallas::Base>,
         scalar: &EccScalarFixedShort,
         base: &ValueCommitV,
-        offset: usize,
-        region: &mut Region<'_, pallas::Base>,
     ) -> Result<EccPoint, Error> {
-        // Copy the scalar decomposition
-        self.super_config
-            .copy_scalar(region, offset, &scalar.into())?;
+        layouter.assign_region(
+            || "Short fixed-base mul",
+            |mut region| {
+                let offset = 0;
 
-        let (acc, mul_b) = self.super_config.assign_region_inner(
-            region,
-            offset,
-            &scalar.into(),
-            base.clone().into(),
-            self.super_config.mul_fixed,
-        )?;
+                // Copy the scalar decomposition
+                self.super_config
+                    .copy_scalar(&mut region, offset, &scalar.into())?;
 
-        // Add to the cumulative sum to get `[magnitude]B`.
-        let magnitude_mul = self.super_config.add_config.assign_region(
-            &mul_b,
-            &acc,
-            offset + NUM_WINDOWS,
-            region,
-        )?;
+                let (acc, mul_b) = self.super_config.assign_region_inner(
+                    &mut region,
+                    offset,
+                    &scalar.into(),
+                    base.clone().into(),
+                    self.super_config.mul_fixed,
+                )?;
 
-        // Increase offset by 1 after complete addition
-        let offset = offset + 1;
+                // Add to the cumulative sum to get `[magnitude]B`.
+                let magnitude_mul = self.super_config.add_config.assign_region(
+                    &mul_b,
+                    &acc,
+                    offset + NUM_WINDOWS,
+                    &mut region,
+                )?;
 
-        // Assign sign to `window` column
-        let sign = copy(
-            region,
-            || "sign",
-            self.super_config.window,
-            offset + NUM_WINDOWS,
-            &scalar.sign,
-            &self.super_config.perm,
-        )?;
+                // Increase offset by 1 after complete addition
+                let offset = offset + 1;
 
-        // Conditionally negate `y`-coordinate
-        let y_val = if let Some(sign) = sign.value() {
-            if sign == -pallas::Base::one() {
-                magnitude_mul.y.value().map(|y: pallas::Base| -y)
-            } else {
-                magnitude_mul.y.value()
-            }
-        } else {
-            None
-        };
+                // Assign sign to `window` column
+                let sign = copy(
+                    &mut region,
+                    || "sign",
+                    self.super_config.window,
+                    offset + NUM_WINDOWS,
+                    &scalar.sign,
+                    &self.super_config.perm,
+                )?;
 
-        // Enable mul_fixed_short selector on final row
-        self.q_mul_fixed_short
-            .enable(region, offset + NUM_WINDOWS)?;
-
-        // Assign final `y` to `y_p` column and return final point
-        let y_var = region.assign_advice(
-            || "y_var",
-            self.super_config.y_p,
-            offset + NUM_WINDOWS,
-            || y_val.ok_or(Error::SynthesisError),
-        )?;
-
-        let result = EccPoint {
-            x: magnitude_mul.x,
-            y: CellValue::new(y_var, y_val),
-        };
-
-        #[cfg(test)]
-        // Check that the correct multiple is obtained.
-        {
-            use group::Curve;
-
-            let base: super::OrchardFixedBases = base.clone().into();
-
-            let scalar = scalar
-                .magnitude
-                .zip(scalar.sign.value())
-                .map(|(magnitude, sign)| {
-                    let sign = if sign == pallas::Base::one() {
-                        pallas::Scalar::one()
-                    } else if sign == -pallas::Base::one() {
-                        -pallas::Scalar::one()
+                // Conditionally negate `y`-coordinate
+                let y_val = if let Some(sign) = sign.value() {
+                    if sign == -pallas::Base::one() {
+                        magnitude_mul.y.value().map(|y: pallas::Base| -y)
                     } else {
-                        panic!("Sign should be 1 or -1.")
-                    };
-                    magnitude * sign
-                });
-            let real_mul = scalar.map(|scalar| base.generator() * scalar);
-            let result = result.point();
+                        magnitude_mul.y.value()
+                    }
+                } else {
+                    None
+                };
 
-            if let (Some(real_mul), Some(result)) = (real_mul, result) {
-                assert_eq!(real_mul.to_affine(), result);
-            }
-        }
+                // Enable mul_fixed_short selector on final row
+                self.q_mul_fixed_short
+                    .enable(&mut region, offset + NUM_WINDOWS)?;
 
-        Ok(result)
+                // Assign final `y` to `y_p` column and return final point
+                let y_var = region.assign_advice(
+                    || "y_var",
+                    self.super_config.y_p,
+                    offset + NUM_WINDOWS,
+                    || y_val.ok_or(Error::SynthesisError),
+                )?;
+
+                let result = EccPoint {
+                    x: magnitude_mul.x,
+                    y: CellValue::new(y_var, y_val),
+                };
+
+                #[cfg(test)]
+                // Check that the correct multiple is obtained.
+                {
+                    use group::Curve;
+
+                    let base: super::OrchardFixedBases = base.clone().into();
+
+                    let scalar =
+                        scalar
+                            .magnitude
+                            .zip(scalar.sign.value())
+                            .map(|(magnitude, sign)| {
+                                let sign = if sign == pallas::Base::one() {
+                                    pallas::Scalar::one()
+                                } else if sign == -pallas::Base::one() {
+                                    -pallas::Scalar::one()
+                                } else {
+                                    panic!("Sign should be 1 or -1.")
+                                };
+                                magnitude * sign
+                            });
+                    let real_mul = scalar.map(|scalar| base.generator() * scalar);
+                    let result = result.point();
+
+                    if let (Some(real_mul), Some(result)) = (real_mul, result) {
+                        assert_eq!(real_mul.to_affine(), result);
+                    }
+                }
+
+                Ok(result)
+            },
+        )
     }
 }
 
