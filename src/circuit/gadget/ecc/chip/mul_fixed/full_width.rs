@@ -18,47 +18,49 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         scalar: &EccScalarFixed,
         base: OrchardFixedBasesFull,
     ) -> Result<EccPoint, Error> {
-        layouter.assign_region(
-            || "Full-width fixed-base mul",
+        let (acc, mul_b) = layouter.assign_region(
+            || "Full-width fixed-base mul (incomplete addition)",
             |mut region| {
                 let offset = 0;
 
                 // Copy the scalar decomposition
                 self.0.copy_scalar(&mut region, offset, &scalar.into())?;
 
-                let (acc, mul_b) = self.0.assign_region_inner(
+                self.0.assign_region_inner(
                     &mut region,
                     offset,
                     &scalar.into(),
                     base.into(),
                     self.0.q_mul_fixed,
-                )?;
-
-                // Add to the accumulator and return the final result as `[scalar]B`.
-                let result = self.0.add_config.assign_region(
-                    &mul_b,
-                    &acc,
-                    offset + NUM_WINDOWS,
-                    &mut region,
-                )?;
-
-                #[cfg(test)]
-                // Check that the correct multiple is obtained.
-                {
-                    use group::Curve;
-
-                    let base: super::OrchardFixedBases = base.into();
-                    let real_mul = scalar.value.map(|scalar| base.generator() * scalar);
-                    let result = result.point();
-
-                    if let (Some(real_mul), Some(result)) = (real_mul, result) {
-                        assert_eq!(real_mul.to_affine(), result);
-                    }
-                }
-
-                Ok(result)
+                )
             },
-        )
+        )?;
+
+        // Add to the accumulator and return the final result as `[scalar]B`.
+        let result = layouter.assign_region(
+            || "Full-width fixed-base mul (last window, complete addition)",
+            |mut region| {
+                self.0
+                    .add_config
+                    .assign_region(&mul_b, &acc, 0, &mut region)
+            },
+        )?;
+
+        #[cfg(test)]
+        // Check that the correct multiple is obtained.
+        {
+            use group::Curve;
+
+            let base: super::OrchardFixedBases = base.into();
+            let real_mul = scalar.value.map(|scalar| base.generator() * scalar);
+            let result = result.point();
+
+            if let (Some(real_mul), Some(result)) = (real_mul, result) {
+                assert_eq!(real_mul.to_affine(), result);
+            }
+        }
+
+        Ok(result)
     }
 }
 

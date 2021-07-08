@@ -4,7 +4,7 @@ use crate::{
     circuit::gadget::utilities::{
         bitrange_subset, copy, lookup_range_check::LookupRangeCheckConfig, CellValue, Var,
     },
-    constants::{self, util::decompose_scalar_fixed, NUM_WINDOWS, T_P},
+    constants::{self, util::decompose_scalar_fixed, T_P},
     primitives::sinsemilla,
 };
 use halo2::{
@@ -29,7 +29,7 @@ impl From<&EccConfig> for Config {
         let config = Self {
             base_field_fixed_mul: config.base_field_fixed_mul,
             base_field_fixed_canon: config.base_field_fixed_canon,
-            canon_advices: [config.advices[7], config.advices[8], config.advices[9]],
+            canon_advices: [config.advices[6], config.advices[7], config.advices[8]],
             lookup_config: config.lookup_config.clone(),
             super_config: config.into(),
         };
@@ -205,8 +205,8 @@ impl Config {
         scalar: CellValue<pallas::Base>,
         base: OrchardFixedBasesFull,
     ) -> Result<EccPoint, Error> {
-        let (result, scalar) = layouter.assign_region(
-            || "Base-field elem fixed-base mul",
+        let (scalar, acc, mul_b) = layouter.assign_region(
+            || "Base-field elem fixed-base mul (incomplete addition)",
             |mut region| {
                 let offset = 0;
 
@@ -221,39 +221,37 @@ impl Config {
                     self.base_field_fixed_mul,
                 )?;
 
-                // Increase offset by 1 because the running sum decomposition takes
-                // up 86 rows (1 more than the number of windows.)
-                let offset = offset + 1;
-
-                // Add to the accumulator and return the final result as `[scalar]B`.
-                let result = self.super_config.add_config.assign_region(
-                    &mul_b,
-                    &acc,
-                    offset + NUM_WINDOWS,
-                    &mut region,
-                )?;
-
-                #[cfg(test)]
-                // Check that the correct multiple is obtained.
-                {
-                    use group::Curve;
-
-                    let base: super::OrchardFixedBases = base.into();
-                    let scalar = &scalar
-                        .base_field_elem()
-                        .value()
-                        .map(|scalar| pallas::Scalar::from_bytes(&scalar.to_bytes()).unwrap());
-                    let real_mul = scalar.map(|scalar| base.generator() * scalar);
-                    let result = result.point();
-
-                    if let (Some(real_mul), Some(result)) = (real_mul, result) {
-                        assert_eq!(real_mul.to_affine(), result);
-                    }
-                }
-
-                Ok((result, scalar))
+                Ok((scalar, acc, mul_b))
             },
         )?;
+
+        // Add to the accumulator and return the final result as `[scalar]B`.
+        let result = layouter.assign_region(
+            || "Base-field elem fixed-base mul (complete addition)",
+            |mut region| {
+                self.super_config
+                    .add_config
+                    .assign_region(&mul_b, &acc, 0, &mut region)
+            },
+        )?;
+
+        #[cfg(test)]
+        // Check that the correct multiple is obtained.
+        {
+            use group::Curve;
+
+            let base: super::OrchardFixedBases = base.into();
+            let scalar = &scalar
+                .base_field_elem()
+                .value()
+                .map(|scalar| pallas::Scalar::from_bytes(&scalar.to_bytes()).unwrap());
+            let real_mul = scalar.map(|scalar| base.generator() * scalar);
+            let result = result.point();
+
+            if let (Some(real_mul), Some(result)) = (real_mul, result) {
+                assert_eq!(real_mul.to_affine(), result);
+            }
+        }
 
         // We want to enforce canonicity of a 255-bit base field element, α.
         // That is, we want to check that 0 ≤ α < p, where p is Pallas base
