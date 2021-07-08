@@ -1,7 +1,7 @@
 use ff::PrimeFieldBits;
 use halo2::{
     circuit::{Cell, Layouter, Region},
-    plonk::{Advice, Column, Error, Permutation},
+    plonk::{Advice, Column, Error, Expression, Permutation},
 };
 use pasta_curves::arithmetic::FieldExt;
 use std::array;
@@ -122,4 +122,13 @@ pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(
         .collect();
 
     F::from_bytes(&bytearray.try_into().unwrap()).unwrap()
+}
+
+/// Check that an expression is in the small range [0..range),
+/// i.e. 0 ≤ word < range.
+pub fn range_check<F: FieldExt>(word: Expression<F>, range: usize) -> Expression<F> {
+    (0..range)
+        .map(|i| Expression::Constant(F::from_u64(i as u64)))
+        .reduce(|acc, i| acc * (word.clone() - i))
+        .expect("range > 0")
 }

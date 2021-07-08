@@ -82,10 +82,6 @@ pub const NUM_WINDOWS: usize =
 pub const NUM_WINDOWS_SHORT: usize =
     (L_VALUE + FIXED_BASE_WINDOW_SIZE - 1) / FIXED_BASE_WINDOW_SIZE;
 
-/// Number of bits for which complete addition needs to be used in variable-base
-/// scalar multiplication
-pub const NUM_COMPLETE_BITS: usize = 3;
-
 /// For each fixed base, we calculate its scalar multiples in three-bit windows.
 /// Each window will have $2^3 = 8$ points.
 fn compute_window_table<C: CurveAffine>(base: C, num_windows: usize) -> Vec<[C; H]> {

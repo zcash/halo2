@@ -1,9 +1,12 @@
 use super::{CellValue, EccConfig, Var};
-use crate::constants::{self, util};
+use crate::{
+    circuit::gadget::utilities::range_check,
+    constants::{self, util},
+};
 use arrayvec::ArrayVec;
 use halo2::{
     circuit::Region,
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Permutation, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Error, Permutation, Selector},
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -38,11 +41,7 @@ impl Config {
 
             // Constrain each window to a 3-bit value:
             // 1 * (window - 0) * (window - 1) * ... * (window - 7)
-            let range_check =
-                (0..constants::H).fold(Expression::Constant(pallas::Base::one()), |acc, i| {
-                    acc * (window.clone() - Expression::Constant(pallas::Base::from_u64(i as u64)))
-                });
-            vec![q_scalar_fixed * range_check]
+            vec![q_scalar_fixed * range_check(window, constants::H)]
         });
     }
 

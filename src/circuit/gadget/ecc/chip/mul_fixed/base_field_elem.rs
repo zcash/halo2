@@ -2,7 +2,8 @@ use super::super::{EccBaseFieldElemFixed, EccConfig, EccPoint, OrchardFixedBases
 
 use crate::{
     circuit::gadget::utilities::{
-        bitrange_subset, copy, lookup_range_check::LookupRangeCheckConfig, CellValue, Var,
+        bitrange_subset, copy, lookup_range_check::LookupRangeCheckConfig, range_check, CellValue,
+        Var,
     },
     constants::{self, util::decompose_scalar_fixed, T_P},
     primitives::sinsemilla,
@@ -37,7 +38,7 @@ impl From<&EccConfig> for Config {
         let add_incomplete_advices = config.super_config.add_incomplete_config.advice_columns();
         for canon_advice in config.canon_advices.iter() {
             assert!(
-                !add_incomplete_advices.contains(&canon_advice),
+                !add_incomplete_advices.contains(canon_advice),
                 "Deconflict canon_advice columns with incomplete addition columns."
             );
         }
@@ -48,29 +49,21 @@ impl From<&EccConfig> for Config {
 
 impl Config {
     pub fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
-        // Check that an expression is in the range [0..range),
-        // i.e. 0 ≤ word < range.
-        let range_check = |word: Expression<pallas::Base>, range: usize| {
-            (0..range).fold(Expression::Constant(pallas::Base::one()), |acc, i| {
-                acc * (word.clone() - Expression::Constant(pallas::Base::from_u64(i as u64)))
-            })
-        };
-
         // Decompose the base field element α into three-bit windows
         // using a running sum `z`, where z_{i+1} = (z_i - a_i) / (2^3)
-        // for α = a_0 + (2^3) a_1 + ... + (2^{3(84)}) a_{84}.
+        // for α = a_0 + 2^3 a_1 + ... + 2^{3*84} a_84.
         //
         // We set z_0 = α, which implies:
         //      z_1 = (α - a_0) / 2^3, (subtract the lowest 3 bits)
-        //          = a_1 + (2^3) a_2 + ... + 2^{3(83)} a_{84},
+        //          = a_1 + 2^3 a_2 + ... + 2^{3*83} a_84,
         //      z_2 = (z_1 - a_1) / 2^3
-        //          = a_2 + (2^3) a_3 + ... + 2^{3(82)} a_{84},
+        //          = a_2 + 2^3 a_3 + ... + 2^{3*82} a_84,
         //      ...,
-        //      z_{84} = a_{84}
-        //      z_n = (z_{84} - a_{84}) / 2^3
+        //      z_84 = a_84
+        //      z_n = (z_84 - a_84) / 2^3
         //          = 0.
         //
-        // This gate checks that each a_i = z_i - z_{i+1} * (2^3) is within
+        // This gate checks that each a_i = z_i - z_{i+1} * 2^3 is within
         // 3 bits.
         //
         // This gate also checks that this window uses the correct y_p and
@@ -81,8 +74,8 @@ impl Config {
             let z_cur = meta.query_advice(self.super_config.window, Rotation::cur());
             let z_next = meta.query_advice(self.super_config.window, Rotation::next());
 
-            //    z_{i+1} = (z_i - a_i) / (2^3)
-            // => a_i = z_i - (z_{i+1} * (2^3))
+            //    z_{i+1} = (z_i - a_i) / 2^3
+            // => a_i = z_i - z_{i+1} * 2^3
             let word = z_cur - z_next * pallas::Base::from_u64(constants::H as u64);
 
             // (word - 7) * (word - 6) * ... * (word - 1) * word = 0
@@ -108,7 +101,7 @@ impl Config {
             // The last three bits of α.
             let z_84_alpha = meta.query_advice(self.canon_advices[2], Rotation::prev());
 
-            // Decompose α into three pieces,
+            // Decompose α into three pieces, in little-endian order:
             //            α = α_0 (252 bits)  || α_1 (2 bits) || α_2 (1 bit).
             //
             // α_0 is derived, not witnessed.
@@ -152,8 +145,9 @@ impl Config {
             //                 = 2^254 + 45560315531419706090280762371685220353.
             // Note that t_p < 2^130.
             //
-            // α has been decomposed into three pieces,
+            // α has been decomposed into three pieces in little-endian order:
             //            α = α_0 (252 bits)  || α_1 (2 bits) || α_2 (1 bit).
+            //              = α_0 + 2^252 α_1 + 2^254 α_2.
             //
             // If the MSB α_2 = 1, then:
             //      - α_2 = 1 => α_1 = 0, and
@@ -259,8 +253,9 @@ impl Config {
         //                 = 2^254 + 45560315531419706090280762371685220353.
         // Note that t_p < 2^130.
         //
-        // α has been decomposed into three pieces,
+        // α has been decomposed into three pieces in little-endian order:
         //            α = α_0 (252 bits)  || α_1 (2 bits) || α_2 (1 bit).
+        //              = α_0 + 2^252 α_1 + 2^254 α_2.
         //
         // If the MSB α_2 = 1, then:
         //      - α_2 = 1 => α_1 = 0, and
@@ -274,14 +269,6 @@ impl Config {
         let (alpha, running_sum) = (scalar.base_field_elem, &scalar.running_sum);
         let z_43_alpha = running_sum[42];
         let z_44_alpha = running_sum[43];
-        {
-            let a_43 = z_44_alpha
-                .value()
-                .zip(z_43_alpha.value())
-                .map(|(z_44, z_43)| z_43 - z_44 * pallas::Base::from_u64(8));
-            println!("a_43: {:?}", a_43);
-        }
-
         let z_84_alpha = running_sum[83];
         let z_85_alpha = running_sum[84];
 
@@ -485,7 +472,7 @@ impl Config {
                     .zip(word)
                     .map(|(z_cur_val, word)| (z_cur_val - word) * eight_inv);
                 let cell = region.assign_advice(
-                    || format!("word {:?}", idx),
+                    || format!("z_{:?}", idx + 1),
                     self.super_config.window,
                     offset + idx,
                     || z_next_val.ok_or(Error::SynthesisError),
@@ -538,7 +525,7 @@ pub mod tests {
             chip.clone(),
             layouter.namespace(|| "commit_ivk_r"),
             commit_ivk_r,
-            &zero,
+            zero,
         )?;
 
         // note_commit_r
@@ -548,7 +535,7 @@ pub mod tests {
             chip.clone(),
             layouter.namespace(|| "note_commit_r"),
             note_commit_r,
-            &zero,
+            zero,
         )?;
 
         // nullifier_k
@@ -558,7 +545,7 @@ pub mod tests {
             chip.clone(),
             layouter.namespace(|| "nullifier_k"),
             nullifier_k,
-            &zero,
+            zero,
         )?;
 
         // value_commit_r
@@ -568,7 +555,7 @@ pub mod tests {
             chip.clone(),
             layouter.namespace(|| "value_commit_r"),
             value_commit_r,
-            &zero,
+            zero,
         )?;
 
         // spend_auth_g
@@ -578,7 +565,7 @@ pub mod tests {
             chip,
             layouter.namespace(|| "spend_auth_g"),
             spend_auth_g,
-            &zero,
+            zero,
         )?;
 
         Ok(())
@@ -637,7 +624,7 @@ pub mod tests {
             )?;
             let result =
                 base.mul_base_field_elem(layouter.namespace(|| "mul by zero"), scalar_fixed)?;
-            result.constrain_equal(layouter.namespace(|| "[0]B = 𝒪"), &zero)?;
+            result.constrain_equal(layouter.namespace(|| "[0]B = 𝒪"), zero)?;
         }
 
         // [-1]B is the largest base field element

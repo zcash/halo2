@@ -16,6 +16,7 @@ use halo2::{
     },
     poly::Rotation,
 };
+use lazy_static::lazy_static;
 use pasta_curves::{
     arithmetic::{CurveAffine, FieldExt},
     pallas,
@@ -24,6 +25,13 @@ use pasta_curves::{
 pub mod base_field_elem;
 pub mod full_width;
 pub mod short;
+
+lazy_static! {
+    static ref TWO_SCALAR: pallas::Scalar = pallas::Scalar::from_u64(2);
+    // H = 2^3 (3-bit window)
+    static ref H_SCALAR: pallas::Scalar = pallas::Scalar::from_u64(constants::H as u64);
+    static ref H_BASE: pallas::Base = pallas::Base::from_u64(constants::H as u64);
+}
 
 // A sum type for both full-width and short bases. This enables us to use the
 // shared functionality of full-width and short fixed-base scalar multiplication.
@@ -301,6 +309,57 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         Ok(())
     }
 
+    fn process_window(
+        &self,
+        region: &mut Region<'_, pallas::Base>,
+        offset: usize,
+        w: usize,
+        k: Option<pallas::Scalar>,
+        k_usize: Option<usize>,
+        base: OrchardFixedBases,
+    ) -> Result<EccPoint, Error> {
+        let base_value = base.generator();
+        let base_u = base.u();
+
+        // Compute [(k_w + 2) ⋅ 8^w]B
+        let mul_b = {
+            let mul_b =
+                k.map(|k| base_value * (k + *TWO_SCALAR) * H_SCALAR.pow(&[w as u64, 0, 0, 0]));
+            let mul_b = mul_b.map(|mul_b| mul_b.to_affine().coordinates().unwrap());
+
+            let x = mul_b.map(|mul_b| *mul_b.x());
+            let x_cell = region.assign_advice(
+                || format!("mul_b_x, window {}", w),
+                self.x_p,
+                offset + w,
+                || x.ok_or(Error::SynthesisError),
+            )?;
+            let x = CellValue::new(x_cell, x);
+
+            let y = mul_b.map(|mul_b| *mul_b.y());
+            let y_cell = region.assign_advice(
+                || format!("mul_b_y, window {}", w),
+                self.y_p,
+                offset + w,
+                || y.ok_or(Error::SynthesisError),
+            )?;
+            let y = CellValue::new(y_cell, y);
+
+            EccPoint { x, y }
+        };
+
+        // Assign u = (y_p + z_w).sqrt()
+        let u_val = k_usize.map(|k| base_u[w].0[k]);
+        region.assign_advice(
+            || "u",
+            self.u,
+            offset + w,
+            || u_val.ok_or(Error::SynthesisError),
+        )?;
+
+        Ok(mul_b)
+    }
+
     fn initialize_accumulator(
         &self,
         region: &mut Region<'_, pallas::Base>,
@@ -311,60 +370,10 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         // Recall that the message at each window `w` is represented as
         // `m_w = [(k_w + 2) ⋅ 8^w]B`.
         // When `w = 0`, we have `m_0 = [(k_0 + 2)]B`.
-        let m0 = {
-            let k0 = scalar.windows_field()[0];
-            let m0 = k0.map(|k0| base.generator() * (k0 + pallas::Scalar::from_u64(2)));
-            let m0 = m0.map(|m0| m0.to_affine().coordinates().unwrap());
-
-            let x = m0.map(|m0| *m0.x());
-            let x_cell = region.assign_advice(
-                || "m0_x",
-                self.x_p,
-                offset,
-                || x.ok_or(Error::SynthesisError),
-            )?;
-            let x = CellValue::new(x_cell, x);
-
-            let y = m0.map(|m0| *m0.y());
-            let y_cell = region.assign_advice(
-                || "m0_y",
-                self.y_p,
-                offset,
-                || y.ok_or(Error::SynthesisError),
-            )?;
-            let y = CellValue::new(y_cell, y);
-
-            EccPoint { x, y }
-        };
-
-        // Assign u = (y_p + z_w).sqrt() for `m0`
-        {
-            let k0 = scalar.windows_usize()[0];
-            let u0 = &base.u()[0];
-            let u0 = k0.map(|k0| u0.0[k0]);
-
-            region.assign_advice(|| "u", self.u, offset, || u0.ok_or(Error::SynthesisError))?;
-        }
-
-        // Copy `m0` into `x_qr`, `y_qr` cells on row 1 of the incomplete addition.
-        let x = copy(
-            region,
-            || "initialize acc x",
-            self.add_incomplete_config.x_qr,
-            offset + 1,
-            &m0.x,
-            &self.perm,
-        )?;
-        let y = copy(
-            region,
-            || "initialize acc y",
-            self.add_incomplete_config.y_qr,
-            offset + 1,
-            &m0.y,
-            &self.perm,
-        )?;
-
-        Ok(EccPoint { x, y })
+        let w = 0;
+        let k0 = scalar.windows_field()[0];
+        let k0_usize = scalar.windows_usize()[0];
+        self.process_window(region, offset, w, k0, k0_usize, base)
     }
 
     fn add_incomplete(
@@ -375,57 +384,18 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         base: OrchardFixedBases,
         scalar: &ScalarFixed,
     ) -> Result<EccPoint, Error> {
-        // This is 2^w, where w is the window width
-        let h = pallas::Scalar::from_u64(constants::H as u64);
-
-        let base_value = base.generator();
-        let base_u = base.u();
         let scalar_windows_field = scalar.windows_field();
         let scalar_windows_usize = scalar.windows_usize();
 
-        for (w, k) in scalar_windows_field[1..(scalar_windows_field.len() - 1)]
+        for (w, (k, k_usize)) in scalar_windows_field[..(scalar_windows_field.len() - 1)]
             .iter()
+            .zip(scalar_windows_usize[..(scalar_windows_field.len() - 1)].iter())
             .enumerate()
+            // Skip k_0 (already processed).
+            .skip(1)
         {
-            // Offset window index by 1 since we are starting on k_1
-            let w = w + 1;
-
             // Compute [(k_w + 2) ⋅ 8^w]B
-            let mul_b = {
-                let mul_b = k.map(|k| {
-                    base_value * (k + pallas::Scalar::from_u64(2)) * h.pow(&[w as u64, 0, 0, 0])
-                });
-                let mul_b = mul_b.map(|mul_b| mul_b.to_affine().coordinates().unwrap());
-
-                let x = mul_b.map(|mul_b| *mul_b.x());
-                let x_cell = region.assign_advice(
-                    || format!("mul_b_x, window {}", w),
-                    self.x_p,
-                    offset + w,
-                    || x.ok_or(Error::SynthesisError),
-                )?;
-                let x = CellValue::new(x_cell, x);
-
-                let y = mul_b.map(|mul_b| *mul_b.y());
-                let y_cell = region.assign_advice(
-                    || format!("mul_b_y, window {}", w),
-                    self.y_p,
-                    offset + w,
-                    || y.ok_or(Error::SynthesisError),
-                )?;
-                let y = CellValue::new(y_cell, y);
-
-                EccPoint { x, y }
-            };
-
-            // Assign u = (y_p + z_w).sqrt()
-            let u_val = scalar_windows_usize[w].map(|k| base_u[w].0[k]);
-            region.assign_advice(
-                || "u",
-                self.u,
-                offset + w,
-                || u_val.ok_or(Error::SynthesisError),
-            )?;
+            let mul_b = self.process_window(region, offset, w, *k, *k_usize, base)?;
 
             // Add to the accumulator
             acc = self
@@ -442,9 +412,6 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         base: OrchardFixedBases,
         scalar: &ScalarFixed,
     ) -> Result<EccPoint, Error> {
-        // This is 2^w, where w is the window width
-        let h = pallas::Scalar::from_u64(constants::H as u64);
-
         // Assign u = (y_p + z_w).sqrt() for the most significant window
         {
             let u_val =
@@ -459,7 +426,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
 
         // offset_acc = \sum_{j = 0}^{NUM_WINDOWS - 2} 2^{FIXED_BASE_WINDOW_SIZE * j+1}
         let offset_acc = (0..(NUM_WINDOWS - 1)).fold(pallas::Scalar::zero(), |acc, w| {
-            acc + pallas::Scalar::from_u64(2).pow(&[
+            acc + (*TWO_SCALAR).pow(&[
                 constants::FIXED_BASE_WINDOW_SIZE as u64 * w as u64 + 1,
                 0,
                 0,
@@ -469,7 +436,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
 
         // `scalar = [k * 8^84 - offset_acc]`, where `offset_acc = \sum_{j = 0}^{83} 2^{FIXED_BASE_WINDOW_SIZE * j + 1}`.
         let scalar = scalar.windows_field()[scalar.windows_field().len() - 1]
-            .map(|k| k * h.pow(&[(NUM_WINDOWS - 1) as u64, 0, 0, 0]) - offset_acc);
+            .map(|k| k * (*H_SCALAR).pow(&[(NUM_WINDOWS - 1) as u64, 0, 0, 0]) - offset_acc);
 
         let mul_b = {
             let mul_b = scalar.map(|scalar| base.generator() * scalar);
@@ -545,9 +512,9 @@ impl ScalarFixed {
                     .map(|idx| {
                         let z_cur = zs[idx].value();
                         let z_next = zs[idx + 1].value();
-                        let word = z_cur.zip(z_next).map(|(z_cur, z_next)| {
-                            z_cur - z_next * pallas::Base::from_u64(constants::H as u64)
-                        });
+                        let word = z_cur
+                            .zip(z_next)
+                            .map(|(z_cur, z_next)| z_cur - z_next * *H_BASE);
                         word.map(|word| pallas::Scalar::from_bytes(&word.to_bytes()).unwrap())
                     })
                     .collect::<Vec<_>>()

@@ -194,7 +194,7 @@ pub mod tests {
                 Some(scalar_fixed),
             )?;
             let result = value_commit_v.mul(layouter.namespace(|| "mul by zero"), &scalar_fixed)?;
-            result.constrain_equal(layouter.namespace(|| "[0]B = 𝒪"), &zero)?;
+            result.constrain_equal(layouter.namespace(|| "[0]B = 𝒪"), zero)?;
         }
 
         // Random [a]B

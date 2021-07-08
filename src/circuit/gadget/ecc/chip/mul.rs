@@ -1,8 +1,5 @@
 use super::{add, CellValue, EccConfig, EccPoint, EccScalarVar, Var};
-use crate::{
-    circuit::gadget::utilities::copy,
-    constants::{NUM_COMPLETE_BITS, T_Q},
-};
+use crate::{circuit::gadget::utilities::copy, constants::T_Q};
 use std::ops::{Deref, Range};
 
 use bigint::U256;
@@ -20,12 +17,18 @@ mod complete;
 mod incomplete;
 mod overflow;
 
+/// Number of bits for which complete addition needs to be used in variable-base
+/// scalar multiplication
+const NUM_COMPLETE_BITS: usize = 3;
+
 // Bits used in incomplete addition. k_{254} to k_{4} inclusive
 const INCOMPLETE_LEN: usize = pallas::Scalar::NUM_BITS as usize - 1 - NUM_COMPLETE_BITS;
 const INCOMPLETE_RANGE: Range<usize> = 0..INCOMPLETE_LEN;
 
 // Bits k_{254} to k_{4} inclusive are used in incomplete addition.
 // The `hi` half is k_{254} to k_{130} inclusive (length 125 bits).
+// (It is a coincidence that k_{130} matches the boundary of the
+// overflow check described in [the book](https://zcash.github.io/halo2/design/gadgets/ecc/var-base-scalar-mul.html#overflow-check).)
 const INCOMPLETE_HI_RANGE: Range<usize> = 0..(INCOMPLETE_LEN / 2);
 
 // Bits k_{254} to k_{4} inclusive are used in incomplete addition.

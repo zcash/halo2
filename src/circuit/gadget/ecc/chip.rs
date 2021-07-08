@@ -284,8 +284,12 @@ pub struct EccScalarFixed {
 /// A signed short scalar used for fixed-base scalar multiplication.
 /// A short scalar must have magnitude in the range [0..2^64), with
 /// a sign of either 1 or -1.
-/// This is decomposed into 22 3-bit windows in little-endian order,
-/// i.e. `windows` = [k_0, k_1, ..., k_21] (for a 64-bit magnitude)
+/// This is decomposed into 3-bit windows in little-endian order
+/// using a running sum `z`, where z_{i+1} = (z_i - a_i) / (2^3)
+/// for element α = a_0 + (2^3) a_1 + ... + (2^{3(n-1)}) a_{n-1}.
+/// Each `a_i` is in the range [0..2^3).
+///
+/// `windows` = [k_0, k_1, ..., k_21] (for a 64-bit magnitude)
 /// where `scalar = k_0 + k_1 * (2^3) + ... + k_84 * (2^3)^84` and
 /// each `k_i` is in the range [0..2^3).
 /// k_21 must be a single bit, i.e. 0 or 1.
