@@ -12,6 +12,19 @@ In most cases, we multiply the fixed bases by $255-$bit scalars from $\mathbb{F}
 
 $$\alpha = k_0 + k_1 \cdot (2^3)^1 + \cdots + k_{84} \cdot (2^3)^{84}, k_i \in [0..2^3).$$
 
+The scalar multiplication will be computed correctly for $k_{0..84}$ representing any integer in the range $[0, 2^{255})$.
+If $k_{0..84}$ is witnessed directly then no issue of canonicity arises. If the scalar is given as a base field element, then
+care must be taken to ensure a canonical representation, since $2^{255} > p$. This occurs, for example, in the scalar
+multiplication for the nullifier computation of the Action circuit.
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+9 & q_\text{scalar-fixed} \cdot 1 \cdot \left(\sum\limits_{i=0}^7{w - i}\right) = 0 \\\hline
+\end{array}
+$$
+
 At the point of witnessing the scalar, we range-constrain each $3$-bit word of its decomposition.
 $$
 \begin{array}{|c|l|}
@@ -153,8 +166,8 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-5 & q_\text{canon-base-field} \cdot \texttt{range\_check}(\alpha_1), 4) = 0 \\\hline
-3 & q_\text{canon-base-field} \cdot \texttt{range\_check}(\alpha_2), 2) = 0 \\\hline
+5 & q_\text{canon-base-field} \cdot \texttt{range\_check}(\alpha_1, 4) = 0 \\\hline
+3 & q_\text{canon-base-field} \cdot \texttt{range\_check}(\alpha_2, 2) = 0 \\\hline
 2 & q_\text{canon-base-field} \cdot \left(z_{84} - (\alpha_1 + \alpha_2 \cdot 2^2)\right) = 0 \\\hline
 \end{array}
 $$

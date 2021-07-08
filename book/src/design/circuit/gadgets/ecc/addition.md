@@ -1,13 +1,47 @@
+We will use formulae for curve arithmetic using affine coordinates on short Weierstrass curves,
+derived from section 4.1 of [Hüseyin Hışıl's thesis](https://core.ac.uk/download/pdf/10898289.pdf).
+
 ## Incomplete addition
+
 - Inputs: $P = (x_p, y_p), Q = (x_q, y_q)$
 - Output: $R = P \;⸭\; Q = (x_r, y_r)$
 
-Formulae:
-- $\lambda \cdot (x_p - x_q) = y_p - y_q$
-- $x_r = \lambda^2 - x_q - x_p$
-- $y_r = \lambda(x_q - x_r) - y_q$
+The formulae from Hışıl's thesis are:
 
-Substituting for $\lambda$, we get the constraints:
+- $x_3 = \left(\frac{y_1 - y_2}{x_1 - x_2}\right)^2 - x_1 - x_2$
+- $y_3 = \frac{y_1 - y_2}{x_1 - x_2} \cdot (x_1 - x_3) - y_1$
+
+Rename:
+- $(x_1, y_1)$ to $(x_q, y_q)$
+- $(x_2, y_2)$ to $(x_p, y_p)$
+- $(x_3, y_3)$ to $(x_r, y_r)$.
+
+Let $\lambda = \frac{y_q - y_p}{x_q - x_p} = \frac{y_p - y_q}{x_p - x_q}$, which we implement as
+
+$\lambda \cdot (x_p - x_q) = y_p - y_q$
+
+Also,
+- $x_r = \lambda^2 - x_q - x_p$
+- $y_r = \lambda \cdot (x_q - x_r) - y_q$
+
+which is equivalent to
+
+- $x_r + x_q + x_p = \lambda^2$
+
+Assuming $x_p \neq x_q$,
+
+\begin{array}{|rrll|}
+\hline
+&(x_r + x_q + x_p) \cdot (x_p - x_q)^2 &=& \lambda^2 \cdot (x_p - x_q)^2\\
+\implies &(x_r + x_q + x_p) \cdot (x_p - x_q)^2 &=& (\lambda \cdot (x_p - x_q))^2\\
+\\\hline
+         &y_r &=& \lambda \cdot (x_q - x_r) - y_q\\
+\implies &y_r + y_q &=& \lambda \cdot (x_q - x_r)\\
+\implies &(y_r + y_q) \cdot (x_p - x_q) &=& \lambda \cdot (x_p - x_q) \cdot (x_q - x_r)\\
+\hline
+\end{array}
+
+Substituting for $\lambda \cdot (x_p - x_q)$, we get the constraints:
 - $(x_r + x_q + x_p) \cdot (x_p - x_q)^2 - (y_p - y_q)^2 = 0$
   - Note that this constraint is unsatisfiable for $P \;⸭\; (-P)$ (when $P \neq \mathcal{O}$),
     and so cannot be used with arbitrary inputs.
@@ -37,7 +71,8 @@ P + Q &= R\\
 \end{aligned}
 $$
 
-For the doubling case, $\lambda$ has to instead be computed as $\frac{3x^2}{2y}$.
+For the doubling case, Hışıl's thesis tells us that $\lambda$ has to
+instead be computed as $\frac{3x^2}{2y}$.
 
 Define $\mathsf{inv0}(x) = \begin{cases} 0, &\text{if } x = 0 \\ 1/x, &\text{otherwise.} \end{cases}$
 
