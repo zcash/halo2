@@ -536,6 +536,7 @@ mod tests {
                     layouter.namespace(|| "variable-base scalar mul"),
                     &zero,
                     &p,
+                    p_val,
                 )?;
             }
 

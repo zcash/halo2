@@ -442,6 +442,7 @@ fn decompose_for_scalar_mul(scalar: Option<pallas::Base>) -> Vec<Option<bool>> {
 
 #[cfg(test)]
 pub mod tests {
+    use group::Curve;
     use halo2::{circuit::Layouter, plonk::Error};
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
@@ -452,35 +453,97 @@ pub mod tests {
         mut layouter: impl Layouter<pallas::Base>,
         zero: &Point<pallas::Affine, EccChip>,
         p: &Point<pallas::Affine, EccChip>,
+        p_val: pallas::Affine,
     ) -> Result<(), Error> {
+        fn constrain_equal<
+            EccChip: EccInstructions<pallas::Affine> + Clone + Eq + std::fmt::Debug,
+        >(
+            chip: EccChip,
+            mut layouter: impl Layouter<pallas::Base>,
+            base_val: pallas::Affine,
+            scalar_val: pallas::Base,
+            result: Point<pallas::Affine, EccChip>,
+        ) -> Result<(), Error> {
+            // Case scalar from base field into scalar field
+            let scalar = pallas::Scalar::from_bytes(&scalar_val.to_bytes()).unwrap();
+            let expected = Point::new(
+                chip,
+                layouter.namespace(|| "expected point"),
+                Some((base_val * scalar).to_affine()),
+            )?;
+            result.constrain_equal(layouter.namespace(|| "constrain result"), &expected)
+        }
+
         // [a]B
-        let scalar_val = pallas::Base::rand();
-        let scalar = ScalarVar::new(
-            chip.clone(),
-            layouter.namespace(|| "ScalarVar"),
-            Some(scalar_val),
-        )?;
-        p.mul(layouter.namespace(|| "mul"), &scalar)?;
+        {
+            let scalar_val = pallas::Base::rand();
+            let result = {
+                let scalar = ScalarVar::new(
+                    chip.clone(),
+                    layouter.namespace(|| "random scalar"),
+                    Some(scalar_val),
+                )?;
+                p.mul(layouter.namespace(|| "random [a]B"), &scalar)?
+            };
+            constrain_equal(
+                chip.clone(),
+                layouter.namespace(|| "random [a]B"),
+                p_val,
+                scalar_val,
+                result,
+            )?;
+        }
 
         // [a]𝒪 should return an error since variable-base scalar multiplication
         // uses incomplete addition at the beginning of its double-and-add.
-        zero.mul(layouter.namespace(|| "mul"), &scalar)
-            .expect_err("[a]𝒪 should return an error");
+        {
+            let scalar_val = pallas::Base::rand();
+            let scalar = ScalarVar::new(
+                chip.clone(),
+                layouter.namespace(|| "random scalar"),
+                Some(scalar_val),
+            )?;
+            zero.mul(layouter.namespace(|| "[a]𝒪"), &scalar)
+                .expect_err("[a]𝒪 should return an error");
+        }
 
         // [0]B should return (0,0) since variable-base scalar multiplication
         // uses complete addition for the final bits of the scalar.
-        let scalar_val = pallas::Base::zero();
-        let scalar = ScalarVar::new(
-            chip.clone(),
-            layouter.namespace(|| "ScalarVar"),
-            Some(scalar_val),
-        )?;
-        p.mul(layouter.namespace(|| "mul"), &scalar)?;
+        {
+            let scalar_val = pallas::Base::zero();
+            let result = {
+                let scalar = ScalarVar::new(
+                    chip.clone(),
+                    layouter.namespace(|| "zero"),
+                    Some(scalar_val),
+                )?;
+                p.mul(layouter.namespace(|| "[0]B"), &scalar)?
+            };
+            constrain_equal(
+                chip.clone(),
+                layouter.namespace(|| "[0]B"),
+                p_val,
+                scalar_val,
+                result,
+            )?;
+        }
 
         // [-1]B (the largest possible base field element)
-        let scalar_val = -pallas::Base::one();
-        let scalar = ScalarVar::new(chip, layouter.namespace(|| "ScalarVar"), Some(scalar_val))?;
-        p.mul(layouter.namespace(|| "mul"), &scalar)?;
+        {
+            let scalar_val = -pallas::Base::one();
+            let result = {
+                let scalar =
+                    ScalarVar::new(chip.clone(), layouter.namespace(|| "-1"), Some(scalar_val))?;
+                p.mul(layouter.namespace(|| "[-1]B"), &scalar)?
+            };
+            constrain_equal(
+                chip,
+                layouter.namespace(|| "[-1]B"),
+                p_val,
+                scalar_val,
+                result,
+            )?;
+        }
 
         Ok(())
     }
