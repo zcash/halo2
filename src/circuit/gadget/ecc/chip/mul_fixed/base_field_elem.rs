@@ -494,6 +494,7 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
+    use group::Curve;
     use halo2::{
         circuit::{Chip, Layouter},
         plonk::Error,
@@ -512,7 +513,6 @@ pub mod tests {
     pub fn test_mul_fixed_base_field(
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
-        zero: &Point<pallas::Affine, EccChip>,
     ) -> Result<(), Error> {
         impl UtilitiesInstructions<pallas::Base> for EccChip {
             type Var = CellValue<pallas::Base>;
@@ -520,52 +520,47 @@ pub mod tests {
 
         // commit_ivk_r
         let commit_ivk_r = OrchardFixedBasesFull::CommitIvkR;
-        let commit_ivk_r = FixedPoint::from_inner(chip.clone(), commit_ivk_r);
         test_single_base(
             chip.clone(),
             layouter.namespace(|| "commit_ivk_r"),
-            commit_ivk_r,
-            zero,
+            FixedPoint::from_inner(chip.clone(), commit_ivk_r),
+            commit_ivk_r.generator(),
         )?;
 
         // note_commit_r
         let note_commit_r = OrchardFixedBasesFull::NoteCommitR;
-        let note_commit_r = FixedPoint::from_inner(chip.clone(), note_commit_r);
         test_single_base(
             chip.clone(),
             layouter.namespace(|| "note_commit_r"),
-            note_commit_r,
-            zero,
+            FixedPoint::from_inner(chip.clone(), note_commit_r),
+            note_commit_r.generator(),
         )?;
 
         // nullifier_k
         let nullifier_k = OrchardFixedBasesFull::NullifierK;
-        let nullifier_k = FixedPoint::from_inner(chip.clone(), nullifier_k);
         test_single_base(
             chip.clone(),
             layouter.namespace(|| "nullifier_k"),
-            nullifier_k,
-            zero,
+            FixedPoint::from_inner(chip.clone(), nullifier_k),
+            nullifier_k.generator(),
         )?;
 
         // value_commit_r
         let value_commit_r = OrchardFixedBasesFull::ValueCommitR;
-        let value_commit_r = FixedPoint::from_inner(chip.clone(), value_commit_r);
         test_single_base(
             chip.clone(),
             layouter.namespace(|| "value_commit_r"),
-            value_commit_r,
-            zero,
+            FixedPoint::from_inner(chip.clone(), value_commit_r),
+            value_commit_r.generator(),
         )?;
 
         // spend_auth_g
         let spend_auth_g = OrchardFixedBasesFull::SpendAuthG;
-        let spend_auth_g = FixedPoint::from_inner(chip.clone(), spend_auth_g);
         test_single_base(
-            chip,
+            chip.clone(),
             layouter.namespace(|| "spend_auth_g"),
-            spend_auth_g,
-            zero,
+            FixedPoint::from_inner(chip, spend_auth_g),
+            spend_auth_g.generator(),
         )?;
 
         Ok(())
@@ -576,20 +571,44 @@ pub mod tests {
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
         base: FixedPoint<pallas::Affine, EccChip>,
-        zero: &Point<pallas::Affine, EccChip>,
+        base_val: pallas::Affine,
     ) -> Result<(), Error> {
         let column = chip.config().advices[0];
+        fn constrain_equal(
+            chip: EccChip,
+            mut layouter: impl Layouter<pallas::Base>,
+            base_val: pallas::Affine,
+            scalar_val: pallas::Base,
+            result: Point<pallas::Affine, EccChip>,
+        ) -> Result<(), Error> {
+            // Case scalar from base field into scalar field
+            let scalar = pallas::Scalar::from_bytes(&scalar_val.to_bytes()).unwrap();
+            let expected = Point::new(
+                chip,
+                layouter.namespace(|| "expected point"),
+                Some((base_val * scalar).to_affine()),
+            )?;
+            result.constrain_equal(layouter.namespace(|| "constrain result"), &expected)
+        }
 
         // [a]B
         {
             let scalar_fixed = pallas::Base::rand();
-            let scalar_fixed = chip.load_private(
-                layouter.namespace(|| "witness random base field element"),
-                column,
-                Some(scalar_fixed),
+            let result = {
+                let scalar_fixed = chip.load_private(
+                    layouter.namespace(|| "random base field element"),
+                    column,
+                    Some(scalar_fixed),
+                )?;
+                base.mul_base_field_elem(layouter.namespace(|| "random [a]B"), scalar_fixed)?
+            };
+            constrain_equal(
+                chip.clone(),
+                layouter.namespace(|| "random [a]B"),
+                base_val,
+                scalar_fixed,
+                result,
             )?;
-
-            base.mul_base_field_elem(layouter.namespace(|| "mul"), scalar_fixed)?;
         }
 
         // There is a single canonical sequence of window values for which a doubling occurs on the last step:
@@ -603,39 +622,56 @@ pub mod tests {
                         .fold(pallas::Base::zero(), |acc, c| {
                             acc * &h + &pallas::Base::from_u64(c.to_digit(8).unwrap().into())
                         });
-
-            let scalar_fixed = chip.load_private(
+            let result = {
+                let scalar_fixed = chip.load_private(
+                    layouter.namespace(|| "mul with double"),
+                    column,
+                    Some(scalar_fixed),
+                )?;
+                base.mul_base_field_elem(layouter.namespace(|| "mul with double"), scalar_fixed)?
+            };
+            constrain_equal(
+                chip.clone(),
                 layouter.namespace(|| "mul with double"),
-                column,
-                Some(scalar_fixed),
+                base_val,
+                scalar_fixed,
+                result,
             )?;
-
-            base.mul_base_field_elem(layouter.namespace(|| "mul with double"), scalar_fixed)?;
         }
 
         // [0]B should return (0,0) since it uses complete addition
         // on the last step.
         {
             let scalar_fixed = pallas::Base::zero();
-            let scalar_fixed = chip.load_private(
+            let result = {
+                let scalar_fixed =
+                    chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_fixed))?;
+                base.mul_base_field_elem(layouter.namespace(|| "mul by zero"), scalar_fixed)?
+            };
+            constrain_equal(
+                chip.clone(),
                 layouter.namespace(|| "mul by zero"),
-                column,
-                Some(scalar_fixed),
+                base_val,
+                scalar_fixed,
+                result,
             )?;
-            let result =
-                base.mul_base_field_elem(layouter.namespace(|| "mul by zero"), scalar_fixed)?;
-            result.constrain_equal(layouter.namespace(|| "[0]B = 𝒪"), zero)?;
         }
 
         // [-1]B is the largest base field element
         {
             let scalar_fixed = -pallas::Base::one();
-            let scalar_fixed = chip.load_private(
+            let result = {
+                let scalar_fixed =
+                    chip.load_private(layouter.namespace(|| "-1"), column, Some(scalar_fixed))?;
+                base.mul_base_field_elem(layouter.namespace(|| "mul by -1"), scalar_fixed)?
+            };
+            constrain_equal(
+                chip,
                 layouter.namespace(|| "mul by -1"),
-                column,
-                Some(scalar_fixed),
+                base_val,
+                scalar_fixed,
+                result,
             )?;
-            base.mul_base_field_elem(layouter.namespace(|| "mul by -1"), scalar_fixed)?;
         }
 
         Ok(())

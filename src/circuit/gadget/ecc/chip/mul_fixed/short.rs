@@ -164,7 +164,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
 
 #[cfg(test)]
 pub mod tests {
-    use ff::PrimeFieldBits;
+    use group::Curve;
     use halo2::{circuit::Layouter, plonk::Error};
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
@@ -175,26 +175,46 @@ pub mod tests {
     pub fn test_mul_fixed_short(
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
-        zero: &Point<pallas::Affine, EccChip>,
-    ) -> Result<(), Error>
-    where
-        pallas::Scalar: PrimeFieldBits,
-    {
+    ) -> Result<(), Error> {
         // value_commit_v
         let value_commit_v = ValueCommitV::get();
+        let base_val = value_commit_v.generator;
         let value_commit_v = FixedPointShort::from_inner(chip.clone(), value_commit_v);
+
+        fn constrain_equal(
+            chip: EccChip,
+            mut layouter: impl Layouter<pallas::Base>,
+            base_val: pallas::Affine,
+            scalar_val: pallas::Scalar,
+            result: Point<pallas::Affine, EccChip>,
+        ) -> Result<(), Error> {
+            let expected = Point::new(
+                chip,
+                layouter.namespace(|| "expected point"),
+                Some((base_val * scalar_val).to_affine()),
+            )?;
+            result.constrain_equal(layouter.namespace(|| "constrain result"), &expected)
+        }
 
         // [0]B should return (0,0) since it uses complete addition
         // on the last step.
         {
             let scalar_fixed = pallas::Scalar::zero();
-            let scalar_fixed = ScalarFixedShort::new(
+            let result = {
+                let scalar_fixed = ScalarFixedShort::new(
+                    chip.clone(),
+                    layouter.namespace(|| "zero"),
+                    Some(scalar_fixed),
+                )?;
+                value_commit_v.mul(layouter.namespace(|| "mul by zero"), &scalar_fixed)?
+            };
+            constrain_equal(
                 chip.clone(),
-                layouter.namespace(|| "ScalarFixedShort"),
-                Some(scalar_fixed),
+                layouter.namespace(|| "mul by zero"),
+                base_val,
+                scalar_fixed,
+                result,
             )?;
-            let result = value_commit_v.mul(layouter.namespace(|| "mul by zero"), &scalar_fixed)?;
-            result.constrain_equal(layouter.namespace(|| "[0]B = 𝒪"), zero)?;
         }
 
         // Random [a]B
@@ -206,36 +226,64 @@ pub mod tests {
             }
             let scalar_fixed_short = sign * &scalar_fixed_short;
 
-            let scalar_fixed_short = ScalarFixedShort::new(
+            let result = {
+                let scalar_fixed_short = ScalarFixedShort::new(
+                    chip.clone(),
+                    layouter.namespace(|| "random short scalar"),
+                    Some(scalar_fixed_short),
+                )?;
+
+                value_commit_v.mul(layouter.namespace(|| "random [a]B"), &scalar_fixed_short)?
+            };
+            constrain_equal(
                 chip.clone(),
-                layouter.namespace(|| "ScalarFixedShort"),
-                Some(scalar_fixed_short),
+                layouter.namespace(|| "random [a]B"),
+                base_val,
+                scalar_fixed_short,
+                result,
             )?;
-            value_commit_v.mul(layouter.namespace(|| "mul fixed"), &scalar_fixed_short)?;
         }
 
         // [2^64 - 1]B
         {
             let scalar_fixed_short = pallas::Scalar::from_u64(0xFFFF_FFFF_FFFF_FFFFu64);
 
-            let scalar_fixed_short = ScalarFixedShort::new(
+            let result = {
+                let scalar_fixed_short = ScalarFixedShort::new(
+                    chip.clone(),
+                    layouter.namespace(|| "2^64 - 1"),
+                    Some(scalar_fixed_short),
+                )?;
+                value_commit_v.mul(layouter.namespace(|| "[2^64 - 1]B"), &scalar_fixed_short)?
+            };
+            constrain_equal(
                 chip.clone(),
-                layouter.namespace(|| "ScalarFixedShort"),
-                Some(scalar_fixed_short),
+                layouter.namespace(|| "[2^64 - 1]B"),
+                base_val,
+                scalar_fixed_short,
+                result,
             )?;
-            value_commit_v.mul(layouter.namespace(|| "mul fixed"), &scalar_fixed_short)?;
         }
 
         // [-(2^64 - 1)]B
         {
             let scalar_fixed_short = -pallas::Scalar::from_u64(0xFFFF_FFFF_FFFF_FFFFu64);
 
-            let scalar_fixed_short = ScalarFixedShort::new(
+            let result = {
+                let scalar_fixed_short = ScalarFixedShort::new(
+                    chip.clone(),
+                    layouter.namespace(|| "-(2^64 - 1)"),
+                    Some(scalar_fixed_short),
+                )?;
+                value_commit_v.mul(layouter.namespace(|| "[-(2^64 - 1)]B"), &scalar_fixed_short)?
+            };
+            constrain_equal(
                 chip.clone(),
-                layouter.namespace(|| "ScalarFixedShort"),
-                Some(scalar_fixed_short),
+                layouter.namespace(|| "[-2^64 - 1]B"),
+                base_val,
+                scalar_fixed_short,
+                result,
             )?;
-            value_commit_v.mul(layouter.namespace(|| "mul fixed"), &scalar_fixed_short)?;
         }
 
         // There is a single canonical sequence of window values for which a doubling occurs on the last step:
@@ -244,12 +292,24 @@ pub mod tests {
         {
             let scalar_fixed_short = pallas::Scalar::from_u64(0xB6DB_6DB6_DB6D_B6DCu64);
 
-            let scalar_fixed_short = ScalarFixedShort::new(
+            let result = {
+                let scalar_fixed_short = ScalarFixedShort::new(
+                    chip.clone(),
+                    layouter.namespace(|| "mul with double"),
+                    Some(scalar_fixed_short),
+                )?;
+                value_commit_v.mul(
+                    layouter.namespace(|| "mul with double"),
+                    &scalar_fixed_short,
+                )?
+            };
+            constrain_equal(
                 chip,
-                layouter.namespace(|| "ScalarFixedShort"),
-                Some(scalar_fixed_short),
+                layouter.namespace(|| "mul with double"),
+                base_val,
+                scalar_fixed_short,
+                result,
             )?;
-            value_commit_v.mul(layouter.namespace(|| "mul fixed"), &scalar_fixed_short)?;
         }
 
         Ok(())
