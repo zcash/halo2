@@ -134,7 +134,7 @@ z_{85} &= (z_{84} - k_{84}) / 2^3\\
 \end{aligned}
 $$
 
-Since we don't directly witness this decomposition, we must range-constrain the difference at each step of the running sum. We also constrain the final output of the running sum to be $0$.
+Since we don't directly witness the three-bit values, we must range-constrain the difference at each step of the running sum. We also constrain the final output of the running sum to be $0$.
 $$
 \begin{array}{|c|l|}
 \hline
@@ -161,16 +161,28 @@ $$
 If the MSB $\alpha_2 = 0$ is not set, then $\alpha < 2^{254} < p.$ However, in the case where $\alpha_2 = 1$, we must check:
 - $\alpha_2 = 1 \implies \alpha_1 = 0;$
 - $\alpha_2 = 1 \implies \alpha_0 < t_p$:
-  - $\alpha_2 = 1 \implies 0 ≤ \alpha_0 < 2^{130}$
-  - $\alpha_2 = 1 \implies 0 ≤ \alpha_0 + 2^{130} - t_p < 2^{130}$
+  - $\alpha_2 = 1 \implies 0 \leq \alpha_0 < 2^{130}$,
+  - $\alpha_2 = 1 \implies 0 \leq \alpha_0 + 2^{130} - t_p < 2^{130}$
 
-This will involve 13 ten-bit [lookups](../lookup_range_check.md) for each $\alpha_0$ and $\alpha_0' \equiv \alpha_0 + 2^{130} - t_p$, where we constrain the $z_{13}$ running sum output of each lookup to be $0$ if $\alpha_2 = 1.$
+To check that $0 \leq \alpha_0 < 2^{130},$ we make use of the three-bit running sum decomposition:
+- firstly, we constrain $\alpha_0$ to be a $132$-bit value by enforcing its high $120$ bits to be all-zero. We can get $\textsf{alpha\_0\_hi\_120}$ from the decomposition:
 $$
-\begin{array}{|c|l|}
+\begin{aligned}
+z_{44} &= k_{44} + 2^3 k_{45} + \cdots + 2^{3 \cdot (84 - 44)} k_{84}\\
+\implies \textsf{alpha\_0\_hi\_120} &= z_{44} - 2^{3 \cdot (84 - 44)} k_{84}\\
+&= z_{44} - 2^{3 \cdot (40)} z_{84}.
+\end{aligned}
+$$
+- then, we constrain bits $130..=131$ of $\alpha_0$ to be zeroes; in other words, we constrain the three-bit word $k_{43} = \alpha[129..=131] = \alpha_0[129..=131] \in \{0, 1\}.$ We make use of the running sum decomposition to obtain $k_{43} = z_{43} - 2^3 \cdot z_{44}.$
+
+To check that $0 \leq \alpha_0 + 2^{130} - t_p < 2^{130},$ we use 13 ten-bit [lookups](../lookup_range_check.md), where we constrain the $z_{13}$ running sum output of the lookup to be $0$ if $\alpha_2 = 1.$
+$$
+\begin{array}{|c|l|l|}
 \hline
-\text{Degree} & \text{Constraint} \\\hline
-3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \alpha_1 = 0 \\\hline
-3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot z_{13}(\texttt{lookup}(\alpha_0, 13)) = 0 \\\hline
-3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot z_{13}(\texttt{lookup}(\alpha_0', 13)) = 0 \\\hline
+\text{Degree} & \text{Constraint} & \text{Comment} \\\hline
+3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \alpha_1 = 0 & \alpha_2 = 1 \implies \alpha_1 = 0 \\\hline
+3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \textsf{alpha\_0\_hi\_120} = 0 & \text{Constrain $\alpha_0$ to be a $132$-bit value} \\\hline
+4 & q_\text{canon-base-field} \cdot \alpha_2 \cdot k_{43} \cdot (1 - k_{43}) = 0 & \text{Constrain $\alpha_0[130..=131]$ to $0$}  \\\hline
+3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot z_{13}(\texttt{lookup}(\alpha_0', 13)) = 0 & \alpha_2 = 1 \implies 0 \leq \alpha_0 + 2^{130} - t_p < 2^{130}\\\hline
 \end{array}
 $$
