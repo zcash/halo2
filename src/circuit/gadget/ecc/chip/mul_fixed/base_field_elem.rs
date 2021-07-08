@@ -141,7 +141,7 @@ impl Config {
 
             // Check α_0_prime = α_0 + 2^130 - t_p
             let alpha_0_prime_check = {
-                let two_pow_130 = Expression::Constant(pallas::Base::from_u128(65).square());
+                let two_pow_130 = Expression::Constant(pallas::Base::from_u128(1 << 65).square());
                 let t_p = Expression::Constant(pallas::Base::from_u128(T_P));
                 alpha_0_prime - (alpha_0 + two_pow_130 - t_p)
             };
@@ -286,7 +286,7 @@ impl Config {
         let (alpha_0_prime, z_13_alpha_0_prime) = {
             // alpha_0_prime = alpha + 2^130 - t_p.
             let alpha_0_prime = alpha_0.value().map(|alpha_0| {
-                let two_pow_130 = pallas::Base::from_u128(65).square();
+                let two_pow_130 = pallas::Base::from_u128(1 << 65).square();
                 let t_p = pallas::Base::from_u128(T_P);
                 alpha_0 + two_pow_130 - t_p
             });
