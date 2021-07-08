@@ -191,6 +191,8 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                             .flat_map(move |(p, argument)| {
                                 p.expressions(
                                     l_0,
+                                    l_last,
+                                    l_cover,
                                     argument,
                                     theta,
                                     beta,

@@ -9,7 +9,7 @@ use std::ops::Range;
 
 use crate::plonk::{
     Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-    FloorPlanner, Permutation, Selector,
+    FloorPlanner, Selector,
 };
 
 /// Graphical renderer for circuit layouts.
@@ -344,7 +344,6 @@ impl<F: Field> Assignment<F> for Layout {
 
     fn copy(
         &mut self,
-        _: &Permutation,
         _: Column<Any>,
         _: usize,
         _: Column<Any>,

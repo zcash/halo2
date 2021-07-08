@@ -3,7 +3,7 @@ use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
 use crate::plonk::{
     Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-    FloorPlanner, Permutation, Selector,
+    FloorPlanner, Selector,
 };
 
 pub mod layout;
@@ -132,7 +132,6 @@ impl<F: Field> Assignment<F> for Graph {
 
     fn copy(
         &mut self,
-        _: &Permutation,
         _: Column<Any>,
         _: usize,
         _: Column<Any>,
