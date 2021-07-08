@@ -65,7 +65,7 @@ pub enum VerifyFailure {
     /// A permutation did not preserve the original value of a cell.
     Permutation {
         /// The column in which this permutation is not satisfied.
-        column: usize,
+        column: Column<Any>,
         /// The row on which this permutation is not satisfied.
         row: usize,
     },
@@ -641,7 +641,10 @@ impl<F: FieldExt> MockProver<F> {
                         if original_cell == permuted_cell {
                             None
                         } else {
-                            Some(VerifyFailure::Permutation { column, row })
+                            Some(VerifyFailure::Permutation {
+                                column: *self.cs.permutation.get_columns().get(column).unwrap(),
+                                row,
+                            })
                         }
                     })
                 })
