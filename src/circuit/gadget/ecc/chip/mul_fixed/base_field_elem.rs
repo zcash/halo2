@@ -111,13 +111,18 @@ impl Config {
             // Decompose α into three pieces,
             //            α = α_0 (252 bits)  || α_1 (2 bits) || α_2 (1 bit).
             //
-            let alpha_0 = meta.query_advice(self.canon_advices[0], Rotation::cur());
+            // α_0 is derived, not witnessed.
+            let alpha_0 = {
+                let two_pow_252 = pallas::Base::from_u128(1 << 126).square();
+                alpha - (z_84_alpha.clone() * two_pow_252)
+            };
             let alpha_1 = meta.query_advice(self.canon_advices[1], Rotation::cur());
             let alpha_2 = meta.query_advice(self.canon_advices[2], Rotation::cur());
 
-            let alpha_0_prime = meta.query_advice(self.canon_advices[0], Rotation::next());
-            let z_13_alpha_0_prime = meta.query_advice(self.canon_advices[1], Rotation::next());
-            let z_13_alpha_0 = meta.query_advice(self.canon_advices[2], Rotation::next());
+            let alpha_0_prime = meta.query_advice(self.canon_advices[0], Rotation::cur());
+            let z_13_alpha_0_prime = meta.query_advice(self.canon_advices[0], Rotation::next());
+            let z_44_alpha = meta.query_advice(self.canon_advices[1], Rotation::next());
+            let z_43_alpha = meta.query_advice(self.canon_advices[2], Rotation::next());
 
             let decomposition_checks = {
                 // Range-constrain α_1 to be 2 bits
@@ -128,15 +133,10 @@ impl Config {
                 let z_84_alpha_check = z_84_alpha.clone()
                     - (alpha_1.clone() + alpha_2.clone() * pallas::Base::from_u64(1 << 2));
 
-                // Check that the witnessed α_0 fulfils the constraint α_0 = α - z_84_alpha * 2^252
-                let two_pow_252 = pallas::Base::from_u128(1 << 126).square();
-                let expected_alpha_0 = alpha - (z_84_alpha * two_pow_252);
-
                 std::iter::empty()
                     .chain(Some(("alpha_1_range_check", alpha_1_range_check)))
                     .chain(Some(("alpha_2_range_check", alpha_2_range_check)))
                     .chain(Some(("z_84_alpha_check", z_84_alpha_check)))
-                    .chain(Some(("alpha_0_check", alpha_0.clone() - expected_alpha_0)))
             };
 
             // Check α_0_prime = α_0 + 2^130 - t_p
@@ -159,17 +159,31 @@ impl Config {
             //      - α_2 = 1 => α_1 = 0, and
             //      - α_2 = 1 => α_0 < t_p. To enforce this:
             //          - α_2 = 1 => 0 ≤ α_0 < 2^130
-            //                    => 13 ten-bit lookups of α_0
+            //                - alpha_0_hi_120 = 0 (constrain α_0 to be 132 bits)
+            //                - a_43 = 0 or 1 (constrain α_0[130..=131] to be 0)
             //          - α_2 = 1 => 0 ≤ α_0 + 2^130 - t_p < 2^130
             //                    => 13 ten-bit lookups of α_0 + 2^130 - t_p
             //                    => z_13_alpha_0_prime = 0
             //
             let canon_checks = {
+                // alpha_0_hi_120 = z_44 - 2^120 z_84
+                let alpha_0_hi_120 = {
+                    let two_pow_120 =
+                        Expression::Constant(pallas::Base::from_u128(1 << 60).square());
+                    z_44_alpha.clone() - z_84_alpha * two_pow_120
+                };
+                // a_43 = z_43 - (2^3)z_44
+                let a_43 = z_43_alpha - z_44_alpha * pallas::Base::from_u64(1 << 3);
+
                 std::iter::empty()
                     .chain(Some(("MSB = 1 => alpha_1 = 0", alpha_2.clone() * alpha_1)))
                     .chain(Some((
-                        "MSB = 1 => z_13_alpha_0 = 0",
-                        alpha_2.clone() * z_13_alpha_0,
+                        "MSB = 1 => alpha_0_hi_120 = 0",
+                        alpha_2.clone() * alpha_0_hi_120,
+                    )))
+                    .chain(Some((
+                        "MSB = 1 => a_43 = 0 or 1",
+                        alpha_2.clone() * range_check(a_43, 2),
                     )))
                     .chain(Some((
                         "MSB = 1 => z_13_alpha_0_prime = 0",
@@ -260,32 +274,31 @@ impl Config {
         //                => z_13_alpha_0_prime = 0
         //
         let (alpha, running_sum) = (scalar.base_field_elem, &scalar.running_sum);
+        let z_43_alpha = running_sum[42];
+        let z_44_alpha = running_sum[43];
+        {
+            let a_43 = z_44_alpha
+                .value()
+                .zip(z_43_alpha.value())
+                .map(|(z_44, z_43)| z_43 - z_44 * pallas::Base::from_u64(8));
+            println!("a_43: {:?}", a_43);
+        }
+
         let z_84_alpha = running_sum[83];
         let z_85_alpha = running_sum[84];
 
-        let (alpha_0, z_13_alpha_0) = {
-            // α_0 = α - z_84_alpha * 2^252
-            let alpha_0 = alpha
-                .value()
-                .zip(z_84_alpha.value())
-                .map(|(alpha, z_84_alpha)| {
-                    let two_pow_252 = pallas::Base::from_u128(1 << 126).square();
-                    alpha - z_84_alpha * two_pow_252
-                });
-
-            let (alpha_0, zs) = self.lookup_config.witness_check(
-                layouter.namespace(|| "Lookup range check alpha + 2^130 - t_p"),
-                alpha_0,
-                13,
-                false,
-            )?;
-
-            (alpha_0, zs[13])
-        };
+        // α_0 = α - z_84_alpha * 2^252
+        let alpha_0 = alpha
+            .value()
+            .zip(z_84_alpha.value())
+            .map(|(alpha, z_84_alpha)| {
+                let two_pow_252 = pallas::Base::from_u128(1 << 126).square();
+                alpha - z_84_alpha * two_pow_252
+            });
 
         let (alpha_0_prime, z_13_alpha_0_prime) = {
             // alpha_0_prime = alpha + 2^130 - t_p.
-            let alpha_0_prime = alpha_0.value().map(|alpha_0| {
+            let alpha_0_prime = alpha_0.map(|alpha_0| {
                 let two_pow_130 = pallas::Base::from_u128(1 << 65).square();
                 let t_p = pallas::Base::from_u128(T_P);
                 alpha_0 + two_pow_130 - t_p
@@ -346,19 +359,20 @@ impl Config {
                 // Offset 1
                 {
                     let offset = 1;
-
-                    // Decompose α into three pieces,
-                    //     α = α_0 (252 bits)  || α_1 (2 bits) || α_2 (1 bit).
-                    // Copy α_0
+                    // Copy alpha_0_prime = alpha_0 + 2^130 - t_p.
+                    // We constrain this in the custom gate to be derived correctly.
                     copy(
                         &mut region,
-                        || "α_0",
+                        || "Copy α_0 + 2^130 - t_p",
                         self.canon_advices[0],
                         offset,
-                        &alpha_0,
+                        &alpha_0_prime,
                         perm,
                     )?;
 
+                    // Decompose α into three pieces,
+                    //     α = α_0 (252 bits)  || α_1 (2 bits) || α_2 (1 bit).
+                    // We only need to witness α_1 and α_2. α_0 is derived in the gate.
                     // Witness α_1 = α[252..=253]
                     let alpha_1 = alpha.value().map(|alpha| bitrange_subset(alpha, 252..254));
                     region.assign_advice(
@@ -381,34 +395,33 @@ impl Config {
                 // Offset 2
                 {
                     let offset = 2;
-                    // Copy alpha_0_prime = alpha_0 + 2^130 - t_p.
-                    // We constrain this in the custom gate to be derived correctly.
-                    copy(
-                        &mut region,
-                        || "Copy α_0 + 2^130 - t_p",
-                        self.canon_advices[0],
-                        offset,
-                        &alpha_0_prime,
-                        perm,
-                    )?;
-
                     // Copy z_13_alpha_0_prime
                     copy(
                         &mut region,
                         || "Copy z_13_alpha_0_prime",
-                        self.canon_advices[1],
+                        self.canon_advices[0],
                         offset,
                         &z_13_alpha_0_prime,
                         perm,
                     )?;
 
-                    // Copy z_13_alpha_0, which is α with the first 130 bits subtracted.
+                    // Copy z_44_alpha
                     copy(
                         &mut region,
-                        || "Copy z_13_alpha_0",
+                        || "Copy z_44_alpha",
+                        self.canon_advices[1],
+                        offset,
+                        &z_44_alpha,
+                        perm,
+                    )?;
+
+                    // Copy z_43_alpha
+                    copy(
+                        &mut region,
+                        || "Copy z_43_alpha",
                         self.canon_advices[2],
                         offset,
-                        &z_13_alpha_0,
+                        &z_43_alpha,
                         perm,
                     )?;
                 }
