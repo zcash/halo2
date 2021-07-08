@@ -4,8 +4,7 @@ use halo2::{
     plonk::{Advice, Column, Error, Expression, Permutation},
 };
 use pasta_curves::arithmetic::FieldExt;
-use std::array;
-use std::convert::TryInto;
+use std::{array, convert::TryInto, ops::Range};
 
 pub(crate) mod cond_swap;
 pub(crate) mod enable_flag;
@@ -101,10 +100,7 @@ pub fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize>(
 }
 
 /// Subsets a field element to a specified bitrange (little-endian)
-pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(
-    field_elem: F,
-    bitrange: std::ops::Range<usize>,
-) -> F {
+pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(field_elem: F, bitrange: Range<usize>) -> F {
     assert!(bitrange.end <= F::NUM_BITS as usize);
 
     let bits: Vec<bool> = field_elem
@@ -131,4 +127,84 @@ pub fn range_check<F: FieldExt>(word: Expression<F>, range: usize) -> Expression
         .map(|i| Expression::Constant(F::from_u64(i as u64)))
         .reduce(|acc, i| acc * (word.clone() - i))
         .expect("range > 0")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bigint::U256;
+    use ff::PrimeField;
+    use pasta_curves::pallas;
+
+    #[test]
+    fn test_bitrange_subset() {
+        // Subset full range.
+        {
+            let field_elem = pallas::Base::rand();
+            let bitrange = 0..(pallas::Base::NUM_BITS as usize);
+            let subset = bitrange_subset(field_elem, bitrange);
+            assert_eq!(field_elem, subset);
+        }
+
+        // Subset zero bits
+        {
+            let field_elem = pallas::Base::rand();
+            let bitrange = 0..0;
+            let subset = bitrange_subset(field_elem, bitrange);
+            assert_eq!(pallas::Base::zero(), subset);
+        }
+
+        // Closure to decompose field element into pieces using consecutive ranges,
+        // and check that we recover the original.
+        let decompose = |field_elem: pallas::Base, ranges: &[Range<usize>]| {
+            assert_eq!(
+                ranges.iter().map(|range| range.len()).sum::<usize>(),
+                pallas::Base::NUM_BITS as usize
+            );
+            assert_eq!(ranges[0].start, 0);
+            assert_eq!(ranges.last().unwrap().end, pallas::Base::NUM_BITS as usize);
+
+            // Check ranges are contiguous
+            #[allow(unused_assignments)]
+            {
+                let mut ranges = ranges.iter();
+                let mut range = ranges.next().unwrap();
+                if let Some(next_range) = ranges.next() {
+                    assert_eq!(range.end, next_range.start);
+                    range = next_range;
+                }
+            }
+
+            let subsets = ranges
+                .iter()
+                .map(|range| bitrange_subset(field_elem, range.clone()))
+                .collect::<Vec<_>>();
+
+            let mut sum = subsets[0];
+            let mut num_bits = 0;
+            for (idx, subset) in subsets.iter().skip(1).enumerate() {
+                // 2^num_bits
+                let range_shift: [u8; 32] = {
+                    num_bits += ranges[idx].len();
+                    let mut range_shift = [0u8; 32];
+                    U256([2, 0, 0, 0])
+                        .pow(U256([num_bits as u64, 0, 0, 0]))
+                        .to_little_endian(&mut range_shift);
+                    range_shift
+                };
+                sum += subset * pallas::Base::from_bytes(&range_shift).unwrap();
+            }
+            assert_eq!(field_elem, sum);
+        };
+
+        decompose(pallas::Base::rand(), &[0..255]);
+        decompose(pallas::Base::rand(), &[0..1, 1..255]);
+        decompose(pallas::Base::rand(), &[0..254, 254..255]);
+        decompose(pallas::Base::rand(), &[0..127, 127..255]);
+        decompose(pallas::Base::rand(), &[0..128, 128..255]);
+        decompose(
+            pallas::Base::rand(),
+            &[0..50, 50..100, 100..150, 150..200, 200..255],
+        );
+    }
 }
