@@ -8,7 +8,7 @@ use ff::Field;
 
 use super::{Cell, RegionIndex};
 use crate::plonk::Assigned;
-use crate::plonk::{Advice, Any, Column, Error, Fixed, Selector};
+use crate::plonk::{Advice, Any, Column, Error, Fixed, Instance, Selector};
 
 /// Helper trait for implementing a custom [`Layouter`].
 ///
@@ -57,6 +57,18 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         offset: usize,
         to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error>;
+
+    /// Assign the value of the instance column's cell at absolute location
+    /// `row` to the column `advice` at `offset` within this region, and return
+    /// a `Cell` as well as its value, if known.
+    fn assign_advice_from_instance<'v>(
+        &mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        instance: Column<Instance>,
+        row: usize,
+        advice: Column<Advice>,
+        offset: usize,
+    ) -> Result<(Cell, Option<F>), Error>;
 
     /// Assign a fixed value
     fn assign_fixed<'v>(
@@ -137,6 +149,30 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
             row_offset: offset,
             column: column.into(),
         })
+    }
+
+    /// Assign the value of the instance column's cell at absolute location
+    /// `row` to the column `advice` at `offset` within this region, and return
+    /// a `Cell`.
+    fn assign_advice_from_instance<'v>(
+        &mut self,
+        _: &'v (dyn Fn() -> String + 'v),
+        _: Column<Instance>,
+        _: usize,
+        advice: Column<Advice>,
+        offset: usize,
+    ) -> Result<(Cell, Option<F>), Error> {
+        self.columns.insert(advice.into());
+        self.row_count = cmp::max(self.row_count, offset + 1);
+
+        Ok((
+            Cell {
+                region_index: self.region_index,
+                row_offset: offset,
+                column: advice.into(),
+            },
+            None,
+        ))
     }
 
     fn assign_fixed<'v>(

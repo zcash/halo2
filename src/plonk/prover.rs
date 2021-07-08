@@ -4,7 +4,8 @@ use std::iter;
 
 use super::{
     circuit::{
-        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Selector,
+        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
+        Selector,
     },
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
     ChallengeY, Error, ProvingKey,
@@ -122,14 +123,16 @@ pub fn create_proof<
 
     let advice: Vec<AdviceSingle<C>> = circuits
         .iter()
-        .map(|circuit| -> Result<AdviceSingle<C>, Error> {
-            struct WitnessCollection<F: Field> {
+        .zip(instances.iter())
+        .map(|(circuit, instances)| -> Result<AdviceSingle<C>, Error> {
+            struct WitnessCollection<'a, F: Field> {
                 pub advice: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
+                instances: &'a [&'a [F]],
                 upper_bound_cell_index: usize,
                 _marker: std::marker::PhantomData<F>,
             }
 
-            impl<F: Field> Assignment<F> for WitnessCollection<F> {
+            impl<'a, F: Field> Assignment<F> for WitnessCollection<'a, F> {
                 fn enter_region<NR, N>(&mut self, _: N)
                 where
                     NR: Into<String>,
@@ -155,6 +158,18 @@ pub fn create_proof<
                     // We only care about advice columns here
 
                     Ok(())
+                }
+
+                fn query_instance(
+                    &self,
+                    column: Column<Instance>,
+                    row: usize,
+                ) -> Result<Option<F>, Error> {
+                    self.instances
+                        .get(column.index())
+                        .and_then(|column| column.get(row))
+                        .map(|v| Some(*v))
+                        .ok_or(Error::BoundsFailure)
                 }
 
                 fn assign_advice<V, VR, A, AR>(
@@ -228,6 +243,7 @@ pub fn create_proof<
 
             let mut witness = WitnessCollection {
                 advice: vec![domain.empty_lagrange_assigned(); meta.num_advice_columns],
+                instances,
                 // The prover will not be allowed to assign values to advice
                 // cells that exist within inactive rows, which include some
                 // number of blinding factors and an extra row for use in the

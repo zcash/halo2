@@ -5,7 +5,8 @@ use group::Curve;
 
 use super::{
     circuit::{
-        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Selector,
+        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
+        Selector,
     },
     permutation, Assigned, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
 };
@@ -89,6 +90,11 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         // TODO: Implement selector combining optimization
         // https://github.com/zcash/halo2/issues/116
         self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
+    }
+
+    fn query_instance(&self, _: Column<Instance>, _: usize) -> Result<Option<F>, Error> {
+        // There is no instance in this context.
+        Ok(None)
     }
 
     fn assign_advice<V, VR, A, AR>(

@@ -6,7 +6,7 @@ use ff::Field;
 
 use crate::{
     arithmetic::FieldExt,
-    plonk::{Advice, Any, Assigned, Column, Error, Fixed, Selector},
+    plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector},
 };
 
 pub mod floor_planner;
@@ -152,6 +152,30 @@ impl<'r, F: Field> Region<'r, F> {
             })
     }
 
+    /// Assign the value of the instance column's cell at absolute location
+    /// `row` to the column `advice` at `offset` within this region, and return
+    /// a `Cell`.
+    pub fn assign_advice_from_instance<'v, A, AR>(
+        &'v mut self,
+        annotation: A,
+        instance: Column<Instance>,
+        row: usize,
+        advice: Column<Advice>,
+        offset: usize,
+    ) -> Result<(Cell, Option<F>), Error>
+    where
+        A: Fn() -> AR,
+        AR: Into<String>,
+    {
+        self.region.assign_advice_from_instance(
+            &|| annotation().into(),
+            instance,
+            row,
+            advice,
+            offset,
+        )
+    }
+
     /// Assign a fixed value.
     ///
     /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
@@ -210,6 +234,15 @@ pub trait Layouter<F: Field> {
         N: Fn() -> NR,
         NR: Into<String>;
 
+    /// This constrains a [`Cell`] to equal an instance column's row value
+    /// at an absolute position.
+    fn constrain_instance(
+        &mut self,
+        cell: Cell,
+        column: Column<Instance>,
+        row: usize,
+    ) -> Result<(), Error>;
+
     /// Gets the "root" of this assignment, bypassing the namespacing.
     ///
     /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
@@ -255,6 +288,15 @@ impl<'a, F: Field, L: Layouter<F> + 'a> Layouter<F> for NamespacedLayouter<'a, F
         NR: Into<String>,
     {
         self.0.assign_region(name, assignment)
+    }
+
+    fn constrain_instance(
+        &mut self,
+        cell: Cell,
+        column: Column<Instance>,
+        row: usize,
+    ) -> Result<(), Error> {
+        self.0.constrain_instance(cell, column, row)
     }
 
     fn get_root(&mut self) -> &mut Self::Root {

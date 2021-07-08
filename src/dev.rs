@@ -11,7 +11,7 @@ use crate::{
     arithmetic::{FieldExt, Group},
     plonk::{
         permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Expression, Fixed, FloorPlanner, Selector,
+        Expression, Fixed, FloorPlanner, Instance, Selector,
     },
     poly::Rotation,
 };
@@ -292,6 +292,16 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
 
         // Selectors are just fixed columns.
         self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
+    }
+
+    /// Query the value of the cell of an instance column at a particular
+    /// absolute row, if known.
+    fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Option<F>, Error> {
+        self.instance
+            .get(column.index())
+            .and_then(|column| column.get(row))
+            .map(|v| Some(*v))
+            .ok_or(Error::BoundsFailure)
     }
 
     fn assign_advice<V, VR, A, AR>(
