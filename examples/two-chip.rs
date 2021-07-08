@@ -5,7 +5,6 @@ use std::marker::PhantomData;
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Cell, Chip, Layouter, Region, SimpleFloorPlanner},
-    dev::VerifyFailure,
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance, Selector},
     poly::Rotation,
 };
@@ -43,6 +42,7 @@ trait FieldInstructions<F: FieldExt>: AddInstructions<F> + MulInstructions<F> {
         &self,
         layouter: impl Layouter<F>,
         num: <Self as FieldInstructions<F>>::Num,
+        row: usize,
     ) -> Result<(), Error>;
 }
 // ANCHOR_END: field-instructions
@@ -87,8 +87,8 @@ struct FieldConfig {
     /// the circuit.
     advice: [Column<Advice>; 2],
 
-    // The selector for the public-input gate, which uses one of the advice columns.
-    s_pub: Selector,
+    /// Public inputs
+    instance: Column<Instance>,
 
     add_config: AddConfig,
     mul_config: MulConfig,
@@ -173,10 +173,7 @@ impl<F: FieldExt> AddChip<F> {
             vec![s_add * (lhs + rhs + out * -F::one())]
         });
 
-        AddConfig {
-            advice,
-            s_add,
-        }
+        AddConfig { advice, s_add }
     }
 }
 // ANCHOR END: add-chip-impl
@@ -317,10 +314,7 @@ impl<F: FieldExt> MulChip<F> {
             vec![s_mul * (lhs * rhs + out * -F::one())]
         });
 
-        MulConfig {
-            advice,
-            s_mul,
-        }
+        MulConfig { advice, s_mul }
     }
 }
 // ANCHOR_END: mul-chip-impl
@@ -429,27 +423,14 @@ impl<F: FieldExt> FieldChip<F> {
         advice: [Column<Advice>; 2],
         instance: Column<Instance>,
     ) -> <Self as Chip<F>>::Config {
-        let s_pub = meta.selector();
-
-        // Define our public-input gate!
-        meta.create_gate("public input", |meta| {
-            // We choose somewhat-arbitrarily that we will use the second advice
-            // column for exposing numbers as public inputs.
-            let a = meta.query_advice(advice[1], Rotation::cur());
-            let p = meta.query_instance(instance, Rotation::cur());
-            let s = meta.query_selector(s_pub);
-
-            // We simply constrain the advice cell to be equal to the instance cell,
-            // when the selector is enabled.
-            vec![s * (p + a * -F::one())]
-        });
-
         let add_config = AddChip::configure(meta, advice);
         let mul_config = MulChip::configure(meta, advice);
 
+        meta.enable_equality(instance.into());
+
         FieldConfig {
             advice,
-            s_pub,
+            instance,
             add_config,
             mul_config,
         }
@@ -501,29 +482,11 @@ impl<F: FieldExt> FieldInstructions<F> for FieldChip<F> {
         &self,
         mut layouter: impl Layouter<F>,
         num: <Self as FieldInstructions<F>>::Num,
+        row: usize,
     ) -> Result<(), Error> {
         let config = self.config();
 
-        layouter.assign_region(
-            || "expose public",
-            |mut region: Region<'_, F>| {
-                // Enable the public-input gate.
-                config.s_pub.enable(&mut region, 0)?;
-
-                // Load the output into the correct advice column.
-                let out = region.assign_advice(
-                    || "public advice",
-                    config.advice[1],
-                    0,
-                    || num.value.ok_or(Error::SynthesisError),
-                )?;
-                region.constrain_equal(num.cell, out)?;
-
-                // We don't assign to the instance column inside the circuit;
-                // the mapping of public inputs to cells is provided to the prover.
-                Ok(())
-            },
-        )
+        layouter.constrain_instance(num.cell, config.instance, row)
     }
 }
 // ANCHOR_END: field-instructions-impl
@@ -576,7 +539,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         let d = field_chip.add_and_mul(&mut layouter, a, b, c)?;
 
         // Expose the result as a public input to the circuit.
-        field_chip.expose_public(layouter.namespace(|| "expose d"), d)
+        field_chip.expose_public(layouter.namespace(|| "expose d"), d, 0)
     }
 }
 // ANCHOR_END: circuit
@@ -603,24 +566,18 @@ fn main() {
         c: Some(c),
     };
 
-    // Arrange the public input. We expose the multiplication result in row 6
+    // Arrange the public input. We expose the multiplication result in row 0
     // of the instance column, so we position it there in our public inputs.
     let mut public_inputs = vec![Fp::zero(); 1 << k];
-    public_inputs[7] = d;
+    public_inputs[0] = d;
 
     // Given the correct public input, our circuit will verify.
     let prover = MockProver::run(k, &circuit, vec![public_inputs.clone()]).unwrap();
     assert_eq!(prover.verify(), Ok(()));
 
     // If we try some other public input, the proof will fail!
-    public_inputs[7] += Fp::one();
+    public_inputs[0] += Fp::one();
     let prover = MockProver::run(k, &circuit, vec![public_inputs]).unwrap();
-    assert_eq!(
-        prover.verify(),
-        Err(vec![VerifyFailure::Constraint {
-            constraint: ((0, "public input").into(), 0, "").into(),
-            row: 7,
-        }])
-    );
+    assert!(prover.verify().is_err());
     // ANCHOR_END: test-circuit
 }

@@ -5,7 +5,6 @@ use std::marker::PhantomData;
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Cell, Chip, Layouter, Region, SimpleFloorPlanner},
-    dev::VerifyFailure,
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance, Selector},
     poly::Rotation,
 };
@@ -50,14 +49,14 @@ struct FieldConfig {
     /// the circuit.
     advice: [Column<Advice>; 2],
 
+    /// This is the public input (instance) column.
+    instance: Column<Instance>,
+
     // We need a selector to enable the multiplication gate, so that we aren't placing
     // any constraints on cells where `NumericInstructions::mul` is not being used.
     // This is important when building larger circuits, where columns are used by
     // multiple sets of instructions.
     s_mul: Selector,
-
-    // The selector for the public-input gate, which uses one of the advice columns.
-    s_pub: Selector,
 }
 
 impl<F: FieldExt> FieldChip<F> {
@@ -73,11 +72,11 @@ impl<F: FieldExt> FieldChip<F> {
         advice: [Column<Advice>; 2],
         instance: Column<Instance>,
     ) -> <Self as Chip<F>>::Config {
+        meta.enable_equality(instance.into());
         for column in &advice {
             meta.enable_equality((*column).into());
         }
         let s_mul = meta.selector();
-        let s_pub = meta.selector();
 
         // Define our multiplication gate!
         meta.create_gate("mul", |meta| {
@@ -109,23 +108,10 @@ impl<F: FieldExt> FieldChip<F> {
             vec![s_mul * (lhs * rhs + out * -F::one())]
         });
 
-        // Define our public-input gate!
-        meta.create_gate("public input", |meta| {
-            // We choose somewhat-arbitrarily that we will use the second advice
-            // column for exposing numbers as public inputs.
-            let a = meta.query_advice(advice[1], Rotation::cur());
-            let p = meta.query_instance(instance, Rotation::cur());
-            let s = meta.query_selector(s_pub);
-
-            // We simply constrain the advice cell to be equal to the instance cell,
-            // when the selector is enabled.
-            vec![s * (p + a * -F::one())]
-        });
-
         FieldConfig {
             advice,
+            instance,
             s_mul,
-            s_pub,
         }
     }
 }
@@ -239,26 +225,7 @@ impl<F: FieldExt> NumericInstructions<F> for FieldChip<F> {
     fn expose_public(&self, mut layouter: impl Layouter<F>, num: Self::Num) -> Result<(), Error> {
         let config = self.config();
 
-        layouter.assign_region(
-            || "expose public",
-            |mut region: Region<'_, F>| {
-                // Enable the public-input gate.
-                config.s_pub.enable(&mut region, 0)?;
-
-                // Load the output into the correct advice column.
-                let out = region.assign_advice(
-                    || "public advice",
-                    config.advice[1],
-                    0,
-                    || num.value.ok_or(Error::SynthesisError),
-                )?;
-                region.constrain_equal(num.cell, out)?;
-
-                // We don't assign to the instance column inside the circuit;
-                // the mapping of public inputs to cells is provided to the prover.
-                Ok(())
-            },
-        )
+        layouter.constrain_instance(num.cell, config.instance, 0)
     }
 }
 // ANCHOR_END: instructions-impl
@@ -342,24 +309,18 @@ fn main() {
         b: Some(b),
     };
 
-    // Arrange the public input. We expose the multiplication result in row 6
+    // Arrange the public input. We expose the multiplication result in row 0
     // of the instance column, so we position it there in our public inputs.
     let mut public_inputs = vec![Fp::zero(); 1 << k];
-    public_inputs[6] = c;
+    public_inputs[0] = c;
 
     // Given the correct public input, our circuit will verify.
     let prover = MockProver::run(k, &circuit, vec![public_inputs.clone()]).unwrap();
     assert_eq!(prover.verify(), Ok(()));
 
     // If we try some other public input, the proof will fail!
-    public_inputs[6] += Fp::one();
+    public_inputs[0] += Fp::one();
     let prover = MockProver::run(k, &circuit, vec![public_inputs]).unwrap();
-    assert_eq!(
-        prover.verify(),
-        Err(vec![VerifyFailure::Constraint {
-            constraint: ((1, "public input").into(), 0, "").into(),
-            row: 6,
-        }])
-    );
+    assert!(prover.verify().is_err());
     // ANCHOR_END: test-circuit
 }
