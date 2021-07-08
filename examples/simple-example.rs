@@ -6,7 +6,7 @@ use halo2::{
     arithmetic::FieldExt,
     circuit::{Cell, Chip, Layouter, Region, SimpleFloorPlanner},
     dev::VerifyFailure,
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance, Permutation, Selector},
+    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance, Selector},
     poly::Rotation,
 };
 
@@ -50,11 +50,6 @@ struct FieldConfig {
     /// the circuit.
     advice: [Column<Advice>; 2],
 
-    // We need to create a permutation between our advice columns. This allows us to
-    // copy numbers within these columns from arbitrary rows, which we can use to load
-    // inputs into our instruction regions.
-    perm: Permutation,
-
     // We need a selector to enable the multiplication gate, so that we aren't placing
     // any constraints on cells where `NumericInstructions::mul` is not being used.
     // This is important when building larger circuits, where columns are used by
@@ -78,13 +73,9 @@ impl<F: FieldExt> FieldChip<F> {
         advice: [Column<Advice>; 2],
         instance: Column<Instance>,
     ) -> <Self as Chip<F>>::Config {
-        let perm = Permutation::new(
-            meta,
-            &advice
-                .iter()
-                .map(|column| (*column).into())
-                .collect::<Vec<_>>(),
-        );
+        for column in &advice {
+            meta.enable_equality((*column).into());
+        }
         let s_mul = meta.selector();
         let s_pub = meta.selector();
 
@@ -133,7 +124,6 @@ impl<F: FieldExt> FieldChip<F> {
 
         FieldConfig {
             advice,
-            perm,
             s_mul,
             s_pub,
         }
@@ -224,8 +214,8 @@ impl<F: FieldExt> NumericInstructions<F> for FieldChip<F> {
                     0,
                     || b.value.ok_or(Error::SynthesisError),
                 )?;
-                region.constrain_equal(&config.perm, a.cell, lhs)?;
-                region.constrain_equal(&config.perm, b.cell, rhs)?;
+                region.constrain_equal(a.cell, lhs)?;
+                region.constrain_equal(b.cell, rhs)?;
 
                 // Now we can assign the multiplication result into the output position.
                 let value = a.value.and_then(|a| b.value.map(|b| a * b));
@@ -262,7 +252,7 @@ impl<F: FieldExt> NumericInstructions<F> for FieldChip<F> {
                     0,
                     || num.value.ok_or(Error::SynthesisError),
                 )?;
-                region.constrain_equal(&config.perm, num.cell, out)?;
+                region.constrain_equal(num.cell, out)?;
 
                 // We don't assign to the instance column inside the circuit;
                 // the mapping of public inputs to cells is provided to the prover.
@@ -339,7 +329,7 @@ fn main() {
     // ANCHOR: test-circuit
     // The number of rows in our circuit cannot exceed 2^k. Since our example
     // circuit is very small, we can pick a very small value here.
-    let k = 3;
+    let k = 4;
 
     // Prepare the private and public inputs to the circuit!
     let a = Fp::from(2);

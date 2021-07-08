@@ -31,8 +31,6 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         sb: Column<Fixed>,
         sc: Column<Fixed>,
         sm: Column<Fixed>,
-
-        perm: Permutation,
     }
 
     trait StandardCs<FF: FieldExt> {
@@ -164,10 +162,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             left: Cell,
             right: Cell,
         ) -> Result<(), Error> {
-            layouter.assign_region(
-                || "copy",
-                |mut region| region.constrain_equal(&self.config.perm, left, right),
-            )
+            layouter.assign_region(|| "copy", |mut region| region.constrain_equal(left, right))
         }
     }
 
@@ -184,7 +179,9 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             let b = meta.advice_column();
             let c = meta.advice_column();
 
-            let perm = meta.permutation(&[a.into(), b.into(), c.into()]);
+            meta.enable_equality(a.into());
+            meta.enable_equality(b.into());
+            meta.enable_equality(c.into());
 
             let sm = meta.fixed_column();
             let sa = meta.fixed_column();
@@ -212,7 +209,6 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
                 sb,
                 sc,
                 sm,
-                perm,
             }
         }
 
@@ -223,7 +219,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         ) -> Result<(), Error> {
             let cs = StandardPlonk::new(config);
 
-            for _ in 0..(1 << (self.k - 1)) {
+            for _ in 0..((1 << (self.k - 1)) - 5) {
                 let mut a_squared = None;
                 let (a0, _, c0) = cs.raw_multiply(&mut layouter, || {
                     a_squared = self.a.map(|a| a.square());

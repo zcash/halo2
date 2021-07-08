@@ -8,7 +8,7 @@ use halo2::dev::MockProver;
 use halo2::pasta::{EqAffine, Fp};
 use halo2::plonk::{
     create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column, ConstraintSystem,
-    Error, Fixed, Permutation, VerifyingKey,
+    Error, Fixed, VerifyingKey,
 };
 use halo2::poly::{
     commitment::{Blind, Params},
@@ -43,9 +43,6 @@ fn plonk_api() {
         sp: Column<Fixed>,
         sl: Column<Fixed>,
         sl2: Column<Fixed>,
-
-        perm: Permutation,
-        perm2: Permutation,
     }
 
     trait StandardCs<FF: FieldExt> {
@@ -212,8 +209,8 @@ fn plonk_api() {
             layouter.assign_region(
                 || "copy",
                 |mut region| {
-                    region.constrain_equal(&self.config.perm, left, right)?;
-                    region.constrain_equal(&self.config.perm2, left, right)
+                    region.constrain_equal(left, right)?;
+                    region.constrain_equal(left, right)
                 },
             )
         }
@@ -282,8 +279,9 @@ fn plonk_api() {
             let d = meta.advice_column();
             let p = meta.instance_column();
 
-            let perm = meta.permutation(&[a.into(), b.into(), c.into()]);
-            let perm2 = meta.permutation(&[a.into(), b.into(), c.into()]);
+            meta.enable_equality(a.into());
+            meta.enable_equality(b.into());
+            meta.enable_equality(c.into());
 
             let sm = meta.fixed_column();
             let sa = meta.fixed_column();
@@ -308,6 +306,7 @@ fn plonk_api() {
              *   ...       ...    ...  0         0
              * ]
              */
+
             meta.lookup(|meta| {
                 let a_ = meta.query_any(a.into(), Rotation::cur());
                 let sl_ = meta.query_any(sl.into(), Rotation::cur());
@@ -364,8 +363,6 @@ fn plonk_api() {
                 sp,
                 sl,
                 sl2,
-                perm,
-                perm2,
             }
         }
 
@@ -501,6 +498,7 @@ fn plonk_api() {
 
     // Check that the verification key has not changed unexpectedly
     {
+        //panic!("{:#?}", pk.get_vk().pinned());
         assert_eq!(
             format!("{:#?}", pk.get_vk().pinned()),
             r#####"PinnedVerificationKey {
@@ -508,7 +506,7 @@ fn plonk_api() {
     scalar_modulus: "0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001",
     domain: PinnedEvaluationDomain {
         k: 5,
-        extended_k: 7,
+        extended_k: 8,
         omega: 0x0cc3380dc616f2e1daf29ad1560833ed3baea3393eceb7bc8fa36376929b78cc,
     },
     cs: PinnedConstraintSystem {
@@ -726,40 +724,22 @@ fn plonk_api() {
                 ),
             ),
         ],
-        permutations: [
-            Argument {
-                columns: [
-                    Column {
-                        index: 1,
-                        column_type: Advice,
-                    },
-                    Column {
-                        index: 2,
-                        column_type: Advice,
-                    },
-                    Column {
-                        index: 3,
-                        column_type: Advice,
-                    },
-                ],
-            },
-            Argument {
-                columns: [
-                    Column {
-                        index: 1,
-                        column_type: Advice,
-                    },
-                    Column {
-                        index: 2,
-                        column_type: Advice,
-                    },
-                    Column {
-                        index: 3,
-                        column_type: Advice,
-                    },
-                ],
-            },
-        ],
+        permutation: Argument {
+            columns: [
+                Column {
+                    index: 1,
+                    column_type: Advice,
+                },
+                Column {
+                    index: 2,
+                    column_type: Advice,
+                },
+                Column {
+                    index: 3,
+                    column_type: Advice,
+                },
+            ],
+        },
         lookups: [
             Argument {
                 input_expressions: [
@@ -807,22 +787,13 @@ fn plonk_api() {
         (0x3c145eb1e4f1e49d9eed351a4e2d9f3deed13bc5ba028d3b425084d606418cc8, 0x045d846e7df4e563ce57cd5483d17bad87f0345e18409bf15abc3d71953ae71c),
         (0x27b1cd6c0408a2fe7a764e6ac7abda4f6c7e7a4b3f7375532fe11f3af579de64, 0x19dcda088f6c8ad67408650554cfdd5c8c2e5385cf59c662554c837cf3f42c2d),
     ],
-    permutations: [
-        VerifyingKey {
-            commitments: [
-                (0x1347b4b385837977a96b87f199c6a9a81520015539d1e8fa79429bb4ca229a00, 0x2168e404cabef513654d6ff516cde73f0ba87e3dc84e4b940ed675b5f66f3884),
-                (0x0e6d69cd2455ec43be640f6397ed65c9e51b1d8c0fd2216339314ff37ade122a, 0x222ed6dc8cfc9ea26dcc10b9d4add791ada60f2b5a63ee1e4635f88aa0c96654),
-                (0x13c447846f48c41a5e0675ccf88ebc0cdef2c96c51446d037acb866d24255785, 0x1f0b5414fc5e8219dbfab996eed6129d831488b2386a8b1a63663938903bd63a),
-            ],
-        },
-        VerifyingKey {
-            commitments: [
-                (0x1347b4b385837977a96b87f199c6a9a81520015539d1e8fa79429bb4ca229a00, 0x2168e404cabef513654d6ff516cde73f0ba87e3dc84e4b940ed675b5f66f3884),
-                (0x0e6d69cd2455ec43be640f6397ed65c9e51b1d8c0fd2216339314ff37ade122a, 0x222ed6dc8cfc9ea26dcc10b9d4add791ada60f2b5a63ee1e4635f88aa0c96654),
-                (0x13c447846f48c41a5e0675ccf88ebc0cdef2c96c51446d037acb866d24255785, 0x1f0b5414fc5e8219dbfab996eed6129d831488b2386a8b1a63663938903bd63a),
-            ],
-        },
-    ],
+    permutation: VerifyingKey {
+        commitments: [
+            (0x1347b4b385837977a96b87f199c6a9a81520015539d1e8fa79429bb4ca229a00, 0x2168e404cabef513654d6ff516cde73f0ba87e3dc84e4b940ed675b5f66f3884),
+            (0x0e6d69cd2455ec43be640f6397ed65c9e51b1d8c0fd2216339314ff37ade122a, 0x222ed6dc8cfc9ea26dcc10b9d4add791ada60f2b5a63ee1e4635f88aa0c96654),
+            (0x13c447846f48c41a5e0675ccf88ebc0cdef2c96c51446d037acb866d24255785, 0x1f0b5414fc5e8219dbfab996eed6129d831488b2386a8b1a63663938903bd63a),
+        ],
+    },
 }"#####
         );
     }

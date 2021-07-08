@@ -3,7 +3,7 @@ use halo2::{
     circuit::{Cell, Layouter, Region, SimpleFloorPlanner},
     dev::CircuitLayout,
     pasta::Fp,
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed, Permutation},
+    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed},
     poly::Rotation,
 };
 use plotters::prelude::*;
@@ -27,12 +27,8 @@ fn main() {
         sb: Column<Fixed>,
         sc: Column<Fixed>,
         sm: Column<Fixed>,
-        sp: Column<Fixed>,
         sl: Column<Fixed>,
         sl2: Column<Fixed>,
-
-        perm: Permutation,
-        perm2: Permutation,
     }
 
     trait StandardCs<FF: FieldExt> {
@@ -47,9 +43,6 @@ fn main() {
         where
             F: FnMut() -> Result<(FF, FF, FF), Error>;
         fn copy(&self, region: &mut Region<FF>, a: Cell, b: Cell) -> Result<(), Error>;
-        fn public_input<F>(&self, layouter: &mut impl Layouter<FF>, f: F) -> Result<Cell, Error>
-        where
-            F: FnMut() -> Result<FF, Error>;
         fn lookup_table(
             &self,
             layouter: &mut impl Layouter<FF>,
@@ -172,22 +165,7 @@ fn main() {
             Ok((lhs, rhs, out))
         }
         fn copy(&self, region: &mut Region<FF>, left: Cell, right: Cell) -> Result<(), Error> {
-            region.constrain_equal(&self.config.perm, left, right)?;
-            region.constrain_equal(&self.config.perm2, left, right)
-        }
-        fn public_input<F>(&self, layouter: &mut impl Layouter<FF>, mut f: F) -> Result<Cell, Error>
-        where
-            F: FnMut() -> Result<FF, Error>,
-        {
-            layouter.assign_region(
-                || "public_input",
-                |mut region| {
-                    let value = region.assign_advice(|| "value", self.config.a, 0, || f())?;
-                    region.assign_fixed(|| "public", self.config.sp, 0, || Ok(FF::one()))?;
-
-                    Ok(value)
-                },
-            )
+            region.constrain_equal(left, right)
         }
         fn lookup_table(
             &self,
@@ -238,16 +216,15 @@ fn main() {
             let sf = meta.fixed_column();
             let c = meta.advice_column();
             let d = meta.advice_column();
-            let p = meta.instance_column();
 
-            let perm = meta.permutation(&[a.into(), b.into(), c.into()]);
-            let perm2 = meta.permutation(&[a.into(), b.into(), c.into()]);
+            meta.enable_equality(a.into());
+            meta.enable_equality(b.into());
+            meta.enable_equality(c.into());
 
             let sm = meta.fixed_column();
             let sa = meta.fixed_column();
             let sb = meta.fixed_column();
             let sc = meta.fixed_column();
-            let sp = meta.fixed_column();
             let sl = meta.fixed_column();
             let sl2 = meta.fixed_column();
 
@@ -301,14 +278,6 @@ fn main() {
                 ]
             });
 
-            meta.create_gate("Public input", |meta| {
-                let a = meta.query_advice(a, Rotation::cur());
-                let p = meta.query_instance(p, Rotation::cur());
-                let sp = meta.query_fixed(sp, Rotation::cur());
-
-                vec![sp * (a + p * (-F::one()))]
-            });
-
             PlonkConfig {
                 a,
                 b,
@@ -319,11 +288,8 @@ fn main() {
                 sb,
                 sc,
                 sm,
-                sp,
                 sl,
                 sl2,
-                perm,
-                perm2,
             }
         }
 
@@ -333,10 +299,6 @@ fn main() {
             mut layouter: impl Layouter<F>,
         ) -> Result<(), Error> {
             let cs = StandardPlonk::new(config);
-
-            let _ = cs.public_input(&mut layouter.namespace(|| "input"), || {
-                Ok(F::one() + F::one())
-            })?;
 
             for i in 0..10 {
                 layouter.assign_region(
