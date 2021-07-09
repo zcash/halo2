@@ -293,10 +293,10 @@ pub trait HashDomains<C: CurveAffine>: Clone + Debug {
 #[cfg(test)]
 mod tests {
     use halo2::{
-        circuit::{layouter::SingleChipLayouter, Layouter},
+        circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         pasta::pallas,
-        plonk::{Assignment, Circuit, ConstraintSystem, Error},
+        plonk::{Circuit, ConstraintSystem, Error},
     };
 
     use super::{
@@ -322,6 +322,11 @@ mod tests {
 
     impl Circuit<pallas::Base> for MyCircuit {
         type Config = (EccConfig, SinsemillaConfig, SinsemillaConfig);
+        type FloorPlanner = SimpleFloorPlanner;
+
+        fn without_witnesses(&self) -> Self {
+            MyCircuit {}
+        }
 
         #[allow(non_snake_case)]
         fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
@@ -393,10 +398,9 @@ mod tests {
 
         fn synthesize(
             &self,
-            cs: &mut impl Assignment<pallas::Base>,
             config: Self::Config,
+            mut layouter: impl Layouter<pallas::Base>,
         ) -> Result<(), Error> {
-            let mut layouter = SingleChipLayouter::new(cs)?;
             let ecc_chip = EccChip::construct(config.0);
 
             // The two `SinsemillaChip`s share the same lookup table.
@@ -503,6 +507,8 @@ mod tests {
         let root = root.titled("SinsemillaHash", ("sans-serif", 60)).unwrap();
 
         let circuit = MyCircuit {};
-        halo2::dev::circuit_layout(&circuit, &root).unwrap();
+        halo2::dev::CircuitLayout::default()
+            .render(&circuit, &root)
+            .unwrap();
     }
 }
