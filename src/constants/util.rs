@@ -1,7 +1,7 @@
 use ff::PrimeFieldBits;
 use halo2::arithmetic::{CurveAffine, FieldExt};
 
-/// Decompose a scalar into `window_num_bits` bits (little-endian)
+/// Decompose a word `alpha` into `window_num_bits` bits (little-endian)
 /// For a window size of `w`, this returns [k_0, ..., k_n] where each `k_i`
 /// is a `w`-bit value, and `scalar = k_0 + k_1 * w + k_n * w^n`.
 ///
@@ -9,22 +9,22 @@ use halo2::arithmetic::{CurveAffine, FieldExt};
 ///
 /// We are returning a `Vec<u8>` which means the window size is limited to
 /// <= 8 bits.
-pub fn decompose_scalar_fixed<F: PrimeFieldBits>(
-    scalar: F,
-    scalar_num_bits: usize,
+pub fn decompose_word<F: PrimeFieldBits>(
+    word: F,
+    word_num_bits: usize,
     window_num_bits: usize,
 ) -> Vec<u8> {
     assert!(window_num_bits <= 8);
 
     // Pad bits to multiple of window_num_bits
-    let padding = (window_num_bits - (scalar_num_bits % window_num_bits)) % window_num_bits;
-    let bits: Vec<bool> = scalar
+    let padding = (window_num_bits - (word_num_bits % window_num_bits)) % window_num_bits;
+    let bits: Vec<bool> = word
         .to_le_bits()
         .into_iter()
-        .take(scalar_num_bits)
+        .take(word_num_bits)
         .chain(std::iter::repeat(false).take(padding))
         .collect();
-    assert_eq!(bits.len(), scalar_num_bits + padding);
+    assert_eq!(bits.len(), word_num_bits + padding);
 
     bits.chunks_exact(window_num_bits)
         .map(|chunk| chunk.iter().rev().fold(0, |acc, b| (acc << 1) + (*b as u8)))
@@ -54,7 +54,7 @@ pub fn gen_const_array<Output: Copy + Default, const LEN: usize>(
 
 #[cfg(test)]
 mod tests {
-    use super::decompose_scalar_fixed;
+    use super::decompose_word;
     use ff::PrimeField;
     use pasta_curves::{arithmetic::FieldExt, pallas};
     use proptest::prelude::*;
@@ -72,12 +72,12 @@ mod tests {
 
     proptest! {
         #[test]
-        fn test_decompose_scalar_fixed(
+        fn test_decompose_word(
             scalar in arb_scalar(),
             window_num_bits in 1u8..9
         ) {
             // Get decomposition into `window_num_bits` bits
-            let decomposed = decompose_scalar_fixed(scalar, pallas::Scalar::NUM_BITS as usize, window_num_bits as usize);
+            let decomposed = decompose_word(scalar, pallas::Scalar::NUM_BITS as usize, window_num_bits as usize);
 
             // Flatten bits
             let bits = decomposed

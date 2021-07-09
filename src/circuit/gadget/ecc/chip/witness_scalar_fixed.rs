@@ -61,7 +61,7 @@ impl Config {
 
         // Decompose scalar into `k-bit` windows
         let scalar_windows: Option<Vec<u8>> = scalar.map(|scalar| {
-            util::decompose_scalar_fixed::<pallas::Scalar>(
+            util::decompose_word::<pallas::Scalar>(
                 scalar,
                 SCALAR_NUM_BITS,
                 constants::FIXED_BASE_WINDOW_SIZE,

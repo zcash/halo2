@@ -6,7 +6,7 @@ use crate::{
         bitrange_subset, copy, lookup_range_check::LookupRangeCheckConfig, range_check, CellValue,
         Var,
     },
-    constants::{self, util::decompose_scalar_fixed, T_P},
+    constants::{self, util::decompose_word, T_P},
     primitives::sinsemilla,
 };
 use halo2::{
@@ -428,7 +428,7 @@ impl Config {
         // Decompose base field element into 3-bit words.
         let words: Vec<Option<u8>> = {
             let words = base_field_elem.value().map(|base_field_elem| {
-                decompose_scalar_fixed::<pallas::Base>(
+                decompose_word::<pallas::Base>(
                     base_field_elem,
                     constants::L_ORCHARD_BASE,
                     constants::FIXED_BASE_WINDOW_SIZE,
