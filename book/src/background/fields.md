@@ -260,7 +260,7 @@ quite large.)
 
 In the previous sections we wrote $p - 1 = 2^k \cdot t$ with $t$ odd, and stated that an
 element $\alpha \in \mathbb{F}_p^\times$ generated the $2^k$-order subgroup. For
-convenience, let's denote $n := 2^k.$ The elements $\{1, \alpha, \alpha^2, \alpha^{n-1}\}$
+convenience, let's denote $n := 2^k.$ The elements $\{1, \alpha, \ldots, \alpha^{n-1}\}$
 are known as the $n$th [roots of unity](https://en.wikipedia.org/wiki/Root_of_unity).
 
 The **primitive root of unity**, $\omega,$ is an $n$th root of unity such that
