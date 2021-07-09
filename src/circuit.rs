@@ -198,9 +198,10 @@ impl<'r, F: Field> Region<'r, F> {
             })
     }
 
-    /// Constraint two cells to have the same value.
+    /// Constrain two cells to have the same value.
     ///
-    /// Returns an error if either of the cells is not within the given permutation.
+    /// Returns an error if either of the cells are in columns where equality
+    /// has not been enabled.
     pub fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error> {
         self.region.constrain_equal(left, right)
     }

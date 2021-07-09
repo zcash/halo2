@@ -244,6 +244,8 @@ pub struct MockProver<F: Group + Field> {
 
     permutation: permutation::keygen::Assembly,
 
+    // All rows including and above this one are off
+    // limits due to blinding factors.
     upper_bound_cell_index: usize,
 }
 
@@ -408,8 +410,8 @@ impl<F: FieldExt> MockProver<F> {
         let config = ConcreteCircuit::configure(&mut cs);
         let cs = cs;
 
-        if n < cs.blinding_factors() + 3 {
-            panic!("not enough rows available to synthesize");
+        if n < cs.minimum_rows() {
+            return Err(Error::NotEnoughRowsAvailable);
         }
 
         let fixed = vec![vec![None; n]; cs.num_fixed_columns];

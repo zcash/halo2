@@ -29,7 +29,8 @@ impl<F: Field> Argument<F> {
         // degree 2:
         // l_0(X) * (1 - z(X)) = 0
         //
-        // The "last" value in the permutation poly should be a boolean, for completeness.
+        // The "last" value in the permutation poly should be a boolean, for
+        // completeness and soundness.
         // degree 3:
         // l_last(X) * (z(X)^2 - z(X)) = 0
         //

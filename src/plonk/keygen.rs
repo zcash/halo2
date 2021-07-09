@@ -30,16 +30,6 @@ where
     let mut cs = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut cs);
 
-    let cs = cs;
-    // There needs to be enough room for at least one row.
-    assert!(
-        cs.blinding_factors() // m blinding factors
-        + 1 // for l_{-(m + 1)}
-        + 1 // for l_0
-        + 1 // for at least one row
-        <= (params.n as usize)
-    );
-
     let degree = cs.degree();
 
     let domain = EvaluationDomain::new(degree as u32, params.k);
@@ -180,6 +170,10 @@ where
 {
     let (domain, cs, config) = create_domain::<C, ConcreteCircuit>(params);
 
+    if (params.n as usize) < cs.minimum_rows() {
+        return Err(Error::NotEnoughRowsAvailable);
+    }
+
     let mut assembly: Assembly<C::Scalar> = Assembly {
         fixed: vec![domain.empty_lagrange_assigned(); cs.num_fixed_columns],
         permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
@@ -223,14 +217,10 @@ where
     let config = ConcreteCircuit::configure(&mut cs);
 
     let cs = cs;
-    // There needs to be enough room for at least one row.
-    assert!(
-        cs.blinding_factors() // m blinding factors
-        + 1 // for l_{-(m + 1)}
-        + 1 // for l_0
-        + 1 // for at least one row
-        <= (params.n as usize)
-    );
+
+    if (params.n as usize) < cs.minimum_rows() {
+        return Err(Error::NotEnoughRowsAvailable);
+    }
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
         fixed: vec![vk.domain.empty_lagrange_assigned(); vk.cs.num_fixed_columns],

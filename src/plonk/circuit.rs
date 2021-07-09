@@ -1073,15 +1073,16 @@ impl<F: Field> ConstraintSystem<F> {
     /// Compute the number of blinding factors necessary to perfectly blind
     /// each of the prover's witness polynomials.
     pub fn blinding_factors(&self) -> usize {
-        // All of the prover's advice columns are evaluated at most
+        // All of the prover's advice columns are evaluated at no more than
         let factors = *self.num_advice_queries.iter().max().unwrap_or(&1);
-        // distinct points during gate checks. In the permutation and lookup
-        // argument the witness polynomials are evaluated at most 3 times:
+        // distinct points during gate checks.
 
+        // In the permutation and lookup argument the witness polynomials are
+        // evaluated at most 3 times:
         let factors = std::cmp::max(3, factors);
 
         // Each polynomial is evaluated at most an additional time during
-        // multiopen
+        // multiopen:
         let factors = factors + 1;
 
         // h(x) is derived by the other evaluations so it does not reveal
@@ -1089,11 +1090,20 @@ impl<F: Field> ConstraintSystem<F> {
 
         // h(x_3) is also not revealed; the verifier only learns a single
         // evaluation of a polynomial in x_1 which has h(x_3) and another random
-        // polynomial evaluated at x_3 as coefficients
+        // polynomial evaluated at x_3 as coefficients.
 
         // Add an additional blinding factor as a slight defense against
         // off-by-one errors.
         factors + 1
+    }
+
+    /// Returns the minimum necessary rows that need to exist in order to
+    /// account for e.g. blinding factors.
+    pub fn minimum_rows(&self) -> usize {
+        self.blinding_factors() // m blinding factors
+            + 1 // for l_{-(m + 1)} (l_last)
+            + 1 // for l_0
+            + 1 // for at least one row
     }
 }
 

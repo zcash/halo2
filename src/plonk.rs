@@ -150,6 +150,8 @@ pub enum Error {
     OpeningError,
     /// Transcript error
     TranscriptError,
+    /// Insufficient number of rows available
+    NotEnoughRowsAvailable,
 }
 
 impl<C: CurveAffine> ProvingKey<C> {
