@@ -110,7 +110,7 @@ impl<C: CurveAffine> Evaluated<C> {
         &'a self,
         l_0: C::Scalar,
         l_last: C::Scalar,
-        l_cover: C::Scalar,
+        l_blind: C::Scalar,
         argument: &'a Argument<C::Scalar>,
         theta: ChallengeTheta<C>,
         beta: ChallengeBeta<C>,
@@ -119,7 +119,7 @@ impl<C: CurveAffine> Evaluated<C> {
         fixed_evals: &[C::Scalar],
         instance_evals: &[C::Scalar],
     ) -> impl Iterator<Item = C::Scalar> + 'a {
-        let active_rows = C::Scalar::one() - (l_last + l_cover);
+        let active_rows = C::Scalar::one() - (l_last + l_blind);
 
         let product_expression = || {
             // z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
@@ -161,7 +161,7 @@ impl<C: CurveAffine> Evaluated<C> {
                 Some(l_last * &(self.product_eval.square() - &self.product_eval)),
             )
             .chain(
-                // (1 - (l_last + l_cover)) * (
+                // (1 - (l_last + l_blind)) * (
                 //   z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
                 //   - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
                 // ) = 0
@@ -172,7 +172,7 @@ impl<C: CurveAffine> Evaluated<C> {
                 l_0 * &(self.permuted_input_eval - &self.permuted_table_eval),
             ))
             .chain(Some(
-                // (1 - (l_last + l_cover)) * (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
+                // (1 - (l_last + l_blind)) * (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
                 (self.permuted_input_eval - &self.permuted_table_eval)
                     * &(self.permuted_input_eval - &self.permuted_input_inv_eval)
                     * &active_rows,

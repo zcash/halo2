@@ -60,7 +60,7 @@ impl Argument {
         let domain = &pk.vk.domain;
 
         // How many columns can be included in a single permutation polynomial?
-        // We need to multiply by z(X) and (1 - (l_last(X) + l_cover(X))). This
+        // We need to multiply by z(X) and (1 - (l_last(X) + l_blind(X))). This
         // will never underflow because of the requirement of at least a degree
         // 3 circuit for the permutation argument.
         let chunk_len = pk.vk.cs.degree() - 2;
@@ -261,7 +261,7 @@ impl<C: CurveAffine> Committed<C> {
                     .map(move |(coset, coset_last)| (coset - &coset_last) * &pk.l0),
             )
             // And for all the sets we enforce:
-            // (1 - (l_last + l_cover)) * (
+            // (1 - (l_last + l_blind)) * (
             //   z_i(\omega X) \prod (p(X) + \beta s_i(X) + \gamma)
             // - z_i(X) \prod (p(X) + \delta^i \beta X + \gamma)
             // )
@@ -331,7 +331,7 @@ impl<C: CurveAffine> Committed<C> {
                             current_delta *= &C::Scalar::DELTA;
                         }
 
-                        (left - &right) * &Polynomial::one_minus(pk.l_last.clone() + &pk.l_cover)
+                        (left - &right) * &Polynomial::one_minus(pk.l_last.clone() + &pk.l_blind)
                     }),
             );
 

@@ -143,7 +143,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
             .l_i_range(*x, xn, (-((blinding_factors + 1) as i32))..=0);
         assert_eq!(l_evals.len(), 2 + blinding_factors);
         let l_last = l_evals[0];
-        let l_cover: C::Scalar = l_evals[1..(1 + blinding_factors)]
+        let l_blind: C::Scalar = l_evals[1..(1 + blinding_factors)]
             .iter()
             .fold(C::Scalar::zero(), |acc, eval| acc + eval);
         let l_0 = l_evals[1 + blinding_factors];
@@ -179,7 +179,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                         &instance_evals,
                         l_0,
                         l_last,
-                        l_cover,
+                        l_blind,
                         beta,
                         gamma,
                         x,
@@ -192,7 +192,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                                 p.expressions(
                                     l_0,
                                     l_last,
-                                    l_cover,
+                                    l_blind,
                                     argument,
                                     theta,
                                     beta,

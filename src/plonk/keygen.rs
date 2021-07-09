@@ -260,14 +260,14 @@ where
     let l0 = vk.domain.lagrange_to_coeff(l0);
     let l0 = vk.domain.coeff_to_extended(l0, Rotation::cur());
 
-    // Compute l_cover(X) which evaluates to 1 for each blinding factor row
+    // Compute l_blind(X) which evaluates to 1 for each blinding factor row
     // and 0 otherwise over the domain.
-    let mut l_cover = vk.domain.empty_lagrange();
-    for evaluation in l_cover[..].iter_mut().rev().take(cs.blinding_factors()) {
+    let mut l_blind = vk.domain.empty_lagrange();
+    for evaluation in l_blind[..].iter_mut().rev().take(cs.blinding_factors()) {
         *evaluation = C::Scalar::one();
     }
-    let l_cover = vk.domain.lagrange_to_coeff(l_cover);
-    let l_cover = vk.domain.coeff_to_extended(l_cover, Rotation::cur());
+    let l_blind = vk.domain.lagrange_to_coeff(l_blind);
+    let l_blind = vk.domain.coeff_to_extended(l_blind, Rotation::cur());
 
     // Compute l_last(X) which evaluates to 1 on the first inactive row (just
     // before the blinding factors) and 0 otherwise over the domain
@@ -283,7 +283,7 @@ where
     Ok(ProvingKey {
         vk,
         l0,
-        l_cover,
+        l_blind,
         l_last,
         fixed_values: fixed,
         fixed_polys,

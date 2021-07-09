@@ -434,7 +434,7 @@ impl<'a, C: CurveAffine> Committed<C> {
     ) {
         let permuted = self.permuted;
 
-        let active_rows = Polynomial::one_minus(pk.l_last.clone() + &pk.l_cover);
+        let active_rows = Polynomial::one_minus(pk.l_last.clone() + &pk.l_blind);
 
         let expressions = iter::empty()
             // l_0(X) * (1 - z(X)) = 0
@@ -446,7 +446,7 @@ impl<'a, C: CurveAffine> Committed<C> {
                 (self.product_coset.clone() * &self.product_coset - &self.product_coset)
                     * &pk.l_last,
             ))
-            // (1 - (l_last + l_cover)) * (
+            // (1 - (l_last + l_blind)) * (
             //   z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
             //   - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
             // ) = 0
@@ -501,7 +501,7 @@ impl<'a, C: CurveAffine> Committed<C> {
             // Check that each value in the permuted lookup input expression is either
             // equal to the value above it, or the value at the same index in the
             // permuted table expression.
-            // (1 - (l_last + l_cover)) * (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
+            // (1 - (l_last + l_blind)) * (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
             .chain(Some(
                 (permuted.permuted_input_coset.clone() - &permuted.permuted_table_coset)
                     * &(permuted.permuted_input_coset.clone() - &permuted.permuted_input_inv_coset)

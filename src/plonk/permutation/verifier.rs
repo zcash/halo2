@@ -108,7 +108,7 @@ impl<C: CurveAffine> Evaluated<C> {
         instance_evals: &'a [C::Scalar],
         l_0: C::Scalar,
         l_last: C::Scalar,
-        l_cover: C::Scalar,
+        l_blind: C::Scalar,
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
         x: ChallengeX<C>,
@@ -146,7 +146,7 @@ impl<C: CurveAffine> Evaluated<C> {
                     .map(move |(set, prev_last)| (set - &prev_last) * &l_0),
             )
             // And for all the sets we enforce:
-            // (1 - (l_last + l_cover)) * (
+            // (1 - (l_last + l_blind)) * (
             //   z_i(\omega X) \prod (p(X) + \beta s_i(X) + \gamma)
             // - z_i(X) \prod (p(X) + \delta^i \beta X + \gamma)
             // )
@@ -195,7 +195,7 @@ impl<C: CurveAffine> Evaluated<C> {
                             current_delta *= &C::Scalar::DELTA;
                         }
 
-                        (left - &right) * (C::Scalar::one() - &(l_last + &l_cover))
+                        (left - &right) * (C::Scalar::one() - &(l_last + &l_blind))
                     }),
             )
     }
