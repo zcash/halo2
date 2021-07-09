@@ -464,7 +464,8 @@ pub mod tests {
             scalar_val: pallas::Base,
             result: Point<pallas::Affine, EccChip>,
         ) -> Result<(), Error> {
-            // Case scalar from base field into scalar field
+            // Move scalar from base field into scalar field (which always fits
+            // for Pallas).
             let scalar = pallas::Scalar::from_bytes(&scalar_val.to_bytes()).unwrap();
             let expected = Point::new(
                 chip,

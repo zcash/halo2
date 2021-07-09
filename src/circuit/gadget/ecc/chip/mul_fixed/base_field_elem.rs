@@ -1,4 +1,5 @@
 use super::super::{EccBaseFieldElemFixed, EccConfig, EccPoint, OrchardFixedBasesFull};
+use super::H_BASE;
 
 use crate::{
     circuit::gadget::utilities::{
@@ -167,7 +168,7 @@ impl Config {
                     z_44_alpha.clone() - z_84_alpha * two_pow_120
                 };
                 // a_43 = z_43 - (2^3)z_44
-                let a_43 = z_43_alpha - z_44_alpha * pallas::Base::from_u64(1 << 3);
+                let a_43 = z_43_alpha - z_44_alpha * *H_BASE;
 
                 std::iter::empty()
                     .chain(Some(("MSB = 1 => alpha_1 = 0", alpha_2.clone() * alpha_1)))
@@ -456,10 +457,6 @@ impl Config {
             &self.super_config.perm,
         )?;
 
-        for idx in 0..words.len() {
-            self.base_field_fixed_mul.enable(region, offset + idx)?;
-        }
-
         let offset = offset + 1;
 
         let eight_inv = pallas::Base::TWO_INV.square() * pallas::Base::TWO_INV;
@@ -581,7 +578,7 @@ pub mod tests {
             scalar_val: pallas::Base,
             result: Point<pallas::Affine, EccChip>,
         ) -> Result<(), Error> {
-            // Case scalar from base field into scalar field
+            // Move scalar from base field into scalar field (which always fits for Pallas).
             let scalar = pallas::Scalar::from_bytes(&scalar_val.to_bytes()).unwrap();
             let expected = Point::new(
                 chip,
