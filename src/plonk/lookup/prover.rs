@@ -670,16 +670,16 @@ fn permute_expression_pair<C: CurveAffine>(
 
     #[cfg(feature = "sanity-checks")]
     {
-        let mut last = C::Scalar::rand();
+        let mut last = None;
         for (a, b) in permuted_input_expression
             .iter()
             .zip(permuted_table_coeffs.iter())
             .take(usable_rows)
         {
             if *a != *b {
-                assert_eq!(*a, last);
+                assert_eq!(*a, last.unwrap());
             }
-            last = *a;
+            last = Some(*a);
         }
     }
 
