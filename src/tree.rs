@@ -17,7 +17,7 @@ use serde::de::{Deserializer, Error};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 use std::iter;
-use subtle::{ConstantTimeEq, CtOption};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 // The uncommitted leaf is defined as pallas::Base(2).
 // <https://zips.z.cash/protocol/protocol.pdf#thmuncommittedorchard>
@@ -131,7 +131,9 @@ fn cond_swap(swap: bool, node: pallas::Base, sibling: pallas::Base) -> Pair {
     }
 }
 
-/// <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
+/// Implements the function `hash` (internal to MerkleCRH^Orchard) defined
+/// in <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
+///
 /// The layer with 2^n nodes is called "layer n":
 ///      - leaves are at layer MERKLE_DEPTH_ORCHARD = 32;
 ///      - the root is at layer 0.
@@ -170,19 +172,19 @@ fn hash_with_l(l: usize, pair: Pair) -> CtOption<pallas::Base> {
 /// can produce a bottom value which needs to be accounted for in
 /// the production of a Merkle root. Leaf nodes are always wrapped
 /// with the `Some` constructor.
-#[derive(Clone, Debug)]
-pub struct OrchardIncrementalTreeDigest(CtOption<pallas::Base>);
+#[derive(Copy, Clone, Debug)]
+pub struct MerkleCrhOrchardOutput(pallas::Base);
 
-impl OrchardIncrementalTreeDigest {
+impl MerkleCrhOrchardOutput {
     /// Creates an incremental tree leaf digest from the specified
     /// Orchard extracted note commitment.
     pub fn from_cmx(value: &ExtractedNoteCommitment) -> Self {
-        OrchardIncrementalTreeDigest(CtOption::new(**value, 1.into()))
+        MerkleCrhOrchardOutput(**value)
     }
 
     /// Convert this digest to its canonical byte representation.
-    pub fn to_bytes(&self) -> Option<[u8; 32]> {
-        <Option<pallas::Base>>::from(self.0).map(|b| b.to_bytes())
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
     }
 
     /// Parses a incremental tree leaf digest from the bytes of
@@ -191,23 +193,22 @@ impl OrchardIncrementalTreeDigest {
     /// Returns the empty `CtOption` if the provided bytes represent
     /// a non-canonical encoding.
     pub fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
-        pallas::Base::from_bytes(bytes)
-            .map(|b| OrchardIncrementalTreeDigest(CtOption::new(b, 1.into())))
+        pallas::Base::from_bytes(bytes).map(MerkleCrhOrchardOutput)
     }
 }
 
 /// This instance should only be used for hash table key comparisons.
-impl std::cmp::PartialEq for OrchardIncrementalTreeDigest {
+impl std::cmp::PartialEq for MerkleCrhOrchardOutput {
     fn eq(&self, other: &Self) -> bool {
         self.0.ct_eq(&other.0).into()
     }
 }
 
 /// This instance should only be used for hash table key comparisons.
-impl std::cmp::Eq for OrchardIncrementalTreeDigest {}
+impl std::cmp::Eq for MerkleCrhOrchardOutput {}
 
 /// This instance should only be used for hash table key hashing.
-impl std::hash::Hash for OrchardIncrementalTreeDigest {
+impl std::hash::Hash for MerkleCrhOrchardOutput {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         <Option<pallas::Base>>::from(self.0)
             .map(|b| b.to_bytes())
@@ -215,34 +216,43 @@ impl std::hash::Hash for OrchardIncrementalTreeDigest {
     }
 }
 
-impl Hashable for OrchardIncrementalTreeDigest {
-    fn empty_leaf() -> Self {
-        OrchardIncrementalTreeDigest(CtOption::new(*UNCOMMITTED_ORCHARD, 1.into()))
-    }
-
-    fn combine(altitude: Altitude, left_opt: &Self, right_opt: &Self) -> Self {
-        OrchardIncrementalTreeDigest(left_opt.0.and_then(|left| {
-            right_opt
-                .0
-                .and_then(|right| hash_with_l(altitude.into(), Pair { left, right }))
-        }))
-    }
-
-    fn empty_root(altitude: Altitude) -> Self {
-        OrchardIncrementalTreeDigest(CtOption::new(
-            EMPTY_ROOTS[<usize>::from(altitude)],
-            1.into(),
-        ))
+impl ConditionallySelectable for MerkleCrhOrchardOutput {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        MerkleCrhOrchardOutput(pallas::Base::conditional_select(&a.0, &b.0, choice))
     }
 }
 
-impl Serialize for OrchardIncrementalTreeDigest {
+impl Hashable for MerkleCrhOrchardOutput {
+    fn empty_leaf() -> Self {
+        MerkleCrhOrchardOutput(*UNCOMMITTED_ORCHARD)
+    }
+
+    /// Implements `MerkleCRH^Orchard` as defined in
+    /// <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
+    fn combine(altitude: Altitude, left: &Self, right: &Self) -> Self {
+        hash_with_l(
+            altitude.into(),
+            Pair {
+                left: left.0,
+                right: right.0,
+            },
+        )
+        .map(MerkleCrhOrchardOutput)
+        .unwrap_or_else(|| MerkleCrhOrchardOutput(pallas::Base::zero()))
+    }
+
+    fn empty_root(altitude: Altitude) -> Self {
+        MerkleCrhOrchardOutput(EMPTY_ROOTS[<usize>::from(altitude)])
+    }
+}
+
+impl Serialize for MerkleCrhOrchardOutput {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.to_bytes().serialize(serializer)
     }
 }
 
-impl<'de> Deserialize<'de> for OrchardIncrementalTreeDigest {
+impl<'de> Deserialize<'de> for MerkleCrhOrchardOutput {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let parsed = <[u8; 32]>::deserialize(deserializer)?;
         <Option<_>>::from(Self::from_bytes(&parsed)).ok_or_else(|| {
@@ -262,8 +272,6 @@ pub mod testing {
     };
 
     use std::convert::TryInto;
-    #[cfg(test)]
-    use subtle::CtOption;
 
     use crate::{
         constants::MERKLE_DEPTH_ORCHARD,
@@ -278,7 +286,7 @@ pub mod testing {
     use proptest::prelude::*;
 
     #[cfg(test)]
-    use super::OrchardIncrementalTreeDigest;
+    use super::MerkleCrhOrchardOutput;
     use super::{hash_with_l, Anchor, MerklePath, Pair, EMPTY_ROOTS};
 
     #[test]
@@ -417,9 +425,8 @@ pub mod testing {
 
         for (altitude, tv_root) in tv_empty_roots.iter().enumerate() {
             assert_eq!(
-                OrchardIncrementalTreeDigest::empty_root(Altitude::from(altitude as u8))
+                MerkleCrhOrchardOutput::empty_root(Altitude::from(altitude as u8))
                     .0
-                    .unwrap()
                     .to_bytes(),
                 *tv_root,
                 "Empty root mismatch at altitude {}",
@@ -469,16 +476,13 @@ pub mod testing {
             0x9c, 0x52, 0x7f, 0x0e,
         ];
 
-        let mut frontier = BridgeFrontier::<OrchardIncrementalTreeDigest, 32>::new();
+        let mut frontier = BridgeFrontier::<MerkleCrhOrchardOutput, 32>::new();
         for commitment in commitments.iter() {
-            let cmx = OrchardIncrementalTreeDigest(CtOption::new(
-                pallas::Base::from_bytes(commitment).unwrap(),
-                1.into(),
-            ));
+            let cmx = MerkleCrhOrchardOutput(pallas::Base::from_bytes(commitment).unwrap());
             frontier.append(&cmx);
         }
         assert_eq!(
-            frontier.root().0.unwrap(),
+            frontier.root().0,
             pallas::Base::from_bytes(&anchor).unwrap()
         );
     }
