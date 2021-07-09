@@ -48,7 +48,7 @@ impl<F: Field> Argument<F> {
         // Either the two values are the same, or the previous
         // value of a' is the same as the current value.
         // degree 3:
-        // (1 - (l_last + l_blind)) * (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
+        // (1 - (l_last + l_blind)) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0
         let mut input_degree = 1;
         for expr in self.input_expressions.iter() {
             input_degree = std::cmp::max(input_degree, expr.degree());

@@ -172,7 +172,7 @@ impl<C: CurveAffine> Evaluated<C> {
                 l_0 * &(self.permuted_input_eval - &self.permuted_table_eval),
             ))
             .chain(Some(
-                // (1 - (l_last + l_blind)) * (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
+                // (1 - (l_last + l_blind)) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0
                 (self.permuted_input_eval - &self.permuted_table_eval)
                     * &(self.permuted_input_eval - &self.permuted_input_inv_eval)
                     * &active_rows,

@@ -499,7 +499,7 @@ impl<'a, C: CurveAffine> Committed<C> {
             // Check that each value in the permuted lookup input expression is either
             // equal to the value above it, or the value at the same index in the
             // permuted table expression.
-            // (1 - (l_last + l_blind)) * (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0
+            // (1 - (l_last + l_blind)) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0
             .chain(Some(
                 (permuted.permuted_input_coset.clone() - &permuted.permuted_table_coset)
                     * &(permuted.permuted_input_coset.clone() - &permuted.permuted_input_inv_coset)
