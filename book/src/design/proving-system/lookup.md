@@ -102,9 +102,9 @@ We limit the number of usable rows to $u = 2^k - t - 1.$ We add two selectors:
 We enable the constraints from above only for the usable rows:
 
 $$
-\big(1 - (q_\mathit{blind}(X) + q_\mathit{last}(X))\big) \cdot \big(Z(\omega X) \cdot (A'(X) + \beta) \cdot (S'(X) + \gamma) - Z(X) \cdot (A(X) + \beta) \cdot (S(X) + \gamma)\big) = 0
+\big(1 - (q_\mathit{last}(X) + q_\mathit{blind}(X))\big) \cdot \big(Z(\omega X) \cdot (A'(X) + \beta) \cdot (S'(X) + \gamma) - Z(X) \cdot (A(X) + \beta) \cdot (S(X) + \gamma)\big) = 0
 $$$$
-\big(1 - (q_\mathit{blind}(X) + q_\mathit{last}(X))\big) \cdot (A'(X) - S'(X)) \cdot (A'(X) - A'(\omega^{-1} X)) = 0
+\big(1 - (q_\mathit{last}(X) + q_\mathit{blind}(X))\big) \cdot (A'(X) - S'(X)) \cdot (A'(X) - A'(\omega^{-1} X)) = 0
 $$
 
 The rules that are enabled on row $0$ remain the same:
