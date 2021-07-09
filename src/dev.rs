@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::iter;
+use std::ops::RangeTo;
 
 use ff::Field;
 
@@ -244,9 +245,8 @@ pub struct MockProver<F: Group + Field> {
 
     permutation: permutation::keygen::Assembly,
 
-    // All rows including and above this one are off
-    // limits due to blinding factors.
-    upper_bound_cell_index: usize,
+    // A range of available rows for assignment and copies.
+    usable_rows: RangeTo<usize>,
 }
 
 impl<F: Field + Group> Assignment<F> for MockProver<F> {
@@ -278,7 +278,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
-        if row >= self.upper_bound_cell_index {
+        if !self.usable_rows.contains(&row) {
             return Err(Error::BoundsFailure);
         }
 
@@ -319,7 +319,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
-        if row >= self.upper_bound_cell_index {
+        if !self.usable_rows.contains(&row) {
             return Err(Error::BoundsFailure);
         }
 
@@ -350,7 +350,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
-        if row >= self.upper_bound_cell_index {
+        if !self.usable_rows.contains(&row) {
             return Err(Error::BoundsFailure);
         }
 
@@ -375,7 +375,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         right_column: Column<Any>,
         right_row: usize,
     ) -> Result<(), crate::plonk::Error> {
-        if left_row >= self.upper_bound_cell_index || right_row >= self.upper_bound_cell_index {
+        if !self.usable_rows.contains(&left_row) || !self.usable_rows.contains(&right_row) {
             return Err(Error::BoundsFailure);
         }
 
@@ -428,7 +428,7 @@ impl<F: FieldExt> MockProver<F> {
             advice,
             instance,
             permutation,
-            upper_bound_cell_index: n - (blinding_factors + 1),
+            usable_rows: ..n - (blinding_factors + 1),
         };
 
         ConcreteCircuit::FloorPlanner::synthesize(&mut prover, circuit, config)?;

@@ -1,6 +1,7 @@
 use ff::Field;
 use group::Curve;
 use std::iter;
+use std::ops::RangeTo;
 
 use super::{
     circuit::{
@@ -128,7 +129,7 @@ pub fn create_proof<
             struct WitnessCollection<'a, F: Field> {
                 pub advice: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
                 instances: &'a [&'a [F]],
-                upper_bound_cell_index: usize,
+                usable_rows: RangeTo<usize>,
                 _marker: std::marker::PhantomData<F>,
             }
 
@@ -185,7 +186,7 @@ pub fn create_proof<
                     A: FnOnce() -> AR,
                     AR: Into<String>,
                 {
-                    if row >= self.upper_bound_cell_index {
+                    if !self.usable_rows.contains(&row) {
                         return Err(Error::BoundsFailure);
                     }
 
@@ -241,6 +242,8 @@ pub fn create_proof<
                 }
             }
 
+            let unusable_rows_start = params.n as usize - (meta.blinding_factors() + 1);
+
             let mut witness = WitnessCollection {
                 advice: vec![domain.empty_lagrange_assigned(); meta.num_advice_columns],
                 instances,
@@ -248,7 +251,7 @@ pub fn create_proof<
                 // cells that exist within inactive rows, which include some
                 // number of blinding factors and an extra row for use in the
                 // permutation argument.
-                upper_bound_cell_index: params.n as usize - (meta.blinding_factors() + 1),
+                usable_rows: ..unusable_rows_start,
                 _marker: std::marker::PhantomData,
             };
 
@@ -259,7 +262,7 @@ pub fn create_proof<
 
             // Add blinding factors to advice columns
             for advice in &mut advice {
-                for cell in &mut advice[witness.upper_bound_cell_index..] {
+                for cell in &mut advice[unusable_rows_start..] {
                     *cell = C::Scalar::rand();
                 }
             }

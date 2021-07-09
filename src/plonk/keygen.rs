@@ -1,5 +1,7 @@
 #![allow(clippy::int_plus_one)]
 
+use std::ops::RangeTo;
+
 use ff::Field;
 use group::Curve;
 
@@ -42,9 +44,8 @@ where
 struct Assembly<F: Field> {
     fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
     permutation: permutation::keygen::Assembly,
-    // All rows including and above this one are off
-    // limits due to blinding factors.
-    upper_bound_cell_index: usize,
+    // A range of available rows for assignment and copies.
+    usable_rows: RangeTo<usize>,
     _marker: std::marker::PhantomData<F>,
 }
 
@@ -71,7 +72,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
-        if row >= self.upper_bound_cell_index {
+        if !self.usable_rows.contains(&row) {
             return Err(Error::BoundsFailure);
         }
         // Selectors are just fixed columns.
@@ -117,7 +118,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
-        if row >= self.upper_bound_cell_index {
+        if !self.usable_rows.contains(&row) {
             return Err(Error::BoundsFailure);
         }
 
@@ -137,8 +138,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         right_column: Column<Any>,
         right_row: usize,
     ) -> Result<(), Error> {
-        // Check bounds first
-        if left_row >= self.upper_bound_cell_index || right_row >= self.upper_bound_cell_index {
+        if !self.usable_rows.contains(&left_row) || !self.usable_rows.contains(&right_row) {
             return Err(Error::BoundsFailure);
         }
 
@@ -177,7 +177,7 @@ where
     let mut assembly: Assembly<C::Scalar> = Assembly {
         fixed: vec![domain.empty_lagrange_assigned(); cs.num_fixed_columns],
         permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
-        upper_bound_cell_index: params.n as usize - (cs.blinding_factors() + 1),
+        usable_rows: ..params.n as usize - (cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
     };
 
@@ -225,7 +225,7 @@ where
     let mut assembly: Assembly<C::Scalar> = Assembly {
         fixed: vec![vk.domain.empty_lagrange_assigned(); vk.cs.num_fixed_columns],
         permutation: permutation::keygen::Assembly::new(params.n as usize, &vk.cs.permutation),
-        upper_bound_cell_index: params.n as usize - (vk.cs.blinding_factors() + 1),
+        usable_rows: ..params.n as usize - (vk.cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
     };
 
