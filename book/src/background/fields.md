@@ -193,6 +193,18 @@ of $\mathbb{F}_p^\times$ must divide $p-1.$
 
 [lagrange-group]: https://en.wikipedia.org/wiki/Lagrange%27s_theorem_(group_theory)
 
+[PLONK-based] proving systems like Halo 2 are more convenient to use with fields that have
+a large number of multiplicative subgroups with a "smooth" distribution (which makes the
+performance cliffs smaller and more granular as circuit sizes increase). The Pallas and
+Vesta curves specifically have primes of the form
+
+$$T \cdot 2^S = p - 1$$
+
+with $S = 32$ and $T$ odd (i.e. $p - 1$ has 32 lower zero-bits). This means they have
+multiplicative subgroups of order $2^k$ for all $k \leq 32$.
+
+[PLONK-based]: upa.md
+
 ## Square roots
 
 In a field $\mathbb{F}_p$ exactly half of all nonzero elements are squares; the remainder
