@@ -613,8 +613,10 @@ fn permute_expression_pair<C: CurveAffine>(
     table_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
 ) -> Result<ExpressionPair<C::Scalar>, Error> {
     let blinding_factors = pk.vk.cs.blinding_factors();
+    let usable_rows = params.n as usize - (blinding_factors + 1);
+
     let mut permuted_input_expression: Vec<C::Scalar> = input_expression.to_vec();
-    permuted_input_expression.truncate(params.n as usize - (blinding_factors + 1));
+    permuted_input_expression.truncate(usable_rows);
 
     // Sort input lookup expression values
     permuted_input_expression.sort();
@@ -622,13 +624,12 @@ fn permute_expression_pair<C: CurveAffine>(
     // A BTreeMap of each unique element in the table expression and its count
     let mut leftover_table_map: BTreeMap<C::Scalar, u32> = table_expression
         .iter()
-        .take(params.n as usize - (blinding_factors + 1))
+        .take(usable_rows)
         .fold(BTreeMap::new(), |mut acc, coeff| {
             *acc.entry(*coeff).or_insert(0) += 1;
             acc
         });
-    let mut permuted_table_coeffs =
-        vec![C::Scalar::zero(); params.n as usize - (blinding_factors + 1)];
+    let mut permuted_table_coeffs = vec![C::Scalar::zero(); usable_rows];
 
     let mut repeated_input_rows = permuted_input_expression
         .iter()
@@ -673,7 +674,7 @@ fn permute_expression_pair<C: CurveAffine>(
         for (a, b) in permuted_input_expression
             .iter()
             .zip(permuted_table_coeffs.iter())
-            .take(params.n as usize - (blinding_factors + 1))
+            .take(usable_rows)
         {
             if *a != *b {
                 assert_eq!(*a, last);
