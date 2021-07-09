@@ -133,7 +133,90 @@ mod tests {
     use super::*;
     use bigint::U256;
     use ff::PrimeField;
+    use halo2::{
+        circuit::{layouter::SingleChipLayouter, Layouter},
+        dev::{MockProver, VerifyFailure},
+        plonk::{Assignment, Circuit, ConstraintSystem, Error, Selector},
+        poly::Rotation,
+    };
     use pasta_curves::pallas;
+
+    #[test]
+    fn test_range_check() {
+        struct MyCircuit<const RANGE: usize>(u8);
+
+        impl<const RANGE: usize> UtilitiesInstructions<pallas::Base> for MyCircuit<RANGE> {
+            type Var = CellValue<pallas::Base>;
+        }
+
+        #[derive(Clone)]
+        struct Config {
+            selector: Selector,
+            advice: Column<Advice>,
+        }
+
+        impl<const RANGE: usize> Circuit<pallas::Base> for MyCircuit<RANGE> {
+            type Config = Config;
+
+            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+                let selector = meta.selector();
+                let advice = meta.advice_column();
+
+                meta.create_gate("range check", |meta| {
+                    let selector = meta.query_selector(selector);
+                    let advice = meta.query_advice(advice, Rotation::cur());
+
+                    vec![selector * range_check(advice, RANGE)]
+                });
+
+                Config { selector, advice }
+            }
+
+            fn synthesize(
+                &self,
+                cs: &mut impl Assignment<pallas::Base>,
+                config: Self::Config,
+            ) -> Result<(), Error> {
+                let mut layouter = SingleChipLayouter::new(cs)?;
+
+                layouter.assign_region(
+                    || "range constrain",
+                    |mut region| {
+                        config.selector.enable(&mut region, 0)?;
+                        region.assign_advice(
+                            || format!("witness {}", self.0),
+                            config.advice,
+                            0,
+                            || Ok(pallas::Base::from_u64(self.0.into())),
+                        )?;
+
+                        Ok(())
+                    },
+                )
+            }
+        }
+
+        for i in 0..8 {
+            let circuit: MyCircuit<8> = MyCircuit(i);
+            let prover = MockProver::<pallas::Base>::run(1, &circuit, vec![]).unwrap();
+            assert_eq!(prover.verify(), Ok(()));
+        }
+
+        {
+            let circuit: MyCircuit<8> = MyCircuit(8);
+            let prover = MockProver::<pallas::Base>::run(1, &circuit, vec![]).unwrap();
+            assert_eq!(
+                prover.verify(),
+                Err(vec![VerifyFailure::Constraint {
+                    gate_index: 0,
+                    gate_name: "range check",
+                    constraint_index: 0,
+                    constraint_name: "",
+                    row: 0
+                }])
+            );
+        }
+    }
 
     #[test]
     fn test_bitrange_subset() {
