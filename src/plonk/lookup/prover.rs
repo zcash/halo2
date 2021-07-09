@@ -357,9 +357,7 @@ impl<C: CurveAffine> Permuted<C> {
             // z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
             // - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
             for i in 0..n {
-                let next_idx = (i + 1) % n;
-
-                let mut left = z[next_idx];
+                let mut left = z[i + 1];
                 let permuted_input_value = &self.permuted_input_expression[i];
 
                 let permuted_table_value = &self.permuted_table_expression[i];
