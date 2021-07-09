@@ -155,8 +155,8 @@ impl<'r, F: Field> Region<'r, F> {
     /// Assign the value of the instance column's cell at absolute location
     /// `row` to the column `advice` at `offset` within this region, and return
     /// a `Cell`.
-    pub fn assign_advice_from_instance<'v, A, AR>(
-        &'v mut self,
+    pub fn assign_advice_from_instance<A, AR>(
+        &mut self,
         annotation: A,
         instance: Column<Instance>,
         row: usize,
