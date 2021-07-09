@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["halo2"] = [{"text":"impl&lt;F, B&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/deref/trait.DerefMut.html\" title=\"trait core::ops::deref::DerefMut\">DerefMut</a> for <a class=\"struct\" href=\"halo2/poly/struct.Polynomial.html\" title=\"struct halo2::poly::Polynomial\">Polynomial</a>&lt;F, B&gt;","synthetic":false,"types":["halo2::poly::Polynomial"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
