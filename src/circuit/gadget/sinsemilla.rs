@@ -401,7 +401,7 @@ mod tests {
             chip::{EccChip, EccConfig},
             Point,
         },
-        constants::MERKLE_CRH_PERSONALIZATION,
+        constants::{COMMIT_IVK_PERSONALIZATION, MERKLE_CRH_PERSONALIZATION},
         primitives::sinsemilla::{self, K},
     };
 
@@ -579,20 +579,47 @@ mod tests {
             {
                 let chip2 = SinsemillaChip::construct(config.2);
 
-                let commit_ivk =
-                    CommitDomain::new(chip2.clone(), ecc_chip, &SinsemillaCommitDomains::CommitIvk);
-                let r = Some(pallas::Scalar::rand());
+                let commit_ivk = CommitDomain::new(
+                    chip2.clone(),
+                    ecc_chip.clone(),
+                    &SinsemillaCommitDomains::CommitIvk,
+                );
+                let r_val = pallas::Scalar::rand();
                 let message: Vec<Option<bool>> =
                     (0..500).map(|_| Some(rand::random::<bool>())).collect();
-                let message = Message::from_bitstring(
-                    chip2,
-                    layouter.namespace(|| "witness message"),
-                    message,
-                )?;
-                commit_ivk.commit(layouter.namespace(|| "commit"), message, r)?;
-            }
 
-            Ok(())
+                let result = {
+                    let message = Message::from_bitstring(
+                        chip2,
+                        layouter.namespace(|| "witness message"),
+                        message.clone(),
+                    )?;
+                    commit_ivk.commit(layouter.namespace(|| "commit"), message, Some(r_val))?
+                };
+
+                // Witness expected result.
+                let expected_result = {
+                    let message: Option<Vec<bool>> = message.into_iter().collect();
+                    let expected_result = if let Some(message) = message {
+                        let domain = sinsemilla::CommitDomain::new(COMMIT_IVK_PERSONALIZATION);
+                        let point = domain.commit(message.into_iter(), &r_val).unwrap();
+                        Some(point.to_affine())
+                    } else {
+                        None
+                    };
+
+                    Point::new(
+                        ecc_chip,
+                        layouter.namespace(|| "Witness expected result"),
+                        expected_result,
+                    )?
+                };
+
+                result.constrain_equal(
+                    layouter.namespace(|| "result == expected result"),
+                    &expected_result,
+                )
+            }
         }
     }
 
