@@ -41,7 +41,7 @@ permutation argument with product column $Z$ with the rules:
 $$
 Z(\omega X) \cdot (A'(X) + \beta) \cdot (S'(X) + \gamma) - Z(X) \cdot (A(X) + \beta) \cdot (S(X) + \gamma) = 0
 $$$$
-\ell_0(X) \cdot (Z(X) - 1) = 0
+\ell_0(X) \cdot (1 - Z(X)) = 0
 $$
 
 i.e. provided that division by zero does not occur, we have for all $i \in [0, 2^k)$:
@@ -112,7 +112,7 @@ The rules that are enabled on row $0$ remain the same:
 $$
 \ell_0(X) \cdot (A'(X) - S'(X)) = 0
 $$$$
-\ell_0(X) \cdot (Z(X) - 1) = 0
+\ell_0(X) \cdot (1 - Z(X)) = 0
 $$
 
 Since we can no longer rely on the wraparound to ensure that the product $Z$ becomes $1$
