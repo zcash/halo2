@@ -12,6 +12,9 @@ In addition to the [general notes on language](../design.md#note-on-language):
 
 ## Technique Description
 
+For ease of explanation, we'll first describe a simplified version of the argument that
+ignores zero knowledge.
+
 We express lookups in terms of a "subset argument" over a table with $2^k$ rows (numbered
 from 0), and columns $A$ and $S$.
 
@@ -36,9 +39,17 @@ these $A'$ and $S'$, respectively. We can enforce that they are permutations usi
 permutation argument with product column $Z$ with the rules:
 
 $$
-Z(X) (A(X) + \beta) (S(X) + \gamma) - Z(\omega^{-1} X) (A'(X) + \beta) (S'(X) + \gamma) = 0
+Z(\omega X) \cdot (A'(X) + \beta) \cdot (S'(X) + \gamma) - Z(X) \cdot (A(X) + \beta) \cdot (S(X) + \gamma) = 0
 $$$$
-\ell_0(X) (Z(X) - 1) = 0
+\ell_0(X) \cdot (Z(X) - 1) = 0
+$$
+
+i.e. provided that division by zero does not occur, we have for all $i \in [0, 2^k)$:
+
+$$
+Z_{i+1} = Z_i \cdot \frac{(A_i + \beta) \cdot (S_i + \gamma)}{(A'_i + \beta) \cdot (S'_i + \gamma)}
+$$$$
+Z_{2^k} = Z_0 = 1.
 $$
 
 This is a version of the permutation argument which allows $A'$ and $S'$ to be
@@ -69,8 +80,63 @@ $$
 \ell_0(X) \cdot (A'(X) - S'(X)) = 0
 $$
 
+(The $A'(X) - A'(\omega^{-1} X)$ term of the first rule here has no effect at row $0,$ even
+though $\omega^{-1} X$ "wraps", because of the second rule.)
+
 Together these constraints effectively force every element in $A'$ (and thus $A$) to equal
 at least one element in $S'$ (and thus $S$). Proof: by induction on prefixes of the rows.
+
+## Zero-knowledge adjustment
+
+In order to achieve zero knowledge for the PLONK-based proof system, we will need the last
+$t$ rows of each column to be filled with random values. This requires an adjustment to the
+lookup argument, because these random values would not satisfy the constraints described
+above.
+
+We limit the number of usable rows to $u = 2^k - t - 1.$ We add two selectors:
+
+* $q_\mathit{blind}$ is set to $1$ on the last $t$ rows, and $0$ elsewhere;
+* $q_\mathit{last}$ is set to $1$ only on row $u,$ and $0$ elsewhere (i.e. it is set on the
+  row in between the usable rows and the blinding rows).
+
+We enable the constraints from above only for the usable rows:
+
+$$
+\big(1 - (q_\mathit{blind}(X) + q_\mathit{last}(X))\big) \cdot \big(Z(\omega X) \cdot (A'(X) + \beta) \cdot (S'(X) + \gamma) - Z(X) \cdot (A(X) + \beta) \cdot (S(X) + \gamma)\big) = 0
+$$$$
+\big(1 - (q_\mathit{blind}(X) + q_\mathit{last}(X))\big) \cdot (A'(X) - S'(X)) \cdot (A'(X) - A'(\omega^{-1} X)) = 0
+$$
+
+The rules that are enabled on row $0$ remain the same:
+
+$$
+\ell_0(X) \cdot (A'(X) - S'(X)) = 0
+$$$$
+\ell_0(X) \cdot (Z(X) - 1) = 0
+$$
+
+Since we can no longer rely on the wraparound to ensure that the product $Z$ becomes $1$
+again at $\omega^{2^k},$ we would instead need to constrain $Z(\omega^u)$ to $1.$ However,
+there is a potential difficulty: if any of the values $A_i + \beta$ or $S_i + \gamma$ are
+zero for $i \in [0, u),$ then it might not be possible to satisfy the permutation argument.
+This occurs with negligble probability over choices of $\beta$ and $\gamma,$ but is an
+obstacle to achieving *perfect* zero knowledge (because an adversary can rule out witnesses
+that would cause this situation), as well as perfect completeness.
+
+To ensure both perfect completeness and perfect zero knowledge, we allow $Z(\omega^u)$
+to be either zero or one:
+
+$$
+q_\mathit{last}(X) \cdot (Z(X)^2 - Z(X)) = 0
+$$
+
+Now if $A_i + \beta$ or $S_i + \gamma$ are zero for some $i,$ we can set $Z_j = 0$ for
+$i < j \leq u,$ satisfying the constraint system.
+
+Note that the challenges $\beta$ and $\gamma$ are chosen after committing to $A$ and $S$
+(and to $A'$ and $S'$), so the prover cannot force the case where some $A_i + \beta$ or
+$S_i + \gamma$ is zero to occur. Since this case occurs with negligible probability,
+soundness is not affected.
 
 ## Cost
 
