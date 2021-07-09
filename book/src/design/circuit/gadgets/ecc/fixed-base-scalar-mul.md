@@ -131,15 +131,15 @@ We support using a base field element as the scalar in fixed-base multiplication
 This is used in
 $\mathsf{DeriveNullifier_{nk}} = \mathsf{Extract}_\mathbb{P}\left(\left[(\mathsf{PRF_{nk}^{nfOrchard}}(\rho) + \psi) \bmod{q_\mathbb{P}}\right]\mathcal{K}^\mathsf{Orchard} + \mathsf{cm}\right)$: here, the scalar $$\left[(\mathsf{PRF_{nk}^{nfOrchard}}(\rho) + \psi) \bmod{q_\mathbb{P}}\right]$$ is the result of a base field addition.
 
-Decompose the base field element $\alpha$ into three-bit windows using a running sum $z$, where $z_{i+1} = (z_i - a_i) / (2^3)$ for $$\alpha = a_0 + (2^3) a_1 + ... + (2^{3(84)}) a_{84}.$$ (This running sum $z$ is not to be confused with the $Z$ array used to check the $y$-coordinate of a fixed-base window.)
+Decompose the base field element $\alpha$ into three-bit windows using a running sum $z$, where $z_{i+1} = (z_i - a_i) / 2^3$ for $$\alpha = a_0 + 2^3 a_1 + ... + 2^{3 \cdot 84} a_{84}.$$ (This running sum $z$ is not to be confused with the $Z$ array used to check the $y$-coordinate of a fixed-base window.)
 
 We set $z_0 = \alpha$, which means:
 $$
 \begin{aligned}
 z_1 &= (\alpha - k_0) / 2^3, \text{ (subtract the lowest 3 bits)}\\
-    &= k_1 + (2^3) k_2 + ... + 2^{3(83)} k_{84},\\
+    &= k_1 + 2^3 k_2 + ... + 2^{3 \cdot 83} k_{84},\\
 z_2 &= (z_1 - k_1) / 2^3\\
-    &= k_2 + (2^3) k_3 + ... + 2^{3(82)} k_{84},\\
+    &= k_2 + 2^3 k_3 + ... + 2^{3 \cdot 82} k_{84},\\
     &\cdots,\\
 z_{84} &= k_{84}\\
 z_{85} &= (z_{84} - k_{84}) / 2^3\\
@@ -147,27 +147,27 @@ z_{85} &= (z_{84} - k_{84}) / 2^3\\
 \end{aligned}
 $$
 
-Since we don't directly witness the three-bit values, we must range-constrain the difference at each step of the running sum. We also constrain the final output of the running sum to be $0$.
+We must range-constrain the difference at each step of the running sum. We also constrain the final output of the running sum to be $0$.
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-9 & q_\text{decompose-base-field} \cdot \texttt{range\_check}(z_i - z_{i+1} \cdot (2^3), 8) = 0 \\\hline
+9 & q_\text{decompose-base-field} \cdot \texttt{range\_check}(z_i - z_{i+1} \cdot 2^3, 2^3) = 0 \\\hline
 2 & q_\text{decompose-base-field} \cdot z_{85} = 0 \\\hline
 \end{array}
 $$
 
 We also enforce canonicity of this decomposition. That is, we want to check that $0 \leq \alpha < p,$ where $p$ the is Pallas base field modulus $$p = 2^{254} + t_p = 2^{254} + 45560315531419706090280762371685220353.$$ Note that $t_p < 2^{130}.$
 
-To do this, we decompose $\alpha$ into three pieces: $$\alpha = \alpha_0 \text{ (252 bits) }  || \alpha_1 \text{ (2 bits) } || \alpha_2 \text{ (1 bit) }.$$
+To do this, we decompose $\alpha$ into three pieces: $$\alpha = \alpha_0 \text{ (252 bits) } \,||\, \alpha_1 \text{ (2 bits) } \,||\, \alpha_2 \text{ (1 bit) }.$$
 
 We check the correctness of this decomposition by:
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-5 & q_\text{canon-base-field} \cdot \texttt{range\_check}(\alpha_1, 4) = 0 \\\hline
-3 & q_\text{canon-base-field} \cdot \texttt{range\_check}(\alpha_2, 2) = 0 \\\hline
+5 & q_\text{canon-base-field} \cdot \texttt{range\_check}(\alpha_1, 2^2) = 0 \\\hline
+3 & q_\text{canon-base-field} \cdot \texttt{range\_check}(\alpha_2, 2^1) = 0 \\\hline
 2 & q_\text{canon-base-field} \cdot \left(z_{84} - (\alpha_1 + \alpha_2 \cdot 2^2)\right) = 0 \\\hline
 \end{array}
 $$
@@ -178,7 +178,7 @@ If the MSB $\alpha_2 = 0$ is not set, then $\alpha < 2^{254} < p.$ However, in t
   - $\alpha_2 = 1 \implies 0 \leq \alpha_0 + 2^{130} - t_p < 2^{130}$
 
 To check that $0 \leq \alpha_0 < 2^{130},$ we make use of the three-bit running sum decomposition:
-- firstly, we constrain $\alpha_0$ to be a $132$-bit value by enforcing its high $120$ bits to be all-zero. We can get $\textsf{alpha\_0\_hi\_120}$ from the decomposition:
+- Firstly, we constrain $\alpha_0$ to be a $132$-bit value by enforcing its high $120$ bits to be all-zero. We can get $\textsf{alpha\_0\_hi\_120}$ from the decomposition:
 $$
 \begin{aligned}
 z_{44} &= k_{44} + 2^3 k_{45} + \cdots + 2^{3 \cdot (84 - 44)} k_{84}\\
@@ -186,16 +186,31 @@ z_{44} &= k_{44} + 2^3 k_{45} + \cdots + 2^{3 \cdot (84 - 44)} k_{84}\\
 &= z_{44} - 2^{3 \cdot (40)} z_{84}.
 \end{aligned}
 $$
-- then, we constrain bits $130..=131$ of $\alpha_0$ to be zeroes; in other words, we constrain the three-bit word $k_{43} = \alpha[129..=131] = \alpha_0[129..=131] \in \{0, 1\}.$ We make use of the running sum decomposition to obtain $k_{43} = z_{43} - 2^3 \cdot z_{44}.$
+- Then, we constrain bits $130..\!\!=\!\!131$ of $\alpha_0$ to be zeroes; in other words, we constrain the three-bit word $k_{43} = \alpha[129..\!\!=\!\!131] = \alpha_0[129..\!\!=\!\!131] \in \{0, 1\}.$ We make use of the running sum decomposition to obtain $k_{43} = z_{43} - z_{44} \cdot 2^3.$
 
-To check that $0 \leq \alpha_0 + 2^{130} - t_p < 2^{130},$ we use 13 ten-bit [lookups](../lookup_range_check.md), where we constrain the $z_{13}$ running sum output of the lookup to be $0$ if $\alpha_2 = 1.$
+Define $\alpha'_0 = \alpha_0 + 2^{130} - t_p$. To check that $0 \leq \alpha'_0 < 2^{130},$ we use 13 ten-bit [lookups](../lookup_range_check.md), where we constrain the $z_{13}$ running sum output of the lookup to be $0$ if $\alpha_2 = 1.$
 $$
 \begin{array}{|c|l|l|}
 \hline
 \text{Degree} & \text{Constraint} & \text{Comment} \\\hline
 3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \alpha_1 = 0 & \alpha_2 = 1 \implies \alpha_1 = 0 \\\hline
 3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \textsf{alpha\_0\_hi\_120} = 0 & \text{Constrain $\alpha_0$ to be a $132$-bit value} \\\hline
-4 & q_\text{canon-base-field} \cdot \alpha_2 \cdot k_{43} \cdot (1 - k_{43}) = 0 & \text{Constrain $\alpha_0[130..=131]$ to $0$}  \\\hline
-3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot z_{13}(\texttt{lookup}(\alpha_0', 13)) = 0 & \alpha_2 = 1 \implies 0 \leq \alpha_0 + 2^{130} - t_p < 2^{130}\\\hline
+4 & q_\text{canon-base-field} \cdot \alpha_2 \cdot k_{43} \cdot (1 - k_{43}) = 0 & \text{Constrain $\alpha_0[130..\!\!=\!\!131]$ to $0$}  \\\hline
+3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot z_{13}(\texttt{lookup}(\alpha_0', 13)) = 0 & \alpha_2 = 1 \implies 0 \leq \alpha'_0 < 2^{130}\\\hline
 \end{array}
 $$
+
+## Layout
+
+$$
+\begin{array}{|c|c|c|c|c|c|c|c|}
+\hline
+  x_P   &   y_P   &      x_{QR}       &        y_{QR}      &    u   & \text{window}   & L_{0..=7}   & \textsf{fixed\_z}   \\\hline
+x_{P,0} & y_{P,0} &                   &                    &   u_0  & \text{window}_0 & L_{0..=7,0} & \textsf{fixed\_z}_0 \\\hline
+x_{P,1} & y_{P,1} & x_{Q,1} = x_{P,0} & y_{Q,1} = y_{P,0}  &   u_1  & \text{window}_1 & L_{0..=7,1} & \textsf{fixed\_z}_1 \\\hline
+x_{P,2} & y_{P,2} & x_{Q,2} = x_{R,1} & y_{Q,2} = y_{R,1}  &   u_2  & \text{window}_2 & L_{0..=7,1} & \textsf{fixed\_z}_2 \\\hline
+\vdots  & \vdots  &      \vdots       &       \vdots       & \vdots &     \vdots      &    \vdots   &        \vdots       \\\hline
+\end{array}
+$$
+
+Note: this doesn't include the last row that uses [complete addition](./addition.md#Complete-addition). In the implementation this is allocated in a different region.

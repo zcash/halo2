@@ -30,6 +30,7 @@ which is equivalent to
 
 Assuming $x_p \neq x_q$,
 
+$
 \begin{array}{|rrll|}
 \hline
 &(x_r + x_q + x_p) \cdot (x_p - x_q)^2 &=& \lambda^2 \cdot (x_p - x_q)^2\\
@@ -40,6 +41,7 @@ Assuming $x_p \neq x_q$,
 \implies &(y_r + y_q) \cdot (x_p - x_q) &=& \lambda \cdot (x_p - x_q) \cdot (x_q - x_r)\\
 \hline
 \end{array}
+$
 
 Substituting for $\lambda \cdot (x_p - x_q)$, we get the constraints:
 - $(x_r + x_q + x_p) \cdot (x_p - x_q)^2 - (y_p - y_q)^2 = 0$
@@ -130,7 +132,8 @@ $$
   && \text{If } (x_q - x_p) \cdot \lambda - (y_q - y_p) = 0, \text{ then because } x_q - x_p \neq 0, \\
   && \text{ by rearranging both sides we get } \lambda = (y_q - y_p) / (x_q - x_p) \\
   && \\
-  && \text{and therefore } :: x_q \neq x_p \implies \lambda = (y_q - y_p) / (x_q - x_p).\\
+  && \text{and therefore:}\\
+  && \hspace{2em} x_q \neq x_p \implies \lambda = (y_q - y_p) / (x_q - x_p).\\
   && \\
 2.&& (1 - (x_q - x_p) \cdot \alpha) \cdot (2y_p \cdot \lambda - 3x_p^2) = 0\\  
   && \begin{aligned}
@@ -144,9 +147,10 @@ $$
   && \\
   && \text{If } y_p = 0 \text{ then } x_p = 0, \text{ and the constraint is satisfied.}\\
   && \\
-  && \text{If } y_p \neq 0 \text{ then by rearranging both sides we get }\\
+  && \text{If } y_p \neq 0 \text{ by rearranging both sides we get }\\
   && \lambda = 3x_p^2 / 2y_p \\
-  && \text{Therefore } :: (x_q = x_p) \wedge y_p \neq 0 \implies \lambda = 3x_p^2 / 2y_p. \\
+  && \text{Therefore:} \\
+  && \hspace{2em} (x_q = x_p) \wedge y_p \neq 0 \implies \lambda = 3x_p^2 / 2y_p. \\
   && \\
 3.& \text{a)} & x_p \cdot x_q \cdot (x_q - x_p) \cdot (\lambda^2 - x_p - x_q - x_r) = 0 \\
   & \text{b)} & x_p \cdot x_q \cdot (x_q - x_p) \cdot (\lambda \cdot (x_p - x_r) - y_p - y_r) = 0 \\
@@ -173,9 +177,9 @@ $$
         &\text{• Similarly, constraint (d) imposes that } y_r = \lambda \cdot (x_p - x_r) - y_p \text{ is satisfied.} \\
      \end{aligned} \\
   && \\
-  && \text{Therefore} \\
+  && \text{Therefore:} \\
   && \begin{aligned}
-        :: &(x_p \neq 0) \wedge (x_q \neq 0) \wedge ((x_q \neq x_p) \vee (y_q \neq -y_p)) \\
+        &(x_p \neq 0) \wedge (x_q \neq 0) \wedge ((x_q \neq x_p) \vee (y_q \neq -y_p)) \\
         \implies &(x_r = \lambda^2 - x_p - x_q) \wedge (y_r = \lambda \cdot (x_p - x_r) - y_p).
      \end{aligned} \\
   && \\
@@ -193,7 +197,8 @@ $$
  && \\
  && \text{Similarly, constraint (b) imposes that } y_r - y_q = 0. \\
  && \\
- && \text{Therefore } :: x_p = 0 => (x_r, y_r) = (x_q, y_q). \\
+ && \text{Therefore:} \\
+ && \hspace{2em} x_p = 0 \implies (x_r, y_r) = (x_q, y_q). \\
  && \\
  5.& \text{a)} & (1 - x_q \cdot \beta) \cdot (x_r - x_p) = 0 \\
    & \text{b)} & (1 - x_q \cdot \beta) \cdot (y_r - y_p) = 0 \\
@@ -210,7 +215,8 @@ $$
  && \\
  && \text{Similarly, constraint (b) imposes that } y_r - y_p = 0. \\
  && \\
- && \text{Therefore } :: x_q = 0 \implies (x_r, y_r) = (x_p, y_p). \\
+ && \text{Therefore:}
+ && \hspace{2em} x_q = 0 \implies (x_r, y_r) = (x_p, y_p). \\
  && \\
  6.& \text{a)} & (1 - (x_q - x_p) \cdot \alpha - (y_q + y_p) \cdot \delta) \cdot x_r = 0 \\
    & \text{b)} & (1 - (x_q - x_p) \cdot \alpha - (y_q + y_p) \cdot \delta) \cdot y_r = 0 \\
@@ -225,7 +231,7 @@ $$
  && \text{If } x_r \neq 0, \text{ then it must be that } 1 - (x_q - x_p) \cdot \alpha - (y_q + y_p) \cdot \delta = 0. \\
  && \\
  && \text{However, if } x_q = x_p \wedge y_q = -y_p, \text{ then there are no solutions for } \alpha \text { and } \delta. \\
- && \text{Therefore } : x_q = x_p \wedge y_q = -y_p \implies (x_r, y_r) = (0, 0).
+ && \text{Therefore: } x_q = x_p \wedge y_q = -y_p \implies (x_r, y_r) = (0, 0).
 \end{array}
 $$
 
@@ -337,7 +343,7 @@ $(x_p, y_p) + (x_q, y_q) = (x_r, y_r)$
         \end{array}
         $
 
-    - Soundness: (x_r, y_r) = (0, 0) is the only solution
+    - Soundness: $(x_r, y_r) = (0, 0)$ is the only solution
 
 * $(\zeta x, y) + (x, y)$
 

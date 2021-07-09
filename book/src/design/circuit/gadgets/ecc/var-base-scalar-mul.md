@@ -102,19 +102,17 @@ $$
 Initialize $A_{254} = [2] T.$
 
 for $i$ from $254$ down to $4$:
-$$
-\begin{aligned}
-    &(\mathbf{k}_i)(\mathbf{k}_i-1) = 0\\
-    &\mathbf{z}_{i} = 2\mathbf{z}_{i+1} + \mathbf{k}_{i}\\
-    & x_{P,i} = x_T\\
-    & y_{P,i} = (2 \mathbf{k}_i - 1) \cdot y_T  \hspace{2em}\text{(conditionally negate)}\\
-    & \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) = y_{A,i} - y_{P,i}\\
-    & \lambda_{1,i}^2 = x_{R,i} + x_{A,i} + x_{P,i}\\
-    & (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) = 2 y_{\mathsf{A},i}\\
-    & \lambda_{2,i}^2 = x_{A,i-1} + x_{R,i} + x_{A,i}\\
-    & \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A,i-1},\\
-\end{aligned}
-$$
+$\begin{array}{ll}
+\hspace{2em}& (\mathbf{k}_i)(\mathbf{k}_i-1) = 0\\
+\hspace{2em}& \mathbf{z}_{i} = 2\mathbf{z}_{i+1} + \mathbf{k}_{i}\\
+\hspace{2em}& x_{P,i} = x_T\\
+\hspace{2em}& y_{P,i} = (2 \mathbf{k}_i - 1) \cdot y_T  \hspace{2em}\text{(conditionally negate)}\\
+\hspace{2em}& \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) = y_{A,i} - y_{P,i}\\
+\hspace{2em}& \lambda_{1,i}^2 = x_{R,i} + x_{A,i} + x_{P,i}\\
+\hspace{2em}& (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) = 2 y_{\mathsf{A},i}\\
+\hspace{2em}& \lambda_{2,i}^2 = x_{A,i-1} + x_{R,i} + x_{A,i}\\
+\hspace{2em}& \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A,i-1},\\
+\end{array}$
 
 where $x_{R,i} = (\lambda_{1,i}^2 - x_{A,i} - x_T).$ After substitution of $x_{P,i}, y_{P,i}, x_{R,i}, y_{A,i}$, and $y_{A,i-1}$, this becomes:
 
@@ -138,18 +136,33 @@ $$
     \lambda_{2,4} \cdot (x_{A,4} - x_{A,3}) = y_{A,4} + y_{A,3}^\text{witnessed}, &\text{if } i = 4.
 \end{cases}
 $$
+Here, $y_{A,3}^\text{witnessed}$ is assigned to a cell. This is unlike previous $y_{A,i}$'s, which were implicitly derived from $\lambda_{1,i}, \lambda_{2,i}, x_{A,i}, x_T$, but never actually assigned.
 
-The bits $\mathbf{k}_{3 \dots 1}$ are used in double-and-add using [complete addition](./addition.md#Complete-addition).
+The bits $\mathbf{k}_{3 \dots 1}$ are used in three further steps, using [complete addition](./addition.md#Complete-addition):
+
+for $i$ from $3$ down to $1$:
+$\begin{array}{ll}
+\hspace{2em}& \texttt{// let } \mathbf{k}_{i} = \mathbf{z}_{i} - 2\mathbf{z}_{i+1}\\
+\hspace{2em}& (\mathbf{k}_i)(\mathbf{k}_i-1) = 0\\
+\hspace{2em}& (x_{A,i-1}, y_{A,i-1}) = \left((x_{A,i}, y_{A,i}) + (x_T, y_T)\right) + (x_{A,i}, y_{A,i})
+\end{array}$
 
 If the least significant bit is set $\mathbf{k_0} = 1,$ we return the accumulator $A$. Else, if $\mathbf{k_0} = 0,$ we return $A - T$ (also using complete addition).
 
-Output $(x_{A,0}, y_{A,0})$
+Let $B = \begin{cases}
+(0, 0), &\text{ if } \mathbf{k_0} = 1,\\
+(x_T, -y_T), &\text{ otherwise.}
+\end{cases}$
+
+Output $(x_{A,0}, y_{A,0}) + B$.
+
+(Note that $(0, 0)$ represents $\mathcal{O}$.)
+
 
 ### Circuit design
-We need six advice columns to witness $(x_T, y_T, \lambda_1, \lambda_2, x_{A,i}, \mathbf{z}_i)$. However, since $(x_T, y_T)$ are the same, we can perform two incomplete additions in a single row,
-reusing the same $(x_T, y_T)$. We split the scalar bits used in incomplete addition into $hi$ and $lo$ halves and process them in parallel. This means that we effectively have two for loops:
-- the first, covering the `hi` half for $i$ from $254$ down to $130$, with a special case at $i = 130$; and
-- the second, covering the `lo` half for the remaining $i$ from $129$ down to $4$, with a special case at $i = 4$.
+We need six advice columns to witness $(x_T, y_T, \lambda_1, \lambda_2, x_{A,i}, \mathbf{z}_i)$. However, since $(x_T, y_T)$ are the same, we can perform two incomplete additions in a single row, reusing the same $(x_T, y_T)$. We split the scalar bits used in incomplete addition into $hi$ and $lo$ halves and process them in parallel. This means that we effectively have two for loops:
+- the first, covering the $hi$ half for $i$ from $254$ down to $130$, with a special case at $i = 130$; and
+- the second, covering the $lo$ half for the remaining $i$ from $129$ down to $4$, with a special case at $i = 4$.
 
 $$
 \begin{array}{|c|c|c|c|c|c|c|c|c|c|c|c|}
