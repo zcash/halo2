@@ -272,11 +272,7 @@ where
     // Compute l_last(X) which evaluates to 1 on the first inactive row (just
     // before the blinding factors) and 0 otherwise over the domain
     let mut l_last = vk.domain.empty_lagrange();
-    *(l_last[..]
-        .iter_mut()
-        .rev()
-        .nth(cs.blinding_factors())
-        .unwrap()) = C::Scalar::one();
+    l_last[params.n as usize - cs.blinding_factors() - 1] = C::Scalar::one();
     let l_last = vk.domain.lagrange_to_coeff(l_last);
     let l_last = vk.domain.coeff_to_extended(l_last, Rotation::cur());
 
