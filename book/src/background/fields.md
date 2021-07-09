@@ -201,9 +201,11 @@ Vesta curves specifically have primes of the form
 $$T \cdot 2^S = p - 1$$
 
 with $S = 32$ and $T$ odd (i.e. $p - 1$ has 32 lower zero-bits). This means they have
-multiplicative subgroups of order $2^k$ for all $k \leq 32$.
+multiplicative subgroups of order $2^k$ for all $k \leq 32$. These 2-adic subgroups are
+nice for [efficient FFTs], as well as enabling a wide variety of circuit sizes.
 
 [PLONK-based]: upa.md
+[efficient FFTs]: polynomials.md#fast-fourier-transform-fft
 
 ## Square roots
 
