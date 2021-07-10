@@ -26,7 +26,12 @@ trait NumericInstructions<F: FieldExt>: Chip<F> {
     ) -> Result<Self::Num, Error>;
 
     /// Exposes a number as a public input to the circuit.
-    fn expose_public(&self, layouter: impl Layouter<F>, num: Self::Num) -> Result<(), Error>;
+    fn expose_public(
+        &self,
+        layouter: impl Layouter<F>,
+        num: Self::Num,
+        row: usize,
+    ) -> Result<(), Error>;
 }
 // ANCHOR_END: instructions
 
@@ -222,10 +227,15 @@ impl<F: FieldExt> NumericInstructions<F> for FieldChip<F> {
         Ok(out.unwrap())
     }
 
-    fn expose_public(&self, mut layouter: impl Layouter<F>, num: Self::Num) -> Result<(), Error> {
+    fn expose_public(
+        &self,
+        mut layouter: impl Layouter<F>,
+        num: Self::Num,
+        row: usize,
+    ) -> Result<(), Error> {
         let config = self.config();
 
-        layouter.constrain_instance(num.cell, config.instance, 0)
+        layouter.constrain_instance(num.cell, config.instance, row)
     }
 }
 // ANCHOR_END: instructions-impl
@@ -285,7 +295,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         let c = field_chip.mul(layouter.namespace(|| "ab * ab"), ab.clone(), ab)?;
 
         // Expose the result as a public input to the circuit.
-        field_chip.expose_public(layouter.namespace(|| "expose c"), c)
+        field_chip.expose_public(layouter.namespace(|| "expose c"), c, 0)
     }
 }
 // ANCHOR_END: circuit
