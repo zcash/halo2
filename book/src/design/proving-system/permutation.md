@@ -15,11 +15,11 @@ factored uniquely into a composition of cycles (up to ordering of cycles, and ro
 each cycle).
 
 We sometimes use [cycle notation](https://en.wikipedia.org/wiki/Permutation#Cycle_notation)
-to write permutations. Let $(a\ b\ c)$ denote a cycle where $a$ maps to $b$, $b$ maps to
-$c$, and $c$ maps to $a$ (with the obvious generalisation to arbitrary-sized cycles).
+to write permutations. Let $(a\ b\ c)$ denote a cycle where $a$ maps to $b,$ $b$ maps to
+$c,$ and $c$ maps to $a$ (with the obvious generalisation to arbitrary-sized cycles).
 Writing two or more cycles next to each other denotes a composition of the corresponding
-permutations. For example, $(a\ b)\ (c\ d)$ denotes the permutation that maps $a$ to $b$,
-$b$ to $a$, $c$ to $d$, and $d$ to $c$.
+permutations. For example, $(a\ b)\ (c\ d)$ denotes the permutation that maps $a$ to $b,$
+$b$ to $a,$ $c$ to $d,$ and $d$ to $c.$
 
 ## Constructing the permutation
 
@@ -33,12 +33,12 @@ defines the following equality constraints:
 - $a \equiv c$
 - $d \equiv e$
 
-From this we have the equality-constraint sets $\{a, b, c\}$ and $\{d, e\}$. We want to
+From this we have the equality-constraint sets $\{a, b, c\}$ and $\{d, e\}.$ We want to
 construct the permutation:
 
 $$(a\ b\ c)\ (d\ e)$$
 
-which defines the mapping of $[a, b, c, d, e]$ to $[b, c, a, e, d]$.
+which defines the mapping of $[a, b, c, d, e]$ to $[b, c, a, e, d].$
 
 ### Algorithm
 
@@ -54,31 +54,31 @@ We represent the current state as:
   cycle;
 - another array $\mathsf{sizes}$ that keeps track of the size of each cycle.
 
-We have the invariant that for each element $x$ in a given cycle $C$, $\mathsf{aux}(x)$
-points to the same element $c \in C$. This allows us to quickly decide whether two given
+We have the invariant that for each element $x$ in a given cycle $C,$ $\mathsf{aux}(x)$
+points to the same element $c \in C.$ This allows us to quickly decide whether two given
 elements $x$ and $y$ are in the same cycle, by checking whether
-$\mathsf{aux}(x) = \mathsf{aux}(y)$. Also, $\mathsf{sizes}(\mathsf{aux}(x))$ gives the
-size of the cycle containing $x$. (This is guaranteed only for
-$\mathsf{sizes}(\mathsf{aux}(x)))$, not for $\mathsf{sizes}(x)$.)
+$\mathsf{aux}(x) = \mathsf{aux}(y).$ Also, $\mathsf{sizes}(\mathsf{aux}(x))$ gives the
+size of the cycle containing $x.$ (This is guaranteed only for
+$\mathsf{sizes}(\mathsf{aux}(x)),$ not for $\mathsf{sizes}(x).$)
 
 The algorithm starts with a representation of the identity permutation:
-for all $x$, we set $\mathsf{mapping}(x) = x$, $\mathsf{aux}(x) = x$, and
-$\mathsf{sizes}(x) = 1$.
+for all $x,$ we set $\mathsf{mapping}(x) = x,$ $\mathsf{aux}(x) = x,$ and
+$\mathsf{sizes}(x) = 1.$
 
 To add an equality constraint $\mathit{left} \equiv \mathit{right}$:
 
 1. Check whether $\mathit{left}$ and $\mathit{right}$ are already in the same cycle, i.e.
-   whether $\mathsf{aux}(\mathit{left}) = \mathsf{aux}(\mathit{right})$. If so, there is
+   whether $\mathsf{aux}(\mathit{left}) = \mathsf{aux}(\mathit{right}).$ If so, there is
    nothing to do.
 2. Otherwise, $\mathit{left}$ and $\mathit{right}$ belong to different cycles. Make
    $\mathit{left}$ the larger cycle and $\mathit{right}$ the smaller one, by swapping them
-   iff $\mathsf{sizes}(\mathsf{aux}(\mathit{left})) < \mathsf{sizes}(\mathsf{aux}(\mathit{right}))$.
-3. Set $\mathsf{sizes}(\mathsf{aux}(\mathit{left}))) :=
-        \mathsf{sizes}(\mathsf{aux}(\mathit{left}))) + \mathsf{sizes}(\mathsf{aux}(\mathit{right})))$.
+   iff $\mathsf{sizes}(\mathsf{aux}(\mathit{left})) < \mathsf{sizes}(\mathsf{aux}(\mathit{right})).$
+3. Set $\mathsf{sizes}(\mathsf{aux}(\mathit{left})) :=
+        \mathsf{sizes}(\mathsf{aux}(\mathit{left})) + \mathsf{sizes}(\mathsf{aux}(\mathit{right})).$
 4. Following the mapping around the right (smaller) cycle, for each element $x$ set
-   $\mathsf{aux}(x) := \mathsf{aux}(\mathit{left})$.
+   $\mathsf{aux}(x) := \mathsf{aux}(\mathit{left}).$
 5. Splice the smaller cycle into the larger one by swapping $\mathsf{mapping}(\mathit{left})$
-   with $\mathsf{mapping}(\mathit{right})$.
+   with $\mathsf{mapping}(\mathit{right}).$
 
 For example, given two disjoint cycles $(A\ B\ C\ D)$ and $(E\ F\ G\ H)$:
 
@@ -120,26 +120,28 @@ following constraints:
 - $b \equiv d$
 
 and we tried to implement adding an equality constraint just using step 5 of the above
-algorithm, then we would end up constructing the cycle $(a\ b)\ (c\ d)$, rather than the
-correct $(a\ b\ c\ d)$.
+algorithm, then we would end up constructing the cycle $(a\ b)\ (c\ d),$ rather than the
+correct $(a\ b\ c\ d).$
 
 ## Argument specification
 
 We need to check a permutation of cells in $m$ columns, represented in Lagrange basis by
 polynomials $v_0, \ldots, v_{m-1}.$
 
-We first label each cell in those $m$ columns with a unique element of $\mathbb{F}^\times$.
+We first label each cell in those $m$ columns with a unique element of $\mathbb{F}^\times.$
 
 Let $\omega$ be a $2^k$ root of unity and let $\delta$ be a $T$ root of unity, where
-$T \cdot 2^S + 1 = p$ with $T$ odd and $k \leq S$.
+$T \cdot 2^S + 1 = p$ with $T$ odd and $k \leq S.$
 We will use $\delta^i \cdot \omega^j \in \mathbb{F}^\times$ as the label for the
 cell in the $j$th row of the $i$th column of the permutation argument.
 
-If we have a permutation $\sigma(\mathsf{column}: i, \mathsf{row}: j) = (\mathsf{column}: i', \mathsf{row}: j')$,
-we can represent it as a vector of $m$ polynomials $s_i(X)$ such that $s_i(\omega^j) = \delta^{i'} \cdot \omega^{j'}$.
+If we have a permutation
+$\sigma(\mathsf{column}: i, \mathsf{row}: j) = (\mathsf{column}: i', \mathsf{row}: j'),$
+we can represent it as a vector of $m$ polynomials $s_i(X)$ such that
+$s_i(\omega^j) = \delta^{i'} \cdot \omega^{j'}.$
 
 Notice that the identity permutation can be represented by the vector of $m$ polynomials
-$\mathsf{ID}_i(X)$ such that $\mathsf{ID}_i(X) = \delta^i \cdot X$.
+$\mathsf{ID}_i(X)$ such that $\mathsf{ID}_i(X) = \delta^i \cdot X.$
 
 Now given our permutation represented by $s_0, \ldots, s_{m-1}$ over columns represented by
 $v_0, \ldots, v_{m-1},$ we want to ensure that:
