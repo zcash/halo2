@@ -426,7 +426,7 @@ pub mod tests {
             chip::{EccChip, OrchardFixedBasesFull},
             FixedPoint, Point,
         },
-        utilities::{CellValue, UtilitiesInstructions},
+        utilities::UtilitiesInstructions,
     };
     use crate::constants;
 
@@ -434,10 +434,6 @@ pub mod tests {
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
-        impl UtilitiesInstructions<pallas::Base> for EccChip {
-            type Var = CellValue<pallas::Base>;
-        }
-
         // commit_ivk_r
         let commit_ivk_r = OrchardFixedBasesFull::CommitIvkR;
         test_single_base(

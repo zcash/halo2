@@ -2,7 +2,7 @@ use super::EccInstructions;
 use crate::{
     circuit::gadget::utilities::{
         copy, decompose_running_sum::RunningSumConfig, lookup_range_check::LookupRangeCheckConfig,
-        CellValue, Var,
+        CellValue, UtilitiesInstructions, Var,
     },
     constants::{self, OrchardFixedBasesFull, ValueCommitV},
     primitives::sinsemilla,
@@ -157,6 +157,10 @@ impl Chip<pallas::Base> for EccChip {
     fn loaded(&self) -> &Self::Loaded {
         &()
     }
+}
+
+impl UtilitiesInstructions<pallas::Base> for EccChip {
+    type Var = CellValue<pallas::Base>;
 }
 
 impl EccChip {

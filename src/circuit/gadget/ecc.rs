@@ -9,12 +9,12 @@ use halo2::{
     plonk::Error,
 };
 
-use crate::circuit::gadget::utilities::CellValue;
+use crate::circuit::gadget::utilities::UtilitiesInstructions;
 
 pub mod chip;
 
 /// The set of circuit instructions required to use the ECC gadgets.
-pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
+pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions<C::Base> {
     /// Variable representing an element of the elliptic curve's base field, that
     /// is used as a scalar in variable-base scalar mul.
     ///
@@ -137,7 +137,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
     fn mul_fixed_base_field_elem(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        base_field_elem: CellValue<C::Base>,
+        base_field_elem: Self::Var,
         base: &Self::FixedPoints,
     ) -> Result<Self::Point, Error>;
 }
@@ -369,7 +369,7 @@ where
     pub fn mul_base_field_elem(
         &self,
         mut layouter: impl Layouter<C::Base>,
-        by: CellValue<C::Base>,
+        by: EccChip::Var,
     ) -> Result<Point<C, EccChip>, Error> {
         self.chip
             .mul_fixed_base_field_elem(&mut layouter, by, &self.inner)
