@@ -19,7 +19,7 @@ and the multiplication of a group element $G$ by a scalar $a$ is written $[a]
 G$.
 
 We will often use the notation $\langle \mathbf{a}, \mathbf{b} \rangle$ to
-describe the inner product of two like-length vectors of scalars $\mathbf{a},
+describe the inner product of two same-length vectors of scalars $\mathbf{a},
 \mathbf{b} \in \field^n$. We also use this notation to represent the linear
 combination of group elements such as $\langle \mathbf{a}, \mathbf{G} \rangle$
 with $\mathbf{a} \in \field^n, \mathbf{G} \in \group^n$, computed in practice by
@@ -30,12 +30,12 @@ zeroes in $\field$.
 
 > **Discrete Log Relation Problem.** The advantage metric
 $$
-\adv^\dlrel_{\group,n}(\a, \sec) = \textnormal{Pr} \left[ \mathsf{G}^\dlrel_{\group,n}(\a, \sec) \right]
+\adv^\dlrel_{\group,n}(\a, \sec) = \prob \left[ \dlgame(\a, \sec) \right]
 $$
-> is defined with respect the following game.
+> is defined with respect to the following game.
 $$
 \begin{array}{ll}
-&\underline{\bold{Game} \, \mathsf{G}^\dlrel_{\group,n}(\a, \sec):} \\
+&\underline{\bold{Game} \, \dlgame(\a, \sec):} \\
 &\mathbf{G} \gets \group^n_\sec \\
 &\mathbf{a} \gets \a(\mathbf{G}) \\
 &\textnormal{Return} \, \left( \langle \mathbf{a}, \mathbf{G} \rangle = \zero \land \mathbf{a} \neq \mathbf{0}^n \right)
@@ -77,13 +77,13 @@ notions.
   implications for the other security notions.
 * **Soundness:** Can a cheating prover falsely convince the verifier of the
   correctness of a statement that is not actually correct? We refer to the
-  probability that a cheating prover can falsely convince the verifier as the
-  _soundness error_.
+  probability that a given cheating prover can falsely convince the verifier as
+  the _soundness error_ against that prover.
 * **Knowledge soundness:** When the verifier is convinced the statement is
   correct, does the prover actually possess ("know") a valid witness? We refer
-  to the probability that a cheating prover falsely convinces the verifier of
-  this knowledge as the _knowledge error_.
-* **Zero knowledge:** Does the prover learn anything besides that which can be
+  to the probability that a given cheating prover falsely convinces the verifier
+  of this knowledge as the _knowledge error_ against that prover.
+* **Zero knowledge:** Does the verifier learn anything besides that which can be
   inferred from the correctness of the statement and the prover's knowledge of a
   valid witness?
 
@@ -93,7 +93,7 @@ First, we will visit the simple definition of completeness.
 > has _perfect completeness_ if for all polynomial-time decidable
 > relations $\relation$ and for all non-uniform polynomial-time adversaries $\a$
 $$
-Pr \left[
+\prob \left[
     (x, w) \notin \relation \lor
     \langle \prover(\pp, x, w), \verifier(\pp, x) \rangle \, \textnormal{accepts}
     \, \middle| \,
@@ -108,22 +108,22 @@ $$
 
 Complicating our analysis is that although our protocol is described as an
 interactive argument, it is realized in practice as a _non-interactive argument_
-through the use of the Fiat-Shamir transformation.
+through the use of the Fiat–Shamir transformation.
 
-> **Public coin.** We say that an interactive argument is _public coin_ when all
+> **Public-coin.** We say that an interactive argument is _public-coin_ when all
 > of the messages sent by the verifier are each sampled with fresh randomness.
 
-> **Fiat-Shamir transformation.** In this transformation an interactive, public
-> coin argument can be made _non-interactive_ in the _random oracle model_ by
+> **Fiat–Shamir transformation.** In this transformation an interactive, public-coin
+> argument can be made _non-interactive_ in the _random oracle model_ by
 > replacing the verifier algorithm with a cryptographically strong hash function
-> that produces sufficiently random looking output.
+> that produces sufficiently random-looking output.
 
 This transformation means that in the concrete protocol a cheating prover can
 easily "rewind" the verifier by forking the transcript and sending new messages
 to the verifier. Studying the concrete security of our construction _after_
 applying this transformation is important. Fortunately, we are able to follow a
 framework of analysis by Ghoshal and Tessaro
-([[GT20]]((https://eprint.iacr.org/2020/1351))) that has been applied to
+([[GT20]](https://eprint.iacr.org/2020/1351)) that has been applied to
 constructions similar to ours.
 
 We will study our protocol through the notion of _state-restoration soundness_.
@@ -131,11 +131,11 @@ In this model the (cheating) prover is allowed to rewind the verifier to any
 previous state it was in. The prover wins if they are able to produce an
 accepting transcript.
 
-> **State-Restoration Soundness.** Let $\ip$ be an interactive argument with $r
-> = r(\sec)$ verifier challenges and let the $i$th challenge be sampled from
+> **State-Restoration Soundness.** Let $\ip$ be an interactive argument with
+> $r = r(\sec)$ verifier challenges and let the $i$th challenge be sampled from
 > $\ch_i$. The advantage metric
 $$
-\adv^\srs_\ip(\prover, \sec) = \textnormal{Pr} \left[ \srs^\ip_\prover(\sec) \right]
+\adv^\srs_\ip(\prover, \sec) = \prob \left[ \srs^\ip_\prover(\sec) \right]
 $$
 > of a state restoration prover $\prover$ is defined with respect to the
 > following game.
@@ -164,19 +164,19 @@ $$
 \end{array}
 $$
 
-As shown in [[GT20]]((https://eprint.iacr.org/2020/1351)) (Theorem 1) state
+As shown in [[GT20]](https://eprint.iacr.org/2020/1351) (Theorem 1) state
 restoration soundness is tightly related to soundness after applying the
-Fiat-Shamir transformation.
+Fiat–Shamir transformation.
 
 #### Knowledge Soundness
 
 We will show that our protocol satisfies a strengthened notion of knowledge
-soundness known as _witness extended emulation_. Informally, this notion states
+soundness known as _witness-extended emulation_. Informally, this notion states
 that for any successful prover algorithm there exists an efficient _emulator_
 that can extract a witness from it by rewinding it and supplying it with fresh
 randomness.
 
-However, we must slightly adjust our definition of witness extended emulation to
+However, we must slightly adjust our definition of witness-extended emulation to
 account for the fact that our provers are state restoration provers and can
 rewind the verifier. Further, to avoid the need for rewinding the state
 restoration prover during witness extraction we study our protocol in the
@@ -184,8 +184,9 @@ algebraic group model.
 
 > **Algebraic Group Model (AGM).** An adversary $\alg{\prover}$ is said to be
 > _algebraic_ if whenever it outputs a group element $X$ it also outputs a
-> _representation_ $\mathbf{x} \in \field^n$ such that $\langle \mathbf{x}, \mathbf{G} \rangle = X$ where $\mathbf{G} \in \group^n$ is the vector of group
-> elements that $\alg{\prover}$ has seen so far.
+> _representation_ $\mathbf{x} \in \field^n$ such that
+> $\langle \mathbf{x}, \mathbf{G} \rangle = X$ where $\mathbf{G} \in \group^n$
+> is the vector of group elements that $\alg{\prover}$ has seen so far.
 > Notationally, we write $\left[X\right]$ to describe a group element $X$ enhanced
 > with this representation. We also write $[X]^{\mathbf{G}}_i$ to identify the
 > component of the representation of $X$ that corresponds with $\mathbf{G}_i$. In
@@ -198,15 +199,15 @@ The algebraic group model allows us to perform so-called "online" extraction for
 some protocols: the extractor can obtain the witness from the representations
 themselves for a single (accepting) transcript.
 
-> **State Restoration Witness Extended Emulation** Let $\ip$ be an interactive
-> argument for relation $\relation$ with $r = r(\sec)$ challenges. We define for
+> **State Restoration Witness-Extended Emulation** Let $\ip$ be an interactive
+> argument for relation $\relation$ with $r = r(\sec)$ challenges. For
 > all non-uniform algebraic provers $\alg{\prover}$, extractors $\extractor$,
-> and computationally unbounded distinguishers $\distinguisher$ the advantage
+> and computationally unbounded distinguishers $\distinguisher$, the advantage
 > metric
 $$
-\adv^\srwee_{\ip, \relation}(\alg{\prover}, \distinguisher, \extractor, \sec) = \textnormal{Pr} \left[ \weereal^{\prover,\distinguisher}_{\ip,\relation}(\sec) \right] - \textnormal{Pr} \left[ \weeideal^{\extractor,\prover,\distinguisher}_{\ip,\relation}(\sec) \right]
+\adv^\srwee_{\ip, \relation}(\alg{\prover}, \distinguisher, \extractor, \sec) = \prob \left[ \weereal^{\prover,\distinguisher}_{\ip,\relation}(\sec) \right] - \prob \left[ \weeideal^{\extractor,\prover,\distinguisher}_{\ip,\relation}(\sec) \right]
 $$
-> is defined with the respect to the following games.
+> is defined with respect to the following games.
 $$
 \begin{array}{ll}
 \begin{array}{ll}
@@ -252,11 +253,11 @@ $$
 
 #### Zero Knowledge
 
-We say that an argument of knowledge is _zero knowledge_ if the verifier also
+We say that an argument of knowledge is _zero knowledge_ if the verifier
 does not learn anything from their interaction besides that which can be learned
 from the existence of a valid $w$. More formally,
 
-> **Perfect Special Honest-Verifier Zero Knowledge.** A public coin interactive
+> **Perfect Special Honest-Verifier Zero Knowledge.** A public-coin interactive
 > argument $(\setup, \prover, \verifier)$ has _perfect special honest-verifier
 > zero knowledge_ (PSHVZK) if for all polynomial-time decidable relations
 > $\relation$ and for all $(x, w) \in \relation$ and for all non-uniform
@@ -264,7 +265,7 @@ from the existence of a valid $w$. More formally,
 > polynomial-time simulator $\sim$ such that
 $$
 \begin{array}{rl}
-&Pr \left[ \a_1(\sigma, x, \tr) = 1 \, \middle| \,
+&\prob \left[ \a_1(\sigma, x, \tr) = 1 \, \middle| \,
 \begin{array}{ll}
 &\pp \gets \setup(1^\lambda); \\
 &(x, w, \rho) \gets \a_2(\pp); \\
@@ -272,7 +273,7 @@ $$
 \end{array}
  \right] \\
  \\
-=&Pr \left[ \a_1(\sigma, x, \tr) = 1 \, \middle| \,
+=&\prob \left[ \a_1(\sigma, x, \tr) = 1 \, \middle| \,
 \begin{array}{ll}
 &\pp \gets \setup(1^\lambda); \\
 &(x, w, \rho) \gets \a_2(\pp); \\
@@ -296,8 +297,10 @@ The protocol we describe will seek to generalize protocols such as PLONK to more
 
 * There exists $\omega \in \field$ that is a $n = 2^k$ root of unity generating a domain $D$ of size $n$. There also exists $\delta$ that generates a coset of this domain.
 * The prover holds vectors $\mathbf{a}, \mathbf{b}, \mathbf{c} \in \field^n$.
-* There exist fixed "selector" vectors $\mathbf{s_a}, \mathbf{s_b}, \mathbf{s_c}, \mathbf{s_m} \in \field^n$ are used to enable and modify the logic of gates described below.
-* The also exist fixed selector vectors $\mathbf{p_a}, \mathbf{p_b}, \mathbf{p_c}$ which are used to encode "copy" constraints. In the case of no copy constraints, then $\mathbf{p_a} = (\omega^0, \omega^1, ..., \omega^{n - 1})$ and $\mathbf{p_b} = \delta \cdot \mathbf{p_a}, \mathbf{p_c} = \delta^2 \cdot \mathbf{p_a}$. As an example, if we wished to constrain that $\mathbf{a}_i = \mathbf{c}_j$, then we would swap entries such that $\mathbf{p_a}_i = \delta^2 \omega^j$ and $\mathbf{p_c}_j = \omega^i$. (More details about swapping can be found [here]().)
+* There exist fixed "selector" vectors $\mathbf{s_a}, \mathbf{s_b}, \mathbf{s_c}, \mathbf{s_m} \in \field^n$
+  that are used to enable and modify the logic of gates described below.
+* The also exist fixed vectors that are used to encode equality constraints, as described
+  [here](design/proving-system/permutation.md).
 * The prover's goal will be to show that for all $i \in [0, n)$
 $$
 \mathbf{s_a}_i \cdot \mathbf{a}_i + \mathbf{s_b}_i \cdot \mathbf{b}_i + \mathbf{s_m}_i \cdot \mathbf{a}_i \cdot \mathbf{b}_i - \mathbf{s_c}_i \cdot \mathbf{c}_i = 0
@@ -343,9 +346,9 @@ Let $n_q$ denote the size of $\mathbf{q}$, and let $n_e$ denote the size of ever
 In the following protocol, we take it for granted that each polynomial $a_i(X, \cdots)$ is defined such that $n_e + 1$ blinding factors are freshly sampled by the prover and are each present as an evaluation of $a_i(X, \cdots)$ over the domain $D$.
 
 1. $\prover$ and $\verifier$ proceed in the following $n_a$ rounds of interaction, where in round $j$ (starting at $0$)
-  * $\prover$ sets $a'_j(X) = a_j(X, c_0, c_1, ..., c_{j - 1})$
-  * $\prover$ sends a hiding commitment $A_j = \innerprod{\mathbf{a'}}{\mathbf{G}} + [\cdot] W$ where $\mathbf{a'}$ are the coefficients of the univariate polynomial $a'_j(X)$ and $\cdot$ is some random, independently sampled blinding factor elided for exposition.
-  * $\verifier$ responds with a challenge $c_j$.
+   * $\prover$ sets $a'_j(X) = a_j(X, c_0, c_1, ..., c_{j - 1})$
+   * $\prover$ sends a hiding commitment $A_j = \innerprod{\mathbf{a'}}{\mathbf{G}} + [\cdot] W$ where $\mathbf{a'}$ are the coefficients of the univariate polynomial $a'_j(X)$ and $\cdot$ is some random, independently sampled blinding factor elided for exposition.
+   * $\verifier$ responds with a challenge $c_j$.
 2. $\prover$ and $\verifier$ set $g'(X) = g(X, c_0, c_1, ..., c_{n_a - 1})$.
 3. $\prover$ sends a commitment $R = \innerprod{\mathbf{r}}{\mathbf{G}} + [\cdot] W$ where $\mathbf{r} \in \field^n$ are the coefficients of a randomly sampled univariate polynomial $r(X)$ of degree $n - 1$.
 4. $\prover$ computes univariate polynomial $h(X) = \frac{g'(X)}{t(X)}$ of degree $n_g(n - 1) - n$.
@@ -356,14 +359,14 @@ In the following protocol, we take it for granted that each polynomial $a_i(X, \
 9. $\prover$ sends $r = r(x)$ and for all $i \in [0, n_a)$ sends $\mathbf{a_i}$ such that $(\mathbf{a_i})_j = a'_i(\omega^{(\mathbf{p_i})_j} x)$ for all $j \in [0, n_e]$.
 10. For all $i \in [0, n_a)$ $\prover$ and $\verifier$ set $s_i(X)$ to be the lowest degree univariate polynomial defined such that $s_i(\omega^{(\mathbf{p_i})_j} x) = (\mathbf{a_i})_j$ for all $j \in [0, n_e)$.
 11. $\verifier$ responds with challenges $x_1, x_2$ and initializes $Q_0, Q_1, ..., Q_{n_q - 1} = \zero$.
-  * Starting at $i=0$ and ending at $n_a - 1$ $\verifier$ sets $Q_{\sigma(i)} := [x_1] Q_{\sigma(i)} + A_i$.
-  * $\verifier$ finally sets $Q_0 := [x_1^2] Q_i + [x_1] H' + R$.
+    * Starting at $i=0$ and ending at $n_a - 1$, $\verifier$ sets $$Q_{\sigma(i)} := [x_1] Q_{\sigma(i)} + A_i.$$
+    * $\verifier$ finally sets $$Q_0 := [x_1^2] Q_0 + [x_1] H' + R.$$
 12. $\prover$ initializes $q_0(X), q_1(X), ..., q_{n_q - 1}(X) = 0$.
-  * Starting at $i=0$ and ending at $n_a - 1$ $\prover$ sets $q_{\sigma(i)} := x_1 q_{\sigma(i)} + a'(X)$.
-  * $\prover$ finally sets $q_0(X) := x_1^2 q_0(X) + x_1 h'(X) + r(X)$.
+    * Starting at $i=0$ and ending at $n_a - 1$, $\prover$ sets $$q_{\sigma(i)} := x_1 q_{\sigma(i)} + a'_i(X).$$
+    * $\prover$ finally sets $$q_0(X) := x_1^2 q_0(X) + x_1 h'(X) + r(X).$$
 13. $\prover$ and $\verifier$ initialize $r_0(X), r_1(X), ..., r_{n_q - 1}(X) = 0$.
-  * Starting at $i=0$ and ending at $n_a - 1$ $\prover$ and $\verifier$ set $r_{\sigma(i)}(X) := x_1 r_{\sigma(i)}(X) + s_i(X)$.
-  * Finally $\prover$ and $\verifier$ set $r_0 := x_1^2 r_0 + x_1 h + r$ and where $h$ is computed by $\verifier$ as $\frac{g'(x)}{t(x)}$ using the values $r, \mathbf{a}$ provided by $\prover$.
+    * Starting at $i=0$ and ending at $n_a - 1$, $\prover$ and $\verifier$ set $$r_{\sigma(i)}(X) := x_1 r_{\sigma(i)}(X) + s_i(X).$$
+    * Finally $\prover$ and $\verifier$ set $r_0 := x_1^2 r_0 + x_1 h + r,$ where $h$ is computed by $\verifier$ as $\frac{g'(x)}{t(x)}$ using the values $r, \mathbf{a}$ provided by $\prover$.
 14. $\prover$ sends $Q' = \innerprod{\mathbf{q'}}{\mathbf{G}} + [\cdot] W$ where $\mathbf{q'}$ defines the coefficients of the polynomial
 $$q'(X) = \sum\limits_{i=0}^{n_q - 1}
 
@@ -383,9 +386,9 @@ $$
 15. $\verifier$ responds with challenge $x_3$.
 16. $\prover$ sends $\mathbf{u} \in \field^{n_q}$ such that $\mathbf{u}_i = q_i(x_3)$ for all $i \in [0, n_q)$.
 17. $\verifier$ responds with challenge $x_4$.
-18. $\prover$ and $\verifier$ set $P = Q' + x_4 \sum\limits_{i=0}^{n_q - 1} [x_4^i] Q_i$ and $v = $
+18. $\prover$ and $\verifier$ set $P = Q' + x_4 \sum\limits_{i=0}^{n_q - 1} [x_4^i] Q_i$ and
 $$
-\sum\limits_{i=0}^{n_q - 1}
+v = \sum\limits_{i=0}^{n_q - 1}
 \left(
 x_2^i
   \left(
@@ -402,23 +405,31 @@ x_2^i
 \right)
 +
 x_4 \sum\limits_{i=0}^{n_q - 1} x_4 \mathbf{u}_i
-$$
+.$$
 19. $\prover$ sets $p(X) = q'(X) + [x_4] \sum\limits_{i=0}^{n_q - 1} x_4^i q_i(X)$.
 20. $\prover$ samples a random polynomial $s(X)$ of degree $n - 1$ with a root at $x_3$ and sends a commitment $S = \innerprod{\mathbf{s}}{\mathbf{G}} + [\cdot] W$ where $\mathbf{s}$ defines the coefficients of $s(X)$.
 21. $\verifier$ responds with challenges $\xi, z$.
 22. $\prover$ and $\verifier$ set $P' = P - [v] \mathbf{G}_0 + [\xi] S$.
 23. $\prover$ sets $p'(X) = p(X) - v + \xi s(X)$.
 24. Initialize $\mathbf{p'}$ as the coefficients of $p'(X)$ and $\mathbf{G'} = \mathbf{G}$ and $\mathbf{b} = (x_3^0, x_3^1, ..., x_3^{n - 1})$. $\prover$ and $\verifier$ will interact in the following $k$ rounds, where in the $j$th round starting in round $j=0$ and ending in round $j=k-1$:
-  * $\prover$ sends $L_j = \innerprod{\mathbf{p'}_\hi}{\mathbf{G'}_\lo} + [z \innerprod{\mathbf{p'}_\hi}{\mathbf{b}_\lo}] U + [\cdot] W$ and $R_j = \innerprod{\mathbf{p'}_\lo}{\mathbf{G'}_\hi} + [z \innerprod{\mathbf{p'}_\lo}{\mathbf{b}_\hi}] U + [\cdot] W$.
-  * $\verifier$ responds with challenge $u_j$.
-  * $\prover$ and $\verifier$ set $\mathbf{G'} := \mathbf{G'}_\lo + u_j \mathbf{G'}_\hi$ and $\mathbf{b} = \mathbf{b}_\lo + u_j \mathbf{b}_\hi$.
-  * $\prover$ sets $\mathbf{p'} := \mathbf{p'}_\lo + u_j^{-1} \mathbf{p'}_\hi$.
+    * $\prover$ sends $$L_j = \innerprod{\mathbf{p'}_\hi}{\mathbf{G'}_\lo} + [z \innerprod{\mathbf{p'}_\hi}{\mathbf{b}_\lo}] U + [\cdot] W$$ and $$R_j = \innerprod{\mathbf{p'}_\lo}{\mathbf{G'}_\hi} + [z \innerprod{\mathbf{p'}_\lo}{\mathbf{b}_\hi}] U + [\cdot] W.$$
+    * $\verifier$ responds with challenge $u_j$.
+    * $\prover$ and $\verifier$ set $\mathbf{G'} := \mathbf{G'}_\lo + u_j \mathbf{G'}_\hi$ and $\mathbf{b} = \mathbf{b}_\lo + u_j \mathbf{b}_\hi$.
+    * $\prover$ sets $\mathbf{p'} := \mathbf{p'}_\lo + u_j^{-1} \mathbf{p'}_\hi$.
 25. $\prover$ sends $c = \mathbf{p'}_0$ and synthetic blinding factor $f$.
-26. $\verifier$ accepts only if $\sum_{j=0}^{k - 1} [u_j^{-1}] L_j + P' + \sum_{j=0}^{k - 1} [u_j] R_j = [c] \mathbf{G'}_0 + [c \mathbf{b}_0 z] U + [f] W$.
+26. $\verifier$ accepts only if $$\sum_{j=0}^{k - 1} [u_j^{-1}] L_j + P' + \sum_{j=0}^{k - 1} [u_j] R_j = [c] \mathbf{G'}_0 + [c \mathbf{b}_0 z] U + [f] W.$$
 
 ### Proof
 
-We claim that $\protocol$ is _perfectly complete_ so long as a valid witness of each $a_i(X, \cdots)$ exists for all challenges $c_0, c_1, ..., c_{n_a - 1}$. This is trivial and can be seen from inspection of the protocol. We also claim that $\protocol$ has _perfect special honest-verifier zero knowledge_. Observe that throughout the protocol all commitments sent by the prover are blinded perfectly with the generator $W$ by a freshly sampled random blinding factor, and so all commitments are perfectly blinded and thus uniformly distributed. The value $c$ provided by the prover at the end is uniformly distributed amongst polynomials having a root at $x_3$, and the commitment $S$ provided by the prover has a uniformly random blinding factor, so the value $f$ also provided at the end is uniformly distributed. Finally, the openings $r, \mathbf{a}, \mathbf{u}$ are uniformly distributed because the prover chooses $n_e + 1$ fresh blinding factors when defining each of $a_i(X, \cdots)$, which is equal to the number of evaluations of each polynomial that are present in the transcript, and because only a linear combination of the random polynomial $r(X)$ and $h'(X)$ are opened at $x$ the proof does not reveal any other information about $h(X)$. We will thus define a simulator $\sim$ for $\protocol$ as follows: first, sample random polynomials $a_i(X, \cdots)$ and proceed normally. Using knowledge of challenge $x$ sample random $h(X)$ of degree $n_g(n - 1) - n$ such that $h(X) \cdot t(X)$ agrees with $g'(X)$ at $x$. Then, proceed normally for the rest of the protocol. The transcript produced by $\sim$ will be indistinguishable from that of an honest prover for all valid witnesses because the commitments and evaluations of polynomials are identically distributed.
+We claim that $\protocol$ is _perfectly complete_ so long as a valid witness of each $a_i(X, \cdots)$ exists for all challenges $c_0, c_1, ..., c_{n_a - 1}$. This is trivial and can be seen from inspection of the protocol.
+
+We also claim that $\protocol$ has _perfect special honest-verifier zero knowledge_:
+
+- Observe that throughout the protocol all commitments sent by the prover are blinded perfectly with the generator $W$ by a freshly sampled random blinding factor, and so all commitments are perfectly blinded and thus uniformly distributed.
+- The value $c$ provided by the prover at the end is uniformly distributed amongst polynomials having a root at $x_3$, and the commitment $S$ provided by the prover has a uniformly random blinding factor, so the value $f$ also provided at the end is uniformly distributed.
+- Finally, the openings $r, \mathbf{a}, \mathbf{u}$ are uniformly distributed because the prover chooses $n_e + 1$ fresh blinding factors when defining each of $a_i(X, \cdots)$, which is equal to the number of evaluations of each polynomial that are present in the transcript, and because only a linear combination of the random polynomial $r(X)$ and $h'(X)$ are opened at $x$ the proof does not reveal any other information about $h(X)$.
+
+We will thus define a simulator $\sim$ for $\protocol$ as follows: first, sample random polynomials $a_i(X, \cdots)$ and proceed normally. Using knowledge of challenge $x$ sample random $h(X)$ of degree $n_g(n - 1) - n$ such that $h(X) \cdot t(X)$ agrees with $g'(X)$ at $x$. Then, proceed normally for the rest of the protocol. The transcript produced by $\sim$ will be indistinguishable from that of an honest prover for all valid witnesses because the commitments and evaluations of polynomials are identically distributed.
 
 #### Witness-extended Emulation
 
@@ -428,7 +439,7 @@ $$
 \adv^\srwee_{\ip, \relation}(\alg{\prover}, \distinguisher, \extractor, \sec) \leq q\epsilon + \adv^\dlrel_{\group,n}(\mathcal{F}, \sec).
 $$
 
-_Proof._ We will prove this by invoking Theorem 3 of [[GT20]]((https://eprint.iacr.org/2020/1351)) by describing an extractor function $e$, by defining a set of bad challenges $\badch_{\tr'_c}$ for each possible (valid) partial transcript $\tr'_c$ that contains all messages before the challenge $c$ is sampled, by upper bounding each $|\badch_{\tr'_c}| \leq \epsilon$, and by showing that there exists adversary $\mathcal{F}$ such that
+_Proof._ We will prove this by invoking Theorem 3 of [[GT20]](https://eprint.iacr.org/2020/1351) by describing an extractor function $e$, by defining a set of bad challenges $\badch_{\tr'_c}$ for each possible (valid) partial transcript $\tr'_c$ that contains all messages before the challenge $c$ is sampled, by upper bounding each $|\badch_{\tr'_c}| \leq \epsilon$, and by showing that there exists adversary $\mathcal{F}$ such that
 
 $$
 p_\textnormal{fail}(\protocol, \alg{\prover}, e, \relation) \leq \adv^\dlrel_{\group,n}(\mathcal{F}, \sec)
@@ -442,12 +453,12 @@ $$
 \sum_{i=0}^{k - 1} [u_j^{-1}] L_j + P' + \sum_{i=0}^{k - 1} [u_j] R_j = [c] \mathbf{G'}_0 + [c \mathbf{b}_0 z] U + [f] W
 $$
 
-and so by taking the representations of each of the prover's commitments with respect to each group element in $\pp$ and rearranging so that they equal zero, we will (efficiently) obtain discrete log relations. Our adversary $\mathcal{F}$ will simulate $\protocol$ to $\alg{\prover}$ and rearrange as stated, and returns the first non-trivial discrete log relation or a trivial relation in the absence of any. This establishes the upper bound on $p_\textnormal{fail}$. In order to complete the proof, we must show the operation of the extractor function $e$ and prove that whenever $\mathcal{F}$ fails to obtain a non-trivial discrete log relation that the extractor function $e$ will obtain a valid witness from the transcript.
+and so by taking the representations of each of the prover's commitments with respect to each group element in $\pp$ and rearranging so that they equal zero, we will (efficiently) obtain discrete log relations. Our adversary $\mathcal{F}$ will simulate $\protocol$ to $\alg{\prover}$ and rearrange as stated, and returns the first non-trivial discrete log relation (or a trivial relation in the absence of any). This establishes the upper bound on $p_\textnormal{fail}$. In order to complete the proof, we must show the operation of the extractor function $e$ and prove that whenever $\mathcal{F}$ fails to obtain a non-trivial discrete log relation that the extractor function $e$ will obtain a valid witness from the transcript.
 
 We will now proceed to describe the operation of the function $e$ by working our way backwards from the protocol execution. In the last step, the prover has supplied $c, f$ such that
 
 $$
-\sum_{i=0}^{k - 1} [u_j^{-1}] L_j + P' + \sum_{i=0}^{k - 1} [u_j] R_j = [c] \mathbf{G'}_0 + [c \mathbf{b}_0 z] U + [f] W
+\sum_{i=0}^{k - 1} [u_j^{-1}] L_j + P' + \sum_{i=0}^{k - 1} [u_j] R_j = [c] \mathbf{G'}_0 + [c \mathbf{b}_0 z] U + [f] W.
 $$
 
 We will perform some substitutions to aid in exposition. First, let us define the polynomial
@@ -520,7 +531,7 @@ $$
 \end{array}
 $$
 
-Because $[P']$ was determined prior to the choice of $z$, for nonzero $[P']^U$ this equality would hold with probability $\frac{1}{|\ch|}$ and so by bounding $|\badch_{\tr'_z}| \leq \frac{1}{|\ch|} \leq \epsilon$ we can conclude $[P']^U = \sum\limits_{h=0}^{n-1} x_3^h [P']^{\mathbf{G}}_h = 0$ and therefore that $[P']^{\mathbf{G}}$ describes a $n - 1$ degree polynomial that has a root at $x_3$.
+Because $[P']$ was determined prior to the choice of $z$, for nonzero $[P']^U$ this equality would hold with probability $\frac{1}{|\ch|}$ and so by bounding $|\badch_{\tr'_z}| \leq \frac{1}{|\ch|} \leq \epsilon$ we can conclude $$[P']^U = \sum\limits_{h=0}^{n-1} x_3^h [P']^{\mathbf{G}}_h = 0$$ and therefore that $[P']^{\mathbf{G}}$ describes a $n - 1$ degree polynomial that has a root at $x_3$.
 
 Because $[S]$ was determined prior to the choice of $\xi$, and that $P' = P - [v] \mathbf{G}_0 + [\xi] S$, then if $[S]^\mathbf{G}$ does not describe the coefficients of a degree $n - 1$ polynomial with a root at $x_3$ then with high probability $[P']^{\mathbf{G}}$ would not either. By bounding $|\badch_{\tr'_\xi}| \leq \frac{n}{|\ch|} \leq \epsilon$ and correcting for $v$ we obtain that $[P]^{\mathbf{G}}$ describes the coefficients of a polynomial that evaluates to $v$ at $x_3$.
 
