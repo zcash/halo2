@@ -72,7 +72,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
     let permutations_committed = (0..num_proofs)
         .map(|_| {
             // Hash each permutation product commitment
-            vk.cs.permutation.read_product_commitments(&vk, transcript)
+            vk.cs.permutation.read_product_commitments(vk, transcript)
         })
         .collect::<Result<Vec<_>, _>>()?;
 
