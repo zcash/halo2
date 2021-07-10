@@ -63,6 +63,7 @@ impl Argument {
         // We need to multiply by z(X) and (1 - (l_last(X) + l_blind(X))). This
         // will never underflow because of the requirement of at least a degree
         // 3 circuit for the permutation argument.
+        assert!(pk.vk.cs.degree() >= 3);
         let chunk_len = pk.vk.cs.degree() - 2;
         let blinding_factors = pk.vk.cs.blinding_factors();
 
@@ -251,19 +252,16 @@ impl<C: CurveAffine> Committed<C> {
                     .skip(1)
                     .zip(self.sets.iter())
                     .map(|(set, last_set)| {
-                        (
-                            set.permutation_product_coset.clone(),
-                            last_set.permutation_product_coset_last.clone().unwrap(),
-                        )
+                        (set.permutation_product_coset.clone()
+                            - &last_set.permutation_product_coset_last.as_ref().unwrap())
+                            * &pk.l0
                     })
-                    .collect::<Vec<_>>()
-                    .into_iter()
-                    .map(move |(coset, coset_last)| (coset - &coset_last) * &pk.l0),
+                    .collect::<Vec<_>>(),
             )
             // And for all the sets we enforce:
             // (1 - (l_last + l_blind)) * (
-            //   z_i(\omega X) \prod (p(X) + \beta s_i(X) + \gamma)
-            // - z_i(X) \prod (p(X) + \delta^i \beta X + \gamma)
+            //   z_i(\omega X) \prod_j (p(X) + \beta s_j(X) + \gamma)
+            // - z_i(X) \prod_j (p(X) + \delta^j \beta X + \gamma)
             // )
             .chain(
                 self.sets
