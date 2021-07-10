@@ -126,7 +126,7 @@ correct $(a\ b\ c\ d)$.
 ## Argument specification
 
 We need to check a permutation of cells in $m$ columns, represented in Lagrange basis by
-polynomials $p_0, \ldots, p_{m-1}$.
+polynomials $v_0, \ldots, v_{m-1}.$
 
 We first label each cell in those $m$ columns with a unique element of $\mathbb{F}^\times$.
 
@@ -142,23 +142,101 @@ Notice that the identity permutation can be represented by the vector of $m$ pol
 $\mathsf{ID}_i(X)$ such that $\mathsf{ID}_i(X) = \delta^i \cdot X$.
 
 Now given our permutation represented by $s_0, \ldots, s_{m-1}$ over columns represented by
-$p_0, \ldots, p_{m-1}$, we want to ensure that:
+$v_0, \ldots, v_{m-1},$ we want to ensure that:
 $$
-\prod\limits_{i=0}^{m-1} \prod\limits_{j=0}^{n-1} \left(\frac{p_i(\omega^j) + \beta \cdot \delta^i \cdot \omega^j + \gamma}{p_i(\omega^j) + \beta \cdot s_i(\omega^j) + \gamma}\right) = 1
+\prod\limits_{i=0}^{m-1} \prod\limits_{j=0}^{n-1} \left(\frac{v_i(\omega^j) + \beta \cdot \delta^i \cdot \omega^j + \gamma}{v_i(\omega^j) + \beta \cdot s_i(\omega^j) + \gamma}\right) = 1
 $$
 
 Let $Z_P$ be such that $Z_P(\omega^0) = Z_P(\omega^n) = 1$ and for $0 \leq j < n$:
 $$\begin{array}{rl}
-Z_P(\omega^{j+1}) &= \prod\limits_{h=0}^{j} \prod\limits_{i=0}^{m-1} \frac{p_i(\omega^h) + \beta \cdot \delta^i \cdot \omega^h + \gamma}{p_i(\omega^h) + \beta \cdot s_i(\omega^h) + \gamma} \\
-                  &= Z_P(\omega^j) \prod\limits_{i=0}^{m-1} \frac{p_i(\omega^j) + \beta \cdot \delta^i \cdot \omega^j + \gamma}{p_i(\omega^j) + \beta \cdot s_i(\omega^j) + \gamma}
+Z_P(\omega^{j+1}) &= \prod\limits_{h=0}^{j} \prod\limits_{i=0}^{m-1} \frac{v_i(\omega^h) + \beta \cdot \delta^i \cdot \omega^h + \gamma}{v_i(\omega^h) + \beta \cdot s_i(\omega^h) + \gamma} \\
+                  &= Z_P(\omega^j) \prod\limits_{i=0}^{m-1} \frac{v_i(\omega^j) + \beta \cdot \delta^i \cdot \omega^j + \gamma}{v_i(\omega^j) + \beta \cdot s_i(\omega^j) + \gamma}
 \end{array}$$
 
-Then it is sufficient to enforce the constraints:
+Then it is sufficient to enforce the rules:
 $$
-l_0 \cdot (Z_P(X) - 1) = 0 \\
-Z_P(\omega X) \cdot \prod\limits_{i=0}^{m-1} \left(p_i(X) + \beta \cdot s_i(X) + \gamma\right) - Z_P(X) \cdot \prod\limits_{i=0}^{m-1} \left(p_i(X) + \beta \cdot \delta^i \cdot X + \gamma\right) = 0
+Z_P(\omega X) \cdot \prod\limits_{i=0}^{m-1} \left(v_i(X) + \beta \cdot s_i(X) + \gamma\right) - Z_P(X) \cdot \prod\limits_{i=0}^{m-1} \left(v_i(X) + \beta \cdot \delta^i \cdot X + \gamma\right) = 0 \\
+\ell_0 \cdot (1 - Z_P(X)) = 0
 $$
+
+This assumes that the number of columns $m$ is such that the polynomial in the first
+rule above fits within the degree bound of the PLONK configuration. We will see
+[below](#spanning-a-large-number-of-columns) how to handle a larger number of columns.
 
 > The optimization used to obtain the simple representation of the identity permutation was suggested
 > by Vitalik Buterin for PLONK, and is described at the end of section 8 of the PLONK paper. Note that
 > the $\delta^i$ are all distinct quadratic non-residues.
+
+## Zero-knowledge adjustment
+
+Similarly to the [lookup argument](lookup.md#zero-knowledge-adjustment), we need an
+adjustment to the above argument to account for the last $t$ rows of each column being
+filled with random values.
+
+We limit the number of usable rows to $u = 2^k - t - 1.$ We add two selectors,
+defined in the same way as for the lookup argument:
+
+* $q_\mathit{blind}$ is set to $1$ on the last $t$ rows, and $0$ elsewhere;
+* $q_\mathit{last}$ is set to $1$ only on row $u,$ and $0$ elsewhere (i.e. it is set on
+  the row in between the usable rows and the blinding rows).
+
+We enable the product rule from above only for the usable rows:
+
+$\big(1 - (q_\mathit{last}(X) + q_\mathit{blind}(X))\big) \cdot$
+$\hspace{1em}\left(Z_P(\omega X) \cdot \prod\limits_{i=0}^{m-1} \left(v_i(X) + \beta \cdot s_i(X) + \gamma\right) - Z_P(X) \cdot \prod\limits_{i=0}^{m-1} \left(v_i(X) + \beta \cdot \delta^i \cdot X + \gamma\right)\right) = 0$
+
+The rule that is enabled on row $0$ remains the same:
+
+$$
+\ell_0(X) \cdot (1 - Z_P(X)) = 0
+$$
+
+Since we can no longer rely on the wraparound to ensure that each product $Z_P$ becomes
+$1$ again at $\omega^{2^k},$ we would instead need to constrain $Z(\omega^u) = 1.$ This
+raises the same problem that was described for the lookup argument. So we allow
+$Z(\omega^u)$ to be either zero or one:
+
+$$
+q_\mathit{last}(X) \cdot (Z_P(X)^2 - Z_P(X)) = 0
+$$
+
+which gives perfect completeness and zero knowledge.
+
+## Spanning a large number of columns
+
+The halo2 implementation does not in practice limit the number of columns for which
+equality constraints can be enabled. Therefore, it must solve the problem that the
+above approach might yield a product rule with a polynomial that exceeds the PLONK
+configuration's degree bound. The degree bound could be raised, but this would be
+inefficient if no other rules require a larger degree.
+
+Instead, we split the product across $b$ sets of $m$ columns, using product columns
+$Z_{P,0}, \ldots Z_{P,b-1},$ and we use another rule to copy the product from the end
+of one column set to the beginning of the next.
+
+That is, for $0 \leq a < b$ we have:
+
+$\big(1 - (q_\mathit{last}(X) + q_\mathit{blind}(X))\big) \cdot$
+$\hspace{1em}\left(Z_{P,a}(\omega X) \cdot \!\prod\limits_{i=am}^{(a+1)m-1}\! \left(v_i(X) + \beta \cdot s_i(X) + \gamma\right) - Z_P(X) \cdot \!\prod\limits_{i=am}^{(a+1)m-1}\! \left(v_i(X) + \beta \cdot \delta^i \cdot X + \gamma\right)\right)$
+$\hspace{2em}= 0$
+
+For the first column set we have:
+
+$$
+\ell_0 \cdot (1 - Z_{P,0}(X)) = 0
+$$
+
+For each subsequent column set, $0 < a < b,$ we use the following rule to copy
+$Z_{P,a-1}(\omega^u)$ to the start of the next column set, $Z_{P,a}(\omega^0)$:
+
+$$
+\ell_0 \cdot \left(Z_{P,a}(X) - Z_{P,a-1}(\omega^u X)\right) = 0
+$$
+
+For the last column set, we have:
+
+$$
+q_\mathit{last}(X) \cdot \left(Z_{P,b-1}(X)^2 - Z_{P,b-1}(X)\right) = 0
+$$
+
+which gives perfect completeness and zero knowledge as before.
