@@ -2,31 +2,21 @@
 
 ## Preliminaries
 
+See [Notation](concepts/notation.md) for notational conventions. Briefly,
+recall that $\group$ represents a cryptographic group with identity element
+$\zero$; group elements are written in capital letters; scalars are written
+in lowercase or Greek letters; and vectors of scalars or group elements are
+written in boldface. The notation $\langle \mathbf{a}, \mathbf{b} \rangle$ is
+used for an inner product of two same-length vectors of scalars $\mathbf{a},
+\mathbf{b} \in \field^n,$ and also for a linear combination of group elements
+such as $\langle \mathbf{a}, \mathbf{G} \rangle$ with $\mathbf{a} \in \field^n,
+\mathbf{G} \in \group^n,$ computed by a multiscalar multiplication.
+$\mathbf{0}^n$ is a vector of length $n$ that contains only zeroes in $\field.$
+
 We take $\sec$ as our security parameter, and unless explicitly noted all
 algorithms and adversaries are probabilistic (interactive) Turing machines that
 run in polynomial time in this security parameter. We use $\negl$ to denote a
-function that is negligible in $\sec$.
-
-### Cryptographic Groups
-
-We let $\group$ denote a cyclic group of prime order $p$. The identity of a
-group is written as $\zero$. We refer to the scalars of elements in $\group$ as
-elements in a scalar field $\field$ of size $p$. Group elements are written in
-capital letters while scalars are written in lowercase or Greek letters. Vectors
-of scalars or group elements are written in boldface, i.e. $\mathbf{a} \in
-\field^n$ and $\mathbf{G} \in \group^n$. Group operations are written additively
-and the multiplication of a group element $G$ by a scalar $a$ is written $[a]
-G$.
-
-We will often use the notation $\langle \mathbf{a}, \mathbf{b} \rangle$ to
-describe the inner product of two same-length vectors of scalars $\mathbf{a},
-\mathbf{b} \in \field^n$. We also use this notation to represent the linear
-combination of group elements such as $\langle \mathbf{a}, \mathbf{G} \rangle$
-with $\mathbf{a} \in \field^n, \mathbf{G} \in \group^n$, computed in practice by
-a multiscalar multiplication.
-
-We use $\mathbf{0}^n$ to describe a vector of length $n$ that contains only
-zeroes in $\field$.
+function that is negligible in $\sec.$
 
 > **Discrete Log Relation Problem.** The advantage metric
 $$
