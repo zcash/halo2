@@ -308,8 +308,6 @@ impl<F: Field> Assignment<F> for Layout {
         self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
     }
 
-    /// Query the value of the cell of an instance column at a particular
-    /// absolute row, if known.
     fn query_instance(&self, _: Column<Instance>, _: usize) -> Result<Option<F>, Error> {
         Ok(None)
     }

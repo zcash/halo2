@@ -297,6 +297,10 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
     }
 
     fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Option<F>, Error> {
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::BoundsFailure);
+        }
+
         self.instance
             .get(column.index())
             .and_then(|column| column.get(row))

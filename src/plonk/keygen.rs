@@ -83,7 +83,11 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
     }
 
-    fn query_instance(&self, _: Column<Instance>, _: usize) -> Result<Option<F>, Error> {
+    fn query_instance(&self, _: Column<Instance>, row: usize) -> Result<Option<F>, Error> {
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::BoundsFailure);
+        }
+
         // There is no instance in this context.
         Ok(None)
     }

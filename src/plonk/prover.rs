@@ -166,6 +166,10 @@ pub fn create_proof<
                     column: Column<Instance>,
                     row: usize,
                 ) -> Result<Option<F>, Error> {
+                    if !self.usable_rows.contains(&row) {
+                        return Err(Error::BoundsFailure);
+                    }
+
                     self.instances
                         .get(column.index())
                         .and_then(|column| column.get(row))
