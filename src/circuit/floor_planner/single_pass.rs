@@ -109,8 +109,6 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
         Ok(result)
     }
 
-    /// This constrains a [`Cell`] to equal an instance column's row value
-    /// at an absolute position.
     fn constrain_instance(
         &mut self,
         cell: Cell,

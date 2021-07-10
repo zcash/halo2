@@ -59,8 +59,9 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
     ) -> Result<Cell, Error>;
 
     /// Assign the value of the instance column's cell at absolute location
-    /// `row` to the column `advice` at `offset` within this region, and return
-    /// a `Cell` as well as its value, if known.
+    /// `row` to the column `advice` at `offset` within this region.
+    ///
+    /// Returns the advice cell, and its value if known.
     fn assign_advice_from_instance<'v>(
         &mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
@@ -151,9 +152,6 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         })
     }
 
-    /// Assign the value of the instance column's cell at absolute location
-    /// `row` to the column `advice` at `offset` within this region, and return
-    /// a `Cell`.
     fn assign_advice_from_instance<'v>(
         &mut self,
         _: &'v (dyn Fn() -> String + 'v),

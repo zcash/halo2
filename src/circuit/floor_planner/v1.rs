@@ -117,8 +117,6 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for V1Pass<'p, 'a, F,
         }
     }
 
-    /// This constrains a [`Cell`] to equal an instance column's row value
-    /// at an absolute position.
     fn constrain_instance(
         &mut self,
         cell: Cell,

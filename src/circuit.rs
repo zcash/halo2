@@ -153,8 +153,9 @@ impl<'r, F: Field> Region<'r, F> {
     }
 
     /// Assign the value of the instance column's cell at absolute location
-    /// `row` to the column `advice` at `offset` within this region, and return
-    /// a `Cell`.
+    /// `row` to the column `advice` at `offset` within this region.
+    ///
+    /// Returns the advice cell, and its value if known.
     pub fn assign_advice_from_instance<A, AR>(
         &mut self,
         annotation: A,
@@ -198,7 +199,7 @@ impl<'r, F: Field> Region<'r, F> {
             })
     }
 
-    /// Constrain two cells to have the same value.
+    /// Constrains two cells to have the same value.
     ///
     /// Returns an error if either of the cells are in columns where equality
     /// has not been enabled.
@@ -235,8 +236,8 @@ pub trait Layouter<F: Field> {
         N: Fn() -> NR,
         NR: Into<String>;
 
-    /// This constrains a [`Cell`] to equal an instance column's row value
-    /// at an absolute position.
+    /// Constrains a [`Cell`] to equal an instance column's row value at an
+    /// absolute position.
     fn constrain_instance(
         &mut self,
         cell: Cell,
