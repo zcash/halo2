@@ -1,7 +1,6 @@
 # The halo2 Book
 
 [halo2](README.md)
-- [Protocol (WIP)](protocol.md)
 - [Concepts](concepts.md)
   - [Proof systems](concepts/proofs.md)
   - [UltraPLONK Arithmetization](concepts/arithmetization.md)
@@ -22,6 +21,7 @@
     - [Multipoint opening argument](design/proving-system/multipoint-opening.md)
     - [Inner product argument](design/proving-system/inner-product.md)
     - [Comparison to other work](design/proving-system/comparison.md)
+  - [Protocol (WIP)](protocol.md)
   - [Implementation](design/implementation.md)
     - [Proofs](design/implementation/proofs.md)
     - [Fields](design/implementation/fields.md)
