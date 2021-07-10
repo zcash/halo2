@@ -294,9 +294,9 @@ pub struct EccScalarFixed {
 /// k_21 must be a single bit, i.e. 0 or 1.
 #[derive(Clone, Debug)]
 pub struct EccScalarFixedShort {
-    magnitude: Option<pallas::Scalar>,
+    magnitude: CellValue<pallas::Base>,
     sign: CellValue<pallas::Base>,
-    windows: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS_SHORT }>,
+    running_sum: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS_SHORT }>,
 }
 
 /// A base field element used for fixed-base scalar multiplication.
@@ -420,13 +420,13 @@ impl EccInstructions<pallas::Affine> for EccChip {
     fn mul_fixed_short(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        scalar: Option<pallas::Scalar>,
+        magnitude_sign: (CellValue<pallas::Base>, CellValue<pallas::Base>),
         base: &Self::FixedPointsShort,
     ) -> Result<(Self::Point, Self::ScalarFixedShort), Error> {
         let config: mul_fixed::short::Config = self.config().into();
         config.assign(
             layouter.namespace(|| format!("short fixed-base mul of {:?}", base)),
-            scalar,
+            magnitude_sign,
             base,
         )
     }

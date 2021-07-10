@@ -1,7 +1,10 @@
-use std::array;
+use std::{array, convert::TryInto};
 
-use super::super::{copy, CellValue, EccConfig, EccPoint, EccScalarFixedShort, Var};
-use crate::constants::{ValueCommitV, L_VALUE, NUM_WINDOWS_SHORT};
+use super::super::{EccConfig, EccPoint, EccScalarFixedShort};
+use crate::{
+    circuit::gadget::utilities::{copy, decompose_running_sum::RunningSumConfig, CellValue, Var},
+    constants::{self, ValueCommitV, FIXED_BASE_WINDOW_SIZE, L_VALUE, NUM_WINDOWS_SHORT},
+};
 
 use halo2::{
     circuit::{Layouter, Region},
@@ -13,7 +16,13 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 pub struct Config {
     // Selector used for fixed-base scalar mul with short signed exponent.
     q_mul_fixed_short: Selector,
-    q_scalar_fixed_short: Selector,
+    q_mul_fixed_running_sum: Selector,
+    running_sum_config: RunningSumConfig<
+        pallas::Base,
+        { L_VALUE },
+        { FIXED_BASE_WINDOW_SIZE },
+        { NUM_WINDOWS_SHORT },
+    >,
     super_config: super::Config<NUM_WINDOWS_SHORT>,
 }
 
@@ -21,39 +30,44 @@ impl From<&EccConfig> for Config {
     fn from(config: &EccConfig) -> Self {
         Self {
             q_mul_fixed_short: config.q_mul_fixed_short,
-            q_scalar_fixed_short: config.q_scalar_fixed_short,
+            q_mul_fixed_running_sum: config.q_mul_fixed_running_sum,
+            running_sum_config: config.running_sum_short_config.clone(),
             super_config: config.into(),
         }
     }
 }
 
 impl Config {
-    // We reuse the constraints in the `mul_fixed` gate so exclude them here.
-    // Here, we add some new constraints specific to the short signed case.
     pub(crate) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
-        // Check that sign is either 1 or -1.
-        // Check that last window is either 0 or 1.
-        meta.create_gate("Check sign and last window", |meta| {
-            let q_scalar_fixed_short = meta.query_selector(self.q_scalar_fixed_short);
-            let last_window = meta.query_advice(self.super_config.window, Rotation::prev());
-            let sign = meta.query_advice(self.super_config.window, Rotation::cur());
+        // Check that each window uses the correct y_p and interpolated x_p.
+        meta.create_gate("Coordinates check", |meta| {
+            let q_mul_fixed_running_sum = meta.query_selector(self.q_mul_fixed_running_sum);
 
-            let one = Expression::Constant(pallas::Base::one());
+            let z_cur = meta.query_advice(self.super_config.window, Rotation::cur());
+            let z_next = meta.query_advice(self.super_config.window, Rotation::next());
 
-            let last_window_check = last_window.clone() * (one.clone() - last_window);
-            let sign_check = sign.clone() * sign - one;
+            //    z_{i+1} = (z_i - a_i) / 2^3
+            // => a_i = z_i - z_{i+1} * 2^3
+            let word = z_cur - z_next * pallas::Base::from_u64(constants::H as u64);
 
-            vec![
-                q_scalar_fixed_short.clone() * last_window_check,
-                q_scalar_fixed_short * sign_check,
-            ]
+            self.super_config
+                .coords_check(meta, q_mul_fixed_running_sum, word)
         });
 
         meta.create_gate("Short fixed-base mul gate", |meta| {
             let q_mul_fixed_short = meta.query_selector(self.q_mul_fixed_short);
             let y_p = meta.query_advice(self.super_config.y_p, Rotation::cur());
             let y_a = meta.query_advice(self.super_config.add_config.y_qr, Rotation::cur());
+            // z_21
+            let last_window = meta.query_advice(self.super_config.u, Rotation::cur());
             let sign = meta.query_advice(self.super_config.window, Rotation::cur());
+
+            let one = Expression::Constant(pallas::Base::one());
+
+            // Check that last window is either 0 or 1.
+            let last_window_check = last_window.clone() * (one.clone() - last_window);
+            // Check that sign is either 1 or -1.
+            let sign_check = sign.clone() * sign.clone() - one;
 
             // `(x_a, y_a)` is the result of `[m]B`, where `m` is the magnitude.
             // We conditionally negate this result using `y_p = y_a * s`, where `s` is the sign.
@@ -66,66 +80,40 @@ impl Config {
             // Check that the correct sign is witnessed s.t. sign * y_p = y_a
             let negation_check = sign * y_p - y_a;
 
-            array::IntoIter::new([y_check, negation_check])
-                .map(move |poly| q_mul_fixed_short.clone() * poly)
+            array::IntoIter::new([
+                ("last_window_check", last_window_check),
+                ("sign_check", sign_check),
+                ("y_check", y_check),
+                ("negation_check", negation_check),
+            ])
+            .map(move |(name, poly)| (name, q_mul_fixed_short.clone() * poly))
         });
     }
 
-    fn witness(
+    fn decompose(
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        value: Option<pallas::Scalar>,
+        magnitude_sign: (CellValue<pallas::Base>, CellValue<pallas::Base>),
     ) -> Result<EccScalarFixedShort, Error> {
-        // Enable `q_scalar_fixed_short`
-        self.q_scalar_fixed_short
-            .enable(region, offset + NUM_WINDOWS_SHORT)?;
+        let (magnitude, sign) = magnitude_sign;
 
-        // Compute the scalar's sign and magnitude
-        let sign = value.map(|value| {
-            // t = (p - 1)/2
-            let t = (pallas::Scalar::zero() - &pallas::Scalar::one()) * &pallas::Scalar::TWO_INV;
-            if value > t {
-                -pallas::Scalar::one()
-            } else {
-                pallas::Scalar::one()
-            }
-        });
-
-        let magnitude = sign.zip(value).map(|(sign, value)| sign * &value);
-
-        // Decompose magnitude into `k`-bit windows
-        let windows = self
-            .super_config
-            .decompose_scalar_fixed::<L_VALUE>(magnitude, offset, region)?;
-
-        // Assign the sign and enable `q_scalar_fixed_short`
-        let sign = sign.map(|sign| {
-            assert!(sign == pallas::Scalar::one() || sign == -pallas::Scalar::one());
-            if sign == pallas::Scalar::one() {
-                pallas::Base::one()
-            } else {
-                -pallas::Base::one()
-            }
-        });
-        let sign_cell = region.assign_advice(
-            || "sign",
-            self.super_config.window,
-            offset + NUM_WINDOWS_SHORT,
-            || sign.ok_or(Error::SynthesisError),
-        )?;
+        // Decompose magnitude
+        let (magnitude, running_sum) = self
+            .running_sum_config
+            .copy_decompose(region, offset, magnitude, true)?;
 
         Ok(EccScalarFixedShort {
             magnitude,
-            sign: CellValue::<pallas::Base>::new(sign_cell, sign),
-            windows,
+            sign,
+            running_sum: (*running_sum).as_slice().try_into().unwrap(),
         })
     }
 
     pub fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        scalar: Option<pallas::Scalar>,
+        magnitude_sign: (CellValue<pallas::Base>, CellValue<pallas::Base>),
         base: &ValueCommitV,
     ) -> Result<(EccPoint, EccScalarFixedShort), Error> {
         let (scalar, acc, mul_b) = layouter.assign_region(
@@ -133,8 +121,8 @@ impl Config {
             |mut region| {
                 let offset = 0;
 
-                // Copy the scalar decomposition
-                let scalar = self.witness(&mut region, offset, scalar)?;
+                // Decompose the scalar
+                let scalar = self.decompose(&mut region, offset, magnitude_sign)?;
 
                 let (acc, mul_b) = self.super_config.assign_region_inner(
                     &mut region,
@@ -148,6 +136,7 @@ impl Config {
             },
         )?;
 
+        // Last window
         let result = layouter.assign_region(
             || "Short fixed-base mul (most significant word)",
             |mut region| {
@@ -163,13 +152,24 @@ impl Config {
                 // Increase offset by 1 after complete addition
                 let offset = offset + 1;
 
-                // Assign sign to `window` column
+                // Copy sign to `window` column
                 let sign = copy(
                     &mut region,
                     || "sign",
                     self.super_config.window,
                     offset,
                     &scalar.sign,
+                    &self.super_config.perm,
+                )?;
+
+                // Copy last window to `u` column
+                let z_21 = scalar.running_sum[20];
+                copy(
+                    &mut region,
+                    || "last_window",
+                    self.super_config.u,
+                    offset,
+                    &z_21,
                     &self.super_config.perm,
                 )?;
 
@@ -209,19 +209,25 @@ impl Config {
 
             let base: super::OrchardFixedBases = base.clone().into();
 
-            let scalar = scalar
-                .magnitude
-                .zip(scalar.sign.value())
-                .map(|(magnitude, sign)| {
-                    let sign = if sign == pallas::Base::one() {
-                        pallas::Scalar::one()
-                    } else if sign == -pallas::Base::one() {
-                        -pallas::Scalar::one()
-                    } else {
-                        panic!("Sign should be 1 or -1.")
-                    };
-                    magnitude * sign
-                });
+            let scalar =
+                scalar
+                    .magnitude
+                    .value()
+                    .zip(scalar.sign.value())
+                    .map(|(magnitude, sign)| {
+                        // Move magnitude from base field into scalar field (which always fits
+                        // for Pallas).
+                        let magnitude = pallas::Scalar::from_bytes(&magnitude.to_bytes()).unwrap();
+
+                        let sign = if sign == pallas::Base::one() {
+                            pallas::Scalar::one()
+                        } else if sign == -pallas::Base::one() {
+                            -pallas::Scalar::one()
+                        } else {
+                            panic!("Sign should be 1 or -1.")
+                        };
+                        magnitude * sign
+                    });
             let real_mul = scalar.map(|scalar| base.generator() * scalar);
             let result = result.point();
 
@@ -237,10 +243,16 @@ impl Config {
 #[cfg(test)]
 pub mod tests {
     use group::Curve;
-    use halo2::{circuit::Layouter, plonk::Error};
+    use halo2::{
+        circuit::{Chip, Layouter},
+        plonk::Error,
+    };
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
-    use crate::circuit::gadget::ecc::{chip::EccChip, FixedPointShort, Point};
+    use crate::circuit::gadget::{
+        ecc::{chip::EccChip, FixedPointShort, Point},
+        utilities::{CellValue, UtilitiesInstructions},
+    };
     use crate::constants::load::ValueCommitV;
 
     #[allow(clippy::op_ref)]
@@ -252,6 +264,20 @@ pub mod tests {
         let value_commit_v = ValueCommitV::get();
         let base_val = value_commit_v.generator;
         let value_commit_v = FixedPointShort::from_inner(chip.clone(), value_commit_v);
+
+        fn load_magnitude_sign(
+            chip: EccChip,
+            mut layouter: impl Layouter<pallas::Base>,
+            magnitude: pallas::Base,
+            sign: pallas::Base,
+        ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+            let column = chip.config().advices[0];
+            let magnitude =
+                chip.load_private(layouter.namespace(|| "magnitude"), column, Some(magnitude))?;
+            let sign = chip.load_private(layouter.namespace(|| "sign"), column, Some(sign))?;
+
+            Ok((magnitude, sign))
+        }
 
         fn constrain_equal(
             chip: EccChip,
@@ -268,96 +294,63 @@ pub mod tests {
             result.constrain_equal(layouter.namespace(|| "constrain result"), &expected)
         }
 
-        // [0]B should return (0,0) since it uses complete addition
-        // on the last step.
-        {
-            let scalar_fixed_short = pallas::Scalar::zero();
-            let (result, _) = value_commit_v.mul(
-                layouter.namespace(|| "mul by zero"),
-                Some(scalar_fixed_short),
-            )?;
+        let mut random_sign = pallas::Base::one();
+        if rand::random::<bool>() {
+            random_sign = -random_sign;
+        }
+        let magnitude_signs = [
+            ("mul by +zero", pallas::Base::zero(), pallas::Base::one()),
+            ("mul by -zero", pallas::Base::zero(), -pallas::Base::one()),
+            (
+                "random [a]B",
+                pallas::Base::from_u64(rand::random::<u64>()),
+                random_sign,
+            ),
+            (
+                "[2^64 - 1]B",
+                pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64),
+                pallas::Base::one(),
+            ),
+            (
+                "-[2^64 - 1]B",
+                pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64),
+                -pallas::Base::one(),
+            ),
+            // There is a single canonical sequence of window values for which a doubling occurs on the last step:
+            // 1333333333333333333334 in octal.
+            // [0xB6DB_6DB6_DB6D_B6DC] B
+            (
+                "mul_with_double",
+                pallas::Base::from_u64(0xB6DB_6DB6_DB6D_B6DCu64),
+                pallas::Base::one(),
+            ),
+        ];
 
+        for (name, magnitude, sign) in magnitude_signs.iter() {
+            let (result, _) = {
+                let magnitude_sign = load_magnitude_sign(
+                    chip.clone(),
+                    layouter.namespace(|| *name),
+                    *magnitude,
+                    *sign,
+                )?;
+                value_commit_v.mul(layouter.namespace(|| *name), magnitude_sign)?
+            };
+            // Move from base field into scalar field
+            let scalar = {
+                let magnitude = pallas::Scalar::from_bytes(&magnitude.to_bytes()).unwrap();
+                let sign = if *sign == pallas::Base::one() {
+                    pallas::Scalar::one()
+                } else {
+                    -pallas::Scalar::one()
+                };
+                magnitude * sign
+            };
             constrain_equal(
                 chip.clone(),
-                layouter.namespace(|| "mul by zero"),
+                layouter.namespace(|| *name),
                 base_val,
-                scalar_fixed_short,
-                result,
-            )?;
-        }
-
-        // Random [a]B
-        {
-            let scalar_fixed_short = pallas::Scalar::from_u64(rand::random::<u64>());
-            let mut sign = pallas::Scalar::one();
-            if rand::random::<bool>() {
-                sign = -sign;
-            }
-            let scalar_fixed_short = sign * &scalar_fixed_short;
-            let (result, _) = value_commit_v.mul(
-                layouter.namespace(|| "random short scalar"),
-                Some(scalar_fixed_short),
-            )?;
-
-            constrain_equal(
-                chip.clone(),
-                layouter.namespace(|| "random [a]B"),
-                base_val,
-                scalar_fixed_short,
-                result,
-            )?;
-        }
-
-        // [2^64 - 1]B
-        {
-            let scalar_fixed_short = pallas::Scalar::from_u64(0xFFFF_FFFF_FFFF_FFFFu64);
-            let (result, _) = value_commit_v.mul(
-                layouter.namespace(|| "[2^64 - 1]B"),
-                Some(scalar_fixed_short),
-            )?;
-
-            constrain_equal(
-                chip.clone(),
-                layouter.namespace(|| "[2^64 - 1]B"),
-                base_val,
-                scalar_fixed_short,
-                result,
-            )?;
-        }
-
-        // [-(2^64 - 1)]B
-        {
-            let scalar_fixed_short = -pallas::Scalar::from_u64(0xFFFF_FFFF_FFFF_FFFFu64);
-            let (result, _) = value_commit_v.mul(
-                layouter.namespace(|| "-[2^64 - 1]B"),
-                Some(scalar_fixed_short),
-            )?;
-
-            constrain_equal(
-                chip.clone(),
-                layouter.namespace(|| "[-2^64 - 1]B"),
-                base_val,
-                scalar_fixed_short,
-                result,
-            )?;
-        }
-
-        // There is a single canonical sequence of window values for which a doubling occurs on the last step:
-        // 1333333333333333333334 in octal.
-        // [0xB6DB_6DB6_DB6D_B6DC] B
-        {
-            let scalar_fixed_short = pallas::Scalar::from_u64(0xB6DB_6DB6_DB6D_B6DCu64);
-
-            let (result, _) = value_commit_v.mul(
-                layouter.namespace(|| "mul with double"),
-                Some(scalar_fixed_short),
-            )?;
-
-            constrain_equal(
-                chip,
-                layouter.namespace(|| "mul with double"),
-                base_val,
-                scalar_fixed_short,
+                scalar,
                 result,
             )?;
         }

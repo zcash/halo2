@@ -510,35 +510,34 @@ impl From<&EccBaseFieldElemFixed> for ScalarFixed {
 }
 
 impl ScalarFixed {
-    fn windows(&self) -> &[CellValue<pallas::Base>] {
-        match self {
-            ScalarFixed::FullWidth(scalar) => &scalar.windows,
-            ScalarFixed::Short(scalar) => &scalar.windows,
-            _ => unreachable!("The base field element is not witnessed as windows."),
-        }
-    }
-
     // The scalar decomposition was done in the base field. For computation
     // outside the circuit, we now convert them back into the scalar field.
     fn windows_field(&self) -> Vec<Option<pallas::Scalar>> {
+        let running_sum_to_windows = |zs: Vec<CellValue<pallas::Base>>| {
+            (0..(zs.len() - 1))
+                .map(|idx| {
+                    let z_cur = zs[idx].value();
+                    let z_next = zs[idx + 1].value();
+                    let word = z_cur
+                        .zip(z_next)
+                        .map(|(z_cur, z_next)| z_cur - z_next * *H_BASE);
+                    word.map(|word| pallas::Scalar::from_bytes(&word.to_bytes()).unwrap())
+                })
+                .collect::<Vec<_>>()
+        };
         match self {
             Self::BaseFieldElem(scalar) => {
                 let mut zs = vec![scalar.base_field_elem];
                 zs.extend_from_slice(&scalar.running_sum);
-
-                (0..(zs.len() - 1))
-                    .map(|idx| {
-                        let z_cur = zs[idx].value();
-                        let z_next = zs[idx + 1].value();
-                        let word = z_cur
-                            .zip(z_next)
-                            .map(|(z_cur, z_next)| z_cur - z_next * *H_BASE);
-                        word.map(|word| pallas::Scalar::from_bytes(&word.to_bytes()).unwrap())
-                    })
-                    .collect::<Vec<_>>()
+                running_sum_to_windows(zs)
             }
-            _ => self
-                .windows()
+            Self::Short(scalar) => {
+                let mut zs = vec![scalar.magnitude];
+                zs.extend_from_slice(&scalar.running_sum);
+                running_sum_to_windows(zs)
+            }
+            Self::FullWidth(scalar) => scalar
+                .windows
                 .iter()
                 .map(|bits| {
                     bits.value()

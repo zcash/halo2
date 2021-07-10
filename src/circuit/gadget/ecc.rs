@@ -102,7 +102,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
     fn mul_fixed_short(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        scalar: Option<C::Scalar>,
+        magnitude_sign: (Self::Var, Self::Var),
         base: &Self::FixedPointsShort,
     ) -> Result<(Self::Point, Self::ScalarFixedShort), Error>;
 
@@ -271,6 +271,7 @@ impl<C: CurveAffine, EccChip> FixedPoint<C, EccChip>
 where
     EccChip: EccInstructions<C> + Clone + Debug + Eq,
 {
+    #[allow(clippy::type_complexity)]
     /// Returns `[by] self`.
     pub fn mul(
         &self,
@@ -329,14 +330,15 @@ impl<C: CurveAffine, EccChip> FixedPointShort<C, EccChip>
 where
     EccChip: EccInstructions<C> + Clone + Debug + Eq,
 {
+    #[allow(clippy::type_complexity)]
     /// Returns `[by] self`.
     pub fn mul(
         &self,
         mut layouter: impl Layouter<C::Base>,
-        by: Option<C::Scalar>,
+        magnitude_sign: (EccChip::Var, EccChip::Var),
     ) -> Result<(Point<C, EccChip>, ScalarFixedShort<C, EccChip>), Error> {
         self.chip
-            .mul_fixed_short(&mut layouter, by, &self.inner)
+            .mul_fixed_short(&mut layouter, magnitude_sign, &self.inner)
             .map(|(point, scalar)| {
                 (
                     Point {
