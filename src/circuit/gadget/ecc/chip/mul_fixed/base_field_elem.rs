@@ -3,36 +3,43 @@ use super::H_BASE;
 
 use crate::{
     circuit::gadget::utilities::{
-        bitrange_subset, copy, lookup_range_check::LookupRangeCheckConfig, range_check, CellValue,
-        Var,
+        bitrange_subset, copy, decompose_running_sum::RunningSumConfig,
+        lookup_range_check::LookupRangeCheckConfig, range_check, CellValue, Var,
     },
-    constants::{self, util::decompose_word, T_P},
+    constants::{self, T_P},
     primitives::sinsemilla,
 };
 use halo2::{
-    circuit::{Layouter, Region},
+    circuit::Layouter,
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
-use arrayvec::ArrayVec;
+use std::convert::TryInto;
 
 pub struct Config {
-    base_field_fixed_mul: Selector,
+    q_mul_fixed_running_sum: Selector,
     base_field_fixed_canon: Selector,
     canon_advices: [Column<Advice>; 3],
     lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    running_sum_config: RunningSumConfig<
+        pallas::Base,
+        { constants::L_ORCHARD_BASE },
+        { constants::FIXED_BASE_WINDOW_SIZE },
+        { constants::NUM_WINDOWS },
+    >,
     super_config: super::Config<{ constants::NUM_WINDOWS }>,
 }
 
 impl From<&EccConfig> for Config {
     fn from(config: &EccConfig) -> Self {
         let config = Self {
-            base_field_fixed_mul: config.base_field_fixed_mul,
+            q_mul_fixed_running_sum: config.q_mul_fixed_running_sum,
             base_field_fixed_canon: config.base_field_fixed_canon,
             canon_advices: [config.advices[6], config.advices[7], config.advices[8]],
             lookup_config: config.lookup_config.clone(),
+            running_sum_config: config.running_sum_full_config.clone(),
             super_config: config.into(),
         };
 
@@ -44,33 +51,17 @@ impl From<&EccConfig> for Config {
             );
         }
 
+        assert_eq!(config.running_sum_config.z, config.super_config.window);
+
         config
     }
 }
 
 impl Config {
     pub fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
-        // Decompose the base field element α into three-bit windows
-        // using a running sum `z`, where z_{i+1} = (z_i - a_i) / (2^3)
-        // for α = a_0 + 2^3 a_1 + ... + 2^{3*84} a_84.
-        //
-        // We set z_0 = α, which implies:
-        //      z_1 = (α - a_0) / 2^3, (subtract the lowest 3 bits)
-        //          = a_1 + 2^3 a_2 + ... + 2^{3*83} a_84,
-        //      z_2 = (z_1 - a_1) / 2^3
-        //          = a_2 + 2^3 a_3 + ... + 2^{3*82} a_84,
-        //      ...,
-        //      z_84 = a_84
-        //      z_n = (z_84 - a_84) / 2^3
-        //          = 0.
-        //
-        // This gate checks that each a_i = z_i - z_{i+1} * 2^3 is within
-        // 3 bits.
-        //
-        // This gate also checks that this window uses the correct y_p and
-        // interpolated x_p.
-        meta.create_gate("Decompose base field element", |meta| {
-            let base_field_fixed_mul = meta.query_selector(self.base_field_fixed_mul);
+        // Check that each window uses the correct y_p and interpolated x_p.
+        meta.create_gate("Coordinates check", |meta| {
+            let q_mul_fixed_running_sum = meta.query_selector(self.q_mul_fixed_running_sum);
 
             let z_cur = meta.query_advice(self.super_config.window, Rotation::cur());
             let z_next = meta.query_advice(self.super_config.window, Rotation::next());
@@ -79,16 +70,8 @@ impl Config {
             // => a_i = z_i - z_{i+1} * 2^3
             let word = z_cur - z_next * pallas::Base::from_u64(constants::H as u64);
 
-            // (word - 7) * (word - 6) * ... * (word - 1) * word = 0
-            let range_check = range_check(word.clone(), constants::H);
-
             self.super_config
-                .coords_check(meta, base_field_fixed_mul.clone(), word)
-                .into_iter()
-                .chain(Some((
-                    "Decomposition range check",
-                    base_field_fixed_mul * range_check,
-                )))
+                .coords_check(meta, q_mul_fixed_running_sum, word)
         });
 
         // Check that we get z_85 = 0 as the final output of the three-bit decomposition running sum.
@@ -206,14 +189,23 @@ impl Config {
                 let offset = 0;
 
                 // Decompose scalar
-                let scalar = self.decompose_base_field_elem(scalar, offset, &mut region)?;
+                let scalar =
+                    {
+                        let (base_field_elem, running_sum) = self
+                            .running_sum_config
+                            .copy_decompose(&mut region, offset, scalar, true)?;
+                        EccBaseFieldElemFixed {
+                            base_field_elem,
+                            running_sum: (*running_sum).as_slice().try_into().unwrap(),
+                        }
+                    };
 
                 let (acc, mul_b) = self.super_config.assign_region_inner(
                     &mut region,
                     offset,
                     &(&scalar).into(),
                     base.into(),
-                    self.base_field_fixed_mul,
+                    self.q_mul_fixed_running_sum,
                 )?;
 
                 Ok((scalar, acc, mul_b))
@@ -417,75 +409,6 @@ impl Config {
         )?;
 
         Ok(result)
-    }
-
-    fn decompose_base_field_elem(
-        &self,
-        base_field_elem: CellValue<pallas::Base>,
-        offset: usize,
-        region: &mut Region<'_, pallas::Base>,
-    ) -> Result<EccBaseFieldElemFixed, Error> {
-        // Decompose base field element into 3-bit words.
-        let words: Vec<Option<u8>> = {
-            let words = base_field_elem.value().map(|base_field_elem| {
-                decompose_word::<pallas::Base>(
-                    base_field_elem,
-                    constants::L_ORCHARD_BASE,
-                    constants::FIXED_BASE_WINDOW_SIZE,
-                )
-            });
-
-            if let Some(words) = words {
-                words.into_iter().map(Some).collect()
-            } else {
-                vec![None; constants::NUM_WINDOWS]
-            }
-        };
-
-        // Initialize empty ArrayVec to store running sum values [z_1, ..., z_85].
-        let mut running_sum: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS }> =
-            ArrayVec::new();
-
-        // Assign running sum `z_i`, i = 0..=n, where z_{i+1} = (z_i - a_i) / (2^3)
-        // and `z_0` is initialized as `base_field_elem`.
-        let mut z = copy(
-            region,
-            || "z_0 = base_field_elem",
-            self.super_config.window,
-            offset,
-            &base_field_elem,
-            &self.super_config.perm,
-        )?;
-
-        let offset = offset + 1;
-
-        let eight_inv = pallas::Base::TWO_INV.square() * pallas::Base::TWO_INV;
-        for (idx, word) in words.iter().enumerate() {
-            // z_next = (z_cur - word) / (2^3)
-            let z_next = {
-                let word = word.map(|word| pallas::Base::from_u64(word as u64));
-                let z_next_val = z
-                    .value()
-                    .zip(word)
-                    .map(|(z_cur_val, word)| (z_cur_val - word) * eight_inv);
-                let cell = region.assign_advice(
-                    || format!("z_{:?}", idx + 1),
-                    self.super_config.window,
-                    offset + idx,
-                    || z_next_val.ok_or(Error::SynthesisError),
-                )?;
-                CellValue::new(cell, z_next_val)
-            };
-
-            // Update `z`.
-            z = z_next;
-            running_sum.push(z);
-        }
-
-        Ok(EccBaseFieldElemFixed {
-            base_field_elem,
-            running_sum,
-        })
     }
 }
 

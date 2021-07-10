@@ -1,7 +1,8 @@
 use super::EccInstructions;
 use crate::{
     circuit::gadget::utilities::{
-        copy, lookup_range_check::LookupRangeCheckConfig, CellValue, Var,
+        copy, decompose_running_sum::RunningSumConfig, lookup_range_check::LookupRangeCheckConfig,
+        CellValue, Var,
     },
     constants::{self, OrchardFixedBasesFull, ValueCommitV},
     primitives::sinsemilla,
@@ -103,7 +104,7 @@ pub struct EccConfig {
     /// Fixed-base signed short scalar multiplication
     pub q_mul_fixed_short: Selector,
     /// Fixed-base multiplication using a base field element as the scalar
-    pub base_field_fixed_mul: Selector,
+    pub q_mul_fixed_running_sum: Selector,
     /// Canonicity checks on base field element used as scalar in fixed-base mul
     pub base_field_fixed_canon: Selector,
 
@@ -121,8 +122,22 @@ pub struct EccConfig {
     pub constants: Column<Fixed>,
     /// Permutation over all advice columns and the `constants` fixed column.
     pub perm: Permutation,
-    /// 10-bit lookup table
+    /// Lookup range check using 10-bit lookup table
     pub lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    /// Running sum decomposition for full-width base field element
+    pub running_sum_full_config: RunningSumConfig<
+        pallas::Base,
+        { constants::L_ORCHARD_BASE },
+        { constants::FIXED_BASE_WINDOW_SIZE },
+        { constants::NUM_WINDOWS },
+    >,
+    /// Running sum decomposition for 64-bit word
+    pub running_sum_short_config: RunningSumConfig<
+        pallas::Base,
+        { constants::L_VALUE },
+        { constants::FIXED_BASE_WINDOW_SIZE },
+        { constants::NUM_WINDOWS_SHORT },
+    >,
 }
 
 /// A chip implementing EccInstructions
@@ -165,6 +180,11 @@ impl EccChip {
             lookup_table,
             perm.clone(),
         );
+        let q_mul_fixed_running_sum = meta.selector();
+        let running_sum_full_config =
+            RunningSumConfig::configure(meta, q_mul_fixed_running_sum, advices[4], perm.clone());
+        let running_sum_short_config =
+            RunningSumConfig::configure(meta, q_mul_fixed_running_sum, advices[4], perm.clone());
 
         let config = EccConfig {
             advices,
@@ -188,7 +208,7 @@ impl EccChip {
             q_mul_lsb: meta.selector(),
             q_mul_fixed: meta.selector(),
             q_mul_fixed_short: meta.selector(),
-            base_field_fixed_mul: meta.selector(),
+            q_mul_fixed_running_sum,
             base_field_fixed_canon: meta.selector(),
             q_point: meta.selector(),
             q_scalar_fixed: meta.selector(),
@@ -196,6 +216,8 @@ impl EccChip {
             constants: constants[1],
             perm,
             lookup_config,
+            running_sum_full_config,
+            running_sum_short_config,
         };
 
         // Create witness point gate
