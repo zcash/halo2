@@ -490,6 +490,7 @@ pub mod tests {
         base_val: pallas::Affine,
     ) -> Result<(), Error> {
         let column = chip.config().advices[0];
+
         fn constrain_equal(
             chip: EccChip,
             mut layouter: impl Layouter<pallas::Base>,

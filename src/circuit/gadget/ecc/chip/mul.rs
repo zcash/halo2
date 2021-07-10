@@ -1,4 +1,4 @@
-use super::{add, CellValue, EccConfig, EccPoint, EccScalarVar, Var};
+use super::{add, CellValue, EccConfig, EccPoint, Var};
 use crate::{circuit::gadget::utilities::copy, constants::T_Q};
 use std::ops::{Deref, Range};
 
@@ -137,9 +137,9 @@ impl Config {
     pub(super) fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        alpha: EccScalarVar,
+        alpha: CellValue<pallas::Base>,
         base: &EccPoint,
-    ) -> Result<EccPoint, Error> {
+    ) -> Result<(EccPoint, CellValue<pallas::Base>), Error> {
         let (result, zs): (EccPoint, Vec<Z<pallas::Base>>) = layouter.assign_region(
             || "variable-base scalar mul",
             |mut region| {
@@ -264,7 +264,7 @@ impl Config {
         self.overflow_config
             .overflow_check(layouter.namespace(|| "overflow check"), alpha, &zs)?;
 
-        Ok(result)
+        Ok((result, alpha))
     }
 
     /// Processes the final scalar bit `k_0`.
@@ -448,18 +448,26 @@ fn decompose_for_scalar_mul(scalar: Option<pallas::Base>) -> Vec<Option<bool>> {
 #[cfg(test)]
 pub mod tests {
     use group::Curve;
-    use halo2::{circuit::Layouter, plonk::Error};
+    use halo2::{
+        circuit::{Chip, Layouter},
+        plonk::Error,
+    };
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
-    use crate::circuit::gadget::ecc::{EccInstructions, Point, ScalarVar};
+    use crate::circuit::gadget::{
+        ecc::{chip::EccChip, EccInstructions, Point},
+        utilities::UtilitiesInstructions,
+    };
 
-    pub fn test_mul<EccChip: EccInstructions<pallas::Affine> + Clone + Eq + std::fmt::Debug>(
+    pub fn test_mul(
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
         zero: &Point<pallas::Affine, EccChip>,
         p: &Point<pallas::Affine, EccChip>,
         p_val: pallas::Affine,
     ) -> Result<(), Error> {
+        let column = chip.config().advices[0];
+
         fn constrain_equal<
             EccChip: EccInstructions<pallas::Affine> + Clone + Eq + std::fmt::Debug,
         >(
@@ -483,10 +491,10 @@ pub mod tests {
         // [a]B
         {
             let scalar_val = pallas::Base::rand();
-            let result = {
-                let scalar = ScalarVar::new(
-                    chip.clone(),
+            let (result, _) = {
+                let scalar = chip.load_private(
                     layouter.namespace(|| "random scalar"),
+                    column,
                     Some(scalar_val),
                 )?;
                 p.mul(layouter.namespace(|| "random [a]B"), &scalar)?
@@ -504,9 +512,9 @@ pub mod tests {
         // uses incomplete addition at the beginning of its double-and-add.
         {
             let scalar_val = pallas::Base::rand();
-            let scalar = ScalarVar::new(
-                chip.clone(),
+            let scalar = chip.load_private(
                 layouter.namespace(|| "random scalar"),
+                column,
                 Some(scalar_val),
             )?;
             zero.mul(layouter.namespace(|| "[a]𝒪"), &scalar)
@@ -517,12 +525,9 @@ pub mod tests {
         // uses complete addition for the final bits of the scalar.
         {
             let scalar_val = pallas::Base::zero();
-            let result = {
-                let scalar = ScalarVar::new(
-                    chip.clone(),
-                    layouter.namespace(|| "zero"),
-                    Some(scalar_val),
-                )?;
+            let (result, _) = {
+                let scalar =
+                    chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_val))?;
                 p.mul(layouter.namespace(|| "[0]B"), &scalar)?
             };
             constrain_equal(
@@ -537,9 +542,9 @@ pub mod tests {
         // [-1]B (the largest possible base field element)
         {
             let scalar_val = -pallas::Base::one();
-            let result = {
+            let (result, _) = {
                 let scalar =
-                    ScalarVar::new(chip.clone(), layouter.namespace(|| "-1"), Some(scalar_val))?;
+                    chip.load_private(layouter.namespace(|| "-1"), column, Some(scalar_val))?;
                 p.mul(layouter.namespace(|| "[-1]B"), &scalar)?
             };
             constrain_equal(

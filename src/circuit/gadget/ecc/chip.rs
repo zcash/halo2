@@ -21,7 +21,6 @@ pub(super) mod add_incomplete;
 pub(super) mod mul;
 pub(super) mod mul_fixed;
 pub(super) mod witness_point;
-pub(super) mod witness_scalar_fixed;
 
 /// A curve point represented in affine (x, y) coordinates. Each coordinate is
 /// assigned to a cell.
@@ -248,30 +247,15 @@ impl EccChip {
             mul_config.create_gate(meta);
         }
 
-        // Create witness scalar_fixed gate that applies to both full-width and
-        // short scalars
+        // Create gate that is only used in full-width fixed-base scalar mul.
         {
-            let config: witness_scalar_fixed::Config = (&config).into();
-            config.create_gate(meta);
-        }
-
-        // Create witness scalar_fixed gate that only applies to short scalars
-        {
-            let config: witness_scalar_fixed::short::Config = (&config).into();
-            config.create_gate(meta);
-        }
-
-        // Create fixed-base scalar mul gate that is used in both full-width
-        // and short multiplication.
-        {
-            let mul_fixed_config: mul_fixed::Config<{ constants::NUM_WINDOWS }> = (&config).into();
-            mul_fixed_config.create_gate_scalar(meta);
+            let mul_fixed_full_config: mul_fixed::full_width::Config = (&config).into();
+            mul_fixed_full_config.create_gate(meta);
         }
 
         // Create gate that is only used in short fixed-base scalar mul.
         {
-            let short_config: mul_fixed::short::Config<{ constants::NUM_WINDOWS_SHORT }> =
-                (&config).into();
+            let short_config: mul_fixed::short::Config = (&config).into();
             short_config.create_gate(meta);
         }
 
@@ -282,17 +266,6 @@ impl EccChip {
         }
 
         config
-    }
-}
-
-/// A base-field element used as the scalar in variable-base scalar multiplication.
-#[derive(Copy, Clone, Debug)]
-pub struct EccScalarVar(CellValue<pallas::Base>);
-impl std::ops::Deref for EccScalarVar {
-    type Target = CellValue<pallas::Base>;
-
-    fn deref(&self) -> &CellValue<pallas::Base> {
-        &self.0
     }
 }
 
@@ -350,7 +323,7 @@ impl EccBaseFieldElemFixed {
 impl EccInstructions<pallas::Affine> for EccChip {
     type ScalarFixed = EccScalarFixed;
     type ScalarFixedShort = EccScalarFixedShort;
-    type ScalarVar = EccScalarVar;
+    type ScalarVar = CellValue<pallas::Base>;
     type Point = EccPoint;
     type X = CellValue<pallas::Base>;
     type FixedPoints = OrchardFixedBasesFull;
@@ -371,50 +344,6 @@ impl EccInstructions<pallas::Affine> for EccChip {
                 // Constrain x-coordinates
                 region.constrain_equal(&config.perm, a.y().cell(), b.y().cell())
             },
-        )
-    }
-
-    fn witness_scalar_var(
-        &self,
-        layouter: &mut impl Layouter<pallas::Base>,
-        value: Option<pallas::Base>,
-    ) -> Result<Self::ScalarVar, Error> {
-        let config = self.config().clone();
-        layouter.assign_region(
-            || "Witness scalar for variable-base mul",
-            |mut region| {
-                let cell = region.assign_advice(
-                    || "witness scalar var",
-                    config.advices[0],
-                    0,
-                    || value.ok_or(Error::SynthesisError),
-                )?;
-                Ok(EccScalarVar(CellValue::new(cell, value)))
-            },
-        )
-    }
-
-    fn witness_scalar_fixed(
-        &self,
-        layouter: &mut impl Layouter<pallas::Base>,
-        value: Option<pallas::Scalar>,
-    ) -> Result<Self::ScalarFixed, Error> {
-        let config: witness_scalar_fixed::full_width::Config = self.config().into();
-        layouter.assign_region(
-            || "witness scalar for fixed-base mul",
-            |mut region| config.assign_region(value, 0, &mut region),
-        )
-    }
-
-    fn witness_scalar_fixed_short(
-        &self,
-        layouter: &mut impl Layouter<pallas::Base>,
-        value: Option<pallas::Scalar>,
-    ) -> Result<Self::ScalarFixedShort, Error> {
-        let config: witness_scalar_fixed::short::Config = self.config().into();
-        layouter.assign_region(
-            || "witness short scalar for fixed-base mul",
-            |mut region| config.assign_region(value, 0, &mut region),
         )
     }
 
@@ -463,9 +392,9 @@ impl EccInstructions<pallas::Affine> for EccChip {
     fn mul(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        scalar: &Self::ScalarVar,
+        scalar: &Self::Var,
         base: &Self::Point,
-    ) -> Result<Self::Point, Error> {
+    ) -> Result<(Self::Point, Self::ScalarVar), Error> {
         let config: mul::Config = self.config().into();
         config.assign(
             layouter.namespace(|| "variable-base scalar mul"),
@@ -477,11 +406,10 @@ impl EccInstructions<pallas::Affine> for EccChip {
     fn mul_fixed(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        scalar: &Self::ScalarFixed,
+        scalar: Option<pallas::Scalar>,
         base: &Self::FixedPoints,
-    ) -> Result<Self::Point, Error> {
-        let config: mul_fixed::full_width::Config<{ constants::NUM_WINDOWS }> =
-            self.config().into();
+    ) -> Result<(Self::Point, Self::ScalarFixed), Error> {
+        let config: mul_fixed::full_width::Config = self.config().into();
         config.assign(
             layouter.namespace(|| format!("fixed-base mul of {:?}", base)),
             scalar,
@@ -492,11 +420,10 @@ impl EccInstructions<pallas::Affine> for EccChip {
     fn mul_fixed_short(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        scalar: &Self::ScalarFixedShort,
+        scalar: Option<pallas::Scalar>,
         base: &Self::FixedPointsShort,
-    ) -> Result<Self::Point, Error> {
-        let config: mul_fixed::short::Config<{ constants::NUM_WINDOWS_SHORT }> =
-            self.config().into();
+    ) -> Result<(Self::Point, Self::ScalarFixedShort), Error> {
+        let config: mul_fixed::short::Config = self.config().into();
         config.assign(
             layouter.namespace(|| format!("short fixed-base mul of {:?}", base)),
             scalar,
