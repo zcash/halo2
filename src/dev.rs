@@ -618,6 +618,7 @@ impl<F: FieldExt> MockProver<F> {
 
         // Check that permutations preserve the original values of the cells.
         let perm_errors = {
+            // Original values of columns involved in the permutation.
             let original = |column, row| {
                 self.cs
                     .permutation

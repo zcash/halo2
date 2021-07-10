@@ -428,8 +428,9 @@ pub trait Assignment<F: Field> {
         A: FnOnce() -> AR,
         AR: Into<String>;
 
-    /// Query the value of the cell of an instance column at a particular
-    /// absolute row, if known.
+    /// Queries the cell of an instance column at a particular absolute row.
+    ///
+    /// Returns the cell's value, if known.
     fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Option<F>, Error>;
 
     /// Assign an advice column value (witness)
