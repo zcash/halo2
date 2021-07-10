@@ -22,6 +22,9 @@ impl Argument {
         Argument { columns: vec![] }
     }
 
+    /// Returns the minimum circuit degree required by the permutation argument.
+    /// The argument may use larger degree gates depending on the actual
+    /// circuit's degree and how many columns are involved in the permutation.
     pub(crate) fn required_degree(&self) -> usize {
         // degree 2:
         // l_0(X) * (1 - z(X)) = 0
