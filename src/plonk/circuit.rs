@@ -1105,7 +1105,10 @@ impl<F: Field> ConstraintSystem<F> {
     pub fn minimum_rows(&self) -> usize {
         self.blinding_factors() // m blinding factors
             + 1 // for l_{-(m + 1)} (l_last)
-            + 1 // for l_0
+            + 1 // for l_0 (just for extra breathing room for the permutation
+                // argument, to essentially force a separation in the
+                // permutation polynomial between the roles of l_last, l_0
+                // and the interstitial values.)
             + 1 // for at least one row
     }
 }
