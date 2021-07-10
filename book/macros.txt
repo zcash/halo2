@@ -28,7 +28,7 @@
 \dlrel:{\mathsf{dl-rel}}
 \game:{\mathsf{⅁}}
 \innerprod:{\langle{#1},{#2}\rangle}
-\dlgame:{\game^\dlrel_{\group,n}}
+\dlgame:{\game^\dlrel_{\smash{\group,n}}}
 \distinguisher:{\mathcal{D}}
 \extractor:{\mathcal{E}}
 \state:{\mathsf{st}_{#1}}
@@ -36,3 +36,4 @@
 \lo:{\textnormal{lo}}
 \hi:{\textnormal{hi}}
 \protocol:{\halo}
+\tab:\hspace{1.5em}
