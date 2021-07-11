@@ -1,16 +1,13 @@
-# UltraPLONK Arithmetization
+# PLONKish Arithmetization
 
 The arithmetization used by Halo 2 comes from [PLONK](https://eprint.iacr.org/2019/953), or
 more precisely its extension UltraPLONK that supports custom gates and lookup arguments. We'll
-call it ***UPA*** (***UltraPLONK arithmetization***).
+call it [***PLONKish***](https://twitter.com/feministPLT/status/1413815927704014850).
 
-> The term UPA and some of the other terms we use to describe it are not used in the PLONK
-> paper.
-
-***UPA circuits*** are defined in terms of a rectangular matrix of values. We refer to
+***PLONKish circuits*** are defined in terms of a rectangular matrix of values. We refer to
 ***rows***, ***columns***, and ***cells*** of this matrix with the conventional meanings.
 
-A UPA circuit depends on a ***configuration***:
+A PLONKish circuit depends on a ***configuration***:
 
 * A finite field $\mathbb{F}$, where cell values (for a given statement and witness) will be
   elements of $\mathbb{F}$.
@@ -33,7 +30,7 @@ A UPA circuit depends on a ***configuration***:
 * A sequence of ***lookup arguments*** defined over tuples of ***input expressions***
   (which are multivariate polynomials as above) and ***table columns***.
 
-A UPA circuit also defines:
+A PLONKish circuit also defines:
 
 * The number of rows $n$ in the matrix. $n$ must correspond to the size of a multiplicative
   subgroup of $\mathbb{F}^\times$; typically a power of two.
