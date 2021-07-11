@@ -13,6 +13,7 @@ use halo2::{
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
+#[derive(Clone)]
 pub struct Config {
     // Selector used for fixed-base scalar mul with short signed exponent.
     q_mul_fixed_short: Selector,
@@ -204,35 +205,44 @@ impl Config {
 
         #[cfg(test)]
         // Check that the correct multiple is obtained.
+        // This inlined test is only done for valid 64-bit magnitudes
+        // and valid +/- 1 signs.
+        // Invalid values result in constraint failures which are
+        // tested at the circuit-level.
         {
             use group::Curve;
 
-            let base: super::OrchardFixedBases = base.clone().into();
+            if let (Some(magnitude), Some(sign)) = (scalar.magnitude.value(), scalar.sign.value()) {
+                let magnitude_is_valid =
+                    magnitude < pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64);
+                let sign_is_valid = sign * sign == pallas::Base::one();
+                if magnitude_is_valid && sign_is_valid {
+                    let base: super::OrchardFixedBases = base.clone().into();
 
-            let scalar =
-                scalar
-                    .magnitude
-                    .value()
-                    .zip(scalar.sign.value())
-                    .map(|(magnitude, sign)| {
-                        // Move magnitude from base field into scalar field (which always fits
-                        // for Pallas).
-                        let magnitude = pallas::Scalar::from_bytes(&magnitude.to_bytes()).unwrap();
+                    let scalar = scalar.magnitude.value().zip(scalar.sign.value()).map(
+                        |(magnitude, sign)| {
+                            // Move magnitude from base field into scalar field (which always fits
+                            // for Pallas).
+                            let magnitude =
+                                pallas::Scalar::from_bytes(&magnitude.to_bytes()).unwrap();
 
-                        let sign = if sign == pallas::Base::one() {
-                            pallas::Scalar::one()
-                        } else if sign == -pallas::Base::one() {
-                            -pallas::Scalar::one()
-                        } else {
-                            panic!("Sign should be 1 or -1.")
-                        };
-                        magnitude * sign
-                    });
-            let real_mul = scalar.map(|scalar| base.generator() * scalar);
-            let result = result.point();
+                            let sign = if sign == pallas::Base::one() {
+                                pallas::Scalar::one()
+                            } else {
+                                -pallas::Scalar::one()
+                            };
 
-            if let (Some(real_mul), Some(result)) = (real_mul, result) {
-                assert_eq!(real_mul.to_affine(), result);
+                            magnitude * sign
+                        },
+                    );
+                    let real_mul = scalar.map(|scalar| base.generator() * scalar);
+
+                    let result = result.point();
+
+                    if let (Some(real_mul), Some(result)) = (real_mul, result) {
+                        assert_eq!(real_mul.to_affine(), result);
+                    }
+                }
             }
         }
 
@@ -294,17 +304,19 @@ pub mod tests {
             result.constrain_equal(layouter.namespace(|| "constrain result"), &expected)
         }
 
-        let mut random_sign = pallas::Base::one();
-        if rand::random::<bool>() {
-            random_sign = -random_sign;
-        }
         let magnitude_signs = [
             ("mul by +zero", pallas::Base::zero(), pallas::Base::one()),
             ("mul by -zero", pallas::Base::zero(), -pallas::Base::one()),
             (
                 "random [a]B",
                 pallas::Base::from_u64(rand::random::<u64>()),
-                random_sign,
+                {
+                    let mut random_sign = pallas::Base::one();
+                    if rand::random::<bool>() {
+                        random_sign = -random_sign;
+                    }
+                    random_sign
+                },
             ),
             (
                 "[2^64 - 1]B",
@@ -356,5 +368,145 @@ pub mod tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn invalid_magnitude_sign() {
+        use crate::circuit::gadget::{
+            ecc::chip::EccConfig,
+            utilities::{CellValue, UtilitiesInstructions},
+        };
+        use halo2::{
+            circuit::{Layouter, SimpleFloorPlanner},
+            dev::{MockProver, VerifyFailure},
+            plonk::{Circuit, ConstraintSystem, Error},
+        };
+
+        #[derive(Default)]
+        struct MyCircuit {
+            magnitude: Option<pallas::Base>,
+            sign: Option<pallas::Base>,
+        }
+
+        impl UtilitiesInstructions<pallas::Base> for MyCircuit {
+            type Var = CellValue<pallas::Base>;
+        }
+
+        impl Circuit<pallas::Base> for MyCircuit {
+            type Config = EccConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                Self::default()
+            }
+
+            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+                let advices = [
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                ];
+
+                let constants = [meta.fixed_column(), meta.fixed_column()];
+                let perm = meta.permutation(
+                    &advices
+                        .iter()
+                        .map(|advice| (*advice).into())
+                        .chain(constants.iter().map(|fixed| (*fixed).into()))
+                        .collect::<Vec<_>>(),
+                );
+
+                let lookup_table = meta.fixed_column();
+                EccChip::configure(meta, advices, lookup_table, constants, perm)
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<pallas::Base>,
+            ) -> Result<(), Error> {
+                let column = config.advices[0];
+
+                let short_config: super::Config = (&config).into();
+                let magnitude_sign = {
+                    let magnitude = self.load_private(
+                        layouter.namespace(|| "load magnitude"),
+                        column,
+                        self.magnitude,
+                    )?;
+                    let sign =
+                        self.load_private(layouter.namespace(|| "load sign"), column, self.sign)?;
+                    (magnitude, sign)
+                };
+
+                short_config.assign(layouter, magnitude_sign, &ValueCommitV::get())?;
+
+                Ok(())
+            }
+        }
+
+        // Magnitude larger than 64 bits should fail
+        {
+            let circuit = MyCircuit {
+                magnitude: Some(pallas::Base::from_u128(1 << 64)),
+                sign: Some(pallas::Base::one()),
+            };
+
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(
+                prover.verify(),
+                Err(vec![
+                    VerifyFailure::Constraint {
+                        constraint: ((4, "final z = 0").into(), 0, "").into(),
+                        row: 24
+                    },
+                    VerifyFailure::Constraint {
+                        constraint: (
+                            (15, "Short fixed-base mul gate").into(),
+                            0,
+                            "last_window_check"
+                        )
+                            .into(),
+                        row: 26
+                    }
+                ])
+            );
+        }
+
+        // Sign that is not +/- 1 should fail
+        {
+            let circuit = MyCircuit {
+                magnitude: Some(pallas::Base::from_u64(rand::random::<u64>())),
+                sign: Some(pallas::Base::zero()),
+            };
+
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(
+                prover.verify(),
+                Err(vec![
+                    VerifyFailure::Constraint {
+                        constraint: ((15, "Short fixed-base mul gate").into(), 1, "sign_check")
+                            .into(),
+                        row: 26
+                    },
+                    VerifyFailure::Constraint {
+                        constraint: (
+                            (15, "Short fixed-base mul gate").into(),
+                            3,
+                            "negation_check"
+                        )
+                            .into(),
+                        row: 26
+                    }
+                ])
+            );
+        }
     }
 }

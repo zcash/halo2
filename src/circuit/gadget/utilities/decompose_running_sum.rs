@@ -249,7 +249,7 @@ mod tests {
             fn without_witnesses(&self) -> Self {
                 Self {
                     alpha: None,
-                    strict: self.strict
+                    strict: self.strict,
                 }
             }
 
