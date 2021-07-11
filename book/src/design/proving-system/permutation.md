@@ -128,26 +128,48 @@ correct $(a\ b\ c\ d).$
 We need to check a permutation of cells in $m$ columns, represented in Lagrange basis by
 polynomials $v_0, \ldots, v_{m-1}.$
 
-We first label each cell in those $m$ columns with a unique element of $\mathbb{F}^\times.$
+We will label *each cell* in those $m$ columns with a unique element of $\mathbb{F}^\times.$
+
+Suppose that we have a permutation on these labels,
+$$
+\sigma(\mathsf{column}: i, \mathsf{row}: j) = (\mathsf{column}: i', \mathsf{row}: j').
+$$
+in which the cycles correspond to equality-constraint sets.
+
+> If we consider the set of pairs $\{(\mathit{label}, \mathit{value})\}$, then the values within
+> each cycle are equal if and only if permuting the label in each pair by $\sigma$ yields the
+> same set:
+>
+> ![An example for a cycle (A B C D). The set before permuting the labels is {(A, 7), (B, 7), (C, 7), (D, 7)}, and the set after is {(D, 7), (A, 7), (B, 7), (C, 7)} which is the same. If one of the 7s is replaced by 3, then the set after permuting labels is not the same.](./permutation-diagram.png)
+>
+> Since the labels are distinct, set equality is the same as multiset equality, which we can
+> check using a product argument.
 
 Let $\omega$ be a $2^k$ root of unity and let $\delta$ be a $T$ root of unity, where
-$T \cdot 2^S + 1 = p$ with $T$ odd and $k \leq S.$
+${T \cdot 2^S + 1 = p}$ with $T$ odd and ${k \leq S.}$
 We will use $\delta^i \cdot \omega^j \in \mathbb{F}^\times$ as the label for the
 cell in the $j$th row of the $i$th column of the permutation argument.
 
-If we have a permutation
-$\sigma(\mathsf{column}: i, \mathsf{row}: j) = (\mathsf{column}: i', \mathsf{row}: j'),$
-we can represent it as a vector of $m$ polynomials $s_i(X)$ such that
+We represent $\sigma$ by a vector of $m$ polynomials $s_i(X)$ such that
 $s_i(\omega^j) = \delta^{i'} \cdot \omega^{j'}.$
 
 Notice that the identity permutation can be represented by the vector of $m$ polynomials
-$\mathsf{ID}_i(X)$ such that $\mathsf{ID}_i(X) = \delta^i \cdot X.$
+$\mathsf{ID}_i(\omega^j)$ such that $\mathsf{ID}_i(\omega^j) = \delta^i \cdot \omega^j.$
+
+We will use a challenge $\beta$ to compress each ${(\mathit{label}, \mathit{value})}$ pair
+to $\mathit{value} + \beta \cdot \mathit{label}.$ Just as in the product argument we used
+for [lookups](lookup.md), we also use a challenge $\gamma$ to randomize each term of the
+product.
 
 Now given our permutation represented by $s_0, \ldots, s_{m-1}$ over columns represented by
 $v_0, \ldots, v_{m-1},$ we want to ensure that:
 $$
 \prod\limits_{i=0}^{m-1} \prod\limits_{j=0}^{n-1} \left(\frac{v_i(\omega^j) + \beta \cdot \delta^i \cdot \omega^j + \gamma}{v_i(\omega^j) + \beta \cdot s_i(\omega^j) + \gamma}\right) = 1
 $$
+
+> Here ${v_i(\omega^j) + \beta \cdot \delta^i \cdot \omega^j}$ represents the unpermuted
+> $(\mathit{label}, value)$ pair, and ${v_i(\omega^j) + \beta \cdot s_i(\omega^j)}$
+> represents the permuted $(\sigma(\mathit{label}), value)$ pair.
 
 Let $Z_P$ be such that $Z_P(\omega^0) = Z_P(\omega^n) = 1$ and for $0 \leq j < n$:
 $$\begin{array}{rl}
@@ -222,6 +244,10 @@ $\big(1 - (q_\mathit{last}(X) + q_\mathit{blind}(X))\big) \cdot$
 $\hspace{1em}\left(Z_{P,a}(\omega X) \cdot \!\prod\limits_{i=am}^{(a+1)m-1}\! \left(v_i(X) + \beta \cdot s_i(X) + \gamma\right) - Z_P(X) \cdot \!\prod\limits_{i=am}^{(a+1)m-1}\! \left(v_i(X) + \beta \cdot \delta^i \cdot X + \gamma\right)\right)$
 $\hspace{2em}= 0$
 
+> For simplicity this is written assuming that the number of columns enabled for
+> equality constraints is a multiple of $m$; if not then the products for the last
+> column set will have fewer than $m$ terms.
+
 For the first column set we have:
 
 $$
@@ -235,7 +261,7 @@ $$
 \ell_0 \cdot \left(Z_{P,a}(X) - Z_{P,a-1}(\omega^u X)\right) = 0
 $$
 
-For the last column set, we have:
+For the last column set, we allow $Z_{P,b-1}(\omega^u)$ to be either zero or one:
 
 $$
 q_\mathit{last}(X) \cdot \left(Z_{P,b-1}(X)^2 - Z_{P,b-1}(X)\right) = 0
