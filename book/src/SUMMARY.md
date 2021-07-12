@@ -23,5 +23,6 @@
         - [Variable-base scalar multiplication](design/circuit/gadgets/ecc/var-base-scalar-mul.md)
       - [Sinsemilla](design/circuit/gadgets/sinsemilla.md)
         - [MerkleCRH](design/circuit/gadgets/sinsemilla/merkle-crh.md)
+        - [CommitIvk](design/circuit/gadgets/sinsemilla/commit-ivk.md)
       - [Lookup Range Check](design/circuit/gadgets/lookup_range_check.md)
       - [Decomposition](design/circuit/gadgets/decomposition.md)
