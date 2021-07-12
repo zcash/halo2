@@ -44,32 +44,46 @@ follows:
 - The prover then permutes $A_\text{compressed}(X)$ and $S_\text{compressed}(X)$ according
   to the [rules of the lookup argument](lookup.md), obtaining $A'(X)$ and $S'(X)$.
 
-Finally, the prover creates blinding commitments for all of the lookups
+The prover creates blinding commitments for all of the lookups
 
 $$\mathbf{L} = \left[ (\text{Commit}(A'(X))), \text{Commit}(S'(X))), \dots \right]$$
 
 and sends them to the verifier.
 
-## Committing to the equality constraint permutations
+After the verifier receives $\mathbf{A}$, $\mathbf{F}$, and $\mathbf{L}$, it samples
+challenges $\beta$ and $\gamma$ that will be used in the permutation argument and the
+remainder of the lookup argument below. (These challenges can be reused because the
+arguments are independent.)
 
-The verifier samples $\beta$ and $\gamma$.
+## Committing to the equality constraint permutation
 
-For each equality constraint argument:
+Let $c$ be the number of columns that are enabled for equality constraints.
 
-- The prover constructs a vector $P$:
+Let $m$ be the maximum number of columns that can accomodated by a
+[column set](permutation.md#spanning-a-large-number-of-columns) without exceeding
+the PLONK configuration's polynomial degree bound.
+
+Let $u$ be the number of “usable” rows as defined in the
+[Permutation argument](permutation.md#zero-knowledge-adjustment) section.
+
+Let $b = \mathsf{ceiling}(c/m).$
+
+The prover constructs a vector $\mathbf{P}$ of length $bu$ such that for each
+column set $0 \leq a < b$ and each row $0 \leq j < u,$
 
 $$
-P_j = \prod\limits_{i=0}^{m-1} \frac{p_i(\omega^j) + \beta \cdot \delta^i \cdot \omega^j + \gamma}{p_i(\omega^j) + \beta \cdot s_i(\omega^j) + \gamma}
+\mathbf{P}_{au + j} = \prod\limits_{i=am}^{\min(c, (a+1)m)-1} \frac{v_i(\omega^j) + \beta \cdot \delta^i \cdot \omega^j + \gamma}{v_i(\omega^j) + \beta \cdot s_i(\omega^j) + \gamma}.
 $$
 
-- The prover constructs a polynomial $Z_P$ which has a Lagrange basis representation
-  corresponding to a running product of $P$, starting at $Z_P(1) = 1$.
+The prover then computes a running product of $\mathbf{P}$, starting at $1$,
+and a vector of polynomials $Z_{P,0..b-1}$ that each have a Lagrange basis
+representation corresponding to a $u$-sized slice of this running product, as
+described in the [Permutation argument](permutation.md#argument-specification)
+section.
 
-See the [Permutation argument](permutation.md#argument-specification) section for more detail.
+The prover creates blinding commitments to each $Z_{P,a}$ polynomial:
 
-The prover creates blinding commitments to each $Z_P$ polynomial:
-
-$$\mathbf{Z_P} = \left[\text{Commit}(Z_P(X)), \dots \right]$$
+$$\mathbf{Z_P} = \left[\text{Commit}(Z_{P,0}(X)), \dots, \text{Commit}(Z_{P,b-1}(X))\right]$$
 
 and sends them to the verifier.
 
@@ -88,12 +102,10 @@ $$
   corresponding to a running product of $P$, starting at $Z_L(1) = 1$.
 
 $\beta$ and $\gamma$ are used to combine the permutation arguments for $A'(X)$ and $S'(X)$
-while keeping them independent. We can reuse $\beta$ and $\gamma$ from the equality
-constraint permutation here because they serve the same purpose in both places, and we
-aren't trying to combine the lookup and equality constraint permutation arguments. The
-important thing here is that the verifier samples $\beta$ and $\gamma$ after the prover
-has created $\mathbf{A}$, $\mathbf{F}$, and $\mathbf{L}$ (and thus commited to all the
-cell values used in lookup columns, as well as $A'(X)$ and $S'(X)$ for each lookup).
+while keeping them independent. The important thing here is that the verifier samples
+$\beta$ and $\gamma$ after the prover has created $\mathbf{A}$, $\mathbf{F}$, and
+$\mathbf{L}$ (and thus committed to all the cell values used in lookup columns, as well
+as $A'(X)$ and $S'(X)$ for each lookup).
 
 As before, the prover creates blinding commitments to each $Z_L$ polynomial:
 

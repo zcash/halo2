@@ -1,4 +1,4 @@
-# [WIP] UltraPLONK arithmetisation
+# [WIP] PLONKish arithmetization
 
 We call the field over which the circuit is defined $\mathbb{F} = \mathbb{F}_p$.
 
@@ -14,7 +14,7 @@ every row (i.e. at every element in the multiplicative subgroup).
 e.g.
 
 ```text
-a * sa + b * sb + a * b * sm + c * sc + PI = 0 
+a * sa + b * sb + a * b * sm + c * sc + PI = 0
 ```
 
 ## Columns
@@ -51,7 +51,7 @@ Check the constraints:
 
 2. Running product is well-constructed. For each row, we check that this holds:
    $$Z(\omega^i) \cdot{(C(\omega^i) + \beta S_k(\omega^i) + \gamma)} - Z(\omega^{i-1}) \cdot{(C(\omega^i) + \delta^k \beta \omega^i + \gamma)} = 0$$
-   Rearranging gives 
+   Rearranging gives
    $$Z(\omega^i) = Z(\omega^{i-1}) \frac{C(\omega^i) + \beta\delta^k \omega^i + \gamma}{C(\omega^i) + \beta S_k(\omega^i) + \gamma},$$
    which is how we defined the grand product polynomial in the first place.
 
@@ -61,7 +61,7 @@ Reference: [Generic Lookups with PLONK (DRAFT)](/LTPc5f-3S0qNF6MtwD-Tdg?view)
 ### Vanishing argument
 We want to check that the expressions defined by the gate constraints, permutation
 constraints and loookup constraints evaluate to zero at all elements in the multiplicative
-subgroup. To do this, the prover collapses all the expressions into one polynomial 
+subgroup. To do this, the prover collapses all the expressions into one polynomial
 $$H(X) = \sum_{i=0}^e y^i E_i(X),$$
 where $e$ is the number of expressions and $y$ is a random challenge used to keep the
 constraints linearly independent. The prover then divides this by the vanishing polynomial

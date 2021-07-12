@@ -40,8 +40,8 @@ intermediate rounds. (Refer to Section 3 in the [Halo] paper for a full explanat
 
 [Halo]: https://eprint.iacr.org/2019/1021.pdf
 
-Before beginning the argment, the verifier selects a random group element $U$ and sends it
-to the prover. We initialise the argument at round $k,$ with the vectors
+Before beginning the argument, the verifier selects a random group element $U$ and sends it
+to the prover. We initialize the argument at round $k,$ with the vectors
 $\mathbf{a}^{(k)} := \mathbf{a},$ $\mathbf{G}^{(k)} := \mathbf{G}$ and
 $\mathbf{b}^{(k)} := \mathbf{b}.$ In each round $j = k, k-1, \cdots, 1$:
 
