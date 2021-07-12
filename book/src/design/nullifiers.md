@@ -2,7 +2,7 @@
 
 The nullifier design we use for Orchard is
 
-$$\mathsf{nf} = \mathsf{Extract}_{\mathbb{P}}\big([F_{\mathsf{nk}}(\rho) + \psi \pmod{p}] \mathcal{G} + \mathsf{cm}\big),$$
+$$\mathsf{nf} = \mathsf{Extract}_{\mathbb{P}}\big([(F_{\mathsf{nk}}(\rho) + \psi) \bmod{p}] \mathcal{G} + \mathsf{cm}\big),$$
 
 where:
 
@@ -117,7 +117,7 @@ $$
 [F_{\mathsf{nk}}(\rho)] \mathcal{G} + \mathsf{cm} & (addr, v, \rho, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \mathit{DDH}_E^\dagger & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & \mathit{DL}_E & \text{NP(OOB) not perfect} \\[0.9ex]\hline\\[-1.7ex]
 [F_{\mathsf{nk}}(\rho, \psi)] \mathcal{G_v} + [\mathsf{rnf}] \mathcal{I} & (addr, v, \rho, \mathsf{rnf}, \psi, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & \mathit{Coll}_F \wedge \mathit{DL}_E & \mathit{Coll}_F \text{ for FR} \\[0.9ex]\hline\\[-1.7ex]
 [F_{\mathsf{nk}}(\rho)] \mathcal{G_v} + [\mathsf{rnf}] \mathcal{I} & (addr, v, \rho, \mathsf{rnf}, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & \mathit{Coll}_F \wedge \mathit{DL}_E & \mathit{Coll}_F \text{ for FR} \\[0.9ex]\hline\\[-1.7ex]
-[F_{\mathsf{nk}}(\rho) + \psi \pmod{p}] \mathcal{G_v} & (addr, v, \rho, \psi, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Near perfect} \ddagger & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & \color{red}{\text{broken}} & \text{broken for FR} \\[0.9ex]\hline\\[-1.7ex]
+[(F_{\mathsf{nk}}(\rho) + \psi) \bmod{p}] \mathcal{G_v} & (addr, v, \rho, \psi, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Near perfect} \ddagger & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & \color{red}{\text{broken}} & \text{broken for FR} \\[0.9ex]\hline\\[-1.7ex]
 \![F_{\mathsf{nk}}(\rho, \psi)] \mathcal{G} \!+\! \mathit{Commit}^{\mathsf{nf}}_{\mathsf{rnf}}(v, \rho)\! & (addr, v, \rho, \mathsf{rnf}, \psi, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & \mathit{DL}_E & \text{Perf. (2 fix-base)} \\[0.9ex]\hline\\[-1.7ex]
 [F_{\mathsf{nk}}(\rho)] \mathcal{G} + \mathit{Commit}^{\mathsf{nf}}_{\mathsf{rnf}}(v, \rho) & (addr, v, \rho, \mathsf{rnf}, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & \mathit{DL}_E & \text{Perf. (2 fix-base)} \\[0.9ex]\hline
 \end{array}
