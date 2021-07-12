@@ -189,7 +189,9 @@ rule above fits within the degree bound of the PLONK configuration. We will see
 
 > The optimization used to obtain the simple representation of the identity permutation was suggested
 > by Vitalik Buterin for PLONK, and is described at the end of section 8 of the PLONK paper. Note that
-> the $\delta^i$ are all distinct quadratic non-residues.
+> the $\delta^i$ are all distinct quadratic non-residues, provided that the number of columns that
+> are enabled for equality is no more than $T$, which always holds in practice for the curves used in
+> Halo 2.
 
 ## Zero-knowledge adjustment
 
