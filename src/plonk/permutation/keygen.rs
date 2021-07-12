@@ -7,7 +7,7 @@ use crate::{
     plonk::{Any, Column, Error},
     poly::{
         commitment::{Blind, Params},
-        EvaluationDomain, Rotation,
+        EvaluationDomain,
     },
 };
 
@@ -199,7 +199,7 @@ impl Assembly {
             permutations.push(permutation_poly.clone());
             let poly = domain.lagrange_to_coeff(permutation_poly);
             polys.push(poly.clone());
-            cosets.push(domain.coeff_to_extended(poly, Rotation::cur()));
+            cosets.push(domain.coeff_to_extended(poly));
         }
         ProvingKey {
             permutations,

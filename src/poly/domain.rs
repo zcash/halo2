@@ -239,26 +239,10 @@ impl<G: Group> EvaluationDomain<G> {
     pub fn coeff_to_extended(
         &self,
         mut a: Polynomial<G, Coeff>,
-        rotation: Rotation,
     ) -> Polynomial<G, ExtendedLagrangeCoeff> {
         assert_eq!(a.values.len(), 1 << self.k);
 
-        assert!(rotation.0 != i32::MIN);
-        if rotation.0 == 0 {
-            // In this special case, the powers of zeta repeat so we do not need
-            // to compute them.
-            Self::distribute_powers_zeta(&mut a.values, true);
-        } else {
-            let mut g = self.g_coset;
-            if rotation.0 > 0 {
-                g *= &self.omega.pow_vartime(&[rotation.0 as u64, 0, 0, 0]);
-            } else {
-                g *= &self
-                    .omega_inv
-                    .pow_vartime(&[rotation.0.abs() as u64, 0, 0, 0]);
-            }
-            Self::distribute_powers(&mut a.values, g);
-        }
+        Self::distribute_powers_zeta(&mut a.values, true);
         a.values.resize(self.extended_len(), G::group_zero());
         best_fft(&mut a.values, self.extended_omega, self.extended_k);
 
@@ -435,18 +419,6 @@ impl<G: Group> EvaluationDomain<G> {
                     a.group_scale(&coset_powers[i - 1]);
                 }
                 index += 1;
-            }
-        });
-    }
-
-    // Given a length-`n` slice of group elements `a` and a scalar `g`, this
-    // returns `[a_0, [g]a_1, [g^2]a_2, [g^3]a_3, ..., [g^n-1] a_{n-1}]`.
-    fn distribute_powers(mut a: &mut [G], g: G::Scalar) {
-        parallelize(&mut a, |a, index| {
-            let mut cur = g.pow_vartime(&[index as u64, 0, 0, 0]);
-            for a in a {
-                a.group_scale(&cur);
-                cur *= &g;
             }
         });
     }

@@ -213,14 +213,8 @@ impl<F: FieldExt> Argument<F> {
             .write_point(permuted_table_commitment)
             .map_err(|_| Error::TranscriptError)?;
 
-        let permuted_input_coset = pk
-            .vk
-            .domain
-            .coeff_to_extended(permuted_input_poly.clone(), Rotation::cur());
-        let permuted_table_coset = pk
-            .vk
-            .domain
-            .coeff_to_extended(permuted_table_poly.clone(), Rotation::cur());
+        let permuted_input_coset = pk.vk.domain.coeff_to_extended(permuted_input_poly.clone());
+        let permuted_table_coset = pk.vk.domain.coeff_to_extended(permuted_table_poly.clone());
 
         Ok(Permuted {
             unpermuted_input_expressions,
@@ -391,7 +385,7 @@ impl<C: CurveAffine> Permuted<C> {
         let product_blind = Blind(C::Scalar::rand());
         let product_commitment = params.commit_lagrange(&z, product_blind).to_affine();
         let z = pk.vk.domain.lagrange_to_coeff(z);
-        let product_coset = pk.vk.domain.coeff_to_extended(z.clone(), Rotation::cur());
+        let product_coset = pk.vk.domain.coeff_to_extended(z.clone());
 
         // Hash product commitment
         transcript

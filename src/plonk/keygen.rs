@@ -14,7 +14,7 @@ use super::{
 };
 use crate::poly::{
     commitment::{Blind, Params},
-    EvaluationDomain, Rotation,
+    EvaluationDomain,
 };
 use crate::{arithmetic::CurveAffine, poly::batch_invert_assigned};
 
@@ -245,7 +245,7 @@ where
 
     let fixed_cosets = fixed_polys
         .iter()
-        .map(|poly| vk.domain.coeff_to_extended(poly.clone(), Rotation::cur()))
+        .map(|poly| vk.domain.coeff_to_extended(poly.clone()))
         .collect();
 
     let permutation_pk = assembly
@@ -257,7 +257,7 @@ where
     let mut l0 = vk.domain.empty_lagrange();
     l0[0] = C::Scalar::one();
     let l0 = vk.domain.lagrange_to_coeff(l0);
-    let l0 = vk.domain.coeff_to_extended(l0, Rotation::cur());
+    let l0 = vk.domain.coeff_to_extended(l0);
 
     // Compute l_blind(X) which evaluates to 1 for each blinding factor row
     // and 0 otherwise over the domain.
@@ -266,14 +266,14 @@ where
         *evaluation = C::Scalar::one();
     }
     let l_blind = vk.domain.lagrange_to_coeff(l_blind);
-    let l_blind = vk.domain.coeff_to_extended(l_blind, Rotation::cur());
+    let l_blind = vk.domain.coeff_to_extended(l_blind);
 
     // Compute l_last(X) which evaluates to 1 on the first inactive row (just
     // before the blinding factors) and 0 otherwise over the domain
     let mut l_last = vk.domain.empty_lagrange();
     l_last[params.n as usize - cs.blinding_factors() - 1] = C::Scalar::one();
     let l_last = vk.domain.lagrange_to_coeff(l_last);
-    let l_last = vk.domain.coeff_to_extended(l_last, Rotation::cur());
+    let l_last = vk.domain.coeff_to_extended(l_last);
 
     Ok(ProvingKey {
         vk,

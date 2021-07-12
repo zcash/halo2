@@ -14,7 +14,7 @@ use super::{
 use crate::poly::{
     commitment::{Blind, Params},
     multiopen::{self, ProverQuery},
-    Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
+    Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
 };
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine, FieldExt},
@@ -100,7 +100,7 @@ pub fn create_proof<
 
             let instance_cosets: Vec<_> = instance_polys
                 .iter()
-                .map(|poly| domain.coeff_to_extended(poly.clone(), Rotation::cur()))
+                .map(|poly| domain.coeff_to_extended(poly.clone()))
                 .collect();
 
             Ok(InstanceSingle {
@@ -293,7 +293,7 @@ pub fn create_proof<
 
             let advice_cosets: Vec<_> = advice_polys
                 .iter()
-                .map(|poly| domain.coeff_to_extended(poly.clone(), Rotation::cur()))
+                .map(|poly| domain.coeff_to_extended(poly.clone()))
                 .collect();
 
             Ok(AdviceSingle {
