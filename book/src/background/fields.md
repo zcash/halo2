@@ -3,8 +3,7 @@
 A fundamental component of many cryptographic protocols is the algebraic structure known
 as a [field]. Fields are sets of objects (usually numbers) with two associated binary
 operators $+$ and $\times$ such that various [field axioms][field-axioms] hold. The real
-numbers $\mathbb{R}$ are an example of a field with an uncountably infinite number of
-elements.
+numbers $\mathbb{R}$ are an example of a field with uncountably many elements.
 
 [field]: https://en.wikipedia.org/wiki/Field_(mathematics)
 [field-axioms]: https://en.wikipedia.org/wiki/Field_(mathematics)#Classic_definition

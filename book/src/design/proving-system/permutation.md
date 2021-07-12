@@ -16,7 +16,7 @@ each cycle).
 
 We sometimes use [cycle notation](https://en.wikipedia.org/wiki/Permutation#Cycle_notation)
 to write permutations. Let $(a\ b\ c)$ denote a cycle where $a$ maps to $b,$ $b$ maps to
-$c,$ and $c$ maps to $a$ (with the obvious generalisation to arbitrary-sized cycles).
+$c,$ and $c$ maps to $a$ (with the obvious generalization to arbitrary-sized cycles).
 Writing two or more cycles next to each other denotes a composition of the corresponding
 permutations. For example, $(a\ b)\ (c\ d)$ denotes the permutation that maps $a$ to $b,$
 $b$ to $a,$ $c$ to $d,$ and $d$ to $c.$

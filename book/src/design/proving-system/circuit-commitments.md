@@ -104,7 +104,7 @@ $$
 $\beta$ and $\gamma$ are used to combine the permutation arguments for $A'(X)$ and $S'(X)$
 while keeping them independent. The important thing here is that the verifier samples
 $\beta$ and $\gamma$ after the prover has created $\mathbf{A}$, $\mathbf{F}$, and
-$\mathbf{L}$ (and thus commited to all the cell values used in lookup columns, as well
+$\mathbf{L}$ (and thus committed to all the cell values used in lookup columns, as well
 as $A'(X)$ and $S'(X)$ for each lookup).
 
 As before, the prover creates blinding commitments to each $Z_L$ polynomial:
