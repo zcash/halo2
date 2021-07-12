@@ -175,6 +175,8 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         }
 
         fn configure(meta: &mut ConstraintSystem<F>) -> PlonkConfig {
+            meta.set_minimum_degree(5);
+
             let a = meta.advice_column();
             let b = meta.advice_column();
             let c = meta.advice_column();

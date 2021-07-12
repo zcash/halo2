@@ -776,6 +776,7 @@ fn plonk_api() {
                 ],
             },
         ],
+        minimum_degree: None,
     },
     fixed_commitments: [
         (0x2bbc94ef7b22aebef24f9a4b0cc1831882548b605171366017d45c3e6fd92075, 0x082b801a6e176239943bfb759fb02138f47a5c8cc4aa7fa0af559fde4e3abd97),
