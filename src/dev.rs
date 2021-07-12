@@ -500,8 +500,8 @@ impl<F: FieldExt> MockProver<F> {
                             row: i32,
                             queries: &'a [(Column<T>, Rotation)],
                             cells: &'a [Vec<Option<F>>],
-                        ) -> impl Fn(usize) -> F + 'a {
-                            move |index| {
+                        ) -> impl Fn(usize, usize, Rotation) -> F + 'a {
+                            move |index, _, _| {
                                 let (column, at) = &queries[index];
                                 let resolved_row = (row + at.0) % n;
                                 cell_value(cells[column.index()][resolved_row as usize])
@@ -513,8 +513,8 @@ impl<F: FieldExt> MockProver<F> {
                             row: i32,
                             queries: &'a [(Column<T>, Rotation)],
                             cells: &'a [Vec<F>],
-                        ) -> impl Fn(usize) -> F + 'a {
-                            move |index| {
+                        ) -> impl Fn(usize, usize, Rotation) -> F + 'a {
+                            move |index, _, _| {
                                 let (column, at) = &queries[index];
                                 let resolved_row = (row + at.0) % n;
                                 cells[column.index()][resolved_row as usize]
@@ -561,7 +561,7 @@ impl<F: FieldExt> MockProver<F> {
                         let load = |expression: &Expression<F>, row| {
                             expression.evaluate(
                                 &|scalar| scalar,
-                                &|index| {
+                                &|index, _, _| {
                                     let query = self.cs.fixed_queries[index];
                                     let column_index = query.0.index();
                                     let rotation = query.1 .0;
@@ -570,7 +570,7 @@ impl<F: FieldExt> MockProver<F> {
                                             [(row as i32 + n + rotation) as usize % n as usize],
                                     )
                                 },
-                                &|index| {
+                                &|index, _, _| {
                                     let query = self.cs.advice_queries[index];
                                     let column_index = query.0.index();
                                     let rotation = query.1 .0;
@@ -579,7 +579,7 @@ impl<F: FieldExt> MockProver<F> {
                                             [(row as i32 + n + rotation) as usize % n as usize],
                                     )
                                 },
-                                &|index| {
+                                &|index, _, _| {
                                     let query = self.cs.instance_queries[index];
                                     let column_index = query.0.index();
                                     let rotation = query.1 .0;

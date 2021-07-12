@@ -537,11 +537,32 @@ pub enum Expression<F> {
     /// This is a constant polynomial
     Constant(F),
     /// This is a fixed column queried at a certain relative location
-    Fixed(usize),
+    Fixed {
+        /// Query index
+        query_index: usize,
+        /// Column index
+        column_index: usize,
+        /// Rotation of this query
+        rotation: Rotation,
+    },
     /// This is an advice (witness) column queried at a certain relative location
-    Advice(usize),
+    Advice {
+        /// Query index
+        query_index: usize,
+        /// Column index
+        column_index: usize,
+        /// Rotation of this query
+        rotation: Rotation,
+    },
     /// This is an instance (external) column queried at a certain relative location
-    Instance(usize),
+    Instance {
+        /// Query index
+        query_index: usize,
+        /// Column index
+        column_index: usize,
+        /// Rotation of this query
+        rotation: Rotation,
+    },
     /// This is the sum of two polynomials
     Sum(Box<Expression<F>>, Box<Expression<F>>),
     /// This is the product of two polynomials
@@ -556,18 +577,30 @@ impl<F: Field> Expression<F> {
     pub fn evaluate<T>(
         &self,
         constant: &impl Fn(F) -> T,
-        fixed_column: &impl Fn(usize) -> T,
-        advice_column: &impl Fn(usize) -> T,
-        instance_column: &impl Fn(usize) -> T,
+        fixed_column: &impl Fn(usize, usize, Rotation) -> T,
+        advice_column: &impl Fn(usize, usize, Rotation) -> T,
+        instance_column: &impl Fn(usize, usize, Rotation) -> T,
         sum: &impl Fn(T, T) -> T,
         product: &impl Fn(T, T) -> T,
         scaled: &impl Fn(T, F) -> T,
     ) -> T {
         match self {
             Expression::Constant(scalar) => constant(*scalar),
-            Expression::Fixed(index) => fixed_column(*index),
-            Expression::Advice(index) => advice_column(*index),
-            Expression::Instance(index) => instance_column(*index),
+            Expression::Fixed {
+                query_index,
+                column_index,
+                rotation,
+            } => fixed_column(*query_index, *column_index, *rotation),
+            Expression::Advice {
+                query_index,
+                column_index,
+                rotation,
+            } => advice_column(*query_index, *column_index, *rotation),
+            Expression::Instance {
+                query_index,
+                column_index,
+                rotation,
+            } => instance_column(*query_index, *column_index, *rotation),
             Expression::Sum(a, b) => {
                 let a = a.evaluate(
                     constant,
@@ -629,9 +662,9 @@ impl<F: Field> Expression<F> {
     pub fn degree(&self) -> usize {
         match self {
             Expression::Constant(_) => 0,
-            Expression::Fixed(_) => 1,
-            Expression::Advice(_) => 1,
-            Expression::Instance(_) => 1,
+            Expression::Fixed { .. } => 1,
+            Expression::Advice { .. } => 1,
+            Expression::Instance { .. } => 1,
             Expression::Sum(a, b) => max(a.degree(), b.degree()),
             Expression::Product(a, b) => a.degree() + b.degree(),
             Expression::Scaled(poly, _) => poly.degree(),
@@ -1136,43 +1169,49 @@ impl<'a, F: Field> VirtualCells<'a, F> {
     pub fn query_selector(&mut self, selector: Selector) -> Expression<F> {
         // Selectors are always queried at the current row.
         self.queried_selectors.push(selector);
-        Expression::Fixed(self.meta.query_fixed_index(selector.0, Rotation::cur()))
+        Expression::Fixed {
+            query_index: self.meta.query_fixed_index(selector.0, Rotation::cur()),
+            column_index: (selector.0).index,
+            rotation: Rotation::cur(),
+        }
     }
 
     /// Query a fixed column at a relative position
     pub fn query_fixed(&mut self, column: Column<Fixed>, at: Rotation) -> Expression<F> {
         self.queried_cells.push((column, at).into());
-        Expression::Fixed(self.meta.query_fixed_index(column, at))
+        Expression::Fixed {
+            query_index: self.meta.query_fixed_index(column, at),
+            column_index: column.index,
+            rotation: at,
+        }
     }
 
     /// Query an advice column at a relative position
     pub fn query_advice(&mut self, column: Column<Advice>, at: Rotation) -> Expression<F> {
         self.queried_cells.push((column, at).into());
-        Expression::Advice(self.meta.query_advice_index(column, at))
+        Expression::Advice {
+            query_index: self.meta.query_advice_index(column, at),
+            column_index: column.index,
+            rotation: at,
+        }
     }
 
     /// Query an instance column at a relative position
     pub fn query_instance(&mut self, column: Column<Instance>, at: Rotation) -> Expression<F> {
         self.queried_cells.push((column, at).into());
-        Expression::Instance(self.meta.query_instance_index(column, at))
+        Expression::Instance {
+            query_index: self.meta.query_instance_index(column, at),
+            column_index: column.index,
+            rotation: at,
+        }
     }
 
     /// Query an Any column at a relative position
     pub fn query_any(&mut self, column: Column<Any>, at: Rotation) -> Expression<F> {
-        self.queried_cells.push((column, at).into());
         match column.column_type() {
-            Any::Advice => Expression::Advice(
-                self.meta
-                    .query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
-            ),
-            Any::Fixed => Expression::Fixed(
-                self.meta
-                    .query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
-            ),
-            Any::Instance => Expression::Instance(
-                self.meta
-                    .query_instance_index(Column::<Instance>::try_from(column).unwrap(), at),
-            ),
+            Any::Advice => self.query_advice(Column::<Advice>::try_from(column).unwrap(), at),
+            Any::Fixed => self.query_fixed(Column::<Fixed>::try_from(column).unwrap(), at),
+            Any::Instance => self.query_instance(Column::<Instance>::try_from(column).unwrap(), at),
         }
     }
 }

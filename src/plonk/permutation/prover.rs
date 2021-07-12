@@ -18,8 +18,6 @@ use crate::{
 pub struct CommittedSet<C: CurveAffine> {
     permutation_product_poly: Polynomial<C::Scalar, Coeff>,
     permutation_product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
-    permutation_product_coset_next: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
-    permutation_product_coset_last: Option<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     permutation_product_blind: Blind<C::Scalar>,
 }
 
@@ -168,18 +166,7 @@ impl Argument {
             let z = domain.lagrange_to_coeff(z);
             let permutation_product_poly = z.clone();
 
-            // We only keep these around if there's another set afterward.
-            let permutation_product_coset_last = if iter.len() > 0 {
-                // Keep the polynomial around, rotated to l_last.
-                Some(
-                    domain.coeff_to_extended(z.clone(), Rotation(-((blinding_factors + 1) as i32))),
-                )
-            } else {
-                None
-            };
-
             let permutation_product_coset = domain.coeff_to_extended(z.clone(), Rotation::cur());
-            let permutation_product_coset_next = domain.coeff_to_extended(z, Rotation::next());
 
             let permutation_product_commitment =
                 permutation_product_commitment_projective.to_affine();
@@ -192,8 +179,6 @@ impl Argument {
             sets.push(CommittedSet {
                 permutation_product_poly,
                 permutation_product_coset,
-                permutation_product_coset_next,
-                permutation_product_coset_last,
                 permutation_product_blind,
             });
         }
@@ -219,6 +204,8 @@ impl<C: CurveAffine> Committed<C> {
     ) {
         let domain = &pk.vk.domain;
         let chunk_len = pk.vk.cs.degree() - 2;
+        let blinding_factors = pk.vk.cs.blinding_factors();
+        let last_rotation = Rotation(-((blinding_factors + 1) as i32));
 
         let constructed = Constructed {
             sets: self
@@ -252,9 +239,11 @@ impl<C: CurveAffine> Committed<C> {
                     .skip(1)
                     .zip(self.sets.iter())
                     .map(|(set, last_set)| {
-                        (set.permutation_product_coset.clone()
-                            - &last_set.permutation_product_coset_last.as_ref().unwrap())
-                            * &pk.l0
+                        domain.sub_extended(
+                            set.permutation_product_coset.clone(),
+                            &last_set.permutation_product_coset,
+                            last_rotation,
+                        ) * &pk.l0
                     })
                     .collect::<Vec<_>>(),
             )
@@ -270,22 +259,14 @@ impl<C: CurveAffine> Committed<C> {
                     .zip(pkey.cosets.chunks(chunk_len))
                     .enumerate()
                     .map(move |(chunk_index, ((set, columns), cosets))| {
-                        let mut left = set.permutation_product_coset_next;
+                        let mut left = domain
+                            .rotate_extended(&set.permutation_product_coset, Rotation::next());
                         for (values, permutation) in columns
                             .iter()
                             .map(|&column| match column.column_type() {
-                                Any::Advice => {
-                                    &advice_cosets
-                                        [pk.vk.cs.get_any_query_index(column, Rotation::cur())]
-                                }
-                                Any::Fixed => {
-                                    &fixed_cosets
-                                        [pk.vk.cs.get_any_query_index(column, Rotation::cur())]
-                                }
-                                Any::Instance => {
-                                    &instance_cosets
-                                        [pk.vk.cs.get_any_query_index(column, Rotation::cur())]
-                                }
+                                Any::Advice => &advice_cosets[column.index()],
+                                Any::Fixed => &fixed_cosets[column.index()],
+                                Any::Instance => &instance_cosets[column.index()],
                             })
                             .zip(cosets.iter())
                         {
@@ -306,17 +287,9 @@ impl<C: CurveAffine> Committed<C> {
                             * &(C::Scalar::DELTA.pow_vartime(&[(chunk_index * chunk_len) as u64]));
                         let step = domain.get_extended_omega();
                         for values in columns.iter().map(|&column| match column.column_type() {
-                            Any::Advice => {
-                                &advice_cosets
-                                    [pk.vk.cs.get_any_query_index(column, Rotation::cur())]
-                            }
-                            Any::Fixed => {
-                                &fixed_cosets[pk.vk.cs.get_any_query_index(column, Rotation::cur())]
-                            }
-                            Any::Instance => {
-                                &instance_cosets
-                                    [pk.vk.cs.get_any_query_index(column, Rotation::cur())]
-                            }
+                            Any::Advice => &advice_cosets[column.index()],
+                            Any::Fixed => &fixed_cosets[column.index()],
+                            Any::Instance => &instance_cosets[column.index()],
                         }) {
                             parallelize(&mut right, move |right, start| {
                                 let mut beta_term =

@@ -243,14 +243,9 @@ where
         .map(|poly| vk.domain.lagrange_to_coeff(poly.clone()))
         .collect();
 
-    let fixed_cosets = vk
-        .cs
-        .fixed_queries
+    let fixed_cosets = fixed_polys
         .iter()
-        .map(|&(column, at)| {
-            let poly = fixed_polys[column.index()].clone();
-            vk.domain.coeff_to_extended(poly, at)
-        })
+        .map(|poly| vk.domain.coeff_to_extended(poly.clone(), Rotation::cur()))
         .collect();
 
     let permutation_pk = assembly
