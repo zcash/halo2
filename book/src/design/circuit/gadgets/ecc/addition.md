@@ -215,7 +215,7 @@ $$
  && \\
  && \text{Similarly, constraint (b) imposes that } y_r - y_p = 0. \\
  && \\
- && \text{Therefore:}
+ && \text{Therefore:}\\
  && \hspace{2em} x_q = 0 \implies (x_r, y_r) = (x_p, y_p). \\
  && \\
  6.& \text{a)} & (1 - (x_q - x_p) \cdot \alpha - (y_q + y_p) \cdot \delta) \cdot x_r = 0 \\
