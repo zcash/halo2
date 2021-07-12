@@ -13,7 +13,7 @@ where:
   spent note.
 - $\psi$ is sender-controlled randomness. It is not required to be unique, and in practice
   is derived from both $\rho$ and a sender-selected random value $\mathsf{rseed}$:
-  $$\psi = KDF^\psi(\rho, \mathsf{rseed}).$$
+  $$\psi = \mathit{KDF}^\psi(\rho, \mathsf{rseed}).$$
 - $\mathcal{G}$ is a fixed independent base.
 - $\mathsf{Extract}_{\mathbb{P}}$ extracts the $x$-coordinate of a Pallas curve point.
 
@@ -57,36 +57,36 @@ We care about several security properties for our nullifiers:
 
 We assume (and instantiate elsewhere) the following primitives:
 
-- $GH$ is a cryptographic hash into the group (such as BLAKE2s with simplified SWU), used
-  to derive all fixed independent bases.
+- $\mathit{GH}$ is a cryptographic hash into the group (such as BLAKE2s with simplified SWU),
+  used to derive all fixed independent bases.
 - $E$ is an elliptic curve (such as Pallas).
-- $KDF$ is the note encryption key derivation function.
+- $\mathit{KDF}$ is the note encryption key derivation function.
 
 For our chosen design, our desired security properties rely on the following assumptions:
 
 $$
 \begin{array}{|l|l|}
 \hline
-\text{Balance} & DL_E \\
-\text{Note Privacy} & \mathit{HashDH}^{KDF}_E \\
+\text{Balance} & \mathit{DL}_E \\
+\text{Note Privacy} & \mathit{HashDH}^{\mathit{KDF}}_E \\
 \text{Note Privacy (OOB)} & \text{Near perfect} \ddagger \\
-\text{Spend Unlinkability} & DDH_E^\dagger \vee PRF_F \\
-\text{Faerie Resistance} & DL_E \\
+\text{Spend Unlinkability} & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F \\
+\text{Faerie Resistance} & \mathit{DL}_E \\
 \hline
 \end{array}
 $$
 
-$\mathit{HashDH}^{KDF}_E$ is computational Diffie-Hellman using $KDF$ for the key derivation, with
-one-time ephemeral keys. This assumption is heuristically weaker than $DDH_E$ but stronger
-than $DL_E$.
+$\mathit{HashDH}^{\mathit{KDF}}_E$ is computational Diffie-Hellman using $\mathit{KDF}$ for
+the key derivation, with one-time ephemeral keys. This assumption is heuristically weaker
+than $\mathit{DDH}_E$ but stronger than $\mathit{DL}_E$.
 
-We omit $RO_{GH}$ as a security assumption because we only rely on the random oracle
+We omit $RO_{\mathit{GH}}$ as a security assumption because we only rely on the random oracle
 applied to fixed inputs defined by the protocol, i.e. to generate the fixed base
 $\mathcal{G}$, not to attacker-specified inputs.
 
 > $\dagger$ We additionally assume that for any input $x$,
 > $\{F_{\mathsf{nk}}(x) : \mathsf{nk} \in E\}$ gives a scalar in an adequate range for
-> $DDH_E$. (Otherwise, $F$ could be trivial, e.g. independent of $\mathsf{nk}$.)
+> $\mathit{DDH}_E$. (Otherwise, $F$ could be trivial, e.g. independent of $\mathsf{nk}$.)
 >
 > $\ddagger$ Statistical distance $< 2^{-167.8}$ from perfect.
 
@@ -102,24 +102,24 @@ own security analysis, but because it is a deterministic mapping, only Faerie Re
 could be affected by it.
 
 $$
-\begin{array}{|c|l|c|c|c|c|c|}
-\hline
-\mathsf{nf} & Note & \text{Balance} & \text{Note Privacy} & \text{Note Privacy (OOB)} & \text{Spend Unlinkability} & \text{Faerie Resistance} & \text{Reason not to use} \\\hline
-[\mathsf{nk}] [\theta] H & (addr, v, H, \theta, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & \text{Perfect} & DDH_E & RO_{GH} \wedge DL_E & \text{No SU for DL-breaking} \\\hline
-[\mathsf{nk}] H + [\mathsf{rnf}] \mathcal{I} & (addr, v, H, \mathsf{rnf}, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & \text{Perfect} & DDH_E & RO_{GH} \wedge DL_E & \text{No SU for DL-breaking} \\\hline
-\mathit{Hash}([\mathsf{nk}] [\theta] H) & (addr, v, H, \theta, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & \text{Perfect} & DDH_E \vee Pre_{\mathit{Hash}} & Coll_{\mathit{Hash}} \wedge RO_{GH} \wedge DL_E & Coll_{\mathit{Hash}} \text{ for FR} \\\hline
-\mathit{Hash}([\mathsf{nk}] H + [\mathsf{rnf}] \mathcal{I}) & (addr, v, H, \mathsf{rnf}, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & \text{Perfect} & DDH_E \vee Pre_{\mathit{Hash}} & Coll_{\mathit{Hash}} \wedge RO_{GH} \wedge DL_E & Coll_{\mathit{Hash}} \text{ for FR} \\\hline
-[F_{\mathsf{nk}}(\psi)] [\theta] H & (addr, v, H, \theta, \psi, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & \text{Perfect} & DDH_E^\dagger \vee PRF_F & RO_{GH} \wedge DL_E & \text{Performance (2 variable-base)} \\\hline
-[F_{\mathsf{nk}}(\psi)] H + [\mathsf{rnf}] \mathcal{I} & (addr, v, H, \mathsf{rnf}, \psi, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & \text{Perfect} & DDH_E^\dagger \vee PRF_F & RO_{GH} \wedge DL_E & \text{Performance (1 variable- + 1 fixed-base)} \\\hline
-[F_{\mathsf{nk}}(\psi)] \mathcal{G} + [\theta] H & (addr, v, H, \theta, \psi, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & \text{Perfect} & DDH_E^\dagger \vee PRF_F & RO_{GH} \wedge DL_E & \text{Performance (1 variable- + 1 fixed-base)} \\\hline
-[F_{\mathsf{nk}}(\psi)] H + \mathsf{cm} & (addr, v, H, \psi, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & DDH_E^\dagger & DDH_E^\dagger \vee PRF_F & RO_{GH} \wedge DL_E & \text{NP(OOB) not perfect} \\\hline
-[F_{\mathsf{nk}}(\rho, \psi)] \mathcal{G} + \mathsf{cm} & (addr, v, \rho, \psi, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & DDH_E^\dagger  & DDH_E^\dagger \vee PRF_F & DL_E & \text{NP(OOB) not perfect} \\\hline
-[F_{\mathsf{nk}}(\rho)] \mathcal{G} + \mathsf{cm} & (addr, v, \rho, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & DDH_E^\dagger & DDH_E^\dagger \vee PRF_F & DL_E & \text{NP(OOB) not perfect} \\\hline
-[F_{\mathsf{nk}}(\rho, \psi)] \mathcal{G_v} + [\mathsf{rnf}] \mathcal{I} & (addr, v, \rho, \mathsf{rnf}, \psi, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & \text{Perfect} & DDH_E^\dagger \vee PRF_F & Coll_F \wedge DL_E & Coll_F \text{ for FR} \\\hline
-[F_{\mathsf{nk}}(\rho)] \mathcal{G_v} + [\mathsf{rnf}] \mathcal{I} & (addr, v, \rho, \mathsf{rnf}, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & \text{Perfect} & DDH_E^\dagger \vee PRF_F & Coll_F \wedge DL_E & Coll_F \text{ for FR} \\\hline
-[F_{\mathsf{nk}}(\rho) + \psi \pmod{p}] \mathcal{G_v} & (addr, v, \rho, \psi, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & \text{Near perfect} \ddagger & DDH_E^\dagger \vee PRF_F & \color{red}{\text{broken}} & \text{broken for FR} \\\hline
-[F_{\mathsf{nk}}(\rho, \psi)] \mathcal{G} + \mathit{Commit}^{\mathsf{nf}}_{\mathsf{rnf}}(v, \rho) & (addr, v, \rho, \mathsf{rnf}, \psi, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & \text{Perfect} & DDH_E^\dagger \vee PRF_F & DL_E & \text{Performance (2 fixed-base)} \\\hline
-[F_{\mathsf{nk}}(\rho)] \mathcal{G} + \mathit{Commit}^{\mathsf{nf}}_{\mathsf{rnf}}(v, \rho) & (addr, v, \rho, \mathsf{rnf}, \mathsf{rcm}) & DL_E & \mathit{HashDH}^{KDF}_E & \text{Perfect} & DDH_E^\dagger \vee PRF_F & DL_E & \text{Performance (2 fixed-base)} \\\hline
+\tiny \begin{array}{|c|l|c|c|c|c|c|c|}
+\hline\\[-1.5ex]
+\mathsf{nf} & \text{Note} & \!\text{Balance}\! & \text{Note Privacy} & \!\text{Note Priv OOB}\! & \!\text{Spend Unlinkability}\! & \text{Faerie Resistance} & \text{Reason not to use} \\[0.6ex]\hline\\[-2.4ex]\hline\\[-1.7ex]
+[\mathsf{nk}] [\theta] H & (addr, v, H, \theta, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E & RO_{\mathit{GH}} \wedge \mathit{DL}_E & \text{No SU for DL-breaking}\! \\[0.9ex]\hline\\[-1.7ex]
+[\mathsf{nk}] H + [\mathsf{rnf}] \mathcal{I} & (addr, v, H, \mathsf{rnf}, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E & RO_{\mathit{GH}} \wedge \mathit{DL}_E & \text{No SU for DL-breaking}\! \\[0.9ex]\hline\\[-1.7ex]
+\mathit{Hash}([\mathsf{nk}] [\theta] H) & (addr, v, H, \theta, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E \vee \mathit{Pre}_{\mathit{Hash}} & \!\mathit{Coll}_{\mathit{Hash}} \wedge RO_{\mathit{GH}} \wedge \mathit{DL}_E\! & \mathit{Coll}_{\mathit{Hash}} \text{ for FR} \\[0.9ex]\hline\\[-1.7ex]
+\mathit{Hash}([\mathsf{nk}] H + [\mathsf{rnf}] \mathcal{I}) & (addr, v, H, \mathsf{rnf}, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E \vee \mathit{Pre}_{\mathit{Hash}} & \!\mathit{Coll}_{\mathit{Hash}} \wedge RO_{\mathit{GH}} \wedge \mathit{DL}_E\! & \mathit{Coll}_{\mathit{Hash}} \text{ for FR} \\[0.9ex]\hline\\[-1.7ex]
+[F_{\mathsf{nk}}(\psi)] [\theta] H & (addr, v, H, \theta, \psi, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & RO_{\mathit{GH}} \wedge \mathit{DL}_E & \text{Perf. (2 var-base)} \\[0.9ex]\hline\\[-1.7ex]
+[F_{\mathsf{nk}}(\psi)] H + [\mathsf{rnf}] \mathcal{I} & (addr, v, H, \mathsf{rnf}, \psi, \mathsf{rcm})\! & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & RO_{\mathit{GH}} \wedge \mathit{DL}_E & \!\text{Perf. (1 var+1 fix-base)}\! \\[0.9ex]\hline\\[-1.7ex]
+[F_{\mathsf{nk}}(\psi)] \mathcal{G} + [\theta] H & (addr, v, H, \theta, \psi, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & RO_{\mathit{GH}} \wedge \mathit{DL}_E & \!\text{Perf. (1 var+1 fix-base)}\! \\[0.9ex]\hline\\[-1.7ex]
+[F_{\mathsf{nk}}(\psi)] H + \mathsf{cm} & (addr, v, H, \psi, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \mathit{DDH}_E^\dagger & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & RO_{\mathit{GH}} \wedge \mathit{DL}_E & \text{NP(OOB) not perfect} \\[0.9ex]\hline\\[-1.7ex]
+[F_{\mathsf{nk}}(\rho, \psi)] \mathcal{G} + \mathsf{cm} & (addr, v, \rho, \psi, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \mathit{DDH}_E^\dagger  & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & \mathit{DL}_E & \text{NP(OOB) not perfect} \\[0.9ex]\hline\\[-1.7ex]
+[F_{\mathsf{nk}}(\rho)] \mathcal{G} + \mathsf{cm} & (addr, v, \rho, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \mathit{DDH}_E^\dagger & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & \mathit{DL}_E & \text{NP(OOB) not perfect} \\[0.9ex]\hline\\[-1.7ex]
+[F_{\mathsf{nk}}(\rho, \psi)] \mathcal{G_v} + [\mathsf{rnf}] \mathcal{I} & (addr, v, \rho, \mathsf{rnf}, \psi, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & \mathit{Coll}_F \wedge \mathit{DL}_E & \mathit{Coll}_F \text{ for FR} \\[0.9ex]\hline\\[-1.7ex]
+[F_{\mathsf{nk}}(\rho)] \mathcal{G_v} + [\mathsf{rnf}] \mathcal{I} & (addr, v, \rho, \mathsf{rnf}, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & \mathit{Coll}_F \wedge \mathit{DL}_E & \mathit{Coll}_F \text{ for FR} \\[0.9ex]\hline\\[-1.7ex]
+[F_{\mathsf{nk}}(\rho) + \psi \pmod{p}] \mathcal{G_v} & (addr, v, \rho, \psi, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Near perfect} \ddagger & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & \color{red}{\text{broken}} & \text{broken for FR} \\[0.9ex]\hline\\[-1.7ex]
+\![F_{\mathsf{nk}}(\rho, \psi)] \mathcal{G} \!+\! \mathit{Commit}^{\mathsf{nf}}_{\mathsf{rnf}}(v, \rho)\! & (addr, v, \rho, \mathsf{rnf}, \psi, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & \mathit{DL}_E & \text{Perf. (2 fix-base)} \\[0.9ex]\hline\\[-1.7ex]
+[F_{\mathsf{nk}}(\rho)] \mathcal{G} + \mathit{Commit}^{\mathsf{nf}}_{\mathsf{rnf}}(v, \rho) & (addr, v, \rho, \mathsf{rnf}, \mathsf{rcm}) & \mathit{DL}_E & \mathit{HashDH}^{\mathit{KDF}\!}_E & \text{Perfect} & \mathit{DDH}_E^\dagger \vee \mathit{PRF}_F & \mathit{DL}_E & \text{Perf. (2 fix-base)} \\[0.9ex]\hline
 \end{array}
 $$
 
@@ -127,15 +127,15 @@ In the above alternatives:
 
 - $\mathit{Hash}$ is a keyed circuit-efficient hash (such as Rescue).
 - $\mathcal{I}$ is an fixed independent base, independent of $\mathcal{G}$ and any others
-  returned by $GH$.
+  returned by $\mathit{GH}$.
 - $\mathcal{G_v}$ is a pair of fixed independent bases (independent of all others), where
   the specific choice of base depends on whether the note has zero value.
 - $H$ is a base unique to this output.
 
-  - For non-zero-valued notes, $H = GH(\rho)$. As with $\mathsf{h_{Sig}}$ in Sprout,
+  - For non-zero-valued notes, $H = \mathit{GH}(\rho)$. As with $\mathsf{h_{Sig}}$ in Sprout,
     $\rho$ includes the nullifiers of any Orchard notes being spent in the same action.
   - For zero-valued notes, $H$ is constrained by the circuit to a fixed base independent
-    of $\mathcal{I}$ and any others returned by $GH$.
+    of $\mathcal{I}$ and any others returned by $\mathit{GH}$.
 
 ## Rationale
 
@@ -186,20 +186,21 @@ directly to the note (to avoid a DL-breaking adversary from immediately breaking
 We were considering using a design involving $H$ with the goal of eliminating all usages
 of a PRF inside the circuit, for two reasons:
 
-- Instantiating $PRF_F$ with a traditional hash function is expensive in the circuit.
-- We didn't want to solely rely on an algebraic hash function satisfying $PRF_F$ to
-  achieve **Spend Unlinkability**.
+- Instantiating $\mathit{PRF}_F$ with a traditional hash function is expensive in the
+  circuit.
+- We didn't want to solely rely on an algebraic hash function satisfying $\mathit{PRF}_F$
+  to achieve **Spend Unlinkability**.
 
-However, those designs rely on both $RO_{GH}$ and $DL_E$ for **Faerie Resistance**, while
-still requiring $DDH_E$ for **Spend Unlinkability**. (There are two designs for which this
-is not the case, but they rely on $DDH_E^\dagger$ for **Note Privacy (OOB)** which was not
-acceptable).
+However, those designs rely on both $RO_{\mathit{GH}}$ and $\mathit{DL}_E$ for
+**Faerie Resistance**, while still requiring $\mathit{DDH}_E$ for **Spend Unlinkability**.
+(There are two designs for which this is not the case, but they rely on
+$\mathit{DDH}_E^\dagger$ for **Note Privacy (OOB)** which was not acceptable).
 
 By contrast, several designs involving $\rho$ (including the chosen design) have weaker
-assumptions for **Faerie Resistance** (only relying on $DL_E$), and **Spend Unlinkability**
-does not require $PRF_F$ to hold: they can fall back on the same $DDH_E$ assumption as the
-$H$ designs (along with an additional assumption about the output of $F$ which is easily
-satisfied).
+assumptions for **Faerie Resistance** (only relying on $\mathit{DL}_E$), and
+**Spend Unlinkability** does not require $\mathit{PRF}_F$ to hold: they can fall back
+on the same $\mathit{DDH}_E$ assumption as the $H$ designs (along with an additional
+assumption about the output of $F$ which is easily satisfied).
 
 ### Use of $\psi$
 
@@ -235,11 +236,11 @@ The nullifier commits to the note value via $\mathsf{cm}$ for two reasons:
 
 - It domain-separates nullifiers for zero-valued notes from other notes. This is necessary
   because we do not require zero-valued notes to exist in the commitment tree.
-- Designs that bind the nullifier to $F_{\mathsf{nk}}(\rho)$ require $Coll_F$ to achieve
-  **Faerie Resistance** (and similarly where $\mathit{Hash}$ is applied to a value derived from
-  $H$). Adding $\mathsf{cm}$ to the nullifier avoids this assumption: all of the bases
-  used to derive $\mathsf{cm}$ are fixed and independent of $\mathcal{G}$, and so the
-  nullifier can be viewed as a Pedersen hash where the input includes $\rho$ directly.
+- Designs that bind the nullifier to $F_{\mathsf{nk}}(\rho)$ require $\mathit{Coll}_F$ to
+  achieve **Faerie Resistance** (and similarly where $\mathit{Hash}$ is applied to a value
+  derived from $H$). Adding $\mathsf{cm}$ to the nullifier avoids this assumption: all of
+  the bases used to derive $\mathsf{cm}$ are fixed and independent of $\mathcal{G}$, and so
+  the nullifier can be viewed as a Pedersen hash where the input includes $\rho$ directly.
 
 The $\mathit{Commit}^{\mathsf{nf}}$ variants were considered to avoid directly depending on
 $\mathsf{cm}$ (which in its native type is a base field element, not a group element). We
@@ -251,4 +252,5 @@ We also considered variants that used a choice of fixed bases $\mathcal{G_v}$ to
 domain separation for zero-valued notes. The most performant design (similar to the chosen
 design) does not achieve **Faerie Resistance** for an adversary that knows the recipient's
 full viewing key ($\psi$ could be brute-forced to cancel out $F_{\mathsf{nk}}(\rho)$,
-causing a collision), and the other variants require assuming $Coll_F$ as mentioned above.
+causing a collision), and the other variants require assuming $\mathit{Coll}_F$ as
+mentioned above.
