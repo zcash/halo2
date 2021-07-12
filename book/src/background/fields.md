@@ -193,6 +193,20 @@ of $\mathbb{F}_p^\times$ must divide $p-1.$
 
 [lagrange-group]: https://en.wikipedia.org/wiki/Lagrange%27s_theorem_(group_theory)
 
+[PLONK-based] proving systems like Halo 2 are more convenient to use with fields that have
+a large number of multiplicative subgroups with a "smooth" distribution (which makes the
+performance cliffs smaller and more granular as circuit sizes increase). The Pallas and
+Vesta curves specifically have primes of the form
+
+$$T \cdot 2^S = p - 1$$
+
+with $S = 32$ and $T$ odd (i.e. $p - 1$ has 32 lower zero-bits). This means they have
+multiplicative subgroups of order $2^k$ for all $k \leq 32$. These 2-adic subgroups are
+nice for [efficient FFTs], as well as enabling a wide variety of circuit sizes.
+
+[PLONK-based]: upa.md
+[efficient FFTs]: polynomials.md#fast-fourier-transform-fft
+
 ## Square roots
 
 In a field $\mathbb{F}_p$ exactly half of all nonzero elements are squares; the remainder
@@ -260,7 +274,7 @@ quite large.)
 
 In the previous sections we wrote $p - 1 = 2^k \cdot t$ with $t$ odd, and stated that an
 element $\alpha \in \mathbb{F}_p^\times$ generated the $2^k$-order subgroup. For
-convenience, let's denote $n := 2^k.$ The elements $\{1, \alpha, \alpha^2, \alpha^{n-1}\}$
+convenience, let's denote $n := 2^k.$ The elements $\{1, \alpha, \ldots, \alpha^{n-1}\}$
 are known as the $n$th [roots of unity](https://en.wikipedia.org/wiki/Root_of_unity).
 
 The **primitive root of unity**, $\omega,$ is an $n$th root of unity such that
