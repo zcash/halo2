@@ -129,9 +129,7 @@ $$
        \end{aligned} \\
    & \text{must be satisfied for the constraint to be satisfied.} \\
    & \\
-   & \text{If } x_q - x_p \neq 0, \text{ then } (x_q - x_p) \cdot \lambda - (y_q - y_p) = 0. \\
-   & \\
-   & \text{If } (x_q - x_p) \cdot \lambda - (y_q - y_p) = 0, \text{ then because } x_q - x_p \neq 0, \\
+   & \text{If } x_q - x_p \neq 0, \text{ then } (x_q - x_p) \cdot \lambda - (y_q - y_p) = 0, \text{ and} \\
    & \text{by rearranging both sides we get } \lambda = (y_q - y_p) / (x_q - x_p). \\
    & \\
    & \text{Therefore:} \\
@@ -148,9 +146,10 @@ $$
    & \text{If } x_q = x_p, \text{ then } 1 - (x_q - x_p) \cdot \alpha = 0 \text{ has no solution for } \alpha, \\
    & \text{so it must be that } 2y_p \cdot \lambda - 3x_p^2 = 0. \\
    & \\
-   & \text{If } y_p = 0 \text{ then } x_p = 0, \text{ and the constraint is satisfied.}\\
+   & \text{If } x_q = x_p \text{ and } y_p = 0 \text{ then } x_p = 0, \text{ and the constraint is satisfied.}\\
    & \\
-   & \text{If } y_p \neq 0 \text{ by rearranging both sides we get } \lambda = 3x_p^2 / 2y_p. \\
+   & \text{If } x_q = x_p \text{ and } y_p \neq 0 \text{ then by rearranging both sides} \\
+   & \text{we get } \lambda = 3x_p^2 / 2y_p. \\
    & \\
    & \text{Therefore:} \\
    & \hspace{2em} (x_q = x_p) \wedge y_p \neq 0 \implies \lambda = 3x_p^2 / 2y_p. \\
@@ -168,11 +167,11 @@ $$
      \end{aligned} \\
    & \text{must be satisfied for constraint (a) to be satisfied.} \\
    & \\
-   & \text{Let } x_p \neq 0 \wedge x_q \neq 0 \wedge x_q \neq x_p. \\[1.5ex]
+   & \text{If } x_p \neq 0 \wedge x_q \neq 0 \wedge x_q \neq x_p, \\[1.5ex]
    & \text{• Constraint (a) imposes that } x_r = \lambda^2 - x_p - x_q. \\
    & \text{• Constraint (b) imposes that } y_r = \lambda \cdot (x_p - x_r) - y_p. \\
    & \\
-   & \text{Let } x_p \neq 0 \wedge x_q \neq 0 \wedge y_q \neq -y_p. \\[1.5ex]
+   & \text{If } x_p \neq 0 \wedge x_q \neq 0 \wedge y_q \neq -y_p, \\[1.5ex]
    & \text{• Constraint (c) imposes that } x_r = \lambda^2 - x_p - x_q. \\
    & \text{• Constraint (d) imposes that } y_r = \lambda \cdot (x_p - x_r) - y_p. \\
    & \\
@@ -194,7 +193,8 @@ $$
   & \text{If } x_p = 0 \text{ then } 1 - x_p \cdot \beta = 0 \text{ has no solutions for } \beta, \\
   & \text{and so it must be that } x_r - x_q = 0. \\
   & \\
-  & \text{Similarly, constraint (b) imposes that } y_r - y_q = 0. \\
+  & \text{Similarly, constraint (b) imposes that if } x_p = 0 \\
+  & \text{then } y_r - y_q = 0. \\
   & \\
   & \text{Therefore:} \\
   & \hspace{2em} x_p = 0 \implies (x_r, y_r) = (x_q, y_q). \\
@@ -211,7 +211,8 @@ $$
   & \text{If } x_q = 0 \text{ then } 1 - x_q \cdot \beta = 0 \text{ has no solutions for } \beta, \\
   & \text{and so it must be that } x_r - x_p = 0. \\
   & \\
-  & \text{Similarly, constraint (b) imposes that } y_r - y_p = 0. \\
+  & \text{Similarly, constraint (b) imposes that if } x_q = 0 \\
+  & \text{then } y_r - y_p = 0. \\
   & \\
   & \text{Therefore:} \\
   & \hspace{2em} x_q = 0 \implies (x_r, y_r) = (x_p, y_p). \\
@@ -223,9 +224,10 @@ $$
       \text{At least one of } &1 - (x_q - x_p) \cdot \alpha - (y_q + y_p) \cdot \delta = 0 \\
                    \text{or } &x_r = 0
     \end{aligned} \\
-  & \text{must be satisfied for constraint (a) to be satisfied.} \\
+  & \text{must be satisfied for constraint (a) to be satisfied,} \\
+  & \text{and similarly replacing } x_r \text{ by } y_r. \\
   & \\
-  & \text{If } x_r \neq 0, \text{ then it must be that } 1 - (x_q - x_p) \cdot \alpha - (y_q + y_p) \cdot \delta = 0. \\
+  & \text{If } x_r \neq 0 \text{ or } y_r = 0, \text{ then it must be that } 1 - (x_q - x_p) \cdot \alpha - (y_q + y_p) \cdot \delta = 0. \\
   & \\
   & \text{However, if } x_q = x_p \wedge y_q = -y_p, \text{ then there are no solutions for } \alpha \text { and } \delta. \\
   & \\
@@ -248,132 +250,106 @@ $
 \end{array}
 $
 
-#### Test cases:
+#### Cases:
 
 $(x_p, y_p) + (x_q, y_q) = (x_r, y_r)$
+
+Note that we rely on the fact that $0$ is not a valid $x$-coordinate or $y$-coordinate of a
+point on the Pallas curve other than $\mathcal{O}$.
 
 * $(0, 0) + (0, 0)$
     - Completeness:
 
         $
         \begin{array}{cl}
-        (1)&\text{ holds because } x_q = x_p \\
-        (2)&\text{ holds because } y_p = 0 \\
-        (3)&\text{ holds because } x_p = 0 \\
-        (4)&\text{ holds because } x_p = 0 \text{ only when } x_r = 0, y_r = 0 \\
-        (5)&\text{ holds because } x_q = 0 \text{ only when } x_r = 0, y_r = 0 \\
-        (6)&\text{ holds because } x_q = x_p \wedge y_q = -y_p \text{ only when } (x_r, y_r) = (0, 0) \\
+        (1)&\text{holds because } x_q = x_p \\
+        (2)&\text{holds because } y_p = 0 \\
+        (3)&\text{holds because } x_p = 0 \\
+        (4)&\text{holds because } (x_r, y_r) = (x_q, y_q) = (0, 0) \\
+        (5)&\text{holds because } (x_r, y_r) = (x_p, y_p) = (0, 0) \\
+        (6)&\text{holds because } (x_r, y_r) = (0, 0). \\
         \end{array}
         $
 
-    - Soundness: $(x_r, y_r) = (0, 0)$ is the only solution
-* $(x, y) + (0, 0)$
+    - Soundness: $(x_r, y_r) = (0, 0)$ is the only solution to $(6).$
 
+* $(x, y) + (0, 0)$ for $(x, y) \neq (0, 0)$
     - Completeness:
 
         $
         \begin{array}{cl}
-        (1)&\text{ holds because } x_q \neq x_p \text{ because 0 is not a valid x-coordinate }\\
-           &\text{ only when } \lambda = (y_q - y_p) / (x_q - x_p) \text{ which is defined because } x_q \neq x_p \\
-        (2)&\text{ holds because } x_q \neq x_p \text{ because 0 is not a valid x-coordinate }\\
-           &\text{ only when } \alpha = (x_q - x_p)^{-1} \\
-        (3)&\text{ holds because } x_q = 0 \\
-        (4)&\text{ holds because } x_p \neq 0 \text{ because 0 is not a valid x-coordinate }\\
-           &\text{ only when } \beta = x_p^{-1} \\
-        (5)&\text{ holds because } x_q = 0 \text{ only when } (x_r, y_r) = (x_p, y_p) \\
-        (6)&\text{ holds because } y_p \neq -y_p \text{ because 0 is not a valid y-coordinate}\\
-           &\text{ only when } \delta = (y_q + y_p)^{-1} \text{ which is defined because 0 is not a valid y-coordinate} \\
+        (1)&\text{holds because } x_q \neq x_p, \text{ therefore } \lambda = (y_q - y_p) / (x_q - x_p) \text{ is a solution} \\
+        (2)&\text{holds because } x_q \neq x_p, \text{ therefore } \alpha = (x_q - x_p)^{-1} \text{ is a solution} \\
+        (3)&\text{holds because } x_q = 0 \\
+        (4)&\text{holds because } x_p \neq 0, \text{ therefore } \beta = x_p^{-1} \text{ is a solution} \\
+        (5)&\text{holds because } (x_r, y_r) = (x_p, y_p) \\
+        (6)&\text{holds because } x_q \neq x_p, \text{ therefore } \alpha = (x_q - x_p)^{-1} \text{ and } \delta = 0 \text{ is a solution.}
         \end{array}
         $
 
-    - Soundness: $(x_r, y_r) = (x_p, y_p)$ is the only solution
-* $(0, 0) + (x, y)$
+    - Soundness: $(x_r, y_r) = (x_p, y_p)$ is the only solution to $(5).$
 
+* $(0, 0) + (x, y)$ for $(x, y) \neq (0, 0)$
     - Completeness:
 
         $
         \begin{array}{cl}
-        (1)&\text{ holds because } x_q \neq x_p \text{ because 0 is not a valid x-coordinate} \\
-           &\text{ only when } \lambda = (y_q - y_p) / (x_q - x_p) \text{ which is defined because } x_q \neq x_p \\
-        (2)&\text{ holds because } x_q \neq x_p \text{ because 0 is not a valid x-coordinate} \\
-           &\text{ only when } \alpha = (x_q - x_p)^{-1} \\
-        (3)&\text{ holds because } x_p = 0 \\
-        (4)&\text{ holds because } x_p = 0 \\
-           &\text{ only when } (x_r, y_r) = (x_q, y_q) \\
-        (5)&\text{ holds because } x_q \neq 0 \text{ because 0 is not a valid x-coordinate} \\
-           &\text{ only when } \gamma = x_q^{-1} \\
-        (6)&\text{ holds because } y_p \neq -y_p \text{ because 0 is not a valid y-coordinate} \\
-           &\text{ only when } \delta = (y_q + y_p)^{-1} \text{which is defined because 0 is not a valid y-coordinate} \\
+        (1)&\text{holds because } x_q \neq x_p, \text{ therefore } \lambda = (y_q - y_p) / (x_q - x_p) \text{ is a solution} \\
+        (2)&\text{holds because } x_q \neq x_p, \text{ therefore } \alpha = (x_q - x_p)^{-1} \text{ is a solution} \\
+        (3)&\text{holds because } x_p = 0 \\
+        (4)&\text{holds because } x_p = 0 \text{ only when } (x_r, y_r) = (x_q, y_q) \\
+        (5)&\text{holds because } x_q \neq 0, \text{ therefore } \gamma = x_q^{-1} \text{ is a solution}\\
+        (6)&\text{holds because } x_q \neq x_p, \text{ therefore } \alpha = (x_q - x_p)^{-1} \text{ and } \delta = 0 \text{ is a solution.}
         \end{array}
         $
 
-    - Soundness: $(x_r, y_r) = (x_q, y_q)$ is the only solution
+    - Soundness: $(x_r, y_r) = (x_q, y_q)$ is the only solution to $(4).$
 
-* $(x, y) + (x, y)$
+* $(x, y) + (x, y)$ for $(x, y) \neq (0, 0)$
     - Completeness:
 
         $
         \begin{array}{cl}
-        (1)&\text{ holds because } x_q = x_p \\
-        (2)&\text{ holds because } x_q = x_p \wedge y_p \neq 0 \text{ (because 0 is not a valid y-coordinate)} \\
-           &\text{ only when } \lambda = 3x_p^2 / 2y_p \\
-        (3)&\text{ holds because } x_p \neq 0 \wedge x_q \neq 0 and y_q \neq -y_p \\
-           &\text{ only when } x_r = \lambda^2 - x_p - x_q \wedge y_r = \lambda * (x_p - x_r) - y_p \\
-        (4)&\text{ holds because } x_p \neq 0 \text{ only when } \beta = x_p^{-1} \\
-        (5)&\text{ holds because } x_p \neq 0 \text{ only when } \gamma = x_q^{-1} \\
-        (6)&\text{ holds because } y_q \neq -y_p \text{ only when } \delta = (y_q + y_p)^{-1} \\
-           &\text{ which is defined because 0 is not a valid y-coordinate} \\
+        (1)&\text{holds because } x_q = x_p \\
+        (2)&\text{holds because } x_q = x_p \wedge y_p \neq 0, \text{ therefore } \lambda = 3x_p^2 / 2y_p \text{ is a solution}\\
+        (3)&\text{holds because } x_r = \lambda^2 - x_p - x_q \wedge y_r = \lambda \cdot (x_p - x_r) - y_p \text{ in this case} \\
+        (4)&\text{holds because } x_p \neq 0, \text{ therefore } \beta = x_p^{-1} \text{ is a solution} \\
+        (5)&\text{holds because } x_p \neq 0, \text{ therefore } \gamma = x_q^{-1} \text{ is a solution} \\
+        (6)&\text{holds because } x_q = x_p \text{ and } y_q \neq -y_p, \text{ therefore } \alpha = 0 \text{ and } \delta = (y_q + y_p)^{-1} \text{ is a solution.} \\
         \end{array}
         $
 
-    - Soundness: $(x_r, y_r) = (\lambda^2 - x_p - x_q, \lambda * (x_p - x_r) - y_p)$ is the only solution
+    - Soundness: $\lambda$ is computed correctly, and $(x_r, y_r) = (\lambda^2 - x_p - x_q, \lambda \cdot (x_p - x_r) - y_p)$ is the only solution.
 
-* $(x, y) + (x, -y)$
-
+* $(x, y) + (x, -y)$ for $(x, y) \neq (0, 0)$
     - Completeness:
 
         $
         \begin{array}{cl}
-        (1)&\text{ holds because } x_q = x_p \\
-        (2)&\text{ holds because } x_q = x_p \wedge y_p \neq 0 \text{ (because 0 is not a valid y-coordinate)} \\
-           &\text{only when } \lambda = 3x_p^2 / 2y_p \\
-        (3)&\text{ holds because } x_p \neq 0 \wedge x_q \neq 0 \text{ but } y_q = -y_p \wedge x_q = x_p \\
-        (4)&\text{ holds because } x_p \neq 0 \text{ only when } \beta = x_p^{-1} \\
-        (5)&\text{ holds because } x_q \neq 0 \text{ only when } \gamma = x_q^{-1} \\
-        (6)&\text{ holds because } x_q = x_p \wedge y_q = -y_p \text{ only when } (x_r, y_r) = (0, 0) \\
+        (1)&\text{holds because } x_q = x_p \\
+        (2)&\text{holds because } x_q = x_p \wedge y_p \neq 0, \text{ therefore } \lambda = 3x_p^2 / 2y_p \text{ is a solution} \\
+           &\text{(although } \lambda \text{ is not used in this case)} \\
+        (3)&\text{holds because } x_q = x_p \text{ and } y_q = -y_p \\
+        (4)&\text{holds because } x_p \neq 0, \text{ therefore } \beta = x_p^{-1} \text{ is a solution} \\
+        (5)&\text{holds because } x_q \neq 0, \text{ therefore } \gamma = x_q^{-1} \text{ is a solution} \\
+        (6)&\text{holds because } (x_r, y_r) = (0, 0) \\
         \end{array}
         $
 
-    - Soundness: $(x_r, y_r) = (0, 0)$ is the only solution
+    - Soundness: $(x_r, y_r) = (0, 0)$ is the only solution to $(6).$
 
-* $(\zeta x, y) + (x, y)$
-
+* $(x_p, y_p) + (x_q, y_q)$ for $(x_p, y_p) \neq (0,0)$ and $(x_q, y_q) \neq (0, 0)$ and $x_p \neq x_q$
     - Completeness:
 
         $
         \begin{array}{cl}
-        (1)&\text{ holds because } x_q \neq x_p \text{ only when } \lambda = (y_q - y_p) / (x_q - x_p) \\
-           &\text{ which is defined because } x_q \neq x_p \\
-        (2)&\text{ holds because } x_p \neq x_p  \text{ only when } \alpha = (x_q - x_p)^{-1} \\
-           &\text{ which is defined because } x_q \neq x_p \\
-        (3)&\text{ holds because } (x_p \neq 0) \wedge (x_q \neq 0) \wedge (x_q \neq x_p) \\
-           &\text{ only when } x_r = \lambda^2 - x_p - x_q \wedge y_r = \lambda * (x_p - x_r) - y_p \\
-        (4)&\text{ holds because } x_p \neq 0 \text{ only when } \beta = x_p^{-1} \\
-        (5)&\text{ holds because } x_q \neq 0 \text{ only when } \gamma = x_q^{-1} \\
-        (6)&\text{ holds because } x_q \neq x_p \text{ only when } \delta = 0 \\
+        (1)&\text{holds because } x_q \neq x_p, \text{ therefore } \lambda = (y_q - y_p) / (x_q - x_p) \text{ is a solution} \\
+        (2)&\text{holds because } x_q \neq x_p, \text{ therefore } \alpha = (x_q - x_p)^{-1} \text{ is a solution} \\
+        (3)&\text{holds because } x_r = \lambda^2 - x_p - x_q \wedge y_r = \lambda \cdot (x_p - x_r) - y_p \text{ in this case} \\
+        (4)&\text{holds because } x_p \neq 0, \text{ therefore } \beta = x_p^{-1} \text{ is a solution} \\
+        (5)&\text{holds because } x_q \neq 0, \text{ therefore } \gamma = x_q^{-1} \text{ is a solution} \\
+        (6)&\text{holds because } x_q \neq x_p, \text{ therefore } \alpha = (x_q - x_p)^{-1} \text{ and } \delta = 0 \text{ is a solution.}
         \end{array}
         $
 
-    - Soundness: $(x_r, y_r) = (\lambda^2 - x_p - x_q, \lambda * (x_p - x_r) - y_p)$ is the only solution
-
-All remaining cases $(x, y) + (x', y')$ are identical to the case $(\zeta x, y) + (x, y)$ when
-$$
-\begin{aligned}
-    \lambda &= (y_q - y_p) / (x_q - x_p) \\
-    \alpha &= (x_q - x_p)^{-1} \\
-    \beta &= x_p^{-1} \\
-    \gamma &= x_q^{-1} \\
-    \delta &= 0 \\
-\end{aligned}
-$$
-because in all remaining cases, $x_q \neq x_p, x_p \neq 0, x_q \neq 0.$
+    - Soundness: $\lambda$ is computed correctly, and $(x_r, y_r) = (\lambda^2 - x_p - x_q, \lambda \cdot (x_p - x_r) - y_p)$ is the only solution.
