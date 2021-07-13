@@ -31,7 +31,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
     let instance_commitments = instances
         .iter()
         .map(|instance| {
-            Ok(instance
+            instance
                 .iter()
                 .map(|instance| {
                     if instance.len() > params.n as usize - (vk.cs.blinding_factors() + 1) {
@@ -43,7 +43,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
 
                     Ok(params.commit_lagrange(&poly, Blind::default()).to_affine())
                 })
-                .collect::<Result<Vec<_>, _>>()?)
+                .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
 
