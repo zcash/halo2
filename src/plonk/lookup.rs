@@ -58,6 +58,15 @@ impl<F: Field> Argument<F> {
             table_degree = std::cmp::max(table_degree, expr.degree());
         }
 
-        std::cmp::max(4, 2 + input_degree + table_degree)
+        // In practice because input_degree and table_degree are initialized to
+        // one, the latter half of this max() invocation is at least 4 always,
+        // rendering this call pointless except to be explicit in case we change
+        // the initialization of input_degree/table_degree in the future.
+        std::cmp::max(
+            // (1 - (l_last + l_blind)) z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
+            4,
+            // (1 - (l_last + l_blind)) z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
+            2 + input_degree + table_degree,
+        )
     }
 }
