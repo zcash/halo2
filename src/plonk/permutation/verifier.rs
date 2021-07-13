@@ -146,7 +146,7 @@ impl<C: CurveAffine> Evaluated<C> {
                     .map(move |(set, prev_last)| (set - &prev_last) * &l_0),
             )
             // And for all the sets we enforce:
-            // (1 - (l_last + l_blind)) * (
+            // (1 - (l_last(X) + l_blind(X))) * (
             //   z_i(\omega X) \prod (p(X) + \beta s_i(X) + \gamma)
             // - z_i(X) \prod (p(X) + \delta^i \beta X + \gamma)
             // )

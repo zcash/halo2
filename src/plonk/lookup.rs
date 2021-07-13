@@ -36,7 +36,7 @@ impl<F: Field> Argument<F> {
         //
         // Enable the permutation argument for only the rows involved.
         // degree (2 + input_degree + table_degree) or 4, whichever is larger:
-        // (1 - (l_last + l_blind)) * (
+        // (1 - (l_last(X) + l_blind(X))) * (
         //   z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
         //   - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
         // ) = 0
@@ -48,7 +48,7 @@ impl<F: Field> Argument<F> {
         // Either the two values are the same, or the previous
         // value of a' is the same as the current value.
         // degree 3:
-        // (1 - (l_last + l_blind)) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0
+        // (1 - (l_last(X) + l_blind(X))) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0
         let mut input_degree = 1;
         for expr in self.input_expressions.iter() {
             input_degree = std::cmp::max(input_degree, expr.degree());

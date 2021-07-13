@@ -34,7 +34,7 @@ impl Argument {
         // following will not affect the required degree of
         // this middleware.
         //
-        // (1 - (l_last + l_blind)) * (
+        // (1 - (l_last(X) + l_blind(X))) * (
         //   z(\omega X) \prod (p(X) + \beta s_i(X) + \gamma)
         // - z(X) \prod (p(X) + \delta^i \beta X + \gamma)
         // )

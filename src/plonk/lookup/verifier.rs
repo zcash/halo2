@@ -161,7 +161,7 @@ impl<C: CurveAffine> Evaluated<C> {
                 Some(l_last * &(self.product_eval.square() - &self.product_eval)),
             )
             .chain(
-                // (1 - (l_last + l_blind)) * (
+                // (1 - (l_last(X) + l_blind(X))) * (
                 //   z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
                 //   - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
                 // ) = 0
@@ -172,7 +172,7 @@ impl<C: CurveAffine> Evaluated<C> {
                 l_0 * &(self.permuted_input_eval - &self.permuted_table_eval),
             ))
             .chain(Some(
-                // (1 - (l_last + l_blind)) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0
+                // (1 - (l_last(X) + l_blind(X))) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0
                 (self.permuted_input_eval - &self.permuted_table_eval)
                     * &(self.permuted_input_eval - &self.permuted_input_inv_eval)
                     * &active_rows,

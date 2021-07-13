@@ -444,7 +444,7 @@ impl<'a, C: CurveAffine> Committed<C> {
                 (self.product_coset.clone() * &self.product_coset - &self.product_coset)
                     * &pk.l_last,
             ))
-            // (1 - (l_last + l_blind)) * (
+            // (1 - (l_last(X) + l_blind(X))) * (
             //   z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
             //   - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
             // ) = 0

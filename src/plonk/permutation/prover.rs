@@ -259,7 +259,7 @@ impl<C: CurveAffine> Committed<C> {
                     .collect::<Vec<_>>(),
             )
             // And for all the sets we enforce:
-            // (1 - (l_last + l_blind)) * (
+            // (1 - (l_last(X) + l_blind(X))) * (
             //   z_i(\omega X) \prod_j (p(X) + \beta s_j(X) + \gamma)
             // - z_i(X) \prod_j (p(X) + \delta^j \beta X + \gamma)
             // )
