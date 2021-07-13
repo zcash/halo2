@@ -1,7 +1,6 @@
 #![allow(clippy::many_single_char_names)]
 #![allow(clippy::op_ref)]
 
-use group::Curve;
 use halo2::arithmetic::FieldExt;
 use halo2::circuit::{Cell, Layouter, SimpleFloorPlanner};
 use halo2::dev::MockProver;
@@ -10,10 +9,7 @@ use halo2::plonk::{
     create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column, ConstraintSystem,
     Error, Fixed, VerifyingKey,
 };
-use halo2::poly::{
-    commitment::{Blind, Params},
-    Rotation,
-};
+use halo2::poly::{commitment::Params, Rotation};
 use halo2::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
 use std::marker::PhantomData;
 
@@ -423,14 +419,10 @@ fn plonk_api() {
     let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
     let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
 
-    let mut pubinputs = pk.get_vk().get_domain().empty_lagrange();
-    pubinputs[0] = instance;
-    let pubinput = params
-        .commit_lagrange(&pubinputs, Blind::default())
-        .to_affine();
+    let pubinputs = vec![instance];
 
     // Check this circuit is satisfied.
-    let prover = match MockProver::run(K, &circuit, vec![pubinputs.to_vec()]) {
+    let prover = match MockProver::run(K, &circuit, vec![pubinputs.clone()]) {
         Ok(prover) => prover,
         Err(e) => panic!("{:?}", e),
     };
@@ -449,15 +441,13 @@ fn plonk_api() {
         .expect("proof generation should not fail");
         let proof: Vec<u8> = transcript.finalize();
 
-        let pubinput_slice = &[pubinput];
-        let pubinput_slice_copy = &[pubinput];
         let msm = params.empty_msm();
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
         let guard = verify_proof(
             &params,
             pk.get_vk(),
             msm,
-            &[pubinput_slice, pubinput_slice_copy],
+            &[&[&pubinputs[..]], &[&pubinputs[..]]],
             &mut transcript,
         )
         .unwrap();
@@ -481,7 +471,7 @@ fn plonk_api() {
             &params,
             &vk,
             msm,
-            &[pubinput_slice, pubinput_slice_copy],
+            &[&[&pubinputs[..]], &[&pubinputs[..]]],
             &mut transcript,
         )
         .unwrap();

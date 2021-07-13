@@ -1,4 +1,5 @@
 use ff::Field;
+use group::Curve;
 use std::iter;
 
 use super::{
@@ -7,7 +8,7 @@ use super::{
 };
 use crate::arithmetic::{CurveAffine, FieldExt};
 use crate::poly::{
-    commitment::{Guard, Params, MSM},
+    commitment::{Blind, Guard, Params, MSM},
     multiopen::{self, VerifierQuery},
 };
 use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
@@ -17,15 +18,34 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
     params: &'params Params<C>,
     vk: &VerifyingKey<C>,
     msm: MSM<'params, C>,
-    instance_commitments: &[&[C]],
+    instances: &[&[&[C::Scalar]]],
     transcript: &mut T,
 ) -> Result<Guard<'params, C, E>, Error> {
-    // Check that instance_commitments matches the expected number of instance columns
-    for instance_commitments in instance_commitments.iter() {
-        if instance_commitments.len() != vk.cs.num_instance_columns {
+    // Check that instances matches the expected number of instance columns
+    for instances in instances.iter() {
+        if instances.len() != vk.cs.num_instance_columns {
             return Err(Error::IncompatibleParams);
         }
     }
+
+    let instance_commitments = instances
+        .iter()
+        .map(|instance| {
+            Ok(instance
+                .iter()
+                .map(|instance| {
+                    if instance.len() > params.n as usize - (vk.cs.blinding_factors() + 1) {
+                        return Err(Error::InstanceTooLarge);
+                    }
+                    let mut poly = instance.to_vec();
+                    poly.resize(params.n as usize, C::Scalar::zero());
+                    let poly = vk.domain.lagrange_from_vec(poly);
+
+                    Ok(params.commit_lagrange(&poly, Blind::default()).to_affine())
+                })
+                .collect::<Result<Vec<_>, _>>()?)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     let num_proofs = instance_commitments.len();
 
@@ -35,7 +55,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
 
     for instance_commitments in instance_commitments.iter() {
         // Hash the instance (external) commitments into the transcript
-        for commitment in *instance_commitments {
+        for commitment in instance_commitments {
             transcript
                 .common_point(*commitment)
                 .map_err(|_| Error::TranscriptError)?

@@ -416,6 +416,22 @@ impl<F: FieldExt> MockProver<F> {
             return Err(Error::NotEnoughRowsAvailable);
         }
 
+        if instance.len() != cs.num_instance_columns {
+            return Err(Error::IncompatibleParams);
+        }
+
+        let instance = instance
+            .into_iter()
+            .map(|mut instance| {
+                if instance.len() > n - (cs.blinding_factors() + 1) {
+                    return Err(Error::InstanceTooLarge);
+                }
+
+                instance.resize(n, F::zero());
+                Ok(instance)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
         let fixed = vec![vec![None; n]; cs.num_fixed_columns];
         let advice = vec![vec![None; n]; cs.num_advice_columns];
         let permutation = permutation::keygen::Assembly::new(n, &cs.permutation);
