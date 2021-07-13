@@ -28,12 +28,12 @@ $a,b,c$ are constrained by the $\textsf{SinsemillaHash}$ to be $250$ bits, $20$ 
 
 In a custom gate, we check this message decomposition by enforcing the following constraints:
 
-1. $a_0 = l_{\star}$
+1. $a_0 = l$
 <br>
 $z_{1,a}$, the index-1 running sum output of $\textsf{SinsemillaHash}(a)$, is copied into the gate. $z_{1,a}$ has been constrained by the $\textsf{SinsemillaHash}$ to be $240$ bits. We recover the subpieces $a_0, a_1$ using $a, z_{1,a}$:
 $$
 \begin{aligned}
-z_{1,a} &= \frac{a - a_{0..=10}}{2^{10}}\\
+z_{1,a} &= \frac{a - a_0}{2^{10}}\\
         &= a_1 \\
         \implies a_0 &= a - (z_{1,a} \cdot 2^{10}).
 \end{aligned}
