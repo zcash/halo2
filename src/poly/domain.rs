@@ -242,7 +242,7 @@ impl<G: Group> EvaluationDomain<G> {
     ) -> Polynomial<G, ExtendedLagrangeCoeff> {
         assert_eq!(a.values.len(), 1 << self.k);
 
-        Self::distribute_powers_zeta(&mut a.values, true);
+        self.distribute_powers_zeta(&mut a.values, true);
         a.values.resize(self.extended_len(), G::group_zero());
         best_fft(&mut a.values, self.extended_omega, self.extended_k);
 
@@ -367,7 +367,7 @@ impl<G: Group> EvaluationDomain<G> {
 
         // Distribute powers to move from coset; opposite from the
         // transformation we performed earlier.
-        Self::distribute_powers_zeta(&mut a.values, false);
+        self.distribute_powers_zeta(&mut a.values, false);
 
         // Truncate it to match the size of the quotient polynomial; the
         // evaluation domain might be slightly larger than necessary because
@@ -401,15 +401,15 @@ impl<G: Group> EvaluationDomain<G> {
         }
     }
 
-    // Given a slice of group elements `[a_0, a_1, a_2, ...]`, this returns
-    // `[a_0, [zeta]a_1, [zeta^2]a_2, a_3, [zeta]a_4, [zeta^2]a_5, a_6, ...]`,
-    // where zeta is a cube root of unity in the multiplicative subgroup with
-    // order (p - 1), i.e. zeta^3 = 1.
-    fn distribute_powers_zeta(mut a: &mut [G], direction: bool) {
-        let coset_powers = if direction {
-            [G::Scalar::ZETA, G::Scalar::ZETA.square()]
+    /// Given a slice of group elements `[a_0, a_1, a_2, ...]`, this returns
+    /// `[a_0, [zeta]a_1, [zeta^2]a_2, a_3, [zeta]a_4, [zeta^2]a_5, a_6, ...]`,
+    /// where zeta is a cube root of unity in the multiplicative subgroup with
+    /// order (p - 1), i.e. zeta^3 = 1.
+    fn distribute_powers_zeta(&self, mut a: &mut [G], into_coset: bool) {
+        let coset_powers = if into_coset {
+            [self.g_coset, self.g_coset_inv]
         } else {
-            [G::Scalar::ZETA.square(), G::Scalar::ZETA]
+            [self.g_coset_inv, self.g_coset]
         };
         parallelize(&mut a, |a, mut index| {
             for a in a {
