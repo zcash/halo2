@@ -349,14 +349,14 @@ impl<C: CurveAffine> Permuted<C> {
         // It can be used for debugging purposes.
         {
             // While in Lagrange basis, check that product is correctly constructed
-            let n = (params.n as usize) - (blinding_factors + 1);
+            let u = (params.n as usize) - (blinding_factors + 1);
 
             // l_0(X) * (1 - z(X)) = 0
             assert_eq!(z[0], C::Scalar::one());
 
             // z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
             // - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
-            for i in 0..n {
+            for i in 0..u {
                 let mut left = z[i + 1];
                 let permuted_input_value = &self.permuted_input_expression[i];
 
