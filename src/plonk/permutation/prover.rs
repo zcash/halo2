@@ -73,12 +73,11 @@ impl Argument {
 
         let mut sets = vec![];
 
-        let mut iter = self
+        for (columns, permutations) in self
             .columns
             .chunks(chunk_len)
-            .zip(pkey.permutations.chunks(chunk_len));
-
-        while let Some((columns, permutations)) = iter.next() {
+            .zip(pkey.permutations.chunks(chunk_len))
+        {
             // Goal is to compute the products of fractions
             //
             // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
