@@ -27,7 +27,8 @@ use crate::{
 
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
-/// generated previously for the same circuit.
+/// generated previously for the same circuit. The provided `instances`
+/// are zero-padded internally.
 pub fn create_proof<
     C: CurveAffine,
     E: EncodedChallenge<C>,
@@ -68,12 +69,16 @@ pub fn create_proof<
                 .iter()
                 .map(|values| {
                     let mut poly = domain.empty_lagrange();
+                    assert_eq!(poly.len(), params.n as usize);
+                    if values.len() > (poly.len() - (meta.blinding_factors() + 1)) {
+                        return Err(Error::InstanceTooLarge);
+                    }
                     for (poly, value) in poly.iter_mut().zip(values.iter()) {
                         *poly = *value;
                     }
-                    poly
+                    Ok(poly)
                 })
-                .collect::<Vec<_>>();
+                .collect::<Result<Vec<_>, _>>()?;
             let instance_commitments_projective: Vec<_> = instance_values
                 .iter()
                 .map(|poly| params.commit_lagrange(poly, Blind::default()))
