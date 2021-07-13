@@ -3,23 +3,23 @@
 ## Message decomposition
 $\mathsf{SinsemillaHash}$ is used in the [$\mathsf{MerkleCRH^{Orchard}}$ hash function](https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh). The input to $\mathsf{SinsemillaHash}$ is:
 
-$$l_{\star} || \textsf{left}_{\star} || \textsf{right}_{\star}, $$
+$${l\star} \,||\, {\textsf{left}\star} \,||\, {\textsf{right}\star},$$
 
 where:
-- $l_{\star} = \textsf{I2LEBSP}_{10}(l) = \textsf{I2LEBSP}_{10}(\textsf{MerkleDepth}^\textsf{Orchard} - 1 - \textsf{layer})$,
-- $\textsf{left}_{\star} = \textsf{I2LEBSP}_{\ell_{\textsf{Merkle}}^{\textsf{Orchard}}}(\textsf{left})$,
-- $\textsf{right}_{\star} = \textsf{I2LEBSP}_{\ell_{\textsf{Merkle}}^{\textsf{Orchard}}}(\textsf{right})$,
+- ${l\star} = \textsf{I2LEBSP}_{10}(l) = \textsf{I2LEBSP}_{10}(\textsf{MerkleDepth}^\textsf{Orchard} - 1 - \textsf{layer})$,
+- ${\textsf{left}\star} = \textsf{I2LEBSP}_{\ell_{\textsf{Merkle}}^{\textsf{Orchard}}}(\textsf{left})$,
+- ${\textsf{right}\star} = \textsf{I2LEBSP}_{\ell_{\textsf{Merkle}}^{\textsf{Orchard}}}(\textsf{right})$,
 
-where $\ell_{\textsf{Merkle}}^{\textsf{Orchard}} = 255.$ $\textsf{left}$ and $\textsf{right}$ are allowed to be non-canonical $255$-bit encodings.
+with $\ell_{\textsf{Merkle}}^{\textsf{Orchard}} = 255.$ $\textsf{left}$ and $\textsf{right}$ are allowed to be non-canonical $255$-bit encodings.
 
 We break these inputs into the following `MessagePiece`s:
 
 $$
 \begin{aligned}
-a \text{ (250 bits)} &= a_0||a_1 \\
-                     &= l_\star || (\text{bits } 0..=239 \text{ of } \textsf{ left }) \\
-b \text{ (20 bits)}  &= b_0||b_1||b_2 \\
-                     &= (\text{bits } 240..=249 \text{ of } \textsf{left}) || (\text{bits } 250..=254 \text{ of } \textsf{left}) || (\text{bits } 0..=4 \text{ of } \textsf{right}) \\
+a \text{ (250 bits)} &= a_0 \,||\, a_1 \\
+                     &= {l\star} \,||\, (\text{bits } 0..=239 \text{ of } \textsf{ left }) \\
+b \text{ (20 bits)}  &= b_0 \,||\, b_1 \,||\, b_2 \\
+                     &= (\text{bits } 240..=249 \text{ of } \textsf{left}) \,||\, (\text{bits } 250..=254 \text{ of } \textsf{left}) \,||\, (\text{bits } 0..=4 \text{ of } \textsf{right}) \\
 c \text{ (250 bits)} &= \text{bits } 5..=254 \text{ of } \textsf{right}
 \end{aligned}
 $$
@@ -35,7 +35,7 @@ $$
 \begin{aligned}
 z_{1,a} &= \frac{a - a_0}{2^{10}}\\
         &= a_1 \\
-        \implies a_0 &= a - (z_{1,a} \cdot 2^{10}).
+        \implies a_0 &= a - z_{1,a} \cdot 2^{10}.
 \end{aligned}
 $$
 $l + 1$ is loaded into a fixed column at each layer of the hash. It is used both as a gate selector, and to fix the value of $l$. We check that $$a_0 = (l + 1) - 1.$$
