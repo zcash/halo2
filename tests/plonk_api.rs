@@ -346,6 +346,18 @@ fn plonk_api() {
                 vec![sp * (a + p * (-F::one()))]
             });
 
+            meta.enable_equality(sf.into());
+            meta.enable_equality(e.into());
+            meta.enable_equality(d.into());
+            meta.enable_equality(p.into());
+            meta.enable_equality(sm.into());
+            meta.enable_equality(sa.into());
+            meta.enable_equality(sb.into());
+            meta.enable_equality(sc.into());
+            meta.enable_equality(sp.into());
+            meta.enable_equality(sl.into());
+            meta.enable_equality(sl2.into());
+
             PlonkConfig {
                 a,
                 b,
@@ -628,6 +640,24 @@ fn plonk_api() {
                     -1,
                 ),
             ),
+            (
+                Column {
+                    index: 0,
+                    column_type: Advice,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+            (
+                Column {
+                    index: 4,
+                    column_type: Advice,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
         ],
         instance_queries: [
             (
@@ -728,6 +758,50 @@ fn plonk_api() {
                     index: 3,
                     column_type: Advice,
                 },
+                Column {
+                    index: 0,
+                    column_type: Fixed,
+                },
+                Column {
+                    index: 0,
+                    column_type: Advice,
+                },
+                Column {
+                    index: 4,
+                    column_type: Advice,
+                },
+                Column {
+                    index: 0,
+                    column_type: Instance,
+                },
+                Column {
+                    index: 1,
+                    column_type: Fixed,
+                },
+                Column {
+                    index: 2,
+                    column_type: Fixed,
+                },
+                Column {
+                    index: 3,
+                    column_type: Fixed,
+                },
+                Column {
+                    index: 4,
+                    column_type: Fixed,
+                },
+                Column {
+                    index: 5,
+                    column_type: Fixed,
+                },
+                Column {
+                    index: 6,
+                    column_type: Fixed,
+                },
+                Column {
+                    index: 7,
+                    column_type: Fixed,
+                },
             ],
         },
         lookups: [
@@ -783,6 +857,17 @@ fn plonk_api() {
             (0x1347b4b385837977a96b87f199c6a9a81520015539d1e8fa79429bb4ca229a00, 0x2168e404cabef513654d6ff516cde73f0ba87e3dc84e4b940ed675b5f66f3884),
             (0x0e6d69cd2455ec43be640f6397ed65c9e51b1d8c0fd2216339314ff37ade122a, 0x222ed6dc8cfc9ea26dcc10b9d4add791ada60f2b5a63ee1e4635f88aa0c96654),
             (0x13c447846f48c41a5e0675ccf88ebc0cdef2c96c51446d037acb866d24255785, 0x1f0b5414fc5e8219dbfab996eed6129d831488b2386a8b1a63663938903bd63a),
+            (0x1aae6470aa662b8fda003894ddef5fedd03af318b3231683039d2fac9cab05b9, 0x08832d91ae69e99cd07d096c7a4a284a69e6a16227cbb07932a0cdc56914f3a6),
+            (0x0850521b0f8ac7dd0550fe3e25c840837076e9635067ed623b81d5cbac5944d9, 0x0c25d65d1038d0a92c72e5fccd96c1caf07801c3c8233290bb292e0c38c256fa),
+            (0x12febcf696badd970750eabf75dd3ced4c2f54f93519bcee23849025177d2014, 0x0a05ab3cd42c9fbcc1bbfcf9269951640cc9920761c87cf8e211ba73c8d9f90f),
+            (0x053904bdde8cfead3b517bb4f6ded3e699f8b94ca6156a9dd2f92a2a05a7ec5a, 0x16753ff97c0d82ff586bb7a07bf7f27a92df90b3617fa5e75d4f55c3b0ef8711),
+            (0x3804548f6816452747a5b542fa5656353fc989db40d69e9e27d6f973b5deebb0, 0x389a44d5037866dd83993af75831a5f90a18ad5244255aa5bd2c922cc5853055),
+            (0x003a9f9ca71c7c0b832c802220915f6fc8d840162bdde6b0ea05d25fb95559e3, 0x091247ca19d6b73887cd7f68908cbf0db0b47459b7c82276bbdb8a1c937e2438),
+            (0x3eaa38689d9e391c8a8fafab9568f20c45816321d38f309d4cc37f4b1601af72, 0x247f8270a462ea88450221a56aa6b55d2bc352b80b03501e99ea983251ceea13),
+            (0x394437571f9de32dccdc546fd4737772d8d92593c85438aa3473243997d5acc8, 0x14924ec6e3174f1fab7f0ce7070c22f04bbd0a0ecebdfc5c94be857f25493e95),
+            (0x3d907e0591343bd285c2c846f3e871a6ac70d80ec29e9500b8cb57f544e60202, 0x1034e48df35830244cabea076be8a16d67d7896e27c6ac22b285d017105da9c3),
+            (0x21d210b41675a1eae44cbd0f3fd27d69e30716c71873f6089cee61acacd403ab, 0x2275e97c7e84f68bfaa528a9d8be4e059f7abefd80d03fbfca774e8414a9b7c1),
+            (0x0f9e7de28e0f650d99d99d95c0fcd39c9dac9db5aa1973319f66922d6eb9f7d5, 0x1ba644ecc18ad711ddd33af7f695f6834e9f35c93d47a6a5273dabbe800fc7e6),
         ],
     },
 }"#####
