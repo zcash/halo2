@@ -395,6 +395,9 @@ impl<C: CurveAffine> Constructed<C> {
                         .map_err(|_| Error::TranscriptError)?;
                 }
 
+                // If we have any remaining sets to process, evaluate this set at omega^u
+                // so we can constrain the last value of its running product to equal the
+                // first value of the next set's running product, chaining them together.
                 if sets.len() > 0 {
                     let permutation_product_last_eval = eval_polynomial(
                         &set.permutation_product_poly,
