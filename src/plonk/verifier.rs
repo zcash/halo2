@@ -194,9 +194,9 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                     .chain(permutation.expressions(
                         vk,
                         &vk.cs.permutation,
-                        &advice_evals,
-                        &fixed_evals,
-                        &instance_evals,
+                        advice_evals,
+                        fixed_evals,
+                        instance_evals,
                         l_0,
                         l_last,
                         l_blind,
@@ -217,9 +217,9 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                                     theta,
                                     beta,
                                     gamma,
-                                    &advice_evals,
-                                    &fixed_evals,
-                                    &instance_evals,
+                                    advice_evals,
+                                    fixed_evals,
+                                    instance_evals,
                                 )
                             })
                             .into_iter(),

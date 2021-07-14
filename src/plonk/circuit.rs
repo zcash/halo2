@@ -1093,12 +1093,13 @@ impl<F: Field> ConstraintSystem<F> {
         let factors = *self.num_advice_queries.iter().max().unwrap_or(&1);
         // distinct points during gate checks.
 
-        // In the permutation and lookup argument the witness polynomials are
-        // evaluated at most 3 times:
+        // - The permutation argument witness polynomials are evaluated at most 3 times.
+        // - Each lookup argument has independent witness polynomials, and they are
+        //   evaluated at most 2 times.
         let factors = std::cmp::max(3, factors);
 
         // Each polynomial is evaluated at most an additional time during
-        // multiopen:
+        // multiopen (at x_3 to produce q_evals):
         let factors = factors + 1;
 
         // h(x) is derived by the other evaluations so it does not reveal
@@ -1106,7 +1107,8 @@ impl<F: Field> ConstraintSystem<F> {
 
         // h(x_3) is also not revealed; the verifier only learns a single
         // evaluation of a polynomial in x_1 which has h(x_3) and another random
-        // polynomial evaluated at x_3 as coefficients.
+        // polynomial evaluated at x_3 as coefficients -- this random polynomial
+        // is "random_poly" in the vanishing argument.
 
         // Add an additional blinding factor as a slight defense against
         // off-by-one errors.
