@@ -80,15 +80,20 @@ impl From<&EccConfig> for Config {
             "y_p is shared across hi and lo halves."
         );
 
-        let add_config_advices = config.add_config.advice_columns();
-        assert!(
-            !add_config_advices.contains(&config.hi_config.z),
-            "hi_config z cannot overlap with complete addition columns."
-        );
-        assert!(
-            !add_config_advices.contains(&config.complete_config.z_complete),
-            "complete_config z cannot overlap with complete addition columns."
-        );
+        // For both hi_config and lo_config:
+        // z and lambda1 are assigned on the same row as the add_config output.
+        // Therefore, z and lambda1 must not overlap with add_config.x_qr, add_config.y_qr.
+        let add_config_outputs = config.add_config.output_columns();
+        for config in [&(*config.hi_config), &(*config.lo_config)].iter() {
+            assert!(
+                !add_config_outputs.contains(&config.z),
+                "incomplete config z cannot overlap with complete addition columns."
+            );
+            assert!(
+                !add_config_outputs.contains(&config.lambda1),
+                "incomplete config lambda1 cannot overlap with complete addition columns."
+            );
+        }
 
         config
     }
