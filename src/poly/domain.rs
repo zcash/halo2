@@ -419,10 +419,10 @@ impl<G: Group> EvaluationDomain<G> {
     /// We know that for $i = 0$
     ///     $$\frac{1}{\prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)} = \frac{1}{n}.$$
     ///
-    /// If we multiply $(1 / n)$ by $(\omega^i)^{-1}$ then we obtain
-    ///     $$\frac{1}{\prod_{j=0,j \neq 0}^{n - 1} (\omega^{i + 1} - \omega^{j + 1})}
-    ///       = \frac{1}{\prod_{j=0,j \neq -i}^{n - 1} (\omega^i - \omega^j)}$$
-    /// which is the barycentric weight of $\omega^{-i}$.
+    /// If we multiply $(1 / n)$ by $\omega^i$ then we obtain
+    ///     $$\frac{1}{\prod_{j=0,j \neq 0}^{n - 1} (\omega^i - \omega^j)}
+    ///       = \frac{1}{\prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)}$$
+    /// which is the barycentric weight of $\omega^i$.
     pub fn l_i_range<I: IntoIterator<Item = i32> + Clone>(
         &self,
         x: G::Scalar,
