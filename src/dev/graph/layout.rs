@@ -9,7 +9,7 @@ use std::ops::Range;
 
 use crate::plonk::{
     Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-    FloorPlanner, Permutation, Selector,
+    FloorPlanner, Instance, Selector,
 };
 
 /// Graphical renderer for circuit layouts.
@@ -308,6 +308,10 @@ impl<F: Field> Assignment<F> for Layout {
         self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
     }
 
+    fn query_instance(&self, _: Column<Instance>, _: usize) -> Result<Option<F>, Error> {
+        Ok(None)
+    }
+
     fn assign_advice<V, VR, A, AR>(
         &mut self,
         _: A,
@@ -344,7 +348,6 @@ impl<F: Field> Assignment<F> for Layout {
 
     fn copy(
         &mut self,
-        _: &Permutation,
         _: Column<Any>,
         _: usize,
         _: Column<Any>,

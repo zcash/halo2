@@ -62,7 +62,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --all --benches --all-features
+          args: --benches --examples --all-features
 
   book:
     name: Book tests

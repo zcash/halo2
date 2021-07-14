@@ -1,13 +1,15 @@
 use ff::Field;
 use group::Curve;
 use std::iter;
+use std::ops::RangeTo;
 
 use super::{
     circuit::{
-        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Selector,
+        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
+        Selector,
     },
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
-    ChallengeY, Error, Permutation, ProvingKey,
+    ChallengeY, Error, ProvingKey,
 };
 use crate::poly::{
     commitment::{Blind, Params},
@@ -25,7 +27,8 @@ use crate::{
 
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
-/// generated previously for the same circuit.
+/// generated previously for the same circuit. The provided `instances`
+/// are zero-padded internally.
 pub fn create_proof<
     C: CurveAffine,
     E: EncodedChallenge<C>,
@@ -35,7 +38,7 @@ pub fn create_proof<
     params: &Params<C>,
     pk: &ProvingKey<C>,
     circuits: &[ConcreteCircuit],
-    instances: &[&[Polynomial<C::Scalar, LagrangeCoeff>]],
+    instances: &[&[&[C::Scalar]]],
     transcript: &mut T,
 ) -> Result<(), Error> {
     for instance in instances.iter() {
@@ -53,8 +56,8 @@ pub fn create_proof<
     let mut meta = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut meta);
 
-    struct InstanceSingle<'a, C: CurveAffine> {
-        pub instance_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+    struct InstanceSingle<C: CurveAffine> {
+        pub instance_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
         pub instance_polys: Vec<Polynomial<C::Scalar, Coeff>>,
         pub instance_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     }
@@ -62,7 +65,21 @@ pub fn create_proof<
     let instance: Vec<InstanceSingle<C>> = instances
         .iter()
         .map(|instance| -> Result<InstanceSingle<C>, Error> {
-            let instance_commitments_projective: Vec<_> = instance
+            let instance_values = instance
+                .iter()
+                .map(|values| {
+                    let mut poly = domain.empty_lagrange();
+                    assert_eq!(poly.len(), params.n as usize);
+                    if values.len() > (poly.len() - (meta.blinding_factors() + 1)) {
+                        return Err(Error::InstanceTooLarge);
+                    }
+                    for (poly, value) in poly.iter_mut().zip(values.iter()) {
+                        *poly = *value;
+                    }
+                    Ok(poly)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            let instance_commitments_projective: Vec<_> = instance_values
                 .iter()
                 .map(|poly| params.commit_lagrange(poly, Blind::default()))
                 .collect();
@@ -78,7 +95,7 @@ pub fn create_proof<
                     .map_err(|_| Error::TranscriptError)?;
             }
 
-            let instance_polys: Vec<_> = instance
+            let instance_polys: Vec<_> = instance_values
                 .iter()
                 .map(|poly| {
                     let lagrange_vec = domain.lagrange_from_vec(poly.to_vec());
@@ -96,7 +113,7 @@ pub fn create_proof<
                 .collect();
 
             Ok(InstanceSingle {
-                instance_values: *instance,
+                instance_values,
                 instance_polys,
                 instance_cosets,
             })
@@ -112,13 +129,16 @@ pub fn create_proof<
 
     let advice: Vec<AdviceSingle<C>> = circuits
         .iter()
-        .map(|circuit| -> Result<AdviceSingle<C>, Error> {
-            struct WitnessCollection<F: Field> {
+        .zip(instances.iter())
+        .map(|(circuit, instances)| -> Result<AdviceSingle<C>, Error> {
+            struct WitnessCollection<'a, F: Field> {
                 pub advice: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
+                instances: &'a [&'a [F]],
+                usable_rows: RangeTo<usize>,
                 _marker: std::marker::PhantomData<F>,
             }
 
-            impl<F: Field> Assignment<F> for WitnessCollection<F> {
+            impl<'a, F: Field> Assignment<F> for WitnessCollection<'a, F> {
                 fn enter_region<NR, N>(&mut self, _: N)
                 where
                     NR: Into<String>,
@@ -146,6 +166,22 @@ pub fn create_proof<
                     Ok(())
                 }
 
+                fn query_instance(
+                    &self,
+                    column: Column<Instance>,
+                    row: usize,
+                ) -> Result<Option<F>, Error> {
+                    if !self.usable_rows.contains(&row) {
+                        return Err(Error::BoundsFailure);
+                    }
+
+                    self.instances
+                        .get(column.index())
+                        .and_then(|column| column.get(row))
+                        .map(|v| Some(*v))
+                        .ok_or(Error::BoundsFailure)
+                }
+
                 fn assign_advice<V, VR, A, AR>(
                     &mut self,
                     _: A,
@@ -159,6 +195,10 @@ pub fn create_proof<
                     A: FnOnce() -> AR,
                     AR: Into<String>,
                 {
+                    if !self.usable_rows.contains(&row) {
+                        return Err(Error::BoundsFailure);
+                    }
+
                     *self
                         .advice
                         .get_mut(column.index())
@@ -188,7 +228,6 @@ pub fn create_proof<
 
                 fn copy(
                     &mut self,
-                    _: &Permutation,
                     _: Column<Any>,
                     _: usize,
                     _: Column<Any>,
@@ -212,15 +251,30 @@ pub fn create_proof<
                 }
             }
 
+            let unusable_rows_start = params.n as usize - (meta.blinding_factors() + 1);
+
             let mut witness = WitnessCollection {
                 advice: vec![domain.empty_lagrange_assigned(); meta.num_advice_columns],
+                instances,
+                // The prover will not be allowed to assign values to advice
+                // cells that exist within inactive rows, which include some
+                // number of blinding factors and an extra row for use in the
+                // permutation argument.
+                usable_rows: ..unusable_rows_start,
                 _marker: std::marker::PhantomData,
             };
 
             // Synthesize the circuit to obtain the witness and other information.
             ConcreteCircuit::FloorPlanner::synthesize(&mut witness, circuit, config.clone())?;
 
-            let advice = batch_invert_assigned(&witness.advice);
+            let mut advice = batch_invert_assigned(witness.advice);
+
+            // Add blinding factors to advice columns
+            for advice in &mut advice {
+                for cell in &mut advice[unusable_rows_start..] {
+                    *cell = C::Scalar::rand();
+                }
+            }
 
             // Compute commitments to advice column polynomials
             let advice_blinds: Vec<_> = advice.iter().map(|_| Blind(C::Scalar::rand())).collect();
@@ -284,7 +338,7 @@ pub fn create_proof<
                         theta,
                         &advice.advice_values,
                         &pk.fixed_values,
-                        instance.instance_values,
+                        &instance.instance_values,
                         &advice.advice_cosets,
                         &pk.fixed_cosets,
                         &instance.instance_cosets,
@@ -301,30 +355,22 @@ pub fn create_proof<
     // Sample gamma challenge
     let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
 
-    let permutations: Vec<Vec<permutation::prover::Committed<C>>> = instance
+    // Commit to permutations.
+    let permutations: Vec<permutation::prover::Committed<C>> = instance
         .iter()
         .zip(advice.iter())
-        .map(|(instance, advice)| -> Result<Vec<_>, Error> {
-            // Commit to permutations, if any.
-            pk.vk
-                .cs
-                .permutations
-                .iter()
-                .zip(pk.permutations.iter())
-                .map(|(p, pkey)| {
-                    p.commit(
-                        params,
-                        pk,
-                        pkey,
-                        &advice.advice_values,
-                        &pk.fixed_values,
-                        instance.instance_values,
-                        beta,
-                        gamma,
-                        transcript,
-                    )
-                })
-                .collect()
+        .map(|(instance, advice)| {
+            pk.vk.cs.permutation.commit(
+                params,
+                pk,
+                &pk.permutation,
+                &advice.advice_values,
+                &pk.fixed_values,
+                &instance.instance_values,
+                beta,
+                gamma,
+                transcript,
+            )
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -339,32 +385,28 @@ pub fn create_proof<
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    // Commit to the vanishing argument's random polynomial for blinding h(x_3)
+    let vanishing = vanishing::Argument::commit(params, domain, transcript)?;
+
     // Obtain challenge for keeping all separate gates linearly independent
     let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
 
-    let (permutations, permutation_expressions): (Vec<Vec<_>>, Vec<Vec<_>>) = permutations
+    // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints.
+    let (permutations, permutation_expressions): (Vec<_>, Vec<_>) = permutations
         .into_iter()
         .zip(advice.iter())
         .zip(instance.iter())
-        .map(|((permutations, advice), instance)| {
-            // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints, if any.
-            permutations
-                .into_iter()
-                .zip(pk.vk.cs.permutations.iter())
-                .zip(pk.permutations.iter())
-                .map(|((p, argument), pkey)| {
-                    p.construct(
-                        pk,
-                        argument,
-                        pkey,
-                        &advice.advice_cosets,
-                        &pk.fixed_cosets,
-                        &instance.instance_cosets,
-                        beta,
-                        gamma,
-                    )
-                })
-                .unzip()
+        .map(|((permutation, advice), instance)| {
+            permutation.construct(
+                pk,
+                &pk.vk.cs.permutation,
+                &pk.permutation,
+                &advice.advice_cosets,
+                &pk.fixed_cosets,
+                &instance.instance_cosets,
+                beta,
+                gamma,
+            )
         })
         .unzip();
 
@@ -402,16 +444,17 @@ pub fn create_proof<
                         })
                     }))
                     // Permutation constraints, if any.
-                    .chain(permutation_expressions.into_iter().flatten())
+                    .chain(permutation_expressions.into_iter())
                     // Lookup constraints, if any.
                     .chain(lookup_expressions.into_iter().flatten())
             },
         );
 
-    // Construct the vanishing argument
-    let vanishing = vanishing::Argument::construct(params, domain, expressions, y, transcript)?;
+    // Construct the vanishing argument's h(X) commitments
+    let vanishing = vanishing.construct(params, domain, expressions, y, transcript)?;
 
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
+    let xn = x.pow(&[params.n as u64, 0, 0, 0]);
 
     // Compute and hash instance evals for each circuit instance
     for instance in instance.iter() {
@@ -473,17 +516,13 @@ pub fn create_proof<
             .map_err(|_| Error::TranscriptError)?;
     }
 
-    let vanishing = vanishing.evaluate(x, transcript)?;
+    let vanishing = vanishing.evaluate(x, xn, domain, transcript)?;
 
     // Evaluate the permutations, if any, at omega^i x.
-    let permutations: Vec<Vec<permutation::prover::Evaluated<C>>> = permutations
+    let permutations: Vec<permutation::prover::Evaluated<C>> = permutations
         .into_iter()
-        .map(|permutations| -> Result<Vec<_>, _> {
-            permutations
-                .into_iter()
-                .zip(pk.permutations.iter())
-                .map(|(p, pkey)| p.evaluate(pk, pkey, x, transcript))
-                .collect::<Result<Vec<_>, _>>()
+        .map(|permutation| -> Result<_, _> {
+            permutation.evaluate(pk, &pk.permutation, x, transcript)
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -503,7 +542,7 @@ pub fn create_proof<
         .zip(advice.iter())
         .zip(permutations.iter())
         .zip(lookups.iter())
-        .flat_map(|(((instance, advice), permutations), lookups)| {
+        .flat_map(|(((instance, advice), permutation), lookups)| {
             iter::empty()
                 .chain(
                     pk.vk
@@ -527,13 +566,7 @@ pub fn create_proof<
                             blind: advice.advice_blinds[column.index()],
                         }),
                 )
-                .chain(
-                    permutations
-                        .iter()
-                        .zip(pk.permutations.iter())
-                        .flat_map(move |(p, pkey)| p.open(pk, pkey, x))
-                        .into_iter(),
-                )
+                .chain(permutation.open(pk, &pk.permutation, x))
                 .chain(lookups.iter().flat_map(move |p| p.open(pk, x)).into_iter())
         })
         .chain(

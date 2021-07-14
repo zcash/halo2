@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::iter;
+use std::ops::RangeTo;
 
 use ff::Field;
 
@@ -11,7 +12,7 @@ use crate::{
     arithmetic::{FieldExt, Group},
     plonk::{
         permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Expression, Fixed, FloorPlanner, Permutation, Selector,
+        Expression, Fixed, FloorPlanner, Instance, Selector,
     },
     poly::Rotation,
 };
@@ -64,12 +65,8 @@ pub enum VerifyFailure {
     },
     /// A permutation did not preserve the original value of a cell.
     Permutation {
-        /// The index of the permutation that is not satisfied. These indices are assigned
-        /// in the order in which `ConstraintSystem::lookup` is called during
-        /// `Circuit::configure`.
-        perm_index: usize,
         /// The column in which this permutation is not satisfied.
-        column: usize,
+        column: Column<Any>,
         /// The row on which this permutation is not satisfied.
         row: usize,
     },
@@ -96,15 +93,11 @@ impl fmt::Display for VerifyFailure {
             Self::Lookup { lookup_index, row } => {
                 write!(f, "Lookup {} is not satisfied on row {}", lookup_index, row)
             }
-            Self::Permutation {
-                perm_index,
-                column,
-                row,
-            } => {
+            Self::Permutation { column, row } => {
                 write!(
                     f,
-                    "Permutation {} is not satisfied by cell ({:?}, {})",
-                    perm_index, column, row
+                    "Equality constraint not satisfied by cell ({:?}, {})",
+                    column, row
                 )
             }
         }
@@ -250,7 +243,10 @@ pub struct MockProver<F: Group + Field> {
     // The instance cells in the circuit, arranged as [column][row].
     instance: Vec<Vec<F>>,
 
-    permutations: Vec<permutation::keygen::Assembly>,
+    permutation: permutation::keygen::Assembly,
+
+    // A range of available rows for assignment and copies.
+    usable_rows: RangeTo<usize>,
 }
 
 impl<F: Field + Group> Assignment<F> for MockProver<F> {
@@ -282,6 +278,10 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::BoundsFailure);
+        }
+
         // Track that this selector was enabled. We require that all selectors are enabled
         // inside some region (i.e. no floating selectors).
         self.current_region
@@ -294,6 +294,18 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
 
         // Selectors are just fixed columns.
         self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
+    }
+
+    fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Option<F>, Error> {
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::BoundsFailure);
+        }
+
+        self.instance
+            .get(column.index())
+            .and_then(|column| column.get(row))
+            .map(|v| Some(*v))
+            .ok_or(Error::BoundsFailure)
     }
 
     fn assign_advice<V, VR, A, AR>(
@@ -309,6 +321,10 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::BoundsFailure);
+        }
+
         if let Some(region) = self.current_region.as_mut() {
             region.update_start(row);
             region.cells.push((column.into(), row));
@@ -336,6 +352,10 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::BoundsFailure);
+        }
+
         if let Some(region) = self.current_region.as_mut() {
             region.update_start(row);
             region.cells.push((column.into(), row));
@@ -352,34 +372,17 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
 
     fn copy(
         &mut self,
-        permutation: &Permutation,
         left_column: Column<Any>,
         left_row: usize,
         right_column: Column<Any>,
         right_row: usize,
     ) -> Result<(), crate::plonk::Error> {
-        // Check bounds first
-        if permutation.index() >= self.permutations.len() {
+        if !self.usable_rows.contains(&left_row) || !self.usable_rows.contains(&right_row) {
             return Err(Error::BoundsFailure);
         }
 
-        let left_column_index = permutation
-            .mapping()
-            .iter()
-            .position(|c| c == &left_column)
-            .ok_or(Error::SynthesisError)?;
-        let right_column_index = permutation
-            .mapping()
-            .iter()
-            .position(|c| c == &right_column)
-            .ok_or(Error::SynthesisError)?;
-
-        self.permutations[permutation.index()].copy(
-            left_column_index,
-            left_row,
-            right_column_index,
-            right_row,
-        )
+        self.permutation
+            .copy(left_column, left_row, right_column, right_row)
     }
 
     fn push_namespace<NR, N>(&mut self, _: N)
@@ -407,24 +410,43 @@ impl<F: FieldExt> MockProver<F> {
 
         let mut cs = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut cs);
+        let cs = cs;
 
-        let fixed = vec![vec![None; n as usize]; cs.num_fixed_columns];
-        let advice = vec![vec![None; n as usize]; cs.num_advice_columns];
-        let permutations = cs
-            .permutations
-            .iter()
-            .map(|p| permutation::keygen::Assembly::new(n as usize, p))
-            .collect();
+        if n < cs.minimum_rows() {
+            return Err(Error::NotEnoughRowsAvailable);
+        }
 
+        if instance.len() != cs.num_instance_columns {
+            return Err(Error::IncompatibleParams);
+        }
+
+        let instance = instance
+            .into_iter()
+            .map(|mut instance| {
+                if instance.len() > n - (cs.blinding_factors() + 1) {
+                    return Err(Error::InstanceTooLarge);
+                }
+
+                instance.resize(n, F::zero());
+                Ok(instance)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let fixed = vec![vec![None; n]; cs.num_fixed_columns];
+        let advice = vec![vec![None; n]; cs.num_advice_columns];
+        let permutation = permutation::keygen::Assembly::new(n, &cs.permutation);
+
+        let blinding_factors = cs.blinding_factors();
         let mut prover = MockProver {
-            n,
+            n: n as u32,
             cs,
             regions: vec![],
             current_region: None,
             fixed,
             advice,
             instance,
-            permutations,
+            permutation,
+            usable_rows: ..n - (blinding_factors + 1),
         };
 
         ConcreteCircuit::FloorPlanner::synthesize(&mut prover, circuit, config)?;
@@ -611,47 +633,43 @@ impl<F: FieldExt> MockProver<F> {
                 });
 
         // Check that permutations preserve the original values of the cells.
-        let perm_errors =
-            self.permutations
+        let perm_errors = {
+            // Original values of columns involved in the permutation.
+            let original = |column, row| {
+                self.cs
+                    .permutation
+                    .get_columns()
+                    .get(column)
+                    .map(|c: &Column<Any>| match c.column_type() {
+                        Any::Advice => cell_value(self.advice[c.index()][row]),
+                        Any::Fixed => cell_value(self.fixed[c.index()][row]),
+                        Any::Instance => self.instance[c.index()][row],
+                    })
+                    .unwrap()
+            };
+
+            // Iterate over each column of the permutation
+            self.permutation
+                .mapping
                 .iter()
                 .enumerate()
-                .flat_map(|(perm_index, assembly)| {
-                    // Original values of columns involved in the permutation
-                    let original = |perm_index: usize, column, row| {
-                        self.cs.permutations[perm_index]
-                            .get_columns()
-                            .get(column)
-                            .map(|c: &Column<Any>| match c.column_type() {
-                                Any::Advice => cell_value(self.advice[c.index()][row]),
-                                Any::Fixed => cell_value(self.fixed[c.index()][row]),
-                                Any::Instance => self.instance[c.index()][row],
+                .flat_map(move |(column, values)| {
+                    // Iterate over each row of the column to check that the cell's
+                    // value is preserved by the mapping.
+                    values.iter().enumerate().filter_map(move |(row, cell)| {
+                        let original_cell = original(column, row);
+                        let permuted_cell = original(cell.0, cell.1);
+                        if original_cell == permuted_cell {
+                            None
+                        } else {
+                            Some(VerifyFailure::Permutation {
+                                column: *self.cs.permutation.get_columns().get(column).unwrap(),
+                                row,
                             })
-                            .unwrap()
-                    };
-
-                    // Iterate over each column of the permutation
-                    assembly
-                        .mapping
-                        .iter()
-                        .enumerate()
-                        .flat_map(move |(column, values)| {
-                            // Iterate over each row of the column to check that the cell's
-                            // value is preserved by the mapping.
-                            values.iter().enumerate().filter_map(move |(row, cell)| {
-                                let original_cell = original(perm_index, column, row);
-                                let permuted_cell = original(perm_index, cell.0, cell.1);
-                                if original_cell == permuted_cell {
-                                    None
-                                } else {
-                                    Some(VerifyFailure::Permutation {
-                                        perm_index,
-                                        column,
-                                        row,
-                                    })
-                                }
-                            })
-                        })
-                });
+                        }
+                    })
+                })
+        };
 
         let errors: Vec<_> = iter::empty()
             .chain(selector_errors)

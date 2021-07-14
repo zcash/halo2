@@ -8,7 +8,7 @@ use ff::Field;
 
 use super::{Cell, RegionIndex};
 use crate::plonk::Assigned;
-use crate::plonk::{Advice, Any, Column, Error, Fixed, Permutation, Selector};
+use crate::plonk::{Advice, Any, Column, Error, Fixed, Instance, Selector};
 
 /// Helper trait for implementing a custom [`Layouter`].
 ///
@@ -58,6 +58,19 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error>;
 
+    /// Assign the value of the instance column's cell at absolute location
+    /// `row` to the column `advice` at `offset` within this region.
+    ///
+    /// Returns the advice cell, and its value if known.
+    fn assign_advice_from_instance<'v>(
+        &mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        instance: Column<Instance>,
+        row: usize,
+        advice: Column<Advice>,
+        offset: usize,
+    ) -> Result<(Cell, Option<F>), Error>;
+
     /// Assign a fixed value
     fn assign_fixed<'v>(
         &'v mut self,
@@ -70,12 +83,7 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
     /// Constraint two cells to have the same value.
     ///
     /// Returns an error if either of the cells is not within the given permutation.
-    fn constrain_equal(
-        &mut self,
-        permutation: &Permutation,
-        left: Cell,
-        right: Cell,
-    ) -> Result<(), Error>;
+    fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error>;
 }
 
 /// The shape of a region. For a region at a certain index, we track
@@ -144,6 +152,27 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         })
     }
 
+    fn assign_advice_from_instance<'v>(
+        &mut self,
+        _: &'v (dyn Fn() -> String + 'v),
+        _: Column<Instance>,
+        _: usize,
+        advice: Column<Advice>,
+        offset: usize,
+    ) -> Result<(Cell, Option<F>), Error> {
+        self.columns.insert(advice.into());
+        self.row_count = cmp::max(self.row_count, offset + 1);
+
+        Ok((
+            Cell {
+                region_index: self.region_index,
+                row_offset: offset,
+                column: advice.into(),
+            },
+            None,
+        ))
+    }
+
     fn assign_fixed<'v>(
         &'v mut self,
         _: &'v (dyn Fn() -> String + 'v),
@@ -161,12 +190,7 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         })
     }
 
-    fn constrain_equal(
-        &mut self,
-        _permutation: &Permutation,
-        _left: Cell,
-        _right: Cell,
-    ) -> Result<(), Error> {
+    fn constrain_equal(&mut self, _left: Cell, _right: Cell) -> Result<(), Error> {
         // Equality constraints don't affect the region shape.
         Ok(())
     }

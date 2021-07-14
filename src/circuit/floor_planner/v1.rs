@@ -9,7 +9,7 @@ use crate::{
         Cell, Layouter, Region, RegionIndex, RegionStart,
     },
     plonk::{
-        Advice, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Permutation,
+        Advice, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Instance,
         Selector,
     },
 };
@@ -117,6 +117,18 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for V1Pass<'p, 'a, F,
         }
     }
 
+    fn constrain_instance(
+        &mut self,
+        cell: Cell,
+        instance: Column<Instance>,
+        row: usize,
+    ) -> Result<(), Error> {
+        match &mut self.0 {
+            Pass::Measurement(_) => Ok(()),
+            Pass::Assignment(pass) => pass.constrain_instance(cell, instance, row),
+        }
+    }
+
     fn get_root(&mut self) -> &mut Self::Root {
         self
     }
@@ -203,6 +215,20 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
 
         Ok(result)
     }
+
+    fn constrain_instance(
+        &mut self,
+        cell: Cell,
+        instance: Column<Instance>,
+        row: usize,
+    ) -> Result<(), Error> {
+        self.plan.cs.copy(
+            cell.column,
+            *self.plan.regions[*cell.region_index] + cell.row_offset,
+            instance.into(),
+            row,
+        )
+    }
 }
 
 struct V1Region<'r, 'a, F: Field, CS: Assignment<F> + 'a> {
@@ -260,6 +286,30 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
         })
     }
 
+    fn assign_advice_from_instance<'v>(
+        &mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        instance: Column<Instance>,
+        row: usize,
+        advice: Column<Advice>,
+        offset: usize,
+    ) -> Result<(Cell, Option<F>), Error> {
+        let value = self.plan.cs.query_instance(instance, row)?;
+
+        let cell = self.assign_advice(annotation, advice, offset, &mut || {
+            value.ok_or(Error::SynthesisError).map(|v| v.into())
+        })?;
+
+        self.plan.cs.copy(
+            cell.column,
+            *self.plan.regions[*cell.region_index] + cell.row_offset,
+            instance.into(),
+            row,
+        )?;
+
+        Ok((cell, value))
+    }
+
     fn assign_fixed<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
@@ -281,14 +331,8 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
         })
     }
 
-    fn constrain_equal(
-        &mut self,
-        permutation: &Permutation,
-        left: Cell,
-        right: Cell,
-    ) -> Result<(), Error> {
+    fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error> {
         self.plan.cs.copy(
-            permutation,
             left.column,
             *self.plan.regions[*left.region_index] + left.row_offset,
             right.column,

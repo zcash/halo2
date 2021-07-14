@@ -1,4 +1,5 @@
 use ff::Field;
+use group::Curve;
 use std::iter;
 
 use super::{
@@ -7,25 +8,44 @@ use super::{
 };
 use crate::arithmetic::{CurveAffine, FieldExt};
 use crate::poly::{
-    commitment::{Guard, Params, MSM},
+    commitment::{Blind, Guard, Params, MSM},
     multiopen::{self, VerifierQuery},
 };
 use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
 
 /// Returns a boolean indicating whether or not the proof is valid
-pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
-    params: &'a Params<C>,
+pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
+    params: &'params Params<C>,
     vk: &VerifyingKey<C>,
-    msm: MSM<'a, C>,
-    instance_commitments: &[&[C]],
+    msm: MSM<'params, C>,
+    instances: &[&[&[C::Scalar]]],
     transcript: &mut T,
-) -> Result<Guard<'a, C, E>, Error> {
-    // Check that instance_commitments matches the expected number of instance columns
-    for instance_commitments in instance_commitments.iter() {
-        if instance_commitments.len() != vk.cs.num_instance_columns {
+) -> Result<Guard<'params, C, E>, Error> {
+    // Check that instances matches the expected number of instance columns
+    for instances in instances.iter() {
+        if instances.len() != vk.cs.num_instance_columns {
             return Err(Error::IncompatibleParams);
         }
     }
+
+    let instance_commitments = instances
+        .iter()
+        .map(|instance| {
+            instance
+                .iter()
+                .map(|instance| {
+                    if instance.len() > params.n as usize - (vk.cs.blinding_factors() + 1) {
+                        return Err(Error::InstanceTooLarge);
+                    }
+                    let mut poly = instance.to_vec();
+                    poly.resize(params.n as usize, C::Scalar::zero());
+                    let poly = vk.domain.lagrange_from_vec(poly);
+
+                    Ok(params.commit_lagrange(&poly, Blind::default()).to_affine())
+                })
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     let num_proofs = instance_commitments.len();
 
@@ -35,7 +55,7 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
 
     for instance_commitments in instance_commitments.iter() {
         // Hash the instance (external) commitments into the transcript
-        for commitment in *instance_commitments {
+        for commitment in instance_commitments {
             transcript
                 .common_point(*commitment)
                 .map_err(|_| Error::TranscriptError)?
@@ -70,13 +90,9 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
     let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
 
     let permutations_committed = (0..num_proofs)
-        .map(|_| -> Result<Vec<_>, _> {
+        .map(|_| {
             // Hash each permutation product commitment
-            vk.cs
-                .permutations
-                .iter()
-                .map(|argument| argument.read_product_commitment(transcript))
-                .collect::<Result<Vec<_>, _>>()
+            vk.cs.permutation.read_product_commitments(vk, transcript)
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -91,9 +107,12 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    let vanishing = vanishing::Argument::read_commitments_before_y(transcript)?;
+
     // Sample y challenge, which keeps the gates linearly independent.
     let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
-    let vanishing = vanishing::Argument::read_commitments(vk, transcript)?;
+
+    let vanishing = vanishing.read_commitments_after_y(vk, transcript)?;
 
     // Sample x challenge, which is used to ensure the circuit is
     // satisfied with high probability.
@@ -115,17 +134,11 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
     let fixed_evals = read_n_scalars(transcript, vk.cs.fixed_queries.len())
         .map_err(|_| Error::TranscriptError)?;
 
-    let vanishing = vanishing.evaluate(transcript)?;
+    let vanishing = vanishing.evaluate_after_x(transcript)?;
 
     let permutations_evaluated = permutations_committed
         .into_iter()
-        .map(|permutations| -> Result<Vec<_>, _> {
-            permutations
-                .into_iter()
-                .zip(vk.permutations.iter())
-                .map(|(permutation, vkey)| permutation.evaluate(vkey, transcript))
-                .collect::<Result<Vec<_>, _>>()
-        })
+        .map(|permutation| permutation.evaluate(&vk.permutation, transcript))
         .collect::<Result<Vec<_>, _>>()?;
 
     let lookups_evaluated = lookups_committed
@@ -140,15 +153,20 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
 
     // This check ensures the circuit is satisfied so long as the polynomial
     // commitments open to the correct values.
-    {
+    let vanishing = {
         // x^n
         let xn = x.pow(&[params.n as u64, 0, 0, 0]);
 
-        // TODO: bubble this error up
-        // l_0(x)
-        let l_0 = (*x - &C::Scalar::one()).invert().unwrap() // 1 / (x - 1)
-            * &(xn - &C::Scalar::one()) // (x^n - 1) / (x - 1)
-            * &vk.domain.get_barycentric_weight(); // l_0(x)
+        let blinding_factors = vk.cs.blinding_factors();
+        let l_evals = vk
+            .domain
+            .l_i_range(*x, xn, (-((blinding_factors + 1) as i32))..=0);
+        assert_eq!(l_evals.len(), 2 + blinding_factors);
+        let l_last = l_evals[0];
+        let l_blind: C::Scalar = l_evals[1..(1 + blinding_factors)]
+            .iter()
+            .fold(C::Scalar::zero(), |acc, eval| acc + eval);
+        let l_0 = l_evals[1 + blinding_factors];
 
         // Compute the expected value of h(x)
         let expressions = advice_evals
@@ -156,71 +174,60 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
             .zip(instance_evals.iter())
             .zip(permutations_evaluated.iter())
             .zip(lookups_evaluated.iter())
-            .flat_map(
-                |(((advice_evals, instance_evals), permutations), lookups)| {
-                    let fixed_evals = fixed_evals.clone();
-                    let fixed_evals_copy = fixed_evals.clone();
-                    let fixed_evals_copy_copy = fixed_evals.clone();
-
-                    std::iter::empty()
-                        // Evaluate the circuit using the custom gates provided
-                        .chain(vk.cs.gates.iter().flat_map(move |gate| {
-                            let fixed_evals = fixed_evals.clone();
-
-                            gate.polynomials().iter().map(move |poly| {
-                                poly.evaluate(
-                                    &|scalar| scalar,
-                                    &|index| fixed_evals[index],
-                                    &|index| advice_evals[index],
-                                    &|index| instance_evals[index],
-                                    &|a, b| a + &b,
-                                    &|a, b| a * &b,
-                                    &|a, scalar| a * &scalar,
+            .flat_map(|(((advice_evals, instance_evals), permutation), lookups)| {
+                let fixed_evals = &fixed_evals;
+                std::iter::empty()
+                    // Evaluate the circuit using the custom gates provided
+                    .chain(vk.cs.gates.iter().flat_map(move |gate| {
+                        gate.polynomials().iter().map(move |poly| {
+                            poly.evaluate(
+                                &|scalar| scalar,
+                                &|index| fixed_evals[index],
+                                &|index| advice_evals[index],
+                                &|index| instance_evals[index],
+                                &|a, b| a + &b,
+                                &|a, b| a * &b,
+                                &|a, scalar| a * &scalar,
+                            )
+                        })
+                    }))
+                    .chain(permutation.expressions(
+                        vk,
+                        &vk.cs.permutation,
+                        advice_evals,
+                        fixed_evals,
+                        instance_evals,
+                        l_0,
+                        l_last,
+                        l_blind,
+                        beta,
+                        gamma,
+                        x,
+                    ))
+                    .chain(
+                        lookups
+                            .iter()
+                            .zip(vk.cs.lookups.iter())
+                            .flat_map(move |(p, argument)| {
+                                p.expressions(
+                                    l_0,
+                                    l_last,
+                                    l_blind,
+                                    argument,
+                                    theta,
+                                    beta,
+                                    gamma,
+                                    advice_evals,
+                                    fixed_evals,
+                                    instance_evals,
                                 )
                             })
-                        }))
-                        .chain(
-                            permutations
-                                .iter()
-                                .zip(vk.cs.permutations.iter())
-                                .flat_map(move |(p, argument)| {
-                                    p.expressions(
-                                        vk,
-                                        argument,
-                                        advice_evals,
-                                        &fixed_evals_copy,
-                                        instance_evals,
-                                        l_0,
-                                        beta,
-                                        gamma,
-                                        x,
-                                    )
-                                })
-                                .into_iter(),
-                        )
-                        .chain(
-                            lookups
-                                .iter()
-                                .zip(vk.cs.lookups.iter())
-                                .flat_map(move |(p, argument)| {
-                                    p.expressions(
-                                        l_0,
-                                        argument,
-                                        theta,
-                                        beta,
-                                        gamma,
-                                        advice_evals,
-                                        &fixed_evals_copy_copy,
-                                        instance_evals,
-                                    )
-                                })
-                                .into_iter(),
-                        )
-                },
-            );
+                            .into_iter(),
+                    )
+            });
 
-        vanishing.verify(expressions, y, xn)?;
-    }
+        vanishing.verify(params, expressions, y, xn)
+    };
 
     let queries = instance_commitments
         .iter()
@@ -233,32 +240,30 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
             |(
                 (
                     (((instance_commitments, instance_evals), advice_commitments), advice_evals),
-                    permutations,
+                    permutation,
                 ),
                 lookups,
             )| {
                 iter::empty()
                     .chain(vk.cs.instance_queries.iter().enumerate().map(
-                        move |(query_index, &(column, at))| VerifierQuery {
-                            point: vk.domain.rotate_omega(*x, at),
-                            commitment: &instance_commitments[column.index()],
-                            eval: instance_evals[query_index],
+                        move |(query_index, &(column, at))| {
+                            VerifierQuery::new_commitment(
+                                &instance_commitments[column.index()],
+                                vk.domain.rotate_omega(*x, at),
+                                instance_evals[query_index],
+                            )
                         },
                     ))
                     .chain(vk.cs.advice_queries.iter().enumerate().map(
-                        move |(query_index, &(column, at))| VerifierQuery {
-                            point: vk.domain.rotate_omega(*x, at),
-                            commitment: &advice_commitments[column.index()],
-                            eval: advice_evals[query_index],
+                        move |(query_index, &(column, at))| {
+                            VerifierQuery::new_commitment(
+                                &advice_commitments[column.index()],
+                                vk.domain.rotate_omega(*x, at),
+                                advice_evals[query_index],
+                            )
                         },
                     ))
-                    .chain(
-                        permutations
-                            .iter()
-                            .zip(vk.permutations.iter())
-                            .flat_map(move |(p, vkey)| p.queries(vk, vkey, x))
-                            .into_iter(),
-                    )
+                    .chain(permutation.queries(vk, &vk.permutation, x))
                     .chain(
                         lookups
                             .iter()
@@ -272,10 +277,12 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
                 .fixed_queries
                 .iter()
                 .enumerate()
-                .map(|(query_index, &(column, at))| VerifierQuery {
-                    point: vk.domain.rotate_omega(*x, at),
-                    commitment: &vk.fixed_commitments[column.index()],
-                    eval: fixed_evals[query_index],
+                .map(|(query_index, &(column, at))| {
+                    VerifierQuery::new_commitment(
+                        &vk.fixed_commitments[column.index()],
+                        vk.domain.rotate_omega(*x, at),
+                        fixed_evals[query_index],
+                    )
                 }),
         )
         .chain(vanishing.queries(x));

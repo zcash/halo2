@@ -237,32 +237,6 @@ impl Selector {
     }
 }
 
-/// A permutation.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Permutation {
-    /// The index of this permutation.
-    index: usize,
-    /// The mapping between columns involved in this permutation.
-    mapping: Vec<Column<Any>>,
-}
-
-impl Permutation {
-    /// Configures a new permutation for the given columns.
-    pub fn new<F: FieldExt>(meta: &mut ConstraintSystem<F>, columns: &[Column<Any>]) -> Self {
-        meta.permutation(columns)
-    }
-
-    /// Returns index of permutation
-    pub fn index(&self) -> usize {
-        self.index
-    }
-
-    /// Returns mapping of permutation
-    pub fn mapping(&self) -> &[Column<Any>] {
-        &self.mapping
-    }
-}
-
 /// A value assigned to a cell within a circuit.
 ///
 /// Stored as a fraction, so the backend can use batch inversion.
@@ -454,6 +428,11 @@ pub trait Assignment<F: Field> {
         A: FnOnce() -> AR,
         AR: Into<String>;
 
+    /// Queries the cell of an instance column at a particular absolute row.
+    ///
+    /// Returns the cell's value, if known.
+    fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Option<F>, Error>;
+
     /// Assign an advice column value (witness)
     fn assign_advice<V, VR, A, AR>(
         &mut self,
@@ -485,7 +464,6 @@ pub trait Assignment<F: Field> {
     /// Assign two cells to have the same value
     fn copy(
         &mut self,
-        permutation: &Permutation,
         left_column: Column<Any>,
         left_row: usize,
         right_column: Column<Any>,
@@ -792,16 +770,21 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) num_instance_columns: usize,
     pub(crate) gates: Vec<Gate<F>>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
+    // Contains an integer for each advice column
+    // identifying how many distinct queries it has
+    // so far; should be same length as num_advice_columns.
+    num_advice_queries: Vec<usize>,
     pub(crate) instance_queries: Vec<(Column<Instance>, Rotation)>,
     pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
 
-    // Vector of permutation arguments, where each corresponds to a sequence of columns
-    // that are involved in a permutation argument.
-    pub(crate) permutations: Vec<permutation::Argument>,
+    // Permutation argument for performing equality constraints
+    pub(crate) permutation: permutation::Argument,
 
     // Vector of lookup arguments, where each corresponds to a sequence of
     // input expressions and a sequence of table expressions involved in the lookup.
     pub(crate) lookups: Vec<lookup::Argument<F>>,
+
+    pub(crate) minimum_degree: Option<usize>,
 }
 
 /// Represents the minimal parameters that determine a `ConstraintSystem`.
@@ -814,8 +797,9 @@ pub struct PinnedConstraintSystem<'a, F: Field> {
     advice_queries: &'a Vec<(Column<Advice>, Rotation)>,
     instance_queries: &'a Vec<(Column<Instance>, Rotation)>,
     fixed_queries: &'a Vec<(Column<Fixed>, Rotation)>,
-    permutations: &'a Vec<permutation::Argument>,
+    permutation: &'a permutation::Argument,
     lookups: &'a Vec<lookup::Argument<F>>,
+    minimum_degree: &'a Option<usize>,
 }
 
 struct PinnedGates<'a, F: Field>(&'a Vec<Gate<F>>);
@@ -837,9 +821,11 @@ impl<F: Field> Default for ConstraintSystem<F> {
             gates: vec![],
             fixed_queries: Vec::new(),
             advice_queries: Vec::new(),
+            num_advice_queries: Vec::new(),
             instance_queries: Vec::new(),
-            permutations: Vec::new(),
+            permutation: permutation::Argument::new(),
             lookups: Vec::new(),
+            minimum_degree: None,
         }
     }
 }
@@ -857,25 +843,16 @@ impl<F: Field> ConstraintSystem<F> {
             fixed_queries: &self.fixed_queries,
             advice_queries: &self.advice_queries,
             instance_queries: &self.instance_queries,
-            permutations: &self.permutations,
+            permutation: &self.permutation,
             lookups: &self.lookups,
+            minimum_degree: &self.minimum_degree,
         }
     }
 
-    /// Add a permutation argument for some columns
-    pub fn permutation(&mut self, columns: &[Column<Any>]) -> Permutation {
-        let index = self.permutations.len();
-
-        for column in columns {
-            self.query_any_index(*column, Rotation::cur());
-        }
-        self.permutations
-            .push(permutation::Argument::new(columns.to_vec()));
-
-        Permutation {
-            index,
-            mapping: columns.to_vec(),
-        }
+    /// Enable the ability to enforce equality over cells in this column
+    pub fn enable_equality(&mut self, column: Column<Any>) {
+        self.query_any_index(column, Rotation::cur());
+        self.permutation.add_column(column);
     }
 
     /// Add a lookup argument for some input expressions and table expressions.
@@ -922,6 +899,7 @@ impl<F: Field> ConstraintSystem<F> {
         // Make a new query
         let index = self.advice_queries.len();
         self.advice_queries.push((column, at));
+        self.num_advice_queries[column.index] += 1;
 
         index
     }
@@ -995,6 +973,13 @@ impl<F: Field> ConstraintSystem<F> {
         }
     }
 
+    /// Sets the minimum degree required by the circuit, which can be set to a
+    /// larger amount than actually needed. This can be used, for example, to
+    /// force the permutation argument to involve more columns in the same set.
+    pub fn set_minimum_degree(&mut self, degree: usize) {
+        self.minimum_degree = Some(degree);
+    }
+
     /// Creates a new gate.
     ///
     /// # Panics
@@ -1055,6 +1040,7 @@ impl<F: Field> ConstraintSystem<F> {
             column_type: Advice,
         };
         self.num_advice_columns += 1;
+        self.num_advice_queries.push(0);
         tmp
     }
 
@@ -1073,12 +1059,7 @@ impl<F: Field> ConstraintSystem<F> {
     pub fn degree(&self) -> usize {
         // The permutation argument will serve alongside the gates, so must be
         // accounted for.
-        let mut degree = self
-            .permutations
-            .iter()
-            .map(|p| p.required_degree())
-            .max()
-            .unwrap_or(1);
+        let mut degree = self.permutation.required_degree();
 
         // The lookup argument also serves alongside the gates and must be accounted
         // for.
@@ -1102,7 +1083,48 @@ impl<F: Field> ConstraintSystem<F> {
                 .unwrap_or(0),
         );
 
-        degree
+        std::cmp::max(degree, self.minimum_degree.unwrap_or(1))
+    }
+
+    /// Compute the number of blinding factors necessary to perfectly blind
+    /// each of the prover's witness polynomials.
+    pub fn blinding_factors(&self) -> usize {
+        // All of the prover's advice columns are evaluated at no more than
+        let factors = *self.num_advice_queries.iter().max().unwrap_or(&1);
+        // distinct points during gate checks.
+
+        // - The permutation argument witness polynomials are evaluated at most 3 times.
+        // - Each lookup argument has independent witness polynomials, and they are
+        //   evaluated at most 2 times.
+        let factors = std::cmp::max(3, factors);
+
+        // Each polynomial is evaluated at most an additional time during
+        // multiopen (at x_3 to produce q_evals):
+        let factors = factors + 1;
+
+        // h(x) is derived by the other evaluations so it does not reveal
+        // anything; in fact it does not even appear in the proof.
+
+        // h(x_3) is also not revealed; the verifier only learns a single
+        // evaluation of a polynomial in x_1 which has h(x_3) and another random
+        // polynomial evaluated at x_3 as coefficients -- this random polynomial
+        // is "random_poly" in the vanishing argument.
+
+        // Add an additional blinding factor as a slight defense against
+        // off-by-one errors.
+        factors + 1
+    }
+
+    /// Returns the minimum necessary rows that need to exist in order to
+    /// account for e.g. blinding factors.
+    pub fn minimum_rows(&self) -> usize {
+        self.blinding_factors() // m blinding factors
+            + 1 // for l_{-(m + 1)} (l_last)
+            + 1 // for l_0 (just for extra breathing room for the permutation
+                // argument, to essentially force a separation in the
+                // permutation polynomial between the roles of l_last, l_0
+                // and the interstitial values.)
+            + 1 // for at least one row
     }
 }
 

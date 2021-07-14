@@ -6,7 +6,7 @@ use ff::Field;
 
 use crate::{
     arithmetic::FieldExt,
-    plonk::{Advice, Any, Assigned, Column, Error, Fixed, Permutation, Selector},
+    plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector},
 };
 
 pub mod floor_planner;
@@ -152,6 +152,31 @@ impl<'r, F: Field> Region<'r, F> {
             })
     }
 
+    /// Assign the value of the instance column's cell at absolute location
+    /// `row` to the column `advice` at `offset` within this region.
+    ///
+    /// Returns the advice cell, and its value if known.
+    pub fn assign_advice_from_instance<A, AR>(
+        &mut self,
+        annotation: A,
+        instance: Column<Instance>,
+        row: usize,
+        advice: Column<Advice>,
+        offset: usize,
+    ) -> Result<(Cell, Option<F>), Error>
+    where
+        A: Fn() -> AR,
+        AR: Into<String>,
+    {
+        self.region.assign_advice_from_instance(
+            &|| annotation().into(),
+            instance,
+            row,
+            advice,
+            offset,
+        )
+    }
+
     /// Assign a fixed value.
     ///
     /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
@@ -174,16 +199,12 @@ impl<'r, F: Field> Region<'r, F> {
             })
     }
 
-    /// Constraint two cells to have the same value.
+    /// Constrains two cells to have the same value.
     ///
-    /// Returns an error if either of the cells is not within the given permutation.
-    pub fn constrain_equal(
-        &mut self,
-        permutation: &Permutation,
-        left: Cell,
-        right: Cell,
-    ) -> Result<(), Error> {
-        self.region.constrain_equal(permutation, left, right)
+    /// Returns an error if either of the cells are in columns where equality
+    /// has not been enabled.
+    pub fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error> {
+        self.region.constrain_equal(left, right)
     }
 }
 
@@ -214,6 +235,15 @@ pub trait Layouter<F: Field> {
         A: FnMut(Region<'_, F>) -> Result<AR, Error>,
         N: Fn() -> NR,
         NR: Into<String>;
+
+    /// Constrains a [`Cell`] to equal an instance column's row value at an
+    /// absolute position.
+    fn constrain_instance(
+        &mut self,
+        cell: Cell,
+        column: Column<Instance>,
+        row: usize,
+    ) -> Result<(), Error>;
 
     /// Gets the "root" of this assignment, bypassing the namespacing.
     ///
@@ -260,6 +290,15 @@ impl<'a, F: Field, L: Layouter<F> + 'a> Layouter<F> for NamespacedLayouter<'a, F
         NR: Into<String>,
     {
         self.0.assign_region(name, assignment)
+    }
+
+    fn constrain_instance(
+        &mut self,
+        cell: Cell,
+        column: Column<Instance>,
+        row: usize,
+    ) -> Result<(), Error> {
+        self.0.constrain_instance(cell, column, row)
     }
 
     fn get_root(&mut self) -> &mut Self::Root {

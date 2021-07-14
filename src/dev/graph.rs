@@ -3,7 +3,7 @@ use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
 use crate::plonk::{
     Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-    FloorPlanner, Permutation, Selector,
+    FloorPlanner, Instance, Selector,
 };
 
 pub mod layout;
@@ -96,6 +96,10 @@ impl<F: Field> Assignment<F> for Graph {
         Ok(())
     }
 
+    fn query_instance(&self, _: Column<Instance>, _: usize) -> Result<Option<F>, Error> {
+        Ok(None)
+    }
+
     fn assign_advice<V, VR, A, AR>(
         &mut self,
         _: A,
@@ -132,7 +136,6 @@ impl<F: Field> Assignment<F> for Graph {
 
     fn copy(
         &mut self,
-        _: &Permutation,
         _: Column<Any>,
         _: usize,
         _: Column<Any>,
