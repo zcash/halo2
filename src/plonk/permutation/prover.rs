@@ -444,7 +444,9 @@ impl<C: CurveAffine> Evaluated<C> {
                         blind: set.permutation_product_blind,
                     }))
             }))
-            // Open it at \omega^{last} x for all but the last set
+            // Open it at \omega^{last} x for all but the last set. This rotation is only
+            // sensical for the first row, but we only use this rotation in a constraint
+            // that is gated on l_0.
             .chain(
                 self.constructed
                     .sets
