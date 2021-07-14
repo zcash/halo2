@@ -429,7 +429,7 @@ impl<C: CurveAffine> Evaluated<C> {
         iter::empty()
             .chain(self.constructed.sets.iter().flat_map(move |set| {
                 iter::empty()
-                    // Open permutation product commitments at x and \omega^{-1} x
+                    // Open permutation product commitments at x and \omega x
                     .chain(Some(ProverQuery {
                         point: *x,
                         poly: &set.permutation_product_poly,
