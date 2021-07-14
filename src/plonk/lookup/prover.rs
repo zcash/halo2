@@ -385,11 +385,8 @@ impl<C: CurveAffine> Permuted<C> {
 
             // l_last(X) * (z(X)^2 - z(X)) = 0
             // Assertion will fail only when soundness is broken, in which
-            // case this z[0] value will be zero. (bad!)
-            assert_eq!(
-                z[params.n as usize - 1 - blinding_factors],
-                C::Scalar::one()
-            );
+            // case this z[u] value will be zero. (bad!)
+            assert_eq!(z[u], C::Scalar::one());
         }
 
         let product_blind = Blind(C::Scalar::rand());

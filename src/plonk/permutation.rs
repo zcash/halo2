@@ -40,11 +40,11 @@ impl Argument {
         // )
         //
         // On the first sets of columns, except the first
-        // column, we will do
+        // set, we will do
         //
         // l_0(X) * (z(X) - z'(\omega^(last) X)) = 0
         //
-        // where z'(X) is the permutation for the last set
+        // where z'(X) is the permutation for the previous set
         // of columns.
         //
         // On the final set of columns, we will do
