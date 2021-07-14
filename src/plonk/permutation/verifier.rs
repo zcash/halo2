@@ -141,8 +141,6 @@ impl<C: CurveAffine> Evaluated<C> {
                             last_set.permutation_product_last_eval.unwrap(),
                         )
                     })
-                    .collect::<Vec<_>>()
-                    .into_iter()
                     .map(move |(set, prev_last)| (set - &prev_last) * &l_0),
             )
             // And for all the sets we enforce:
