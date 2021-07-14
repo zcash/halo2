@@ -444,15 +444,7 @@ impl<G: Group> EvaluationDomain<G> {
         let common = (xn - G::Scalar::one()) * self.barycentric_weight;
         for (rotation, result) in rotations.into_iter().zip(results.iter_mut()) {
             let rotation = Rotation(rotation);
-            *result *= common;
-
-            if rotation.0 >= 0 {
-                *result *= self.get_omega().pow_vartime(&[rotation.0 as u64]);
-            } else {
-                *result *= self
-                    .get_omega_inv()
-                    .pow_vartime(&[(rotation.0 as i64).abs() as u64]);
-            }
+            *result = self.rotate_omega(*result * common, rotation);
         }
 
         results
