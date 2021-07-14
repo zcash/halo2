@@ -186,6 +186,30 @@
 <span id="171">171</span>
 <span id="172">172</span>
 <span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Implementations of common circuit layouters.</span>
 
@@ -197,7 +221,7 @@
 
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Cell</span>, <span class="ident">RegionIndex</span>};
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::plonk::Assigned</span>;
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Column</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>, <span class="ident">Permutation</span>, <span class="ident">Selector</span>};
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Column</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>, <span class="ident">Instance</span>, <span class="ident">Selector</span>};
 
 <span class="doccomment">/// Helper trait for implementing a custom [`Layouter`].</span>
 <span class="doccomment">///</span>
@@ -247,6 +271,19 @@
         <span class="ident">to</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> (<span class="kw">dyn</span> <span class="ident">FnMut</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cell</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 
+    <span class="doccomment">/// Assign the value of the instance column&#39;s cell at absolute location</span>
+    <span class="doccomment">/// `row` to the column `advice` at `offset` within this region.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Returns the advice cell, and its value if known.</span>
+    <span class="kw">fn</span> <span class="ident">assign_advice_from_instance</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">annotation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
+        <span class="ident">instance</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>,
+        <span class="ident">row</span>: <span class="ident">usize</span>,
+        <span class="ident">advice</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+        <span class="ident">offset</span>: <span class="ident">usize</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Cell</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span>;
+
     <span class="doccomment">/// Assign a fixed value</span>
     <span class="kw">fn</span> <span class="ident">assign_fixed</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> <span class="self">self</span>,
@@ -259,12 +296,7 @@
     <span class="doccomment">/// Constraint two cells to have the same value.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if either of the cells is not within the given permutation.</span>
-    <span class="kw">fn</span> <span class="ident">constrain_equal</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">permutation</span>: <span class="kw-2">&amp;</span><span class="ident">Permutation</span>,
-        <span class="ident">left</span>: <span class="ident">Cell</span>,
-        <span class="ident">right</span>: <span class="ident">Cell</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">constrain_equal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">left</span>: <span class="ident">Cell</span>, <span class="ident">right</span>: <span class="ident">Cell</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
 }
 
 <span class="doccomment">/// The shape of a region. For a region at a certain index, we track</span>
@@ -333,6 +365,27 @@
         })
     }
 
+    <span class="kw">fn</span> <span class="ident">assign_advice_from_instance</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="kw">_</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
+        <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>,
+        <span class="kw">_</span>: <span class="ident">usize</span>,
+        <span class="ident">advice</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+        <span class="ident">offset</span>: <span class="ident">usize</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Cell</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">columns</span>.<span class="ident">insert</span>(<span class="ident">advice</span>.<span class="ident">into</span>());
+        <span class="self">self</span>.<span class="ident">row_count</span> <span class="op">=</span> <span class="ident">cmp::max</span>(<span class="self">self</span>.<span class="ident">row_count</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>);
+
+        <span class="prelude-val">Ok</span>((
+            <span class="ident">Cell</span> {
+                <span class="ident">region_index</span>: <span class="self">self</span>.<span class="ident">region_index</span>,
+                <span class="ident">row_offset</span>: <span class="ident">offset</span>,
+                <span class="ident">column</span>: <span class="ident">advice</span>.<span class="ident">into</span>(),
+            },
+            <span class="prelude-val">None</span>,
+        ))
+    }
+
     <span class="kw">fn</span> <span class="ident">assign_fixed</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="kw">_</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
@@ -350,12 +403,7 @@
         })
     }
 
-    <span class="kw">fn</span> <span class="ident">constrain_equal</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">_permutation</span>: <span class="kw-2">&amp;</span><span class="ident">Permutation</span>,
-        <span class="ident">_left</span>: <span class="ident">Cell</span>,
-        <span class="ident">_right</span>: <span class="ident">Cell</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">constrain_equal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_left</span>: <span class="ident">Cell</span>, <span class="ident">_right</span>: <span class="ident">Cell</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="comment">// Equality constraints don&#39;t affect the region shape.</span>
         <span class="prelude-val">Ok</span>(())
     }

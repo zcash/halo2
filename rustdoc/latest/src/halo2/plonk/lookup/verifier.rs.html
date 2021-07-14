@@ -223,6 +223,18 @@
 <span id="208">208</span>
 <span id="209">209</span>
 <span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">std::iter</span>;
 
@@ -251,7 +263,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Evaluated</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
     <span class="ident">committed</span>: <span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
     <span class="ident">product_eval</span>: <span class="ident">C::Scalar</span>,
-    <span class="ident">product_inv_eval</span>: <span class="ident">C::Scalar</span>,
+    <span class="ident">product_next_eval</span>: <span class="ident">C::Scalar</span>,
     <span class="ident">permuted_input_eval</span>: <span class="ident">C::Scalar</span>,
     <span class="ident">permuted_input_inv_eval</span>: <span class="ident">C::Scalar</span>,
     <span class="ident">permuted_table_eval</span>: <span class="ident">C::Scalar</span>,
@@ -307,7 +319,7 @@
         <span class="kw">let</span> <span class="ident">product_eval</span> <span class="op">=</span> <span class="ident">transcript</span>
             .<span class="ident">read_scalar</span>()
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Error::TranscriptError</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">product_inv_eval</span> <span class="op">=</span> <span class="ident">transcript</span>
+        <span class="kw">let</span> <span class="ident">product_next_eval</span> <span class="op">=</span> <span class="ident">transcript</span>
             .<span class="ident">read_scalar</span>()
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Error::TranscriptError</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">permuted_input_eval</span> <span class="op">=</span> <span class="ident">transcript</span>
@@ -323,7 +335,7 @@
         <span class="prelude-val">Ok</span>(<span class="ident">Evaluated</span> {
             <span class="ident">committed</span>: <span class="self">self</span>,
             <span class="ident">product_eval</span>,
-            <span class="ident">product_inv_eval</span>,
+            <span class="ident">product_next_eval</span>,
             <span class="ident">permuted_input_eval</span>,
             <span class="ident">permuted_input_inv_eval</span>,
             <span class="ident">permuted_table_eval</span>,
@@ -335,6 +347,8 @@
     <span class="kw">pub</span>(<span class="kw">in</span> <span class="kw">crate</span><span class="ident">::plonk</span>) <span class="kw">fn</span> <span class="ident">expressions</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>,
         <span class="ident">l_0</span>: <span class="ident">C::Scalar</span>,
+        <span class="ident">l_last</span>: <span class="ident">C::Scalar</span>,
+        <span class="ident">l_blind</span>: <span class="ident">C::Scalar</span>,
         <span class="ident">argument</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Argument</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
         <span class="ident">theta</span>: <span class="ident">ChallengeTheta</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
         <span class="ident">beta</span>: <span class="ident">ChallengeBeta</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
@@ -343,10 +357,12 @@
         <span class="ident">fixed_evals</span>: <span class="kw-2">&amp;</span>[<span class="ident">C::Scalar</span>],
         <span class="ident">instance_evals</span>: <span class="kw-2">&amp;</span>[<span class="ident">C::Scalar</span>],
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">C::Scalar</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span> {
+        <span class="kw">let</span> <span class="ident">active_rows</span> <span class="op">=</span> <span class="ident">C::Scalar::one</span>() <span class="op">-</span> (<span class="ident">l_last</span> <span class="op">+</span> <span class="ident">l_blind</span>);
+
         <span class="kw">let</span> <span class="ident">product_expression</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> {
-            <span class="comment">// z&#39;(X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)</span>
-            <span class="comment">// - z&#39;(\omega^{-1} X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)</span>
-            <span class="kw">let</span> <span class="ident">left</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">product_eval</span>
+            <span class="comment">// z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)</span>
+            <span class="comment">// - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)</span>
+            <span class="kw">let</span> <span class="ident">left</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">product_next_eval</span>
                 <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="self">self</span>.<span class="ident">permuted_input_eval</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">beta</span>)
                 <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="self">self</span>.<span class="ident">permuted_table_eval</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">gamma</span>);
 
@@ -366,11 +382,11 @@
                     })
                     .<span class="ident">fold</span>(<span class="ident">C::Scalar::zero</span>(), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">eval</span><span class="op">|</span> <span class="ident">acc</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">theta</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">eval</span>)
             };
-            <span class="kw">let</span> <span class="ident">right</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">product_inv_eval</span>
+            <span class="kw">let</span> <span class="ident">right</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">product_eval</span>
                 <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="ident">compress_expressions</span>(<span class="kw-2">&amp;</span><span class="ident">argument</span>.<span class="ident">input_expressions</span>) <span class="op">+</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">beta</span>)
                 <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="ident">compress_expressions</span>(<span class="kw-2">&amp;</span><span class="ident">argument</span>.<span class="ident">table_expressions</span>) <span class="op">+</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">gamma</span>);
 
-            <span class="ident">left</span> <span class="op">-</span> <span class="kw-2">&amp;</span><span class="ident">right</span>
+            (<span class="ident">left</span> <span class="op">-</span> <span class="kw-2">&amp;</span><span class="ident">right</span>) <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">active_rows</span>
         };
 
         <span class="ident">std::iter::empty</span>()
@@ -379,8 +395,14 @@
                 <span class="prelude-val">Some</span>(<span class="ident">l_0</span> <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="ident">C::Scalar::one</span>() <span class="op">-</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">product_eval</span>)),
             )
             .<span class="ident">chain</span>(
-                <span class="comment">// z&#39;(X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)</span>
-                <span class="comment">// - z&#39;(\omega^{-1} X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)</span>
+                <span class="comment">// l_last(X) * (z(X)^2 - z(X)) = 0</span>
+                <span class="prelude-val">Some</span>(<span class="ident">l_last</span> <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="self">self</span>.<span class="ident">product_eval</span>.<span class="ident">square</span>() <span class="op">-</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">product_eval</span>)),
+            )
+            .<span class="ident">chain</span>(
+                <span class="comment">// (1 - (l_last(X) + l_blind(X))) * (</span>
+                <span class="comment">//   z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)</span>
+                <span class="comment">//   - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)</span>
+                <span class="comment">// ) = 0</span>
                 <span class="prelude-val">Some</span>(<span class="ident">product_expression</span>()),
             )
             .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(
@@ -388,50 +410,52 @@
                 <span class="ident">l_0</span> <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="self">self</span>.<span class="ident">permuted_input_eval</span> <span class="op">-</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permuted_table_eval</span>),
             ))
             .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(
-                <span class="comment">// (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0</span>
+                <span class="comment">// (1 - (l_last(X) + l_blind(X))) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0</span>
                 (<span class="self">self</span>.<span class="ident">permuted_input_eval</span> <span class="op">-</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permuted_table_eval</span>)
-                    <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="self">self</span>.<span class="ident">permuted_input_eval</span> <span class="op">-</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permuted_input_inv_eval</span>),
+                    <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="self">self</span>.<span class="ident">permuted_input_eval</span> <span class="op">-</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permuted_input_inv_eval</span>)
+                    <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">active_rows</span>,
             ))
     }
 
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="kw">crate</span><span class="ident">::plonk</span>) <span class="kw">fn</span> <span class="ident">queries</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>,
-        <span class="ident">vk</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">in</span> <span class="kw">crate</span><span class="ident">::plonk</span>) <span class="kw">fn</span> <span class="ident">queries</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="self">self</span>,
+        <span class="ident">vk</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="ident">VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
         <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> {
-        <span class="kw">let</span> <span class="ident">x_inv</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">rotate_omega</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">Rotation</span>(<span class="op">-</span><span class="number">1</span>));
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> {
+        <span class="kw">let</span> <span class="ident">x_inv</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">rotate_omega</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">Rotation::prev</span>());
+        <span class="kw">let</span> <span class="ident">x_next</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">rotate_omega</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">Rotation::next</span>());
 
         <span class="ident">iter::empty</span>()
-            <span class="comment">// Open lookup product commitments at x</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">VerifierQuery</span> {
-                <span class="ident">point</span>: <span class="kw-2">*</span><span class="ident">x</span>,
-                <span class="ident">commitment</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">committed</span>.<span class="ident">product_commitment</span>,
-                <span class="ident">eval</span>: <span class="self">self</span>.<span class="ident">product_eval</span>,
-            }))
+            <span class="comment">// Open lookup product commitment at x</span>
+            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">VerifierQuery::new_commitment</span>(
+                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">committed</span>.<span class="ident">product_commitment</span>,
+                <span class="kw-2">*</span><span class="ident">x</span>,
+                <span class="self">self</span>.<span class="ident">product_eval</span>,
+            )))
             <span class="comment">// Open lookup input commitments at x</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">VerifierQuery</span> {
-                <span class="ident">point</span>: <span class="kw-2">*</span><span class="ident">x</span>,
-                <span class="ident">commitment</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">committed</span>.<span class="ident">permuted</span>.<span class="ident">permuted_input_commitment</span>,
-                <span class="ident">eval</span>: <span class="self">self</span>.<span class="ident">permuted_input_eval</span>,
-            }))
+            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">VerifierQuery::new_commitment</span>(
+                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">committed</span>.<span class="ident">permuted</span>.<span class="ident">permuted_input_commitment</span>,
+                <span class="kw-2">*</span><span class="ident">x</span>,
+                <span class="self">self</span>.<span class="ident">permuted_input_eval</span>,
+            )))
             <span class="comment">// Open lookup table commitments at x</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">VerifierQuery</span> {
-                <span class="ident">point</span>: <span class="kw-2">*</span><span class="ident">x</span>,
-                <span class="ident">commitment</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">committed</span>.<span class="ident">permuted</span>.<span class="ident">permuted_table_commitment</span>,
-                <span class="ident">eval</span>: <span class="self">self</span>.<span class="ident">permuted_table_eval</span>,
-            }))
+            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">VerifierQuery::new_commitment</span>(
+                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">committed</span>.<span class="ident">permuted</span>.<span class="ident">permuted_table_commitment</span>,
+                <span class="kw-2">*</span><span class="ident">x</span>,
+                <span class="self">self</span>.<span class="ident">permuted_table_eval</span>,
+            )))
             <span class="comment">// Open lookup input commitments at \omega^{-1} x</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">VerifierQuery</span> {
-                <span class="ident">point</span>: <span class="ident">x_inv</span>,
-                <span class="ident">commitment</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">committed</span>.<span class="ident">permuted</span>.<span class="ident">permuted_input_commitment</span>,
-                <span class="ident">eval</span>: <span class="self">self</span>.<span class="ident">permuted_input_inv_eval</span>,
-            }))
-            <span class="comment">// Open lookup product commitments at \omega^{-1} x</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">VerifierQuery</span> {
-                <span class="ident">point</span>: <span class="ident">x_inv</span>,
-                <span class="ident">commitment</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">committed</span>.<span class="ident">product_commitment</span>,
-                <span class="ident">eval</span>: <span class="self">self</span>.<span class="ident">product_inv_eval</span>,
-            }))
+            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">VerifierQuery::new_commitment</span>(
+                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">committed</span>.<span class="ident">permuted</span>.<span class="ident">permuted_input_commitment</span>,
+                <span class="ident">x_inv</span>,
+                <span class="self">self</span>.<span class="ident">permuted_input_inv_eval</span>,
+            )))
+            <span class="comment">// Open lookup product commitment at \omega x</span>
+            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">VerifierQuery::new_commitment</span>(
+                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">committed</span>.<span class="ident">product_commitment</span>,
+                <span class="ident">x_next</span>,
+                <span class="self">self</span>.<span class="ident">product_next_eval</span>,
+            )))
     }
 }
 </pre></div>

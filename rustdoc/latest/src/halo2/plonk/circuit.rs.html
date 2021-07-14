@@ -1183,6 +1183,28 @@
 <span id="1168">1168</span>
 <span id="1169">1169</span>
 <span id="1170">1170</span>
+<span id="1171">1171</span>
+<span id="1172">1172</span>
+<span id="1173">1173</span>
+<span id="1174">1174</span>
+<span id="1175">1175</span>
+<span id="1176">1176</span>
+<span id="1177">1177</span>
+<span id="1178">1178</span>
+<span id="1179">1179</span>
+<span id="1180">1180</span>
+<span id="1181">1181</span>
+<span id="1182">1182</span>
+<span id="1183">1183</span>
+<span id="1184">1184</span>
+<span id="1185">1185</span>
+<span id="1186">1186</span>
+<span id="1187">1187</span>
+<span id="1188">1188</span>
+<span id="1189">1189</span>
+<span id="1190">1190</span>
+<span id="1191">1191</span>
+<span id="1192">1192</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">core::cmp::max</span>;
 <span class="kw">use</span> <span class="ident">core::ops</span>::{<span class="ident">Add</span>, <span class="ident">Mul</span>};
@@ -1423,32 +1445,6 @@
     }
 }
 
-<span class="doccomment">/// A permutation.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Permutation</span> {
-    <span class="doccomment">/// The index of this permutation.</span>
-    <span class="ident">index</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// The mapping between columns involved in this permutation.</span>
-    <span class="ident">mapping</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">Permutation</span> {
-    <span class="doccomment">/// Configures a new permutation for the given columns.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">columns</span>: <span class="kw-2">&amp;</span>[<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">meta</span>.<span class="ident">permutation</span>(<span class="ident">columns</span>)
-    }
-
-    <span class="doccomment">/// Returns index of permutation</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">index</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
-        <span class="self">self</span>.<span class="ident">index</span>
-    }
-
-    <span class="doccomment">/// Returns mapping of permutation</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mapping</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span>[<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>] {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">mapping</span>
-    }
-}
-
 <span class="doccomment">/// A value assigned to a cell within a circuit.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Stored as a fraction, so the backend can use batch inversion.</span>
@@ -1640,6 +1636,11 @@
         <span class="ident">A</span>: <span class="ident">FnOnce</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>;
 
+    <span class="doccomment">/// Queries the cell of an instance column at a particular absolute row.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Returns the cell&#39;s value, if known.</span>
+    <span class="kw">fn</span> <span class="ident">query_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="ident">row</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+
     <span class="doccomment">/// Assign an advice column value (witness)</span>
     <span class="kw">fn</span> <span class="ident">assign_advice</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">VR</span>, <span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
@@ -1671,7 +1672,6 @@
     <span class="doccomment">/// Assign two cells to have the same value</span>
     <span class="kw">fn</span> <span class="ident">copy</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">permutation</span>: <span class="kw-2">&amp;</span><span class="ident">Permutation</span>,
         <span class="ident">left_column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>,
         <span class="ident">left_row</span>: <span class="ident">usize</span>,
         <span class="ident">right_column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>,
@@ -1978,16 +1978,21 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">num_instance_columns</span>: <span class="ident">usize</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">gates</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Gate</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">advice_queries</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>, <span class="ident">Rotation</span>)<span class="op">&gt;</span>,
+    <span class="comment">// Contains an integer for each advice column</span>
+    <span class="comment">// identifying how many distinct queries it has</span>
+    <span class="comment">// so far; should be same length as num_advice_columns.</span>
+    <span class="ident">num_advice_queries</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">instance_queries</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="ident">Rotation</span>)<span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">fixed_queries</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>, <span class="ident">Rotation</span>)<span class="op">&gt;</span>,
 
-    <span class="comment">// Vector of permutation arguments, where each corresponds to a sequence of columns</span>
-    <span class="comment">// that are involved in a permutation argument.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">permutations</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">permutation::Argument</span><span class="op">&gt;</span>,
+    <span class="comment">// Permutation argument for performing equality constraints</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">permutation</span>: <span class="ident">permutation::Argument</span>,
 
     <span class="comment">// Vector of lookup arguments, where each corresponds to a sequence of</span>
     <span class="comment">// input expressions and a sequence of table expressions involved in the lookup.</span>
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">lookups</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">lookup::Argument</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">minimum_degree</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// Represents the minimal parameters that determine a `ConstraintSystem`.</span>
@@ -2000,8 +2005,9 @@
     <span class="ident">advice_queries</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>, <span class="ident">Rotation</span>)<span class="op">&gt;</span>,
     <span class="ident">instance_queries</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="ident">Rotation</span>)<span class="op">&gt;</span>,
     <span class="ident">fixed_queries</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>, <span class="ident">Rotation</span>)<span class="op">&gt;</span>,
-    <span class="ident">permutations</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">permutation::Argument</span><span class="op">&gt;</span>,
+    <span class="ident">permutation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">permutation::Argument</span>,
     <span class="ident">lookups</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">lookup::Argument</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">minimum_degree</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">struct</span> <span class="ident">PinnedGates</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Gate</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>);
@@ -2023,9 +2029,11 @@
             <span class="ident">gates</span>: <span class="macro">vec!</span>[],
             <span class="ident">fixed_queries</span>: <span class="ident">Vec::new</span>(),
             <span class="ident">advice_queries</span>: <span class="ident">Vec::new</span>(),
+            <span class="ident">num_advice_queries</span>: <span class="ident">Vec::new</span>(),
             <span class="ident">instance_queries</span>: <span class="ident">Vec::new</span>(),
-            <span class="ident">permutations</span>: <span class="ident">Vec::new</span>(),
+            <span class="ident">permutation</span>: <span class="ident">permutation::Argument::new</span>(),
             <span class="ident">lookups</span>: <span class="ident">Vec::new</span>(),
+            <span class="ident">minimum_degree</span>: <span class="prelude-val">None</span>,
         }
     }
 }
@@ -2043,25 +2051,16 @@
             <span class="ident">fixed_queries</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">fixed_queries</span>,
             <span class="ident">advice_queries</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">advice_queries</span>,
             <span class="ident">instance_queries</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">instance_queries</span>,
-            <span class="ident">permutations</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permutations</span>,
+            <span class="ident">permutation</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permutation</span>,
             <span class="ident">lookups</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookups</span>,
+            <span class="ident">minimum_degree</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">minimum_degree</span>,
         }
     }
 
-    <span class="doccomment">/// Add a permutation argument for some columns</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">permutation</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">columns</span>: <span class="kw-2">&amp;</span>[<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Permutation</span> {
-        <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">permutations</span>.<span class="ident">len</span>();
-
-        <span class="kw">for</span> <span class="ident">column</span> <span class="kw">in</span> <span class="ident">columns</span> {
-            <span class="self">self</span>.<span class="ident">query_any_index</span>(<span class="kw-2">*</span><span class="ident">column</span>, <span class="ident">Rotation::cur</span>());
-        }
-        <span class="self">self</span>.<span class="ident">permutations</span>
-            .<span class="ident">push</span>(<span class="ident">permutation::Argument::new</span>(<span class="ident">columns</span>.<span class="ident">to_vec</span>()));
-
-        <span class="ident">Permutation</span> {
-            <span class="ident">index</span>,
-            <span class="ident">mapping</span>: <span class="ident">columns</span>.<span class="ident">to_vec</span>(),
-        }
+    <span class="doccomment">/// Enable the ability to enforce equality over cells in this column</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">enable_equality</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>) {
+        <span class="self">self</span>.<span class="ident">query_any_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>());
+        <span class="self">self</span>.<span class="ident">permutation</span>.<span class="ident">add_column</span>(<span class="ident">column</span>);
     }
 
     <span class="doccomment">/// Add a lookup argument for some input expressions and table expressions.</span>
@@ -2108,6 +2107,7 @@
         <span class="comment">// Make a new query</span>
         <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">advice_queries</span>.<span class="ident">len</span>();
         <span class="self">self</span>.<span class="ident">advice_queries</span>.<span class="ident">push</span>((<span class="ident">column</span>, <span class="ident">at</span>));
+        <span class="self">self</span>.<span class="ident">num_advice_queries</span>[<span class="ident">column</span>.<span class="ident">index</span>] <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
 
         <span class="ident">index</span>
     }
@@ -2181,6 +2181,13 @@
         }
     }
 
+    <span class="doccomment">/// Sets the minimum degree required by the circuit, which can be set to a</span>
+    <span class="doccomment">/// larger amount than actually needed. This can be used, for example, to</span>
+    <span class="doccomment">/// force the permutation argument to involve more columns in the same set.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_minimum_degree</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">degree</span>: <span class="ident">usize</span>) {
+        <span class="self">self</span>.<span class="ident">minimum_degree</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">degree</span>);
+    }
+
     <span class="doccomment">/// Creates a new gate.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Panics</span>
@@ -2241,6 +2248,7 @@
             <span class="ident">column_type</span>: <span class="ident">Advice</span>,
         };
         <span class="self">self</span>.<span class="ident">num_advice_columns</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+        <span class="self">self</span>.<span class="ident">num_advice_queries</span>.<span class="ident">push</span>(<span class="number">0</span>);
         <span class="ident">tmp</span>
     }
 
@@ -2259,12 +2267,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">degree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
         <span class="comment">// The permutation argument will serve alongside the gates, so must be</span>
         <span class="comment">// accounted for.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">degree</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">permutations</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>.<span class="ident">required_degree</span>())
-            .<span class="ident">max</span>()
-            .<span class="ident">unwrap_or</span>(<span class="number">1</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">degree</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">permutation</span>.<span class="ident">required_degree</span>();
 
         <span class="comment">// The lookup argument also serves alongside the gates and must be accounted</span>
         <span class="comment">// for.</span>
@@ -2288,7 +2291,48 @@
                 .<span class="ident">unwrap_or</span>(<span class="number">0</span>),
         );
 
-        <span class="ident">degree</span>
+        <span class="ident">std::cmp::max</span>(<span class="ident">degree</span>, <span class="self">self</span>.<span class="ident">minimum_degree</span>.<span class="ident">unwrap_or</span>(<span class="number">1</span>))
+    }
+
+    <span class="doccomment">/// Compute the number of blinding factors necessary to perfectly blind</span>
+    <span class="doccomment">/// each of the prover&#39;s witness polynomials.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">blinding_factors</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
+        <span class="comment">// All of the prover&#39;s advice columns are evaluated at no more than</span>
+        <span class="kw">let</span> <span class="ident">factors</span> <span class="op">=</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">num_advice_queries</span>.<span class="ident">iter</span>().<span class="ident">max</span>().<span class="ident">unwrap_or</span>(<span class="kw-2">&amp;</span><span class="number">1</span>);
+        <span class="comment">// distinct points during gate checks.</span>
+
+        <span class="comment">// - The permutation argument witness polynomials are evaluated at most 3 times.</span>
+        <span class="comment">// - Each lookup argument has independent witness polynomials, and they are</span>
+        <span class="comment">//   evaluated at most 2 times.</span>
+        <span class="kw">let</span> <span class="ident">factors</span> <span class="op">=</span> <span class="ident">std::cmp::max</span>(<span class="number">3</span>, <span class="ident">factors</span>);
+
+        <span class="comment">// Each polynomial is evaluated at most an additional time during</span>
+        <span class="comment">// multiopen (at x_3 to produce q_evals):</span>
+        <span class="kw">let</span> <span class="ident">factors</span> <span class="op">=</span> <span class="ident">factors</span> <span class="op">+</span> <span class="number">1</span>;
+
+        <span class="comment">// h(x) is derived by the other evaluations so it does not reveal</span>
+        <span class="comment">// anything; in fact it does not even appear in the proof.</span>
+
+        <span class="comment">// h(x_3) is also not revealed; the verifier only learns a single</span>
+        <span class="comment">// evaluation of a polynomial in x_1 which has h(x_3) and another random</span>
+        <span class="comment">// polynomial evaluated at x_3 as coefficients -- this random polynomial</span>
+        <span class="comment">// is &quot;random_poly&quot; in the vanishing argument.</span>
+
+        <span class="comment">// Add an additional blinding factor as a slight defense against</span>
+        <span class="comment">// off-by-one errors.</span>
+        <span class="ident">factors</span> <span class="op">+</span> <span class="number">1</span>
+    }
+
+    <span class="doccomment">/// Returns the minimum necessary rows that need to exist in order to</span>
+    <span class="doccomment">/// account for e.g. blinding factors.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">minimum_rows</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
+        <span class="self">self</span>.<span class="ident">blinding_factors</span>() <span class="comment">// m blinding factors</span>
+            <span class="op">+</span> <span class="number">1</span> <span class="comment">// for l_{-(m + 1)} (l_last)</span>
+            <span class="op">+</span> <span class="number">1</span> <span class="comment">// for l_0 (just for extra breathing room for the permutation</span>
+                <span class="comment">// argument, to essentially force a separation in the</span>
+                <span class="comment">// permutation polynomial between the roles of l_last, l_0</span>
+                <span class="comment">// and the interstitial values.)</span>
+            <span class="op">+</span> <span class="number">1</span> <span class="comment">// for at least one row</span>
     }
 }
 

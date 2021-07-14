@@ -64,6 +64,27 @@
 <span id="49">49</span>
 <span id="50">50</span>
 <span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="kw">super</span><span class="ident">::circuit::Expression</span>;
 <span class="kw">use</span> <span class="ident">ff::Field</span>;
@@ -92,18 +113,30 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">required_degree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
         <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">input_expressions</span>.<span class="ident">len</span>(), <span class="self">self</span>.<span class="ident">table_expressions</span>.<span class="ident">len</span>());
 
+        <span class="comment">// The first value in the permutation poly should be one.</span>
         <span class="comment">// degree 2:</span>
-        <span class="comment">// l_0(X) * (1 - z&#39;(X)) = 0</span>
+        <span class="comment">// l_0(X) * (1 - z(X)) = 0</span>
         <span class="comment">//</span>
-        <span class="comment">// degree (1 + input_degree + table_degree):</span>
-        <span class="comment">// z&#39;(X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)</span>
-        <span class="comment">// - z&#39;(\omega^{-1} X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)</span>
+        <span class="comment">// The &quot;last&quot; value in the permutation poly should be a boolean, for</span>
+        <span class="comment">// completeness and soundness.</span>
+        <span class="comment">// degree 3:</span>
+        <span class="comment">// l_last(X) * (z(X)^2 - z(X)) = 0</span>
         <span class="comment">//</span>
+        <span class="comment">// Enable the permutation argument for only the rows involved.</span>
+        <span class="comment">// degree (2 + input_degree + table_degree) or 4, whichever is larger:</span>
+        <span class="comment">// (1 - (l_last(X) + l_blind(X))) * (</span>
+        <span class="comment">//   z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)</span>
+        <span class="comment">//   - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)</span>
+        <span class="comment">// ) = 0</span>
+        <span class="comment">//</span>
+        <span class="comment">// The first two values of a&#39; and s&#39; should be the same.</span>
         <span class="comment">// degree 2:</span>
         <span class="comment">// l_0(X) * (a&#39;(X) - s&#39;(X)) = 0</span>
         <span class="comment">//</span>
-        <span class="comment">// degree 2:</span>
-        <span class="comment">// (a′(X)−s′(X))⋅(a′(X)−a′(\omega{-1} X)) = 0</span>
+        <span class="comment">// Either the two values are the same, or the previous</span>
+        <span class="comment">// value of a&#39; is the same as the current value.</span>
+        <span class="comment">// degree 3:</span>
+        <span class="comment">// (1 - (l_last(X) + l_blind(X))) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">input_degree</span> <span class="op">=</span> <span class="number">1</span>;
         <span class="kw">for</span> <span class="ident">expr</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">input_expressions</span>.<span class="ident">iter</span>() {
             <span class="ident">input_degree</span> <span class="op">=</span> <span class="ident">std::cmp::max</span>(<span class="ident">input_degree</span>, <span class="ident">expr</span>.<span class="ident">degree</span>());
@@ -113,7 +146,16 @@
             <span class="ident">table_degree</span> <span class="op">=</span> <span class="ident">std::cmp::max</span>(<span class="ident">table_degree</span>, <span class="ident">expr</span>.<span class="ident">degree</span>());
         }
 
-        <span class="number">1</span> <span class="op">+</span> <span class="ident">input_degree</span> <span class="op">+</span> <span class="ident">table_degree</span>
+        <span class="comment">// In practice because input_degree and table_degree are initialized to</span>
+        <span class="comment">// one, the latter half of this max() invocation is at least 4 always,</span>
+        <span class="comment">// rendering this call pointless except to be explicit in case we change</span>
+        <span class="comment">// the initialization of input_degree/table_degree in the future.</span>
+        <span class="ident">std::cmp::max</span>(
+            <span class="comment">// (1 - (l_last + l_blind)) z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)</span>
+            <span class="number">4</span>,
+            <span class="comment">// (1 - (l_last + l_blind)) z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)</span>
+            <span class="number">2</span> <span class="op">+</span> <span class="ident">input_degree</span> <span class="op">+</span> <span class="ident">table_degree</span>,
+        )
     }
 }
 </pre></div>

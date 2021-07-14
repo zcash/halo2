@@ -204,7 +204,6 @@
 <span id="189">189</span>
 <span id="190">190</span>
 <span id="191">191</span>
-<span id="192">192</span>
 </pre><pre class="rust">
 <span class="doccomment">//! This module provides an implementation of a variant of (Turbo)[PLONK][plonk]</span>
 <span class="doccomment">//! that is designed specifically for the polynomial commitment scheme described</span>
@@ -244,7 +243,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
     <span class="ident">domain</span>: <span class="ident">EvaluationDomain</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
     <span class="ident">fixed_commitments</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="ident">permutations</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">permutation::VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">permutation</span>: <span class="ident">permutation::VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
     <span class="ident">cs</span>: <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
 }
 
@@ -254,9 +253,7 @@
         <span class="kw">for</span> <span class="ident">commitment</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">fixed_commitments</span> {
             <span class="ident">writer</span>.<span class="ident">write_all</span>(<span class="ident">commitment</span>.<span class="ident">to_bytes</span>().<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
         }
-        <span class="kw">for</span> <span class="ident">permutation</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permutations</span> {
-            <span class="ident">permutation</span>.<span class="ident">write</span>(<span class="ident">writer</span>)<span class="question-mark">?</span>;
-        }
+        <span class="self">self</span>.<span class="ident">permutation</span>.<span class="ident">write</span>(<span class="ident">writer</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
@@ -272,16 +269,12 @@
             .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">C::read</span>(<span class="ident">reader</span>))
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">permutations</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">cs</span>
-            .<span class="ident">permutations</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">argument</span><span class="op">|</span> <span class="ident">permutation::VerifyingKey::read</span>(<span class="ident">reader</span>, <span class="ident">argument</span>))
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">permutation</span> <span class="op">=</span> <span class="ident">permutation::VerifyingKey::read</span>(<span class="ident">reader</span>, <span class="kw-2">&amp;</span><span class="ident">cs</span>.<span class="ident">permutation</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">VerifyingKey</span> {
             <span class="ident">domain</span>,
             <span class="ident">fixed_commitments</span>,
-            <span class="ident">permutations</span>,
+            <span class="ident">permutation</span>,
             <span class="ident">cs</span>,
         })
     }
@@ -315,7 +308,7 @@
             <span class="ident">scalar_modulus</span>: <span class="ident">C::Scalar::MODULUS</span>,
             <span class="ident">domain</span>: <span class="self">self</span>.<span class="ident">domain</span>.<span class="ident">pinned</span>(),
             <span class="ident">fixed_commitments</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">fixed_commitments</span>,
-            <span class="ident">permutations</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permutations</span>,
+            <span class="ident">permutation</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permutation</span>,
             <span class="ident">cs</span>: <span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">pinned</span>(),
         }
     }
@@ -330,19 +323,20 @@
     <span class="ident">domain</span>: <span class="ident">PinnedEvaluationDomain</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C::Scalar</span><span class="op">&gt;</span>,
     <span class="ident">cs</span>: <span class="ident">PinnedConstraintSystem</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C::Scalar</span><span class="op">&gt;</span>,
     <span class="ident">fixed_commitments</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="ident">permutations</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">permutation::VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">permutation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">permutation::VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
 }
 <span class="doccomment">/// This is a proving key which allows for the creation of proofs for a</span>
 <span class="doccomment">/// particular circuit.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
     <span class="ident">vk</span>: <span class="ident">VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="comment">// TODO: get rid of this?</span>
     <span class="ident">l0</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
+    <span class="ident">l_blind</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
+    <span class="ident">l_last</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
     <span class="ident">fixed_values</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">fixed_polys</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">Coeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">fixed_cosets</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">permutations</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">permutation::ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">permutation</span>: <span class="ident">permutation::ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// This is an error that could occur during proving or circuit synthesis.</span>
@@ -363,6 +357,10 @@
     <span class="ident">OpeningError</span>,
     <span class="doccomment">/// Transcript error</span>
     <span class="ident">TranscriptError</span>,
+    <span class="doccomment">/// Instance provided has more rows than supported by circuit</span>
+    <span class="ident">NotEnoughRowsAvailable</span>,
+    <span class="doccomment">/// Instance provided exceeds number of available rows</span>
+    <span class="ident">InstanceTooLarge</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {

@@ -447,7 +447,7 @@
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">batch_invert_assigned</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(
-    <span class="ident">assigned</span>: <span class="kw-2">&amp;</span>[<span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>],
+    <span class="ident">assigned</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">assigned_denominators</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">assigned</span>
         .<span class="ident">iter</span>()

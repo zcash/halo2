@@ -164,9 +164,6 @@
 <span id="149">149</span>
 <span id="150">150</span>
 <span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">ff::Field</span>;
 
@@ -175,8 +172,8 @@
     <span class="ident">Error</span>,
 };
 <span class="kw">use</span> <span class="kw">super</span>::{
-    <span class="ident">construct_intermediate_sets</span>, <span class="ident">ChallengeX1</span>, <span class="ident">ChallengeX2</span>, <span class="ident">ChallengeX3</span>, <span class="ident">ChallengeX4</span>, <span class="ident">Query</span>,
-    <span class="ident">VerifierQuery</span>,
+    <span class="ident">construct_intermediate_sets</span>, <span class="ident">ChallengeX1</span>, <span class="ident">ChallengeX2</span>, <span class="ident">ChallengeX3</span>, <span class="ident">ChallengeX4</span>,
+    <span class="ident">CommitmentReference</span>, <span class="ident">Query</span>, <span class="ident">VerifierQuery</span>,
 };
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::arithmetic</span>::{<span class="ident">eval_polynomial</span>, <span class="ident">lagrange_interpolate</span>, <span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>};
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::transcript</span>::{<span class="ident">EncodedChallenge</span>, <span class="ident">TranscriptRead</span>};
@@ -189,20 +186,20 @@
 
 <span class="doccomment">/// Verify a multi-opening proof</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_proof</span><span class="op">&lt;</span>
-    <span class="lifetime">&#39;b</span>,
-    <span class="lifetime">&#39;a</span>: <span class="lifetime">&#39;b</span>,
+    <span class="lifetime">&#39;r</span>,
+    <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span>,
     <span class="ident">I</span>,
     <span class="ident">C</span>: <span class="ident">CurveAffine</span>,
     <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
     <span class="ident">T</span>: <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>,
 <span class="op">&gt;</span>(
-    <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
+    <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params</span> <span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
     <span class="ident">transcript</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>,
     <span class="ident">queries</span>: <span class="ident">I</span>,
-    <span class="kw-2">mut</span> <span class="ident">msm</span>: <span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Guard</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>
+    <span class="kw-2">mut</span> <span class="ident">msm</span>: <span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Guard</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;b</span>, <span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>,
+    <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>,
 {
     <span class="comment">// Scale the MSM by a random factor to ensure that if the existing MSM</span>
     <span class="comment">// has is_zero() == false then this argument won&#39;t be able to interfere</span>
@@ -231,7 +228,14 @@
     {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">accumulate</span> <span class="op">=</span> <span class="op">|</span><span class="ident">set_idx</span>: <span class="ident">usize</span>, <span class="ident">new_commitment</span>, <span class="ident">evals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span><span class="op">|</span> {
             <span class="ident">q_commitments</span>[<span class="ident">set_idx</span>].<span class="ident">scale</span>(<span class="kw-2">*</span><span class="ident">x_1</span>);
-            <span class="ident">q_commitments</span>[<span class="ident">set_idx</span>].<span class="ident">append_term</span>(<span class="ident">C::Scalar::one</span>(), <span class="ident">new_commitment</span>);
+            <span class="kw">match</span> <span class="ident">new_commitment</span> {
+                <span class="ident">CommitmentReference::Commitment</span>(<span class="ident">c</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">q_commitments</span>[<span class="ident">set_idx</span>].<span class="ident">append_term</span>(<span class="ident">C::Scalar::one</span>(), <span class="kw-2">*</span><span class="ident">c</span>);
+                }
+                <span class="ident">CommitmentReference::MSM</span>(<span class="ident">msm</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">q_commitments</span>[<span class="ident">set_idx</span>].<span class="ident">add_msm</span>(<span class="ident">msm</span>);
+                }
+            }
             <span class="kw">for</span> (<span class="ident">eval</span>, <span class="ident">set_eval</span>) <span class="kw">in</span> <span class="ident">evals</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">q_eval_sets</span>[<span class="ident">set_idx</span>].<span class="ident">iter_mut</span>()) {
                 <span class="kw-2">*</span><span class="ident">set_eval</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="kw-2">*</span><span class="ident">x_1</span>);
                 <span class="kw-2">*</span><span class="ident">set_eval</span> <span class="op">+</span><span class="op">=</span> <span class="ident">eval</span>;
@@ -242,9 +246,9 @@
         <span class="comment">// For each set, we collapse each commitment&#39;s evals pointwise.</span>
         <span class="kw">for</span> <span class="ident">commitment_data</span> <span class="kw">in</span> <span class="ident">commitment_map</span>.<span class="ident">into_iter</span>() {
             <span class="ident">accumulate</span>(
-                <span class="ident">commitment_data</span>.<span class="ident">set_index</span>,     <span class="comment">// set_idx,</span>
-                <span class="kw-2">*</span><span class="ident">commitment_data</span>.<span class="ident">commitment</span>.<span class="number">0</span>, <span class="comment">// commitment,</span>
-                <span class="ident">commitment_data</span>.<span class="ident">evals</span>,         <span class="comment">// evals</span>
+                <span class="ident">commitment_data</span>.<span class="ident">set_index</span>,  <span class="comment">// set_idx,</span>
+                <span class="ident">commitment_data</span>.<span class="ident">commitment</span>, <span class="comment">// commitment,</span>
+                <span class="ident">commitment_data</span>.<span class="ident">evals</span>,      <span class="comment">// evals</span>
             );
         }
     }
@@ -298,18 +302,8 @@
     <span class="kw">super</span><span class="ident">::commitment::verify_proof</span>(<span class="ident">params</span>, <span class="ident">msm</span>, <span class="ident">transcript</span>, <span class="kw-2">*</span><span class="ident">x_3</span>, <span class="ident">msm_eval</span>)
 }
 
-<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CommitmentPointer</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">C</span>);
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> <span class="ident">PartialEq</span> <span class="kw">for</span> <span class="ident">CommitmentPointer</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="ident">std::ptr::eq</span>(<span class="self">self</span>.<span class="number">0</span>, <span class="ident">other</span>.<span class="number">0</span>)
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Query</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Commitment</span> <span class="op">=</span> <span class="ident">CommitmentPointer</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span>;
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Query</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">C</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="ident">Commitment</span> <span class="op">=</span> <span class="ident">CommitmentReference</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">C</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">Eval</span> <span class="op">=</span> <span class="ident">C::Scalar</span>;
 
     <span class="kw">fn</span> <span class="ident">get_point</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">C::Scalar</span> {
@@ -319,7 +313,7 @@
         <span class="self">self</span>.<span class="ident">eval</span>
     }
     <span class="kw">fn</span> <span class="ident">get_commitment</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Commitment</span> {
-        <span class="ident">CommitmentPointer</span>(<span class="self">self</span>.<span class="ident">commitment</span>)
+        <span class="self">self</span>.<span class="ident">commitment</span>
     }
 }
 </pre></div>
