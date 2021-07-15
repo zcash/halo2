@@ -9,6 +9,8 @@ use halo2::{
     plonk::Error,
 };
 
+use crate::circuit::gadget::utilities::CellValue;
+
 pub mod chip;
 
 /// The set of circuit instructions required to use the ECC gadgets.
@@ -127,6 +129,16 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> {
         layouter: &mut impl Layouter<C::Base>,
         scalar: &Self::ScalarFixedShort,
         base: &Self::FixedPointsShort,
+    ) -> Result<Self::Point, Error>;
+
+    /// Performs fixed-base scalar multiplication using a base field element as the scalar.
+    /// In the current implementation, this base field element must be output from another
+    /// instruction.
+    fn mul_fixed_base_field_elem(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        base_field_elem: CellValue<C::Base>,
+        base: &Self::FixedPoints,
     ) -> Result<Self::Point, Error>;
 }
 
@@ -352,6 +364,21 @@ where
             })
     }
 
+    /// Multiplies `self` using a value encoded in a base field element
+    /// as the scalar.
+    pub fn mul_base_field_elem(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        by: CellValue<C::Base>,
+    ) -> Result<Point<C, EccChip>, Error> {
+        self.chip
+            .mul_fixed_base_field_elem(&mut layouter, by, &self.inner)
+            .map(|inner| Point {
+                chip: self.chip.clone(),
+                inner,
+            })
+    }
+
     /// Wraps the given fixed base (obtained directly from an instruction) in a gadget.
     pub fn from_inner(chip: EccChip, inner: EccChip::FixedPoints) -> Self {
         FixedPoint { chip, inner }
@@ -427,14 +454,17 @@ mod tests {
                 meta.advice_column(),
             ];
 
+            let constants = [meta.fixed_column(), meta.fixed_column()];
             let perm = meta.permutation(
                 &advices
                     .iter()
                     .map(|advice| (*advice).into())
+                    .chain(constants.iter().map(|fixed| (*fixed).into()))
                     .collect::<Vec<_>>(),
             );
 
-            EccChip::configure(meta, advices, perm)
+            let lookup_table = meta.fixed_column();
+            EccChip::configure(meta, advices, lookup_table, constants, perm)
         }
 
         fn synthesize(
@@ -443,7 +473,11 @@ mod tests {
             config: Self::Config,
         ) -> Result<(), Error> {
             let mut layouter = SingleChipLayouter::new(cs)?;
-            let chip = EccChip::construct(config);
+            let chip = EccChip::construct(config.clone());
+
+            // Load 10-bit lookup table. In the Action circuit, this will be
+            // provided by the Sinsemilla chip.
+            config.lookup_config.load(&mut layouter)?;
 
             // Generate a random point P
             let p_val = pallas::Point::random(rand::rngs::OsRng).to_affine(); // P
@@ -484,7 +518,7 @@ mod tests {
             // Test incomplete addition
             {
                 super::chip::add_incomplete::tests::test_add_incomplete(
-                    chip,
+                    chip.clone(),
                     layouter.namespace(|| "incomplete addition"),
                     &zero,
                     p_val,
@@ -495,15 +529,63 @@ mod tests {
                 )?;
             }
 
+            // Test variable-base scalar multiplication
+            {
+                super::chip::mul::tests::test_mul(
+                    chip.clone(),
+                    layouter.namespace(|| "variable-base scalar mul"),
+                    &zero,
+                    &p,
+                    p_val,
+                )?;
+            }
+
+            // Test full-width fixed-base scalar multiplication
+            {
+                super::chip::mul_fixed::full_width::tests::test_mul_fixed(
+                    chip.clone(),
+                    layouter.namespace(|| "full-width fixed-base scalar mul"),
+                )?;
+            }
+
+            // Test signed short fixed-base scalar multiplication
+            {
+                super::chip::mul_fixed::short::tests::test_mul_fixed_short(
+                    chip.clone(),
+                    layouter.namespace(|| "signed short fixed-base scalar mul"),
+                )?;
+            }
+
+            // Test fixed-base scalar multiplication with a base field element
+            {
+                super::chip::mul_fixed::base_field_elem::tests::test_mul_fixed_base_field(
+                    chip,
+                    layouter.namespace(|| "fixed-base scalar mul with base field element"),
+                )?;
+            }
+
             Ok(())
         }
     }
 
     #[test]
     fn ecc() {
-        let k = 6;
+        let k = 13;
         let circuit = MyCircuit {};
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[cfg(feature = "dev-graph")]
+    #[test]
+    fn print_ecc_chip() {
+        use plotters::prelude::*;
+
+        let root = BitMapBackend::new("ecc-chip-layout.png", (1024, 7680)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root.titled("Ecc Chip Layout", ("sans-serif", 60)).unwrap();
+
+        let circuit = MyCircuit {};
+        halo2::dev::circuit_layout(&circuit, &root).unwrap();
     }
 }

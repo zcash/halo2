@@ -70,6 +70,10 @@ impl Config {
         .collect()
     }
 
+    pub(crate) fn output_columns(&self) -> HashSet<Column<Advice>> {
+        core::array::IntoIter::new([self.x_qr, self.y_qr]).collect()
+    }
+
     pub(crate) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("complete addition gates", |meta| {
             let q_add = meta.query_selector(self.q_add);

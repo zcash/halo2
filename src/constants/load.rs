@@ -12,6 +12,28 @@ pub enum OrchardFixedBasesFull {
     SpendAuthG,
 }
 
+impl OrchardFixedBasesFull {
+    pub fn generator(&self) -> pallas::Affine {
+        match self {
+            OrchardFixedBasesFull::CommitIvkR => super::commit_ivk_r::generator(),
+            OrchardFixedBasesFull::NoteCommitR => super::note_commit_r::generator(),
+            OrchardFixedBasesFull::NullifierK => super::nullifier_k::generator(),
+            OrchardFixedBasesFull::ValueCommitR => super::value_commit_r::generator(),
+            OrchardFixedBasesFull::SpendAuthG => super::spend_auth_g::generator(),
+        }
+    }
+
+    pub fn u(&self) -> U {
+        match self {
+            OrchardFixedBasesFull::CommitIvkR => super::commit_ivk_r::U.into(),
+            OrchardFixedBasesFull::NoteCommitR => super::note_commit_r::U.into(),
+            OrchardFixedBasesFull::NullifierK => super::nullifier_k::U.into(),
+            OrchardFixedBasesFull::ValueCommitR => super::value_commit_r::U.into(),
+            OrchardFixedBasesFull::SpendAuthG => super::spend_auth_g::U.into(),
+        }
+    }
+}
+
 /// A fixed base to be used in scalar multiplication with a full-width scalar.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OrchardFixedBase {

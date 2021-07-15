@@ -20,6 +20,14 @@ pub mod util;
 
 pub use load::{OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV};
 
+/// The Pallas scalar field modulus is $q = 2^{254} + \mathsf{t_q}$.
+/// <https://github.com/zcash/pasta>
+pub(crate) const T_Q: u128 = 45560315531506369815346746415080538113;
+
+/// The Pallas base field modulus is $p = 2^{254} + \mathsf{t_p}$.
+/// <https://github.com/zcash/pasta>
+pub(crate) const T_P: u128 = 45560315531419706090280762371685220353;
+
 /// $\mathsf{MerkleDepth^{Orchard}}$
 pub(crate) const MERKLE_DEPTH_ORCHARD: usize = 32;
 
@@ -73,10 +81,6 @@ pub const NUM_WINDOWS: usize =
 /// Number of windows for a short signed scalar
 pub const NUM_WINDOWS_SHORT: usize =
     (L_VALUE + FIXED_BASE_WINDOW_SIZE - 1) / FIXED_BASE_WINDOW_SIZE;
-
-/// Number of bits for which complete addition needs to be used in variable-base
-/// scalar multiplication
-pub const NUM_COMPLETE_BITS: usize = 3;
 
 /// For each fixed base, we calculate its scalar multiples in three-bit windows.
 /// Each window will have $2^3 = 8$ points.
@@ -260,7 +264,7 @@ fn test_zs_and_us<C: CurveAffine>(base: C, z: &[u64], u: &[[[u8; 32]; H]], num_w
 #[cfg(test)]
 mod tests {
     use ff::PrimeField;
-    use pasta_curves::pallas;
+    use pasta_curves::{arithmetic::FieldExt, pallas};
 
     #[test]
     // Nodes in the Merkle tree are Pallas base field elements.
@@ -278,5 +282,19 @@ mod tests {
     // Orchard uses the Pallas base field as its base field.
     fn l_orchard_scalar() {
         assert_eq!(super::L_ORCHARD_SCALAR, pallas::Scalar::NUM_BITS as usize);
+    }
+
+    #[test]
+    fn t_q() {
+        let t_q = pallas::Scalar::from_u128(super::T_Q);
+        let two_pow_254 = pallas::Scalar::from_u128(1 << 127).square();
+        assert_eq!(t_q + two_pow_254, pallas::Scalar::zero());
+    }
+
+    #[test]
+    fn t_p() {
+        let t_p = pallas::Base::from_u128(super::T_P);
+        let two_pow_254 = pallas::Base::from_u128(1 << 127).square();
+        assert_eq!(t_p + two_pow_254, pallas::Base::zero());
     }
 }
