@@ -136,9 +136,11 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
 
     let vanishing = vanishing.evaluate_after_x(transcript)?;
 
+    let permutations_common = vk.permutation.evaluate(transcript)?;
+
     let permutations_evaluated = permutations_committed
         .into_iter()
-        .map(|permutation| permutation.evaluate(&vk.permutation, transcript))
+        .map(|permutation| permutation.evaluate(transcript))
         .collect::<Result<Vec<_>, _>>()?;
 
     let lookups_evaluated = lookups_committed
@@ -194,6 +196,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                     .chain(permutation.expressions(
                         vk,
                         &vk.cs.permutation,
+                        &permutations_common,
                         advice_evals,
                         fixed_evals,
                         instance_evals,
@@ -263,7 +266,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                             )
                         },
                     ))
-                    .chain(permutation.queries(vk, &vk.permutation, x))
+                    .chain(permutation.queries(vk, x))
                     .chain(
                         lookups
                             .iter()
@@ -285,6 +288,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                     )
                 }),
         )
+        .chain(permutations_common.queries(&vk.permutation, x))
         .chain(vanishing.queries(x));
 
     // We are now convinced the circuit is satisfied so long as the

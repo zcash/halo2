@@ -338,19 +338,30 @@ impl<C: CurveAffine> Committed<C> {
 }
 
 impl<C: CurveAffine> super::ProvingKey<C> {
-    fn evaluate(&self, x: ChallengeX<C>) -> Vec<C::Scalar> {
-        self.polys
-            .iter()
-            .map(|poly| eval_polynomial(poly, *x))
-            .collect()
-    }
-
-    fn open(&self, x: ChallengeX<C>) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
+    pub(in crate::plonk) fn open(
+        &self,
+        x: ChallengeX<C>,
+    ) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
         self.polys.iter().map(move |poly| ProverQuery {
             point: *x,
             poly,
             blind: Blind::default(),
         })
+    }
+
+    pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
+        &self,
+        x: ChallengeX<C>,
+        transcript: &mut T,
+    ) -> Result<(), Error> {
+        // Hash permutation evals
+        for eval in self.polys.iter().map(|poly| eval_polynomial(poly, *x)) {
+            transcript
+                .write_scalar(eval)
+                .map_err(|_| Error::TranscriptError)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -358,21 +369,11 @@ impl<C: CurveAffine> Constructed<C> {
     pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
         self,
         pk: &plonk::ProvingKey<C>,
-        pkey: &ProvingKey<C>,
         x: ChallengeX<C>,
         transcript: &mut T,
     ) -> Result<Evaluated<C>, Error> {
         let domain = &pk.vk.domain;
         let blinding_factors = pk.vk.cs.blinding_factors();
-
-        // Hash permutation evals
-        // TODO: need to do this once for a single proof; as is this happens
-        // for every circuit instance in the proof.
-        for eval in pkey.evaluate(x).iter() {
-            transcript
-                .write_scalar(*eval)
-                .map_err(|_| Error::TranscriptError)?;
-        }
 
         {
             let mut sets = self.sets.iter();
@@ -419,7 +420,6 @@ impl<C: CurveAffine> Evaluated<C> {
     pub(in crate::plonk) fn open<'a>(
         &'a self,
         pk: &'a plonk::ProvingKey<C>,
-        pkey: &'a ProvingKey<C>,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
         let blinding_factors = pk.vk.cs.blinding_factors();
@@ -461,7 +461,5 @@ impl<C: CurveAffine> Evaluated<C> {
                         })
                     }),
             )
-            // Open permutation polynomial commitments at x
-            .chain(pkey.open(x))
     }
 }
