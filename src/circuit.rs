@@ -39,9 +39,16 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         meta.instance_column();
 
         // Placeholder gate so there is something for the prover to operate on.
+        // We need a selector so that the gate is disabled by default, and doesn't
+        // interfere with the blinding factors.
         let advice = meta.advice_column();
+        let selector = meta.selector();
+
         meta.create_gate("TODO", |meta| {
-            vec![meta.query_advice(advice, Rotation::cur())]
+            let a = meta.query_advice(advice, Rotation::cur());
+            let s = meta.query_selector(selector);
+
+            vec![s * a]
         });
     }
 
