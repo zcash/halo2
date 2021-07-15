@@ -99,52 +99,47 @@ $$
 \end{aligned}
 $$
 
-Initialize $A_{254} = [2] T.$
-
-for $i$ from $254$ down to $4$:
-$\begin{array}{ll}
-\hspace{2em}& (\mathbf{k}_i)(\mathbf{k}_i-1) = 0\\
-\hspace{2em}& \mathbf{z}_{i} = 2\mathbf{z}_{i+1} + \mathbf{k}_{i}\\
-\hspace{2em}& x_{P,i} = x_T\\
-\hspace{2em}& y_{P,i} = (2 \mathbf{k}_i - 1) \cdot y_T  \hspace{2em}\text{(conditionally negate)}\\
-\hspace{2em}& \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) = y_{A,i} - y_{P,i}\\
-\hspace{2em}& \lambda_{1,i}^2 = x_{R,i} + x_{A,i} + x_{P,i}\\
-\hspace{2em}& (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) = 2 y_{\mathsf{A},i}\\
-\hspace{2em}& \lambda_{2,i}^2 = x_{A,i-1} + x_{R,i} + x_{A,i}\\
-\hspace{2em}& \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A,i-1},\\
+$\begin{array}{l}
+\text{Initialize } A_{254} = [2] T. \\
+\\
+\text{for } i \text{ from } 254 \text{ down to } 4: \\
+\hspace{1.5em} (\mathbf{k}_i)(\mathbf{k}_i-1) = 0 \\
+\hspace{1.5em} \mathbf{z}_{i} = 2\mathbf{z}_{i+1} + \mathbf{k}_{i} \\
+\hspace{1.5em} x_{P,i} = x_T \\
+\hspace{1.5em} y_{P,i} = (2 \mathbf{k}_i - 1) \cdot y_T  \hspace{2em}\text{(conditionally negate)} \\
+\hspace{1.5em} \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) = y_{A,i} - y_{P,i} \\
+\hspace{1.5em} \lambda_{1,i}^2 = x_{R,i} + x_{A,i} + x_{P,i} \\
+\hspace{1.5em} (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) = 2 y_{\mathsf{A},i} \\
+\hspace{1.5em} \lambda_{2,i}^2 = x_{A,i-1} + x_{R,i} + x_{A,i} \\
+\hspace{1.5em} \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A,i-1}, \\
 \end{array}$
 
 where $x_{R,i} = (\lambda_{1,i}^2 - x_{A,i} - x_T).$ After substitution of $x_{P,i}, y_{P,i}, x_{R,i}, y_{A,i}$, and $y_{A,i-1}$, this becomes:
 
-Initialize $A_{254} = [2] T.$
+$\begin{array}{l}
+\text{Initialize } A_{254} = [2] T. \\
+\\
+\text{for } i \text{ from } 254 \text{ down to } 4: \\
+\hspace{1.5em} \text{// let } \mathbf{k}_{i} = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\
+\hspace{1.5em} \text{// let } y_{A,i} = \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2} \\[2ex]
+\hspace{1.5em} (\mathbf{k}_i)(\mathbf{k}_i-1) = 0 \\
+\hspace{1.5em} \lambda_{1,i} \cdot (x_{A,i} - x_T) = y_{A,i} - (2 \mathbf{k}_i - 1) \cdot y_T \\
+\hspace{1.5em} \lambda_{2,i}^2 = x_{A,i-1} + \lambda_{1,i}^2 - x_T \\[1ex]
+\hspace{1.5em} \begin{cases}
+                 \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A, i-1}, &\text{if } i > 4 \\[0.5ex]
+                 \lambda_{2,4} \cdot (x_{A,4} - x_{A,3}) = y_{A,4} + y_{A,3}^\text{witnessed}, &\text{if } i = 4.
+               \end{cases}
+\end{array}$
 
-
-for $i$ from $254$ down to $4$:
-
-$$
-\begin{aligned}
-    &\texttt{// let } \mathbf{k}_{i} = \mathbf{z}_{i} - 2\mathbf{z}_{i+1}\\
-    &\texttt{// let } y_{A,i} = \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2}\\
-    &(\mathbf{k}_i)(\mathbf{k}_i-1) = 0\\
-    &\lambda_{1,i} \cdot (x_{A,i} - x_T) = y_{A,i} - (2 \mathbf{k}_i - 1) \cdot y_T\\
-    &\lambda_{2,i}^2 = x_{A,i-1} + \lambda_{1,i}^2 - x_T\\
-\end{aligned}
-$$
-$$
-\begin{cases}
-    \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A, i-1}, &\text{if } i > 4 \\[0.5ex]
-    \lambda_{2,4} \cdot (x_{A,4} - x_{A,3}) = y_{A,4} + y_{A,3}^\text{witnessed}, &\text{if } i = 4.
-\end{cases}
-$$
 Here, $y_{A,3}^\text{witnessed}$ is assigned to a cell. This is unlike previous $y_{A,i}$'s, which were implicitly derived from $\lambda_{1,i}, \lambda_{2,i}, x_{A,i}, x_T$, but never actually assigned.
 
 The bits $\mathbf{k}_{3 \dots 1}$ are used in three further steps, using [complete addition](./addition.md#Complete-addition):
 
-for $i$ from $3$ down to $1$:
-$\begin{array}{ll}
-\hspace{2em}& \texttt{// let } \mathbf{k}_{i} = \mathbf{z}_{i} - 2\mathbf{z}_{i+1}\\
-\hspace{2em}& (\mathbf{k}_i)(\mathbf{k}_i-1) = 0\\
-\hspace{2em}& (x_{A,i-1}, y_{A,i-1}) = \left((x_{A,i}, y_{A,i}) + (x_T, y_T)\right) + (x_{A,i}, y_{A,i})
+$\begin{array}{l}
+\text{for } i \text{ from } 3 \text{ down to } 1: \\
+\hspace{1.5em} \text{// let } \mathbf{k}_{i} = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\[0.5ex]
+\hspace{1.5em} (\mathbf{k}_i)(\mathbf{k}_i-1) = 0 \\
+\hspace{1.5em} (x_{A,i-1}, y_{A,i-1}) = \left((x_{A,i}, y_{A,i}) + (x_T, y_T)\right) + (x_{A,i}, y_{A,i})
 \end{array}$
 
 If the least significant bit is set $\mathbf{k_0} = 1,$ we return the accumulator $A$. Else, if $\mathbf{k_0} = 0,$ we return $A - T$ (also using complete addition).
