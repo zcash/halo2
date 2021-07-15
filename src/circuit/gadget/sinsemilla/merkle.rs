@@ -272,13 +272,15 @@ pub mod tests {
             let computed_final_root =
                 path.calculate_root(layouter.namespace(|| "calculate root"), leaf)?;
 
-            // The expected final root
-            let pos_bool = i2lebsp::<32>(self.leaf_pos.unwrap() as u64);
-            let path: Option<Vec<pallas::Base>> = self.merkle_path.map(|path| path.to_vec());
-            let final_root = hash_path(self.leaf.unwrap(), &pos_bool, &path.unwrap());
+            if let Some(leaf_pos) = self.leaf_pos {
+                // The expected final root
+                let pos_bool = i2lebsp::<32>(leaf_pos as u64);
+                let path: Option<Vec<pallas::Base>> = self.merkle_path.map(|path| path.to_vec());
+                let final_root = hash_path(self.leaf.unwrap(), &pos_bool, &path.unwrap());
 
-            // Check the computed final root against the expected final root.
-            assert_eq!(computed_final_root.value().unwrap(), final_root);
+                // Check the computed final root against the expected final root.
+                assert_eq!(computed_final_root.value().unwrap(), final_root);
+            }
 
             Ok(())
         }
@@ -342,5 +344,21 @@ pub mod tests {
 
         let prover = MockProver::run(11, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[cfg(feature = "dev-graph")]
+    #[test]
+    fn print_merkle_chip() {
+        use plotters::prelude::*;
+
+        let root = BitMapBackend::new("merkle-path-layout.png", (1024, 7680)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root.titled("MerkleCRH Path", ("sans-serif", 60)).unwrap();
+
+        let circuit = MyCircuit::default();
+        halo2::dev::CircuitLayout::default()
+            .show_labels(false)
+            .render(&circuit, &root)
+            .unwrap();
     }
 }
