@@ -424,7 +424,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
             )?;
         }
 
-        // offset_acc = \sum_{j = 0}^{NUM_WINDOWS - 2} 2^{FIXED_BASE_WINDOW_SIZE * j+1}
+        // offset_acc = \sum_{j = 0}^{NUM_WINDOWS - 2} 2^{FIXED_BASE_WINDOW_SIZE*j + 1}
         let offset_acc = (0..(NUM_WINDOWS - 1)).fold(pallas::Scalar::zero(), |acc, w| {
             acc + (*TWO_SCALAR).pow(&[
                 constants::FIXED_BASE_WINDOW_SIZE as u64 * w as u64 + 1,
@@ -434,7 +434,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
             ])
         });
 
-        // `scalar = [k * 8^84 - offset_acc]`, where `offset_acc = \sum_{j = 0}^{83} 2^{FIXED_BASE_WINDOW_SIZE * j + 1}`.
+        // `scalar = [k * 8^84 - offset_acc]`, where `offset_acc = \sum_{j = 0}^{83} 2^{FIXED_BASE_WINDOW_SIZE*j + 1}`.
         let scalar = scalar.windows_field()[scalar.windows_field().len() - 1]
             .map(|k| k * (*H_SCALAR).pow(&[(NUM_WINDOWS - 1) as u64, 0, 0, 0]) - offset_acc);
 
@@ -531,14 +531,14 @@ impl ScalarFixed {
     }
 
     // The scalar decomposition is guaranteed to be in three-bit windows,
-    // so we also cast the least significant byte in their serialisation
+    // so we also cast the least significant 4 bytes in their serialisation
     // into usize for convenient indexing into `u`-values
     fn windows_usize(&self) -> Vec<Option<usize>> {
         self.windows_field()
             .iter()
             .map(|window| {
                 if let Some(window) = window {
-                    let window = window.to_bytes()[0] as usize;
+                    let window = window.get_lower_32() as usize;
                     assert!(window < constants::H);
                     Some(window)
                 } else {

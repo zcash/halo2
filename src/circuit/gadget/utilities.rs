@@ -99,7 +99,8 @@ pub fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize>(
     ret
 }
 
-/// Subsets a field element to a specified bitrange (little-endian)
+/// Takes a specified subsequence of the little-endian bit representation of a field element.
+/// The bits are numbered from 0 for the LSB.
 pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(field_elem: F, bitrange: Range<usize>) -> F {
     assert!(bitrange.end <= F::NUM_BITS as usize);
 
