@@ -1,4 +1,4 @@
-use super::super::{EccBaseFieldElemFixed, EccConfig, EccPoint, OrchardFixedBasesFull};
+use super::super::{EccBaseFieldElemFixed, EccConfig, EccPoint, NullifierK};
 use super::H_BASE;
 
 use crate::{
@@ -181,7 +181,7 @@ impl Config {
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         scalar: CellValue<pallas::Base>,
-        base: OrchardFixedBasesFull,
+        base: NullifierK,
     ) -> Result<EccPoint, Error> {
         let (scalar, acc, mul_b) = layouter.assign_region(
             || "Base-field elem fixed-base mul (incomplete addition)",
@@ -423,8 +423,8 @@ pub mod tests {
 
     use crate::circuit::gadget::{
         ecc::{
-            chip::{EccChip, OrchardFixedBasesFull},
-            FixedPoint, Point,
+            chip::{EccChip, NullifierK},
+            FixedPointBaseField, Point,
         },
         utilities::UtilitiesInstructions,
     };
@@ -434,59 +434,21 @@ pub mod tests {
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
-        // commit_ivk_r
-        let commit_ivk_r = OrchardFixedBasesFull::CommitIvkR;
-        test_single_base(
-            chip.clone(),
-            layouter.namespace(|| "commit_ivk_r"),
-            FixedPoint::from_inner(chip.clone(), commit_ivk_r),
-            commit_ivk_r.generator(),
-        )?;
-
-        // note_commit_r
-        let note_commit_r = OrchardFixedBasesFull::NoteCommitR;
-        test_single_base(
-            chip.clone(),
-            layouter.namespace(|| "note_commit_r"),
-            FixedPoint::from_inner(chip.clone(), note_commit_r),
-            note_commit_r.generator(),
-        )?;
-
         // nullifier_k
-        let nullifier_k = OrchardFixedBasesFull::NullifierK;
+        let nullifier_k = NullifierK;
         test_single_base(
             chip.clone(),
             layouter.namespace(|| "nullifier_k"),
-            FixedPoint::from_inner(chip.clone(), nullifier_k),
+            FixedPointBaseField::from_inner(chip, nullifier_k),
             nullifier_k.generator(),
-        )?;
-
-        // value_commit_r
-        let value_commit_r = OrchardFixedBasesFull::ValueCommitR;
-        test_single_base(
-            chip.clone(),
-            layouter.namespace(|| "value_commit_r"),
-            FixedPoint::from_inner(chip.clone(), value_commit_r),
-            value_commit_r.generator(),
-        )?;
-
-        // spend_auth_g
-        let spend_auth_g = OrchardFixedBasesFull::SpendAuthG;
-        test_single_base(
-            chip.clone(),
-            layouter.namespace(|| "spend_auth_g"),
-            FixedPoint::from_inner(chip, spend_auth_g),
-            spend_auth_g.generator(),
-        )?;
-
-        Ok(())
+        )
     }
 
     #[allow(clippy::op_ref)]
     fn test_single_base(
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
-        base: FixedPoint<pallas::Affine, EccChip>,
+        base: FixedPointBaseField<pallas::Affine, EccChip>,
         base_val: pallas::Affine,
     ) -> Result<(), Error> {
         let column = chip.config().advices[0];
@@ -517,7 +479,7 @@ pub mod tests {
                     column,
                     Some(scalar_fixed),
                 )?;
-                base.mul_base_field_elem(layouter.namespace(|| "random [a]B"), scalar_fixed)?
+                base.mul(layouter.namespace(|| "random [a]B"), scalar_fixed)?
             };
             constrain_equal(
                 chip.clone(),
@@ -545,7 +507,7 @@ pub mod tests {
                     column,
                     Some(scalar_fixed),
                 )?;
-                base.mul_base_field_elem(layouter.namespace(|| "mul with double"), scalar_fixed)?
+                base.mul(layouter.namespace(|| "mul with double"), scalar_fixed)?
             };
             constrain_equal(
                 chip.clone(),
@@ -563,7 +525,7 @@ pub mod tests {
             let result = {
                 let scalar_fixed =
                     chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_fixed))?;
-                base.mul_base_field_elem(layouter.namespace(|| "mul by zero"), scalar_fixed)?
+                base.mul(layouter.namespace(|| "mul by zero"), scalar_fixed)?
             };
             constrain_equal(
                 chip.clone(),
@@ -580,7 +542,7 @@ pub mod tests {
             let result = {
                 let scalar_fixed =
                     chip.load_private(layouter.namespace(|| "-1"), column, Some(scalar_fixed))?;
-                base.mul_base_field_elem(layouter.namespace(|| "mul by -1"), scalar_fixed)?
+                base.mul(layouter.namespace(|| "mul by -1"), scalar_fixed)?
             };
             constrain_equal(
                 chip,

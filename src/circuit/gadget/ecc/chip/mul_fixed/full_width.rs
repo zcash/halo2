@@ -150,15 +150,6 @@ pub mod tests {
             note_commit_r.generator(),
         )?;
 
-        // nullifier_k
-        let nullifier_k = OrchardFixedBasesFull::NullifierK;
-        test_single_base(
-            chip.clone(),
-            layouter.namespace(|| "nullifier_k"),
-            FixedPoint::from_inner(chip.clone(), nullifier_k),
-            nullifier_k.generator(),
-        )?;
-
         // value_commit_r
         let value_commit_r = OrchardFixedBasesFull::ValueCommitR;
         test_single_base(

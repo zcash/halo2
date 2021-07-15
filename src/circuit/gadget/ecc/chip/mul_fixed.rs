@@ -4,7 +4,7 @@ use super::{
 };
 use crate::constants::{
     self,
-    load::{OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV, WindowUs},
+    load::{NullifierK, OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV, WindowUs},
     util,
 };
 
@@ -37,6 +37,7 @@ lazy_static! {
 #[derive(Copy, Clone, Debug)]
 enum OrchardFixedBases {
     Full(OrchardFixedBasesFull),
+    NullifierK,
     ValueCommitV,
 }
 
@@ -52,10 +53,17 @@ impl From<ValueCommitV> for OrchardFixedBases {
     }
 }
 
+impl From<NullifierK> for OrchardFixedBases {
+    fn from(_nullifier_k: NullifierK) -> Self {
+        Self::NullifierK
+    }
+}
+
 impl OrchardFixedBases {
     pub fn generator(self) -> pallas::Affine {
         match self {
             Self::ValueCommitV => constants::value_commit_v::generator(),
+            Self::NullifierK => constants::nullifier_k::generator(),
             Self::Full(base) => base.generator(),
         }
     }
@@ -63,6 +71,7 @@ impl OrchardFixedBases {
     pub fn u(self) -> Vec<WindowUs> {
         match self {
             Self::ValueCommitV => ValueCommitV::get().u_short.0.as_ref().to_vec(),
+            Self::NullifierK => NullifierK.u().0.as_ref().to_vec(),
             Self::Full(base) => base.u().0.as_ref().to_vec(),
         }
     }
@@ -231,6 +240,14 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
             OrchardFixedBases::Full(base) => {
                 assert_eq!(NUM_WINDOWS, constants::NUM_WINDOWS);
                 let base: OrchardFixedBase = base.into();
+                (
+                    base.lagrange_coeffs.0.as_ref().to_vec(),
+                    base.z.0.as_ref().to_vec(),
+                )
+            }
+            OrchardFixedBases::NullifierK => {
+                assert_eq!(NUM_WINDOWS, constants::NUM_WINDOWS);
+                let base: OrchardFixedBase = NullifierK.into();
                 (
                     base.lagrange_coeffs.0.as_ref().to_vec(),
                     base.z.0.as_ref().to_vec(),

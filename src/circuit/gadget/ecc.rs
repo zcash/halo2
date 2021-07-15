@@ -39,8 +39,10 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
     /// Variable representing the affine short Weierstrass x-coordinate of an
     /// elliptic curve point.
     type X: Clone + Debug;
-    /// Enumeration of the set of fixed bases to be used in full-width scalar mul.
+    /// Enumeration of the set of fixed bases to be used in scalar mul with a full-width scalar.
     type FixedPoints: Clone + Debug;
+    /// Enumeration of the set of fixed bases to be used in scalar mul with a base field element.
+    type FixedPointsBaseField: Clone + Debug;
     /// Enumeration of the set of fixed bases to be used in short signed scalar mul.
     type FixedPointsShort: Clone + Debug;
 
@@ -113,7 +115,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
         &self,
         layouter: &mut impl Layouter<C::Base>,
         base_field_elem: Self::Var,
-        base: &Self::FixedPoints,
+        base: &Self::FixedPointsBaseField,
     ) -> Result<Self::Point, Error>;
 }
 
@@ -258,6 +260,8 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> X<C, EccC
 
 /// A constant elliptic curve point over the given curve, for which window tables have
 /// been provided to make scalar multiplication more efficient.
+///
+/// Used in scalar multiplication with full-width scalars.
 #[derive(Clone, Debug)]
 pub struct FixedPoint<C: CurveAffine, EccChip>
 where
@@ -294,9 +298,30 @@ where
             })
     }
 
-    /// Multiplies `self` using a value encoded in a base field element
-    /// as the scalar.
-    pub fn mul_base_field_elem(
+    /// Wraps the given fixed base (obtained directly from an instruction) in a gadget.
+    pub fn from_inner(chip: EccChip, inner: EccChip::FixedPoints) -> Self {
+        FixedPoint { chip, inner }
+    }
+}
+
+/// A constant elliptic curve point over the given curve, used in scalar multiplication
+/// with a base field element
+#[derive(Clone, Debug)]
+pub struct FixedPointBaseField<C: CurveAffine, EccChip>
+where
+    EccChip: EccInstructions<C> + Clone + Debug + Eq,
+{
+    chip: EccChip,
+    inner: EccChip::FixedPointsBaseField,
+}
+
+impl<C: CurveAffine, EccChip> FixedPointBaseField<C, EccChip>
+where
+    EccChip: EccInstructions<C> + Clone + Debug + Eq,
+{
+    #[allow(clippy::type_complexity)]
+    /// Returns `[by] self`.
+    pub fn mul(
         &self,
         mut layouter: impl Layouter<C::Base>,
         by: EccChip::Var,
@@ -310,8 +335,8 @@ where
     }
 
     /// Wraps the given fixed base (obtained directly from an instruction) in a gadget.
-    pub fn from_inner(chip: EccChip, inner: EccChip::FixedPoints) -> Self {
-        FixedPoint { chip, inner }
+    pub fn from_inner(chip: EccChip, inner: EccChip::FixedPointsBaseField) -> Self {
+        FixedPointBaseField { chip, inner }
     }
 }
 

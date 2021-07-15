@@ -7,7 +7,6 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 pub enum OrchardFixedBasesFull {
     CommitIvkR,
     NoteCommitR,
-    NullifierK,
     ValueCommitR,
     SpendAuthG,
 }
@@ -17,7 +16,6 @@ impl OrchardFixedBasesFull {
         match self {
             OrchardFixedBasesFull::CommitIvkR => super::commit_ivk_r::generator(),
             OrchardFixedBasesFull::NoteCommitR => super::note_commit_r::generator(),
-            OrchardFixedBasesFull::NullifierK => super::nullifier_k::generator(),
             OrchardFixedBasesFull::ValueCommitR => super::value_commit_r::generator(),
             OrchardFixedBasesFull::SpendAuthG => super::spend_auth_g::generator(),
         }
@@ -27,7 +25,6 @@ impl OrchardFixedBasesFull {
         match self {
             OrchardFixedBasesFull::CommitIvkR => super::commit_ivk_r::U.into(),
             OrchardFixedBasesFull::NoteCommitR => super::note_commit_r::U.into(),
-            OrchardFixedBasesFull::NullifierK => super::nullifier_k::U.into(),
             OrchardFixedBasesFull::ValueCommitR => super::value_commit_r::U.into(),
             OrchardFixedBasesFull::SpendAuthG => super::spend_auth_g::U.into(),
         }
@@ -56,11 +53,6 @@ impl From<OrchardFixedBasesFull> for OrchardFixedBase {
                 super::note_commit_r::Z.into(),
                 super::note_commit_r::U.into(),
             ),
-            OrchardFixedBasesFull::NullifierK => (
-                super::nullifier_k::generator(),
-                super::nullifier_k::Z.into(),
-                super::nullifier_k::U.into(),
-            ),
             OrchardFixedBasesFull::ValueCommitR => (
                 super::value_commit_r::generator(),
                 super::value_commit_r::Z.into(),
@@ -82,7 +74,7 @@ impl From<OrchardFixedBasesFull> for OrchardFixedBase {
     }
 }
 
-/// A fixed base to be used in scalar multiplication with a short signed exponent.
+/// A fixed base to be used in scalar multiplication with a base field element.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ValueCommitV {
     pub generator: pallas::Affine,
@@ -100,6 +92,36 @@ impl ValueCommitV {
             z_short: super::value_commit_v::Z_SHORT.into(),
             u_short: super::value_commit_v::U_SHORT.into(),
         }
+    }
+}
+
+/// A fixed base to be used in scalar multiplication with a short signed exponent.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct NullifierK;
+
+impl From<NullifierK> for OrchardFixedBase {
+    fn from(_nullifier_k: NullifierK) -> Self {
+        let (generator, z, u) = (
+            super::nullifier_k::generator(),
+            super::nullifier_k::Z.into(),
+            super::nullifier_k::U.into(),
+        );
+        Self {
+            generator,
+            lagrange_coeffs: compute_lagrange_coeffs(generator, NUM_WINDOWS).into(),
+            z,
+            u,
+        }
+    }
+}
+
+impl NullifierK {
+    pub fn generator(&self) -> pallas::Affine {
+        super::nullifier_k::generator()
+    }
+
+    pub fn u(&self) -> U {
+        super::nullifier_k::U.into()
     }
 }
 

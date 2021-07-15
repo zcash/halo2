@@ -18,7 +18,7 @@ pub mod value_commit_v;
 pub mod load;
 pub mod util;
 
-pub use load::{OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV};
+pub use load::{NullifierK, OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV};
 
 /// The Pallas scalar field modulus is $q = 2^{254} + \mathsf{t_q}$.
 /// <https://github.com/zcash/pasta>

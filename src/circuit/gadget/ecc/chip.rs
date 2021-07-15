@@ -4,7 +4,7 @@ use crate::{
         copy, decompose_running_sum::RunningSumConfig, lookup_range_check::LookupRangeCheckConfig,
         CellValue, UtilitiesInstructions, Var,
     },
-    constants::{self, OrchardFixedBasesFull, ValueCommitV},
+    constants::{self, NullifierK, OrchardFixedBasesFull, ValueCommitV},
     primitives::sinsemilla,
 };
 use arrayvec::ArrayVec;
@@ -327,6 +327,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
     type Point = EccPoint;
     type X = CellValue<pallas::Base>;
     type FixedPoints = OrchardFixedBasesFull;
+    type FixedPointsBaseField = NullifierK;
     type FixedPointsShort = ValueCommitV;
 
     fn constrain_equal(
@@ -435,7 +436,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
         base_field_elem: CellValue<pallas::Base>,
-        base: &Self::FixedPoints,
+        base: &Self::FixedPointsBaseField,
     ) -> Result<Self::Point, Error> {
         let config: mul_fixed::base_field_elem::Config = self.config().into();
         config.assign(
