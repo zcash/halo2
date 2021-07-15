@@ -671,56 +671,62 @@ impl<F: FieldExt> MockProver<F> {
                 .iter()
                 .enumerate()
                 .flat_map(|(lookup_index, lookup)| {
+                    let load = |expression: &Expression<F>, row| {
+                        expression.evaluate(
+                            &|scalar| Value::Real(scalar),
+                            &|index| {
+                                let query = self.cs.fixed_queries[index];
+                                let column_index = query.0.index();
+                                let rotation = query.1 .0;
+                                self.fixed[column_index]
+                                    [(row as i32 + n + rotation) as usize % n as usize]
+                                    .into()
+                            },
+                            &|index| {
+                                let query = self.cs.advice_queries[index];
+                                let column_index = query.0.index();
+                                let rotation = query.1 .0;
+                                self.advice[column_index]
+                                    [(row as i32 + n + rotation) as usize % n as usize]
+                                    .into()
+                            },
+                            &|index| {
+                                let query = self.cs.instance_queries[index];
+                                let column_index = query.0.index();
+                                let rotation = query.1 .0;
+                                Value::Real(
+                                    self.instance[column_index]
+                                        [(row as i32 + n + rotation) as usize % n as usize],
+                                )
+                            },
+                            &|a, b| a + b,
+                            &|a, b| a * b,
+                            &|a, scalar| a * scalar,
+                        )
+                    };
+
                     // In the real prover, the lookup expressions are never enforced on
                     // unusable rows, due to the (1 - (l_last(X) + l_blind(X))) term.
+                    let table: Vec<_> = self
+                        .usable_rows
+                        .clone()
+                        .map(|table_row| {
+                            lookup
+                                .table_expressions
+                                .iter()
+                                .map(move |c| load(c, table_row))
+                                .collect::<Vec<_>>()
+                        })
+                        .collect();
                     self.usable_rows.clone().filter_map(move |input_row| {
-                        let load = |expression: &Expression<F>, row| {
-                            expression.evaluate(
-                                &|scalar| Value::Real(scalar),
-                                &|index| {
-                                    let query = self.cs.fixed_queries[index];
-                                    let column_index = query.0.index();
-                                    let rotation = query.1 .0;
-                                    self.fixed[column_index]
-                                        [(row as i32 + n + rotation) as usize % n as usize]
-                                        .into()
-                                },
-                                &|index| {
-                                    let query = self.cs.advice_queries[index];
-                                    let column_index = query.0.index();
-                                    let rotation = query.1 .0;
-                                    self.advice[column_index]
-                                        [(row as i32 + n + rotation) as usize % n as usize]
-                                        .into()
-                                },
-                                &|index| {
-                                    let query = self.cs.instance_queries[index];
-                                    let column_index = query.0.index();
-                                    let rotation = query.1 .0;
-                                    Value::Real(
-                                        self.instance[column_index]
-                                            [(row as i32 + n + rotation) as usize % n as usize],
-                                    )
-                                },
-                                &|a, b| a + b,
-                                &|a, b| a * b,
-                                &|a, scalar| a * scalar,
-                            )
-                        };
-
                         let inputs: Vec<_> = lookup
                             .input_expressions
                             .iter()
                             .map(|c| load(c, input_row))
                             .collect();
-                        let lookup_passes = (0..n as usize)
-                            .map(|table_row| {
-                                lookup
-                                    .table_expressions
-                                    .iter()
-                                    .map(move |c| load(c, table_row))
-                            })
-                            .any(|table_row| table_row.eq(inputs.iter().cloned()));
+                        let lookup_passes = table
+                            .iter()
+                            .any(|table_row| table_row.iter().cloned().eq(inputs.iter().cloned()));
                         if lookup_passes {
                             None
                         } else {
