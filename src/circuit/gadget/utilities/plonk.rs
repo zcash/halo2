@@ -225,14 +225,15 @@ mod tests {
     use super::super::UtilitiesInstructions;
     use super::{PLONKChip, PLONKConfig, PLONKInstructions};
     use halo2::{
-        circuit::{layouter::SingleChipLayouter, Layouter},
+        circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
-        plonk::{Any, Assignment, Circuit, Column, ConstraintSystem, Error},
+        plonk::{Any, Circuit, Column, ConstraintSystem, Error},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas::Base};
 
     #[test]
     fn plonk_util() {
+        #[derive(Default)]
         struct MyCircuit<F: FieldExt> {
             a: Option<F>,
             b: Option<F>,
@@ -240,6 +241,11 @@ mod tests {
 
         impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
             type Config = PLONKConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                Self::default()
+            }
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let advices = [
@@ -260,10 +266,9 @@ mod tests {
 
             fn synthesize(
                 &self,
-                cs: &mut impl Assignment<F>,
                 config: Self::Config,
+                mut layouter: impl Layouter<F>,
             ) -> Result<(), Error> {
-                let mut layouter = SingleChipLayouter::new(cs)?;
                 let chip = PLONKChip::<F>::construct(config.clone());
 
                 let a = chip.load_private(layouter.namespace(|| "a"), config.a, self.a)?;

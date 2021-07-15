@@ -135,9 +135,9 @@ mod tests {
     use bigint::U256;
     use ff::PrimeField;
     use halo2::{
-        circuit::{layouter::SingleChipLayouter, Layouter},
+        circuit::{Layouter, SimpleFloorPlanner},
         dev::{MockProver, VerifyFailure},
-        plonk::{Assignment, Circuit, ConstraintSystem, Error, Selector},
+        plonk::{Circuit, ConstraintSystem, Error, Selector},
         poly::Rotation,
     };
     use pasta_curves::pallas;
@@ -158,6 +158,11 @@ mod tests {
 
         impl<const RANGE: usize> Circuit<pallas::Base> for MyCircuit<RANGE> {
             type Config = Config;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                MyCircuit(self.0)
+            }
 
             fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
                 let selector = meta.selector();
@@ -175,11 +180,9 @@ mod tests {
 
             fn synthesize(
                 &self,
-                cs: &mut impl Assignment<pallas::Base>,
                 config: Self::Config,
+                mut layouter: impl Layouter<pallas::Base>,
             ) -> Result<(), Error> {
-                let mut layouter = SingleChipLayouter::new(cs)?;
-
                 layouter.assign_region(
                     || "range constrain",
                     |mut region| {
@@ -209,10 +212,7 @@ mod tests {
             assert_eq!(
                 prover.verify(),
                 Err(vec![VerifyFailure::Constraint {
-                    gate_index: 0,
-                    gate_name: "range check",
-                    constraint_index: 0,
-                    constraint_name: "",
+                    constraint: ((0, "range check").into(), 0, "").into(),
                     row: 0
                 }])
             );

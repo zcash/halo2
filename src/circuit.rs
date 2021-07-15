@@ -4,6 +4,7 @@ use std::mem;
 
 use group::Curve;
 use halo2::{
+    circuit::{Layouter, SimpleFloorPlanner},
     plonk,
     poly::{EvaluationDomain, LagrangeCoeff, Polynomial, Rotation},
     transcript::{Blake2bRead, Blake2bWrite},
@@ -28,6 +29,11 @@ pub struct Circuit {}
 
 impl plonk::Circuit<pallas::Base> for Circuit {
     type Config = ();
+    type FloorPlanner = SimpleFloorPlanner;
+
+    fn without_witnesses(&self) -> Self {
+        Circuit {}
+    }
 
     fn configure(meta: &mut plonk::ConstraintSystem<pallas::Base>) -> Self::Config {
         // Placeholder so the proving key is correctly built.
@@ -42,8 +48,8 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
     fn synthesize(
         &self,
-        _cs: &mut impl plonk::Assignment<pallas::Base>,
         _config: Self::Config,
+        _layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), plonk::Error> {
         Ok(())
     }
