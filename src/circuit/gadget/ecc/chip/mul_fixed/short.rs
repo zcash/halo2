@@ -336,6 +336,11 @@ pub mod tests {
                 pallas::Base::from_u64(0xB6DB_6DB6_DB6D_B6DCu64),
                 pallas::Base::one(),
             ),
+            (
+                "mul_with_double negative",
+                pallas::Base::from_u64(0xB6DB_6DB6_DB6D_B6DCu64),
+                -pallas::Base::one(),
+            ),
         ];
 
         for (name, magnitude, sign) in magnitude_signs.iter() {
