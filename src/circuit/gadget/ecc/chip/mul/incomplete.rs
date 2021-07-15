@@ -5,9 +5,7 @@ use super::{INCOMPLETE_HI_RANGE, INCOMPLETE_LO_RANGE, X, Y, Z};
 use ff::Field;
 use halo2::{
     circuit::Region,
-    plonk::{
-        Advice, Column, ConstraintSystem, Error, Expression, Fixed, Permutation, VirtualCells,
-    },
+    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, VirtualCells},
     poly::Rotation,
 };
 
@@ -30,8 +28,6 @@ pub(super) struct Config {
     pub(super) lambda1: Column<Advice>,
     // lambda2 in each double-and-add iteration.
     pub(super) lambda2: Column<Advice>,
-    // Permutation
-    pub(super) perm: Permutation,
 }
 
 // Columns used in processing the `hi` bits of the scalar.
@@ -48,7 +44,6 @@ impl From<&EccConfig> for HiConfig {
             x_a: ecc_config.advices[3],
             lambda1: ecc_config.advices[4],
             lambda2: ecc_config.advices[5],
-            perm: ecc_config.perm.clone(),
         };
         Self(config)
     }
@@ -75,7 +70,6 @@ impl From<&EccConfig> for LoConfig {
             x_a: ecc_config.advices[7],
             lambda1: ecc_config.advices[8],
             lambda2: ecc_config.advices[2],
-            perm: ecc_config.perm.clone(),
         };
         Self(config)
     }
@@ -285,25 +279,11 @@ impl Config {
         // Initialise double-and-add
         let (mut x_a, mut y_a, mut z) = {
             // Initialise the running `z` sum for the scalar bits.
-            let z = copy(region, || "starting z", self.z, offset, &acc.2, &self.perm)?;
+            let z = copy(region, || "starting z", self.z, offset, &acc.2)?;
 
             // Initialise acc
-            let x_a = copy(
-                region,
-                || "starting x_a",
-                self.x_a,
-                offset + 1,
-                &acc.0,
-                &self.perm,
-            )?;
-            let y_a = copy(
-                region,
-                || "starting y_a",
-                self.lambda1,
-                offset,
-                &acc.1,
-                &self.perm,
-            )?;
+            let x_a = copy(region, || "starting x_a", self.x_a, offset + 1, &acc.0)?;
+            let y_a = copy(region, || "starting y_a", self.lambda1, offset, &acc.1)?;
 
             (x_a, y_a.value(), z)
         };

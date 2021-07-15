@@ -2,11 +2,10 @@
 
 use std::mem;
 
-use group::Curve;
 use halo2::{
     circuit::{Layouter, SimpleFloorPlanner},
     plonk,
-    poly::{EvaluationDomain, LagrangeCoeff, Polynomial, Rotation},
+    poly::Rotation,
     transcript::{Blake2bRead, Blake2bWrite},
 };
 use pasta_curves::{pallas, vesta};
@@ -107,21 +106,9 @@ pub struct Instance {
 }
 
 impl Instance {
-    fn to_halo2_instance(
-        &self,
-        domain: &EvaluationDomain<vesta::Scalar>,
-    ) -> [Polynomial<vesta::Scalar, LagrangeCoeff>; 1] {
+    fn to_halo2_instance(&self) -> [[vesta::Scalar; 0]; 1] {
         // TODO
-        [domain.empty_lagrange()]
-    }
-
-    fn to_halo2_instance_commitments(&self, vk: &VerifyingKey) -> [vesta::Affine; 1] {
-        [vk.params
-            .commit_lagrange(
-                &self.to_halo2_instance(vk.vk.get_domain())[0],
-                Default::default(),
-            )
-            .to_affine()]
+        [[]]
     }
 }
 
@@ -149,9 +136,10 @@ impl Proof {
         circuits: &[Circuit],
         instances: &[Instance],
     ) -> Result<Self, plonk::Error> {
-        let instances: Vec<_> = instances
+        let instances: Vec<_> = instances.iter().map(|i| i.to_halo2_instance()).collect();
+        let instances: Vec<Vec<_>> = instances
             .iter()
-            .map(|i| i.to_halo2_instance(pk.pk.get_vk().get_domain()))
+            .map(|i| i.iter().map(|c| &c[..]).collect())
             .collect();
         let instances: Vec<_> = instances.iter().map(|i| &i[..]).collect();
 
@@ -162,9 +150,10 @@ impl Proof {
 
     /// Verifies this proof with the given instances.
     pub fn verify(&self, vk: &VerifyingKey, instances: &[Instance]) -> Result<(), plonk::Error> {
-        let instances: Vec<_> = instances
+        let instances: Vec<_> = instances.iter().map(|i| i.to_halo2_instance()).collect();
+        let instances: Vec<Vec<_>> = instances
             .iter()
-            .map(|i| i.to_halo2_instance_commitments(vk))
+            .map(|i| i.iter().map(|c| &c[..]).collect())
             .collect();
         let instances: Vec<_> = instances.iter().map(|i| &i[..]).collect();
 
@@ -241,9 +230,9 @@ mod tests {
                     K,
                     circuit,
                     instance
-                        .to_halo2_instance(vk.vk.get_domain())
+                        .to_halo2_instance()
                         .iter()
-                        .map(|p| p.iter().cloned().collect())
+                        .map(|p| p.to_vec())
                         .collect()
                 )
                 .unwrap()

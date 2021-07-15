@@ -4,7 +4,7 @@
 use crate::spec::lebs2ip;
 use halo2::{
     circuit::{Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Permutation, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Selector},
     poly::Rotation,
 };
 use std::{convert::TryInto, marker::PhantomData};
@@ -21,7 +21,6 @@ pub struct LookupRangeCheckConfig<F: FieldExt + PrimeFieldBits, const K: usize> 
     pub running_sum: Column<Advice>,
     constants: Column<Fixed>,
     table_idx: Column<Fixed>,
-    perm: Permutation,
     _marker: PhantomData<F>,
 }
 
@@ -33,13 +32,19 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     /// The `table_idx` fixed column contains values from [0..2^K). Looking up
     /// a value in `table_idx` constrains it to be within this range. The table
     /// can be loaded outside this helper.
+    ///
+    /// # Side-effects
+    ///
+    /// Both the `running_sum` and `constants` columns will be equality-enabled.
     pub fn configure(
         meta: &mut ConstraintSystem<F>,
         running_sum: Column<Advice>,
         constants: Column<Fixed>,
         table_idx: Column<Fixed>,
-        perm: Permutation,
     ) -> Self {
+        meta.enable_equality(running_sum.into());
+        meta.enable_equality(constants.into());
+
         let q_lookup = meta.selector();
         let q_lookup_short = meta.selector();
         let short_lookup_bitshift = meta.fixed_column();
@@ -50,7 +55,6 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             running_sum,
             constants,
             table_idx,
-            perm,
             _marker: PhantomData,
         };
 
@@ -115,6 +119,9 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     }
 
     /// Range check on an existing cell that is copied into this helper.
+    ///
+    /// Returns an error if `element` is not in a column that was passed to
+    /// [`ConstraintSystem::enable_equality`] during circuit configuration.
     pub fn copy_check(
         &self,
         mut layouter: impl Layouter<F>,
@@ -126,14 +133,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             || format!("{:?} words range check", num_words),
             |mut region| {
                 // Copy `element` and initialize running sum `z_0 = element` to decompose it.
-                let z_0 = copy(
-                    &mut region,
-                    || "z_0",
-                    self.running_sum,
-                    0,
-                    &element,
-                    &self.perm,
-                )?;
+                let z_0 = copy(&mut region, || "z_0", self.running_sum, 0, &element)?;
 
                 self.range_check(&mut region, z_0, num_words, strict)
             },
@@ -247,7 +247,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             // Constrain the final `z` to be zero.
             let cell =
                 region.assign_fixed(|| "zero", self.constants, words.len(), || Ok(F::zero()))?;
-            region.constrain_equal(&self.perm, z.cell(), cell)?;
+            region.constrain_equal(z.cell(), cell)?;
         }
 
         Ok(zs)
@@ -269,14 +269,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             || format!("Range check {:?} bits", num_bits),
             |mut region| {
                 // Copy `element` to use in the k-bit lookup.
-                let element = copy(
-                    &mut region,
-                    || "element",
-                    self.running_sum,
-                    0,
-                    &element,
-                    &self.perm,
-                )?;
+                let element = copy(&mut region, || "element", self.running_sum, 0, &element)?;
 
                 self.short_range_check(&mut region, element, num_bits)
             },
@@ -397,15 +390,8 @@ mod tests {
                 let running_sum = meta.advice_column();
                 let constants = meta.fixed_column();
                 let table_idx = meta.fixed_column();
-                let perm = meta.permutation(&[running_sum.into(), constants.into()]);
 
-                LookupRangeCheckConfig::<F, K>::configure(
-                    meta,
-                    running_sum,
-                    constants,
-                    table_idx,
-                    perm,
-                )
+                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, constants, table_idx)
             }
 
             fn synthesize(
@@ -509,15 +495,8 @@ mod tests {
                 let running_sum = meta.advice_column();
                 let constants = meta.fixed_column();
                 let table_idx = meta.fixed_column();
-                let perm = meta.permutation(&[running_sum.into()]);
 
-                LookupRangeCheckConfig::<F, K>::configure(
-                    meta,
-                    running_sum,
-                    constants,
-                    table_idx,
-                    perm,
-                )
+                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, constants, table_idx)
             }
 
             fn synthesize(

@@ -47,14 +47,7 @@ impl SinsemillaChip {
                 CellValue::new(cell, Some(x_q))
             };
 
-            let x_a = copy(
-                region,
-                || "x_q",
-                config.x_a,
-                offset,
-                &fixed_x_q,
-                &config.perm,
-            )?;
+            let x_a = copy(region, || "x_q", config.x_a, offset, &fixed_x_q)?;
 
             // Constrain the initial x_a, lambda_1, lambda_2, x_p using the fixed y_q
             // initializer. Assign `fixed_y_q` to be zero on every other row.
@@ -291,7 +284,7 @@ impl SinsemillaChip {
                 offset,
                 || piece.field_elem().ok_or(Error::SynthesisError),
             )?;
-            region.constrain_equal(&config.perm, piece.cell(), cell)?;
+            region.constrain_equal(piece.cell(), cell)?;
             zs.push(CellValue::new(cell, piece.field_elem()));
 
             // Assign cumulative sum such that for 0 <= i < n,

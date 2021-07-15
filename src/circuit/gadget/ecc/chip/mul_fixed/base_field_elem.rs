@@ -273,8 +273,6 @@ impl Config {
         layouter.assign_region(
             || "Canonicity checks",
             |mut region| {
-                let perm = &self.super_config.perm;
-
                 // Activate canonicity check gate
                 self.q_mul_fixed_base_field.enable(&mut region, 1)?;
 
@@ -289,7 +287,6 @@ impl Config {
                         self.canon_advices[0],
                         offset,
                         &alpha,
-                        perm,
                     )?;
 
                     // z_84_alpha = the top three bits of alpha.
@@ -299,7 +296,6 @@ impl Config {
                         self.canon_advices[2],
                         offset,
                         &z_84_alpha,
-                        perm,
                     )?;
                 }
 
@@ -314,7 +310,6 @@ impl Config {
                         self.canon_advices[0],
                         offset,
                         &alpha_0_prime,
-                        perm,
                     )?;
 
                     // Decompose α into three pieces,
@@ -349,7 +344,6 @@ impl Config {
                         self.canon_advices[0],
                         offset,
                         &z_13_alpha_0_prime,
-                        perm,
                     )?;
 
                     // Copy z_44_alpha
@@ -359,7 +353,6 @@ impl Config {
                         self.canon_advices[1],
                         offset,
                         &z_44_alpha,
-                        perm,
                     )?;
 
                     // Copy z_43_alpha
@@ -369,7 +362,6 @@ impl Config {
                         self.canon_advices[2],
                         offset,
                         &z_43_alpha,
-                        perm,
                     )?;
                 }
 

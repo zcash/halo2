@@ -1,6 +1,6 @@
 use halo2::{
     circuit::{Chip, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Permutation},
+    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed},
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -26,7 +26,6 @@ use std::{array, convert::TryInto};
 pub struct MerkleConfig {
     advices: [Column<Advice>; 5],
     l_plus_1: Column<Fixed>,
-    perm: Permutation,
     pub(super) cond_swap_config: CondSwapConfig,
     pub(super) sinsemilla_config: SinsemillaConfig,
 }
@@ -54,9 +53,10 @@ impl MerkleChip {
         meta: &mut ConstraintSystem<pallas::Base>,
         sinsemilla_config: SinsemillaConfig,
     ) -> MerkleConfig {
+        // TODO: Check whether these advice columns were equality-enabled by
+        // SinsemillaConfig. We require all five columns to be equality-enabled.
         let advices = sinsemilla_config.advices();
-        let cond_swap_config =
-            CondSwapChip::configure(meta, advices, sinsemilla_config.perm.clone());
+        let cond_swap_config = CondSwapChip::configure(meta, advices);
 
         // This fixed column serves two purposes:
         //  - Fixing the value of l* for rows in which a Merkle path layer
@@ -153,7 +153,6 @@ impl MerkleChip {
         MerkleConfig {
             advices,
             l_plus_1,
-            perm: sinsemilla_config.perm.clone(),
             cond_swap_config,
             sinsemilla_config,
         }
@@ -298,7 +297,6 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                         config.advices[0],
                         0,
                         &a.cell_value(),
-                        &config.perm,
                     )?;
                     // Copy and assign `b` at the correct position.
                     copy(
@@ -307,7 +305,6 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                         config.advices[1],
                         0,
                         &b.cell_value(),
-                        &config.perm,
                     )?;
                     // Copy and assign `c` at the correct position.
                     copy(
@@ -316,64 +313,21 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                         config.advices[2],
                         0,
                         &c.cell_value(),
-                        &config.perm,
                     )?;
                     // Copy and assign the left node at the correct position.
-                    copy(
-                        &mut region,
-                        || "left",
-                        config.advices[3],
-                        0,
-                        &left,
-                        &config.perm,
-                    )?;
+                    copy(&mut region, || "left", config.advices[3], 0, &left)?;
                     // Copy and assign the right node at the correct position.
-                    copy(
-                        &mut region,
-                        || "right",
-                        config.advices[4],
-                        0,
-                        &right,
-                        &config.perm,
-                    )?;
+                    copy(&mut region, || "right", config.advices[4], 0, &right)?;
 
                     // Offset 1
                     // Copy and assign z_1 of SinsemillaHash(a) = a_1
-                    copy(
-                        &mut region,
-                        || "z1_a",
-                        config.advices[0],
-                        1,
-                        &z1_a,
-                        &config.perm,
-                    )?;
+                    copy(&mut region, || "z1_a", config.advices[0], 1, &z1_a)?;
                     // Copy and assign z_1 of SinsemillaHash(b) = b_1
-                    copy(
-                        &mut region,
-                        || "z1_b",
-                        config.advices[1],
-                        1,
-                        &z1_b,
-                        &config.perm,
-                    )?;
+                    copy(&mut region, || "z1_b", config.advices[1], 1, &z1_b)?;
                     // Copy `b_1`, which has been constrained to be a 5-bit value
-                    copy(
-                        &mut region,
-                        || "b_1",
-                        config.advices[2],
-                        1,
-                        &b_1,
-                        &config.perm,
-                    )?;
+                    copy(&mut region, || "b_1", config.advices[2], 1, &b_1)?;
                     // Copy `b_2`, which has been constrained to be a 5-bit value
-                    copy(
-                        &mut region,
-                        || "b_2",
-                        config.advices[3],
-                        1,
-                        &b_2,
-                        &config.perm,
-                    )?;
+                    copy(&mut region, || "b_2", config.advices[3], 1, &b_2)?;
 
                     Ok(())
                 },

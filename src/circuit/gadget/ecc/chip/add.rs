@@ -5,7 +5,7 @@ use ff::Field;
 use halo2::{
     arithmetic::BatchInvert,
     circuit::Region,
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Permutation, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -32,8 +32,6 @@ pub struct Config {
     gamma: Column<Advice>,
     // δ = inv0(y_p + y_q) if x_q = x_p, 0 otherwise
     delta: Column<Advice>,
-    // Permutation
-    perm: Permutation,
 }
 
 impl From<&EccConfig> for Config {
@@ -49,7 +47,6 @@ impl From<&EccConfig> for Config {
             beta: ecc_config.advices[6],
             gamma: ecc_config.advices[7],
             delta: ecc_config.advices[8],
-            perm: ecc_config.perm.clone(),
         }
     }
 }
@@ -208,12 +205,12 @@ impl Config {
         self.q_add.enable(region, offset)?;
 
         // Copy point `p` into `x_p`, `y_p` columns
-        copy(region, || "x_p", self.x_p, offset, &p.x, &self.perm)?;
-        copy(region, || "y_p", self.y_p, offset, &p.y, &self.perm)?;
+        copy(region, || "x_p", self.x_p, offset, &p.x)?;
+        copy(region, || "y_p", self.y_p, offset, &p.y)?;
 
         // Copy point `q` into `x_qr`, `y_qr` columns
-        copy(region, || "x_q", self.x_qr, offset, &q.x, &self.perm)?;
-        copy(region, || "y_q", self.y_qr, offset, &q.y, &self.perm)?;
+        copy(region, || "x_q", self.x_qr, offset, &q.x)?;
+        copy(region, || "y_q", self.y_qr, offset, &q.y)?;
 
         let (x_p, y_p) = (p.x.value(), p.y.value());
         let (x_q, y_q) = (q.x.value(), q.y.value());

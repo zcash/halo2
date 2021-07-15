@@ -15,10 +15,7 @@ use crate::{
 use halo2::{
     arithmetic::{CurveAffine, FieldExt},
     circuit::{Chip, Layouter},
-    plonk::{
-        Advice, Column, ConstraintSystem, Error, Expression, Fixed, Permutation, Selector,
-        VirtualCells,
-    },
+    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, VirtualCells},
     poly::Rotation,
 };
 use pasta_curves::pallas;
@@ -62,8 +59,6 @@ pub struct SinsemillaConfig {
     /// x-coordinate of the domain $Q$, which is then constrained to equal the
     /// initial $x_a$.
     pub(super) constants: Column<Fixed>,
-    /// Permutation over all advice columns and the `constants` fixed column.
-    pub(super) perm: Permutation,
     /// Configure each advice column to be able to perform lookup range checks.
     pub(super) lookup_config_0: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     pub(super) lookup_config_1: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
@@ -110,6 +105,9 @@ impl SinsemillaChip {
         config.generator_table.load(layouter)
     }
 
+    /// # Side-effects
+    ///
+    /// All columns in `advices` and `constants` will be equality-enabled.
     #[allow(clippy::too_many_arguments)]
     #[allow(non_snake_case)]
     pub fn configure(
@@ -117,8 +115,23 @@ impl SinsemillaChip {
         advices: [Column<Advice>; 5],
         lookup: (Column<Fixed>, Column<Fixed>, Column<Fixed>),
         constants: [Column<Fixed>; 6], // TODO: replace with public inputs API
-        perm: Permutation,
     ) -> <Self as Chip<pallas::Base>>::Config {
+        // This chip requires all advice columns and the `constants` fixed column to be
+        // equality-enabled. The advice columns are equality-enabled by the calls to
+        // LookupRangeCheckConfig::configure.
+        let lookup_config_0 =
+            LookupRangeCheckConfig::configure(meta, advices[0], constants[0], lookup.0);
+        let lookup_config_1 =
+            LookupRangeCheckConfig::configure(meta, advices[1], constants[1], lookup.0);
+        let lookup_config_2 =
+            LookupRangeCheckConfig::configure(meta, advices[2], constants[2], lookup.0);
+        let lookup_config_3 =
+            LookupRangeCheckConfig::configure(meta, advices[3], constants[3], lookup.0);
+        let lookup_config_4 =
+            LookupRangeCheckConfig::configure(meta, advices[4], constants[4], lookup.0);
+        let constants = constants[5];
+        meta.enable_equality(constants.into());
+
         let config = SinsemillaConfig {
             q_sinsemilla1: meta.selector(),
             q_sinsemilla2: meta.fixed_column(),
@@ -133,43 +146,12 @@ impl SinsemillaChip {
                 table_x: lookup.1,
                 table_y: lookup.2,
             },
-            constants: constants[5],
-            lookup_config_0: LookupRangeCheckConfig::configure(
-                meta,
-                advices[0],
-                constants[0],
-                lookup.0,
-                perm.clone(),
-            ),
-            lookup_config_1: LookupRangeCheckConfig::configure(
-                meta,
-                advices[1],
-                constants[1],
-                lookup.0,
-                perm.clone(),
-            ),
-            lookup_config_2: LookupRangeCheckConfig::configure(
-                meta,
-                advices[2],
-                constants[2],
-                lookup.0,
-                perm.clone(),
-            ),
-            lookup_config_3: LookupRangeCheckConfig::configure(
-                meta,
-                advices[3],
-                constants[3],
-                lookup.0,
-                perm.clone(),
-            ),
-            lookup_config_4: LookupRangeCheckConfig::configure(
-                meta,
-                advices[4],
-                constants[4],
-                lookup.0,
-                perm.clone(),
-            ),
-            perm,
+            constants,
+            lookup_config_0,
+            lookup_config_1,
+            lookup_config_2,
+            lookup_config_3,
+            lookup_config_4,
         };
 
         // Set up lookup argument
