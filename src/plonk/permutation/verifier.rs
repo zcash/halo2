@@ -10,10 +10,6 @@ use crate::{
     transcript::{EncodedChallenge, TranscriptRead},
 };
 
-pub struct CommonCommitted<C: CurveAffine> {
-    permutation_evals: Vec<C::Scalar>,
-}
-
 pub struct Committed<C: CurveAffine> {
     permutation_product_commitments: Vec<C>,
 }
@@ -23,6 +19,10 @@ pub struct EvaluatedSet<C: CurveAffine> {
     permutation_product_eval: C::Scalar,
     permutation_product_next_eval: C::Scalar,
     permutation_product_last_eval: Option<C::Scalar>,
+}
+
+pub struct CommonEvaluated<C: CurveAffine> {
+    permutation_evals: Vec<C::Scalar>,
 }
 
 pub struct Evaluated<C: CurveAffine> {
@@ -57,14 +57,14 @@ impl<C: CurveAffine> VerifyingKey<C> {
     pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
         &self,
         transcript: &mut T,
-    ) -> Result<CommonCommitted<C>, Error> {
+    ) -> Result<CommonEvaluated<C>, Error> {
         let permutation_evals = self
             .commitments
             .iter()
             .map(|_| transcript.read_scalar().map_err(|_| Error::TranscriptError))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(CommonCommitted { permutation_evals })
+        Ok(CommonEvaluated { permutation_evals })
     }
 }
 
@@ -111,7 +111,7 @@ impl<C: CurveAffine> Evaluated<C> {
         &'a self,
         vk: &'a plonk::VerifyingKey<C>,
         p: &'a Argument,
-        common: &'a CommonCommitted<C>,
+        common: &'a CommonEvaluated<C>,
         advice_evals: &'a [C::Scalar],
         fixed_evals: &'a [C::Scalar],
         instance_evals: &'a [C::Scalar],
@@ -245,7 +245,7 @@ impl<C: CurveAffine> Evaluated<C> {
     }
 }
 
-impl<C: CurveAffine> CommonCommitted<C> {
+impl<C: CurveAffine> CommonEvaluated<C> {
     pub(in crate::plonk) fn queries<'r, 'params: 'r>(
         &'r self,
         vkey: &'r VerifyingKey<C>,
