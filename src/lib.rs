@@ -28,6 +28,7 @@ pub mod primitives;
 mod spec;
 pub mod tree;
 pub mod value;
+pub mod zip32;
 
 #[cfg(test)]
 mod test_vectors;

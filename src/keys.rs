@@ -1,6 +1,7 @@
 //! Key structures for Orchard.
 
 use std::convert::{TryFrom, TryInto};
+use std::io::{self, Read, Write};
 use std::mem;
 
 use aes::Aes256;
@@ -20,16 +21,18 @@ use crate::{
         commit_ivk, diversify_hash, extract_p, ka_orchard, prf_nf, to_base, to_scalar,
         NonIdentityPallasPoint, NonZeroPallasBase, NonZeroPallasScalar, PrfExpand,
     },
+    zip32::ExtendedSpendingKey,
 };
 
 const KDF_ORCHARD_PERSONALIZATION: &[u8; 16] = b"Zcash_OrchardKDF";
+const ZIP32_PURPOSE: u32 = 32;
 
 /// A spending key, from which all key material is derived.
 ///
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SpendingKey([u8; 32]);
 
 impl SpendingKey {
@@ -68,6 +71,12 @@ impl SpendingKey {
     /// Returns the raw bytes of the spending key.
     pub fn to_bytes(&self) -> &[u8; 32] {
         &self.0
+    }
+
+    /// Derives the Orchard spending key for the given seed, coin type, and account.
+    pub fn from_zip32_seed(seed: &[u8], coin_type: u32, account: u32) -> Self {
+        // Call zip32 logic
+        ExtendedSpendingKey::from_path(&seed, &[ZIP32_PURPOSE, coin_type, account]).sk()
     }
 }
 
@@ -272,6 +281,12 @@ impl From<&SpendingKey> for FullViewingKey {
     }
 }
 
+impl From<&ExtendedSpendingKey> for FullViewingKey {
+    fn from(extsk: &ExtendedSpendingKey) -> Self {
+        (&extsk.sk()).into()
+    }
+}
+
 impl From<FullViewingKey> for SpendValidatingKey {
     fn from(fvk: FullViewingKey) -> Self {
         fvk.ak
@@ -319,18 +334,44 @@ impl FullViewingKey {
     /// Serializes the full viewing key as specified in [Zcash Protocol Spec § 5.6.4.4: Orchard Raw Full Viewing Keys][orchardrawfullviewingkeys]
     ///
     /// [orchardrawfullviewingkeys]: https://zips.z.cash/protocol/protocol.pdf#orchardfullviewingkeyencoding
-    pub fn to_raw_fvk_bytes(&self) -> [u8; 96] {
+    pub fn write<W: Write>(&self, mut writer: W) -> io::Result<()> {
+        let ak_raw: [u8; 32] = self.ak.0.clone().into();
+        writer.write_all(&ak_raw)?;
+        writer.write_all(&self.nk.0.to_bytes())?;
+        writer.write_all(&self.rivk.0.to_bytes())?;
+
+        Ok(())
+    }
+
+    /// Parses a full viewing key from its "raw" encoding as specified in [Zcash Protocol Spec § 5.6.4.4: Orchard Raw Full Viewing Keys][orchardrawfullviewingkeys]
+    ///
+    /// [orchardrawfullviewingkeys]: https://zips.z.cash/protocol/protocol.pdf#orchardfullviewingkeyencoding
+    pub fn read<R: Read>(mut reader: R) -> io::Result<Self> {
+        let mut data = [0u8; 96];
+        reader.read_exact(&mut data)?;
+
+        Self::from_bytes(&data).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Unable to deserialize a valid Orchard FullViewingKey from bytes".to_owned(),
+            )
+        })
+    }
+
+    /// Serializes the full viewing key as specified in [Zcash Protocol Spec § 5.6.4.4: Orchard Raw Full Viewing Keys][orchardrawfullviewingkeys]
+    ///
+    /// [orchardrawfullviewingkeys]: https://zips.z.cash/protocol/protocol.pdf#orchardfullviewingkeyencoding
+    pub fn to_bytes(&self) -> [u8; 96] {
         let mut result = [0u8; 96];
-        result[..32].copy_from_slice(&self.ak.to_bytes());
-        result[32..64].copy_from_slice(&self.nk.to_bytes());
-        result[64..].copy_from_slice(&<[u8; 32]>::from(&self.rivk.0));
+        self.write(&mut result[..])
+            .expect("should be able to serialize a FullViewingKey");
         result
     }
 
     /// Parses a full viewing key from its "raw" encoding as specified in [Zcash Protocol Spec § 5.6.4.4: Orchard Raw Full Viewing Keys][orchardrawfullviewingkeys]
     ///
     /// [orchardrawfullviewingkeys]: https://zips.z.cash/protocol/protocol.pdf#orchardfullviewingkeyencoding
-    pub fn from_raw_fvk_bytes(bytes: &[u8; 96]) -> Option<Self> {
+    pub fn from_bytes(bytes: &[u8; 96]) -> Option<Self> {
         let ak = SpendValidatingKey::from_bytes(&bytes[..32])?;
         let nk = NullifierDerivingKey::from_bytes(&bytes[32..64])?;
         let rivk = CommitIvkRandomness::from_bytes(&bytes[64..])?;
