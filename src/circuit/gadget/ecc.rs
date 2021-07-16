@@ -100,7 +100,8 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
         base: &Self::FixedPoints,
     ) -> Result<(Self::Point, Self::ScalarFixed), Error>;
 
-    /// Performs fixed-base scalar multiplication using a short signed scalar, returning `[scalar] base`.
+    /// Performs fixed-base scalar multiplication using a short signed scalar, returning
+    /// `[magnitude * sign] base`.
     fn mul_fixed_short(
         &self,
         layouter: &mut impl Layouter<C::Base>,

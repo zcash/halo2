@@ -308,6 +308,29 @@ mod tests {
             };
             let prover = MockProver::<pallas::Base>::run(8, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
+        }
+
+        // Random 64-bit word
+        {
+            let alpha = pallas::Base::from_u64(rand::random());
+
+            // Strict full decomposition should pass.
+            let circuit: MyCircuit<
+                pallas::Base,
+                L_VALUE,
+                FIXED_BASE_WINDOW_SIZE,
+                NUM_WINDOWS_SHORT,
+            > = MyCircuit {
+                alpha: Some(alpha),
+                strict: true,
+            };
+            let prover = MockProver::<pallas::Base>::run(8, &circuit, vec![]).unwrap();
+            assert_eq!(prover.verify(), Ok(()));
+        }
+
+        // 2^64
+        {
+            let alpha = pallas::Base::from_u128(1 << 64);
 
             // Strict partial decomposition should fail.
             let circuit: MyCircuit<
@@ -343,24 +366,6 @@ mod tests {
             > = MyCircuit {
                 alpha: Some(alpha),
                 strict: false,
-            };
-            let prover = MockProver::<pallas::Base>::run(8, &circuit, vec![]).unwrap();
-            assert_eq!(prover.verify(), Ok(()));
-        }
-
-        // Random 64-bit word
-        {
-            let alpha = pallas::Base::from_u64(rand::random());
-
-            // Strict full decomposition should pass.
-            let circuit: MyCircuit<
-                pallas::Base,
-                L_VALUE,
-                FIXED_BASE_WINDOW_SIZE,
-                NUM_WINDOWS_SHORT,
-            > = MyCircuit {
-                alpha: Some(alpha),
-                strict: true,
             };
             let prover = MockProver::<pallas::Base>::run(8, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));

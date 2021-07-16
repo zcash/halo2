@@ -163,7 +163,9 @@ impl Config {
                     &self.super_config.perm,
                 )?;
 
-                // Copy last window to `u` column
+                // Copy last window to `u` column.
+                // (Although the last window is not a `u` value; we are copying it into the `u`
+                // column because there is an available cell there.)
                 let z_21 = scalar.running_sum[20];
                 copy(
                     &mut region,
@@ -459,30 +461,60 @@ pub mod tests {
 
         // Magnitude larger than 64 bits should fail
         {
-            let circuit = MyCircuit {
-                magnitude: Some(pallas::Base::from_u128(1 << 64)),
-                sign: Some(pallas::Base::one()),
-            };
+            let circuits = [
+                // 2^64
+                MyCircuit {
+                    magnitude: Some(pallas::Base::from_u128(1 << 64)),
+                    sign: Some(pallas::Base::one()),
+                },
+                // -2^64
+                MyCircuit {
+                    magnitude: Some(pallas::Base::from_u128(1 << 64)),
+                    sign: Some(-pallas::Base::one()),
+                },
+                // 2^66
+                MyCircuit {
+                    magnitude: Some(pallas::Base::from_u128(1 << 66)),
+                    sign: Some(pallas::Base::one()),
+                },
+                // -2^66
+                MyCircuit {
+                    magnitude: Some(pallas::Base::from_u128(1 << 66)),
+                    sign: Some(-pallas::Base::one()),
+                },
+                // 2^254
+                MyCircuit {
+                    magnitude: Some(pallas::Base::from_u128(1 << 127).square()),
+                    sign: Some(pallas::Base::one()),
+                },
+                // -2^254
+                MyCircuit {
+                    magnitude: Some(pallas::Base::from_u128(1 << 127).square()),
+                    sign: Some(-pallas::Base::one()),
+                },
+            ];
 
-            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
-            assert_eq!(
-                prover.verify(),
-                Err(vec![
-                    VerifyFailure::Constraint {
-                        constraint: ((4, "final z = 0").into(), 0, "").into(),
-                        row: 24
-                    },
-                    VerifyFailure::Constraint {
-                        constraint: (
-                            (15, "Short fixed-base mul gate").into(),
-                            0,
-                            "last_window_check"
-                        )
-                            .into(),
-                        row: 26
-                    }
-                ])
-            );
+            for circuit in circuits.iter() {
+                let prover = MockProver::<pallas::Base>::run(11, circuit, vec![]).unwrap();
+                assert_eq!(
+                    prover.verify(),
+                    Err(vec![
+                        VerifyFailure::Constraint {
+                            constraint: ((4, "final z = 0").into(), 0, "").into(),
+                            row: 24
+                        },
+                        VerifyFailure::Constraint {
+                            constraint: (
+                                (15, "Short fixed-base mul gate").into(),
+                                0,
+                                "last_window_check"
+                            )
+                                .into(),
+                            row: 26
+                        }
+                    ])
+                );
+            }
         }
 
         // Sign that is not +/- 1 should fail
