@@ -60,7 +60,7 @@ impl CircuitLayout {
         self
     }
 
-    /// Draws red lines between equality-constrainted cells.
+    /// Draws red lines between equality-constrained cells.
     ///
     /// The default is to not show these, as they can get _very_ messy.
     pub fn show_equality_constraints(mut self, show: bool) -> Self {
