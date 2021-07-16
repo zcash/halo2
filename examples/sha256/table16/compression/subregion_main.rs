@@ -67,7 +67,6 @@ impl CompressionConfig {
                 a_7,
                 a_new_row,
                 &a_new_dense.0.into(),
-                &self.perm,
             )?;
             self.assign_and_constrain(
                 region,
@@ -75,7 +74,6 @@ impl CompressionConfig {
                 a_7,
                 a_new_row + 1,
                 &a_new_dense.1.into(),
-                &self.perm,
             )?;
 
             // Assign and copy E_new
@@ -86,7 +84,6 @@ impl CompressionConfig {
                 a_7,
                 e_new_row,
                 &e_new_dense.0.into(),
-                &self.perm,
             )?;
             self.assign_and_constrain(
                 region,
@@ -94,7 +91,6 @@ impl CompressionConfig {
                 a_7,
                 e_new_row + 1,
                 &e_new_dense.1.into(),
-                &self.perm,
             )?;
 
             // Decompose A into (2, 11, 9, 10)-bit chunks

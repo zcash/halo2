@@ -4,7 +4,7 @@ use super::Sha256Instructions;
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Cell, Chip, Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Permutation},
+    plonk::{Advice, Column, ConstraintSystem, Error},
 };
 
 mod compression;
@@ -91,6 +91,7 @@ impl CellValue32 {
     }
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<CellValue32> for CellValue16 {
     fn into(self) -> CellValue32 {
         CellValue32::new(self.var, self.value.unwrap() as u32)
@@ -165,30 +166,16 @@ impl<F: FieldExt> Table16Chip<F> {
         let a_8 = extras[4];
         let _a_9 = extras[5];
 
-        let perm = Permutation::new(
-            meta,
-            &[
-                a_1.into(),
-                a_2.into(),
-                a_3.into(),
-                a_4.into(),
-                a_5.into(),
-                a_6.into(),
-                a_7.into(),
-                a_8.into(),
-            ],
-        );
+        // Add all advice columns to permutation
+        for column in [a_1, a_2, a_3, a_4, a_5, a_6, a_7, a_8].iter() {
+            meta.enable_equality((*column).into());
+        }
 
-        let compression = CompressionConfig::configure(
-            meta,
-            lookup_inputs.clone(),
-            message_schedule,
-            extras,
-            perm.clone(),
-        );
+        let compression =
+            CompressionConfig::configure(meta, lookup_inputs.clone(), message_schedule, extras);
 
         let message_schedule =
-            MessageScheduleConfig::configure(meta, lookup_inputs, message_schedule, extras, perm);
+            MessageScheduleConfig::configure(meta, lookup_inputs, message_schedule, extras);
 
         Table16Config {
             lookup,
@@ -260,7 +247,6 @@ trait Table16Assignment<F: FieldExt> {
         region: &mut Region<'_, F>,
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
-        perm: &Permutation,
         row: usize,
         r_0_even: u16,
         r_0_odd: u16,
@@ -280,7 +266,7 @@ trait Table16Assignment<F: FieldExt> {
             row,
             || Ok(F::from_u64(r_1_odd.spread.value.unwrap().into())),
         )?;
-        region.constrain_equal(perm, r_1_odd.spread.var, r_1_odd_spread)?;
+        region.constrain_equal(r_1_odd.spread.var, r_1_odd_spread)?;
 
         Ok((
             (
@@ -301,7 +287,6 @@ trait Table16Assignment<F: FieldExt> {
         region: &mut Region<'_, F>,
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
-        perm: &Permutation,
         row: usize,
         r_0_even: u16,
         r_0_odd: u16,
@@ -309,7 +294,7 @@ trait Table16Assignment<F: FieldExt> {
         r_1_odd: u16,
     ) -> Result<(CellValue16, CellValue16), Error> {
         let (even, _odd) = self.assign_spread_outputs(
-            region, lookup, a_3, perm, row, r_0_even, r_0_odd, r_1_even, r_1_odd,
+            region, lookup, a_3, row, r_0_even, r_0_odd, r_1_even, r_1_odd,
         )?;
 
         Ok(even)
@@ -323,7 +308,6 @@ trait Table16Assignment<F: FieldExt> {
         column: Column<Advice>,
         row: usize,
         copy: &CellValue32,
-        perm: &Permutation,
     ) -> Result<Cell, Error>
     where
         A: Fn() -> AR,
@@ -332,7 +316,7 @@ trait Table16Assignment<F: FieldExt> {
         let cell = region.assign_advice(annotation, column, row, || {
             Ok(F::from_u64(copy.value.unwrap() as u64))
         })?;
-        region.constrain_equal(perm, cell, copy.var)?;
+        region.constrain_equal(cell, copy.var)?;
         Ok(cell)
     }
 }
@@ -343,9 +327,9 @@ mod tests {
     use super::{Table16Chip, Table16Config};
     use halo2::{
         arithmetic::FieldExt,
-        circuit::{layouter::SingleChipLayouter, Layouter},
+        circuit::{Layouter, SimpleFloorPlanner},
         pasta::Fq,
-        plonk::{Assignment, Circuit, ConstraintSystem, Error},
+        plonk::{Circuit, ConstraintSystem, Error},
     };
 
     #[cfg(feature = "dev-graph")]
@@ -355,6 +339,11 @@ mod tests {
 
         impl<F: FieldExt> Circuit<F> for MyCircuit {
             type Config = Table16Config;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                MyCircuit {}
+            }
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 Table16Chip::configure(meta)
@@ -362,10 +351,9 @@ mod tests {
 
             fn synthesize(
                 &self,
-                cs: &mut impl Assignment<F>,
                 config: Self::Config,
+                mut layouter: impl Layouter<F>,
             ) -> Result<(), Error> {
-                let mut layouter = SingleChipLayouter::new(cs)?;
                 let table16_chip = Table16Chip::<F>::construct(config.clone());
                 Table16Chip::<F>::load(config, &mut layouter)?;
 
@@ -412,6 +400,11 @@ mod tests {
 
         impl<F: FieldExt> Circuit<F> for MyCircuit {
             type Config = Table16Config;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                MyCircuit {}
+            }
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 Table16Chip::configure(meta)
@@ -419,10 +412,9 @@ mod tests {
 
             fn synthesize(
                 &self,
-                cs: &mut impl Assignment<F>,
                 config: Self::Config,
+                mut layouter: impl Layouter<F>,
             ) -> Result<(), Error> {
-                let mut layouter = SingleChipLayouter::new(cs)?;
                 let table16_chip = Table16Chip::<F>::construct(config.clone());
                 Table16Chip::<F>::load(config, &mut layouter)?;
 
@@ -465,6 +457,8 @@ mod tests {
             .unwrap();
 
         let circuit = MyCircuit {};
-        halo2::dev::circuit_layout::<Fq, _, _>(&circuit, &root).unwrap();
+        halo2::dev::CircuitLayout::default()
+            .render::<Fq, _, _>(&circuit, &root)
+            .unwrap();
     }
 }

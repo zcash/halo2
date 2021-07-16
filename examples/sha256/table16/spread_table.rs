@@ -275,10 +275,10 @@ mod tests {
     use crate::table16::util::{get_tag, interleave_u16_with_zeros};
     use halo2::{
         arithmetic::FieldExt,
-        circuit::{layouter::SingleChipLayouter, Layouter},
+        circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         pasta::Fp,
-        plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error},
+        plonk::{Advice, Circuit, Column, ConstraintSystem, Error},
     };
 
     #[test]
@@ -291,6 +291,11 @@ mod tests {
 
         impl<F: FieldExt> Circuit<F> for MyCircuit {
             type Config = SpreadTableConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                MyCircuit {}
+            }
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let input_tag = meta.advice_column();
@@ -302,10 +307,9 @@ mod tests {
 
             fn synthesize(
                 &self,
-                cs: &mut impl Assignment<F>,
                 config: Self::Config,
+                mut layouter: impl Layouter<F>,
             ) -> Result<(), Error> {
-                let mut layouter = SingleChipLayouter::new(cs)?;
                 SpreadTableChip::load(config.clone(), &mut layouter)?;
 
                 layouter.assign_region(
@@ -410,7 +414,7 @@ mod tests {
 
         let circuit: MyCircuit = MyCircuit {};
 
-        let prover = match MockProver::<Fp>::run(16, &circuit, vec![]) {
+        let prover = match MockProver::<Fp>::run(17, &circuit, vec![]) {
             Ok(prover) => prover,
             Err(e) => panic!("{:?}", e),
         };

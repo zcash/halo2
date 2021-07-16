@@ -102,7 +102,7 @@ impl MessageScheduleConfig {
         let row = get_word_row(word.index) + 3;
 
         // Assign `a` and copy constraint
-        self.assign_and_constrain(region, || "a", a_5, row + 1, &word.a, &self.perm)?;
+        self.assign_and_constrain(region, || "a", a_5, row + 1, &word.a)?;
 
         // Witness `spread_a`
         let spread_a = interleave_u16_with_zeros(word.a.value.unwrap() as u16);
@@ -136,13 +136,13 @@ impl MessageScheduleConfig {
         )?;
 
         // Assign `b` and copy constraint
-        self.assign_and_constrain(region, || "b", a_6, row, &word.b, &self.perm)?;
+        self.assign_and_constrain(region, || "b", a_6, row, &word.b)?;
 
         // Assign `spread_c` and copy constraint
-        self.assign_and_constrain(region, || "spread_c", a_4, row, &word.spread_c, &self.perm)?;
+        self.assign_and_constrain(region, || "spread_c", a_4, row, &word.spread_c)?;
 
         // Assign `spread_d` and copy constraint
-        self.assign_and_constrain(region, || "spread_d", a_5, row, &word.spread_d, &self.perm)?;
+        self.assign_and_constrain(region, || "spread_d", a_5, row, &word.spread_d)?;
 
         // Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
         let spread_a = spread_a as u64;
@@ -171,7 +171,6 @@ impl MessageScheduleConfig {
             region,
             &self.lookup,
             a_3,
-            &self.perm,
             row,
             r_0_even,
             r_0_odd,
