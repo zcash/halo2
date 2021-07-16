@@ -223,16 +223,20 @@ impl CircuitLayout {
 
         // Mark equality-constrained cells.
         if self.mark_equality_cells {
+            let mut cells = HashSet::new();
             for (l_col, l_row, r_col, r_row) in &layout.equality {
                 let l_col = column_index(l_col);
                 let r_col = column_index(r_col);
+
+                // Deduplicate cells.
+                cells.insert((l_col, *l_row));
+                cells.insert((r_col, *r_row));
+            }
+
+            for (col, row) in cells {
                 root.draw(&Rectangle::new(
-                    [(l_col, *l_row), (l_col + 1, *l_row + 1)],
-                    ShapeStyle::from(&RED).filled(),
-                ))?;
-                root.draw(&Rectangle::new(
-                    [(r_col, *r_row), (r_col + 1, *r_row + 1)],
-                    ShapeStyle::from(&RED).filled(),
+                    [(col, row), (col + 1, row + 1)],
+                    ShapeStyle::from(&RED.mix(0.5)).filled(),
                 ))?;
             }
         }
