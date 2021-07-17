@@ -1,22 +1,23 @@
-//! Decomposes an n-bit field element alpha into W windows, each window
-//! being a K-bit word, using a running sum z.
-//! We constrain K <= 3 for this helper.
-//!     alpha = w_0 + (2^K) w_1 + (2^2K) w_2 + ... + (2^(W-1)K) w_{W-1}
-//! z_0 is initialized as alpha. Each successive z_{i+1} is computed as
-//!                z_{i+1} = (z_{i} - k_i) / (2^k).
-//! z_W is constrained to be zero.
+//! Decomposes an $n$-bit field element $\alpha$ into $W$ windows, each window
+//! being a $K$-bit word, using a running sum $z$.
+//! We constrain $K \leq 3$ for this helper.
+//!     $$\alpha = k_0 + (2^K) k_1 + (2^{2K}) k_2 + ... + (2^{(W-1)K}) k_{W-1}$$
+//!
+//! $z_0$ is initialized as $\alpha$. Each successive $z_{i+1}$ is computed as
+//!                $$z_{i+1} = (z_{i} - k_i) / (2^K).$$
+//! $z_W$ is constrained to be zero.
 //! The difference between each interstitial running sum output is constrained
-//! to be K bits, i.e.
-//!                      range_check(k_i, 2^K),
-//! where range_check(word, range)
-//!     = word * (1 - word) * (2 - word) * ... * ((range - 1) - word)
+//! to be $K$ bits, i.e.
+//!                      `range_check`($k_i$, $2^K$),
+//! where `range_check(word, range)
+//!     = word * (1 - word) * (2 - word) * ... * ((range - 1) - word)`
 //! is an expression of degree range.
 //!
-//! Given that the range_check constraint will be toggled by a selector, in
-//! practice we will have a selector * range_check(word, range) expression
-//! of degree range + 1.
+//! Given that the `range_check` constraint will be toggled by a selector, in
+//! practice we will have a `selector * range_check(word, range)` expression
+//! of degree `range + 1`.
 //!
-//! This means that 2^K has to be at most degree_bound - 1 in order for
+//! This means that $2^K$ has to be at most `degree_bound - 1` in order for
 //! the range check constraint to stay within the degree bound.
 
 use ff::PrimeFieldBits;
@@ -31,7 +32,7 @@ use crate::constants::util::decompose_word;
 use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
-/// The running sum [z_0, z_1, ..., z_W], where z_0 = alpha, and z_W = zero.
+/// The running sum $[z_1, ..., z_W]$. If created in strict mode, $z_W = 0$.
 pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<CellValue<F>>);
 impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
     type Target = Vec<CellValue<F>>;
@@ -41,32 +42,22 @@ impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
     }
 }
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct RunningSumConfig<
-    F: FieldExt + PrimeFieldBits,
-    const WORD_NUM_BITS: usize,
-    const WINDOW_NUM_BITS: usize,
-    const NUM_WINDOWS: usize,
-> {
+pub struct RunningSumConfig<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> {
     q_range_check: Selector,
-    q_final_z: Selector,
+    q_strict: Selector,
     pub z: Column<Advice>,
     perm: Permutation,
     _marker: PhantomData<F>,
 }
 
-impl<
-        F: FieldExt + PrimeFieldBits,
-        const WORD_NUM_BITS: usize,
-        const WINDOW_NUM_BITS: usize,
-        const NUM_WINDOWS: usize,
-    > RunningSumConfig<F, WORD_NUM_BITS, WINDOW_NUM_BITS, NUM_WINDOWS>
+impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
+    RunningSumConfig<F, WINDOW_NUM_BITS>
 {
     /// `perm` MUST include the advice column `z`.
     ///
     /// # Panics
     ///
     /// Panics if WINDOW_NUM_BITS > 3.
-    /// Panics if there are too many windows for the given word size.
     pub fn configure(
         meta: &mut ConstraintSystem<F>,
         q_range_check: Selector,
@@ -74,11 +65,10 @@ impl<
         perm: Permutation,
     ) -> Self {
         assert!(WINDOW_NUM_BITS <= 3);
-        assert!(WINDOW_NUM_BITS * NUM_WINDOWS < WORD_NUM_BITS + WINDOW_NUM_BITS);
 
         let config = Self {
             q_range_check,
-            q_final_z: meta.selector(),
+            q_strict: meta.selector(),
             z,
             perm,
             _marker: PhantomData,
@@ -96,10 +86,10 @@ impl<
         });
 
         meta.create_gate("final z = 0", |meta| {
-            let q_final_z = meta.query_selector(config.q_final_z);
+            let q_strict = meta.query_selector(config.q_strict);
             let z_final = meta.query_advice(config.z, Rotation::cur());
 
-            vec![q_final_z * z_final]
+            vec![q_strict * z_final]
         });
 
         config
@@ -108,57 +98,80 @@ impl<
     /// Decompose a field element alpha that is witnessed in this helper.
     ///
     /// `strict` = true constrains the final running sum to be zero, i.e.
-    /// constrains alpha to be within WINDOW_NUM_BITS * NUM_WINDOWS bits.
+    /// constrains alpha to be within WINDOW_NUM_BITS * num_windows bits.
     pub fn witness_decompose(
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
         alpha: Option<F>,
         strict: bool,
+        word_num_bits: usize,
+        num_windows: usize,
     ) -> Result<(CellValue<F>, RunningSum<F>), Error> {
         let z_0 = {
             let cell = region.assign_advice(
-                || "Witness alpha",
+                || "z_0 = alpha",
                 self.z,
                 offset,
                 || alpha.ok_or(Error::SynthesisError),
             )?;
             CellValue::new(cell, alpha)
         };
-        self.decompose(region, offset, z_0, strict)
+        self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
 
     /// Decompose an existing variable alpha that is copied into this helper.
     ///
     /// `strict` = true constrains the final running sum to be zero, i.e.
-    /// constrains alpha to be within WINDOW_NUM_BITS * NUM_WINDOWS bits.
+    /// constrains alpha to be within WINDOW_NUM_BITS * num_windows bits.
     pub fn copy_decompose(
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
         alpha: CellValue<F>,
         strict: bool,
+        word_num_bits: usize,
+        num_windows: usize,
     ) -> Result<(CellValue<F>, RunningSum<F>), Error> {
-        let z_0 = copy(region, || "Copy alpha", self.z, offset, &alpha, &self.perm)?;
-        self.decompose(region, offset, z_0, strict)
+        let z_0 = copy(region, || "z_0 = alpha", self.z, offset, &alpha, &self.perm)?;
+        self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
 
+    /// `z_0` must be the cell at `(self.z, offset)` in `region`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if there are too many windows for the given word size.
     fn decompose(
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
         z_0: CellValue<F>,
         strict: bool,
+        word_num_bits: usize,
+        num_windows: usize,
     ) -> Result<(CellValue<F>, RunningSum<F>), Error> {
+        // Make sure that we do not have more windows than required for the number
+        // of bits in the word. In other words, every window must contain at least
+        // one bit of the word (no empty windows).
+        //
+        // For example, let:
+        //      - word_num_bits = 64
+        //      - WINDOW_NUM_BITS = 3
+        // In this case, the maximum allowed num_windows is 22:
+        //                    3 * 22 < 64 + 3
+        //
+        assert!(WINDOW_NUM_BITS * num_windows < word_num_bits + WINDOW_NUM_BITS);
+
         // Enable selectors
         {
-            for idx in 0..NUM_WINDOWS {
+            for idx in 0..num_windows {
                 self.q_range_check.enable(region, offset + idx)?;
             }
 
             if strict {
                 // Constrain the final running sum output to be zero.
-                self.q_final_z.enable(region, offset + NUM_WINDOWS)?;
+                self.q_strict.enable(region, offset + num_windows)?;
             }
         }
 
@@ -166,20 +179,20 @@ impl<
         let words: Vec<Option<u8>> = {
             let words = z_0
                 .value()
-                .map(|word| decompose_word::<F>(word, WORD_NUM_BITS, WINDOW_NUM_BITS));
+                .map(|word| decompose_word::<F>(word, word_num_bits, WINDOW_NUM_BITS));
 
             if let Some(words) = words {
                 words.into_iter().map(Some).collect()
             } else {
-                vec![None; NUM_WINDOWS]
+                vec![None; num_windows]
             }
         };
 
-        // Initialize empty vector to store running sum values [z_0, ..., z_W].
-        let mut zs: Vec<CellValue<F>> = Vec::with_capacity(NUM_WINDOWS);
+        // Initialize empty vector to store running sum values [z_1, ..., z_W].
+        let mut zs: Vec<CellValue<F>> = Vec::with_capacity(num_windows);
         let mut z = z_0;
 
-        // Assign running sum `z_i`, i = 0..=n, where z_{i+1} = (z_i - a_i) / (2^K).
+        // Assign running sum `z_i`, i = 0..=n, where z_{i+1} = (z_i - k_i) / (2^K).
         // Outside of this helper, z_0 = alpha must have already been loaded into the
         // `z` column at `offset`.
         let offset = offset + 1;
@@ -243,7 +256,7 @@ mod tests {
                 const NUM_WINDOWS: usize,
             > Circuit<F> for MyCircuit<F, WORD_NUM_BITS, WINDOW_NUM_BITS, NUM_WINDOWS>
         {
-            type Config = RunningSumConfig<F, WORD_NUM_BITS, WINDOW_NUM_BITS, NUM_WINDOWS>;
+            type Config = RunningSumConfig<F, WINDOW_NUM_BITS>;
             type FloorPlanner = SimpleFloorPlanner;
 
             fn without_witnesses(&self) -> Self {
@@ -258,12 +271,7 @@ mod tests {
                 let q_range_check = meta.selector();
                 let perm = meta.permutation(&[z.into()]);
 
-                RunningSumConfig::<F, WORD_NUM_BITS, WINDOW_NUM_BITS, NUM_WINDOWS>::configure(
-                    meta,
-                    q_range_check,
-                    z,
-                    perm,
-                )
+                RunningSumConfig::<F, WINDOW_NUM_BITS>::configure(meta, q_range_check, z, perm)
             }
 
             fn synthesize(
@@ -280,11 +288,20 @@ mod tests {
                             offset,
                             self.alpha,
                             self.strict,
+                            WORD_NUM_BITS,
+                            NUM_WINDOWS,
                         )?;
 
                         let offset = offset + NUM_WINDOWS + 1;
 
-                        config.copy_decompose(&mut region, offset, alpha, self.strict)?;
+                        config.copy_decompose(
+                            &mut region,
+                            offset,
+                            alpha,
+                            self.strict,
+                            WORD_NUM_BITS,
+                            NUM_WINDOWS,
+                        )?;
 
                         Ok(())
                     },
@@ -328,9 +345,9 @@ mod tests {
             assert_eq!(prover.verify(), Ok(()));
         }
 
-        // 2^64
+        // 2^66
         {
-            let alpha = pallas::Base::from_u128(1 << 64);
+            let alpha = pallas::Base::from_u128(1 << 66);
 
             // Strict partial decomposition should fail.
             let circuit: MyCircuit<

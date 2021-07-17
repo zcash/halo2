@@ -123,20 +123,8 @@ pub struct EccConfig {
     pub perm: Permutation,
     /// Lookup range check using 10-bit lookup table
     pub lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
-    /// Running sum decomposition for full-width base field element
-    pub running_sum_full_config: RunningSumConfig<
-        pallas::Base,
-        { constants::L_ORCHARD_BASE },
-        { constants::FIXED_BASE_WINDOW_SIZE },
-        { constants::NUM_WINDOWS },
-    >,
-    /// Running sum decomposition for 64-bit word
-    pub running_sum_short_config: RunningSumConfig<
-        pallas::Base,
-        { constants::L_VALUE },
-        { constants::FIXED_BASE_WINDOW_SIZE },
-        { constants::NUM_WINDOWS_SHORT },
-    >,
+    /// Running sum decomposition.
+    pub running_sum_config: RunningSumConfig<pallas::Base, { constants::FIXED_BASE_WINDOW_SIZE }>,
 }
 
 /// A chip implementing EccInstructions
@@ -184,9 +172,7 @@ impl EccChip {
             perm.clone(),
         );
         let q_mul_fixed_running_sum = meta.selector();
-        let running_sum_full_config =
-            RunningSumConfig::configure(meta, q_mul_fixed_running_sum, advices[4], perm.clone());
-        let running_sum_short_config =
+        let running_sum_config =
             RunningSumConfig::configure(meta, q_mul_fixed_running_sum, advices[4], perm.clone());
 
         let config = EccConfig {
@@ -219,8 +205,7 @@ impl EccChip {
             constants: constants[1],
             perm,
             lookup_config,
-            running_sum_full_config,
-            running_sum_short_config,
+            running_sum_config,
         };
 
         // Create witness point gate

@@ -18,12 +18,7 @@ pub struct Config {
     // Selector used for fixed-base scalar mul with short signed exponent.
     q_mul_fixed_short: Selector,
     q_mul_fixed_running_sum: Selector,
-    running_sum_config: RunningSumConfig<
-        pallas::Base,
-        { L_VALUE },
-        { FIXED_BASE_WINDOW_SIZE },
-        { NUM_WINDOWS_SHORT },
-    >,
+    running_sum_config: RunningSumConfig<pallas::Base, { FIXED_BASE_WINDOW_SIZE }>,
     super_config: super::Config<NUM_WINDOWS_SHORT>,
 }
 
@@ -32,7 +27,7 @@ impl From<&EccConfig> for Config {
         Self {
             q_mul_fixed_short: config.q_mul_fixed_short,
             q_mul_fixed_running_sum: config.q_mul_fixed_running_sum,
-            running_sum_config: config.running_sum_short_config.clone(),
+            running_sum_config: config.running_sum_config.clone(),
             super_config: config.into(),
         }
     }
@@ -100,9 +95,14 @@ impl Config {
         let (magnitude, sign) = magnitude_sign;
 
         // Decompose magnitude
-        let (magnitude, running_sum) = self
-            .running_sum_config
-            .copy_decompose(region, offset, magnitude, true)?;
+        let (magnitude, running_sum) = self.running_sum_config.copy_decompose(
+            region,
+            offset,
+            magnitude,
+            true,
+            L_VALUE,
+            NUM_WINDOWS_SHORT,
+        )?;
 
         Ok(EccScalarFixedShort {
             magnitude,
@@ -500,12 +500,12 @@ pub mod tests {
                     prover.verify(),
                     Err(vec![
                         VerifyFailure::Constraint {
-                            constraint: ((4, "final z = 0").into(), 0, "").into(),
+                            constraint: ((2, "final z = 0").into(), 0, "").into(),
                             row: 24
                         },
                         VerifyFailure::Constraint {
                             constraint: (
-                                (15, "Short fixed-base mul gate").into(),
+                                (13, "Short fixed-base mul gate").into(),
                                 0,
                                 "last_window_check"
                             )
@@ -529,13 +529,13 @@ pub mod tests {
                 prover.verify(),
                 Err(vec![
                     VerifyFailure::Constraint {
-                        constraint: ((15, "Short fixed-base mul gate").into(), 1, "sign_check")
+                        constraint: ((13, "Short fixed-base mul gate").into(), 1, "sign_check")
                             .into(),
                         row: 26
                     },
                     VerifyFailure::Constraint {
                         constraint: (
-                            (15, "Short fixed-base mul gate").into(),
+                            (13, "Short fixed-base mul gate").into(),
                             3,
                             "negation_check"
                         )

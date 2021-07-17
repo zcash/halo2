@@ -23,12 +23,7 @@ pub struct Config {
     base_field_fixed_canon: Selector,
     canon_advices: [Column<Advice>; 3],
     lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
-    running_sum_config: RunningSumConfig<
-        pallas::Base,
-        { constants::L_ORCHARD_BASE },
-        { constants::FIXED_BASE_WINDOW_SIZE },
-        { constants::NUM_WINDOWS },
-    >,
+    running_sum_config: RunningSumConfig<pallas::Base, { constants::FIXED_BASE_WINDOW_SIZE }>,
     super_config: super::Config<{ constants::NUM_WINDOWS }>,
 }
 
@@ -39,7 +34,7 @@ impl From<&EccConfig> for Config {
             base_field_fixed_canon: config.base_field_fixed_canon,
             canon_advices: [config.advices[6], config.advices[7], config.advices[8]],
             lookup_config: config.lookup_config.clone(),
-            running_sum_config: config.running_sum_full_config.clone(),
+            running_sum_config: config.running_sum_config.clone(),
             super_config: config.into(),
         };
 
@@ -189,16 +184,20 @@ impl Config {
                 let offset = 0;
 
                 // Decompose scalar
-                let scalar =
-                    {
-                        let (base_field_elem, running_sum) = self
-                            .running_sum_config
-                            .copy_decompose(&mut region, offset, scalar, true)?;
-                        EccBaseFieldElemFixed {
-                            base_field_elem,
-                            running_sum: (*running_sum).as_slice().try_into().unwrap(),
-                        }
-                    };
+                let scalar = {
+                    let (base_field_elem, running_sum) = self.running_sum_config.copy_decompose(
+                        &mut region,
+                        offset,
+                        scalar,
+                        true,
+                        constants::L_ORCHARD_BASE,
+                        constants::NUM_WINDOWS,
+                    )?;
+                    EccBaseFieldElemFixed {
+                        base_field_elem,
+                        running_sum: (*running_sum).as_slice().try_into().unwrap(),
+                    }
+                };
 
                 let (acc, mul_b) = self.super_config.assign_region_inner(
                     &mut region,
