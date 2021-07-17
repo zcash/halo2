@@ -1,25 +1,26 @@
 use super::super::{EccConfig, EccPoint, EccScalarFixed, OrchardFixedBasesFull};
 
 use crate::{
-    circuit::gadget::utilities::range_check,
-    constants::{self, L_ORCHARD_SCALAR, NUM_WINDOWS},
+    circuit::gadget::utilities::{range_check, CellValue, Var},
+    constants::{self, util, L_ORCHARD_SCALAR, NUM_WINDOWS},
 };
+use arrayvec::ArrayVec;
 use halo2::{
     circuit::{Layouter, Region},
     plonk::{ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
-use pasta_curves::pallas;
+use pasta_curves::{arithmetic::FieldExt, pallas};
 
 pub struct Config {
-    q_scalar_fixed: Selector,
+    q_mul_fixed_full: Selector,
     super_config: super::Config<NUM_WINDOWS>,
 }
 
 impl From<&EccConfig> for Config {
     fn from(config: &EccConfig) -> Self {
         Self {
-            q_scalar_fixed: config.q_scalar_fixed,
+            q_mul_fixed_full: config.q_mul_fixed_full,
             super_config: config.into(),
         }
     }
@@ -29,17 +30,17 @@ impl Config {
     pub fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // Check that each window `k` is within 3 bits
         meta.create_gate("Full-width fixed-base scalar mul", |meta| {
-            let q_scalar_fixed = meta.query_selector(self.q_scalar_fixed);
+            let q_mul_fixed_full = meta.query_selector(self.q_mul_fixed_full);
             let window = meta.query_advice(self.super_config.window, Rotation::cur());
 
             self.super_config
-                .coords_check(meta, q_scalar_fixed.clone(), window.clone())
+                .coords_check(meta, q_mul_fixed_full.clone(), window.clone())
                 .into_iter()
                 // Constrain each window to a 3-bit value:
                 // 1 * (window - 0) * (window - 1) * ... * (window - 7)
                 .chain(Some((
                     "window range check",
-                    q_scalar_fixed * range_check(window, constants::H),
+                    q_mul_fixed_full * range_check(window, constants::H),
                 )))
         });
     }
@@ -53,14 +54,61 @@ impl Config {
         offset: usize,
         scalar: Option<pallas::Scalar>,
     ) -> Result<EccScalarFixed, Error> {
-        let windows = self
-            .super_config
-            .decompose_scalar_fixed::<L_ORCHARD_SCALAR>(scalar, offset, region)?;
+        let windows = self.decompose_scalar_fixed::<L_ORCHARD_SCALAR>(scalar, offset, region)?;
 
         Ok(EccScalarFixed {
             value: scalar,
             windows,
         })
+    }
+
+    /// Witnesses the given scalar as `NUM_WINDOWS` 3-bit windows.
+    ///
+    /// The scalar is allowed to be non-canonical.
+    fn decompose_scalar_fixed<const SCALAR_NUM_BITS: usize>(
+        &self,
+        scalar: Option<pallas::Scalar>,
+        offset: usize,
+        region: &mut Region<'_, pallas::Base>,
+    ) -> Result<ArrayVec<CellValue<pallas::Base>, NUM_WINDOWS>, Error> {
+        // Enable `q_mul_fixed_full` selector
+        for idx in 0..NUM_WINDOWS {
+            self.q_mul_fixed_full.enable(region, offset + idx)?;
+        }
+
+        // Decompose scalar into `k-bit` windows
+        let scalar_windows: Option<Vec<u8>> = scalar.map(|scalar| {
+            util::decompose_word::<pallas::Scalar>(
+                scalar,
+                SCALAR_NUM_BITS,
+                constants::FIXED_BASE_WINDOW_SIZE,
+            )
+        });
+
+        // Store the scalar decomposition
+        let mut windows: ArrayVec<CellValue<pallas::Base>, NUM_WINDOWS> = ArrayVec::new();
+
+        let scalar_windows: Vec<Option<pallas::Base>> = if let Some(windows) = scalar_windows {
+            assert_eq!(windows.len(), NUM_WINDOWS);
+            windows
+                .into_iter()
+                .map(|window| Some(pallas::Base::from_u64(window as u64)))
+                .collect()
+        } else {
+            vec![None; NUM_WINDOWS]
+        };
+
+        for (idx, window) in scalar_windows.into_iter().enumerate() {
+            let window_cell = region.assign_advice(
+                || format!("k[{:?}]", offset + idx),
+                self.super_config.window,
+                offset + idx,
+                || window.ok_or(Error::SynthesisError),
+            )?;
+            windows.push(CellValue::new(window_cell, window));
+        }
+
+        Ok(windows)
     }
 
     pub fn assign(
@@ -81,7 +129,7 @@ impl Config {
                     offset,
                     &(&scalar).into(),
                     base.into(),
-                    self.super_config.q_mul_fixed,
+                    self.q_mul_fixed_full,
                 )?;
 
                 Ok((scalar, acc, mul_b))

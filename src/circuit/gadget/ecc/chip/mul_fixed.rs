@@ -5,14 +5,15 @@ use super::{
 use crate::constants::{
     self,
     load::{NullifierK, OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV, WindowUs},
-    util,
 };
 
-use arrayvec::ArrayVec;
 use group::Curve;
 use halo2::{
     circuit::Region,
-    plonk::{Advice, Column, Error, Expression, Fixed, Permutation, Selector, VirtualCells},
+    plonk::{
+        Advice, Column, ConstraintSystem, Error, Expression, Fixed, Permutation, Selector,
+        VirtualCells,
+    },
     poly::Rotation,
 };
 use lazy_static::lazy_static;
@@ -79,8 +80,7 @@ impl OrchardFixedBases {
 
 #[derive(Clone, Debug)]
 pub struct Config<const NUM_WINDOWS: usize> {
-    q_mul_fixed: Selector,
-    q_scalar_fixed: Selector,
+    q_mul_fixed_running_sum: Selector,
     // The fixed Lagrange interpolation coefficients for `x_p`.
     lagrange_coeffs: [Column<Fixed>; constants::H],
     // The fixed `z` for each window such that `y + z = u^2`.
@@ -105,8 +105,7 @@ pub struct Config<const NUM_WINDOWS: usize> {
 impl<const NUM_WINDOWS: usize> From<&EccConfig> for Config<NUM_WINDOWS> {
     fn from(ecc_config: &EccConfig) -> Self {
         let config = Self {
-            q_mul_fixed: ecc_config.q_mul_fixed,
-            q_scalar_fixed: ecc_config.q_scalar_fixed,
+            q_mul_fixed_running_sum: ecc_config.q_mul_fixed_running_sum,
             lagrange_coeffs: ecc_config.lagrange_coeffs,
             fixed_z: ecc_config.fixed_z,
             x_p: ecc_config.advices[0],
@@ -153,6 +152,30 @@ impl<const NUM_WINDOWS: usize> From<&EccConfig> for Config<NUM_WINDOWS> {
 }
 
 impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
+    /// Check that each window in the running sum decomposition uses the correct y_p
+    /// and interpolated x_p.
+    ///
+    /// This gate is used both in the mul_fixed::base_field_elem and mul_fixed::short
+    /// helpers, which decompose the scalar using a running sum.
+    ///
+    /// This gate is not used in the mul_fixed::full_width helper, since the full-width
+    /// scalar is witnessed directly as three-bit windows instead of being decomposed
+    /// via a running sum.
+    pub(crate) fn running_sum_coords_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+        meta.create_gate("Running sum coordinates check", |meta| {
+            let q_mul_fixed_running_sum = meta.query_selector(self.q_mul_fixed_running_sum);
+
+            let z_cur = meta.query_advice(self.window, Rotation::cur());
+            let z_next = meta.query_advice(self.window, Rotation::next());
+
+            //    z_{i+1} = (z_i - a_i) / 2^3
+            // => a_i = z_i - z_{i+1} * 2^3
+            let word = z_cur - z_next * pallas::Base::from_u64(constants::H as u64);
+
+            self.coords_check(meta, q_mul_fixed_running_sum, word)
+        });
+    }
+
     #[allow(clippy::op_ref)]
     fn coords_check(
         &self,
@@ -293,55 +316,6 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         }
 
         Ok(())
-    }
-
-    /// Witnesses the given scalar as `NUM_WINDOWS` 3-bit windows.
-    ///
-    /// The scalar is allowed to be non-canonical.
-    fn decompose_scalar_fixed<const SCALAR_NUM_BITS: usize>(
-        &self,
-        scalar: Option<pallas::Scalar>,
-        offset: usize,
-        region: &mut Region<'_, pallas::Base>,
-    ) -> Result<ArrayVec<CellValue<pallas::Base>, NUM_WINDOWS>, Error> {
-        // Enable `q_scalar_fixed` selector
-        for idx in 0..NUM_WINDOWS {
-            self.q_scalar_fixed.enable(region, offset + idx)?;
-        }
-
-        // Decompose scalar into `k-bit` windows
-        let scalar_windows: Option<Vec<u8>> = scalar.map(|scalar| {
-            util::decompose_word::<pallas::Scalar>(
-                scalar,
-                SCALAR_NUM_BITS,
-                constants::FIXED_BASE_WINDOW_SIZE,
-            )
-        });
-
-        // Store the scalar decomposition
-        let mut windows: ArrayVec<CellValue<pallas::Base>, NUM_WINDOWS> = ArrayVec::new();
-
-        let scalar_windows: Vec<Option<pallas::Base>> = if let Some(windows) = scalar_windows {
-            assert_eq!(windows.len(), NUM_WINDOWS);
-            windows
-                .into_iter()
-                .map(|window| Some(pallas::Base::from_u64(window as u64)))
-                .collect()
-        } else {
-            vec![None; NUM_WINDOWS]
-        };
-
-        for (idx, window) in scalar_windows.into_iter().enumerate() {
-            let window_cell = region.assign_advice(
-                || format!("k[{:?}]", offset + idx),
-                self.window,
-                offset + idx,
-                || window.ok_or(Error::SynthesisError),
-            )?;
-            windows.push(CellValue::new(window_cell, window));
-        }
-
-        Ok(windows)
     }
 
     fn process_window(

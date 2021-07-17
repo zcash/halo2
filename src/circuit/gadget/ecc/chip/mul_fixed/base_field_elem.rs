@@ -20,7 +20,7 @@ use std::convert::TryInto;
 
 pub struct Config {
     q_mul_fixed_running_sum: Selector,
-    base_field_fixed_canon: Selector,
+    q_mul_fixed_base_field: Selector,
     canon_advices: [Column<Advice>; 3],
     lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     running_sum_config: RunningSumConfig<pallas::Base, { constants::FIXED_BASE_WINDOW_SIZE }>,
@@ -31,7 +31,7 @@ impl From<&EccConfig> for Config {
     fn from(config: &EccConfig) -> Self {
         let config = Self {
             q_mul_fixed_running_sum: config.q_mul_fixed_running_sum,
-            base_field_fixed_canon: config.base_field_fixed_canon,
+            q_mul_fixed_base_field: config.q_mul_fixed_base_field,
             canon_advices: [config.advices[6], config.advices[7], config.advices[8]],
             lookup_config: config.lookup_config.clone(),
             running_sum_config: config.running_sum_config.clone(),
@@ -71,7 +71,7 @@ impl Config {
 
         // Check that the base field element is canonical.
         meta.create_gate("Canonicity checks", |meta| {
-            let base_field_fixed_canon = meta.query_selector(self.base_field_fixed_canon);
+            let q_mul_fixed_base_field = meta.query_selector(self.q_mul_fixed_base_field);
 
             let alpha = meta.query_advice(self.canon_advices[0], Rotation::prev());
             // The last three bits of α.
@@ -164,7 +164,7 @@ impl Config {
             canon_checks
                 .chain(decomposition_checks)
                 .chain(Some(("alpha_0_prime check", alpha_0_prime_check)))
-                .map(move |(name, poly)| (name, base_field_fixed_canon.clone() * poly))
+                .map(move |(name, poly)| (name, q_mul_fixed_base_field.clone() * poly))
         });
     }
 
@@ -291,7 +291,7 @@ impl Config {
                 let perm = &self.super_config.perm;
 
                 // Activate canonicity check gate
-                self.base_field_fixed_canon.enable(&mut region, 1)?;
+                self.q_mul_fixed_base_field.enable(&mut region, 1)?;
 
                 // Offset 0
                 {

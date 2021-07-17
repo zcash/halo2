@@ -99,21 +99,17 @@ pub struct EccConfig {
     pub q_mul_overflow: Selector,
 
     /// Fixed-base full-width scalar multiplication
-    pub q_mul_fixed: Selector,
+    pub q_mul_fixed_full: Selector,
     /// Fixed-base signed short scalar multiplication
     pub q_mul_fixed_short: Selector,
-    /// Fixed-base multiplication using a base field element as the scalar
-    pub q_mul_fixed_running_sum: Selector,
     /// Canonicity checks on base field element used as scalar in fixed-base mul
-    pub base_field_fixed_canon: Selector,
+    pub q_mul_fixed_base_field: Selector,
+    /// Running sum decomposition of a scalar used in fixed-base mul. This is used
+    /// when the scalar is a signed short exponent or a base-field element.
+    pub q_mul_fixed_running_sum: Selector,
 
     /// Witness point
     pub q_point: Selector,
-
-    /// Witness full-width scalar for fixed-base scalar mul
-    pub q_scalar_fixed: Selector,
-    /// Witness signed short scalar for full-width fixed-base scalar mul
-    pub q_scalar_fixed_short: Selector,
 
     /// Shared fixed column used for loading constants. This is included in
     /// the permutation so that cells in advice columns can be constrained to
@@ -195,13 +191,11 @@ impl EccChip {
             q_mul_decompose_var: meta.selector(),
             q_mul_overflow: meta.selector(),
             q_mul_lsb: meta.selector(),
-            q_mul_fixed: meta.selector(),
+            q_mul_fixed_full: meta.selector(),
             q_mul_fixed_short: meta.selector(),
+            q_mul_fixed_base_field: meta.selector(),
             q_mul_fixed_running_sum,
-            base_field_fixed_canon: meta.selector(),
             q_point: meta.selector(),
-            q_scalar_fixed: meta.selector(),
-            q_scalar_fixed_short: meta.selector(),
             constants: constants[1],
             perm,
             lookup_config,
@@ -230,6 +224,14 @@ impl EccChip {
         {
             let mul_config: mul::Config = (&config).into();
             mul_config.create_gate(meta);
+        }
+
+        // Create gate that is used both in fixed-base mul using a short signed exponent,
+        // and fixed-base mul using a base field element.
+        {
+            // The const generic does not matter when creating gates.
+            let mul_fixed_config: mul_fixed::Config<{ constants::NUM_WINDOWS }> = (&config).into();
+            mul_fixed_config.running_sum_coords_gate(meta);
         }
 
         // Create gate that is only used in full-width fixed-base scalar mul.
