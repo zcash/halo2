@@ -69,14 +69,11 @@ impl Config {
                 .coords_check(meta, q_mul_fixed_running_sum, word)
         });
 
-        // Check that we get z_85 = 0 as the final output of the three-bit decomposition running sum.
-        // Also check that the base field element is canonical.
+        // Check that the base field element is canonical.
         meta.create_gate("Canonicity checks", |meta| {
             let base_field_fixed_canon = meta.query_selector(self.base_field_fixed_canon);
 
             let alpha = meta.query_advice(self.canon_advices[0], Rotation::prev());
-            // z_85_alpha is constrained to be zero in this gate.
-            let z_85_alpha = meta.query_advice(self.canon_advices[1], Rotation::prev());
             // The last three bits of α.
             let z_84_alpha = meta.query_advice(self.canon_advices[2], Rotation::prev());
 
@@ -166,7 +163,6 @@ impl Config {
 
             canon_checks
                 .chain(decomposition_checks)
-                .chain(Some(("z_85_alpha = 0", z_85_alpha)))
                 .chain(Some(("alpha_0_prime check", alpha_0_prime_check)))
                 .map(move |(name, poly)| (name, base_field_fixed_canon.clone() * poly))
         });
@@ -262,7 +258,6 @@ impl Config {
         let z_43_alpha = running_sum[42];
         let z_44_alpha = running_sum[43];
         let z_84_alpha = running_sum[83];
-        let z_85_alpha = running_sum[84];
 
         // α_0 = α - z_84_alpha * 2^252
         let alpha_0 = alpha
@@ -309,16 +304,6 @@ impl Config {
                         self.canon_advices[0],
                         offset,
                         &alpha,
-                        perm,
-                    )?;
-
-                    // z_85_alpha is constrained to be zero in the custom gate.
-                    copy(
-                        &mut region,
-                        || "Copy z_85_alpha",
-                        self.canon_advices[1],
-                        offset,
-                        &z_85_alpha,
                         perm,
                     )?;
 
