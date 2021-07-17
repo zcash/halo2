@@ -202,7 +202,7 @@ impl Config {
 
             if let (Some(magnitude), Some(sign)) = (scalar.magnitude.value(), scalar.sign.value()) {
                 let magnitude_is_valid =
-                    magnitude < pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64);
+                    magnitude <= pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64);
                 let sign_is_valid = sign * sign == pallas::Base::one();
                 if magnitude_is_valid && sign_is_valid {
                     let base: super::OrchardFixedBases = base.clone().into();
