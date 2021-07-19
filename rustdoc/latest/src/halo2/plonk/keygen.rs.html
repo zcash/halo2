@@ -301,11 +301,6 @@
 <span id="286">286</span>
 <span id="287">287</span>
 <span id="288">288</span>
-<span id="289">289</span>
-<span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
 </pre><pre class="rust">
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::int_plus_one</span>)]</span>
 
@@ -323,7 +318,7 @@
 };
 <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::poly</span>::{
     <span class="ident">commitment</span>::{<span class="ident">Blind</span>, <span class="ident">Params</span>},
-    <span class="ident">EvaluationDomain</span>, <span class="ident">Rotation</span>,
+    <span class="ident">EvaluationDomain</span>,
 };
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">arithmetic::CurveAffine</span>, <span class="ident">poly::batch_invert_assigned</span>};
 
@@ -552,14 +547,9 @@
         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">poly</span><span class="op">|</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">lagrange_to_coeff</span>(<span class="ident">poly</span>.<span class="ident">clone</span>()))
         .<span class="ident">collect</span>();
 
-    <span class="kw">let</span> <span class="ident">fixed_cosets</span> <span class="op">=</span> <span class="ident">vk</span>
-        .<span class="ident">cs</span>
-        .<span class="ident">fixed_queries</span>
+    <span class="kw">let</span> <span class="ident">fixed_cosets</span> <span class="op">=</span> <span class="ident">fixed_polys</span>
         .<span class="ident">iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw-2">&amp;</span>(<span class="ident">column</span>, <span class="ident">at</span>)<span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">fixed_polys</span>[<span class="ident">column</span>.<span class="ident">index</span>()].<span class="ident">clone</span>();
-            <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">poly</span>, <span class="ident">at</span>)
-        })
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">poly</span><span class="op">|</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">poly</span>.<span class="ident">clone</span>()))
         .<span class="ident">collect</span>();
 
     <span class="kw">let</span> <span class="ident">permutation_pk</span> <span class="op">=</span> <span class="ident">assembly</span>
@@ -571,7 +561,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">l0</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">empty_lagrange</span>();
     <span class="ident">l0</span>[<span class="number">0</span>] <span class="op">=</span> <span class="ident">C::Scalar::one</span>();
     <span class="kw">let</span> <span class="ident">l0</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">lagrange_to_coeff</span>(<span class="ident">l0</span>);
-    <span class="kw">let</span> <span class="ident">l0</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">l0</span>, <span class="ident">Rotation::cur</span>());
+    <span class="kw">let</span> <span class="ident">l0</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">l0</span>);
 
     <span class="comment">// Compute l_blind(X) which evaluates to 1 for each blinding factor row</span>
     <span class="comment">// and 0 otherwise over the domain.</span>
@@ -580,14 +570,14 @@
         <span class="kw-2">*</span><span class="ident">evaluation</span> <span class="op">=</span> <span class="ident">C::Scalar::one</span>();
     }
     <span class="kw">let</span> <span class="ident">l_blind</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">lagrange_to_coeff</span>(<span class="ident">l_blind</span>);
-    <span class="kw">let</span> <span class="ident">l_blind</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">l_blind</span>, <span class="ident">Rotation::cur</span>());
+    <span class="kw">let</span> <span class="ident">l_blind</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">l_blind</span>);
 
     <span class="comment">// Compute l_last(X) which evaluates to 1 on the first inactive row (just</span>
     <span class="comment">// before the blinding factors) and 0 otherwise over the domain</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">l_last</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">empty_lagrange</span>();
     <span class="ident">l_last</span>[<span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">-</span> <span class="ident">cs</span>.<span class="ident">blinding_factors</span>() <span class="op">-</span> <span class="number">1</span>] <span class="op">=</span> <span class="ident">C::Scalar::one</span>();
     <span class="kw">let</span> <span class="ident">l_last</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">lagrange_to_coeff</span>(<span class="ident">l_last</span>);
-    <span class="kw">let</span> <span class="ident">l_last</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">l_last</span>, <span class="ident">Rotation::cur</span>());
+    <span class="kw">let</span> <span class="ident">l_last</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">l_last</span>);
 
     <span class="prelude-val">Ok</span>(<span class="ident">ProvingKey</span> {
         <span class="ident">vk</span>,

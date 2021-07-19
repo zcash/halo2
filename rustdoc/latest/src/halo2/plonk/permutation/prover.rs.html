@@ -450,34 +450,6 @@
 <span id="435">435</span>
 <span id="436">436</span>
 <span id="437">437</span>
-<span id="438">438</span>
-<span id="439">439</span>
-<span id="440">440</span>
-<span id="441">441</span>
-<span id="442">442</span>
-<span id="443">443</span>
-<span id="444">444</span>
-<span id="445">445</span>
-<span id="446">446</span>
-<span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
-<span id="451">451</span>
-<span id="452">452</span>
-<span id="453">453</span>
-<span id="454">454</span>
-<span id="455">455</span>
-<span id="456">456</span>
-<span id="457">457</span>
-<span id="458">458</span>
-<span id="459">459</span>
-<span id="460">460</span>
-<span id="461">461</span>
-<span id="462">462</span>
-<span id="463">463</span>
-<span id="464">464</span>
-<span id="465">465</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">ff::Field</span>;
 <span class="kw">use</span> <span class="ident">group::Curve</span>;
@@ -499,8 +471,6 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CommittedSet</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
     <span class="ident">permutation_product_poly</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">Coeff</span><span class="op">&gt;</span>,
     <span class="ident">permutation_product_coset</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
-    <span class="ident">permutation_product_coset_next</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
-    <span class="ident">permutation_product_coset_last</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">permutation_product_blind</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
 }
 
@@ -556,12 +526,11 @@
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sets</span> <span class="op">=</span> <span class="macro">vec!</span>[];
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">iter</span> <span class="op">=</span> <span class="self">self</span>
+        <span class="kw">for</span> (<span class="ident">columns</span>, <span class="ident">permutations</span>) <span class="kw">in</span> <span class="self">self</span>
             .<span class="ident">columns</span>
             .<span class="ident">chunks</span>(<span class="ident">chunk_len</span>)
-            .<span class="ident">zip</span>(<span class="ident">pkey</span>.<span class="ident">permutations</span>.<span class="ident">chunks</span>(<span class="ident">chunk_len</span>));
-
-        <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">columns</span>, <span class="ident">permutations</span>)) <span class="op">=</span> <span class="ident">iter</span>.<span class="ident">next</span>() {
+            .<span class="ident">zip</span>(<span class="ident">pkey</span>.<span class="ident">permutations</span>.<span class="ident">chunks</span>(<span class="ident">chunk_len</span>))
+        {
             <span class="comment">// Goal is to compute the products of fractions</span>
             <span class="comment">//</span>
             <span class="comment">// (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /</span>
@@ -649,18 +618,7 @@
             <span class="kw">let</span> <span class="ident">z</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">lagrange_to_coeff</span>(<span class="ident">z</span>);
             <span class="kw">let</span> <span class="ident">permutation_product_poly</span> <span class="op">=</span> <span class="ident">z</span>.<span class="ident">clone</span>();
 
-            <span class="comment">// We only keep these around if there&#39;s another set afterward.</span>
-            <span class="kw">let</span> <span class="ident">permutation_product_coset_last</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">iter</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">0</span> {
-                <span class="comment">// Keep the polynomial around, rotated to l_last.</span>
-                <span class="prelude-val">Some</span>(
-                    <span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">z</span>.<span class="ident">clone</span>(), <span class="ident">Rotation</span>(<span class="op">-</span>((<span class="ident">blinding_factors</span> <span class="op">+</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">i32</span>))),
-                )
-            } <span class="kw">else</span> {
-                <span class="prelude-val">None</span>
-            };
-
-            <span class="kw">let</span> <span class="ident">permutation_product_coset</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">z</span>.<span class="ident">clone</span>(), <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">permutation_product_coset_next</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">z</span>, <span class="ident">Rotation::next</span>());
+            <span class="kw">let</span> <span class="ident">permutation_product_coset</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">z</span>.<span class="ident">clone</span>());
 
             <span class="kw">let</span> <span class="ident">permutation_product_commitment</span> <span class="op">=</span>
                 <span class="ident">permutation_product_commitment_projective</span>.<span class="ident">to_affine</span>();
@@ -673,8 +631,6 @@
             <span class="ident">sets</span>.<span class="ident">push</span>(<span class="ident">CommittedSet</span> {
                 <span class="ident">permutation_product_poly</span>,
                 <span class="ident">permutation_product_coset</span>,
-                <span class="ident">permutation_product_coset_next</span>,
-                <span class="ident">permutation_product_coset_last</span>,
                 <span class="ident">permutation_product_blind</span>,
             });
         }
@@ -700,6 +656,8 @@
     ) {
         <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">domain</span>;
         <span class="kw">let</span> <span class="ident">chunk_len</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">degree</span>() <span class="op">-</span> <span class="number">2</span>;
+        <span class="kw">let</span> <span class="ident">blinding_factors</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">blinding_factors</span>();
+        <span class="kw">let</span> <span class="ident">last_rotation</span> <span class="op">=</span> <span class="ident">Rotation</span>(<span class="op">-</span>((<span class="ident">blinding_factors</span> <span class="op">+</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">i32</span>));
 
         <span class="kw">let</span> <span class="ident">constructed</span> <span class="op">=</span> <span class="ident">Constructed</span> {
             <span class="ident">sets</span>: <span class="self">self</span>
@@ -733,9 +691,11 @@
                     .<span class="ident">skip</span>(<span class="number">1</span>)
                     .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">sets</span>.<span class="ident">iter</span>())
                     .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">set</span>, <span class="ident">last_set</span>)<span class="op">|</span> {
-                        (<span class="ident">set</span>.<span class="ident">permutation_product_coset</span>.<span class="ident">clone</span>()
-                            <span class="op">-</span> <span class="kw-2">&amp;</span><span class="ident">last_set</span>.<span class="ident">permutation_product_coset_last</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>())
-                            <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">l0</span>
+                        <span class="ident">domain</span>.<span class="ident">sub_extended</span>(
+                            <span class="ident">set</span>.<span class="ident">permutation_product_coset</span>.<span class="ident">clone</span>(),
+                            <span class="kw-2">&amp;</span><span class="ident">last_set</span>.<span class="ident">permutation_product_coset</span>,
+                            <span class="ident">last_rotation</span>,
+                        ) <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">l0</span>
                     })
                     .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
             )
@@ -751,22 +711,14 @@
                     .<span class="ident">zip</span>(<span class="ident">pkey</span>.<span class="ident">cosets</span>.<span class="ident">chunks</span>(<span class="ident">chunk_len</span>))
                     .<span class="ident">enumerate</span>()
                     .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">chunk_index</span>, ((<span class="ident">set</span>, <span class="ident">columns</span>), <span class="ident">cosets</span>))<span class="op">|</span> {
-                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">left</span> <span class="op">=</span> <span class="ident">set</span>.<span class="ident">permutation_product_coset_next</span>;
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">left</span> <span class="op">=</span> <span class="ident">domain</span>
+                            .<span class="ident">rotate_extended</span>(<span class="kw-2">&amp;</span><span class="ident">set</span>.<span class="ident">permutation_product_coset</span>, <span class="ident">Rotation::next</span>());
                         <span class="kw">for</span> (<span class="ident">values</span>, <span class="ident">permutation</span>) <span class="kw">in</span> <span class="ident">columns</span>
                             .<span class="ident">iter</span>()
                             .<span class="ident">map</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">column</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">column</span>.<span class="ident">column_type</span>() {
-                                <span class="ident">Any::Advice</span> <span class="op">=</span><span class="op">&gt;</span> {
-                                    <span class="kw-2">&amp;</span><span class="ident">advice_cosets</span>
-                                        [<span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
-                                }
-                                <span class="ident">Any::Fixed</span> <span class="op">=</span><span class="op">&gt;</span> {
-                                    <span class="kw-2">&amp;</span><span class="ident">fixed_cosets</span>
-                                        [<span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
-                                }
-                                <span class="ident">Any::Instance</span> <span class="op">=</span><span class="op">&gt;</span> {
-                                    <span class="kw-2">&amp;</span><span class="ident">instance_cosets</span>
-                                        [<span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
-                                }
+                                <span class="ident">Any::Advice</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">advice_cosets</span>[<span class="ident">column</span>.<span class="ident">index</span>()],
+                                <span class="ident">Any::Fixed</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">fixed_cosets</span>[<span class="ident">column</span>.<span class="ident">index</span>()],
+                                <span class="ident">Any::Instance</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">instance_cosets</span>[<span class="ident">column</span>.<span class="ident">index</span>()],
                             })
                             .<span class="ident">zip</span>(<span class="ident">cosets</span>.<span class="ident">iter</span>())
                         {
@@ -787,17 +739,9 @@
                             <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="ident">C::Scalar::DELTA</span>.<span class="ident">pow_vartime</span>(<span class="kw-2">&amp;</span>[(<span class="ident">chunk_index</span> <span class="op">*</span> <span class="ident">chunk_len</span>) <span class="kw">as</span> <span class="ident">u64</span>]));
                         <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">get_extended_omega</span>();
                         <span class="kw">for</span> <span class="ident">values</span> <span class="kw">in</span> <span class="ident">columns</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">column</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">column</span>.<span class="ident">column_type</span>() {
-                            <span class="ident">Any::Advice</span> <span class="op">=</span><span class="op">&gt;</span> {
-                                <span class="kw-2">&amp;</span><span class="ident">advice_cosets</span>
-                                    [<span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
-                            }
-                            <span class="ident">Any::Fixed</span> <span class="op">=</span><span class="op">&gt;</span> {
-                                <span class="kw-2">&amp;</span><span class="ident">fixed_cosets</span>[<span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
-                            }
-                            <span class="ident">Any::Instance</span> <span class="op">=</span><span class="op">&gt;</span> {
-                                <span class="kw-2">&amp;</span><span class="ident">instance_cosets</span>
-                                    [<span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
-                            }
+                            <span class="ident">Any::Advice</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">advice_cosets</span>[<span class="ident">column</span>.<span class="ident">index</span>()],
+                            <span class="ident">Any::Fixed</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">fixed_cosets</span>[<span class="ident">column</span>.<span class="ident">index</span>()],
+                            <span class="ident">Any::Instance</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">instance_cosets</span>[<span class="ident">column</span>.<span class="ident">index</span>()],
                         }) {
                             <span class="ident">parallelize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">right</span>, <span class="kw">move</span> <span class="op">|</span><span class="ident">right</span>, <span class="ident">start</span><span class="op">|</span> {
                                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">beta_term</span> <span class="op">=</span>

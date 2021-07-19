@@ -233,7 +233,7 @@
     <span class="ident">plonk</span>::{<span class="ident">Any</span>, <span class="ident">Column</span>, <span class="ident">Error</span>},
     <span class="ident">poly</span>::{
         <span class="ident">commitment</span>::{<span class="ident">Blind</span>, <span class="ident">Params</span>},
-        <span class="ident">EvaluationDomain</span>, <span class="ident">Rotation</span>,
+        <span class="ident">EvaluationDomain</span>,
     },
 };
 
@@ -425,7 +425,7 @@
             <span class="ident">permutations</span>.<span class="ident">push</span>(<span class="ident">permutation_poly</span>.<span class="ident">clone</span>());
             <span class="kw">let</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">lagrange_to_coeff</span>(<span class="ident">permutation_poly</span>);
             <span class="ident">polys</span>.<span class="ident">push</span>(<span class="ident">poly</span>.<span class="ident">clone</span>());
-            <span class="ident">cosets</span>.<span class="ident">push</span>(<span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">poly</span>, <span class="ident">Rotation::cur</span>()));
+            <span class="ident">cosets</span>.<span class="ident">push</span>(<span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">poly</span>));
         }
         <span class="ident">ProvingKey</span> {
             <span class="ident">permutations</span>,
