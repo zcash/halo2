@@ -103,13 +103,9 @@ pub fn create_proof<
                 })
                 .collect();
 
-            let instance_cosets: Vec<_> = meta
-                .instance_queries
+            let instance_cosets: Vec<_> = instance_polys
                 .iter()
-                .map(|&(column, at)| {
-                    let poly = instance_polys[column.index()].clone();
-                    domain.coeff_to_extended(poly, at)
-                })
+                .map(|poly| domain.coeff_to_extended(poly.clone()))
                 .collect();
 
             Ok(InstanceSingle {
@@ -300,13 +296,9 @@ pub fn create_proof<
                 .map(|poly| domain.lagrange_to_coeff(poly))
                 .collect();
 
-            let advice_cosets: Vec<_> = meta
-                .advice_queries
+            let advice_cosets: Vec<_> = advice_polys
                 .iter()
-                .map(|&(column, at)| {
-                    let poly = advice_polys[column.index()].clone();
-                    domain.coeff_to_extended(poly, at)
-                })
+                .map(|poly| domain.coeff_to_extended(poly.clone()))
                 .collect();
 
             Ok(AdviceSingle {
@@ -434,9 +426,23 @@ pub fn create_proof<
                         gate.polynomials().iter().map(move |poly| {
                             poly.evaluate(
                                 &|scalar| pk.vk.domain.constant_extended(scalar),
-                                &|index| pk.fixed_cosets[index].clone(),
-                                &|index| advice.advice_cosets[index].clone(),
-                                &|index| instance.instance_cosets[index].clone(),
+                                &|_, column_index, rotation| {
+                                    pk.vk
+                                        .domain
+                                        .rotate_extended(&pk.fixed_cosets[column_index], rotation)
+                                },
+                                &|_, column_index, rotation| {
+                                    pk.vk.domain.rotate_extended(
+                                        &advice.advice_cosets[column_index],
+                                        rotation,
+                                    )
+                                },
+                                &|_, column_index, rotation| {
+                                    pk.vk.domain.rotate_extended(
+                                        &instance.instance_cosets[column_index],
+                                        rotation,
+                                    )
+                                },
                                 &|a, b| a + &b,
                                 &|a, b| a * &b,
                                 &|a, scalar| a * scalar,

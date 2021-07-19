@@ -184,9 +184,9 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                         gate.polynomials().iter().map(move |poly| {
                             poly.evaluate(
                                 &|scalar| scalar,
-                                &|index| fixed_evals[index],
-                                &|index| advice_evals[index],
-                                &|index| instance_evals[index],
+                                &|index, _, _| fixed_evals[index],
+                                &|index, _, _| advice_evals[index],
+                                &|index, _, _| instance_evals[index],
                                 &|a, b| a + &b,
                                 &|a, b| a * &b,
                                 &|a, scalar| a * &scalar,

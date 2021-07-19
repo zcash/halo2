@@ -239,26 +239,10 @@ impl<G: Group> EvaluationDomain<G> {
     pub fn coeff_to_extended(
         &self,
         mut a: Polynomial<G, Coeff>,
-        rotation: Rotation,
     ) -> Polynomial<G, ExtendedLagrangeCoeff> {
         assert_eq!(a.values.len(), 1 << self.k);
 
-        assert!(rotation.0 != i32::MIN);
-        if rotation.0 == 0 {
-            // In this special case, the powers of zeta repeat so we do not need
-            // to compute them.
-            Self::distribute_powers_zeta(&mut a.values);
-        } else {
-            let mut g = self.g_coset;
-            if rotation.0 > 0 {
-                g *= &self.omega.pow_vartime(&[rotation.0 as u64, 0, 0, 0]);
-            } else {
-                g *= &self
-                    .omega_inv
-                    .pow_vartime(&[rotation.0.abs() as u64, 0, 0, 0]);
-            }
-            Self::distribute_powers(&mut a.values, g);
-        }
+        self.distribute_powers_zeta(&mut a.values, true);
         a.values.resize(self.extended_len(), G::group_zero());
         best_fft(&mut a.values, self.extended_omega, self.extended_k);
 
@@ -266,6 +250,102 @@ impl<G: Group> EvaluationDomain<G> {
             values: a.values,
             _marker: PhantomData,
         }
+    }
+
+    fn op_extended(
+        &self,
+        mut left: Polynomial<G, ExtendedLagrangeCoeff>,
+        right: &Polynomial<G, ExtendedLagrangeCoeff>,
+        rotation: Rotation,
+        op: impl Fn(&mut G, &G) + Send + Sync + 'static,
+    ) -> Polynomial<G, ExtendedLagrangeCoeff>
+    where
+        G: Field,
+    {
+        // Rotation while in the extended domain is simply exaggerated by how
+        // much larger the extended domain is compared to the original domain.
+        let rotation = (1 << (self.extended_k - self.k)) * rotation.0;
+
+        parallelize(&mut left.values, |lhs, start| {
+            let start = ((((start + self.extended_len()) as i32) + rotation) as usize)
+                % self.extended_len();
+
+            for (lhs, rhs) in lhs
+                .iter_mut()
+                .zip(right.values[start..].iter().chain(right.values.iter()))
+            {
+                op(lhs, rhs);
+            }
+        });
+
+        left
+    }
+
+    /// Multiply two polynomials in the extended domain, rotating the latter
+    /// polynomial over the original domain first.
+    pub fn mul_extended(
+        &self,
+        left: Polynomial<G, ExtendedLagrangeCoeff>,
+        right: &Polynomial<G, ExtendedLagrangeCoeff>,
+        rotation: Rotation,
+    ) -> Polynomial<G, ExtendedLagrangeCoeff>
+    where
+        G: Field,
+    {
+        self.op_extended(left, right, rotation, |lhs, rhs| {
+            *lhs *= *rhs;
+        })
+    }
+
+    /// Add two polynomials in the extended domain, rotating the latter
+    /// polynomial over the original domain first.
+    pub fn add_extended(
+        &self,
+        left: Polynomial<G, ExtendedLagrangeCoeff>,
+        right: &Polynomial<G, ExtendedLagrangeCoeff>,
+        rotation: Rotation,
+    ) -> Polynomial<G, ExtendedLagrangeCoeff>
+    where
+        G: Field,
+    {
+        self.op_extended(left, right, rotation, |lhs, rhs| {
+            *lhs += *rhs;
+        })
+    }
+
+    /// Subtract a polynomial from another in the extended domain, rotating the
+    /// former polynomial over the original domain first.
+    pub fn sub_extended(
+        &self,
+        left: Polynomial<G, ExtendedLagrangeCoeff>,
+        right: &Polynomial<G, ExtendedLagrangeCoeff>,
+        rotation: Rotation,
+    ) -> Polynomial<G, ExtendedLagrangeCoeff>
+    where
+        G: Field,
+    {
+        self.op_extended(left, right, rotation, |lhs, rhs| {
+            *lhs -= *rhs;
+        })
+    }
+
+    /// Rotate the extended domain polynomial over the original domain.
+    pub fn rotate_extended(
+        &self,
+        poly: &Polynomial<G, ExtendedLagrangeCoeff>,
+        rotation: Rotation,
+    ) -> Polynomial<G, ExtendedLagrangeCoeff> {
+        let new_rotation = ((1 << (self.extended_k - self.k)) * rotation.0.abs()) as usize;
+
+        let mut poly = poly.clone();
+
+        if rotation.0 >= 0 {
+            poly.values.rotate_left(new_rotation);
+        } else {
+            poly.values.rotate_right(new_rotation);
+        }
+
+        poly
     }
 
     /// This takes us from the extended evaluation domain and gets us the
@@ -287,7 +367,7 @@ impl<G: Group> EvaluationDomain<G> {
 
         // Distribute powers to move from coset; opposite from the
         // transformation we performed earlier.
-        Self::distribute_powers(&mut a.values, self.g_coset_inv);
+        self.distribute_powers_zeta(&mut a.values, false);
 
         // Truncate it to match the size of the quotient polynomial; the
         // evaluation domain might be slightly larger than necessary because
@@ -321,32 +401,27 @@ impl<G: Group> EvaluationDomain<G> {
         }
     }
 
-    // Given a slice of group elements `[a_0, a_1, a_2, ...]`, this returns
-    // `[a_0, [zeta]a_1, [zeta^2]a_2, a_3, [zeta]a_4, [zeta^2]a_5, a_6, ...]`,
-    // where zeta is a cube root of unity in the multiplicative subgroup with
-    // order (p - 1), i.e. zeta^3 = 1.
-    fn distribute_powers_zeta(mut a: &mut [G]) {
-        let coset_powers = [G::Scalar::ZETA, G::Scalar::ZETA.square()];
+    /// Given a slice of group elements `[a_0, a_1, a_2, ...]`, this returns
+    /// `[a_0, [zeta]a_1, [zeta^2]a_2, a_3, [zeta]a_4, [zeta^2]a_5, a_6, ...]`,
+    /// where zeta is a cube root of unity in the multiplicative subgroup with
+    /// order (p - 1), i.e. zeta^3 = 1.
+    ///
+    /// `into_coset` should be set to `true` when moving into the coset,
+    /// and `false` when moving out. This toggles the choice of `zeta`.
+    fn distribute_powers_zeta(&self, mut a: &mut [G], into_coset: bool) {
+        let coset_powers = if into_coset {
+            [self.g_coset, self.g_coset_inv]
+        } else {
+            [self.g_coset_inv, self.g_coset]
+        };
         parallelize(&mut a, |a, mut index| {
             for a in a {
-                // Distribute powers to move into coset
+                // Distribute powers to move into/from coset
                 let i = index % (coset_powers.len() + 1);
                 if i != 0 {
                     a.group_scale(&coset_powers[i - 1]);
                 }
                 index += 1;
-            }
-        });
-    }
-
-    // Given a length-`n` slice of group elements `a` and a scalar `g`, this
-    // returns `[a_0, [g]a_1, [g^2]a_2, [g^3]a_3, ..., [g^n-1] a_{n-1}]`.
-    fn distribute_powers(mut a: &mut [G], g: G::Scalar) {
-        parallelize(&mut a, |a, index| {
-            let mut cur = g.pow_vartime(&[index as u64, 0, 0, 0]);
-            for a in a {
-                a.group_scale(&cur);
-                cur *= &g;
             }
         });
     }

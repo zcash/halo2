@@ -27,7 +27,6 @@ pub(in crate::plonk) struct Permuted<C: CurveAffine> {
     permuted_input_expression: Polynomial<C::Scalar, LagrangeCoeff>,
     permuted_input_poly: Polynomial<C::Scalar, Coeff>,
     permuted_input_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
-    permuted_input_inv_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permuted_input_blind: Blind<C::Scalar>,
     permuted_input_commitment: C,
     unpermuted_table_expressions: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
@@ -44,7 +43,6 @@ pub(in crate::plonk) struct Committed<C: CurveAffine> {
     permuted: Permuted<C>,
     product_poly: Polynomial<C::Scalar, Coeff>,
     product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
-    product_next_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     product_blind: Blind<C::Scalar>,
     product_commitment: C,
 }
@@ -103,22 +101,13 @@ impl<F: FieldExt> Argument<F> {
                 .map(|expression| {
                     expression.evaluate(
                         &|scalar| pk.vk.domain.constant_lagrange(scalar),
-                        &|index| {
-                            let query = pk.vk.cs.fixed_queries[index];
-                            let column_index = query.0.index();
-                            let rotation = query.1;
+                        &|_, column_index, rotation| {
                             fixed_values[column_index].clone().rotate(rotation)
                         },
-                        &|index| {
-                            let query = pk.vk.cs.advice_queries[index];
-                            let column_index = query.0.index();
-                            let rotation = query.1;
+                        &|_, column_index, rotation| {
                             advice_values[column_index].clone().rotate(rotation)
                         },
-                        &|index| {
-                            let query = pk.vk.cs.instance_queries[index];
-                            let column_index = query.0.index();
-                            let rotation = query.1;
+                        &|_, column_index, rotation| {
                             instance_values[column_index].clone().rotate(rotation)
                         },
                         &|a, b| a + &b,
@@ -145,9 +134,21 @@ impl<F: FieldExt> Argument<F> {
                 .map(|expression| {
                     expression.evaluate(
                         &|scalar| pk.vk.domain.constant_extended(scalar),
-                        &|index| fixed_cosets[index].clone(),
-                        &|index| advice_cosets[index].clone(),
-                        &|index| instance_cosets[index].clone(),
+                        &|_, column_index, rotation| {
+                            pk.vk
+                                .domain
+                                .rotate_extended(&fixed_cosets[column_index], rotation)
+                        },
+                        &|_, column_index, rotation| {
+                            pk.vk
+                                .domain
+                                .rotate_extended(&advice_cosets[column_index], rotation)
+                        },
+                        &|_, column_index, rotation| {
+                            pk.vk
+                                .domain
+                                .rotate_extended(&instance_cosets[column_index], rotation)
+                        },
                         &|a, b| a + &b,
                         &|a, b| a * &b,
                         &|a, scalar| a * scalar,
@@ -212,18 +213,8 @@ impl<F: FieldExt> Argument<F> {
             .write_point(permuted_table_commitment)
             .map_err(|_| Error::TranscriptError)?;
 
-        let permuted_input_coset = pk
-            .vk
-            .domain
-            .coeff_to_extended(permuted_input_poly.clone(), Rotation::cur());
-        let permuted_input_inv_coset = pk
-            .vk
-            .domain
-            .coeff_to_extended(permuted_input_poly.clone(), Rotation(-1));
-        let permuted_table_coset = pk
-            .vk
-            .domain
-            .coeff_to_extended(permuted_table_poly.clone(), Rotation::cur());
+        let permuted_input_coset = pk.vk.domain.coeff_to_extended(permuted_input_poly.clone());
+        let permuted_table_coset = pk.vk.domain.coeff_to_extended(permuted_table_poly.clone());
 
         Ok(Permuted {
             unpermuted_input_expressions,
@@ -231,7 +222,6 @@ impl<F: FieldExt> Argument<F> {
             permuted_input_expression,
             permuted_input_poly,
             permuted_input_coset,
-            permuted_input_inv_coset,
             permuted_input_blind,
             permuted_input_commitment,
             unpermuted_table_expressions,
@@ -392,8 +382,7 @@ impl<C: CurveAffine> Permuted<C> {
         let product_blind = Blind(C::Scalar::rand());
         let product_commitment = params.commit_lagrange(&z, product_blind).to_affine();
         let z = pk.vk.domain.lagrange_to_coeff(z);
-        let product_coset = pk.vk.domain.coeff_to_extended(z.clone(), Rotation::cur());
-        let product_next_coset = pk.vk.domain.coeff_to_extended(z.clone(), Rotation::next());
+        let product_coset = pk.vk.domain.coeff_to_extended(z.clone());
 
         // Hash product commitment
         transcript
@@ -404,7 +393,6 @@ impl<C: CurveAffine> Permuted<C> {
             permuted: self,
             product_poly: z,
             product_coset,
-            product_next_coset,
             product_commitment,
             product_blind,
         })
@@ -427,6 +415,7 @@ impl<'a, C: CurveAffine> Committed<C> {
         Constructed<C>,
         impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>> + 'a,
     ) {
+        let domain = &pk.vk.domain;
         let permuted = self.permuted;
 
         let active_rows = Polynomial::one_minus(pk.l_last.clone() + &pk.l_blind);
@@ -447,7 +436,7 @@ impl<'a, C: CurveAffine> Committed<C> {
             // ) = 0
             .chain({
                 // z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
-                let mut left = self.product_next_coset.clone();
+                let mut left = domain.rotate_extended(&self.product_coset, Rotation::next());
                 parallelize(&mut left, |left, start| {
                     for ((left, permuted_input), permuted_table) in left
                         .iter_mut()
@@ -499,7 +488,11 @@ impl<'a, C: CurveAffine> Committed<C> {
             // (1 - (l_last + l_blind)) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0
             .chain(Some(
                 (permuted.permuted_input_coset.clone() - &permuted.permuted_table_coset)
-                    * &(permuted.permuted_input_coset.clone() - &permuted.permuted_input_inv_coset)
+                    * &(domain.sub_extended(
+                        permuted.permuted_input_coset.clone(),
+                        &permuted.permuted_input_coset,
+                        Rotation::prev(),
+                    ))
                     * &active_rows,
             ));
 

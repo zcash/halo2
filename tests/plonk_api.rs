@@ -521,74 +521,134 @@ fn plonk_api() {
                     Sum(
                         Sum(
                             Product(
-                                Advice(
-                                    0,
-                                ),
-                                Fixed(
-                                    3,
-                                ),
+                                Advice {
+                                    query_index: 0,
+                                    column_index: 1,
+                                    rotation: Rotation(
+                                        0,
+                                    ),
+                                },
+                                Fixed {
+                                    query_index: 3,
+                                    column_index: 2,
+                                    rotation: Rotation(
+                                        0,
+                                    ),
+                                },
                             ),
                             Product(
-                                Advice(
-                                    1,
-                                ),
-                                Fixed(
-                                    4,
-                                ),
+                                Advice {
+                                    query_index: 1,
+                                    column_index: 2,
+                                    rotation: Rotation(
+                                        0,
+                                    ),
+                                },
+                                Fixed {
+                                    query_index: 4,
+                                    column_index: 3,
+                                    rotation: Rotation(
+                                        0,
+                                    ),
+                                },
                             ),
                         ),
                         Product(
                             Product(
-                                Advice(
+                                Advice {
+                                    query_index: 0,
+                                    column_index: 1,
+                                    rotation: Rotation(
+                                        0,
+                                    ),
+                                },
+                                Advice {
+                                    query_index: 1,
+                                    column_index: 2,
+                                    rotation: Rotation(
+                                        0,
+                                    ),
+                                },
+                            ),
+                            Fixed {
+                                query_index: 6,
+                                column_index: 1,
+                                rotation: Rotation(
                                     0,
                                 ),
-                                Advice(
-                                    1,
-                                ),
-                            ),
-                            Fixed(
-                                6,
-                            ),
+                            },
                         ),
                     ),
                     Scaled(
                         Product(
-                            Advice(
-                                2,
-                            ),
-                            Fixed(
-                                5,
-                            ),
+                            Advice {
+                                query_index: 2,
+                                column_index: 3,
+                                rotation: Rotation(
+                                    0,
+                                ),
+                            },
+                            Fixed {
+                                query_index: 5,
+                                column_index: 4,
+                                rotation: Rotation(
+                                    0,
+                                ),
+                            },
                         ),
                         0x40000000000000000000000000000000224698fc094cf91b992d30ed00000000,
                     ),
                 ),
                 Product(
-                    Fixed(
-                        2,
-                    ),
+                    Fixed {
+                        query_index: 2,
+                        column_index: 0,
+                        rotation: Rotation(
+                            0,
+                        ),
+                    },
                     Product(
-                        Advice(
-                            3,
-                        ),
-                        Advice(
-                            4,
-                        ),
+                        Advice {
+                            query_index: 3,
+                            column_index: 4,
+                            rotation: Rotation(
+                                1,
+                            ),
+                        },
+                        Advice {
+                            query_index: 4,
+                            column_index: 0,
+                            rotation: Rotation(
+                                -1,
+                            ),
+                        },
                     ),
                 ),
             ),
             Product(
-                Fixed(
-                    7,
-                ),
-                Sum(
-                    Advice(
+                Fixed {
+                    query_index: 7,
+                    column_index: 5,
+                    rotation: Rotation(
                         0,
                     ),
-                    Scaled(
-                        Instance(
+                },
+                Sum(
+                    Advice {
+                        query_index: 0,
+                        column_index: 1,
+                        rotation: Rotation(
                             0,
                         ),
+                    },
+                    Scaled(
+                        Instance {
+                            query_index: 0,
+                            column_index: 0,
+                            rotation: Rotation(
+                                0,
+                            ),
+                        },
                         0x40000000000000000000000000000000224698fc094cf91b992d30ed00000000,
                     ),
                 ),
@@ -807,35 +867,59 @@ fn plonk_api() {
         lookups: [
             Argument {
                 input_expressions: [
-                    Advice(
-                        0,
-                    ),
+                    Advice {
+                        query_index: 0,
+                        column_index: 1,
+                        rotation: Rotation(
+                            0,
+                        ),
+                    },
                 ],
                 table_expressions: [
-                    Fixed(
-                        0,
-                    ),
+                    Fixed {
+                        query_index: 0,
+                        column_index: 6,
+                        rotation: Rotation(
+                            0,
+                        ),
+                    },
                 ],
             },
             Argument {
                 input_expressions: [
                     Product(
-                        Advice(
-                            0,
-                        ),
-                        Advice(
-                            1,
-                        ),
+                        Advice {
+                            query_index: 0,
+                            column_index: 1,
+                            rotation: Rotation(
+                                0,
+                            ),
+                        },
+                        Advice {
+                            query_index: 1,
+                            column_index: 2,
+                            rotation: Rotation(
+                                0,
+                            ),
+                        },
                     ),
                 ],
                 table_expressions: [
                     Product(
-                        Fixed(
-                            0,
-                        ),
-                        Fixed(
-                            1,
-                        ),
+                        Fixed {
+                            query_index: 0,
+                            column_index: 6,
+                            rotation: Rotation(
+                                0,
+                            ),
+                        },
+                        Fixed {
+                            query_index: 1,
+                            column_index: 7,
+                            rotation: Rotation(
+                                0,
+                            ),
+                        },
                     ),
                 ],
             },
