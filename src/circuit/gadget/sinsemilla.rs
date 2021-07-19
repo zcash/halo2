@@ -294,7 +294,8 @@ where
 pub trait CommitDomains<C: CurveAffine, F: Clone + Debug, H: HashDomains<C>>:
     Clone + Debug
 {
-    /// Returns the fixed point corresponding to the R constant for this CommitDomain.
+    /// Returns the fixed point corresponding to the R constant used for
+    /// randomization in this CommitDomain.
     fn r(&self) -> F;
 
     /// Returns the HashDomain contained in this CommitDomain
