@@ -1,7 +1,7 @@
 use super::{copy, CellValue, UtilitiesInstructions};
 use halo2::{
     circuit::{Chip, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Permutation},
+    plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
     poly::Rotation,
 };
 use pasta_curves::arithmetic::FieldExt;
@@ -44,8 +44,6 @@ pub struct PLONKConfig {
     sb: Column<Fixed>,
     sc: Column<Fixed>,
     sm: Column<Fixed>,
-
-    perm: Permutation,
 }
 
 #[allow(clippy::upper_case_acronyms)]
@@ -90,13 +88,13 @@ impl<F: FieldExt> PLONKInstructions<F> for PLONKChip<F> {
                 let config = self.config().clone();
 
                 // Copy in `a`
-                copy(&mut region, || "copy a", config.a, 0, &a, &config.perm)?;
+                copy(&mut region, || "copy a", config.a, 0, &a)?;
 
                 // Copy in `b`
-                copy(&mut region, || "copy b", config.b, 0, &b, &config.perm)?;
+                copy(&mut region, || "copy b", config.b, 0, &b)?;
 
                 // Copy in `c`
-                copy(&mut region, || "copy c", config.c, 0, &c, &config.perm)?;
+                copy(&mut region, || "copy c", config.c, 0, &c)?;
 
                 // Assign fixed columns
                 region.assign_fixed(|| "sc", config.sc, 0, || sc.ok_or(Error::SynthesisError))?;
@@ -138,13 +136,13 @@ impl<F: FieldExt> PLONKInstructions<F> for PLONKChip<F> {
             || "add",
             |mut region| {
                 // Copy in `a`
-                copy(&mut region, || "copy a", config.a, 0, &a, &config.perm)?;
+                copy(&mut region, || "copy a", config.a, 0, &a)?;
 
                 // Copy in `b`
-                copy(&mut region, || "copy b", config.b, 0, &b, &config.perm)?;
+                copy(&mut region, || "copy b", config.b, 0, &b)?;
 
                 // Copy in `c`
-                copy(&mut region, || "copy c", config.c, 0, &c, &config.perm)?;
+                copy(&mut region, || "copy c", config.c, 0, &c)?;
 
                 // Assign fixed columns
                 region.assign_fixed(|| "a", config.sa, 0, || sa.ok_or(Error::SynthesisError))?;
@@ -171,16 +169,16 @@ impl<F: FieldExt> PLONKInstructions<F> for PLONKChip<F> {
 impl<F: FieldExt> PLONKChip<F> {
     /// Configures this chip for use in a circuit.
     ///
-    /// `perm` must cover `advices`, as well as any columns that will be passed
-    /// to this chip.
-    pub fn configure(
-        meta: &mut ConstraintSystem<F>,
-        advices: [Column<Advice>; 3],
-        perm: Permutation,
-    ) -> PLONKConfig {
+    /// # Side-effects
+    ///
+    /// All columns in `advices` will be equality-enabled.
+    pub fn configure(meta: &mut ConstraintSystem<F>, advices: [Column<Advice>; 3]) -> PLONKConfig {
         let a = advices[0];
         let b = advices[1];
         let c = advices[2];
+        meta.enable_equality(a.into());
+        meta.enable_equality(b.into());
+        meta.enable_equality(c.into());
 
         let sa = meta.fixed_column();
         let sb = meta.fixed_column();
@@ -208,7 +206,6 @@ impl<F: FieldExt> PLONKChip<F> {
             sb,
             sc,
             sm,
-            perm,
         }
     }
 
@@ -227,7 +224,7 @@ mod tests {
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
-        plonk::{Any, Circuit, Column, ConstraintSystem, Error},
+        plonk::{Circuit, ConstraintSystem, Error},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas::Base};
 
@@ -254,14 +251,7 @@ mod tests {
                     meta.advice_column(),
                 ];
 
-                let perm = meta.permutation(
-                    &advices
-                        .iter()
-                        .map(|advice| (*advice).into())
-                        .collect::<Vec<Column<Any>>>(),
-                );
-
-                PLONKChip::<F>::configure(meta, advices, perm)
+                PLONKChip::<F>::configure(meta, advices)
             }
 
             fn synthesize(
@@ -343,7 +333,7 @@ mod tests {
             a: Some(Base::rand()),
             b: Some(Base::rand()),
         };
-        let prover = MockProver::<Base>::run(3, &circuit, vec![]).unwrap();
+        let prover = MockProver::<Base>::run(4, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()));
     }
 }

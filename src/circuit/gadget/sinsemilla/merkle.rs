@@ -206,15 +206,6 @@ pub mod tests {
                 meta.fixed_column(),
             ];
 
-            let perm = meta.permutation(
-                &advices
-                    .iter()
-                    .map(|advice| (*advice).into())
-                    .chain(constants_1.iter().map(|fixed| (*fixed).into()))
-                    .chain(constants_2.iter().map(|fixed| (*fixed).into()))
-                    .collect::<Vec<_>>(),
-            );
-
             // Fixed columns for the Sinsemilla generator lookup table
             let lookup = (
                 meta.fixed_column(),
@@ -227,7 +218,6 @@ pub mod tests {
                 advices[5..].try_into().unwrap(),
                 lookup,
                 constants_1,
-                perm.clone(),
             );
             let config1 = MerkleChip::configure(meta, sinsemilla_config_1);
 
@@ -236,7 +226,6 @@ pub mod tests {
                 advices[..5].try_into().unwrap(),
                 lookup,
                 constants_2,
-                perm,
             );
             let config2 = MerkleChip::configure(meta, sinsemilla_config_2);
 

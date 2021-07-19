@@ -4,7 +4,7 @@ use super::{copy, CellValue, EccConfig, EccPoint, Var};
 use group::Curve;
 use halo2::{
     circuit::Region,
-    plonk::{Advice, Column, ConstraintSystem, Error, Permutation, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
@@ -20,8 +20,6 @@ pub struct Config {
     pub x_qr: Column<Advice>,
     // y-coordinate of Q or R in P + Q = R
     pub y_qr: Column<Advice>,
-    // Permutation
-    perm: Permutation,
 }
 
 impl From<&EccConfig> for Config {
@@ -32,7 +30,6 @@ impl From<&EccConfig> for Config {
             y_p: ecc_config.advices[1],
             x_qr: ecc_config.advices[2],
             y_qr: ecc_config.advices[3],
-            perm: ecc_config.perm.clone(),
         }
     }
 }
@@ -99,12 +96,12 @@ impl Config {
             .transpose()?;
 
         // Copy point `p` into `x_p`, `y_p` columns
-        copy(region, || "x_p", self.x_p, offset, &p.x, &self.perm)?;
-        copy(region, || "y_p", self.y_p, offset, &p.y, &self.perm)?;
+        copy(region, || "x_p", self.x_p, offset, &p.x)?;
+        copy(region, || "y_p", self.y_p, offset, &p.y)?;
 
         // Copy point `q` into `x_qr`, `y_qr` columns
-        copy(region, || "x_q", self.x_qr, offset, &q.x, &self.perm)?;
-        copy(region, || "y_q", self.y_qr, offset, &q.y, &self.perm)?;
+        copy(region, || "x_q", self.x_qr, offset, &q.x)?;
+        copy(region, || "y_q", self.y_qr, offset, &q.y)?;
 
         // Compute the sum `P + Q = R`
         let r = {

@@ -25,7 +25,7 @@
 use ff::PrimeFieldBits;
 use halo2::{
     circuit::Region,
-    plonk::{Advice, Column, ConstraintSystem, Error, Permutation, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
 
@@ -48,7 +48,6 @@ pub struct RunningSumConfig<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS:
     q_range_check: Selector,
     q_strict: Selector,
     pub z: Column<Advice>,
-    perm: Permutation,
     _marker: PhantomData<F>,
 }
 
@@ -60,19 +59,23 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
     /// # Panics
     ///
     /// Panics if WINDOW_NUM_BITS > 3.
+    ///
+    /// # Side-effects
+    ///
+    /// `z` will be equality-enabled.
     pub fn configure(
         meta: &mut ConstraintSystem<F>,
         q_range_check: Selector,
         z: Column<Advice>,
-        perm: Permutation,
     ) -> Self {
         assert!(WINDOW_NUM_BITS <= 3);
+
+        meta.enable_equality(z.into());
 
         let config = Self {
             q_range_check,
             q_strict: meta.selector(),
             z,
-            perm,
             _marker: PhantomData,
         };
 
@@ -135,14 +138,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         word_num_bits: usize,
         num_windows: usize,
     ) -> Result<(CellValue<F>, RunningSum<F>), Error> {
-        let z_0 = copy(
-            region,
-            || "copy z_0 = alpha",
-            self.z,
-            offset,
-            &alpha,
-            &self.perm,
-        )?;
+        let z_0 = copy(region, || "copy z_0 = alpha", self.z, offset, &alpha)?;
         self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
 
@@ -276,9 +272,8 @@ mod tests {
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let z = meta.advice_column();
                 let q_range_check = meta.selector();
-                let perm = meta.permutation(&[z.into()]);
 
-                RunningSumConfig::<F, WINDOW_NUM_BITS>::configure(meta, q_range_check, z, perm)
+                RunningSumConfig::<F, WINDOW_NUM_BITS>::configure(meta, q_range_check, z)
             }
 
             fn synthesize(
@@ -370,11 +365,11 @@ mod tests {
             assert_eq!(
                 prover.verify(),
                 Err(vec![
-                    VerifyFailure::Constraint {
+                    VerifyFailure::ConstraintNotSatisfied {
                         constraint: ((1, "final z = 0").into(), 0, "").into(),
                         row: 22
                     },
-                    VerifyFailure::Constraint {
+                    VerifyFailure::ConstraintNotSatisfied {
                         constraint: ((1, "final z = 0").into(), 0, "").into(),
                         row: 45
                     }

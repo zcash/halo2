@@ -12,7 +12,7 @@ use arrayvec::ArrayVec;
 use group::prime::PrimeCurveAffine;
 use halo2::{
     circuit::{Chip, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Permutation, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Selector},
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
@@ -111,12 +111,8 @@ pub struct EccConfig {
     /// Witness point
     pub q_point: Selector,
 
-    /// Shared fixed column used for loading constants. This is included in
-    /// the permutation so that cells in advice columns can be constrained to
-    /// equal cells in this fixed column.
+    /// Shared fixed column used for loading constants.
     pub constants: Column<Fixed>,
-    /// Permutation over all advice columns and the `constants` fixed column.
-    pub perm: Permutation,
     /// Lookup range check using 10-bit lookup table
     pub lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     /// Running sum decomposition.
@@ -151,6 +147,9 @@ impl EccChip {
         Self { config }
     }
 
+    /// # Side effects
+    ///
+    /// All columns in `advices` and `constants` will be equality-enabled.
     #[allow(non_snake_case)]
     pub fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
@@ -158,18 +157,48 @@ impl EccChip {
         lookup_table: Column<Fixed>,
         // TODO: Replace with public inputs API
         constants: [Column<Fixed>; 2],
-        perm: Permutation,
     ) -> <Self as Chip<pallas::Base>>::Config {
-        let lookup_config = LookupRangeCheckConfig::configure(
-            meta,
-            advices[9],
-            constants[0],
-            lookup_table,
-            perm.clone(),
-        );
+        // The following columns need to be equality-enabled for their use in sub-configs:
+        //
+        // add::Config and add_incomplete::Config:
+        // - advices[0]: x_p,
+        // - advices[1]: y_p,
+        // - advices[2]: x_qr,
+        // - advices[3]: y_qr,
+        //
+        // mul_fixed::Config:
+        // - advices[4]: window
+        // - advices[5]: u
+        //
+        // mul_fixed::base_field_element::Config:
+        // - [advices[6], advices[7], advices[8]]: canon_advices
+        //
+        // mul::overflow::Config:
+        // - [advices[0], advices[1], advices[2]]: advices
+        //
+        // mul::incomplete::Config
+        // - advices[4]: lambda1
+        // - advices[9]: z
+        //
+        // mul::complete::Config:
+        // - advices[9]: z_complete
+        //
+        // mul::Config:
+        // - constants[1]: Setting `z_init` to zero.
+        //
+        // TODO: Refactor away from `impl From<EccConfig> for _` so that sub-configs can
+        // equality-enable the columns they need to.
+        for column in &advices {
+            meta.enable_equality((*column).into());
+        }
+        // constants[0] is also equality-enabled here.
+        let lookup_config =
+            LookupRangeCheckConfig::configure(meta, advices[9], constants[0], lookup_table);
+        meta.enable_equality(constants[1].into());
+
         let q_mul_fixed_running_sum = meta.selector();
         let running_sum_config =
-            RunningSumConfig::configure(meta, q_mul_fixed_running_sum, advices[4], perm.clone());
+            RunningSumConfig::configure(meta, q_mul_fixed_running_sum, advices[4]);
 
         let config = EccConfig {
             advices,
@@ -197,7 +226,6 @@ impl EccChip {
             q_mul_fixed_running_sum,
             q_point: meta.selector(),
             constants: constants[1],
-            perm,
             lookup_config,
             running_sum_config,
         };
@@ -323,14 +351,13 @@ impl EccInstructions<pallas::Affine> for EccChip {
         a: &Self::Point,
         b: &Self::Point,
     ) -> Result<(), Error> {
-        let config = self.config().clone();
         layouter.assign_region(
             || "constrain equal",
             |mut region| {
                 // Constrain x-coordinates
-                region.constrain_equal(&config.perm, a.x().cell(), b.x().cell())?;
+                region.constrain_equal(a.x().cell(), b.x().cell())?;
                 // Constrain x-coordinates
-                region.constrain_equal(&config.perm, a.y().cell(), b.y().cell())
+                region.constrain_equal(a.y().cell(), b.y().cell())
             },
         )
     }

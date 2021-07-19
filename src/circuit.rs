@@ -2,11 +2,10 @@
 
 use std::mem;
 
-use group::Curve;
 use halo2::{
     circuit::{Layouter, SimpleFloorPlanner},
     plonk,
-    poly::{EvaluationDomain, LagrangeCoeff, Polynomial, Rotation},
+    poly::Rotation,
     transcript::{Blake2bRead, Blake2bWrite},
 };
 use pasta_curves::{pallas, vesta};
@@ -40,9 +39,16 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         meta.instance_column();
 
         // Placeholder gate so there is something for the prover to operate on.
+        // We need a selector so that the gate is disabled by default, and doesn't
+        // interfere with the blinding factors.
         let advice = meta.advice_column();
+        let selector = meta.selector();
+
         meta.create_gate("TODO", |meta| {
-            vec![meta.query_advice(advice, Rotation::cur())]
+            let a = meta.query_advice(advice, Rotation::cur());
+            let s = meta.query_selector(selector);
+
+            vec![s * a]
         });
     }
 
@@ -107,21 +113,9 @@ pub struct Instance {
 }
 
 impl Instance {
-    fn to_halo2_instance(
-        &self,
-        domain: &EvaluationDomain<vesta::Scalar>,
-    ) -> [Polynomial<vesta::Scalar, LagrangeCoeff>; 1] {
+    fn to_halo2_instance(&self) -> [[vesta::Scalar; 0]; 1] {
         // TODO
-        [domain.empty_lagrange()]
-    }
-
-    fn to_halo2_instance_commitments(&self, vk: &VerifyingKey) -> [vesta::Affine; 1] {
-        [vk.params
-            .commit_lagrange(
-                &self.to_halo2_instance(vk.vk.get_domain())[0],
-                Default::default(),
-            )
-            .to_affine()]
+        [[]]
     }
 }
 
@@ -149,9 +143,10 @@ impl Proof {
         circuits: &[Circuit],
         instances: &[Instance],
     ) -> Result<Self, plonk::Error> {
-        let instances: Vec<_> = instances
+        let instances: Vec<_> = instances.iter().map(|i| i.to_halo2_instance()).collect();
+        let instances: Vec<Vec<_>> = instances
             .iter()
-            .map(|i| i.to_halo2_instance(pk.pk.get_vk().get_domain()))
+            .map(|i| i.iter().map(|c| &c[..]).collect())
             .collect();
         let instances: Vec<_> = instances.iter().map(|i| &i[..]).collect();
 
@@ -162,9 +157,10 @@ impl Proof {
 
     /// Verifies this proof with the given instances.
     pub fn verify(&self, vk: &VerifyingKey, instances: &[Instance]) -> Result<(), plonk::Error> {
-        let instances: Vec<_> = instances
+        let instances: Vec<_> = instances.iter().map(|i| i.to_halo2_instance()).collect();
+        let instances: Vec<Vec<_>> = instances
             .iter()
-            .map(|i| i.to_halo2_instance_commitments(vk))
+            .map(|i| i.iter().map(|c| &c[..]).collect())
             .collect();
         let instances: Vec<_> = instances.iter().map(|i| &i[..]).collect();
 
@@ -241,9 +237,9 @@ mod tests {
                     K,
                     circuit,
                     instance
-                        .to_halo2_instance(vk.vk.get_domain())
+                        .to_halo2_instance()
                         .iter()
-                        .map(|p| p.iter().cloned().collect())
+                        .map(|p| p.to_vec())
                         .collect()
                 )
                 .unwrap()

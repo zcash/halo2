@@ -7,7 +7,7 @@ use ff::PrimeField;
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Layouter, Region},
-    plonk::{Column, ConstraintSystem, Error, Expression, Fixed, Permutation, Selector},
+    plonk::{Column, ConstraintSystem, Error, Expression, Fixed, Selector},
     poly::Rotation,
 };
 
@@ -44,8 +44,6 @@ pub struct Config {
     constants: Column<Fixed>,
     // Selector used to check switching logic on LSB
     q_mul_lsb: Selector,
-    // Permutation
-    perm: Permutation,
     // Configuration used in complete addition
     add_config: add::Config,
     // Configuration used for `hi` bits of the scalar
@@ -63,7 +61,6 @@ impl From<&EccConfig> for Config {
         let config = Self {
             constants: ecc_config.constants,
             q_mul_lsb: ecc_config.q_mul_lsb,
-            perm: ecc_config.perm.clone(),
             add_config: ecc_config.into(),
             hi_config: ecc_config.into(),
             lo_config: ecc_config.into(),
@@ -318,7 +315,6 @@ impl Config {
             self.add_config.x_p,
             offset + 1,
             &base.x(),
-            &self.perm,
         )?;
         copy(
             region,
@@ -326,7 +322,6 @@ impl Config {
             self.add_config.y_p,
             offset + 1,
             &base.y(),
-            &self.perm,
         )?;
 
         // If `lsb` is 0, return `Acc + (-P)`. If `lsb` is 1, simply return `Acc + 0`.

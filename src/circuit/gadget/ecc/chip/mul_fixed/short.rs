@@ -145,7 +145,6 @@ impl Config {
                     self.super_config.window,
                     offset,
                     &scalar.sign,
-                    &self.super_config.perm,
                 )?;
 
                 // Copy last window to `u` column.
@@ -158,7 +157,6 @@ impl Config {
                     self.super_config.u,
                     offset,
                     &z_21,
-                    &self.super_config.perm,
                 )?;
 
                 // Conditionally negate `y`-coordinate
@@ -406,18 +404,10 @@ pub mod tests {
                     meta.advice_column(),
                     meta.advice_column(),
                 ];
-
                 let constants = [meta.fixed_column(), meta.fixed_column()];
-                let perm = meta.permutation(
-                    &advices
-                        .iter()
-                        .map(|advice| (*advice).into())
-                        .chain(constants.iter().map(|fixed| (*fixed).into()))
-                        .collect::<Vec<_>>(),
-                );
-
                 let lookup_table = meta.fixed_column();
-                EccChip::configure(meta, advices, lookup_table, constants, perm)
+
+                EccChip::configure(meta, advices, lookup_table, constants)
             }
 
             fn synthesize(
@@ -485,11 +475,11 @@ pub mod tests {
                 assert_eq!(
                     prover.verify(),
                     Err(vec![
-                        VerifyFailure::Constraint {
+                        VerifyFailure::ConstraintNotSatisfied {
                             constraint: ((2, "final z = 0").into(), 0, "").into(),
                             row: 24
                         },
-                        VerifyFailure::Constraint {
+                        VerifyFailure::ConstraintNotSatisfied {
                             constraint: (
                                 (13, "Short fixed-base mul gate").into(),
                                 0,
@@ -514,12 +504,12 @@ pub mod tests {
             assert_eq!(
                 prover.verify(),
                 Err(vec![
-                    VerifyFailure::Constraint {
+                    VerifyFailure::ConstraintNotSatisfied {
                         constraint: ((13, "Short fixed-base mul gate").into(), 1, "sign_check")
                             .into(),
                         row: 26
                     },
-                    VerifyFailure::Constraint {
+                    VerifyFailure::ConstraintNotSatisfied {
                         constraint: (
                             (13, "Short fixed-base mul gate").into(),
                             3,

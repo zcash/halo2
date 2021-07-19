@@ -1,7 +1,7 @@
 use ff::PrimeFieldBits;
 use halo2::{
     circuit::{Cell, Layouter, Region},
-    plonk::{Advice, Column, Error, Expression, Permutation},
+    plonk::{Advice, Column, Error, Expression},
 };
 use pasta_curves::arithmetic::FieldExt;
 use std::{array, convert::TryInto, ops::Range};
@@ -66,14 +66,16 @@ pub trait UtilitiesInstructions<F: FieldExt> {
 /// Assigns a cell at a specific offset within the given region, constraining it
 /// to the same value as another cell (which may be in any region).
 ///
-/// Returns an error if either `column` or `copy` is not within `perm`.
+/// Returns an error if either `column` or `copy` is not in a column that was passed to
+/// [`ConstraintSystem::enable_equality`] during circuit configuration.
+///
+/// [`ConstraintSystem::enable_equality`]: halo2::plonk::ConstraintSystem::enable_equality
 pub fn copy<A, AR, F: FieldExt>(
     region: &mut Region<'_, F>,
     annotation: A,
     column: Column<Advice>,
     offset: usize,
     copy: &CellValue<F>,
-    perm: &Permutation,
 ) -> Result<CellValue<F>, Error>
 where
     A: Fn() -> AR,
@@ -83,7 +85,7 @@ where
         copy.value.ok_or(Error::SynthesisError)
     })?;
 
-    region.constrain_equal(perm, cell, copy.cell)?;
+    region.constrain_equal(cell, copy.cell)?;
 
     Ok(CellValue::new(cell, copy.value))
 }
@@ -203,16 +205,16 @@ mod tests {
 
         for i in 0..8 {
             let circuit: MyCircuit<8> = MyCircuit(i);
-            let prover = MockProver::<pallas::Base>::run(1, &circuit, vec![]).unwrap();
+            let prover = MockProver::<pallas::Base>::run(3, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
         }
 
         {
             let circuit: MyCircuit<8> = MyCircuit(8);
-            let prover = MockProver::<pallas::Base>::run(1, &circuit, vec![]).unwrap();
+            let prover = MockProver::<pallas::Base>::run(3, &circuit, vec![]).unwrap();
             assert_eq!(
                 prover.verify(),
-                Err(vec![VerifyFailure::Constraint {
+                Err(vec![VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((0, "range check").into(), 0, "").into(),
                     row: 0
                 }])
