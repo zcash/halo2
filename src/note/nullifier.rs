@@ -14,6 +14,14 @@ use crate::{
 #[derive(Clone, Copy, Debug)]
 pub struct Nullifier(pub(crate) pallas::Base);
 
+impl std::ops::Deref for Nullifier {
+    type Target = pallas::Base;
+
+    fn deref(&self) -> &pallas::Base {
+        &self.0
+    }
+}
+
 impl Nullifier {
     /// Generates a dummy nullifier for use as $\rho$ in dummy spent notes.
     ///

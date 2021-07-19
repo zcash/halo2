@@ -21,9 +21,9 @@ use std::ops::{Add, Sub};
 
 use bitvec::{array::BitArray, order::Lsb0};
 use ff::{Field, PrimeField};
-use group::{Group, GroupEncoding};
+use group::{Curve, Group, GroupEncoding};
 use pasta_curves::{
-    arithmetic::{CurveExt, FieldExt},
+    arithmetic::{CurveAffine, CurveExt, FieldExt},
     pallas,
 };
 use rand::RngCore;
@@ -274,6 +274,24 @@ impl ValueCommitment {
     /// Serialize this value commitment to its canonical byte representation.
     pub fn to_bytes(&self) -> [u8; 32] {
         self.0.to_bytes()
+    }
+
+    /// x-coordinate of this value commitment.
+    pub fn x(&self) -> pallas::Base {
+        if self.0 == pallas::Point::identity() {
+            pallas::Base::zero()
+        } else {
+            *self.0.to_affine().coordinates().unwrap().x()
+        }
+    }
+
+    /// y-coordinate of this value commitment.
+    pub fn y(&self) -> pallas::Base {
+        if self.0 == pallas::Point::identity() {
+            pallas::Base::zero()
+        } else {
+            *self.0.to_affine().coordinates().unwrap().y()
+        }
     }
 }
 

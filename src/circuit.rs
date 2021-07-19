@@ -9,7 +9,10 @@ use halo2::{
     poly::Rotation,
     transcript::{Blake2bRead, Blake2bWrite},
 };
-use pasta_curves::{arithmetic::FieldExt, pallas, vesta};
+use pasta_curves::{
+    arithmetic::{CurveAffine, FieldExt},
+    pallas, vesta,
+};
 
 use crate::{
     constants::{
@@ -66,12 +69,23 @@ pub(crate) mod gadget;
 // FIXME: This circuit should fit within 2^11 rows.
 const K: u32 = 12;
 
+// Absolute offsets for public inputs.
+const ZERO: usize = 0;
+const ANCHOR: usize = 1;
+const NF_OLD: usize = 2;
+const CV_NET_X: usize = 3;
+const CV_NET_Y: usize = 4;
+const RK_X: usize = 5;
+const RK_Y: usize = 6;
+const CMX: usize = 7;
+const ENABLE_SPEND: usize = 8;
+const ENABLE_OUTPUT: usize = 9;
+
 /// Configuration needed to use the Orchard Action circuit.
 #[derive(Clone, Debug)]
 pub struct Config {
-    q_primary: Selector,
     primary: Column<InstanceColumn>,
-    q_v_net: Selector,
+    q_orchard: Selector,
     advices: [Column<Advice>; 10],
     enable_flag_config: EnableFlagConfig,
     ecc_config: EccConfig,
@@ -138,15 +152,29 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         ];
 
         // Constrain v_old - v_new = magnitude * sign
-        let q_v_net = meta.selector();
-        meta.create_gate("v_old - v_new = magnitude * sign", |meta| {
-            let q_v_net = meta.query_selector(q_v_net);
+        // Either v_old = 0, or anchor equals public input
+        let q_orchard = meta.selector();
+        meta.create_gate("Orchard circuit checks", |meta| {
+            let q_orchard = meta.query_selector(q_orchard);
             let v_old = meta.query_advice(advices[0], Rotation::cur());
             let v_new = meta.query_advice(advices[1], Rotation::cur());
             let magnitude = meta.query_advice(advices[2], Rotation::cur());
             let sign = meta.query_advice(advices[3], Rotation::cur());
 
-            vec![q_v_net * (v_old - v_new - magnitude * sign)]
+            let anchor = meta.query_advice(advices[4], Rotation::cur());
+            let pub_input_anchor = meta.query_advice(advices[5], Rotation::cur());
+
+            std::array::IntoIter::new([
+                (
+                    "v_old - v_new = magnitude * sign",
+                    v_old.clone() - v_new - magnitude * sign,
+                ),
+                (
+                    "Either v_old = 0, or anchor equals public input",
+                    v_old * (anchor - pub_input_anchor),
+                ),
+            ])
+            .map(move |(name, poly)| (name, q_orchard.clone() * poly))
         });
 
         // Fixed columns for the Sinsemilla generator lookup table
@@ -172,6 +200,11 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             meta.fixed_column(),
             meta.fixed_column(),
         ];
+
+        // Instance column.
+        let primary = meta.instance_column();
+
+        meta.enable_equality(primary.into());
 
         // Permutation over all advice columns and `constants` columns.
         // TODO: Replace `*_constants` with public inputs API.
@@ -254,27 +287,9 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let new_note_commit_config =
             NoteCommitConfig::configure(meta, advices, sinsemilla_config_2.clone());
 
-        // TODO: Infrastructure to handle public inputs.
-        let q_primary = meta.selector();
-        let primary = meta.instance_column();
-
-        // Placeholder gate so there is something for the prover to operate on.
-        // We need a selector so that the gate is disabled by default, and doesn't
-        // interfere with the blinding factors.
-        let advice = meta.advice_column();
-        let selector = meta.selector();
-
-        meta.create_gate("TODO", |meta| {
-            let a = meta.query_advice(advice, Rotation::cur());
-            let s = meta.query_selector(selector);
-
-            vec![s * a]
-        });
-
         Config {
-            q_primary,
             primary,
-            q_v_net,
+            q_orchard,
             advices,
             enable_flag_config,
             ecc_config,
@@ -366,8 +381,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         };
 
         // Merkle path validity check.
-        // TODO: constrain output to equal public input
-        let _anchor = {
+        let anchor = {
             let merkle_inputs = MerklePath {
                 chip_1: config.merkle_chip_1(),
                 chip_2: config.merkle_chip_2(),
@@ -380,8 +394,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         };
 
         // Value commitment integrity.
-        // TODO: constrain to equal public input cv_net
-        let _cv_net = {
+        let v_net = {
             // v_net = v_old - v_new
             let v_net = {
                 let v_net_val = self.v_old.zip(self.v_new).map(|(v_old, v_new)| {
@@ -426,26 +439,6 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 (magnitude, sign)
             };
 
-            // Constrain v_old - v_new = magnitude * sign
-            layouter.assign_region(
-                || "v_old - v_new = magnitude * sign",
-                |mut region| {
-                    copy(&mut region, || "v_old", config.advices[0], 0, &v_old)?;
-                    copy(&mut region, || "v_new", config.advices[1], 0, &v_new)?;
-                    let (magnitude, sign) = v_net;
-                    copy(
-                        &mut region,
-                        || "v_net magnitude",
-                        config.advices[2],
-                        0,
-                        &magnitude,
-                    )?;
-                    copy(&mut region, || "v_net sign", config.advices[3], 0, &sign)?;
-
-                    config.q_v_net.enable(&mut region, 0)
-                },
-            )?;
-
             // commitment = [v_net] ValueCommitV
             let (commitment, _) = {
                 let value_commit_v = ValueCommitV::get();
@@ -464,11 +457,16 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             };
 
             // [v_net] ValueCommitV + [rcv] ValueCommitR
-            commitment.add(layouter.namespace(|| "cv_net"), &blind)?
+            let cv_net = commitment.add(layouter.namespace(|| "cv_net"), &blind)?;
+
+            // Constrain cv_net to equal public input
+            layouter.constrain_instance(cv_net.inner().x().cell(), config.primary, CV_NET_X)?;
+            layouter.constrain_instance(cv_net.inner().y().cell(), config.primary, CV_NET_Y)?;
+
+            v_net
         };
 
         // Nullifier integrity
-        // TODO: constrain to equal public input nf_old
         let nf_old = {
             // nk_rho_old = poseidon_hash(nk, rho_old)
             let nk_rho_old = {
@@ -548,14 +546,18 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
             // Add cm_old to multiplied fixed base to get nf_old
             // cm_old + [poseidon_output + psi_old] NullifierK
-            cm_old
+            let nf_old = cm_old
                 .add(layouter.namespace(|| "nf_old"), &product)?
-                .extract_p()
+                .extract_p();
+
+            // Constrain nf_old to equal public input
+            layouter.constrain_instance(nf_old.inner().cell(), config.primary, NF_OLD)?;
+
+            nf_old
         };
 
         // Spend authority
-        // TODO: constrain to equal public input rk
-        let _rk = {
+        {
             // alpha_commitment = [alpha] SpendAuthG
             let (alpha_commitment, _) = {
                 let spend_auth_g = OrchardFixedBasesFull::SpendAuthG;
@@ -564,11 +566,15 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             };
 
             // [alpha] SpendAuthG + ak
-            alpha_commitment.add(layouter.namespace(|| "rk"), &ak)?
-        };
+            let rk = alpha_commitment.add(layouter.namespace(|| "rk"), &ak)?;
+
+            // Constrain rk to equal public input
+            layouter.constrain_instance(rk.inner().x().cell(), config.primary, RK_X)?;
+            layouter.constrain_instance(rk.inner().y().cell(), config.primary, RK_Y)?;
+        }
 
         // Diversified address integrity.
-        let (pk_d_old, _) = {
+        let pk_d_old = {
             let commit_ivk_config = config.commit_ivk_config.clone();
 
             let ivk = {
@@ -585,17 +591,31 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             };
 
             // [ivk] g_d_old
-            g_d_old.mul(layouter.namespace(|| "[ivk] g_d_old"), ivk.inner())?
+            let (derived_pk_d_old, _) =
+                g_d_old.mul(layouter.namespace(|| "[ivk] g_d_old"), ivk.inner())?;
+
+            // Constrain derived pk_d_old to equal witnessed pk_d_old
+            // This addresses the case where ivk = ⊥ , since ⊥ maps to 0 and variable-base
+            // scalar multiplication maps [0]B to (0, 0).
+            let pk_d_old = Point::new(
+                ecc_chip.clone(),
+                layouter.namespace(|| "witness pk_d_old"),
+                self.pk_d_old.map(|pk_d_old| (*pk_d_old).to_affine()),
+            )?;
+            derived_pk_d_old
+                .constrain_equal(layouter.namespace(|| "pk_d_old equality"), &pk_d_old)?;
+
+            pk_d_old
         };
 
         // Old note commitment integrity.
-        let _cm_old = {
+        {
             let old_note_commit_config = config.old_note_commit_config.clone();
 
             let rcm_old = self.rcm_old.as_ref().map(|rcm_old| **rcm_old);
 
             // g★_d || pk★_d || i2lebsp_{64}(v) || i2lebsp_{255}(rho) || i2lebsp_{255}(psi)
-            old_note_commit_config.assign_region(
+            let derived_cm_old = old_note_commit_config.assign_region(
                 layouter.namespace(|| {
                     "g★_d || pk★_d || i2lebsp_{64}(v) || i2lebsp_{255}(rho) || i2lebsp_{255}(psi)"
                 }),
@@ -607,11 +627,14 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 rho_old,
                 psi_old,
                 rcm_old,
-            )?
-        };
+            )?;
 
-        // new note commitment integrity.
-        let _cmx = {
+            // Constrain derived cm_old to equal witnessed cm_old
+            derived_cm_old.constrain_equal(layouter.namespace(|| "cm_old equality"), &cm_old)?;
+        }
+
+        // New note commitment integrity.
+        {
             let new_note_commit_config = config.new_note_commit_config.clone();
 
             // Witness g_d_new_star
@@ -662,8 +685,41 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 rcm_new,
             )?;
 
-            cm_new.extract_p()
-        };
+            let cmx = cm_new.extract_p();
+
+            // Constrain cmx to equal public input
+            layouter.constrain_instance(cmx.inner().cell(), config.primary, CMX)?;
+        }
+
+        // Constrain v_old - v_new = magnitude * sign
+        // Either v_old = 0, or anchor equals public input
+        layouter.assign_region(
+            || "v_old - v_new = magnitude * sign",
+            |mut region| {
+                copy(&mut region, || "v_old", config.advices[0], 0, &v_old)?;
+                copy(&mut region, || "v_new", config.advices[1], 0, &v_new)?;
+                let (magnitude, sign) = v_net;
+                copy(
+                    &mut region,
+                    || "v_net magnitude",
+                    config.advices[2],
+                    0,
+                    &magnitude,
+                )?;
+                copy(&mut region, || "v_net sign", config.advices[3], 0, &sign)?;
+
+                copy(&mut region, || "anchor", config.advices[4], 0, &anchor)?;
+                region.assign_advice_from_instance(
+                    || "pub input anchor",
+                    config.primary,
+                    ANCHOR,
+                    config.advices[5],
+                    0,
+                )?;
+
+                config.q_orchard.enable(&mut region, 0)
+            },
+        )?;
 
         Ok(())
     }
@@ -721,9 +777,28 @@ pub struct Instance {
 }
 
 impl Instance {
-    fn to_halo2_instance(&self) -> [[vesta::Scalar; 0]; 1] {
-        // TODO
-        [[]]
+    fn to_halo2_instance(&self) -> [[vesta::Scalar; 10]; 1] {
+        let mut instance = [vesta::Scalar::zero(); 10];
+
+        // instance[0] is left as 0.
+        instance[ANCHOR] = *self.anchor;
+        instance[CV_NET_X] = self.cv_net.x();
+        instance[CV_NET_Y] = self.cv_net.y();
+        instance[NF_OLD] = *self.nf_old;
+
+        let rk = pallas::Point::from_bytes(&self.rk.clone().into())
+            .unwrap()
+            .to_affine()
+            .coordinates()
+            .unwrap();
+
+        instance[RK_X] = *rk.x();
+        instance[RK_Y] = *rk.y();
+        instance[CMX] = *self.cmx;
+        instance[ENABLE_SPEND] = vesta::Scalar::from_u64(self.enable_spend.into());
+        instance[ENABLE_OUTPUT] = vesta::Scalar::from_u64(self.enable_output.into());
+
+        [instance]
     }
 }
 
@@ -814,6 +889,7 @@ mod tests {
         let (circuits, instances): (Vec<_>, Vec<_>) = iter::once(())
             .map(|()| {
                 let (_, fvk, spent_note) = Note::dummy(&mut rng, None);
+
                 let sender_address = fvk.default_address();
                 let nk = *fvk.nk();
                 let rivk = *fvk.rivk();

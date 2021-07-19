@@ -466,6 +466,14 @@ impl AsRef<[u8; 32]> for OutgoingViewingKey {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DiversifiedTransmissionKey(NonIdentityPallasPoint);
 
+impl std::ops::Deref for DiversifiedTransmissionKey {
+    type Target = pallas::Point;
+
+    fn deref(&self) -> &pallas::Point {
+        &(*self.0)
+    }
+}
+
 impl DiversifiedTransmissionKey {
     /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
     ///

@@ -53,6 +53,14 @@ impl From<pallas::Base> for Anchor {
     }
 }
 
+impl std::ops::Deref for Anchor {
+    type Target = pallas::Base;
+
+    fn deref(&self) -> &pallas::Base {
+        &self.0
+    }
+}
+
 impl Anchor {
     /// Parses an Orchard anchor from a byte encoding.
     pub fn from_bytes(bytes: [u8; 32]) -> Option<Anchor> {
