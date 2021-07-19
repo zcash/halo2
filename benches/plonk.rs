@@ -175,6 +175,8 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         }
 
         fn configure(meta: &mut ConstraintSystem<F>) -> PlonkConfig {
+            meta.set_minimum_degree(5);
+
             let a = meta.advice_column();
             let b = meta.advice_column();
             let c = meta.advice_column();
@@ -219,7 +221,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
         ) -> Result<(), Error> {
             let cs = StandardPlonk::new(config);
 
-            for _ in 0..((1 << (self.k - 1)) - 5) {
+            for _ in 0..((1 << (self.k - 1)) - 3) {
                 let mut a_squared = None;
                 let (a0, _, c0) = cs.raw_multiply(&mut layouter, || {
                     a_squared = self.a.map(|a| a.square());

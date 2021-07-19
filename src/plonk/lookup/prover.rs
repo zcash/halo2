@@ -339,14 +339,14 @@ impl<C: CurveAffine> Permuted<C> {
         // It can be used for debugging purposes.
         {
             // While in Lagrange basis, check that product is correctly constructed
-            let n = (params.n as usize) - (blinding_factors + 1);
+            let u = (params.n as usize) - (blinding_factors + 1);
 
             // l_0(X) * (1 - z(X)) = 0
             assert_eq!(z[0], C::Scalar::one());
 
             // z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
             // - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
-            for i in 0..n {
+            for i in 0..u {
                 let mut left = z[i + 1];
                 let permuted_input_value = &self.permuted_input_expression[i];
 
@@ -375,11 +375,8 @@ impl<C: CurveAffine> Permuted<C> {
 
             // l_last(X) * (z(X)^2 - z(X)) = 0
             // Assertion will fail only when soundness is broken, in which
-            // case this z[0] value will be zero. (bad!)
-            assert_eq!(
-                z[params.n as usize - 1 - blinding_factors],
-                C::Scalar::one()
-            );
+            // case this z[u] value will be zero. (bad!)
+            assert_eq!(z[u], C::Scalar::one());
         }
 
         let product_blind = Blind(C::Scalar::rand());
@@ -433,7 +430,7 @@ impl<'a, C: CurveAffine> Committed<C> {
                 (self.product_coset.clone() * &self.product_coset - &self.product_coset)
                     * &pk.l_last,
             ))
-            // (1 - (l_last + l_blind)) * (
+            // (1 - (l_last(X) + l_blind(X))) * (
             //   z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
             //   - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
             // ) = 0

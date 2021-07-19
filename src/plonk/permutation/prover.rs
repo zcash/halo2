@@ -247,7 +247,7 @@ impl<C: CurveAffine> Committed<C> {
                     .collect::<Vec<_>>(),
             )
             // And for all the sets we enforce:
-            // (1 - (l_last + l_blind)) * (
+            // (1 - (l_last(X) + l_blind(X))) * (
             //   z_i(\omega X) \prod_j (p(X) + \beta s_j(X) + \gamma)
             // - z_i(X) \prod_j (p(X) + \delta^j \beta X + \gamma)
             // )
@@ -310,19 +310,30 @@ impl<C: CurveAffine> Committed<C> {
 }
 
 impl<C: CurveAffine> super::ProvingKey<C> {
-    fn evaluate(&self, x: ChallengeX<C>) -> Vec<C::Scalar> {
-        self.polys
-            .iter()
-            .map(|poly| eval_polynomial(poly, *x))
-            .collect()
-    }
-
-    fn open(&self, x: ChallengeX<C>) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
+    pub(in crate::plonk) fn open(
+        &self,
+        x: ChallengeX<C>,
+    ) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
         self.polys.iter().map(move |poly| ProverQuery {
             point: *x,
             poly,
             blind: Blind::default(),
         })
+    }
+
+    pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
+        &self,
+        x: ChallengeX<C>,
+        transcript: &mut T,
+    ) -> Result<(), Error> {
+        // Hash permutation evals
+        for eval in self.polys.iter().map(|poly| eval_polynomial(poly, *x)) {
+            transcript
+                .write_scalar(eval)
+                .map_err(|_| Error::TranscriptError)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -330,21 +341,11 @@ impl<C: CurveAffine> Constructed<C> {
     pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
         self,
         pk: &plonk::ProvingKey<C>,
-        pkey: &ProvingKey<C>,
         x: ChallengeX<C>,
         transcript: &mut T,
     ) -> Result<Evaluated<C>, Error> {
         let domain = &pk.vk.domain;
         let blinding_factors = pk.vk.cs.blinding_factors();
-
-        // Hash permutation evals
-        // TODO: need to do this once for a single proof; as is this happens
-        // for every circuit instance in the proof.
-        for eval in pkey.evaluate(x).iter() {
-            transcript
-                .write_scalar(*eval)
-                .map_err(|_| Error::TranscriptError)?;
-        }
 
         {
             let mut sets = self.sets.iter();
@@ -367,6 +368,9 @@ impl<C: CurveAffine> Constructed<C> {
                         .map_err(|_| Error::TranscriptError)?;
                 }
 
+                // If we have any remaining sets to process, evaluate this set at omega^u
+                // so we can constrain the last value of its running product to equal the
+                // first value of the next set's running product, chaining them together.
                 if sets.len() > 0 {
                     let permutation_product_last_eval = eval_polynomial(
                         &set.permutation_product_poly,
@@ -388,7 +392,6 @@ impl<C: CurveAffine> Evaluated<C> {
     pub(in crate::plonk) fn open<'a>(
         &'a self,
         pk: &'a plonk::ProvingKey<C>,
-        pkey: &'a ProvingKey<C>,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
         let blinding_factors = pk.vk.cs.blinding_factors();
@@ -401,7 +404,7 @@ impl<C: CurveAffine> Evaluated<C> {
         iter::empty()
             .chain(self.constructed.sets.iter().flat_map(move |set| {
                 iter::empty()
-                    // Open permutation product commitments at x and \omega^{-1} x
+                    // Open permutation product commitments at x and \omega x
                     .chain(Some(ProverQuery {
                         point: *x,
                         poly: &set.permutation_product_poly,
@@ -413,7 +416,9 @@ impl<C: CurveAffine> Evaluated<C> {
                         blind: set.permutation_product_blind,
                     }))
             }))
-            // Open it at \omega^{last} x for all but the last set
+            // Open it at \omega^{last} x for all but the last set. This rotation is only
+            // sensical for the first row, but we only use this rotation in a constraint
+            // that is gated on l_0.
             .chain(
                 self.constructed
                     .sets
@@ -428,7 +433,5 @@ impl<C: CurveAffine> Evaluated<C> {
                         })
                     }),
             )
-            // Open permutation polynomial commitments at x
-            .chain(pkey.open(x))
     }
 }

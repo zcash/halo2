@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
 
       - name: Setup mdBook
         uses: peaceiris/actions-mdbook@v1
@@ -24,6 +28,17 @@ jobs:
 
       - name: Build halo2 book
         run: mdbook build book/
+
+      - name: Build latest rustdocs
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustdoc
+          args: -- --cfg docsrs --html-in-header katex-header.html
+
+      - name: Move latest rustdocs into book
+        run: |
+          mkdir -p ./book/book/rustdoc
+          mv ./target/doc ./book/book/rustdoc/latest
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

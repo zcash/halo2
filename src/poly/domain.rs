@@ -471,32 +471,36 @@ impl<G: Group> EvaluationDomain<G> {
     /// Computes evaluations (at the point `x`, where `xn = x^n`) of Lagrange
     /// basis polynomials `l_i(X)` defined such that `l_i(omega^i) = 1` and
     /// `l_i(omega^j) = 0` for all `j != i` at each provided rotation `i`.
+    ///
+    /// # Implementation
+    ///
+    /// The polynomial
+    ///     $$\prod_{j=0,j \neq i}^{n - 1} (X - \omega^j)$$
+    /// has a root at all points in the domain except $\omega^i$, where it evaluates to
+    ///     $$\prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)$$
+    /// and so we divide that polynomial by this value to obtain $l_i(X)$. Since
+    ///     $$\prod_{j=0,j \neq i}^{n - 1} (X - \omega^j)
+    ///       = \frac{X^n - 1}{X - \omega^i}$$
+    /// then $l_i(x)$ for some $x$ is evaluated as
+    ///     $$\left(\frac{x^n - 1}{x - \omega^i}\right)
+    ///       \cdot \left(\frac{1}{\prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)}\right).$$
+    /// We refer to
+    ///     $$1 \over \prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)$$
+    /// as the barycentric weight of $\omega^i$.
+    ///
+    /// We know that for $i = 0$
+    ///     $$\frac{1}{\prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)} = \frac{1}{n}.$$
+    ///
+    /// If we multiply $(1 / n)$ by $\omega^i$ then we obtain
+    ///     $$\frac{1}{\prod_{j=0,j \neq 0}^{n - 1} (\omega^i - \omega^j)}
+    ///       = \frac{1}{\prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)}$$
+    /// which is the barycentric weight of $\omega^i$.
     pub fn l_i_range<I: IntoIterator<Item = i32> + Clone>(
         &self,
         x: G::Scalar,
         xn: G::Scalar,
         rotations: I,
     ) -> Vec<G::Scalar> {
-        // The polynomial
-        // \prod_{j=0,j \neq i}^{n - 1} (X - omega^j)
-        // has a root at all points in the domain except omega^i, where it evaluates to
-        // \prod_{j=0,j \neq i}^{n - 1} (omega^i - omega^j)
-        // and so we divide that polynomial by this value to obtain l_i(X).
-        // Since \prod_{j=0,j \neq i}^{n - 1} (X - omega^j)
-        //       = (X^n - 1) / (X - omega^i)
-        // Then l_i(x) for some x is evaluated as
-        // ((x^n - 1) / (x - omega^i)) * (1 / \prod_{j=0,j \neq i}^{n - 1} (omega^i - omega^j))
-        // We refer to
-        // (1 / \prod_{j=0,j \neq i}^{n - 1} (omega^i - omega^j))
-        // as the barycentric weight of omega^i.
-        // We know that for i = 0
-        // (1 / \prod_{j=0,j \neq i}^{n - 1} (omega^i - omega^j))
-        // = (1 / n)
-        // If we multiply (1 / n) by (omega^{i})^-1 then we obtain
-        // (1 / \prod_{j=0,j \neq 0}^{n - 1} (omega^{i + 1} - omega^{j + 1}))
-        // = (1 / \prod_{j=0,j \neq -i}^{n - 1} (omega^i - omega^j))
-        // which is the barycentric weight of omega^{-i}
-
         let mut results;
         {
             let rotations = rotations.clone().into_iter();
@@ -512,15 +516,7 @@ impl<G: Group> EvaluationDomain<G> {
         let common = (xn - G::Scalar::one()) * self.barycentric_weight;
         for (rotation, result) in rotations.into_iter().zip(results.iter_mut()) {
             let rotation = Rotation(rotation);
-            *result *= common;
-
-            if rotation.0 >= 0 {
-                *result *= self.get_omega().pow_vartime(&[rotation.0 as u64]);
-            } else {
-                *result *= self
-                    .get_omega_inv()
-                    .pow_vartime(&[(rotation.0 as i64).abs() as u64]);
-            }
+            *result = self.rotate_omega(*result * common, rotation);
         }
 
         results

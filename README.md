@@ -11,9 +11,14 @@ Requires Rust **1.51** or higher.
 Minimum supported Rust version can be changed in the future, but it will be done with a
 minor version bump.
 
+## Controlling parallelism
+
+`halo2` currently uses [rayon](https://github.com/rayon-rs/rayon) for parallel computation.
+The `RAYON_NUM_THREADS` environment variable can be used to set the number of threads.
+
 ## License
 
-Copyright 2020 The Electric Coin Company.
+Copyright 2020-2021 The Electric Coin Company.
 
 You may use this package under the Bootstrap Open Source Licence, version 1.0,
 or at your option, any later version. See the file

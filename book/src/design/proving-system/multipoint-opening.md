@@ -22,9 +22,9 @@ $$
 For each of these groups, we combine them into a polynomial set, and create a single $Q$
 for that set, which we open at each rotation.
 
-## Optimisation steps
+## Optimization steps
 
-The multipoint opening optimisation takes as input:
+The multipoint opening optimization takes as input:
 
 - A random $x$ sampled by the verifier, at which we evaluate $a(X), b(X), c(X), d(X)$.
 - Evaluations of each polynomial at each point of interest, provided by the prover:
@@ -32,7 +32,7 @@ The multipoint opening optimisation takes as input:
 
 These are the outputs of the [vanishing argument](vanishing.md#evaluating-the-polynomials).
 
-The multipoint opening optimisation proceeds as such:
+The multipoint opening optimization proceeds as such:
 
 1. Sample random $x_1$, to keep $a, b, c, d$ linearly independent.
 2. Accumulate polynomials and their corresponding evaluations according

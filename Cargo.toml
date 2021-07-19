@@ -37,10 +37,9 @@ harness = false
 
 [dependencies]
 backtrace = { version = "0.3", optional = true }
-crossbeam-utils = "0.8"
+rayon = "1.5.1"
 ff = "0.10"
 group = "0.10"
-num_cpus = "1.13"
 pasta_curves = "0.1"
 rand = "0.8"
 blake2b_simd = "0.5"

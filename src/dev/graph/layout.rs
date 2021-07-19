@@ -37,6 +37,8 @@ use crate::plonk::{
 #[derive(Debug, Default)]
 pub struct CircuitLayout {
     hide_labels: bool,
+    mark_equality_cells: bool,
+    show_equality_constraints: bool,
     view_width: Option<Range<usize>>,
     view_height: Option<Range<usize>>,
 }
@@ -47,6 +49,22 @@ impl CircuitLayout {
     /// The default is to show labels.
     pub fn show_labels(mut self, show: bool) -> Self {
         self.hide_labels = !show;
+        self
+    }
+
+    /// Marks cells involved in equality constraints, in red.
+    ///
+    /// The default is to not mark these cells.
+    pub fn mark_equality_cells(mut self, show: bool) -> Self {
+        self.mark_equality_cells = show;
+        self
+    }
+
+    /// Draws red lines between equality-constrained cells.
+    ///
+    /// The default is to not show these, as they can get _very_ messy.
+    pub fn show_equality_constraints(mut self, show: bool) -> Self {
+        self.show_equality_constraints = show;
         self
     }
 
@@ -203,6 +221,38 @@ impl CircuitLayout {
             draw_cell(&root, column_index(&column), row)?;
         }
 
+        // Mark equality-constrained cells.
+        if self.mark_equality_cells {
+            let mut cells = HashSet::new();
+            for (l_col, l_row, r_col, r_row) in &layout.equality {
+                let l_col = column_index(l_col);
+                let r_col = column_index(r_col);
+
+                // Deduplicate cells.
+                cells.insert((l_col, *l_row));
+                cells.insert((r_col, *r_row));
+            }
+
+            for (col, row) in cells {
+                root.draw(&Rectangle::new(
+                    [(col, row), (col + 1, row + 1)],
+                    ShapeStyle::from(&RED.mix(0.5)).filled(),
+                ))?;
+            }
+        }
+
+        // Draw lines between equality-constrained cells.
+        if self.show_equality_constraints {
+            for (l_col, l_row, r_col, r_row) in &layout.equality {
+                let l_col = column_index(l_col);
+                let r_col = column_index(r_col);
+                root.draw(&PathElement::new(
+                    [(l_col, *l_row), (r_col, *r_row)],
+                    ShapeStyle::from(&RED),
+                ))?;
+            }
+        }
+
         // Render labels last, on top of everything else.
         if let Some(labels) = labels {
             for (label, top_left) in labels {
@@ -241,6 +291,8 @@ struct Layout {
     loose_cells: Vec<(Column<Any>, usize)>,
     /// Columns we have observed are actually Selectors.
     selectors: HashSet<Column<Any>>,
+    /// Pairs of cells between which we have equality constraints.
+    equality: Vec<(Column<Any>, usize, Column<Any>, usize)>,
 }
 
 impl Layout {
@@ -348,12 +400,12 @@ impl<F: Field> Assignment<F> for Layout {
 
     fn copy(
         &mut self,
-        _: Column<Any>,
-        _: usize,
-        _: Column<Any>,
-        _: usize,
+        l_col: Column<Any>,
+        l_row: usize,
+        r_col: Column<Any>,
+        r_row: usize,
     ) -> Result<(), crate::plonk::Error> {
-        // Do nothing; we don't care about permutations in this context.
+        self.equality.push((l_col, l_row, r_col, r_row));
         Ok(())
     }
 

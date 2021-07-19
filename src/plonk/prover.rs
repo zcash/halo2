@@ -27,7 +27,8 @@ use crate::{
 
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
-/// generated previously for the same circuit.
+/// generated previously for the same circuit. The provided `instances`
+/// are zero-padded internally.
 pub fn create_proof<
     C: CurveAffine,
     E: EncodedChallenge<C>,
@@ -68,12 +69,16 @@ pub fn create_proof<
                 .iter()
                 .map(|values| {
                     let mut poly = domain.empty_lagrange();
+                    assert_eq!(poly.len(), params.n as usize);
+                    if values.len() > (poly.len() - (meta.blinding_factors() + 1)) {
+                        return Err(Error::InstanceTooLarge);
+                    }
                     for (poly, value) in poly.iter_mut().zip(values.iter()) {
                         *poly = *value;
                     }
-                    poly
+                    Ok(poly)
                 })
-                .collect::<Vec<_>>();
+                .collect::<Result<Vec<_>, _>>()?;
             let instance_commitments_projective: Vec<_> = instance_values
                 .iter()
                 .map(|poly| params.commit_lagrange(poly, Blind::default()))
@@ -519,12 +524,13 @@ pub fn create_proof<
 
     let vanishing = vanishing.evaluate(x, xn, domain, transcript)?;
 
+    // Evaluate common permutation data
+    pk.permutation.evaluate(x, transcript)?;
+
     // Evaluate the permutations, if any, at omega^i x.
     let permutations: Vec<permutation::prover::Evaluated<C>> = permutations
         .into_iter()
-        .map(|permutation| -> Result<_, _> {
-            permutation.evaluate(pk, &pk.permutation, x, transcript)
-        })
+        .map(|permutation| -> Result<_, _> { permutation.evaluate(pk, x, transcript) })
         .collect::<Result<Vec<_>, _>>()?;
 
     // Evaluate the lookups, if any, at omega^i x.
@@ -567,7 +573,7 @@ pub fn create_proof<
                             blind: advice.advice_blinds[column.index()],
                         }),
                 )
-                .chain(permutation.open(pk, &pk.permutation, x))
+                .chain(permutation.open(pk, x))
                 .chain(lookups.iter().flat_map(move |p| p.open(pk, x)).into_iter())
         })
         .chain(
@@ -581,6 +587,7 @@ pub fn create_proof<
                     blind: Blind::default(),
                 }),
         )
+        .chain(pk.permutation.open(x))
         // We query the h(X) polynomial at x
         .chain(vanishing.open(x));
 

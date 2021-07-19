@@ -34,17 +34,17 @@ impl Argument {
         // following will not affect the required degree of
         // this middleware.
         //
-        // (1 - (l_last + l_blind)) * (
+        // (1 - (l_last(X) + l_blind(X))) * (
         //   z(\omega X) \prod (p(X) + \beta s_i(X) + \gamma)
         // - z(X) \prod (p(X) + \delta^i \beta X + \gamma)
         // )
         //
         // On the first sets of columns, except the first
-        // column, we will do
+        // set, we will do
         //
         // l_0(X) * (z(X) - z'(\omega^(last) X)) = 0
         //
-        // where z'(X) is the permutation for the last set
+        // where z'(X) is the permutation for the previous set
         // of columns.
         //
         // On the final set of columns, we will do

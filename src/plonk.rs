@@ -150,8 +150,10 @@ pub enum Error {
     OpeningError,
     /// Transcript error
     TranscriptError,
-    /// Insufficient number of rows available
+    /// Instance provided has more rows than supported by circuit
     NotEnoughRowsAvailable,
+    /// Instance provided exceeds number of available rows
+    InstanceTooLarge,
 }
 
 impl<C: CurveAffine> ProvingKey<C> {

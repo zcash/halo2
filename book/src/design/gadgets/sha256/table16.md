@@ -84,7 +84,7 @@ $Maj$ can be done in $4$ lookups: $2\; \mathtt{spread} * 2$ chunks
 > $2$.
 
 ### Ch function
-> TODO: can probably be optimised to $4$ or $5$ lookups using an additional table.
+> TODO: can probably be optimized to $4$ or $5$ lookups using an additional table.
 >
 $Ch$ can be done in $8$ lookups: $4\; \mathtt{spread} * 2$ chunks
 
