@@ -54,21 +54,6 @@ impl From<&EccConfig> for Config {
 
 impl Config {
     pub fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
-        // Check that each window uses the correct y_p and interpolated x_p.
-        meta.create_gate("Coordinates check", |meta| {
-            let q_mul_fixed_running_sum = meta.query_selector(self.q_mul_fixed_running_sum);
-
-            let z_cur = meta.query_advice(self.super_config.window, Rotation::cur());
-            let z_next = meta.query_advice(self.super_config.window, Rotation::next());
-
-            //    z_{i+1} = (z_i - a_i) / 2^3
-            // => a_i = z_i - z_{i+1} * 2^3
-            let word = z_cur - z_next * pallas::Base::from_u64(constants::H as u64);
-
-            self.super_config
-                .coords_check(meta, q_mul_fixed_running_sum, word)
-        });
-
         // Check that the base field element is canonical.
         meta.create_gate("Canonicity checks", |meta| {
             let q_mul_fixed_base_field = meta.query_selector(self.q_mul_fixed_base_field);
