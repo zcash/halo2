@@ -10,7 +10,7 @@
 //! to be $K$ bits, i.e.
 //!                      `range_check`($k_i$, $2^K$),
 //! where
-//! ```
+//! ```text
 //!   range_check(word, range)
 //!     = word * (1 - word) * (2 - word) * ... * ((range - 1) - word)
 //! ```
