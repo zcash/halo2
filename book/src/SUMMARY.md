@@ -2,6 +2,7 @@
 
 [halo2](README.md)
 - [Concepts](concepts.md)
+  - [Notation](concepts/notation.md)
   - [Proof systems](concepts/proofs.md)
   - [PLONKish Arithmetization](concepts/arithmetization.md)
   - [Chips](concepts/chips.md)
@@ -21,6 +22,7 @@
     - [Multipoint opening argument](design/proving-system/multipoint-opening.md)
     - [Inner product argument](design/proving-system/inner-product.md)
     - [Comparison to other work](design/proving-system/comparison.md)
+  - [Protocol (WIP)](protocol.md)
   - [Implementation](design/implementation.md)
     - [Proofs](design/implementation/proofs.md)
     - [Fields](design/implementation/fields.md)
