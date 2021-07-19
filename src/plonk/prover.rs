@@ -518,12 +518,13 @@ pub fn create_proof<
 
     let vanishing = vanishing.evaluate(x, xn, domain, transcript)?;
 
+    // Evaluate common permutation data
+    pk.permutation.evaluate(x, transcript)?;
+
     // Evaluate the permutations, if any, at omega^i x.
     let permutations: Vec<permutation::prover::Evaluated<C>> = permutations
         .into_iter()
-        .map(|permutation| -> Result<_, _> {
-            permutation.evaluate(pk, &pk.permutation, x, transcript)
-        })
+        .map(|permutation| -> Result<_, _> { permutation.evaluate(pk, x, transcript) })
         .collect::<Result<Vec<_>, _>>()?;
 
     // Evaluate the lookups, if any, at omega^i x.
@@ -566,7 +567,7 @@ pub fn create_proof<
                             blind: advice.advice_blinds[column.index()],
                         }),
                 )
-                .chain(permutation.open(pk, &pk.permutation, x))
+                .chain(permutation.open(pk, x))
                 .chain(lookups.iter().flat_map(move |p| p.open(pk, x)).into_iter())
         })
         .chain(
@@ -580,6 +581,7 @@ pub fn create_proof<
                     blind: Blind::default(),
                 }),
         )
+        .chain(pk.permutation.open(x))
         // We query the h(X) polynomial at x
         .chain(vanishing.open(x));
 

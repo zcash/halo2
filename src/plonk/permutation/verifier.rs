@@ -21,9 +21,12 @@ pub struct EvaluatedSet<C: CurveAffine> {
     permutation_product_last_eval: Option<C::Scalar>,
 }
 
+pub struct CommonEvaluated<C: CurveAffine> {
+    permutation_evals: Vec<C::Scalar>,
+}
+
 pub struct Evaluated<C: CurveAffine> {
     sets: Vec<EvaluatedSet<C>>,
-    permutation_evals: Vec<C::Scalar>,
 }
 
 impl Argument {
@@ -50,18 +53,26 @@ impl Argument {
     }
 }
 
-impl<C: CurveAffine> Committed<C> {
-    pub(crate) fn evaluate<E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
-        self,
-        vkey: &VerifyingKey<C>,
+impl<C: CurveAffine> VerifyingKey<C> {
+    pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
+        &self,
         transcript: &mut T,
-    ) -> Result<Evaluated<C>, Error> {
-        let permutation_evals = vkey
+    ) -> Result<CommonEvaluated<C>, Error> {
+        let permutation_evals = self
             .commitments
             .iter()
             .map(|_| transcript.read_scalar().map_err(|_| Error::TranscriptError))
             .collect::<Result<Vec<_>, _>>()?;
 
+        Ok(CommonEvaluated { permutation_evals })
+    }
+}
+
+impl<C: CurveAffine> Committed<C> {
+    pub(crate) fn evaluate<E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
+        self,
+        transcript: &mut T,
+    ) -> Result<Evaluated<C>, Error> {
         let mut sets = vec![];
 
         let mut iter = self.permutation_product_commitments.into_iter();
@@ -91,10 +102,7 @@ impl<C: CurveAffine> Committed<C> {
             });
         }
 
-        Ok(Evaluated {
-            sets,
-            permutation_evals,
-        })
+        Ok(Evaluated { sets })
     }
 }
 
@@ -103,6 +111,7 @@ impl<C: CurveAffine> Evaluated<C> {
         &'a self,
         vk: &'a plonk::VerifyingKey<C>,
         p: &'a Argument,
+        common: &'a CommonEvaluated<C>,
         advice_evals: &'a [C::Scalar],
         fixed_evals: &'a [C::Scalar],
         instance_evals: &'a [C::Scalar],
@@ -152,7 +161,7 @@ impl<C: CurveAffine> Evaluated<C> {
                 self.sets
                     .iter()
                     .zip(p.columns.chunks(chunk_len))
-                    .zip(self.permutation_evals.chunks(chunk_len))
+                    .zip(common.permutation_evals.chunks(chunk_len))
                     .enumerate()
                     .map(move |(chunk_index, ((set, columns), permutation_evals))| {
                         let mut left = set.permutation_product_next_eval;
@@ -201,7 +210,6 @@ impl<C: CurveAffine> Evaluated<C> {
     pub(in crate::plonk) fn queries<'r, 'params: 'r>(
         &'r self,
         vk: &'r plonk::VerifyingKey<C>,
-        vkey: &'r VerifyingKey<C>,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone {
         let blinding_factors = vk.cs.blinding_factors();
@@ -234,14 +242,19 @@ impl<C: CurveAffine> Evaluated<C> {
                     set.permutation_product_last_eval.unwrap(),
                 ))
             }))
-            // Open permutation commitments for each permutation argument at x
-            .chain(
-                vkey.commitments
-                    .iter()
-                    .zip(self.permutation_evals.iter())
-                    .map(move |(commitment, &eval)| {
-                        VerifierQuery::new_commitment(commitment, *x, eval)
-                    }),
-            )
+    }
+}
+
+impl<C: CurveAffine> CommonEvaluated<C> {
+    pub(in crate::plonk) fn queries<'r, 'params: 'r>(
+        &'r self,
+        vkey: &'r VerifyingKey<C>,
+        x: ChallengeX<C>,
+    ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone {
+        // Open permutation commitments for each permutation argument at x
+        vkey.commitments
+            .iter()
+            .zip(self.permutation_evals.iter())
+            .map(move |(commitment, &eval)| VerifierQuery::new_commitment(commitment, *x, eval))
     }
 }
