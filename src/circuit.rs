@@ -5,7 +5,7 @@ use std::mem;
 use group::{Curve, GroupEncoding};
 use halo2::{
     circuit::{Layouter, SimpleFloorPlanner},
-    plonk::{self, Advice, Column, Instance as InstanceColumn, Selector},
+    plonk::{self, Advice, Column, Expression, Instance as InstanceColumn, Selector},
     poly::Rotation,
     transcript::{Blake2bRead, Blake2bWrite},
 };
@@ -55,7 +55,6 @@ use gadget::{
     },
     utilities::{
         copy,
-        enable_flag::{EnableFlagChip, EnableFlagConfig},
         plonk::{PLONKChip, PLONKConfig, PLONKInstructions},
         CellValue, UtilitiesInstructions, Var,
     },
@@ -87,7 +86,6 @@ pub struct Config {
     primary: Column<InstanceColumn>,
     q_orchard: Selector,
     advices: [Column<Advice>; 10],
-    enable_flag_config: EnableFlagConfig,
     ecc_config: EccConfig,
     poseidon_config: PoseidonConfig<pallas::Base>,
     plonk_config: PLONKConfig,
@@ -153,6 +151,8 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
         // Constrain v_old - v_new = magnitude * sign
         // Either v_old = 0, or anchor equals public input
+        // Constrain v_old = 0 or enable_spends = 1.
+        // Constrain v_new = 0 or enable_outputs = 1.
         let q_orchard = meta.selector();
         meta.create_gate("Orchard circuit checks", |meta| {
             let q_orchard = meta.query_selector(q_orchard);
@@ -164,14 +164,23 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             let anchor = meta.query_advice(advices[4], Rotation::cur());
             let pub_input_anchor = meta.query_advice(advices[5], Rotation::cur());
 
+            let one = Expression::Constant(pallas::Base::one());
+            let not_enable_spends = one.clone() - meta.query_advice(advices[6], Rotation::cur());
+            let not_enable_outputs = one - meta.query_advice(advices[7], Rotation::cur());
+
             std::array::IntoIter::new([
                 (
                     "v_old - v_new = magnitude * sign",
-                    v_old.clone() - v_new - magnitude * sign,
+                    v_old.clone() - v_new.clone() - magnitude * sign,
                 ),
                 (
                     "Either v_old = 0, or anchor equals public input",
-                    v_old * (anchor - pub_input_anchor),
+                    v_old.clone() * (anchor - pub_input_anchor),
+                ),
+                ("v_old = 0 or enable_spends = 1", v_old * not_enable_spends),
+                (
+                    "v_new = 0 or enable_outputs = 1",
+                    v_new * not_enable_outputs,
                 ),
             ])
             .map(move |(name, poly)| (name, q_orchard.clone() * poly))
@@ -220,10 +229,6 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         for fixed in sinsemilla_2_constants.iter() {
             meta.enable_equality((*fixed).into());
         }
-
-        // Configuration for `enable_spends` and `enable_outputs` flags logic
-        // TODO: this may change with public inputs API.
-        let enable_flag_config = EnableFlagChip::configure(meta, [advices[0], advices[1]]);
 
         // Configuration for curve point operations.
         // This uses 10 advice columns and spans the whole circuit.
@@ -291,7 +296,6 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             primary,
             q_orchard,
             advices,
-            enable_flag_config,
             ecc_config,
             poseidon_config,
             plonk_config,
@@ -714,6 +718,22 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                     config.primary,
                     ANCHOR,
                     config.advices[5],
+                    0,
+                )?;
+
+                region.assign_advice_from_instance(
+                    || "enable spends",
+                    config.primary,
+                    ENABLE_SPEND,
+                    config.advices[6],
+                    0,
+                )?;
+
+                region.assign_advice_from_instance(
+                    || "enable outputs",
+                    config.primary,
+                    ENABLE_OUTPUT,
+                    config.advices[7],
                     0,
                 )?;
 
