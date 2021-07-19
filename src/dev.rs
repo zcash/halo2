@@ -610,7 +610,8 @@ impl<F: FieldExt> MockProver<F> {
                             row: i32,
                             queries: &'a [(Column<T>, Rotation)],
                             cells: &'a [Vec<F>],
-                        ) -> impl Fn(usize, usize, Rotation) -> Value<F> + 'a {
+                        ) -> impl Fn(usize, usize, Rotation) -> Value<F> + 'a
+                        {
                             move |index, _, _| {
                                 let (column, at) = &queries[index];
                                 let resolved_row = (row + at.0) % n;
@@ -623,7 +624,8 @@ impl<F: FieldExt> MockProver<F> {
                             row: i32,
                             queries: &'a [(Column<T>, Rotation)],
                             cells: &'a [Vec<CellValue<F>>],
-                        ) -> impl Fn(usize, usize, Rotation) -> Value<F> + 'a {
+                        ) -> impl Fn(usize, usize, Rotation) -> Value<F> + 'a
+                        {
                             move |index, _, _| {
                                 let (column, at) = &queries[index];
                                 let resolved_row = (row + at.0) % n;
