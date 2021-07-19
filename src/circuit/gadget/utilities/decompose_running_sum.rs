@@ -9,9 +9,11 @@
 //! The difference between each interstitial running sum output is constrained
 //! to be $K$ bits, i.e.
 //!                      `range_check`($k_i$, $2^K$),
-//! where `range_check(word, range)
-//!     = word * (1 - word) * (2 - word) * ... * ((range - 1) - word)`
-//! is an expression of degree range.
+//! where
+//! ```
+//!   range_check(word, range)
+//!     = word * (1 - word) * (2 - word) * ... * ((range - 1) - word)
+//! ```
 //!
 //! Given that the `range_check` constraint will be toggled by a selector, in
 //! practice we will have a `selector * range_check(word, range)` expression
@@ -133,7 +135,14 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         word_num_bits: usize,
         num_windows: usize,
     ) -> Result<(CellValue<F>, RunningSum<F>), Error> {
-        let z_0 = copy(region, || "z_0 = alpha", self.z, offset, &alpha, &self.perm)?;
+        let z_0 = copy(
+            region,
+            || "copy z_0 = alpha",
+            self.z,
+            offset,
+            &alpha,
+            &self.perm,
+        )?;
         self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
 
@@ -192,13 +201,11 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         let mut zs: Vec<CellValue<F>> = Vec::with_capacity(num_windows);
         let mut z = z_0;
 
-        // Assign running sum `z_i`, i = 0..=n, where z_{i+1} = (z_i - k_i) / (2^K).
+        // Assign running sum `z_{i+1}` = (z_i - k_i) / (2^K) for i = 0..=n-1.
         // Outside of this helper, z_0 = alpha must have already been loaded into the
         // `z` column at `offset`.
-        let offset = offset + 1;
-
         let two_pow_k_inv = F::from_u64(1 << WINDOW_NUM_BITS as u64).invert().unwrap();
-        for (idx, word) in words.iter().enumerate() {
+        for (i, word) in words.iter().enumerate() {
             // z_next = (z_cur - word) / (2^K)
             let z_next = {
                 let word = word.map(|word| F::from_u64(word as u64));
@@ -207,9 +214,9 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
                     .zip(word)
                     .map(|(z_cur_val, word)| (z_cur_val - word) * two_pow_k_inv);
                 let cell = region.assign_advice(
-                    || format!("z_{:?}", idx + 1),
+                    || format!("z_{:?}", i + 1),
                     self.z,
-                    offset + idx,
+                    offset + i + 1,
                     || z_next_val.ok_or(Error::SynthesisError),
                 )?;
                 CellValue::new(cell, z_next_val)
