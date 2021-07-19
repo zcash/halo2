@@ -183,8 +183,8 @@ impl EccChip {
         // mul::complete::Config:
         // - advices[9]: z_complete
         //
-        // I have not yet figured out where constants[1] is used in an equality constraint
-        // but we get synthesis errors without it.
+        // mul::Config:
+        // - constants[1]: Setting `z_init` to zero.
         //
         // TODO: Refactor away from `impl From<EccConfig> for _` so that sub-configs can
         // equality-enable the columns they need to.

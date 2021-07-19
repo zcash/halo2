@@ -53,8 +53,7 @@ impl MerkleChip {
         meta: &mut ConstraintSystem<pallas::Base>,
         sinsemilla_config: SinsemillaConfig,
     ) -> MerkleConfig {
-        // TODO: Check whether these advice columns were equality-enabled by
-        // SinsemillaConfig. We require all five columns to be equality-enabled.
+        // All five advice columns are equality-enabled by SinsemillaConfig.
         let advices = sinsemilla_config.advices();
         let cond_swap_config = CondSwapChip::configure(meta, advices);
 

@@ -116,9 +116,9 @@ impl SinsemillaChip {
         lookup: (Column<Fixed>, Column<Fixed>, Column<Fixed>),
         constants: [Column<Fixed>; 6], // TODO: replace with public inputs API
     ) -> <Self as Chip<pallas::Base>>::Config {
-        // This chip requires all advice columns and the `constants` fixed column to be
-        // equality-enabled. The advice columns are equality-enabled by the calls to
-        // LookupRangeCheckConfig::configure.
+        // This chip requires all advice columns and the `constants` fixed columns to be
+        // equality-enabled. The advice columns and the first five `constants` columns
+        // are equality-enabled by the calls to LookupRangeCheckConfig::configure.
         let lookup_config_0 =
             LookupRangeCheckConfig::configure(meta, advices[0], constants[0], lookup.0);
         let lookup_config_1 =
