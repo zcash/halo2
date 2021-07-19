@@ -28,10 +28,7 @@ pub trait Sha256Instructions<F: FieldExt>: Chip<F> {
     type State: Clone + fmt::Debug;
     /// Variable representing a 32-bit word of the input block to the SHA-256 compression
     /// function.
-    type BlockWord: Copy + fmt::Debug;
-
-    /// The zero BlockWord
-    fn zero() -> Self::BlockWord;
+    type BlockWord: Copy + fmt::Debug + Default;
 
     /// Places the SHA-256 IV in the circuit, returning the initial state variable.
     fn initialization_vector(&self, layouter: &mut impl Layouter<F>) -> Result<Self::State, Error>;
@@ -140,7 +137,7 @@ impl<F: FieldExt, Sha256Chip: Sha256Instructions<F>> Sha256<F, Sha256Chip> {
     ) -> Result<Sha256Digest<Sha256Chip::BlockWord>, Error> {
         // Pad the remaining block
         if !self.cur_block.is_empty() {
-            let padding = vec![Sha256Chip::zero(); BLOCK_SIZE - self.cur_block.len()];
+            let padding = vec![Sha256Chip::BlockWord::default(); BLOCK_SIZE - self.cur_block.len()];
             self.cur_block.extend_from_slice(&padding);
             self.state = self.chip.initialization(&mut layouter, &self.state)?;
             self.state = self.chip.compress(

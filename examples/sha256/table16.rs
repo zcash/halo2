@@ -44,21 +44,13 @@ const IV: [u32; STATE] = [
     0x5be0_cd19,
 ];
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 /// A word in a `Table16` message block.
-pub struct BlockWord {
-    var: (),
-    value: Option<u32>,
-}
+pub struct BlockWord(pub(crate) Option<u32>);
 
-impl BlockWord {
-    /// Create a new `BlockWord`.
-    pub fn new(value: u32) -> Self {
-        BlockWord {
-            var: (),
-            value: Some(value),
-        }
-    }
+pub trait CellValue<T> {
+    fn var(&self) -> Cell;
+    fn value(&self) -> Option<T>;
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -67,12 +59,18 @@ pub struct CellValue16 {
     value: Option<u16>,
 }
 
+impl<F: FieldExt> CellValue<F> for CellValue16 {
+    fn var(&self) -> Cell {
+        self.var
+    }
+    fn value(&self) -> Option<F> {
+        self.value.map(|value| F::from_u64(value as u64))
+    }
+}
+
 impl CellValue16 {
-    pub fn new(var: Cell, value: u16) -> Self {
-        CellValue16 {
-            var,
-            value: Some(value),
-        }
+    pub fn new(var: Cell, value: Option<u16>) -> Self {
+        CellValue16 { var, value }
     }
 }
 
@@ -83,18 +81,24 @@ pub struct CellValue32 {
 }
 
 impl CellValue32 {
-    pub fn new(var: Cell, value: u32) -> Self {
-        CellValue32 {
-            var,
-            value: Some(value),
-        }
+    pub fn new(var: Cell, value: Option<u32>) -> Self {
+        CellValue32 { var, value }
+    }
+}
+
+impl<F: FieldExt> CellValue<F> for CellValue32 {
+    fn var(&self) -> Cell {
+        self.var
+    }
+    fn value(&self) -> Option<F> {
+        self.value.map(|value| F::from_u64(value as u64))
     }
 }
 
 #[allow(clippy::from_over_into)]
 impl Into<CellValue32> for CellValue16 {
     fn into(self) -> CellValue32 {
-        CellValue32::new(self.var, self.value.unwrap() as u32)
+        CellValue32::new(self.var, self.value.map(|value| value as u32))
     }
 }
 
@@ -193,10 +197,6 @@ impl<F: FieldExt> Sha256Instructions<F> for Table16Chip<F> {
     type State = State;
     type BlockWord = BlockWord;
 
-    fn zero() -> Self::BlockWord {
-        BlockWord::new(0)
-    }
-
     fn initialization_vector(&self, layouter: &mut impl Layouter<F>) -> Result<State, Error> {
         self.config().compression.initialize_with_iv(layouter, IV)
     }
@@ -248,34 +248,43 @@ trait Table16Assignment<F: FieldExt> {
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
         row: usize,
-        r_0_even: u16,
-        r_0_odd: u16,
-        r_1_even: u16,
-        r_1_odd: u16,
+        r_0_even: Option<u16>,
+        r_0_odd: Option<u16>,
+        r_1_even: Option<u16>,
+        r_1_odd: Option<u16>,
     ) -> Result<((CellValue16, CellValue16), (CellValue16, CellValue16)), Error> {
         // Lookup R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
-        let r_0_even = SpreadVar::with_lookup(region, lookup, row - 1, SpreadWord::new(r_0_even))?;
-        let r_0_odd = SpreadVar::with_lookup(region, lookup, row, SpreadWord::new(r_0_odd))?;
-        let r_1_even = SpreadVar::with_lookup(region, lookup, row + 1, SpreadWord::new(r_1_even))?;
-        let r_1_odd = SpreadVar::with_lookup(region, lookup, row + 2, SpreadWord::new(r_1_odd))?;
+        let r_0_even =
+            SpreadVar::with_lookup(region, lookup, row - 1, SpreadWord::opt_new(r_0_even))?;
+        let r_0_odd = SpreadVar::with_lookup(region, lookup, row, SpreadWord::opt_new(r_0_odd))?;
+        let r_1_even =
+            SpreadVar::with_lookup(region, lookup, row + 1, SpreadWord::opt_new(r_1_even))?;
+        let r_1_odd =
+            SpreadVar::with_lookup(region, lookup, row + 2, SpreadWord::opt_new(r_1_odd))?;
 
         // Assign and copy R_1^{odd}
         let r_1_odd_spread = region.assign_advice(
             || "Assign and copy R_1^{odd}",
             a_3,
             row,
-            || Ok(F::from_u64(r_1_odd.spread.value.unwrap().into())),
+            || {
+                r_1_odd
+                    .spread
+                    .value
+                    .map(|value| F::from_u64(value as u64))
+                    .ok_or(Error::SynthesisError)
+            },
         )?;
         region.constrain_equal(r_1_odd.spread.var, r_1_odd_spread)?;
 
         Ok((
             (
-                CellValue16::new(r_0_even.dense.var, r_0_even.dense.value.unwrap()),
-                CellValue16::new(r_1_even.dense.var, r_1_even.dense.value.unwrap()),
+                CellValue16::new(r_0_even.dense.var, r_0_even.dense.value),
+                CellValue16::new(r_1_even.dense.var, r_1_even.dense.value),
             ),
             (
-                CellValue16::new(r_0_odd.dense.var, r_0_odd.dense.value.unwrap()),
-                CellValue16::new(r_1_odd.dense.var, r_1_odd.dense.value.unwrap()),
+                CellValue16::new(r_0_odd.dense.var, r_0_odd.dense.value),
+                CellValue16::new(r_1_odd.dense.var, r_1_odd.dense.value),
             ),
         ))
     }
@@ -288,10 +297,10 @@ trait Table16Assignment<F: FieldExt> {
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
         row: usize,
-        r_0_even: u16,
-        r_0_odd: u16,
-        r_1_even: u16,
-        r_1_odd: u16,
+        r_0_even: Option<u16>,
+        r_0_odd: Option<u16>,
+        r_1_even: Option<u16>,
+        r_1_odd: Option<u16>,
     ) -> Result<(CellValue16, CellValue16), Error> {
         let (even, _odd) = self.assign_spread_outputs(
             region, lookup, a_3, row, r_0_even, r_0_odd, r_1_even, r_1_odd,
@@ -307,16 +316,16 @@ trait Table16Assignment<F: FieldExt> {
         annotation: A,
         column: Column<Advice>,
         row: usize,
-        copy: &CellValue32,
+        copy: impl CellValue<F>,
     ) -> Result<Cell, Error>
     where
         A: Fn() -> AR,
         AR: Into<String>,
     {
         let cell = region.assign_advice(annotation, column, row, || {
-            Ok(F::from_u64(copy.value.unwrap() as u64))
+            copy.value().ok_or(Error::SynthesisError)
         })?;
-        region.constrain_equal(cell, copy.var)?;
+        region.constrain_equal(cell, copy.var())?;
         Ok(cell)
     }
 }
@@ -324,7 +333,7 @@ trait Table16Assignment<F: FieldExt> {
 #[cfg(test)]
 mod tests {
     use super::super::{BlockWord, Sha256, BLOCK_SIZE};
-    use super::{Table16Chip, Table16Config};
+    use super::{message_schedule::msg_schedule_test_input, Table16Chip, Table16Config};
     use halo2::{
         arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner},
@@ -358,23 +367,7 @@ mod tests {
                 Table16Chip::<F>::load(config, &mut layouter)?;
 
                 // Test vector: "abc"
-                let test_input = [
-                    BlockWord::new(0b01100001011000100110001110000000),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                ];
+                let test_input = msg_schedule_test_input();
 
                 // Create a message of length 31 blocks
                 let mut input = Vec::with_capacity(31 * BLOCK_SIZE);
@@ -419,23 +412,7 @@ mod tests {
                 Table16Chip::<F>::load(config, &mut layouter)?;
 
                 // Test vector: "abc"
-                let test_input = [
-                    BlockWord::new(0b01100001011000100110001110000000),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                    BlockWord::new(0),
-                ];
+                let test_input = msg_schedule_test_input();
 
                 // Create a message of length 2 blocks
                 let mut input = Vec::with_capacity(2 * BLOCK_SIZE);

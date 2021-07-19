@@ -59,24 +59,24 @@ pub fn get_word_row(word_idx: usize) -> usize {
 
 /// Test vector: "abc"
 #[cfg(test)]
-pub fn get_msg_schedule_test_input() -> [BlockWord; BLOCK_SIZE] {
+pub fn msg_schedule_test_input() -> [BlockWord; BLOCK_SIZE] {
     [
-        BlockWord::new(0b01100001011000100110001110000000),
-        BlockWord::new(0b00000000000000000000000000000000),
-        BlockWord::new(0b00000000000000000000000000000000),
-        BlockWord::new(0b00000000000000000000000000000000),
-        BlockWord::new(0b00000000000000000000000000000000),
-        BlockWord::new(0b00000000000000000000000000000000),
-        BlockWord::new(0b00000000000000000000000000000000),
-        BlockWord::new(0b00000000000000000000000000000000),
-        BlockWord::new(0b00000000000000000000000000000000),
-        BlockWord::new(0b00000000000000000000000000000000),
-        BlockWord::new(0b00000000000000000000000000000000),
-        BlockWord::new(0b00000000000000000000000000000000),
-        BlockWord::new(0b00000000000000000000000000000000),
-        BlockWord::new(0b00000000000000000000000000000000),
-        BlockWord::new(0b00000000000000000000000000000000),
-        BlockWord::new(0b00000000000000000000000000011000),
+        BlockWord(Some(0b01100001011000100110001110000000)),
+        BlockWord(Some(0b00000000000000000000000000000000)),
+        BlockWord(Some(0b00000000000000000000000000000000)),
+        BlockWord(Some(0b00000000000000000000000000000000)),
+        BlockWord(Some(0b00000000000000000000000000000000)),
+        BlockWord(Some(0b00000000000000000000000000000000)),
+        BlockWord(Some(0b00000000000000000000000000000000)),
+        BlockWord(Some(0b00000000000000000000000000000000)),
+        BlockWord(Some(0b00000000000000000000000000000000)),
+        BlockWord(Some(0b00000000000000000000000000000000)),
+        BlockWord(Some(0b00000000000000000000000000000000)),
+        BlockWord(Some(0b00000000000000000000000000000000)),
+        BlockWord(Some(0b00000000000000000000000000000000)),
+        BlockWord(Some(0b00000000000000000000000000000000)),
+        BlockWord(Some(0b00000000000000000000000000000000)),
+        BlockWord(Some(0b00000000000000000000000000011000)),
     ]
 }
 
@@ -153,7 +153,7 @@ impl MessageScheduleConfig {
     pub fn assign_word_and_halves<F: FieldExt>(
         &self,
         region: &mut Region<'_, F>,
-        word: u32,
+        word: Option<u32>,
         word_idx: usize,
     ) -> Result<(Cell, (CellValue16, CellValue16)), Error> {
         // Rename these here for ease of matching the gates to the specification.
@@ -162,35 +162,45 @@ impl MessageScheduleConfig {
 
         let row = get_word_row(word_idx);
 
-        let var = region.assign_advice(
-            || format!("W_{}", word_idx),
-            self.message_schedule,
-            row,
-            || Ok(F::from_u64(word as u64)),
-        )?;
+        let var = {
+            let word = word.map(|word| F::from_u64(word as u64));
+            region.assign_advice(
+                || format!("W_{}", word_idx),
+                self.message_schedule,
+                row,
+                || word.ok_or(Error::SynthesisError),
+            )?
+        };
 
-        let w_lo = word as u16;
-        let w_hi = (word >> 16) as u16;
+        let w_lo = {
+            let w_lo_val = word.map(|word| word as u16);
+            let w_lo_cell = region.assign_advice(
+                || format!("W_{}_lo", word_idx),
+                a_3,
+                row,
+                || {
+                    w_lo_val
+                        .map(|w_lo| F::from_u64(w_lo as u64))
+                        .ok_or(Error::SynthesisError)
+                },
+            )?;
+            CellValue16::new(w_lo_cell, w_lo_val)
+        };
+        let w_hi = {
+            let w_hi_val = word.map(|word| (word >> 16) as u16);
+            let w_hi_cell = region.assign_advice(
+                || format!("W_{}_hi", word_idx),
+                a_4,
+                row,
+                || {
+                    w_hi_val
+                        .map(|w_hi| F::from_u64(w_hi as u64))
+                        .ok_or(Error::SynthesisError)
+                },
+            )?;
+            CellValue16::new(w_hi_cell, w_hi_val)
+        };
 
-        let w_lo_cell = region.assign_advice(
-            || format!("W_{}_lo", word_idx),
-            a_3,
-            row,
-            || Ok(F::from_u64(w_lo as u64)),
-        )?;
-        let w_hi_cell = region.assign_advice(
-            || format!("W_{}_hi", word_idx),
-            a_4,
-            row,
-            || Ok(F::from_u64(w_hi as u64)),
-        )?;
-
-        Ok((
-            var,
-            (
-                CellValue16::new(w_lo_cell, w_lo),
-                CellValue16::new(w_hi_cell, w_hi),
-            ),
-        ))
+        Ok((var, (w_lo, w_hi)))
     }
 }

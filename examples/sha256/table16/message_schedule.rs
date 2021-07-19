@@ -18,7 +18,7 @@ use schedule_gates::ScheduleGate;
 use schedule_util::*;
 
 #[cfg(test)]
-pub use schedule_util::get_msg_schedule_test_input;
+pub use schedule_util::msg_schedule_test_input;
 
 #[derive(Clone, Debug)]
 pub(super) struct MessageWord {
@@ -394,12 +394,8 @@ impl MessageScheduleConfig {
 
                 // Assign W[0..16]
                 for (i, word) in input.iter().enumerate() {
-                    let (var, halves) =
-                        self.assign_word_and_halves(&mut region, word.value.unwrap(), i)?;
-                    w.push(MessageWord {
-                        var,
-                        value: word.value,
-                    });
+                    let (var, halves) = self.assign_word_and_halves(&mut region, word.0, i)?;
+                    w.push(MessageWord { var, value: word.0 });
                     w_halves.push(halves);
                 }
 
@@ -469,7 +465,7 @@ mod tests {
 
                 // Provide input
                 // Test vector: "abc"
-                let inputs: [BlockWord; BLOCK_SIZE] = get_msg_schedule_test_input();
+                let inputs: [BlockWord; BLOCK_SIZE] = msg_schedule_test_input();
 
                 // Run message_scheduler to get W_[0..64]
                 let (w, _) = config.message_schedule.process(&mut layouter, inputs)?;

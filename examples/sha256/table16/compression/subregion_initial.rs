@@ -14,27 +14,29 @@ impl CompressionConfig {
         let idx = -1;
 
         // Decompose E into (6, 5, 14, 7)-bit chunks
-        let e = self.decompose_e(region, idx, iv[4])?;
+        let e = self.decompose_e(region, idx, Some(iv[4]))?;
 
         // Decompose F, G
-        let f = self.decompose_f(region, idx, iv[5])?;
-        let g = self.decompose_g(region, idx, iv[6])?;
+        let f = self.decompose_f(region, idx, Some(iv[5]))?;
+        let g = self.decompose_g(region, idx, Some(iv[6]))?;
 
         // Assign H
         let h_row = get_h_row(idx);
-        let h_dense = self.assign_word_halves_dense(region, h_row, a_7, h_row + 1, a_7, iv[7])?;
+        let h_dense =
+            self.assign_word_halves_dense(region, h_row, a_7, h_row + 1, a_7, Some(iv[7]))?;
         let h = RoundWordDense::new(h_dense);
 
         // Decompose A into (2, 11, 9, 10)-bit chunks
-        let a = self.decompose_a(region, idx, iv[0])?;
+        let a = self.decompose_a(region, idx, Some(iv[0]))?;
 
         // Decompose B, C
-        let b = self.decompose_b(region, idx, iv[1])?;
-        let c = self.decompose_c(region, idx, iv[2])?;
+        let b = self.decompose_b(region, idx, Some(iv[1]))?;
+        let c = self.decompose_c(region, idx, Some(iv[2]))?;
 
         // Assign D
         let d_row = get_d_row(idx);
-        let d_dense = self.assign_word_halves_dense(region, d_row, a_7, d_row + 1, a_7, iv[3])?;
+        let d_dense =
+            self.assign_word_halves_dense(region, d_row, a_7, d_row + 1, a_7, Some(iv[3]))?;
         let d = RoundWordDense::new(d_dense);
 
         Ok(State::new(
@@ -108,7 +110,7 @@ impl CompressionConfig {
         &self,
         region: &mut Region<'_, F>,
         idx: i32,
-        b_val: u32,
+        b_val: Option<u32>,
     ) -> Result<RoundWordSpread, Error> {
         let row = get_decompose_b_row(idx);
 
@@ -121,7 +123,7 @@ impl CompressionConfig {
         &self,
         region: &mut Region<'_, F>,
         idx: i32,
-        c_val: u32,
+        c_val: Option<u32>,
     ) -> Result<RoundWordSpread, Error> {
         let row = get_decompose_c_row(idx);
 
@@ -134,7 +136,7 @@ impl CompressionConfig {
         &self,
         region: &mut Region<'_, F>,
         idx: i32,
-        f_val: u32,
+        f_val: Option<u32>,
     ) -> Result<RoundWordSpread, Error> {
         let row = get_decompose_f_row(idx);
 
@@ -147,7 +149,7 @@ impl CompressionConfig {
         &self,
         region: &mut Region<'_, F>,
         idx: i32,
-        g_val: u32,
+        g_val: Option<u32>,
     ) -> Result<RoundWordSpread, Error> {
         let row = get_decompose_g_row(idx);
 

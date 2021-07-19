@@ -87,9 +87,38 @@ pub fn get_even_and_odd_bits_u32(word: u32) -> (u16, u16) {
 }
 
 // Split 4-bit value into 2-bit lo and hi halves
-pub fn bisect_four_bit(word: u32) -> (u32, u32) {
-    assert!(word < 16); // 4-bit range-check
+pub fn bisect_four_bit(word: impl Into<u32>) -> (u32, u32) {
+    let word: u32 = word.into();
+    assert!(word < (1 << 4)); // 4-bit range-check
     let word_hi = (word & 0b1100) >> 2;
     let word_lo = word & 0b0011;
     (word_lo, word_hi)
+}
+
+/// Helper function to transpose an Option<Vec<F>> to a Vec<Option<F>>.
+/// The length of the vector must be `len`.
+pub fn transpose_option_vec<F: Copy>(vec: Option<Vec<F>>, len: usize) -> Vec<Option<F>> {
+    if let Some(vec) = vec {
+        vec.into_iter().map(Some).collect()
+    } else {
+        vec![None; len]
+    }
+}
+
+/// Given a vector of words as vec![(lo: u16, hi: u16)], returns their sum: u32, along
+/// with a carry bit.
+pub fn sum_with_carry(words: Vec<(Option<u16>, Option<u16>)>) -> (Option<u32>, Option<u64>) {
+    let words_lo: Option<Vec<u64>> = words.iter().map(|(lo, _)| lo.map(|lo| lo as u64)).collect();
+    let words_hi: Option<Vec<u64>> = words.iter().map(|(_, hi)| hi.map(|hi| hi as u64)).collect();
+
+    let sum: Option<u64> = {
+        let sum_lo: Option<u64> = words_lo.map(|vec| vec.iter().sum());
+        let sum_hi: Option<u64> = words_hi.map(|vec| vec.iter().sum());
+        sum_lo.zip(sum_hi).map(|(lo, hi)| lo + (1 << 16) * hi)
+    };
+
+    let carry = sum.map(|sum| (sum >> 32) as u64);
+    let sum = sum.map(|sum| sum as u32);
+
+    (sum, carry)
 }

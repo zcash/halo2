@@ -30,7 +30,7 @@ use compression_gates::CompressionGate;
 #[derive(Copy, Clone, Debug)]
 pub struct AbcdVar {
     idx: i32,
-    val: u32,
+    val: Option<u32>,
     a: SpreadVar,
     b: SpreadVar,
     c_lo: SpreadVar,
@@ -52,7 +52,7 @@ pub struct AbcdVar {
 #[derive(Copy, Clone, Debug)]
 pub struct EfghVar {
     idx: i32,
-    val: u32,
+    val: Option<u32>,
     a_lo: SpreadVar,
     a_hi: SpreadVar,
     b_lo: SpreadVar,
@@ -727,7 +727,7 @@ impl CompressionConfig {
         layouter: &mut impl Layouter<F>,
         state: State,
     ) -> Result<[BlockWord; DIGEST_SIZE], Error> {
-        let mut digest = [BlockWord::new(0); DIGEST_SIZE];
+        let mut digest = [BlockWord(Some(0)); DIGEST_SIZE];
         layouter.assign_region(
             || "digest",
             |mut region| {
@@ -743,7 +743,7 @@ impl CompressionConfig {
 #[cfg(test)]
 mod tests {
     use super::super::{
-        super::BLOCK_SIZE, get_msg_schedule_test_input, BlockWord, Table16Chip, Table16Config, IV,
+        super::BLOCK_SIZE, msg_schedule_test_input, BlockWord, Table16Chip, Table16Config, IV,
     };
     use halo2::{
         arithmetic::FieldExt,
@@ -777,7 +777,7 @@ mod tests {
                 Table16Chip::<F>::load(config.clone(), &mut layouter)?;
 
                 // Test vector: "abc"
-                let input: [BlockWord; BLOCK_SIZE] = get_msg_schedule_test_input();
+                let input: [BlockWord; BLOCK_SIZE] = msg_schedule_test_input();
 
                 let (_, w_halves) = config.message_schedule.process(&mut layouter, input)?;
 
@@ -792,7 +792,7 @@ mod tests {
                 let digest = config.compression.digest(&mut layouter, state)?;
                 for (idx, digest_word) in digest.iter().enumerate() {
                     assert_eq!(
-                        (digest_word.value.unwrap() as u64 + IV[idx] as u64) as u32,
+                        (digest_word.0.unwrap() as u64 + IV[idx] as u64) as u32,
                         super::compression_util::COMPRESSION_OUTPUT[idx]
                     );
                 }

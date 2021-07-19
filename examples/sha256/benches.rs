@@ -47,21 +47,22 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
 
             // Test vector: "abc"
             let test_input = [
-                BlockWord::new(0b01100001011000100110001110000000),
-                BlockWord::new(0),
-                BlockWord::new(0),
-                BlockWord::new(0),
-                BlockWord::new(0),
-                BlockWord::new(0),
-                BlockWord::new(0),
-                BlockWord::new(0),
-                BlockWord::new(0),
-                BlockWord::new(0),
-                BlockWord::new(0),
-                BlockWord::new(0),
-                BlockWord::new(0),
-                BlockWord::new(0),
-                BlockWord::new(0),
+                BlockWord(Some(0b01100001011000100110001110000000)),
+                BlockWord(Some(0b00000000000000000000000000000000)),
+                BlockWord(Some(0b00000000000000000000000000000000)),
+                BlockWord(Some(0b00000000000000000000000000000000)),
+                BlockWord(Some(0b00000000000000000000000000000000)),
+                BlockWord(Some(0b00000000000000000000000000000000)),
+                BlockWord(Some(0b00000000000000000000000000000000)),
+                BlockWord(Some(0b00000000000000000000000000000000)),
+                BlockWord(Some(0b00000000000000000000000000000000)),
+                BlockWord(Some(0b00000000000000000000000000000000)),
+                BlockWord(Some(0b00000000000000000000000000000000)),
+                BlockWord(Some(0b00000000000000000000000000000000)),
+                BlockWord(Some(0b00000000000000000000000000000000)),
+                BlockWord(Some(0b00000000000000000000000000000000)),
+                BlockWord(Some(0b00000000000000000000000000000000)),
+                BlockWord(Some(0b00000000000000000000000000011000)),
             ];
 
             // Create a message of length 31 blocks

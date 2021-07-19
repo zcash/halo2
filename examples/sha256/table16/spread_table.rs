@@ -23,12 +23,16 @@ impl SpreadWord {
             spread: interleave_u16_with_zeros(word),
         }
     }
+
+    pub(super) fn opt_new(word: Option<u16>) -> Option<Self> {
+        word.map(SpreadWord::new)
+    }
 }
 
 /// A variable stored in advice columns corresponding to a row of [`SpreadTableConfig`].
 #[derive(Copy, Clone, Debug)]
 pub(super) struct SpreadVar {
-    pub tag: u8,
+    pub tag: Option<u8>,
     pub dense: CellValue16,
     pub spread: CellValue32,
 }
@@ -38,12 +42,22 @@ impl SpreadVar {
         region: &mut Region<'_, F>,
         cols: &SpreadInputs,
         row: usize,
-        word: SpreadWord,
+        word: Option<SpreadWord>,
     ) -> Result<Self, Error> {
-        let tag = word.tag;
-        let dense_val = Some(word.dense);
-        let spread_val = Some(word.spread);
-        region.assign_advice(|| "tag", cols.tag, row, || Ok(F::from_u64(tag as u64)))?;
+        let tag = word.map(|word| word.tag);
+        let dense_val = word.map(|word| word.dense);
+        let spread_val = word.map(|word| word.spread);
+
+        region.assign_advice(
+            || "tag",
+            cols.tag,
+            row,
+            || {
+                tag.map(|tag| F::from_u64(tag as u64))
+                    .ok_or(Error::SynthesisError)
+            },
+        )?;
+
         let dense_var = region.assign_advice(
             || "dense",
             cols.dense,
@@ -67,8 +81,8 @@ impl SpreadVar {
 
         Ok(SpreadVar {
             tag,
-            dense: CellValue16::new(dense_var, dense_val.unwrap()),
-            spread: CellValue32::new(spread_var, spread_val.unwrap()),
+            dense: CellValue16::new(dense_var, dense_val),
+            spread: CellValue32::new(spread_var, spread_val),
         })
     }
 
@@ -78,11 +92,11 @@ impl SpreadVar {
         dense_row: usize,
         spread_col: Column<Advice>,
         spread_row: usize,
-        word: SpreadWord,
+        word: Option<SpreadWord>,
     ) -> Result<Self, Error> {
-        let tag = word.tag;
-        let dense_val = Some(word.dense);
-        let spread_val = Some(word.spread);
+        let tag = word.map(|word| word.tag);
+        let dense_val = word.map(|word| word.dense);
+        let spread_val = word.map(|word| word.spread);
         let dense_var = region.assign_advice(
             || "dense",
             dense_col,
@@ -106,8 +120,8 @@ impl SpreadVar {
 
         Ok(SpreadVar {
             tag,
-            dense: CellValue16::new(dense_var, dense_val.unwrap()),
-            spread: CellValue32::new(spread_var, spread_val.unwrap()),
+            dense: CellValue16::new(dense_var, dense_val),
+            spread: CellValue32::new(spread_var, spread_val),
         })
     }
 }

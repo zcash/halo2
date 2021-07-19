@@ -61,37 +61,13 @@ impl CompressionConfig {
         if idx < 63 {
             // Assign and copy A_new
             let a_new_row = get_decompose_a_row(idx + 1);
-            self.assign_and_constrain(
-                region,
-                || "a_new_lo",
-                a_7,
-                a_new_row,
-                &a_new_dense.0.into(),
-            )?;
-            self.assign_and_constrain(
-                region,
-                || "a_new_hi",
-                a_7,
-                a_new_row + 1,
-                &a_new_dense.1.into(),
-            )?;
+            self.assign_and_constrain(region, || "a_new_lo", a_7, a_new_row, a_new_dense.0)?;
+            self.assign_and_constrain(region, || "a_new_hi", a_7, a_new_row + 1, a_new_dense.1)?;
 
             // Assign and copy E_new
             let e_new_row = get_decompose_e_row(idx + 1);
-            self.assign_and_constrain(
-                region,
-                || "e_new_lo",
-                a_7,
-                e_new_row,
-                &e_new_dense.0.into(),
-            )?;
-            self.assign_and_constrain(
-                region,
-                || "e_new_hi",
-                a_7,
-                e_new_row + 1,
-                &e_new_dense.1.into(),
-            )?;
+            self.assign_and_constrain(region, || "e_new_lo", a_7, e_new_row, e_new_dense.0)?;
+            self.assign_and_constrain(region, || "e_new_hi", a_7, e_new_row + 1, e_new_dense.1)?;
 
             // Decompose A into (2, 11, 9, 10)-bit chunks
             let a_new = self.decompose_a(region, idx + 1, a_new_val)?;
