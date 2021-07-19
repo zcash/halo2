@@ -1,12 +1,13 @@
 use super::{
     message::{Message, MessagePiece},
-    HashDomains, SinsemillaInstructions,
+    CommitDomains, HashDomains, SinsemillaInstructions,
 };
 use crate::{
     circuit::gadget::{
         ecc::chip::EccPoint,
         utilities::{lookup_range_check::LookupRangeCheckConfig, CellValue, Var},
     },
+    constants::OrchardFixedBasesFull,
     primitives::sinsemilla::{
         self, Q_COMMIT_IVK_M_GENERATOR, Q_MERKLE_CRH, Q_NOTE_COMMITMENT_M_GENERATOR,
     },
@@ -267,8 +268,10 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
 
     type X = CellValue<pallas::Base>;
     type Point = EccPoint;
+    type FixedPoints = OrchardFixedBasesFull;
 
     type HashDomains = SinsemillaHashDomains;
+    type CommitDomains = SinsemillaCommitDomains;
 
     fn witness_message_piece(
         &self,
@@ -337,6 +340,30 @@ impl HashDomains<pallas::Affine> for SinsemillaHashDomains {
                 pallas::Base::from_bytes(&Q_MERKLE_CRH.1).unwrap(),
             )
             .unwrap(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum SinsemillaCommitDomains {
+    NoteCommit,
+    CommitIvk,
+}
+
+impl CommitDomains<pallas::Affine, OrchardFixedBasesFull, SinsemillaHashDomains>
+    for SinsemillaCommitDomains
+{
+    fn r(&self) -> OrchardFixedBasesFull {
+        match self {
+            Self::NoteCommit => OrchardFixedBasesFull::NoteCommitR,
+            Self::CommitIvk => OrchardFixedBasesFull::CommitIvkR,
+        }
+    }
+
+    fn hash_domain(&self) -> SinsemillaHashDomains {
+        match self {
+            Self::NoteCommit => SinsemillaHashDomains::NoteCommit,
+            Self::CommitIvk => SinsemillaHashDomains::CommitIvk,
         }
     }
 }
