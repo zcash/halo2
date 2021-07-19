@@ -405,6 +405,9 @@ impl<G: Group> EvaluationDomain<G> {
     /// `[a_0, [zeta]a_1, [zeta^2]a_2, a_3, [zeta]a_4, [zeta^2]a_5, a_6, ...]`,
     /// where zeta is a cube root of unity in the multiplicative subgroup with
     /// order (p - 1), i.e. zeta^3 = 1.
+    ///
+    /// `into_coset` should be set to `true` when moving into the coset,
+    /// and `false` when moving out. This toggles the choice of `zeta`.
     fn distribute_powers_zeta(&self, mut a: &mut [G], into_coset: bool) {
         let coset_powers = if into_coset {
             [self.g_coset, self.g_coset_inv]
