@@ -43,14 +43,12 @@ pub fn create_proof<
 ) -> Result<(), Error> {
     for instance in instances.iter() {
         if instance.len() != pk.vk.cs.num_instance_columns {
-            return Err(Error::IncompatibleParams);
+            return Err(Error::InvalidInstances);
         }
     }
 
     // Hash verification key into transcript
-    pk.vk
-        .hash_into(transcript)
-        .map_err(|_| Error::TranscriptError)?;
+    pk.vk.hash_into(transcript)?;
 
     let domain = &pk.vk.domain;
     let mut meta = ConstraintSystem::default();
@@ -90,9 +88,7 @@ pub fn create_proof<
             drop(instance_commitments_projective);
 
             for commitment in &instance_commitments {
-                transcript
-                    .common_point(*commitment)
-                    .map_err(|_| Error::TranscriptError)?;
+                transcript.common_point(*commitment)?;
             }
 
             let instance_polys: Vec<_> = instance_values
@@ -285,9 +281,7 @@ pub fn create_proof<
             drop(advice_commitments_projective);
 
             for commitment in &advice_commitments {
-                transcript
-                    .write_point(*commitment)
-                    .map_err(|_| Error::TranscriptError)?;
+                transcript.write_point(*commitment)?;
             }
 
             let advice_polys: Vec<_> = advice
@@ -478,9 +472,7 @@ pub fn create_proof<
 
         // Hash each instance column evaluation
         for eval in instance_evals.iter() {
-            transcript
-                .write_scalar(*eval)
-                .map_err(|_| Error::TranscriptError)?;
+            transcript.write_scalar(*eval)?;
         }
     }
 
@@ -500,9 +492,7 @@ pub fn create_proof<
 
         // Hash each advice column evaluation
         for eval in advice_evals.iter() {
-            transcript
-                .write_scalar(*eval)
-                .map_err(|_| Error::TranscriptError)?;
+            transcript.write_scalar(*eval)?;
         }
     }
 
@@ -517,9 +507,7 @@ pub fn create_proof<
 
     // Hash each fixed column evaluation
     for eval in fixed_evals.iter() {
-        transcript
-            .write_scalar(*eval)
-            .map_err(|_| Error::TranscriptError)?;
+        transcript.write_scalar(*eval)?;
     }
 
     let vanishing = vanishing.evaluate(x, xn, domain, transcript)?;
@@ -591,5 +579,5 @@ pub fn create_proof<
         // We query the h(X) polynomial at x
         .chain(vanishing.open(x));
 
-    multiopen::create_proof(params, transcript, instances).map_err(|_| Error::OpeningError)
+    multiopen::create_proof(params, transcript, instances).map_err(|_| Error::Opening)
 }

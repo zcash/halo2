@@ -44,9 +44,7 @@ impl<C: CurveAffine> Argument<C> {
     >(
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
-        let random_poly_commitment = transcript
-            .read_point()
-            .map_err(|_| Error::TranscriptError)?;
+        let random_poly_commitment = transcript.read_point()?;
 
         Ok(Committed {
             random_poly_commitment,
@@ -64,8 +62,7 @@ impl<C: CurveAffine> Committed<C> {
         transcript: &mut T,
     ) -> Result<Constructed<C>, Error> {
         // Obtain a commitment to h(X) in the form of multiple pieces of degree n - 1
-        let h_commitments = read_n_points(transcript, vk.domain.get_quotient_poly_degree())
-            .map_err(|_| Error::TranscriptError)?;
+        let h_commitments = read_n_points(transcript, vk.domain.get_quotient_poly_degree())?;
 
         Ok(Constructed {
             h_commitments,
@@ -79,9 +76,7 @@ impl<C: CurveAffine> Constructed<C> {
         self,
         transcript: &mut T,
     ) -> Result<PartiallyEvaluated<C>, Error> {
-        let random_eval = transcript
-            .read_scalar()
-            .map_err(|_| Error::TranscriptError)?;
+        let random_eval = transcript.read_scalar()?;
 
         Ok(PartiallyEvaluated {
             h_commitments: self.h_commitments,

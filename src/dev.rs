@@ -498,7 +498,7 @@ impl<F: FieldExt> MockProver<F> {
         }
 
         if instance.len() != cs.num_instance_columns {
-            return Err(Error::IncompatibleParams);
+            return Err(Error::InvalidInstances);
         }
 
         let instance = instance
