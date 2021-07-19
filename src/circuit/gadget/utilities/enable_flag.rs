@@ -210,7 +210,7 @@ mod tests {
             let prover = MockProver::<Base>::run(3, &circuit, vec![]).unwrap();
             assert_eq!(
                 prover.verify(),
-                Err(vec![VerifyFailure::Constraint {
+                Err(vec![VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((0, "Enable flag").into(), 0, "").into(),
                     row: 1,
                 }])

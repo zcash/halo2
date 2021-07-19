@@ -475,11 +475,11 @@ pub mod tests {
                 assert_eq!(
                     prover.verify(),
                     Err(vec![
-                        VerifyFailure::Constraint {
+                        VerifyFailure::ConstraintNotSatisfied {
                             constraint: ((2, "final z = 0").into(), 0, "").into(),
                             row: 24
                         },
-                        VerifyFailure::Constraint {
+                        VerifyFailure::ConstraintNotSatisfied {
                             constraint: (
                                 (13, "Short fixed-base mul gate").into(),
                                 0,
@@ -504,12 +504,12 @@ pub mod tests {
             assert_eq!(
                 prover.verify(),
                 Err(vec![
-                    VerifyFailure::Constraint {
+                    VerifyFailure::ConstraintNotSatisfied {
                         constraint: ((13, "Short fixed-base mul gate").into(), 1, "sign_check")
                             .into(),
                         row: 26
                     },
-                    VerifyFailure::Constraint {
+                    VerifyFailure::ConstraintNotSatisfied {
                         constraint: (
                             (13, "Short fixed-base mul gate").into(),
                             3,

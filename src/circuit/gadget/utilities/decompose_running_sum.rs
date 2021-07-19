@@ -365,11 +365,11 @@ mod tests {
             assert_eq!(
                 prover.verify(),
                 Err(vec![
-                    VerifyFailure::Constraint {
+                    VerifyFailure::ConstraintNotSatisfied {
                         constraint: ((1, "final z = 0").into(), 0, "").into(),
                         row: 22
                     },
-                    VerifyFailure::Constraint {
+                    VerifyFailure::ConstraintNotSatisfied {
                         constraint: ((1, "final z = 0").into(), 0, "").into(),
                         row: 45
                     }
