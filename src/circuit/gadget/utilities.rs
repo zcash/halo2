@@ -7,6 +7,7 @@ use pasta_curves::arithmetic::FieldExt;
 use std::{array, convert::TryInto, ops::Range};
 
 pub(crate) mod cond_swap;
+pub(crate) mod decompose_running_sum;
 pub(crate) mod enable_flag;
 pub(crate) mod lookup_range_check;
 pub(crate) mod plonk;

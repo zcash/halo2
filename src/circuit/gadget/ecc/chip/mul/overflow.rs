@@ -1,4 +1,4 @@
-use super::super::{copy, CellValue, EccConfig, EccScalarVar, Var};
+use super::super::{copy, CellValue, EccConfig, Var};
 use super::Z;
 use crate::{
     circuit::gadget::utilities::lookup_range_check::LookupRangeCheckConfig, constants::T_Q,
@@ -95,7 +95,7 @@ impl Config {
     pub(super) fn overflow_check(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        alpha: EccScalarVar,
+        alpha: CellValue<pallas::Base>,
         zs: &[Z<pallas::Base>], // [z_0, z_1, ..., z_{254}, z_{255}]
     ) -> Result<(), Error> {
         // s = alpha + k_254 ⋅ 2^130 is witnessed here, and then copied into
@@ -189,7 +189,7 @@ impl Config {
                     || "copy original alpha",
                     self.advices[1],
                     offset + 1,
-                    &*alpha,
+                    &alpha,
                     &self.perm,
                 )?;
 

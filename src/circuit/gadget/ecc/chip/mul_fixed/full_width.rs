@@ -1,38 +1,138 @@
 use super::super::{EccConfig, EccPoint, EccScalarFixed, OrchardFixedBasesFull};
 
-use halo2::{circuit::Layouter, plonk::Error};
-use pasta_curves::pallas;
+use crate::{
+    circuit::gadget::utilities::{range_check, CellValue, Var},
+    constants::{self, util, L_ORCHARD_SCALAR, NUM_WINDOWS},
+};
+use arrayvec::ArrayVec;
+use halo2::{
+    circuit::{Layouter, Region},
+    plonk::{ConstraintSystem, Error, Selector},
+    poly::Rotation,
+};
+use pasta_curves::{arithmetic::FieldExt, pallas};
 
-pub struct Config<const NUM_WINDOWS: usize>(super::Config<NUM_WINDOWS>);
+pub struct Config {
+    q_mul_fixed_full: Selector,
+    super_config: super::Config<NUM_WINDOWS>,
+}
 
-impl<const NUM_WINDOWS: usize> From<&EccConfig> for Config<NUM_WINDOWS> {
+impl From<&EccConfig> for Config {
     fn from(config: &EccConfig) -> Self {
-        Self(config.into())
+        Self {
+            q_mul_fixed_full: config.q_mul_fixed_full,
+            super_config: config.into(),
+        }
     }
 }
 
-impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
+impl Config {
+    pub fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+        // Check that each window `k` is within 3 bits
+        meta.create_gate("Full-width fixed-base scalar mul", |meta| {
+            let q_mul_fixed_full = meta.query_selector(self.q_mul_fixed_full);
+            let window = meta.query_advice(self.super_config.window, Rotation::cur());
+
+            self.super_config
+                .coords_check(meta, q_mul_fixed_full.clone(), window.clone())
+                .into_iter()
+                // Constrain each window to a 3-bit value:
+                // 1 * (window - 0) * (window - 1) * ... * (window - 7)
+                .chain(Some((
+                    "window range check",
+                    q_mul_fixed_full * range_check(window, constants::H),
+                )))
+        });
+    }
+
+    /// Witnesses the given scalar as `NUM_WINDOWS` 3-bit windows.
+    ///
+    /// The scalar is allowed to be non-canonical.
+    fn witness(
+        &self,
+        region: &mut Region<'_, pallas::Base>,
+        offset: usize,
+        scalar: Option<pallas::Scalar>,
+    ) -> Result<EccScalarFixed, Error> {
+        let windows = self.decompose_scalar_fixed::<L_ORCHARD_SCALAR>(scalar, offset, region)?;
+
+        Ok(EccScalarFixed {
+            value: scalar,
+            windows,
+        })
+    }
+
+    /// Witnesses the given scalar as `NUM_WINDOWS` 3-bit windows.
+    ///
+    /// The scalar is allowed to be non-canonical.
+    fn decompose_scalar_fixed<const SCALAR_NUM_BITS: usize>(
+        &self,
+        scalar: Option<pallas::Scalar>,
+        offset: usize,
+        region: &mut Region<'_, pallas::Base>,
+    ) -> Result<ArrayVec<CellValue<pallas::Base>, NUM_WINDOWS>, Error> {
+        // Enable `q_mul_fixed_full` selector
+        for idx in 0..NUM_WINDOWS {
+            self.q_mul_fixed_full.enable(region, offset + idx)?;
+        }
+
+        // Decompose scalar into `k-bit` windows
+        let scalar_windows: Option<Vec<u8>> = scalar.map(|scalar| {
+            util::decompose_word::<pallas::Scalar>(
+                scalar,
+                SCALAR_NUM_BITS,
+                constants::FIXED_BASE_WINDOW_SIZE,
+            )
+        });
+
+        // Store the scalar decomposition
+        let mut windows: ArrayVec<CellValue<pallas::Base>, NUM_WINDOWS> = ArrayVec::new();
+
+        let scalar_windows: Vec<Option<pallas::Base>> = if let Some(windows) = scalar_windows {
+            assert_eq!(windows.len(), NUM_WINDOWS);
+            windows
+                .into_iter()
+                .map(|window| Some(pallas::Base::from_u64(window as u64)))
+                .collect()
+        } else {
+            vec![None; NUM_WINDOWS]
+        };
+
+        for (idx, window) in scalar_windows.into_iter().enumerate() {
+            let window_cell = region.assign_advice(
+                || format!("k[{:?}]", offset + idx),
+                self.super_config.window,
+                offset + idx,
+                || window.ok_or(Error::SynthesisError),
+            )?;
+            windows.push(CellValue::new(window_cell, window));
+        }
+
+        Ok(windows)
+    }
+
     pub fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        scalar: &EccScalarFixed,
+        scalar: Option<pallas::Scalar>,
         base: OrchardFixedBasesFull,
-    ) -> Result<EccPoint, Error> {
-        let (acc, mul_b) = layouter.assign_region(
+    ) -> Result<(EccPoint, EccScalarFixed), Error> {
+        let (scalar, acc, mul_b) = layouter.assign_region(
             || "Full-width fixed-base mul (incomplete addition)",
             |mut region| {
                 let offset = 0;
 
-                // Copy the scalar decomposition
-                self.0.copy_scalar(&mut region, offset, &scalar.into())?;
+                let scalar = self.witness(&mut region, offset, scalar)?;
 
-                self.0.assign_region_inner(
+                let (acc, mul_b) = self.super_config.assign_region_inner(
                     &mut region,
                     offset,
-                    &scalar.into(),
+                    &(&scalar).into(),
                     base.into(),
-                    self.0.q_mul_fixed,
-                )
+                    self.q_mul_fixed_full,
+                )?;
+
+                Ok((scalar, acc, mul_b))
             },
         )?;
 
@@ -40,7 +140,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         let result = layouter.assign_region(
             || "Full-width fixed-base mul (last window, complete addition)",
             |mut region| {
-                self.0
+                self.super_config
                     .add_config
                     .assign_region(&mul_b, &acc, 0, &mut region)
             },
@@ -60,7 +160,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
             }
         }
 
-        Ok(result)
+        Ok((result, scalar))
     }
 }
 
@@ -72,7 +172,7 @@ pub mod tests {
 
     use crate::circuit::gadget::ecc::{
         chip::{EccChip, OrchardFixedBasesFull},
-        FixedPoint, Point, ScalarFixed,
+        FixedPoint, Point,
     };
     use crate::constants;
 
@@ -96,15 +196,6 @@ pub mod tests {
             layouter.namespace(|| "note_commit_r"),
             FixedPoint::from_inner(chip.clone(), note_commit_r),
             note_commit_r.generator(),
-        )?;
-
-        // nullifier_k
-        let nullifier_k = OrchardFixedBasesFull::NullifierK;
-        test_single_base(
-            chip.clone(),
-            layouter.namespace(|| "nullifier_k"),
-            FixedPoint::from_inner(chip.clone(), nullifier_k),
-            nullifier_k.generator(),
         )?;
 
         // value_commit_r
@@ -154,15 +245,7 @@ pub mod tests {
         {
             let scalar_fixed = pallas::Scalar::rand();
 
-            let result = {
-                let scalar_fixed = ScalarFixed::new(
-                    chip.clone(),
-                    layouter.namespace(|| "random scalar"),
-                    Some(scalar_fixed),
-                )?;
-                base.mul(layouter.namespace(|| "random [a]B"), &scalar_fixed)?
-            };
-
+            let (result, _) = base.mul(layouter.namespace(|| "random [a]B"), Some(scalar_fixed))?;
             constrain_equal(
                 chip.clone(),
                 layouter.namespace(|| "random [a]B"),
@@ -183,14 +266,8 @@ pub mod tests {
                         .fold(pallas::Scalar::zero(), |acc, c| {
                             acc * &h + &pallas::Scalar::from_u64(c.to_digit(8).unwrap().into())
                         });
-            let result = {
-                let scalar_fixed = ScalarFixed::new(
-                    chip.clone(),
-                    layouter.namespace(|| "mul with double"),
-                    Some(scalar_fixed),
-                )?;
-                base.mul(layouter.namespace(|| "mul with double"), &scalar_fixed)?
-            };
+            let (result, _) =
+                base.mul(layouter.namespace(|| "mul with double"), Some(scalar_fixed))?;
 
             constrain_equal(
                 chip.clone(),
@@ -205,14 +282,7 @@ pub mod tests {
         // on the last step.
         {
             let scalar_fixed = pallas::Scalar::zero();
-            let result = {
-                let scalar_fixed = ScalarFixed::new(
-                    chip.clone(),
-                    layouter.namespace(|| "zero"),
-                    Some(scalar_fixed),
-                )?;
-                base.mul(layouter.namespace(|| "mul by zero"), &scalar_fixed)?
-            };
+            let (result, _) = base.mul(layouter.namespace(|| "mul by zero"), Some(scalar_fixed))?;
             constrain_equal(
                 chip.clone(),
                 layouter.namespace(|| "mul by zero"),
@@ -225,14 +295,7 @@ pub mod tests {
         // [-1]B is the largest scalar field element.
         {
             let scalar_fixed = -pallas::Scalar::one();
-            let result = {
-                let scalar_fixed = ScalarFixed::new(
-                    chip.clone(),
-                    layouter.namespace(|| "-1"),
-                    Some(scalar_fixed),
-                )?;
-                base.mul(layouter.namespace(|| "mul by -1"), &scalar_fixed)?
-            };
+            let (result, _) = base.mul(layouter.namespace(|| "mul by -1"), Some(scalar_fixed))?;
             constrain_equal(
                 chip,
                 layouter.namespace(|| "mul by -1"),

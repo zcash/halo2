@@ -1,10 +1,10 @@
 use super::{
-    add, add_incomplete, copy, CellValue, EccBaseFieldElemFixed, EccConfig, EccPoint,
-    EccScalarFixed, EccScalarFixedShort, Var,
+    add, add_incomplete, CellValue, EccBaseFieldElemFixed, EccConfig, EccPoint, EccScalarFixed,
+    EccScalarFixedShort, Var,
 };
 use crate::constants::{
     self,
-    load::{OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV, WindowUs},
+    load::{NullifierK, OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV, WindowUs},
 };
 
 use group::Curve;
@@ -38,6 +38,7 @@ lazy_static! {
 #[derive(Copy, Clone, Debug)]
 enum OrchardFixedBases {
     Full(OrchardFixedBasesFull),
+    NullifierK,
     ValueCommitV,
 }
 
@@ -53,10 +54,17 @@ impl From<ValueCommitV> for OrchardFixedBases {
     }
 }
 
+impl From<NullifierK> for OrchardFixedBases {
+    fn from(_nullifier_k: NullifierK) -> Self {
+        Self::NullifierK
+    }
+}
+
 impl OrchardFixedBases {
     pub fn generator(self) -> pallas::Affine {
         match self {
             Self::ValueCommitV => constants::value_commit_v::generator(),
+            Self::NullifierK => constants::nullifier_k::generator(),
             Self::Full(base) => base.generator(),
         }
     }
@@ -64,6 +72,7 @@ impl OrchardFixedBases {
     pub fn u(self) -> Vec<WindowUs> {
         match self {
             Self::ValueCommitV => ValueCommitV::get().u_short.0.as_ref().to_vec(),
+            Self::NullifierK => NullifierK.u().0.as_ref().to_vec(),
             Self::Full(base) => base.u().0.as_ref().to_vec(),
         }
     }
@@ -71,7 +80,7 @@ impl OrchardFixedBases {
 
 #[derive(Clone, Debug)]
 pub struct Config<const NUM_WINDOWS: usize> {
-    q_mul_fixed: Selector,
+    q_mul_fixed_running_sum: Selector,
     // The fixed Lagrange interpolation coefficients for `x_p`.
     lagrange_coeffs: [Column<Fixed>; constants::H],
     // The fixed `z` for each window such that `y + z = u^2`.
@@ -96,7 +105,7 @@ pub struct Config<const NUM_WINDOWS: usize> {
 impl<const NUM_WINDOWS: usize> From<&EccConfig> for Config<NUM_WINDOWS> {
     fn from(ecc_config: &EccConfig) -> Self {
         let config = Self {
-            q_mul_fixed: ecc_config.q_mul_fixed,
+            q_mul_fixed_running_sum: ecc_config.q_mul_fixed_running_sum,
             lagrange_coeffs: ecc_config.lagrange_coeffs,
             fixed_z: ecc_config.fixed_z,
             x_p: ecc_config.advices[0],
@@ -143,15 +152,28 @@ impl<const NUM_WINDOWS: usize> From<&EccConfig> for Config<NUM_WINDOWS> {
 }
 
 impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
-    pub(super) fn create_gate_scalar(&self, meta: &mut ConstraintSystem<pallas::Base>) {
-        meta.create_gate(
-            "x_p, y_p checks for ScalarFixed, ScalarFixedShort",
-            |meta| {
-                let mul_fixed = meta.query_selector(self.q_mul_fixed);
-                let window = meta.query_advice(self.window, Rotation::cur());
-                self.coords_check(meta, mul_fixed, window)
-            },
-        )
+    /// Check that each window in the running sum decomposition uses the correct y_p
+    /// and interpolated x_p.
+    ///
+    /// This gate is used both in the mul_fixed::base_field_elem and mul_fixed::short
+    /// helpers, which decompose the scalar using a running sum.
+    ///
+    /// This gate is not used in the mul_fixed::full_width helper, since the full-width
+    /// scalar is witnessed directly as three-bit windows instead of being decomposed
+    /// via a running sum.
+    pub(crate) fn running_sum_coords_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+        meta.create_gate("Running sum coordinates check", |meta| {
+            let q_mul_fixed_running_sum = meta.query_selector(self.q_mul_fixed_running_sum);
+
+            let z_cur = meta.query_advice(self.window, Rotation::cur());
+            let z_next = meta.query_advice(self.window, Rotation::next());
+
+            //    z_{i+1} = (z_i - a_i) / 2^3
+            // => a_i = z_i - z_{i+1} * 2^3
+            let word = z_cur - z_next * pallas::Base::from_u64(constants::H as u64);
+
+            self.coords_check(meta, q_mul_fixed_running_sum, word)
+        });
     }
 
     #[allow(clippy::op_ref)]
@@ -246,6 +268,14 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
                     base.z.0.as_ref().to_vec(),
                 )
             }
+            OrchardFixedBases::NullifierK => {
+                assert_eq!(NUM_WINDOWS, constants::NUM_WINDOWS);
+                let base: OrchardFixedBase = NullifierK.into();
+                (
+                    base.lagrange_coeffs.0.as_ref().to_vec(),
+                    base.z.0.as_ref().to_vec(),
+                )
+            }
         };
 
         // Assign fixed columns for given fixed base
@@ -282,27 +312,6 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
                     let z = &constants.as_ref().unwrap().1;
                     Ok(z[window])
                 },
-            )?;
-        }
-
-        Ok(())
-    }
-
-    fn copy_scalar(
-        &self,
-        region: &mut Region<'_, pallas::Base>,
-        offset: usize,
-        scalar: &ScalarFixed,
-    ) -> Result<(), Error> {
-        // Copy the scalar decomposition (`k`-bit windows)
-        for (window_idx, window) in scalar.windows().iter().enumerate() {
-            copy(
-                region,
-                || format!("k[{:?}]", window),
-                self.window,
-                window_idx + offset,
-                window,
-                &self.perm,
             )?;
         }
 
@@ -492,35 +501,34 @@ impl From<&EccBaseFieldElemFixed> for ScalarFixed {
 }
 
 impl ScalarFixed {
-    fn windows(&self) -> &[CellValue<pallas::Base>] {
-        match self {
-            ScalarFixed::FullWidth(scalar) => &scalar.windows,
-            ScalarFixed::Short(scalar) => &scalar.windows,
-            _ => unreachable!("The base field element is not witnessed as windows."),
-        }
-    }
-
     // The scalar decomposition was done in the base field. For computation
     // outside the circuit, we now convert them back into the scalar field.
     fn windows_field(&self) -> Vec<Option<pallas::Scalar>> {
+        let running_sum_to_windows = |zs: Vec<CellValue<pallas::Base>>| {
+            (0..(zs.len() - 1))
+                .map(|idx| {
+                    let z_cur = zs[idx].value();
+                    let z_next = zs[idx + 1].value();
+                    let word = z_cur
+                        .zip(z_next)
+                        .map(|(z_cur, z_next)| z_cur - z_next * *H_BASE);
+                    word.map(|word| pallas::Scalar::from_bytes(&word.to_bytes()).unwrap())
+                })
+                .collect::<Vec<_>>()
+        };
         match self {
             Self::BaseFieldElem(scalar) => {
                 let mut zs = vec![scalar.base_field_elem];
                 zs.extend_from_slice(&scalar.running_sum);
-
-                (0..(zs.len() - 1))
-                    .map(|idx| {
-                        let z_cur = zs[idx].value();
-                        let z_next = zs[idx + 1].value();
-                        let word = z_cur
-                            .zip(z_next)
-                            .map(|(z_cur, z_next)| z_cur - z_next * *H_BASE);
-                        word.map(|word| pallas::Scalar::from_bytes(&word.to_bytes()).unwrap())
-                    })
-                    .collect::<Vec<_>>()
+                running_sum_to_windows(zs)
             }
-            _ => self
-                .windows()
+            Self::Short(scalar) => {
+                let mut zs = vec![scalar.magnitude];
+                zs.extend_from_slice(&scalar.running_sum);
+                running_sum_to_windows(zs)
+            }
+            Self::FullWidth(scalar) => scalar
+                .windows
                 .iter()
                 .map(|bits| {
                     bits.value()
