@@ -1,7 +1,7 @@
 # Decomposition
 Given a field element $\alpha$, these gadgets decompose it into $W$ $K$-bit windows $$\alpha = k_0 + 2^{K} \cdot k_1 + 2^{2K} \cdot k_2 + \cdots + 2^{(W-1)K} \cdot k_{W-1}$$ where each $k_i$ a $K$-bit value.
 
-This is done using a running sum $z_i, i \in [0..W).$ We initialize the running sum $z_0 = \alpha,$ and compute subsequent terms $z_i = \frac{z_{i - 1} - k_{i-1}}{2^{K}}.$ This gives us:
+This is done using a running sum $z_i, i \in [0..W).$ We initialize the running sum $z_0 = \alpha,$ and compute subsequent terms $z_{i+1} = \frac{z_i - k_i}{2^{K}}.$ This gives us:
 
 $$
 \begin{aligned}
@@ -37,6 +37,7 @@ $$
 \hline
 \text{Degree} & \text{Constraint} \\\hline
 2^K + 1 & q_\text{decompose-base-field} \cdot \texttt{range\_check}(z_i - z_{i+1} \cdot 2^K, 2^K) = 0 \\\hline
+2 & q_\text{strict} \cdot z_W = 0 \\\hline
 \end{array}
 $$
 where $\texttt{range\_check}(k_i, \texttt{range}) = k_i \cdot (1 - k_i) \cdots (\texttt{range} - 1 - k_i).$

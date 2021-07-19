@@ -113,7 +113,7 @@ Then, we precompute multiples of the fixed base $B$ for each window. This takes 
 - for the first (W-1) rows $M[0..(W-1))[0..8)$: $$M[w][k] = [(k+2) \cdot (2^3)^w]B$$
 - in the last row $M[W-1][0..8)$: $$M[w][k] = [k \cdot (2^3)^w - \sum\limits_{j=0}^{83} 2^{3j+1}]B$$
 
-The additional $(k + 2)$ term lets us avoid adding the point at infinity in the case $k = 0$. We offset these accumulated terms by subtracting them in the final window, i.e. we subtract $\sum\limits_{j=0}^{W-2} 2^{(W-2)j+1}$.
+The additional $(k + 2)$ term lets us avoid adding the point at infinity in the case $k = 0$. We offset these accumulated terms by subtracting them in the final window, i.e. we subtract $\sum\limits_{j=0}^{W-2} 2^{3j+1}$.
 
 > Note: Although an offset of $(k + 1)$ would naively suffice, it introduces an edge case when $k_0 = 7, k_1= 0$.
 > In this case, the window table entries evaluate to the same point:
