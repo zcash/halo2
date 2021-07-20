@@ -530,6 +530,7 @@ impl<F: FieldExt> MockProver<F> {
             cs.num_advice_columns
         ];
         let permutation = permutation::keygen::Assembly::new(n, &cs.permutation);
+        let constants = cs.constants.clone();
 
         let mut prover = MockProver {
             n: n as u32,
@@ -543,7 +544,7 @@ impl<F: FieldExt> MockProver<F> {
             usable_rows: 0..usable_rows,
         };
 
-        ConcreteCircuit::FloorPlanner::synthesize(&mut prover, circuit, config)?;
+        ConcreteCircuit::FloorPlanner::synthesize(&mut prover, circuit, config, constants)?;
 
         Ok(prover)
     }

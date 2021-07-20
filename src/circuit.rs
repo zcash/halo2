@@ -152,6 +152,32 @@ impl<'r, F: Field> Region<'r, F> {
             })
     }
 
+    /// Assigns a constant value to the column `advice` at `offset` within this region.
+    ///
+    /// The constant value will be assigned to a cell within one of the fixed columns
+    /// configured via `ConstraintSystem::enable_constant`.
+    ///
+    /// Returns the advice cell.
+    pub fn assign_advice_from_constant<'v, VR, A, AR>(
+        &mut self,
+        annotation: A,
+        column: Column<Advice>,
+        offset: usize,
+        constant: VR,
+    ) -> Result<Cell, Error>
+    where
+        VR: Into<Assigned<F>>,
+        A: Fn() -> AR,
+        AR: Into<String>,
+    {
+        self.region.assign_advice_from_constant(
+            &|| annotation().into(),
+            column,
+            offset,
+            constant.into(),
+        )
+    }
+
     /// Assign the value of the instance column's cell at absolute location
     /// `row` to the column `advice` at `offset` within this region.
     ///

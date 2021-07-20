@@ -58,6 +58,20 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error>;
 
+    /// Assigns a constant value to the column `advice` at `offset` within this region.
+    ///
+    /// The constant value will be assigned to a cell within one of the fixed columns
+    /// configured via `ConstraintSystem::enable_constant`.
+    ///
+    /// Returns the advice cell that has been equality-constrained to the constant.
+    fn assign_advice_from_constant<'v>(
+        &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        column: Column<Advice>,
+        offset: usize,
+        constant: Assigned<F>,
+    ) -> Result<Cell, Error>;
+
     /// Assign the value of the instance column's cell at absolute location
     /// `row` to the column `advice` at `offset` within this region.
     ///
