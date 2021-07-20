@@ -454,43 +454,19 @@ mod tests {
                 meta.advice_column(),
             ];
 
-            // TODO: Replace with public inputs API
-            let constants_1 = [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ];
-            let constants_2 = [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ];
-            let ecc_constants = [meta.fixed_column(), meta.fixed_column()];
+            // Shared fixed column for loading constants
+            let constants = meta.fixed_column();
+            meta.enable_constant(constants);
+
             let table_idx = meta.fixed_column();
 
             // Fixed columns for the Sinsemilla generator lookup table
             let lookup = (table_idx, meta.fixed_column(), meta.fixed_column());
 
-            let ecc_config = EccChip::configure(meta, advices, table_idx, ecc_constants);
+            let ecc_config = EccChip::configure(meta, advices, table_idx);
 
-            let config1 = SinsemillaChip::configure(
-                meta,
-                advices[..5].try_into().unwrap(),
-                lookup,
-                constants_1,
-            );
-            let config2 = SinsemillaChip::configure(
-                meta,
-                advices[5..].try_into().unwrap(),
-                lookup,
-                constants_2,
-            );
+            let config1 = SinsemillaChip::configure(meta, advices[..5].try_into().unwrap(), lookup);
+            let config2 = SinsemillaChip::configure(meta, advices[5..].try_into().unwrap(), lookup);
             (ecc_config, config1, config2)
         }
 

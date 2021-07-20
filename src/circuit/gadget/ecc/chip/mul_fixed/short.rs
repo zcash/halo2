@@ -241,7 +241,7 @@ pub mod tests {
     use group::Curve;
     use halo2::{
         circuit::{Chip, Layouter},
-        plonk::Error,
+        plonk::{Any, Error},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
@@ -404,10 +404,13 @@ pub mod tests {
                     meta.advice_column(),
                     meta.advice_column(),
                 ];
-                let constants = [meta.fixed_column(), meta.fixed_column()];
                 let lookup_table = meta.fixed_column();
 
-                EccChip::configure(meta, advices, lookup_table, constants)
+                // Shared fixed column for loading constants
+                let constants = meta.fixed_column();
+                meta.enable_constant(constants);
+
+                EccChip::configure(meta, advices, lookup_table)
             }
 
             fn synthesize(
@@ -476,17 +479,21 @@ pub mod tests {
                     prover.verify(),
                     Err(vec![
                         VerifyFailure::ConstraintNotSatisfied {
-                            constraint: ((2, "final z = 0").into(), 0, "").into(),
-                            row: 24
-                        },
-                        VerifyFailure::ConstraintNotSatisfied {
                             constraint: (
-                                (13, "Short fixed-base mul gate").into(),
+                                (12, "Short fixed-base mul gate").into(),
                                 0,
                                 "last_window_check"
                             )
                                 .into(),
                             row: 26
+                        },
+                        VerifyFailure::Permutation {
+                            column: (Any::Fixed, 1).into(),
+                            row: 2
+                        },
+                        VerifyFailure::Permutation {
+                            column: (Any::Advice, 4).into(),
+                            row: 24
                         }
                     ])
                 );
@@ -505,13 +512,13 @@ pub mod tests {
                 prover.verify(),
                 Err(vec![
                     VerifyFailure::ConstraintNotSatisfied {
-                        constraint: ((13, "Short fixed-base mul gate").into(), 1, "sign_check")
+                        constraint: ((12, "Short fixed-base mul gate").into(), 1, "sign_check")
                             .into(),
                         row: 26
                     },
                     VerifyFailure::ConstraintNotSatisfied {
                         constraint: (
-                            (13, "Short fixed-base mul gate").into(),
+                            (12, "Short fixed-base mul gate").into(),
                             3,
                             "negation_check"
                         )

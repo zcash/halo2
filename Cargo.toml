@@ -1,3 +1,4 @@
+
 [package]
 name = "orchard"
 version = "0.0.0"
@@ -62,5 +63,5 @@ name = "small"
 harness = false
 
 [patch.crates-io]
-halo2 = { git = "https://github.com/zcash/halo2.git", rev = "dda1be47316c32585c0d974c0b6401108714875d" }
+halo2 = { git = "https://github.com/zcash/halo2.git", rev = "62f088e2f249dfce2c3bcab7321cba0d99697af9" }
 zcash_note_encryption = { git = "https://github.com/zcash/librustzcash.git", rev = "cc533a9da4f6a7209a7be05f82b12a03969152c9" }

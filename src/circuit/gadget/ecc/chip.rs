@@ -111,8 +111,6 @@ pub struct EccConfig {
     /// Witness point
     pub q_point: Selector,
 
-    /// Shared fixed column used for loading constants.
-    pub constants: Column<Fixed>,
     /// Lookup range check using 10-bit lookup table
     pub lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     /// Running sum decomposition.
@@ -155,8 +153,6 @@ impl EccChip {
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 10],
         lookup_table: Column<Fixed>,
-        // TODO: Replace with public inputs API
-        constants: [Column<Fixed>; 2],
     ) -> <Self as Chip<pallas::Base>>::Config {
         // The following columns need to be equality-enabled for their use in sub-configs:
         //
@@ -183,18 +179,13 @@ impl EccChip {
         // mul::complete::Config:
         // - advices[9]: z_complete
         //
-        // mul::Config:
-        // - constants[1]: Setting `z_init` to zero.
-        //
         // TODO: Refactor away from `impl From<EccConfig> for _` so that sub-configs can
         // equality-enable the columns they need to.
         for column in &advices {
             meta.enable_equality((*column).into());
         }
-        // constants[0] is also equality-enabled here.
-        let lookup_config =
-            LookupRangeCheckConfig::configure(meta, advices[9], constants[0], lookup_table);
-        meta.enable_equality(constants[1].into());
+
+        let lookup_config = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
 
         let q_mul_fixed_running_sum = meta.selector();
         let running_sum_config =
@@ -225,7 +216,6 @@ impl EccChip {
             q_mul_fixed_base_field: meta.selector(),
             q_mul_fixed_running_sum,
             q_point: meta.selector(),
-            constants: constants[1],
             lookup_config,
             running_sum_config,
         };

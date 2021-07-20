@@ -188,23 +188,8 @@ pub mod tests {
             ];
 
             // Shared fixed column for loading constants
-            // TODO: Replace with public inputs API
-            let constants_1 = [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ];
-            let constants_2 = [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ];
+            let constants = meta.fixed_column();
+            meta.enable_constant(constants);
 
             // Fixed columns for the Sinsemilla generator lookup table
             let lookup = (
@@ -213,20 +198,12 @@ pub mod tests {
                 meta.fixed_column(),
             );
 
-            let sinsemilla_config_1 = SinsemillaChip::configure(
-                meta,
-                advices[5..].try_into().unwrap(),
-                lookup,
-                constants_1,
-            );
+            let sinsemilla_config_1 =
+                SinsemillaChip::configure(meta, advices[5..].try_into().unwrap(), lookup);
             let config1 = MerkleChip::configure(meta, sinsemilla_config_1);
 
-            let sinsemilla_config_2 = SinsemillaChip::configure(
-                meta,
-                advices[..5].try_into().unwrap(),
-                lookup,
-                constants_2,
-            );
+            let sinsemilla_config_2 =
+                SinsemillaChip::configure(meta, advices[..5].try_into().unwrap(), lookup);
             let config2 = MerkleChip::configure(meta, sinsemilla_config_2);
 
             (config1, config2)

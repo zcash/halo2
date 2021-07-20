@@ -5,7 +5,7 @@ use std::mem;
 use group::{Curve, GroupEncoding};
 use halo2::{
     circuit::{Layouter, SimpleFloorPlanner},
-    plonk::{self, Advice, Column, Expression, Instance as InstanceColumn, Selector},
+    plonk::{self, Advice, Column, Expression, Fixed, Instance as InstanceColumn, Selector},
     poly::Rotation,
     transcript::{Blake2bRead, Blake2bWrite},
 };
@@ -69,21 +69,21 @@ pub(crate) mod gadget;
 const K: u32 = 12;
 
 // Absolute offsets for public inputs.
-const ZERO: usize = 0;
-const ANCHOR: usize = 1;
-const NF_OLD: usize = 2;
-const CV_NET_X: usize = 3;
-const CV_NET_Y: usize = 4;
-const RK_X: usize = 5;
-const RK_Y: usize = 6;
-const CMX: usize = 7;
-const ENABLE_SPEND: usize = 8;
-const ENABLE_OUTPUT: usize = 9;
+const ANCHOR: usize = 0;
+const NF_OLD: usize = 1;
+const CV_NET_X: usize = 2;
+const CV_NET_Y: usize = 3;
+const RK_X: usize = 4;
+const RK_Y: usize = 5;
+const CMX: usize = 6;
+const ENABLE_SPEND: usize = 7;
+const ENABLE_OUTPUT: usize = 8;
 
 /// Configuration needed to use the Orchard Action circuit.
 #[derive(Clone, Debug)]
 pub struct Config {
     primary: Column<InstanceColumn>,
+    constants: Column<Fixed>,
     q_orchard: Selector,
     advices: [Column<Advice>; 10],
     ecc_config: EccConfig,
@@ -190,49 +190,22 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let table_idx = meta.fixed_column();
         let lookup = (table_idx, meta.fixed_column(), meta.fixed_column());
 
-        // Shared fixed column used to load constants.
-        // TODO: Replace with public inputs API
-        let ecc_constants = [meta.fixed_column(), meta.fixed_column()];
-        let sinsemilla_1_constants = [
-            meta.fixed_column(),
-            meta.fixed_column(),
-            meta.fixed_column(),
-            meta.fixed_column(),
-            meta.fixed_column(),
-            meta.fixed_column(),
-        ];
-        let sinsemilla_2_constants = [
-            meta.fixed_column(),
-            meta.fixed_column(),
-            meta.fixed_column(),
-            meta.fixed_column(),
-            meta.fixed_column(),
-            meta.fixed_column(),
-        ];
-
-        // Instance column.
+        // Instance column used for public inputs
         let primary = meta.instance_column();
-
         meta.enable_equality(primary.into());
 
-        // Permutation over all advice columns and `constants` columns.
-        // TODO: Replace `*_constants` with public inputs API.
+        // Shared fixed column used to load constants
+        let constants = meta.fixed_column();
+        meta.enable_constant(constants);
+
+        // Permutation over all advice columns.
         for advice in advices.iter() {
             meta.enable_equality((*advice).into());
-        }
-        for fixed in ecc_constants.iter() {
-            meta.enable_equality((*fixed).into());
-        }
-        for fixed in sinsemilla_1_constants.iter() {
-            meta.enable_equality((*fixed).into());
-        }
-        for fixed in sinsemilla_2_constants.iter() {
-            meta.enable_equality((*fixed).into());
         }
 
         // Configuration for curve point operations.
         // This uses 10 advice columns and spans the whole circuit.
-        let ecc_config = EccChip::configure(meta, advices, table_idx, ecc_constants);
+        let ecc_config = EccChip::configure(meta, advices, table_idx);
 
         // Configuration for the Poseidon hash.
         let poseidon_config = PoseidonChip::configure(
@@ -250,12 +223,8 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         // Since the Sinsemilla config uses only 5 advice columns,
         // we can fit two instances side-by-side.
         let (sinsemilla_config_1, merkle_config_1) = {
-            let sinsemilla_config_1 = SinsemillaChip::configure(
-                meta,
-                advices[..5].try_into().unwrap(),
-                lookup,
-                sinsemilla_1_constants,
-            );
+            let sinsemilla_config_1 =
+                SinsemillaChip::configure(meta, advices[..5].try_into().unwrap(), lookup);
             let merkle_config_1 = MerkleChip::configure(meta, sinsemilla_config_1.clone());
 
             (sinsemilla_config_1, merkle_config_1)
@@ -266,12 +235,8 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         // Since the Sinsemilla config uses only 5 advice columns,
         // we can fit two instances side-by-side.
         let (sinsemilla_config_2, merkle_config_2) = {
-            let sinsemilla_config_2 = SinsemillaChip::configure(
-                meta,
-                advices[5..].try_into().unwrap(),
-                lookup,
-                sinsemilla_2_constants,
-            );
+            let sinsemilla_config_2 =
+                SinsemillaChip::configure(meta, advices[5..].try_into().unwrap(), lookup);
             let merkle_config_2 = MerkleChip::configure(meta, sinsemilla_config_2.clone());
 
             (sinsemilla_config_2, merkle_config_2)
@@ -294,6 +259,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
         Config {
             primary,
+            constants,
             q_orchard,
             advices,
             ecc_config,
@@ -401,35 +367,30 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let v_net = {
             // v_net = v_old - v_new
             let v_net = {
-                let v_net_val = self.v_old.zip(self.v_new).map(|(v_old, v_new)| {
-                    // Do the subtraction in the scalar field.
-                    let v_old = pallas::Scalar::from_u64(v_old.inner());
-                    let v_new = pallas::Scalar::from_u64(v_new.inner());
-                    v_old - v_new
+                // v_old, v_new are guaranteed to be 64-bit values. Therefore, we can
+                // move them into the base field.
+                let v_old = self
+                    .v_old
+                    .map(|v_old| pallas::Base::from_u64(v_old.inner()));
+                let v_new = self
+                    .v_new
+                    .map(|v_new| pallas::Base::from_u64(v_new.inner()));
+
+                let magnitude_sign = v_old.zip(v_new).map(|(v_old, v_new)| {
+                    let is_negative = v_old < v_new;
+                    let magnitude = if is_negative {
+                        v_new - v_old
+                    } else {
+                        v_old - v_new
+                    };
+                    let sign = if is_negative {
+                        -pallas::Base::one()
+                    } else {
+                        pallas::Base::one()
+                    };
+                    (magnitude, sign)
                 });
-                // If v_net_val > (p - 1)/2, its sign is negative.
-                let is_negative =
-                    v_net_val.map(|val| val > (-pallas::Scalar::one()) * pallas::Scalar::TWO_INV);
-                let magnitude_sign =
-                    v_net_val
-                        .zip(is_negative)
-                        .map(|(signed_value, is_negative)| {
-                            let magnitude = {
-                                let magnitude = if is_negative {
-                                    -signed_value
-                                } else {
-                                    signed_value
-                                };
-                                assert!(magnitude < pallas::Scalar::from_u128(1 << 64));
-                                pallas::Base::from_bytes(&magnitude.to_bytes()).unwrap()
-                            };
-                            let sign = if is_negative {
-                                -pallas::Base::one()
-                            } else {
-                                pallas::Base::one()
-                            };
-                            (magnitude, sign)
-                        });
+
                 let magnitude = self.load_private(
                     layouter.namespace(|| "v_net magnitude"),
                     config.advices[9],
@@ -451,7 +412,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             };
 
             // blind = [rcv] ValueCommitR
-            let (blind, _) = {
+            let (blind, _rcv) = {
                 let rcv = self.rcv.as_ref().map(|rcv| **rcv);
                 let value_commit_r = OrchardFixedBasesFull::ValueCommitR;
                 let value_commit_r = FixedPoint::from_inner(ecc_chip.clone(), value_commit_r);
@@ -595,7 +556,8 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             };
 
             // [ivk] g_d_old
-            let (derived_pk_d_old, _) =
+            // The scalar value is passed through and discarded.
+            let (derived_pk_d_old, _ivk) =
                 g_d_old.mul(layouter.namespace(|| "[ivk] g_d_old"), ivk.inner())?;
 
             // Constrain derived pk_d_old to equal witnessed pk_d_old
@@ -756,7 +718,7 @@ impl VerifyingKey {
     /// Builds the verifying key.
     pub fn build() -> Self {
         let params = halo2::poly::commitment::Params::new(K);
-        let circuit: Circuit = Default::default(); // TODO
+        let circuit: Circuit = Default::default();
 
         let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
@@ -775,7 +737,7 @@ impl ProvingKey {
     /// Builds the proving key.
     pub fn build() -> Self {
         let params = halo2::poly::commitment::Params::new(K);
-        let circuit: Circuit = Default::default(); // TODO
+        let circuit: Circuit = Default::default();
 
         let vk = plonk::keygen_vk(&params, &circuit).unwrap();
         let pk = plonk::keygen_pk(&params, vk, &circuit).unwrap();
@@ -797,10 +759,9 @@ pub struct Instance {
 }
 
 impl Instance {
-    fn to_halo2_instance(&self) -> [[vesta::Scalar; 10]; 1] {
-        let mut instance = [vesta::Scalar::zero(); 10];
+    fn to_halo2_instance(&self) -> [[vesta::Scalar; 9]; 1] {
+        let mut instance = [vesta::Scalar::zero(); 9];
 
-        // instance[0] is left as 0.
         instance[ANCHOR] = *self.anchor;
         instance[CV_NET_X] = self.cv_net.x();
         instance[CV_NET_Y] = self.cv_net.y();
@@ -983,5 +944,44 @@ mod tests {
         let pk = ProvingKey::build();
         let proof = Proof::create(&pk, &circuits, &instances).unwrap();
         assert!(proof.verify(&vk, &instances).is_ok());
+    }
+
+    #[cfg(feature = "dev-graph")]
+    #[test]
+    fn print_action_circuit() {
+        use plotters::prelude::*;
+
+        let root = BitMapBackend::new("action-circuit-layout.png", (1024, 768)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root
+            .titled("Orchard Action Circuit", ("sans-serif", 60))
+            .unwrap();
+
+        let circuit = Circuit {
+            path: None,
+            pos: None,
+            g_d_old: None,
+            pk_d_old: None,
+            v_old: None,
+            rho_old: None,
+            psi_old: None,
+            rcm_old: None,
+            cm_old: None,
+            alpha: None,
+            ak: None,
+            nk: None,
+            rivk: None,
+            g_d_new_star: None,
+            pk_d_new_star: None,
+            v_new: None,
+            psi_new: None,
+            rcm_new: None,
+            rcv: None,
+        };
+        halo2::dev::CircuitLayout::default()
+            .show_labels(false)
+            .view_height(0..(1 << 11))
+            .render(&circuit, &root)
+            .unwrap();
     }
 }

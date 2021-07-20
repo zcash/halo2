@@ -676,41 +676,22 @@ mod tests {
                     meta.advice_column(),
                 ];
 
-                // Shared fixed columns for loading constants.
-                // TODO: Replace with public inputs API.
-                let ecc_constants = [meta.fixed_column(), meta.fixed_column()];
-                let sinsemilla_constants = [
-                    meta.fixed_column(),
-                    meta.fixed_column(),
-                    meta.fixed_column(),
-                    meta.fixed_column(),
-                    meta.fixed_column(),
-                    meta.fixed_column(),
-                ];
+                let constants = meta.fixed_column();
+                meta.enable_constant(constants);
 
                 for advice in advices.iter() {
                     meta.enable_equality((*advice).into());
-                }
-                for fixed in ecc_constants.iter() {
-                    meta.enable_equality((*fixed).into());
-                }
-                for fixed in sinsemilla_constants.iter() {
-                    meta.enable_equality((*fixed).into());
                 }
 
                 let table_idx = meta.fixed_column();
                 let lookup = (table_idx, meta.fixed_column(), meta.fixed_column());
 
-                let sinsemilla_config = SinsemillaChip::configure(
-                    meta,
-                    advices[..5].try_into().unwrap(),
-                    lookup,
-                    sinsemilla_constants,
-                );
+                let sinsemilla_config =
+                    SinsemillaChip::configure(meta, advices[..5].try_into().unwrap(), lookup);
                 let commit_ivk_config =
                     CommitIvkConfig::configure(meta, advices, sinsemilla_config);
 
-                let ecc_config = EccChip::configure(meta, advices, table_idx, ecc_constants);
+                let ecc_config = EccChip::configure(meta, advices, table_idx);
 
                 (commit_ivk_config, ecc_config)
             }

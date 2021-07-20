@@ -19,7 +19,6 @@ pub struct LookupRangeCheckConfig<F: FieldExt + PrimeFieldBits, const K: usize> 
     pub q_lookup_short: Selector,
     pub short_lookup_bitshift: Column<Fixed>,
     pub running_sum: Column<Advice>,
-    constants: Column<Fixed>,
     table_idx: Column<Fixed>,
     _marker: PhantomData<F>,
 }
@@ -39,11 +38,9 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     pub fn configure(
         meta: &mut ConstraintSystem<F>,
         running_sum: Column<Advice>,
-        constants: Column<Fixed>,
         table_idx: Column<Fixed>,
     ) -> Self {
         meta.enable_equality(running_sum.into());
-        meta.enable_equality(constants.into());
 
         let q_lookup = meta.selector();
         let q_lookup_short = meta.selector();
@@ -53,7 +50,6 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             q_lookup_short,
             short_lookup_bitshift,
             running_sum,
-            constants,
             table_idx,
             _marker: PhantomData,
         };
@@ -135,7 +131,14 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                 // Copy `element` and initialize running sum `z_0 = element` to decompose it.
                 let z_0 = copy(&mut region, || "z_0", self.running_sum, 0, &element)?;
 
-                self.range_check(&mut region, z_0, num_words, strict)
+                let zs = self.range_check(&mut region, z_0, num_words)?;
+
+                if strict {
+                    // Constrain the final `z` to be zero.
+                    region.constrain_constant(zs.last().unwrap().cell(), F::zero())?;
+                }
+
+                Ok(zs)
             },
         )
     }
@@ -148,7 +151,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         num_words: usize,
         strict: bool,
     ) -> Result<(CellValue<F>, Vec<CellValue<F>>), Error> {
-        layouter.assign_region(
+        let (z_0, zs) = layouter.assign_region(
             || "Witness element",
             |mut region| {
                 let z_0 = {
@@ -161,11 +164,18 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                     CellValue::new(cell, value)
                 };
 
-                let zs = self.range_check(&mut region, z_0, num_words, strict)?;
+                let zs = self.range_check(&mut region, z_0, num_words)?;
+
+                if strict {
+                    // Constrain the final `z` to be zero.
+                    region.constrain_constant(zs.last().unwrap().cell(), F::zero())?;
+                }
 
                 Ok((z_0, zs))
             },
-        )
+        )?;
+
+        Ok((z_0, zs))
     }
 
     /// If `strict` is set to "true", the field element must fit into
@@ -180,7 +190,6 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         region: &mut Region<'_, F>,
         element: CellValue<F>,
         num_words: usize,
-        strict: bool,
     ) -> Result<Vec<CellValue<F>>, Error> {
         // `num_words` must fit into a single field element.
         assert!(num_words * K <= F::CAPACITY as usize);
@@ -241,13 +250,6 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                 CellValue::new(z_cell, z_val)
             };
             zs.push(z);
-        }
-
-        if strict {
-            // Constrain the final `z` to be zero.
-            let cell =
-                region.assign_fixed(|| "zero", self.constants, words.len(), || Ok(F::zero()))?;
-            region.constrain_equal(z.cell(), cell)?;
         }
 
         Ok(zs)
@@ -388,10 +390,11 @@ mod tests {
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let running_sum = meta.advice_column();
-                let constants = meta.fixed_column();
                 let table_idx = meta.fixed_column();
+                let constants = meta.fixed_column();
+                meta.enable_constant(constants);
 
-                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, constants, table_idx)
+                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, table_idx)
             }
 
             fn synthesize(
@@ -466,6 +469,7 @@ mod tests {
                 num_words: 6,
                 _marker: PhantomData,
             };
+
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
         }
@@ -493,10 +497,11 @@ mod tests {
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let running_sum = meta.advice_column();
-                let constants = meta.fixed_column();
                 let table_idx = meta.fixed_column();
+                let constants = meta.fixed_column();
+                meta.enable_constant(constants);
 
-                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, constants, table_idx)
+                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, table_idx)
             }
 
             fn synthesize(

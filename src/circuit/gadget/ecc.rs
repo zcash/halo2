@@ -432,10 +432,12 @@ mod tests {
                 meta.advice_column(),
                 meta.advice_column(),
             ];
-            let constants = [meta.fixed_column(), meta.fixed_column()];
             let lookup_table = meta.fixed_column();
+            // Shared fixed column for loading constants
+            let constants = meta.fixed_column();
+            meta.enable_constant(constants);
 
-            EccChip::configure(meta, advices, lookup_table, constants)
+            EccChip::configure(meta, advices, lookup_table)
         }
 
         fn synthesize(

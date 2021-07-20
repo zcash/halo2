@@ -1,9 +1,6 @@
 use super::super::SinsemillaInstructions;
 use super::{get_s_by_idx, CellValue, EccPoint, SinsemillaChip, Var};
-use crate::{
-    circuit::gadget::utilities::copy,
-    primitives::sinsemilla::{self, lebs2ip_k, INV_TWO_POW_K},
-};
+use crate::primitives::sinsemilla::{self, lebs2ip_k, INV_TWO_POW_K};
 use halo2::{
     circuit::{Chip, Region},
     plonk::Error,
@@ -41,13 +38,11 @@ impl SinsemillaChip {
         // Initialize the accumulator to `Q`.
         let (mut x_a, mut y_a): (X<pallas::Base>, Y<pallas::Base>) = {
             // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
-            let fixed_x_q = {
+            let x_a = {
                 let cell =
-                    region.assign_fixed(|| "fixed x_q", config.constants, offset, || Ok(x_q))?;
+                    region.assign_advice_from_constant(|| "public x_q", config.x_a, offset, x_q)?;
                 CellValue::new(cell, Some(x_q))
             };
-
-            let x_a = copy(region, || "x_q", config.x_a, offset, &fixed_x_q)?;
 
             // Constrain the initial x_a, lambda_1, lambda_2, x_p using the fixed y_q
             // initializer. Assign `fixed_y_q` to be zero on every other row.
@@ -132,7 +127,7 @@ impl SinsemillaChip {
             let field_elems: Option<Vec<pallas::Base>> =
                 message.iter().map(|piece| piece.field_elem()).collect();
 
-            if field_elems.is_some() {
+            if field_elems.is_some() && x_a.value().is_some() && y_a.value().is_some() {
                 // Get message as a bitstring.
                 let bitstring: Vec<bool> = message
                     .iter()

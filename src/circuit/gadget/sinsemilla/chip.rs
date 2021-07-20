@@ -56,10 +56,6 @@ pub struct SinsemillaConfig {
     /// The lookup table where $(\mathsf{idx}, x_p, y_p)$ are loaded for the $2^K$
     /// generators of the Sinsemilla hash.
     pub(super) generator_table: GeneratorTableConfig,
-    /// Fixed column shared by the whole circuit. This is used to load the
-    /// x-coordinate of the domain $Q$, which is then constrained to equal the
-    /// initial $x_a$.
-    pub(super) constants: Column<Fixed>,
     /// Configure each advice column to be able to perform lookup range checks.
     pub(super) lookup_config_0: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     pub(super) lookup_config_1: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
@@ -115,23 +111,15 @@ impl SinsemillaChip {
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 5],
         lookup: (Column<Fixed>, Column<Fixed>, Column<Fixed>),
-        constants: [Column<Fixed>; 6], // TODO: replace with public inputs API
     ) -> <Self as Chip<pallas::Base>>::Config {
         // This chip requires all advice columns and the `constants` fixed columns to be
         // equality-enabled. The advice columns and the first five `constants` columns
         // are equality-enabled by the calls to LookupRangeCheckConfig::configure.
-        let lookup_config_0 =
-            LookupRangeCheckConfig::configure(meta, advices[0], constants[0], lookup.0);
-        let lookup_config_1 =
-            LookupRangeCheckConfig::configure(meta, advices[1], constants[1], lookup.0);
-        let lookup_config_2 =
-            LookupRangeCheckConfig::configure(meta, advices[2], constants[2], lookup.0);
-        let lookup_config_3 =
-            LookupRangeCheckConfig::configure(meta, advices[3], constants[3], lookup.0);
-        let lookup_config_4 =
-            LookupRangeCheckConfig::configure(meta, advices[4], constants[4], lookup.0);
-        let constants = constants[5];
-        meta.enable_equality(constants.into());
+        let lookup_config_0 = LookupRangeCheckConfig::configure(meta, advices[0], lookup.0);
+        let lookup_config_1 = LookupRangeCheckConfig::configure(meta, advices[1], lookup.0);
+        let lookup_config_2 = LookupRangeCheckConfig::configure(meta, advices[2], lookup.0);
+        let lookup_config_3 = LookupRangeCheckConfig::configure(meta, advices[3], lookup.0);
+        let lookup_config_4 = LookupRangeCheckConfig::configure(meta, advices[4], lookup.0);
 
         let config = SinsemillaConfig {
             q_sinsemilla1: meta.selector(),
@@ -147,7 +135,6 @@ impl SinsemillaChip {
                 table_x: lookup.1,
                 table_y: lookup.2,
             },
-            constants,
             lookup_config_0,
             lookup_config_1,
             lookup_config_2,
