@@ -215,28 +215,8 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F>
         offset: usize,
         constant: Assigned<F>,
     ) -> Result<Cell, Error> {
-        if self.layouter.constants.is_empty() {
-            return Err(Error::NotEnoughColumnsForConstants);
-        }
-
         let advice = self.assign_advice(annotation, column, offset, &mut || Ok(constant))?;
-
-        // For the simple layouter, just assign the fixed constants inside the region
-        // using the first constants column. self.next_constant_row is updated by this
-        // function call.
-        let fixed = self.assign_fixed(
-            annotation,
-            self.layouter.constants[0],
-            // Convert the absolute row into a relative offset within this region, but
-            // always at an offset that is not before this region (taking advantage of the
-            // fact that for this single-pass layouter, regions are always layed out in
-            // increasing row order).
-            self.next_constant_row
-                .saturating_sub(*self.layouter.regions[*self.region_index]),
-            &mut || Ok(constant),
-        )?;
-
-        self.constrain_equal(advice, fixed)?;
+        self.constrain_constant(advice, constant)?;
 
         Ok(advice)
     }
@@ -289,6 +269,29 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F>
             row_offset: offset,
             column: column.into(),
         })
+    }
+
+    fn constrain_constant(&mut self, cell: Cell, constant: Assigned<F>) -> Result<(), Error> {
+        if self.layouter.constants.is_empty() {
+            return Err(Error::NotEnoughColumnsForConstants);
+        }
+
+        // For the simple layouter, just assign the fixed constants inside the region
+        // using the first constants column. self.next_constant_row is updated by this
+        // function call.
+        let fixed = self.assign_fixed(
+            &|| "constant".into(),
+            self.layouter.constants[0],
+            // Convert the absolute row into a relative offset within this region, but
+            // always at an offset that is not before this region (taking advantage of the
+            // fact that for this single-pass layouter, regions are always layed out in
+            // increasing row order).
+            self.next_constant_row
+                .saturating_sub(*self.layouter.regions[*self.region_index]),
+            &mut || Ok(constant),
+        )?;
+
+        self.constrain_equal(cell, fixed)
     }
 
     fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error> {

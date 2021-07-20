@@ -94,6 +94,11 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error>;
 
+    /// Constrains a cell to have a constant value.
+    ///
+    /// Returns an error if the cell is in a column where equality has not been enabled.
+    fn constrain_constant(&mut self, cell: Cell, constant: Assigned<F>) -> Result<(), Error>;
+
     /// Constraint two cells to have the same value.
     ///
     /// Returns an error if either of the cells is not within the given permutation.
@@ -213,6 +218,11 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
             row_offset: offset,
             column: column.into(),
         })
+    }
+
+    fn constrain_constant(&mut self, _cell: Cell, _constant: Assigned<F>) -> Result<(), Error> {
+        // Global constants don't affect the region shape.
+        Ok(())
     }
 
     fn constrain_equal(&mut self, _left: Cell, _right: Cell) -> Result<(), Error> {

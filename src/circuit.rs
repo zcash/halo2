@@ -225,6 +225,16 @@ impl<'r, F: Field> Region<'r, F> {
             })
     }
 
+    /// Constrains a cell to have a constant value.
+    ///
+    /// Returns an error if the cell is in a column where equality has not been enabled.
+    pub fn constrain_constant<VR>(&mut self, cell: Cell, constant: VR) -> Result<(), Error>
+    where
+        VR: Into<Assigned<F>>,
+    {
+        self.region.constrain_constant(cell, constant.into())
+    }
+
     /// Constrains two cells to have the same value.
     ///
     /// Returns an error if either of the cells are in columns where equality

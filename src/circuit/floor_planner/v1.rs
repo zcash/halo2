@@ -348,7 +348,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
         constant: Assigned<F>,
     ) -> Result<Cell, Error> {
         let advice = self.assign_advice(annotation, column, offset, &mut || Ok(constant))?;
-        self.plan.constants.push((constant, advice));
+        self.constrain_constant(advice, constant)?;
 
         Ok(advice)
     }
@@ -396,6 +396,11 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
             row_offset: offset,
             column: column.into(),
         })
+    }
+
+    fn constrain_constant(&mut self, cell: Cell, constant: Assigned<F>) -> Result<(), Error> {
+        self.plan.constants.push((constant, cell));
+        Ok(())
     }
 
     fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error> {
