@@ -29,8 +29,9 @@ impl FloorPlanner for SimpleFloorPlanner {
         cs: &mut CS,
         circuit: &C,
         config: C::Config,
+        constants: Vec<Column<Fixed>>,
     ) -> Result<(), Error> {
-        let layouter = SingleChipLayouter::new(cs)?;
+        let layouter = SingleChipLayouter::new(cs, constants)?;
         circuit.synthesize(config, layouter)
     }
 }
@@ -38,6 +39,7 @@ impl FloorPlanner for SimpleFloorPlanner {
 /// A [`Layouter`] for a single-chip circuit.
 pub struct SingleChipLayouter<'a, F: Field, CS: Assignment<F> + 'a> {
     cs: &'a mut CS,
+    constants: Vec<Column<Fixed>>,
     /// Stores the starting row for each region.
     regions: Vec<RegionStart>,
     /// Stores the first empty row for each column.
@@ -56,9 +58,10 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for SingleChipLayouter<'a,
 
 impl<'a, F: Field, CS: Assignment<F>> SingleChipLayouter<'a, F, CS> {
     /// Creates a new single-chip layouter.
-    pub fn new(cs: &'a mut CS) -> Result<Self, Error> {
+    pub fn new(cs: &'a mut CS, constants: Vec<Column<Fixed>>) -> Result<Self, Error> {
         let ret = SingleChipLayouter {
             cs,
+            constants,
             regions: vec![],
             columns: HashMap::default(),
             _marker: PhantomData,
@@ -143,6 +146,8 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
 struct SingleChipLayouterRegion<'r, 'a, F: Field, CS: Assignment<F> + 'a> {
     layouter: &'r mut SingleChipLayouter<'a, F, CS>,
     region_index: RegionIndex,
+    // The index of the next available row in the first constants column.
+    next_constant_row: usize,
 }
 
 impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug
@@ -161,6 +166,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> SingleChipLayouterRegion<'r, 'a, 
         SingleChipLayouterRegion {
             layouter,
             region_index,
+            next_constant_row: 0,
         }
     }
 }
@@ -202,6 +208,39 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F>
         })
     }
 
+    fn assign_advice_from_constant<'v>(
+        &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        column: Column<Advice>,
+        offset: usize,
+        constant: Assigned<F>,
+    ) -> Result<Cell, Error> {
+        if self.layouter.constants.is_empty() {
+            return Err(Error::NotEnoughColumnsForConstants);
+        }
+
+        let advice = self.assign_advice(annotation, column, offset, &mut || Ok(constant))?;
+
+        // For the simple layouter, just assign the fixed constants inside the region
+        // using the first constants column. self.next_constant_row is updated by this
+        // function call.
+        let fixed = self.assign_fixed(
+            annotation,
+            self.layouter.constants[0],
+            // Convert the absolute row into a relative offset within this region, but
+            // always at an offset that is not before this region (taking advantage of the
+            // fact that for this single-pass layouter, regions are always layed out in
+            // increasing row order).
+            self.next_constant_row
+                .saturating_sub(*self.layouter.regions[*self.region_index]),
+            &mut || Ok(constant),
+        )?;
+
+        self.constrain_equal(advice, fixed)?;
+
+        Ok(advice)
+    }
+
     fn assign_advice_from_instance<'v>(
         &mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
@@ -233,12 +272,17 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F>
         offset: usize,
         to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error> {
-        self.layouter.cs.assign_fixed(
-            annotation,
-            column,
-            *self.layouter.regions[*self.region_index] + offset,
-            to,
-        )?;
+        let row = *self.layouter.regions[*self.region_index] + offset;
+
+        self.layouter.cs.assign_fixed(annotation, column, row, to)?;
+
+        if let Some(c) = self.layouter.constants.first() {
+            if c == &column {
+                // Ensure that the next row we will assign a constant to is always after any
+                // prior assignments (for simplicity).
+                self.next_constant_row = cmp::max(self.next_constant_row, row + 1);
+            }
+        }
 
         Ok(Cell {
             region_index: self.region_index,

@@ -166,6 +166,17 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         })
     }
 
+    fn assign_advice_from_constant<'v>(
+        &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        column: Column<Advice>,
+        offset: usize,
+        constant: Assigned<F>,
+    ) -> Result<Cell, Error> {
+        // The rest is identical to witnessing an advice cell.
+        self.assign_advice(annotation, column, offset, &mut || Ok(constant))
+    }
+
     fn assign_advice_from_instance<'v>(
         &mut self,
         _: &'v (dyn Fn() -> String + 'v),
