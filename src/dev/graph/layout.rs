@@ -97,13 +97,13 @@ impl CircuitLayout {
 
         // Figure out what order to render the columns in.
         // TODO: For now, just render them in the order they were configured.
-        let total_columns = cs.num_advice_columns + cs.num_instance_columns + cs.num_fixed_columns;
+        let total_columns = cs.num_instance_columns + cs.num_advice_columns + cs.num_fixed_columns;
         let column_index = |column: &Column<Any>| {
             column.index()
                 + match column.column_type() {
-                    Any::Advice => 0,
-                    Any::Instance => cs.num_advice_columns,
-                    Any::Fixed => cs.num_advice_columns + cs.num_instance_columns,
+                    Any::Instance => 0,
+                    Any::Advice => cs.num_instance_columns,
+                    Any::Fixed => cs.num_instance_columns + cs.num_advice_columns,
                 }
         };
 
@@ -124,12 +124,15 @@ impl CircuitLayout {
             ShapeStyle::from(&WHITE).filled(),
         ))?;
         root.draw(&Rectangle::new(
-            [(0, 0), (cs.num_advice_columns, view_bottom)],
+            [
+                (cs.num_instance_columns, 0),
+                (cs.num_instance_columns + cs.num_advice_columns, view_bottom),
+            ],
             ShapeStyle::from(&RED.mix(0.2)).filled(),
         ))?;
         root.draw(&Rectangle::new(
             [
-                (cs.num_advice_columns + cs.num_instance_columns, 0),
+                (cs.num_instance_columns + cs.num_advice_columns, 0),
                 (total_columns, view_bottom),
             ],
             ShapeStyle::from(&BLUE.mix(0.2)).filled(),
@@ -138,9 +141,9 @@ impl CircuitLayout {
             let index = selector.index();
             root.draw(&Rectangle::new(
                 [
-                    (cs.num_advice_columns + cs.num_instance_columns + index, 0),
+                    (cs.num_instance_columns + cs.num_advice_columns + index, 0),
                     (
-                        cs.num_advice_columns + cs.num_instance_columns + index + 1,
+                        cs.num_instance_columns + cs.num_advice_columns + index + 1,
                         view_bottom,
                     ),
                 ],
