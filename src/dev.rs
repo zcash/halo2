@@ -19,6 +19,9 @@ use crate::{
 
 pub mod metadata;
 
+pub mod cost;
+pub use cost::CircuitCost;
+
 #[cfg(feature = "dev-graph")]
 mod graph;
 
