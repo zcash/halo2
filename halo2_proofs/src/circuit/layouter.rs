@@ -139,6 +139,7 @@ pub struct RegionShape {
 /// The virtual column involved in a region. This includes concrete columns,
 /// as well as selectors that are not concrete columns at this stage.
 #[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
+#[cfg_attr(feature = "dev-graph", derive(serde::Serialize))]
 pub enum RegionColumn {
     /// Concrete column
     Column(Column<Any>),

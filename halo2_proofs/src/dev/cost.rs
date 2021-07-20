@@ -11,6 +11,9 @@ use std::{
 use ff::{Field, PrimeField};
 use group::prime::PrimeGroup;
 
+#[cfg(feature = "dev-graph")]
+use serde::ser::SerializeStruct;
+
 use crate::{
     circuit::{layouter::RegionColumn, Value},
     plonk::{
@@ -54,7 +57,28 @@ pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
     _marker: PhantomData<(G, ConcreteCircuit)>,
 }
 
+#[cfg(feature = "dev-graph")]
+impl serde::Serialize for Column<Any> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("Column", 2)?;
+        state.serialize_field(
+            "kind",
+            match self.column_type() {
+                Any::Advice => "advice",
+                Any::Fixed => "fixed",
+                Any::Instance => "instance",
+            },
+        )?;
+        state.serialize_field("index", &self.index())?;
+        state.end()
+    }
+}
+
 #[derive(Debug)]
+#[cfg_attr(feature = "dev-graph", derive(serde::Serialize))]
 pub(crate) struct Cell {
     pub(crate) column: RegionColumn,
     pub(crate) row: usize,
@@ -63,6 +87,7 @@ pub(crate) struct Cell {
 /// Region implementation used by Layout
 #[allow(dead_code)]
 #[derive(Debug)]
+#[cfg_attr(feature = "dev-graph", derive(serde::Serialize))]
 pub(crate) struct LayoutRegion {
     /// The name of the region. Not required to be unique.
     pub(crate) name: String,

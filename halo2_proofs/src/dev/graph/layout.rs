@@ -3,12 +3,13 @@ use plotters::{
     coord::Shift,
     prelude::{DrawingArea, DrawingAreaErrorKind, DrawingBackend},
 };
+
 use std::collections::HashSet;
 use std::ops::Range;
 
 use crate::{
     circuit::layouter::RegionColumn,
-    dev::cost::{Cell, Layout},
+    dev::cost::{Cell, Layout, LayoutRegion},
     plonk::{Any, Circuit, Column, ConstraintSystem, FloorPlanner},
 };
 
@@ -317,4 +318,36 @@ impl CircuitLayout {
         }
         Ok(())
     }
+}
+
+/// Renders the given circuit layout to a JSON string.
+pub fn render_to_json<F: Field, ConcreteCircuit: Circuit<F>>(
+    circuit: &ConcreteCircuit,
+) -> Result<String, serde_json::Error> {
+    // Collect the layout details.
+    let mut cs = ConstraintSystem::default();
+    let config = ConcreteCircuit::configure(&mut cs);
+    let mut layout = Layout::default();
+    ConcreteCircuit::FloorPlanner::synthesize(&mut layout, circuit, config, cs.constants).unwrap();
+
+    // Render.
+    #[derive(serde::Serialize)]
+    struct Circuit {
+        num_instance_columns: usize,
+        num_advice_columns: usize,
+        num_fixed_columns: usize,
+        total_rows: usize,
+        regions: Vec<LayoutRegion>,
+        loose_cells: Vec<Cell>,
+        selectors: Vec<Vec<bool>>,
+    }
+    serde_json::to_string(&Circuit {
+        num_instance_columns: cs.num_instance_columns,
+        num_advice_columns: cs.num_advice_columns,
+        num_fixed_columns: cs.num_fixed_columns,
+        total_rows: layout.total_rows,
+        regions: layout.regions,
+        loose_cells: layout.loose_cells,
+        selectors: layout.selectors,
+    })
 }

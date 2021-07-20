@@ -55,6 +55,8 @@ maybe-rayon = {version = "0.1.0", default-features = false}
 
 # Developer tooling dependencies
 plotters = { version = "0.3.0", default-features = false, optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+serde_json = { version = "1", optional = true }
 tabbycat = { version = "0.1", features = ["attributes"], optional = true }
 
 # Legacy circuit compatibility
@@ -73,7 +75,7 @@ getrandom = { version = "0.2", features = ["js"] }
 [features]
 default = ["batch", "multicore"]
 multicore = ["maybe-rayon/threads"]
-dev-graph = ["plotters", "tabbycat"]
+dev-graph = ["plotters", "serde", "serde_json", "tabbycat"]
 test-dev-graph = [
     "dev-graph",
     "plotters/bitmap_backend",
