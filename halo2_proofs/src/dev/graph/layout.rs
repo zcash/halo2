@@ -8,7 +8,7 @@ use std::ops::Range;
 
 use crate::{
     circuit::layouter::RegionColumn,
-    dev::cost::Layout,
+    dev::cost::{Cell, Layout},
     plonk::{Any, Circuit, Column, ConstraintSystem, FloorPlanner},
 };
 
@@ -242,26 +242,26 @@ impl CircuitLayout {
 
         // Darken the cells of the region that have been assigned to.
         for region in layout.regions {
-            for (column, row) in region.cells {
+            for Cell { column, row } in region.cells {
                 draw_cell(&root, column_index(&cs, column), row)?;
             }
         }
 
         // Darken any loose cells that have been assigned to.
-        for (column, row) in layout.loose_cells {
+        for Cell { column, row } in layout.loose_cells {
             draw_cell(&root, column_index(&cs, column), row)?;
         }
 
         // Mark equality-constrained cells.
         if self.mark_equality_cells {
             let mut cells = HashSet::new();
-            for (l_col, l_row, r_col, r_row) in &layout.equality {
-                let l_col = column_index(&cs, (*l_col).into());
-                let r_col = column_index(&cs, (*r_col).into());
+            for (l, r) in &layout.equality {
+                let l_col = column_index(&cs, l.column);
+                let r_col = column_index(&cs, r.column);
 
                 // Deduplicate cells.
-                cells.insert((l_col, *l_row));
-                cells.insert((r_col, *r_row));
+                cells.insert((l_col, l.row));
+                cells.insert((r_col, r.row));
             }
 
             for (col, row) in cells {
@@ -274,11 +274,11 @@ impl CircuitLayout {
 
         // Draw lines between equality-constrained cells.
         if self.show_equality_constraints {
-            for (l_col, l_row, r_col, r_row) in &layout.equality {
-                let l_col = column_index(&cs, (*l_col).into());
-                let r_col = column_index(&cs, (*r_col).into());
+            for (l, r) in &layout.equality {
+                let l_col = column_index(&cs, l.column);
+                let r_col = column_index(&cs, r.column);
                 root.draw(&PathElement::new(
-                    [(l_col, *l_row), (r_col, *r_row)],
+                    [(l_col, l.row), (r_col, r.row)],
                     ShapeStyle::from(&RED),
                 ))?;
             }
