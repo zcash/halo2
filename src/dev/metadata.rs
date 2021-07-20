@@ -1,6 +1,37 @@
 //! Metadata about circuits.
 
+use crate::plonk::{self, Any};
 use std::fmt;
+
+/// Metadata about a column within a circuit.
+#[derive(Debug, PartialEq)]
+pub struct Column {
+    /// The index of the column.
+    index: usize,
+    /// The type of the column.
+    column_type: Any,
+}
+
+impl fmt::Display for Column {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Column {} ('{:?}')", self.index, self.column_type)
+    }
+}
+
+impl From<(usize, Any)> for Column {
+    fn from((index, column_type): (usize, Any)) -> Self {
+        Column { index, column_type }
+    }
+}
+
+impl From<plonk::Column<Any>> for Column {
+    fn from(column: plonk::Column<Any>) -> Self {
+        Column {
+            index: column.index(),
+            column_type: *column.column_type(),
+        }
+    }
+}
 
 /// Metadata about a configured gate within a circuit.
 #[derive(Debug, PartialEq)]
