@@ -901,6 +901,7 @@
 <span id="886">886</span>
 <span id="887">887</span>
 <span id="888">888</span>
+<span id="889">889</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Tools for developing circuits.</span>
 
@@ -970,7 +971,7 @@
     <span class="doccomment">/// A permutation did not preserve the original value of a cell.</span>
     <span class="ident">Permutation</span> {
         <span class="doccomment">/// The column in which this permutation is not satisfied.</span>
-        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>,
+        <span class="ident">column</span>: <span class="ident">metadata::Column</span>,
         <span class="doccomment">/// The row on which this permutation is not satisfied.</span>
         <span class="ident">row</span>: <span class="ident">usize</span>,
     },
@@ -1675,7 +1676,8 @@
                             <span class="prelude-val">None</span>
                         } <span class="kw">else</span> {
                             <span class="prelude-val">Some</span>(<span class="ident">VerifyFailure::Permutation</span> {
-                                <span class="ident">column</span>: <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">permutation</span>.<span class="ident">get_columns</span>().<span class="ident">get</span>(<span class="ident">column</span>).<span class="ident">unwrap</span>(),
+                                <span class="ident">column</span>: (<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">permutation</span>.<span class="ident">get_columns</span>().<span class="ident">get</span>(<span class="ident">column</span>).<span class="ident">unwrap</span>())
+                                    .<span class="ident">into</span>(),
                                 <span class="ident">row</span>,
                             })
                         }
