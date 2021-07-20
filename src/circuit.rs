@@ -158,7 +158,7 @@ impl<'r, F: Field> Region<'r, F> {
     /// configured via `ConstraintSystem::enable_constant`.
     ///
     /// Returns the advice cell.
-    pub fn assign_advice_from_constant<'v, VR, A, AR>(
+    pub fn assign_advice_from_constant<VR, A, AR>(
         &mut self,
         annotation: A,
         column: Column<Advice>,

@@ -101,11 +101,14 @@ impl Allocations {
     }
 }
 
+/// Allocated rows within a circuit.
+pub type CircuitAllocations = HashMap<Column<Any>, Allocations>;
+
 /// - `start` is the current start row of the region (not of this column).
 /// - `slack` is the maximum number of rows the start could be moved down, taking into
 ///   account prior columns.
 fn first_fit_region(
-    column_allocations: &mut HashMap<Column<Any>, Allocations>,
+    column_allocations: &mut CircuitAllocations,
     region_columns: &[Column<Any>],
     region_length: usize,
     start: usize,
@@ -164,12 +167,9 @@ fn first_fit_region(
 /// in use, taking into account gaps between earlier regions.
 fn slot_in(
     region_shapes: Vec<RegionShape>,
-) -> (
-    Vec<(RegionStart, RegionShape)>,
-    HashMap<Column<Any>, Allocations>,
-) {
+) -> (Vec<(RegionStart, RegionShape)>, CircuitAllocations) {
     // Tracks the empty regions for each column.
-    let mut column_allocations: HashMap<Column<Any>, Allocations> = Default::default();
+    let mut column_allocations: CircuitAllocations = Default::default();
 
     let regions = region_shapes
         .into_iter()
@@ -200,7 +200,7 @@ fn slot_in(
 /// Sorts the regions by advice area and then lays them out with the [`slot_in`] strategy.
 pub fn slot_in_biggest_advice_first(
     region_shapes: Vec<RegionShape>,
-) -> (Vec<RegionStart>, HashMap<Column<Any>, Allocations>) {
+) -> (Vec<RegionStart>, CircuitAllocations) {
     let mut sorted_regions: Vec<_> = region_shapes.into_iter().collect();
     sorted_regions.sort_unstable_by_key(|shape| {
         // Count the number of advice columns
