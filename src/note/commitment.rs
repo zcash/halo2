@@ -5,7 +5,12 @@ use ff::PrimeFieldBits;
 use pasta_curves::{arithmetic::FieldExt, pallas};
 use subtle::{ConstantTimeEq, CtOption};
 
-use crate::{constants::L_ORCHARD_BASE, primitives::sinsemilla, spec::extract_p, value::NoteValue};
+use crate::{
+    constants::{L_ORCHARD_BASE, NOTE_COMMITMENT_PERSONALIZATION},
+    primitives::sinsemilla,
+    spec::extract_p,
+    value::NoteValue,
+};
 
 pub(super) struct NoteCommitTrapdoor(pub(super) pallas::Scalar);
 
@@ -27,7 +32,7 @@ impl NoteCommitment {
         psi: pallas::Base,
         rcm: NoteCommitTrapdoor,
     ) -> CtOption<Self> {
-        let domain = sinsemilla::CommitDomain::new("z.cash:Orchard-NoteCommit");
+        let domain = sinsemilla::CommitDomain::new(NOTE_COMMITMENT_PERSONALIZATION);
         domain
             .commit(
                 iter::empty()
