@@ -310,6 +310,20 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
         Ok((cell, value))
     }
 
+    fn constrain_instance<'v>(
+        &mut self,
+        cell: Cell,
+        instance: Column<Instance>,
+        row: usize,
+    ) -> Result<(), Error> {
+        self.plan.cs.copy(
+            cell.column,
+            *self.plan.regions[*cell.region_index] + cell.row_offset,
+            instance.into(),
+            row,
+        )
+    }
+
     fn assign_fixed<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),

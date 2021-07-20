@@ -177,6 +177,17 @@ impl<'r, F: Field> Region<'r, F> {
         )
     }
 
+    /// Constrain a cell to equal an instance column's cell at absolute location
+    /// `row`.
+    pub fn constrain_instance(
+        &mut self,
+        cell: Cell,
+        instance: Column<Instance>,
+        row: usize,
+    ) -> Result<(), Error> {
+        self.region.constrain_instance(cell, instance, row)
+    }
+
     /// Assign a fixed value.
     ///
     /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.

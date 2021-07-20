@@ -71,6 +71,15 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         offset: usize,
     ) -> Result<(Cell, Option<F>), Error>;
 
+    /// Constrain a cell to equal an instance column's cell at absolute location
+    /// `row`.
+    fn constrain_instance(
+        &mut self,
+        cell: Cell,
+        instance: Column<Instance>,
+        row: usize,
+    ) -> Result<(), Error>;
+
     /// Assign a fixed value
     fn assign_fixed<'v>(
         &'v mut self,
@@ -171,6 +180,15 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
             },
             None,
         ))
+    }
+
+    fn constrain_instance<'v>(
+        &mut self,
+        _cell: Cell,
+        _instance: Column<Instance>,
+        _row: usize,
+    ) -> Result<(), Error> {
+        Ok(())
     }
 
     fn assign_fixed<'v>(
