@@ -305,6 +305,16 @@ impl DiversifierKey {
             .unwrap();
         Diversifier(enc.to_bytes_le().try_into().unwrap())
     }
+
+    /// Return the raw bytes of the diversifier key
+    pub fn to_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
+
+    /// Construct a diversifier key from bytes 
+    pub fn from_bytes(bytes: [u8; 32]) -> Self {
+        DiversifierKey(bytes)
+    }
 }
 
 /// A diversifier that can be used to derive a specific [`Address`] from a
@@ -398,6 +408,14 @@ impl From<&FullViewingKey> for IncomingViewingKey {
 }
 
 impl IncomingViewingKey {
+    /// Serializes an Orchard incoming viewing key to its raw encoding
+    pub fn to_bytes(&self) -> [u8; 64] {
+        let mut result = [0u8; 64];
+        result.copy_from_slice(self.dk.to_bytes());
+        result[32..].copy_from_slice(&self.ivk.0.to_bytes());
+        result
+    }
+
     /// Parses an Orchard incoming viewing key from its raw encoding.
     pub fn from_bytes(bytes: &[u8; 64]) -> CtOption<Self> {
         NonZeroPallasBase::from_bytes(bytes[32..].try_into().unwrap()).map(|ivk| {

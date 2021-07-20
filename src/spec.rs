@@ -73,6 +73,10 @@ impl NonZeroPallasBase {
         pallas::Base::from_bytes(bytes).and_then(NonZeroPallasBase::from_base)
     }
 
+    pub(crate) fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
+    }
+
     pub(crate) fn from_base(b: pallas::Base) -> CtOption<Self> {
         CtOption::new(NonZeroPallasBase(b), !b.ct_is_zero())
     }
