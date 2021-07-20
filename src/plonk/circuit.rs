@@ -44,8 +44,8 @@ impl<C: ColumnType> Ord for Column<C> {
         // orderings.
         match (self.column_type.into(), other.column_type.into()) {
             // Indices are assigned within column types.
-            (Any::Advice, Any::Advice)
-            | (Any::Instance, Any::Instance)
+            (Any::Instance, Any::Instance)
+            | (Any::Advice, Any::Advice)
             | (Any::Fixed, Any::Fixed) => self.index.cmp(&other.index),
             // Across column types, sort Instance < Advice < Fixed.
             (Any::Instance, Any::Advice)
