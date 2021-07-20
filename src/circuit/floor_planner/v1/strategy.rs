@@ -1,6 +1,7 @@
 use std::{
     cmp,
     collections::{BTreeSet, HashMap},
+    ops::Range,
 };
 
 use super::RegionShape;
@@ -31,24 +32,39 @@ impl PartialOrd for AllocatedRegion {
 }
 
 /// An area of empty space within a column.
-struct EmptySpace {
-    // The starting position of the empty space.
+pub(crate) struct EmptySpace {
+    // The starting position (inclusive) of the empty space.
     start: usize,
-    // The number of rows of empty space, or `None` if unbounded.
+    // The ending position (exclusive) of the empty space, or `None` if unbounded.
     end: Option<usize>,
+}
+
+impl EmptySpace {
+    pub(crate) fn range(&self) -> Option<Range<usize>> {
+        self.end.map(|end| self.start..end)
+    }
 }
 
 /// Allocated rows within a column.
 ///
 /// This is a set of [a_start, a_end) pairs representing disjoint allocated intervals.
 #[derive(Clone, Default, Debug)]
-struct Allocations(BTreeSet<AllocatedRegion>);
+pub struct Allocations(BTreeSet<AllocatedRegion>);
 
 impl Allocations {
+    /// Returns the row that forms the unbounded unallocated interval [row, None).
+    pub(crate) fn unbounded_interval_start(&self) -> usize {
+        self.0
+            .iter()
+            .last()
+            .map(|r| r.start + r.length)
+            .unwrap_or(0)
+    }
+
     /// Return all the *unallocated* nonempty intervals intersecting [start, end).
     ///
     /// `end = None` represents an unbounded end.
-    fn free_intervals(
+    pub(crate) fn free_intervals(
         &self,
         start: usize,
         end: Option<usize>,
@@ -146,11 +162,16 @@ fn first_fit_region(
 
 /// Positions the regions starting at the earliest row for which none of the columns are
 /// in use, taking into account gaps between earlier regions.
-fn slot_in(region_shapes: Vec<RegionShape>) -> Vec<(RegionStart, RegionShape)> {
+fn slot_in(
+    region_shapes: Vec<RegionShape>,
+) -> (
+    Vec<(RegionStart, RegionShape)>,
+    HashMap<Column<Any>, Allocations>,
+) {
     // Tracks the empty regions for each column.
     let mut column_allocations: HashMap<Column<Any>, Allocations> = Default::default();
 
-    region_shapes
+    let regions = region_shapes
         .into_iter()
         .map(|region| {
             // Sort the region's columns to ensure determinism.
@@ -170,11 +191,16 @@ fn slot_in(region_shapes: Vec<RegionShape>) -> Vec<(RegionStart, RegionShape)> {
 
             (region_start.into(), region)
         })
-        .collect()
+        .collect();
+
+    // Return the column allocations for potential further processing.
+    (regions, column_allocations)
 }
 
 /// Sorts the regions by advice area and then lays them out with the [`slot_in`] strategy.
-pub fn slot_in_biggest_advice_first(region_shapes: Vec<RegionShape>) -> Vec<RegionStart> {
+pub fn slot_in_biggest_advice_first(
+    region_shapes: Vec<RegionShape>,
+) -> (Vec<RegionStart>, HashMap<Column<Any>, Allocations>) {
     let mut sorted_regions: Vec<_> = region_shapes.into_iter().collect();
     sorted_regions.sort_unstable_by_key(|shape| {
         // Count the number of advice columns
@@ -189,11 +215,13 @@ pub fn slot_in_biggest_advice_first(region_shapes: Vec<RegionShape>) -> Vec<Regi
     sorted_regions.reverse();
 
     // Lay out the sorted regions.
-    let mut regions = slot_in(sorted_regions);
+    let (mut regions, column_allocations) = slot_in(sorted_regions);
 
     // Un-sort the regions so they match the original indexing.
     regions.sort_unstable_by_key(|(_, region)| region.region_index().0);
-    regions.into_iter().map(|(start, _)| start).collect()
+    let regions = regions.into_iter().map(|(start, _)| start).collect();
+
+    (regions, column_allocations)
 }
 
 #[test]
@@ -221,6 +249,7 @@ fn test_slot_in() {
     ];
     assert_eq!(
         slot_in(regions)
+            .0
             .into_iter()
             .map(|(i, _)| i)
             .collect::<Vec<_>>(),
