@@ -56,6 +56,10 @@ pub fn create_proof<
     let mut meta = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut meta);
 
+    // Selector optimizations cannot be applied here; use the ConstraintSystem
+    // from the verification key.
+    let meta = &pk.vk.cs;
+
     struct InstanceSingle<C: CurveAffine> {
         pub instance_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
         pub instance_polys: Vec<Polynomial<C::Scalar, Coeff>>,
@@ -431,6 +435,7 @@ pub fn create_proof<
                         gate.polynomials().iter().map(move |poly| {
                             poly.evaluate(
                                 &|scalar| pk.vk.domain.constant_extended(scalar),
+                                &|_| panic!("virtual selectors are removed during optimization"),
                                 &|_, column_index, rotation| {
                                     pk.vk
                                         .domain

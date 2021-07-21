@@ -228,7 +228,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct Selector(pub(crate) Column<Fixed>);
+pub struct Selector(pub(crate) usize);
 
 impl Selector {
     /// Enable this selector at the given offset within the given region.
@@ -540,6 +540,8 @@ pub trait Circuit<F: Field> {
 pub enum Expression<F> {
     /// This is a constant polynomial
     Constant(F),
+    /// This is a virtual selector
+    Selector(Selector),
     /// This is a fixed column queried at a certain relative location
     Fixed {
         /// Query index
@@ -581,6 +583,7 @@ impl<F: Field> Expression<F> {
     pub fn evaluate<T>(
         &self,
         constant: &impl Fn(F) -> T,
+        selector_column: &impl Fn(Selector) -> T,
         fixed_column: &impl Fn(usize, usize, Rotation) -> T,
         advice_column: &impl Fn(usize, usize, Rotation) -> T,
         instance_column: &impl Fn(usize, usize, Rotation) -> T,
@@ -590,6 +593,7 @@ impl<F: Field> Expression<F> {
     ) -> T {
         match self {
             Expression::Constant(scalar) => constant(*scalar),
+            Expression::Selector(selector) => selector_column(*selector),
             Expression::Fixed {
                 query_index,
                 column_index,
@@ -608,6 +612,7 @@ impl<F: Field> Expression<F> {
             Expression::Sum(a, b) => {
                 let a = a.evaluate(
                     constant,
+                    selector_column,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -617,6 +622,7 @@ impl<F: Field> Expression<F> {
                 );
                 let b = b.evaluate(
                     constant,
+                    selector_column,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -629,6 +635,7 @@ impl<F: Field> Expression<F> {
             Expression::Product(a, b) => {
                 let a = a.evaluate(
                     constant,
+                    selector_column,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -638,6 +645,7 @@ impl<F: Field> Expression<F> {
                 );
                 let b = b.evaluate(
                     constant,
+                    selector_column,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -650,6 +658,7 @@ impl<F: Field> Expression<F> {
             Expression::Scaled(a, f) => {
                 let a = a.evaluate(
                     constant,
+                    selector_column,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -666,6 +675,7 @@ impl<F: Field> Expression<F> {
     pub fn degree(&self) -> usize {
         match self {
             Expression::Constant(_) => 0,
+            Expression::Selector(_) => 1,
             Expression::Fixed { .. } => 1,
             Expression::Advice { .. } => 1,
             Expression::Instance { .. } => 1,
@@ -805,6 +815,8 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) num_fixed_columns: usize,
     pub(crate) num_advice_columns: usize,
     pub(crate) num_instance_columns: usize,
+    pub(crate) num_selectors: usize,
+    pub(crate) selector_map: Vec<Column<Fixed>>,
     pub(crate) gates: Vec<Gate<F>>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
     // Contains an integer for each advice column
@@ -834,6 +846,8 @@ pub struct PinnedConstraintSystem<'a, F: Field> {
     num_fixed_columns: &'a usize,
     num_advice_columns: &'a usize,
     num_instance_columns: &'a usize,
+    num_selectors: &'a usize,
+    selector_map: &'a [Column<Fixed>],
     gates: PinnedGates<'a, F>,
     advice_queries: &'a Vec<(Column<Advice>, Rotation)>,
     instance_queries: &'a Vec<(Column<Instance>, Rotation)>,
@@ -860,6 +874,8 @@ impl<F: Field> Default for ConstraintSystem<F> {
             num_fixed_columns: 0,
             num_advice_columns: 0,
             num_instance_columns: 0,
+            num_selectors: 0,
+            selector_map: vec![],
             gates: vec![],
             fixed_queries: Vec::new(),
             advice_queries: Vec::new(),
@@ -882,6 +898,8 @@ impl<F: Field> ConstraintSystem<F> {
             num_fixed_columns: &self.num_fixed_columns,
             num_advice_columns: &self.num_advice_columns,
             num_instance_columns: &self.num_instance_columns,
+            num_selectors: &self.num_selectors,
+            selector_map: &self.selector_map,
             gates: PinnedGates(&self.gates),
             fixed_queries: &self.fixed_queries,
             advice_queries: &self.advice_queries,
@@ -1072,11 +1090,80 @@ impl<F: Field> ConstraintSystem<F> {
         });
     }
 
+    /// This will compress selectors together depending on their provided
+    /// assignments. This `ConstraintSystem` will then be modified to add new
+    /// fixed columns (representing the actual selectors) and will return the
+    /// polynomials for those columns. Finally, an internal map is updated to
+    /// find which fixed column corresponds with a given `Selector`.
+    ///
+    /// Do not call this twice. Yes, this should be a builder pattern instead.
+    pub(crate) fn compress_selectors(mut self, selectors: Vec<Vec<bool>>) -> (Self, Vec<Vec<F>>)
+    where
+        F: FieldExt,
+    {
+        // Note: This is a stub for an actual optimization step. For now, just
+        // make new columns like we were doing already.
+        assert_eq!(selectors.len(), self.num_selectors);
+
+        // Create self.num_selectors new fixed columns
+        let mut queries = vec![];
+        for _ in 0..self.num_selectors {
+            let column = self.fixed_column();
+            // Selectors are only queried here.
+            let query = self.query_fixed_index(column, Rotation::cur());
+            queries.push(query);
+            self.selector_map.push(column);
+        }
+
+        let polys = selectors
+            .into_iter()
+            .map(|bools| {
+                bools
+                    .into_iter()
+                    .map(|coeff| if coeff { F::one() } else { F::zero() })
+                    .collect()
+            })
+            .collect();
+
+        // Substitute selectors for the real fixed columns in all gates
+        for gate in self.gates.iter_mut().flat_map(|gate| gate.polys.iter_mut()) {
+            let selector_map = &self.selector_map;
+            *gate = gate.evaluate(
+                &|constant| Expression::Constant(constant),
+                &|selector| Expression::Fixed {
+                    query_index: queries[selector.0],
+                    column_index: selector_map[selector.0].index(),
+                    rotation: Rotation::cur(),
+                },
+                &|query_index, column_index, rotation| Expression::Fixed {
+                    query_index,
+                    column_index,
+                    rotation,
+                },
+                &|query_index, column_index, rotation| Expression::Advice {
+                    query_index,
+                    column_index,
+                    rotation,
+                },
+                &|query_index, column_index, rotation| Expression::Instance {
+                    query_index,
+                    column_index,
+                    rotation,
+                },
+                &|a, b| a + b,
+                &|a, b| a * b,
+                &|a, f| a * f,
+            );
+        }
+
+        (self, polys)
+    }
+
     /// Allocate a new selector.
     pub fn selector(&mut self) -> Selector {
-        // TODO: Track selectors separately, and combine selectors where possible.
-        // https://github.com/zcash/halo2/issues/116
-        Selector(self.fixed_column())
+        let index = self.num_selectors;
+        self.num_selectors += 1;
+        Selector(index)
     }
 
     /// Allocate a new fixed column
@@ -1204,13 +1291,8 @@ impl<'a, F: Field> VirtualCells<'a, F> {
 
     /// Query a selector at the current position.
     pub fn query_selector(&mut self, selector: Selector) -> Expression<F> {
-        // Selectors are always queried at the current row.
         self.queried_selectors.push(selector);
-        Expression::Fixed {
-            query_index: self.meta.query_fixed_index(selector.0, Rotation::cur()),
-            column_index: (selector.0).index,
-            rotation: Rotation::cur(),
-        }
+        Expression::Selector(selector)
     }
 
     /// Query a fixed column at a relative position

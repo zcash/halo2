@@ -44,6 +44,7 @@ where
 struct Assembly<F: Field> {
     fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
     permutation: permutation::keygen::Assembly,
+    selectors: Vec<Vec<bool>>,
     // A range of available rows for assignment and copies.
     usable_rows: RangeTo<usize>,
     _marker: std::marker::PhantomData<F>,
@@ -62,12 +63,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         // Do nothing; we don't care about regions in this context.
     }
 
-    fn enable_selector<A, AR>(
-        &mut self,
-        annotation: A,
-        selector: &Selector,
-        row: usize,
-    ) -> Result<(), Error>
+    fn enable_selector<A, AR>(&mut self, _: A, selector: &Selector, row: usize) -> Result<(), Error>
     where
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -75,12 +71,10 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         if !self.usable_rows.contains(&row) {
             return Err(Error::BoundsFailure);
         }
-        // Selectors are just fixed columns.
-        // TODO: Ensure that the default for a selector's cells is always zero, if we
-        // alter the proving system to change the global default.
-        // TODO: Implement selector combining optimization
-        // https://github.com/zcash/halo2/issues/116
-        self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
+
+        self.selectors[selector.0][row] = true;
+
+        Ok(())
     }
 
     fn query_instance(&self, _: Column<Instance>, row: usize) -> Result<Option<F>, Error> {
@@ -181,6 +175,7 @@ where
     let mut assembly: Assembly<C::Scalar> = Assembly {
         fixed: vec![domain.empty_lagrange_assigned(); cs.num_fixed_columns],
         permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
+        selectors: vec![vec![false; params.n as usize]; cs.num_selectors],
         usable_rows: ..params.n as usize - (cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
     };
@@ -193,7 +188,13 @@ where
         cs.constants.clone(),
     )?;
 
-    let fixed = batch_invert_assigned(assembly.fixed);
+    let mut fixed = batch_invert_assigned(assembly.fixed);
+    let (cs, selector_polys) = cs.compress_selectors(assembly.selectors);
+    fixed.extend(
+        selector_polys
+            .into_iter()
+            .map(|poly| domain.lagrange_from_vec(poly)),
+    );
 
     let permutation_vk = assembly
         .permutation
@@ -234,6 +235,7 @@ where
     let mut assembly: Assembly<C::Scalar> = Assembly {
         fixed: vec![vk.domain.empty_lagrange_assigned(); vk.cs.num_fixed_columns],
         permutation: permutation::keygen::Assembly::new(params.n as usize, &vk.cs.permutation),
+        selectors: vec![vec![false; params.n as usize]; cs.num_selectors],
         usable_rows: ..params.n as usize - (vk.cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
     };
@@ -246,7 +248,13 @@ where
         cs.constants.clone(),
     )?;
 
-    let fixed = batch_invert_assigned(assembly.fixed);
+    let mut fixed = batch_invert_assigned(assembly.fixed);
+    let (cs, selector_polys) = cs.compress_selectors(assembly.selectors);
+    fixed.extend(
+        selector_polys
+            .into_iter()
+            .map(|poly| vk.domain.lagrange_from_vec(poly)),
+    );
 
     let fixed_polys: Vec<_> = fixed
         .iter()

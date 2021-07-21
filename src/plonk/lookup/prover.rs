@@ -101,6 +101,7 @@ impl<F: FieldExt> Argument<F> {
                 .map(|expression| {
                     expression.evaluate(
                         &|scalar| pk.vk.domain.constant_lagrange(scalar),
+                        &|_| panic!("virtual selectors are removed during optimization"),
                         &|_, column_index, rotation| {
                             fixed_values[column_index].clone().rotate(rotation)
                         },
@@ -134,6 +135,7 @@ impl<F: FieldExt> Argument<F> {
                 .map(|expression| {
                     expression.evaluate(
                         &|scalar| pk.vk.domain.constant_extended(scalar),
+                        &|_| panic!("virtual selectors are removed during optimization"),
                         &|_, column_index, rotation| {
                             pk.vk
                                 .domain
