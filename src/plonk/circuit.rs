@@ -1125,13 +1125,15 @@ impl<F: Field> ConstraintSystem<F> {
             })
             .collect();
 
-        // Substitute selectors for the real fixed columns in all gates
-        for gate in self.gates.iter_mut().flat_map(|gate| gate.polys.iter_mut()) {
-            let selector_map = &self.selector_map;
-            *gate = gate.evaluate(
+        fn replace_selectors<F: FieldExt>(
+            expr: &mut Expression<F>,
+            selector_map: &[Column<Fixed>],
+            selector_queries: &[usize],
+        ) {
+            *expr = expr.evaluate(
                 &|constant| Expression::Constant(constant),
                 &|selector| Expression::Fixed {
-                    query_index: queries[selector.0],
+                    query_index: selector_queries[selector.0],
                     column_index: selector_map[selector.0].index(),
                     rotation: Rotation::cur(),
                 },
@@ -1154,6 +1156,22 @@ impl<F: Field> ConstraintSystem<F> {
                 &|a, b| a * b,
                 &|a, f| a * f,
             );
+        }
+
+        // Substitute selectors for the real fixed columns in all gates
+        for expr in self.gates.iter_mut().flat_map(|gate| gate.polys.iter_mut()) {
+            replace_selectors(expr, &self.selector_map, &queries);
+        }
+
+        // Substitute selectors for the real fixed columns in all lookup
+        // expressions
+        for expr in self.lookups.iter_mut().flat_map(|lookup| {
+            lookup
+                .input_expressions
+                .iter_mut()
+                .chain(lookup.table_expressions.iter_mut())
+        }) {
+            replace_selectors(expr, &self.selector_map, &queries);
         }
 
         (self, polys)
