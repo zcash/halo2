@@ -5,7 +5,7 @@ use std::mem;
 use group::{Curve, GroupEncoding};
 use halo2::{
     circuit::{floor_planner, Layouter},
-    plonk::{self, Advice, Column, Expression, Fixed, Instance as InstanceColumn, Selector},
+    plonk::{self, Advice, Column, Expression, Instance as InstanceColumn, Selector},
     poly::Rotation,
     transcript::{Blake2bRead, Blake2bWrite},
 };
@@ -84,7 +84,6 @@ const ENABLE_OUTPUT: usize = 8;
 #[derive(Clone, Debug)]
 pub struct Config {
     primary: Column<InstanceColumn>,
-    constants: Column<Fixed>,
     q_orchard: Selector,
     advices: [Column<Advice>; 10],
     ecc_config: EccConfig,
@@ -195,10 +194,6 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let primary = meta.instance_column();
         meta.enable_equality(primary.into());
 
-        // Shared fixed column used to load constants
-        let constants = meta.fixed_column();
-        meta.enable_constant(constants);
-
         // Permutation over all advice columns.
         for advice in advices.iter() {
             meta.enable_equality((*advice).into());
@@ -221,6 +216,10 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         ];
         let rc_a = lagrange_coeffs[2..5].try_into().unwrap();
         let rc_b = lagrange_coeffs[5..8].try_into().unwrap();
+
+        // Also use the first Lagrange coefficient column for loading global constants.
+        // It's free real estate :)
+        meta.enable_constant(lagrange_coeffs[0]);
 
         // We have a lot of free space in the right-most advice columns; use one of them
         // for all of our range checks.
@@ -294,7 +293,6 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
         Config {
             primary,
-            constants,
             q_orchard,
             advices,
             ecc_config,
