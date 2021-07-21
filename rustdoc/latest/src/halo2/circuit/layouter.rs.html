@@ -210,6 +210,41 @@
 <span id="195">195</span>
 <span id="196">196</span>
 <span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Implementations of common circuit layouters.</span>
 
@@ -271,6 +306,20 @@
         <span class="ident">to</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> (<span class="kw">dyn</span> <span class="ident">FnMut</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cell</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 
+    <span class="doccomment">/// Assigns a constant value to the column `advice` at `offset` within this region.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The constant value will be assigned to a cell within one of the fixed columns</span>
+    <span class="doccomment">/// configured via `ConstraintSystem::enable_constant`.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Returns the advice cell that has been equality-constrained to the constant.</span>
+    <span class="kw">fn</span> <span class="ident">assign_advice_from_constant</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">annotation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
+        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+        <span class="ident">offset</span>: <span class="ident">usize</span>,
+        <span class="ident">constant</span>: <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cell</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+
     <span class="doccomment">/// Assign the value of the instance column&#39;s cell at absolute location</span>
     <span class="doccomment">/// `row` to the column `advice` at `offset` within this region.</span>
     <span class="doccomment">///</span>
@@ -292,6 +341,11 @@
         <span class="ident">offset</span>: <span class="ident">usize</span>,
         <span class="ident">to</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> (<span class="kw">dyn</span> <span class="ident">FnMut</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cell</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Constrains a cell to have a constant value.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Returns an error if the cell is in a column where equality has not been enabled.</span>
+    <span class="kw">fn</span> <span class="ident">constrain_constant</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">cell</span>: <span class="ident">Cell</span>, <span class="ident">constant</span>: <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Constraint two cells to have the same value.</span>
     <span class="doccomment">///</span>
@@ -365,6 +419,17 @@
         })
     }
 
+    <span class="kw">fn</span> <span class="ident">assign_advice_from_constant</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">annotation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
+        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+        <span class="ident">offset</span>: <span class="ident">usize</span>,
+        <span class="ident">constant</span>: <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cell</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="comment">// The rest is identical to witnessing an advice cell.</span>
+        <span class="self">self</span>.<span class="ident">assign_advice</span>(<span class="ident">annotation</span>, <span class="ident">column</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">constant</span>))
+    }
+
     <span class="kw">fn</span> <span class="ident">assign_advice_from_instance</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="kw">_</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
@@ -401,6 +466,11 @@
             <span class="ident">row_offset</span>: <span class="ident">offset</span>,
             <span class="ident">column</span>: <span class="ident">column</span>.<span class="ident">into</span>(),
         })
+    }
+
+    <span class="kw">fn</span> <span class="ident">constrain_constant</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_cell</span>: <span class="ident">Cell</span>, <span class="ident">_constant</span>: <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="comment">// Global constants don&#39;t affect the region shape.</span>
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">fn</span> <span class="ident">constrain_equal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_left</span>: <span class="ident">Cell</span>, <span class="ident">_right</span>: <span class="ident">Cell</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {

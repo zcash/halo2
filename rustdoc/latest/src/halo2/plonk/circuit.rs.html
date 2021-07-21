@@ -1244,6 +1244,29 @@
 <span id="1229">1229</span>
 <span id="1230">1230</span>
 <span id="1231">1231</span>
+<span id="1232">1232</span>
+<span id="1233">1233</span>
+<span id="1234">1234</span>
+<span id="1235">1235</span>
+<span id="1236">1236</span>
+<span id="1237">1237</span>
+<span id="1238">1238</span>
+<span id="1239">1239</span>
+<span id="1240">1240</span>
+<span id="1241">1241</span>
+<span id="1242">1242</span>
+<span id="1243">1243</span>
+<span id="1244">1244</span>
+<span id="1245">1245</span>
+<span id="1246">1246</span>
+<span id="1247">1247</span>
+<span id="1248">1248</span>
+<span id="1249">1249</span>
+<span id="1250">1250</span>
+<span id="1251">1251</span>
+<span id="1252">1252</span>
+<span id="1253">1253</span>
+<span id="1254">1254</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">core::cmp::max</span>;
 <span class="kw">use</span> <span class="ident">core::ops</span>::{<span class="ident">Add</span>, <span class="ident">Mul</span>};
@@ -1291,16 +1314,16 @@
         <span class="comment">// orderings.</span>
         <span class="kw">match</span> (<span class="self">self</span>.<span class="ident">column_type</span>.<span class="ident">into</span>(), <span class="ident">other</span>.<span class="ident">column_type</span>.<span class="ident">into</span>()) {
             <span class="comment">// Indices are assigned within column types.</span>
-            (<span class="ident">Any::Advice</span>, <span class="ident">Any::Advice</span>)
-            <span class="op">|</span> (<span class="ident">Any::Instance</span>, <span class="ident">Any::Instance</span>)
+            (<span class="ident">Any::Instance</span>, <span class="ident">Any::Instance</span>)
+            <span class="op">|</span> (<span class="ident">Any::Advice</span>, <span class="ident">Any::Advice</span>)
             <span class="op">|</span> (<span class="ident">Any::Fixed</span>, <span class="ident">Any::Fixed</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">index</span>.<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">other</span>.<span class="ident">index</span>),
-            <span class="comment">// Across column types, sort Advice &lt; Instance &lt; Fixed.</span>
-            (<span class="ident">Any::Advice</span>, <span class="ident">Any::Instance</span>)
+            <span class="comment">// Across column types, sort Instance &lt; Advice &lt; Fixed.</span>
+            (<span class="ident">Any::Instance</span>, <span class="ident">Any::Advice</span>)
             <span class="op">|</span> (<span class="ident">Any::Advice</span>, <span class="ident">Any::Fixed</span>)
             <span class="op">|</span> (<span class="ident">Any::Instance</span>, <span class="ident">Any::Fixed</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">std::cmp::Ordering::Less</span>,
             (<span class="ident">Any::Fixed</span>, <span class="ident">Any::Instance</span>)
             <span class="op">|</span> (<span class="ident">Any::Fixed</span>, <span class="ident">Any::Advice</span>)
-            <span class="op">|</span> (<span class="ident">Any::Instance</span>, <span class="ident">Any::Advice</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">std::cmp::Ordering::Greater</span>,
+            <span class="op">|</span> (<span class="ident">Any::Advice</span>, <span class="ident">Any::Instance</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">std::cmp::Ordering::Greater</span>,
         }
     }
 }
@@ -1742,6 +1765,9 @@
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">FloorPlanner</span> {
     <span class="doccomment">/// Given the provided `cs`, synthesize the given circuit.</span>
     <span class="doccomment">///</span>
+    <span class="doccomment">/// `constants` is the list of fixed columns that the layouter may use to assign</span>
+    <span class="doccomment">/// global constant values. These columns will all have been equality-enabled.</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// Internally, a floor planner will perform the following operations:</span>
     <span class="doccomment">/// - Instantiate a [`Layouter`] for this floor planner.</span>
     <span class="doccomment">/// - Perform any necessary setup or measurement tasks, which may involve one or more</span>
@@ -1751,6 +1777,7 @@
         <span class="ident">cs</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CS</span>,
         <span class="ident">circuit</span>: <span class="kw-2">&amp;</span><span class="ident">C</span>,
         <span class="ident">config</span>: <span class="ident">C::Config</span>,
+        <span class="ident">constants</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
 }
 
@@ -2064,6 +2091,10 @@
     <span class="comment">// input expressions and a sequence of table expressions involved in the lookup.</span>
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">lookups</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">lookup::Argument</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 
+    <span class="comment">// Vector of fixed columns, which can be used to store constant values</span>
+    <span class="comment">// that are copied into advice columns.</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">constants</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">minimum_degree</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
 }
 
@@ -2079,6 +2110,7 @@
     <span class="ident">fixed_queries</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>, <span class="ident">Rotation</span>)<span class="op">&gt;</span>,
     <span class="ident">permutation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">permutation::Argument</span>,
     <span class="ident">lookups</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">lookup::Argument</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">constants</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">minimum_degree</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
 }
 
@@ -2105,6 +2137,7 @@
             <span class="ident">instance_queries</span>: <span class="ident">Vec::new</span>(),
             <span class="ident">permutation</span>: <span class="ident">permutation::Argument::new</span>(),
             <span class="ident">lookups</span>: <span class="ident">Vec::new</span>(),
+            <span class="ident">constants</span>: <span class="macro">vec!</span>[],
             <span class="ident">minimum_degree</span>: <span class="prelude-val">None</span>,
         }
     }
@@ -2125,7 +2158,20 @@
             <span class="ident">instance_queries</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">instance_queries</span>,
             <span class="ident">permutation</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permutation</span>,
             <span class="ident">lookups</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookups</span>,
+            <span class="ident">constants</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">constants</span>,
             <span class="ident">minimum_degree</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">minimum_degree</span>,
+        }
+    }
+
+    <span class="doccomment">/// Enables this fixed column to be used for global constant assignments.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # Side-effects</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The column will be equality-enabled.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">enable_constant</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>) {
+        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">constants</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">column</span>) {
+            <span class="self">self</span>.<span class="ident">constants</span>.<span class="ident">push</span>(<span class="ident">column</span>);
+            <span class="self">self</span>.<span class="ident">enable_equality</span>(<span class="ident">column</span>.<span class="ident">into</span>());
         }
     }
 

@@ -273,6 +273,108 @@
 <span id="258">258</span>
 <span id="259">259</span>
 <span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">std::cmp</span>;
 <span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
@@ -305,8 +407,9 @@
         <span class="ident">cs</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CS</span>,
         <span class="ident">circuit</span>: <span class="kw-2">&amp;</span><span class="ident">C</span>,
         <span class="ident">config</span>: <span class="ident">C::Config</span>,
+        <span class="ident">constants</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">layouter</span> <span class="op">=</span> <span class="ident">SingleChipLayouter::new</span>(<span class="ident">cs</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">layouter</span> <span class="op">=</span> <span class="ident">SingleChipLayouter::new</span>(<span class="ident">cs</span>, <span class="ident">constants</span>)<span class="question-mark">?</span>;
         <span class="ident">circuit</span>.<span class="ident">synthesize</span>(<span class="ident">config</span>, <span class="ident">layouter</span>)
     }
 }
@@ -314,6 +417,7 @@
 <span class="doccomment">/// A [`Layouter`] for a single-chip circuit.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SingleChipLayouter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="ident">cs</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">CS</span>,
+    <span class="ident">constants</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Stores the starting row for each region.</span>
     <span class="ident">regions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RegionStart</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Stores the first empty row for each column.</span>
@@ -332,9 +436,10 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">SingleChipLayouter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Creates a new single-chip layouter.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">cs</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">CS</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">cs</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">CS</span>, <span class="ident">constants</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="ident">SingleChipLayouter</span> {
             <span class="ident">cs</span>,
+            <span class="ident">constants</span>,
             <span class="ident">regions</span>: <span class="macro">vec!</span>[],
             <span class="ident">columns</span>: <span class="ident">HashMap::default</span>(),
             <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
@@ -419,6 +524,8 @@
 <span class="kw">struct</span> <span class="ident">SingleChipLayouterRegion</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="ident">layouter</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="kw-2">mut</span> <span class="ident">SingleChipLayouter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span>,
     <span class="ident">region_index</span>: <span class="ident">RegionIndex</span>,
+    <span class="comment">// The index of the next available row in the first constants column.</span>
+    <span class="ident">next_constant_row</span>: <span class="ident">usize</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">fmt::Debug</span>
@@ -437,6 +544,7 @@
         <span class="ident">SingleChipLayouterRegion</span> {
             <span class="ident">layouter</span>,
             <span class="ident">region_index</span>,
+            <span class="ident">next_constant_row</span>: <span class="number">0</span>,
         }
     }
 }
@@ -478,6 +586,19 @@
         })
     }
 
+    <span class="kw">fn</span> <span class="ident">assign_advice_from_constant</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">annotation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
+        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+        <span class="ident">offset</span>: <span class="ident">usize</span>,
+        <span class="ident">constant</span>: <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cell</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">advice</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_advice</span>(<span class="ident">annotation</span>, <span class="ident">column</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">constant</span>))<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">constrain_constant</span>(<span class="ident">advice</span>, <span class="ident">constant</span>)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(<span class="ident">advice</span>)
+    }
+
     <span class="kw">fn</span> <span class="ident">assign_advice_from_instance</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">annotation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
@@ -509,18 +630,46 @@
         <span class="ident">offset</span>: <span class="ident">usize</span>,
         <span class="ident">to</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> (<span class="kw">dyn</span> <span class="ident">FnMut</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cell</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">layouter</span>.<span class="ident">cs</span>.<span class="ident">assign_fixed</span>(
-            <span class="ident">annotation</span>,
-            <span class="ident">column</span>,
-            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">layouter</span>.<span class="ident">regions</span>[<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">region_index</span>] <span class="op">+</span> <span class="ident">offset</span>,
-            <span class="ident">to</span>,
-        )<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">layouter</span>.<span class="ident">regions</span>[<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">region_index</span>] <span class="op">+</span> <span class="ident">offset</span>;
+
+        <span class="self">self</span>.<span class="ident">layouter</span>.<span class="ident">cs</span>.<span class="ident">assign_fixed</span>(<span class="ident">annotation</span>, <span class="ident">column</span>, <span class="ident">row</span>, <span class="ident">to</span>)<span class="question-mark">?</span>;
+
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">c</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">layouter</span>.<span class="ident">constants</span>.<span class="ident">first</span>() {
+            <span class="kw">if</span> <span class="ident">c</span> <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">column</span> {
+                <span class="comment">// Ensure that the next row we will assign a constant to is always after any</span>
+                <span class="comment">// prior assignments (for simplicity).</span>
+                <span class="self">self</span>.<span class="ident">next_constant_row</span> <span class="op">=</span> <span class="ident">cmp::max</span>(<span class="self">self</span>.<span class="ident">next_constant_row</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>);
+            }
+        }
 
         <span class="prelude-val">Ok</span>(<span class="ident">Cell</span> {
             <span class="ident">region_index</span>: <span class="self">self</span>.<span class="ident">region_index</span>,
             <span class="ident">row_offset</span>: <span class="ident">offset</span>,
             <span class="ident">column</span>: <span class="ident">column</span>.<span class="ident">into</span>(),
         })
+    }
+
+    <span class="kw">fn</span> <span class="ident">constrain_constant</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">cell</span>: <span class="ident">Cell</span>, <span class="ident">constant</span>: <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">layouter</span>.<span class="ident">constants</span>.<span class="ident">is_empty</span>() {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::NotEnoughColumnsForConstants</span>);
+        }
+
+        <span class="comment">// For the simple layouter, just assign the fixed constants inside the region</span>
+        <span class="comment">// using the first constants column. self.next_constant_row is updated by this</span>
+        <span class="comment">// function call.</span>
+        <span class="kw">let</span> <span class="ident">fixed</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_fixed</span>(
+            <span class="kw-2">&amp;</span><span class="op">|</span><span class="op">|</span> <span class="string">&quot;constant&quot;</span>.<span class="ident">into</span>(),
+            <span class="self">self</span>.<span class="ident">layouter</span>.<span class="ident">constants</span>[<span class="number">0</span>],
+            <span class="comment">// Convert the absolute row into a relative offset within this region, but</span>
+            <span class="comment">// always at an offset that is not before this region (taking advantage of the</span>
+            <span class="comment">// fact that for this single-pass layouter, regions are always laid out in</span>
+            <span class="comment">// increasing row order).</span>
+            <span class="self">self</span>.<span class="ident">next_constant_row</span>
+                .<span class="ident">saturating_sub</span>(<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">layouter</span>.<span class="ident">regions</span>[<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">region_index</span>]),
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">constant</span>),
+        )<span class="question-mark">?</span>;
+
+        <span class="self">self</span>.<span class="ident">constrain_equal</span>(<span class="ident">cell</span>, <span class="ident">fixed</span>)
     }
 
     <span class="kw">fn</span> <span class="ident">constrain_equal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">left</span>: <span class="ident">Cell</span>, <span class="ident">right</span>: <span class="ident">Cell</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
@@ -532,6 +681,61 @@
         )<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">mod</span> <span class="ident">tests</span> {
+    <span class="kw">use</span> <span class="ident">pasta_curves::vesta</span>;
+
+    <span class="kw">use</span> <span class="kw">super</span><span class="ident">::SimpleFloorPlanner</span>;
+    <span class="kw">use</span> <span class="kw">crate</span>::{
+        <span class="ident">dev::MockProver</span>,
+        <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">Error</span>},
+    };
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">not_enough_columns_for_constants</span>() {
+        <span class="kw">struct</span> <span class="ident">MyCircuit</span> {}
+
+        <span class="kw">impl</span> <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">vesta::Scalar</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyCircuit</span> {
+            <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>;
+            <span class="kw">type</span> <span class="ident">FloorPlanner</span> <span class="op">=</span> <span class="ident">SimpleFloorPlanner</span>;
+
+            <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+                <span class="ident">MyCircuit</span> {}
+            }
+
+            <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">crate</span><span class="ident">::plonk::ConstraintSystem</span><span class="op">&lt;</span><span class="ident">vesta::Scalar</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Config</span> {
+                <span class="ident">meta</span>.<span class="ident">advice_column</span>()
+            }
+
+            <span class="kw">fn</span> <span class="ident">synthesize</span>(
+                <span class="kw-2">&amp;</span><span class="self">self</span>,
+                <span class="ident">config</span>: <span class="self">Self</span><span class="ident">::Config</span>,
+                <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="kw">crate</span><span class="ident">::circuit::Layouter</span><span class="op">&lt;</span><span class="ident">vesta::Scalar</span><span class="op">&gt;</span>,
+            ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="kw">crate</span><span class="ident">::plonk::Error</span><span class="op">&gt;</span> {
+                <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
+                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;assign constant&quot;</span>,
+                    <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
+                        <span class="ident">region</span>.<span class="ident">assign_advice_from_constant</span>(
+                            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;one&quot;</span>,
+                            <span class="ident">config</span>,
+                            <span class="number">0</span>,
+                            <span class="ident">vesta::Scalar::one</span>(),
+                        )
+                    },
+                )<span class="question-mark">?</span>;
+
+                <span class="prelude-val">Ok</span>(())
+            }
+        }
+
+        <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {};
+        <span class="macro">assert_eq!</span>(
+            <span class="ident">MockProver::run</span>(<span class="number">3</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap_err</span>(),
+            <span class="ident">Error::NotEnoughColumnsForConstants</span>,
+        );
     }
 }
 </pre></div>

@@ -242,10 +242,40 @@
 <span id="227">227</span>
 <span id="228">228</span>
 <span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">cmp</span>,
     <span class="ident">collections</span>::{<span class="ident">BTreeSet</span>, <span class="ident">HashMap</span>},
+    <span class="ident">ops::Range</span>,
 };
 
 <span class="kw">use</span> <span class="kw">super</span><span class="ident">::RegionShape</span>;
@@ -276,24 +306,39 @@
 }
 
 <span class="doccomment">/// An area of empty space within a column.</span>
-<span class="kw">struct</span> <span class="ident">EmptySpace</span> {
-    <span class="comment">// The starting position of the empty space.</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">EmptySpace</span> {
+    <span class="comment">// The starting position (inclusive) of the empty space.</span>
     <span class="ident">start</span>: <span class="ident">usize</span>,
-    <span class="comment">// The number of rows of empty space, or `None` if unbounded.</span>
+    <span class="comment">// The ending position (exclusive) of the empty space, or `None` if unbounded.</span>
     <span class="ident">end</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">EmptySpace</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">range</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">end</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">end</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">start</span>..<span class="ident">end</span>)
+    }
 }
 
 <span class="doccomment">/// Allocated rows within a column.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// This is a set of [a_start, a_end) pairs representing disjoint allocated intervals.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">struct</span> <span class="ident">Allocations</span>(<span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">AllocatedRegion</span><span class="op">&gt;</span>);
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Allocations</span>(<span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">AllocatedRegion</span><span class="op">&gt;</span>);
 
 <span class="kw">impl</span> <span class="ident">Allocations</span> {
+    <span class="doccomment">/// Returns the row that forms the unbounded unallocated interval [row, None).</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">unbounded_interval_start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
+        <span class="self">self</span>.<span class="number">0</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">last</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>.<span class="ident">start</span> <span class="op">+</span> <span class="ident">r</span>.<span class="ident">length</span>)
+            .<span class="ident">unwrap_or</span>(<span class="number">0</span>)
+    }
+
     <span class="doccomment">/// Return all the *unallocated* nonempty intervals intersecting [start, end).</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// `end = None` represents an unbounded end.</span>
-    <span class="kw">fn</span> <span class="ident">free_intervals</span>(
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">free_intervals</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">start</span>: <span class="ident">usize</span>,
         <span class="ident">end</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
@@ -330,11 +375,14 @@
     }
 }
 
+<span class="doccomment">/// Allocated rows within a circuit.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">CircuitAllocations</span> <span class="op">=</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>, <span class="ident">Allocations</span><span class="op">&gt;</span>;
+
 <span class="doccomment">/// - `start` is the current start row of the region (not of this column).</span>
 <span class="doccomment">/// - `slack` is the maximum number of rows the start could be moved down, taking into</span>
 <span class="doccomment">///   account prior columns.</span>
 <span class="kw">fn</span> <span class="ident">first_fit_region</span>(
-    <span class="ident">column_allocations</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>, <span class="ident">Allocations</span><span class="op">&gt;</span>,
+    <span class="ident">column_allocations</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CircuitAllocations</span>,
     <span class="ident">region_columns</span>: <span class="kw-2">&amp;</span>[<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>],
     <span class="ident">region_length</span>: <span class="ident">usize</span>,
     <span class="ident">start</span>: <span class="ident">usize</span>,
@@ -391,11 +439,13 @@
 
 <span class="doccomment">/// Positions the regions starting at the earliest row for which none of the columns are</span>
 <span class="doccomment">/// in use, taking into account gaps between earlier regions.</span>
-<span class="kw">fn</span> <span class="ident">slot_in</span>(<span class="ident">region_shapes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RegionShape</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">RegionStart</span>, <span class="ident">RegionShape</span>)<span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">slot_in</span>(
+    <span class="ident">region_shapes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RegionShape</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">RegionStart</span>, <span class="ident">RegionShape</span>)<span class="op">&gt;</span>, <span class="ident">CircuitAllocations</span>) {
     <span class="comment">// Tracks the empty regions for each column.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">column_allocations</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>, <span class="ident">Allocations</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Default::default</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">column_allocations</span>: <span class="ident">CircuitAllocations</span> <span class="op">=</span> <span class="ident">Default::default</span>();
 
-    <span class="ident">region_shapes</span>
+    <span class="kw">let</span> <span class="ident">regions</span> <span class="op">=</span> <span class="ident">region_shapes</span>
         .<span class="ident">into_iter</span>()
         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">region</span><span class="op">|</span> {
             <span class="comment">// Sort the region&#39;s columns to ensure determinism.</span>
@@ -415,11 +465,16 @@
 
             (<span class="ident">region_start</span>.<span class="ident">into</span>(), <span class="ident">region</span>)
         })
-        .<span class="ident">collect</span>()
+        .<span class="ident">collect</span>();
+
+    <span class="comment">// Return the column allocations for potential further processing.</span>
+    (<span class="ident">regions</span>, <span class="ident">column_allocations</span>)
 }
 
 <span class="doccomment">/// Sorts the regions by advice area and then lays them out with the [`slot_in`] strategy.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">slot_in_biggest_advice_first</span>(<span class="ident">region_shapes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RegionShape</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RegionStart</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">slot_in_biggest_advice_first</span>(
+    <span class="ident">region_shapes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RegionShape</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RegionStart</span><span class="op">&gt;</span>, <span class="ident">CircuitAllocations</span>) {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sorted_regions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">region_shapes</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>();
     <span class="ident">sorted_regions</span>.<span class="ident">sort_unstable_by_key</span>(<span class="op">|</span><span class="ident">shape</span><span class="op">|</span> {
         <span class="comment">// Count the number of advice columns</span>
@@ -434,11 +489,13 @@
     <span class="ident">sorted_regions</span>.<span class="ident">reverse</span>();
 
     <span class="comment">// Lay out the sorted regions.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">regions</span> <span class="op">=</span> <span class="ident">slot_in</span>(<span class="ident">sorted_regions</span>);
+    <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">regions</span>, <span class="ident">column_allocations</span>) <span class="op">=</span> <span class="ident">slot_in</span>(<span class="ident">sorted_regions</span>);
 
     <span class="comment">// Un-sort the regions so they match the original indexing.</span>
     <span class="ident">regions</span>.<span class="ident">sort_unstable_by_key</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">region</span>)<span class="op">|</span> <span class="ident">region</span>.<span class="ident">region_index</span>().<span class="number">0</span>);
-    <span class="ident">regions</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">start</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">start</span>).<span class="ident">collect</span>()
+    <span class="kw">let</span> <span class="ident">regions</span> <span class="op">=</span> <span class="ident">regions</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">start</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">start</span>).<span class="ident">collect</span>();
+
+    (<span class="ident">regions</span>, <span class="ident">column_allocations</span>)
 }
 
 <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -466,6 +523,7 @@
     ];
     <span class="macro">assert_eq!</span>(
         <span class="ident">slot_in</span>(<span class="ident">regions</span>)
+            .<span class="number">0</span>
             .<span class="ident">into_iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">i</span>)
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),

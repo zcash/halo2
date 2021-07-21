@@ -204,6 +204,9 @@
 <span id="189">189</span>
 <span id="190">190</span>
 <span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
 </pre><pre class="rust">
 <span class="doccomment">//! This module provides an implementation of a variant of (Turbo)[PLONK][plonk]</span>
 <span class="doccomment">//! that is designed specifically for the polynomial commitment scheme described</span>
@@ -341,7 +344,7 @@
 
 <span class="doccomment">/// This is an error that could occur during proving or circuit synthesis.</span>
 <span class="comment">// TODO: these errors need to be cleaned up</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
     <span class="doccomment">/// This is an error that can occur during synthesis of the circuit, for</span>
     <span class="doccomment">/// example, when the witness is not present.</span>
@@ -361,6 +364,9 @@
     <span class="ident">NotEnoughRowsAvailable</span>,
     <span class="doccomment">/// Instance provided exceeds number of available rows</span>
     <span class="ident">InstanceTooLarge</span>,
+    <span class="doccomment">/// Circuit synthesis requires global constants, but circuit configuration did not</span>
+    <span class="doccomment">/// call [`ConstraintSystem::enable_constant`] on fixed columns with sufficient space.</span>
+    <span class="ident">NotEnoughColumnsForConstants</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {

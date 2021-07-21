@@ -301,6 +301,16 @@
 <span id="286">286</span>
 <span id="287">287</span>
 <span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
 </pre><pre class="rust">
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::int_plus_one</span>)]</span>
 
@@ -490,7 +500,12 @@
     };
 
     <span class="comment">// Synthesize the circuit to obtain URS</span>
-    <span class="ident">ConcreteCircuit::FloorPlanner::synthesize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">assembly</span>, <span class="ident">circuit</span>, <span class="ident">config</span>)<span class="question-mark">?</span>;
+    <span class="ident">ConcreteCircuit::FloorPlanner::synthesize</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">assembly</span>,
+        <span class="ident">circuit</span>,
+        <span class="ident">config</span>,
+        <span class="ident">cs</span>.<span class="ident">constants</span>.<span class="ident">clone</span>(),
+    )<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="ident">fixed</span> <span class="op">=</span> <span class="ident">batch_invert_assigned</span>(<span class="ident">assembly</span>.<span class="ident">fixed</span>);
 
@@ -538,7 +553,12 @@
     };
 
     <span class="comment">// Synthesize the circuit to obtain URS</span>
-    <span class="ident">ConcreteCircuit::FloorPlanner::synthesize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">assembly</span>, <span class="ident">circuit</span>, <span class="ident">config</span>)<span class="question-mark">?</span>;
+    <span class="ident">ConcreteCircuit::FloorPlanner::synthesize</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">assembly</span>,
+        <span class="ident">circuit</span>,
+        <span class="ident">config</span>,
+        <span class="ident">cs</span>.<span class="ident">constants</span>.<span class="ident">clone</span>(),
+    )<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="ident">fixed</span> <span class="op">=</span> <span class="ident">batch_invert_assigned</span>(<span class="ident">assembly</span>.<span class="ident">fixed</span>);
 

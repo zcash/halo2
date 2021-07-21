@@ -902,6 +902,7 @@
 <span id="887">887</span>
 <span id="888">888</span>
 <span id="889">889</span>
+<span id="890">890</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Tools for developing circuits.</span>
 
@@ -1435,6 +1436,7 @@
             <span class="ident">cs</span>.<span class="ident">num_advice_columns</span>
         ];
         <span class="kw">let</span> <span class="ident">permutation</span> <span class="op">=</span> <span class="ident">permutation::keygen::Assembly::new</span>(<span class="ident">n</span>, <span class="kw-2">&amp;</span><span class="ident">cs</span>.<span class="ident">permutation</span>);
+        <span class="kw">let</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">cs</span>.<span class="ident">constants</span>.<span class="ident">clone</span>();
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver</span> {
             <span class="ident">n</span>: <span class="ident">n</span> <span class="kw">as</span> <span class="ident">u32</span>,
@@ -1448,7 +1450,7 @@
             <span class="ident">usable_rows</span>: <span class="number">0</span>..<span class="ident">usable_rows</span>,
         };
 
-        <span class="ident">ConcreteCircuit::FloorPlanner::synthesize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">prover</span>, <span class="ident">circuit</span>, <span class="ident">config</span>)<span class="question-mark">?</span>;
+        <span class="ident">ConcreteCircuit::FloorPlanner::synthesize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">prover</span>, <span class="ident">circuit</span>, <span class="ident">config</span>, <span class="ident">constants</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">prover</span>)
     }

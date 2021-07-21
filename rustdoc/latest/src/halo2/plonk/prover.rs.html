@@ -608,6 +608,11 @@
 <span id="593">593</span>
 <span id="594">594</span>
 <span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">ff::Field</span>;
 <span class="kw">use</span> <span class="ident">group::Curve</span>;
@@ -872,7 +877,12 @@
             };
 
             <span class="comment">// Synthesize the circuit to obtain the witness and other information.</span>
-            <span class="ident">ConcreteCircuit::FloorPlanner::synthesize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">witness</span>, <span class="ident">circuit</span>, <span class="ident">config</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
+            <span class="ident">ConcreteCircuit::FloorPlanner::synthesize</span>(
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">witness</span>,
+                <span class="ident">circuit</span>,
+                <span class="ident">config</span>.<span class="ident">clone</span>(),
+                <span class="ident">meta</span>.<span class="ident">constants</span>.<span class="ident">clone</span>(),
+            )<span class="question-mark">?</span>;
 
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">advice</span> <span class="op">=</span> <span class="ident">batch_invert_assigned</span>(<span class="ident">witness</span>.<span class="ident">advice</span>);
 

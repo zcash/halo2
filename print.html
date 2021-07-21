@@ -504,6 +504,9 @@ these in a way that makes the most sense for their optimization goals.</p>
     /// Loads a number into the circuit as a private input.
     fn load_private(&amp;self, layouter: impl Layouter&lt;F&gt;, a: Option&lt;F&gt;) -&gt; Result&lt;Self::Num, Error&gt;;
 
+    /// Loads a number into the circuit as a fixed constant.
+    fn load_constant(&amp;self, layouter: impl Layouter&lt;F&gt;, constant: F) -&gt; Result&lt;Self::Num, Error&gt;;
+
     /// Returns `c = a * b`.
     fn mul(
         &amp;self,
@@ -567,6 +570,9 @@ struct FieldConfig {
     // This is important when building larger circuits, where columns are used by
     // multiple sets of instructions.
     s_mul: Selector,
+
+    /// The fixed column used to load constants.
+    constant: Column&lt;Fixed&gt;,
 }
 
 impl&lt;F: FieldExt&gt; FieldChip&lt;F&gt; {
@@ -581,8 +587,10 @@ impl&lt;F: FieldExt&gt; FieldChip&lt;F&gt; {
         meta: &amp;mut ConstraintSystem&lt;F&gt;,
         advice: [Column&lt;Advice&gt;; 2],
         instance: Column&lt;Instance&gt;,
+        constant: Column&lt;Fixed&gt;,
     ) -&gt; &lt;Self as Chip&lt;F&gt;&gt;::Config {
         meta.enable_equality(instance.into());
+        meta.enable_constant(constant);
         for column in &amp;advice {
             meta.enable_equality((*column).into());
         }
@@ -622,6 +630,7 @@ impl&lt;F: FieldExt&gt; FieldChip&lt;F&gt; {
             advice,
             instance,
             s_mul,
+            constant,
         }
     }
 }
@@ -655,6 +664,33 @@ impl&lt;F: FieldExt&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
                     || value.ok_or(Error::SynthesisError),
                 )?;
                 num = Some(Number { cell, value });
+                Ok(())
+            },
+        )?;
+        Ok(num.unwrap())
+    }
+
+    fn load_constant(
+        &amp;self,
+        mut layouter: impl Layouter&lt;F&gt;,
+        constant: F,
+    ) -&gt; Result&lt;Self::Num, Error&gt; {
+        let config = self.config();
+
+        let mut num = None;
+        layouter.assign_region(
+            || &quot;load constant&quot;,
+            |mut region| {
+                let cell = region.assign_advice_from_constant(
+                    || &quot;constant value&quot;,
+                    config.advice[0],
+                    0,
+                    constant,
+                )?;
+                num = Some(Number {
+                    cell,
+                    value: Some(constant),
+                });
                 Ok(())
             },
         )?;
@@ -738,6 +774,7 @@ build our circuit!</p>
 /// were `None` we would get an error.
 #[derive(Default)]
 struct MyCircuit&lt;F: FieldExt&gt; {
+    constant: F,
     a: Option&lt;F&gt;,
     b: Option&lt;F&gt;,
 }
@@ -758,7 +795,10 @@ impl&lt;F: FieldExt&gt; Circuit&lt;F&gt; for MyCircuit&lt;F&gt; {
         // We also need an instance column to store public inputs.
         let instance = meta.instance_column();
 
-        FieldChip::configure(meta, advice, instance)
+        // Create a fixed column to load constants.
+        let constant = meta.fixed_column();
+
+        FieldChip::configure(meta, advice, instance, constant)
     }
 
     fn synthesize(
@@ -772,17 +812,24 @@ impl&lt;F: FieldExt&gt; Circuit&lt;F&gt; for MyCircuit&lt;F&gt; {
         let a = field_chip.load_private(layouter.namespace(|| &quot;load a&quot;), self.a)?;
         let b = field_chip.load_private(layouter.namespace(|| &quot;load b&quot;), self.b)?;
 
+        // Load the constant factor into the circuit.
+        let constant =
+            field_chip.load_constant(layouter.namespace(|| &quot;load constant&quot;), self.constant)?;
+
         // We only have access to plain multiplication.
         // We could implement our circuit as:
-        //     asq = a*a
-        //     bsq = b*b
-        //     c   = asq*bsq
+        //     asq  = a*a
+        //     bsq  = b*b
+        //     absq = asq*bsq
+        //     c    = constant*asq*bsq
         //
         // but it's more efficient to implement it as:
-        //     ab = a*b
-        //     c  = ab^2
+        //     ab   = a*b
+        //     absq = ab^2
+        //     c    = constant*absq
         let ab = field_chip.mul(layouter.namespace(|| &quot;a * b&quot;), a, b)?;
-        let c = field_chip.mul(layouter.namespace(|| &quot;ab * ab&quot;), ab.clone(), ab)?;
+        let absq = field_chip.mul(layouter.namespace(|| &quot;ab * ab&quot;), ab.clone(), ab)?;
+        let c = field_chip.mul(layouter.namespace(|| &quot;constant * absq&quot;), constant, absq)?;
 
         // Expose the result as a public input to the circuit.
         field_chip.expose_public(layouter.namespace(|| &quot;expose c&quot;), c, 0)
@@ -799,12 +846,14 @@ in the circuit, and tell us exactly what is failing (if anything).</p>
     let k = 4;
 
     // Prepare the private and public inputs to the circuit!
+    let constant = Fp::from(7);
     let a = Fp::from(2);
     let b = Fp::from(3);
-    let c = a.square() * b.square();
+    let c = constant * a.square() * b.square();
 
     // Instantiate the circuit with the private inputs.
     let circuit = MyCircuit {
+        constant,
         a: Some(a),
         b: Some(b),
     };

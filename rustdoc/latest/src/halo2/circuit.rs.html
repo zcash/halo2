@@ -365,6 +365,42 @@
 <span id="350">350</span>
 <span id="351">351</span>
 <span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Traits and structs for implementing circuit components.</span>
 
@@ -520,6 +556,32 @@
             })
     }
 
+    <span class="doccomment">/// Assigns a constant value to the column `advice` at `offset` within this region.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The constant value will be assigned to a cell within one of the fixed columns</span>
+    <span class="doccomment">/// configured via `ConstraintSystem::enable_constant`.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Returns the advice cell.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assign_advice_from_constant</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">annotation</span>: <span class="ident">A</span>,
+        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+        <span class="ident">offset</span>: <span class="ident">usize</span>,
+        <span class="ident">constant</span>: <span class="ident">VR</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cell</span>, <span class="ident">Error</span><span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">A</span>: <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AR</span>,
+        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    {
+        <span class="self">self</span>.<span class="ident">region</span>.<span class="ident">assign_advice_from_constant</span>(
+            <span class="kw-2">&amp;</span><span class="op">|</span><span class="op">|</span> <span class="ident">annotation</span>().<span class="ident">into</span>(),
+            <span class="ident">column</span>,
+            <span class="ident">offset</span>,
+            <span class="ident">constant</span>.<span class="ident">into</span>(),
+        )
+    }
+
     <span class="doccomment">/// Assign the value of the instance column&#39;s cell at absolute location</span>
     <span class="doccomment">/// `row` to the column `advice` at `offset` within this region.</span>
     <span class="doccomment">///</span>
@@ -565,6 +627,16 @@
             .<span class="ident">assign_fixed</span>(<span class="kw-2">&amp;</span><span class="op">|</span><span class="op">|</span> <span class="ident">annotation</span>().<span class="ident">into</span>(), <span class="ident">column</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="op">|</span><span class="op">|</span> {
                 <span class="ident">to</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">into</span>())
             })
+    }
+
+    <span class="doccomment">/// Constrains a cell to have a constant value.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Returns an error if the cell is in a column where equality has not been enabled.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">constrain_constant</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">cell</span>: <span class="ident">Cell</span>, <span class="ident">constant</span>: <span class="ident">VR</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    {
+        <span class="self">self</span>.<span class="ident">region</span>.<span class="ident">constrain_constant</span>(<span class="ident">cell</span>, <span class="ident">constant</span>.<span class="ident">into</span>())
     }
 
     <span class="doccomment">/// Constrains two cells to have the same value.</span>
