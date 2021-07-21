@@ -903,6 +903,9 @@
 <span id="888">888</span>
 <span id="889">889</span>
 <span id="890">890</span>
+<span id="891">891</span>
+<span id="892">892</span>
+<span id="893">893</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Tools for developing circuits.</span>
 
@@ -924,6 +927,9 @@
 };
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">metadata</span>;
+
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">cost</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">cost::CircuitCost</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;dev-graph&quot;</span>)]</span>
 <span class="kw">mod</span> <span class="ident">graph</span>;
