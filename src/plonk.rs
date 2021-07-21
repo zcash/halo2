@@ -134,7 +134,7 @@ pub struct ProvingKey<C: CurveAffine> {
 
 /// This is an error that could occur during proving or circuit synthesis.
 // TODO: these errors need to be cleaned up
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     /// This is an error that can occur during synthesis of the circuit, for
     /// example, when the witness is not present.
@@ -154,6 +154,9 @@ pub enum Error {
     NotEnoughRowsAvailable,
     /// Instance provided exceeds number of available rows
     InstanceTooLarge,
+    /// Circuit synthesis requires global constants, but circuit configuration did not
+    /// call [`ConstraintSystem::enable_constant`] on fixed columns with sufficient space.
+    NotEnoughColumnsForConstants,
 }
 
 impl<C: CurveAffine> ProvingKey<C> {

@@ -1,5 +1,4 @@
 use std::fmt;
-use std::marker::PhantomData;
 
 use ff::Field;
 
@@ -31,7 +30,8 @@ struct V1Plan<'a, F: Field, CS: Assignment<F> + 'a> {
     cs: &'a mut CS,
     /// Stores the starting row for each region.
     regions: Vec<RegionStart>,
-    _marker: PhantomData<F>,
+    /// Stores the constants to be assigned, and the cells to which they are copied.
+    constants: Vec<(Assigned<F>, Cell)>,
 }
 
 impl<'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for V1Plan<'a, F, CS> {
@@ -46,7 +46,7 @@ impl<'a, F: Field, CS: Assignment<F>> V1Plan<'a, F, CS> {
         let ret = V1Plan {
             cs,
             regions: vec![],
-            _marker: PhantomData,
+            constants: vec![],
         };
         Ok(ret)
     }
@@ -57,6 +57,7 @@ impl FloorPlanner for V1 {
         cs: &mut CS,
         circuit: &C,
         config: C::Config,
+        constants: Vec<Column<Fixed>>,
     ) -> Result<(), Error> {
         let mut plan = V1Plan::new(cs)?;
 
@@ -69,13 +70,66 @@ impl FloorPlanner for V1 {
                 .synthesize(config.clone(), V1Pass::<_, CS>::measure(pass))?;
         }
 
-        plan.regions = strategy::slot_in_biggest_advice_first(measure.regions);
+        // Planning:
+        // - Position the regions.
+        let (regions, column_allocations) = strategy::slot_in_biggest_advice_first(measure.regions);
+        plan.regions = regions;
 
-        // Second pass: assign the regions.
+        // - Determine how many rows our planned circuit will require.
+        let first_unassigned_row = column_allocations
+            .iter()
+            .map(|(_, a)| a.unbounded_interval_start())
+            .max()
+            .unwrap_or(0);
+
+        // - Position the constants within those rows.
+        let fixed_allocations: Vec<_> = constants
+            .into_iter()
+            .map(|c| {
+                (
+                    c,
+                    column_allocations
+                        .get(&c.into())
+                        .cloned()
+                        .unwrap_or_default(),
+                )
+            })
+            .collect();
+        let constant_positions = || {
+            fixed_allocations.iter().flat_map(|(c, a)| {
+                let c = *c;
+                a.free_intervals(0, Some(first_unassigned_row))
+                    .flat_map(move |e| e.range().unwrap().map(move |i| (c, i)))
+            })
+        };
+
+        // Second pass:
+        // - Assign the regions.
         let mut assign = AssignmentPass::new(&mut plan);
         {
             let pass = &mut assign;
             circuit.synthesize(config, V1Pass::assign(pass))?;
+        }
+
+        // - Assign the constants.
+        if constant_positions().count() < plan.constants.len() {
+            return Err(Error::NotEnoughColumnsForConstants);
+        }
+        for ((fixed_column, fixed_row), (value, advice)) in
+            constant_positions().zip(plan.constants.into_iter())
+        {
+            plan.cs.assign_fixed(
+                || format!("Constant({:?})", value.evaluate()),
+                fixed_column,
+                fixed_row,
+                || Ok(value),
+            )?;
+            plan.cs.copy(
+                fixed_column.into(),
+                fixed_row,
+                advice.column,
+                *plan.regions[*advice.region_index] + advice.row_offset,
+            )?;
         }
 
         Ok(())
@@ -286,6 +340,19 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
         })
     }
 
+    fn assign_advice_from_constant<'v>(
+        &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        column: Column<Advice>,
+        offset: usize,
+        constant: Assigned<F>,
+    ) -> Result<Cell, Error> {
+        let advice = self.assign_advice(annotation, column, offset, &mut || Ok(constant))?;
+        self.constrain_constant(advice, constant)?;
+
+        Ok(advice)
+    }
+
     fn assign_advice_from_instance<'v>(
         &mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
@@ -331,6 +398,11 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
         })
     }
 
+    fn constrain_constant(&mut self, cell: Cell, constant: Assigned<F>) -> Result<(), Error> {
+        self.plan.constants.push((constant, cell));
+        Ok(())
+    }
+
     fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error> {
         self.plan.cs.copy(
             left.column,
@@ -340,5 +412,59 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
         )?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use pasta_curves::vesta;
+
+    use crate::{
+        dev::MockProver,
+        plonk::{Advice, Circuit, Column, Error},
+    };
+
+    #[test]
+    fn not_enough_columns_for_constants() {
+        struct MyCircuit {}
+
+        impl Circuit<vesta::Scalar> for MyCircuit {
+            type Config = Column<Advice>;
+            type FloorPlanner = super::V1;
+
+            fn without_witnesses(&self) -> Self {
+                MyCircuit {}
+            }
+
+            fn configure(meta: &mut crate::plonk::ConstraintSystem<vesta::Scalar>) -> Self::Config {
+                meta.advice_column()
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl crate::circuit::Layouter<vesta::Scalar>,
+            ) -> Result<(), crate::plonk::Error> {
+                layouter.assign_region(
+                    || "assign constant",
+                    |mut region| {
+                        region.assign_advice_from_constant(
+                            || "one",
+                            config,
+                            0,
+                            vesta::Scalar::one(),
+                        )
+                    },
+                )?;
+
+                Ok(())
+            }
+        }
+
+        let circuit = MyCircuit {};
+        assert_eq!(
+            MockProver::run(3, &circuit, vec![]).unwrap_err(),
+            Error::NotEnoughColumnsForConstants,
+        );
     }
 }

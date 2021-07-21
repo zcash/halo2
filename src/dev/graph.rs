@@ -21,7 +21,7 @@ pub fn circuit_dot_graph<F: Field, ConcreteCircuit: Circuit<F>>(
     let mut cs = ConstraintSystem::default();
     let config = ConcreteCircuit::configure(&mut cs);
     let mut graph = Graph::default();
-    ConcreteCircuit::FloorPlanner::synthesize(&mut graph, circuit, config).unwrap();
+    ConcreteCircuit::FloorPlanner::synthesize(&mut graph, circuit, config, cs.constants).unwrap();
 
     // Construct the node labels. We need to store these, because tabbycat operates on
     // string references, and we need those references to live long enough.
