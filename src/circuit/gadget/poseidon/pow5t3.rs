@@ -53,6 +53,8 @@ impl<F: FieldExt> Pow5T3Chip<F> {
         spec: S,
         state: [Column<Advice>; WIDTH],
         partial_sbox: Column<Advice>,
+        rc_a: [Column<Fixed>; WIDTH],
+        rc_b: [Column<Fixed>; WIDTH],
     ) -> Pow5T3Config<F> {
         // Generate constants for the Poseidon permutation.
         // This gadget requires R_F and R_P to be even.
@@ -61,17 +63,6 @@ impl<F: FieldExt> Pow5T3Chip<F> {
         let half_full_rounds = S::full_rounds() / 2;
         let half_partial_rounds = S::partial_rounds() / 2;
         let (round_constants, m_reg, m_inv) = spec.constants();
-
-        let rc_a = [
-            meta.fixed_column(),
-            meta.fixed_column(),
-            meta.fixed_column(),
-        ];
-        let rc_b = [
-            meta.fixed_column(),
-            meta.fixed_column(),
-            meta.fixed_column(),
-        ];
 
         // This allows state words to be initialized (by constraining them equal to fixed
         // values), and used in a permutation from an arbitrary region. rc_a is used in
@@ -645,7 +636,18 @@ mod tests {
             ];
             let partial_sbox = meta.advice_column();
 
-            Pow5T3Chip::configure(meta, OrchardNullifier, state, partial_sbox)
+            let rc_a = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+            ];
+            let rc_b = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+            ];
+
+            Pow5T3Chip::configure(meta, OrchardNullifier, state, partial_sbox, rc_a, rc_b)
         }
 
         fn synthesize(
@@ -741,7 +743,18 @@ mod tests {
             ];
             let partial_sbox = meta.advice_column();
 
-            Pow5T3Chip::configure(meta, OrchardNullifier, state, partial_sbox)
+            let rc_a = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+            ];
+            let rc_b = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+            ];
+
+            Pow5T3Chip::configure(meta, OrchardNullifier, state, partial_sbox, rc_a, rc_b)
         }
 
         fn synthesize(

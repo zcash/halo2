@@ -153,6 +153,7 @@ impl EccChip {
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 10],
         lookup_table: Column<Fixed>,
+        lagrange_coeffs: [Column<Fixed>; 8],
     ) -> <Self as Chip<pallas::Base>>::Config {
         // The following columns need to be equality-enabled for their use in sub-configs:
         //
@@ -193,16 +194,7 @@ impl EccChip {
 
         let config = EccConfig {
             advices,
-            lagrange_coeffs: [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ],
+            lagrange_coeffs,
             fixed_z: meta.fixed_column(),
             q_add_incomplete: meta.selector(),
             q_add: meta.selector(),

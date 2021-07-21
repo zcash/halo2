@@ -459,11 +459,21 @@ mod tests {
             meta.enable_constant(constants);
 
             let table_idx = meta.fixed_column();
+            let lagrange_coeffs = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+            ];
 
             // Fixed columns for the Sinsemilla generator lookup table
             let lookup = (table_idx, meta.fixed_column(), meta.fixed_column());
 
-            let ecc_config = EccChip::configure(meta, advices, table_idx);
+            let ecc_config = EccChip::configure(meta, advices, table_idx, lagrange_coeffs);
 
             let config1 = SinsemillaChip::configure(meta, advices[..5].try_into().unwrap(), lookup);
             let config2 = SinsemillaChip::configure(meta, advices[5..].try_into().unwrap(), lookup);

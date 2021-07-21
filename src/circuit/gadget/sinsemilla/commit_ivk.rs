@@ -685,13 +685,23 @@ mod tests {
 
                 let table_idx = meta.fixed_column();
                 let lookup = (table_idx, meta.fixed_column(), meta.fixed_column());
+                let lagrange_coeffs = [
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                ];
 
                 let sinsemilla_config =
                     SinsemillaChip::configure(meta, advices[..5].try_into().unwrap(), lookup);
                 let commit_ivk_config =
                     CommitIvkConfig::configure(meta, advices, sinsemilla_config);
 
-                let ecc_config = EccChip::configure(meta, advices, table_idx);
+                let ecc_config = EccChip::configure(meta, advices, table_idx, lagrange_coeffs);
 
                 (commit_ivk_config, ecc_config)
             }

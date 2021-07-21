@@ -203,16 +203,36 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             meta.enable_equality((*advice).into());
         }
 
+        // Poseidon requires four advice columns, while ECC incomplete addition requires
+        // six, so we could choose to configure them in parallel. However, we only use a
+        // single Poseidon invocation, and we have the rows to accomodate it serially.
+        // Instead, we reduce the proof size by sharing fixed columns between the ECC and
+        // Poseidon chips.
+        let lagrange_coeffs = [
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+        ];
+        let rc_a = lagrange_coeffs[2..5].try_into().unwrap();
+        let rc_b = lagrange_coeffs[5..8].try_into().unwrap();
+
         // Configuration for curve point operations.
         // This uses 10 advice columns and spans the whole circuit.
-        let ecc_config = EccChip::configure(meta, advices, table_idx);
+        let ecc_config = EccChip::configure(meta, advices, table_idx, lagrange_coeffs);
 
         // Configuration for the Poseidon hash.
         let poseidon_config = PoseidonChip::configure(
             meta,
             poseidon::OrchardNullifier,
-            [advices[0], advices[1], advices[2]],
-            advices[3],
+            advices[5..8].try_into().unwrap(),
+            advices[8],
+            rc_a,
+            rc_b,
         );
 
         // Configuration for standard PLONK (addition and multiplication).

@@ -433,11 +433,21 @@ mod tests {
                 meta.advice_column(),
             ];
             let lookup_table = meta.fixed_column();
+            let lagrange_coeffs = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+            ];
             // Shared fixed column for loading constants
             let constants = meta.fixed_column();
             meta.enable_constant(constants);
 
-            EccChip::configure(meta, advices, lookup_table)
+            EccChip::configure(meta, advices, lookup_table, lagrange_coeffs)
         }
 
         fn synthesize(
