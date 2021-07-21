@@ -689,6 +689,20 @@ impl<F: Field> Expression<F> {
     pub fn square(self) -> Self {
         self.clone() * self
     }
+
+    /// Returns whether or not this expression contains a `Selector`.
+    fn contains_selector(&self) -> bool {
+        self.evaluate(
+            &|_| false,
+            &|_| true,
+            &|_, _, _| false,
+            &|_, _, _| false,
+            &|_, _, _| false,
+            &|a, b| a || b,
+            &|a, b| a || b,
+            &|a, _| a,
+        )
+    }
 }
 
 impl<F: Field> Neg for Expression<F> {
@@ -698,9 +712,12 @@ impl<F: Field> Neg for Expression<F> {
     }
 }
 
-impl<F> Add for Expression<F> {
+impl<F: Field> Add for Expression<F> {
     type Output = Expression<F>;
     fn add(self, rhs: Expression<F>) -> Expression<F> {
+        if self.contains_selector() || rhs.contains_selector() {
+            panic!("attempted to add to a selector");
+        }
         Expression::Sum(Box::new(self), Box::new(rhs))
     }
 }
@@ -708,18 +725,24 @@ impl<F> Add for Expression<F> {
 impl<F: Field> Sub for Expression<F> {
     type Output = Expression<F>;
     fn sub(self, rhs: Expression<F>) -> Expression<F> {
+        if self.contains_selector() || rhs.contains_selector() {
+            panic!("attempted to add to a selector");
+        }
         Expression::Sum(Box::new(self), Box::new(-rhs))
     }
 }
 
-impl<F> Mul for Expression<F> {
+impl<F: Field> Mul for Expression<F> {
     type Output = Expression<F>;
     fn mul(self, rhs: Expression<F>) -> Expression<F> {
+        if self.contains_selector() && rhs.contains_selector() {
+            panic!("attempted to multiply two selectors");
+        }
         Expression::Product(Box::new(self), Box::new(rhs))
     }
 }
 
-impl<F> Mul<F> for Expression<F> {
+impl<F: Field> Mul<F> for Expression<F> {
     type Output = Expression<F>;
     fn mul(self, rhs: F) -> Expression<F> {
         Expression::Scaled(Box::new(self), rhs)
