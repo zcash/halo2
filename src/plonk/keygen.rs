@@ -233,10 +233,10 @@ where
     }
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
-        fixed: vec![vk.domain.empty_lagrange_assigned(); vk.cs.num_fixed_columns],
-        permutation: permutation::keygen::Assembly::new(params.n as usize, &vk.cs.permutation),
+        fixed: vec![vk.domain.empty_lagrange_assigned(); cs.num_fixed_columns],
+        permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
         selectors: vec![vec![false; params.n as usize]; cs.num_selectors],
-        usable_rows: ..params.n as usize - (vk.cs.blinding_factors() + 1),
+        usable_rows: ..params.n as usize - (cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
     };
 
@@ -268,7 +268,7 @@ where
 
     let permutation_pk = assembly
         .permutation
-        .build_pk(params, &vk.domain, &vk.cs.permutation);
+        .build_pk(params, &vk.domain, &cs.permutation);
 
     // Compute l_0(X)
     // TODO: this can be done more efficiently
