@@ -7,11 +7,11 @@ use ff::Field;
 
 use crate::{
     circuit::{
-        layouter::{RegionLayouter, RegionShape},
+        layouter::{RegionColumn, RegionLayouter, RegionShape},
         Cell, Layouter, Region, RegionIndex, RegionStart,
     },
     plonk::{
-        Advice, Any, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Instance,
+        Advice, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Instance,
         Selector,
     },
 };
@@ -43,7 +43,7 @@ pub struct SingleChipLayouter<'a, F: Field, CS: Assignment<F> + 'a> {
     /// Stores the starting row for each region.
     regions: Vec<RegionStart>,
     /// Stores the first empty row for each column.
-    columns: HashMap<Column<Any>, usize>,
+    columns: HashMap<RegionColumn, usize>,
     _marker: PhantomData<F>,
 }
 

@@ -110,8 +110,47 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
 #[derive(Clone, Debug)]
 pub struct RegionShape {
     pub(super) region_index: RegionIndex,
-    pub(super) columns: HashSet<Column<Any>>,
+    pub(super) columns: HashSet<RegionColumn>,
     pub(super) row_count: usize,
+}
+
+/// The virtual column involved in a region. This includes normal "logical"
+/// columns as well as selectors that are not definite columns at this stage.
+#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
+pub enum RegionColumn {
+    /// Logical column
+    Column(Column<Any>),
+    /// Virtual column representing a (boolean) selector
+    Selector(Selector),
+}
+
+impl From<Column<Any>> for RegionColumn {
+    fn from(column: Column<Any>) -> RegionColumn {
+        RegionColumn::Column(column)
+    }
+}
+
+impl From<Selector> for RegionColumn {
+    fn from(selector: Selector) -> RegionColumn {
+        RegionColumn::Selector(selector)
+    }
+}
+
+impl Ord for RegionColumn {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        match (self, other) {
+            (Self::Column(ref a), Self::Column(ref b)) => a.cmp(b),
+            (Self::Selector(ref a), Self::Selector(ref b)) => a.0.cmp(&b.0),
+            (Self::Column(_), Self::Selector(_)) => cmp::Ordering::Greater,
+            (Self::Selector(_), Self::Column(_)) => cmp::Ordering::Less,
+        }
+    }
+}
+
+impl PartialOrd for RegionColumn {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl RegionShape {
@@ -130,7 +169,7 @@ impl RegionShape {
     }
 
     /// Get a reference to the set of `columns` used in a `RegionShape`.
-    pub fn columns(&self) -> &HashSet<Column<Any>> {
+    pub fn columns(&self) -> &HashSet<RegionColumn> {
         &self.columns
     }
 
@@ -148,8 +187,7 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         offset: usize,
     ) -> Result<(), Error> {
         // Track the selector's fixed column as part of the region's shape.
-        // TODO: Avoid exposing selector internals?
-        self.columns.insert(selector.0.into());
+        self.columns.insert((*selector).into());
         self.row_count = cmp::max(self.row_count, offset + 1);
         Ok(())
     }
@@ -161,7 +199,7 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         offset: usize,
         _to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error> {
-        self.columns.insert(column.into());
+        self.columns.insert(Column::<Any>::from(column).into());
         self.row_count = cmp::max(self.row_count, offset + 1);
 
         Ok(Cell {
@@ -190,7 +228,7 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         advice: Column<Advice>,
         offset: usize,
     ) -> Result<(Cell, Option<F>), Error> {
-        self.columns.insert(advice.into());
+        self.columns.insert(Column::<Any>::from(advice).into());
         self.row_count = cmp::max(self.row_count, offset + 1);
 
         Ok((
@@ -210,7 +248,7 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         offset: usize,
         _to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error> {
-        self.columns.insert(column.into());
+        self.columns.insert(Column::<Any>::from(column).into());
         self.row_count = cmp::max(self.row_count, offset + 1);
 
         Ok(Cell {

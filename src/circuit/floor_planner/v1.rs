@@ -4,11 +4,11 @@ use ff::Field;
 
 use crate::{
     circuit::{
-        layouter::{RegionLayouter, RegionShape},
+        layouter::{RegionColumn, RegionLayouter, RegionShape},
         Cell, Layouter, Region, RegionIndex, RegionStart,
     },
     plonk::{
-        Advice, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Instance,
+        Advice, Any, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Instance,
         Selector,
     },
 };
@@ -89,7 +89,7 @@ impl FloorPlanner for V1 {
                 (
                     c,
                     column_allocations
-                        .get(&c.into())
+                        .get(&Column::<Any>::from(c).into())
                         .cloned()
                         .unwrap_or_default(),
                 )
