@@ -66,7 +66,6 @@ impl MessageScheduleConfig {
                 a_6,
                 get_word_row(new_word_idx - 16),
                 &sigma_0_output.0.into(),
-                &self.perm,
             )?;
             self.assign_and_constrain(
                 region,
@@ -74,7 +73,6 @@ impl MessageScheduleConfig {
                 a_6,
                 get_word_row(new_word_idx - 16) + 1,
                 &sigma_0_output.1.into(),
-                &self.perm,
             )?;
 
             // Copy sigma_1(W_{i - 2})
@@ -84,7 +82,6 @@ impl MessageScheduleConfig {
                 a_7,
                 get_word_row(new_word_idx - 16),
                 &lower_sigma_1_v2_results[new_word_idx - 16].0.into(),
-                &self.perm,
             )?;
             self.assign_and_constrain(
                 region,
@@ -92,7 +89,6 @@ impl MessageScheduleConfig {
                 a_7,
                 get_word_row(new_word_idx - 16) + 1,
                 &lower_sigma_1_v2_results[new_word_idx - 16].1.into(),
-                &self.perm,
             )?;
 
             // Copy W_{i - 7}
@@ -102,7 +98,6 @@ impl MessageScheduleConfig {
                 a_8,
                 get_word_row(new_word_idx - 16),
                 &w_halves[new_word_idx - 7].0.into(),
-                &self.perm,
             )?;
             self.assign_and_constrain(
                 region,
@@ -110,7 +105,6 @@ impl MessageScheduleConfig {
                 a_8,
                 get_word_row(new_word_idx - 16) + 1,
                 &w_halves[new_word_idx - 7].1.into(),
-                &self.perm,
             )?;
 
             // Calculate W_i, carry_i
@@ -233,7 +227,7 @@ impl MessageScheduleConfig {
         let a_7 = self.extras[3];
 
         // Assign `a` and copy constraint
-        self.assign_and_constrain(region, || "a", a_3, row + 1, &subregion2_word.a, &self.perm)?;
+        self.assign_and_constrain(region, || "a", a_3, row + 1, &subregion2_word.a)?;
 
         // Witness `spread_a`
         let spread_a = interleave_u16_with_zeros(subregion2_word.a.value.unwrap() as u16);
@@ -267,10 +261,10 @@ impl MessageScheduleConfig {
         )?;
 
         // Assign `b` and copy constraint
-        self.assign_and_constrain(region, || "b", a_6, row, &subregion2_word.b, &self.perm)?;
+        self.assign_and_constrain(region, || "b", a_6, row, &subregion2_word.b)?;
 
         // Assign `c` and copy constraint
-        self.assign_and_constrain(region, || "c", a_5, row + 1, &subregion2_word.c, &self.perm)?;
+        self.assign_and_constrain(region, || "c", a_5, row + 1, &subregion2_word.c)?;
 
         // Witness `spread_c`
         let spread_c = interleave_u16_with_zeros(subregion2_word.c.value.unwrap() as u16);
@@ -282,30 +276,16 @@ impl MessageScheduleConfig {
         )?;
 
         // Assign `spread_d` and copy constraint
-        self.assign_and_constrain(
-            region,
-            || "spread_d",
-            a_4,
-            row,
-            &subregion2_word.spread_d,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_d", a_4, row, &subregion2_word.spread_d)?;
 
         // Assign `e` and copy constraint
-        self.assign_and_constrain(region, || "e", a_7, row, &subregion2_word.e, &self.perm)?;
+        self.assign_and_constrain(region, || "e", a_7, row, &subregion2_word.e)?;
 
         // Assign `f` and copy constraint
-        self.assign_and_constrain(region, || "f", a_7, row + 1, &subregion2_word.f, &self.perm)?;
+        self.assign_and_constrain(region, || "f", a_7, row + 1, &subregion2_word.f)?;
 
         // Assign `spread_g` and copy constraint
-        self.assign_and_constrain(
-            region,
-            || "spread_g",
-            a_5,
-            row,
-            &subregion2_word.spread_g,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_g", a_5, row, &subregion2_word.spread_g)?;
 
         Ok((
             spread_a as u64,
@@ -365,7 +345,6 @@ impl MessageScheduleConfig {
             region,
             &self.lookup,
             a_3,
-            &self.perm,
             row,
             r_0_even,
             r_0_odd,
@@ -415,7 +394,6 @@ impl MessageScheduleConfig {
             region,
             &self.lookup,
             a_3,
-            &self.perm,
             row,
             r_0_even,
             r_0_odd,

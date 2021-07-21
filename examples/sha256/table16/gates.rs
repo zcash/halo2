@@ -68,50 +68,57 @@ impl<F: FieldExt> Gate<F> {
         expr
     }
 
-    // 2-bit range check
-    fn two_bit_range_check(value: Expression<F>) -> Expression<F> {
-        Self::range_check(value, 0, (1 << 2) - 1)
-    }
-
-    // 2-bit spread interpolation
-    fn two_bit_spread(dense: Expression<F>, spread: Expression<F>) -> Expression<F> {
-        let (factor, lagrange_poly) = Self::lagrange_interpolate(
-            dense,
-            vec![0b00, 0b01, 0b10, 0b11],
-            vec![0b0000, 0b0001, 0b0100, 0b0101],
-        );
-
-        lagrange_poly + (spread * factor * (-F::one()))
-    }
-
-    // 3-bit range check
-    fn three_bit_range_check(value: Expression<F>) -> Expression<F> {
-        Self::range_check(value, 0, (1 << 3) - 1)
-    }
-
-    // 3-bit spread
-    fn three_bit_spread(dense: Expression<F>, spread: Expression<F>) -> Expression<F> {
-        let (factor, lagrange_poly) = Self::lagrange_interpolate(
-            dense,
-            vec![0b000, 0b001, 0b010, 0b011, 0b100, 0b101, 0b110, 0b111],
-            vec![
-                0b000000, 0b000001, 0b000100, 0b000101, 0b010000, 0b010001, 0b010100, 0b010101,
-            ],
-        );
-
-        lagrange_poly + (spread * factor * (-F::one()))
-    }
-
     /// Spread and range check on 2-bit word
-    pub fn two_bit_spread_and_range(dense: Expression<F>, spread: Expression<F>) -> Expression<F> {
-        Self::two_bit_range_check(dense.clone()) + Self::two_bit_spread(dense, spread)
+    pub fn two_bit_spread_and_range(
+        dense: Expression<F>,
+        spread: Expression<F>,
+    ) -> impl Iterator<Item = (&'static str, Expression<F>)> {
+        let two_bit_spread = |dense: Expression<F>, spread: Expression<F>| {
+            let (factor, lagrange_poly) = Self::lagrange_interpolate(
+                dense,
+                vec![0b00, 0b01, 0b10, 0b11],
+                vec![0b0000, 0b0001, 0b0100, 0b0101],
+            );
+
+            lagrange_poly - spread * factor
+        };
+
+        std::iter::empty()
+            .chain(Some((
+                "two_bit_range_check",
+                Self::range_check(dense.clone(), 0, (1 << 2) - 1),
+            )))
+            .chain(Some((
+                "two_bit_spread_check",
+                two_bit_spread(dense, spread),
+            )))
     }
 
     /// Spread and range check on 3-bit word
     pub fn three_bit_spread_and_range(
         dense: Expression<F>,
         spread: Expression<F>,
-    ) -> Expression<F> {
-        Self::three_bit_range_check(dense.clone()) + Self::three_bit_spread(dense, spread)
+    ) -> impl Iterator<Item = (&'static str, Expression<F>)> {
+        let three_bit_spread = |dense: Expression<F>, spread: Expression<F>| {
+            let (factor, lagrange_poly) = Self::lagrange_interpolate(
+                dense,
+                vec![0b000, 0b001, 0b010, 0b011, 0b100, 0b101, 0b110, 0b111],
+                vec![
+                    0b000000, 0b000001, 0b000100, 0b000101, 0b010000, 0b010001, 0b010100, 0b010101,
+                ],
+            );
+
+            lagrange_poly - spread * factor
+        };
+
+        std::iter::empty()
+            .chain(Some((
+                "three_bit_range_check",
+                Self::range_check(dense.clone(), 0, (1 << 3) - 1),
+            )))
+            .chain(Some((
+                "three_bit_spread_check",
+                three_bit_spread(dense, spread),
+            )))
     }
 }

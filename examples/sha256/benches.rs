@@ -1,10 +1,10 @@
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{layouter::SingleChipLayouter, Layouter},
+    circuit::{Layouter, SimpleFloorPlanner},
     pasta::EqAffine,
     plonk::{
-        create_proof, keygen_pk, keygen_vk, verify_proof, Assignment, Circuit, ConstraintSystem,
-        Error, VerifyingKey,
+        create_proof, keygen_pk, keygen_vk, verify_proof, Circuit, ConstraintSystem, Error,
+        VerifyingKey,
     },
     poly::commitment::Params,
     transcript::{Blake2bRead, Blake2bWrite, Challenge255},
@@ -22,10 +22,16 @@ use crate::{BlockWord, Sha256, Table16Chip, Table16Config, BLOCK_SIZE};
 
 #[allow(dead_code)]
 fn bench(name: &str, k: u32, c: &mut Criterion) {
+    #[derive(Default)]
     struct MyCircuit {}
 
     impl<F: FieldExt> Circuit<F> for MyCircuit {
         type Config = Table16Config;
+        type FloorPlanner = SimpleFloorPlanner;
+
+        fn without_witnesses(&self) -> Self {
+            Self::default()
+        }
 
         fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
             Table16Chip::configure(meta)
@@ -33,10 +39,9 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
 
         fn synthesize(
             &self,
-            cs: &mut impl Assignment<F>,
             config: Self::Config,
+            mut layouter: impl Layouter<F>,
         ) -> Result<(), Error> {
-            let mut layouter = SingleChipLayouter::new(cs)?;
             Table16Chip::<F>::load(config.clone(), &mut layouter)?;
             let table16_chip = Table16Chip::<F>::construct(config);
 
@@ -155,7 +160,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
 
 #[allow(dead_code)]
 fn criterion_benchmark(c: &mut Criterion) {
-    bench("sha256", 16, c);
+    bench("sha256", 17, c);
     // bench("sha256", 20, c);
 }
 

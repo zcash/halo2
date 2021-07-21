@@ -5,7 +5,7 @@ use super::{
 use halo2::{
     arithmetic::FieldExt,
     circuit::Layouter,
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Permutation},
+    plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
     poly::Rotation,
 };
 
@@ -90,6 +90,7 @@ impl RoundWordSpread {
     }
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<RoundWordDense> for RoundWordSpread {
     fn into(self) -> RoundWordDense {
         RoundWordDense::new(self.dense_halves)
@@ -125,6 +126,7 @@ impl RoundWordA {
     }
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<RoundWordSpread> for RoundWordA {
     fn into(self) -> RoundWordSpread {
         RoundWordSpread::new(self.dense_halves, self.spread_halves.unwrap())
@@ -160,6 +162,7 @@ impl RoundWordE {
     }
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<RoundWordSpread> for RoundWordE {
     fn into(self) -> RoundWordSpread {
         RoundWordSpread::new(self.dense_halves, self.spread_halves.unwrap())
@@ -252,8 +255,6 @@ pub(super) struct CompressionConfig {
     s_decompose_efgh: Column<Fixed>,
 
     s_digest: Column<Fixed>,
-
-    perm: Permutation,
 }
 
 impl<F: FieldExt> Table16Assignment<F> for CompressionConfig {}
@@ -264,7 +265,6 @@ impl CompressionConfig {
         lookup: SpreadInputs,
         message_schedule: Column<Advice>,
         extras: [Column<Advice>; 6],
-        perm: Permutation,
     ) -> Self {
         let s_ch = meta.fixed_column();
         let s_ch_neg = meta.fixed_column();
@@ -339,7 +339,6 @@ impl CompressionConfig {
                 word_hi,
                 spread_word_hi,
             )
-            .0
         });
 
         // Decompose `E,F,G,H` words into (6, 5, 14, 7)-bit chunks.
@@ -387,7 +386,6 @@ impl CompressionConfig {
                 word_hi,
                 spread_word_hi,
             )
-            .0
         });
 
         // s_upper_sigma_0 on abcd words
@@ -419,7 +417,6 @@ impl CompressionConfig {
                 spread_c_hi,
                 spread_d,
             )
-            .0
         });
 
         // s_upper_sigma_1 on efgh words
@@ -450,7 +447,6 @@ impl CompressionConfig {
                 spread_c,
                 spread_d,
             )
-            .0
         });
 
         // s_ch on efgh words
@@ -477,7 +473,6 @@ impl CompressionConfig {
                 spread_f_lo,
                 spread_f_hi,
             )
-            .0
         });
 
         // s_ch_neg on efgh words
@@ -508,7 +503,6 @@ impl CompressionConfig {
                 spread_g_lo,
                 spread_g_hi,
             )
-            .0
         });
 
         // s_maj on abcd words
@@ -538,7 +532,6 @@ impl CompressionConfig {
                 spread_c_lo,
                 spread_c_hi,
             )
-            .0
         });
 
         // s_h_prime to compute H' = H + Ch(E, F, G) + s_upper_sigma_1(E) + K + W
@@ -578,7 +571,6 @@ impl CompressionConfig {
                 w_lo,
                 w_hi,
             )
-            .0
         });
 
         // s_a_new
@@ -606,7 +598,6 @@ impl CompressionConfig {
                 h_prime_lo,
                 h_prime_hi,
             )
-            .0
         });
 
         // s_e_new
@@ -630,7 +621,6 @@ impl CompressionConfig {
                 h_prime_lo,
                 h_prime_hi,
             )
-            .0
         });
 
         // s_digest for final round
@@ -653,7 +643,6 @@ impl CompressionConfig {
                 s_digest, lo_0, hi_0, word_0, lo_1, hi_1, word_1, lo_2, hi_2, word_2, lo_3, hi_3,
                 word_3,
             )
-            .0
         });
 
         CompressionConfig {
@@ -671,7 +660,6 @@ impl CompressionConfig {
             s_decompose_abcd,
             s_decompose_efgh,
             s_digest,
-            perm,
         }
     }
 
@@ -759,10 +747,10 @@ mod tests {
     };
     use halo2::{
         arithmetic::FieldExt,
-        circuit::layouter::SingleChipLayouter,
+        circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         pasta::Fp,
-        plonk::{Assignment, Circuit, ConstraintSystem, Error},
+        plonk::{Circuit, ConstraintSystem, Error},
     };
 
     #[test]
@@ -771,6 +759,11 @@ mod tests {
 
         impl<F: FieldExt> Circuit<F> for MyCircuit {
             type Config = Table16Config;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                MyCircuit {}
+            }
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 Table16Chip::configure(meta)
@@ -778,10 +771,9 @@ mod tests {
 
             fn synthesize(
                 &self,
-                cs: &mut impl Assignment<F>,
                 config: Self::Config,
+                mut layouter: impl Layouter<F>,
             ) -> Result<(), Error> {
-                let mut layouter = SingleChipLayouter::new(cs)?;
                 Table16Chip::<F>::load(config.clone(), &mut layouter)?;
 
                 // Test vector: "abc"
@@ -811,7 +803,7 @@ mod tests {
 
         let circuit: MyCircuit = MyCircuit {};
 
-        let prover = match MockProver::<Fp>::run(16, &circuit, vec![]) {
+        let prover = match MockProver::<Fp>::run(17, &circuit, vec![]) {
             Ok(prover) => prover,
             Err(e) => panic!("{:?}", e),
         };

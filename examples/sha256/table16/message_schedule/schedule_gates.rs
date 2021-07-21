@@ -1,7 +1,8 @@
 use super::super::Gate;
 use halo2::{arithmetic::FieldExt, plonk::Expression};
+use std::{array, marker::PhantomData};
 
-pub struct ScheduleGate<F: FieldExt>(pub Expression<F>);
+pub struct ScheduleGate<F: FieldExt>(PhantomData<F>);
 
 impl<F: FieldExt> ScheduleGate<F> {
     /// s_word for W_16 to W_63
@@ -18,7 +19,7 @@ impl<F: FieldExt> ScheduleGate<F> {
         w_minus_16_hi: Expression<F>,
         word: Expression<F>,
         carry: Expression<F>,
-    ) -> Self {
+    ) -> impl Iterator<Item = (&'static str, Expression<F>)> {
         let lo = sigma_0_lo + sigma_1_lo + w_minus_9_lo + w_minus_16_lo;
         let hi = sigma_0_hi + sigma_1_hi + w_minus_9_hi + w_minus_16_hi;
 
@@ -28,7 +29,8 @@ impl<F: FieldExt> ScheduleGate<F> {
             + (word * (-F::one()));
         let carry_check = Gate::range_check(carry, 0, 3);
 
-        ScheduleGate(s_word * (word_check + carry_check))
+        array::IntoIter::new([("word_check", word_check), ("carry_check", carry_check)])
+            .map(move |(name, poly)| (name, s_word.clone() * poly))
     }
 
     /// s_decompose_0 for all words
@@ -37,8 +39,9 @@ impl<F: FieldExt> ScheduleGate<F> {
         lo: Expression<F>,
         hi: Expression<F>,
         word: Expression<F>,
-    ) -> Self {
-        ScheduleGate(s_decompose_0 * (lo + hi * F::from_u64(1 << 16) + word * (-F::one())))
+    ) -> impl Iterator<Item = (&'static str, Expression<F>)> {
+        let check = lo + hi * F::from_u64(1 << 16) - word;
+        std::iter::empty().chain(Some(("s_decompose_0", s_decompose_0 * check)))
     }
 
     /// s_decompose_1 for W_1 to W_13
@@ -53,7 +56,7 @@ impl<F: FieldExt> ScheduleGate<F> {
         d: Expression<F>,
         tag_d: Expression<F>,
         word: Expression<F>,
-    ) -> Self {
+    ) -> impl Iterator<Item = (&'static str, Expression<F>)> {
         let decompose_check = a
             + b * F::from_u64(1 << 3)
             + c * F::from_u64(1 << 7)
@@ -61,7 +64,13 @@ impl<F: FieldExt> ScheduleGate<F> {
             + word * (-F::one());
         let range_check_tag_c = Gate::range_check(tag_c, 0, 2);
         let range_check_tag_d = Gate::range_check(tag_d, 0, 4);
-        ScheduleGate(s_decompose_1 * (decompose_check + range_check_tag_c + range_check_tag_d))
+
+        array::IntoIter::new([
+            ("decompose_check", decompose_check),
+            ("range_check_tag_c", range_check_tag_c),
+            ("range_check_tag_d", range_check_tag_d),
+        ])
+        .map(move |(name, poly)| (name, s_decompose_1.clone() * poly))
     }
 
     /// s_decompose_2 for W_14 to W_48
@@ -80,7 +89,7 @@ impl<F: FieldExt> ScheduleGate<F> {
         g: Expression<F>,
         tag_g: Expression<F>,
         word: Expression<F>,
-    ) -> Self {
+    ) -> impl Iterator<Item = (&'static str, Expression<F>)> {
         let decompose_check = a
             + b * F::from_u64(1 << 3)
             + c * F::from_u64(1 << 7)
@@ -91,7 +100,13 @@ impl<F: FieldExt> ScheduleGate<F> {
             + word * (-F::one());
         let range_check_tag_d = Gate::range_check(tag_d, 0, 0);
         let range_check_tag_g = Gate::range_check(tag_g, 0, 3);
-        ScheduleGate(s_decompose_2 * (decompose_check + range_check_tag_g + range_check_tag_d))
+
+        array::IntoIter::new([
+            ("decompose_check", decompose_check),
+            ("range_check_tag_g", range_check_tag_g),
+            ("range_check_tag_d", range_check_tag_d),
+        ])
+        .map(move |(name, poly)| (name, s_decompose_2.clone() * poly))
     }
 
     /// s_decompose_3 for W_49 to W_61
@@ -106,7 +121,7 @@ impl<F: FieldExt> ScheduleGate<F> {
         d: Expression<F>,
         tag_d: Expression<F>,
         word: Expression<F>,
-    ) -> Self {
+    ) -> impl Iterator<Item = (&'static str, Expression<F>)> {
         let decompose_check = a
             + b * F::from_u64(1 << 10)
             + c * F::from_u64(1 << 17)
@@ -115,24 +130,18 @@ impl<F: FieldExt> ScheduleGate<F> {
         let range_check_tag_a = Gate::range_check(tag_a, 0, 1);
         let range_check_tag_d = Gate::range_check(tag_d, 0, 3);
 
-        ScheduleGate(s_decompose_3 * (decompose_check + range_check_tag_a + range_check_tag_d))
+        array::IntoIter::new([
+            ("decompose_check", decompose_check),
+            ("range_check_tag_a", range_check_tag_a),
+            ("range_check_tag_d", range_check_tag_d),
+        ])
+        .map(move |(name, poly)| (name, s_decompose_3.clone() * poly))
     }
 
     /// b_lo + 2^2 * b_mid = b, on W_[1..49]
     fn check_b(b: Expression<F>, b_lo: Expression<F>, b_hi: Expression<F>) -> Expression<F> {
         let expected_b = b_lo + b_hi * F::from_u64(1 << 2);
-        expected_b + (b * -F::one())
-    }
-
-    /// b_lo + 2^2 * b_mid + 2^4 * b_hi = b, on W_[49..62]
-    fn check_b1(
-        b: Expression<F>,
-        b_lo: Expression<F>,
-        b_mid: Expression<F>,
-        b_hi: Expression<F>,
-    ) -> Expression<F> {
-        let expected_b = b_lo + b_mid * F::from_u64(1 << 2) + b_hi * F::from_u64(1 << 4);
-        expected_b + (b * -F::one())
+        expected_b - b
     }
 
     /// sigma_0 v1 on W_1 to W_13
@@ -153,11 +162,14 @@ impl<F: FieldExt> ScheduleGate<F> {
         spread_b_hi: Expression<F>,
         spread_c: Expression<F>,
         spread_d: Expression<F>,
-    ) -> Self {
+    ) -> impl Iterator<Item = (&'static str, Expression<F>)> {
         let check_spread_and_range =
             Gate::two_bit_spread_and_range(b_lo.clone(), spread_b_lo.clone())
-                + Gate::two_bit_spread_and_range(b_hi.clone(), spread_b_hi.clone())
-                + Gate::three_bit_spread_and_range(a, spread_a.clone());
+                .chain(Gate::two_bit_spread_and_range(
+                    b_hi.clone(),
+                    spread_b_hi.clone(),
+                ))
+                .chain(Gate::three_bit_spread_and_range(a, spread_a.clone()));
         let check_b = Self::check_b(b, b_lo, b_hi);
         let spread_witness = spread_r0_even
             + spread_r0_odd * F::from_u64(2)
@@ -178,10 +190,10 @@ impl<F: FieldExt> ScheduleGate<F> {
             + spread_c * F::from_u64(1 << 42);
         let xor = xor_0 + xor_1 + xor_2;
 
-        ScheduleGate(
-            s_lower_sigma_0
-                * (check_spread_and_range + check_b + spread_witness + (xor * -F::one())),
-        )
+        check_spread_and_range
+            .chain(Some(("check_b", check_b)))
+            .chain(Some(("lower_sigma_0", spread_witness - xor)))
+            .map(move |(name, poly)| (name, s_lower_sigma_0.clone() * poly))
     }
 
     /// sigma_1 v1 on W_49 to W_61
@@ -204,13 +216,23 @@ impl<F: FieldExt> ScheduleGate<F> {
         c: Expression<F>,
         spread_c: Expression<F>,
         spread_d: Expression<F>,
-    ) -> Self {
+    ) -> impl Iterator<Item = (&'static str, Expression<F>)> {
         let check_spread_and_range =
             Gate::two_bit_spread_and_range(b_lo.clone(), spread_b_lo.clone())
-                + Gate::two_bit_spread_and_range(b_mid.clone(), spread_b_mid.clone())
-                + Gate::two_bit_spread_and_range(c, spread_c.clone())
-                + Gate::three_bit_spread_and_range(b_hi.clone(), spread_b_hi.clone());
-        let check_b1 = Self::check_b1(b, b_lo, b_mid, b_hi);
+                .chain(Gate::two_bit_spread_and_range(
+                    b_mid.clone(),
+                    spread_b_mid.clone(),
+                ))
+                .chain(Gate::two_bit_spread_and_range(c, spread_c.clone()))
+                .chain(Gate::three_bit_spread_and_range(
+                    b_hi.clone(),
+                    spread_b_hi.clone(),
+                ));
+        // b_lo + 2^2 * b_mid + 2^4 * b_hi = b, on W_[49..62]
+        let check_b1 = {
+            let expected_b = b_lo + b_mid * F::from_u64(1 << 2) + b_hi * F::from_u64(1 << 4);
+            expected_b - b
+        };
         let spread_witness = spread_r0_even
             + spread_r0_odd * F::from_u64(2)
             + (spread_r1_even + spread_r1_odd * F::from_u64(2)) * F::from_u64(1 << 32);
@@ -233,10 +255,10 @@ impl<F: FieldExt> ScheduleGate<F> {
             + spread_c * F::from_u64(1 << 60);
         let xor = xor_0 + xor_1 + xor_2;
 
-        ScheduleGate(
-            s_lower_sigma_1
-                * (check_spread_and_range + check_b1 + spread_witness + (xor * -F::one())),
-        )
+        check_spread_and_range
+            .chain(Some(("check_b1", check_b1)))
+            .chain(Some(("lower_sigma_1", spread_witness - xor)))
+            .map(move |(name, poly)| (name, s_lower_sigma_1.clone() * poly))
     }
 
     /// sigma_0 v2 on W_14 to W_48
@@ -261,12 +283,15 @@ impl<F: FieldExt> ScheduleGate<F> {
         spread_e: Expression<F>,
         spread_f: Expression<F>,
         spread_g: Expression<F>,
-    ) -> Self {
+    ) -> impl Iterator<Item = (&'static str, Expression<F>)> {
         let check_spread_and_range =
             Gate::two_bit_spread_and_range(b_lo.clone(), spread_b_lo.clone())
-                + Gate::two_bit_spread_and_range(b_hi.clone(), spread_b_hi.clone())
-                + Gate::three_bit_spread_and_range(a, spread_a.clone())
-                + Gate::three_bit_spread_and_range(c, spread_c.clone());
+                .chain(Gate::two_bit_spread_and_range(
+                    b_hi.clone(),
+                    spread_b_hi.clone(),
+                ))
+                .chain(Gate::three_bit_spread_and_range(a, spread_a.clone()))
+                .chain(Gate::three_bit_spread_and_range(c, spread_c.clone()));
         let check_b = Self::check_b(b, b_lo, b_hi);
         let spread_witness = spread_r0_even
             + spread_r0_odd * F::from_u64(2)
@@ -296,10 +321,10 @@ impl<F: FieldExt> ScheduleGate<F> {
             + spread_e * F::from_u64(1 << 62);
         let xor = xor_0 + xor_1 + xor_2;
 
-        ScheduleGate(
-            s_lower_sigma_0_v2
-                * (check_spread_and_range + check_b + spread_witness + (xor * -F::one())),
-        )
+        check_spread_and_range
+            .chain(Some(("check_b", check_b)))
+            .chain(Some(("lower_sigma_0_v2", spread_witness - xor)))
+            .map(move |(name, poly)| (name, s_lower_sigma_0_v2.clone() * poly))
     }
 
     /// sigma_1 v2 on W_14 to W_48
@@ -324,12 +349,15 @@ impl<F: FieldExt> ScheduleGate<F> {
         spread_e: Expression<F>,
         spread_f: Expression<F>,
         spread_g: Expression<F>,
-    ) -> Self {
+    ) -> impl Iterator<Item = (&'static str, Expression<F>)> {
         let check_spread_and_range =
             Gate::two_bit_spread_and_range(b_lo.clone(), spread_b_lo.clone())
-                + Gate::two_bit_spread_and_range(b_hi.clone(), spread_b_hi.clone())
-                + Gate::three_bit_spread_and_range(a, spread_a.clone())
-                + Gate::three_bit_spread_and_range(c, spread_c.clone());
+                .chain(Gate::two_bit_spread_and_range(
+                    b_hi.clone(),
+                    spread_b_hi.clone(),
+                ))
+                .chain(Gate::three_bit_spread_and_range(a, spread_a.clone()))
+                .chain(Gate::three_bit_spread_and_range(c, spread_c.clone()));
         let check_b = Self::check_b(b, b_lo, b_hi);
         let spread_witness = spread_r0_even
             + spread_r0_odd * F::from_u64(2)
@@ -356,9 +384,9 @@ impl<F: FieldExt> ScheduleGate<F> {
             + spread_f * F::from_u64(1 << 62);
         let xor = xor_0 + xor_1 + xor_2;
 
-        ScheduleGate(
-            s_lower_sigma_1_v2
-                * (check_spread_and_range + check_b + spread_witness + (xor * -F::one())),
-        )
+        check_spread_and_range
+            .chain(Some(("check_b", check_b)))
+            .chain(Some(("lower_sigma_1_v2", spread_witness - xor)))
+            .map(move |(name, poly)| (name, s_lower_sigma_1_v2.clone() * poly))
     }
 }

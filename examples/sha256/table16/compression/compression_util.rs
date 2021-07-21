@@ -299,45 +299,17 @@ impl CompressionConfig {
         )?;
 
         // Assign `spread_a` and copy constraint
-        self.assign_and_constrain(
-            region,
-            || "spread_a",
-            a_3,
-            row + 1,
-            &word.a.spread,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_a", a_3, row + 1, &word.a.spread)?;
         // Assign `spread_b` and copy constraint
-        self.assign_and_constrain(region, || "spread_b", a_5, row, &word.b.spread, &self.perm)?;
+        self.assign_and_constrain(region, || "spread_b", a_5, row, &word.b.spread)?;
         // Assign `spread_c_lo` and copy constraint
-        self.assign_and_constrain(
-            region,
-            || "spread_c_lo",
-            a_3,
-            row - 1,
-            &word.c_lo.spread,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_c_lo", a_3, row - 1, &word.c_lo.spread)?;
         // Assign `spread_c_mid` and copy constraint
-        self.assign_and_constrain(
-            region,
-            || "spread_c_mid",
-            a_4,
-            row - 1,
-            &word.c_mid.spread,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_c_mid", a_4, row - 1, &word.c_mid.spread)?;
         // Assign `spread_c_hi` and copy constraint
-        self.assign_and_constrain(
-            region,
-            || "spread_c_hi",
-            a_4,
-            row + 1,
-            &word.c_hi.spread,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_c_hi", a_4, row + 1, &word.c_hi.spread)?;
         // Assign `spread_d` and copy constraint
-        self.assign_and_constrain(region, || "spread_d", a_4, row, &word.d.spread, &self.perm)?;
+        self.assign_and_constrain(region, || "spread_d", a_4, row, &word.d.spread)?;
 
         // Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
         let spread_a = word.a.spread.value.unwrap() as u64;
@@ -374,7 +346,6 @@ impl CompressionConfig {
             region,
             &self.lookup,
             a_3,
-            &self.perm,
             row,
             r_0_even,
             r_0_odd,
@@ -404,45 +375,17 @@ impl CompressionConfig {
         )?;
 
         // Assign `spread_a_lo` and copy constraint
-        self.assign_and_constrain(
-            region,
-            || "spread_a_lo",
-            a_3,
-            row + 1,
-            &word.a_lo.spread,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_a_lo", a_3, row + 1, &word.a_lo.spread)?;
         // Assign `spread_a_hi` and copy constraint
-        self.assign_and_constrain(
-            region,
-            || "spread_a_hi",
-            a_4,
-            row + 1,
-            &word.a_hi.spread,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_a_hi", a_4, row + 1, &word.a_hi.spread)?;
         // Assign `spread_b_lo` and copy constraint
-        self.assign_and_constrain(
-            region,
-            || "spread_b_lo",
-            a_3,
-            row - 1,
-            &word.b_lo.spread,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_b_lo", a_3, row - 1, &word.b_lo.spread)?;
         // Assign `spread_b_hi` and copy constraint
-        self.assign_and_constrain(
-            region,
-            || "spread_b_hi",
-            a_4,
-            row - 1,
-            &word.b_hi.spread,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_b_hi", a_4, row - 1, &word.b_hi.spread)?;
         // Assign `spread_c` and copy constraint
-        self.assign_and_constrain(region, || "spread_c", a_5, row, &word.c.spread, &self.perm)?;
+        self.assign_and_constrain(region, || "spread_c", a_5, row, &word.c.spread)?;
         // Assign `spread_d` and copy constraint
-        self.assign_and_constrain(region, || "spread_d", a_4, row, &word.d.spread, &self.perm)?;
+        self.assign_and_constrain(region, || "spread_d", a_4, row, &word.d.spread)?;
 
         // Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
         let spread_a_lo = word.a_lo.spread.value.unwrap() as u64;
@@ -479,7 +422,6 @@ impl CompressionConfig {
             region,
             &self.lookup,
             a_3,
-            &self.perm,
             row,
             r_0_even,
             r_0_odd,
@@ -503,7 +445,6 @@ impl CompressionConfig {
             region,
             &self.lookup,
             a_3,
-            &self.perm,
             row,
             r_0_even,
             r_0_odd,
@@ -529,40 +470,12 @@ impl CompressionConfig {
         region.assign_fixed(|| "s_ch", self.s_ch, row, || Ok(F::one()))?;
 
         // Assign and copy spread_e_lo, spread_e_hi
-        self.assign_and_constrain(
-            region,
-            || "spread_e_lo",
-            a_3,
-            row - 1,
-            &spread_halves_e.0,
-            &self.perm,
-        )?;
-        self.assign_and_constrain(
-            region,
-            || "spread_e_hi",
-            a_4,
-            row - 1,
-            &spread_halves_e.1,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_e_lo", a_3, row - 1, &spread_halves_e.0)?;
+        self.assign_and_constrain(region, || "spread_e_hi", a_4, row - 1, &spread_halves_e.1)?;
 
         // Assign and copy spread_f_lo, spread_f_hi
-        self.assign_and_constrain(
-            region,
-            || "spread_f_lo",
-            a_3,
-            row + 1,
-            &spread_halves_f.0,
-            &self.perm,
-        )?;
-        self.assign_and_constrain(
-            region,
-            || "spread_f_hi",
-            a_4,
-            row + 1,
-            &spread_halves_f.1,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_f_lo", a_3, row + 1, &spread_halves_f.0)?;
+        self.assign_and_constrain(region, || "spread_f_hi", a_4, row + 1, &spread_halves_f.1)?;
 
         let p: u64 = spread_halves_e.0.value.unwrap() as u64
             + spread_halves_f.0.value.unwrap() as u64
@@ -592,40 +505,12 @@ impl CompressionConfig {
         let a_5 = self.message_schedule;
 
         // Assign and copy spread_e_lo, spread_e_hi
-        self.assign_and_constrain(
-            region,
-            || "spread_e_lo",
-            a_5,
-            row - 1,
-            &spread_halves_e.0,
-            &self.perm,
-        )?;
-        self.assign_and_constrain(
-            region,
-            || "spread_e_hi",
-            a_5,
-            row,
-            &spread_halves_e.1,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_e_lo", a_5, row - 1, &spread_halves_e.0)?;
+        self.assign_and_constrain(region, || "spread_e_hi", a_5, row, &spread_halves_e.1)?;
 
         // Assign and copy spread_g_lo, spread_g_hi
-        self.assign_and_constrain(
-            region,
-            || "spread_g_lo",
-            a_3,
-            row + 1,
-            &spread_halves_g.0,
-            &self.perm,
-        )?;
-        self.assign_and_constrain(
-            region,
-            || "spread_g_hi",
-            a_4,
-            row + 1,
-            &spread_halves_g.1,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_g_lo", a_3, row + 1, &spread_halves_g.0)?;
+        self.assign_and_constrain(region, || "spread_g_hi", a_4, row + 1, &spread_halves_g.1)?;
 
         // Calculate neg_e_lo, neg_e_hi
         let spread_e_lo = spread_halves_e.0.value.unwrap();
@@ -673,7 +558,6 @@ impl CompressionConfig {
             region,
             &self.lookup,
             a_3,
-            &self.perm,
             row,
             r_0_even,
             r_0_odd,
@@ -700,58 +584,16 @@ impl CompressionConfig {
         region.assign_fixed(|| "s_maj", self.s_maj, row, || Ok(F::one()))?;
 
         // Assign and copy spread_a_lo, spread_a_hi
-        self.assign_and_constrain(
-            region,
-            || "spread_a_lo",
-            a_4,
-            row - 1,
-            &spread_halves_a.0,
-            &self.perm,
-        )?;
-        self.assign_and_constrain(
-            region,
-            || "spread_a_hi",
-            a_5,
-            row - 1,
-            &spread_halves_a.1,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_a_lo", a_4, row - 1, &spread_halves_a.0)?;
+        self.assign_and_constrain(region, || "spread_a_hi", a_5, row - 1, &spread_halves_a.1)?;
 
         // Assign and copy spread_b_lo, spread_b_hi
-        self.assign_and_constrain(
-            region,
-            || "spread_b_lo",
-            a_4,
-            row,
-            &spread_halves_b.0,
-            &self.perm,
-        )?;
-        self.assign_and_constrain(
-            region,
-            || "spread_b_hi",
-            a_5,
-            row,
-            &spread_halves_b.1,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_b_lo", a_4, row, &spread_halves_b.0)?;
+        self.assign_and_constrain(region, || "spread_b_hi", a_5, row, &spread_halves_b.1)?;
 
         // Assign and copy spread_c_lo, spread_c_hi
-        self.assign_and_constrain(
-            region,
-            || "spread_c_lo",
-            a_4,
-            row + 1,
-            &spread_halves_c.0,
-            &self.perm,
-        )?;
-        self.assign_and_constrain(
-            region,
-            || "spread_c_hi",
-            a_5,
-            row + 1,
-            &spread_halves_c.1,
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "spread_c_lo", a_4, row + 1, &spread_halves_c.0)?;
+        self.assign_and_constrain(region, || "spread_c_hi", a_5, row + 1, &spread_halves_c.1)?;
 
         let m: u64 = spread_halves_a.0.value.unwrap() as u64
             + spread_halves_b.0.value.unwrap() as u64
@@ -791,26 +633,12 @@ impl CompressionConfig {
         let a_9 = self.extras[5];
 
         // Assign and copy h
-        self.assign_and_constrain(region, || "h_lo", a_7, row - 1, &h.0.into(), &self.perm)?;
-        self.assign_and_constrain(region, || "h_hi", a_7, row, &h.1.into(), &self.perm)?;
+        self.assign_and_constrain(region, || "h_lo", a_7, row - 1, &h.0.into())?;
+        self.assign_and_constrain(region, || "h_hi", a_7, row, &h.1.into())?;
 
         // Assign and copy sigma_1
-        self.assign_and_constrain(
-            region,
-            || "sigma_1_lo",
-            a_4,
-            row,
-            &sigma_1.0.into(),
-            &self.perm,
-        )?;
-        self.assign_and_constrain(
-            region,
-            || "sigma_1_hi",
-            a_5,
-            row,
-            &sigma_1.1.into(),
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "sigma_1_lo", a_4, row, &sigma_1.0.into())?;
+        self.assign_and_constrain(region, || "sigma_1_hi", a_5, row, &sigma_1.1.into())?;
 
         // Assign k
         let k_pieces = chop_u32(k, &[16, 16]);
@@ -823,36 +651,15 @@ impl CompressionConfig {
         region.assign_advice(|| "k_hi", a_6, row, || Ok(F::from_u64(k_pieces[1] as u64)))?;
 
         // Assign and copy w
-        self.assign_and_constrain(region, || "w_lo", a_8, row - 1, &w.0.into(), &self.perm)?;
-        self.assign_and_constrain(region, || "w_hi", a_8, row, &w.1.into(), &self.perm)?;
+        self.assign_and_constrain(region, || "w_lo", a_8, row - 1, &w.0.into())?;
+        self.assign_and_constrain(region, || "w_hi", a_8, row, &w.1.into())?;
 
         // Assign and copy ch
-        self.assign_and_constrain(
-            region,
-            || "ch_neg_hi",
-            a_6,
-            row + 1,
-            &ch.1.into(),
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "ch_neg_hi", a_6, row + 1, &ch.1.into())?;
 
         // Assign and copy ch_neg
-        self.assign_and_constrain(
-            region,
-            || "ch_neg_lo",
-            a_5,
-            row - 1,
-            &ch_neg.0.into(),
-            &self.perm,
-        )?;
-        self.assign_and_constrain(
-            region,
-            || "ch_neg_hi",
-            a_5,
-            row + 1,
-            &ch_neg.1.into(),
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "ch_neg_lo", a_5, row - 1, &ch_neg.0.into())?;
+        self.assign_and_constrain(region, || "ch_neg_hi", a_5, row + 1, &ch_neg.1.into())?;
 
         // Assign h_prime, h_prime_carry
         let h_prime_lo = h.0.value.unwrap() as u32
@@ -914,8 +721,8 @@ impl CompressionConfig {
         let a_9 = self.extras[5];
 
         // Assign and copy d_lo, d_hi
-        self.assign_and_constrain(region, || "d_lo", a_7, row, &d.0.into(), &self.perm)?;
-        self.assign_and_constrain(region, || "d_hi", a_7, row + 1, &d.1.into(), &self.perm)?;
+        self.assign_and_constrain(region, || "d_lo", a_7, row, &d.0.into())?;
+        self.assign_and_constrain(region, || "d_hi", a_7, row + 1, &d.1.into())?;
 
         // Assign e_new, e_new_carry
         let e_new_lo = h_prime.0.value.unwrap() as u32 + d.0.value.unwrap() as u32;
@@ -956,50 +763,15 @@ impl CompressionConfig {
         let a_9 = self.extras[5];
 
         // Assign and copy maj_1
-        self.assign_and_constrain(
-            region,
-            || "maj_1_hi",
-            a_3,
-            row - 1,
-            &maj.1.into(),
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "maj_1_hi", a_3, row - 1, &maj.1.into())?;
 
         // Assign and copy sigma_0
-        self.assign_and_constrain(
-            region,
-            || "sigma_0_lo",
-            a_6,
-            row,
-            &sigma_0.0.into(),
-            &self.perm,
-        )?;
-        self.assign_and_constrain(
-            region,
-            || "sigma_0_hi",
-            a_6,
-            row + 1,
-            &sigma_0.1.into(),
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "sigma_0_lo", a_6, row, &sigma_0.0.into())?;
+        self.assign_and_constrain(region, || "sigma_0_hi", a_6, row + 1, &sigma_0.1.into())?;
 
         // Assign and copy h_prime
-        self.assign_and_constrain(
-            region,
-            || "h_prime_lo",
-            a_7,
-            row - 1,
-            &h_prime.0.into(),
-            &self.perm,
-        )?;
-        self.assign_and_constrain(
-            region,
-            || "h_prime_hi",
-            a_8,
-            row - 1,
-            &h_prime.1.into(),
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "h_prime_lo", a_7, row - 1, &h_prime.0.into())?;
+        self.assign_and_constrain(region, || "h_prime_hi", a_8, row - 1, &h_prime.1.into())?;
 
         // Assign a_new, a_new_carry
         let a_new_lo = h_prime.0.value.unwrap() as u32

@@ -4,7 +4,7 @@ use super::{super::BLOCK_SIZE, BlockWord, CellValue16, SpreadInputs, Table16Assi
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Cell, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Permutation},
+    plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
     poly::Rotation,
 };
 
@@ -50,7 +50,6 @@ pub(super) struct MessageScheduleConfig {
     s_lower_sigma_0_v2: Column<Fixed>,
     /// sigma_1_v2 gate for W_[14..49]
     s_lower_sigma_1_v2: Column<Fixed>,
-    perm: Permutation,
 }
 
 impl<F: FieldExt> Table16Assignment<F> for MessageScheduleConfig {}
@@ -71,7 +70,6 @@ impl MessageScheduleConfig {
         lookup: SpreadInputs,
         message_schedule: Column<Advice>,
         extras: [Column<Advice>; 6],
-        perm: Permutation,
     ) -> Self {
         // Create fixed columns for the selectors we will require.
         let s_word = meta.fixed_column();
@@ -128,7 +126,6 @@ impl MessageScheduleConfig {
                 word,
                 carry,
             )
-            .0
         });
 
         // s_decompose_0 for all words
@@ -138,7 +135,7 @@ impl MessageScheduleConfig {
             let hi = meta.query_advice(a_4, Rotation::cur());
             let word = meta.query_advice(a_5, Rotation::cur());
 
-            ScheduleGate::s_decompose_0(s_decompose_0, lo, hi, word).0
+            ScheduleGate::s_decompose_0(s_decompose_0, lo, hi, word)
         });
 
         // s_decompose_1 for W_[1..14]
@@ -153,7 +150,7 @@ impl MessageScheduleConfig {
             let tag_d = meta.query_advice(a_0, Rotation::cur());
             let word = meta.query_advice(a_5, Rotation::cur());
 
-            ScheduleGate::s_decompose_1(s_decompose_1, a, b, c, tag_c, d, tag_d, word).0
+            ScheduleGate::s_decompose_1(s_decompose_1, a, b, c, tag_c, d, tag_d, word)
         });
 
         // s_decompose_2 for W_[14..49]
@@ -171,7 +168,7 @@ impl MessageScheduleConfig {
             let tag_g = meta.query_advice(a_0, Rotation::prev());
             let word = meta.query_advice(a_5, Rotation::cur());
 
-            ScheduleGate::s_decompose_2(s_decompose_2, a, b, c, d, tag_d, e, f, g, tag_g, word).0
+            ScheduleGate::s_decompose_2(s_decompose_2, a, b, c, d, tag_d, e, f, g, tag_g, word)
         });
 
         // s_decompose_3 for W_49 to W_61
@@ -186,7 +183,7 @@ impl MessageScheduleConfig {
             let tag_d = meta.query_advice(a_0, Rotation::cur());
             let word = meta.query_advice(a_5, Rotation::cur());
 
-            ScheduleGate::s_decompose_3(s_decompose_3, a, tag_a, b, c, d, tag_d, word).0
+            ScheduleGate::s_decompose_3(s_decompose_3, a, tag_a, b, c, d, tag_d, word)
         });
 
         // sigma_0 v1 on W_[1..14]
@@ -208,7 +205,6 @@ impl MessageScheduleConfig {
                 meta.query_advice(a_4, Rotation::cur()),            // spread_c
                 meta.query_advice(a_5, Rotation::cur()),            // spread_d
             )
-            .0
         });
 
         // sigma_0 v2 on W_[14..49]
@@ -234,7 +230,6 @@ impl MessageScheduleConfig {
                 meta.query_advice(a_7, Rotation::next()),              // spread_f
                 meta.query_advice(a_5, Rotation::cur()),               // spread_g
             )
-            .0
         });
 
         // sigma_1 v2 on W_14 to W_48
@@ -260,7 +255,6 @@ impl MessageScheduleConfig {
                 meta.query_advice(a_7, Rotation::next()),              // spread_f
                 meta.query_advice(a_5, Rotation::cur()),               // spread_g
             )
-            .0
         });
 
         // sigma_1 v1 on W_49 to W_61
@@ -284,7 +278,6 @@ impl MessageScheduleConfig {
                 meta.query_advice(a_4, Rotation::next()),           // spread_c
                 meta.query_advice(a_5, Rotation::cur()),            // spread_d
             )
-            .0
         });
 
         MessageScheduleConfig {
@@ -300,7 +293,6 @@ impl MessageScheduleConfig {
             s_lower_sigma_1,
             s_lower_sigma_0_v2,
             s_lower_sigma_1_v2,
-            perm,
         }
     }
 
@@ -445,10 +437,10 @@ mod tests {
     use super::schedule_util::*;
     use halo2::{
         arithmetic::FieldExt,
-        circuit::layouter::SingleChipLayouter,
+        circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         pasta::Fp,
-        plonk::{Assignment, Circuit, ConstraintSystem, Error},
+        plonk::{Circuit, ConstraintSystem, Error},
     };
 
     #[test]
@@ -457,6 +449,11 @@ mod tests {
 
         impl<F: FieldExt> Circuit<F> for MyCircuit {
             type Config = Table16Config;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                MyCircuit {}
+            }
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 Table16Chip::configure(meta)
@@ -464,11 +461,9 @@ mod tests {
 
             fn synthesize(
                 &self,
-                cs: &mut impl Assignment<F>,
                 config: Self::Config,
+                mut layouter: impl Layouter<F>,
             ) -> Result<(), Error> {
-                let mut layouter = SingleChipLayouter::new(cs)?;
-
                 // Load lookup table
                 SpreadTableChip::load(config.lookup.clone(), &mut layouter)?;
 
@@ -488,7 +483,7 @@ mod tests {
 
         let circuit: MyCircuit = MyCircuit {};
 
-        let prover = match MockProver::<Fp>::run(16, &circuit, vec![]) {
+        let prover = match MockProver::<Fp>::run(17, &circuit, vec![]) {
             Ok(prover) => prover,
             Err(e) => panic!("{:?}", e),
         };

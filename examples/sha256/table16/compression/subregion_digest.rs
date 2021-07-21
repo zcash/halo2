@@ -28,22 +28,8 @@ impl CompressionConfig {
         region.assign_fixed(|| "s_digest", self.s_digest, efgh_row, || Ok(F::one()))?;
 
         // Assign digest for A, B, C, D
-        self.assign_and_constrain(
-            region,
-            || "a_lo",
-            a_3,
-            abcd_row,
-            &a.dense_halves.0.into(),
-            &self.perm,
-        )?;
-        self.assign_and_constrain(
-            region,
-            || "a_hi",
-            a_4,
-            abcd_row,
-            &a.dense_halves.1.into(),
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "a_lo", a_3, abcd_row, &a.dense_halves.0.into())?;
+        self.assign_and_constrain(region, || "a_hi", a_4, abcd_row, &a.dense_halves.1.into())?;
         let a = a.dense_halves.0.value.unwrap() as u32
             + (1 << 16) * (a.dense_halves.1.value.unwrap() as u32);
         region.assign_advice(|| "a", a_5, abcd_row, || Ok(F::from_u64(a as u64)))?;
@@ -53,22 +39,8 @@ impl CompressionConfig {
         let d = self.assign_digest_word(region, abcd_row + 1, a_6, a_7, a_8, d.dense_halves)?;
 
         // Assign digest for E, F, G, H
-        self.assign_and_constrain(
-            region,
-            || "e_lo",
-            a_3,
-            efgh_row,
-            &e.dense_halves.0.into(),
-            &self.perm,
-        )?;
-        self.assign_and_constrain(
-            region,
-            || "e_hi",
-            a_4,
-            efgh_row,
-            &e.dense_halves.1.into(),
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "e_lo", a_3, efgh_row, &e.dense_halves.0.into())?;
+        self.assign_and_constrain(region, || "e_hi", a_4, efgh_row, &e.dense_halves.1.into())?;
         let e = e.dense_halves.0.value.unwrap() as u32
             + (1 << 16) * (e.dense_halves.1.value.unwrap() as u32);
         region.assign_advice(|| "e", a_5, efgh_row, || Ok(F::from_u64(e as u64)))?;
@@ -98,22 +70,8 @@ impl CompressionConfig {
         word_col: Column<Advice>,
         dense_halves: (CellValue16, CellValue16),
     ) -> Result<u32, Error> {
-        self.assign_and_constrain(
-            region,
-            || "lo",
-            lo_col,
-            row,
-            &dense_halves.0.into(),
-            &self.perm,
-        )?;
-        self.assign_and_constrain(
-            region,
-            || "hi",
-            hi_col,
-            row,
-            &dense_halves.1.into(),
-            &self.perm,
-        )?;
+        self.assign_and_constrain(region, || "lo", lo_col, row, &dense_halves.0.into())?;
+        self.assign_and_constrain(region, || "hi", hi_col, row, &dense_halves.1.into())?;
         let val = dense_halves.0.value.unwrap() as u32
             + (1 << 16) * (dense_halves.1.value.unwrap() as u32);
         region.assign_advice(|| "word", word_col, row, || Ok(F::from_u64(val as u64)))?;
