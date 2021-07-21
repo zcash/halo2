@@ -93,7 +93,13 @@ impl CircuitLayout {
         let mut cs = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut cs);
         let mut layout = Layout::default();
-        ConcreteCircuit::FloorPlanner::synthesize(&mut layout, circuit, config).unwrap();
+        ConcreteCircuit::FloorPlanner::synthesize(
+            &mut layout,
+            circuit,
+            config,
+            cs.constants.clone(),
+        )
+        .unwrap();
 
         // Figure out what order to render the columns in.
         // TODO: For now, just render them in the order they were configured.

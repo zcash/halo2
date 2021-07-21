@@ -495,6 +495,9 @@ pub trait Assignment<F: Field> {
 pub trait FloorPlanner {
     /// Given the provided `cs`, synthesize the given circuit.
     ///
+    /// `constants` is the list of fixed columns that the layouter may use to assign
+    /// global constant values. These columns will all have been equality-enabled.
+    ///
     /// Internally, a floor planner will perform the following operations:
     /// - Instantiate a [`Layouter`] for this floor planner.
     /// - Perform any necessary setup or measurement tasks, which may involve one or more
@@ -504,6 +507,7 @@ pub trait FloorPlanner {
         cs: &mut CS,
         circuit: &C,
         config: C::Config,
+        constants: Vec<Column<Fixed>>,
     ) -> Result<(), Error>;
 }
 
@@ -817,6 +821,10 @@ pub struct ConstraintSystem<F: Field> {
     // input expressions and a sequence of table expressions involved in the lookup.
     pub(crate) lookups: Vec<lookup::Argument<F>>,
 
+    // Vector of fixed columns, which can be used to store constant values
+    // that are copied into advice columns.
+    pub(crate) constants: Vec<Column<Fixed>>,
+
     pub(crate) minimum_degree: Option<usize>,
 }
 
@@ -832,6 +840,7 @@ pub struct PinnedConstraintSystem<'a, F: Field> {
     fixed_queries: &'a Vec<(Column<Fixed>, Rotation)>,
     permutation: &'a permutation::Argument,
     lookups: &'a Vec<lookup::Argument<F>>,
+    constants: &'a Vec<Column<Fixed>>,
     minimum_degree: &'a Option<usize>,
 }
 
@@ -858,6 +867,7 @@ impl<F: Field> Default for ConstraintSystem<F> {
             instance_queries: Vec::new(),
             permutation: permutation::Argument::new(),
             lookups: Vec::new(),
+            constants: vec![],
             minimum_degree: None,
         }
     }
@@ -878,7 +888,20 @@ impl<F: Field> ConstraintSystem<F> {
             instance_queries: &self.instance_queries,
             permutation: &self.permutation,
             lookups: &self.lookups,
+            constants: &self.constants,
             minimum_degree: &self.minimum_degree,
+        }
+    }
+
+    /// Enables this fixed column to be used for global constant assignments.
+    ///
+    /// # Side-effects
+    ///
+    /// The column will be equality-enabled.
+    pub fn enable_constant(&mut self, column: Column<Fixed>) {
+        if !self.constants.contains(&column) {
+            self.constants.push(column);
+            self.enable_equality(column.into());
         }
     }
 

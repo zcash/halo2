@@ -58,6 +58,20 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error>;
 
+    /// Assigns a constant value to the column `advice` at `offset` within this region.
+    ///
+    /// The constant value will be assigned to a cell within one of the fixed columns
+    /// configured via `ConstraintSystem::enable_constant`.
+    ///
+    /// Returns the advice cell that has been equality-constrained to the constant.
+    fn assign_advice_from_constant<'v>(
+        &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        column: Column<Advice>,
+        offset: usize,
+        constant: Assigned<F>,
+    ) -> Result<Cell, Error>;
+
     /// Assign the value of the instance column's cell at absolute location
     /// `row` to the column `advice` at `offset` within this region.
     ///
@@ -79,6 +93,11 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         offset: usize,
         to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error>;
+
+    /// Constrains a cell to have a constant value.
+    ///
+    /// Returns an error if the cell is in a column where equality has not been enabled.
+    fn constrain_constant(&mut self, cell: Cell, constant: Assigned<F>) -> Result<(), Error>;
 
     /// Constraint two cells to have the same value.
     ///
@@ -152,6 +171,17 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         })
     }
 
+    fn assign_advice_from_constant<'v>(
+        &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        column: Column<Advice>,
+        offset: usize,
+        constant: Assigned<F>,
+    ) -> Result<Cell, Error> {
+        // The rest is identical to witnessing an advice cell.
+        self.assign_advice(annotation, column, offset, &mut || Ok(constant))
+    }
+
     fn assign_advice_from_instance<'v>(
         &mut self,
         _: &'v (dyn Fn() -> String + 'v),
@@ -188,6 +218,11 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
             row_offset: offset,
             column: column.into(),
         })
+    }
+
+    fn constrain_constant(&mut self, _cell: Cell, _constant: Assigned<F>) -> Result<(), Error> {
+        // Global constants don't affect the region shape.
+        Ok(())
     }
 
     fn constrain_equal(&mut self, _left: Cell, _right: Cell) -> Result<(), Error> {

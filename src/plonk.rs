@@ -154,6 +154,9 @@ pub enum Error {
     NotEnoughRowsAvailable,
     /// Instance provided exceeds number of available rows
     InstanceTooLarge,
+    /// Circuit synthesis requires global constants, but circuit configuration did not
+    /// call [`ConstraintSystem::enable_constant`] on fixed columns with sufficient space.
+    NotEnoughColumnsForConstants,
 }
 
 impl<C: CurveAffine> ProvingKey<C> {

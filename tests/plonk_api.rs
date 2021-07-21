@@ -924,6 +924,7 @@ fn plonk_api() {
                 ],
             },
         ],
+        constants: [],
         minimum_degree: None,
     },
     fixed_commitments: [

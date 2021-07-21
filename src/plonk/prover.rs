@@ -261,7 +261,12 @@ pub fn create_proof<
             };
 
             // Synthesize the circuit to obtain the witness and other information.
-            ConcreteCircuit::FloorPlanner::synthesize(&mut witness, circuit, config.clone())?;
+            ConcreteCircuit::FloorPlanner::synthesize(
+                &mut witness,
+                circuit,
+                config.clone(),
+                meta.constants.clone(),
+            )?;
 
             let mut advice = batch_invert_assigned(witness.advice);
 

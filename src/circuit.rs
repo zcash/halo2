@@ -152,6 +152,32 @@ impl<'r, F: Field> Region<'r, F> {
             })
     }
 
+    /// Assigns a constant value to the column `advice` at `offset` within this region.
+    ///
+    /// The constant value will be assigned to a cell within one of the fixed columns
+    /// configured via `ConstraintSystem::enable_constant`.
+    ///
+    /// Returns the advice cell.
+    pub fn assign_advice_from_constant<VR, A, AR>(
+        &mut self,
+        annotation: A,
+        column: Column<Advice>,
+        offset: usize,
+        constant: VR,
+    ) -> Result<Cell, Error>
+    where
+        VR: Into<Assigned<F>>,
+        A: Fn() -> AR,
+        AR: Into<String>,
+    {
+        self.region.assign_advice_from_constant(
+            &|| annotation().into(),
+            column,
+            offset,
+            constant.into(),
+        )
+    }
+
     /// Assign the value of the instance column's cell at absolute location
     /// `row` to the column `advice` at `offset` within this region.
     ///
@@ -197,6 +223,16 @@ impl<'r, F: Field> Region<'r, F> {
             .assign_fixed(&|| annotation().into(), column, offset, &mut || {
                 to().map(|v| v.into())
             })
+    }
+
+    /// Constrains a cell to have a constant value.
+    ///
+    /// Returns an error if the cell is in a column where equality has not been enabled.
+    pub fn constrain_constant<VR>(&mut self, cell: Cell, constant: VR) -> Result<(), Error>
+    where
+        VR: Into<Assigned<F>>,
+    {
+        self.region.constrain_constant(cell, constant.into())
     }
 
     /// Constrains two cells to have the same value.

@@ -186,7 +186,12 @@ where
     };
 
     // Synthesize the circuit to obtain URS
-    ConcreteCircuit::FloorPlanner::synthesize(&mut assembly, circuit, config)?;
+    ConcreteCircuit::FloorPlanner::synthesize(
+        &mut assembly,
+        circuit,
+        config,
+        cs.constants.clone(),
+    )?;
 
     let fixed = batch_invert_assigned(assembly.fixed);
 
@@ -234,7 +239,12 @@ where
     };
 
     // Synthesize the circuit to obtain URS
-    ConcreteCircuit::FloorPlanner::synthesize(&mut assembly, circuit, config)?;
+    ConcreteCircuit::FloorPlanner::synthesize(
+        &mut assembly,
+        circuit,
+        config,
+        cs.constants.clone(),
+    )?;
 
     let fixed = batch_invert_assigned(assembly.fixed);
 
