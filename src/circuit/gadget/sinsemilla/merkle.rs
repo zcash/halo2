@@ -203,6 +203,7 @@ pub mod tests {
             let sinsemilla_config_1 = SinsemillaChip::configure(
                 meta,
                 advices[5..].try_into().unwrap(),
+                advices[7],
                 lookup,
                 range_check.clone(),
             );
@@ -211,6 +212,7 @@ pub mod tests {
             let sinsemilla_config_2 = SinsemillaChip::configure(
                 meta,
                 advices[..5].try_into().unwrap(),
+                advices[2],
                 lookup,
                 range_check,
             );

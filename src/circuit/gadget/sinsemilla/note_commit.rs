@@ -1364,6 +1364,7 @@ mod tests {
                 let sinsemilla_config = SinsemillaChip::configure(
                     meta,
                     advices[..5].try_into().unwrap(),
+                    advices[2],
                     lookup,
                     range_check.clone(),
                 );

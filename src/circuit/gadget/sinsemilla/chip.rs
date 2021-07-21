@@ -53,6 +53,9 @@ pub struct SinsemillaConfig {
     /// Advice column used to store the $\lambda_2$ intermediate value at each
     /// iteration.
     lambda_2: Column<Advice>,
+    /// Advice column used to witness message pieces. This may or may not be the same
+    /// column as `bits`.
+    witness_pieces: Column<Advice>,
     /// The lookup table where $(\mathsf{idx}, x_p, y_p)$ are loaded for the $2^K$
     /// generators of the Sinsemilla hash.
     pub(super) generator_table: GeneratorTableConfig,
@@ -106,6 +109,7 @@ impl SinsemillaChip {
     pub fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 5],
+        witness_pieces: Column<Advice>,
         lookup: (Column<Fixed>, Column<Fixed>, Column<Fixed>),
         range_check: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     ) -> <Self as Chip<pallas::Base>>::Config {
@@ -118,6 +122,7 @@ impl SinsemillaChip {
             bits: advices[2],
             lambda_1: advices[3],
             lambda_2: advices[4],
+            witness_pieces,
             generator_table: GeneratorTableConfig {
                 table_idx: lookup.0,
                 table_x: lookup.1,
@@ -241,7 +246,7 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
             |mut region| {
                 region.assign_advice(
                     || "witness message piece",
-                    config.bits,
+                    config.witness_pieces,
                     0,
                     || field_elem.ok_or(Error::SynthesisError),
                 )
