@@ -44,16 +44,16 @@ impl<C: ColumnType> Ord for Column<C> {
         // orderings.
         match (self.column_type.into(), other.column_type.into()) {
             // Indices are assigned within column types.
-            (Any::Advice, Any::Advice)
-            | (Any::Instance, Any::Instance)
+            (Any::Instance, Any::Instance)
+            | (Any::Advice, Any::Advice)
             | (Any::Fixed, Any::Fixed) => self.index.cmp(&other.index),
-            // Across column types, sort Advice < Instance < Fixed.
-            (Any::Advice, Any::Instance)
+            // Across column types, sort Instance < Advice < Fixed.
+            (Any::Instance, Any::Advice)
             | (Any::Advice, Any::Fixed)
             | (Any::Instance, Any::Fixed) => std::cmp::Ordering::Less,
             (Any::Fixed, Any::Instance)
             | (Any::Fixed, Any::Advice)
-            | (Any::Instance, Any::Advice) => std::cmp::Ordering::Greater,
+            | (Any::Advice, Any::Instance) => std::cmp::Ordering::Greater,
         }
     }
 }
