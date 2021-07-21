@@ -407,6 +407,7 @@ mod tests {
     use pasta_curves::pallas;
 
     use super::chip::{EccChip, EccConfig};
+    use crate::circuit::gadget::utilities::lookup_range_check::LookupRangeCheckConfig;
 
     struct MyCircuit {}
 
@@ -447,7 +448,8 @@ mod tests {
             let constants = meta.fixed_column();
             meta.enable_constant(constants);
 
-            EccChip::configure(meta, advices, lookup_table, lagrange_coeffs)
+            let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
+            EccChip::configure(meta, advices, lagrange_coeffs, range_check)
         }
 
         fn synthesize(

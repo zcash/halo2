@@ -56,12 +56,8 @@ pub struct SinsemillaConfig {
     /// The lookup table where $(\mathsf{idx}, x_p, y_p)$ are loaded for the $2^K$
     /// generators of the Sinsemilla hash.
     pub(super) generator_table: GeneratorTableConfig,
-    /// Configure each advice column to be able to perform lookup range checks.
-    pub(super) lookup_config_0: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
-    pub(super) lookup_config_1: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
-    pub(super) lookup_config_2: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
-    pub(super) lookup_config_3: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
-    pub(super) lookup_config_4: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    /// An advice column configured to perform lookup range checks.
+    pub(super) lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
 }
 
 impl SinsemillaConfig {
@@ -111,16 +107,8 @@ impl SinsemillaChip {
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 5],
         lookup: (Column<Fixed>, Column<Fixed>, Column<Fixed>),
+        range_check: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     ) -> <Self as Chip<pallas::Base>>::Config {
-        // This chip requires all advice columns and the `constants` fixed columns to be
-        // equality-enabled. The advice columns and the first five `constants` columns
-        // are equality-enabled by the calls to LookupRangeCheckConfig::configure.
-        let lookup_config_0 = LookupRangeCheckConfig::configure(meta, advices[0], lookup.0);
-        let lookup_config_1 = LookupRangeCheckConfig::configure(meta, advices[1], lookup.0);
-        let lookup_config_2 = LookupRangeCheckConfig::configure(meta, advices[2], lookup.0);
-        let lookup_config_3 = LookupRangeCheckConfig::configure(meta, advices[3], lookup.0);
-        let lookup_config_4 = LookupRangeCheckConfig::configure(meta, advices[4], lookup.0);
-
         let config = SinsemillaConfig {
             q_sinsemilla1: meta.selector(),
             q_sinsemilla2: meta.fixed_column(),
@@ -135,11 +123,7 @@ impl SinsemillaChip {
                 table_x: lookup.1,
                 table_y: lookup.2,
             },
-            lookup_config_0,
-            lookup_config_1,
-            lookup_config_2,
-            lookup_config_3,
-            lookup_config_4,
+            lookup_config: range_check,
         };
 
         // Set up lookup argument

@@ -139,7 +139,7 @@ pub mod tests {
     use crate::{
         circuit::gadget::{
             sinsemilla::chip::{SinsemillaChip, SinsemillaHashDomains},
-            utilities::{UtilitiesInstructions, Var},
+            utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions, Var},
         },
         constants::{L_ORCHARD_BASE, MERKLE_CRH_PERSONALIZATION, MERKLE_DEPTH_ORCHARD},
         primitives::sinsemilla::HashDomain,
@@ -198,12 +198,22 @@ pub mod tests {
                 meta.fixed_column(),
             );
 
-            let sinsemilla_config_1 =
-                SinsemillaChip::configure(meta, advices[5..].try_into().unwrap(), lookup);
+            let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup.0);
+
+            let sinsemilla_config_1 = SinsemillaChip::configure(
+                meta,
+                advices[5..].try_into().unwrap(),
+                lookup,
+                range_check.clone(),
+            );
             let config1 = MerkleChip::configure(meta, sinsemilla_config_1);
 
-            let sinsemilla_config_2 =
-                SinsemillaChip::configure(meta, advices[..5].try_into().unwrap(), lookup);
+            let sinsemilla_config_2 = SinsemillaChip::configure(
+                meta,
+                advices[..5].try_into().unwrap(),
+                lookup,
+                range_check,
+            );
             let config2 = MerkleChip::configure(meta, sinsemilla_config_2);
 
             (config1, config2)

@@ -416,9 +416,12 @@ mod tests {
     };
 
     use crate::{
-        circuit::gadget::ecc::{
-            chip::{EccChip, EccConfig},
-            Point,
+        circuit::gadget::{
+            ecc::{
+                chip::{EccChip, EccConfig},
+                Point,
+            },
+            utilities::lookup_range_check::LookupRangeCheckConfig,
         },
         constants::{COMMIT_IVK_PERSONALIZATION, MERKLE_CRH_PERSONALIZATION},
         primitives::sinsemilla::{self, K},
@@ -473,10 +476,23 @@ mod tests {
             // Fixed columns for the Sinsemilla generator lookup table
             let lookup = (table_idx, meta.fixed_column(), meta.fixed_column());
 
-            let ecc_config = EccChip::configure(meta, advices, table_idx, lagrange_coeffs);
+            let range_check = LookupRangeCheckConfig::configure(meta, advices[9], table_idx);
 
-            let config1 = SinsemillaChip::configure(meta, advices[..5].try_into().unwrap(), lookup);
-            let config2 = SinsemillaChip::configure(meta, advices[5..].try_into().unwrap(), lookup);
+            let ecc_config =
+                EccChip::configure(meta, advices, lagrange_coeffs, range_check.clone());
+
+            let config1 = SinsemillaChip::configure(
+                meta,
+                advices[..5].try_into().unwrap(),
+                lookup,
+                range_check.clone(),
+            );
+            let config2 = SinsemillaChip::configure(
+                meta,
+                advices[5..].try_into().unwrap(),
+                lookup,
+                range_check,
+            );
             (ecc_config, config1, config2)
         }
 

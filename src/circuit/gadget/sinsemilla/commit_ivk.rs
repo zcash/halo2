@@ -263,13 +263,13 @@ impl CommitIvkConfig {
             });
 
             // Constrain b_0 to be 4 bits.
-            let b_0 = self.sinsemilla_config.lookup_config_0.witness_short_check(
+            let b_0 = self.sinsemilla_config.lookup_config.witness_short_check(
                 layouter.namespace(|| "b_0 is 4 bits"),
                 b_0,
                 4,
             )?;
             // Constrain b_2 to be 5 bits.
-            let b_2 = self.sinsemilla_config.lookup_config_1.witness_short_check(
+            let b_2 = self.sinsemilla_config.lookup_config.witness_short_check(
                 layouter.namespace(|| "b_2 is 5 bits"),
                 b_2,
                 5,
@@ -307,7 +307,7 @@ impl CommitIvkConfig {
                 .map(|(d_0, d_1)| d_0 + d_1 * pallas::Base::from_u64(1 << 9));
 
             // Constrain d_0 to be 9 bits.
-            let d_0 = self.sinsemilla_config.lookup_config_2.witness_short_check(
+            let d_0 = self.sinsemilla_config.lookup_config.witness_short_check(
                 layouter.namespace(|| "d_0 is 9 bits"),
                 d_0,
                 9,
@@ -400,7 +400,7 @@ impl CommitIvkConfig {
             let t_p = pallas::Base::from_u128(T_P);
             a + two_pow_130 - t_p
         });
-        let (a_prime, zs) = self.sinsemilla_config.lookup_config_3.witness_check(
+        let (a_prime, zs) = self.sinsemilla_config.lookup_config.witness_check(
             layouter.namespace(|| "Decompose low 130 bits of (a + 2^130 - t_P)"),
             a_prime,
             13,
@@ -436,7 +436,7 @@ impl CommitIvkConfig {
             let t_p = pallas::Base::from_u128(T_P);
             b_2 + c * two_pow_5 + two_pow_140 - t_p
         });
-        let (b2_c_prime, zs) = self.sinsemilla_config.lookup_config_4.witness_check(
+        let (b2_c_prime, zs) = self.sinsemilla_config.lookup_config.witness_check(
             layouter.namespace(|| "Decompose low 140 bits of (b_2 + c * 2^5 + 2^140 - t_P)"),
             b2_c_prime,
             14,
@@ -629,7 +629,9 @@ mod tests {
         circuit::gadget::{
             ecc::chip::{EccChip, EccConfig},
             sinsemilla::chip::SinsemillaChip,
-            utilities::{CellValue, UtilitiesInstructions},
+            utilities::{
+                lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions,
+            },
         },
         constants::T_Q,
     };
@@ -696,12 +698,18 @@ mod tests {
                     meta.fixed_column(),
                 ];
 
-                let sinsemilla_config =
-                    SinsemillaChip::configure(meta, advices[..5].try_into().unwrap(), lookup);
+                let range_check = LookupRangeCheckConfig::configure(meta, advices[9], table_idx);
+                let sinsemilla_config = SinsemillaChip::configure(
+                    meta,
+                    advices[..5].try_into().unwrap(),
+                    lookup,
+                    range_check.clone(),
+                );
+
                 let commit_ivk_config =
                     CommitIvkConfig::configure(meta, advices, sinsemilla_config);
 
-                let ecc_config = EccChip::configure(meta, advices, table_idx, lagrange_coeffs);
+                let ecc_config = EccChip::configure(meta, advices, lagrange_coeffs, range_check);
 
                 (commit_ivk_config, ecc_config)
             }

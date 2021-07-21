@@ -152,8 +152,8 @@ impl EccChip {
     pub fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 10],
-        lookup_table: Column<Fixed>,
         lagrange_coeffs: [Column<Fixed>; 8],
+        range_check: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     ) -> <Self as Chip<pallas::Base>>::Config {
         // The following columns need to be equality-enabled for their use in sub-configs:
         //
@@ -186,8 +186,6 @@ impl EccChip {
             meta.enable_equality((*column).into());
         }
 
-        let lookup_config = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
-
         let q_mul_fixed_running_sum = meta.selector();
         let running_sum_config =
             RunningSumConfig::configure(meta, q_mul_fixed_running_sum, advices[4]);
@@ -208,7 +206,7 @@ impl EccChip {
             q_mul_fixed_base_field: meta.selector(),
             q_mul_fixed_running_sum,
             q_point: meta.selector(),
-            lookup_config,
+            lookup_config: range_check,
             running_sum_config,
         };
 

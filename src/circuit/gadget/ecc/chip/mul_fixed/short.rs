@@ -247,7 +247,7 @@ pub mod tests {
 
     use crate::circuit::gadget::{
         ecc::{chip::EccChip, FixedPointShort, Point},
-        utilities::{CellValue, UtilitiesInstructions},
+        utilities::{lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions},
     };
     use crate::constants::load::ValueCommitV;
 
@@ -420,7 +420,8 @@ pub mod tests {
                 let constants = meta.fixed_column();
                 meta.enable_constant(constants);
 
-                EccChip::configure(meta, advices, lookup_table, lagrange_coeffs)
+                let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
+                EccChip::configure(meta, advices, lagrange_coeffs, range_check)
             }
 
             fn synthesize(

@@ -62,6 +62,8 @@ use gadget::{
 
 use std::convert::TryInto;
 
+use self::gadget::utilities::lookup_range_check::LookupRangeCheckConfig;
+
 pub(crate) mod gadget;
 
 /// Size of the Orchard circuit.
@@ -221,9 +223,13 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let rc_a = lagrange_coeffs[2..5].try_into().unwrap();
         let rc_b = lagrange_coeffs[5..8].try_into().unwrap();
 
+        // We have a lot of free space in the right-most advice columns; use one of them
+        // for all of our range checks.
+        let range_check = LookupRangeCheckConfig::configure(meta, advices[9], table_idx);
+
         // Configuration for curve point operations.
         // This uses 10 advice columns and spans the whole circuit.
-        let ecc_config = EccChip::configure(meta, advices, table_idx, lagrange_coeffs);
+        let ecc_config = EccChip::configure(meta, advices, lagrange_coeffs, range_check.clone());
 
         // Configuration for the Poseidon hash.
         let poseidon_config = PoseidonChip::configure(
@@ -243,8 +249,12 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         // Since the Sinsemilla config uses only 5 advice columns,
         // we can fit two instances side-by-side.
         let (sinsemilla_config_1, merkle_config_1) = {
-            let sinsemilla_config_1 =
-                SinsemillaChip::configure(meta, advices[..5].try_into().unwrap(), lookup);
+            let sinsemilla_config_1 = SinsemillaChip::configure(
+                meta,
+                advices[..5].try_into().unwrap(),
+                lookup,
+                range_check.clone(),
+            );
             let merkle_config_1 = MerkleChip::configure(meta, sinsemilla_config_1.clone());
 
             (sinsemilla_config_1, merkle_config_1)
@@ -255,8 +265,12 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         // Since the Sinsemilla config uses only 5 advice columns,
         // we can fit two instances side-by-side.
         let (sinsemilla_config_2, merkle_config_2) = {
-            let sinsemilla_config_2 =
-                SinsemillaChip::configure(meta, advices[5..].try_into().unwrap(), lookup);
+            let sinsemilla_config_2 = SinsemillaChip::configure(
+                meta,
+                advices[5..].try_into().unwrap(),
+                lookup,
+                range_check,
+            );
             let merkle_config_2 = MerkleChip::configure(meta, sinsemilla_config_2.clone());
 
             (sinsemilla_config_2, merkle_config_2)
