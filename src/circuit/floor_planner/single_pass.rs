@@ -284,7 +284,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F>
             self.layouter.constants[0],
             // Convert the absolute row into a relative offset within this region, but
             // always at an offset that is not before this region (taking advantage of the
-            // fact that for this single-pass layouter, regions are always layed out in
+            // fact that for this single-pass layouter, regions are always laid out in
             // increasing row order).
             self.next_constant_row
                 .saturating_sub(*self.layouter.regions[*self.region_index]),
