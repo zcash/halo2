@@ -8,7 +8,7 @@ use std::{
 
 use super::{lookup, permutation, Error};
 use crate::circuit::Layouter;
-use crate::{arithmetic::FieldExt, circuit::Region, poly::Rotation};
+use crate::{circuit::Region, poly::Rotation};
 
 /// A column type
 pub trait ColumnType:
@@ -232,7 +232,7 @@ pub struct Selector(pub(crate) usize);
 
 impl Selector {
     /// Enable this selector at the given offset within the given region.
-    pub fn enable<F: FieldExt>(&self, region: &mut Region<F>, offset: usize) -> Result<(), Error> {
+    pub fn enable<F: Field>(&self, region: &mut Region<F>, offset: usize) -> Result<(), Error> {
         region.enable_selector(|| "", self, offset)
     }
 }
@@ -1120,10 +1120,7 @@ impl<F: Field> ConstraintSystem<F> {
     /// find which fixed column corresponds with a given `Selector`.
     ///
     /// Do not call this twice. Yes, this should be a builder pattern instead.
-    pub(crate) fn compress_selectors(mut self, selectors: Vec<Vec<bool>>) -> (Self, Vec<Vec<F>>)
-    where
-        F: FieldExt,
-    {
+    pub(crate) fn compress_selectors(mut self, selectors: Vec<Vec<bool>>) -> (Self, Vec<Vec<F>>) {
         // Note: This is a stub for an actual optimization step. For now, just
         // make new columns like we were doing already.
         assert_eq!(selectors.len(), self.num_selectors);
@@ -1148,7 +1145,7 @@ impl<F: Field> ConstraintSystem<F> {
             })
             .collect();
 
-        fn replace_selectors<F: FieldExt>(
+        fn replace_selectors<F: Field>(
             expr: &mut Expression<F>,
             selector_map: &[Column<Fixed>],
             selector_queries: &[usize],

@@ -7,6 +7,7 @@ use std::cmp;
 use std::collections::HashSet;
 use std::ops::Range;
 
+use crate::circuit::layouter::RegionColumn;
 use crate::plonk::{
     Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
     FloorPlanner, Instance, Selector,
@@ -83,16 +84,18 @@ impl CircuitLayout {
     /// Renders the given circuit on the given drawing area.
     pub fn render<F: Field, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>(
         self,
+        k: usize,
         circuit: &ConcreteCircuit,
         drawing_area: &DrawingArea<DB, Shift>,
     ) -> Result<(), DrawingAreaErrorKind<DB::ErrorType>> {
         use plotters::coord::types::RangedCoordusize;
         use plotters::prelude::*;
 
+        let n = 1 << k;
         // Collect the layout details.
         let mut cs = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut cs);
-        let mut layout = Layout::default();
+        let mut layout = Layout::new(n, cs.num_selectors);
         ConcreteCircuit::FloorPlanner::synthesize(
             &mut layout,
             circuit,
@@ -100,11 +103,17 @@ impl CircuitLayout {
             cs.constants.clone(),
         )
         .unwrap();
+        let (cs, selector_polys) = cs.compress_selectors(layout.selectors);
+        let non_selector_fixed_columns = cs.num_fixed_columns - selector_polys.len();
 
         // Figure out what order to render the columns in.
         // TODO: For now, just render them in the order they were configured.
         let total_columns = cs.num_instance_columns + cs.num_advice_columns + cs.num_fixed_columns;
-        let column_index = |column: &Column<Any>| {
+        let column_index = |cs: &ConstraintSystem<F>, column: RegionColumn| {
+            let column: Column<Any> = match column {
+                RegionColumn::Column(col) => col,
+                RegionColumn::Selector(selector) => cs.selector_map[selector.0].into(),
+            };
             column.index()
                 + match column.column_type() {
                     Any::Instance => 0,
@@ -143,15 +152,16 @@ impl CircuitLayout {
             ],
             ShapeStyle::from(&BLUE.mix(0.2)).filled(),
         ))?;
-        for selector in layout.selectors {
-            let index = selector.index();
+        {
             root.draw(&Rectangle::new(
                 [
-                    (cs.num_instance_columns + cs.num_advice_columns + index, 0),
                     (
-                        cs.num_instance_columns + cs.num_advice_columns + index + 1,
-                        view_bottom,
+                        cs.num_instance_columns
+                            + cs.num_advice_columns
+                            + non_selector_fixed_columns,
+                        0,
                     ),
+                    (total_columns, view_bottom),
                 ],
                 ShapeStyle::from(&BLUE.mix(0.1)).filled(),
             ))?;
@@ -191,12 +201,12 @@ impl CircuitLayout {
             if let Some(offset) = region.offset {
                 // Sort the region's columns according to the defined ordering.
                 let mut columns: Vec<_> = region.columns.into_iter().collect();
-                columns.sort_unstable_by_key(|a| column_index(a));
+                columns.sort_unstable_by_key(|a| column_index(&cs, *a));
 
                 // Render contiguous parts of the same region as a single box.
                 let mut width = None;
                 for column in columns {
-                    let column = column_index(&column);
+                    let column = column_index(&cs, column);
                     match width {
                         Some((start, end)) if end == column => width = Some((start, end + 1)),
                         Some((start, end)) => {
@@ -220,22 +230,22 @@ impl CircuitLayout {
 
                 // Darken the cells of the region that have been assigned to.
                 for (column, row) in region.cells {
-                    draw_cell(&root, column_index(&column), row)?;
+                    draw_cell(&root, column_index(&cs, column), row)?;
                 }
             }
         }
 
         // Darken any loose cells that have been assigned to.
         for (column, row) in layout.loose_cells {
-            draw_cell(&root, column_index(&column), row)?;
+            draw_cell(&root, column_index(&cs, column), row)?;
         }
 
         // Mark equality-constrained cells.
         if self.mark_equality_cells {
             let mut cells = HashSet::new();
             for (l_col, l_row, r_col, r_row) in &layout.equality {
-                let l_col = column_index(l_col);
-                let r_col = column_index(r_col);
+                let l_col = column_index(&cs, (*l_col).into());
+                let r_col = column_index(&cs, (*r_col).into());
 
                 // Deduplicate cells.
                 cells.insert((l_col, *l_row));
@@ -253,8 +263,8 @@ impl CircuitLayout {
         // Draw lines between equality-constrained cells.
         if self.show_equality_constraints {
             for (l_col, l_row, r_col, r_row) in &layout.equality {
-                let l_col = column_index(l_col);
-                let r_col = column_index(r_col);
+                let l_col = column_index(&cs, (*l_col).into());
+                let r_col = column_index(&cs, (*r_col).into());
                 root.draw(&PathElement::new(
                     [(l_col, *l_row), (r_col, *r_row)],
                     ShapeStyle::from(&RED),
@@ -280,14 +290,14 @@ struct Region {
     /// The name of the region. Not required to be unique.
     name: String,
     /// The columns used by this region.
-    columns: HashSet<Column<Any>>,
+    columns: HashSet<RegionColumn>,
     /// The row that this region starts on, if known.
     offset: Option<usize>,
     /// The number of rows that this region takes up.
     rows: usize,
     /// The cells assigned in this region. We store this as a `Vec` so that if any cells
     /// are double-assigned, they will be visibly darker.
-    cells: Vec<(Column<Any>, usize)>,
+    cells: Vec<(RegionColumn, usize)>,
 }
 
 #[derive(Default)]
@@ -297,15 +307,30 @@ struct Layout {
     total_rows: usize,
     /// Any cells assigned outside of a region. We store this as a `Vec` so that if any
     /// cells are double-assigned, they will be visibly darker.
-    loose_cells: Vec<(Column<Any>, usize)>,
-    /// Columns we have observed are actually Selectors.
-    selectors: HashSet<Column<Any>>,
+    loose_cells: Vec<(RegionColumn, usize)>,
     /// Pairs of cells between which we have equality constraints.
     equality: Vec<(Column<Any>, usize, Column<Any>, usize)>,
+    /// Selector assignments used for optimization pass
+    selectors: Vec<Vec<bool>>,
 }
 
 impl Layout {
-    fn update(&mut self, column: Column<Any>, row: usize) {
+    fn new(n: usize, num_selectors: usize) -> Self {
+        Layout {
+            regions: vec![],
+            current_region: None,
+            total_rows: 0,
+            /// Any cells assigned outside of a region. We store this as a `Vec` so that if any
+            /// cells are double-assigned, they will be visibly darker.
+            loose_cells: vec![],
+            /// Pairs of cells between which we have equality constraints.
+            equality: vec![],
+            /// Selector assignments used for optimization pass
+            selectors: vec![vec![false; n]; num_selectors],
+        }
+    }
+
+    fn update(&mut self, column: RegionColumn, row: usize) {
         self.total_rows = cmp::max(self.total_rows, row + 1);
 
         if let Some(region) = self.current_region {
@@ -353,20 +378,14 @@ impl<F: Field> Assignment<F> for Layout {
         self.current_region = None;
     }
 
-    fn enable_selector<A, AR>(
-        &mut self,
-        annotation: A,
-        selector: &Selector,
-        row: usize,
-    ) -> Result<(), Error>
+    fn enable_selector<A, AR>(&mut self, _: A, selector: &Selector, row: usize) -> Result<(), Error>
     where
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
-        // Remember that this column is a selector.
-        self.selectors.insert(selector.0.into());
-        // Selectors are just fixed columns.
-        self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
+        self.selectors[selector.0][row] = true;
+        self.update((*selector).into(), row);
+        Ok(())
     }
 
     fn query_instance(&self, _: Column<Instance>, _: usize) -> Result<Option<F>, Error> {
@@ -386,7 +405,7 @@ impl<F: Field> Assignment<F> for Layout {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
-        self.update(column.into(), row);
+        self.update(Column::<Any>::from(column).into(), row);
         Ok(())
     }
 
@@ -403,7 +422,7 @@ impl<F: Field> Assignment<F> for Layout {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
-        self.update(column.into(), row);
+        self.update(Column::<Any>::from(column).into(), row);
         Ok(())
     }
 
