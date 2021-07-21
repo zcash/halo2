@@ -311,7 +311,7 @@ impl DiversifierKey {
         &self.0
     }
 
-    /// Construct a diversifier key from bytes 
+    /// Construct a diversifier key from bytes
     pub fn from_bytes(bytes: [u8; 32]) -> Self {
         DiversifierKey(bytes)
     }

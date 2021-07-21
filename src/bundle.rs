@@ -7,11 +7,15 @@ use std::mem;
 
 use blake2b_simd::Hash as Blake2bHash;
 use nonempty::NonEmpty;
+use zcash_note_encryption::try_note_decryption;
 
 use crate::{
+    address::Address,
     bundle::commitments::{hash_bundle_auth_data, hash_bundle_txid_data},
     circuit::{Instance, Proof, VerifyingKey},
-    note::{ExtractedNoteCommitment, Nullifier, TransmittedNoteCiphertext},
+    keys::IncomingViewingKey,
+    note::{ExtractedNoteCommitment, Note, Nullifier, TransmittedNoteCiphertext},
+    note_encryption::OrchardDomain,
     primitives::redpallas::{self, Binding, SpendAuth},
     tree::Anchor,
     value::{ValueCommitTrapdoor, ValueCommitment, ValueSum},
@@ -352,6 +356,25 @@ impl<T: Authorization, V> Bundle<T, V> {
         self.actions
             .iter()
             .map(|a| a.to_instance(self.flags, self.anchor))
+            .collect()
+    }
+
+    /// Perform trial decryption of each action in the bundle with each of the
+    /// specified incoming viewing keys, and return the decrypted note contents
+    /// along with the index of the action from which it was derived.
+    pub fn decrypt_outputs_for_keys(
+        &self,
+        keys: &[IncomingViewingKey],
+    ) -> Vec<(usize, Note, Address, [u8; 512])> {
+        self.actions
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, action)| {
+                let domain = OrchardDomain::for_action(action);
+                keys.iter().find_map(move |ivk| {
+                    try_note_decryption(&domain, ivk, action).map(|(n, a, m)| (idx, n, a, m))
+                })
+            })
             .collect()
     }
 }
