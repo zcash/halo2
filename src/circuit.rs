@@ -4,7 +4,7 @@ use std::mem;
 
 use group::{Curve, GroupEncoding};
 use halo2::{
-    circuit::{Layouter, SimpleFloorPlanner},
+    circuit::{floor_planner, Layouter},
     plonk::{self, Advice, Column, Expression, Fixed, Instance as InstanceColumn, Selector},
     poly::Rotation,
     transcript::{Blake2bRead, Blake2bWrite},
@@ -67,8 +67,7 @@ use self::gadget::utilities::lookup_range_check::LookupRangeCheckConfig;
 pub(crate) mod gadget;
 
 /// Size of the Orchard circuit.
-// FIXME: This circuit should fit within 2^11 rows.
-const K: u32 = 12;
+const K: u32 = 11;
 
 // Absolute offsets for public inputs.
 const ANCHOR: usize = 0;
@@ -130,7 +129,7 @@ impl UtilitiesInstructions<pallas::Base> for Circuit {
 
 impl plonk::Circuit<pallas::Base> for Circuit {
     type Config = Config;
-    type FloorPlanner = SimpleFloorPlanner;
+    type FloorPlanner = floor_planner::V1;
 
     fn without_witnesses(&self) -> Self {
         Self::default()
