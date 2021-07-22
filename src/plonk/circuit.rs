@@ -964,16 +964,21 @@ impl<F: Field> ConstraintSystem<F> {
     /// they need to match.
     pub fn lookup(
         &mut self,
-        table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, Expression<F>)>,
+        table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, Column<Fixed>)>,
     ) -> usize {
         let mut cells = VirtualCells::new(self);
-        let table_map = table_map(&mut cells);
+        let table_map = table_map(&mut cells)
+            .into_iter()
+            .map(|(input, table)| {
+                if input.contains_simple_selector() {
+                    panic!("expression containing simple selector supplied to lookup argument");
+                }
 
-        for table in &table_map {
-            if table.0.contains_simple_selector() || table.1.contains_simple_selector() {
-                panic!("expression containing simple selector supplied to lookup argument");
-            }
-        }
+                let table = cells.query_fixed(table, Rotation::cur());
+
+                (input, table)
+            })
+            .collect();
 
         let index = self.lookups.len();
 
