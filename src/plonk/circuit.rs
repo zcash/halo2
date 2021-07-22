@@ -228,12 +228,18 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct Selector(pub(crate) usize);
+pub struct Selector(pub(crate) usize, bool);
 
 impl Selector {
     /// Enable this selector at the given offset within the given region.
     pub fn enable<F: Field>(&self, region: &mut Region<F>, offset: usize) -> Result<(), Error> {
         region.enable_selector(|| "", self, offset)
+    }
+
+    /// Is this selector "simple"? Simple selectors can only be multiplied
+    /// by expressions that contain no other simple selectors.
+    pub fn is_simple(&self) -> bool {
+        self.1
     }
 }
 
@@ -691,10 +697,10 @@ impl<F: Field> Expression<F> {
     }
 
     /// Returns whether or not this expression contains a `Selector`.
-    fn contains_selector(&self) -> bool {
+    fn contains_simple_selector(&self) -> bool {
         self.evaluate(
             &|_| false,
-            &|_| true,
+            &|selector| selector.is_simple(),
             &|_, _, _| false,
             &|_, _, _| false,
             &|_, _, _| false,
@@ -715,8 +721,8 @@ impl<F: Field> Neg for Expression<F> {
 impl<F: Field> Add for Expression<F> {
     type Output = Expression<F>;
     fn add(self, rhs: Expression<F>) -> Expression<F> {
-        if self.contains_selector() || rhs.contains_selector() {
-            panic!("attempted to add to a selector");
+        if self.contains_simple_selector() || rhs.contains_simple_selector() {
+            panic!("attempted to add to a simple selector");
         }
         Expression::Sum(Box::new(self), Box::new(rhs))
     }
@@ -725,8 +731,8 @@ impl<F: Field> Add for Expression<F> {
 impl<F: Field> Sub for Expression<F> {
     type Output = Expression<F>;
     fn sub(self, rhs: Expression<F>) -> Expression<F> {
-        if self.contains_selector() || rhs.contains_selector() {
-            panic!("attempted to add to a selector");
+        if self.contains_simple_selector() || rhs.contains_simple_selector() {
+            panic!("attempted to add to a simple selector");
         }
         Expression::Sum(Box::new(self), Box::new(-rhs))
     }
@@ -735,8 +741,8 @@ impl<F: Field> Sub for Expression<F> {
 impl<F: Field> Mul for Expression<F> {
     type Output = Expression<F>;
     fn mul(self, rhs: Expression<F>) -> Expression<F> {
-        if self.contains_selector() && rhs.contains_selector() {
-            panic!("attempted to multiply two selectors");
+        if self.contains_simple_selector() && rhs.contains_simple_selector() {
+            panic!("attempted to multiply two simple selectors");
         }
         Expression::Product(Box::new(self), Box::new(rhs))
     }
@@ -963,6 +969,12 @@ impl<F: Field> ConstraintSystem<F> {
         let mut cells = VirtualCells::new(self);
         let table_map = table_map(&mut cells);
 
+        for table in &table_map {
+            if table.0.contains_simple_selector() || table.1.contains_simple_selector() {
+                panic!("expression containing simple selector supplied to lookup argument");
+            }
+        }
+
         let index = self.lookups.len();
 
         self.lookups.push(lookup::Argument::new(table_map));
@@ -1149,13 +1161,23 @@ impl<F: Field> ConstraintSystem<F> {
             expr: &mut Expression<F>,
             selector_map: &[Column<Fixed>],
             selector_queries: &[usize],
+            must_be_nonsimple: bool,
         ) {
             *expr = expr.evaluate(
                 &|constant| Expression::Constant(constant),
-                &|selector| Expression::Fixed {
-                    query_index: selector_queries[selector.0],
-                    column_index: selector_map[selector.0].index(),
-                    rotation: Rotation::cur(),
+                &|selector| {
+                    if must_be_nonsimple {
+                        // Complex selectors are prohibited from appearing in
+                        // expressions in the lookup argument by
+                        // `ConstraintSystem`.
+                        assert!(!selector.is_simple());
+                    }
+
+                    Expression::Fixed {
+                        query_index: selector_queries[selector.0],
+                        column_index: selector_map[selector.0].index(),
+                        rotation: Rotation::cur(),
+                    }
                 },
                 &|query_index, column_index, rotation| Expression::Fixed {
                     query_index,
@@ -1180,28 +1202,39 @@ impl<F: Field> ConstraintSystem<F> {
 
         // Substitute selectors for the real fixed columns in all gates
         for expr in self.gates.iter_mut().flat_map(|gate| gate.polys.iter_mut()) {
-            replace_selectors(expr, &self.selector_map, &queries);
+            replace_selectors(expr, &self.selector_map, &queries, false);
         }
 
-        // Substitute selectors for the real fixed columns in all lookup
-        // expressions
+        // Substitute non-simple selectors for the real fixed columns in all
+        // lookup expressions
         for expr in self.lookups.iter_mut().flat_map(|lookup| {
             lookup
                 .input_expressions
                 .iter_mut()
                 .chain(lookup.table_expressions.iter_mut())
         }) {
-            replace_selectors(expr, &self.selector_map, &queries);
+            replace_selectors(expr, &self.selector_map, &queries, true);
         }
 
         (self, polys)
     }
 
-    /// Allocate a new selector.
+    /// Allocate a new (simple) selector. Simple selectors cannot be added to
+    /// expressions nor multiplied by other expressions containing simple
+    /// selectors. Also, simple selectors may not appear in lookup argument
+    /// inputs.
     pub fn selector(&mut self) -> Selector {
         let index = self.num_selectors;
         self.num_selectors += 1;
-        Selector(index)
+        Selector(index, true)
+    }
+
+    /// Allocate a new complex selector that can appear anywhere
+    /// within expressions.
+    pub fn complex_selector(&mut self) -> Selector {
+        let index = self.num_selectors;
+        self.num_selectors += 1;
+        Selector(index, false)
     }
 
     /// Allocate a new fixed column

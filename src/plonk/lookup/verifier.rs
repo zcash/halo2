@@ -134,7 +134,7 @@ impl<C: CurveAffine> Evaluated<C> {
                     .map(|expression| {
                         expression.evaluate(
                             &|scalar| scalar,
-                            &|_| panic!("virtual selectors are removed during optimization"),
+                            &|_| panic!("virtual selectors are optimized away during keygen"),
                             &|index, _, _| fixed_evals[index],
                             &|index, _, _| advice_evals[index],
                             &|index, _, _| instance_evals[index],
