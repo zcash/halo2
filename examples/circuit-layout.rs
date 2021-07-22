@@ -315,7 +315,7 @@ fn main() {
 
     let circuit: MyCircuit<Fp> = MyCircuit {
         a: None,
-        lookup_table: lookup_table,
+        lookup_table,
     };
 
     let root = BitMapBackend::new("example-circuit-layout.png", (1024, 768)).into_drawing_area();

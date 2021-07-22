@@ -397,7 +397,7 @@ fn plonk_api() {
 
     let circuit: MyCircuit<Fp> = MyCircuit {
         a: Some(a),
-        lookup_table: lookup_table,
+        lookup_table,
     };
 
     // Initialize the proving key
