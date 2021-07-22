@@ -165,79 +165,77 @@ We need six advice columns to witness $(x_T, y_T, \lambda_1, \lambda_2, x_{A,i},
 - the second, covering the $lo$ half for the remaining $i$ from $129$ down to $4$, with a special case at $i = 4$.
 
 $$
-\begin{array}{|c|c|c|c|c|c|c|c|c|c|c|c|}
+\begin{array}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
 \hline
-    x_T     &    y_T      &          z^{hi}           &    x_A^{hi}        &  \lambda_1^{hi}  &  \lambda_2^{hi}  &q_{mul}^{hi}&         z^{lo}        &  x_A^{lo}   &  \lambda_1^{lo}     &  \lambda_2^{lo}   &q_{mul}^{lo}\\\hline
-            &             &  \mathbf{z}_{255} = 0     &                    & y_{A,254}=2[T]_y &                  &     1      &   \mathbf{z}_{130}    &             &   y_{A,129}         &                   &    1       \\\hline
-    x_T     &    y_T      &    \mathbf{z}_{254}       & x_{A,254} = 2[T]_x & \lambda_{1,254}  & \lambda_{2,254}  &     2      &   \mathbf{z}_{129}    & x_{A,129}   & \lambda_{1,129}     & \lambda_{2,129}   &    2       \\\hline
-    x_T     &    y_T      &    \mathbf{z}_{253}       &     x_{A,253}      & \lambda_{1,253}  & \lambda_{2,253}  &     2      &   \mathbf{z}_{128}    & x_{A,128}   & \lambda_{1,128}     & \lambda_{2,128}   &    2       \\\hline
-   \vdots   &   \vdots    &         \vdots            &      \vdots        &      \vdots      &      \vdots      &   \vdots   &        \vdots         &  \vdots     &      \vdots         &      \vdots       &  \vdots    \\\hline
-    x_T     &    y_T      &    \mathbf{z}_{130}       &     x_{A,130}      & \lambda_{1,130}  & \lambda_{2,130}  &     3      &   \mathbf{z}_5        & x_{A,5}     & \lambda_{1,5}       & \lambda_{2,5}     &    2       \\\hline
-            &             &                           &     x_{A,129}      &    y_{A,129}     &                  &            &   \mathbf{z}_4        & x_{A,4}     & \lambda_{1,4}       & \lambda_{2,4}     &    3       \\\hline
-            &             &                           &                    &                  &                  &            &                       & x_{A,3}     &     y_{A,3}         &                   &            \\\hline
+    x_T     &    y_T      &          z^{hi}           &    x_A^{hi}        &  \lambda_1^{hi}  &  \lambda_2^{hi}  &  q_1^{hi}  &  q_2^{hi}   &  q_3^{hi}  &         z^{lo}        &  x_A^{lo}   &  \lambda_1^{lo}     &  \lambda_2^{lo}   &  q_1^{lo}  &  q_2^{lo}   &  q_3^{lo}  \\\hline
+            &             &  \mathbf{z}_{255} = 0     &                    & y_{A,254}=2[T]_y &                  &     1      &     0       &     0      &   \mathbf{z}_{130}    &             &   y_{A,129}         &                   &     1      &     0       &     0      \\\hline
+    x_T     &    y_T      &    \mathbf{z}_{254}       & x_{A,254} = 2[T]_x & \lambda_{1,254}  & \lambda_{2,254}  &     0      &     1       &     0      &   \mathbf{z}_{129}    & x_{A,129}   & \lambda_{1,129}     & \lambda_{2,129}   &     0      &     1       &     0      \\\hline
+    x_T     &    y_T      &    \mathbf{z}_{253}       &     x_{A,253}      & \lambda_{1,253}  & \lambda_{2,253}  &     0      &     1       &     0      &   \mathbf{z}_{128}    & x_{A,128}   & \lambda_{1,128}     & \lambda_{2,128}   &     0      &     1       &     0      \\\hline
+   \vdots   &   \vdots    &         \vdots            &      \vdots        &      \vdots      &      \vdots      &   \vdots   &   \vdots    &   \vdots   &        \vdots         &  \vdots     &      \vdots         &      \vdots       &   \vdots   &   \vdots    &   \vdots   \\\hline
+    x_T     &    y_T      &    \mathbf{z}_{130}       &     x_{A,130}      & \lambda_{1,130}  & \lambda_{2,130}  &     0      &     0       &     1      &   \mathbf{z}_5        & x_{A,5}     & \lambda_{1,5}       & \lambda_{2,5}     &     0      &     1       &     0      \\\hline
+            &             &                           &     x_{A,129}      &    y_{A,129}     &                  &            &             &            &   \mathbf{z}_4        & x_{A,4}     & \lambda_{1,4}       & \lambda_{2,4}     &     0      &     0       &     1      \\\hline
+            &             &                           &                    &                  &                  &            &             &            &                       & x_{A,3}     &     y_{A,3}         &                   &            &             &            \\\hline
+
 \end{array}
 $$
 
 For each $hi$ and $lo$ half, we have three sets of gates. Note that $i$ is going from $255..=3$; $i$ is NOT indexing the rows.
 
-#### $q_{mul} = 1$
+#### $q_1 = 1$
 This gate is only used on the first row (before the for loop). We check that $\lambda_1, \lambda_2$ are initialized to values consistent with the initial $y_A.$
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-5 & q_{mul}^{one} \cdot \left(y_{A,n}^\text{witnessed} - y_{A,n}\right) = 0 \\\hline
+3 & q_1 \cdot \left(y_{A,n}^\text{witnessed} - y_{A,n}\right) = 0 \\\hline
 \end{array}
 $$
 where
 $$
 \begin{aligned}
-q_{mul}^{one} &= q_{mul} \cdot (2 - q_{mul}) \cdot (3 - q_{mul}),\\
 y_{A,n} &= \frac{(\lambda_{1,n} + \lambda_{2,n}) \cdot (x_{A,n} - (\lambda_{1,n}^2 - x_{A,n} - x_T))}{2},\\
 y_{A,n}^\text{witnessed} &\text{ is witnessed.}
 \end{aligned}
 $$
 
-#### $q_{mul} = 2$
+#### $q_2 = 1$
 This gate is used on all rows corresponding to the for loop except the last.
 
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-4 & q_{mul}^{two} \cdot \left(x_{T,cur} - x_{T,next}\right) = 0 \\\hline
-4 & q_{mul}^{two} \cdot \left(y_{T,cur} - y_{T,next}\right) = 0 \\\hline
-5 & q_{mul}^{two} \cdot \mathbf{k}_i \cdot (\mathbf{k}_i - 1) = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
-6 & q_{mul}^{two} \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{T,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{T,i}\right) = 0 \\\hline
-5 & q_{mul}^{two} \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - \lambda_{1,i}^2 + x_{T,i}\right) = 0 \\\hline
-5 & q_{mul}^{two} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}\right) = 0 \\\hline
+2 & q_2 \cdot \left(x_{T,cur} - x_{T,next}\right) = 0 \\\hline
+2 & q_2 \cdot \left(y_{T,cur} - y_{T,next}\right) = 0 \\\hline
+3 & q_2 \cdot \mathbf{k}_i \cdot (\mathbf{k}_i - 1) = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
+4 & q_2 \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{T,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{T,i}\right) = 0 \\\hline
+3 & q_2 \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - \lambda_{1,i}^2 + x_{T,i}\right) = 0 \\\hline
+3 & q_2 \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}\right) = 0 \\\hline
 \end{array}
 $$
 where
 $$
 \begin{aligned}
-q_{mul}^{two} &= q_{mul} \cdot (1 - q_{mul}) \cdot (3 - q_{mul}),\\
 y_{A,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2}, \\
 y_{A,i-1} &= \frac{(\lambda_{1,i-1} + \lambda_{2,i-1}) \cdot (x_{A,i-1} - (\lambda_{1,i-1}^2 - x_{A,i-1} - x_T))}{2}, \\
 \end{aligned}
 $$
 
-#### $q_{mul} = 3$
+#### $q_3 = 1$
 This gate is used on the final iteration of the for loop, handling the special case where we check that the output $y_A$ has been witnessed correctly.
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-5 & q_{mul}^{three} \cdot \mathbf{k}_i \cdot (\mathbf{k}_i - 1) = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
-6 & q_{mul}^{three} \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{T,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{T,i}\right) = 0 \\\hline
-5 & q_{mul}^{three} \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - \lambda_{1,i}^2 + x_{T,i}\right) = 0 \\\hline
-5 & q_{mul}^{three} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}^\text{witnessed}\right) = 0 \\\hline
+3 & q_3 \cdot \mathbf{k}_i \cdot (\mathbf{k}_i - 1) = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
+4 & q_3 \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{T,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{T,i}\right) = 0 \\\hline
+3 & q_3 \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - \lambda_{1,i}^2 + x_{T,i}\right) = 0 \\\hline
+3 & q_3 \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}^\text{witnessed}\right) = 0 \\\hline
 \end{array}
 $$
 where
 $$
 \begin{aligned}
-q_{mul}^{three} &= q_{mul} \cdot (1 - q_{mul}) \cdot (2 - q_{mul}),\\
 y_{A,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2},\\
 y_{A,i-1}^\text{witnessed} &\text{ is witnessed.}
 \end{aligned}
@@ -324,11 +322,11 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-2 & q_\text{mul}^\text{overflow} \cdot \left(s - (\alpha + \mathbf{k}_{254} \cdot 2^{130})\right) = 0 \\\hline
-2 & q_\text{mul}^\text{overflow} \cdot \left(\mathbf{z}_0 - \alpha - t_q\right) = 0 \\\hline
-3 & q_\text{mul}^\text{overflow} \cdot \left(\mathbf{k}_{254} \cdot (\mathbf{z}_{130} - 2^{124})\right) = 0 \\\hline
-3 & q_\text{mul}^\text{overflow} \cdot \left(\mathbf{k}_{254} \cdot (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}\right) = 0 \\\hline
-5 & q_\text{mul}^\text{overflow} \cdot \left((1 - \mathbf{k}_{254}) \cdot (1 - \mathbf{z}_{130} \cdot \eta) \cdot (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}\right) = 0 \\\hline
+2 & \text{q\_mul}^\text{overflow} \cdot \left(s - (\alpha + \mathbf{k}_{254} \cdot 2^{130})\right) = 0 \\\hline
+2 & \text{q\_mul}^\text{overflow} \cdot \left(\mathbf{z}_0 - \alpha - t_q\right) = 0 \\\hline
+3 & \text{q\_mul}^\text{overflow} \cdot \left(\mathbf{k}_{254} \cdot (\mathbf{z}_{130} - 2^{124})\right) = 0 \\\hline
+3 & \text{q\_mul}^\text{overflow} \cdot \left(\mathbf{k}_{254} \cdot (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}\right) = 0 \\\hline
+5 & \text{q\_mul}^\text{overflow} \cdot \left((1 - \mathbf{k}_{254}) \cdot (1 - \mathbf{z}_{130} \cdot \eta) \cdot (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}\right) = 0 \\\hline
 \end{array}
 $$
 where $(s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}$ can be computed by another running sum. Note that the factor of $1/2^{130}$ has no effect on the constraint, since the RHS is zero.
