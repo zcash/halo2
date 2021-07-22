@@ -10,8 +10,7 @@ use group::{prime::PrimeCurveAffine, Curve, GroupEncoding};
 use halo2::arithmetic::FieldExt;
 use pasta_curves::pallas;
 use rand::RngCore;
-use subtle::ConstantTimeEq;
-use subtle::CtOption;
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 use zcash_note_encryption::EphemeralKeyBytes;
 
 use crate::{
@@ -507,6 +506,20 @@ impl DiversifiedTransmissionKey {
     /// $repr_P(self)$
     pub(crate) fn to_bytes(self) -> [u8; 32] {
         self.0.to_bytes()
+    }
+}
+
+impl Default for DiversifiedTransmissionKey {
+    fn default() -> Self {
+        DiversifiedTransmissionKey(NonIdentityPallasPoint::default())
+    }
+}
+
+impl ConditionallySelectable for DiversifiedTransmissionKey {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        DiversifiedTransmissionKey(NonIdentityPallasPoint::conditional_select(
+            &a.0, &b.0, choice,
+        ))
     }
 }
 
