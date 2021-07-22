@@ -18,14 +18,6 @@ use super::{
     CommitDomain, Message, MessagePiece,
 };
 
-// <https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit>
-// We need to hash `ak || nk` where each of `ak`, `nk` is a field element (255 bits).
-//
-// a = bits 0..=249 of `ak`
-// b = b_0||b_1||b_2` = (bits 250..=253 of `ak`) || (bit 254 of  `ak`) || (bits 0..=4 of  `nk`)
-// c = bits 5..=244 of `nk`
-// d = d_0||d_1` = (bits 245..=253 of `nk`) || (bit 254 of `nk`)
-
 #[derive(Clone, Debug)]
 pub struct CommitIvkConfig {
     q_canon: Selector,

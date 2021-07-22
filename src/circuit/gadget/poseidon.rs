@@ -67,7 +67,24 @@ pub struct Word<
     const T: usize,
     const RATE: usize,
 > {
-    pub inner: PoseidonChip::Word,
+    inner: PoseidonChip::Word,
+}
+
+impl<
+        F: FieldExt,
+        PoseidonChip: PoseidonInstructions<F, S, T, RATE>,
+        S: Spec<F, T, RATE>,
+        const T: usize,
+        const RATE: usize,
+    > Word<F, PoseidonChip, S, T, RATE>
+{
+    pub(crate) fn inner(&self) -> PoseidonChip::Word {
+        self.inner
+    }
+
+    pub(crate) fn from_inner(inner: PoseidonChip::Word) -> Self {
+        Self { inner }
+    }
 }
 
 fn poseidon_duplex<

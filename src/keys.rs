@@ -150,11 +150,9 @@ impl SpendValidatingKey {
 #[derive(Copy, Debug, Clone)]
 pub(crate) struct NullifierDerivingKey(pallas::Base);
 
-impl std::ops::Deref for NullifierDerivingKey {
-    type Target = pallas::Base;
-
-    fn deref(&self) -> &pallas::Base {
-        &self.0
+impl NullifierDerivingKey {
+    pub(crate) fn inner(&self) -> pallas::Base {
+        self.0
     }
 }
 
@@ -184,11 +182,9 @@ impl From<&SpendingKey> for CommitIvkRandomness {
     }
 }
 
-impl std::ops::Deref for CommitIvkRandomness {
-    type Target = pallas::Scalar;
-
-    fn deref(&self) -> &pallas::Scalar {
-        &self.0
+impl CommitIvkRandomness {
+    pub(crate) fn inner(&self) -> pallas::Scalar {
+        self.0
     }
 }
 
@@ -466,11 +462,9 @@ impl AsRef<[u8; 32]> for OutgoingViewingKey {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DiversifiedTransmissionKey(NonIdentityPallasPoint);
 
-impl std::ops::Deref for DiversifiedTransmissionKey {
-    type Target = pallas::Point;
-
-    fn deref(&self) -> &pallas::Point {
-        &(*self.0)
+impl DiversifiedTransmissionKey {
+    pub(crate) fn inner(&self) -> NonIdentityPallasPoint {
+        self.0
     }
 }
 

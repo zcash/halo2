@@ -71,9 +71,9 @@ const K: u32 = 11;
 
 // Absolute offsets for public inputs.
 const ANCHOR: usize = 0;
-const NF_OLD: usize = 1;
-const CV_NET_X: usize = 2;
-const CV_NET_Y: usize = 3;
+const CV_NET_X: usize = 1;
+const CV_NET_Y: usize = 2;
+const NF_OLD: usize = 3;
 const RK_X: usize = 4;
 const RK_Y: usize = 5;
 const CMX: usize = 6;
@@ -339,7 +339,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             let cm_old = Point::new(
                 config.ecc_chip(),
                 layouter.namespace(|| "cm_old"),
-                self.cm_old.as_ref().map(|cm| cm.to_affine()),
+                self.cm_old.as_ref().map(|cm| cm.inner().to_affine()),
             )?;
 
             // Witness g_d_old
@@ -361,7 +361,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             let nk = self.load_private(
                 layouter.namespace(|| "witness nk"),
                 config.advices[0],
-                self.nk.map(|nk| *nk),
+                self.nk.map(|nk| nk.inner()),
             )?;
 
             // Witness v_old.
@@ -446,7 +446,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
             // blind = [rcv] ValueCommitR
             let (blind, _rcv) = {
-                let rcv = self.rcv.as_ref().map(|rcv| **rcv);
+                let rcv = self.rcv.as_ref().map(|rcv| rcv.inner());
                 let value_commit_r = OrchardFixedBasesFull::ValueCommitR;
                 let value_commit_r = FixedPoint::from_inner(ecc_chip.clone(), value_commit_r);
 
@@ -482,9 +482,9 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                                 || value.ok_or(plonk::Error::SynthesisError),
                             )?;
                             region.constrain_equal(var, message[i].cell())?;
-                            Ok(Word::<_, _, poseidon::OrchardNullifier, 3, 2> {
-                                inner: StateWord::new(var, value),
-                            })
+                            Ok(Word::<_, _, poseidon::OrchardNullifier, 3, 2>::from_inner(
+                                StateWord::new(var, value),
+                            ))
                         };
 
                         Ok([message_word(0)?, message_word(1)?])
@@ -500,7 +500,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                     layouter.namespace(|| "Poseidon hash (nk, rho_old)"),
                     poseidon_message,
                 )?;
-                let poseidon_output: CellValue<pallas::Base> = poseidon_output.inner.into();
+                let poseidon_output: CellValue<pallas::Base> = poseidon_output.inner().into();
                 poseidon_output
             };
 
@@ -576,7 +576,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             let commit_ivk_config = config.commit_ivk_config.clone();
 
             let ivk = {
-                let rivk = self.rivk.map(|rivk| *rivk);
+                let rivk = self.rivk.map(|rivk| rivk.inner());
 
                 commit_ivk_config.assign_region(
                     config.sinsemilla_chip_1(),
@@ -599,7 +599,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             let pk_d_old = Point::new(
                 ecc_chip.clone(),
                 layouter.namespace(|| "witness pk_d_old"),
-                self.pk_d_old.map(|pk_d_old| (*pk_d_old).to_affine()),
+                self.pk_d_old.map(|pk_d_old| pk_d_old.inner().to_affine()),
             )?;
             derived_pk_d_old
                 .constrain_equal(layouter.namespace(|| "pk_d_old equality"), &pk_d_old)?;
@@ -611,7 +611,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         {
             let old_note_commit_config = config.old_note_commit_config.clone();
 
-            let rcm_old = self.rcm_old.as_ref().map(|rcm_old| **rcm_old);
+            let rcm_old = self.rcm_old.as_ref().map(|rcm_old| rcm_old.inner());
 
             // g★_d || pk★_d || i2lebsp_{64}(v) || i2lebsp_{255}(rho) || i2lebsp_{255}(psi)
             let derived_cm_old = old_note_commit_config.assign_region(
@@ -667,7 +667,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 self.psi_new,
             )?;
 
-            let rcm_new = self.rcm_new.as_ref().map(|rcm_new| **rcm_new);
+            let rcm_new = self.rcm_new.as_ref().map(|rcm_new| rcm_new.inner());
 
             // g★_d || pk★_d || i2lebsp_{64}(v) || i2lebsp_{255}(rho) || i2lebsp_{255}(psi)
             let cm_new = new_note_commit_config.assign_region(
@@ -795,10 +795,10 @@ impl Instance {
     fn to_halo2_instance(&self) -> [[vesta::Scalar; 9]; 1] {
         let mut instance = [vesta::Scalar::zero(); 9];
 
-        instance[ANCHOR] = *self.anchor;
+        instance[ANCHOR] = self.anchor.inner();
         instance[CV_NET_X] = self.cv_net.x();
         instance[CV_NET_Y] = self.cv_net.y();
-        instance[NF_OLD] = *self.nf_old;
+        instance[NF_OLD] = self.nf_old.0;
 
         let rk = pallas::Point::from_bytes(&self.rk.clone().into())
             .unwrap()
@@ -808,7 +808,7 @@ impl Instance {
 
         instance[RK_X] = *rk.x();
         instance[RK_Y] = *rk.y();
-        instance[CMX] = *self.cmx;
+        instance[CMX] = self.cmx.inner();
         instance[ENABLE_SPEND] = vesta::Scalar::from_u64(self.enable_spend.into());
         instance[ENABLE_OUTPUT] = vesta::Scalar::from_u64(self.enable_output.into());
 

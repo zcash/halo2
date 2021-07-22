@@ -499,7 +499,7 @@ pub mod tests {
                             row: 26
                         },
                         VerifyFailure::Permutation {
-                            column: (Any::Fixed, 1).into(),
+                            column: (Any::Fixed, 9).into(),
                             row: 2
                         },
                         VerifyFailure::Permutation {

@@ -285,24 +285,23 @@ where
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
     ) -> Result<(ecc::Point<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
         assert_eq!(self.sinsemilla_chip, message.chip);
-        let (p, zs) = self
-            .sinsemilla_chip
-            .hash_to_point(layouter, self.Q, message.inner)?;
-        let p = ecc::Point::from_inner(self.ecc_chip.clone(), p);
-        Ok((p, zs))
+        self.sinsemilla_chip
+            .hash_to_point(layouter, self.Q, message.inner)
+            .map(|(point, zs)| (ecc::Point::from_inner(self.ecc_chip.clone(), point), zs))
     }
 
     /// $\mathsf{SinsemillaHash}$ from [§ 5.4.1.9][concretesinsemillahash].
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
+    #[allow(clippy::type_complexity)]
     pub fn hash(
         &self,
         layouter: impl Layouter<C::Base>,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
-    ) -> Result<ecc::X<C, EccChip>, Error> {
+    ) -> Result<(ecc::X<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
         assert_eq!(self.sinsemilla_chip, message.chip);
-        let (p, _) = self.hash_to_point(layouter, message)?;
-        Ok(p.extract_p())
+        let (p, zs) = self.hash_to_point(layouter, message)?;
+        Ok((p.extract_p(), zs))
     }
 }
 

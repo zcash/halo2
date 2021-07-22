@@ -103,7 +103,7 @@ impl SinsemillaChip {
 
     /// # Side-effects
     ///
-    /// All columns in `advices` and `constants` will be equality-enabled.
+    /// All columns in `advices` and will be equality-enabled.
     #[allow(clippy::too_many_arguments)]
     #[allow(non_snake_case)]
     pub fn configure(
@@ -113,6 +113,11 @@ impl SinsemillaChip {
         lookup: (Column<Fixed>, Column<Fixed>, Column<Fixed>),
         range_check: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     ) -> <Self as Chip<pallas::Base>>::Config {
+        // Enable equality on all advice columns
+        for advice in advices.iter() {
+            meta.enable_equality((*advice).into())
+        }
+
         let config = SinsemillaConfig {
             q_sinsemilla1: meta.selector(),
             q_sinsemilla2: meta.fixed_column(),

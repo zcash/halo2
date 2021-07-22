@@ -135,6 +135,8 @@ impl ActionInfo {
         let nf_old = self.spend.note.nullifier(&self.spend.fvk);
         let sender_address = self.spend.fvk.default_address();
         let rho_old = self.spend.note.rho();
+        let psi_old = self.spend.note.rseed().psi(&rho_old);
+        let rcm_old = self.spend.note.rseed().rcm(&rho_old);
         let ak: SpendValidatingKey = self.spend.fvk.clone().into();
         let alpha = pallas::Scalar::random(&mut rng);
         let rk = ak.randomize(&alpha);
@@ -181,9 +183,9 @@ impl ActionInfo {
                 g_d_old: Some(sender_address.g_d()),
                 pk_d_old: Some(*sender_address.pk_d()),
                 v_old: Some(self.spend.note.value()),
-                rho_old: Some(self.spend.note.rho()),
-                psi_old: Some(self.spend.note.rseed().psi(&rho_old)),
-                rcm_old: Some(self.spend.note.rseed().rcm(&rho_old)),
+                rho_old: Some(rho_old),
+                psi_old: Some(psi_old),
+                rcm_old: Some(rcm_old),
                 cm_old: Some(self.spend.note.commitment()),
                 alpha: Some(alpha),
                 ak: Some(ak),

@@ -164,11 +164,9 @@ impl TryFrom<ValueSum> for i64 {
 #[derive(Clone, Debug)]
 pub struct ValueCommitTrapdoor(pallas::Scalar);
 
-impl std::ops::Deref for ValueCommitTrapdoor {
-    type Target = pallas::Scalar;
-
-    fn deref(&self) -> &pallas::Scalar {
-        &self.0
+impl ValueCommitTrapdoor {
+    pub(crate) fn inner(&self) -> pallas::Scalar {
+        self.0
     }
 }
 
@@ -277,7 +275,7 @@ impl ValueCommitment {
     }
 
     /// x-coordinate of this value commitment.
-    pub fn x(&self) -> pallas::Base {
+    pub(crate) fn x(&self) -> pallas::Base {
         if self.0 == pallas::Point::identity() {
             pallas::Base::zero()
         } else {
@@ -286,7 +284,7 @@ impl ValueCommitment {
     }
 
     /// y-coordinate of this value commitment.
-    pub fn y(&self) -> pallas::Base {
+    pub(crate) fn y(&self) -> pallas::Base {
         if self.0 == pallas::Point::identity() {
             pallas::Base::zero()
         } else {

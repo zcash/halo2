@@ -10,11 +10,9 @@ use crate::{constants::L_ORCHARD_BASE, primitives::sinsemilla, spec::extract_p, 
 #[derive(Debug)]
 pub(crate) struct NoteCommitTrapdoor(pub(super) pallas::Scalar);
 
-impl std::ops::Deref for NoteCommitTrapdoor {
-    type Target = pallas::Scalar;
-
-    fn deref(&self) -> &pallas::Scalar {
-        &self.0
+impl NoteCommitTrapdoor {
+    pub(crate) fn inner(&self) -> pallas::Scalar {
+        self.0
     }
 }
 
@@ -22,11 +20,9 @@ impl std::ops::Deref for NoteCommitTrapdoor {
 #[derive(Clone, Debug)]
 pub struct NoteCommitment(pub(super) pallas::Point);
 
-impl std::ops::Deref for NoteCommitment {
-    type Target = pallas::Point;
-
-    fn deref(&self) -> &pallas::Point {
-        &self.0
+impl NoteCommitment {
+    pub(crate) fn inner(&self) -> pallas::Point {
+        self.0
     }
 }
 
@@ -81,11 +77,9 @@ impl From<NoteCommitment> for ExtractedNoteCommitment {
     }
 }
 
-impl std::ops::Deref for ExtractedNoteCommitment {
-    type Target = pallas::Base;
-
-    fn deref(&self) -> &pallas::Base {
-        &self.0
+impl ExtractedNoteCommitment {
+    pub(crate) fn inner(&self) -> pallas::Base {
+        self.0
     }
 }
 

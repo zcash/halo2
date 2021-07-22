@@ -40,7 +40,7 @@ impl SinsemillaChip {
             // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
             let x_a = {
                 let cell =
-                    region.assign_advice_from_constant(|| "public x_q", config.x_a, offset, x_q)?;
+                    region.assign_advice_from_constant(|| "fixed x_q", config.x_a, offset, x_q)?;
                 CellValue::new(cell, Some(x_q))
             };
 

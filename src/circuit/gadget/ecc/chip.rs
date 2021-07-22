@@ -147,7 +147,7 @@ impl EccChip {
 
     /// # Side effects
     ///
-    /// All columns in `advices` and `constants` will be equality-enabled.
+    /// All columns in `advices` will be equality-enabled.
     #[allow(non_snake_case)]
     pub fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,

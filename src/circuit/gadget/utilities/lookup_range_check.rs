@@ -131,12 +131,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                 // Copy `element` and initialize running sum `z_0 = element` to decompose it.
                 let z_0 = copy(&mut region, || "z_0", self.running_sum, 0, &element)?;
 
-                let zs = self.range_check(&mut region, z_0, num_words)?;
-
-                if strict {
-                    // Constrain the final `z` to be zero.
-                    region.constrain_constant(zs.last().unwrap().cell(), F::zero())?;
-                }
+                let zs = self.range_check(&mut region, z_0, num_words, strict)?;
 
                 Ok(zs)
             },
@@ -151,7 +146,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         num_words: usize,
         strict: bool,
     ) -> Result<(CellValue<F>, Vec<CellValue<F>>), Error> {
-        let (z_0, zs) = layouter.assign_region(
+        layouter.assign_region(
             || "Witness element",
             |mut region| {
                 let z_0 = {
@@ -164,18 +159,11 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                     CellValue::new(cell, value)
                 };
 
-                let zs = self.range_check(&mut region, z_0, num_words)?;
-
-                if strict {
-                    // Constrain the final `z` to be zero.
-                    region.constrain_constant(zs.last().unwrap().cell(), F::zero())?;
-                }
+                let zs = self.range_check(&mut region, z_0, num_words, strict)?;
 
                 Ok((z_0, zs))
             },
-        )?;
-
-        Ok((z_0, zs))
+        )
     }
 
     /// If `strict` is set to "true", the field element must fit into
@@ -190,6 +178,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         region: &mut Region<'_, F>,
         element: CellValue<F>,
         num_words: usize,
+        strict: bool,
     ) -> Result<Vec<CellValue<F>>, Error> {
         // `num_words` must fit into a single field element.
         assert!(num_words * K <= F::CAPACITY as usize);
@@ -250,6 +239,11 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                 CellValue::new(z_cell, z_val)
             };
             zs.push(z);
+        }
+
+        if strict {
+            // Constrain the final `z` to be zero.
+            region.constrain_constant(zs.last().unwrap().cell(), F::zero())?;
         }
 
         Ok(zs)
