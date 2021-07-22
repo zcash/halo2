@@ -11,7 +11,10 @@ use pasta_curves::pallas;
 use subtle::{ConditionallySelectable, CtOption};
 
 use crate::{
-    constants::{util::gen_const_array, L_ORCHARD_BASE},
+    constants::{
+        util::gen_const_array, COMMIT_IVK_PERSONALIZATION, KEY_DIVERSIFICATION_PERSONALIZATION,
+        L_ORCHARD_BASE,
+    },
     primitives::{poseidon, sinsemilla},
 };
 
@@ -171,7 +174,7 @@ pub(crate) fn commit_ivk(
 ) -> CtOption<NonZeroPallasBase> {
     // We rely on the API contract that to_le_bits() returns at least PrimeField::NUM_BITS
     // bits, which is equal to L_ORCHARD_BASE.
-    let domain = sinsemilla::CommitDomain::new("z.cash:Orchard-CommitIvk");
+    let domain = sinsemilla::CommitDomain::new(COMMIT_IVK_PERSONALIZATION);
     domain
         .short_commit(
             iter::empty()
@@ -192,7 +195,7 @@ pub(crate) fn commit_ivk(
 ///
 /// [concretediversifyhash]: https://zips.z.cash/protocol/nu5.pdf#concretediversifyhash
 pub(crate) fn diversify_hash(d: &[u8; 11]) -> NonIdentityPallasPoint {
-    let hasher = pallas::Point::hash_to_curve("z.cash:Orchard-gd");
+    let hasher = pallas::Point::hash_to_curve(KEY_DIVERSIFICATION_PERSONALIZATION);
     let pk_d = hasher(d);
     // If the identity occurs, we replace it with a different fixed point.
     // TODO: Replace the unwrap_or_else with a cached fixed point.

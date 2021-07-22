@@ -1,4 +1,4 @@
-use ff::PrimeFieldBits;
+use ff::{Field, PrimeFieldBits};
 use halo2::arithmetic::{CurveAffine, FieldExt};
 
 /// Decompose a word `alpha` into `window_num_bits` bits (little-endian)
@@ -37,7 +37,9 @@ pub fn evaluate<C: CurveAffine>(x: u8, coeffs: &[C::Base]) -> C::Base {
     coeffs
         .iter()
         .rev()
-        .fold(C::Base::default(), |acc, coeff| acc * x + coeff)
+        .cloned()
+        .reduce(|acc, coeff| acc * x + coeff)
+        .unwrap_or_else(C::Base::zero)
 }
 
 /// Takes in an FnMut closure and returns a constant-length array with elements of
