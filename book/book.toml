@@ -6,3 +6,4 @@ src = "src"
 title = "The Orchard Book"
 
 [preprocessor.katex]
+macros = "macros.txt"
