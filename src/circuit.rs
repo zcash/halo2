@@ -53,11 +53,7 @@ use gadget::{
         },
         note_commit::NoteCommitConfig,
     },
-    utilities::{
-        copy,
-        plonk::{PLONKChip, PLONKConfig, PLONKInstructions},
-        CellValue, UtilitiesInstructions, Var,
-    },
+    utilities::{copy, CellValue, UtilitiesInstructions, Var},
 };
 
 use std::convert::TryInto;
@@ -85,10 +81,11 @@ const ENABLE_OUTPUT: usize = 8;
 pub struct Config {
     primary: Column<InstanceColumn>,
     q_orchard: Selector,
+    // Selector for the field addition gate poseidon_hash(nk, rho_old) + psi_old.
+    q_add: Selector,
     advices: [Column<Advice>; 10],
     ecc_config: EccConfig,
     poseidon_config: PoseidonConfig<pallas::Base>,
-    plonk_config: PLONKConfig,
     merkle_config_1: MerkleConfig,
     merkle_config_2: MerkleConfig,
     sinsemilla_config_1: SinsemillaConfig,
@@ -186,6 +183,17 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             .map(move |(name, poly)| (name, q_orchard.clone() * poly))
         });
 
+        // Addition of two field elements poseidon_hash(nk, rho_old) + psi_old.
+        let q_add = meta.selector();
+        meta.create_gate("poseidon_hash(nk, rho_old) + psi_old", |meta| {
+            let q_add = meta.query_selector(q_add);
+            let sum = meta.query_advice(advices[0], Rotation::cur());
+            let nk_rho_old = meta.query_advice(advices[1], Rotation::cur());
+            let psi_old = meta.query_advice(advices[2], Rotation::cur());
+
+            vec![q_add * (nk_rho_old + psi_old - sum)]
+        });
+
         // Fixed columns for the Sinsemilla generator lookup table
         let table_idx = meta.fixed_column();
         let lookup = (table_idx, meta.fixed_column(), meta.fixed_column());
@@ -239,9 +247,6 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             rc_b,
         );
 
-        // Configuration for standard PLONK (addition and multiplication).
-        let plonk_config = PLONKChip::configure(meta, [advices[0], advices[1], advices[2]]);
-
         // Configuration for a Sinsemilla hash instantiation and a
         // Merkle hash instantiation using this Sinsemilla instance.
         // Since the Sinsemilla config uses only 5 advice columns,
@@ -294,10 +299,10 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         Config {
             primary,
             q_orchard,
+            q_add,
             advices,
             ecc_config,
             poseidon_config,
-            plonk_config,
             merkle_config_1,
             merkle_config_2,
             sinsemilla_config_1,
@@ -504,32 +509,42 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 poseidon_output
             };
 
-            // Add hash output to psi using standard PLONK
+            // Add hash output to psi.
             // `scalar` = poseidon_hash(nk, rho_old) + psi_old.
             //
-            let scalar = {
-                let scalar_val = nk_rho_old
-                    .value()
-                    .zip(psi_old.value())
-                    .map(|(nk_rho_old, psi_old)| nk_rho_old + psi_old);
-                let scalar = self.load_private(
-                    layouter.namespace(|| "poseidon_hash(nk, rho_old) + psi_old"),
-                    config.advices[0],
-                    scalar_val,
-                )?;
+            let scalar = layouter.assign_region(
+                || " `scalar` = poseidon_hash(nk, rho_old) + psi_old",
+                |mut region| {
+                    config.q_add.enable(&mut region, 0)?;
 
-                config.plonk_chip().add(
-                    layouter.namespace(|| "poseidon_hash(nk, rho_old) + psi_old"),
-                    nk_rho_old,
-                    psi_old,
-                    scalar,
-                    Some(pallas::Base::one()),
-                    Some(pallas::Base::one()),
-                    Some(pallas::Base::one()),
-                )?;
+                    copy(
+                        &mut region,
+                        || "copy nk_rho_old",
+                        config.advices[1],
+                        0,
+                        &nk_rho_old,
+                    )?;
+                    copy(
+                        &mut region,
+                        || "copy psi_old",
+                        config.advices[2],
+                        0,
+                        &psi_old,
+                    )?;
 
-                scalar
-            };
+                    let scalar_val = nk_rho_old
+                        .value()
+                        .zip(psi_old.value())
+                        .map(|(nk_rho_old, psi_old)| nk_rho_old + psi_old);
+                    let cell = region.assign_advice(
+                        || "poseidon_hash(nk, rho_old) + psi_old",
+                        config.advices[0],
+                        0,
+                        || scalar_val.ok_or(plonk::Error::SynthesisError),
+                    )?;
+                    Ok(CellValue::new(cell, scalar_val))
+                },
+            )?;
 
             // Multiply scalar by NullifierK
             // `product` = [poseidon_hash(nk, rho_old) + psi_old] NullifierK.
