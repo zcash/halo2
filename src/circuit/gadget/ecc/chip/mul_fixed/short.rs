@@ -500,7 +500,7 @@ pub mod tests {
                         },
                         VerifyFailure::Permutation {
                             column: (Any::Fixed, 9).into(),
-                            row: 2
+                            row: 0
                         },
                         VerifyFailure::Permutation {
                             column: (Any::Advice, 4).into(),

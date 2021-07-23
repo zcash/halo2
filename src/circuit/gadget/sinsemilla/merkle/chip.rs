@@ -1,6 +1,6 @@
 use halo2::{
     circuit::{Chip, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed},
+    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -25,7 +25,7 @@ use std::array;
 #[derive(Clone, Debug)]
 pub struct MerkleConfig {
     advices: [Column<Advice>; 5],
-    l_plus_1: Column<Fixed>,
+    q_decompose: Selector,
     pub(super) cond_swap_config: CondSwapConfig,
     pub(super) sinsemilla_config: SinsemillaConfig,
 }
@@ -57,13 +57,8 @@ impl MerkleChip {
         let advices = sinsemilla_config.advices();
         let cond_swap_config = CondSwapChip::configure(meta, advices);
 
-        // This fixed column serves two purposes:
-        //  - Fixing the value of l* for rows in which a Merkle path layer
-        //    is decomposed.
-        //  - Disabling the entire decomposition gate when set to zero
-        //    (i.e. replacing a Selector).
-
-        let l_plus_1 = meta.fixed_column();
+        // This selector enables the decomposition gate.
+        let q_decompose = meta.selector();
 
         // Check that pieces have been decomposed correctly for Sinsemilla hash.
         // <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
@@ -78,13 +73,14 @@ impl MerkleChip {
         //
         /*
             The pieces and subpieces are arranged in the following configuration:
-            |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | l_plus_1 |
-            ----------------------------------------------------
-            |   a   |   b   |   c   |  left | right |   l + 1  |
-            |  z1_a |  z1_b |  b_1  |  b_2  |       |          |
+            |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
+            -------------------------------------------------------
+            |   a   |   b   |   c   |  left | right |      1      |
+            |  z1_a |  z1_b |  b_1  |  b_2  | l + 1 |             |
         */
         meta.create_gate("Decomposition check", |meta| {
-            let l_plus_1_whole = meta.query_fixed(l_plus_1, Rotation::cur());
+            let q_decompose = meta.query_selector(q_decompose);
+            let l_plus_1_whole = meta.query_advice(advices[4], Rotation::next());
 
             let two_pow_5 = pallas::Base::from_u64(1 << 5);
             let two_pow_10 = two_pow_5.square();
@@ -146,12 +142,12 @@ impl MerkleChip {
                 ("right_check", right_check),
                 ("b1_b2_check", b1_b2_check),
             ])
-            .map(move |(name, poly)| (name, l_plus_1_whole.clone() * poly))
+            .map(move |(name, poly)| (name, q_decompose.clone() * poly))
         });
 
         MerkleConfig {
             advices,
-            l_plus_1,
+            q_decompose,
             cond_swap_config,
             sinsemilla_config,
         }
@@ -270,10 +266,10 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
         // Check that the pieces have been decomposed properly.
         /*
             The pieces and subpieces are arranged in the following configuration:
-            |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | l_plus_1 |
-            ----------------------------------------------------
-            |   a   |   b   |   c   |  left | right |   l + 1  |
-            |  z1_a |  z1_b |  b_1  |  b_2  |       |          |
+            |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
+            -------------------------------------------------------
+            |   a   |   b   |   c   |  left | right |      1      |
+            |  z1_a |  z1_b |  b_1  |  b_2  | l + 1 |             |
         */
         {
             layouter.assign_region(
@@ -283,11 +279,12 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                     // Recall that l = MERKLE_DEPTH_ORCHARD - layer - 1.
                     // The layer with 2^n nodes is called "layer n".
                     let l_plus_1 = (l as u64) + 1;
-                    region.assign_fixed(
+                    config.q_decompose.enable(&mut region, 0)?;
+                    region.assign_advice_from_constant(
                         || format!("l_plus_1 {}", l_plus_1),
-                        config.l_plus_1,
-                        0,
-                        || Ok(pallas::Base::from_u64(l_plus_1)),
+                        config.advices[4],
+                        1,
+                        pallas::Base::from_u64(l_plus_1),
                     )?;
 
                     // Offset 0

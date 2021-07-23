@@ -62,5 +62,5 @@ name = "small"
 harness = false
 
 [patch.crates-io]
-halo2 = { git = "https://github.com/zcash/halo2.git", rev = "62f088e2f249dfce2c3bcab7321cba0d99697af9" }
+halo2 = { git = "https://github.com/zcash/halo2.git", rev = "92645b6ee9a2a91649bf22caebe5b1017ff67198" }
 zcash_note_encryption = { git = "https://github.com/zcash/librustzcash.git", rev = "cc533a9da4f6a7209a7be05f82b12a03969152c9" }
