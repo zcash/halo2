@@ -1,6 +1,6 @@
 use halo2::{
     circuit::{Chip, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -63,7 +63,7 @@ impl MerkleChip {
         // Check that pieces have been decomposed correctly for Sinsemilla hash.
         // <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
         //
-        // a = a_0||a_1 = l_star || (bits 0..=239 of left)
+        // a = a_0||a_1 = l || (bits 0..=239 of left)
         // b = b_0||b_1||b_2
         //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
         // c = bits 5..=254 of right
@@ -76,11 +76,11 @@ impl MerkleChip {
             |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
             -------------------------------------------------------
             |   a   |   b   |   c   |  left | right |      1      |
-            |  z1_a |  z1_b |  b_1  |  b_2  | l + 1 |             |
+            |  z1_a |  z1_b |  b_1  |  b_2  |   l   |             |
         */
         meta.create_gate("Decomposition check", |meta| {
             let q_decompose = meta.query_selector(q_decompose);
-            let l_plus_1_whole = meta.query_advice(advices[4], Rotation::next());
+            let l_whole = meta.query_advice(advices[4], Rotation::next());
 
             let two_pow_5 = pallas::Base::from_u64(1 << 5);
             let two_pow_10 = two_pow_5.square();
@@ -94,16 +94,15 @@ impl MerkleChip {
             let left_node = meta.query_advice(advices[3], Rotation::cur());
             let right_node = meta.query_advice(advices[4], Rotation::cur());
 
-            // a = a_0||a_1 = l_star || (bits 0..=239 of left)
-            // Check that a_0 = l_star
+            // a = a_0||a_1 = l || (bits 0..=239 of left)
+            // Check that a_0 = l
             //
             // z_1 of SinsemillaHash(a) = a_1
             let z1_a = meta.query_advice(advices[0], Rotation::next());
             let a_1 = z1_a;
             // a_0 = a - (a_1 * 2^10)
             let a_0 = a_whole - a_1.clone() * pallas::Base::from_u64(1 << 10);
-            let l_star_check =
-                a_0 - (l_plus_1_whole.clone() - Expression::Constant(pallas::Base::one()));
+            let l_check = a_0 - l_whole;
 
             // b = b_0||b_1||b_2
             //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
@@ -137,7 +136,7 @@ impl MerkleChip {
             let right_check = b_2 + c_whole * two_pow_5 - right_node;
 
             array::IntoIter::new([
-                ("l_star_check", l_star_check),
+                ("l_check", l_check),
                 ("left_check", left_check),
                 ("right_check", right_check),
                 ("b1_b2_check", b1_b2_check),
@@ -174,18 +173,18 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
         let config = self.config().clone();
 
         // <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
-        // We need to hash `l_star || left || right`, where `l_star` is a 10-bit value.
+        // We need to hash `l || left || right`, where `l` is a 10-bit value.
         // We allow `left` and `right` to be non-canonical 255-bit encodings.
         //
-        // a = a_0||a_1 = l_star || (bits 0..=239 of left)
+        // a = a_0||a_1 = l || (bits 0..=239 of left)
         // b = b_0||b_1||b_2
         //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
         // c = bits 5..=254 of right
 
-        // `a = a_0||a_1` = `l_star` || (bits 0..=239 of `left`)
+        // `a = a_0||a_1` = `l` || (bits 0..=239 of `left`)
         let a = {
             let a = {
-                // a_0 = l_star
+                // a_0 = l
                 let a_0 = bitrange_subset(pallas::Base::from_u64(l as u64), 0..10);
 
                 // a_1 = (bits 0..=239 of `left`)
@@ -269,22 +268,21 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
             |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
             -------------------------------------------------------
             |   a   |   b   |   c   |  left | right |      1      |
-            |  z1_a |  z1_b |  b_1  |  b_2  | l + 1 |             |
+            |  z1_a |  z1_b |  b_1  |  b_2  |   l   |             |
         */
         {
             layouter.assign_region(
                 || "Check piece decomposition",
                 |mut region| {
-                    // Set the fixed column `l_plus_1` to the current l + 1.
+                    // Set the fixed column `l` to the current l.
                     // Recall that l = MERKLE_DEPTH_ORCHARD - layer - 1.
                     // The layer with 2^n nodes is called "layer n".
-                    let l_plus_1 = (l as u64) + 1;
                     config.q_decompose.enable(&mut region, 0)?;
                     region.assign_advice_from_constant(
-                        || format!("l_plus_1 {}", l_plus_1),
+                        || format!("l {}", l),
                         config.advices[4],
                         1,
-                        pallas::Base::from_u64(l_plus_1),
+                        pallas::Base::from_u64(l as u64),
                     )?;
 
                     // Offset 0
@@ -344,7 +342,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
             use ff::PrimeFieldBits;
 
             if let (Some(left), Some(right)) = (left.value(), right.value()) {
-                let l_star = i2lebsp::<10>(l as u64);
+                let l = i2lebsp::<10>(l as u64);
                 let left: Vec<_> = left
                     .to_le_bits()
                     .iter()
@@ -359,7 +357,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                     .collect();
                 let merkle_crh = HashDomain::new(MERKLE_CRH_PERSONALIZATION);
 
-                let mut message = l_star.to_vec();
+                let mut message = l.to_vec();
                 message.extend_from_slice(&left);
                 message.extend_from_slice(&right);
 
