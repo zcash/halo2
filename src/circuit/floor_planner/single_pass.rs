@@ -101,13 +101,41 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
             self.columns.insert(column, region_start + shape.row_count);
         }
 
+        // Assign region cells.
         self.cs.enter_region(name);
         let mut region = SingleChipLayouterRegion::new(self, region_index.into());
         let result = {
             let region: &mut dyn RegionLayouter<F> = &mut region;
             assignment(region.into())
         }?;
+        let constants_to_assign = region.constants;
         self.cs.exit_region();
+
+        // Assign constants. For the simple floor planner, we assign constants in order in
+        // the first `constants` column.
+        if self.constants.is_empty() {
+            if !constants_to_assign.is_empty() {
+                return Err(Error::NotEnoughColumnsForConstants);
+            }
+        } else {
+            let constants_column = self.constants[0];
+            let next_constant_row = self.columns.entry(constants_column.into()).or_default();
+            for (constant, advice) in constants_to_assign {
+                self.cs.assign_fixed(
+                    || format!("Constant({:?})", constant.evaluate()),
+                    constants_column,
+                    *next_constant_row,
+                    || Ok(constant),
+                )?;
+                self.cs.copy(
+                    constants_column.into(),
+                    *next_constant_row,
+                    advice.column,
+                    *self.regions[*advice.region_index] + advice.row_offset,
+                )?;
+                *next_constant_row += 1;
+            }
+        }
 
         Ok(result)
     }
@@ -146,8 +174,8 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
 struct SingleChipLayouterRegion<'r, 'a, F: Field, CS: Assignment<F> + 'a> {
     layouter: &'r mut SingleChipLayouter<'a, F, CS>,
     region_index: RegionIndex,
-    // The index of the next available row in the first constants column.
-    next_constant_row: usize,
+    /// Stores the constants to be assigned, and the cells to which they are copied.
+    constants: Vec<(Assigned<F>, Cell)>,
 }
 
 impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug
@@ -166,7 +194,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> SingleChipLayouterRegion<'r, 'a, 
         SingleChipLayouterRegion {
             layouter,
             region_index,
-            next_constant_row: 0,
+            constants: vec![],
         }
     }
 }
@@ -252,17 +280,12 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F>
         offset: usize,
         to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<Cell, Error> {
-        let row = *self.layouter.regions[*self.region_index] + offset;
-
-        self.layouter.cs.assign_fixed(annotation, column, row, to)?;
-
-        if let Some(c) = self.layouter.constants.first() {
-            if c == &column {
-                // Ensure that the next row we will assign a constant to is always after any
-                // prior assignments (for simplicity).
-                self.next_constant_row = cmp::max(self.next_constant_row, row + 1);
-            }
-        }
+        self.layouter.cs.assign_fixed(
+            annotation,
+            column,
+            *self.layouter.regions[*self.region_index] + offset,
+            to,
+        )?;
 
         Ok(Cell {
             region_index: self.region_index,
@@ -272,26 +295,8 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F>
     }
 
     fn constrain_constant(&mut self, cell: Cell, constant: Assigned<F>) -> Result<(), Error> {
-        if self.layouter.constants.is_empty() {
-            return Err(Error::NotEnoughColumnsForConstants);
-        }
-
-        // For the simple layouter, just assign the fixed constants inside the region
-        // using the first constants column. self.next_constant_row is updated by this
-        // function call.
-        let fixed = self.assign_fixed(
-            &|| "constant".into(),
-            self.layouter.constants[0],
-            // Convert the absolute row into a relative offset within this region, but
-            // always at an offset that is not before this region (taking advantage of the
-            // fact that for this single-pass layouter, regions are always laid out in
-            // increasing row order).
-            self.next_constant_row
-                .saturating_sub(*self.layouter.regions[*self.region_index]),
-            &mut || Ok(constant),
-        )?;
-
-        self.constrain_equal(cell, fixed)
+        self.constants.push((constant, cell));
+        Ok(())
     }
 
     fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error> {
