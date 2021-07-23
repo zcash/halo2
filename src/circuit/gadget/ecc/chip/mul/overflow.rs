@@ -29,10 +29,12 @@ impl From<&EccConfig> for Config {
         Self {
             q_mul_overflow: ecc_config.q_mul_overflow,
             lookup_config: ecc_config.lookup_config.clone(),
+            // Use advice columns that don't conflict with the either the incomplete
+            // additions in fixed-base scalar mul, or the lookup range checks.
             advices: [
-                ecc_config.advices[0],
-                ecc_config.advices[1],
-                ecc_config.advices[2],
+                ecc_config.advices[6],
+                ecc_config.advices[7],
+                ecc_config.advices[8],
             ],
         }
     }

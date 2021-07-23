@@ -280,19 +280,12 @@ impl<F: FieldExt, S: Spec<F, WIDTH, 2>> PoseidonDuplexInstructions<F, S, WIDTH, 
             || format!("initial state for domain {:?}", domain),
             |mut region| {
                 let mut load_state_word = |i: usize, value: F| {
-                    let var = region.assign_advice(
+                    let var = region.assign_advice_from_constant(
                         || format!("state_{}", i),
                         config.state[i],
                         0,
-                        || Ok(value),
+                        value,
                     )?;
-                    let fixed = region.assign_fixed(
-                        || format!("state_{}", i),
-                        config.rc_b[i],
-                        0,
-                        || Ok(value),
-                    )?;
-                    region.constrain_equal(var, fixed)?;
                     Ok(StateWord {
                         var,
                         value: Some(value),
@@ -753,6 +746,8 @@ mod tests {
                 meta.fixed_column(),
                 meta.fixed_column(),
             ];
+
+            meta.enable_constant(rc_b[0]);
 
             Pow5T3Chip::configure(meta, OrchardNullifier, state, partial_sbox, rc_a, rc_b)
         }

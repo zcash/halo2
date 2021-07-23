@@ -241,8 +241,10 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let poseidon_config = PoseidonChip::configure(
             meta,
             poseidon::OrchardNullifier,
-            advices[5..8].try_into().unwrap(),
-            advices[8],
+            // We place the state columns after the partial_sbox column so that the
+            // pad-and-add region can be layed out more efficiently.
+            advices[6..9].try_into().unwrap(),
+            advices[5],
             rc_a,
             rc_b,
         );
