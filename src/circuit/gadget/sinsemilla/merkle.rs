@@ -191,6 +191,11 @@ pub mod tests {
             let constants = meta.fixed_column();
             meta.enable_constant(constants);
 
+            // NB: In the actual Action circuit, these fixed columns will be reused
+            // by other chips. For this test, we are creating new fixed columns.
+            let fixed_y_q_1 = meta.fixed_column();
+            let fixed_y_q_2 = meta.fixed_column();
+
             // Fixed columns for the Sinsemilla generator lookup table
             let lookup = (
                 meta.fixed_column(),
@@ -204,6 +209,7 @@ pub mod tests {
                 meta,
                 advices[5..].try_into().unwrap(),
                 advices[7],
+                fixed_y_q_1,
                 lookup,
                 range_check.clone(),
             );
@@ -213,6 +219,7 @@ pub mod tests {
                 meta,
                 advices[..5].try_into().unwrap(),
                 advices[2],
+                fixed_y_q_2,
                 lookup,
                 range_check,
             );

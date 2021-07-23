@@ -484,6 +484,7 @@ mod tests {
                 meta,
                 advices[..5].try_into().unwrap(),
                 advices[2],
+                lagrange_coeffs[0],
                 lookup,
                 range_check.clone(),
             );
@@ -491,6 +492,7 @@ mod tests {
                 meta,
                 advices[5..].try_into().unwrap(),
                 advices[7],
+                lagrange_coeffs[1],
                 lookup,
                 range_check,
             );

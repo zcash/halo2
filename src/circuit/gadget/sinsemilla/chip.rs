@@ -30,13 +30,16 @@ mod hash_to_point;
 /// Configuration for the Sinsemilla hash chip
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct SinsemillaConfig {
-    /// Selector used in the lookup argument as well as Sinsemilla custom gates.
+    /// Binary selector used in lookup argument and in the body of the Sinsemilla hash.
     q_sinsemilla1: Selector,
-    /// Fixed column used in Sinsemilla custom gates, to toggle behaviour at the ends of
-    /// message pieces.
+    /// Non-binary selector used in lookup argument and in the body of the Sinsemilla hash.
     q_sinsemilla2: Column<Fixed>,
-    /// Fixed column used to constrain hash initialization to be consistent with
+    /// q_sinsemilla2 is used to define a synthetic selector,
+    ///         q_sinsemilla3 = (q_sinsemilla2) ⋅ (q_sinsemilla2 - 1)
+    /// Simple selector used to constrain hash initialization to be consistent with
     /// the y-coordinate of the domain $Q$.
+    q_sinsemilla4: Selector,
+    /// Fixed column used to load the y-coordinate of the domain $Q$.
     fixed_y_q: Column<Fixed>,
     /// Advice column used to store the x-coordinate of the accumulator at each
     /// iteration of the hash.
@@ -110,6 +113,7 @@ impl SinsemillaChip {
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 5],
         witness_pieces: Column<Advice>,
+        fixed_y_q: Column<Fixed>,
         lookup: (Column<Fixed>, Column<Fixed>, Column<Fixed>),
         range_check: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     ) -> <Self as Chip<pallas::Base>>::Config {
@@ -121,7 +125,8 @@ impl SinsemillaChip {
         let config = SinsemillaConfig {
             q_sinsemilla1: meta.selector(),
             q_sinsemilla2: meta.fixed_column(),
-            fixed_y_q: meta.fixed_column(),
+            q_sinsemilla4: meta.selector(),
+            fixed_y_q,
             x_a: advices[0],
             x_p: advices[1],
             bits: advices[2],
@@ -139,8 +144,7 @@ impl SinsemillaChip {
         // Set up lookup argument
         GeneratorTableConfig::configure(meta, config.clone());
 
-        // Constant expressions
-        let two = Expression::Constant(pallas::Base::from_u64(2));
+        let two = pallas::Base::from_u64(2);
 
         // Closures for expressions that are derived multiple times
         // x_r = lambda_1^2 - x_a - x_p
@@ -159,14 +163,28 @@ impl SinsemillaChip {
             (lambda_1 + lambda_2) * (x_a - x_r(meta, rotation))
         };
 
+        // Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.
+        meta.create_gate("Initial y_Q", |meta| {
+            let q_s4 = meta.query_selector(config.q_sinsemilla4);
+            let y_q = meta.query_fixed(config.fixed_y_q, Rotation::cur());
+
+            // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
+            let Y_A_cur = Y_A(meta, Rotation::cur());
+
+            // 2 * y_q - Y_{A,0} = 0
+            let init_y_q_check = y_q * two - Y_A_cur;
+
+            vec![q_s4 * init_y_q_check]
+        });
+
         meta.create_gate("Sinsemilla gate", |meta| {
             let q_s1 = meta.query_selector(config.q_sinsemilla1);
-            let q_s2 = meta.query_fixed(config.q_sinsemilla2, Rotation::cur());
+            // q_s3 = (q_s2) * (q_s2 - 1)
             let q_s3 = {
                 let one = Expression::Constant(pallas::Base::one());
+                let q_s2 = meta.query_fixed(config.q_sinsemilla2, Rotation::cur());
                 q_s2.clone() * (q_s2 - one)
             };
-            let fixed_y_q = meta.query_fixed(config.fixed_y_q, Rotation::cur());
 
             let lambda_1_next = meta.query_advice(config.lambda_1, Rotation::next());
             let lambda_2_cur = meta.query_advice(config.lambda_2, Rotation::cur());
@@ -181,10 +199,6 @@ impl SinsemillaChip {
 
             // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
             let Y_A_next = Y_A(meta, Rotation::next());
-
-            // Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.
-            // fixed_y_q * (2 * fixed_y_q - Y_{A,0}) = 0
-            let init_y_q_check = fixed_y_q.clone() * (two.clone() * fixed_y_q - Y_A_cur.clone());
 
             // lambda2^2 - (x_a_next + x_r + x_a_cur) = 0
             let secant_line =
@@ -202,15 +216,14 @@ impl SinsemillaChip {
                     // y_a_final is assigned to the lambda1 column on the next offset.
                     let y_a_final = lambda_1_next;
 
-                    two.clone() * Y_A_cur
-                        + (two.clone() - q_s3.clone()) * Y_A_next
-                        + two * q_s3 * y_a_final
+                    Y_A_cur * two
+                        + (Expression::Constant(two) - q_s3.clone()) * Y_A_next
+                        + q_s3 * two * y_a_final
                 };
                 lhs - rhs
             };
 
             vec![
-                ("Initial y_q", init_y_q_check),
                 ("Secant line", q_s1.clone() * secant_line),
                 ("y check", q_s1 * y_check),
             ]
