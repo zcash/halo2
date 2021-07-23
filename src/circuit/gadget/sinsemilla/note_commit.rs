@@ -1,7 +1,7 @@
 use group::GroupEncoding;
 use halo2::{
     circuit::Layouter,
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed},
+    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
 use pasta_curves::{
@@ -36,27 +36,13 @@ use super::{
         - v is a 64-bit value;
         - rho is a base field element (255 bits); and
         - psi is a base field element (255 bits).
-
-    All bit ranges are inclusive.
-    a (250 bits) = bits 0..=249 of x(g_d)
-    b (10 bits)  = b_0 || b_1 || b_2 || b_3
-                 = (bits 250..=253 of x(g_d)) || (bit 254 of x(g_d)) || (ỹ bit of g_d) || (bits 0..=3 of pk★_d)
-    c (250 bits) = bits 4..=253 of pk★_d
-    d (60 bits)  = d_0 || d_1 || d_2 || d_3
-                 = (bit 254 of x(pk_d)) || (ỹ bit of pk_d) || (0..=7 of v) || (8..=57 of v)
-    e (10 bits)  = e_0 || e_1
-                 = (bits 58..=63 of v) || (bits 0..=3 of rho)
-    f (250 bits) = bits 4..=253 inclusive of rho
-    g (250 bits) = g_0 || g_1 || g_2
-                 = (bit 254 of rho) || (bits 0..=8 of psi) || (bits 9..=248 of psi)
-    h (10 bits)  = h_0 || h_1 || h_2
-                 = (bits 249..=253 of psi) || (bit 254 of psi) || 4 zero bits
 */
 
 #[allow(non_snake_case)]
 #[derive(Clone, Debug)]
 pub struct NoteCommitConfig {
-    q_canon: Column<Fixed>,
+    q_canon_1: Selector,
+    q_canon_2: Selector,
     advices: [Column<Advice>; 10],
     sinsemilla_config: SinsemillaConfig,
 }
@@ -69,10 +55,12 @@ impl NoteCommitConfig {
         advices: [Column<Advice>; 10],
         sinsemilla_config: SinsemillaConfig,
     ) -> Self {
-        let q_canon = meta.fixed_column();
+        let q_canon_1 = meta.selector();
+        let q_canon_2 = meta.selector();
 
         let config = Self {
-            q_canon,
+            q_canon_1,
+            q_canon_2,
             advices,
             sinsemilla_config,
         };
@@ -93,6 +81,8 @@ impl NoteCommitConfig {
 
         meta.create_gate("NoteCommit decomposition check", |meta| {
             /*
+                All bit ranges are inclusive.
+
                 a (250 bits) = bits 0..=249 of x(g_d)
                 b (10 bits)  = b_0 || b_1 || b_2 || b_3
                              = (bits 250..=253 of x(g_d)) || (bit 254 of x(g_d)) || (ỹ bit of g_d) || (bits 0..=3 of pk★_d)
@@ -107,14 +97,14 @@ impl NoteCommitConfig {
                 h (10 bits)  = h_0 || h_1 || h_2
                              = (bits 249..=253 of psi) || (bit 254 of psi) || 4 zero bits
 
-                |         A_0         |          A_1           |         A_2            |          A_3            |  A_4  |  A_5  |  A_6  |  A_7   |  A_8  |   A_9   |   q_canon   |
-                -------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                |       a_prime       |       b3_c_prime       |       e1_f_prime       |       g1_g2_prime       |   a   |   b   |  b_2  |   b_3  |   c   |    d    |             |
-                |         d_1         |           d_2          |          z1_d          |           e             |  e_0  |  e_1  |   f   |    g   |  g_1  |    h    |      1      |
-                |         h_0         |           h_1          |         x(g_d)         |        x(pk_d)          | value |  b_0  |  b_1  |   d_0  |  g_0  |   z1_g  |      2      |
-                |a_prime_decomposition|b3_c_prime_decomposition|e1_f_prime_decomposition|g1_g2_prime_decomposition| z13_a | z13_c | z13_f | z13_g  |  psi  |   rho   |             |
+                |         A_0         |          A_1           |         A_2            |          A_3            |  A_4  |  A_5  |  A_6  |  A_7   |  A_8  |   A_9   |  q_canon_1  |  q_canon_2  |
+                ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                |       a_prime       |       b3_c_prime       |       e1_f_prime       |       g1_g2_prime       |   a   |   b   |  b_2  |   b_3  |   c   |    d    |      0      |      0      |
+                |         d_1         |           d_2          |          z1_d          |           e             |  e_0  |  e_1  |   f   |    g   |  g_1  |    h    |      1      |      0      |
+                |         h_0         |           h_1          |         x(g_d)         |        x(pk_d)          | value |  b_0  |  b_1  |   d_0  |  g_0  |   z1_g  |      0      |      1      |
+                |a_prime_decomposition|b3_c_prime_decomposition|e1_f_prime_decomposition|g1_g2_prime_decomposition| z13_a | z13_c | z13_f | z13_g  |  psi  |   rho   |      0      |      0      |
 
-             q_canon_is_one checks that:
+             q_canon_1 checks that:
               - piece decomposition:
                   - b = b_0 + (2^4) b_1 + (2^5) b_2 + (2^6) b_3
                     - b_1 is boolean
@@ -137,11 +127,7 @@ impl NoteCommitConfig {
                   - e1_f_prime = e_1 + (2^4)g + 2^140 - t_P
                   - g1_g2_prime = g_1 + (2^9) g_2 + 2^140 - t_P
             */
-            let q_canon_is_one = {
-                let two = Expression::Constant(pallas::Base::from_u64(2));
-                let q_canon = meta.query_fixed(config.q_canon, Rotation::cur());
-                q_canon.clone() * (two - q_canon)
-            };
+            let q_canon_1 = meta.query_selector(config.q_canon_1);
 
             // Offset prev
             let a_prime = meta.query_advice(config.advices[0], Rotation::prev());
@@ -282,7 +268,7 @@ impl NoteCommitConfig {
                 .chain(Some(("gd_x_check", gd_x_check)))
                 .chain(Some(("pkd_x_check", pkd_x_check)))
                 .chain(Some(("value_check", value_check)))
-                .map(move |(name, poly)| (name, q_canon_is_one.clone() * poly))
+                .map(move |(name, poly)| (name, q_canon_1.clone() * poly))
         });
 
         meta.create_gate("Canonicity checks", |meta| {
@@ -301,15 +287,15 @@ impl NoteCommitConfig {
                 h (10 bits)  = h_0 || h_1 || h_2
                             = (bits 249..=253 of psi) || (bit 254 of psi) || 4 zero bits
 
-                |         A_0         |          A_1           |         A_2            |          A_3            |  A_4  |  A_5  |  A_6  |  A_7   |  A_8  |   A_9   |   q_canon   |
-                -------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                |       a_prime       |       b3_c_prime       |       e1_f_prime       |       g1_g2_prime       |   a   |   b   |  b_2  |   b_3  |   c   |    d    |             |
-                |         d_1         |           d_2          |          z1_d          |           e             |  e_0  |  e_1  |   f   |    g   |  g_1  |    h    |      1      |
-                |         h_0         |           h_1          |         x(g_d)         |        x(pk_d)          | value |  b_0  |  b_1  |   d_0  |  g_0  |   z1_g  |      2      |
-                |a_prime_decomposition|b3_c_prime_decomposition|e1_f_prime_decomposition|g1_g2_prime_decomposition| z13_a | z13_c | z13_f | z13_g  |  psi  |   rho   |             |
+                |         A_0         |          A_1           |         A_2            |          A_3            |  A_4  |  A_5  |  A_6  |  A_7   |  A_8  |   A_9   |  q_canon_1  |  q_canon_2  |
+                ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                |       a_prime       |       b3_c_prime       |       e1_f_prime       |       g1_g2_prime       |   a   |   b   |  b_2  |   b_3  |   c   |    d    |      0      |      0      |
+                |         d_1         |           d_2          |          z1_d          |           e             |  e_0  |  e_1  |   f   |    g   |  g_1  |    h    |      1      |      0      |
+                |         h_0         |           h_1          |         x(g_d)         |        x(pk_d)          | value |  b_0  |  b_1  |   d_0  |  g_0  |   z1_g  |      0      |      1      |
+                |a_prime_decomposition|b3_c_prime_decomposition|e1_f_prime_decomposition|g1_g2_prime_decomposition| z13_a | z13_c | z13_f | z13_g  |  psi  |   rho   |      0      |      0      |
             */
 
-            // q_canon_is_two checks that:
+            // q_canon_2 checks that:
             //   - field element decomposition:
             //      - rho = e_1 + (2^4) g + (2^254) h_0
             //      - psi = h_1 + (2^9) i + (2^249) j_0 + (2^254) j_1
@@ -324,11 +310,7 @@ impl NoteCommitConfig {
             //      - j_1 = 0 => j_0 = 0
             //                && g1_g2_prime_decomposition = 0
 
-            let q_canon_is_two = {
-                let one = Expression::Constant(pallas::Base::one());
-                let q_canon = meta.query_fixed(config.q_canon, Rotation::cur());
-                q_canon.clone() * (one - q_canon)
-            };
+            let q_canon_2 = meta.query_selector(config.q_canon_2);
 
             // Offset prev
             let e_1 = meta.query_advice(config.advices[5], Rotation::prev());
@@ -411,7 +393,7 @@ impl NoteCommitConfig {
                 .chain(pkd_x_canonicity_checks)
                 .chain(rho_canonicity_checks)
                 .chain(psi_canonicity_checks)
-                .map(move |poly| q_canon_is_two.clone() * poly)
+                .map(move |poly| q_canon_2.clone() * poly)
         });
 
         config
@@ -861,30 +843,20 @@ impl NoteCommitConfig {
             The pieces are witnessed in the below configuration, such that no gate has to query an
             offset greater than +/- 1 from its relative row.
 
-            |         A_0         |          A_1           |         A_2            |          A_3            |  A_4  |  A_5  |  A_6  |  A_7   |  A_8  |   A_9   |   q_canon   |
-            -------------------------------------------------------------------------------------------------------------------------------------------------------------------
-            |       a_prime       |       b3_c_prime       |       e1_f_prime       |       g1_g2_prime       |   a   |   b   |  b_2  |   b_3  |   c   |    d    |             |
-            |         d_1         |           d_2          |          z1_d          |           e             |  e_0  |  e_1  |   f   |    g   |  g_1  |    h    |      1      |
-            |         h_0         |           h_1          |         x(g_d)         |        x(pk_d)          | value |  b_0  |  b_1  |   d_0  |  g_0  |   z1_g  |      2      |
-            |a_prime_decomposition|b3_c_prime_decomposition|e1_f_prime_decomposition|g1_g2_prime_decomposition| z13_a | z13_c | z13_f | z13_g  |  psi  |   rho   |             |
+            |         A_0         |          A_1           |         A_2            |          A_3            |  A_4  |  A_5  |  A_6  |  A_7   |  A_8  |   A_9   |  q_canon_1  |  q_canon_2  |
+            ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+            |       a_prime       |       b3_c_prime       |       e1_f_prime       |       g1_g2_prime       |   a   |   b   |  b_2  |   b_3  |   c   |    d    |      0      |      0      |
+            |         d_1         |           d_2          |          z1_d          |           e             |  e_0  |  e_1  |   f   |    g   |  g_1  |    h    |      1      |      0      |
+            |         h_0         |           h_1          |         x(g_d)         |        x(pk_d)          | value |  b_0  |  b_1  |   d_0  |  g_0  |   z1_g  |      0      |      1      |
+            |a_prime_decomposition|b3_c_prime_decomposition|e1_f_prime_decomposition|g1_g2_prime_decomposition| z13_a | z13_c | z13_f | z13_g  |  psi  |   rho   |      0      |      0      |
 
         */
         layouter.assign_region(
             || "Assign gate cells",
             |mut region| {
                 // Assign fixed column the correct values
-                region.assign_fixed(
-                    || "q_canon = 1",
-                    self.q_canon,
-                    1,
-                    || Ok(pallas::Base::one()),
-                )?;
-                region.assign_fixed(
-                    || "q_canon = 2",
-                    self.q_canon,
-                    2,
-                    || Ok(pallas::Base::from_u64(2)),
-                )?;
+                self.q_canon_1.enable(&mut region, 1)?;
+                self.q_canon_2.enable(&mut region, 2)?;
 
                 // Offset 0
                 {
