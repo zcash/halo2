@@ -1,4 +1,4 @@
-# CommitIvk
+# $\CommitIvk$
 
 ## Message decomposition
 
