@@ -17,7 +17,7 @@ use super::*;
 pub struct LookupRangeCheckConfig<F: FieldExt + PrimeFieldBits, const K: usize> {
     pub q_lookup: Selector,
     pub q_lookup_short: Selector,
-    pub short_lookup_bitshift: Column<Fixed>,
+    pub q_lookup_bitshift: Selector,
     pub running_sum: Column<Advice>,
     table_idx: Column<Fixed>,
     _marker: PhantomData<F>,
@@ -44,11 +44,11 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
 
         let q_lookup = meta.selector();
         let q_lookup_short = meta.selector();
-        let short_lookup_bitshift = meta.fixed_column();
+        let q_lookup_bitshift = meta.selector();
         let config = LookupRangeCheckConfig {
             q_lookup,
             q_lookup_short,
-            short_lookup_bitshift,
+            q_lookup_bitshift,
             running_sum,
             table_idx,
             _marker: PhantomData,
@@ -78,15 +78,16 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
 
         // For short lookups, check that the word has been shifted by the correct number of bits.
         meta.create_gate("Short lookup bitshift", |meta| {
-            let inv_two_pow_s = meta.query_fixed(config.short_lookup_bitshift, Rotation::cur());
+            let q_lookup_bitshift = meta.query_selector(config.q_lookup_bitshift);
             let word = meta.query_advice(config.running_sum, Rotation::prev());
             let shifted_word = meta.query_advice(config.running_sum, Rotation::cur());
+            let inv_two_pow_s = meta.query_advice(config.running_sum, Rotation::next());
 
             let two_pow_k = F::from_u64(1 << K);
 
             // shifted_word = word * 2^{K-s}
             //              = word * 2^K * inv_two_pow_s
-            vec![inv_two_pow_s.clone() * (word * two_pow_k * inv_two_pow_s - shifted_word)]
+            vec![q_lookup_bitshift * (word * two_pow_k * inv_two_pow_s - shifted_word)]
         });
 
         config
@@ -317,17 +318,11 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         // Enable lookup for `element`, to constrain it to 10 bits.
         self.q_lookup_short.enable(region, 0)?;
 
-        // Assign 2^{-num_bits} in a fixed column.
-        {
-            // 2^{-num_bits}
-            let inv_two_pow_s = F::from_u64(1 << num_bits).invert().unwrap();
-            region.assign_fixed(
-                || format!("2^(-{})", num_bits),
-                self.short_lookup_bitshift,
-                1,
-                || Ok(inv_two_pow_s),
-            )?;
-        }
+        // Enable lookup for shifted element, to constrain it to 10 bits.
+        self.q_lookup_short.enable(region, 1)?;
+
+        // Check element has been shifted by the correct number of bits.
+        self.q_lookup_bitshift.enable(region, 1)?;
 
         // Assign shifted `element * 2^{K - num_bits}`
         let shifted = element.value().map(|element| {
@@ -342,8 +337,14 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             || shifted.ok_or(Error::SynthesisError),
         )?;
 
-        // Enable lookup for shifted element, to constrain it to 10 bits.
-        self.q_lookup_short.enable(region, 1)?;
+        // Assign 2^{-num_bits} from a fixed column.
+        let inv_two_pow_s = F::from_u64(1 << num_bits).invert().unwrap();
+        region.assign_advice_from_constant(
+            || format!("2^(-{})", num_bits),
+            self.running_sum,
+            2,
+            inv_two_pow_s,
+        )?;
 
         Ok(())
     }
