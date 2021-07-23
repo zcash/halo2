@@ -1,6 +1,6 @@
 //! Key structures for Orchard.
 
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::mem;
 
 use aes::Aes256;
@@ -15,7 +15,7 @@ use zcash_note_encryption::EphemeralKeyBytes;
 
 use crate::{
     address::Address,
-    primitives::redpallas::{self, SpendAuth},
+    primitives::redpallas::{self, SpendAuth, VerificationKey},
     spec::{
         commit_ivk, diversify_hash, extract_p, ka_orchard, prf_nf, to_base, to_scalar,
         NonIdentityPallasPoint, NonZeroPallasBase, NonZeroPallasScalar, PrfExpand,
@@ -137,6 +137,18 @@ impl SpendValidatingKey {
     pub fn randomize(&self, randomizer: &pallas::Scalar) -> redpallas::VerificationKey<SpendAuth> {
         self.0.randomize(randomizer)
     }
+
+    /// Converts this spend validating key to its serialized form.
+    pub(crate) fn to_bytes(&self) -> [u8; 32] {
+        <[u8; 32]>::from(&self.0)
+    }
+
+    pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        <[u8; 32]>::try_from(&bytes[..32])
+            .ok()
+            .and_then(|b| <VerificationKey<SpendAuth>>::try_from(b).ok())
+            .map(SpendValidatingKey)
+    }
 }
 
 /// A key used to derive [`Nullifier`]s from [`Note`]s.
@@ -165,6 +177,21 @@ impl NullifierDerivingKey {
     pub(crate) fn prf_nf(&self, rho: pallas::Base) -> pallas::Base {
         prf_nf(self.0, rho)
     }
+
+    /// Converts this nullifier deriving key to its serialized form.
+    pub(crate) fn to_bytes(&self) -> [u8; 32] {
+        <[u8; 32]>::from(self.0)
+    }
+
+    pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        let nk_bytes = <[u8; 32]>::try_from(&bytes[..32]).ok()?;
+        let nk = pallas::Base::from_bytes(&nk_bytes).map(NullifierDerivingKey);
+        if nk.is_some().into() {
+            Some(nk.unwrap())
+        } else {
+            None
+        }
+    }
 }
 
 /// The randomness for $\mathsf{Commit}^\mathsf{ivk}$.
@@ -184,6 +211,21 @@ impl From<&SpendingKey> for CommitIvkRandomness {
 impl CommitIvkRandomness {
     pub(crate) fn inner(&self) -> pallas::Scalar {
         self.0
+    }
+
+    /// Converts this nullifier deriving key to its serialized form.
+    pub(crate) fn to_bytes(&self) -> [u8; 32] {
+        <[u8; 32]>::from(self.0)
+    }
+
+    pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        let rivk_bytes = <[u8; 32]>::try_from(&bytes[..32]).ok()?;
+        let rivk = pallas::Scalar::from_bytes(&rivk_bytes).map(CommitIvkRandomness);
+        if rivk.is_some().into() {
+            Some(rivk.unwrap())
+        } else {
+            None
+        }
     }
 }
 
@@ -254,6 +296,28 @@ impl FullViewingKey {
     pub fn address(&self, d: Diversifier) -> Address {
         // Shortcut: we don't need to derive DiversifierKey.
         KeyAgreementPrivateKey::from(self).address(d)
+    }
+
+    /// Serializes the full viewing key as specified in [Zcash Protocol Spec § 5.6.4.4: Orchard Raw Full Viewing Keys][orchardrawfullviewingkeys]
+    ///
+    /// [orchardrawfullviewingkeys]: https://zips.z.cash/protocol/protocol.pdf#orchardfullviewingkeyencoding
+    pub fn to_raw_fvk_bytes(&self) -> [u8; 96] {
+        let mut result = [0u8; 96];
+        result[..32].copy_from_slice(&self.ak.to_bytes());
+        result[32..64].copy_from_slice(&self.nk.to_bytes());
+        result[64..].copy_from_slice(&<[u8; 32]>::from(&self.rivk.0));
+        result
+    }
+
+    /// Parses a full viewing key from its "raw" encoding as specified in [Zcash Protocol Spec § 5.6.4.4: Orchard Raw Full Viewing Keys][orchardrawfullviewingkeys]
+    ///
+    /// [orchardrawfullviewingkeys]: https://zips.z.cash/protocol/protocol.pdf#orchardfullviewingkeyencoding
+    pub fn from_raw_fvk_bytes(bytes: &[u8; 96]) -> Option<Self> {
+        let ak = SpendValidatingKey::from_bytes(&bytes[..32])?;
+        let nk = NullifierDerivingKey::from_bytes(&bytes[32..64])?;
+        let rivk = CommitIvkRandomness::from_bytes(&bytes[64..])?;
+
+        Some(FullViewingKey { ak, nk, rivk })
     }
 }
 

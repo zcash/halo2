@@ -44,8 +44,9 @@ impl Address {
         &self.pk_d
     }
 
-    /// Serialize this address to its "raw" encoding as defined in
-    /// https://zips.z.cash/protocol/protocol.pdf#orchardpaymentaddrencoding
+    /// Serializes this address to its "raw" encoding as specified in [Zcash Protocol Spec § 5.6.4.2: Orchard Raw Payment Addresses][orchardpaymentaddrencoding]
+    ///
+    /// [orchardpaymentaddrencoding]: https://zips.z.cash/protocol/protocol.pdf#orchardpaymentaddrencoding
     pub fn to_raw_address_bytes(&self) -> [u8; 43] {
         let mut result = [0u8; 43];
         result[..11].copy_from_slice(self.d.as_array());
@@ -53,8 +54,9 @@ impl Address {
         result
     }
 
-    /// Parse an address from its "raw" encoding as defined in 
-    /// https://zips.z.cash/protocol/protocol.pdf#orchardpaymentaddrencoding
+    /// Parse an address from its "raw" encoding as specified in [Zcash Protocol Spec § 5.6.4.2: Orchard Raw Payment Addresses][orchardpaymentaddrencoding]
+    ///
+    /// [orchardpaymentaddrencoding]: https://zips.z.cash/protocol/protocol.pdf#orchardpaymentaddrencoding
     pub fn from_raw_address_bytes(bytes: &[u8; 43]) -> CtOption<Self> {
         DiversifiedTransmissionKey::from_bytes(bytes[11..].try_into().unwrap()).map(|pk_d| {
             let d = Diversifier::from_bytes(bytes[..11].try_into().unwrap());
