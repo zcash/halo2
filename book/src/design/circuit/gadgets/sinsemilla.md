@@ -81,7 +81,7 @@ In other words, $z_{n-i} = \sum\limits_{h=0}^{i-1} 2^{kh} \cdot m_{h+1}$.
 > In order to support chaining multiple field elements without a gap, we will use a slightly more complicated expression for $m_{i+1}$ that effectively forces $\mathbf{z}_n$ to zero for the last step of each element, as indicated by $q_{S2}$. This allows the cell that would have been $\mathbf{z}_n$ to be used to reinitialize the running sum for the next element.
 
 ### Generator lookup table
-The
+The Sinsemilla circuit makes use of $2^10$ pre-computed random generators. These are loaded into a lookup table:
 $$
 \begin{array}{|c|c|c|}
 \hline
@@ -110,6 +110,7 @@ $$
     2'      & x'_{A,2}   & x_{P[m'_3]} & z'_2     & \lambda'_{1,2}   & \lambda'_{2,2}   & 1      & 1      & 0      &     0      \\\hline
   \vdots    & \vdots     & \vdots      & \vdots   & \vdots           & \vdots           & 1      & 1      & 0      &     0      \\\hline
    n-1'     & x'_{A,n-1} & x_{P[m'_n]} & z'_{n-1} & \lambda'_{1,n-1} & \lambda'_{2,n-1} & 1      & 0      & 1      &     0      \\\hline
+    n'       &  x'_{A,n}   &                     &              &       y_{A,n}         &                            & 0       & 0      & 0      &     0      \\\hline
 \end{array}
 $$
 
@@ -140,10 +141,10 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-4   & q_{S4} \cdot (2 \cdot y_Q - Y_{A,0}) = 0 \\\hline
+2   & q_{S4} \cdot (2 \cdot y_Q - Y_{A,0}) = 0 \\\hline
 5   & q_{S1,i} \Rightarrow (m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P} \\\hline
 3   & q_{S1,i} \cdot \big(\lambda_{2,i}^2 - (x_{A,i+1} + x_{R,i} + x_{A,i})\big) \\\hline
-6   & q_{S1,i} \cdot \left(2 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - (Y_{A,i} + (1 - q_{S3,i}) \cdot Y_{A,i+1} + 2 \cdot q_{S3,i} \cdot y_{A,n})\right) = 0 \\\hline
+4   & q_{S1,i} \cdot \left(2 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - (Y_{A,i} + (1 - q_{S3,i}) \cdot Y_{A,i+1} + 2 \cdot q_{S3,i} \cdot y_{A,n})\right) = 0 \\\hline
 \end{array}
 $$
 
