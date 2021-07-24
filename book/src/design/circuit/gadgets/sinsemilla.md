@@ -96,25 +96,24 @@ $$
 
 ### Layout
 $$
-\begin{array}{|c|c|c|c|c|c|c|c|c|c|}
+\begin{array}{|c|c|c|c|c|c|c|c|c|c|c|}
 \hline
-\text{Step} &    x_A     &    x_P      &   bits   &    \lambda_1     &   \lambda_2      & q_{S1} & q_{S2} & q_{S3} &    q_{S4}  \\\hline
-   -1       & y_Q        &             &          &                  &                  & 0      & 0      & 0      &     1      \\\hline
-    0       & x_Q        & x_{P[m_1]}  & z_0      & \lambda_{1,0}    & \lambda_{2,0}    & 1      & 1      & 0      &     0      \\\hline
-    1       & x_{A,1}    & x_{P[m_2]}  & z_1      & \lambda_{1,1}    & \lambda_{2,1}    & 1      & 1      & 0      &     0      \\\hline
-    2       & x_{A,2}    & x_{P[m_3]}  & z_2      & \lambda_{1,2}    & \lambda_{2,2}    & 1      & 1      & 0      &     0      \\\hline
-  \vdots    & \vdots     & \vdots      & \vdots   & \vdots           & \vdots           & 1      & 1      & 0      &     0      \\\hline
-   n-1      & x_{A,n-1}  & x_{P[m_n]}  & z_{n-1}  & \lambda_{1,n-1}  & \lambda_{2,n-1}  & 1      & 0      & 0      &     0      \\\hline
-    0'      & x'_{A,0}   & x_{P[m'_1]} & z'_0     & \lambda'_{1,0}   & \lambda'_{2,0}   & 1      & 1      & 0      &     0      \\\hline
-    1'      & x'_{A,1}   & x_{P[m'_2]} & z'_1     & \lambda'_{1,1}   & \lambda'_{2,1}   & 1      & 1      & 0      &     0      \\\hline
-    2'      & x'_{A,2}   & x_{P[m'_3]} & z'_2     & \lambda'_{1,2}   & \lambda'_{2,2}   & 1      & 1      & 0      &     0      \\\hline
-  \vdots    & \vdots     & \vdots      & \vdots   & \vdots           & \vdots           & 1      & 1      & 0      &     0      \\\hline
-   n-1'     & x'_{A,n-1} & x_{P[m'_n]} & z'_{n-1} & \lambda'_{1,n-1} & \lambda'_{2,n-1} & 1      & 0      & 1      &     0      \\\hline
-    n'       &  x'_{A,n}   &                     &              &       y_{A,n}         &                            & 0       & 0      & 0      &     0      \\\hline
+\text{Step} &    x_A     &    x_P      &   bits   &    \lambda_1     &   \lambda_2      & q_{S1} & q_{S2} & q_{S3} &    q_{S4}  & \textsf{fixed\_y\_Q}\\\hline
+    0       & x_Q        & x_{P[m_1]}  & z_0      & \lambda_{1,0}    & \lambda_{2,0}    & 1      & 1      & 0      &     1      &    y_Q              \\\hline
+    1       & x_{A,1}    & x_{P[m_2]}  & z_1      & \lambda_{1,1}    & \lambda_{2,1}    & 1      & 1      & 0      &     0      &     0               \\\hline
+    2       & x_{A,2}    & x_{P[m_3]}  & z_2      & \lambda_{1,2}    & \lambda_{2,2}    & 1      & 1      & 0      &     0      &     0               \\\hline
+  \vdots    & \vdots     & \vdots      & \vdots   & \vdots           & \vdots           & 1      & 1      & 0      &     0      &     0               \\\hline
+   n-1      & x_{A,n-1}  & x_{P[m_n]}  & z_{n-1}  & \lambda_{1,n-1}  & \lambda_{2,n-1}  & 1      & 0      & 0      &     0      &     0               \\\hline
+    0'      & x'_{A,0}   & x_{P[m'_1]} & z'_0     & \lambda'_{1,0}   & \lambda'_{2,0}   & 1      & 1      & 0      &     0      &     0               \\\hline
+    1'      & x'_{A,1}   & x_{P[m'_2]} & z'_1     & \lambda'_{1,1}   & \lambda'_{2,1}   & 1      & 1      & 0      &     0      &     0               \\\hline
+    2'      & x'_{A,2}   & x_{P[m'_3]} & z'_2     & \lambda'_{1,2}   & \lambda'_{2,2}   & 1      & 1      & 0      &     0      &     0               \\\hline
+  \vdots    & \vdots     & \vdots      & \vdots   & \vdots           & \vdots           & 1      & 1      & 0      &     0      &     0               \\\hline
+   n-1'     & x'_{A,n-1} & x_{P[m'_n]} & z'_{n-1} & \lambda'_{1,n-1} & \lambda'_{2,n-1} & 1      & 0      & 1      &     0      &     0               \\\hline
+    n'      &  x'_{A,n}  &             &          &       y_{A,n}    &                  & 0      & 0      & 0      &     0      &     0               \\\hline
 \end{array}
 $$
 
-$x_Q$, $y_Q$, $z_0$, $z'_0$, etc. would be copied in using equality constraints.
+$x_Q$, $z_0$, $z'_0$, etc. would be copied in using equality constraints.
 
 ### Optimized Sinsemilla gate
 $$
