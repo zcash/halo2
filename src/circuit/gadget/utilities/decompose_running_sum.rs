@@ -34,7 +34,7 @@ use crate::constants::util::decompose_word;
 use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
-/// The running sum $[z_1, ..., z_W]$. If created in strict mode, $z_W = 0$.
+/// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
 pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<CellValue<F>>);
 impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
     type Target = Vec<CellValue<F>>;
@@ -43,6 +43,7 @@ impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
         &self.0
     }
 }
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RunningSumConfig<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> {
     q_range_check: Selector,
@@ -103,7 +104,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         strict: bool,
         word_num_bits: usize,
         num_windows: usize,
-    ) -> Result<(CellValue<F>, RunningSum<F>), Error> {
+    ) -> Result<RunningSum<F>, Error> {
         let z_0 = {
             let cell = region.assign_advice(
                 || "z_0 = alpha",
@@ -128,7 +129,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         strict: bool,
         word_num_bits: usize,
         num_windows: usize,
-    ) -> Result<(CellValue<F>, RunningSum<F>), Error> {
+    ) -> Result<RunningSum<F>, Error> {
         let z_0 = copy(region, || "copy z_0 = alpha", self.z, offset, &alpha)?;
         self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
@@ -146,7 +147,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         strict: bool,
         word_num_bits: usize,
         num_windows: usize,
-    ) -> Result<(CellValue<F>, RunningSum<F>), Error> {
+    ) -> Result<RunningSum<F>, Error> {
         // Make sure that we do not have more windows than required for the number
         // of bits in the word. In other words, every window must contain at least
         // one bit of the word (no empty windows).
@@ -177,8 +178,8 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
             }
         };
 
-        // Initialize empty vector to store running sum values [z_1, ..., z_W].
-        let mut zs: Vec<CellValue<F>> = Vec::with_capacity(num_windows);
+        // Initialize empty vector to store running sum values [z_0, ..., z_W].
+        let mut zs: Vec<CellValue<F>> = vec![z_0];
         let mut z = z_0;
 
         // Assign running sum `z_{i+1}` = (z_i - k_i) / (2^K) for i = 0..=n-1.
@@ -206,13 +207,14 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
             z = z_next;
             zs.push(z);
         }
+        assert_eq!(zs.len(), num_windows + 1);
 
         if strict {
             // Constrain the final running sum output to be zero.
             region.constrain_constant(zs.last().unwrap().cell(), F::zero())?;
         }
 
-        Ok((z_0, RunningSum(zs)))
+        Ok(RunningSum(zs))
     }
 }
 
@@ -274,7 +276,7 @@ mod tests {
                     || "decompose",
                     |mut region| {
                         let offset = 0;
-                        let (alpha, _zs) = config.witness_decompose(
+                        let zs = config.witness_decompose(
                             &mut region,
                             offset,
                             self.alpha,
@@ -282,6 +284,7 @@ mod tests {
                             WORD_NUM_BITS,
                             NUM_WINDOWS,
                         )?;
+                        let alpha = zs[0];
 
                         let offset = offset + NUM_WINDOWS + 1;
 

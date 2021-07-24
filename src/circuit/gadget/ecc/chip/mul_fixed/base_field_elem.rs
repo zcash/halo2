@@ -166,7 +166,7 @@ impl Config {
 
                 // Decompose scalar
                 let scalar = {
-                    let (base_field_elem, running_sum) = self.running_sum_config.copy_decompose(
+                    let running_sum = self.running_sum_config.copy_decompose(
                         &mut region,
                         offset,
                         scalar,
@@ -175,7 +175,7 @@ impl Config {
                         constants::NUM_WINDOWS,
                     )?;
                     EccBaseFieldElemFixed {
-                        base_field_elem,
+                        base_field_elem: running_sum[0],
                         running_sum: (*running_sum).as_slice().try_into().unwrap(),
                     }
                 };
@@ -240,9 +240,9 @@ impl Config {
         //                => z_13_alpha_0_prime = 0
         //
         let (alpha, running_sum) = (scalar.base_field_elem, &scalar.running_sum);
-        let z_43_alpha = running_sum[42];
-        let z_44_alpha = running_sum[43];
-        let z_84_alpha = running_sum[83];
+        let z_43_alpha = running_sum[43];
+        let z_44_alpha = running_sum[44];
+        let z_84_alpha = running_sum[84];
 
         // α_0 = α - z_84_alpha * 2^252
         let alpha_0 = alpha
@@ -260,12 +260,13 @@ impl Config {
                 let t_p = pallas::Base::from_u128(T_P);
                 alpha_0 + two_pow_130 - t_p
             });
-            let (alpha_0_prime, zs) = self.lookup_config.witness_check(
+            let zs = self.lookup_config.witness_check(
                 layouter.namespace(|| "Lookup range check alpha_0 + 2^130 - t_p"),
                 alpha_0_prime,
                 13,
                 false,
             )?;
+            let alpha_0_prime = zs[0];
 
             (alpha_0_prime, zs[13])
         };

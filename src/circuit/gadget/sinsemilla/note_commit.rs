@@ -710,12 +710,13 @@ impl NoteCommitConfig {
             let t_p = pallas::Base::from_u128(T_P);
             a + two_pow_130 - t_p
         });
-        let (a_prime, zs) = self.sinsemilla_config.lookup_config.witness_check(
+        let zs = self.sinsemilla_config.lookup_config.witness_check(
             layouter.namespace(|| "Decompose low 130 bits of (a + 2^130 - t_P)"),
             a_prime,
             13,
             false,
         )?;
+        let a_prime = zs[0];
         assert_eq!(zs.len(), 14); // [z_0, z_1, ..., z_13]
 
         Ok((a_prime, zs[13]))
@@ -748,12 +749,13 @@ impl NoteCommitConfig {
             b_3 + (two_pow_4 * c) + two_pow_140 - t_p
         });
 
-        let (b3_c_prime, zs) = self.sinsemilla_config.lookup_config.witness_check(
+        let zs = self.sinsemilla_config.lookup_config.witness_check(
             layouter.namespace(|| "Decompose low 140 bits of (b_3 + 2^4 c + 2^140 - t_P)"),
             b3_c_prime,
             14,
             false,
         )?;
+        let b3_c_prime = zs[0];
         assert_eq!(zs.len(), 15); // [z_0, z_1, ..., z_13, z_14]
 
         Ok((b3_c_prime, zs[14]))
@@ -787,12 +789,13 @@ impl NoteCommitConfig {
         // Decompose the low 140 bits of e1_f_prime = e_1 + 2^4 f + 2^140 - t_P,
         // and output the running sum at the end of it.
         // If e1_f_prime < 2^140, the running sum will be 0.
-        let (e1_f_prime, zs) = self.sinsemilla_config.lookup_config.witness_check(
+        let zs = self.sinsemilla_config.lookup_config.witness_check(
             layouter.namespace(|| "Decompose low 140 bits of (e_1 + 2^4 f + 2^140 - t_P)"),
             e1_f_prime,
             14,
             false,
         )?;
+        let e1_f_prime = zs[0];
         assert_eq!(zs.len(), 15); // [z_0, z_1, ..., z_13, z_14]
 
         Ok((e1_f_prime, zs[14]))
@@ -823,12 +826,13 @@ impl NoteCommitConfig {
             g_1 + (two_pow_9 * g_2) + two_pow_140 - t_p
         });
 
-        let (g1_g2_prime, zs) = self.sinsemilla_config.lookup_config.witness_check(
+        let zs = self.sinsemilla_config.lookup_config.witness_check(
             layouter.namespace(|| "Decompose low 140 bits of (g_1 + (2^9)g_2 + 2^140 - t_P)"),
             g1_g2_prime,
             14,
             false,
         )?;
+        let g1_g2_prime = zs[0];
         assert_eq!(zs.len(), 15); // [z_0, z_1, ..., z_13, z_14]
 
         Ok((g1_g2_prime, zs[14]))

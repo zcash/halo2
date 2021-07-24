@@ -291,7 +291,7 @@ pub struct EccScalarFixed {
 pub struct EccScalarFixedShort {
     magnitude: CellValue<pallas::Base>,
     sign: CellValue<pallas::Base>,
-    running_sum: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS_SHORT }>,
+    running_sum: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS_SHORT + 1 }>,
 }
 
 /// A base field element used for fixed-base scalar multiplication.
@@ -300,13 +300,13 @@ pub struct EccScalarFixedShort {
 /// for element α = a_0 + (2^3) a_1 + ... + (2^{3(n-1)}) a_{n-1}.
 /// Each `a_i` is in the range [0..2^3).
 ///
-/// `windows` = [z_1, ..., z_85], where we expect z_85 = 0.
+/// `running_sum` = [z_0, ..., z_85], where we expect z_85 = 0.
 /// Since z_0 is initialized as the scalar α, we store it as
 /// `base_field_elem`.
 #[derive(Clone, Debug)]
 struct EccBaseFieldElemFixed {
     base_field_elem: CellValue<pallas::Base>,
-    running_sum: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS }>,
+    running_sum: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS + 1 }>,
 }
 
 impl EccBaseFieldElemFixed {

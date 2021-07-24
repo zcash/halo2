@@ -13,6 +13,16 @@ use ff::PrimeFieldBits;
 
 use super::*;
 
+/// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
+pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<CellValue<F>>);
+impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
+    type Target = Vec<CellValue<F>>;
+
+    fn deref(&self) -> &Vec<CellValue<F>> {
+        &self.0
+    }
+}
+
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct LookupRangeCheckConfig<F: FieldExt + PrimeFieldBits, const K: usize> {
     pub q_lookup: Selector,
@@ -125,16 +135,13 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         element: CellValue<F>,
         num_words: usize,
         strict: bool,
-    ) -> Result<Vec<CellValue<F>>, Error> {
+    ) -> Result<RunningSum<F>, Error> {
         layouter.assign_region(
             || format!("{:?} words range check", num_words),
             |mut region| {
                 // Copy `element` and initialize running sum `z_0 = element` to decompose it.
                 let z_0 = copy(&mut region, || "z_0", self.running_sum, 0, &element)?;
-
-                let zs = self.range_check(&mut region, z_0, num_words, strict)?;
-
-                Ok(zs)
+                self.range_check(&mut region, z_0, num_words, strict)
             },
         )
     }
@@ -146,7 +153,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         value: Option<F>,
         num_words: usize,
         strict: bool,
-    ) -> Result<(CellValue<F>, Vec<CellValue<F>>), Error> {
+    ) -> Result<RunningSum<F>, Error> {
         layouter.assign_region(
             || "Witness element",
             |mut region| {
@@ -159,10 +166,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                     )?;
                     CellValue::new(cell, value)
                 };
-
-                let zs = self.range_check(&mut region, z_0, num_words, strict)?;
-
-                Ok((z_0, zs))
+                self.range_check(&mut region, z_0, num_words, strict)
             },
         )
     }
@@ -180,7 +184,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         element: CellValue<F>,
         num_words: usize,
         strict: bool,
-    ) -> Result<Vec<CellValue<F>>, Error> {
+    ) -> Result<RunningSum<F>, Error> {
         // `num_words` must fit into a single field element.
         assert!(num_words * K <= F::CAPACITY as usize);
         let num_bits = num_words * K;
@@ -247,7 +251,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             region.constrain_constant(zs.last().unwrap().cell(), F::zero())?;
         }
 
-        Ok(zs)
+        Ok(RunningSum(zs))
     }
 
     /// Short range check on an existing cell that is copied into this helper.
@@ -440,7 +444,7 @@ mod tests {
                 for (element, expected_final_z, strict) in elements_and_expected_final_zs.iter() {
                     let expected_zs = expected_zs::<F, K>(*element, self.num_words);
 
-                    let (_, zs) = config.witness_check(
+                    let zs = config.witness_check(
                         layouter.namespace(|| format!("Lookup {:?}", self.num_words)),
                         Some(*element),
                         self.num_words,

@@ -392,12 +392,13 @@ impl CommitIvkConfig {
             let t_p = pallas::Base::from_u128(T_P);
             a + two_pow_130 - t_p
         });
-        let (a_prime, zs) = self.sinsemilla_config.lookup_config.witness_check(
+        let zs = self.sinsemilla_config.lookup_config.witness_check(
             layouter.namespace(|| "Decompose low 130 bits of (a + 2^130 - t_P)"),
             a_prime,
             13,
             false,
         )?;
+        let a_prime = zs[0];
         assert_eq!(zs.len(), 14); // [z_0, z_1, ..., z13_a]
 
         Ok((a_prime, zs[13]))
@@ -428,12 +429,13 @@ impl CommitIvkConfig {
             let t_p = pallas::Base::from_u128(T_P);
             b_2 + c * two_pow_5 + two_pow_140 - t_p
         });
-        let (b2_c_prime, zs) = self.sinsemilla_config.lookup_config.witness_check(
+        let zs = self.sinsemilla_config.lookup_config.witness_check(
             layouter.namespace(|| "Decompose low 140 bits of (b_2 + c * 2^5 + 2^140 - t_P)"),
             b2_c_prime,
             14,
             false,
         )?;
+        let b2_c_prime = zs[0];
         assert_eq!(zs.len(), 15); // [z_0, z_1, ..., z14]
 
         Ok((b2_c_prime, zs[14]))

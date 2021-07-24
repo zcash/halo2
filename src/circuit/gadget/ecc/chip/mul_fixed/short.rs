@@ -80,7 +80,7 @@ impl Config {
         let (magnitude, sign) = magnitude_sign;
 
         // Decompose magnitude
-        let (magnitude, running_sum) = self.running_sum_config.copy_decompose(
+        let running_sum = self.running_sum_config.copy_decompose(
             region,
             offset,
             magnitude,
@@ -150,7 +150,7 @@ impl Config {
                 // Copy last window to `u` column.
                 // (Although the last window is not a `u` value; we are copying it into the `u`
                 // column because there is an available cell there.)
-                let z_21 = scalar.running_sum[20];
+                let z_21 = scalar.running_sum[21];
                 copy(
                     &mut region,
                     || "last_window",
