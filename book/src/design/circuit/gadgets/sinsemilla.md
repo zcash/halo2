@@ -81,7 +81,7 @@ In other words, $z_{n-i} = \sum\limits_{h=0}^{i-1} 2^{kh} \cdot m_{h+1}$.
 > In order to support chaining multiple field elements without a gap, we will use a slightly more complicated expression for $m_{i+1}$ that effectively forces $\mathbf{z}_n$ to zero for the last step of each element, as indicated by $q_{S2}$. This allows the cell that would have been $\mathbf{z}_n$ to be used to reinitialize the running sum for the next element.
 
 ### Generator lookup table
-The Sinsemilla circuit makes use of $2^10$ pre-computed random generators. These are loaded into a lookup table:
+The Sinsemilla circuit makes use of $2^{10}$ pre-computed random generators. These are loaded into a lookup table:
 $$
 \begin{array}{|c|c|c|}
 \hline
