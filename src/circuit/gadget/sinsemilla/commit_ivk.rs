@@ -162,11 +162,11 @@ impl CommitIvkConfig {
                 // d_1 = 1 => d_0 = 0
                 let c0_canon_check = d_1.clone() * d_0;
 
-                // d_1 = 1 => z14_c = 0, where z14_c is the 14th running sum
+                // d_1 = 1 => z13_c = 0, where z13_c is the 13th running sum
                 // output by the 10-bit Sinsemilla decomposition of `c`.
-                let z14_c_check = {
-                    let z14_c = meta.query_advice(config.advices[4], Rotation::cur());
-                    d_1.clone() * z14_c
+                let z13_c_check = {
+                    let z13_c = meta.query_advice(config.advices[4], Rotation::cur());
+                    d_1.clone() * z13_c
                 };
 
                 // Check that b2_c_prime = b_2 + c * 2^5 + 2^140 - t_P.
@@ -190,7 +190,7 @@ impl CommitIvkConfig {
 
                 std::iter::empty()
                     .chain(Some(c0_canon_check))
-                    .chain(Some(z14_c_check))
+                    .chain(Some(z13_c_check))
                     .chain(Some(b2_c_prime_check))
                     .chain(Some(b2_c_prime_decomposition))
             };
@@ -330,7 +330,7 @@ impl CommitIvkConfig {
         };
 
         let z13_a = zs[0][13];
-        let z14_c = zs[2][14];
+        let z13_c = zs[2][13];
 
         let (a_prime, a_prime_decomposition) = self.ak_canonicity(
             layouter.namespace(|| "ak canonicity"),
@@ -358,7 +358,7 @@ impl CommitIvkConfig {
             z13_a,
             a_prime,
             a_prime_decomposition,
-            z14_c,
+            z13_c,
             b2_c_prime,
             b2_c_prime_decomposition,
         };
@@ -561,13 +561,13 @@ impl CommitIvkConfig {
                         &gate_cells.a_prime_decomposition,
                     )?;
 
-                    // Copy in z14_c
+                    // Copy in z13_c
                     copy(
                         &mut region,
-                        || "z14_c",
+                        || "z13_c",
                         self.advices[4],
                         offset,
-                        &gate_cells.z14_c,
+                        &gate_cells.z13_c,
                     )?;
 
                     // Copy in b2_c_prime
@@ -611,7 +611,7 @@ struct GateCells {
     z13_a: CellValue<pallas::Base>,
     a_prime: CellValue<pallas::Base>,
     a_prime_decomposition: CellValue<pallas::Base>,
-    z14_c: CellValue<pallas::Base>,
+    z13_c: CellValue<pallas::Base>,
     b2_c_prime: CellValue<pallas::Base>,
     b2_c_prime_decomposition: CellValue<pallas::Base>,
 }
