@@ -1,6 +1,7 @@
 # Conventions
 
 \bconcat:{\mathop{\kern 0.1em||\kern 0.1em}}
+\Repr:{\star}
 
 # Conversions
 
@@ -15,12 +16,18 @@
 \AuthSignPublic:{\mathsf{ak}}
 \NullifierKey:{\mathsf{nk}}
 \InViewingKey:{\mathsf{ivk}}
+\DiversifiedTransmitBase:{\mathsf{g_d}}
+\DiversifiedTransmitBaseRepr:{\mathsf{g\Repr_d}}
+\DiversifiedTransmitPublic:{\mathsf{pk_d}}
+\DiversifiedTransmitPublicRepr:{\mathsf{pk\Repr_d}}
 
 # Commitments and hashes
 
 \SinsemillaHash:{\mathsf{SinsemillaHash}}
+\SinsemillaCommit:{\mathsf{SinsemillaCommit}}
 \SinsemillaShortCommit:{\mathsf{SinsemillaShortCommit}}
 \CommitIvk:{\mathsf{Commit}^{\InViewingKey}}
+\NoteCommit:{\mathsf{NoteCommit}}
 
 # Circuit constraint helper methods
 
