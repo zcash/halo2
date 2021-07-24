@@ -1368,7 +1368,6 @@ impl<F: Field> ConstraintSystem<F> {
                 &|selector| {
                     if must_be_nonsimple {
                         // Simple selectors are prohibited from appearing in
-```
                         // expressions in the lookup argument by
                         // `ConstraintSystem`.
                         assert!(!selector.is_simple());
