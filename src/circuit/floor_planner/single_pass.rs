@@ -11,7 +11,7 @@ use crate::{
         Cell, Layouter, Region, RegionIndex, RegionStart,
     },
     plonk::{
-        Advice, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Instance,
+        Advice, Any, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Instance,
         Selector,
     },
 };
@@ -119,7 +119,10 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
             }
         } else {
             let constants_column = self.constants[0];
-            let next_constant_row = self.columns.entry(constants_column.into()).or_default();
+            let next_constant_row = self
+                .columns
+                .entry(Column::<Any>::from(constants_column).into())
+                .or_default();
             for (constant, advice) in constants_to_assign {
                 self.cs.assign_fixed(
                     || format!("Constant({:?})", constant.evaluate()),
