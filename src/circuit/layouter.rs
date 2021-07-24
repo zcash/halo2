@@ -114,11 +114,11 @@ pub struct RegionShape {
     pub(super) row_count: usize,
 }
 
-/// The virtual column involved in a region. This includes normal "logical"
-/// columns as well as selectors that are not definite columns at this stage.
+/// The virtual column involved in a region. This includes concrete columns,
+/// as well as selectors that are not concrete columns at this stage.
 #[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
 pub enum RegionColumn {
-    /// Logical column
+    /// Concrete column
     Column(Column<Any>),
     /// Virtual column representing a (boolean) selector
     Selector(Selector),
@@ -141,8 +141,8 @@ impl Ord for RegionColumn {
         match (self, other) {
             (Self::Column(ref a), Self::Column(ref b)) => a.cmp(b),
             (Self::Selector(ref a), Self::Selector(ref b)) => a.0.cmp(&b.0),
-            (Self::Column(_), Self::Selector(_)) => cmp::Ordering::Greater,
-            (Self::Selector(_), Self::Column(_)) => cmp::Ordering::Less,
+            (Self::Column(_), Self::Selector(_)) => cmp::Ordering::Less,
+            (Self::Selector(_), Self::Column(_)) => cmp::Ordering::Greater,
         }
     }
 }

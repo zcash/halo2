@@ -325,6 +325,6 @@ fn main() {
         .unwrap();
 
     CircuitLayout::default()
-        .render(1 << 5, &circuit, &root)
+        .render(5, &circuit, &root)
         .unwrap();
 }

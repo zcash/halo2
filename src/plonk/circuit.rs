@@ -696,7 +696,7 @@ impl<F: Field> Expression<F> {
         self.clone() * self
     }
 
-    /// Returns whether or not this expression contains a `Selector`.
+    /// Returns whether or not this expression contains a simple `Selector`.
     fn contains_simple_selector(&self) -> bool {
         self.evaluate(
             &|_| false,
@@ -748,7 +748,7 @@ impl<F: Field> Add for Expression<F> {
     type Output = Expression<F>;
     fn add(self, rhs: Expression<F>) -> Expression<F> {
         if self.contains_simple_selector() || rhs.contains_simple_selector() {
-            panic!("attempted to add to a simple selector");
+            panic!("attempted to use a simple selector in an addition");
         }
         Expression::Sum(Box::new(self), Box::new(rhs))
     }
@@ -758,7 +758,7 @@ impl<F: Field> Sub for Expression<F> {
     type Output = Expression<F>;
     fn sub(self, rhs: Expression<F>) -> Expression<F> {
         if self.contains_simple_selector() || rhs.contains_simple_selector() {
-            panic!("attempted to add to a simple selector");
+            panic!("attempted to use a simple selector in a subtraction");
         }
         Expression::Sum(Box::new(self), Box::new(-rhs))
     }
@@ -768,7 +768,7 @@ impl<F: Field> Mul for Expression<F> {
     type Output = Expression<F>;
     fn mul(self, rhs: Expression<F>) -> Expression<F> {
         if self.contains_simple_selector() && rhs.contains_simple_selector() {
-            panic!("attempted to multiply two simple selectors");
+            panic!("attempted to multiply two expressions containing simple selectors");
         }
         Expression::Product(Box::new(self), Box::new(rhs))
     }
@@ -1170,7 +1170,8 @@ impl<F: Field> ConstraintSystem<F> {
         // The length of all provided selectors must be the same.
         let n = selectors[0].len();
         assert!(selectors.iter().all(|a| a.len() == n));
-        // and the number of provided selectors must be the same.
+        // and the number of provided selectors must be the number we counted
+        // for this ConstraintSystem.
         assert_eq!(selectors.len(), self.num_selectors);
 
         // Compute the maximal degree of every simple selector. We only consider
@@ -1184,15 +1185,15 @@ impl<F: Field> ConstraintSystem<F> {
             }
         }
 
-        // Any elements of `degrees` which still has zero must either be a
-        // simple selector or appear in no columns, so we don't need to compute
+        // Any element of `degrees` which still has zero must either be a
+        // complex selector or appear in no columns, so we don't need to compute
         // anything for those. They will appear on their own.
         let complex_selectors = degrees.iter().map(|&i| i == 0).collect::<Vec<_>>();
 
         // Compute the exclusion matrix that has (j, k) = true if selector j and
         // selector k conflict -- that is, they are both enabled on the same
-        // row. This matrix is symmetric so we only need to store the lower
-        // diagonal.
+        // row. This matrix is symmetric and the diagonal entries are false, so
+        // we only need to store the lower triangular entries.
         let mut exclusion_matrix = (0..self.num_selectors)
             .map(|i| vec![false; i])
             .collect::<Vec<_>>();
@@ -1336,7 +1337,7 @@ impl<F: Field> ConstraintSystem<F> {
                 let mut root = F::one();
                 for _ in 0..combination.len() {
                     if root != assignment {
-                        expr = expr * (query.clone() - Expression::Constant(root));
+                        expr = expr * (Expression::Constant(root) - query.clone());
                     }
                     root += F::one();
                 }
@@ -1366,7 +1367,8 @@ impl<F: Field> ConstraintSystem<F> {
                 &|constant| Expression::Constant(constant),
                 &|selector| {
                     if must_be_nonsimple {
-                        // Complex selectors are prohibited from appearing in
+                        // Simple selectors are prohibited from appearing in
+```
                         // expressions in the lookup argument by
                         // `ConstraintSystem`.
                         assert!(!selector.is_simple());
