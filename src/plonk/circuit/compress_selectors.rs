@@ -297,7 +297,7 @@ mod tests {
 
             // Test that, for each selector, the provided expression
             //  1. evaluates to zero on rows where the selector's activation is off
-            //  2. evaluates to nonzero on rows where the selector's activation is off
+            //  2. evaluates to nonzero on rows where the selector's activation is on
             //  3. is of degree d such that d + (selector.max_degree - 1) <= max_degree
             //     OR selector.max_degree is zero
             for selector in selector_assignments {
