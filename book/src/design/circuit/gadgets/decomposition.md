@@ -11,7 +11,10 @@ z_1 &= (z_0 - k_0) / 2^K \\
     &= k_1 + 2^{K} \cdot k_2 +  2^{2K} \cdot k_3 + \cdots, \\
 z_2 &= (z_1 - k_1) / 2^K \\
     &= k_2 +  2^{K} \cdot k_3 + \cdots, \\
-    &\vdots
+    &\vdots \\
+\downarrow &\text{ (in strict mode)} \\
+z_W &= (z_{W-1} - k_{W-1}) / 2^K \\
+    &= 0 \text{ (because } z_{W-1} = k_{W-1} \text{)}
 \end{aligned}
 $$
 

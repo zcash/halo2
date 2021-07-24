@@ -19,7 +19,7 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-9 & q_\text{scalar-fixed} \cdot 1 \cdot \left(\sum\limits_{i=0}^7{w - i}\right) = 0 \\\hline
+9 & q_\text{scalar-fixed} \cdot \left(\sum\limits_{i=0}^7{w - i}\right) = 0 \\\hline
 \end{array}
 $$
 
