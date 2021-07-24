@@ -51,6 +51,7 @@ tabbycat = { version = "0.1", features = ["attributes"], optional = true }
 [dev-dependencies]
 criterion = "0.3"
 gumdrop = "0.8"
+proptest = "1"
 
 [features]
 dev-graph = ["plotters", "tabbycat"]

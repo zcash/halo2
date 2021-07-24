@@ -10,6 +10,8 @@ use super::{lookup, permutation, Error};
 use crate::circuit::Layouter;
 use crate::{circuit::Region, poly::Rotation};
 
+mod compress_selectors;
+
 /// A column type
 pub trait ColumnType:
     'static + Sized + Copy + std::fmt::Debug + PartialEq + Eq + Into<Any>
@@ -1164,19 +1166,14 @@ impl<F: Field> ConstraintSystem<F> {
     ///
     /// Do not call this twice. Yes, this should be a builder pattern instead.
     pub(crate) fn compress_selectors(mut self, selectors: Vec<Vec<bool>>) -> (Self, Vec<Vec<F>>) {
-        if selectors.is_empty() {
-            return (self, vec![]);
-        }
-        // The length of all provided selectors must be the same.
-        let n = selectors[0].len();
-        assert!(selectors.iter().all(|a| a.len() == n));
-        // and the number of provided selectors must be the number we counted
-        // for this ConstraintSystem.
+        // The number of provided selector assignments must be the number we
+        // counted for this constraint system.
         assert_eq!(selectors.len(), self.num_selectors);
 
-        // Compute the maximal degree of every simple selector. We only consider
-        // the expressions in gates, as lookup arguments cannot support simple
-        // selectors.
+        // Compute the maximal degree of every selector. We only consider the
+        // expressions in gates, as lookup arguments cannot support simple
+        // selectors. Selectors that are complex or do not appear in any gates
+        // will have degree zero.
         let mut degrees = vec![0; selectors.len()];
         for expr in self.gates.iter().flat_map(|gate| gate.polys.iter()) {
             let degree = expr.degree();
@@ -1185,174 +1182,47 @@ impl<F: Field> ConstraintSystem<F> {
             }
         }
 
-        // Any element of `degrees` which still has zero must either be a
-        // complex selector or appear in no columns, so we don't need to compute
-        // anything for those. They will appear on their own.
-        let complex_selectors = degrees.iter().map(|&i| i == 0).collect::<Vec<_>>();
-
-        // Compute the exclusion matrix that has (j, k) = true if selector j and
-        // selector k conflict -- that is, they are both enabled on the same
-        // row. This matrix is symmetric and the diagonal entries are false, so
-        // we only need to store the lower triangular entries.
-        let mut exclusion_matrix = (0..self.num_selectors)
-            .map(|i| vec![false; i])
-            .collect::<Vec<_>>();
-
-        // Iterate over each of the selector columns
-        for (i, rows) in selectors.iter().enumerate() {
-            // Ignore exclusions with complex selectors
-            if complex_selectors[i] {
-                continue;
-            }
-
-            // Iterate over the rows, filtering for rows that are set
-            for set_index in rows.iter().enumerate().filter(|a| *a.1).map(|a| a.0) {
-                // Loop, looking only at the selectors previous to this one
-                for (j, other_selector) in selectors.iter().enumerate().take(i) {
-                    // Ignore exclusions with complex selectors
-                    if complex_selectors[j] {
-                        continue;
-                    }
-
-                    // Look at what selectors are active at the same row
-                    if other_selector[set_index] {
-                        // Mark them as incompatible
-                        exclusion_matrix[i][j] = true;
-                    }
-                }
-            }
-        }
-
-        // Keep track of the combinations; the ith element of this vector
-        // represents the ith combination and contains a vector of (simple)
-        // selectors that are included.
-        let mut combinations = vec![];
-
         // We will not increase the degree of the constraint system, so we limit
         // ourselves to the largest existing degree constraint.
         let max_degree = self.degree();
 
-        // Simple selectors that we've added to combinations already.
-        let mut seen = vec![false; self.num_selectors];
-
-        let mut selector_map = vec![0; self.num_selectors];
-
-        for i in 0..self.num_selectors {
-            if complex_selectors[i] {
-                selector_map[i] = combinations.len();
-                // Complex selectors are on their own.
-                combinations.push(vec![i]);
-
-                // NB: We don't update `seen` here as it's a complex selector
-                // that will be ignored anyway.
-            } else {
-                // This is a simple selector.
-                if seen[i] {
-                    // This simple selector was added to a previous combination.
-                    continue;
-                }
-                selector_map[i] = combinations.len();
-                seen[i] = true; // We're definitely adding this to a combination.
-                let mut combination = vec![i];
-                assert!(degrees[i] <= max_degree); // Otherwise, self.degree() is wrong.
-
-                // Keep track of how large the substitution is.
-                let mut usage = 1;
-
-                // Keep track of how large of a gate any of the members of this
-                // combination can support.
-                let mut room = max_degree - degrees[i];
-
-                // Try to find other selectors that can join this one.
-                for j in (i + 1)..self.num_selectors {
-                    // Is there room for the new selector?
-                    if room == 0 {
-                        // Short circuit here, we've hit our limit.
-                        break;
-                    }
-
-                    // Skip complex selectors.
-                    if complex_selectors[j] {
-                        continue;
-                    }
-
-                    // Skip selectors that have been added to previous combinations
-                    if seen[j] {
-                        continue;
-                    }
-
-                    // Are the two selectors excluded from co-existing?
-                    // j > i and so (j, i) is always on the lower diagonal
-                    if exclusion_matrix[j][i] {
-                        continue;
-                    }
-
-                    // Can the new selector join the combination?
-                    if degrees[j] + usage <= max_degree {
-                        // Yes, it can. Let's do it.
-                        combination.push(j);
-                        // The remaining room available is the lesser of the
-                        // current remaining room available for previous
-                        // selector(s) after adjusting for adding this new
-                        // selector, and the room available in the new selector
-                        // after adjusting for adding the previous selectors.
-                        room = std::cmp::min(room - 1, max_degree - (degrees[j] + usage));
-                        usage += 1;
-                        selector_map[j] = combinations.len();
-                        seen[j] = true;
-                    }
-                }
-
-                combinations.push(combination);
-            }
-        }
-
-        let mut selector_replacements = vec![None; self.num_selectors];
-        let mut polys = vec![vec![F::zero(); n]; combinations.len()];
         let mut new_columns = vec![];
-        for (combination, poly) in combinations.iter().zip(polys.iter_mut()) {
-            // Create a new fixed column for the logical selector
-            let column = self.fixed_column();
-            new_columns.push(Some(column));
-            let query = Expression::Fixed {
-                query_index: self.query_fixed_index(column, Rotation::cur()),
-                column_index: column.index,
-                rotation: Rotation::cur(),
-            };
-
-            // Every virtual selector gets a different integer (starting at 1)
-            // that it assigns when it wants to be active.
-            let mut assignment = F::one();
-            for &selector in combination {
-                for (s, poly) in selectors[selector].iter().zip(poly.iter_mut()) {
-                    if *s {
-                        *poly = assignment;
-                    }
+        let (polys, selector_assignment) = compress_selectors::process(
+            selectors
+                .into_iter()
+                .zip(degrees.into_iter())
+                .enumerate()
+                .map(
+                    |(i, (activations, max_degree))| compress_selectors::SelectorDescription {
+                        selector: i,
+                        activations,
+                        max_degree,
+                    },
+                )
+                .collect(),
+            max_degree,
+            || {
+                let column = self.fixed_column();
+                new_columns.push(column);
+                Expression::Fixed {
+                    query_index: self.query_fixed_index(column, Rotation::cur()),
+                    column_index: column.index,
+                    rotation: Rotation::cur(),
                 }
-                // Construct a polynomial that has a root at 0 and at integers
-                // not including what this selector has been assigned to. This
-                // is a generalization of a boolean selector when the selector
-                // is multiplying a value that is constrained to equal zero.
-                let mut expr = query.clone();
-                let mut root = F::one();
-                for _ in 0..combination.len() {
-                    if root != assignment {
-                        expr = expr * (Expression::Constant(root) - query.clone());
-                    }
-                    root += F::one();
-                }
+            },
+        );
 
-                assert!(selector_replacements[selector].is_none());
-                selector_replacements[selector] = Some(expr);
-
-                assignment += F::one();
-            }
+        let mut selector_map = vec![None; selector_assignment.len()];
+        let mut selector_replacements = vec![None; selector_assignment.len()];
+        for assignment in selector_assignment {
+            selector_replacements[assignment.selector] = Some(assignment.expression);
+            selector_map[assignment.selector] = Some(new_columns[assignment.combination_index]);
         }
 
-        // All selectors have a combination now.
-        for selector in selector_map {
-            self.selector_map.push(new_columns[selector].unwrap());
-        }
+        self.selector_map = selector_map
+            .into_iter()
+            .map(|a| a.unwrap())
+            .collect::<Vec<_>>();
         let selector_replacements = selector_replacements
             .into_iter()
             .map(|a| a.unwrap())
@@ -1360,7 +1230,7 @@ impl<F: Field> ConstraintSystem<F> {
 
         fn replace_selectors<F: Field>(
             expr: &mut Expression<F>,
-            selector_map: &[Expression<F>],
+            selector_replacements: &[Expression<F>],
             must_be_nonsimple: bool,
         ) {
             *expr = expr.evaluate(
@@ -1373,7 +1243,7 @@ impl<F: Field> ConstraintSystem<F> {
                         assert!(!selector.is_simple());
                     }
 
-                    selector_map[selector.0].clone()
+                    selector_replacements[selector.0].clone()
                 },
                 &|query_index, column_index, rotation| Expression::Fixed {
                     query_index,
