@@ -20,7 +20,7 @@ use super::{
 
 #[derive(Clone, Debug)]
 pub struct CommitIvkConfig {
-    q_canon: Selector,
+    q_commit_ivk: Selector,
     advices: [Column<Advice>; 10],
     sinsemilla_config: SinsemillaConfig,
 }
@@ -31,10 +31,10 @@ impl CommitIvkConfig {
         advices: [Column<Advice>; 10],
         sinsemilla_config: SinsemillaConfig,
     ) -> Self {
-        let q_canon = meta.selector();
+        let q_commit_ivk = meta.selector();
 
         let config = Self {
-            q_canon,
+            q_commit_ivk,
             advices,
             sinsemilla_config,
         };
@@ -54,36 +54,46 @@ impl CommitIvkConfig {
         //   - c: 240 bits,
         //   - d: 10 bits
         //
+        /*
+            The pieces are laid out in this configuration:
+
+            |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  |  A_5  |  A_6  |    A_7    |       A_8      | q_commit_ivk |
+            -----------------------------------------------------------------------------------------------------
+            |   ak  |   a   |   b   |  b_0  |  b_1  |  b_2  | z13_a |  a_prime  |   z13_a_prime  |       0      |
+            |   nk  |   c   |   d   |  d_0  |  d_1  |       | z13_c | b2_c_prime| z14_b2_c_prime |       1      |
+
+        */
         meta.create_gate("CommitIvk canonicity check", |meta| {
-            let q_canon = meta.query_selector(config.q_canon);
+            let q_commit_ivk = meta.query_selector(config.q_commit_ivk);
 
             // Useful constants
             let two_pow_4 = pallas::Base::from_u64(1 << 4);
             let two_pow_5 = pallas::Base::from_u64(1 << 5);
             let two_pow_9 = two_pow_4 * two_pow_5;
             let two_pow_250 = pallas::Base::from_u128(1 << 125).square();
-            let two_pow_254 = two_pow_250 * pallas::Base::from_u64(1 << 4);
+            let two_pow_254 = two_pow_250 * two_pow_4;
+
+            let ak = meta.query_advice(config.advices[0], Rotation::prev());
+            let nk = meta.query_advice(config.advices[0], Rotation::cur());
 
             // `a` is constrained by the Sinsemilla hash to be 250 bits.
-            let a = meta.query_advice(config.advices[0], Rotation::prev());
+            let a = meta.query_advice(config.advices[1], Rotation::prev());
             // `b` is constrained by the Sinsemilla hash to be 10 bits.
-            let b_whole = meta.query_advice(config.advices[1], Rotation::prev());
+            let b_whole = meta.query_advice(config.advices[2], Rotation::prev());
             // `c` is constrained by the Sinsemilla hash to be 240 bits.
-            let c = meta.query_advice(config.advices[2], Rotation::prev());
+            let c = meta.query_advice(config.advices[1], Rotation::cur());
             // `d` is constrained by the Sinsemilla hash to be 10 bits.
-            let d_whole = meta.query_advice(config.advices[3], Rotation::prev());
-            let ak = meta.query_advice(config.advices[4], Rotation::prev());
-            let nk = meta.query_advice(config.advices[5], Rotation::prev());
+            let d_whole = meta.query_advice(config.advices[2], Rotation::cur());
 
             // b = b_0||b_1||b_2`
             //   = (bits 250..=253 of `ak`) || (bit 254 of  `ak`) || (bits 0..=4 of  `nk`)
             //
             // b_0 has been constrained outside this gate to be a four-bit value.
-            let b_0 = meta.query_advice(config.advices[6], Rotation::prev());
+            let b_0 = meta.query_advice(config.advices[3], Rotation::prev());
             // This gate constrains b_1 to be a one-bit value.
-            let b_1 = meta.query_advice(config.advices[7], Rotation::prev());
+            let b_1 = meta.query_advice(config.advices[4], Rotation::prev());
             // b_2 has been constrained outside this gate to be a five-bit value.
-            let b_2 = meta.query_advice(config.advices[8], Rotation::prev());
+            let b_2 = meta.query_advice(config.advices[5], Rotation::prev());
             // Check that b_whole is consistent with the witnessed subpieces.
             let b_decomposition_check =
                 b_whole - (b_0.clone() + b_1.clone() * two_pow_4 + b_2.clone() * two_pow_5);
@@ -91,9 +101,9 @@ impl CommitIvkConfig {
             // d = d_0||d_1` = (bits 245..=253 of `nk`) || (bit 254 of `nk`)
             //
             // d_0 has been constrained outside this gate to be a nine-bit value.
-            let d_0 = meta.query_advice(config.advices[9], Rotation::prev());
+            let d_0 = meta.query_advice(config.advices[3], Rotation::cur());
             // This gate constrains d_1 to be a one-bit value.
-            let d_1 = meta.query_advice(config.advices[0], Rotation::cur());
+            let d_1 = meta.query_advice(config.advices[4], Rotation::cur());
             // Check that d_whole is consistent with the witnessed subpieces.
             let d_decomposition_check = d_whole - (d_0.clone() + d_1.clone() * two_pow_9);
 
@@ -127,14 +137,14 @@ impl CommitIvkConfig {
                 // z13_a is the 13th running sum output by the 10-bit Sinsemilla decomposition of `a`.
                 // b_1 = 1 => z13_a = 0
                 let z13_a_check = {
-                    let z13_a = meta.query_advice(config.advices[1], Rotation::cur());
+                    let z13_a = meta.query_advice(config.advices[6], Rotation::prev());
                     b_1.clone() * z13_a
                 };
 
                 // Check that a_prime = a + 2^130 - t_P.
                 // This is checked regardless of the value of b_1.
                 let a_prime_check = {
-                    let a_prime = meta.query_advice(config.advices[2], Rotation::cur());
+                    let a_prime = meta.query_advice(config.advices[7], Rotation::prev());
                     let two_pow_130 =
                         Expression::Constant(pallas::Base::from_u128(1 << 65).square());
                     let t_p = Expression::Constant(pallas::Base::from_u128(T_P));
@@ -143,17 +153,16 @@ impl CommitIvkConfig {
 
                 // Check that the running sum output by the 130-bit little-endian decomposition of
                 // `a_prime` is zero.
-                let a_prime_decomposition = {
-                    let a_prime_decomposition =
-                        meta.query_advice(config.advices[3], Rotation::cur());
-                    b_1 * a_prime_decomposition
+                let z13_a_prime = {
+                    let z13_a_prime = meta.query_advice(config.advices[8], Rotation::prev());
+                    b_1 * z13_a_prime
                 };
 
                 std::iter::empty()
                     .chain(Some(b0_canon_check))
                     .chain(Some(z13_a_check))
                     .chain(Some(a_prime_check))
-                    .chain(Some(a_prime_decomposition))
+                    .chain(Some(z13_a_prime))
             };
 
             // nk = b_2 (5 bits) || c (240 bits) || d_0 (9 bits) || d_1 (1 bit)
@@ -165,7 +174,7 @@ impl CommitIvkConfig {
                 // d_1 = 1 => z13_c = 0, where z13_c is the 13th running sum
                 // output by the 10-bit Sinsemilla decomposition of `c`.
                 let z13_c_check = {
-                    let z13_c = meta.query_advice(config.advices[4], Rotation::cur());
+                    let z13_c = meta.query_advice(config.advices[6], Rotation::cur());
                     d_1.clone() * z13_c
                 };
 
@@ -176,23 +185,22 @@ impl CommitIvkConfig {
                     let two_pow_140 =
                         Expression::Constant(pallas::Base::from_u128(1 << 70).square());
                     let t_p = Expression::Constant(pallas::Base::from_u128(T_P));
-                    let b2_c_prime = meta.query_advice(config.advices[5], Rotation::cur());
+                    let b2_c_prime = meta.query_advice(config.advices[7], Rotation::cur());
                     b_2 + c * two_pow_5 + two_pow_140 - t_p - b2_c_prime
                 };
 
                 // Check that the running sum output by the 140-bit little-
                 // endian decomposition of b2_c_prime is zero.
-                let b2_c_prime_decomposition = {
-                    let b2_c_prime_decomposition =
-                        meta.query_advice(config.advices[6], Rotation::cur());
-                    d_1 * b2_c_prime_decomposition
+                let z14_b2_c_prime = {
+                    let z14_b2_c_prime = meta.query_advice(config.advices[8], Rotation::cur());
+                    d_1 * z14_b2_c_prime
                 };
 
                 std::iter::empty()
                     .chain(Some(c0_canon_check))
                     .chain(Some(z13_c_check))
                     .chain(Some(b2_c_prime_check))
-                    .chain(Some(b2_c_prime_decomposition))
+                    .chain(Some(z14_b2_c_prime))
             };
 
             std::iter::empty()
@@ -204,7 +212,7 @@ impl CommitIvkConfig {
                 .chain(Some(nk_decomposition_check))
                 .chain(ak_canonicity_checks)
                 .chain(nk_canonicity_checks)
-                .map(move |poly| q_canon.clone() * poly)
+                .map(move |poly| q_commit_ivk.clone() * poly)
         });
 
         config
@@ -308,7 +316,7 @@ impl CommitIvkConfig {
 
             let d = MessagePiece::from_field_elem(
                 sinsemilla_chip.clone(),
-                layouter.namespace(|| "c = d_0 || d_1"),
+                layouter.namespace(|| "d = d_0 || d_1"),
                 d,
                 1,
             )?;
@@ -332,12 +340,12 @@ impl CommitIvkConfig {
         let z13_a = zs[0][13];
         let z13_c = zs[2][13];
 
-        let (a_prime, a_prime_decomposition) = self.ak_canonicity(
+        let (a_prime, z13_a_prime) = self.ak_canonicity(
             layouter.namespace(|| "ak canonicity"),
             a.inner().cell_value(),
         )?;
 
-        let (b2_c_prime, b2_c_prime_decomposition) = self.nk_canonicity(
+        let (b2_c_prime, z14_b2_c_prime) = self.nk_canonicity(
             layouter.namespace(|| "nk canonicity"),
             b_2,
             c.inner().cell_value(),
@@ -357,10 +365,10 @@ impl CommitIvkConfig {
             d_1,
             z13_a,
             a_prime,
-            a_prime_decomposition,
+            z13_a_prime,
             z13_c,
             b2_c_prime,
-            b2_c_prime_decomposition,
+            z14_b2_c_prime,
         };
 
         self.assign_gate(
@@ -442,6 +450,15 @@ impl CommitIvkConfig {
     }
 
     // Assign cells for the canonicity gate.
+    /*
+        The pieces are laid out in this configuration:
+
+        |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  |  A_5  |  A_6  |    A_7    |       A_8      | q_commit_ivk |
+        -----------------------------------------------------------------------------------------------------
+        |   ak  |   a   |   b   |  b_0  |  b_1  |  b_2  | z13_a |  a_prime  |   z13_a_prime  |       0      |
+        |   nk  |   c   |   d   |  d_0  |  d_1  |       | z13_c | b2_c_prime| z14_b2_c_prime |       1      |
+
+    */
     fn assign_gate(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
@@ -451,46 +468,31 @@ impl CommitIvkConfig {
             || "Assign cells used in canonicity gate",
             |mut region| {
                 // Enable selector on offset 1
-                self.q_canon.enable(&mut region, 1)?;
+                self.q_commit_ivk.enable(&mut region, 1)?;
 
                 // Offset 0
                 {
                     let offset = 0;
-                    // Copy in `a`
-                    copy(&mut region, || "a", self.advices[0], offset, &gate_cells.a)?;
-
-                    // Copy in `b`
-                    copy(&mut region, || "b", self.advices[1], offset, &gate_cells.b)?;
-
-                    // Copy in `c`
-                    copy(&mut region, || "c", self.advices[2], offset, &gate_cells.c)?;
-
-                    // Copy in `d`
-                    copy(&mut region, || "d", self.advices[3], offset, &gate_cells.d)?;
-
                     // Copy in `ak`
                     copy(
                         &mut region,
                         || "ak",
-                        self.advices[4],
+                        self.advices[0],
                         offset,
                         &gate_cells.ak,
                     )?;
 
-                    // Copy in `nk`
-                    copy(
-                        &mut region,
-                        || "nk",
-                        self.advices[5],
-                        offset,
-                        &gate_cells.nk,
-                    )?;
+                    // Copy in `a`
+                    copy(&mut region, || "a", self.advices[1], offset, &gate_cells.a)?;
+
+                    // Copy in `b`
+                    copy(&mut region, || "b", self.advices[2], offset, &gate_cells.b)?;
 
                     // Copy in `b_0`
                     copy(
                         &mut region,
                         || "b_0",
-                        self.advices[6],
+                        self.advices[3],
                         offset,
                         &gate_cells.b_0,
                     )?;
@@ -498,7 +500,7 @@ impl CommitIvkConfig {
                     // Witness `b_1`
                     region.assign_advice(
                         || "Witness b_1",
-                        self.advices[7],
+                        self.advices[4],
                         offset,
                         || gate_cells.b_1.ok_or(Error::SynthesisError),
                     )?;
@@ -507,38 +509,16 @@ impl CommitIvkConfig {
                     copy(
                         &mut region,
                         || "b_2",
-                        self.advices[8],
+                        self.advices[5],
                         offset,
                         &gate_cells.b_2,
-                    )?;
-
-                    // Copy in `d_0`
-                    copy(
-                        &mut region,
-                        || "d_0",
-                        self.advices[9],
-                        offset,
-                        &gate_cells.d_0,
-                    )?;
-                }
-
-                // Offset 1
-                {
-                    let offset = 1;
-
-                    // Witness `d_1`
-                    region.assign_advice(
-                        || "Witness d_1",
-                        self.advices[0],
-                        offset,
-                        || gate_cells.d_1.ok_or(Error::SynthesisError),
                     )?;
 
                     // Copy in z13_a
                     copy(
                         &mut region,
                         || "z13_a",
-                        self.advices[1],
+                        self.advices[6],
                         offset,
                         &gate_cells.z13_a,
                     )?;
@@ -547,25 +527,62 @@ impl CommitIvkConfig {
                     copy(
                         &mut region,
                         || "a_prime",
-                        self.advices[2],
+                        self.advices[7],
                         offset,
                         &gate_cells.a_prime,
                     )?;
 
-                    // Copy in a_prime_decomposition
+                    // Copy in z13_a_prime
                     copy(
                         &mut region,
-                        || "a_prime_decomposition",
+                        || "z13_a_prime",
+                        self.advices[8],
+                        offset,
+                        &gate_cells.z13_a_prime,
+                    )?;
+                }
+
+                // Offset 1
+                {
+                    let offset = 1;
+
+                    // Copy in `nk`
+                    copy(
+                        &mut region,
+                        || "nk",
+                        self.advices[0],
+                        offset,
+                        &gate_cells.nk,
+                    )?;
+
+                    // Copy in `c`
+                    copy(&mut region, || "c", self.advices[1], offset, &gate_cells.c)?;
+
+                    // Copy in `d`
+                    copy(&mut region, || "d", self.advices[2], offset, &gate_cells.d)?;
+
+                    // Copy in `d_0`
+                    copy(
+                        &mut region,
+                        || "d_0",
                         self.advices[3],
                         offset,
-                        &gate_cells.a_prime_decomposition,
+                        &gate_cells.d_0,
+                    )?;
+
+                    // Witness `d_1`
+                    region.assign_advice(
+                        || "Witness d_1",
+                        self.advices[4],
+                        offset,
+                        || gate_cells.d_1.ok_or(Error::SynthesisError),
                     )?;
 
                     // Copy in z13_c
                     copy(
                         &mut region,
                         || "z13_c",
-                        self.advices[4],
+                        self.advices[6],
                         offset,
                         &gate_cells.z13_c,
                     )?;
@@ -574,18 +591,18 @@ impl CommitIvkConfig {
                     copy(
                         &mut region,
                         || "b2_c_prime",
-                        self.advices[5],
+                        self.advices[7],
                         offset,
                         &gate_cells.b2_c_prime,
                     )?;
 
-                    // Copy in b2_c_prime_decomposition
+                    // Copy in z14_b2_c_prime
                     copy(
                         &mut region,
-                        || "b2_c_prime_decomposition",
-                        self.advices[6],
+                        || "z14_b2_c_prime",
+                        self.advices[8],
                         offset,
-                        &gate_cells.b2_c_prime_decomposition,
+                        &gate_cells.z14_b2_c_prime,
                     )?;
                 }
 
@@ -610,10 +627,10 @@ struct GateCells {
     d_1: Option<pallas::Base>,
     z13_a: CellValue<pallas::Base>,
     a_prime: CellValue<pallas::Base>,
-    a_prime_decomposition: CellValue<pallas::Base>,
+    z13_a_prime: CellValue<pallas::Base>,
     z13_c: CellValue<pallas::Base>,
     b2_c_prime: CellValue<pallas::Base>,
-    b2_c_prime_decomposition: CellValue<pallas::Base>,
+    z14_b2_c_prime: CellValue<pallas::Base>,
 }
 
 #[cfg(test)]
