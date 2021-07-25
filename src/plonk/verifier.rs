@@ -188,6 +188,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                                 &|index, _, _| fixed_evals[index],
                                 &|index, _, _| advice_evals[index],
                                 &|index, _, _| instance_evals[index],
+                                &|a| -a,
                                 &|a, b| a + &b,
                                 &|a, b| a * &b,
                                 &|a, scalar| a * &scalar,

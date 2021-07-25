@@ -10,7 +10,7 @@ use ff::Field;
 use pasta_curves::arithmetic::FieldExt;
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, RangeFrom, RangeFull, Sub};
+use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, Neg, RangeFrom, RangeFull, Sub};
 
 pub mod commitment;
 mod domain;
@@ -189,6 +189,20 @@ impl<F: Field> Polynomial<F, ExtendedLagrangeCoeff> {
             }
         });
         p
+    }
+}
+
+impl<'a, F: Field, B: Basis> Neg for Polynomial<F, B> {
+    type Output = Polynomial<F, B>;
+
+    fn neg(mut self) -> Polynomial<F, B> {
+        parallelize(&mut self.values, |lhs, _| {
+            for lhs in lhs.iter_mut() {
+                *lhs = -*lhs;
+            }
+        });
+
+        self
     }
 }
 

@@ -554,7 +554,7 @@ fn plonk_api() {
                             },
                         ),
                     ),
-                    Scaled(
+                    Negated(
                         Product(
                             Advice {
                                 query_index: 2,
@@ -571,7 +571,6 @@ fn plonk_api() {
                                 ),
                             },
                         ),
-                        0x40000000000000000000000000000000224698fc094cf91b992d30ed00000000,
                     ),
                 ),
                 Product(
@@ -616,7 +615,7 @@ fn plonk_api() {
                             0,
                         ),
                     },
-                    Scaled(
+                    Negated(
                         Instance {
                             query_index: 0,
                             column_index: 0,
@@ -624,7 +623,6 @@ fn plonk_api() {
                                 0,
                             ),
                         },
-                        0x40000000000000000000000000000000224698fc094cf91b992d30ed00000000,
                     ),
                 ),
             ),
