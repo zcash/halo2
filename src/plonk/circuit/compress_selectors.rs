@@ -49,7 +49,7 @@ pub struct SelectorAssignment<F> {
 ///
 /// This function is completely deterministic.
 pub fn process<F: Field, E>(
-    mut selectors: Vec<SelectorDescription>,
+    selectors: Vec<SelectorDescription>,
     max_degree: usize,
     mut allocate_fixed_column: E,
 ) -> (Vec<Vec<F>>, Vec<SelectorAssignment<F>>)
@@ -70,7 +70,7 @@ where
 
     // All provided selectors of degree 0 are assumed to be either concrete
     // selectors or do not appear in a gate. Let's address these first.
-    selectors = selectors
+    let mut selectors: Vec<_> = selectors
         .into_iter()
         .filter(|selector| {
             if selector.max_degree == 0 {
@@ -96,6 +96,13 @@ where
             }
         })
         .collect();
+
+    // Sort the selector descriptions by decreasing degree, with ties broken by
+    // selector index. Since indices are distinct, this is equivalent to a stable sort.
+    // The mapping to the selector index is held by the descriptor.
+    selectors.sort_unstable_by_key(|desc| (-(desc.max_degree as isize), desc.selector));
+
+    let selectors = selectors; // we don't mutate this from now on
 
     // All of the remaining `selectors` are simple. Let's try to combine them.
     // First, we compute the exclusion matrix that has (j, k) = true if selector
