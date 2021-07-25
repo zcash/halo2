@@ -246,13 +246,7 @@ fn main() {
                 let sc = meta.query_fixed(sc, Rotation::cur());
                 let sm = meta.query_fixed(sm, Rotation::cur());
 
-                vec![
-                    a.clone() * sa
-                        + b.clone() * sb
-                        + a * b * sm
-                        + (c * sc * (-F::one()))
-                        + sf * (d * e),
-                ]
+                vec![a.clone() * sa + b.clone() * sb + a * b * sm - (c * sc) + sf * (d * e)]
             });
 
             PlonkConfig {
