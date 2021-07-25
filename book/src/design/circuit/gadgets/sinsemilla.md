@@ -95,6 +95,7 @@ $$
 $$
 
 ### Layout
+Note: $q_{S3}$ is synthesized from $q_{S1}$ and $q_{S2}$; it is shown here only for clarity.
 $$
 \begin{array}{|c|c|c|c|c|c|c|c|c|c|c|}
 \hline
@@ -108,7 +109,7 @@ $$
     1'      & x'_{A,1}   & x_{P[m'_2]} & z'_1     & \lambda'_{1,1}   & \lambda'_{2,1}   & 1      & 1      & 0      &     0      &     0               \\\hline
     2'      & x'_{A,2}   & x_{P[m'_3]} & z'_2     & \lambda'_{1,2}   & \lambda'_{2,2}   & 1      & 1      & 0      &     0      &     0               \\\hline
   \vdots    & \vdots     & \vdots      & \vdots   & \vdots           & \vdots           & 1      & 1      & 0      &     0      &     0               \\\hline
-   n-1'     & x'_{A,n-1} & x_{P[m'_n]} & z'_{n-1} & \lambda'_{1,n-1} & \lambda'_{2,n-1} & 1      & 0      & 1      &     0      &     0               \\\hline
+   n-1'     & x'_{A,n-1} & x_{P[m'_n]} & z'_{n-1} & \lambda'_{1,n-1} & \lambda'_{2,n-1} & 1      & 2      & 2      &     0      &     0               \\\hline
     n'      &  x'_{A,n}  &             &          &       y_{A,n}    &                  & 0      & 0      & 0      &     0      &     0               \\\hline
 \end{array}
 $$
@@ -121,20 +122,21 @@ $$
 \text{For } i \in [0, n), \text{ let} &x_{R,i} &=& \lambda_{1,i}^2 - x_{A,i} - x_{P,i} \\
                                       &Y_{A,i} &=& (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) \\
                                       &y_{P,i} &=& Y_{A,i}/2 - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) \\
-                                      &m_{i+1} &=& z_{i} - 2^k \cdot q_{S2,i} \cdot z_{i+1}
+                                      &m_{i+1} &=& z_{i} - 2^k \cdot (q_{S2,i} - q_{S3,i}) \cdot z_{i+1} \\
+                                      &q_{S3}  &=& q_{S2} \cdot (q_{S2} - 1)
 \end{array}
 $$
 
 The Halo 2 circuit API can automatically substitute $y_{P,i}$, $x_{R,i}$, $y_{A,i}$, and $y_{A,i+1}$, so we don't need to do that manually.
 
-$x_{A,0} = x_Q$
-$2 \cdot y_Q = Y_{A,0}$
-for $i$ from $0$ up to $n-1$:
-    $(m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P}$
-    $\lambda_{2,i}^2 = x_{A,i+1} + x_{R,i} + x_{A,i}$
-    $2 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) = Y_{A,i} + (1 - q_{S3}) \cdot Y_{A,i+1} + 2 \cdot q_{S3} \cdot y_{A,n}$
+- $x_{A,0} = x_Q$
+- $2 \cdot y_Q = Y_{A,0}$
+- for $i$ from $0$ up to $n-1$:
+  - $(m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P}$
+  - $\lambda_{2,i}^2 = x_{A,i+1} + x_{R,i} + x_{A,i}$
+  - $4 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) = 2 \cdot Y_{A,i} + (2 - q_{S3}) \cdot Y_{A,i+1} + 2 q_{S3} \cdot y_{A,n}$
 
-Note that each term of the last constraint is multiplied by $2$ relative to the constraint program given earlier. This is a small optimization that avoids divisions by $2$.
+Note that each term of the last constraint is multiplied by $4$ relative to the constraint program given earlier. This is a small optimization that avoids divisions by $2$.
 
 $$
 \begin{array}{|c|l|}
@@ -143,7 +145,7 @@ $$
 2   & q_{S4} \cdot (2 \cdot y_Q - Y_{A,0}) = 0 \\\hline
 5   & q_{S1,i} \Rightarrow (m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P} \\\hline
 3   & q_{S1,i} \cdot \big(\lambda_{2,i}^2 - (x_{A,i+1} + x_{R,i} + x_{A,i})\big) \\\hline
-4   & q_{S1,i} \cdot \left(2 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - (Y_{A,i} + (1 - q_{S3,i}) \cdot Y_{A,i+1} + 2 \cdot q_{S3,i} \cdot y_{A,n})\right) = 0 \\\hline
+6   & q_{S1,i} \cdot \left(4 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - (2 \cdot Y_{A,i} + (2 - q_{S3,i}) \cdot Y_{A,i+1} + 2 \cdot q_{S3,i} \cdot y_{A,n})\right) = 0 \\\hline
 \end{array}
 $$
 
