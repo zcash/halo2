@@ -306,13 +306,7 @@ fn plonk_api() {
                 let sc = meta.query_fixed(sc, Rotation::cur());
                 let sm = meta.query_fixed(sm, Rotation::cur());
 
-                vec![
-                    a.clone() * sa
-                        + b.clone() * sb
-                        + a * b * sm
-                        + (c * sc * (-F::one()))
-                        + sf * (d * e),
-                ]
+                vec![a.clone() * sa + b.clone() * sb + a * b * sm - (c * sc) + sf * (d * e)]
             });
 
             meta.create_gate("Public input", |meta| {
@@ -320,7 +314,7 @@ fn plonk_api() {
                 let p = meta.query_instance(p, Rotation::cur());
                 let sp = meta.query_fixed(sp, Rotation::cur());
 
-                vec![sp * (a + p * (-F::one()))]
+                vec![sp * (a - p)]
             });
 
             meta.enable_equality(sf.into());
