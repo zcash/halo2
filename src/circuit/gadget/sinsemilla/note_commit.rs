@@ -217,7 +217,7 @@ impl NoteCommitConfig {
 
             // Check that *_prime pieces were correctly derived.
             // a_prime = a + 2^130 - t_P
-            let a_prime_check = a.clone() + two_pow_130 - t_p.clone() - a_prime;
+            let a_prime_check = a.clone() + two_pow_130.clone() - t_p.clone() - a_prime;
 
             // b3_c_prime = b_3 + (2^4)c + 2^140 - t_P
             let b3_c_prime_check = b_3.clone() + (c.clone() * two_pow_4) + two_pow_140.clone()
@@ -225,13 +225,12 @@ impl NoteCommitConfig {
                 - b3_c_prime;
 
             // e1_f_prime = e_1 + (2^4)f + 2^140 - t_P
-            let e1_f_prime_check =
-                e_1 + (f * two_pow_4) + two_pow_140.clone() - t_p.clone() - e1_f_prime;
+            let e1_f_prime_check = e_1 + (f * two_pow_4) + two_pow_140 - t_p.clone() - e1_f_prime;
 
-            // g1_g2_prime = g_1 + (2^9)g_2 + 2^140 - t_P
+            // g1_g2_prime = g_1 + (2^9)g_2 + 2^130 - t_P
             let g1_g2_prime_check = {
                 let two_pow_9 = two_pow_4 * two_pow_5;
-                g_1 + (g_2 * two_pow_9) + two_pow_140.clone() - t_p.clone() - g1_g2_prime
+                g_1 + (g_2 * two_pow_9) + two_pow_130 - t_p.clone() - g1_g2_prime
             };
 
             // x(g_d) = a + (2^250)b_0 + (2^254)b_1
@@ -378,7 +377,7 @@ impl NoteCommitConfig {
                 .chain(Some(e1_f_prime_decomposition))
                 .map(move |poly| g_0.clone() * poly);
 
-            // The psi_canonicity_checks are enforced if and only if `i_1` = 1.
+            // The psi_canonicity_checks are enforced if and only if `h_1` = 1.
             // `psi` = `g_1 (9 bits) || g_2 (240 bits) || h_0 (5 bits) || h_1 (1 bit)`
             let psi_canonicity_checks = std::iter::empty()
                 .chain(Some(h_0))
@@ -810,32 +809,32 @@ impl NoteCommitConfig {
     ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
         // `psi` = `g_1 (9 bits) || g_2 (240 bits) || h_0 (5 bits) || h_1 (1 bit)`
         // - h_1 = 1 => (h_0 = 0) ∧ (g_1 + 2^9 g_2 < t_P)
-        // - 0 ≤ g_1 + 2^9 g_2 < 2^139
+        // - 0 ≤ g_1 + 2^9 g_2 < 2^130
         //     - g_1 is individually constrained to be 9 bits
         //     - z_13 of SinsemillaHash(g) == 0 constrains bits 0..=248 of psi
         //       to 130 bits. z13_g == 0 is directly checked in the gate.
-        // - 0 ≤ g_1 + (2^9)g_2 + 2^140 - t_P < 2^140 (14 ten-bit lookups)
+        // - 0 ≤ g_1 + (2^9)g_2 + 2^130 - t_P < 2^130 (13 ten-bit lookups)
 
-        // Decompose the low 140 bits of g1_g2_prime = g_1 + (2^9)g_2 + 2^140 - t_P,
+        // Decompose the low 130 bits of g1_g2_prime = g_1 + (2^9)g_2 + 2^130 - t_P,
         // and output the running sum at the end of it.
-        // If g1_g2_prime < 2^140, the running sum will be 0.
+        // If g1_g2_prime < 2^130, the running sum will be 0.
         let g1_g2_prime = g_1.value().zip(g_2.value()).map(|(g_1, g_2)| {
             let two_pow_9 = pallas::Base::from_u64(1u64 << 9);
-            let two_pow_140 = pallas::Base::from_u128(1u128 << 70).square();
+            let two_pow_130 = pallas::Base::from_u128(1u128 << 65).square();
             let t_p = pallas::Base::from_u128(T_P);
-            g_1 + (two_pow_9 * g_2) + two_pow_140 - t_p
+            g_1 + (two_pow_9 * g_2) + two_pow_130 - t_p
         });
 
         let zs = self.sinsemilla_config.lookup_config.witness_check(
-            layouter.namespace(|| "Decompose low 140 bits of (g_1 + (2^9)g_2 + 2^140 - t_P)"),
+            layouter.namespace(|| "Decompose low 130 bits of (g_1 + (2^9)g_2 + 2^130 - t_P)"),
             g1_g2_prime,
-            14,
+            13,
             false,
         )?;
         let g1_g2_prime = zs[0];
-        assert_eq!(zs.len(), 15); // [z_0, z_1, ..., z_13, z_14]
+        assert_eq!(zs.len(), 14); // [z_0, z_1, ..., z_13]
 
-        Ok((g1_g2_prime, zs[14]))
+        Ok((g1_g2_prime, zs[13]))
     }
 
     fn assign_gate(
