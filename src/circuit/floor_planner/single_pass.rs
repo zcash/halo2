@@ -7,7 +7,7 @@ use ff::Field;
 
 use crate::{
     circuit::{
-        layouter::{RegionLayouter, RegionShape},
+        layouter::{RegionColumn, RegionLayouter, RegionShape},
         Cell, Layouter, Region, RegionIndex, RegionStart,
     },
     plonk::{
@@ -43,7 +43,7 @@ pub struct SingleChipLayouter<'a, F: Field, CS: Assignment<F> + 'a> {
     /// Stores the starting row for each region.
     regions: Vec<RegionStart>,
     /// Stores the first empty row for each column.
-    columns: HashMap<Column<Any>, usize>,
+    columns: HashMap<RegionColumn, usize>,
     _marker: PhantomData<F>,
 }
 
@@ -119,7 +119,10 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
             }
         } else {
             let constants_column = self.constants[0];
-            let next_constant_row = self.columns.entry(constants_column.into()).or_default();
+            let next_constant_row = self
+                .columns
+                .entry(Column::<Any>::from(constants_column).into())
+                .or_default();
             for (constant, advice) in constants_to_assign {
                 self.cs.assign_fixed(
                     || format!("Constant({:?})", constant.evaluate()),

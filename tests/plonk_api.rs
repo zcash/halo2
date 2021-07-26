@@ -38,7 +38,6 @@ fn plonk_api() {
         sm: Column<Fixed>,
         sp: Column<Fixed>,
         sl: Column<Fixed>,
-        sl2: Column<Fixed>,
     }
 
     trait StandardCs<FF: FieldExt> {
@@ -63,14 +62,14 @@ fn plonk_api() {
         fn lookup_table(
             &self,
             layouter: &mut impl Layouter<FF>,
-            values: &[Vec<FF>],
+            values: &[FF],
         ) -> Result<(), Error>;
     }
 
     #[derive(Clone)]
     struct MyCircuit<F: FieldExt> {
         a: Option<F>,
-        lookup_tables: Vec<Vec<F>>,
+        lookup_table: Vec<F>,
     }
 
     struct StandardPlonk<F: FieldExt> {
@@ -227,26 +226,13 @@ fn plonk_api() {
         fn lookup_table(
             &self,
             layouter: &mut impl Layouter<FF>,
-            values: &[Vec<FF>],
+            values: &[FF],
         ) -> Result<(), Error> {
             layouter.assign_region(
                 || "",
                 |mut region| {
-                    for (index, (&value_0, &value_1)) in
-                        values[0].iter().zip(values[1].iter()).enumerate()
-                    {
-                        region.assign_fixed(
-                            || "table col 1",
-                            self.config.sl,
-                            index,
-                            || Ok(value_0),
-                        )?;
-                        region.assign_fixed(
-                            || "table col 2",
-                            self.config.sl2,
-                            index,
-                            || Ok(value_1),
-                        )?;
+                    for (index, &value) in values.iter().enumerate() {
+                        region.assign_fixed(|| "table col", self.config.sl, index, || Ok(value))?;
                     }
                     Ok(())
                 },
@@ -262,7 +248,7 @@ fn plonk_api() {
         fn without_witnesses(&self) -> Self {
             Self {
                 a: None,
-                lookup_tables: self.lookup_tables.clone(),
+                lookup_table: self.lookup_table.clone(),
             }
         }
 
@@ -285,35 +271,26 @@ fn plonk_api() {
             let sc = meta.fixed_column();
             let sp = meta.fixed_column();
             let sl = meta.fixed_column();
-            let sl2 = meta.fixed_column();
 
             /*
-             *   A         B      ...  sl        sl2
+             *   A         B      ...  sl
              * [
-             *   instance  0      ...  0         0
-             *   a         a      ...  0         0
-             *   a         a^2    ...  0         0
-             *   a         a      ...  0         0
-             *   a         a^2    ...  0         0
-             *   ...       ...    ...  ...       ...
-             *   ...       ...    ...  instance  0
-             *   ...       ...    ...  a         a
-             *   ...       ...    ...  a         a^2
-             *   ...       ...    ...  0         0
+             *   instance  0      ...  0
+             *   a         a      ...  0
+             *   a         a^2    ...  0
+             *   a         a      ...  0
+             *   a         a^2    ...  0
+             *   ...       ...    ...  ...
+             *   ...       ...    ...  instance
+             *   ...       ...    ...  a
+             *   ...       ...    ...  a
+             *   ...       ...    ...  0
              * ]
              */
 
             meta.lookup(|meta| {
                 let a_ = meta.query_any(a.into(), Rotation::cur());
-                let sl_ = meta.query_any(sl.into(), Rotation::cur());
-                vec![(a_, sl_)]
-            });
-            meta.lookup(|meta| {
-                let a_ = meta.query_any(a.into(), Rotation::cur());
-                let b_ = meta.query_any(b.into(), Rotation::cur());
-                let sl_ = meta.query_any(sl.into(), Rotation::cur());
-                let sl2_ = meta.query_any(sl2.into(), Rotation::cur());
-                vec![(a_ * b_, sl_ * sl2_)]
+                vec![(a_, sl)]
             });
 
             meta.create_gate("Combined add-mult", |meta| {
@@ -356,7 +333,6 @@ fn plonk_api() {
             meta.enable_equality(sc.into());
             meta.enable_equality(sp.into());
             meta.enable_equality(sl.into());
-            meta.enable_equality(sl2.into());
 
             PlonkConfig {
                 a,
@@ -370,7 +346,6 @@ fn plonk_api() {
                 sm,
                 sp,
                 sl,
-                sl2,
             }
         }
 
@@ -405,26 +380,24 @@ fn plonk_api() {
                 cs.copy(&mut layouter, b1, c0)?;
             }
 
-            cs.lookup_table(&mut layouter, &self.lookup_tables)?;
+            cs.lookup_table(&mut layouter, &self.lookup_table)?;
 
             Ok(())
         }
     }
 
     let a = Fp::from_u64(2834758237) * Fp::ZETA;
-    let a_squared = a * &a;
     let instance = Fp::one() + Fp::one();
     let lookup_table = vec![instance, a, a, Fp::zero()];
-    let lookup_table_2 = vec![Fp::zero(), a, a_squared, Fp::zero()];
 
     let empty_circuit: MyCircuit<Fp> = MyCircuit {
         a: None,
-        lookup_tables: vec![lookup_table.clone(), lookup_table_2.clone()],
+        lookup_table: lookup_table.clone(),
     };
 
     let circuit: MyCircuit<Fp> = MyCircuit {
         a: Some(a),
-        lookup_tables: vec![lookup_table, lookup_table_2],
+        lookup_table,
     };
 
     // Initialize the proving key
@@ -454,7 +427,7 @@ fn plonk_api() {
         let proof: Vec<u8> = transcript.finalize();
         assert_eq!(
             proof.len(),
-            halo2::dev::CircuitCost::<Eq, MyCircuit<_>>::measure(K as usize)
+            halo2::dev::CircuitCost::<Eq, MyCircuit<_>>::measure(K as usize, &circuit)
                 .proof_size(2)
                 .into(),
         );
@@ -514,13 +487,15 @@ fn plonk_api() {
     scalar_modulus: "0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001",
     domain: PinnedEvaluationDomain {
         k: 5,
-        extended_k: 8,
+        extended_k: 7,
         omega: 0x0cc3380dc616f2e1daf29ad1560833ed3baea3393eceb7bc8fa36376929b78cc,
     },
     cs: PinnedConstraintSystem {
-        num_fixed_columns: 8,
+        num_fixed_columns: 7,
         num_advice_columns: 5,
         num_instance_columns: 1,
+        num_selectors: 0,
+        selector_map: [],
         gates: [
             Sum(
                 Sum(
@@ -535,7 +510,7 @@ fn plonk_api() {
                                     ),
                                 },
                                 Fixed {
-                                    query_index: 3,
+                                    query_index: 2,
                                     column_index: 2,
                                     rotation: Rotation(
                                         0,
@@ -551,7 +526,7 @@ fn plonk_api() {
                                     ),
                                 },
                                 Fixed {
-                                    query_index: 4,
+                                    query_index: 3,
                                     column_index: 3,
                                     rotation: Rotation(
                                         0,
@@ -577,7 +552,7 @@ fn plonk_api() {
                                 },
                             ),
                             Fixed {
-                                query_index: 6,
+                                query_index: 5,
                                 column_index: 1,
                                 rotation: Rotation(
                                     0,
@@ -595,7 +570,7 @@ fn plonk_api() {
                                 ),
                             },
                             Fixed {
-                                query_index: 5,
+                                query_index: 4,
                                 column_index: 4,
                                 rotation: Rotation(
                                     0,
@@ -607,7 +582,7 @@ fn plonk_api() {
                 ),
                 Product(
                     Fixed {
-                        query_index: 2,
+                        query_index: 1,
                         column_index: 0,
                         rotation: Rotation(
                             0,
@@ -633,7 +608,7 @@ fn plonk_api() {
             ),
             Product(
                 Fixed {
-                    query_index: 7,
+                    query_index: 6,
                     column_index: 5,
                     rotation: Rotation(
                         0,
@@ -740,15 +715,6 @@ fn plonk_api() {
             (
                 Column {
                     index: 6,
-                    column_type: Fixed,
-                },
-                Rotation(
-                    0,
-                ),
-            ),
-            (
-                Column {
-                    index: 7,
                     column_type: Fixed,
                 },
                 Rotation(
@@ -864,10 +830,6 @@ fn plonk_api() {
                     index: 6,
                     column_type: Fixed,
                 },
-                Column {
-                    index: 7,
-                    column_type: Fixed,
-                },
             ],
         },
         lookups: [
@@ -891,44 +853,6 @@ fn plonk_api() {
                     },
                 ],
             },
-            Argument {
-                input_expressions: [
-                    Product(
-                        Advice {
-                            query_index: 0,
-                            column_index: 1,
-                            rotation: Rotation(
-                                0,
-                            ),
-                        },
-                        Advice {
-                            query_index: 1,
-                            column_index: 2,
-                            rotation: Rotation(
-                                0,
-                            ),
-                        },
-                    ),
-                ],
-                table_expressions: [
-                    Product(
-                        Fixed {
-                            query_index: 0,
-                            column_index: 6,
-                            rotation: Rotation(
-                                0,
-                            ),
-                        },
-                        Fixed {
-                            query_index: 1,
-                            column_index: 7,
-                            rotation: Rotation(
-                                0,
-                            ),
-                        },
-                    ),
-                ],
-            },
         ],
         constants: [],
         minimum_degree: None,
@@ -941,7 +865,6 @@ fn plonk_api() {
         (0x02e62cd68370b13711139a08cbcdd889e800a272b9ea10acc90880fff9d89199, 0x1a96c468cb0ce77065d3a58f1e55fea9b72d15e44c01bba1e110bd0cbc6e9bc6),
         (0x224ef42758215157d3ee48fb8d769da5bddd35e5929a90a4a89736f5c4b5ae9b, 0x11bc3a1e08eb320cde764f1492ecef956d71e996e2165f7a9a30ad2febb511c1),
         (0x3c145eb1e4f1e49d9eed351a4e2d9f3deed13bc5ba028d3b425084d606418cc8, 0x045d846e7df4e563ce57cd5483d17bad87f0345e18409bf15abc3d71953ae71c),
-        (0x27b1cd6c0408a2fe7a764e6ac7abda4f6c7e7a4b3f7375532fe11f3af579de64, 0x19dcda088f6c8ad67408650554cfdd5c8c2e5385cf59c662554c837cf3f42c2d),
     ],
     permutation: VerifyingKey {
         commitments: [
@@ -958,7 +881,6 @@ fn plonk_api() {
             (0x394437571f9de32dccdc546fd4737772d8d92593c85438aa3473243997d5acc8, 0x14924ec6e3174f1fab7f0ce7070c22f04bbd0a0ecebdfc5c94be857f25493e95),
             (0x3d907e0591343bd285c2c846f3e871a6ac70d80ec29e9500b8cb57f544e60202, 0x1034e48df35830244cabea076be8a16d67d7896e27c6ac22b285d017105da9c3),
             (0x21d210b41675a1eae44cbd0f3fd27d69e30716c71873f6089cee61acacd403ab, 0x2275e97c7e84f68bfaa528a9d8be4e059f7abefd80d03fbfca774e8414a9b7c1),
-            (0x0f9e7de28e0f650d99d99d95c0fcd39c9dac9db5aa1973319f66922d6eb9f7d5, 0x1ba644ecc18ad711ddd33af7f695f6834e9f35c93d47a6a5273dabbe800fc7e6),
         ],
     },
 }"#####

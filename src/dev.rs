@@ -327,6 +327,8 @@ pub struct MockProver<F: Group + Field> {
     // The instance cells in the circuit, arranged as [column][row].
     instance: Vec<Vec<F>>,
 
+    selectors: Vec<Vec<bool>>,
+
     permutation: permutation::keygen::Assembly,
 
     // A range of available rows for assignment and copies.
@@ -352,12 +354,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         self.regions.push(self.current_region.take().unwrap());
     }
 
-    fn enable_selector<A, AR>(
-        &mut self,
-        annotation: A,
-        selector: &Selector,
-        row: usize,
-    ) -> Result<(), Error>
+    fn enable_selector<A, AR>(&mut self, _: A, selector: &Selector, row: usize) -> Result<(), Error>
     where
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -376,8 +373,9 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .or_default()
             .push(row);
 
-        // Selectors are just fixed columns.
-        self.assign_fixed(annotation, selector.0, row, || Ok(F::one()))
+        self.selectors[selector.0][row] = true;
+
+        Ok(())
     }
 
     fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Option<F>, Error> {
@@ -518,6 +516,7 @@ impl<F: FieldExt> MockProver<F> {
 
         // Fixed columns contain no blinding factors.
         let fixed = vec![vec![CellValue::Unassigned; n]; cs.num_fixed_columns];
+        let selectors = vec![vec![false; n]; cs.num_selectors];
         // Advice columns contain blinding factors.
         let blinding_factors = cs.blinding_factors();
         let usable_rows = n - (blinding_factors + 1);
@@ -543,11 +542,22 @@ impl<F: FieldExt> MockProver<F> {
             fixed,
             advice,
             instance,
+            selectors,
             permutation,
             usable_rows: 0..usable_rows,
         };
 
         ConcreteCircuit::FloorPlanner::synthesize(&mut prover, circuit, config, constants)?;
+
+        let (cs, selector_polys) = prover.cs.compress_selectors(prover.selectors.clone());
+        prover.cs = cs;
+        prover.fixed.extend(selector_polys.into_iter().map(|poly| {
+            let mut v = vec![CellValue::Unassigned; n];
+            for (v, p) in v.iter_mut().zip(&poly[..]) {
+                *v = CellValue::Assigned(*p);
+            }
+            v
+        }));
 
         Ok(prover)
     }
@@ -640,6 +650,7 @@ impl<F: FieldExt> MockProver<F> {
                         gate.polynomials().iter().enumerate().filter_map(
                             move |(poly_index, poly)| match poly.evaluate(
                                 &|scalar| Value::Real(scalar),
+                                &|_| panic!("virtual selectors are removed during optimization"),
                                 &load(n, row, &self.cs.fixed_queries, &self.fixed),
                                 &load(n, row, &self.cs.advice_queries, &self.advice),
                                 &load_instance(n, row, &self.cs.instance_queries, &self.instance),
@@ -680,6 +691,7 @@ impl<F: FieldExt> MockProver<F> {
                     let load = |expression: &Expression<F>, row| {
                         expression.evaluate(
                             &|scalar| Value::Real(scalar),
+                            &|_| panic!("virtual selectors are removed during optimization"),
                             &|index, _, _| {
                                 let query = self.cs.fixed_queries[index];
                                 let column_index = query.0.index();

@@ -6,11 +6,14 @@ use std::{
     marker::PhantomData,
 };
 
-use ff::PrimeField;
+use ff::{Field, PrimeField};
 use group::prime::PrimeGroup;
 
 use crate::{
-    plonk::{Any, Circuit, Column, ConstraintSystem},
+    plonk::{
+        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
+        FloorPlanner, Instance, Selector,
+    },
     poly::Rotation,
 };
 
@@ -37,14 +40,106 @@ pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
     _marker: PhantomData<(G, ConcreteCircuit)>,
 }
 
+struct Assembly {
+    selectors: Vec<Vec<bool>>,
+}
+
+impl<F: Field> Assignment<F> for Assembly {
+    fn enter_region<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // Do nothing; we don't care about regions in this context.
+    }
+
+    fn exit_region(&mut self) {
+        // Do nothing; we don't care about regions in this context.
+    }
+
+    fn enable_selector<A, AR>(&mut self, _: A, selector: &Selector, row: usize) -> Result<(), Error>
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        self.selectors[selector.0][row] = true;
+
+        Ok(())
+    }
+
+    fn query_instance(&self, _: Column<Instance>, _: usize) -> Result<Option<F>, Error> {
+        Ok(None)
+    }
+
+    fn assign_advice<V, VR, A, AR>(
+        &mut self,
+        _: A,
+        _: Column<Advice>,
+        _: usize,
+        _: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Result<VR, Error>,
+        VR: Into<Assigned<F>>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        Ok(())
+    }
+
+    fn assign_fixed<V, VR, A, AR>(
+        &mut self,
+        _: A,
+        _: Column<Fixed>,
+        _: usize,
+        _: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Result<VR, Error>,
+        VR: Into<Assigned<F>>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        Ok(())
+    }
+
+    fn copy(&mut self, _: Column<Any>, _: usize, _: Column<Any>, _: usize) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn push_namespace<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // Do nothing; we don't care about namespaces in this context.
+    }
+
+    fn pop_namespace(&mut self, _: Option<String>) {
+        // Do nothing; we don't care about namespaces in this context.
+    }
+}
+
 impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, ConcreteCircuit> {
     /// Measures a circuit with parameter constant `k`.
     ///
     /// Panics if `k` is not large enough for the circuit.
-    pub fn measure(k: usize) -> Self {
+    pub fn measure(k: usize, circuit: &ConcreteCircuit) -> Self {
         // Collect the layout details.
         let mut cs = ConstraintSystem::default();
-        let _ = ConcreteCircuit::configure(&mut cs);
+        let config = ConcreteCircuit::configure(&mut cs);
+        let mut assembly = Assembly {
+            selectors: vec![vec![false; 1 << k]; cs.num_selectors],
+        };
+        ConcreteCircuit::FloorPlanner::synthesize(
+            &mut assembly,
+            circuit,
+            config,
+            cs.constants.clone(),
+        )
+        .unwrap();
+        let (cs, _) = cs.compress_selectors(assembly.selectors);
+
         assert!((1 << k) >= cs.minimum_rows());
 
         // Figure out how many point sets we have due to queried cells.

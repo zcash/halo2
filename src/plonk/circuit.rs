@@ -8,7 +8,9 @@ use std::{
 
 use super::{lookup, permutation, Error};
 use crate::circuit::Layouter;
-use crate::{arithmetic::FieldExt, circuit::Region, poly::Rotation};
+use crate::{circuit::Region, poly::Rotation};
+
+mod compress_selectors;
 
 /// A column type
 pub trait ColumnType:
@@ -228,12 +230,18 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct Selector(pub(crate) Column<Fixed>);
+pub struct Selector(pub(crate) usize, bool);
 
 impl Selector {
     /// Enable this selector at the given offset within the given region.
-    pub fn enable<F: FieldExt>(&self, region: &mut Region<F>, offset: usize) -> Result<(), Error> {
+    pub fn enable<F: Field>(&self, region: &mut Region<F>, offset: usize) -> Result<(), Error> {
         region.enable_selector(|| "", self, offset)
+    }
+
+    /// Is this selector "simple"? Simple selectors can only be multiplied
+    /// by expressions that contain no other simple selectors.
+    pub fn is_simple(&self) -> bool {
+        self.1
     }
 }
 
@@ -540,6 +548,8 @@ pub trait Circuit<F: Field> {
 pub enum Expression<F> {
     /// This is a constant polynomial
     Constant(F),
+    /// This is a virtual selector
+    Selector(Selector),
     /// This is a fixed column queried at a certain relative location
     Fixed {
         /// Query index
@@ -581,6 +591,7 @@ impl<F: Field> Expression<F> {
     pub fn evaluate<T>(
         &self,
         constant: &impl Fn(F) -> T,
+        selector_column: &impl Fn(Selector) -> T,
         fixed_column: &impl Fn(usize, usize, Rotation) -> T,
         advice_column: &impl Fn(usize, usize, Rotation) -> T,
         instance_column: &impl Fn(usize, usize, Rotation) -> T,
@@ -590,6 +601,7 @@ impl<F: Field> Expression<F> {
     ) -> T {
         match self {
             Expression::Constant(scalar) => constant(*scalar),
+            Expression::Selector(selector) => selector_column(*selector),
             Expression::Fixed {
                 query_index,
                 column_index,
@@ -608,6 +620,7 @@ impl<F: Field> Expression<F> {
             Expression::Sum(a, b) => {
                 let a = a.evaluate(
                     constant,
+                    selector_column,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -617,6 +630,7 @@ impl<F: Field> Expression<F> {
                 );
                 let b = b.evaluate(
                     constant,
+                    selector_column,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -629,6 +643,7 @@ impl<F: Field> Expression<F> {
             Expression::Product(a, b) => {
                 let a = a.evaluate(
                     constant,
+                    selector_column,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -638,6 +653,7 @@ impl<F: Field> Expression<F> {
                 );
                 let b = b.evaluate(
                     constant,
+                    selector_column,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -650,6 +666,7 @@ impl<F: Field> Expression<F> {
             Expression::Scaled(a, f) => {
                 let a = a.evaluate(
                     constant,
+                    selector_column,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -666,6 +683,7 @@ impl<F: Field> Expression<F> {
     pub fn degree(&self) -> usize {
         match self {
             Expression::Constant(_) => 0,
+            Expression::Selector(_) => 1,
             Expression::Fixed { .. } => 1,
             Expression::Advice { .. } => 1,
             Expression::Instance { .. } => 1,
@@ -679,6 +697,46 @@ impl<F: Field> Expression<F> {
     pub fn square(self) -> Self {
         self.clone() * self
     }
+
+    /// Returns whether or not this expression contains a simple `Selector`.
+    fn contains_simple_selector(&self) -> bool {
+        self.evaluate(
+            &|_| false,
+            &|selector| selector.is_simple(),
+            &|_, _, _| false,
+            &|_, _, _| false,
+            &|_, _, _| false,
+            &|a, b| a || b,
+            &|a, b| a || b,
+            &|a, _| a,
+        )
+    }
+
+    /// Extracts a simple selector from this gate, if present
+    fn extract_simple_selector(&self) -> Option<Selector> {
+        let op = |a, b| match (a, b) {
+            (Some(a), None) | (None, Some(a)) => Some(a),
+            (Some(_), Some(_)) => panic!("two simple selectors cannot be in the same expression"),
+            _ => None,
+        };
+
+        self.evaluate(
+            &|_| None,
+            &|selector| {
+                if selector.is_simple() {
+                    Some(selector)
+                } else {
+                    None
+                }
+            },
+            &|_, _, _| None,
+            &|_, _, _| None,
+            &|_, _, _| None,
+            &op,
+            &op,
+            &|a, _| a,
+        )
+    }
 }
 
 impl<F: Field> Neg for Expression<F> {
@@ -688,9 +746,12 @@ impl<F: Field> Neg for Expression<F> {
     }
 }
 
-impl<F> Add for Expression<F> {
+impl<F: Field> Add for Expression<F> {
     type Output = Expression<F>;
     fn add(self, rhs: Expression<F>) -> Expression<F> {
+        if self.contains_simple_selector() || rhs.contains_simple_selector() {
+            panic!("attempted to use a simple selector in an addition");
+        }
         Expression::Sum(Box::new(self), Box::new(rhs))
     }
 }
@@ -698,18 +759,24 @@ impl<F> Add for Expression<F> {
 impl<F: Field> Sub for Expression<F> {
     type Output = Expression<F>;
     fn sub(self, rhs: Expression<F>) -> Expression<F> {
+        if self.contains_simple_selector() || rhs.contains_simple_selector() {
+            panic!("attempted to use a simple selector in a subtraction");
+        }
         Expression::Sum(Box::new(self), Box::new(-rhs))
     }
 }
 
-impl<F> Mul for Expression<F> {
+impl<F: Field> Mul for Expression<F> {
     type Output = Expression<F>;
     fn mul(self, rhs: Expression<F>) -> Expression<F> {
+        if self.contains_simple_selector() && rhs.contains_simple_selector() {
+            panic!("attempted to multiply two expressions containing simple selectors");
+        }
         Expression::Product(Box::new(self), Box::new(rhs))
     }
 }
 
-impl<F> Mul<F> for Expression<F> {
+impl<F: Field> Mul<F> for Expression<F> {
     type Output = Expression<F>;
     fn mul(self, rhs: F) -> Expression<F> {
         Expression::Scaled(Box::new(self), rhs)
@@ -805,6 +872,8 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) num_fixed_columns: usize,
     pub(crate) num_advice_columns: usize,
     pub(crate) num_instance_columns: usize,
+    pub(crate) num_selectors: usize,
+    pub(crate) selector_map: Vec<Column<Fixed>>,
     pub(crate) gates: Vec<Gate<F>>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
     // Contains an integer for each advice column
@@ -834,6 +903,8 @@ pub struct PinnedConstraintSystem<'a, F: Field> {
     num_fixed_columns: &'a usize,
     num_advice_columns: &'a usize,
     num_instance_columns: &'a usize,
+    num_selectors: &'a usize,
+    selector_map: &'a [Column<Fixed>],
     gates: PinnedGates<'a, F>,
     advice_queries: &'a Vec<(Column<Advice>, Rotation)>,
     instance_queries: &'a Vec<(Column<Instance>, Rotation)>,
@@ -860,6 +931,8 @@ impl<F: Field> Default for ConstraintSystem<F> {
             num_fixed_columns: 0,
             num_advice_columns: 0,
             num_instance_columns: 0,
+            num_selectors: 0,
+            selector_map: vec![],
             gates: vec![],
             fixed_queries: Vec::new(),
             advice_queries: Vec::new(),
@@ -882,6 +955,8 @@ impl<F: Field> ConstraintSystem<F> {
             num_fixed_columns: &self.num_fixed_columns,
             num_advice_columns: &self.num_advice_columns,
             num_instance_columns: &self.num_instance_columns,
+            num_selectors: &self.num_selectors,
+            selector_map: &self.selector_map,
             gates: PinnedGates(&self.gates),
             fixed_queries: &self.fixed_queries,
             advice_queries: &self.advice_queries,
@@ -917,10 +992,21 @@ impl<F: Field> ConstraintSystem<F> {
     /// they need to match.
     pub fn lookup(
         &mut self,
-        table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, Expression<F>)>,
+        table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, Column<Fixed>)>,
     ) -> usize {
         let mut cells = VirtualCells::new(self);
-        let table_map = table_map(&mut cells);
+        let table_map = table_map(&mut cells)
+            .into_iter()
+            .map(|(input, table)| {
+                if input.contains_simple_selector() {
+                    panic!("expression containing simple selector supplied to lookup argument");
+                }
+
+                let table = cells.query_fixed(table, Rotation::cur());
+
+                (input, table)
+            })
+            .collect();
 
         let index = self.lookups.len();
 
@@ -1072,11 +1158,148 @@ impl<F: Field> ConstraintSystem<F> {
         });
     }
 
-    /// Allocate a new selector.
+    /// This will compress selectors together depending on their provided
+    /// assignments. This `ConstraintSystem` will then be modified to add new
+    /// fixed columns (representing the actual selectors) and will return the
+    /// polynomials for those columns. Finally, an internal map is updated to
+    /// find which fixed column corresponds with a given `Selector`.
+    ///
+    /// Do not call this twice. Yes, this should be a builder pattern instead.
+    pub(crate) fn compress_selectors(mut self, selectors: Vec<Vec<bool>>) -> (Self, Vec<Vec<F>>) {
+        // The number of provided selector assignments must be the number we
+        // counted for this constraint system.
+        assert_eq!(selectors.len(), self.num_selectors);
+
+        // Compute the maximal degree of every selector. We only consider the
+        // expressions in gates, as lookup arguments cannot support simple
+        // selectors. Selectors that are complex or do not appear in any gates
+        // will have degree zero.
+        let mut degrees = vec![0; selectors.len()];
+        for expr in self.gates.iter().flat_map(|gate| gate.polys.iter()) {
+            if let Some(selector) = expr.extract_simple_selector() {
+                degrees[selector.0] = max(degrees[selector.0], expr.degree());
+            }
+        }
+
+        // We will not increase the degree of the constraint system, so we limit
+        // ourselves to the largest existing degree constraint.
+        let max_degree = self.degree();
+
+        let mut new_columns = vec![];
+        let (polys, selector_assignment) = compress_selectors::process(
+            selectors
+                .into_iter()
+                .zip(degrees.into_iter())
+                .enumerate()
+                .map(
+                    |(i, (activations, max_degree))| compress_selectors::SelectorDescription {
+                        selector: i,
+                        activations,
+                        max_degree,
+                    },
+                )
+                .collect(),
+            max_degree,
+            || {
+                let column = self.fixed_column();
+                new_columns.push(column);
+                Expression::Fixed {
+                    query_index: self.query_fixed_index(column, Rotation::cur()),
+                    column_index: column.index,
+                    rotation: Rotation::cur(),
+                }
+            },
+        );
+
+        let mut selector_map = vec![None; selector_assignment.len()];
+        let mut selector_replacements = vec![None; selector_assignment.len()];
+        for assignment in selector_assignment {
+            selector_replacements[assignment.selector] = Some(assignment.expression);
+            selector_map[assignment.selector] = Some(new_columns[assignment.combination_index]);
+        }
+
+        self.selector_map = selector_map
+            .into_iter()
+            .map(|a| a.unwrap())
+            .collect::<Vec<_>>();
+        let selector_replacements = selector_replacements
+            .into_iter()
+            .map(|a| a.unwrap())
+            .collect::<Vec<_>>();
+
+        fn replace_selectors<F: Field>(
+            expr: &mut Expression<F>,
+            selector_replacements: &[Expression<F>],
+            must_be_nonsimple: bool,
+        ) {
+            *expr = expr.evaluate(
+                &|constant| Expression::Constant(constant),
+                &|selector| {
+                    if must_be_nonsimple {
+                        // Simple selectors are prohibited from appearing in
+                        // expressions in the lookup argument by
+                        // `ConstraintSystem`.
+                        assert!(!selector.is_simple());
+                    }
+
+                    selector_replacements[selector.0].clone()
+                },
+                &|query_index, column_index, rotation| Expression::Fixed {
+                    query_index,
+                    column_index,
+                    rotation,
+                },
+                &|query_index, column_index, rotation| Expression::Advice {
+                    query_index,
+                    column_index,
+                    rotation,
+                },
+                &|query_index, column_index, rotation| Expression::Instance {
+                    query_index,
+                    column_index,
+                    rotation,
+                },
+                &|a, b| a + b,
+                &|a, b| a * b,
+                &|a, f| a * f,
+            );
+        }
+
+        // Substitute selectors for the real fixed columns in all gates
+        for expr in self.gates.iter_mut().flat_map(|gate| gate.polys.iter_mut()) {
+            replace_selectors(expr, &selector_replacements, false);
+        }
+
+        // Substitute non-simple selectors for the real fixed columns in all
+        // lookup expressions
+        for expr in self.lookups.iter_mut().flat_map(|lookup| {
+            lookup
+                .input_expressions
+                .iter_mut()
+                .chain(lookup.table_expressions.iter_mut())
+        }) {
+            replace_selectors(expr, &selector_replacements, true);
+        }
+
+        (self, polys)
+    }
+
+    /// Allocate a new (simple) selector. Simple selectors cannot be added to
+    /// expressions nor multiplied by other expressions containing simple
+    /// selectors. Also, simple selectors may not appear in lookup argument
+    /// inputs.
     pub fn selector(&mut self) -> Selector {
-        // TODO: Track selectors separately, and combine selectors where possible.
-        // https://github.com/zcash/halo2/issues/116
-        Selector(self.fixed_column())
+        let index = self.num_selectors;
+        self.num_selectors += 1;
+        Selector(index, true)
+    }
+
+    /// Allocate a new complex selector that can appear anywhere
+    /// within expressions.
+    pub fn complex_selector(&mut self) -> Selector {
+        let index = self.num_selectors;
+        self.num_selectors += 1;
+        Selector(index, false)
     }
 
     /// Allocate a new fixed column
@@ -1204,13 +1427,8 @@ impl<'a, F: Field> VirtualCells<'a, F> {
 
     /// Query a selector at the current position.
     pub fn query_selector(&mut self, selector: Selector) -> Expression<F> {
-        // Selectors are always queried at the current row.
         self.queried_selectors.push(selector);
-        Expression::Fixed {
-            query_index: self.meta.query_fixed_index(selector.0, Rotation::cur()),
-            column_index: (selector.0).index,
-            rotation: Rotation::cur(),
-        }
+        Expression::Selector(selector)
     }
 
     /// Query a fixed column at a relative position

@@ -4,11 +4,8 @@ use std::{
     ops::Range,
 };
 
-use super::RegionShape;
-use crate::{
-    circuit::RegionStart,
-    plonk::{Any, Column},
-};
+use super::{RegionColumn, RegionShape};
+use crate::{circuit::RegionStart, plonk::Any};
 
 /// A region allocated within a column.
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
@@ -102,14 +99,14 @@ impl Allocations {
 }
 
 /// Allocated rows within a circuit.
-pub type CircuitAllocations = HashMap<Column<Any>, Allocations>;
+pub type CircuitAllocations = HashMap<RegionColumn, Allocations>;
 
 /// - `start` is the current start row of the region (not of this column).
 /// - `slack` is the maximum number of rows the start could be moved down, taking into
 ///   account prior columns.
 fn first_fit_region(
     column_allocations: &mut CircuitAllocations,
-    region_columns: &[Column<Any>],
+    region_columns: &[RegionColumn],
     region_length: usize,
     start: usize,
     slack: Option<usize>,
@@ -207,7 +204,10 @@ pub fn slot_in_biggest_advice_first(
         let advice_cols = shape
             .columns()
             .iter()
-            .filter(|c| matches!(c.column_type(), Any::Advice))
+            .filter(|c| match c {
+                RegionColumn::Column(c) => matches!(c.column_type(), Any::Advice),
+                _ => false,
+            })
             .count();
         // Sort by advice area (since this has the most contention).
         advice_cols * shape.row_count()
@@ -226,23 +226,30 @@ pub fn slot_in_biggest_advice_first(
 
 #[test]
 fn test_slot_in() {
+    use crate::plonk::Column;
+
     let regions = vec![
         RegionShape {
             region_index: 0.into(),
             columns: vec![Column::new(0, Any::Advice), Column::new(1, Any::Advice)]
                 .into_iter()
+                .map(|a| a.into())
                 .collect(),
             row_count: 15,
         },
         RegionShape {
             region_index: 1.into(),
-            columns: vec![Column::new(2, Any::Advice)].into_iter().collect(),
+            columns: vec![Column::new(2, Any::Advice)]
+                .into_iter()
+                .map(|a| a.into())
+                .collect(),
             row_count: 10,
         },
         RegionShape {
             region_index: 2.into(),
             columns: vec![Column::new(2, Any::Advice), Column::new(0, Any::Advice)]
                 .into_iter()
+                .map(|a| a.into())
                 .collect(),
             row_count: 10,
         },

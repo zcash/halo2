@@ -28,7 +28,6 @@ fn main() {
         sc: Column<Fixed>,
         sm: Column<Fixed>,
         sl: Column<Fixed>,
-        sl2: Column<Fixed>,
     }
 
     trait StandardCs<FF: FieldExt> {
@@ -46,13 +45,13 @@ fn main() {
         fn lookup_table(
             &self,
             layouter: &mut impl Layouter<FF>,
-            values: &[Vec<FF>],
+            values: &[FF],
         ) -> Result<(), Error>;
     }
 
     struct MyCircuit<F: FieldExt> {
         a: Option<F>,
-        lookup_tables: Vec<Vec<F>>,
+        lookup_table: Vec<F>,
     }
 
     struct StandardPlonk<F: FieldExt> {
@@ -170,26 +169,13 @@ fn main() {
         fn lookup_table(
             &self,
             layouter: &mut impl Layouter<FF>,
-            values: &[Vec<FF>],
+            values: &[FF],
         ) -> Result<(), Error> {
             layouter.assign_region(
                 || "",
                 |mut region| {
-                    for (index, (&value_0, &value_1)) in
-                        values[0].iter().zip(values[1].iter()).enumerate()
-                    {
-                        region.assign_fixed(
-                            || "table col 1",
-                            self.config.sl,
-                            index,
-                            || Ok(value_0),
-                        )?;
-                        region.assign_fixed(
-                            || "table col 2",
-                            self.config.sl2,
-                            index,
-                            || Ok(value_1),
-                        )?;
+                    for (index, &value) in values.iter().enumerate() {
+                        region.assign_fixed(|| "table col", self.config.sl, index, || Ok(value))?;
                     }
                     Ok(())
                 },
@@ -205,7 +191,7 @@ fn main() {
         fn without_witnesses(&self) -> Self {
             Self {
                 a: None,
-                lookup_tables: self.lookup_tables.clone(),
+                lookup_table: self.lookup_table.clone(),
             }
         }
 
@@ -226,34 +212,25 @@ fn main() {
             let sb = meta.fixed_column();
             let sc = meta.fixed_column();
             let sl = meta.fixed_column();
-            let sl2 = meta.fixed_column();
 
             /*
-             *   A         B      ...  sl        sl2
+             *   A         B      ...  sl
              * [
-             *   instance  0      ...  0         0
-             *   a         a      ...  0         0
-             *   a         a^2    ...  0         0
-             *   a         a      ...  0         0
-             *   a         a^2    ...  0         0
-             *   ...       ...    ...  ...       ...
-             *   ...       ...    ...  instance  0
-             *   ...       ...    ...  a         a
-             *   ...       ...    ...  a         a^2
-             *   ...       ...    ...  0         0
+             *   instance  0      ...  0
+             *   a         a      ...  0
+             *   a         a^2    ...  0
+             *   a         a      ...  0
+             *   a         a^2    ...  0
+             *   ...       ...    ...  ...
+             *   ...       ...    ...  instance
+             *   ...       ...    ...  a
+             *   ...       ...    ...  a
+             *   ...       ...    ...  0
              * ]
              */
             meta.lookup(|meta| {
                 let a_ = meta.query_any(a.into(), Rotation::cur());
-                let sl_ = meta.query_any(sl.into(), Rotation::cur());
-                vec![(a_, sl_)]
-            });
-            meta.lookup(|meta| {
-                let a_ = meta.query_any(a.into(), Rotation::cur());
-                let b_ = meta.query_any(b.into(), Rotation::cur());
-                let sl_ = meta.query_any(sl.into(), Rotation::cur());
-                let sl2_ = meta.query_any(sl2.into(), Rotation::cur());
-                vec![(a_, sl_), (b_, sl2_)]
+                vec![(a_, sl)]
             });
 
             meta.create_gate("Combined add-mult", |meta| {
@@ -289,7 +266,6 @@ fn main() {
                 sc,
                 sm,
                 sl,
-                sl2,
             }
         }
 
@@ -327,21 +303,19 @@ fn main() {
                 )?;
             }
 
-            cs.lookup_table(&mut layouter, &self.lookup_tables)?;
+            cs.lookup_table(&mut layouter, &self.lookup_table)?;
 
             Ok(())
         }
     }
 
     let a = Fp::rand();
-    let a_squared = a * a;
     let instance = Fp::one() + Fp::one();
     let lookup_table = vec![instance, a, a, Fp::zero()];
-    let lookup_table_2 = vec![Fp::zero(), a, a_squared, Fp::zero()];
 
     let circuit: MyCircuit<Fp> = MyCircuit {
         a: None,
-        lookup_tables: vec![lookup_table, lookup_table_2],
+        lookup_table,
     };
 
     let root = BitMapBackend::new("example-circuit-layout.png", (1024, 768)).into_drawing_area();
@@ -350,5 +324,5 @@ fn main() {
         .titled("Example Circuit Layout", ("sans-serif", 60))
         .unwrap();
 
-    CircuitLayout::default().render(&circuit, &root).unwrap();
+    CircuitLayout::default().render(5, &circuit, &root).unwrap();
 }
