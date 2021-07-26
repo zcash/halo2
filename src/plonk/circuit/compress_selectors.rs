@@ -74,7 +74,8 @@ where
         .into_iter()
         .filter(|selector| {
             if selector.max_degree == 0 {
-                // This is a concrete selector.
+                // This is a complex selector, or a selector that does not appear in any
+                // gate constraint.
                 let expression = allocate_fixed_column();
 
                 let combination_assignment = selector
@@ -111,15 +112,16 @@ where
         .map(|selector| &selector.activations)
         .enumerate()
     {
-        // Iterate over the rows, filtering for rows that are set
-        for set_index in rows.iter().enumerate().filter(|a| *a.1).map(|a| a.0) {
-            // Loop over the selectors previous to this one
-            for (j, other_selector) in selectors.iter().enumerate().take(i) {
-                // Look at what selectors are active at the same row
-                if other_selector.activations[set_index] {
-                    // Mark them as incompatible
-                    exclusion_matrix[i][j] = true;
-                }
+        // Loop over the selectors previous to this one
+        for (j, other_selector) in selectors.iter().enumerate().take(i) {
+            // Look at what selectors are active at the same row
+            if rows
+                .iter()
+                .zip(other_selector.activations.iter())
+                .any(|(l, r)| l & r)
+            {
+                // Mark them as incompatible
+                exclusion_matrix[i][j] = true;
             }
         }
     }
@@ -143,7 +145,7 @@ where
 
         // Try to find other selectors that can join this one.
         'try_selectors: for (j, selector) in selectors.iter().enumerate().skip(i + 1) {
-            if d == max_degree {
+            if d + combination.len() == max_degree {
                 // Short circuit; nothing can be added to this
                 // combination.
                 break 'try_selectors;
@@ -162,7 +164,7 @@ where
                 }
             }
 
-            // Can the new selector join the combination? Reminder: we subtract
+            // Can the new selector join the combination? Reminder: we use
             // selector.max_degree - 1 to omit the influence of the virtual
             // selector on the degree, as it will be substituted.
             let new_d = std::cmp::max(d, selector.max_degree - 1);
@@ -185,7 +187,13 @@ where
 
         let mut assigned_root = F::one();
         selector_assignments.extend(combination.into_iter().map(|selector| {
-            // Compute the expression for substitution
+            // Compute the expression for substitution. This produces an expression of the
+            // form
+            //     q * Prod[i = 1..=combination_len, i != assigned_root](i - q)
+            //
+            // which is non-zero only on rows where `combination_assignment` is set to
+            // `assigned_root`. In particular, rows set to 0 correspond to all selectors
+            // being disabled.
             let mut expression = query.clone();
             let mut root = F::one();
             for _ in 0..combination_len {
@@ -305,7 +313,11 @@ mod tests {
                     selectors[selector.selector].activations.len(),
                     combination_assignments[selector.combination_index].len()
                 );
-                for (&activation, &assignment) in selectors[selector.selector].activations.iter().zip(combination_assignments[selector.combination_index].iter()) {
+                for (&activation, &assignment) in selectors[selector.selector]
+                    .activations
+                    .iter()
+                    .zip(combination_assignments[selector.combination_index].iter())
+                {
                     let eval = selector.expression.evaluate(
                         &|c| c,
                         &|_| panic!("should not occur in returned expressions"),

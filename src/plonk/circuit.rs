@@ -1176,9 +1176,8 @@ impl<F: Field> ConstraintSystem<F> {
         // will have degree zero.
         let mut degrees = vec![0; selectors.len()];
         for expr in self.gates.iter().flat_map(|gate| gate.polys.iter()) {
-            let degree = expr.degree();
             if let Some(selector) = expr.extract_simple_selector() {
-                degrees[selector.0] = max(degrees[selector.0], degree);
+                degrees[selector.0] = max(degrees[selector.0], expr.degree());
             }
         }
 

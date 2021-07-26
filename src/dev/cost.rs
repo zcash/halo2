@@ -10,7 +10,6 @@ use ff::{Field, PrimeField};
 use group::prime::PrimeGroup;
 
 use crate::{
-    arithmetic::FieldExt,
     plonk::{
         Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
         FloorPlanner, Instance, Selector,
@@ -125,10 +124,7 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
     /// Measures a circuit with parameter constant `k`.
     ///
     /// Panics if `k` is not large enough for the circuit.
-    pub fn measure(k: usize, circuit: &ConcreteCircuit) -> Self
-    where
-        G::Scalar: FieldExt,
-    {
+    pub fn measure(k: usize, circuit: &ConcreteCircuit) -> Self {
         // Collect the layout details.
         let mut cs = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut cs);
