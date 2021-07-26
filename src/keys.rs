@@ -29,7 +29,7 @@ const KDF_ORCHARD_PERSONALIZATION: &[u8; 16] = b"Zcash_OrchardKDF";
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SpendingKey([u8; 32]);
 
 impl SpendingKey {
@@ -111,7 +111,7 @@ impl From<&SpendingKey> for SpendAuthorizingKey {
 /// $\mathsf{ak}$ but stored here as a RedPallas verification key.
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialOrd, Ord)]
 pub struct SpendValidatingKey(redpallas::VerificationKey<SpendAuth>);
 
 impl From<&SpendAuthorizingKey> for SpendValidatingKey {
@@ -131,6 +131,8 @@ impl PartialEq for SpendValidatingKey {
         <[u8; 32]>::from(&self.0).eq(&<[u8; 32]>::from(&other.0))
     }
 }
+
+impl Eq for SpendValidatingKey {}
 
 impl SpendValidatingKey {
     /// Randomizes this spend validating key with the given `randomizer`.
@@ -158,7 +160,7 @@ impl SpendValidatingKey {
 /// [`Nullifier`]: crate::note::Nullifier
 /// [`Note`]: crate::note::Note
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Copy, Debug, Clone)]
+#[derive(Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct NullifierDerivingKey(pallas::Base);
 
 impl NullifierDerivingKey {
@@ -199,7 +201,7 @@ impl NullifierDerivingKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Copy, Debug, Clone)]
+#[derive(Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct CommitIvkRandomness(pallas::Scalar);
 
 impl From<&SpendingKey> for CommitIvkRandomness {
@@ -237,7 +239,7 @@ impl CommitIvkRandomness {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FullViewingKey {
     ak: SpendValidatingKey,
     nk: NullifierDerivingKey,
@@ -326,7 +328,7 @@ impl FullViewingKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DiversifierKey([u8; 32]);
 
 impl From<&FullViewingKey> for DiversifierKey {
@@ -336,7 +338,7 @@ impl From<&FullViewingKey> for DiversifierKey {
 }
 
 /// The index for a particular diversifier.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DiversifierIndex([u8; 11]);
 
 macro_rules! di_from {
@@ -418,7 +420,7 @@ impl Diversifier {
 /// decryption of notes). When we actually want to serialize ivk, we're guaranteed to get
 /// a valid base field element encoding, because we always construct ivk from an integer
 /// in the correct range.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct KeyAgreementPrivateKey(NonZeroPallasScalar);
 
 impl From<&FullViewingKey> for KeyAgreementPrivateKey {
@@ -455,7 +457,7 @@ impl KeyAgreementPrivateKey {
 /// Defined in [Zcash Protocol Spec § 5.6.4.3: Orchard Raw Incoming Viewing Keys][orchardinviewingkeyencoding].
 ///
 /// [orchardinviewingkeyencoding]: https://zips.z.cash/protocol/nu5.pdf#orchardinviewingkeyencoding
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct IncomingViewingKey {
     dk: DiversifierKey,
     ivk: KeyAgreementPrivateKey,
