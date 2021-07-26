@@ -181,7 +181,7 @@ impl CommitIvkConfig {
                 // Check that b2_c_prime = b_2 + c * 2^5 + 2^140 - t_P.
                 // This is checked regardless of the value of d_1.
                 let b2_c_prime_check = {
-                    let two_pow_5 = pallas::Base::from_u64(5);
+                    let two_pow_5 = pallas::Base::from_u64(1 << 5);
                     let two_pow_140 =
                         Expression::Constant(pallas::Base::from_u128(1 << 70).square());
                     let t_p = Expression::Constant(pallas::Base::from_u128(T_P));
@@ -432,7 +432,7 @@ impl CommitIvkConfig {
         // Decompose the low 140 bits of b2_c_prime = b_2 + c * 2^5 + 2^140 - t_P, and output
         // the running sum at the end of it. If b2_c_prime < 2^140, the running sum will be 0.
         let b2_c_prime = b_2.value().zip(c.value()).map(|(b_2, c)| {
-            let two_pow_5 = pallas::Base::from_u64(5);
+            let two_pow_5 = pallas::Base::from_u64(1 << 5);
             let two_pow_140 = pallas::Base::from_u128(1u128 << 70).square();
             let t_p = pallas::Base::from_u128(T_P);
             b_2 + c * two_pow_5 + two_pow_140 - t_p
