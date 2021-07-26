@@ -43,6 +43,7 @@ use super::{
 pub struct NoteCommitConfig {
     q_canon_1: Selector,
     q_canon_2: Selector,
+    q_y_canon: Selector,
     advices: [Column<Advice>; 10],
     sinsemilla_config: SinsemillaConfig,
 }
@@ -57,10 +58,12 @@ impl NoteCommitConfig {
     ) -> Self {
         let q_canon_1 = meta.selector();
         let q_canon_2 = meta.selector();
+        let q_y_canon = meta.selector();
 
         let config = Self {
             q_canon_1,
             q_canon_2,
+            q_y_canon,
             advices,
             sinsemilla_config,
         };
@@ -74,10 +77,78 @@ impl NoteCommitConfig {
         let two_pow_8 = two_pow_4.square();
         let two_pow_9 = two_pow_8 * two;
         let two_pow_10 = two_pow_9 * two;
-        let two_pow_254 = pallas::Base::from_u128(1 << 127).square();
         let two_pow_130 = Expression::Constant(pallas::Base::from_u128(1 << 65).square());
         let two_pow_140 = Expression::Constant(pallas::Base::from_u128(1 << 70).square());
+        let two_pow_250 = pallas::Base::from_u128(1 << 125).square();
+        let two_pow_254 = pallas::Base::from_u128(1 << 127).square();
+
         let t_p = Expression::Constant(pallas::Base::from_u128(T_P));
+
+        /*
+            Check decomposition and canonicity of y-coordinates.
+            This is used for both y(g_d) and y(pk_d).
+
+            y = LSB || k_0 || k_1 || k_2 || k_3
+              = (bit 0) || (bits 1..=9) || (bits 10..=249) || (bits 250..=253) || (bit 254)
+        */
+        meta.create_gate("y coordinate checks", |meta| {
+            let q_y_canon = meta.query_selector(q_y_canon);
+            let y = meta.query_advice(advices[0], Rotation::cur());
+            // LSB has been boolean-constrained outside this gate.
+            let lsb = meta.query_advice(advices[1], Rotation::cur());
+            // k_0 has been constrained to 9 bits outside this gate.
+            let k_0 = meta.query_advice(advices[2], Rotation::cur());
+            // This gate constrains k_1 to 240 bits by equating it to z1_j.
+            let k_1 = meta.query_advice(advices[3], Rotation::cur());
+            // k_2 has been constrained to 4 bits outside this gate.
+            let k_2 = meta.query_advice(advices[4], Rotation::cur());
+            // This gate constrains k_3 to be boolean.
+            let k_3 = meta.query_advice(advices[5], Rotation::cur());
+
+            // j = LSB + (2)k_0 + (2^10)k_1
+            let j = meta.query_advice(advices[0], Rotation::next());
+            let z1_j = meta.query_advice(advices[1], Rotation::next());
+            let z13_j = meta.query_advice(advices[2], Rotation::next());
+
+            // j_prime = j + 2^130 - t_P
+            let j_prime = meta.query_advice(advices[3], Rotation::next());
+            let z13_j_prime = meta.query_advice(advices[4], Rotation::next());
+
+            // Decomposition checks
+            let decomposition_checks = {
+                // Check that k_1 = z1_j
+                let k1_check = k_1.clone() - z1_j;
+                // Check that k_3 is boolean
+                let k3_check = bool_check(k_3.clone());
+                // Check that j = LSB + (2)k_0 + (2^10)k_1
+                let j_check = j.clone() - (lsb + k_0 * two + k_1 * two_pow_10);
+                // Check that y = j + (2^250)k_2 + (2^254)k_3
+                let y_check =
+                    y - (j.clone() + k_2.clone() * two_pow_250 + k_3.clone() * two_pow_254);
+                // Check that j_prime = j + 2^130 - t_P
+                let j_prime_check = j_prime - (j + two_pow_130.clone() - t_p.clone());
+
+                std::iter::empty()
+                    .chain(Some(("k1_check", k1_check)))
+                    .chain(Some(("k3_check", k3_check)))
+                    .chain(Some(("j_check", j_check)))
+                    .chain(Some(("y_check", y_check)))
+                    .chain(Some(("j_prime_check", j_prime_check)))
+            };
+
+            // Canonicity checks. These are enforced if and only if k_3 = 1.
+            let canonicity_checks = {
+                std::iter::empty()
+                    .chain(Some(("k_3 = 1 => k_2 = 0", k_2)))
+                    .chain(Some(("k_3 = 1 => z13_j = 0", z13_j)))
+                    .chain(Some(("k_3 = 1 => z13_j_prime = 0", z13_j_prime)))
+                    .map(move |(name, poly)| (name, k_3.clone() * poly))
+            };
+
+            decomposition_checks
+                .chain(canonicity_checks)
+                .map(move |(name, poly)| (name, q_y_canon.clone() * poly))
+        });
 
         meta.create_gate("NoteCommit decomposition check", |meta| {
             /*
@@ -235,7 +306,6 @@ impl NoteCommitConfig {
 
             // x(g_d) = a + (2^250)b_0 + (2^254)b_1
             let gd_x_check = {
-                let two_pow_250 = pallas::Base::from_u128(1 << 125).square();
                 let sum = a + b_0 * two_pow_250 + b_1 * two_pow_254;
                 sum - gd_x
             };
@@ -590,6 +660,15 @@ impl NoteCommitConfig {
             (h_0, h_1, h)
         };
 
+        // Check decomposition of `y(g_d)`.
+        let b_2 = self.y_canonicity(layouter.namespace(|| "y(g_d) decomposition"), g_d.y(), b_2)?;
+        // Check decomposition of `y(pk_d)`.
+        let d_1 = self.y_canonicity(
+            layouter.namespace(|| "y(pk_d) decomposition"),
+            pk_d.y(),
+            d_1,
+        )?;
+
         let (cm, zs) = {
             let message = Message::from_pieces(
                 chip.clone(),
@@ -620,7 +699,7 @@ impl NoteCommitConfig {
         let g_2 = z1_g;
         let z13_g = zs[6][13];
 
-        let (a_prime, a_prime_decomposition) = self.gd_x_canonicity(
+        let (a_prime, a_prime_decomposition) = self.canon_bitshift_130(
             layouter.namespace(|| "x(g_d) canonicity"),
             a.inner().cell_value(),
         )?;
@@ -689,13 +768,13 @@ impl NoteCommitConfig {
     }
 
     #[allow(clippy::type_complexity)]
-    // Check canonicity of `x(g_d)` encoding
-    fn gd_x_canonicity(
+    // A canonicity check helper used in checking x(g_d), y(g_d), and y(pk_d).
+    fn canon_bitshift_130(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         a: CellValue<pallas::Base>,
     ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
-        // `x(g_d)` = `a (250 bits) || b_0 (4 bits) || b_1 (1 bit)`
+        // element = `a (250 bits) || b_0 (4 bits) || b_1 (1 bit)`
         // - b_1 = 1 => b_0 = 0
         // - b_1 = 1 => a < t_P
         //     - 0 ≤ a < 2^130 (z_13 of SinsemillaHash(a))
@@ -837,6 +916,144 @@ impl NoteCommitConfig {
         Ok((g1_g2_prime, zs[13]))
     }
 
+    // Check canonicity of y-coordinate given its LSB as a value.
+    // Also, witness the LSB and return the witnessed cell.
+    fn y_canonicity(
+        &self,
+        mut layouter: impl Layouter<pallas::Base>,
+        y: CellValue<pallas::Base>,
+        lsb: Option<pallas::Base>,
+    ) -> Result<CellValue<pallas::Base>, Error> {
+        // Decompose the field element
+        //      y = LSB || k_0 || k_1 || k_2 || k_3
+        //        = (bit 0) || (bits 1..=9) || (bits 10..=249) || (bits 250..=253) || (bit 254)
+        let (k_0, k_1, k_2, k_3) = {
+            let k_0 = y.value().map(|y| bitrange_subset(y, 1..10));
+            let k_1 = y.value().map(|y| bitrange_subset(y, 10..250));
+            let k_2 = y.value().map(|y| bitrange_subset(y, 250..254));
+            let k_3 = y.value().map(|y| bitrange_subset(y, 254..255));
+
+            (k_0, k_1, k_2, k_3)
+        };
+
+        // Range-constrain k_0 to be 9 bits.
+        let k_0 = self.sinsemilla_config.lookup_config.witness_short_check(
+            layouter.namespace(|| "Constrain k_0 to be 9 bits"),
+            k_0,
+            9,
+        )?;
+
+        // Range-constrain k_2 to be 4 bits.
+        let k_2 = self.sinsemilla_config.lookup_config.witness_short_check(
+            layouter.namespace(|| "Constrain k_2 to be 4 bits"),
+            k_2,
+            4,
+        )?;
+
+        // Decompose j = LSB + (2)k_0 + (2^10)k_1 using 25 ten-bit lookups.
+        let (j, z1_j, z13_j) = {
+            let j = lsb.zip(k_0.value()).zip(k_1).map(|((lsb, k_0), k_1)| {
+                let two = pallas::Base::from_u64(2);
+                let two_pow_10 = pallas::Base::from_u64(1 << 10);
+                lsb + two * k_0 + two_pow_10 * k_1
+            });
+            let zs = self.sinsemilla_config.lookup_config.witness_check(
+                layouter.namespace(|| "Decompose j = LSB + (2)k_0 + (2^10)k_1"),
+                j,
+                25,
+                false,
+            )?;
+            (zs[0], zs[1], zs[13])
+        };
+
+        // Decompose j_prime = j + 2^130 - t_P using 25 ten-bit lookups.
+        // We can reuse the canon_bitshift_130 logic here.
+        let (j_prime, z13_j_prime) =
+            self.canon_bitshift_130(layouter.namespace(|| "j_prime = j + 2^130 - t_P"), j)?;
+
+        // Assign y canonicity gate.
+        layouter.assign_region(
+            || "y canonicity",
+            |mut region| {
+                self.q_y_canon.enable(&mut region, 0)?;
+
+                // Offset 0
+                let lsb = {
+                    let offset = 0;
+
+                    // Copy y.
+                    copy(&mut region, || "copy y", self.advices[0], offset, &y)?;
+                    // Witness LSB.
+                    let lsb = {
+                        let cell = region.assign_advice(
+                            || "witness LSB",
+                            self.advices[1],
+                            offset,
+                            || lsb.ok_or(Error::SynthesisError),
+                        )?;
+                        CellValue::new(cell, lsb)
+                    };
+                    // Witness k_0.
+                    copy(&mut region, || "copy k_0", self.advices[2], offset, &k_0)?;
+                    // Witness k_1.
+                    region.assign_advice(
+                        || "witness k_1",
+                        self.advices[3],
+                        offset,
+                        || k_1.ok_or(Error::SynthesisError),
+                    )?;
+                    // Copy k_2.
+                    copy(&mut region, || "copy k_2", self.advices[4], offset, &k_2)?;
+                    // Witness k_3.
+                    region.assign_advice(
+                        || "witness k_3",
+                        self.advices[5],
+                        offset,
+                        || k_3.ok_or(Error::SynthesisError),
+                    )?;
+
+                    lsb
+                };
+
+                // Offset 1
+                {
+                    let offset = 1;
+
+                    // Copy j.
+                    copy(&mut region, || "copy j", self.advices[0], offset, &j)?;
+                    // Copy z1_j.
+                    copy(&mut region, || "copy z1_j", self.advices[1], offset, &z1_j)?;
+                    // Copy z13_j.
+                    copy(
+                        &mut region,
+                        || "copy z13_j",
+                        self.advices[2],
+                        offset,
+                        &z13_j,
+                    )?;
+                    // Copy j_prime.
+                    copy(
+                        &mut region,
+                        || "copy j_prime",
+                        self.advices[3],
+                        offset,
+                        &j_prime,
+                    )?;
+                    // Copy z13_j_prime.
+                    copy(
+                        &mut region,
+                        || "copy z13_j_prime",
+                        self.advices[4],
+                        offset,
+                        &z13_j_prime,
+                    )?;
+                }
+
+                Ok(lsb)
+            },
+        )
+    }
+
     fn assign_gate(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
@@ -908,11 +1125,12 @@ impl NoteCommitConfig {
                     copy(&mut region, || "b", self.advices[5], offset, &gate_cells.b)?;
 
                     // advices[6]
-                    region.assign_advice(
+                    copy(
+                        &mut region,
                         || "b_2",
                         self.advices[6],
                         offset,
-                        || gate_cells.b_2.ok_or(Error::SynthesisError),
+                        &gate_cells.b_2,
                     )?;
 
                     // advices[7]
@@ -936,11 +1154,12 @@ impl NoteCommitConfig {
                     let offset = 1;
 
                     // advices[0]
-                    region.assign_advice(
+                    copy(
+                        &mut region,
                         || "d_1",
                         self.advices[0],
                         offset,
-                        || gate_cells.d_1.ok_or(Error::SynthesisError),
+                        &gate_cells.d_1,
                     )?;
 
                     // advices[1]
@@ -1209,12 +1428,12 @@ struct GateCells {
     b: CellValue<pallas::Base>,
     b_0: CellValue<pallas::Base>,
     b_1: Option<pallas::Base>,
-    b_2: Option<pallas::Base>,
+    b_2: CellValue<pallas::Base>,
     b_3: CellValue<pallas::Base>,
     c: CellValue<pallas::Base>,
     d: CellValue<pallas::Base>,
     d_0: Option<pallas::Base>,
-    d_1: Option<pallas::Base>,
+    d_1: CellValue<pallas::Base>,
     d_2: CellValue<pallas::Base>,
     z1_d: CellValue<pallas::Base>,
     e: CellValue<pallas::Base>,
