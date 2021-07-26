@@ -847,7 +847,7 @@ mod tests {
             output: None,
         };
         halo2::dev::CircuitLayout::default()
-            .render(&circuit, &root)
+            .render(6, &circuit, &root)
             .unwrap();
     }
 }

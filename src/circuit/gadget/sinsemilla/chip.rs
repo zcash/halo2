@@ -123,7 +123,7 @@ impl SinsemillaChip {
         }
 
         let config = SinsemillaConfig {
-            q_sinsemilla1: meta.selector(),
+            q_sinsemilla1: meta.complex_selector(),
             q_sinsemilla2: meta.fixed_column(),
             q_sinsemilla4: meta.selector(),
             fixed_y_q,

@@ -358,11 +358,11 @@ mod tests {
                 prover.verify(),
                 Err(vec![
                     VerifyFailure::Permutation {
-                        column: (Any::Fixed, 1).into(),
+                        column: (Any::Fixed, 0).into(),
                         row: 0
                     },
                     VerifyFailure::Permutation {
-                        column: (Any::Fixed, 1).into(),
+                        column: (Any::Fixed, 0).into(),
                         row: 1
                     },
                     VerifyFailure::Permutation {

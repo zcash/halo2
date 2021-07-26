@@ -553,7 +553,7 @@ mod tests {
     }
 
     #[test]
-    fn ecc() {
+    fn ecc_chip() {
         let k = 13;
         let circuit = MyCircuit {};
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
@@ -571,7 +571,7 @@ mod tests {
 
         let circuit = MyCircuit {};
         halo2::dev::CircuitLayout::default()
-            .render(&circuit, &root)
+            .render(13, &circuit, &root)
             .unwrap();
     }
 }

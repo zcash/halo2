@@ -52,8 +52,8 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     ) -> Self {
         meta.enable_equality(running_sum.into());
 
-        let q_lookup = meta.selector();
-        let q_lookup_short = meta.selector();
+        let q_lookup = meta.complex_selector();
+        let q_lookup_short = meta.complex_selector();
         let q_lookup_bitshift = meta.selector();
         let config = LookupRangeCheckConfig {
             q_lookup,
@@ -72,18 +72,16 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             //    z_i = 2^{K}⋅z_{i + 1} + a_i
             // => a_i = z_i - 2^{K}⋅z_{i + 1}
             let word = z_cur - z_next * F::from_u64(1 << K);
-            let table = meta.query_fixed(config.table_idx, Rotation::cur());
 
-            vec![(q_lookup * word, table)]
+            vec![(q_lookup * word, config.table_idx)]
         });
 
         // Lookup used in range checks up to S bits, where S < K.
         meta.lookup(|meta| {
             let q_lookup_short = meta.query_selector(config.q_lookup_short);
             let word = meta.query_advice(config.running_sum, Rotation::cur());
-            let table = meta.query_fixed(config.table_idx, Rotation::cur());
 
-            vec![(q_lookup_short * word, table)]
+            vec![(q_lookup_short * word, config.table_idx)]
         });
 
         // For short lookups, check that the word has been shifted by the correct number of bits.

@@ -54,9 +54,7 @@ impl Config {
             // We conditionally negate this result using `y_p = y_a * s`, where `s` is the sign.
 
             // Check that the final `y_p = y_a` or `y_p = -y_a`
-            let y_check = q_mul_fixed_short.clone()
-                * (y_p.clone() - y_a.clone())
-                * (y_p.clone() + y_a.clone());
+            let y_check = (y_p.clone() - y_a.clone()) * (y_p.clone() + y_a.clone());
 
             // Check that the correct sign is witnessed s.t. sign * y_p = y_a
             let negation_check = sign * y_p - y_a;

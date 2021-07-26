@@ -654,7 +654,7 @@ mod tests {
 
         let circuit = MyCircuit {};
         halo2::dev::CircuitLayout::default()
-            .render(&circuit, &root)
+            .render(11, &circuit, &root)
             .unwrap();
     }
 }

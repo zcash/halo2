@@ -1033,7 +1033,7 @@ mod tests {
         halo2::dev::CircuitLayout::default()
             .show_labels(false)
             .view_height(0..(1 << 11))
-            .render(&circuit, &root)
+            .render(K as usize, &circuit, &root)
             .unwrap();
     }
 }

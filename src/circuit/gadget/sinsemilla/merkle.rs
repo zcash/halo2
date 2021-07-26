@@ -343,7 +343,7 @@ pub mod tests {
         let circuit = MyCircuit::default();
         halo2::dev::CircuitLayout::default()
             .show_labels(false)
-            .render(&circuit, &root)
+            .render(11, &circuit, &root)
             .unwrap();
     }
 }
