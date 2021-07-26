@@ -148,17 +148,17 @@ $\NullifierKey$).
 
 ### $\AuthSignPublic$ with $b_1 = 1 \implies \AuthSignPublic \geq 2^{254}$
 
-In these cases, we check that $\textsf{ak}_{0..=253} < t_\mathbb{P} < 2^{126}$:
+In these cases, we check that $\textsf{ak}_{0..=253} < t_\mathbb{P}$:
 
 1. $b_1 = 1 \implies b_0 = 0.$
 
-   Since $b_1 = 1 \implies \AuthSignPublic_{0..=253} < 2^{126},$ we know that
+   Since $b_1 = 1 \implies \AuthSignPublic_{0..=253} < t_\mathbb{P} < 2^{126},$ we know that
    $\AuthSignPublic_{126..=253} = 0,$ and in particular
    $$b_0 := \AuthSignPublic_{250..=253} = 0.$$
 
-2. $b_1 = 1 \implies 0 \leq a < 2^{126}.$
+2. $b_1 = 1 \implies 0 \leq a < t_\mathbb{P}.$
 
-   To check that $a < 2^{126}$, we use two constraints:
+   To check that $a < t_\mathbb{P}$, we use two constraints:
 
     a) $0 \leq a < 2^{130}$. This is expressed in the custom gate as
        $$b_1 \cdot z_{a,13} = 0,$$
@@ -183,15 +183,15 @@ $$
 
 ### $\NullifierKey$ with $d_1 = 1 \implies \NullifierKey \geq 2^{254}$
 
-In these cases, we check that $\textsf{nk}_{0..=253} < t_\mathbb{P} < 2^{126}$:
+In these cases, we check that $\textsf{nk}_{0..=253} < t_\mathbb{P}$:
 
 1. $d_1 = 1 \implies d_0 = 0.$
 
-   Since $d_1 = 1 \implies \NullifierKey_{0..=253} < 2^{126},$ we know that $\NullifierKey_{126..=253} = 0,$ and in particular $$d_0 := \NullifierKey_{245..=253} = 0.$$
+   Since $d_1 = 1 \implies \NullifierKey_{0..=253} < t_\mathbb{P} < 2^{126},$ we know that $\NullifierKey_{126..=253} = 0,$ and in particular $$d_0 := \NullifierKey_{245..=253} = 0.$$
 
-2. $d_1 = 1 \implies 0 \leq b_2 + 2^5 \cdot c < 2^{126}.$
+2. $d_1 = 1 \implies 0 \leq b_2 + 2^5 \cdot c < t_\mathbb{P}.$
 
-   To check that $0 \leq b_2 + 2^5 \cdot c < 2^{126}$, we use two constraints:
+   To check that $0 \leq b_2 + 2^5 \cdot c < t_\mathbb{P}$, we use two constraints:
 
     a) $0 \leq b_2 + 2^5 \cdot c < 2^{140}$. $b_2$ is already constrained individually to
        be a $5$-bit value. $z_{c,13}$ is the index-13 running sum output by

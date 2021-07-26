@@ -232,17 +232,17 @@ below are enforced if and only if the corresponding top bit is set to 1.
 
 ### $\mathsf{x(g_d)}$ with $b_1 = 1 \implies \mathsf{x(g_d)} \geq 2^{254}$
 
-In these cases, we check that $\mathsf{x(g_d)}_{0..=253} < t_\mathbb{P} < 2^{126}$:
+In these cases, we check that $\mathsf{x(g_d)}_{0..=253} < t_\mathbb{P}$:
 
 1. $b_1 = 1 \implies b_0 = 0.$
 
-   Since $b_1 = 1 \implies \mathsf{x(g_d)}_{0..=253} < 2^{126},$ we know that
+   Since $b_1 = 1 \implies \mathsf{x(g_d)}_{0..=253} < t_\mathbb{P} < 2^{126},$ we know that
    $\mathsf{x(g_d)}_{126..=253} = 0,$ and in particular
    $$b_0 := \mathsf{x(g_d)}_{250..=253} = 0.$$
 
-2. $b_1 = 1 \implies 0 \leq a < 2^{126}.$
+2. $b_1 = 1 \implies 0 \leq a < t_\mathbb{P}.$
 
-   To check that $a < 2^{126}$, we use two constraints:
+   To check that $a < t_\mathbb{P}$, we use two constraints:
 
     a) $0 \leq a < 2^{130}$. This is expressed in the custom gate as
        $$b_1 \cdot z_{a,13} = 0,$$
@@ -267,11 +267,11 @@ $$
 
 ### $\mathsf{x(pk_d)}$ with $d_0 = 1 \implies \mathsf{x(pk_d)} \geq 2^{254}$
 
-In these cases, we check that $\mathsf{x(pk_d)}_{0..=253} < t_\mathbb{P} < 2^{126}$:
+In these cases, we check that $\mathsf{x(pk_d)}_{0..=253} < t_\mathbb{P}$:
 
-1. $d_0 = 1 \implies 0 \leq b_3 + 2^{4} \cdot c < 2^{126}.$
+1. $d_0 = 1 \implies 0 \leq b_3 + 2^{4} \cdot c < t_\mathbb{P}.$
 
-   To check that $0 \leq b_3 + 2^{4} \cdot c < 2^{126},$ we use two constraints:
+   To check that $0 \leq b_3 + 2^{4} \cdot c < t_\mathbb{P},$ we use two constraints:
 
     a) $0 \leq b_3 + 2^{4} \cdot c < 2^{140}.$ $b_3$ is already constrained individually
        to be a $4$-bit value. $z_{c,13}$ is the index-13 running sum output by
@@ -296,11 +296,11 @@ $$
 
 ### $\rho$ with $g_0 = 1 \implies \rho \geq 2^{254}$
 
-In these cases, we check that $\rho_{0..=253} < t_\mathbb{P} < 2^{126}$:
+In these cases, we check that $\rho_{0..=253} < t_\mathbb{P}$:
 
-1. $g_0 = 1 \implies 0 \leq e_1 + 2^{4} \cdot f < 2^{126}.$
+1. $g_0 = 1 \implies 0 \leq e_1 + 2^{4} \cdot f < t_\mathbb{P}.$
 
-   To check that $0 \leq e_1 + 2^{4} \cdot f < 2^{126},$ we use two constraints:
+   To check that $0 \leq e_1 + 2^{4} \cdot f < t_\mathbb{P},$ we use two constraints:
 
     a) $0 \leq e_1 + 2^{4} \cdot f < 2^{140}.$ $e_1$ is already constrained individually
        to be a $4$-bit value. $z_{f,13}$ is the index-13 running sum output by
@@ -325,16 +325,16 @@ $$
 
 ### $\psi$ with $h_1 = 1 \implies \psi \geq 2^{254}$
 
-In these cases, we check that $\psi_{0..=253} < t_\mathbb{P} < 2^{126}$:
+In these cases, we check that $\psi_{0..=253} < t_\mathbb{P}$:
 
 1. $h_1 = 1 \implies h_0 = 0.$
 
-   Since $h_1 = 1 \implies \psi_{0..=253} < 2^{126},$ we know that $\psi_{126..=253} = 0,$
+   Since $h_1 = 1 \implies \psi_{0..=253} < t_\mathbb{P} < 2^{126},$ we know that $\psi_{126..=253} = 0,$
    and in particular $h_0 := \psi_{249..=253} = 0.$
 
-2. $h_1 = 1 \implies 0 \leq g_1 + 2^{9} \cdot g_2 < 2^{126}.$
+2. $h_1 = 1 \implies 0 \leq g_1 + 2^{9} \cdot g_2 < t_\mathbb{P}.$
 
-   To check that $0 \leq g_1 + 2^{9} \cdot g_2 < 2^{126},$ we use two constraints:
+   To check that $0 \leq g_1 + 2^{9} \cdot g_2 < t_\mathbb{P},$ we use two constraints:
 
     a) $0 \leq g_1 + 2^{9} \cdot g_2 < 2^{140}.$ $g_1$ is already constrained individually
        to be a $9$-bit value. $z_{g,13}$ is the index-13 running sum output by
