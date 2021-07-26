@@ -217,13 +217,13 @@ $$
 
 ## Region layout
 
-The constraints controlled by the $q_\CommitIvk$ selector are arranged across all 10
+The constraints controlled by the $q_\CommitIvk$ selector are arranged across 9
 advice columns, requiring two rows.
 
 $$
-\begin{array}{|c|c|c|c|c|c|c|c|c|c|c}
-    &          &    &           &                 &               &     &     &     &     & q_\CommitIvk \\\hline
-a   & b        & c  & d         & \AuthSignPublic & \NullifierKey & b_0 & b_1 & b_2 & d_0 & 0 \\\hline
-d_1 & z_{a,13} & a' & z_{a',13} & z_{c,13}        & {b_2}c'       & z_{{b_2}c',14}  & & & & 1 \\\hline
+\begin{array}{|c|c|c|c|c|c|c|c|c|c}
+                &   &   &     &     &     &          &         &                & q_\CommitIvk \\\hline
+\AuthSignPublic & a & b & b_0 & b_1 & b_2 & z_{a,13} & a'      & z_{a',13}      & 0 \\\hline
+\NullifierKey   & c & d & d_0 & d_1 &     & z_{c,13} & {b_2}c' & z_{{b_2}c',14} & 1 \\\hline
 \end{array}
 $$
