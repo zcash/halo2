@@ -121,7 +121,7 @@ $$
 
 where:
 - $\BoolCheck{x} = x \cdot (1 - x)$.
-- $\ShortLookupRangeCheck{}$ is a [short lookup range check](../lookup_range_check.md#short-range-check).
+- $\ShortLookupRangeCheck{}$ is a [short lookup range check](../decomposition.md#short-range-check).
 - $z_{d,1}$ is the index-1 running sum output of $\SinsemillaHash(d),$ constrained by the
   hash to be 50 bits.
 - $z_{g,1}$ is the index-1 running sum output of $\SinsemillaHash(g),$ constrained by the
@@ -183,6 +183,45 @@ $$
 2 & q_{\NoteCommit,1} \cdot (d_2 + d_3 \cdot 2^8 + e_0 \cdot 2^{58} - \mathsf{v}) = 0 \\\hline
 2 & q_{\NoteCommit,2} \cdot (e_1 + f \cdot 2^4 + g_0 \cdot 2^{254} - \rho) = 0 \\\hline
 2 & q_{\NoteCommit,2} \cdot (g_1 + g_2 \cdot 2^9 + h_0 \cdot 2^{249} + h_1 \cdot 2^{254} - \psi) = 0 \\\hline
+\end{array}
+$$
+
+
+Note that only the $ỹ$ LSB of the $y$-coordinates $\mathsf{y(g_d), y(pk_d)}$ was input to the hash, while the other bits of the $y$-coordinate were unused. However, we must still check that the witnessed $ỹ$ bit matches the original point's $y$-coordinate. The checks for $\mathsf{y(g_d), y(pk_d)}$ will follow the same format. For each $y$-coordinate, we witness:
+
+$$
+\begin{align}
+y &= \textsf{LSB} \bconcat k_0 \bconcat k_1 \bconcat k_2 \bconcat k_3\\
+  &= \textsf{LSB}
+      \bconcat \text{ (bits $1..=9$ of $y$) }
+      \bconcat \text{ (bits $10..=249$ of $y$) }
+      \bconcat \text{ (bits $250..=253$ of $y$) }
+      \bconcat \text{ (bit $254$ of $y$) },
+\end{align}
+$$
+
+where $\textsf{LSB}$ is $b_2$ for $\mathsf{y(g_d)}$, and $d_1$ for $\mathsf{y(pk_d)}$. Let $$j = \textsf{LSB} + 2 \cdot k_0 + 10 \cdot k_1.$$ We decompose $j$ to be $250$ bits using $25$ [ten-bit lookups](../decomposition.md#lookup-decomposition).
+
+Recall that $b_2 = ỹ(g_d)$ and $d_1 = ỹ(pk_d)$ were pieces input to the Sinsemilla hash and have already been boolean-constrained. To constrain the remaining chunks, we use the following constraints:
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+  & \ShortLookupRangeCheck{k_0, 9} \\\hline
+  & \ShortLookupRangeCheck{k_2, 4} \\\hline
+3 & q_{\NoteCommit,3} \cdot \BoolCheck{k_3} = 0 \\\hline
+  & k_1 := z_{j,1} \\\hline
+\end{array}
+$$
+
+Then, to check that the decomposition was correct:
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+2 & q_{\NoteCommit,3} \cdot \left(j - (\textsf{LSB} + 2 \cdot k_0 + 10 \cdot k_1) \right) = 0 \\\hline
+2 & q_{\NoteCommit,3} \cdot \left(y - (j + 2^{250} \cdot k_2 + 2^{254} \cdot k_3) \right) = 0 \\\hline
 \end{array}
 $$
 
@@ -265,6 +304,41 @@ $$
 \end{array}
 $$
 
+### $\mathsf{y(g_d)}$ with $k_3 = 1 \implies \mathsf{y(g_d)} \geq 2^{254}$
+
+In these cases, we check that $\mathsf{y(g_d)}_{0..=253} < t_\mathbb{P}$:
+
+1. $k_3 = 1 \implies k_2 = 0.$
+
+   Since $k_3 = 1 \implies \mathsf{y(g_d)}_{0..=253} < t_\mathbb{P} < 2^{126},$ we know that
+   $\mathsf{y(g_d)}_{126..=253} = 0,$ and in particular
+   $$k_2 := \mathsf{y(g_d)}_{250..=253} = 0.$$
+
+2. $k_3 = 1 \implies 0 \leq j < t_\mathbb{P}.$
+
+   To check that $j < t_\mathbb{P}$, we use two constraints:
+
+    a) $0 \leq j < 2^{130}$. This is expressed in the custom gate as
+       $$k_3 \cdot z_{j,13} = 0,$$
+       where $z_{j,13}$ is the index-13 running sum output by the $10$-bit lookup decomposition of $j$.
+
+    b) $0 \leq j + 2^{130} - t_\mathbb{P} < 2^{130}$. To check this, we decompose
+       $j' = j + 2^{130} - t_\mathbb{P}$ into thirteen 10-bit words (little-endian) using
+       a running sum $z_{j'}$, looking up each word in a $10$-bit lookup table. We then
+       enforce in the custom gate that
+       $$k_3 \cdot z_{j',13} = 0.$$
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+3 & q_{\NoteCommit,3} \cdot k_3 \cdot k_2 = 0 \\\hline
+3 & q_{\NoteCommit,3} \cdot k_3 \cdot z_{j,13} = 0 \\\hline
+2 & q_{\NoteCommit,3} \cdot (j + 2^{130} - t_\mathbb{P} - j') = 0 \\\hline
+3 & q_{\NoteCommit,3} \cdot k_3 \cdot z_{j',13} = 0 \\\hline
+\end{array}
+$$
+
 ### $\mathsf{x(pk_d)}$ with $d_0 = 1 \implies \mathsf{x(pk_d)} \geq 2^{254}$
 
 In these cases, we check that $\mathsf{x(pk_d)}_{0..=253} < t_\mathbb{P}$:
@@ -293,6 +367,9 @@ $$
 3 & q_{\NoteCommit,2} \cdot d_0 \cdot z_{{b_3}c',14} = 0 \\\hline
 \end{array}
 $$
+
+### $\mathsf{y(pk_d)}$
+This can be checked in exactly the same way as $\mathsf{y(g_d)}$, with $b_2$ replaced by $d_1$.
 
 ### $\rho$ with $g_0 = 1 \implies \rho \geq 2^{254}$
 

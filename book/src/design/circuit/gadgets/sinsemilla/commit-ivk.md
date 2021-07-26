@@ -71,7 +71,7 @@ $$
 $$
 
 where $\BoolCheck{x} = x \cdot (1 - x)$ and $\ShortLookupRangeCheck{}$ is a
-[short lookup range check](../lookup_range_check.md#short-range-check).
+[short lookup range check](../decomposition.md#short-range-check).
 
 ## Decomposition constraints
 

@@ -25,5 +25,4 @@
         - [MerkleCRH](design/circuit/gadgets/sinsemilla/merkle-crh.md)
         - [CommitIvk](design/circuit/gadgets/sinsemilla/commit-ivk.md)
         - [NoteCommit](design/circuit/gadgets/sinsemilla/note-commit.md)
-      - [Lookup Range Check](design/circuit/gadgets/lookup_range_check.md)
       - [Decomposition](design/circuit/gadgets/decomposition.md)
