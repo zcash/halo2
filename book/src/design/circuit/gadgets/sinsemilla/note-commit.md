@@ -339,13 +339,13 @@ In these cases, we check that $\psi_{0..=253} < t_\mathbb{P} < 2^{126}$:
     a) $0 \leq g_1 + 2^{9} \cdot g_2 < 2^{140}.$ $g_1$ is already constrained individually
        to be a $9$-bit value. $z_{g,13}$ is the index-13 running sum output by
        $\SinsemillaHash(g).$ By constraining $$h_1 \cdot z_{g,13} = 0,$$ we constrain
-       $g_1 + 2^9 \cdot g_2 < 2^{129} < 2^{140}.$
+       $g_1 + 2^9 \cdot g_2 < 2^{129} < 2^{130}.$
 
-    b) $0 \leq g_1 + 2^{9} \cdot g_2 + 2^{140} - t_\mathbb{P} < 2^{140}$. To check this,
-       we decompose ${g_1}{g_2}' = g_1 + 2^{9} \cdot g_2 + 2^{140} - t_\mathbb{P}$ into
-       fourteen 10-bit words (little-endian) using a running sum $z_{{g_1}{g_2}'}$,
+    b) $0 \leq g_1 + 2^{9} \cdot g_2 + 2^{130} - t_\mathbb{P} < 2^{130}$. To check this,
+       we decompose ${g_1}{g_2}' = g_1 + 2^{9} \cdot g_2 + 2^{130} - t_\mathbb{P}$ into
+       thirteen 10-bit words (little-endian) using a running sum $z_{{g_1}{g_2}'}$,
        looking up each word in a $10$-bit lookup table. We then enforce in the custom gate
-       that $$h_1 \cdot z_{{g_1}{g_2}',14} = 0.$$
+       that $$h_1 \cdot z_{{g_1}{g_2}',13} = 0.$$
 
 $$
 \begin{array}{|c|l|}
@@ -353,7 +353,7 @@ $$
 \text{Degree} & \text{Constraint} \\\hline
 3 & q_{\NoteCommit,2} \cdot h_1 \cdot h_0 = 0 \\\hline
 3 & q_{\NoteCommit,2} \cdot h_1 \cdot z_{g,13} = 0 \\\hline
-2 & q_{\NoteCommit,1} \cdot (g_1 + g_2 \cdot 2^9 + 2^{140} - t_\mathbb{P} - {g_1}{g_2}') = 0 \\\hline
+2 & q_{\NoteCommit,1} \cdot (g_1 + g_2 \cdot 2^9 + 2^{130} - t_\mathbb{P} - {g_1}{g_2}') = 0 \\\hline
 3 & q_{\NoteCommit,2} \cdot g_0 \cdot z_{{g_1}{g_2}',14} = 0 \\\hline
 \end{array}
 $$
