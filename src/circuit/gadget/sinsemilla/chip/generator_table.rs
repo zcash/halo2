@@ -1,7 +1,7 @@
 use crate::primitives::sinsemilla::{self, sinsemilla_s_generators, S_PERSONALIZATION};
 use halo2::{
     circuit::Layouter,
-    plonk::{Column, ConstraintSystem, Error, Expression, Fixed},
+    plonk::{ConstraintSystem, Error, Expression, TableColumn},
     poly::Rotation,
 };
 
@@ -15,9 +15,9 @@ use group::Curve;
 /// Table containing independent generators S[0..2^k]
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub struct GeneratorTableConfig {
-    pub table_idx: Column<Fixed>,
-    pub table_x: Column<Fixed>,
-    pub table_y: Column<Fixed>,
+    pub table_idx: TableColumn,
+    pub table_x: TableColumn,
+    pub table_y: TableColumn,
 }
 
 impl GeneratorTableConfig {
@@ -84,15 +84,15 @@ impl GeneratorTableConfig {
     }
 
     pub fn load(&self, layouter: &mut impl Layouter<pallas::Base>) -> Result<(), Error> {
-        layouter.assign_region(
+        layouter.assign_table(
             || "generator_table",
-            |mut gate| {
+            |mut table| {
                 // We generate the row values lazily (we only need them during keygen).
                 let mut rows = sinsemilla_s_generators();
 
                 for index in 0..(1 << sinsemilla::K) {
                     let mut row = None;
-                    gate.assign_fixed(
+                    table.assign_cell(
                         || "table_idx",
                         self.table_idx,
                         index,
@@ -101,13 +101,13 @@ impl GeneratorTableConfig {
                             Ok(pallas::Base::from_u64(index as u64))
                         },
                     )?;
-                    gate.assign_fixed(
+                    table.assign_cell(
                         || "table_x",
                         self.table_x,
                         index,
                         || row.map(|(x, _)| x).ok_or(Error::SynthesisError),
                     )?;
-                    gate.assign_fixed(
+                    table.assign_cell(
                         || "table_y",
                         self.table_y,
                         index,

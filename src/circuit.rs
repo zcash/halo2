@@ -195,8 +195,12 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         });
 
         // Fixed columns for the Sinsemilla generator lookup table
-        let table_idx = meta.fixed_column();
-        let lookup = (table_idx, meta.fixed_column(), meta.fixed_column());
+        let table_idx = meta.lookup_table_column();
+        let lookup = (
+            table_idx,
+            meta.lookup_table_column(),
+            meta.lookup_table_column(),
+        );
 
         // Instance column used for public inputs
         let primary = meta.instance_column();

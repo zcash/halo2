@@ -16,7 +16,10 @@ use crate::{
 use halo2::{
     arithmetic::{CurveAffine, FieldExt},
     circuit::{Chip, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, VirtualCells},
+    plonk::{
+        Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, TableColumn,
+        VirtualCells,
+    },
     poly::Rotation,
 };
 use pasta_curves::pallas;
@@ -114,7 +117,7 @@ impl SinsemillaChip {
         advices: [Column<Advice>; 5],
         witness_pieces: Column<Advice>,
         fixed_y_q: Column<Fixed>,
-        lookup: (Column<Fixed>, Column<Fixed>, Column<Fixed>),
+        lookup: (TableColumn, TableColumn, TableColumn),
         range_check: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     ) -> <Self as Chip<pallas::Base>>::Config {
         // Enable equality on all advice columns

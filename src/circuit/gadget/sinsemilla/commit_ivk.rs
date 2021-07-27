@@ -698,8 +698,12 @@ mod tests {
                     meta.enable_equality((*advice).into());
                 }
 
-                let table_idx = meta.fixed_column();
-                let lookup = (table_idx, meta.fixed_column(), meta.fixed_column());
+                let table_idx = meta.lookup_table_column();
+                let lookup = (
+                    table_idx,
+                    meta.lookup_table_column(),
+                    meta.lookup_table_column(),
+                );
                 let lagrange_coeffs = [
                     meta.fixed_column(),
                     meta.fixed_column(),

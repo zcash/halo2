@@ -4,7 +4,7 @@
 use crate::spec::lebs2ip;
 use halo2::{
     circuit::{Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Error, Selector, TableColumn},
     poly::Rotation,
 };
 use std::{convert::TryInto, marker::PhantomData};
@@ -29,7 +29,7 @@ pub struct LookupRangeCheckConfig<F: FieldExt + PrimeFieldBits, const K: usize> 
     pub q_running: Selector,
     pub q_bitshift: Selector,
     pub running_sum: Column<Advice>,
-    table_idx: Column<Fixed>,
+    table_idx: TableColumn,
     _marker: PhantomData<F>,
 }
 
@@ -48,7 +48,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     pub fn configure(
         meta: &mut ConstraintSystem<F>,
         running_sum: Column<Advice>,
-        table_idx: Column<Fixed>,
+        table_idx: TableColumn,
     ) -> Self {
         meta.enable_equality(running_sum.into());
 
@@ -119,12 +119,12 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     // for now, since the Sinsemilla chip provides a pre-loaded table in the
     // Orchard context.
     pub fn load(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error> {
-        layouter.assign_region(
+        layouter.assign_table(
             || "table_idx",
-            |mut gate| {
+            |mut table| {
                 // We generate the row values lazily (we only need them during keygen).
                 for index in 0..(1 << K) {
-                    gate.assign_fixed(
+                    table.assign_cell(
                         || "table_idx",
                         self.table_idx,
                         index,
@@ -402,7 +402,7 @@ mod tests {
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let running_sum = meta.advice_column();
-                let table_idx = meta.fixed_column();
+                let table_idx = meta.lookup_table_column();
                 let constants = meta.fixed_column();
                 meta.enable_constant(constants);
 
@@ -507,7 +507,7 @@ mod tests {
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let running_sum = meta.advice_column();
-                let table_idx = meta.fixed_column();
+                let table_idx = meta.lookup_table_column();
                 let constants = meta.fixed_column();
                 meta.enable_constant(constants);
 
