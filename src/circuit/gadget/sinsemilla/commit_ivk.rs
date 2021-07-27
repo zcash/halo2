@@ -641,11 +641,13 @@ mod tests {
             ecc::chip::{EccChip, EccConfig},
             sinsemilla::chip::SinsemillaChip,
             utilities::{
-                lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions,
+                lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions, Var,
             },
         },
-        constants::T_Q,
+        constants::{COMMIT_IVK_PERSONALIZATION, L_ORCHARD_BASE, T_Q},
+        primitives::sinsemilla::CommitDomain,
     };
+    use ff::PrimeFieldBits;
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
@@ -759,16 +761,45 @@ mod tests {
                 )?;
 
                 // Use a random scalar for rivk
-                let rivk = Some(pallas::Scalar::rand());
+                let rivk = pallas::Scalar::rand();
 
-                let _ivk = commit_ivk_config.assign_region(
+                let ivk = commit_ivk_config.assign_region(
                     sinsemilla_chip,
                     ecc_chip,
                     layouter.namespace(|| "CommitIvk"),
                     ak,
                     nk,
-                    rivk,
+                    Some(rivk),
                 )?;
+
+                let expected_ivk = {
+                    let domain = CommitDomain::new(COMMIT_IVK_PERSONALIZATION);
+                    // Hash ak || nk
+                    domain
+                        .short_commit(
+                            std::iter::empty()
+                                .chain(
+                                    self.ak
+                                        .unwrap()
+                                        .to_le_bits()
+                                        .iter()
+                                        .by_val()
+                                        .take(L_ORCHARD_BASE),
+                                )
+                                .chain(
+                                    self.nk
+                                        .unwrap()
+                                        .to_le_bits()
+                                        .iter()
+                                        .by_val()
+                                        .take(L_ORCHARD_BASE),
+                                ),
+                            &rivk,
+                        )
+                        .unwrap()
+                };
+
+                assert_eq!(expected_ivk, ivk.inner().value().unwrap());
 
                 Ok(())
             }
