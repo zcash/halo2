@@ -292,6 +292,8 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
         N: Fn() -> NR,
         NR: Into<String>,
     {
+        // Maintenance hazard: there is near-duplicate code in `SingleChipLayouter::assign_table`.
+
         // Assign table cells.
         self.plan.cs.enter_region(name);
         let mut table = SimpleTableLayouter::new(self.plan.cs, &self.plan.table_columns);

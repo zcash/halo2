@@ -152,6 +152,7 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
         N: Fn() -> NR,
         NR: Into<String>,
     {
+        // Maintenance hazard: there is near-duplicate code in `v1::AssignmentPass::assign_table`.
         // Assign table cells.
         self.cs.enter_region(name);
         let mut table = SimpleTableLayouter::new(self.cs, &self.table_columns);
@@ -433,7 +434,10 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
         )?;
 
         match (entry.0.is_none(), offset) {
+            // Use the value at offset 0 as the default value for this table column.
             (true, 0) => entry.0 = Some(value),
+            // Since there is already an existing default value for this table column,
+            // the caller should not be attempting to assign another value at offset 0.
             (false, 0) => return Err(Error::SynthesisError), // TODO better error
             _ => (),
         }
