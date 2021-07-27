@@ -441,10 +441,10 @@ arranged in a single region across 10 advice columns, requiring four rows.
 
 $$
 \begin{array}{|c|c|c|c|c|c|c|c|c|c|cc}
-    &         &         &             &   &     &     &     &   &     & q_{\NoteCommit,1} & q_{\NoteCommit,2} \\\hline
-a'  & {b_3}c' & {e_1}f' & {g_1}{g_2}' &  a  &  b  & b_2 & b_3 &  c  &    d    & 0 & 0 \\\hline
-d_1 &   d_2   & z_{d,1} &      e      & e_0 & e_1 &  f  &  g  & g_1 &    h    & 1 & 0 \\\hline
-h_0 &   h_1   & x(g_d)  &   x(pk_d)   &  v  & b_0 & b_1 & d_0 & g_0 & z_{g,1} & 0 & 1 \\\hline
-z_{a',13} & z_{{b_3}c',14} & z_{{e_1}f',14} & z_{{g_1}{g_2}',13} & z_{a,13} & z_{c,13} & z_{f,13} & z_{g,13} & \psi & \rho & 0 & 0 \\\hline
+          &                &                &        &          &                   &          &                &          &           & q_{\NoteCommit,1} & q_{\NoteCommit,2} \\\hline
+    b     &        d       &        e       &   g    &     h    &        d_1        &  x(pk_d) &      b_3       &     a'   &   b_2     &        0          &         0         \\\hline
+  {e_1}f' &  {g_1}{g_2}'   &        v       &  d_2   &  z_{d,1} &        e_0        &{b_3}{c}' &       c        &     a    &  x(g_d)   &        1          &         0         \\\hline
+   e_1    &        f       &       g_0      &  g_1   &  z_{g,1} &        h_0        &    h_1   &      d_0       &    b_0   &   b_1     &        0          &         1         \\\hline
+  \rho    &    z_{f,13}    & z_{{e_1}f',14} &  \psi  & z_{g,13} &z_{{g_1}{g_2}',13} & z_{c,13} & z_{{b_3}c',14} & z_{a,13} & z_{a',13} &        0          &         0         \\\hline
 \end{array}
 $$
