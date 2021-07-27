@@ -29,7 +29,8 @@ The region layout for the lookup decomposition uses a single advice column $z$, 
 $$
 \begin{array}{|c|c|c|}
 \hline
-    z    & q_{lookup} & q_{running} \\\hline
+    z    & q_\mathit{lookup} & q_\mathit{running} \\\hline
+\hline
   z_0    &     1      &       1     \\\hline
   z_1    &     1      &       1     \\\hline
 \vdots   &   \vdots   &     \vdots  \\\hline
@@ -47,26 +48,29 @@ The short variant of the lookup decomposition introduces a $q_{bitshift}$ select
 $$
 \begin{array}{|c|c|c|c|}
 \hline
-\textsf{word} & q_{lookup} & q_{running} & q_{bitshift} \\\hline
+\textsf{word} & q_\mathit{lookup} & q_\mathit{running} & q_\mathit{bitshift} \\\hline
+\hline
 \alpha        &     1      &      0      &       0      \\\hline
 \alpha'       &     1      &      0      &       1      \\\hline
 2^{K-n}       &     0      &      0      &       0      \\\hline
 \end{array}
 $$
 
-where $\alpha' = \alpha \cdot 2^{K - n}.$ Note that $2^{K-n}$ is assigned to a fixed column at keygen, and copied in at proving time. This is used in the gate enabled by the $q_{bitshift}$ selector to check that $\alpha$ was shifted correctly:
+where $\alpha' = \alpha \cdot 2^{K - n}.$ Note that $2^{K-n}$ is assigned to a fixed column at keygen, and copied in at proving time. This is used in the gate enabled by the $q_\mathit{bitshift}$ selector to check that $\alpha$ was shifted correctly:
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-       2      & q_{bitshift} \cdot (\alpha' - (\alpha \cdot 2^{K - n})) \\\hline
+       2      & q_\mathit{bitshift} \cdot (\alpha' - (\alpha \cdot 2^{K - n})) \\\hline
 \end{array}
 $$
 
 ### Combined lookup expression
-Since the lookup decomposition and its short variant both make use of the same lookup table, we can combine their lookup input expressions into a single one:
+Since the lookup decomposition and its short variant both make use of the same lookup table, we combine their lookup input expressions into a single one:
 
-$$q_{lookup} \cdot \left(q_{running} \cdot (z_i - 2^K \cdot z_{i+1}) + (1 - q_{running}) \cdot \textsf{word} \right).$$
+$$q_\mathit{lookup} \cdot \left(q_\mathit{running} \cdot (z_i - 2^K \cdot z_{i+1}) + (1 - q_\mathit{running}) \cdot \textsf{word} \right)$$
+
+where $z_i$ and $\textsf{word}$ are the same cell (but distinguished here for clarity of usage).
 
 ## Short range decomposition
-For a short range (for instance, $2^K \leq 8$), we can range-constrain each word using a degree-$2^K$ polynomial constraint instead of a lookup: $$\texttt{range\_check(word, range)} = \texttt{word} \cdot (1 - \texttt{word}) \cdots (\texttt{range} - 1 - \texttt{word}).$$
+For a short range (for instance, $[0, m)$ where $m \leq 8$), we can range-constrain each word using a degree-$m$ polynomial constraint instead of a lookup: $$\texttt{range\_check(word, range)} = \texttt{word} \cdot (1 - \texttt{word}) \cdots (\texttt{range} - 1 - \texttt{word}).$$
