@@ -3,7 +3,7 @@ use halo2::{
     circuit::{Cell, Layouter, Region, SimpleFloorPlanner},
     dev::CircuitLayout,
     pasta::Fp,
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed},
+    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed, TableColumn},
     poly::Rotation,
 };
 use plotters::prelude::*;
@@ -27,7 +27,7 @@ fn main() {
         sb: Column<Fixed>,
         sc: Column<Fixed>,
         sm: Column<Fixed>,
-        sl: Column<Fixed>,
+        sl: TableColumn,
     }
 
     trait StandardCs<FF: FieldExt> {
@@ -171,7 +171,7 @@ fn main() {
             layouter: &mut impl Layouter<FF>,
             values: &[FF],
         ) -> Result<(), Error> {
-            layouter.assign_region(
+            layouter.assign_table(
                 || "",
                 |mut region| {
                     for (index, &value) in values.iter().enumerate() {
@@ -211,7 +211,7 @@ fn main() {
             let sa = meta.fixed_column();
             let sb = meta.fixed_column();
             let sc = meta.fixed_column();
-            let sl = meta.fixed_column();
+            let sl = meta.lookup_table_column();
 
             /*
              *   A         B      ...  sl

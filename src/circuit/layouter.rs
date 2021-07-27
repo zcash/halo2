@@ -7,8 +7,7 @@ use std::fmt;
 use ff::Field;
 
 use super::{Cell, RegionIndex};
-use crate::plonk::Assigned;
-use crate::plonk::{Advice, Any, Column, Error, Fixed, Instance, Selector};
+use crate::plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector, TableColumn};
 
 /// Helper trait for implementing a custom [`Layouter`].
 ///
@@ -115,7 +114,7 @@ pub trait TableLayouter<F: Field>: fmt::Debug {
     fn assign_fixed<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
-        column: Column<Fixed>,
+        column: TableColumn,
         offset: usize,
         to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<(), Error>;

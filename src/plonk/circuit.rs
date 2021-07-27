@@ -245,6 +245,34 @@ impl Selector {
     }
 }
 
+/// A fixed column of a lookup table.
+///
+/// A lookup table can be loaded into this column via [`Layouter::assign_table`]. Columns
+/// can currently only contain a single table, but they may be used in multiple lookup
+/// arguments via [`ConstraintSystem::lookup`].
+///
+/// Lookup table columns are always "encumbered" by the lookup arguments they are used in;
+/// they cannot simultaneously be used as general fixed columns.
+///
+/// [`Layouter::assign_table`]: crate::circuit::Layouter::assign_table
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub struct TableColumn {
+    /// The fixed column that this table column is stored in.
+    ///
+    /// # Security
+    ///
+    /// This inner column MUST NOT be exposed in the public API, or else chip developers
+    /// can load lookup tables into their circuits without default-value-filling the
+    /// columns, which can cause soundness bugs.
+    inner: Column<Fixed>,
+}
+
+impl TableColumn {
+    pub(crate) fn inner(&self) -> Column<Fixed> {
+        self.inner
+    }
+}
+
 /// A value assigned to a cell within a circuit.
 ///
 /// Stored as a fraction, so the backend can use batch inversion.
@@ -994,13 +1022,13 @@ impl<F: Field> ConstraintSystem<F> {
         self.permutation.add_column(column);
     }
 
-    /// Add a lookup argument for some input expressions and table expressions.
+    /// Add a lookup argument for some input expressions and table columns.
     ///
-    /// `table_map` returns a map between input expressions and the table expressions
+    /// `table_map` returns a map between input expressions and the table columns
     /// they need to match.
     pub fn lookup(
         &mut self,
-        table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, Column<Fixed>)>,
+        table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, TableColumn)>,
     ) -> usize {
         let mut cells = VirtualCells::new(self);
         let table_map = table_map(&mut cells)
@@ -1010,7 +1038,7 @@ impl<F: Field> ConstraintSystem<F> {
                     panic!("expression containing simple selector supplied to lookup argument");
                 }
 
-                let table = cells.query_fixed(table, Rotation::cur());
+                let table = cells.query_fixed(table.inner(), Rotation::cur());
 
                 (input, table)
             })
@@ -1308,6 +1336,13 @@ impl<F: Field> ConstraintSystem<F> {
         let index = self.num_selectors;
         self.num_selectors += 1;
         Selector(index, false)
+    }
+
+    /// Allocates a new fixed column that can be used in a lookup table.
+    pub fn lookup_table_column(&mut self) -> TableColumn {
+        TableColumn {
+            inner: self.fixed_column(),
+        }
     }
 
     /// Allocate a new fixed column

@@ -12,7 +12,7 @@ use crate::{
     },
     plonk::{
         Advice, Any, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Instance,
-        Selector,
+        Selector, TableColumn,
     },
 };
 
@@ -45,7 +45,7 @@ pub struct SingleChipLayouter<'a, F: Field, CS: Assignment<F> + 'a> {
     /// Stores the first empty row for each column.
     columns: HashMap<RegionColumn, usize>,
     /// Stores the table fixed columns.
-    table_columns: Vec<Column<Fixed>>,
+    table_columns: Vec<TableColumn>,
     _marker: PhantomData<F>,
 }
 
@@ -193,7 +193,7 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
             // at least one cell in each column, and in that case we checked
             // that all cells up to first_unused were assigned.
             self.cs
-                .fill_from_row(col, first_unused, default_val.unwrap())?;
+                .fill_from_row(col.inner(), first_unused, default_val.unwrap())?;
         }
 
         Ok(result)
@@ -372,10 +372,9 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F>
 
 pub(crate) struct SimpleTableLayouter<'r, 'a, F: Field, CS: Assignment<F> + 'a> {
     cs: &'a mut CS,
-    used_columns: &'r [Column<Fixed>],
+    used_columns: &'r [TableColumn],
     // maps from a fixed column to a pair (default value, vector saying which rows are assigned)
-    pub(crate) default_and_assigned:
-        HashMap<Column<Fixed>, (Option<Option<Assigned<F>>>, Vec<bool>)>,
+    pub(crate) default_and_assigned: HashMap<TableColumn, (Option<Option<Assigned<F>>>, Vec<bool>)>,
 }
 
 impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for SimpleTableLayouter<'r, 'a, F, CS> {
@@ -387,7 +386,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for SimpleTableLayoute
 }
 
 impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> SimpleTableLayouter<'r, 'a, F, CS> {
-    pub(crate) fn new(cs: &'a mut CS, used_columns: &'r [Column<Fixed>]) -> Self {
+    pub(crate) fn new(cs: &'a mut CS, used_columns: &'r [TableColumn]) -> Self {
         SimpleTableLayouter {
             cs,
             used_columns,
@@ -402,7 +401,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
     fn assign_fixed<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
-        column: Column<Fixed>,
+        column: TableColumn,
         offset: usize,
         to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<(), Error> {
@@ -415,7 +414,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
         let mut value = None;
         self.cs.assign_fixed(
             annotation,
-            column,
+            column.inner(),
             offset, // tables are always assigned starting at row 0
             || {
                 let res = to();

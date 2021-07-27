@@ -10,7 +10,7 @@ use crate::{
     },
     plonk::{
         Advice, Any, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Instance,
-        Selector,
+        Selector, TableColumn,
     },
 };
 
@@ -34,7 +34,7 @@ struct V1Plan<'a, F: Field, CS: Assignment<F> + 'a> {
     /// Stores the constants to be assigned, and the cells to which they are copied.
     constants: Vec<(Assigned<F>, Cell)>,
     /// Stores the table fixed columns.
-    table_columns: Vec<Column<Fixed>>,
+    table_columns: Vec<TableColumn>,
 }
 
 impl<'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for V1Plan<'a, F, CS> {
@@ -334,7 +334,7 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
             // that all cells up to first_unused were assigned.
             self.plan
                 .cs
-                .fill_from_row(col, first_unused, default_val.unwrap())?;
+                .fill_from_row(col.inner(), first_unused, default_val.unwrap())?;
         }
 
         Ok(result)

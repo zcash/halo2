@@ -7,7 +7,7 @@ use halo2::dev::MockProver;
 use halo2::pasta::{Eq, EqAffine, Fp};
 use halo2::plonk::{
     create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column, ConstraintSystem,
-    Error, Fixed, VerifyingKey,
+    Error, Fixed, TableColumn, VerifyingKey,
 };
 use halo2::poly::{commitment::Params, Rotation};
 use halo2::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
@@ -37,7 +37,7 @@ fn plonk_api() {
         sc: Column<Fixed>,
         sm: Column<Fixed>,
         sp: Column<Fixed>,
-        sl: Column<Fixed>,
+        sl: TableColumn,
     }
 
     trait StandardCs<FF: FieldExt> {
@@ -270,7 +270,7 @@ fn plonk_api() {
             let sb = meta.fixed_column();
             let sc = meta.fixed_column();
             let sp = meta.fixed_column();
-            let sl = meta.fixed_column();
+            let sl = meta.lookup_table_column();
 
             /*
              *   A         B      ...  sl
@@ -332,7 +332,6 @@ fn plonk_api() {
             meta.enable_equality(sb.into());
             meta.enable_equality(sc.into());
             meta.enable_equality(sp.into());
-            meta.enable_equality(sl.into());
 
             PlonkConfig {
                 a,

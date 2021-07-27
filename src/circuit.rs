@@ -6,7 +6,7 @@ use ff::Field;
 
 use crate::{
     arithmetic::FieldExt,
-    plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector},
+    plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector, TableColumn},
 };
 
 pub mod floor_planner;
@@ -245,9 +245,6 @@ impl<'r, F: Field> Region<'r, F> {
 }
 
 /// A lookup table in the circuit.
-///
-/// TODO: Add wrapper type to `ConstraintSystem` to allow us to only deal with lookup
-/// columns here.
 #[derive(Debug)]
 pub struct Table<'r, F: Field> {
     table: &'r mut dyn layouter::TableLayouter<F>,
@@ -266,7 +263,7 @@ impl<'r, F: Field> Table<'r, F> {
     pub fn assign_fixed<'v, V, VR, A, AR>(
         &'v mut self,
         annotation: A,
-        column: Column<Fixed>,
+        column: TableColumn,
         offset: usize,
         mut to: V,
     ) -> Result<(), Error>
