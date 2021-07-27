@@ -187,11 +187,11 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let q_add = meta.selector();
         meta.create_gate("poseidon_hash(nk, rho_old) + psi_old", |meta| {
             let q_add = meta.query_selector(q_add);
-            let sum = meta.query_advice(advices[0], Rotation::cur());
-            let nk_rho_old = meta.query_advice(advices[1], Rotation::cur());
-            let psi_old = meta.query_advice(advices[2], Rotation::cur());
+            let sum = meta.query_advice(advices[6], Rotation::cur());
+            let hash_old = meta.query_advice(advices[7], Rotation::cur());
+            let psi_old = meta.query_advice(advices[8], Rotation::cur());
 
-            vec![q_add * (nk_rho_old + psi_old - sum)]
+            vec![q_add * (hash_old + psi_old - sum)]
         });
 
         // Fixed columns for the Sinsemilla generator lookup table
@@ -329,7 +329,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let ecc_chip = config.ecc_chip();
 
         // Witness private inputs that are used across multiple checks.
-        let (rho_old, psi_old, cm_old, g_d_old, ak, nk, v_old, v_new) = {
+        let (psi_old, rho_old, cm_old, g_d_old, ak, nk, v_old, v_new) = {
             // Witness psi_old
             let psi_old = self.load_private(
                 layouter.namespace(|| "witness psi_old"),
@@ -346,14 +346,14 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
             // Witness cm_old
             let cm_old = Point::new(
-                config.ecc_chip(),
+                ecc_chip.clone(),
                 layouter.namespace(|| "cm_old"),
                 self.cm_old.as_ref().map(|cm| cm.inner().to_affine()),
             )?;
 
             // Witness g_d_old
             let g_d_old = Point::new(
-                config.ecc_chip(),
+                ecc_chip.clone(),
                 layouter.namespace(|| "gd_old"),
                 self.g_d_old.as_ref().map(|gd| gd.to_affine()),
             )?;
@@ -389,7 +389,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                     .map(|v_new| pallas::Base::from_u64(v_new.inner())),
             )?;
 
-            (rho_old, psi_old, cm_old, g_d_old, ak, nk, v_old, v_new)
+            (psi_old, rho_old, cm_old, g_d_old, ak, nk, v_old, v_new)
         };
 
         // Merkle path validity check.
@@ -475,8 +475,8 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
         // Nullifier integrity
         let nf_old = {
-            // nk_rho_old = poseidon_hash(nk, rho_old)
-            let nk_rho_old = {
+            // hash_old = poseidon_hash(nk, rho_old)
+            let hash_old = {
                 let message = [nk, rho_old];
 
                 let poseidon_message = layouter.assign_region(
@@ -523,26 +523,26 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
                     copy(
                         &mut region,
-                        || "copy nk_rho_old",
-                        config.advices[1],
+                        || "copy hash_old",
+                        config.advices[7],
                         0,
-                        &nk_rho_old,
+                        &hash_old,
                     )?;
                     copy(
                         &mut region,
                         || "copy psi_old",
-                        config.advices[2],
+                        config.advices[8],
                         0,
                         &psi_old,
                     )?;
 
-                    let scalar_val = nk_rho_old
+                    let scalar_val = hash_old
                         .value()
                         .zip(psi_old.value())
-                        .map(|(nk_rho_old, psi_old)| nk_rho_old + psi_old);
+                        .map(|(hash_old, psi_old)| hash_old + psi_old);
                     let cell = region.assign_advice(
                         || "poseidon_hash(nk, rho_old) + psi_old",
-                        config.advices[0],
+                        config.advices[6],
                         0,
                         || scalar_val.ok_or(plonk::Error::SynthesisError),
                     )?;
@@ -613,8 +613,6 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 g_d_old.mul(layouter.namespace(|| "[ivk] g_d_old"), ivk.inner())?;
 
             // Constrain derived pk_d_old to equal witnessed pk_d_old
-            // This addresses the case where ivk = ⊥ , since ⊥ maps to 0 and variable-base
-            // scalar multiplication maps [0]B to (0, 0).
             let pk_d_old = Point::new(
                 ecc_chip.clone(),
                 layouter.namespace(|| "witness pk_d_old"),
