@@ -390,6 +390,7 @@ pub(crate) struct SimpleTableLayouter<'r, 'a, F: Field, CS: Assignment<F> + 'a> 
 impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for SimpleTableLayouter<'r, 'a, F, CS> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SimpleTableLayouter")
+            .field("used_columns", &self.used_columns)
             .field("default_and_assigned", &self.default_and_assigned)
             .finish()
     }
