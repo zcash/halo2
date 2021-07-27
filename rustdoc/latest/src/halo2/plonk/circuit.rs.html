@@ -1511,6 +1511,49 @@
 <span id="1496">1496</span>
 <span id="1497">1497</span>
 <span id="1498">1498</span>
+<span id="1499">1499</span>
+<span id="1500">1500</span>
+<span id="1501">1501</span>
+<span id="1502">1502</span>
+<span id="1503">1503</span>
+<span id="1504">1504</span>
+<span id="1505">1505</span>
+<span id="1506">1506</span>
+<span id="1507">1507</span>
+<span id="1508">1508</span>
+<span id="1509">1509</span>
+<span id="1510">1510</span>
+<span id="1511">1511</span>
+<span id="1512">1512</span>
+<span id="1513">1513</span>
+<span id="1514">1514</span>
+<span id="1515">1515</span>
+<span id="1516">1516</span>
+<span id="1517">1517</span>
+<span id="1518">1518</span>
+<span id="1519">1519</span>
+<span id="1520">1520</span>
+<span id="1521">1521</span>
+<span id="1522">1522</span>
+<span id="1523">1523</span>
+<span id="1524">1524</span>
+<span id="1525">1525</span>
+<span id="1526">1526</span>
+<span id="1527">1527</span>
+<span id="1528">1528</span>
+<span id="1529">1529</span>
+<span id="1530">1530</span>
+<span id="1531">1531</span>
+<span id="1532">1532</span>
+<span id="1533">1533</span>
+<span id="1534">1534</span>
+<span id="1535">1535</span>
+<span id="1536">1536</span>
+<span id="1537">1537</span>
+<span id="1538">1538</span>
+<span id="1539">1539</span>
+<span id="1540">1540</span>
+<span id="1541">1541</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">core::cmp::max</span>;
 <span class="kw">use</span> <span class="ident">core::ops</span>::{<span class="ident">Add</span>, <span class="ident">Mul</span>};
@@ -1759,6 +1802,34 @@
     }
 }
 
+<span class="doccomment">/// A fixed column of a lookup table.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// A lookup table can be loaded into this column via [`Layouter::assign_table`]. Columns</span>
+<span class="doccomment">/// can currently only contain a single table, but they may be used in multiple lookup</span>
+<span class="doccomment">/// arguments via [`ConstraintSystem::lookup`].</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Lookup table columns are always &quot;encumbered&quot; by the lookup arguments they are used in;</span>
+<span class="doccomment">/// they cannot simultaneously be used as general fixed columns.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// [`Layouter::assign_table`]: crate::circuit::Layouter::assign_table</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Hash</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TableColumn</span> {
+    <span class="doccomment">/// The fixed column that this table column is stored in.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # Security</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This inner column MUST NOT be exposed in the public API, or else chip developers</span>
+    <span class="doccomment">/// can load lookup tables into their circuits without default-value-filling the</span>
+    <span class="doccomment">/// columns, which can cause soundness bugs.</span>
+    <span class="ident">inner</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">TableColumn</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">inner</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">inner</span>
+    }
+}
+
 <span class="doccomment">/// A value assigned to a cell within a circuit.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Stored as a fraction, so the backend can use batch inversion.</span>
@@ -1990,6 +2061,14 @@
         <span class="ident">left_row</span>: <span class="ident">usize</span>,
         <span class="ident">right_column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>,
         <span class="ident">right_row</span>: <span class="ident">usize</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Fills a fixed `column` starting from the given `row` with value `to`.</span>
+    <span class="kw">fn</span> <span class="ident">fill_from_row</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
+        <span class="ident">row</span>: <span class="ident">usize</span>,
+        <span class="ident">to</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Creates a new (sub)namespace and enters into it.</span>
@@ -2525,13 +2604,13 @@
         <span class="self">self</span>.<span class="ident">permutation</span>.<span class="ident">add_column</span>(<span class="ident">column</span>);
     }
 
-    <span class="doccomment">/// Add a lookup argument for some input expressions and table expressions.</span>
+    <span class="doccomment">/// Add a lookup argument for some input expressions and table columns.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// `table_map` returns a map between input expressions and the table expressions</span>
+    <span class="doccomment">/// `table_map` returns a map between input expressions and the table columns</span>
     <span class="doccomment">/// they need to match.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lookup</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">table_map</span>: <span class="kw">impl</span> <span class="ident">FnOnce</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>)<span class="op">&gt;</span>,
+        <span class="ident">table_map</span>: <span class="kw">impl</span> <span class="ident">FnOnce</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">TableColumn</span>)<span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cells</span> <span class="op">=</span> <span class="ident">VirtualCells::new</span>(<span class="self">self</span>);
         <span class="kw">let</span> <span class="ident">table_map</span> <span class="op">=</span> <span class="ident">table_map</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cells</span>)
@@ -2541,7 +2620,7 @@
                     <span class="macro">panic!</span>(<span class="string">&quot;expression containing simple selector supplied to lookup argument&quot;</span>);
                 }
 
-                <span class="kw">let</span> <span class="ident">table</span> <span class="op">=</span> <span class="ident">cells</span>.<span class="ident">query_fixed</span>(<span class="ident">table</span>, <span class="ident">Rotation::cur</span>());
+                <span class="kw">let</span> <span class="ident">table</span> <span class="op">=</span> <span class="ident">cells</span>.<span class="ident">query_fixed</span>(<span class="ident">table</span>.<span class="ident">inner</span>(), <span class="ident">Rotation::cur</span>());
 
                 (<span class="ident">input</span>, <span class="ident">table</span>)
             })
@@ -2840,6 +2919,13 @@
         <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">num_selectors</span>;
         <span class="self">self</span>.<span class="ident">num_selectors</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
         <span class="ident">Selector</span>(<span class="ident">index</span>, <span class="bool-val">false</span>)
+    }
+
+    <span class="doccomment">/// Allocates a new fixed column that can be used in a lookup table.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lookup_table_column</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TableColumn</span> {
+        <span class="ident">TableColumn</span> {
+            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">fixed_column</span>(),
+        }
     }
 
     <span class="doccomment">/// Allocate a new fixed column</span>

@@ -283,6 +283,23 @@
 <span id="268">268</span>
 <span id="269">269</span>
 <span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Implementations of common circuit layouters.</span>
 
@@ -293,8 +310,7 @@
 <span class="kw">use</span> <span class="ident">ff::Field</span>;
 
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Cell</span>, <span class="ident">RegionIndex</span>};
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::plonk::Assigned</span>;
-<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Column</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>, <span class="ident">Instance</span>, <span class="ident">Selector</span>};
+<span class="kw">use</span> <span class="kw">crate</span><span class="ident">::plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Assigned</span>, <span class="ident">Column</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>, <span class="ident">Instance</span>, <span class="ident">Selector</span>, <span class="ident">TableColumn</span>};
 
 <span class="doccomment">/// Helper trait for implementing a custom [`Layouter`].</span>
 <span class="doccomment">///</span>
@@ -389,6 +405,24 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns an error if either of the cells is not within the given permutation.</span>
     <span class="kw">fn</span> <span class="ident">constrain_equal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">left</span>: <span class="ident">Cell</span>, <span class="ident">right</span>: <span class="ident">Cell</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
+}
+
+<span class="doccomment">/// Helper trait for implementing a custom [`Layouter`].</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This trait is used for implementing table assignments.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// [`Layouter`]: super::Layouter</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">TableLayouter</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>: <span class="ident">fmt::Debug</span> {
+    <span class="doccomment">/// Assigns a fixed value to a table cell.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Returns an error if the table cell has already been assigned to.</span>
+    <span class="kw">fn</span> <span class="ident">assign_cell</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">annotation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
+        <span class="ident">column</span>: <span class="ident">TableColumn</span>,
+        <span class="ident">offset</span>: <span class="ident">usize</span>,
+        <span class="ident">to</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> (<span class="kw">dyn</span> <span class="ident">FnMut</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
 }
 
 <span class="doccomment">/// The shape of a region. For a region at a certain index, we track</span>

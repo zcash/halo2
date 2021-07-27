@@ -483,6 +483,78 @@
 <span id="468">468</span>
 <span id="469">469</span>
 <span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">std::fmt</span>;
 
@@ -490,12 +562,13 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">circuit</span>::{
-        <span class="ident">layouter</span>::{<span class="ident">RegionColumn</span>, <span class="ident">RegionLayouter</span>, <span class="ident">RegionShape</span>},
-        <span class="ident">Cell</span>, <span class="ident">Layouter</span>, <span class="ident">Region</span>, <span class="ident">RegionIndex</span>, <span class="ident">RegionStart</span>,
+        <span class="ident">floor_planner::single_pass::SimpleTableLayouter</span>,
+        <span class="ident">layouter</span>::{<span class="ident">RegionColumn</span>, <span class="ident">RegionLayouter</span>, <span class="ident">RegionShape</span>, <span class="ident">TableLayouter</span>},
+        <span class="ident">Cell</span>, <span class="ident">Layouter</span>, <span class="ident">Region</span>, <span class="ident">RegionIndex</span>, <span class="ident">RegionStart</span>, <span class="ident">Table</span>,
     },
     <span class="ident">plonk</span>::{
         <span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Assigned</span>, <span class="ident">Assignment</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>, <span class="ident">FloorPlanner</span>, <span class="ident">Instance</span>,
-        <span class="ident">Selector</span>,
+        <span class="ident">Selector</span>, <span class="ident">TableColumn</span>,
     },
 };
 
@@ -518,6 +591,8 @@
     <span class="ident">regions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RegionStart</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Stores the constants to be assigned, and the cells to which they are copied.</span>
     <span class="ident">constants</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Cell</span>)<span class="op">&gt;</span>,
+    <span class="doccomment">/// Stores the table fixed columns.</span>
+    <span class="ident">table_columns</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TableColumn</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">fmt::Debug</span> <span class="kw">for</span> <span class="ident">V1Plan</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span> {
@@ -533,6 +608,7 @@
             <span class="ident">cs</span>,
             <span class="ident">regions</span>: <span class="macro">vec!</span>[],
             <span class="ident">constants</span>: <span class="macro">vec!</span>[],
+            <span class="ident">table_columns</span>: <span class="macro">vec!</span>[],
         };
         <span class="prelude-val">Ok</span>(<span class="ident">ret</span>)
     }
@@ -657,6 +733,18 @@
         }
     }
 
+    <span class="kw">fn</span> <span class="ident">assign_table</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">N</span>, <span class="ident">NR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="ident">N</span>, <span class="ident">assignment</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">A</span>: <span class="ident">FnMut</span>(<span class="ident">Table</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>,
+        <span class="ident">N</span>: <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NR</span>,
+        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    {
+        <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="number">0</span> {
+            <span class="ident">Pass::Measurement</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
+            <span class="ident">Pass::Assignment</span>(<span class="ident">pass</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">pass</span>.<span class="ident">assign_table</span>(<span class="ident">name</span>, <span class="ident">assignment</span>),
+        }
+    }
+
     <span class="kw">fn</span> <span class="ident">constrain_instance</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">cell</span>: <span class="ident">Cell</span>,
@@ -752,6 +840,62 @@
             <span class="ident">assignment</span>(<span class="ident">region</span>.<span class="ident">into</span>())
         }<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">exit_region</span>();
+
+        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">assign_table</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span>, <span class="ident">N</span>, <span class="ident">NR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="ident">N</span>, <span class="kw-2">mut</span> <span class="ident">assignment</span>: <span class="ident">A</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AR</span>, <span class="ident">Error</span><span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">A</span>: <span class="ident">FnMut</span>(<span class="ident">Table</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
+        <span class="ident">N</span>: <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NR</span>,
+        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    {
+        <span class="comment">// Maintenance hazard: there is near-duplicate code in `SingleChipLayouter::assign_table`.</span>
+
+        <span class="comment">// Assign table cells.</span>
+        <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">enter_region</span>(<span class="ident">name</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">table</span> <span class="op">=</span> <span class="ident">SimpleTableLayouter::new</span>(<span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">table_columns</span>);
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> {
+            <span class="kw">let</span> <span class="ident">table</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">TableLayouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">table</span>;
+            <span class="ident">assignment</span>(<span class="ident">table</span>.<span class="ident">into</span>())
+        }<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">default_and_assigned</span> <span class="op">=</span> <span class="ident">table</span>.<span class="ident">default_and_assigned</span>;
+        <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">exit_region</span>();
+
+        <span class="comment">// Check that all table columns have the same length `first_unused`,</span>
+        <span class="comment">// and all cells up to that length are assigned.</span>
+        <span class="kw">let</span> <span class="ident">first_unused</span> <span class="op">=</span> {
+            <span class="kw">match</span> <span class="ident">default_and_assigned</span>
+                .<span class="ident">values</span>()
+                .<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">assigned</span>)<span class="op">|</span> {
+                    <span class="kw">if</span> <span class="ident">assigned</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="ident">b</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">b</span>) {
+                        <span class="prelude-val">Some</span>(<span class="ident">assigned</span>.<span class="ident">len</span>())
+                    } <span class="kw">else</span> {
+                        <span class="prelude-val">None</span>
+                    }
+                })
+                .<span class="ident">reduce</span>(<span class="op">|</span><span class="ident">acc</span>, <span class="ident">item</span><span class="op">|</span> <span class="kw">match</span> (<span class="ident">acc</span>, <span class="ident">item</span>) {
+                    (<span class="prelude-val">Some</span>(<span class="ident">a</span>), <span class="prelude-val">Some</span>(<span class="ident">b</span>)) <span class="kw">if</span> <span class="ident">a</span> <span class="op">=</span><span class="op">=</span> <span class="ident">b</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">a</span>),
+                    <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+                }) {
+                <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="ident">len</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">len</span>,
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::SynthesisError</span>), <span class="comment">// TODO better error</span>
+            }
+        };
+
+        <span class="comment">// Record these columns so that we can prevent them from being used again.</span>
+        <span class="kw">for</span> <span class="ident">column</span> <span class="kw">in</span> <span class="ident">default_and_assigned</span>.<span class="ident">keys</span>() {
+            <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">table_columns</span>.<span class="ident">push</span>(<span class="kw-2">*</span><span class="ident">column</span>);
+        }
+
+        <span class="kw">for</span> (<span class="ident">col</span>, (<span class="ident">default_val</span>, <span class="kw">_</span>)) <span class="kw">in</span> <span class="ident">default_and_assigned</span> {
+            <span class="comment">// default_val must be Some because we must have assigned</span>
+            <span class="comment">// at least one cell in each column, and in that case we checked</span>
+            <span class="comment">// that all cells up to first_unused were assigned.</span>
+            <span class="self">self</span>.<span class="ident">plan</span>
+                .<span class="ident">cs</span>
+                .<span class="ident">fill_from_row</span>(<span class="ident">col</span>.<span class="ident">inner</span>(), <span class="ident">first_unused</span>, <span class="ident">default_val</span>.<span class="ident">unwrap</span>())<span class="question-mark">?</span>;
+        }
 
         <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
     }
