@@ -166,6 +166,16 @@ impl CircuitLayout {
                 ShapeStyle::from(&BLUE.mix(0.1)).filled(),
             ))?;
         }
+
+        // Mark the unusable rows of the circuit.
+        let usable_rows = n - (cs.blinding_factors() + 1);
+        if view_bottom > usable_rows {
+            root.draw(&Rectangle::new(
+                [(0, usable_rows), (total_columns, view_bottom)],
+                ShapeStyle::from(&RED.mix(0.4)).filled(),
+            ))?;
+        }
+
         root.draw(&Rectangle::new(
             [(0, 0), (total_columns, view_bottom)],
             &BLACK,
@@ -272,6 +282,12 @@ impl CircuitLayout {
             }
         }
 
+        // Add a line showing the total used rows.
+        root.draw(&PathElement::new(
+            [(0, layout.total_rows), (total_columns, layout.total_rows)],
+            ShapeStyle::from(&BLACK),
+        ))?;
+
         // Render labels last, on top of everything else.
         if let Some(labels) = labels {
             for (label, top_left) in labels {
@@ -280,6 +296,22 @@ impl CircuitLayout {
                         + Text::new(label, (10, 10), ("sans-serif", 15.0).into_font())),
                 )?;
             }
+            root.draw(
+                &(EmptyElement::at((0, layout.total_rows))
+                    + Text::new(
+                        format!("{} used rows", layout.total_rows),
+                        (10, 10),
+                        ("sans-serif", 15.0).into_font(),
+                    )),
+            )?;
+            root.draw(
+                &(EmptyElement::at((0, usable_rows))
+                    + Text::new(
+                        format!("{} usable rows", usable_rows),
+                        (10, 10),
+                        ("sans-serif", 15.0).into_font(),
+                    )),
+            )?;
         }
         Ok(())
     }
