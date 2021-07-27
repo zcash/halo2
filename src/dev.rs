@@ -467,6 +467,19 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .copy(left_column, left_row, right_column, right_row)
     }
 
+    fn fill_from_row(
+        &mut self,
+        _: Column<Fixed>,
+        from_row: usize,
+        _: Option<Assigned<F>>,
+    ) -> Result<(), Error> {
+        if !self.usable_rows.contains(&from_row) {
+            return Err(Error::BoundsFailure);
+        }
+
+        Ok(())
+    }
+
     fn push_namespace<NR, N>(&mut self, _: N)
     where
         NR: Into<String>,

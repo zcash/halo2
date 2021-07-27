@@ -105,6 +105,22 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
     fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error>;
 }
 
+/// Helper trait for implementing a custom [`Layouter`].
+///
+/// This trait is used for implementing table assignments.
+///
+/// [`Layouter`]: super::Layouter
+pub trait TableLayouter<F: Field>: fmt::Debug {
+    /// Assign a fixed value
+    fn assign_fixed<'v>(
+        &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        column: Column<Fixed>,
+        offset: usize,
+        to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
+    ) -> Result<(), Error>;
+}
+
 /// The shape of a region. For a region at a certain index, we track
 /// the set of columns it uses as well as the number of rows it uses.
 #[derive(Clone, Debug)]

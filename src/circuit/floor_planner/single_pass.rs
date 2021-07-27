@@ -7,8 +7,8 @@ use ff::Field;
 
 use crate::{
     circuit::{
-        layouter::{RegionColumn, RegionLayouter, RegionShape},
-        Cell, Layouter, Region, RegionIndex, RegionStart,
+        layouter::{RegionColumn, RegionLayouter, RegionShape, TableLayouter},
+        Cell, Layouter, Region, RegionIndex, RegionStart, Table,
     },
     plonk::{
         Advice, Any, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Instance,
@@ -44,6 +44,8 @@ pub struct SingleChipLayouter<'a, F: Field, CS: Assignment<F> + 'a> {
     regions: Vec<RegionStart>,
     /// Stores the first empty row for each column.
     columns: HashMap<RegionColumn, usize>,
+    /// Stores the table fixed columns.
+    table_columns: Vec<Column<Fixed>>,
     _marker: PhantomData<F>,
 }
 
@@ -64,6 +66,7 @@ impl<'a, F: Field, CS: Assignment<F>> SingleChipLayouter<'a, F, CS> {
             constants,
             regions: vec![],
             columns: HashMap::default(),
+            table_columns: vec![],
             _marker: PhantomData,
         };
         Ok(ret)
@@ -138,6 +141,59 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
                 )?;
                 *next_constant_row += 1;
             }
+        }
+
+        Ok(result)
+    }
+
+    fn assign_table<A, N, NR>(&mut self, name: N, mut assignment: A) -> Result<(), Error>
+    where
+        A: FnMut(Table<'_, F>) -> Result<(), Error>,
+        N: Fn() -> NR,
+        NR: Into<String>,
+    {
+        // Assign table cells.
+        self.cs.enter_region(name);
+        let mut table = SimpleTableLayouter::new(self.cs, &self.table_columns);
+        let result = {
+            let table: &mut dyn TableLayouter<F> = &mut table;
+            assignment(table.into())
+        }?;
+        let default_and_assigned = table.default_and_assigned;
+        self.cs.exit_region();
+
+        // Check that all table columns have the same length `first_unused`,
+        // and all cells up to that length are assigned.
+        let first_unused = {
+            match default_and_assigned
+                .values()
+                .map(|(_, assigned)| {
+                    if assigned.iter().all(|b| *b) {
+                        Some(assigned.len())
+                    } else {
+                        None
+                    }
+                })
+                .reduce(|acc, item| match (acc, item) {
+                    (Some(a), Some(b)) if a == b => Some(a),
+                    _ => None,
+                }) {
+                Some(Some(len)) => len,
+                _ => return Err(Error::SynthesisError), // TODO better error
+            }
+        };
+
+        // Record these columns so that we can prevent them from being used again.
+        for column in default_and_assigned.keys() {
+            self.table_columns.push(column.clone());
+        }
+
+        for (col, (default_val, _)) in default_and_assigned {
+            // default_val must be Some because we must have assigned
+            // at least one cell in each column, and in that case we checked
+            // that all cells up to first_unused were assigned.
+            self.cs
+                .fill_from_row(col, first_unused, default_val.unwrap())?;
         }
 
         Ok(result)
@@ -309,6 +365,74 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F>
             right.column,
             *self.layouter.regions[*right.region_index] + right.row_offset,
         )?;
+
+        Ok(())
+    }
+}
+
+pub(crate) struct SimpleTableLayouter<'r, 'a, F: Field, CS: Assignment<F> + 'a> {
+    cs: &'a mut CS,
+    used_columns: &'r [Column<Fixed>],
+    // maps from a fixed column to a pair (default value, vector saying which rows are assigned)
+    pub(crate) default_and_assigned:
+        HashMap<Column<Fixed>, (Option<Option<Assigned<F>>>, Vec<bool>)>,
+}
+
+impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for SimpleTableLayouter<'r, 'a, F, CS> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SimpleTableLayouter")
+            .field("default_and_assigned", &self.default_and_assigned)
+            .finish()
+    }
+}
+
+impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> SimpleTableLayouter<'r, 'a, F, CS> {
+    pub(crate) fn new(cs: &'a mut CS, used_columns: &'r [Column<Fixed>]) -> Self {
+        SimpleTableLayouter {
+            cs,
+            used_columns,
+            default_and_assigned: HashMap::default(),
+        }
+    }
+}
+
+impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
+    for SimpleTableLayouter<'r, 'a, F, CS>
+{
+    fn assign_fixed<'v>(
+        &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        column: Column<Fixed>,
+        offset: usize,
+        to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
+    ) -> Result<(), Error> {
+        if self.used_columns.contains(&column) {
+            return Err(Error::SynthesisError); // TODO better error
+        }
+
+        let entry = self.default_and_assigned.entry(column.clone()).or_default();
+
+        let mut value = None;
+        self.cs.assign_fixed(
+            annotation,
+            column,
+            offset, // tables are always assigned starting at row 0
+            || {
+                let res = to();
+                value = res.as_ref().ok().cloned();
+                res
+            },
+        )?;
+
+        match (entry.0.is_none(), offset) {
+            (true, 0) => entry.0 = Some(value),
+            (false, 0) => return Err(Error::SynthesisError), // TODO better error
+            _ => (),
+        }
+        if entry.1.len() <= offset {
+            entry.1.resize(offset + 1, false);
+        }
+        entry.1[offset] = true;
 
         Ok(())
     }

@@ -244,6 +244,45 @@ impl<'r, F: Field> Region<'r, F> {
     }
 }
 
+/// A lookup table in the circuit.
+///
+/// TODO: Add wrapper type to `ConstraintSystem` to allow us to only deal with lookup
+/// columns here.
+#[derive(Debug)]
+pub struct Table<'r, F: Field> {
+    table: &'r mut dyn layouter::TableLayouter<F>,
+}
+
+impl<'r, F: Field> From<&'r mut dyn layouter::TableLayouter<F>> for Table<'r, F> {
+    fn from(table: &'r mut dyn layouter::TableLayouter<F>) -> Self {
+        Table { table }
+    }
+}
+
+impl<'r, F: Field> Table<'r, F> {
+    /// Assign a fixed value.
+    ///
+    /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
+    pub fn assign_fixed<'v, V, VR, A, AR>(
+        &'v mut self,
+        annotation: A,
+        column: Column<Fixed>,
+        offset: usize,
+        mut to: V,
+    ) -> Result<(), Error>
+    where
+        V: FnMut() -> Result<VR, Error> + 'v,
+        VR: Into<Assigned<F>>,
+        A: Fn() -> AR,
+        AR: Into<String>,
+    {
+        self.table
+            .assign_fixed(&|| annotation().into(), column, offset, &mut || {
+                to().map(|v| v.into())
+            })
+    }
+}
+
 /// A layout strategy within a circuit. The layouter is chip-agnostic and applies its
 /// strategy to the context and config it is given.
 ///
@@ -269,6 +308,20 @@ pub trait Layouter<F: Field> {
     fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>
     where
         A: FnMut(Region<'_, F>) -> Result<AR, Error>,
+        N: Fn() -> NR,
+        NR: Into<String>;
+
+    /// Assign a table region to an absolute row number.
+    ///
+    /// ```ignore
+    /// fn assign_table(&mut self, || "table name", |table| {
+    ///     let config = chip.config();
+    ///     table.assign_fixed(config.a, offset, || { Some(value)});
+    /// });
+    /// ```
+    fn assign_table<A, N, NR>(&mut self, name: N, assignment: A) -> Result<(), Error>
+    where
+        A: FnMut(Table<'_, F>) -> Result<(), Error>,
         N: Fn() -> NR,
         NR: Into<String>;
 
@@ -326,6 +379,15 @@ impl<'a, F: Field, L: Layouter<F> + 'a> Layouter<F> for NamespacedLayouter<'a, F
         NR: Into<String>,
     {
         self.0.assign_region(name, assignment)
+    }
+
+    fn assign_table<A, N, NR>(&mut self, name: N, assignment: A) -> Result<(), Error>
+    where
+        A: FnMut(Table<'_, F>) -> Result<(), Error>,
+        N: Fn() -> NR,
+        NR: Into<String>,
+    {
+        self.0.assign_table(name, assignment)
     }
 
     fn constrain_instance(

@@ -4,8 +4,9 @@ use ff::Field;
 
 use crate::{
     circuit::{
-        layouter::{RegionColumn, RegionLayouter, RegionShape},
-        Cell, Layouter, Region, RegionIndex, RegionStart,
+        floor_planner::single_pass::SimpleTableLayouter,
+        layouter::{RegionColumn, RegionLayouter, RegionShape, TableLayouter},
+        Cell, Layouter, Region, RegionIndex, RegionStart, Table,
     },
     plonk::{
         Advice, Any, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Instance,
@@ -32,6 +33,8 @@ struct V1Plan<'a, F: Field, CS: Assignment<F> + 'a> {
     regions: Vec<RegionStart>,
     /// Stores the constants to be assigned, and the cells to which they are copied.
     constants: Vec<(Assigned<F>, Cell)>,
+    /// Stores the table fixed columns.
+    table_columns: Vec<Column<Fixed>>,
 }
 
 impl<'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for V1Plan<'a, F, CS> {
@@ -47,6 +50,7 @@ impl<'a, F: Field, CS: Assignment<F>> V1Plan<'a, F, CS> {
             cs,
             regions: vec![],
             constants: vec![],
+            table_columns: vec![],
         };
         Ok(ret)
     }
@@ -171,6 +175,18 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for V1Pass<'p, 'a, F,
         }
     }
 
+    fn assign_table<A, N, NR>(&mut self, name: N, assignment: A) -> Result<(), Error>
+    where
+        A: FnMut(Table<'_, F>) -> Result<(), Error>,
+        N: Fn() -> NR,
+        NR: Into<String>,
+    {
+        match &mut self.0 {
+            Pass::Measurement(_) => Ok(()),
+            Pass::Assignment(pass) => pass.assign_table(name, assignment),
+        }
+    }
+
     fn constrain_instance(
         &mut self,
         cell: Cell,
@@ -266,6 +282,60 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
             assignment(region.into())
         }?;
         self.plan.cs.exit_region();
+
+        Ok(result)
+    }
+
+    fn assign_table<A, AR, N, NR>(&mut self, name: N, mut assignment: A) -> Result<AR, Error>
+    where
+        A: FnMut(Table<'_, F>) -> Result<AR, Error>,
+        N: Fn() -> NR,
+        NR: Into<String>,
+    {
+        // Assign table cells.
+        self.plan.cs.enter_region(name);
+        let mut table = SimpleTableLayouter::new(self.plan.cs, &self.plan.table_columns);
+        let result = {
+            let table: &mut dyn TableLayouter<F> = &mut table;
+            assignment(table.into())
+        }?;
+        let default_and_assigned = table.default_and_assigned;
+        self.plan.cs.exit_region();
+
+        // Check that all table columns have the same length `first_unused`,
+        // and all cells up to that length are assigned.
+        let first_unused = {
+            match default_and_assigned
+                .values()
+                .map(|(_, assigned)| {
+                    if assigned.iter().all(|b| *b) {
+                        Some(assigned.len())
+                    } else {
+                        None
+                    }
+                })
+                .reduce(|acc, item| match (acc, item) {
+                    (Some(a), Some(b)) if a == b => Some(a),
+                    _ => None,
+                }) {
+                Some(Some(len)) => len,
+                _ => return Err(Error::SynthesisError), // TODO better error
+            }
+        };
+
+        // Record these columns so that we can prevent them from being used again.
+        for column in default_and_assigned.keys() {
+            self.plan.table_columns.push(column.clone());
+        }
+
+        for (col, (default_val, _)) in default_and_assigned {
+            // default_val must be Some because we must have assigned
+            // at least one cell in each column, and in that case we checked
+            // that all cells up to first_unused were assigned.
+            self.plan
+                .cs
+                .fill_from_row(col, first_unused, default_val.unwrap())?;
+        }
 
         Ok(result)
     }

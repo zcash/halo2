@@ -478,6 +478,14 @@ pub trait Assignment<F: Field> {
         right_row: usize,
     ) -> Result<(), Error>;
 
+    /// Fills a fixed `column` starting from the given `row` with value `to`.
+    fn fill_from_row(
+        &mut self,
+        column: Column<Fixed>,
+        row: usize,
+        to: Option<Assigned<F>>,
+    ) -> Result<(), Error>;
+
     /// Creates a new (sub)namespace and enters into it.
     ///
     /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
