@@ -7,7 +7,7 @@ use halo2::dev::MockProver;
 use halo2::pasta::{Eq, EqAffine, Fp};
 use halo2::plonk::{
     create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column, ConstraintSystem,
-    Error, Fixed, VerifyingKey,
+    Error, Fixed, TableColumn, VerifyingKey,
 };
 use halo2::poly::{commitment::Params, Rotation};
 use halo2::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
@@ -37,7 +37,7 @@ fn plonk_api() {
         sc: Column<Fixed>,
         sm: Column<Fixed>,
         sp: Column<Fixed>,
-        sl: Column<Fixed>,
+        sl: TableColumn,
     }
 
     trait StandardCs<FF: FieldExt> {
@@ -228,11 +228,11 @@ fn plonk_api() {
             layouter: &mut impl Layouter<FF>,
             values: &[FF],
         ) -> Result<(), Error> {
-            layouter.assign_region(
+            layouter.assign_table(
                 || "",
-                |mut region| {
+                |mut table| {
                     for (index, &value) in values.iter().enumerate() {
-                        region.assign_fixed(|| "table col", self.config.sl, index, || Ok(value))?;
+                        table.assign_cell(|| "table col", self.config.sl, index, || Ok(value))?;
                     }
                     Ok(())
                 },
@@ -270,7 +270,7 @@ fn plonk_api() {
             let sb = meta.fixed_column();
             let sc = meta.fixed_column();
             let sp = meta.fixed_column();
-            let sl = meta.fixed_column();
+            let sl = meta.lookup_table_column();
 
             /*
              *   A         B      ...  sl
@@ -326,7 +326,6 @@ fn plonk_api() {
             meta.enable_equality(sb.into());
             meta.enable_equality(sc.into());
             meta.enable_equality(sp.into());
-            meta.enable_equality(sl.into());
 
             PlonkConfig {
                 a,
@@ -818,10 +817,6 @@ fn plonk_api() {
                     index: 5,
                     column_type: Fixed,
                 },
-                Column {
-                    index: 6,
-                    column_type: Fixed,
-                },
             ],
         },
         lookups: [
@@ -856,7 +851,7 @@ fn plonk_api() {
         (0x374a656456a0aae7429b23336f825752b575dd5a44290ff614946ee59d6a20c0, 0x054491e187e6e3460e7601fb54ae10836d34d420026f96316f0c5c62f86db9b8),
         (0x02e62cd68370b13711139a08cbcdd889e800a272b9ea10acc90880fff9d89199, 0x1a96c468cb0ce77065d3a58f1e55fea9b72d15e44c01bba1e110bd0cbc6e9bc6),
         (0x224ef42758215157d3ee48fb8d769da5bddd35e5929a90a4a89736f5c4b5ae9b, 0x11bc3a1e08eb320cde764f1492ecef956d71e996e2165f7a9a30ad2febb511c1),
-        (0x3c145eb1e4f1e49d9eed351a4e2d9f3deed13bc5ba028d3b425084d606418cc8, 0x045d846e7df4e563ce57cd5483d17bad87f0345e18409bf15abc3d71953ae71c),
+        (0x2d5415bf917fcac32bfb705f8ca35cb12d9bad52aa33ccca747350f9235d3a18, 0x2b2921f815fad504052512743963ef20ed5b401d20627793b006413e73fe4dd4),
     ],
     permutation: VerifyingKey {
         commitments: [
@@ -872,7 +867,6 @@ fn plonk_api() {
             (0x3eaa38689d9e391c8a8fafab9568f20c45816321d38f309d4cc37f4b1601af72, 0x247f8270a462ea88450221a56aa6b55d2bc352b80b03501e99ea983251ceea13),
             (0x394437571f9de32dccdc546fd4737772d8d92593c85438aa3473243997d5acc8, 0x14924ec6e3174f1fab7f0ce7070c22f04bbd0a0ecebdfc5c94be857f25493e95),
             (0x3d907e0591343bd285c2c846f3e871a6ac70d80ec29e9500b8cb57f544e60202, 0x1034e48df35830244cabea076be8a16d67d7896e27c6ac22b285d017105da9c3),
-            (0x21d210b41675a1eae44cbd0f3fd27d69e30716c71873f6089cee61acacd403ab, 0x2275e97c7e84f68bfaa528a9d8be4e059f7abefd80d03fbfca774e8414a9b7c1),
         ],
     },
 }"#####

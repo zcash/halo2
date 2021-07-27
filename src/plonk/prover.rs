@@ -238,6 +238,15 @@ pub fn create_proof<
                     Ok(())
                 }
 
+                fn fill_from_row(
+                    &mut self,
+                    _: Column<Fixed>,
+                    _: usize,
+                    _: Option<Assigned<F>>,
+                ) -> Result<(), Error> {
+                    Ok(())
+                }
+
                 fn push_namespace<NR, N>(&mut self, _: N)
                 where
                     NR: Into<String>,

@@ -7,8 +7,7 @@ use std::fmt;
 use ff::Field;
 
 use super::{Cell, RegionIndex};
-use crate::plonk::Assigned;
-use crate::plonk::{Advice, Any, Column, Error, Fixed, Instance, Selector};
+use crate::plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector, TableColumn};
 
 /// Helper trait for implementing a custom [`Layouter`].
 ///
@@ -103,6 +102,24 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
     ///
     /// Returns an error if either of the cells is not within the given permutation.
     fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error>;
+}
+
+/// Helper trait for implementing a custom [`Layouter`].
+///
+/// This trait is used for implementing table assignments.
+///
+/// [`Layouter`]: super::Layouter
+pub trait TableLayouter<F: Field>: fmt::Debug {
+    /// Assigns a fixed value to a table cell.
+    ///
+    /// Returns an error if the table cell has already been assigned to.
+    fn assign_cell<'v>(
+        &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        column: TableColumn,
+        offset: usize,
+        to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
+    ) -> Result<(), Error>;
 }
 
 /// The shape of a region. For a region at a certain index, we track
