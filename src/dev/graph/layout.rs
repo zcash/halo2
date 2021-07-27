@@ -123,7 +123,7 @@ impl CircuitLayout {
         };
 
         let view_width = self.view_width.unwrap_or(0..total_columns);
-        let view_height = self.view_height.unwrap_or(0..layout.total_rows);
+        let view_height = self.view_height.unwrap_or(0..n);
         let view_bottom = view_height.end;
 
         // Prepare the grid layout. We render a red background for advice columns, white for
@@ -166,6 +166,16 @@ impl CircuitLayout {
                 ShapeStyle::from(&BLUE.mix(0.1)).filled(),
             ))?;
         }
+
+        // Mark the unusable rows of the circuit.
+        let usable_rows = n - (cs.blinding_factors() + 1);
+        if view_bottom > usable_rows {
+            root.draw(&Rectangle::new(
+                [(0, usable_rows), (total_columns, view_bottom)],
+                ShapeStyle::from(&RED.mix(0.4)).filled(),
+            ))?;
+        }
+
         root.draw(&Rectangle::new(
             [(0, 0), (total_columns, view_bottom)],
             &BLACK,
@@ -197,10 +207,10 @@ impl CircuitLayout {
 
         // Render the regions!
         let mut labels = if self.hide_labels { None } else { Some(vec![]) };
-        for region in layout.regions {
+        for region in &layout.regions {
             if let Some(offset) = region.offset {
                 // Sort the region's columns according to the defined ordering.
-                let mut columns: Vec<_> = region.columns.into_iter().collect();
+                let mut columns: Vec<_> = region.columns.iter().cloned().collect();
                 columns.sort_unstable_by_key(|a| column_index(&cs, *a));
 
                 // Render contiguous parts of the same region as a single box.
@@ -227,11 +237,13 @@ impl CircuitLayout {
                         labels.push((region.name.clone(), (start, offset)));
                     }
                 }
+            }
+        }
 
-                // Darken the cells of the region that have been assigned to.
-                for (column, row) in region.cells {
-                    draw_cell(&root, column_index(&cs, column), row)?;
-                }
+        // Darken the cells of the region that have been assigned to.
+        for region in layout.regions {
+            for (column, row) in region.cells {
+                draw_cell(&root, column_index(&cs, column), row)?;
             }
         }
 
@@ -272,6 +284,12 @@ impl CircuitLayout {
             }
         }
 
+        // Add a line showing the total used rows.
+        root.draw(&PathElement::new(
+            [(0, layout.total_rows), (total_columns, layout.total_rows)],
+            ShapeStyle::from(&BLACK),
+        ))?;
+
         // Render labels last, on top of everything else.
         if let Some(labels) = labels {
             for (label, top_left) in labels {
@@ -280,6 +298,22 @@ impl CircuitLayout {
                         + Text::new(label, (10, 10), ("sans-serif", 15.0).into_font())),
                 )?;
             }
+            root.draw(
+                &(EmptyElement::at((0, layout.total_rows))
+                    + Text::new(
+                        format!("{} used rows", layout.total_rows),
+                        (10, 10),
+                        ("sans-serif", 15.0).into_font(),
+                    )),
+            )?;
+            root.draw(
+                &(EmptyElement::at((0, usable_rows))
+                    + Text::new(
+                        format!("{} usable rows", usable_rows),
+                        (10, 10),
+                        ("sans-serif", 15.0).into_font(),
+                    )),
+            )?;
         }
         Ok(())
     }

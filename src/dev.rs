@@ -22,6 +22,9 @@ pub mod metadata;
 pub mod cost;
 pub use cost::CircuitCost;
 
+mod gates;
+pub use gates::CircuitGates;
+
 #[cfg(feature = "dev-graph")]
 mod graph;
 
