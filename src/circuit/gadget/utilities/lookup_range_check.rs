@@ -26,8 +26,8 @@ impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct LookupRangeCheckConfig<F: FieldExt + PrimeFieldBits, const K: usize> {
     pub q_lookup: Selector,
-    pub q_lookup_short: Selector,
-    pub q_lookup_bitshift: Selector,
+    pub q_running: Selector,
+    pub q_bitshift: Selector,
     pub running_sum: Column<Advice>,
     table_idx: Column<Fixed>,
     _marker: PhantomData<F>,
@@ -53,40 +53,53 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         meta.enable_equality(running_sum.into());
 
         let q_lookup = meta.complex_selector();
-        let q_lookup_short = meta.complex_selector();
-        let q_lookup_bitshift = meta.selector();
+        let q_running = meta.complex_selector();
+        let q_bitshift = meta.selector();
         let config = LookupRangeCheckConfig {
             q_lookup,
-            q_lookup_short,
-            q_lookup_bitshift,
+            q_running,
+            q_bitshift,
             running_sum,
             table_idx,
             _marker: PhantomData,
         };
 
-        // Lookup for range checks K bits and above.
         meta.lookup(|meta| {
             let q_lookup = meta.query_selector(config.q_lookup);
+            let q_running = meta.query_selector(config.q_running);
             let z_cur = meta.query_advice(config.running_sum, Rotation::cur());
-            let z_next = meta.query_advice(config.running_sum, Rotation::next());
+
+            // In the case of a running sum decomposition, we recover the word from
+            // the difference of the running sums:
             //    z_i = 2^{K}⋅z_{i + 1} + a_i
             // => a_i = z_i - 2^{K}⋅z_{i + 1}
-            let word = z_cur - z_next * F::from_u64(1 << K);
+            let running_sum_lookup = {
+                let running_sum_word = {
+                    let z_next = meta.query_advice(config.running_sum, Rotation::next());
+                    z_cur.clone() - z_next * F::from_u64(1 << K)
+                };
 
-            vec![(q_lookup * word, config.table_idx)]
-        });
+                q_running.clone() * running_sum_word
+            };
 
-        // Lookup used in range checks up to S bits, where S < K.
-        meta.lookup(|meta| {
-            let q_lookup_short = meta.query_selector(config.q_lookup_short);
-            let word = meta.query_advice(config.running_sum, Rotation::cur());
+            // In the short range check, the word is directly witnessed.
+            let short_lookup = {
+                let short_word = z_cur;
+                let q_short = Expression::Constant(F::one()) - q_running;
 
-            vec![(q_lookup_short * word, config.table_idx)]
+                q_short * short_word
+            };
+
+            // Combine the running sum and short lookups:
+            vec![(
+                q_lookup * (running_sum_lookup + short_lookup),
+                config.table_idx,
+            )]
         });
 
         // For short lookups, check that the word has been shifted by the correct number of bits.
         meta.create_gate("Short lookup bitshift", |meta| {
-            let q_lookup_bitshift = meta.query_selector(config.q_lookup_bitshift);
+            let q_bitshift = meta.query_selector(config.q_bitshift);
             let word = meta.query_advice(config.running_sum, Rotation::prev());
             let shifted_word = meta.query_advice(config.running_sum, Rotation::cur());
             let inv_two_pow_s = meta.query_advice(config.running_sum, Rotation::next());
@@ -95,7 +108,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
 
             // shifted_word = word * 2^{K-s}
             //              = word * 2^K * inv_two_pow_s
-            vec![q_lookup_bitshift * (word * two_pow_k * inv_two_pow_s - shifted_word)]
+            vec![q_bitshift * (word * two_pow_k * inv_two_pow_s - shifted_word)]
         });
 
         config
@@ -221,8 +234,10 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         let mut z = element;
         let inv_two_pow_k = F::from_u64(1u64 << K).invert().unwrap();
         for (idx, word) in words.iter().enumerate() {
-            // Enable lookup on this row
+            // Enable q_lookup on this row
             self.q_lookup.enable(region, idx)?;
+            // Enable q_running on this row
+            self.q_running.enable(region, idx)?;
 
             // z_next = (z_cur - m_cur) / 2^K
             z = {
@@ -318,13 +333,13 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         num_bits: usize,
     ) -> Result<(), Error> {
         // Enable lookup for `element`, to constrain it to 10 bits.
-        self.q_lookup_short.enable(region, 0)?;
+        self.q_lookup.enable(region, 0)?;
 
         // Enable lookup for shifted element, to constrain it to 10 bits.
-        self.q_lookup_short.enable(region, 1)?;
+        self.q_lookup.enable(region, 1)?;
 
         // Check element has been shifted by the correct number of bits.
-        self.q_lookup_bitshift.enable(region, 1)?;
+        self.q_bitshift.enable(region, 1)?;
 
         // Assign shifted `element * 2^{K - num_bits}`
         let shifted = element.value().map(|element| {
@@ -477,7 +492,6 @@ mod tests {
         struct MyCircuit<F: FieldExt + PrimeFieldBits> {
             element: Option<F>,
             num_bits: usize,
-            _marker: PhantomData<F>,
         }
 
         impl<F: FieldExt + PrimeFieldBits> Circuit<F> for MyCircuit<F> {
@@ -488,7 +502,6 @@ mod tests {
                 MyCircuit {
                     element: None,
                     num_bits: self.num_bits,
-                    _marker: self._marker,
                 }
             }
 
@@ -525,7 +538,6 @@ mod tests {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
                 element: Some(pallas::Base::zero()),
                 num_bits: 0,
-                _marker: PhantomData,
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
@@ -536,7 +548,6 @@ mod tests {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
                 element: Some(pallas::Base::from_u64((1 << K) - 1)),
                 num_bits: K,
-                _marker: PhantomData,
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
@@ -547,7 +558,6 @@ mod tests {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
                 element: Some(pallas::Base::from_u64((1 << 6) - 1)),
                 num_bits: 6,
-                _marker: PhantomData,
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
@@ -558,13 +568,12 @@ mod tests {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
                 element: Some(pallas::Base::from_u64(1 << 6)),
                 num_bits: 6,
-                _marker: PhantomData,
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(
                 prover.verify(),
                 Err(vec![VerifyFailure::Lookup {
-                    lookup_index: 1,
+                    lookup_index: 0,
                     row: 1
                 }])
             );
@@ -575,18 +584,17 @@ mod tests {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
                 element: Some(pallas::Base::from_u64(1 << K)),
                 num_bits: 6,
-                _marker: PhantomData,
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(
                 prover.verify(),
                 Err(vec![
                     VerifyFailure::Lookup {
-                        lookup_index: 1,
+                        lookup_index: 0,
                         row: 0
                     },
                     VerifyFailure::Lookup {
-                        lookup_index: 1,
+                        lookup_index: 0,
                         row: 1
                     },
                 ])
@@ -607,13 +615,12 @@ mod tests {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
                 element: Some(element),
                 num_bits: num_bits as usize,
-                _marker: PhantomData,
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(
                 prover.verify(),
                 Err(vec![VerifyFailure::Lookup {
-                    lookup_index: 1,
+                    lookup_index: 0,
                     row: 0
                 }])
             );
