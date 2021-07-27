@@ -200,7 +200,7 @@ y &= \textsf{LSB} \bconcat k_0 \bconcat k_1 \bconcat k_2 \bconcat k_3\\
 \end{align}
 $$
 
-where $\textsf{LSB}$ is $b_2$ for $\mathsf{y(g_d)}$, and $d_1$ for $\mathsf{y(pk_d)}$. Let $$j = \textsf{LSB} + 2 \cdot k_0 + 2^{10} \cdot k_1.$$ We decompose $j$ to be $250$ bits using $25$ [ten-bit lookups](../decomposition.md#lookup-decomposition).
+where $\textsf{LSB}$ is $b_2$ for $\mathsf{y(g_d)}$, and $d_1$ for $\mathsf{y(pk_d)}$. Let $$j = \textsf{LSB} + 2 \cdot k_0 + 2^{10} \cdot k_1.$$ We decompose $j$ to be $250$ bits using a strict $25-$word [ten-bit lookup](../decomposition.md#lookup-decomposition). The running sum outputs allow us to susbstitute $k_1 = z_{j, 1}.$
 
 Recall that $b_2 = ỹ(g_d)$ and $d_1 = ỹ(pk_d)$ were pieces input to the Sinsemilla hash and have already been boolean-constrained. To constrain the remaining chunks, we use the following constraints:
 
@@ -211,7 +211,6 @@ $$
   & \ShortLookupRangeCheck{k_0, 9} \\\hline
   & \ShortLookupRangeCheck{k_2, 4} \\\hline
 3 & q_{\NoteCommit,3} \cdot \BoolCheck{k_3} = 0 \\\hline
-  & k_1 := z_{j,1} \\\hline
 \end{array}
 $$
 
