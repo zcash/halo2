@@ -4,6 +4,7 @@ use std::{
     collections::{HashMap, HashSet},
     iter,
     marker::PhantomData,
+    ops::{Add, Mul},
 };
 
 use ff::{Field, PrimeField};
@@ -202,39 +203,53 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
         (self.permutation_cols + chunk_size - 1) / chunk_size
     }
 
-    /// Returns the proof size for the given number of instances of this circuit.
-    pub fn proof_size(&self, instances: usize) -> ProofSize<G> {
+    /// Returns the marginal proof size per instance of this circuit.
+    pub fn marginal_proof_size(&self) -> MarginalProofSize<G> {
         let chunks = self.permutation_chunks();
 
-        ProofSize {
+        MarginalProofSize {
             // Cells:
             // - 1 commitment per advice column per instance
             // - 1 eval per instance column query per instance
             // - 1 eval per advice column query per instance
-            // - 1 eval per fixed column query
-            instance: ProofContribution::new(0, self.instance_queries * instances),
-            advice: ProofContribution::new(
-                self.advice_columns * instances,
-                self.advice_queries * instances,
-            ),
-            fixed: ProofContribution::new(0, self.fixed_queries),
+            instance: ProofContribution::new(0, self.instance_queries),
+            advice: ProofContribution::new(self.advice_columns, self.advice_queries),
 
             // Lookup arguments:
             // - 3 commitments per lookup argument per instance
             // - 5 evals per lookup argument per instance
-            lookups: ProofContribution::new(
-                3 * self.lookups * instances,
-                5 * self.lookups * instances,
-            ),
+            lookups: ProofContribution::new(3 * self.lookups, 5 * self.lookups),
 
             // Global permutation argument:
             // - chunks commitments per instance
             // - 2*chunks + (chunks - 1) evals per instance
+            equality: ProofContribution::new(chunks, 3 * chunks - 1),
+
+            _marker: PhantomData::default(),
+        }
+    }
+
+    /// Returns the proof size for the given number of instances of this circuit.
+    pub fn proof_size(&self, instances: usize) -> ProofSize<G> {
+        let marginal = self.marginal_proof_size();
+
+        ProofSize {
+            // Cells:
+            // - marginal cost per instance
+            // - 1 eval per fixed column query
+            instance: marginal.instance * instances,
+            advice: marginal.advice * instances,
+            fixed: ProofContribution::new(0, self.fixed_queries),
+
+            // Lookup arguments:
+            // - marginal cost per instance
+            lookups: marginal.lookups * instances,
+
+            // Global permutation argument:
+            // - marginal cost per instance
             // - 1 eval per column
-            equality: ProofContribution::new(
-                chunks * instances,
-                (3 * chunks - 1) * instances + self.permutation_cols,
-            ),
+            equality: marginal.equality * instances
+                + ProofContribution::new(0, self.permutation_cols),
 
             // Vanishing argument:
             // - 1 + (max_deg - 1) commitments
@@ -275,6 +290,50 @@ impl ProofContribution {
 
     fn len(&self, point: usize, scalar: usize) -> usize {
         self.commitments * point + self.evaluations * scalar
+    }
+}
+
+impl Add for ProofContribution {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            commitments: self.commitments + rhs.commitments,
+            evaluations: self.evaluations + rhs.evaluations,
+        }
+    }
+}
+
+impl Mul<usize> for ProofContribution {
+    type Output = Self;
+
+    fn mul(self, instances: usize) -> Self::Output {
+        Self {
+            commitments: self.commitments * instances,
+            evaluations: self.evaluations * instances,
+        }
+    }
+}
+
+/// The marginal size of a Halo 2 proof, broken down into its contributing factors.
+#[derive(Debug)]
+pub struct MarginalProofSize<G: PrimeGroup> {
+    instance: ProofContribution,
+    advice: ProofContribution,
+    lookups: ProofContribution,
+    equality: ProofContribution,
+    _marker: PhantomData<G>,
+}
+
+impl<G: PrimeGroup> From<MarginalProofSize<G>> for usize {
+    fn from(proof: MarginalProofSize<G>) -> Self {
+        let point = G::Repr::default().as_ref().len();
+        let scalar = <G::Scalar as PrimeField>::Repr::default().as_ref().len();
+
+        proof.instance.len(point, scalar)
+            + proof.advice.len(point, scalar)
+            + proof.lookups.len(point, scalar)
+            + proof.equality.len(point, scalar)
     }
 }
 
