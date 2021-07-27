@@ -228,11 +228,11 @@ fn plonk_api() {
             layouter: &mut impl Layouter<FF>,
             values: &[FF],
         ) -> Result<(), Error> {
-            layouter.assign_region(
+            layouter.assign_table(
                 || "",
-                |mut region| {
+                |mut table| {
                     for (index, &value) in values.iter().enumerate() {
-                        region.assign_fixed(|| "table col", self.config.sl, index, || Ok(value))?;
+                        table.assign_fixed(|| "table col", self.config.sl, index, || Ok(value))?;
                     }
                     Ok(())
                 },
@@ -864,7 +864,7 @@ fn plonk_api() {
         (0x374a656456a0aae7429b23336f825752b575dd5a44290ff614946ee59d6a20c0, 0x054491e187e6e3460e7601fb54ae10836d34d420026f96316f0c5c62f86db9b8),
         (0x02e62cd68370b13711139a08cbcdd889e800a272b9ea10acc90880fff9d89199, 0x1a96c468cb0ce77065d3a58f1e55fea9b72d15e44c01bba1e110bd0cbc6e9bc6),
         (0x224ef42758215157d3ee48fb8d769da5bddd35e5929a90a4a89736f5c4b5ae9b, 0x11bc3a1e08eb320cde764f1492ecef956d71e996e2165f7a9a30ad2febb511c1),
-        (0x3c145eb1e4f1e49d9eed351a4e2d9f3deed13bc5ba028d3b425084d606418cc8, 0x045d846e7df4e563ce57cd5483d17bad87f0345e18409bf15abc3d71953ae71c),
+        (0x2d5415bf917fcac32bfb705f8ca35cb12d9bad52aa33ccca747350f9235d3a18, 0x2b2921f815fad504052512743963ef20ed5b401d20627793b006413e73fe4dd4),
     ],
     permutation: VerifyingKey {
         commitments: [
