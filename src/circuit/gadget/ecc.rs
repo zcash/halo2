@@ -185,6 +185,11 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
             .constrain_equal(&mut layouter, &self.inner, &other.inner)
     }
 
+    /// Returns the inner point.
+    pub fn inner(&self) -> &EccChip::Point {
+        &self.inner
+    }
+
     /// Extracts the x-coordinate of a point.
     pub fn extract_p(&self) -> X<C, EccChip> {
         X::from_inner(self.chip.clone(), EccChip::extract_p(&self.inner).clone())
@@ -256,6 +261,11 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> X<C, EccC
     /// Wraps the given x-coordinate (obtained directly from an instruction) in a gadget.
     pub fn from_inner(chip: EccChip, inner: EccChip::X) -> Self {
         X { chip, inner }
+    }
+
+    /// Returns the inner x-coordinate.
+    pub fn inner(&self) -> &EccChip::X {
+        &self.inner
     }
 }
 
@@ -397,6 +407,7 @@ mod tests {
     use pasta_curves::pallas;
 
     use super::chip::{EccChip, EccConfig};
+    use crate::circuit::gadget::utilities::lookup_range_check::LookupRangeCheckConfig;
 
     struct MyCircuit {}
 
@@ -422,10 +433,23 @@ mod tests {
                 meta.advice_column(),
                 meta.advice_column(),
             ];
-            let constants = [meta.fixed_column(), meta.fixed_column()];
             let lookup_table = meta.fixed_column();
+            let lagrange_coeffs = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+            ];
+            // Shared fixed column for loading constants
+            let constants = meta.fixed_column();
+            meta.enable_constant(constants);
 
-            EccChip::configure(meta, advices, lookup_table, constants)
+            let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
+            EccChip::configure(meta, advices, lagrange_coeffs, range_check)
         }
 
         fn synthesize(
@@ -529,7 +553,7 @@ mod tests {
     }
 
     #[test]
-    fn ecc() {
+    fn ecc_chip() {
         let k = 13;
         let circuit = MyCircuit {};
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
@@ -547,7 +571,7 @@ mod tests {
 
         let circuit = MyCircuit {};
         halo2::dev::CircuitLayout::default()
-            .render(&circuit, &root)
+            .render(13, &circuit, &root)
             .unwrap();
     }
 }

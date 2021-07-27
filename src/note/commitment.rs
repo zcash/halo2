@@ -12,11 +12,24 @@ use crate::{
     value::NoteValue,
 };
 
-pub(super) struct NoteCommitTrapdoor(pub(super) pallas::Scalar);
+#[derive(Debug)]
+pub(crate) struct NoteCommitTrapdoor(pub(super) pallas::Scalar);
+
+impl NoteCommitTrapdoor {
+    pub(crate) fn inner(&self) -> pallas::Scalar {
+        self.0
+    }
+}
 
 /// A commitment to a note.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct NoteCommitment(pub(super) pallas::Point);
+
+impl NoteCommitment {
+    pub(crate) fn inner(&self) -> pallas::Point {
+        self.0
+    }
+}
 
 impl NoteCommitment {
     /// $NoteCommit^Orchard$.
@@ -69,11 +82,9 @@ impl From<NoteCommitment> for ExtractedNoteCommitment {
     }
 }
 
-impl std::ops::Deref for ExtractedNoteCommitment {
-    type Target = pallas::Base;
-
-    fn deref(&self) -> &pallas::Base {
-        &self.0
+impl ExtractedNoteCommitment {
+    pub(crate) fn inner(&self) -> pallas::Base {
+        self.0
     }
 }
 

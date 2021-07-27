@@ -14,7 +14,7 @@ use crate::{
 };
 use std::iter;
 
-mod chip;
+pub(in crate::circuit) mod chip;
 
 /// Instructions to check the validity of a Merkle path of a given `PATH_LENGTH`.
 /// The hash function used is a Sinsemilla instance with `K`-bit words.
@@ -54,12 +54,12 @@ pub struct MerklePath<
 > where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
-    chip_1: MerkleChip,
-    chip_2: MerkleChip,
-    domain: MerkleChip::HashDomains,
-    leaf_pos: Option<u32>,
+    pub(in crate::circuit) chip_1: MerkleChip,
+    pub(in crate::circuit) chip_2: MerkleChip,
+    pub(in crate::circuit) domain: MerkleChip::HashDomains,
+    pub(in crate::circuit) leaf_pos: Option<u32>,
     // The Merkle path is ordered from leaves to root.
-    path: Option<[C::Base; PATH_LENGTH]>,
+    pub(in crate::circuit) path: Option<[C::Base; PATH_LENGTH]>,
 }
 
 #[allow(non_snake_case)]
@@ -74,7 +74,7 @@ where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
     /// Calculates the root of the tree containing the given leaf at this Merkle path.
-    fn calculate_root(
+    pub(in crate::circuit) fn calculate_root(
         &self,
         mut layouter: impl Layouter<C::Base>,
         leaf: MerkleChip::Var,
@@ -139,7 +139,7 @@ pub mod tests {
     use crate::{
         circuit::gadget::{
             sinsemilla::chip::{SinsemillaChip, SinsemillaHashDomains},
-            utilities::{UtilitiesInstructions, Var},
+            utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions, Var},
         },
         constants::{L_ORCHARD_BASE, MERKLE_CRH_PERSONALIZATION, MERKLE_DEPTH_ORCHARD},
         primitives::sinsemilla::HashDomain,
@@ -188,23 +188,13 @@ pub mod tests {
             ];
 
             // Shared fixed column for loading constants
-            // TODO: Replace with public inputs API
-            let constants_1 = [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ];
-            let constants_2 = [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ];
+            let constants = meta.fixed_column();
+            meta.enable_constant(constants);
+
+            // NB: In the actual Action circuit, these fixed columns will be reused
+            // by other chips. For this test, we are creating new fixed columns.
+            let fixed_y_q_1 = meta.fixed_column();
+            let fixed_y_q_2 = meta.fixed_column();
 
             // Fixed columns for the Sinsemilla generator lookup table
             let lookup = (
@@ -213,19 +203,25 @@ pub mod tests {
                 meta.fixed_column(),
             );
 
+            let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup.0);
+
             let sinsemilla_config_1 = SinsemillaChip::configure(
                 meta,
                 advices[5..].try_into().unwrap(),
+                advices[7],
+                fixed_y_q_1,
                 lookup,
-                constants_1,
+                range_check.clone(),
             );
             let config1 = MerkleChip::configure(meta, sinsemilla_config_1);
 
             let sinsemilla_config_2 = SinsemillaChip::configure(
                 meta,
                 advices[..5].try_into().unwrap(),
+                advices[2],
+                fixed_y_q_2,
                 lookup,
-                constants_2,
+                range_check,
             );
             let config2 = MerkleChip::configure(meta, sinsemilla_config_2);
 
@@ -347,7 +343,7 @@ pub mod tests {
         let circuit = MyCircuit::default();
         halo2::dev::CircuitLayout::default()
             .show_labels(false)
-            .render(&circuit, &root)
+            .render(11, &circuit, &root)
             .unwrap();
     }
 }

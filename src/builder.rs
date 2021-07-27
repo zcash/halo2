@@ -4,6 +4,7 @@ use std::convert::TryFrom;
 use std::iter;
 
 use ff::Field;
+use group::GroupEncoding;
 use nonempty::NonEmpty;
 use pasta_curves::pallas;
 use rand::{CryptoRng, RngCore};
@@ -132,7 +133,11 @@ impl ActionInfo {
         let cv_net = ValueCommitment::derive(v_net, self.rcv);
 
         let nf_old = self.spend.note.nullifier(&self.spend.fvk);
-        let ak: SpendValidatingKey = self.spend.fvk.into();
+        let sender_address = self.spend.fvk.default_address();
+        let rho_old = self.spend.note.rho();
+        let psi_old = self.spend.note.rseed().psi(&rho_old);
+        let rcm_old = self.spend.note.rseed().rcm(&rho_old);
+        let ak: SpendValidatingKey = self.spend.fvk.clone().into();
         let alpha = pallas::Scalar::random(&mut rng);
         let rk = ak.randomize(&alpha);
 
@@ -166,10 +171,33 @@ impl ActionInfo {
                 cv_net,
                 SigningMetadata {
                     dummy_ask: self.spend.dummy_sk.as_ref().map(SpendAuthorizingKey::from),
-                    parts: SigningParts { ak, alpha },
+                    parts: SigningParts {
+                        ak: ak.clone(),
+                        alpha,
+                    },
                 },
             ),
-            Circuit {},
+            Circuit {
+                path: Some(self.spend.merkle_path.auth_path()),
+                pos: Some(self.spend.merkle_path.position()),
+                g_d_old: Some(sender_address.g_d()),
+                pk_d_old: Some(*sender_address.pk_d()),
+                v_old: Some(self.spend.note.value()),
+                rho_old: Some(rho_old),
+                psi_old: Some(psi_old),
+                rcm_old: Some(rcm_old),
+                cm_old: Some(self.spend.note.commitment()),
+                alpha: Some(alpha),
+                ak: Some(ak),
+                nk: Some(*self.spend.fvk.nk()),
+                rivk: Some(*self.spend.fvk.rivk()),
+                g_d_new_star: Some((*note.recipient().g_d()).to_bytes()),
+                pk_d_new_star: Some(note.recipient().pk_d().to_bytes()),
+                v_new: Some(note.value()),
+                psi_new: Some(note.rseed().psi(&note.rho())),
+                rcm_new: Some(note.rseed().rcm(&note.rho())),
+                rcv: Some(ValueCommitTrapdoor::zero()),
+            },
         )
     }
 }
@@ -595,14 +623,15 @@ pub mod testing {
 
 #[cfg(test)]
 mod tests {
-    use pasta_curves::pallas;
     use rand::rngs::OsRng;
 
     use super::Builder;
     use crate::{
         bundle::{Authorized, Bundle, Flags},
         circuit::ProvingKey,
+        constants::MERKLE_DEPTH_ORCHARD,
         keys::{FullViewingKey, SpendingKey},
+        tree::EMPTY_ROOTS,
         value::NoteValue,
     };
 
@@ -615,7 +644,11 @@ mod tests {
         let fvk = FullViewingKey::from(&sk);
         let recipient = fvk.default_address();
 
-        let mut builder = Builder::new(Flags::from_parts(true, true), pallas::Base::zero().into());
+        let mut builder = Builder::new(
+            Flags::from_parts(true, true),
+            EMPTY_ROOTS[MERKLE_DEPTH_ORCHARD].into(),
+        );
+
         builder
             .add_recipient(None, recipient, NoteValue::from_raw(5000), None)
             .unwrap();

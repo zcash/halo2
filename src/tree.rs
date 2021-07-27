@@ -23,7 +23,7 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 // <https://zips.z.cash/protocol/protocol.pdf#thmuncommittedorchard>
 lazy_static! {
     static ref UNCOMMITTED_ORCHARD: pallas::Base = pallas::Base::from_u64(2);
-    static ref EMPTY_ROOTS: Vec<pallas::Base> = {
+    pub(crate) static ref EMPTY_ROOTS: Vec<pallas::Base> = {
         iter::empty()
             .chain(Some(*UNCOMMITTED_ORCHARD))
             .chain(
@@ -50,6 +50,12 @@ pub struct Anchor(pallas::Base);
 impl From<pallas::Base> for Anchor {
     fn from(anchor_field: pallas::Base) -> Anchor {
         Anchor(anchor_field)
+    }
+}
+
+impl Anchor {
+    pub(crate) fn inner(&self) -> pallas::Base {
+        self.0
     }
 }
 
@@ -94,10 +100,13 @@ impl MerklePath {
         self.auth_path
             .iter()
             .enumerate()
-            .fold(CtOption::new(*cmx, 1.into()), |node, (l, sibling)| {
-                let swap = self.position & (1 << l) != 0;
-                node.and_then(|n| hash_with_l(l, cond_swap(swap, n, *sibling)))
-            })
+            .fold(
+                CtOption::new(cmx.inner(), 1.into()),
+                |node, (l, sibling)| {
+                    let swap = self.position & (1 << l) != 0;
+                    node.and_then(|n| hash_with_l(l, cond_swap(swap, n, *sibling)))
+                },
+            )
             .map(Anchor)
     }
 
@@ -179,7 +188,7 @@ impl MerkleCrhOrchardOutput {
     /// Creates an incremental tree leaf digest from the specified
     /// Orchard extracted note commitment.
     pub fn from_cmx(value: &ExtractedNoteCommitment) -> Self {
-        MerkleCrhOrchardOutput(**value)
+        MerkleCrhOrchardOutput(value.inner())
     }
 
     /// Convert this digest to its canonical byte representation.
@@ -331,7 +340,7 @@ pub mod testing {
 
             let perfect_subtree = {
                 let mut perfect_subtree: Vec<Vec<Option<pallas::Base>>> = vec![
-                    padded_leaves.iter().map(|cmx| cmx.map(|cmx| *cmx)).collect()
+                    padded_leaves.iter().map(|cmx| cmx.map(|cmx| cmx.inner())).collect()
                 ];
 
                 // <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>

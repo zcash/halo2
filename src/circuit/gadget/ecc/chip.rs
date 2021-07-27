@@ -88,9 +88,9 @@ pub struct EccConfig {
     pub q_add: Selector,
 
     /// Variable-base scalar multiplication (hi half)
-    pub q_mul_hi: Column<Fixed>,
+    pub q_mul_hi: (Selector, Selector, Selector),
     /// Variable-base scalar multiplication (lo half)
-    pub q_mul_lo: Column<Fixed>,
+    pub q_mul_lo: (Selector, Selector, Selector),
     /// Selector used to enforce boolean decomposition in variable-base scalar mul
     pub q_mul_decompose_var: Selector,
     /// Selector used to enforce switching logic on LSB in variable-base scalar mul
@@ -111,8 +111,6 @@ pub struct EccConfig {
     /// Witness point
     pub q_point: Selector,
 
-    /// Shared fixed column used for loading constants.
-    pub constants: Column<Fixed>,
     /// Lookup range check using 10-bit lookup table
     pub lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     /// Running sum decomposition.
@@ -149,14 +147,13 @@ impl EccChip {
 
     /// # Side effects
     ///
-    /// All columns in `advices` and `constants` will be equality-enabled.
+    /// All columns in `advices` will be equality-enabled.
     #[allow(non_snake_case)]
     pub fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 10],
-        lookup_table: Column<Fixed>,
-        // TODO: Replace with public inputs API
-        constants: [Column<Fixed>; 2],
+        lagrange_coeffs: [Column<Fixed>; 8],
+        range_check: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     ) -> <Self as Chip<pallas::Base>>::Config {
         // The following columns need to be equality-enabled for their use in sub-configs:
         //
@@ -183,18 +180,11 @@ impl EccChip {
         // mul::complete::Config:
         // - advices[9]: z_complete
         //
-        // mul::Config:
-        // - constants[1]: Setting `z_init` to zero.
-        //
         // TODO: Refactor away from `impl From<EccConfig> for _` so that sub-configs can
         // equality-enable the columns they need to.
         for column in &advices {
             meta.enable_equality((*column).into());
         }
-        // constants[0] is also equality-enabled here.
-        let lookup_config =
-            LookupRangeCheckConfig::configure(meta, advices[9], constants[0], lookup_table);
-        meta.enable_equality(constants[1].into());
 
         let q_mul_fixed_running_sum = meta.selector();
         let running_sum_config =
@@ -202,21 +192,12 @@ impl EccChip {
 
         let config = EccConfig {
             advices,
-            lagrange_coeffs: [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ],
+            lagrange_coeffs,
             fixed_z: meta.fixed_column(),
             q_add_incomplete: meta.selector(),
             q_add: meta.selector(),
-            q_mul_hi: meta.fixed_column(),
-            q_mul_lo: meta.fixed_column(),
+            q_mul_hi: (meta.selector(), meta.selector(), meta.selector()),
+            q_mul_lo: (meta.selector(), meta.selector(), meta.selector()),
             q_mul_decompose_var: meta.selector(),
             q_mul_overflow: meta.selector(),
             q_mul_lsb: meta.selector(),
@@ -225,8 +206,7 @@ impl EccChip {
             q_mul_fixed_base_field: meta.selector(),
             q_mul_fixed_running_sum,
             q_point: meta.selector(),
-            constants: constants[1],
-            lookup_config,
+            lookup_config: range_check,
             running_sum_config,
         };
 
@@ -311,7 +291,7 @@ pub struct EccScalarFixed {
 pub struct EccScalarFixedShort {
     magnitude: CellValue<pallas::Base>,
     sign: CellValue<pallas::Base>,
-    running_sum: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS_SHORT }>,
+    running_sum: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS_SHORT + 1 }>,
 }
 
 /// A base field element used for fixed-base scalar multiplication.
@@ -320,13 +300,13 @@ pub struct EccScalarFixedShort {
 /// for element α = a_0 + (2^3) a_1 + ... + (2^{3(n-1)}) a_{n-1}.
 /// Each `a_i` is in the range [0..2^3).
 ///
-/// `windows` = [z_1, ..., z_85], where we expect z_85 = 0.
+/// `running_sum` = [z_0, ..., z_85], where we expect z_85 = 0.
 /// Since z_0 is initialized as the scalar α, we store it as
 /// `base_field_elem`.
 #[derive(Clone, Debug)]
 struct EccBaseFieldElemFixed {
     base_field_elem: CellValue<pallas::Base>,
-    running_sum: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS }>,
+    running_sum: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS + 1 }>,
 }
 
 impl EccBaseFieldElemFixed {

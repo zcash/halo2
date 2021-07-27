@@ -10,7 +10,7 @@ use halo2::{
 };
 
 mod pow5t3;
-pub use pow5t3::{Pow5T3Chip, Pow5T3Config};
+pub use pow5t3::{Pow5T3Chip, Pow5T3Config, StateWord};
 
 use crate::primitives::poseidon::{ConstantLength, Domain, Spec, Sponge, SpongeState, State};
 
@@ -68,6 +68,23 @@ pub struct Word<
     const RATE: usize,
 > {
     inner: PoseidonChip::Word,
+}
+
+impl<
+        F: FieldExt,
+        PoseidonChip: PoseidonInstructions<F, S, T, RATE>,
+        S: Spec<F, T, RATE>,
+        const T: usize,
+        const RATE: usize,
+    > Word<F, PoseidonChip, S, T, RATE>
+{
+    pub(crate) fn inner(&self) -> PoseidonChip::Word {
+        self.inner
+    }
+
+    pub(crate) fn from_inner(inner: PoseidonChip::Word) -> Self {
+        Self { inner }
+    }
 }
 
 fn poseidon_duplex<

@@ -511,16 +511,8 @@ impl ScalarFixed {
                 .collect::<Vec<_>>()
         };
         match self {
-            Self::BaseFieldElem(scalar) => {
-                let mut zs = vec![scalar.base_field_elem];
-                zs.extend_from_slice(&scalar.running_sum);
-                running_sum_to_windows(zs)
-            }
-            Self::Short(scalar) => {
-                let mut zs = vec![scalar.magnitude];
-                zs.extend_from_slice(&scalar.running_sum);
-                running_sum_to_windows(zs)
-            }
+            Self::BaseFieldElem(scalar) => running_sum_to_windows(scalar.running_sum.to_vec()),
+            Self::Short(scalar) => running_sum_to_windows(scalar.running_sum.to_vec()),
             Self::FullWidth(scalar) => scalar
                 .windows
                 .iter()

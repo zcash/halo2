@@ -34,7 +34,7 @@ use crate::constants::util::decompose_word;
 use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
-/// The running sum $[z_1, ..., z_W]$. If created in strict mode, $z_W = 0$.
+/// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
 pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<CellValue<F>>);
 impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
     type Target = Vec<CellValue<F>>;
@@ -43,10 +43,10 @@ impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
         &self.0
     }
 }
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RunningSumConfig<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> {
     q_range_check: Selector,
-    q_strict: Selector,
     pub z: Column<Advice>,
     _marker: PhantomData<F>,
 }
@@ -74,7 +74,6 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
 
         let config = Self {
             q_range_check,
-            q_strict: meta.selector(),
             z,
             _marker: PhantomData,
         };
@@ -88,13 +87,6 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
             let word = z_cur - z_next * F::from_u64(1 << WINDOW_NUM_BITS);
 
             vec![q_range_check * range_check(word, 1 << WINDOW_NUM_BITS)]
-        });
-
-        meta.create_gate("final z = 0", |meta| {
-            let q_strict = meta.query_selector(config.q_strict);
-            let z_final = meta.query_advice(config.z, Rotation::cur());
-
-            vec![q_strict * z_final]
         });
 
         config
@@ -112,7 +104,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         strict: bool,
         word_num_bits: usize,
         num_windows: usize,
-    ) -> Result<(CellValue<F>, RunningSum<F>), Error> {
+    ) -> Result<RunningSum<F>, Error> {
         let z_0 = {
             let cell = region.assign_advice(
                 || "z_0 = alpha",
@@ -137,7 +129,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         strict: bool,
         word_num_bits: usize,
         num_windows: usize,
-    ) -> Result<(CellValue<F>, RunningSum<F>), Error> {
+    ) -> Result<RunningSum<F>, Error> {
         let z_0 = copy(region, || "copy z_0 = alpha", self.z, offset, &alpha)?;
         self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
@@ -155,7 +147,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         strict: bool,
         word_num_bits: usize,
         num_windows: usize,
-    ) -> Result<(CellValue<F>, RunningSum<F>), Error> {
+    ) -> Result<RunningSum<F>, Error> {
         // Make sure that we do not have more windows than required for the number
         // of bits in the word. In other words, every window must contain at least
         // one bit of the word (no empty windows).
@@ -169,15 +161,8 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         assert!(WINDOW_NUM_BITS * num_windows < word_num_bits + WINDOW_NUM_BITS);
 
         // Enable selectors
-        {
-            for idx in 0..num_windows {
-                self.q_range_check.enable(region, offset + idx)?;
-            }
-
-            if strict {
-                // Constrain the final running sum output to be zero.
-                self.q_strict.enable(region, offset + num_windows)?;
-            }
+        for idx in 0..num_windows {
+            self.q_range_check.enable(region, offset + idx)?;
         }
 
         // Decompose base field element into K-bit words.
@@ -193,8 +178,8 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
             }
         };
 
-        // Initialize empty vector to store running sum values [z_1, ..., z_W].
-        let mut zs: Vec<CellValue<F>> = Vec::with_capacity(num_windows);
+        // Initialize empty vector to store running sum values [z_0, ..., z_W].
+        let mut zs: Vec<CellValue<F>> = vec![z_0];
         let mut z = z_0;
 
         // Assign running sum `z_{i+1}` = (z_i - k_i) / (2^K) for i = 0..=n-1.
@@ -222,21 +207,25 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
             z = z_next;
             zs.push(z);
         }
+        assert_eq!(zs.len(), num_windows + 1);
 
-        Ok((z_0, RunningSum(zs)))
+        if strict {
+            // Constrain the final running sum output to be zero.
+            region.constrain_constant(zs.last().unwrap().cell(), F::zero())?;
+        }
+
+        Ok(RunningSum(zs))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::constants::{
-        FIXED_BASE_WINDOW_SIZE, L_ORCHARD_BASE, L_VALUE, NUM_WINDOWS, NUM_WINDOWS_SHORT,
-    };
+    use crate::constants::{self, FIXED_BASE_WINDOW_SIZE, L_ORCHARD_BASE, L_VALUE};
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{MockProver, VerifyFailure},
-        plonk::{Circuit, ConstraintSystem, Error},
+        plonk::{Any, Circuit, ConstraintSystem, Error},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
@@ -272,6 +261,8 @@ mod tests {
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let z = meta.advice_column();
                 let q_range_check = meta.selector();
+                let constants = meta.fixed_column();
+                meta.enable_constant(constants);
 
                 RunningSumConfig::<F, WINDOW_NUM_BITS>::configure(meta, q_range_check, z)
             }
@@ -285,7 +276,7 @@ mod tests {
                     || "decompose",
                     |mut region| {
                         let offset = 0;
-                        let (alpha, _zs) = config.witness_decompose(
+                        let zs = config.witness_decompose(
                             &mut region,
                             offset,
                             self.alpha,
@@ -293,6 +284,7 @@ mod tests {
                             WORD_NUM_BITS,
                             NUM_WINDOWS,
                         )?;
+                        let alpha = zs[0];
 
                         let offset = offset + NUM_WINDOWS + 1;
 
@@ -320,7 +312,7 @@ mod tests {
                 pallas::Base,
                 L_ORCHARD_BASE,
                 FIXED_BASE_WINDOW_SIZE,
-                NUM_WINDOWS,
+                { constants::NUM_WINDOWS },
             > = MyCircuit {
                 alpha: Some(alpha),
                 strict: true,
@@ -338,7 +330,7 @@ mod tests {
                 pallas::Base,
                 L_VALUE,
                 FIXED_BASE_WINDOW_SIZE,
-                NUM_WINDOWS_SHORT,
+                { constants::NUM_WINDOWS_SHORT },
             > = MyCircuit {
                 alpha: Some(alpha),
                 strict: true,
@@ -354,9 +346,9 @@ mod tests {
             // Strict partial decomposition should fail.
             let circuit: MyCircuit<
                 pallas::Base,
-                L_ORCHARD_BASE,
+                L_VALUE,
                 FIXED_BASE_WINDOW_SIZE,
-                NUM_WINDOWS_SHORT,
+                { constants::NUM_WINDOWS_SHORT },
             > = MyCircuit {
                 alpha: Some(alpha),
                 strict: true,
@@ -365,23 +357,31 @@ mod tests {
             assert_eq!(
                 prover.verify(),
                 Err(vec![
-                    VerifyFailure::ConstraintNotSatisfied {
-                        constraint: ((1, "final z = 0").into(), 0, "").into(),
+                    VerifyFailure::Permutation {
+                        column: (Any::Fixed, 0).into(),
+                        row: 0
+                    },
+                    VerifyFailure::Permutation {
+                        column: (Any::Fixed, 0).into(),
+                        row: 1
+                    },
+                    VerifyFailure::Permutation {
+                        column: (Any::Advice, 0).into(),
                         row: 22
                     },
-                    VerifyFailure::ConstraintNotSatisfied {
-                        constraint: ((1, "final z = 0").into(), 0, "").into(),
+                    VerifyFailure::Permutation {
+                        column: (Any::Advice, 0).into(),
                         row: 45
-                    }
+                    },
                 ])
             );
 
             // Non-strict partial decomposition should pass.
             let circuit: MyCircuit<
                 pallas::Base,
-                L_ORCHARD_BASE,
+                { constants::L_VALUE },
                 FIXED_BASE_WINDOW_SIZE,
-                NUM_WINDOWS_SHORT,
+                { constants::NUM_WINDOWS_SHORT },
             > = MyCircuit {
                 alpha: Some(alpha),
                 strict: false,

@@ -13,13 +13,22 @@ use ff::PrimeFieldBits;
 
 use super::*;
 
+/// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
+pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<CellValue<F>>);
+impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
+    type Target = Vec<CellValue<F>>;
+
+    fn deref(&self) -> &Vec<CellValue<F>> {
+        &self.0
+    }
+}
+
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct LookupRangeCheckConfig<F: FieldExt + PrimeFieldBits, const K: usize> {
     pub q_lookup: Selector,
     pub q_lookup_short: Selector,
-    pub short_lookup_bitshift: Column<Fixed>,
+    pub q_lookup_bitshift: Selector,
     pub running_sum: Column<Advice>,
-    constants: Column<Fixed>,
     table_idx: Column<Fixed>,
     _marker: PhantomData<F>,
 }
@@ -39,21 +48,18 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     pub fn configure(
         meta: &mut ConstraintSystem<F>,
         running_sum: Column<Advice>,
-        constants: Column<Fixed>,
         table_idx: Column<Fixed>,
     ) -> Self {
         meta.enable_equality(running_sum.into());
-        meta.enable_equality(constants.into());
 
-        let q_lookup = meta.selector();
-        let q_lookup_short = meta.selector();
-        let short_lookup_bitshift = meta.fixed_column();
+        let q_lookup = meta.complex_selector();
+        let q_lookup_short = meta.complex_selector();
+        let q_lookup_bitshift = meta.selector();
         let config = LookupRangeCheckConfig {
             q_lookup,
             q_lookup_short,
-            short_lookup_bitshift,
+            q_lookup_bitshift,
             running_sum,
-            constants,
             table_idx,
             _marker: PhantomData,
         };
@@ -66,31 +72,30 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             //    z_i = 2^{K}⋅z_{i + 1} + a_i
             // => a_i = z_i - 2^{K}⋅z_{i + 1}
             let word = z_cur - z_next * F::from_u64(1 << K);
-            let table = meta.query_fixed(config.table_idx, Rotation::cur());
 
-            vec![(q_lookup * word, table)]
+            vec![(q_lookup * word, config.table_idx)]
         });
 
         // Lookup used in range checks up to S bits, where S < K.
         meta.lookup(|meta| {
             let q_lookup_short = meta.query_selector(config.q_lookup_short);
             let word = meta.query_advice(config.running_sum, Rotation::cur());
-            let table = meta.query_fixed(config.table_idx, Rotation::cur());
 
-            vec![(q_lookup_short * word, table)]
+            vec![(q_lookup_short * word, config.table_idx)]
         });
 
         // For short lookups, check that the word has been shifted by the correct number of bits.
         meta.create_gate("Short lookup bitshift", |meta| {
-            let inv_two_pow_s = meta.query_fixed(config.short_lookup_bitshift, Rotation::cur());
+            let q_lookup_bitshift = meta.query_selector(config.q_lookup_bitshift);
             let word = meta.query_advice(config.running_sum, Rotation::prev());
             let shifted_word = meta.query_advice(config.running_sum, Rotation::cur());
+            let inv_two_pow_s = meta.query_advice(config.running_sum, Rotation::next());
 
             let two_pow_k = F::from_u64(1 << K);
 
             // shifted_word = word * 2^{K-s}
             //              = word * 2^K * inv_two_pow_s
-            vec![inv_two_pow_s.clone() * (word * two_pow_k * inv_two_pow_s - shifted_word)]
+            vec![q_lookup_bitshift * (word * two_pow_k * inv_two_pow_s - shifted_word)]
         });
 
         config
@@ -128,13 +133,12 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         element: CellValue<F>,
         num_words: usize,
         strict: bool,
-    ) -> Result<Vec<CellValue<F>>, Error> {
+    ) -> Result<RunningSum<F>, Error> {
         layouter.assign_region(
             || format!("{:?} words range check", num_words),
             |mut region| {
                 // Copy `element` and initialize running sum `z_0 = element` to decompose it.
                 let z_0 = copy(&mut region, || "z_0", self.running_sum, 0, &element)?;
-
                 self.range_check(&mut region, z_0, num_words, strict)
             },
         )
@@ -147,7 +151,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         value: Option<F>,
         num_words: usize,
         strict: bool,
-    ) -> Result<(CellValue<F>, Vec<CellValue<F>>), Error> {
+    ) -> Result<RunningSum<F>, Error> {
         layouter.assign_region(
             || "Witness element",
             |mut region| {
@@ -160,10 +164,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                     )?;
                     CellValue::new(cell, value)
                 };
-
-                let zs = self.range_check(&mut region, z_0, num_words, strict)?;
-
-                Ok((z_0, zs))
+                self.range_check(&mut region, z_0, num_words, strict)
             },
         )
     }
@@ -181,7 +182,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         element: CellValue<F>,
         num_words: usize,
         strict: bool,
-    ) -> Result<Vec<CellValue<F>>, Error> {
+    ) -> Result<RunningSum<F>, Error> {
         // `num_words` must fit into a single field element.
         assert!(num_words * K <= F::CAPACITY as usize);
         let num_bits = num_words * K;
@@ -245,12 +246,10 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
 
         if strict {
             // Constrain the final `z` to be zero.
-            let cell =
-                region.assign_fixed(|| "zero", self.constants, words.len(), || Ok(F::zero()))?;
-            region.constrain_equal(z.cell(), cell)?;
+            region.constrain_constant(zs.last().unwrap().cell(), F::zero())?;
         }
 
-        Ok(zs)
+        Ok(RunningSum(zs))
     }
 
     /// Short range check on an existing cell that is copied into this helper.
@@ -321,17 +320,11 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         // Enable lookup for `element`, to constrain it to 10 bits.
         self.q_lookup_short.enable(region, 0)?;
 
-        // Assign 2^{-num_bits} in a fixed column.
-        {
-            // 2^{-num_bits}
-            let inv_two_pow_s = F::from_u64(1 << num_bits).invert().unwrap();
-            region.assign_fixed(
-                || format!("2^(-{})", num_bits),
-                self.short_lookup_bitshift,
-                1,
-                || Ok(inv_two_pow_s),
-            )?;
-        }
+        // Enable lookup for shifted element, to constrain it to 10 bits.
+        self.q_lookup_short.enable(region, 1)?;
+
+        // Check element has been shifted by the correct number of bits.
+        self.q_lookup_bitshift.enable(region, 1)?;
 
         // Assign shifted `element * 2^{K - num_bits}`
         let shifted = element.value().map(|element| {
@@ -346,8 +339,14 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             || shifted.ok_or(Error::SynthesisError),
         )?;
 
-        // Enable lookup for shifted element, to constrain it to 10 bits.
-        self.q_lookup_short.enable(region, 1)?;
+        // Assign 2^{-num_bits} from a fixed column.
+        let inv_two_pow_s = F::from_u64(1 << num_bits).invert().unwrap();
+        region.assign_advice_from_constant(
+            || format!("2^(-{})", num_bits),
+            self.running_sum,
+            2,
+            inv_two_pow_s,
+        )?;
 
         Ok(())
     }
@@ -388,10 +387,11 @@ mod tests {
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let running_sum = meta.advice_column();
-                let constants = meta.fixed_column();
                 let table_idx = meta.fixed_column();
+                let constants = meta.fixed_column();
+                meta.enable_constant(constants);
 
-                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, constants, table_idx)
+                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, table_idx)
             }
 
             fn synthesize(
@@ -442,7 +442,7 @@ mod tests {
                 for (element, expected_final_z, strict) in elements_and_expected_final_zs.iter() {
                     let expected_zs = expected_zs::<F, K>(*element, self.num_words);
 
-                    let (_, zs) = config.witness_check(
+                    let zs = config.witness_check(
                         layouter.namespace(|| format!("Lookup {:?}", self.num_words)),
                         Some(*element),
                         self.num_words,
@@ -466,6 +466,7 @@ mod tests {
                 num_words: 6,
                 _marker: PhantomData,
             };
+
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
         }
@@ -493,10 +494,11 @@ mod tests {
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let running_sum = meta.advice_column();
-                let constants = meta.fixed_column();
                 let table_idx = meta.fixed_column();
+                let constants = meta.fixed_column();
+                meta.enable_constant(constants);
 
-                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, constants, table_idx)
+                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, table_idx)
             }
 
             fn synthesize(

@@ -9,8 +9,10 @@ use pasta_curves::arithmetic::{CurveAffine, FieldExt};
 use std::{convert::TryInto, fmt::Debug};
 
 pub mod chip;
+pub mod commit_ivk;
 pub mod merkle;
 mod message;
+pub mod note_commit;
 
 /// The set of circuit instructions required to use the [`Sinsemilla`](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html) gadget.
 /// This trait is bounded on two constant parameters: `K`, the number of bits
@@ -30,7 +32,17 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     ///
     /// For example, in the case `K = 10`, `NUM_BITS = 255`, we can fit
     /// up to `N = 25` words in a single base field element.
-    type MessagePiece: Clone + Debug;
+    type MessagePiece: Copy + Clone + Debug;
+
+    /// A cumulative sum `z` is used to decompose a Sinsemilla message. It
+    /// produces intermediate values for each word in the message, such
+    /// that `z_next` = (`z_cur` - `word_next`) / `2^K`.
+    ///
+    /// These intermediate values are useful for range checks on subsets
+    /// of the Sinsemilla message. Sinsemilla messages in the Orchard
+    /// protocol are composed of field elements, and we need to check
+    /// the canonicity of the field element encodings in certain cases.
+    type RunningSum;
 
     /// The x-coordinate of a point output of [`Self::hash_to_point`].
     type X;
@@ -63,15 +75,6 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     /// decomposition in the form of intermediate values in a cumulative
     /// sum.
     ///
-    /// A cumulative sum `z` is used to decompose a Sinsemilla message. It
-    /// produces intermediate values for each word in the message, such
-    /// that `z_next` = (`z_cur` - `word_next`) / `2^K`.
-    ///  
-    /// These intermediate values are useful for range checks on subsets
-    /// of the Sinsemilla message. Sinsemilla messages in the Orchard
-    /// protocol are composed of field elements, and we need to check
-    /// the canonicity of the field element encodings in certain cases.
-    ///
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
     fn hash_to_point(
@@ -79,7 +82,7 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
         layouter: impl Layouter<C::Base>,
         Q: C,
         message: Self::Message,
-    ) -> Result<(Self::Point, Vec<Vec<Self::CellValue>>), Error>;
+    ) -> Result<(Self::Point, Vec<Self::RunningSum>), Error>;
 
     /// Extracts the x-coordinate of the output of a Sinsemilla hash.
     fn extract(point: &Self::Point) -> Self::X;
@@ -152,13 +155,23 @@ where
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct MessagePiece<C: CurveAffine, SinsemillaChip, const K: usize, const MAX_WORDS: usize>
 where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
 {
     chip: SinsemillaChip,
     inner: SinsemillaChip::MessagePiece,
+}
+
+impl<C: CurveAffine, SinsemillaChip, const K: usize, const MAX_WORDS: usize>
+    MessagePiece<C, SinsemillaChip, K, MAX_WORDS>
+where
+    SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
+{
+    fn inner(&self) -> SinsemillaChip::MessagePiece {
+        self.inner
+    }
 }
 
 impl<C: CurveAffine, SinsemillaChip, const K: usize, const MAX_WORDS: usize>
@@ -262,6 +275,7 @@ where
         }
     }
 
+    #[allow(clippy::type_complexity)]
     /// $\mathsf{SinsemillaHashToPoint}$ from [§ 5.4.1.9][concretesinsemillahash].
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
@@ -269,24 +283,25 @@ where
         &self,
         layouter: impl Layouter<C::Base>,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
-    ) -> Result<ecc::Point<C, EccChip>, Error> {
+    ) -> Result<(ecc::Point<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
         assert_eq!(self.sinsemilla_chip, message.chip);
         self.sinsemilla_chip
             .hash_to_point(layouter, self.Q, message.inner)
-            .map(|(point, _)| ecc::Point::from_inner(self.ecc_chip.clone(), point))
+            .map(|(point, zs)| (ecc::Point::from_inner(self.ecc_chip.clone(), point), zs))
     }
 
     /// $\mathsf{SinsemillaHash}$ from [§ 5.4.1.9][concretesinsemillahash].
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
+    #[allow(clippy::type_complexity)]
     pub fn hash(
         &self,
         layouter: impl Layouter<C::Base>,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
-    ) -> Result<ecc::X<C, EccChip>, Error> {
+    ) -> Result<(ecc::X<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
         assert_eq!(self.sinsemilla_chip, message.chip);
-        let p = self.hash_to_point(layouter, message);
-        p.map(|p| p.extract_p())
+        let (p, zs) = self.hash_to_point(layouter, message)?;
+        Ok((p.extract_p(), zs))
     }
 }
 
@@ -353,6 +368,7 @@ where
         }
     }
 
+    #[allow(clippy::type_complexity)]
     /// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
     ///
     /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
@@ -361,14 +377,15 @@ where
         mut layouter: impl Layouter<C::Base>,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
         r: Option<C::Scalar>,
-    ) -> Result<ecc::Point<C, EccChip>, Error> {
+    ) -> Result<(ecc::Point<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
         assert_eq!(self.M.sinsemilla_chip, message.chip);
         let (blind, _) = self.R.mul(layouter.namespace(|| "[r] R"), r)?;
-        self.M
-            .hash_to_point(layouter.namespace(|| "M"), message)?
-            .add_incomplete(layouter.namespace(|| "M ⸭ [r] R"), &blind)
+        let (p, zs) = self.M.hash_to_point(layouter.namespace(|| "M"), message)?;
+        let commitment = p.add_incomplete(layouter.namespace(|| "M ⸭ [r] R"), &blind)?;
+        Ok((commitment, zs))
     }
 
+    #[allow(clippy::type_complexity)]
     /// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
     ///
     /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
@@ -377,10 +394,10 @@ where
         mut layouter: impl Layouter<C::Base>,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
         r: Option<C::Scalar>,
-    ) -> Result<ecc::X<C, EccChip>, Error> {
+    ) -> Result<(ecc::X<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
         assert_eq!(self.M.sinsemilla_chip, message.chip);
-        let p = self.commit(layouter.namespace(|| "commit"), message, r);
-        p.map(|p| p.extract_p())
+        let (p, zs) = self.commit(layouter.namespace(|| "commit"), message, r)?;
+        Ok((p.extract_p(), zs))
     }
 }
 
@@ -398,9 +415,12 @@ mod tests {
     };
 
     use crate::{
-        circuit::gadget::ecc::{
-            chip::{EccChip, EccConfig},
-            Point,
+        circuit::gadget::{
+            ecc::{
+                chip::{EccChip, EccConfig},
+                Point,
+            },
+            utilities::lookup_range_check::LookupRangeCheckConfig,
         },
         constants::{COMMIT_IVK_PERSONALIZATION, MERKLE_CRH_PERSONALIZATION},
         primitives::sinsemilla::{self, K},
@@ -436,42 +456,45 @@ mod tests {
                 meta.advice_column(),
             ];
 
-            // TODO: Replace with public inputs API
-            let constants_1 = [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ];
-            let constants_2 = [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ];
-            let ecc_constants = [meta.fixed_column(), meta.fixed_column()];
+            // Shared fixed column for loading constants
+            let constants = meta.fixed_column();
+            meta.enable_constant(constants);
+
             let table_idx = meta.fixed_column();
+            let lagrange_coeffs = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+            ];
 
             // Fixed columns for the Sinsemilla generator lookup table
             let lookup = (table_idx, meta.fixed_column(), meta.fixed_column());
 
-            let ecc_config = EccChip::configure(meta, advices, table_idx, ecc_constants);
+            let range_check = LookupRangeCheckConfig::configure(meta, advices[9], table_idx);
+
+            let ecc_config =
+                EccChip::configure(meta, advices, lagrange_coeffs, range_check.clone());
 
             let config1 = SinsemillaChip::configure(
                 meta,
                 advices[..5].try_into().unwrap(),
+                advices[2],
+                lagrange_coeffs[0],
                 lookup,
-                constants_1,
+                range_check.clone(),
             );
             let config2 = SinsemillaChip::configure(
                 meta,
                 advices[5..].try_into().unwrap(),
+                advices[7],
+                lagrange_coeffs[1],
                 lookup,
-                constants_2,
+                range_check,
             );
             (ecc_config, config1, config2)
         }
@@ -553,7 +576,7 @@ mod tests {
                 };
 
                 // Parent
-                let parent = {
+                let (parent, _) = {
                     let message = Message::from_pieces(chip1, vec![l, left, right]);
                     merkle_crh.hash_to_point(layouter.namespace(|| "parent"), message)?
                 };
@@ -576,7 +599,7 @@ mod tests {
                 let message: Vec<Option<bool>> =
                     (0..500).map(|_| Some(rand::random::<bool>())).collect();
 
-                let result = {
+                let (result, _) = {
                     let message = Message::from_bitstring(
                         chip2,
                         layouter.namespace(|| "witness message"),
@@ -631,7 +654,7 @@ mod tests {
 
         let circuit = MyCircuit {};
         halo2::dev::CircuitLayout::default()
-            .render(&circuit, &root)
+            .render(11, &circuit, &root)
             .unwrap();
     }
 }

@@ -8,9 +8,7 @@ use std::{array, convert::TryInto, ops::Range};
 
 pub(crate) mod cond_swap;
 pub(crate) mod decompose_running_sum;
-pub(crate) mod enable_flag;
 pub(crate) mod lookup_range_check;
-pub(crate) mod plonk;
 
 /// A variable representing a field element.
 #[derive(Copy, Clone, Debug)]
@@ -100,6 +98,11 @@ pub fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize>(
         }
     }
     ret
+}
+
+/// Checks that an expresssion is either 1 or 0.
+pub fn bool_check<F: FieldExt>(value: Expression<F>) -> Expression<F> {
+    value.clone() * (Expression::Constant(F::one()) - value)
 }
 
 /// Takes a specified subsequence of the little-endian bit representation of a field element.

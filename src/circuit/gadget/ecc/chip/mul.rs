@@ -7,7 +7,7 @@ use ff::PrimeField;
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Layouter, Region},
-    plonk::{Column, ConstraintSystem, Error, Expression, Fixed, Selector},
+    plonk::{ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
 
@@ -40,8 +40,6 @@ const INCOMPLETE_LO_RANGE: Range<usize> = (INCOMPLETE_LEN / 2)..INCOMPLETE_LEN;
 const COMPLETE_RANGE: Range<usize> = INCOMPLETE_LEN..(INCOMPLETE_LEN + NUM_COMPLETE_BITS);
 
 pub struct Config {
-    // Fixed column used to constrain the initialization of the running sum to be zero.
-    constants: Column<Fixed>,
     // Selector used to check switching logic on LSB
     q_mul_lsb: Selector,
     // Configuration used in complete addition
@@ -59,7 +57,6 @@ pub struct Config {
 impl From<&EccConfig> for Config {
     fn from(ecc_config: &EccConfig) -> Self {
         let config = Self {
-            constants: ecc_config.constants,
             q_mul_lsb: ecc_config.q_mul_lsb,
             add_config: ecc_config.into(),
             hi_config: ecc_config.into(),
@@ -159,16 +156,14 @@ impl Config {
 
                 // Initialize the running sum for scalar decomposition to zero
                 let z_init = {
-                    // Constrain the initialization of `z` to equal zero.
-                    let z_init_val = pallas::Base::zero();
-                    let z_init_cell = region.assign_fixed(
-                        || "fixed z_init = 0",
-                        self.constants,
+                    let z_init_cell = region.assign_advice_from_constant(
+                        || "z_init = 0",
+                        self.hi_config.z,
                         offset,
-                        || Ok(z_init_val),
+                        pallas::Base::zero(),
                     )?;
 
-                    Z(CellValue::new(z_init_cell, Some(z_init_val)))
+                    Z(CellValue::new(z_init_cell, Some(pallas::Base::zero())))
                 };
 
                 // Double-and-add (incomplete addition) for the `hi` half of the scalar decomposition

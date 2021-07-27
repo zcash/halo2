@@ -54,9 +54,7 @@ impl Config {
             // We conditionally negate this result using `y_p = y_a * s`, where `s` is the sign.
 
             // Check that the final `y_p = y_a` or `y_p = -y_a`
-            let y_check = q_mul_fixed_short.clone()
-                * (y_p.clone() - y_a.clone())
-                * (y_p.clone() + y_a.clone());
+            let y_check = (y_p.clone() - y_a.clone()) * (y_p.clone() + y_a.clone());
 
             // Check that the correct sign is witnessed s.t. sign * y_p = y_a
             let negation_check = sign * y_p - y_a;
@@ -80,7 +78,7 @@ impl Config {
         let (magnitude, sign) = magnitude_sign;
 
         // Decompose magnitude
-        let (magnitude, running_sum) = self.running_sum_config.copy_decompose(
+        let running_sum = self.running_sum_config.copy_decompose(
             region,
             offset,
             magnitude,
@@ -150,7 +148,7 @@ impl Config {
                 // Copy last window to `u` column.
                 // (Although the last window is not a `u` value; we are copying it into the `u`
                 // column because there is an available cell there.)
-                let z_21 = scalar.running_sum[20];
+                let z_21 = scalar.running_sum[21];
                 copy(
                     &mut region,
                     || "last_window",
@@ -241,13 +239,13 @@ pub mod tests {
     use group::Curve;
     use halo2::{
         circuit::{Chip, Layouter},
-        plonk::Error,
+        plonk::{Any, Error},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
     use crate::circuit::gadget::{
         ecc::{chip::EccChip, FixedPointShort, Point},
-        utilities::{CellValue, UtilitiesInstructions},
+        utilities::{lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions},
     };
     use crate::constants::load::ValueCommitV;
 
@@ -404,10 +402,24 @@ pub mod tests {
                     meta.advice_column(),
                     meta.advice_column(),
                 ];
-                let constants = [meta.fixed_column(), meta.fixed_column()];
                 let lookup_table = meta.fixed_column();
+                let lagrange_coeffs = [
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                ];
 
-                EccChip::configure(meta, advices, lookup_table, constants)
+                // Shared fixed column for loading constants
+                let constants = meta.fixed_column();
+                meta.enable_constant(constants);
+
+                let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
+                EccChip::configure(meta, advices, lagrange_coeffs, range_check)
             }
 
             fn synthesize(
@@ -476,17 +488,21 @@ pub mod tests {
                     prover.verify(),
                     Err(vec![
                         VerifyFailure::ConstraintNotSatisfied {
-                            constraint: ((2, "final z = 0").into(), 0, "").into(),
-                            row: 24
-                        },
-                        VerifyFailure::ConstraintNotSatisfied {
                             constraint: (
-                                (13, "Short fixed-base mul gate").into(),
+                                (16, "Short fixed-base mul gate").into(),
                                 0,
                                 "last_window_check"
                             )
                                 .into(),
                             row: 26
+                        },
+                        VerifyFailure::Permutation {
+                            column: (Any::Fixed, 9).into(),
+                            row: 0
+                        },
+                        VerifyFailure::Permutation {
+                            column: (Any::Advice, 4).into(),
+                            row: 24
                         }
                     ])
                 );
@@ -505,13 +521,13 @@ pub mod tests {
                 prover.verify(),
                 Err(vec![
                     VerifyFailure::ConstraintNotSatisfied {
-                        constraint: ((13, "Short fixed-base mul gate").into(), 1, "sign_check")
+                        constraint: ((16, "Short fixed-base mul gate").into(), 1, "sign_check")
                             .into(),
                         row: 26
                     },
                     VerifyFailure::ConstraintNotSatisfied {
                         constraint: (
-                            (13, "Short fixed-base mul gate").into(),
+                            (16, "Short fixed-base mul gate").into(),
                             3,
                             "negation_check"
                         )

@@ -1,9 +1,6 @@
 use super::super::SinsemillaInstructions;
 use super::{get_s_by_idx, CellValue, EccPoint, SinsemillaChip, Var};
-use crate::{
-    circuit::gadget::utilities::copy,
-    primitives::sinsemilla::{self, lebs2ip_k, INV_TWO_POW_K},
-};
+use crate::primitives::sinsemilla::{self, lebs2ip_k, INV_TWO_POW_K};
 use halo2::{
     circuit::{Chip, Region},
     plonk::Error,
@@ -38,36 +35,25 @@ impl SinsemillaChip {
         let x_q = *Q.coordinates().unwrap().x();
         let y_q = *Q.coordinates().unwrap().y();
 
-        // Initialize the accumulator to `Q`.
-        let (mut x_a, mut y_a): (X<pallas::Base>, Y<pallas::Base>) = {
-            // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
-            let fixed_x_q = {
+        // Constrain the initial x_a, lambda_1, lambda_2, x_p using the q_sinsemilla4
+        // selector.
+        let mut y_a: Y<pallas::Base> = {
+            // Enable `q_sinsemilla4` on the first row.
+            config.q_sinsemilla4.enable(region, offset)?;
+            region.assign_fixed(|| "fixed y_q", config.fixed_y_q, offset, || Ok(y_q))?;
+
+            (Some(y_q)).into()
+        };
+
+        // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
+        let mut x_a: X<pallas::Base> = {
+            let x_a = {
                 let cell =
-                    region.assign_fixed(|| "fixed x_q", config.constants, offset, || Ok(x_q))?;
+                    region.assign_advice_from_constant(|| "fixed x_q", config.x_a, offset, x_q)?;
                 CellValue::new(cell, Some(x_q))
             };
 
-            let x_a = copy(region, || "x_q", config.x_a, offset, &fixed_x_q)?;
-
-            // Constrain the initial x_a, lambda_1, lambda_2, x_p using the fixed y_q
-            // initializer. Assign `fixed_y_q` to be zero on every other row.
-            {
-                region.assign_fixed(|| "fixed y_q", config.fixed_y_q, offset, || Ok(y_q))?;
-
-                let total_num_words = message.iter().map(|piece| piece.num_words()).sum();
-                for row in 1..total_num_words {
-                    region.assign_fixed(
-                        || "fixed y_q",
-                        config.fixed_y_q,
-                        offset + row,
-                        || Ok(pallas::Base::zero()),
-                    )?;
-                }
-            }
-
-            let y_a = Some(y_q);
-
-            (x_a.into(), y_a.into())
+            x_a.into()
         };
 
         let mut zs_sum: Vec<Vec<CellValue<pallas::Base>>> = Vec::new();
@@ -132,7 +118,7 @@ impl SinsemillaChip {
             let field_elems: Option<Vec<pallas::Base>> =
                 message.iter().map(|piece| piece.field_elem()).collect();
 
-            if field_elems.is_some() {
+            if field_elems.is_some() && x_a.value().is_some() && y_a.value().is_some() {
                 // Get message as a bitstring.
                 let bitstring: Vec<bool> = message
                     .iter()

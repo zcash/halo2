@@ -21,9 +21,9 @@ use std::ops::{Add, Sub};
 
 use bitvec::{array::BitArray, order::Lsb0};
 use ff::{Field, PrimeField};
-use group::{Group, GroupEncoding};
+use group::{Curve, Group, GroupEncoding};
 use pasta_curves::{
-    arithmetic::{CurveExt, FieldExt},
+    arithmetic::{CurveAffine, CurveExt, FieldExt},
     pallas,
 };
 use rand::RngCore;
@@ -69,6 +69,10 @@ impl NoteValue {
     pub(crate) fn zero() -> Self {
         // Default for u64 is zero.
         Default::default()
+    }
+
+    pub(crate) fn inner(&self) -> u64 {
+        self.0
     }
 
     /// Creates a note value from its raw numeric value.
@@ -159,6 +163,12 @@ impl TryFrom<ValueSum> for i64 {
 /// The blinding factor for a [`ValueCommitment`].
 #[derive(Clone, Debug)]
 pub struct ValueCommitTrapdoor(pallas::Scalar);
+
+impl ValueCommitTrapdoor {
+    pub(crate) fn inner(&self) -> pallas::Scalar {
+        self.0
+    }
+}
 
 impl Add<&ValueCommitTrapdoor> for ValueCommitTrapdoor {
     type Output = ValueCommitTrapdoor;
@@ -262,6 +272,24 @@ impl ValueCommitment {
     /// Serialize this value commitment to its canonical byte representation.
     pub fn to_bytes(&self) -> [u8; 32] {
         self.0.to_bytes()
+    }
+
+    /// x-coordinate of this value commitment.
+    pub(crate) fn x(&self) -> pallas::Base {
+        if self.0 == pallas::Point::identity() {
+            pallas::Base::zero()
+        } else {
+            *self.0.to_affine().coordinates().unwrap().x()
+        }
+    }
+
+    /// y-coordinate of this value commitment.
+    pub(crate) fn y(&self) -> pallas::Base {
+        if self.0 == pallas::Point::identity() {
+            pallas::Base::zero()
+        } else {
+            *self.0.to_affine().coordinates().unwrap().y()
+        }
     }
 }
 
