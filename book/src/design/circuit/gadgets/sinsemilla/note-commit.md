@@ -200,7 +200,7 @@ y &= \textsf{LSB} \bconcat k_0 \bconcat k_1 \bconcat k_2 \bconcat k_3\\
 \end{align}
 $$
 
-where $\textsf{LSB}$ is $b_2$ for $\mathsf{y(g_d)}$, and $d_1$ for $\mathsf{y(pk_d)}$. Let $$j = \textsf{LSB} + 2 \cdot k_0 + 10 \cdot k_1.$$ We decompose $j$ to be $250$ bits using $25$ [ten-bit lookups](../decomposition.md#lookup-decomposition).
+where $\textsf{LSB}$ is $b_2$ for $\mathsf{y(g_d)}$, and $d_1$ for $\mathsf{y(pk_d)}$. Let $$j = \textsf{LSB} + 2 \cdot k_0 + 2^{10} \cdot k_1.$$ We decompose $j$ to be $250$ bits using $25$ [ten-bit lookups](../decomposition.md#lookup-decomposition).
 
 Recall that $b_2 = ỹ(g_d)$ and $d_1 = ỹ(pk_d)$ were pieces input to the Sinsemilla hash and have already been boolean-constrained. To constrain the remaining chunks, we use the following constraints:
 
@@ -220,8 +220,8 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-2 & q_{\NoteCommit,3} \cdot \left(j - (\textsf{LSB} + 2 \cdot k_0 + 10 \cdot k_1) \right) = 0 \\\hline
-2 & q_{\NoteCommit,3} \cdot \left(y - (j + 2^{250} \cdot k_2 + 2^{254} \cdot k_3) \right) = 0 \\\hline
+2 & q_{\NoteCommit,3} \cdot \left(j - (\textsf{LSB} + k_0 \cdot 2 + k_1 \cdot 2^{10}) \right) = 0 \\\hline
+2 & q_{\NoteCommit,3} \cdot \left(y - (j + k_2 \cdot 2^{250} + k_3 \cdot 2^{254}) \right) = 0 \\\hline
 \end{array}
 $$
 
@@ -431,7 +431,7 @@ $$
 3 & q_{\NoteCommit,2} \cdot h_1 \cdot h_0 = 0 \\\hline
 3 & q_{\NoteCommit,2} \cdot h_1 \cdot z_{g,13} = 0 \\\hline
 2 & q_{\NoteCommit,1} \cdot (g_1 + g_2 \cdot 2^9 + 2^{130} - t_\mathbb{P} - {g_1}{g_2}') = 0 \\\hline
-3 & q_{\NoteCommit,2} \cdot g_0 \cdot z_{{g_1}{g_2}',14} = 0 \\\hline
+3 & q_{\NoteCommit,2} \cdot g_0 \cdot z_{{g_1}{g_2}',13} = 0 \\\hline
 \end{array}
 $$
 
@@ -446,6 +446,6 @@ $$
 a'  & {b_3}c' & {e_1}f' & {g_1}{g_2}' &  a  &  b  & b_2 & b_3 &  c  &    d    & 0 & 0 \\\hline
 d_1 &   d_2   & z_{d,1} &      e      & e_0 & e_1 &  f  &  g  & g_1 &    h    & 1 & 0 \\\hline
 h_0 &   h_1   & x(g_d)  &   x(pk_d)   &  v  & b_0 & b_1 & d_0 & g_0 & z_{g,1} & 0 & 1 \\\hline
-z_{a',13} & z_{{b_3}c',14} & z_{{e_1}f',14} & z_{{g_1}{g_2}',14} & z_{a,13} & z_{c,13} & z_{f,13} & z_{g,13} & \psi & \rho & 0 & 0 \\\hline
+z_{a',13} & z_{{b_3}c',14} & z_{{e_1}f',14} & z_{{g_1}{g_2}',13} & z_{a,13} & z_{c,13} & z_{f,13} & z_{g,13} & \psi & \rho & 0 & 0 \\\hline
 \end{array}
 $$
