@@ -142,10 +142,10 @@ $\begin{array}{l}
 \hspace{1.5em} (x_{A,i-1}, y_{A,i-1}) = \left((x_{A,i}, y_{A,i}) + (x_T, y_T)\right) + (x_{A,i}, y_{A,i})
 \end{array}$
 
-If the least significant bit is set $\mathbf{k_0} = 1,$ we return the accumulator $A$. Else, if $\mathbf{k_0} = 0,$ we return $A - T$ (also using complete addition).
+If the least significant bit $\mathbf{k_0} = 1,$ we set $B = \mathcal{O},$ otherwise we set ${B = -T}$. Then we return ${A + B}$ using complete addition.
 
 Let $B = \begin{cases}
-(0, 0), &\text{ if } \mathbf{k_0} = 1,\\
+(0, 0), &\text{ if } \mathbf{k_0} = 1, \\
 (x_T, -y_T), &\text{ otherwise.}
 \end{cases}$
 
