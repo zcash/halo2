@@ -90,37 +90,42 @@ impl NoteCommitConfig {
 
             y = LSB || k_0 || k_1 || k_2 || k_3
               = (bit 0) || (bits 1..=9) || (bits 10..=249) || (bits 250..=253) || (bit 254)
+
+            These pieces are laid out in the following configuration:
+                    | A_5 | A_6 |  A_7  |   A_8   |     A_9     |
+                    ----------------------------------------------
+                    |  y  | lsb |  k_0  |   k_2   |     k_3     |
+                    |  j  | z1_j| z13_j | j_prime | z13_j_prime |
+            where z1_j = k_1.
         */
         meta.create_gate("y coordinate checks", |meta| {
             let q_y_canon = meta.query_selector(q_y_canon);
-            let y = meta.query_advice(advices[0], Rotation::cur());
+            let y = meta.query_advice(advices[5], Rotation::cur());
             // LSB has been boolean-constrained outside this gate.
-            let lsb = meta.query_advice(advices[1], Rotation::cur());
+            let lsb = meta.query_advice(advices[6], Rotation::cur());
             // k_0 has been constrained to 9 bits outside this gate.
-            let k_0 = meta.query_advice(advices[2], Rotation::cur());
-            // This gate constrains k_1 to 240 bits by equating it to z1_j.
-            let k_1 = meta.query_advice(advices[3], Rotation::cur());
+            let k_0 = meta.query_advice(advices[7], Rotation::cur());
+            // k_1 = z1_j (witnessed in the next rotation).
             // k_2 has been constrained to 4 bits outside this gate.
-            let k_2 = meta.query_advice(advices[4], Rotation::cur());
+            let k_2 = meta.query_advice(advices[8], Rotation::cur());
             // This gate constrains k_3 to be boolean.
-            let k_3 = meta.query_advice(advices[5], Rotation::cur());
+            let k_3 = meta.query_advice(advices[9], Rotation::cur());
 
             // j = LSB + (2)k_0 + (2^10)k_1
-            let j = meta.query_advice(advices[0], Rotation::next());
-            let z1_j = meta.query_advice(advices[1], Rotation::next());
-            let z13_j = meta.query_advice(advices[2], Rotation::next());
+            let j = meta.query_advice(advices[5], Rotation::next());
+            let z1_j = meta.query_advice(advices[6], Rotation::next());
+            let z13_j = meta.query_advice(advices[7], Rotation::next());
 
             // j_prime = j + 2^130 - t_P
-            let j_prime = meta.query_advice(advices[3], Rotation::next());
-            let z13_j_prime = meta.query_advice(advices[4], Rotation::next());
+            let j_prime = meta.query_advice(advices[8], Rotation::next());
+            let z13_j_prime = meta.query_advice(advices[9], Rotation::next());
 
             // Decomposition checks
             let decomposition_checks = {
-                // Check that k_1 = z1_j
-                let k1_check = k_1.clone() - z1_j;
                 // Check that k_3 is boolean
                 let k3_check = bool_check(k_3.clone());
                 // Check that j = LSB + (2)k_0 + (2^10)k_1
+                let k_1 = z1_j;
                 let j_check = j.clone() - (lsb + k_0 * two + k_1 * two_pow_10);
                 // Check that y = j + (2^250)k_2 + (2^254)k_3
                 let y_check =
@@ -129,7 +134,6 @@ impl NoteCommitConfig {
                 let j_prime_check = j_prime - (j + two_pow_130.clone() - t_p.clone());
 
                 std::iter::empty()
-                    .chain(Some(("k1_check", k1_check)))
                     .chain(Some(("k3_check", k3_check)))
                     .chain(Some(("j_check", j_check)))
                     .chain(Some(("y_check", y_check)))
@@ -971,7 +975,15 @@ impl NoteCommitConfig {
         let (j_prime, z13_j_prime) =
             self.canon_bitshift_130(layouter.namespace(|| "j_prime = j + 2^130 - t_P"), j)?;
 
-        // Assign y canonicity gate.
+        /*
+
+            Assign y canonicity gate in the following configuration:
+                | A_5 | A_6 |  A_7  |   A_8   |     A_9     |
+                ----------------------------------------------
+                |  y  | lsb |  k_0  |   k_2   |     k_3     |
+                |  j  | z1_j| z13_j | j_prime | z13_j_prime |
+            where z1_j = k_1.
+        */
         layouter.assign_region(
             || "y canonicity",
             |mut region| {
@@ -982,32 +994,25 @@ impl NoteCommitConfig {
                     let offset = 0;
 
                     // Copy y.
-                    copy(&mut region, || "copy y", self.advices[0], offset, &y)?;
+                    copy(&mut region, || "copy y", self.advices[5], offset, &y)?;
                     // Witness LSB.
                     let lsb = {
                         let cell = region.assign_advice(
                             || "witness LSB",
-                            self.advices[1],
+                            self.advices[6],
                             offset,
                             || lsb.ok_or(Error::SynthesisError),
                         )?;
                         CellValue::new(cell, lsb)
                     };
                     // Witness k_0.
-                    copy(&mut region, || "copy k_0", self.advices[2], offset, &k_0)?;
-                    // Witness k_1.
-                    region.assign_advice(
-                        || "witness k_1",
-                        self.advices[3],
-                        offset,
-                        || k_1.ok_or(Error::SynthesisError),
-                    )?;
+                    copy(&mut region, || "copy k_0", self.advices[7], offset, &k_0)?;
                     // Copy k_2.
-                    copy(&mut region, || "copy k_2", self.advices[4], offset, &k_2)?;
+                    copy(&mut region, || "copy k_2", self.advices[8], offset, &k_2)?;
                     // Witness k_3.
                     region.assign_advice(
                         || "witness k_3",
-                        self.advices[5],
+                        self.advices[9],
                         offset,
                         || k_3.ok_or(Error::SynthesisError),
                     )?;
@@ -1020,14 +1025,14 @@ impl NoteCommitConfig {
                     let offset = 1;
 
                     // Copy j.
-                    copy(&mut region, || "copy j", self.advices[0], offset, &j)?;
+                    copy(&mut region, || "copy j", self.advices[5], offset, &j)?;
                     // Copy z1_j.
-                    copy(&mut region, || "copy z1_j", self.advices[1], offset, &z1_j)?;
+                    copy(&mut region, || "copy z1_j", self.advices[6], offset, &z1_j)?;
                     // Copy z13_j.
                     copy(
                         &mut region,
                         || "copy z13_j",
-                        self.advices[2],
+                        self.advices[7],
                         offset,
                         &z13_j,
                     )?;
@@ -1035,7 +1040,7 @@ impl NoteCommitConfig {
                     copy(
                         &mut region,
                         || "copy j_prime",
-                        self.advices[3],
+                        self.advices[8],
                         offset,
                         &j_prime,
                     )?;
@@ -1043,7 +1048,7 @@ impl NoteCommitConfig {
                     copy(
                         &mut region,
                         || "copy z13_j_prime",
-                        self.advices[4],
+                        self.advices[9],
                         offset,
                         &z13_j_prime,
                     )?;
