@@ -362,17 +362,17 @@ impl<T: Authorization, V> Bundle<T, V> {
     /// Perform trial decryption of each action in the bundle with each of the
     /// specified incoming viewing keys, and return the decrypted note contents
     /// along with the index of the action from which it was derived.
-    pub fn decrypt_outputs_for_keys(
+    pub fn decrypt_outputs_for_keys<'a>(
         &self,
-        keys: &[IncomingViewingKey],
-    ) -> Vec<(usize, Note, Address, [u8; 512])> {
+        keys: &[&'a IncomingViewingKey],
+    ) -> Vec<(usize, &'a IncomingViewingKey, Note, Address, [u8; 512])> {
         self.actions
             .iter()
             .enumerate()
             .filter_map(|(idx, action)| {
                 let domain = OrchardDomain::for_action(action);
                 keys.iter().find_map(move |ivk| {
-                    try_note_decryption(&domain, ivk, action).map(|(n, a, m)| (idx, n, a, m))
+                    try_note_decryption(&domain, ivk, action).map(|(n, a, m)| (idx, *ivk, n, a, m))
                 })
             })
             .collect()
