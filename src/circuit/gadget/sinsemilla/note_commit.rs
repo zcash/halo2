@@ -1,13 +1,9 @@
-use group::GroupEncoding;
 use halo2::{
     circuit::Layouter,
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
-use pasta_curves::{
-    arithmetic::{CurveAffine, FieldExt},
-    pallas,
-};
+use pasta_curves::{arithmetic::FieldExt, pallas};
 
 use crate::{
     circuit::gadget::{
@@ -131,7 +127,7 @@ impl NoteCommitConfig {
                 let y_check =
                     y - (j.clone() + k_2.clone() * two_pow_250 + k_3.clone() * two_pow_254);
                 // Check that j_prime = j + 2^130 - t_P
-                let j_prime_check = j_prime - (j + two_pow_130.clone() - t_p.clone());
+                let j_prime_check = j + two_pow_130.clone() - t_p.clone() - j_prime;
 
                 std::iter::empty()
                     .chain(Some(("k3_check", k3_check)))
@@ -172,12 +168,12 @@ impl NoteCommitConfig {
                 h (10 bits)  = h_0 || h_1 || h_2
                              = (bits 249..=253 of psi) || (bit 254 of psi) || 4 zero bits
 
-                |         A_0         |          A_1           |         A_2            |          A_3            |  A_4  |  A_5  |  A_6  |  A_7   |  A_8  |   A_9   |  q_canon_1  |  q_canon_2  |
-                ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                |       a_prime       |       b3_c_prime       |       e1_f_prime       |       g1_g2_prime       |   a   |   b   |  b_2  |   b_3  |   c   |    d    |      0      |      0      |
-                |         d_1         |           d_2          |          z1_d          |           e             |  e_0  |  e_1  |   f   |    g   |  g_1  |    h    |      1      |      0      |
-                |         h_0         |           h_1          |         x(g_d)         |        x(pk_d)          | value |  b_0  |  b_1  |   d_0  |  g_0  |   z1_g  |      0      |      1      |
-                |a_prime_decomposition|b3_c_prime_decomposition|e1_f_prime_decomposition|g1_g2_prime_decomposition| z13_a | z13_c | z13_f | z13_g  |  psi  |   rho   |      0      |      0      |
+                |   A_0    |    A_1    |     A_2      | A_3 |  A_4  |       A_5     |    A_6   |     A_7      |  A_8  |    A_9    |  q_canon_1  |  q_canon_2  |
+                -----------------------------------------------------------------------------------------------------------------------------------------------
+                |    b     |     d     |      e       |  g  |   h   |       d_1     |  x(pk_d) |     b_3      |a_prime|    b_2    |      0      |      0      |
+                |e1_f_prime|g1_g2_prime|    value     | d_2 |  z1_d |       e_0     |b3_c_prime|      c       |   a   |  x(g_d)   |      1      |      0      |
+                |   e_1    |     f     |     g_0      | g_1 |  z1_g |       h_0     |    h_1   |     d_0      |  b_0  |    b_1    |      0      |      1      |
+                |   rho    |   z13_f   |z14_e1_f_prime| psi | z13_g |z13_g1_g2_prime|  z13_c   |z14_b3_c_prime| z13_a |z13_a_prime|      0      |      0      |
 
              q_canon_1 checks that:
               - piece decomposition:
@@ -205,65 +201,65 @@ impl NoteCommitConfig {
             let q_canon_1 = meta.query_selector(config.q_canon_1);
 
             // Offset prev
-            let a_prime = meta.query_advice(config.advices[0], Rotation::prev());
-            let b3_c_prime = meta.query_advice(config.advices[1], Rotation::prev());
-            let e1_f_prime = meta.query_advice(config.advices[2], Rotation::prev());
-            let g1_g2_prime = meta.query_advice(config.advices[3], Rotation::prev());
-            // `a` has been constrained to 250 bits by the Sinsemilla hash.
-            let a = meta.query_advice(config.advices[4], Rotation::prev());
             // `b` has been constrained to 10 bits by the Sinsemilla hash.
-            let b_whole = meta.query_advice(config.advices[5], Rotation::prev());
-            // This gate constrains b_2 to be boolean.
-            let b_2 = meta.query_advice(config.advices[6], Rotation::prev());
+            let b_whole = meta.query_advice(config.advices[0], Rotation::prev());
+            // `d` has been constrained to 10 bits by the Sinsemilla hash.
+            let d_whole = meta.query_advice(config.advices[1], Rotation::prev());
+            // `e` has been constrained to 10 bits by the Sinsemilla hash.
+            let e_whole = meta.query_advice(config.advices[2], Rotation::prev());
+            // `g` has been constrained to 250 bits by the Sinsemilla hash.
+            let g_whole = meta.query_advice(config.advices[3], Rotation::prev());
+            // `h` has been constrained to 10 bits by the Sinsemilla hash.
+            let h_whole = meta.query_advice(config.advices[4], Rotation::prev());
+            // This gate constrains d_1 to be boolean.
+            let d_1 = meta.query_advice(config.advices[5], Rotation::prev());
+            let pkd_x = meta.query_advice(config.advices[6], Rotation::prev());
             // `b_3` has been constrained to 4 bits outside this gate.
             let b_3 = meta.query_advice(config.advices[7], Rotation::prev());
-            // `c` has been constrained to 250 bits by the Sinsemilla hash.
-            let c = meta.query_advice(config.advices[8], Rotation::prev());
-            // `d` has been constrained to 10 bits by the Sinsemilla hash.
-            let d_whole = meta.query_advice(config.advices[9], Rotation::prev());
+            let a_prime = meta.query_advice(config.advices[8], Rotation::prev());
+            // This gate constrains b_2 to be boolean.
+            let b_2 = meta.query_advice(config.advices[9], Rotation::prev());
 
             // Offset cur
-            // This gate constrains d_1 to be boolean.
-            let d_1 = meta.query_advice(config.advices[0], Rotation::cur());
-            // `d_2` has been constrained to 8 bits outside this gate.
-            let d_2 = meta.query_advice(config.advices[1], Rotation::cur());
+            let e1_f_prime = meta.query_advice(config.advices[0], Rotation::cur());
+            let g1_g2_prime = meta.query_advice(config.advices[1], Rotation::cur());
             // `z1_d` has been constrained to 50 bits by the Sinsemilla hash.
-            let z1_d = meta.query_advice(config.advices[2], Rotation::cur());
+            let value = meta.query_advice(config.advices[2], Rotation::cur());
+            // `d_2` has been constrained to 8 bits outside this gate.
+            let d_2 = meta.query_advice(config.advices[3], Rotation::cur());
+            let z1_d = meta.query_advice(config.advices[4], Rotation::cur());
             let d_3 = z1_d;
-            // `e` has been constrained to 10 bits by the Sinsemilla hash.
-            let e_whole = meta.query_advice(config.advices[3], Rotation::cur());
             // `e_0` has been constrained to 6 bits outside this gate.
-            let e_0 = meta.query_advice(config.advices[4], Rotation::cur());
-            // `e_1` has been constrained to 4 bits outside this gate.
-            let e_1 = meta.query_advice(config.advices[5], Rotation::cur());
-            // `f` has been constrained to 250 bits by the Sinsemilla hash.
-            let f = meta.query_advice(config.advices[6], Rotation::cur());
-            // `g` has been constrained to 250 bits by the Sinsemilla hash.
-            let g_whole = meta.query_advice(config.advices[7], Rotation::cur());
-            // `g_1` has been constrained to 9 bits outside this gate.
-            let g_1 = meta.query_advice(config.advices[8], Rotation::cur());
-            // `h` has been constrained to 10 bits by the Sinsemilla hash.
-            let h_whole = meta.query_advice(config.advices[9], Rotation::cur());
+            let e_0 = meta.query_advice(config.advices[5], Rotation::cur());
+            let b3_c_prime = meta.query_advice(config.advices[6], Rotation::cur());
+            // `c` has been constrained to 250 bits by the Sinsemilla hash.
+            let c = meta.query_advice(config.advices[7], Rotation::cur());
+            // `a` has been constrained to 250 bits by the Sinsemilla hash.
+            let a = meta.query_advice(config.advices[8], Rotation::cur());
+            let gd_x = meta.query_advice(config.advices[9], Rotation::cur());
 
             // Offset next
+            // `e_1` has been constrained to 4 bits outside this gate.
+            let e_1 = meta.query_advice(config.advices[0], Rotation::next());
+            // `f` has been constrained to 250 bits by the Sinsemilla hash.
+            let f = meta.query_advice(config.advices[1], Rotation::next());
+            // This gate constrains g_0 to be boolean.
+            let g_0 = meta.query_advice(config.advices[2], Rotation::next());
+            // `g_1` has been constrained to 9 bits outside this gate.
+            let g_1 = meta.query_advice(config.advices[3], Rotation::next());
+            // z1_g has been constrained to 240 bits by the Sinsemilla hash.
+            let z1_g = meta.query_advice(config.advices[4], Rotation::next());
+            let g_2 = z1_g;
             // h_0 has been constrained to be 5 bits outside this gate.
-            let h_0 = meta.query_advice(config.advices[0], Rotation::next());
+            let h_0 = meta.query_advice(config.advices[5], Rotation::next());
             // This gate constrains h_1 to be boolean.
-            let h_1 = meta.query_advice(config.advices[1], Rotation::next());
-            let gd_x = meta.query_advice(config.advices[2], Rotation::next());
-            let pkd_x = meta.query_advice(config.advices[3], Rotation::next());
-            let value = meta.query_advice(config.advices[4], Rotation::next());
-            // b_0 has been constrained to be 4 bits outside this gate.
-            let b_0 = meta.query_advice(config.advices[5], Rotation::next());
-            // This gate constrains b_1 to be boolean.
-            let b_1 = meta.query_advice(config.advices[6], Rotation::next());
+            let h_1 = meta.query_advice(config.advices[6], Rotation::next());
             // This gate constrains d_0 to be boolean.
             let d_0 = meta.query_advice(config.advices[7], Rotation::next());
-            // This gate constrains g_0 to be boolean.
-            let g_0 = meta.query_advice(config.advices[8], Rotation::next());
-            // z1_g has been constrained to 240 bits by the Sinsemilla hash.
-            let z1_g = meta.query_advice(config.advices[9], Rotation::next());
-            let g_2 = z1_g;
+            // b_0 has been constrained to be 4 bits outside this gate.
+            let b_0 = meta.query_advice(config.advices[8], Rotation::next());
+            // This gate constrains b_1 to be boolean.
+            let b_1 = meta.query_advice(config.advices[9], Rotation::next());
 
             // Boolean checks on 1-bit pieces.
             let boolean_checks = std::iter::empty()
@@ -360,57 +356,55 @@ impl NoteCommitConfig {
                 h (10 bits)  = h_0 || h_1 || h_2
                             = (bits 249..=253 of psi) || (bit 254 of psi) || 4 zero bits
 
-                |         A_0         |          A_1           |         A_2            |          A_3            |  A_4  |  A_5  |  A_6  |  A_7   |  A_8  |   A_9   |  q_canon_1  |  q_canon_2  |
-                ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                |       a_prime       |       b3_c_prime       |       e1_f_prime       |       g1_g2_prime       |   a   |   b   |  b_2  |   b_3  |   c   |    d    |      0      |      0      |
-                |         d_1         |           d_2          |          z1_d          |           e             |  e_0  |  e_1  |   f   |    g   |  g_1  |    h    |      1      |      0      |
-                |         h_0         |           h_1          |         x(g_d)         |        x(pk_d)          | value |  b_0  |  b_1  |   d_0  |  g_0  |   z1_g  |      0      |      1      |
-                |a_prime_decomposition|b3_c_prime_decomposition|e1_f_prime_decomposition|g1_g2_prime_decomposition| z13_a | z13_c | z13_f | z13_g  |  psi  |   rho   |      0      |      0      |
+                |   A_0    |    A_1    |     A_2      | A_3 |  A_4  |       A_5     |    A_6   |     A_7      |  A_8  |    A_9    |  q_canon_1  |  q_canon_2  |
+                -----------------------------------------------------------------------------------------------------------------------------------------------
+                |    b     |     d     |      e       |  g  |   h   |       d_1     |  x(pk_d) |     b_3      |a_prime|    b_2    |      0      |      0      |
+                |e1_f_prime|g1_g2_prime|    value     | d_2 |  z1_d |       e_0     |b3_c_prime|      c       |   a   |  x(g_d)   |      1      |      0      |
+                |   e_1    |     f     |     g_0      | g_1 |  z1_g |       h_0     |    h_1   |     d_0      |  b_0  |    b_1    |      0      |      1      |
+                |   rho    |   z13_f   |z14_e1_f_prime| psi | z13_g |z13_g1_g2_prime|  z13_c   |z14_b3_c_prime| z13_a |z13_a_prime|      0      |      0      |
             */
 
             // q_canon_2 checks that:
             //   - field element decomposition:
-            //      - rho = e_1 + (2^4) g + (2^254) h_0
-            //      - psi = h_1 + (2^9) i + (2^249) j_0 + (2^254) j_1
+            //      - rho = e_1 + (2^4) f + (2^254) g_0
+            //      - psi = g_1 + (2^9) g_2 + (2^249) h_0 + (2^254) h_1
             //   - canonicity:
-            //      - b_1 = 0 => b_0 = 0
+            //      - b_1 = 1 => b_0 = 0
             //                && z13_a = 0
-            //                && a_prime_decomposition = 0
-            //      - d_0 = 0 => z13_c = 0
-            //                && b3_c_prime_decomposition = 0
-            //      - h_0 = 0 => z13_f = 0
-            //                && e1_f_prime_decomposition = 0
-            //      - j_1 = 0 => j_0 = 0
-            //                && g1_g2_prime_decomposition = 0
+            //                && z13_a_prime = 0
+            //      - d_0 = 1 => z13_c = 0
+            //                && z14_b3_c_prime = 0
+            //      - g_0 = 1 => z13_f = 0
+            //                && z14_e1_f_prime = 0
+            //      - h_1 = 1 => h_0 = 0
+            //                && z13_g1_g2_prime = 0
 
             let q_canon_2 = meta.query_selector(config.q_canon_2);
 
-            // Offset prev
-            let e_1 = meta.query_advice(config.advices[5], Rotation::prev());
-            let f = meta.query_advice(config.advices[6], Rotation::prev());
-            let g_1 = meta.query_advice(config.advices[8], Rotation::prev());
-
             // Offset cur
-            let h_0 = meta.query_advice(config.advices[0], Rotation::cur());
-            let h_1 = meta.query_advice(config.advices[1], Rotation::cur());
-            let b_0 = meta.query_advice(config.advices[5], Rotation::cur());
-            let b_1 = meta.query_advice(config.advices[6], Rotation::cur());
-            let d_0 = meta.query_advice(config.advices[7], Rotation::cur());
-            let g_0 = meta.query_advice(config.advices[8], Rotation::cur());
-            let z1_g = meta.query_advice(config.advices[9], Rotation::cur());
+            let e_1 = meta.query_advice(config.advices[0], Rotation::cur());
+            let f = meta.query_advice(config.advices[1], Rotation::cur());
+            let g_0 = meta.query_advice(config.advices[2], Rotation::cur());
+            let g_1 = meta.query_advice(config.advices[3], Rotation::cur());
+            let z1_g = meta.query_advice(config.advices[4], Rotation::cur());
             let g_2 = z1_g;
+            let h_0 = meta.query_advice(config.advices[5], Rotation::cur());
+            let h_1 = meta.query_advice(config.advices[6], Rotation::cur());
+            let d_0 = meta.query_advice(config.advices[7], Rotation::cur());
+            let b_0 = meta.query_advice(config.advices[8], Rotation::cur());
+            let b_1 = meta.query_advice(config.advices[9], Rotation::cur());
 
             // Offset next
-            let a_prime_decomposition = meta.query_advice(config.advices[0], Rotation::next());
-            let b3_c_prime_decomposition = meta.query_advice(config.advices[1], Rotation::next());
-            let e1_f_prime_decomposition = meta.query_advice(config.advices[2], Rotation::next());
-            let g1_g2_prime_decomposition = meta.query_advice(config.advices[3], Rotation::next());
-            let z13_a = meta.query_advice(config.advices[4], Rotation::next());
-            let z13_c = meta.query_advice(config.advices[5], Rotation::next());
-            let z13_f = meta.query_advice(config.advices[6], Rotation::next());
-            let z13_g = meta.query_advice(config.advices[7], Rotation::next());
-            let psi = meta.query_advice(config.advices[8], Rotation::next());
-            let rho = meta.query_advice(config.advices[9], Rotation::next());
+            let rho = meta.query_advice(config.advices[0], Rotation::next());
+            let z13_f = meta.query_advice(config.advices[1], Rotation::next());
+            let z14_e1_f_prime = meta.query_advice(config.advices[2], Rotation::next());
+            let psi = meta.query_advice(config.advices[3], Rotation::next());
+            let z13_g = meta.query_advice(config.advices[4], Rotation::next());
+            let z13_g1_g2_prime = meta.query_advice(config.advices[5], Rotation::next());
+            let z13_c = meta.query_advice(config.advices[6], Rotation::next());
+            let z14_b3_c_prime = meta.query_advice(config.advices[7], Rotation::next());
+            let z13_a = meta.query_advice(config.advices[8], Rotation::next());
+            let z13_a_prime = meta.query_advice(config.advices[9], Rotation::next());
 
             // rho = e_1 + (2^4) f + (2^254) g_0
             let rho_decomposition_check = {
@@ -432,41 +426,41 @@ impl NoteCommitConfig {
             // The gd_x_canonicity_checks are enforced if and only if `b_1` = 1.
             // x(g_d) = a (250 bits) || b_0 (4 bits) || b_1 (1 bit)
             let gd_x_canonicity_checks = std::iter::empty()
-                .chain(Some(b_0))
-                .chain(Some(z13_a))
-                .chain(Some(a_prime_decomposition))
-                .map(move |poly| b_1.clone() * poly);
+                .chain(Some(("b_1 = 1 => b_0", b_0)))
+                .chain(Some(("b_1 = 1 => z13_a", z13_a)))
+                .chain(Some(("b_1 = 1 => z13_a_prime", z13_a_prime)))
+                .map(move |(name, poly)| (name, b_1.clone() * poly));
 
             // The pkd_x_canonicity_checks are enforced if and only if `d_0` = 1.
             // `x(pk_d)` = `b_3 (4 bits) || c (250 bits) || d_0 (1 bit)`
             let pkd_x_canonicity_checks = std::iter::empty()
-                .chain(Some(z13_c))
-                .chain(Some(b3_c_prime_decomposition))
-                .map(move |poly| d_0.clone() * poly);
+                .chain(Some(("d_0 = 1 => z13_c", z13_c)))
+                .chain(Some(("d_0 = 1 => z14_b3_c_prime", z14_b3_c_prime)))
+                .map(move |(name, poly)| (name, d_0.clone() * poly));
 
             // The rho_canonicity_checks are enforced if and only if `g_0` = 1.
             // rho = e_1 (4 bits) || f (250 bits) || g_0 (1 bit)
             let rho_canonicity_checks = std::iter::empty()
-                .chain(Some(z13_f))
-                .chain(Some(e1_f_prime_decomposition))
-                .map(move |poly| g_0.clone() * poly);
+                .chain(Some(("g_0 = 1 => z13_f", z13_f)))
+                .chain(Some(("g_0 = 1 => z14_e1_f_prime", z14_e1_f_prime)))
+                .map(move |(name, poly)| (name, g_0.clone() * poly));
 
             // The psi_canonicity_checks are enforced if and only if `h_1` = 1.
             // `psi` = `g_1 (9 bits) || g_2 (240 bits) || h_0 (5 bits) || h_1 (1 bit)`
             let psi_canonicity_checks = std::iter::empty()
-                .chain(Some(h_0))
-                .chain(Some(z13_g))
-                .chain(Some(g1_g2_prime_decomposition))
-                .map(move |poly| h_1.clone() * poly);
+                .chain(Some(("h_1 = 1 => h_0", h_0)))
+                .chain(Some(("h_1 = 1 => z13_g", z13_g)))
+                .chain(Some(("h_1 = 1 => z13_g1_g2_prime", z13_g1_g2_prime)))
+                .map(move |(name, poly)| (name, h_1.clone() * poly));
 
             std::iter::empty()
-                .chain(Some(rho_decomposition_check))
-                .chain(Some(psi_decomposition_check))
+                .chain(Some(("rho_decomposition_check", rho_decomposition_check)))
+                .chain(Some(("psi_decomposition_check", psi_decomposition_check)))
                 .chain(gd_x_canonicity_checks)
                 .chain(pkd_x_canonicity_checks)
                 .chain(rho_canonicity_checks)
                 .chain(psi_canonicity_checks)
-                .map(move |poly| q_canon_2.clone() * poly)
+                .map(move |(name, poly)| (name, q_canon_2.clone() * poly))
         });
 
         config
@@ -487,8 +481,8 @@ impl NoteCommitConfig {
         psi: CellValue<pallas::Base>,
         rcm: Option<pallas::Scalar>,
     ) -> Result<Point<pallas::Affine, EccChip>, Error> {
-        let (gd_x, gd_y) = point_repr(g_d.point());
-        let (pkd_x, pkd_y) = point_repr(pk_d.point());
+        let (gd_x, gd_y) = (g_d.x().value(), g_d.y().value());
+        let (pkd_x, pkd_y) = (pk_d.x().value(), pk_d.y().value());
         let value_val = value.value();
         let rho_val = rho.value();
         let psi_val = psi.value();
@@ -703,24 +697,24 @@ impl NoteCommitConfig {
         let g_2 = z1_g;
         let z13_g = zs[6][13];
 
-        let (a_prime, a_prime_decomposition) = self.canon_bitshift_130(
+        let (a_prime, z13_a_prime) = self.canon_bitshift_130(
             layouter.namespace(|| "x(g_d) canonicity"),
             a.inner().cell_value(),
         )?;
 
-        let (b3_c_prime, b3_c_prime_decomposition) = self.pkd_x_canonicity(
+        let (b3_c_prime, z14_b3_c_prime) = self.pkd_x_canonicity(
             layouter.namespace(|| "x(pk_d) canonicity"),
             b_3,
             c.inner().cell_value(),
         )?;
 
-        let (e1_f_prime, e1_f_prime_decomposition) = self.rho_canonicity(
+        let (e1_f_prime, z14_e1_f_prime) = self.rho_canonicity(
             layouter.namespace(|| "rho canonicity"),
             e_1,
             f.inner().cell_value(),
         )?;
 
-        let (g1_g2_prime, g1_g2_prime_decomposition) =
+        let (g1_g2_prime, z13_g1_g2_prime) =
             self.psi_canonicity(layouter.namespace(|| "psi canonicity"), g_1, g_2)?;
 
         let gate_cells = GateCells {
@@ -756,10 +750,10 @@ impl NoteCommitConfig {
             b3_c_prime,
             e1_f_prime,
             g1_g2_prime,
-            a_prime_decomposition,
-            b3_c_prime_decomposition,
-            e1_f_prime_decomposition,
-            g1_g2_prime_decomposition,
+            z13_a_prime,
+            z14_b3_c_prime,
+            z14_e1_f_prime,
+            z13_g1_g2_prime,
             z13_a,
             z13_c,
             z13_f,
@@ -965,12 +959,12 @@ impl NoteCommitConfig {
                 layouter.namespace(|| "Decompose j = LSB + (2)k_0 + (2^10)k_1"),
                 j,
                 25,
-                false,
+                true,
             )?;
             (zs[0], zs[1], zs[13])
         };
 
-        // Decompose j_prime = j + 2^130 - t_P using 25 ten-bit lookups.
+        // Decompose j_prime = j + 2^130 - t_P using 13 ten-bit lookups.
         // We can reuse the canon_bitshift_130 logic here.
         let (j_prime, z13_j_prime) =
             self.canon_bitshift_130(layouter.namespace(|| "j_prime = j + 2^130 - t_P"), j)?;
@@ -1068,13 +1062,12 @@ impl NoteCommitConfig {
             The pieces are witnessed in the below configuration, such that no gate has to query an
             offset greater than +/- 1 from its relative row.
 
-            |         A_0         |          A_1           |         A_2            |          A_3            |  A_4  |  A_5  |  A_6  |  A_7   |  A_8  |   A_9   |  q_canon_1  |  q_canon_2  |
-            ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-            |       a_prime       |       b3_c_prime       |       e1_f_prime       |       g1_g2_prime       |   a   |   b   |  b_2  |   b_3  |   c   |    d    |      0      |      0      |
-            |         d_1         |           d_2          |          z1_d          |           e             |  e_0  |  e_1  |   f   |    g   |  g_1  |    h    |      1      |      0      |
-            |         h_0         |           h_1          |         x(g_d)         |        x(pk_d)          | value |  b_0  |  b_1  |   d_0  |  g_0  |   z1_g  |      0      |      1      |
-            |a_prime_decomposition|b3_c_prime_decomposition|e1_f_prime_decomposition|g1_g2_prime_decomposition| z13_a | z13_c | z13_f | z13_g  |  psi  |   rho   |      0      |      0      |
-
+                |   A_0    |    A_1    |     A_2      | A_3 |  A_4  |       A_5     |    A_6   |     A_7      |  A_8  |    A_9    |  q_canon_1  |  q_canon_2  |
+                -----------------------------------------------------------------------------------------------------------------------------------------------
+                |    b     |     d     |      e       |  g  |   h   |       d_1     |  x(pk_d) |     b_3      |a_prime|    b_2    |      0      |      0      |
+                |e1_f_prime|g1_g2_prime|    value     | d_2 |  z1_d |       e_0     |b3_c_prime|      c       |   a   |  x(g_d)   |      1      |      0      |
+                |   e_1    |     f     |     g_0      | g_1 |  z1_g |       h_0     |    h_1   |     d_0      |  b_0  |    b_1    |      0      |      1      |
+                |   rho    |   z13_f   |z14_e1_f_prime| psi | z13_g |z13_g1_g2_prime|  z13_c   |z14_b3_c_prime| z13_a |z13_a_prime|      0      |      0      |
         */
         layouter.assign_region(
             || "Assign gate cells",
@@ -1088,54 +1081,36 @@ impl NoteCommitConfig {
                     let offset = 0;
 
                     // advices[0]
-                    copy(
-                        &mut region,
-                        || "a_prime",
-                        self.advices[0],
-                        offset,
-                        &gate_cells.a_prime,
-                    )?;
+                    copy(&mut region, || "b", self.advices[0], offset, &gate_cells.b)?;
 
                     // advices[1]
-                    copy(
-                        &mut region,
-                        || "b3_c_prime",
-                        self.advices[1],
-                        offset,
-                        &gate_cells.b3_c_prime,
-                    )?;
+                    copy(&mut region, || "d", self.advices[1], offset, &gate_cells.d)?;
 
                     // advices[2]
-                    copy(
-                        &mut region,
-                        || "e1_f_prime",
-                        self.advices[2],
-                        offset,
-                        &gate_cells.e1_f_prime,
-                    )?;
+                    copy(&mut region, || "e", self.advices[2], offset, &gate_cells.e)?;
 
                     // advices[3]
-                    copy(
-                        &mut region,
-                        || "g1_g2_prime",
-                        self.advices[3],
-                        offset,
-                        &gate_cells.g1_g2_prime,
-                    )?;
+                    copy(&mut region, || "g", self.advices[3], offset, &gate_cells.g)?;
 
                     // advices[4]
-                    copy(&mut region, || "a", self.advices[4], offset, &gate_cells.a)?;
+                    copy(&mut region, || "h", self.advices[4], offset, &gate_cells.h)?;
 
                     // advices[5]
-                    copy(&mut region, || "b", self.advices[5], offset, &gate_cells.b)?;
+                    copy(
+                        &mut region,
+                        || "d_1",
+                        self.advices[5],
+                        offset,
+                        &gate_cells.d_1,
+                    )?;
 
                     // advices[6]
                     copy(
                         &mut region,
-                        || "b_2",
+                        || "pkd_x",
                         self.advices[6],
                         offset,
-                        &gate_cells.b_2,
+                        &gate_cells.pkd_x,
                     )?;
 
                     // advices[7]
@@ -1148,10 +1123,22 @@ impl NoteCommitConfig {
                     )?;
 
                     // advices[8]
-                    copy(&mut region, || "c", self.advices[8], offset, &gate_cells.c)?;
+                    copy(
+                        &mut region,
+                        || "a_prime",
+                        self.advices[8],
+                        offset,
+                        &gate_cells.a_prime,
+                    )?;
 
                     // advices[9]
-                    copy(&mut region, || "d", self.advices[9], offset, &gate_cells.d)?;
+                    copy(
+                        &mut region,
+                        || "b_2",
+                        self.advices[9],
+                        offset,
+                        &gate_cells.b_2,
+                    )?;
                 }
 
                 // Offset 1
@@ -1161,68 +1148,80 @@ impl NoteCommitConfig {
                     // advices[0]
                     copy(
                         &mut region,
-                        || "d_1",
+                        || "e1_f_prime",
                         self.advices[0],
                         offset,
-                        &gate_cells.d_1,
+                        &gate_cells.e1_f_prime,
                     )?;
 
                     // advices[1]
                     copy(
                         &mut region,
-                        || "d_2",
+                        || "g1_g2_prime",
                         self.advices[1],
                         offset,
-                        &gate_cells.d_2,
+                        &gate_cells.g1_g2_prime,
                     )?;
 
                     // advices[2]
                     copy(
                         &mut region,
-                        || "z1_d",
+                        || "value",
                         self.advices[2],
                         offset,
-                        &gate_cells.z1_d,
+                        &gate_cells.value,
                     )?;
 
                     // advices[3]
-                    copy(&mut region, || "e", self.advices[3], offset, &gate_cells.e)?;
+                    copy(
+                        &mut region,
+                        || "d_2",
+                        self.advices[3],
+                        offset,
+                        &gate_cells.d_2,
+                    )?;
 
                     // advices[4]
                     copy(
                         &mut region,
-                        || "e_0",
+                        || "z1_d",
                         self.advices[4],
                         offset,
-                        &gate_cells.e_0,
+                        &gate_cells.z1_d,
                     )?;
 
                     // advices[5]
                     copy(
                         &mut region,
-                        || "e_1",
+                        || "e_0",
                         self.advices[5],
                         offset,
-                        &gate_cells.e_1,
+                        &gate_cells.e_0,
                     )?;
 
                     // advices[6]
-                    copy(&mut region, || "f", self.advices[6], offset, &gate_cells.f)?;
-
-                    // advices[7]
-                    copy(&mut region, || "g", self.advices[7], offset, &gate_cells.g)?;
-
-                    // advices[8]
                     copy(
                         &mut region,
-                        || "g_1",
-                        self.advices[8],
+                        || "b3_c_prime",
+                        self.advices[6],
                         offset,
-                        &gate_cells.g_1,
+                        &gate_cells.b3_c_prime,
                     )?;
 
+                    // advices[7]
+                    copy(&mut region, || "c", self.advices[7], offset, &gate_cells.c)?;
+
+                    // advices[8]
+                    copy(&mut region, || "a", self.advices[8], offset, &gate_cells.a)?;
+
                     // advices[9]
-                    copy(&mut region, || "h", self.advices[9], offset, &gate_cells.h)?;
+                    copy(
+                        &mut region,
+                        || "gd_x",
+                        self.advices[9],
+                        offset,
+                        &gate_cells.gd_x,
+                    )?;
                 }
 
                 // Offset 2
@@ -1232,62 +1231,56 @@ impl NoteCommitConfig {
                     // advices[0]
                     copy(
                         &mut region,
-                        || "h_0",
+                        || "e_1",
                         self.advices[0],
                         offset,
-                        &gate_cells.h_0,
+                        &gate_cells.e_1,
                     )?;
 
                     // advices[1]
-                    region.assign_advice(
-                        || "h_1",
-                        self.advices[1],
-                        offset,
-                        || gate_cells.h_1.ok_or(Error::SynthesisError),
-                    )?;
+                    copy(&mut region, || "f", self.advices[1], offset, &gate_cells.f)?;
 
                     // advices[2]
-                    copy(
-                        &mut region,
-                        || "gd_x",
+                    region.assign_advice(
+                        || "g_0",
                         self.advices[2],
                         offset,
-                        &gate_cells.gd_x,
+                        || gate_cells.g_0.ok_or(Error::SynthesisError),
                     )?;
 
                     // advices[3]
                     copy(
                         &mut region,
-                        || "pkd_x",
+                        || "g_1",
                         self.advices[3],
                         offset,
-                        &gate_cells.pkd_x,
+                        &gate_cells.g_1,
                     )?;
 
                     // advices[4]
                     copy(
                         &mut region,
-                        || "value",
+                        || "z1_g",
                         self.advices[4],
                         offset,
-                        &gate_cells.value,
+                        &gate_cells.z1_g,
                     )?;
 
                     // advices[5]
                     copy(
                         &mut region,
-                        || "b_0",
+                        || "h_0",
                         self.advices[5],
                         offset,
-                        &gate_cells.b_0,
+                        &gate_cells.h_0,
                     )?;
 
                     // advices[6]
                     region.assign_advice(
-                        || "b_1",
+                        || "h_1",
                         self.advices[6],
                         offset,
-                        || gate_cells.b_1.ok_or(Error::SynthesisError),
+                        || gate_cells.h_1.ok_or(Error::SynthesisError),
                     )?;
 
                     // advices[7]
@@ -1299,20 +1292,20 @@ impl NoteCommitConfig {
                     )?;
 
                     // advices[8]
-                    region.assign_advice(
-                        || "g_0",
+                    copy(
+                        &mut region,
+                        || "b_0",
                         self.advices[8],
                         offset,
-                        || gate_cells.g_0.ok_or(Error::SynthesisError),
+                        &gate_cells.b_0,
                     )?;
 
                     // advices[9]
-                    copy(
-                        &mut region,
-                        || "z1_g",
+                    region.assign_advice(
+                        || "b_1",
                         self.advices[9],
                         offset,
-                        &gate_cells.z1_g,
+                        || gate_cells.b_1.ok_or(Error::SynthesisError),
                     )?;
                 }
 
@@ -1323,91 +1316,91 @@ impl NoteCommitConfig {
                     // advices[0]
                     copy(
                         &mut region,
-                        || "a_prime_decomposition",
+                        || "rho",
                         self.advices[0],
                         offset,
-                        &gate_cells.a_prime_decomposition,
+                        &gate_cells.rho,
                     )?;
 
                     // advices[1]
                     copy(
                         &mut region,
-                        || "b3_c_prime_decomposition",
+                        || "z13_f",
                         self.advices[1],
                         offset,
-                        &gate_cells.b3_c_prime_decomposition,
+                        &gate_cells.z13_f,
                     )?;
 
                     // advices[2]
                     copy(
                         &mut region,
-                        || "e1_f_prime_decomposition",
+                        || "z14_e1_f_prime",
                         self.advices[2],
                         offset,
-                        &gate_cells.e1_f_prime_decomposition,
+                        &gate_cells.z14_e1_f_prime,
                     )?;
 
                     // advices[3]
                     copy(
                         &mut region,
-                        || "g1_g2_prime_decomposition",
+                        || "psi",
                         self.advices[3],
                         offset,
-                        &gate_cells.g1_g2_prime_decomposition,
+                        &gate_cells.psi,
                     )?;
 
                     // advices[4]
                     copy(
                         &mut region,
-                        || "z13_a",
+                        || "z13_g",
                         self.advices[4],
                         offset,
-                        &gate_cells.z13_a,
+                        &gate_cells.z13_g,
                     )?;
 
                     // advices[5]
                     copy(
                         &mut region,
-                        || "z13_c",
+                        || "z13_g1_g2_prime",
                         self.advices[5],
                         offset,
-                        &gate_cells.z13_c,
+                        &gate_cells.z13_g1_g2_prime,
                     )?;
 
                     // advices[6]
                     copy(
                         &mut region,
-                        || "z13_f",
+                        || "z13_c",
                         self.advices[6],
                         offset,
-                        &gate_cells.z13_f,
+                        &gate_cells.z13_c,
                     )?;
 
                     // advices[7]
                     copy(
                         &mut region,
-                        || "z13_g",
+                        || "z14_b3_c_prime",
                         self.advices[7],
                         offset,
-                        &gate_cells.z13_g,
+                        &gate_cells.z14_b3_c_prime,
                     )?;
 
                     // advices[8]
                     copy(
                         &mut region,
-                        || "psi",
+                        || "z13_a",
                         self.advices[8],
                         offset,
-                        &gate_cells.psi,
+                        &gate_cells.z13_a,
                     )?;
 
                     // advices[9]
                     copy(
                         &mut region,
-                        || "rho",
+                        || "z13_a_prime",
                         self.advices[9],
                         offset,
-                        &gate_cells.rho,
+                        &gate_cells.z13_a_prime,
                     )?;
                 }
 
@@ -1415,17 +1408,6 @@ impl NoteCommitConfig {
             },
         )
     }
-}
-
-fn point_repr(point: Option<pallas::Affine>) -> (Option<pallas::Base>, Option<pallas::Base>) {
-    let x: Option<pallas::Base> = point.map(|point| *point.coordinates().unwrap().x());
-    let y: Option<pallas::Base> = point.map(|point| {
-        let last_byte: u8 = point.to_bytes().as_ref()[31];
-        let last_bit = (last_byte >> 7) % 2;
-        pallas::Base::from_u64(last_bit as u64)
-    });
-
-    (x, y)
 }
 
 struct GateCells {
@@ -1461,10 +1443,10 @@ struct GateCells {
     b3_c_prime: CellValue<pallas::Base>,
     e1_f_prime: CellValue<pallas::Base>,
     g1_g2_prime: CellValue<pallas::Base>,
-    a_prime_decomposition: CellValue<pallas::Base>,
-    b3_c_prime_decomposition: CellValue<pallas::Base>,
-    e1_f_prime_decomposition: CellValue<pallas::Base>,
-    g1_g2_prime_decomposition: CellValue<pallas::Base>,
+    z13_a_prime: CellValue<pallas::Base>,
+    z14_b3_c_prime: CellValue<pallas::Base>,
+    z14_e1_f_prime: CellValue<pallas::Base>,
+    z13_g1_g2_prime: CellValue<pallas::Base>,
     z13_a: CellValue<pallas::Base>,
     z13_c: CellValue<pallas::Base>,
     z13_f: CellValue<pallas::Base>,
