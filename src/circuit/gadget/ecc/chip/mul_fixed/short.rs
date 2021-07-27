@@ -402,7 +402,7 @@ pub mod tests {
                     meta.advice_column(),
                     meta.advice_column(),
                 ];
-                let lookup_table = meta.fixed_column();
+                let lookup_table = meta.lookup_table_column();
                 let lagrange_coeffs = [
                     meta.fixed_column(),
                     meta.fixed_column(),

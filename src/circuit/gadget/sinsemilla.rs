@@ -460,7 +460,7 @@ mod tests {
             let constants = meta.fixed_column();
             meta.enable_constant(constants);
 
-            let table_idx = meta.fixed_column();
+            let table_idx = meta.lookup_table_column();
             let lagrange_coeffs = [
                 meta.fixed_column(),
                 meta.fixed_column(),
@@ -473,7 +473,11 @@ mod tests {
             ];
 
             // Fixed columns for the Sinsemilla generator lookup table
-            let lookup = (table_idx, meta.fixed_column(), meta.fixed_column());
+            let lookup = (
+                table_idx,
+                meta.lookup_table_column(),
+                meta.lookup_table_column(),
+            );
 
             let range_check = LookupRangeCheckConfig::configure(meta, advices[9], table_idx);
 
