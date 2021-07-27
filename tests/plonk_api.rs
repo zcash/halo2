@@ -825,10 +825,6 @@ fn plonk_api() {
                     index: 5,
                     column_type: Fixed,
                 },
-                Column {
-                    index: 6,
-                    column_type: Fixed,
-                },
             ],
         },
         lookups: [
@@ -879,7 +875,6 @@ fn plonk_api() {
             (0x3eaa38689d9e391c8a8fafab9568f20c45816321d38f309d4cc37f4b1601af72, 0x247f8270a462ea88450221a56aa6b55d2bc352b80b03501e99ea983251ceea13),
             (0x394437571f9de32dccdc546fd4737772d8d92593c85438aa3473243997d5acc8, 0x14924ec6e3174f1fab7f0ce7070c22f04bbd0a0ecebdfc5c94be857f25493e95),
             (0x3d907e0591343bd285c2c846f3e871a6ac70d80ec29e9500b8cb57f544e60202, 0x1034e48df35830244cabea076be8a16d67d7896e27c6ac22b285d017105da9c3),
-            (0x21d210b41675a1eae44cbd0f3fd27d69e30716c71873f6089cee61acacd403ab, 0x2275e97c7e84f68bfaa528a9d8be4e059f7abefd80d03fbfca774e8414a9b7c1),
         ],
     },
 }"#####
