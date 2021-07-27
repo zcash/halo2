@@ -906,13 +906,38 @@
 <span id="891">891</span>
 <span id="892">892</span>
 <span id="893">893</span>
+<span id="894">894</span>
+<span id="895">895</span>
+<span id="896">896</span>
+<span id="897">897</span>
+<span id="898">898</span>
+<span id="899">899</span>
+<span id="900">900</span>
+<span id="901">901</span>
+<span id="902">902</span>
+<span id="903">903</span>
+<span id="904">904</span>
+<span id="905">905</span>
+<span id="906">906</span>
+<span id="907">907</span>
+<span id="908">908</span>
+<span id="909">909</span>
+<span id="910">910</span>
+<span id="911">911</span>
+<span id="912">912</span>
+<span id="913">913</span>
+<span id="914">914</span>
+<span id="915">915</span>
+<span id="916">916</span>
+<span id="917">917</span>
+<span id="918">918</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Tools for developing circuits.</span>
 
 <span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
 <span class="kw">use</span> <span class="ident">std::fmt</span>;
 <span class="kw">use</span> <span class="ident">std::iter</span>;
-<span class="kw">use</span> <span class="ident">std::ops</span>::{<span class="ident">Add</span>, <span class="ident">Mul</span>, <span class="ident">Range</span>};
+<span class="kw">use</span> <span class="ident">std::ops</span>::{<span class="ident">Add</span>, <span class="ident">Mul</span>, <span class="ident">Neg</span>, <span class="ident">Range</span>};
 
 <span class="kw">use</span> <span class="ident">ff::Field</span>;
 
@@ -1078,6 +1103,17 @@
     }
 }
 
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Group</span> <span class="op">+</span> <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Neg</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span>;
+
+    <span class="kw">fn</span> <span class="ident">neg</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Output</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Value::Real</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Real</span>(<span class="op">-</span><span class="ident">a</span>),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Poison</span>,
+        }
+    }
+}
+
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Group</span> <span class="op">+</span> <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Add</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span>;
 
@@ -1236,6 +1272,8 @@
     <span class="comment">// The instance cells in the circuit, arranged as [column][row].</span>
     <span class="ident">instance</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 
+    <span class="ident">selectors</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+
     <span class="ident">permutation</span>: <span class="ident">permutation::keygen::Assembly</span>,
 
     <span class="comment">// A range of available rows for assignment and copies.</span>
@@ -1261,12 +1299,7 @@
         <span class="self">self</span>.<span class="ident">regions</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">current_region</span>.<span class="ident">take</span>().<span class="ident">unwrap</span>());
     }
 
-    <span class="kw">fn</span> <span class="ident">enable_selector</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">annotation</span>: <span class="ident">A</span>,
-        <span class="ident">selector</span>: <span class="kw-2">&amp;</span><span class="ident">Selector</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
+    <span class="kw">fn</span> <span class="ident">enable_selector</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="kw">_</span>: <span class="ident">A</span>, <span class="ident">selector</span>: <span class="kw-2">&amp;</span><span class="ident">Selector</span>, <span class="ident">row</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">A</span>: <span class="ident">FnOnce</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -1285,8 +1318,9 @@
             .<span class="ident">or_default</span>()
             .<span class="ident">push</span>(<span class="ident">row</span>);
 
-        <span class="comment">// Selectors are just fixed columns.</span>
-        <span class="self">self</span>.<span class="ident">assign_fixed</span>(<span class="ident">annotation</span>, <span class="ident">selector</span>.<span class="number">0</span>, <span class="ident">row</span>, <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">F::one</span>()))
+        <span class="self">self</span>.<span class="ident">selectors</span>[<span class="ident">selector</span>.<span class="number">0</span>][<span class="ident">row</span>] <span class="op">=</span> <span class="bool-val">true</span>;
+
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">fn</span> <span class="ident">query_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="ident">row</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
@@ -1427,6 +1461,7 @@
 
         <span class="comment">// Fixed columns contain no blinding factors.</span>
         <span class="kw">let</span> <span class="ident">fixed</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="macro">vec!</span>[<span class="ident">CellValue::Unassigned</span>; <span class="ident">n</span>]; <span class="ident">cs</span>.<span class="ident">num_fixed_columns</span>];
+        <span class="kw">let</span> <span class="ident">selectors</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="macro">vec!</span>[<span class="bool-val">false</span>; <span class="ident">n</span>]; <span class="ident">cs</span>.<span class="ident">num_selectors</span>];
         <span class="comment">// Advice columns contain blinding factors.</span>
         <span class="kw">let</span> <span class="ident">blinding_factors</span> <span class="op">=</span> <span class="ident">cs</span>.<span class="ident">blinding_factors</span>();
         <span class="kw">let</span> <span class="ident">usable_rows</span> <span class="op">=</span> <span class="ident">n</span> <span class="op">-</span> (<span class="ident">blinding_factors</span> <span class="op">+</span> <span class="number">1</span>);
@@ -1452,11 +1487,22 @@
             <span class="ident">fixed</span>,
             <span class="ident">advice</span>,
             <span class="ident">instance</span>,
+            <span class="ident">selectors</span>,
             <span class="ident">permutation</span>,
             <span class="ident">usable_rows</span>: <span class="number">0</span>..<span class="ident">usable_rows</span>,
         };
 
         <span class="ident">ConcreteCircuit::FloorPlanner::synthesize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">prover</span>, <span class="ident">circuit</span>, <span class="ident">config</span>, <span class="ident">constants</span>)<span class="question-mark">?</span>;
+
+        <span class="kw">let</span> (<span class="ident">cs</span>, <span class="ident">selector_polys</span>) <span class="op">=</span> <span class="ident">prover</span>.<span class="ident">cs</span>.<span class="ident">compress_selectors</span>(<span class="ident">prover</span>.<span class="ident">selectors</span>.<span class="ident">clone</span>());
+        <span class="ident">prover</span>.<span class="ident">cs</span> <span class="op">=</span> <span class="ident">cs</span>;
+        <span class="ident">prover</span>.<span class="ident">fixed</span>.<span class="ident">extend</span>(<span class="ident">selector_polys</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">poly</span><span class="op">|</span> {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">CellValue::Unassigned</span>; <span class="ident">n</span>];
+            <span class="kw">for</span> (<span class="ident">v</span>, <span class="ident">p</span>) <span class="kw">in</span> <span class="ident">v</span>.<span class="ident">iter_mut</span>().<span class="ident">zip</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>[..]) {
+                <span class="kw-2">*</span><span class="ident">v</span> <span class="op">=</span> <span class="ident">CellValue::Assigned</span>(<span class="kw-2">*</span><span class="ident">p</span>);
+            }
+            <span class="ident">v</span>
+        }));
 
         <span class="prelude-val">Ok</span>(<span class="ident">prover</span>)
     }
@@ -1549,9 +1595,11 @@
                         <span class="ident">gate</span>.<span class="ident">polynomials</span>().<span class="ident">iter</span>().<span class="ident">enumerate</span>().<span class="ident">filter_map</span>(
                             <span class="kw">move</span> <span class="op">|</span>(<span class="ident">poly_index</span>, <span class="ident">poly</span>)<span class="op">|</span> <span class="kw">match</span> <span class="ident">poly</span>.<span class="ident">evaluate</span>(
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">scalar</span><span class="op">|</span> <span class="ident">Value::Real</span>(<span class="ident">scalar</span>),
+                                <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
                                 <span class="kw-2">&amp;</span><span class="ident">load</span>(<span class="ident">n</span>, <span class="ident">row</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">fixed_queries</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">fixed</span>),
                                 <span class="kw-2">&amp;</span><span class="ident">load</span>(<span class="ident">n</span>, <span class="ident">row</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">advice_queries</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">advice</span>),
                                 <span class="kw-2">&amp;</span><span class="ident">load_instance</span>(<span class="ident">n</span>, <span class="ident">row</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">instance_queries</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">instance</span>),
+                                <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="op">-</span><span class="ident">a</span>,
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>,
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>,
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">scalar</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">scalar</span>,
@@ -1589,6 +1637,7 @@
                     <span class="kw">let</span> <span class="ident">load</span> <span class="op">=</span> <span class="op">|</span><span class="ident">expression</span>: <span class="kw-2">&amp;</span><span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">row</span><span class="op">|</span> {
                         <span class="ident">expression</span>.<span class="ident">evaluate</span>(
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">scalar</span><span class="op">|</span> <span class="ident">Value::Real</span>(<span class="ident">scalar</span>),
+                            <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> {
                                 <span class="kw">let</span> <span class="ident">query</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">fixed_queries</span>[<span class="ident">index</span>];
                                 <span class="kw">let</span> <span class="ident">column_index</span> <span class="op">=</span> <span class="ident">query</span>.<span class="number">0</span>.<span class="ident">index</span>();
@@ -1614,6 +1663,7 @@
                                         [(<span class="ident">row</span> <span class="kw">as</span> <span class="ident">i32</span> <span class="op">+</span> <span class="ident">n</span> <span class="op">+</span> <span class="ident">rotation</span>) <span class="kw">as</span> <span class="ident">usize</span> <span class="op">%</span> <span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>],
                                 )
                             },
+                            <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="op">-</span><span class="ident">a</span>,
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>,
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>,
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">scalar</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">scalar</span>,

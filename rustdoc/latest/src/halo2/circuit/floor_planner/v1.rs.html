@@ -490,11 +490,11 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">circuit</span>::{
-        <span class="ident">layouter</span>::{<span class="ident">RegionLayouter</span>, <span class="ident">RegionShape</span>},
+        <span class="ident">layouter</span>::{<span class="ident">RegionColumn</span>, <span class="ident">RegionLayouter</span>, <span class="ident">RegionShape</span>},
         <span class="ident">Cell</span>, <span class="ident">Layouter</span>, <span class="ident">Region</span>, <span class="ident">RegionIndex</span>, <span class="ident">RegionStart</span>,
     },
     <span class="ident">plonk</span>::{
-        <span class="ident">Advice</span>, <span class="ident">Assigned</span>, <span class="ident">Assignment</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>, <span class="ident">FloorPlanner</span>, <span class="ident">Instance</span>,
+        <span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Assigned</span>, <span class="ident">Assignment</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>, <span class="ident">FloorPlanner</span>, <span class="ident">Instance</span>,
         <span class="ident">Selector</span>,
     },
 };
@@ -575,7 +575,7 @@
                 (
                     <span class="ident">c</span>,
                     <span class="ident">column_allocations</span>
-                        .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>.<span class="ident">into</span>())
+                        .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">Column</span>::<span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="ident">::from</span>(<span class="ident">c</span>).<span class="ident">into</span>())
                         .<span class="ident">cloned</span>()
                         .<span class="ident">unwrap_or_default</span>(),
                 )

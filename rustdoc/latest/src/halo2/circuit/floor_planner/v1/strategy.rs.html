@@ -271,6 +271,13 @@
 <span id="256">256</span>
 <span id="257">257</span>
 <span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">cmp</span>,
@@ -278,11 +285,8 @@
     <span class="ident">ops::Range</span>,
 };
 
-<span class="kw">use</span> <span class="kw">super</span><span class="ident">::RegionShape</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">circuit::RegionStart</span>,
-    <span class="ident">plonk</span>::{<span class="ident">Any</span>, <span class="ident">Column</span>},
-};
+<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">RegionColumn</span>, <span class="ident">RegionShape</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">circuit::RegionStart</span>, <span class="ident">plonk::Any</span>};
 
 <span class="doccomment">/// A region allocated within a column.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
@@ -376,14 +380,14 @@
 }
 
 <span class="doccomment">/// Allocated rows within a circuit.</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">CircuitAllocations</span> <span class="op">=</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>, <span class="ident">Allocations</span><span class="op">&gt;</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">CircuitAllocations</span> <span class="op">=</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">RegionColumn</span>, <span class="ident">Allocations</span><span class="op">&gt;</span>;
 
 <span class="doccomment">/// - `start` is the current start row of the region (not of this column).</span>
 <span class="doccomment">/// - `slack` is the maximum number of rows the start could be moved down, taking into</span>
 <span class="doccomment">///   account prior columns.</span>
 <span class="kw">fn</span> <span class="ident">first_fit_region</span>(
     <span class="ident">column_allocations</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CircuitAllocations</span>,
-    <span class="ident">region_columns</span>: <span class="kw-2">&amp;</span>[<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>],
+    <span class="ident">region_columns</span>: <span class="kw-2">&amp;</span>[<span class="ident">RegionColumn</span>],
     <span class="ident">region_length</span>: <span class="ident">usize</span>,
     <span class="ident">start</span>: <span class="ident">usize</span>,
     <span class="ident">slack</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
@@ -481,7 +485,10 @@
         <span class="kw">let</span> <span class="ident">advice_cols</span> <span class="op">=</span> <span class="ident">shape</span>
             .<span class="ident">columns</span>()
             .<span class="ident">iter</span>()
-            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="macro">matches!</span>(<span class="ident">c</span>.<span class="ident">column_type</span>(), <span class="ident">Any::Advice</span>))
+            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">c</span> {
+                <span class="ident">RegionColumn::Column</span>(<span class="ident">c</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">matches!</span>(<span class="ident">c</span>.<span class="ident">column_type</span>(), <span class="ident">Any::Advice</span>),
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
+            })
             .<span class="ident">count</span>();
         <span class="comment">// Sort by advice area (since this has the most contention).</span>
         <span class="ident">advice_cols</span> <span class="op">*</span> <span class="ident">shape</span>.<span class="ident">row_count</span>()
@@ -500,23 +507,30 @@
 
 <span class="attribute">#[<span class="ident">test</span>]</span>
 <span class="kw">fn</span> <span class="ident">test_slot_in</span>() {
+    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::plonk::Column</span>;
+
     <span class="kw">let</span> <span class="ident">regions</span> <span class="op">=</span> <span class="macro">vec!</span>[
         <span class="ident">RegionShape</span> {
             <span class="ident">region_index</span>: <span class="number">0</span>.<span class="ident">into</span>(),
             <span class="ident">columns</span>: <span class="macro">vec!</span>[<span class="ident">Column::new</span>(<span class="number">0</span>, <span class="ident">Any::Advice</span>), <span class="ident">Column::new</span>(<span class="number">1</span>, <span class="ident">Any::Advice</span>)]
                 .<span class="ident">into_iter</span>()
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">into</span>())
                 .<span class="ident">collect</span>(),
             <span class="ident">row_count</span>: <span class="number">15</span>,
         },
         <span class="ident">RegionShape</span> {
             <span class="ident">region_index</span>: <span class="number">1</span>.<span class="ident">into</span>(),
-            <span class="ident">columns</span>: <span class="macro">vec!</span>[<span class="ident">Column::new</span>(<span class="number">2</span>, <span class="ident">Any::Advice</span>)].<span class="ident">into_iter</span>().<span class="ident">collect</span>(),
+            <span class="ident">columns</span>: <span class="macro">vec!</span>[<span class="ident">Column::new</span>(<span class="number">2</span>, <span class="ident">Any::Advice</span>)]
+                .<span class="ident">into_iter</span>()
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">into</span>())
+                .<span class="ident">collect</span>(),
             <span class="ident">row_count</span>: <span class="number">10</span>,
         },
         <span class="ident">RegionShape</span> {
             <span class="ident">region_index</span>: <span class="number">2</span>.<span class="ident">into</span>(),
             <span class="ident">columns</span>: <span class="macro">vec!</span>[<span class="ident">Column::new</span>(<span class="number">2</span>, <span class="ident">Any::Advice</span>), <span class="ident">Column::new</span>(<span class="number">0</span>, <span class="ident">Any::Advice</span>)]
                 .<span class="ident">into_iter</span>()
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">into</span>())
                 .<span class="ident">collect</span>(),
             <span class="ident">row_count</span>: <span class="number">10</span>,
         },

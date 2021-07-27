@@ -310,6 +310,8 @@
 <span id="295">295</span>
 <span id="296">296</span>
 <span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
 </pre><pre class="rust">
 <span class="kw">use</span> <span class="ident">ff::Field</span>;
 <span class="kw">use</span> <span class="ident">group::Curve</span>;
@@ -497,9 +499,11 @@
                         <span class="ident">gate</span>.<span class="ident">polynomials</span>().<span class="ident">iter</span>().<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">poly</span><span class="op">|</span> {
                             <span class="ident">poly</span>.<span class="ident">evaluate</span>(
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">scalar</span><span class="op">|</span> <span class="ident">scalar</span>,
+                                <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> <span class="ident">fixed_evals</span>[<span class="ident">index</span>],
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> <span class="ident">advice_evals</span>[<span class="ident">index</span>],
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> <span class="ident">instance_evals</span>[<span class="ident">index</span>],
+                                <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="op">-</span><span class="ident">a</span>,
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">b</span>,
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">b</span>,
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">scalar</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">scalar</span>,

@@ -312,6 +312,20 @@
 <span id="297">297</span>
 <span id="298">298</span>
 <span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Contains utilities for performing arithmetic over univariate polynomials in</span>
 <span class="doccomment">//! various forms, including computing commitments to them and provably opening</span>
@@ -325,7 +339,7 @@
 <span class="kw">use</span> <span class="ident">pasta_curves::arithmetic::FieldExt</span>;
 <span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
 <span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
-<span class="kw">use</span> <span class="ident">std::ops</span>::{<span class="ident">Add</span>, <span class="ident">Deref</span>, <span class="ident">DerefMut</span>, <span class="ident">Index</span>, <span class="ident">IndexMut</span>, <span class="ident">Mul</span>, <span class="ident">RangeFrom</span>, <span class="ident">RangeFull</span>, <span class="ident">Sub</span>};
+<span class="kw">use</span> <span class="ident">std::ops</span>::{<span class="ident">Add</span>, <span class="ident">Deref</span>, <span class="ident">DerefMut</span>, <span class="ident">Index</span>, <span class="ident">IndexMut</span>, <span class="ident">Mul</span>, <span class="ident">Neg</span>, <span class="ident">RangeFrom</span>, <span class="ident">RangeFull</span>, <span class="ident">Sub</span>};
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">commitment</span>;
 <span class="kw">mod</span> <span class="ident">domain</span>;
@@ -504,6 +518,20 @@
             }
         });
         <span class="ident">p</span>
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">B</span>: <span class="ident">Basis</span><span class="op">&gt;</span> <span class="ident">Neg</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span>;
+
+    <span class="kw">fn</span> <span class="ident">neg</span>(<span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
+        <span class="ident">parallelize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">lhs</span>, <span class="kw">_</span><span class="op">|</span> {
+            <span class="kw">for</span> <span class="ident">lhs</span> <span class="kw">in</span> <span class="ident">lhs</span>.<span class="ident">iter_mut</span>() {
+                <span class="kw-2">*</span><span class="ident">lhs</span> <span class="op">=</span> <span class="op">-</span><span class="kw-2">*</span><span class="ident">lhs</span>;
+            }
+        });
+
+        <span class="self">self</span>
     }
 }
 
