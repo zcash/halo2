@@ -118,7 +118,7 @@ impl<F: FieldExt> FieldChip<F> {
             // has the following properties:
             // - When s_mul = 0, any value is allowed in lhs, rhs, and out.
             // - When s_mul != 0, this constrains lhs * rhs = out.
-            vec![s_mul * (lhs * rhs + out * -F::one())]
+            vec![s_mul * (lhs * rhs - out)]
         });
 
         FieldConfig {

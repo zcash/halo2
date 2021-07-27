@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::iter;
-use std::ops::{Add, Mul, Range};
+use std::ops::{Add, Mul, Neg, Range};
 
 use ff::Field;
 
@@ -165,6 +165,17 @@ impl<F: Group + Field> From<CellValue<F>> for Value<F> {
             CellValue::Unassigned => Value::Real(F::zero()),
             CellValue::Assigned(v) => Value::Real(v),
             CellValue::Poison(_) => Value::Poison,
+        }
+    }
+}
+
+impl<F: Group + Field> Neg for Value<F> {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        match self {
+            Value::Real(a) => Value::Real(-a),
+            _ => Value::Poison,
         }
     }
 }
@@ -654,6 +665,7 @@ impl<F: FieldExt> MockProver<F> {
                                 &load(n, row, &self.cs.fixed_queries, &self.fixed),
                                 &load(n, row, &self.cs.advice_queries, &self.advice),
                                 &load_instance(n, row, &self.cs.instance_queries, &self.instance),
+                                &|a| -a,
                                 &|a, b| a + b,
                                 &|a, b| a * b,
                                 &|a, scalar| a * scalar,
@@ -717,6 +729,7 @@ impl<F: FieldExt> MockProver<F> {
                                         [(row as i32 + n + rotation) as usize % n as usize],
                                 )
                             },
+                            &|a| -a,
                             &|a, b| a + b,
                             &|a, b| a * b,
                             &|a, scalar| a * scalar,

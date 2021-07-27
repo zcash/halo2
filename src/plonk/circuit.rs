@@ -577,6 +577,8 @@ pub enum Expression<F> {
         /// Rotation of this query
         rotation: Rotation,
     },
+    /// This is a negated polynomial
+    Negated(Box<Expression<F>>),
     /// This is the sum of two polynomials
     Sum(Box<Expression<F>>, Box<Expression<F>>),
     /// This is the product of two polynomials
@@ -595,6 +597,7 @@ impl<F: Field> Expression<F> {
         fixed_column: &impl Fn(usize, usize, Rotation) -> T,
         advice_column: &impl Fn(usize, usize, Rotation) -> T,
         instance_column: &impl Fn(usize, usize, Rotation) -> T,
+        negated: &impl Fn(T) -> T,
         sum: &impl Fn(T, T) -> T,
         product: &impl Fn(T, T) -> T,
         scaled: &impl Fn(T, F) -> T,
@@ -617,6 +620,20 @@ impl<F: Field> Expression<F> {
                 column_index,
                 rotation,
             } => instance_column(*query_index, *column_index, *rotation),
+            Expression::Negated(a) => {
+                let a = a.evaluate(
+                    constant,
+                    selector_column,
+                    fixed_column,
+                    advice_column,
+                    instance_column,
+                    negated,
+                    sum,
+                    product,
+                    scaled,
+                );
+                negated(a)
+            }
             Expression::Sum(a, b) => {
                 let a = a.evaluate(
                     constant,
@@ -624,6 +641,7 @@ impl<F: Field> Expression<F> {
                     fixed_column,
                     advice_column,
                     instance_column,
+                    negated,
                     sum,
                     product,
                     scaled,
@@ -634,6 +652,7 @@ impl<F: Field> Expression<F> {
                     fixed_column,
                     advice_column,
                     instance_column,
+                    negated,
                     sum,
                     product,
                     scaled,
@@ -647,6 +666,7 @@ impl<F: Field> Expression<F> {
                     fixed_column,
                     advice_column,
                     instance_column,
+                    negated,
                     sum,
                     product,
                     scaled,
@@ -657,6 +677,7 @@ impl<F: Field> Expression<F> {
                     fixed_column,
                     advice_column,
                     instance_column,
+                    negated,
                     sum,
                     product,
                     scaled,
@@ -670,6 +691,7 @@ impl<F: Field> Expression<F> {
                     fixed_column,
                     advice_column,
                     instance_column,
+                    negated,
                     sum,
                     product,
                     scaled,
@@ -687,6 +709,7 @@ impl<F: Field> Expression<F> {
             Expression::Fixed { .. } => 1,
             Expression::Advice { .. } => 1,
             Expression::Instance { .. } => 1,
+            Expression::Negated(poly) => poly.degree(),
             Expression::Sum(a, b) => max(a.degree(), b.degree()),
             Expression::Product(a, b) => a.degree() + b.degree(),
             Expression::Scaled(poly, _) => poly.degree(),
@@ -706,6 +729,7 @@ impl<F: Field> Expression<F> {
             &|_, _, _| false,
             &|_, _, _| false,
             &|_, _, _| false,
+            &|a| a,
             &|a, b| a || b,
             &|a, b| a || b,
             &|a, _| a,
@@ -732,6 +756,7 @@ impl<F: Field> Expression<F> {
             &|_, _, _| None,
             &|_, _, _| None,
             &|_, _, _| None,
+            &|a| a,
             &op,
             &op,
             &|a, _| a,
@@ -742,7 +767,7 @@ impl<F: Field> Expression<F> {
 impl<F: Field> Neg for Expression<F> {
     type Output = Expression<F>;
     fn neg(self) -> Self::Output {
-        Expression::Scaled(Box::new(self), -F::one())
+        Expression::Negated(Box::new(self))
     }
 }
 
@@ -1259,6 +1284,7 @@ impl<F: Field> ConstraintSystem<F> {
                     column_index,
                     rotation,
                 },
+                &|a| -a,
                 &|a, b| a + b,
                 &|a, b| a * b,
                 &|a, f| a * f,

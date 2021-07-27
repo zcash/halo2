@@ -453,6 +453,7 @@ pub fn create_proof<
                                         rotation,
                                     )
                                 },
+                                &|a| -a,
                                 &|a, b| a + &b,
                                 &|a, b| a * &b,
                                 &|a, scalar| a * scalar,

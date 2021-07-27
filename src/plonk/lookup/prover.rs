@@ -111,6 +111,7 @@ impl<F: FieldExt> Argument<F> {
                         &|_, column_index, rotation| {
                             instance_values[column_index].clone().rotate(rotation)
                         },
+                        &|a| -a,
                         &|a, b| a + &b,
                         &|a, b| {
                             let mut modified_a = vec![C::Scalar::one(); params.n as usize];
@@ -151,6 +152,7 @@ impl<F: FieldExt> Argument<F> {
                                 .domain
                                 .rotate_extended(&instance_cosets[column_index], rotation)
                         },
+                        &|a| -a,
                         &|a, b| a + &b,
                         &|a, b| a * &b,
                         &|a, scalar| a * scalar,

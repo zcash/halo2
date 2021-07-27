@@ -200,7 +200,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
                 let sc = meta.query_fixed(sc, Rotation::cur());
                 let sm = meta.query_fixed(sm, Rotation::cur());
 
-                vec![a.clone() * sa + b.clone() * sb + a * b * sm + (c * sc * (-F::one()))]
+                vec![a.clone() * sa + b.clone() * sb + a * b * sm - (c * sc)]
             });
 
             PlonkConfig {
