@@ -325,7 +325,7 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
 
         // Record these columns so that we can prevent them from being used again.
         for column in default_and_assigned.keys() {
-            self.plan.table_columns.push(column.clone());
+            self.plan.table_columns.push(*column);
         }
 
         for (col, (default_val, _)) in default_and_assigned {

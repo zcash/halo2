@@ -155,7 +155,7 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
         // Assign table cells.
         self.cs.enter_region(name);
         let mut table = SimpleTableLayouter::new(self.cs, &self.table_columns);
-        let result = {
+        {
             let table: &mut dyn TableLayouter<F> = &mut table;
             assignment(table.into())
         }?;
@@ -185,7 +185,7 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
 
         // Record these columns so that we can prevent them from being used again.
         for column in default_and_assigned.keys() {
-            self.table_columns.push(column.clone());
+            self.table_columns.push(*column);
         }
 
         for (col, (default_val, _)) in default_and_assigned {
@@ -196,7 +196,7 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
                 .fill_from_row(col.inner(), first_unused, default_val.unwrap())?;
         }
 
-        Ok(result)
+        Ok(())
     }
 
     fn constrain_instance(
@@ -370,11 +370,20 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F>
     }
 }
 
+/// The default value to fill a table column with.
+///
+/// - The outer `Option` tracks whether the value in row 0 of the table column has been
+///   assigned yet. This will always be `Some` once a valid table has been completely
+///   assigned.
+/// - The inner `Option` tracks whether the underlying `Assignment` is evaluating
+///   witnesses or not.
+type DefaultTableValue<F> = Option<Option<Assigned<F>>>;
+
 pub(crate) struct SimpleTableLayouter<'r, 'a, F: Field, CS: Assignment<F> + 'a> {
     cs: &'a mut CS,
     used_columns: &'r [TableColumn],
     // maps from a fixed column to a pair (default value, vector saying which rows are assigned)
-    pub(crate) default_and_assigned: HashMap<TableColumn, (Option<Option<Assigned<F>>>, Vec<bool>)>,
+    pub(crate) default_and_assigned: HashMap<TableColumn, (DefaultTableValue<F>, Vec<bool>)>,
 }
 
 impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for SimpleTableLayouter<'r, 'a, F, CS> {
@@ -409,7 +418,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
             return Err(Error::SynthesisError); // TODO better error
         }
 
-        let entry = self.default_and_assigned.entry(column.clone()).or_default();
+        let entry = self.default_and_assigned.entry(column).or_default();
 
         let mut value = None;
         self.cs.assign_fixed(
