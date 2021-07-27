@@ -257,10 +257,12 @@ impl<'r, F: Field> From<&'r mut dyn layouter::TableLayouter<F>> for Table<'r, F>
 }
 
 impl<'r, F: Field> Table<'r, F> {
-    /// Assign a fixed value.
+    /// Assigns a fixed value to a table cell.
+    ///
+    /// Returns an error if the table cell has already been assigned to.
     ///
     /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
-    pub fn assign_fixed<'v, V, VR, A, AR>(
+    pub fn assign_cell<'v, V, VR, A, AR>(
         &'v mut self,
         annotation: A,
         column: TableColumn,
@@ -274,7 +276,7 @@ impl<'r, F: Field> Table<'r, F> {
         AR: Into<String>,
     {
         self.table
-            .assign_fixed(&|| annotation().into(), column, offset, &mut || {
+            .assign_cell(&|| annotation().into(), column, offset, &mut || {
                 to().map(|v| v.into())
             })
     }

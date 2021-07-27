@@ -232,7 +232,7 @@ fn plonk_api() {
                 || "",
                 |mut table| {
                     for (index, &value) in values.iter().enumerate() {
-                        table.assign_fixed(|| "table col", self.config.sl, index, || Ok(value))?;
+                        table.assign_cell(|| "table col", self.config.sl, index, || Ok(value))?;
                     }
                     Ok(())
                 },

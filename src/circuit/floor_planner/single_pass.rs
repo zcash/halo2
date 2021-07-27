@@ -407,7 +407,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> SimpleTableLayouter<'r, 'a, F, CS
 impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
     for SimpleTableLayouter<'r, 'a, F, CS>
 {
-    fn assign_fixed<'v>(
+    fn assign_cell<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
         column: TableColumn,

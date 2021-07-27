@@ -110,8 +110,10 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
 ///
 /// [`Layouter`]: super::Layouter
 pub trait TableLayouter<F: Field>: fmt::Debug {
-    /// Assign a fixed value
-    fn assign_fixed<'v>(
+    /// Assigns a fixed value to a table cell.
+    ///
+    /// Returns an error if the table cell has already been assigned to.
+    fn assign_cell<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
         column: TableColumn,

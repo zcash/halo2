@@ -173,9 +173,9 @@ fn main() {
         ) -> Result<(), Error> {
             layouter.assign_table(
                 || "",
-                |mut region| {
+                |mut table| {
                     for (index, &value) in values.iter().enumerate() {
-                        region.assign_fixed(|| "table col", self.config.sl, index, || Ok(value))?;
+                        table.assign_cell(|| "table col", self.config.sl, index, || Ok(value))?;
                     }
                     Ok(())
                 },
