@@ -1467,10 +1467,12 @@ mod tests {
                 lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions,
             },
         },
-        constants::T_Q,
+        constants::{L_ORCHARD_BASE, L_VALUE, NOTE_COMMITMENT_PERSONALIZATION, T_Q},
+        primitives::sinsemilla::CommitDomain,
     };
 
-    use ff::Field;
+    use ff::{Field, PrimeField, PrimeFieldBits};
+    use group::Curve;
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
@@ -1489,7 +1491,9 @@ mod tests {
         #[derive(Default)]
         struct MyCircuit {
             gd_x: Option<pallas::Base>,
+            gd_y_lsb: Option<pallas::Base>,
             pkd_x: Option<pallas::Base>,
+            pkd_y_lsb: Option<pallas::Base>,
             rho: Option<pallas::Base>,
             psi: Option<pallas::Base>,
         }
@@ -1577,9 +1581,12 @@ mod tests {
 
                 // Witness g_d
                 let g_d = {
-                    let g_d = self.gd_x.map(|x| {
+                    let g_d = self.gd_x.zip(self.gd_y_lsb).map(|(x, y_lsb)| {
                         // Calculate y = (x^3 + 5).sqrt()
-                        let y = (x.square() * x + pallas::Affine::b()).sqrt().unwrap();
+                        let mut y = (x.square() * x + pallas::Affine::b()).sqrt().unwrap();
+                        if y.is_odd() && y_lsb == pallas::Base::zero() {
+                            y = -y;
+                        }
                         pallas::Affine::from_xy(x, y).unwrap()
                     });
 
@@ -1588,9 +1595,12 @@ mod tests {
 
                 // Witness pk_d
                 let pk_d = {
-                    let pk_d = self.pkd_x.map(|x| {
+                    let pk_d = self.pkd_x.zip(self.pkd_y_lsb).map(|(x, y_lsb)| {
                         // Calculate y = (x^3 + 5).sqrt()
-                        let y = (x.square() * x + pallas::Affine::b()).sqrt().unwrap();
+                        let mut y = (x.square() * x + pallas::Affine::b()).sqrt().unwrap();
+                        if y.is_odd() && y_lsb == pallas::Base::zero() {
+                            y = -y;
+                        }
                         pallas::Affine::from_xy(x, y).unwrap()
                     });
 
@@ -1605,7 +1615,9 @@ mod tests {
                 // A note value cannot be negative.
                 let value = {
                     let mut rng = OsRng;
-                    let value = pallas::Base::from_u64(rng.next_u64());
+                    pallas::Base::from_u64(rng.next_u64())
+                };
+                let value_var = {
                     self.load_private(
                         layouter.namespace(|| "witness value"),
                         note_commit_config.advices[0],
@@ -1627,21 +1639,68 @@ mod tests {
                     self.psi,
                 )?;
 
-                let rcm = Some(pallas::Scalar::rand());
+                let rcm = pallas::Scalar::rand();
 
-                let _cm = note_commit_config.assign_region(
+                let cm = note_commit_config.assign_region(
                     layouter.namespace(|| "Hash NoteCommit pieces"),
                     sinsemilla_chip,
-                    ecc_chip,
+                    ecc_chip.clone(),
                     g_d.inner(),
                     pk_d.inner(),
-                    value,
+                    value_var,
                     rho,
                     psi,
-                    rcm,
+                    Some(rcm),
                 )?;
-
-                Ok(())
+                let expected_cm = {
+                    let domain = CommitDomain::new(NOTE_COMMITMENT_PERSONALIZATION);
+                    // Hash g★_d || pk★_d || i2lebsp_{64}(v) || rho || psi
+                    let lsb = |y_lsb: pallas::Base| y_lsb == pallas::Base::one();
+                    let point = domain
+                        .commit(
+                            std::iter::empty()
+                                .chain(
+                                    self.gd_x
+                                        .unwrap()
+                                        .to_le_bits()
+                                        .iter()
+                                        .by_val()
+                                        .take(L_ORCHARD_BASE),
+                                )
+                                .chain(Some(lsb(self.gd_y_lsb.unwrap())))
+                                .chain(
+                                    self.pkd_x
+                                        .unwrap()
+                                        .to_le_bits()
+                                        .iter()
+                                        .by_val()
+                                        .take(L_ORCHARD_BASE),
+                                )
+                                .chain(Some(lsb(self.pkd_y_lsb.unwrap())))
+                                .chain(value.to_le_bits().iter().by_val().take(L_VALUE))
+                                .chain(
+                                    self.rho
+                                        .unwrap()
+                                        .to_le_bits()
+                                        .iter()
+                                        .by_val()
+                                        .take(L_ORCHARD_BASE),
+                                )
+                                .chain(
+                                    self.psi
+                                        .unwrap()
+                                        .to_le_bits()
+                                        .iter()
+                                        .by_val()
+                                        .take(L_ORCHARD_BASE),
+                                ),
+                            &rcm,
+                        )
+                        .unwrap()
+                        .to_affine();
+                    Point::new(ecc_chip, layouter.namespace(|| "witness g_d"), Some(point))?
+                };
+                cm.constrain_equal(layouter.namespace(|| "cm == expected cm"), &expected_cm)
             }
         }
 
@@ -1652,49 +1711,63 @@ mod tests {
             // `rho` = 0, `psi` = 0
             MyCircuit {
                 gd_x: Some(-pallas::Base::one()),
+                gd_y_lsb: Some(pallas::Base::one()),
                 pkd_x: Some(-pallas::Base::one()),
+                pkd_y_lsb: Some(pallas::Base::one()),
                 rho: Some(pallas::Base::zero()),
                 psi: Some(pallas::Base::zero()),
             },
             // `rho` = T_Q - 1, `psi` = T_Q - 1
             MyCircuit {
                 gd_x: Some(-pallas::Base::one()),
+                gd_y_lsb: Some(pallas::Base::zero()),
                 pkd_x: Some(-pallas::Base::one()),
+                pkd_y_lsb: Some(pallas::Base::zero()),
                 rho: Some(pallas::Base::from_u128(T_Q - 1)),
                 psi: Some(pallas::Base::from_u128(T_Q - 1)),
             },
             // `rho` = T_Q, `psi` = T_Q
             MyCircuit {
                 gd_x: Some(-pallas::Base::one()),
+                gd_y_lsb: Some(pallas::Base::one()),
                 pkd_x: Some(-pallas::Base::one()),
+                pkd_y_lsb: Some(pallas::Base::zero()),
                 rho: Some(pallas::Base::from_u128(T_Q)),
                 psi: Some(pallas::Base::from_u128(T_Q)),
             },
             // `rho` = 2^127 - 1, `psi` = 2^127 - 1
             MyCircuit {
                 gd_x: Some(-pallas::Base::one()),
+                gd_y_lsb: Some(pallas::Base::zero()),
                 pkd_x: Some(-pallas::Base::one()),
+                pkd_y_lsb: Some(pallas::Base::one()),
                 rho: Some(pallas::Base::from_u128((1 << 127) - 1)),
                 psi: Some(pallas::Base::from_u128((1 << 127) - 1)),
             },
             // `rho` = 2^127, `psi` = 2^127
             MyCircuit {
                 gd_x: Some(-pallas::Base::one()),
+                gd_y_lsb: Some(pallas::Base::zero()),
                 pkd_x: Some(-pallas::Base::one()),
+                pkd_y_lsb: Some(pallas::Base::zero()),
                 rho: Some(pallas::Base::from_u128(1 << 127)),
                 psi: Some(pallas::Base::from_u128(1 << 127)),
             },
             // `rho` = 2^254 - 1, `psi` = 2^254 - 1
             MyCircuit {
                 gd_x: Some(-pallas::Base::one()),
+                gd_y_lsb: Some(pallas::Base::one()),
                 pkd_x: Some(-pallas::Base::one()),
+                pkd_y_lsb: Some(pallas::Base::one()),
                 rho: Some(two_pow_254 - pallas::Base::one()),
                 psi: Some(two_pow_254 - pallas::Base::one()),
             },
             // `rho` = 2^254, `psi` = 2^254
             MyCircuit {
                 gd_x: Some(-pallas::Base::one()),
+                gd_y_lsb: Some(pallas::Base::one()),
                 pkd_x: Some(-pallas::Base::one()),
+                pkd_y_lsb: Some(pallas::Base::zero()),
                 rho: Some(two_pow_254),
                 psi: Some(two_pow_254),
             },
