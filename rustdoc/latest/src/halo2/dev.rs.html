@@ -931,6 +931,9 @@
 <span id="916">916</span>
 <span id="917">917</span>
 <span id="918">918</span>
+<span id="919">919</span>
+<span id="920">920</span>
+<span id="921">921</span>
 </pre><pre class="rust">
 <span class="doccomment">//! Tools for developing circuits.</span>
 
@@ -955,6 +958,9 @@
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">cost</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">cost::CircuitCost</span>;
+
+<span class="kw">mod</span> <span class="ident">gates</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">gates::CircuitGates</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;dev-graph&quot;</span>)]</span>
 <span class="kw">mod</span> <span class="ident">graph</span>;
