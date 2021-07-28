@@ -130,7 +130,7 @@ impl ActionInfo {
     /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
     fn build(self, mut rng: impl RngCore) -> (Action<SigningMetadata>, Circuit) {
         let v_net = self.value_sum().expect("already checked this");
-        let cv_net = ValueCommitment::derive(v_net, self.rcv);
+        let cv_net = ValueCommitment::derive(v_net, self.rcv.clone());
 
         let nf_old = self.spend.note.nullifier(&self.spend.fvk);
         let sender_address = self.spend.fvk.default_address();
@@ -196,7 +196,7 @@ impl ActionInfo {
                 v_new: Some(note.value()),
                 psi_new: Some(note.rseed().psi(&note.rho())),
                 rcm_new: Some(note.rseed().rcm(&note.rho())),
-                rcv: Some(ValueCommitTrapdoor::zero()),
+                rcv: Some(self.rcv),
             },
         )
     }
