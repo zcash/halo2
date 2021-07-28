@@ -25,7 +25,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     let vk = VerifyingKey::build();
     let pk = ProvingKey::build();
 
-    for num_recipients in 1..4 {
+    for num_recipients in 1..=4 {
         let mut builder = Builder::new(
             Flags::from_parts(true, true),
             Anchor::from_bytes([0; 32]).unwrap(),
