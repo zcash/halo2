@@ -285,7 +285,7 @@ impl Builder {
         mut self,
         mut rng: impl RngCore,
         pk: &ProvingKey,
-    ) -> Result<Bundle<Unauthorized, V>, Error> {
+    ) -> Result<Bundle<InProgress<Proof, Unauthorized>, V>, Error> {
         // Pair up the spends and recipients, extending with dummy values as necessary.
         //
         // TODO: Do we want to shuffle the order like we do for Sapling? And if we do, do
@@ -360,9 +360,29 @@ impl Builder {
             flags,
             result_value_balance,
             anchor,
-            Unauthorized { proof, bsk },
+            InProgress {
+                proof,
+                sigs: Unauthorized { bsk },
+            },
         ))
     }
+}
+
+/// Marker trait representing bundle signatures in the process of being created.
+pub trait InProgressSignatures {
+    /// The authorization type of an Orchard action in the process of being authorized.
+    type SpendAuth;
+}
+
+/// Marker for a bundle in the process of being built.
+#[derive(Debug)]
+pub struct InProgress<P, S: InProgressSignatures> {
+    proof: P,
+    sigs: S,
+}
+
+impl<P, S: InProgressSignatures> Authorization for InProgress<P, S> {
+    type SpendAuth = S::SpendAuth;
 }
 
 /// The parts needed to sign an [`Action`].
@@ -375,14 +395,13 @@ pub struct SigningParts {
     alpha: pallas::Scalar,
 }
 
-/// Marker for an unauthorized bundle, with a proof but no signatures.
+/// Marker for an unauthorized bundle with no signatures.
 #[derive(Debug)]
 pub struct Unauthorized {
-    proof: Proof,
     bsk: redpallas::SigningKey<Binding>,
 }
 
-impl Authorization for Unauthorized {
+impl InProgressSignatures for Unauthorized {
     type SpendAuth = SigningMetadata;
 }
 
@@ -401,12 +420,11 @@ pub struct SigningMetadata {
 /// Marker for a partially-authorized bundle, in the process of being signed.
 #[derive(Debug)]
 pub struct PartiallyAuthorized {
-    proof: Proof,
     binding_signature: redpallas::Signature<Binding>,
     sighash: [u8; 32],
 }
 
-impl Authorization for PartiallyAuthorized {
+impl InProgressSignatures for PartiallyAuthorized {
     type SpendAuth = MaybeSigned;
 }
 
@@ -430,7 +448,7 @@ impl MaybeSigned {
     }
 }
 
-impl<V> Bundle<Unauthorized, V> {
+impl<P, V> Bundle<InProgress<P, Unauthorized>, V> {
     /// Loads the sighash into this bundle, preparing it for signing.
     ///
     /// This API ensures that all signatures are created over the same sighash.
@@ -438,7 +456,7 @@ impl<V> Bundle<Unauthorized, V> {
         self,
         mut rng: R,
         sighash: [u8; 32],
-    ) -> Bundle<PartiallyAuthorized, V> {
+    ) -> Bundle<InProgress<P, PartiallyAuthorized>, V> {
         self.authorize(
             &mut rng,
             |rng, _, SigningMetadata { dummy_ask, parts }| {
@@ -448,14 +466,18 @@ impl<V> Bundle<Unauthorized, V> {
                     .map(MaybeSigned::Signature)
                     .unwrap_or(MaybeSigned::SigningMetadata(parts))
             },
-            |rng, unauth| PartiallyAuthorized {
-                proof: unauth.proof,
-                binding_signature: unauth.bsk.sign(rng, &sighash),
-                sighash,
+            |rng, auth| InProgress {
+                proof: auth.proof,
+                sigs: PartiallyAuthorized {
+                    binding_signature: auth.sigs.bsk.sign(rng, &sighash),
+                    sighash,
+                },
             },
         )
     }
+}
 
+impl<V> Bundle<InProgress<Proof, Unauthorized>, V> {
     /// Applies signatures to this bundle, in order to authorize it.
     pub fn apply_signatures<R: RngCore + CryptoRng>(
         self,
@@ -472,7 +494,7 @@ impl<V> Bundle<Unauthorized, V> {
     }
 }
 
-impl<V> Bundle<PartiallyAuthorized, V> {
+impl<P, V> Bundle<InProgress<P, PartiallyAuthorized>, V> {
     /// Signs this bundle with the given [`SpendAuthorizingKey`].
     ///
     /// This will apply signatures for all notes controlled by this spending key.
@@ -482,14 +504,18 @@ impl<V> Bundle<PartiallyAuthorized, V> {
             &mut rng,
             |rng, partial, maybe| match maybe {
                 MaybeSigned::SigningMetadata(parts) if parts.ak == expected_ak => {
-                    MaybeSigned::Signature(ask.randomize(&parts.alpha).sign(rng, &partial.sighash))
+                    MaybeSigned::Signature(
+                        ask.randomize(&parts.alpha).sign(rng, &partial.sigs.sighash),
+                    )
                 }
                 s => s,
             },
             |_, partial| partial,
         )
     }
+}
 
+impl<V> Bundle<InProgress<Proof, PartiallyAuthorized>, V> {
     /// Finalizes this bundle, enabling it to be included in a transaction.
     ///
     /// Returns an error if any signatures are missing.
@@ -500,7 +526,7 @@ impl<V> Bundle<PartiallyAuthorized, V> {
             |_, partial| {
                 Ok(Authorized::from_parts(
                     partial.proof,
-                    partial.binding_signature,
+                    partial.sigs.binding_signature,
                 ))
             },
         )
