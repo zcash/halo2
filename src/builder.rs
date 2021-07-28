@@ -281,7 +281,7 @@ impl Builder {
     ///
     /// This API assumes that none of the notes being spent are controlled by (threshold)
     /// multisignatures, and immediately constructs the bundle proof.
-    fn build<V: TryFrom<i64>>(
+    pub fn build<V: TryFrom<i64>>(
         mut self,
         mut rng: impl RngCore,
     ) -> Result<Bundle<InProgress<Unproven, Unauthorized>, V>, Error> {
