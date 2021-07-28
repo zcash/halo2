@@ -12,7 +12,7 @@ use rand::{CryptoRng, RngCore};
 use crate::{
     address::Address,
     bundle::{Action, Authorization, Authorized, Bundle, Flags},
-    circuit::{Circuit, Proof, ProvingKey},
+    circuit::{Circuit, Instance, Proof, ProvingKey},
     keys::{
         FullViewingKey, OutgoingViewingKey, SpendAuthorizingKey, SpendValidatingKey, SpendingKey,
     },
@@ -284,8 +284,7 @@ impl Builder {
     fn build<V: TryFrom<i64>>(
         mut self,
         mut rng: impl RngCore,
-        pk: &ProvingKey,
-    ) -> Result<Bundle<InProgress<Proof, Unauthorized>, V>, Error> {
+    ) -> Result<Bundle<InProgress<Unproven, Unauthorized>, V>, Error> {
         // Pair up the spends and recipients, extending with dummy values as necessary.
         //
         // TODO: Do we want to shuffle the order like we do for Sapling? And if we do, do
@@ -348,20 +347,13 @@ impl Builder {
         .into_bvk();
         assert_eq!(redpallas::VerificationKey::from(&bsk), bvk);
 
-        // Create the proof.
-        let instances: Vec<_> = actions
-            .iter()
-            .map(|a| a.to_instance(flags, anchor))
-            .collect();
-        let proof = Proof::create(pk, &circuits, &instances)?;
-
         Ok(Bundle::from_parts(
             NonEmpty::from_vec(actions).unwrap(),
             flags,
             result_value_balance,
             anchor,
             InProgress {
-                proof,
+                proof: Unproven { circuits },
                 sigs: Unauthorized { bsk },
             },
         ))
@@ -383,6 +375,47 @@ pub struct InProgress<P, S: InProgressSignatures> {
 
 impl<P, S: InProgressSignatures> Authorization for InProgress<P, S> {
     type SpendAuth = S::SpendAuth;
+}
+
+/// Marker for a bundle without a proof.
+///
+/// This struct contains the private data needed to create a [`Proof`] for a [`Bundle`].
+#[derive(Debug)]
+pub struct Unproven {
+    circuits: Vec<Circuit>,
+}
+
+impl<S: InProgressSignatures> InProgress<Unproven, S> {
+    /// Creates the proof for this bundle.
+    pub fn create_proof(
+        &self,
+        pk: &ProvingKey,
+        instances: &[Instance],
+    ) -> Result<Proof, halo2::plonk::Error> {
+        Proof::create(pk, &self.proof.circuits, instances)
+    }
+}
+
+impl<S: InProgressSignatures, V> Bundle<InProgress<Unproven, S>, V> {
+    /// Creates the proof for this bundle.
+    pub fn create_proof(self, pk: &ProvingKey) -> Result<Bundle<InProgress<Proof, S>, V>, Error> {
+        let instances: Vec<_> = self
+            .actions()
+            .iter()
+            .map(|a| a.to_instance(*self.flags(), *self.anchor()))
+            .collect();
+        self.try_authorize(
+            &mut (),
+            |_, _, a| Ok(a),
+            |_, auth| {
+                let proof = auth.create_proof(pk, &instances)?;
+                Ok(InProgress {
+                    proof,
+                    sigs: auth.sigs,
+                })
+            },
+        )
+    }
 }
 
 /// The parts needed to sign an [`Action`].
@@ -595,7 +628,9 @@ pub mod testing {
 
             let pk = ProvingKey::build();
             builder
-                .build(&mut self.rng, &pk)
+                .build(&mut self.rng)
+                .unwrap()
+                .create_proof(&pk)
                 .unwrap()
                 .prepare(&mut self.rng, [0; 32])
                 .sign(&mut self.rng, &SpendAuthorizingKey::from(&self.sk))
@@ -679,7 +714,9 @@ mod tests {
             .add_recipient(None, recipient, NoteValue::from_raw(5000), None)
             .unwrap();
         let bundle: Bundle<Authorized, i64> = builder
-            .build(&mut rng, &pk)
+            .build(&mut rng)
+            .unwrap()
+            .create_proof(&pk)
             .unwrap()
             .prepare(&mut rng, [0; 32])
             .finalize()
