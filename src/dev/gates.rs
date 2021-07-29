@@ -1,4 +1,7 @@
-use std::fmt;
+use std::{
+    collections::BTreeSet,
+    fmt::{self, Write},
+};
 
 use ff::PrimeField;
 
@@ -8,6 +11,7 @@ use crate::plonk::{Circuit, ConstraintSystem};
 struct Constraint {
     name: &'static str,
     expression: String,
+    queries: BTreeSet<String>,
 }
 
 #[derive(Debug)]
@@ -162,6 +166,35 @@ impl CircuitGates {
                                 }
                             },
                         ),
+                        queries: constraint.evaluate(
+                            &|_| BTreeSet::default(),
+                            &|selector| vec![format!("S{}", selector.0)].into_iter().collect(),
+                            &|_, column, rotation| {
+                                vec![format!("F{}@{}", column, rotation.0)]
+                                    .into_iter()
+                                    .collect()
+                            },
+                            &|_, column, rotation| {
+                                vec![format!("A{}@{}", column, rotation.0)]
+                                    .into_iter()
+                                    .collect()
+                            },
+                            &|_, column, rotation| {
+                                vec![format!("I{}@{}", column, rotation.0)]
+                                    .into_iter()
+                                    .collect()
+                            },
+                            &|a| a,
+                            &|mut a, mut b| {
+                                a.append(&mut b);
+                                a
+                            },
+                            &|mut a, mut b| {
+                                a.append(&mut b);
+                                a
+                            },
+                            &|a, _| a,
+                        ),
                     })
                     .collect(),
             })
@@ -195,6 +228,40 @@ impl CircuitGates {
             total_additions,
             total_multiplications,
         }
+    }
+
+    /// Prints the queries in this circuit to a CSV grid.
+    pub fn queries_to_csv(&self) -> String {
+        let mut queries = BTreeSet::new();
+        for gate in &self.gates {
+            for constraint in &gate.constraints {
+                for query in &constraint.queries {
+                    queries.insert(query);
+                }
+            }
+        }
+
+        let mut ret = String::new();
+        let w = &mut ret;
+        for query in &queries {
+            write!(w, "{},", query).unwrap();
+        }
+        writeln!(w, "Name").unwrap();
+
+        for gate in &self.gates {
+            for constraint in &gate.constraints {
+                for query in &queries {
+                    if constraint.queries.contains(*query) {
+                        write!(w, "1").unwrap();
+                    } else {
+                        write!(w, "0").unwrap();
+                    }
+                    write!(w, ",").unwrap();
+                }
+                writeln!(w, "{}/{}", gate.name, constraint.name).unwrap();
+            }
+        }
+        ret
     }
 }
 
