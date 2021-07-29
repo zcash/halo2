@@ -50,6 +50,9 @@ criterion = "0.3"
 hex = "0.4"
 proptest = "1.0.0"
 
+[target.'cfg(unix)'.dev-dependencies]
+pprof = { version = "0.4.2", features = ["criterion", "flamegraph"] }
+
 [lib]
 bench = false
 
@@ -60,6 +63,16 @@ test-dependencies = ["proptest"]
 [[bench]]
 name = "small"
 harness = false
+
+[[bench]]
+name = "circuit"
+harness = false
+
+[profile.release]
+debug = true
+
+[profile.bench]
+debug = true
 
 [patch.crates-io]
 halo2 = { git = "https://github.com/zcash/halo2.git", rev = "27c4187673a9c6ade13fbdbd4f20955530c22d7f" }

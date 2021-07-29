@@ -12,7 +12,7 @@ use rand::{CryptoRng, RngCore};
 use crate::{
     address::Address,
     bundle::{Action, Authorization, Authorized, Bundle, Flags},
-    circuit::{Circuit, Proof, ProvingKey},
+    circuit::{Circuit, Instance, Proof, ProvingKey},
     keys::{
         FullViewingKey, OutgoingViewingKey, SpendAuthorizingKey, SpendValidatingKey, SpendingKey,
     },
@@ -130,7 +130,7 @@ impl ActionInfo {
     /// [orchardsend]: https://zips.z.cash/protocol/nu5.pdf#orchardsend
     fn build(self, mut rng: impl RngCore) -> (Action<SigningMetadata>, Circuit) {
         let v_net = self.value_sum().expect("already checked this");
-        let cv_net = ValueCommitment::derive(v_net, self.rcv);
+        let cv_net = ValueCommitment::derive(v_net, self.rcv.clone());
 
         let nf_old = self.spend.note.nullifier(&self.spend.fvk);
         let sender_address = self.spend.fvk.default_address();
@@ -196,7 +196,7 @@ impl ActionInfo {
                 v_new: Some(note.value()),
                 psi_new: Some(note.rseed().psi(&note.rho())),
                 rcm_new: Some(note.rseed().rcm(&note.rho())),
-                rcv: Some(ValueCommitTrapdoor::zero()),
+                rcv: Some(self.rcv),
             },
         )
     }
@@ -281,11 +281,10 @@ impl Builder {
     ///
     /// This API assumes that none of the notes being spent are controlled by (threshold)
     /// multisignatures, and immediately constructs the bundle proof.
-    fn build<V: TryFrom<i64>>(
+    pub fn build<V: TryFrom<i64>>(
         mut self,
         mut rng: impl RngCore,
-        pk: &ProvingKey,
-    ) -> Result<Bundle<Unauthorized, V>, Error> {
+    ) -> Result<Bundle<InProgress<Unproven, Unauthorized>, V>, Error> {
         // Pair up the spends and recipients, extending with dummy values as necessary.
         //
         // TODO: Do we want to shuffle the order like we do for Sapling? And if we do, do
@@ -348,20 +347,74 @@ impl Builder {
         .into_bvk();
         assert_eq!(redpallas::VerificationKey::from(&bsk), bvk);
 
-        // Create the proof.
-        let instances: Vec<_> = actions
-            .iter()
-            .map(|a| a.to_instance(flags, anchor))
-            .collect();
-        let proof = Proof::create(pk, &circuits, &instances)?;
-
         Ok(Bundle::from_parts(
             NonEmpty::from_vec(actions).unwrap(),
             flags,
             result_value_balance,
             anchor,
-            Unauthorized { proof, bsk },
+            InProgress {
+                proof: Unproven { circuits },
+                sigs: Unauthorized { bsk },
+            },
         ))
+    }
+}
+
+/// Marker trait representing bundle signatures in the process of being created.
+pub trait InProgressSignatures {
+    /// The authorization type of an Orchard action in the process of being authorized.
+    type SpendAuth;
+}
+
+/// Marker for a bundle in the process of being built.
+#[derive(Debug)]
+pub struct InProgress<P, S: InProgressSignatures> {
+    proof: P,
+    sigs: S,
+}
+
+impl<P, S: InProgressSignatures> Authorization for InProgress<P, S> {
+    type SpendAuth = S::SpendAuth;
+}
+
+/// Marker for a bundle without a proof.
+///
+/// This struct contains the private data needed to create a [`Proof`] for a [`Bundle`].
+#[derive(Debug)]
+pub struct Unproven {
+    circuits: Vec<Circuit>,
+}
+
+impl<S: InProgressSignatures> InProgress<Unproven, S> {
+    /// Creates the proof for this bundle.
+    pub fn create_proof(
+        &self,
+        pk: &ProvingKey,
+        instances: &[Instance],
+    ) -> Result<Proof, halo2::plonk::Error> {
+        Proof::create(pk, &self.proof.circuits, instances)
+    }
+}
+
+impl<S: InProgressSignatures, V> Bundle<InProgress<Unproven, S>, V> {
+    /// Creates the proof for this bundle.
+    pub fn create_proof(self, pk: &ProvingKey) -> Result<Bundle<InProgress<Proof, S>, V>, Error> {
+        let instances: Vec<_> = self
+            .actions()
+            .iter()
+            .map(|a| a.to_instance(*self.flags(), *self.anchor()))
+            .collect();
+        self.try_authorize(
+            &mut (),
+            |_, _, a| Ok(a),
+            |_, auth| {
+                let proof = auth.create_proof(pk, &instances)?;
+                Ok(InProgress {
+                    proof,
+                    sigs: auth.sigs,
+                })
+            },
+        )
     }
 }
 
@@ -375,14 +428,13 @@ pub struct SigningParts {
     alpha: pallas::Scalar,
 }
 
-/// Marker for an unauthorized bundle, with a proof but no signatures.
+/// Marker for an unauthorized bundle with no signatures.
 #[derive(Debug)]
 pub struct Unauthorized {
-    proof: Proof,
     bsk: redpallas::SigningKey<Binding>,
 }
 
-impl Authorization for Unauthorized {
+impl InProgressSignatures for Unauthorized {
     type SpendAuth = SigningMetadata;
 }
 
@@ -401,12 +453,11 @@ pub struct SigningMetadata {
 /// Marker for a partially-authorized bundle, in the process of being signed.
 #[derive(Debug)]
 pub struct PartiallyAuthorized {
-    proof: Proof,
     binding_signature: redpallas::Signature<Binding>,
     sighash: [u8; 32],
 }
 
-impl Authorization for PartiallyAuthorized {
+impl InProgressSignatures for PartiallyAuthorized {
     type SpendAuth = MaybeSigned;
 }
 
@@ -430,7 +481,7 @@ impl MaybeSigned {
     }
 }
 
-impl<V> Bundle<Unauthorized, V> {
+impl<P, V> Bundle<InProgress<P, Unauthorized>, V> {
     /// Loads the sighash into this bundle, preparing it for signing.
     ///
     /// This API ensures that all signatures are created over the same sighash.
@@ -438,7 +489,7 @@ impl<V> Bundle<Unauthorized, V> {
         self,
         mut rng: R,
         sighash: [u8; 32],
-    ) -> Bundle<PartiallyAuthorized, V> {
+    ) -> Bundle<InProgress<P, PartiallyAuthorized>, V> {
         self.authorize(
             &mut rng,
             |rng, _, SigningMetadata { dummy_ask, parts }| {
@@ -448,14 +499,18 @@ impl<V> Bundle<Unauthorized, V> {
                     .map(MaybeSigned::Signature)
                     .unwrap_or(MaybeSigned::SigningMetadata(parts))
             },
-            |rng, unauth| PartiallyAuthorized {
-                proof: unauth.proof,
-                binding_signature: unauth.bsk.sign(rng, &sighash),
-                sighash,
+            |rng, auth| InProgress {
+                proof: auth.proof,
+                sigs: PartiallyAuthorized {
+                    binding_signature: auth.sigs.bsk.sign(rng, &sighash),
+                    sighash,
+                },
             },
         )
     }
+}
 
+impl<V> Bundle<InProgress<Proof, Unauthorized>, V> {
     /// Applies signatures to this bundle, in order to authorize it.
     pub fn apply_signatures<R: RngCore + CryptoRng>(
         self,
@@ -472,7 +527,7 @@ impl<V> Bundle<Unauthorized, V> {
     }
 }
 
-impl<V> Bundle<PartiallyAuthorized, V> {
+impl<P, V> Bundle<InProgress<P, PartiallyAuthorized>, V> {
     /// Signs this bundle with the given [`SpendAuthorizingKey`].
     ///
     /// This will apply signatures for all notes controlled by this spending key.
@@ -482,14 +537,18 @@ impl<V> Bundle<PartiallyAuthorized, V> {
             &mut rng,
             |rng, partial, maybe| match maybe {
                 MaybeSigned::SigningMetadata(parts) if parts.ak == expected_ak => {
-                    MaybeSigned::Signature(ask.randomize(&parts.alpha).sign(rng, &partial.sighash))
+                    MaybeSigned::Signature(
+                        ask.randomize(&parts.alpha).sign(rng, &partial.sigs.sighash),
+                    )
                 }
                 s => s,
             },
             |_, partial| partial,
         )
     }
+}
 
+impl<V> Bundle<InProgress<Proof, PartiallyAuthorized>, V> {
     /// Finalizes this bundle, enabling it to be included in a transaction.
     ///
     /// Returns an error if any signatures are missing.
@@ -500,7 +559,7 @@ impl<V> Bundle<PartiallyAuthorized, V> {
             |_, partial| {
                 Ok(Authorized::from_parts(
                     partial.proof,
-                    partial.binding_signature,
+                    partial.sigs.binding_signature,
                 ))
             },
         )
@@ -569,7 +628,9 @@ pub mod testing {
 
             let pk = ProvingKey::build();
             builder
-                .build(&mut self.rng, &pk)
+                .build(&mut self.rng)
+                .unwrap()
+                .create_proof(&pk)
                 .unwrap()
                 .prepare(&mut self.rng, [0; 32])
                 .sign(&mut self.rng, &SpendAuthorizingKey::from(&self.sk))
@@ -653,7 +714,9 @@ mod tests {
             .add_recipient(None, recipient, NoteValue::from_raw(5000), None)
             .unwrap();
         let bundle: Bundle<Authorized, i64> = builder
-            .build(&mut rng, &pk)
+            .build(&mut rng)
+            .unwrap()
+            .create_proof(&pk)
             .unwrap()
             .prepare(&mut rng, [0; 32])
             .finalize()
