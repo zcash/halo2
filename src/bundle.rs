@@ -179,7 +179,7 @@ impl Flags {
     /// Serialize flags to a byte as defined in [Zcash Protocol Spec § 7.1: Transaction
     /// Encoding And Consensus][txencoding].
     ///
-    /// [txencoding]: https://zips.z.cash/protocol/nu5.pdf#txnencoding
+    /// [txencoding]: https://zips.z.cash/protocol/protocol.pdf#txnencoding
     pub fn to_byte(&self) -> u8 {
         let mut value = 0u8;
         if self.spends_enabled {
@@ -194,7 +194,7 @@ impl Flags {
     /// Parse from a single byte as defined in [Zcash Protocol Spec § 7.1: Transaction
     /// Encoding And Consensus][txencoding].
     ///
-    /// [txencoding]: https://zips.z.cash/protocol/nu5.pdf#txnencoding
+    /// [txencoding]: https://zips.z.cash/protocol/protocol.pdf#txnencoding
     pub fn from_byte(value: u8) -> io::Result<Self> {
         if value & FLAGS_EXPECTED_UNSET == 0 {
             Ok(Self::from_parts(
