@@ -81,12 +81,12 @@ impl Config {
             let canonicity = (one.clone() - k_254) * (one - z_130 * eta) * s_minus_lo_130;
 
             iter::empty()
-                .chain(Some(s_check))
-                .chain(Some(recovery))
-                .chain(Some(lo_zero))
-                .chain(Some(s_minus_lo_130_check))
-                .chain(Some(canonicity))
-                .map(|poly| q_mul_overflow.clone() * poly)
+                .chain(Some(("s_check", s_check)))
+                .chain(Some(("recovery", recovery)))
+                .chain(Some(("lo_zero", lo_zero)))
+                .chain(Some(("s_minus_lo_130_check", s_minus_lo_130_check)))
+                .chain(Some(("canonicity", canonicity)))
+                .map(|(name, poly)| (name, q_mul_overflow.clone() * poly))
                 .collect::<Vec<_>>()
         });
     }

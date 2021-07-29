@@ -118,8 +118,12 @@ impl Config {
             let lsb_x = (lsb.clone() * x_p.clone()) + one_minus_lsb.clone() * (x_p - base_x);
             let lsb_y = (lsb * y_p.clone()) + one_minus_lsb * (y_p + base_y);
 
-            std::array::IntoIter::new([bool_check, lsb_x, lsb_y])
-                .map(move |poly| q_mul_lsb.clone() * poly)
+            std::array::IntoIter::new([
+                ("bool_check", bool_check),
+                ("lsb_x", lsb_x),
+                ("lsb_y", lsb_y),
+            ])
+            .map(move |(name, poly)| (name, q_mul_lsb.clone() * poly))
         });
 
         self.hi_config.create_gate(meta);

@@ -110,10 +110,14 @@ impl<F: FieldExt> Pow5T3Chip<F> {
                         - next[next_idx].clone())
             };
 
-            vec![full_round(0), full_round(1), full_round(2)]
+            vec![
+                ("state[0]", full_round(0)),
+                ("state[1]", full_round(1)),
+                ("state[2]", full_round(2)),
+            ]
         });
 
-        meta.create_gate("partial round", |meta| {
+        meta.create_gate("partial rounds", |meta| {
             let cur_0 = meta.query_advice(state[0], Rotation::cur());
             let cur_1 = meta.query_advice(state[1], Rotation::cur());
             let cur_2 = meta.query_advice(state[2], Rotation::cur());
@@ -143,18 +147,24 @@ impl<F: FieldExt> Pow5T3Chip<F> {
             };
 
             vec![
-                s_partial.clone() * (pow_5(cur_0 + rc_a0) - mid_0.clone()),
-                s_partial.clone()
-                    * (pow_5(
-                        mid_0.clone() * m_reg[0][0]
-                            + (cur_1.clone() + rc_a1.clone()) * m_reg[0][1]
-                            + (cur_2.clone() + rc_a2.clone()) * m_reg[0][2]
-                            + rc_b0,
-                    ) - (next_0.clone() * m_inv[0][0]
-                        + next_1.clone() * m_inv[0][1]
-                        + next_2.clone() * m_inv[0][2])),
-                partial_round_linear(1, rc_b1),
-                partial_round_linear(2, rc_b2),
+                (
+                    "state[0] round a",
+                    s_partial.clone() * (pow_5(cur_0 + rc_a0) - mid_0.clone()),
+                ),
+                (
+                    "state[0] round b",
+                    s_partial.clone()
+                        * (pow_5(
+                            mid_0.clone() * m_reg[0][0]
+                                + (cur_1.clone() + rc_a1.clone()) * m_reg[0][1]
+                                + (cur_2.clone() + rc_a2.clone()) * m_reg[0][2]
+                                + rc_b0,
+                        ) - (next_0.clone() * m_inv[0][0]
+                            + next_1.clone() * m_inv[0][1]
+                            + next_2.clone() * m_inv[0][2])),
+                ),
+                ("state[1]", partial_round_linear(1, rc_b1)),
+                ("state[2]", partial_round_linear(2, rc_b2)),
             ]
         });
 
@@ -177,10 +187,19 @@ impl<F: FieldExt> Pow5T3Chip<F> {
             };
 
             vec![
-                pad_and_add(initial_state_0, input_0, output_state_0),
-                pad_and_add(initial_state_1, input_1, output_state_1),
+                (
+                    "state[0]",
+                    pad_and_add(initial_state_0, input_0, output_state_0),
+                ),
+                (
+                    "state[1]",
+                    pad_and_add(initial_state_1, input_1, output_state_1),
+                ),
                 // The capacity element is never altered by the input.
-                s_pad_and_add * (initial_state_2 - output_state_2),
+                (
+                    "state[2]",
+                    s_pad_and_add * (initial_state_2 - output_state_2),
+                ),
             ]
         });
 

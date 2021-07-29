@@ -60,7 +60,8 @@ impl Config {
             // (y_r + y_q)(x_p − x_q) − (y_p − y_q)(x_q − x_r) = 0
             let poly2 = (y_r + y_q.clone()) * (x_p - x_q.clone()) - (y_p - y_q) * (x_q - x_r);
 
-            array::IntoIter::new([poly1, poly2]).map(move |poly| q_add_incomplete.clone() * poly)
+            array::IntoIter::new([("x_r", poly1), ("y_r", poly2)])
+                .map(move |(name, poly)| (name, q_add_incomplete.clone() * poly))
         });
     }
 
