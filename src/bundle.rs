@@ -364,15 +364,15 @@ impl<T: Authorization, V> Bundle<T, V> {
     /// along with the index of the action from which it was derived.
     pub fn decrypt_outputs_for_keys<'a>(
         &self,
-        keys: &[&'a IncomingViewingKey],
-    ) -> Vec<(usize, &'a IncomingViewingKey, Note, Address, [u8; 512])> {
+        keys: &[IncomingViewingKey],
+    ) -> Vec<(usize, IncomingViewingKey, Note, Address, [u8; 512])> {
         self.actions
             .iter()
             .enumerate()
             .filter_map(|(idx, action)| {
                 let domain = OrchardDomain::for_action(action);
                 keys.iter().find_map(move |ivk| {
-                    try_note_decryption(&domain, ivk, action).map(|(n, a, m)| (idx, *ivk, n, a, m))
+                    try_note_decryption(&domain, ivk, action).map(|(n, a, m)| (idx, ivk.clone(), n, a, m))
                 })
             })
             .collect()
