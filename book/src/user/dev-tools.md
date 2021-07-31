@@ -61,7 +61,7 @@ Optional arguments:
 For example, to estimate the cost of a circuit with three advice columns and one fixed
 column (with various rotations), and a maximum gate degree of 4:
 
-```shell
+```plaintext
 $ cargo run --example cost-model -- -a 0,1 -a 0 -a-0,-1,1 -f 0 -g 4 11
     Finished dev [unoptimized + debuginfo] target(s) in 0.03s
      Running `target/debug/examples/cost-model -a 0,1 -a 0 -a 0,-1,1 -f 0 -g 4 11`
