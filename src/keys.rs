@@ -64,6 +64,11 @@ impl SpendingKey {
         let ivk = KeyAgreementPrivateKey::derive_inner(&(&sk).into());
         CtOption::new(sk, !(ask.ct_is_zero() | ivk.is_none()))
     }
+
+    /// Returns the raw bytes of the spending key.
+    pub fn to_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
 }
 
 /// A spend authorizing key, used to create spend authorization signatures.
