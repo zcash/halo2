@@ -71,7 +71,8 @@ impl NoteValue {
         Default::default()
     }
 
-    pub(crate) fn inner(&self) -> u64 {
+    /// Returns the raw underlying value.
+    pub fn inner(&self) -> u64 {
         self.0
     }
 
