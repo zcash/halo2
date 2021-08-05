@@ -485,7 +485,7 @@ pub mod testing {
             0x9c, 0x52, 0x7f, 0x0e,
         ];
 
-        let mut frontier = BridgeFrontier::<MerkleCrhOrchardOutput, 32>::new();
+        let mut frontier = BridgeFrontier::<MerkleCrhOrchardOutput, 32>::empty();
         for commitment in commitments.iter() {
             let cmx = MerkleCrhOrchardOutput(pallas::Base::from_bytes(commitment).unwrap());
             frontier.append(&cmx);
