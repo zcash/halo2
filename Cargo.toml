@@ -77,3 +77,4 @@ debug = true
 [patch.crates-io]
 halo2 = { git = "https://github.com/zcash/halo2.git", rev = "27c4187673a9c6ade13fbdbd4f20955530c22d7f" }
 zcash_note_encryption = { git = "https://github.com/zcash/librustzcash.git", rev = "cc533a9da4f6a7209a7be05f82b12a03969152c9" }
+incrementalmerkletree = { git = "https://github.com/zcash/incrementalmerkletree.git", rev = "b7bd6246122a6e9ace8edb51553fbf5228906cbb" }
