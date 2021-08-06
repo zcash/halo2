@@ -1,6 +1,6 @@
 //! In-band secret distribution for Orchard bundles.
 
-use std::convert::TryInto;
+use std::{convert::TryInto, fmt};
 
 use blake2b_simd::{Hash, Params};
 use halo2::arithmetic::FieldExt;
@@ -242,6 +242,7 @@ impl Domain for OrchardDomain {
     }
 }
 
+/// Implementation of in-band secret distribution for Orchard bundles.
 pub type OrchardNoteEncryption = zcash_note_encryption::NoteEncryption<OrchardDomain>;
 
 impl<T> ShieldedOutput<OrchardDomain> for Action<T> {
@@ -258,10 +259,17 @@ impl<T> ShieldedOutput<OrchardDomain> for Action<T> {
     }
 }
 
-struct CompactAction {
+/// A compact Action for light clients.
+pub struct CompactAction {
     ephemeral_key: EphemeralKeyBytes,
     cmx: ExtractedNoteCommitment,
     enc_ciphertext: [u8; 52],
+}
+
+impl fmt::Debug for CompactAction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "CompactAction")
+    }
 }
 
 impl<T> From<&Action<T>> for CompactAction {
