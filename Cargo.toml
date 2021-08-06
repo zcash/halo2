@@ -61,6 +61,10 @@ dev-graph = ["halo2/dev-graph", "plotters"]
 test-dependencies = ["proptest"]
 
 [[bench]]
+name = "note_decryption"
+harness = false
+
+[[bench]]
 name = "small"
 harness = false
 
