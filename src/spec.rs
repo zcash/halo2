@@ -218,7 +218,8 @@ pub(crate) fn ka_orchard(
     sk: &NonZeroPallasScalar,
     b: &NonIdentityPallasPoint,
 ) -> NonIdentityPallasPoint {
-    NonIdentityPallasPoint(b.deref() * sk.deref())
+    let mut wnaf = group::Wnaf::new();
+    NonIdentityPallasPoint(wnaf.scalar(sk.deref()).base(*b.deref()))
 }
 
 /// Coordinate extractor for Pallas.
