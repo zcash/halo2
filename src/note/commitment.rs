@@ -66,6 +66,11 @@ pub struct ExtractedNoteCommitment(pub(super) pallas::Base);
 
 impl ExtractedNoteCommitment {
     /// Deserialize the extracted note commitment from a byte array.
+    ///
+    /// This method enforces the [consensus rule][cmxcanon] that the
+    /// byte representation of cmx MUST be canonical.
+    ///
+    /// [cmxcanon]: https://zips.z.cash/protocol/protocol.pdf#actionencodingandconsensus
     pub fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
         pallas::Base::from_bytes(bytes).map(ExtractedNoteCommitment)
     }
