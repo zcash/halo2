@@ -10,10 +10,10 @@ pub struct Proof<C: CurveAffine> {
     input_commitment: C,
     table_commitment: C,
     product_commitment: C,
-    evals: Evals<C::Scalar>,
+    pub evals: Evals<C::Scalar>,
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Copy, Debug)]
 pub struct Evals<F: FieldExt> {
     product_eval: F,
     product_next_eval: F,

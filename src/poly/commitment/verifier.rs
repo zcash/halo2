@@ -54,6 +54,8 @@ impl<'a, C: CurveAffine, E: EncodedChallenge<C>> Guard<'a, C, E> {
     }
 
     /// Computes G + H, where G = ⟨s, params.g⟩ and H is used for blinding
+    ///
+    /// Expensive linear-time check, done by accumulation decider.
     pub fn compute_g(&self) -> C {
         let s = compute_s(&self.challenges, C::Scalar::one());
 

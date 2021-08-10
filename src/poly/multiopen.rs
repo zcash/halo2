@@ -21,26 +21,37 @@ pub use verifier::verify_proof;
 /// TODO: documentation
 pub struct Proof<C: CurveAffine> {
     f_commitment: C,
-    q_evals: Vec<C::Scalar>,
-    inner_product: super::commitment::Proof<C>,
+    /// TODO: documentation
+    pub q_evals: Vec<C::Scalar>,
+    inner_product: commitment::Proof<C>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Default, Debug, Clone)]
+/// TODO: documentation
+pub struct Challenges<C: CurveAffine> {
+    x_1: ChallengeX1<C>,
+    x_2: ChallengeX2<C>,
+    x_3: ChallengeX3<C>,
+    x_4: ChallengeX4<C>,
+    inner_product: commitment::Challenges<C::Scalar>,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
 struct X1 {}
 /// Challenge for compressing openings at the same point sets together.
 type ChallengeX1<F> = ChallengeScalar<F, X1>;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 struct X2 {}
 /// Challenge for keeping the multi-point quotient polynomial terms linearly independent.
 type ChallengeX2<F> = ChallengeScalar<F, X2>;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 struct X3 {}
 /// Challenge point at which the commitments are opened.
 type ChallengeX3<F> = ChallengeScalar<F, X3>;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 struct X4 {}
 /// Challenge for collapsing the openings of the various remaining polynomials at x_3
 /// together.

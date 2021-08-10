@@ -14,7 +14,7 @@ use std::io;
 #[derive(Default, Debug, Clone)]
 pub(crate) struct Proof<C: CurveAffine> {
     product_commitment: C,
-    set_evals: Vec<SetEvals<C::Scalar>>,
+    pub set_evals: Vec<SetEvals<C::Scalar>>,
 }
 
 #[derive(Default, Debug, Clone)]

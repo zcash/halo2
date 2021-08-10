@@ -29,6 +29,7 @@ mod multicore;
 pub mod plonk;
 pub mod poly;
 pub mod poseidon;
+pub mod recursion;
 pub mod transcript;
 
 pub mod dev;

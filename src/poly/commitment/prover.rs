@@ -1,7 +1,7 @@
 use ff::Field;
 
 use super::super::{Coeff, Polynomial};
-use super::{Blind, Params, Proof};
+use super::{Blind, Challenges, Params, Proof};
 use crate::arithmetic::{
     best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine, FieldExt,
 };
@@ -28,8 +28,9 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C
     px: &Polynomial<C::Scalar, Coeff>,
     blind: Blind<C::Scalar>,
     x: C::Scalar,
-) -> Result<Proof<C>, std::io::Error> {
+) -> Result<(Proof<C>, Challenges<C::Scalar>), std::io::Error> {
     let mut proof = Proof::default();
+    let mut challenges = Challenges::default();
 
     // We're limited to polynomials of degree n - 1.
     assert!(px.len() <= params.n as usize);
@@ -56,10 +57,12 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C
     // witness a random polynomial commitment that agrees with P at x, with high
     // probability.
     let iota = *transcript.squeeze_challenge_scalar::<()>()?;
+    challenges.iota = iota;
 
     // Challenge that ensures that the prover did not interfere with the U term
     // in their commitments.
     let z = *transcript.squeeze_challenge_scalar::<()>()?;
+    challenges.z = z;
 
     // We'll be opening `s_poly_commitment * iota + P - [v] G_0` to ensure it
     // has a root at zero.
@@ -145,7 +148,7 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C
     proof.xi = blind;
     transcript.write_scalar(blind)?; // \xi
 
-    Ok(proof)
+    Ok((proof, challenges))
 }
 
 fn parallel_generator_collapse<C: CurveAffine>(g: &mut [C], challenge: C::Scalar) {

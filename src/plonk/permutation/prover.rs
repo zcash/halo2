@@ -12,6 +12,7 @@ use crate::{
         multiopen::ProverQuery,
         Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
     },
+    recursion,
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 
@@ -327,7 +328,7 @@ impl<C: CurveAffine> super::ProvingKey<C> {
         &self,
         x: ChallengeX<C>,
         transcript: &mut T,
-        proof: &mut plonk::Proof<C>,
+        proof: &mut recursion::Proof<C>,
     ) -> Result<(), Error> {
         // Hash permutation evals
         for eval in self.polys.iter().map(|poly| eval_polynomial(poly, *x)) {

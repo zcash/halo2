@@ -33,6 +33,13 @@ pub struct Proof<C: CurveAffine> {
     xi: C::Scalar,
 }
 
+#[derive(Default, Debug, Clone)]
+/// TODO: documentation
+pub struct Challenges<F> {
+    iota: F,
+    z: F,
+}
+
 /// These are the public parameters for the polynomial commitment scheme.
 #[derive(Debug)]
 pub struct Params<C: CurveAffine> {

@@ -3,7 +3,7 @@ use super::{
         commitment::{self, Blind, Params},
         Coeff, Polynomial,
     },
-    Proof,
+    Challenges, Proof,
 };
 use super::{
     construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4, ProverQuery,
@@ -30,7 +30,7 @@ pub fn create_proof<'a, I, C: CurveAffine, E: EncodedChallenge<C>, T: Transcript
     params: &Params<C>,
     transcript: &mut T,
     queries: I,
-) -> Result<Proof<C>, std::io::Error>
+) -> Result<(Proof<C>, Challenges<C>), std::io::Error>
 where
     I: IntoIterator<Item = ProverQuery<'a, C>> + Clone,
 {
@@ -120,9 +120,19 @@ where
         },
     );
 
-    proof.inner_product = commitment::create_proof(params, transcript, &f_poly, f_blind_try, *x_3)?;
+    let (inner_product_proof, inner_product_challenges) =
+        commitment::create_proof(params, transcript, &f_poly, f_blind_try, *x_3)?;
 
-    Ok(proof)
+    proof.inner_product = inner_product_proof;
+    let challenges = Challenges {
+        x_1,
+        x_2,
+        x_3,
+        x_4,
+        inner_product: inner_product_challenges,
+    };
+
+    Ok((proof, challenges))
 }
 
 #[doc(hidden)]

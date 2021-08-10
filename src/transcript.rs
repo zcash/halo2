@@ -343,7 +343,7 @@ impl<
 ///
 /// The `Type` type can be used to scope the challenge to a specific context, or
 /// set to `()` if no context is required.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct ChallengeScalar<C: CurveAffine, T> {
     inner: C::Scalar,
     _marker: PhantomData<T>,

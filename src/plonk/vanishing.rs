@@ -10,7 +10,7 @@ mod verifier;
 pub struct Proof<C: CurveAffine> {
     random_commitment: C,
     h_commitments: Vec<C>,
-    random_eval: C::Scalar,
+    pub random_eval: C::Scalar,
 }
 
 /// A vanishing argument.

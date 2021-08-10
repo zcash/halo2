@@ -18,7 +18,7 @@ mod circuit;
 mod keygen;
 pub(crate) mod lookup;
 pub(crate) mod permutation;
-mod vanishing;
+pub(crate) mod vanishing;
 
 mod prover;
 mod verifier;
@@ -29,26 +29,6 @@ pub use prover::*;
 pub use verifier::*;
 
 use std::io;
-
-/// TODO: documentation
-#[derive(Default, Debug)]
-pub struct Proof<C: CurveAffine> {
-    fixed_evals: Vec<C::Scalar>,
-    instances: Vec<InstanceProof<C>>,
-    vanishing: vanishing::Proof<C>,
-    multiopen: crate::poly::multiopen::Proof<C>,
-    common_perm_evals: Vec<C::Scalar>,
-}
-
-/// TODO: documentation
-#[derive(Default, Debug, Clone)]
-pub struct InstanceProof<C: CurveAffine> {
-    advice_commitments: Vec<C>,
-    instance_evals: Vec<C::Scalar>,
-    advice_evals: Vec<C::Scalar>,
-    lookups: Vec<lookup::Proof<C>>,
-    permutation: permutation::Proof<C>,
-}
 
 /// This is a verifying key which allows for the verification of proofs for a
 /// particular circuit.
@@ -193,22 +173,22 @@ impl<C: CurveAffine> VerifyingKey<C> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-struct Theta;
-type ChallengeTheta<F> = ChallengeScalar<F, Theta>;
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct Theta;
+pub(crate) type ChallengeTheta<F> = ChallengeScalar<F, Theta>;
 
-#[derive(Clone, Copy, Debug)]
-struct Beta;
-type ChallengeBeta<F> = ChallengeScalar<F, Beta>;
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct Beta;
+pub(crate) type ChallengeBeta<F> = ChallengeScalar<F, Beta>;
 
-#[derive(Clone, Copy, Debug)]
-struct Gamma;
-type ChallengeGamma<F> = ChallengeScalar<F, Gamma>;
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct Gamma;
+pub(crate) type ChallengeGamma<F> = ChallengeScalar<F, Gamma>;
 
-#[derive(Clone, Copy, Debug)]
-struct Y;
-type ChallengeY<F> = ChallengeScalar<F, Y>;
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct Y;
+pub(crate) type ChallengeY<F> = ChallengeScalar<F, Y>;
 
-#[derive(Clone, Copy, Debug)]
-struct X;
-type ChallengeX<F> = ChallengeScalar<F, X>;
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct X;
+pub(crate) type ChallengeX<F> = ChallengeScalar<F, X>;

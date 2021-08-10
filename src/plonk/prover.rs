@@ -16,9 +16,10 @@ use crate::poly::{
     multiopen::{self, ProverQuery},
     Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
 };
+use crate::recursion::{Challenges, InstanceProof, Proof};
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine, FieldExt},
-    plonk::{Assigned, InstanceProof, Proof},
+    plonk::Assigned,
 };
 use crate::{
     poly::batch_invert_assigned,
@@ -40,7 +41,7 @@ pub fn create_proof<
     circuits: &[ConcreteCircuit],
     instances: &[&[&[C::Scalar]]],
     transcript: &mut T,
-) -> Result<Proof<C>, Error> {
+) -> Result<(Proof<C>, Challenges<C>), Error> {
     for instance in instances.iter() {
         if instance.len() != pk.vk.cs.num_instance_columns {
             return Err(Error::IncompatibleParams);
@@ -53,6 +54,8 @@ pub fn create_proof<
     for instance in proof_instances.iter_mut() {
         instance.lookups = vec![lookup::Proof::default(); pk.vk.cs.lookups.len()];
     }
+
+    let mut challenges = Challenges::default();
 
     // Hash verification key into transcript
     pk.vk
@@ -345,6 +348,7 @@ pub fn create_proof<
     let theta: ChallengeTheta<_> = transcript
         .squeeze_challenge_scalar()
         .map_err(|_| Error::TranscriptError)?;
+    challenges.theta = theta;
 
     let lookups: Vec<Vec<lookup::prover::Permuted<C>>> = instance
         .iter()
@@ -383,11 +387,13 @@ pub fn create_proof<
     let beta: ChallengeBeta<_> = transcript
         .squeeze_challenge_scalar()
         .map_err(|_| Error::TranscriptError)?;
+    challenges.beta = beta;
 
     // Sample gamma challenge
     let gamma: ChallengeGamma<_> = transcript
         .squeeze_challenge_scalar()
         .map_err(|_| Error::TranscriptError)?;
+    challenges.gamma = gamma;
 
     // Commit to permutations.
     let permutations: Vec<permutation::prover::Committed<C>> = instance
@@ -432,6 +438,7 @@ pub fn create_proof<
     let y: ChallengeY<_> = transcript
         .squeeze_challenge_scalar()
         .map_err(|_| Error::TranscriptError)?;
+    challenges.y = y;
 
     // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints.
     let (permutations, permutation_expressions): (Vec<_>, Vec<_>) = permutations
@@ -521,6 +528,7 @@ pub fn create_proof<
     let x: ChallengeX<_> = transcript
         .squeeze_challenge_scalar()
         .map_err(|_| Error::TranscriptError)?;
+    challenges.x = x;
     let xn = x.pow(&[params.n as u64, 0, 0, 0]);
 
     // Compute and hash instance evals for each circuit instance
@@ -660,12 +668,21 @@ pub fn create_proof<
         // We query the h(X) polynomial at x
         .chain(vanishing.open(x));
 
-    let multiopen_proof =
+    let (multiopen_proof, multiopen_challenges) =
         multiopen::create_proof(params, transcript, instances).map_err(|_| Error::OpeningError)?;
 
     proof.vanishing = vanishing_proof;
     proof.instances = proof_instances;
     proof.multiopen = multiopen_proof;
 
-    Ok(proof)
+    let challenges = Challenges {
+        theta,
+        beta,
+        gamma,
+        x,
+        y,
+        multiopen: multiopen_challenges,
+    };
+
+    Ok((proof, challenges))
 }
