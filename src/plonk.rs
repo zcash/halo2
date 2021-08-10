@@ -16,7 +16,7 @@ use crate::transcript::{ChallengeScalar, EncodedChallenge, Transcript};
 
 mod circuit;
 mod keygen;
-mod lookup;
+pub(crate) mod lookup;
 pub(crate) mod permutation;
 mod vanishing;
 
@@ -29,6 +29,26 @@ pub use prover::*;
 pub use verifier::*;
 
 use std::io;
+
+/// TODO: documentation
+#[derive(Default, Debug)]
+pub struct Proof<C: CurveAffine> {
+    fixed_evals: Vec<C::Scalar>,
+    instances: Vec<InstanceProof<C>>,
+    vanishing: vanishing::Proof<C>,
+    multiopen: crate::poly::multiopen::Proof<C>,
+    common_perm_evals: Vec<C::Scalar>,
+}
+
+/// TODO: documentation
+#[derive(Default, Debug, Clone)]
+pub struct InstanceProof<C: CurveAffine> {
+    advice_commitments: Vec<C>,
+    instance_evals: Vec<C::Scalar>,
+    advice_evals: Vec<C::Scalar>,
+    lookups: Vec<lookup::Proof<C>>,
+    permutation: permutation::Proof<C>,
+}
 
 /// This is a verifying key which allows for the verification of proofs for a
 /// particular circuit.

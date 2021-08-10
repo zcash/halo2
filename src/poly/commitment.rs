@@ -22,6 +22,17 @@ pub use verifier::{verify_proof, Accumulator, Guard};
 
 use std::io;
 
+#[derive(Default, Debug)]
+#[allow(non_snake_case)]
+/// TODO: documentation
+pub struct Proof<C: CurveAffine> {
+    s_poly_commitment: C,
+    L: Vec<C>,
+    R: Vec<C>,
+    a: C::Scalar,
+    xi: C::Scalar,
+}
+
 /// These are the public parameters for the polynomial commitment scheme.
 #[derive(Debug)]
 pub struct Params<C: CurveAffine> {

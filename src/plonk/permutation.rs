@@ -1,6 +1,6 @@
 use super::circuit::{Any, Column};
 use crate::{
-    arithmetic::CurveAffine,
+    arithmetic::{CurveAffine, FieldExt},
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
 };
 
@@ -9,6 +9,20 @@ pub(crate) mod prover;
 pub(crate) mod verifier;
 
 use std::io;
+
+/// A permutation proof.
+#[derive(Default, Debug, Clone)]
+pub(crate) struct Proof<C: CurveAffine> {
+    product_commitment: C,
+    set_evals: Vec<SetEvals<C::Scalar>>,
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct SetEvals<F: FieldExt> {
+    product_eval: F,
+    product_next_eval: F,
+    product_last_eval: Option<F>,
+}
 
 /// A permutation argument.
 #[derive(Debug, Clone)]

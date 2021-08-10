@@ -17,6 +17,14 @@ mod verifier;
 pub use prover::create_proof;
 pub use verifier::verify_proof;
 
+#[derive(Default, Debug)]
+/// TODO: documentation
+pub struct Proof<C: CurveAffine> {
+    f_commitment: C,
+    q_evals: Vec<C::Scalar>,
+    inner_product: super::commitment::Proof<C>,
+}
+
 #[derive(Clone, Copy, Debug)]
 struct X1 {}
 /// Challenge for compressing openings at the same point sets together.

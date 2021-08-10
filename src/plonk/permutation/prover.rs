@@ -3,7 +3,7 @@ use group::Curve;
 use std::iter::{self, ExactSizeIterator};
 
 use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
-use super::{Argument, ProvingKey};
+use super::{Argument, Proof, ProvingKey, SetEvals};
 use crate::{
     arithmetic::{eval_polynomial, parallelize, BatchInvert, CurveAffine, FieldExt},
     plonk::{self, Error},
@@ -54,6 +54,7 @@ impl Argument {
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
         transcript: &mut T,
+        proof: &mut Proof<C>,
     ) -> Result<Committed<C>, Error> {
         let domain = &pk.vk.domain;
 
@@ -171,6 +172,7 @@ impl Argument {
                 permutation_product_commitment_projective.to_affine();
 
             // Hash the permutation product commitment
+            proof.product_commitment = permutation_product_commitment;
             transcript
                 .write_point(permutation_product_commitment)
                 .map_err(|_| Error::TranscriptError)?;
@@ -325,9 +327,11 @@ impl<C: CurveAffine> super::ProvingKey<C> {
         &self,
         x: ChallengeX<C>,
         transcript: &mut T,
+        proof: &mut plonk::Proof<C>,
     ) -> Result<(), Error> {
         // Hash permutation evals
         for eval in self.polys.iter().map(|poly| eval_polynomial(poly, *x)) {
+            proof.common_perm_evals.push(eval);
             transcript
                 .write_scalar(eval)
                 .map_err(|_| Error::TranscriptError)?;
@@ -343,14 +347,18 @@ impl<C: CurveAffine> Constructed<C> {
         pk: &plonk::ProvingKey<C>,
         x: ChallengeX<C>,
         transcript: &mut T,
+        proof: &mut Proof<C>,
     ) -> Result<Evaluated<C>, Error> {
         let domain = &pk.vk.domain;
         let blinding_factors = pk.vk.cs.blinding_factors();
 
         {
             let mut sets = self.sets.iter();
+            let mut set_evals = vec![SetEvals::<C::Scalar>::default(); self.sets.len()];
+            let mut set_evals_iter = set_evals.iter_mut();
 
             while let Some(set) = sets.next() {
+                let proof = set_evals_iter.next().unwrap();
                 let permutation_product_eval = eval_polynomial(&set.permutation_product_poly, *x);
 
                 let permutation_product_next_eval = eval_polynomial(
@@ -371,7 +379,7 @@ impl<C: CurveAffine> Constructed<C> {
                 // If we have any remaining sets to process, evaluate this set at omega^u
                 // so we can constrain the last value of its running product to equal the
                 // first value of the next set's running product, chaining them together.
-                if sets.len() > 0 {
+                let permutation_product_last_eval = if sets.len() > 0 {
                     let permutation_product_last_eval = eval_polynomial(
                         &set.permutation_product_poly,
                         domain.rotate_omega(*x, Rotation(-((blinding_factors + 1) as i32))),
@@ -380,8 +388,20 @@ impl<C: CurveAffine> Constructed<C> {
                     transcript
                         .write_scalar(permutation_product_last_eval)
                         .map_err(|_| Error::TranscriptError)?;
+
+                    Some(permutation_product_last_eval)
+                } else {
+                    None
+                };
+
+                *proof = SetEvals {
+                    product_eval: permutation_product_eval,
+                    product_next_eval: permutation_product_next_eval,
+                    product_last_eval: permutation_product_last_eval,
                 }
             }
+
+            proof.set_evals = set_evals;
         }
 
         Ok(Evaluated { constructed: self })

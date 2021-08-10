@@ -419,7 +419,7 @@ fn plonk_api() {
             PoseidonFp,
         >::init(commitment_base, vec![], PoseidonFq, PoseidonFp);
         // Create a proof
-        create_proof(
+        let my_proof = create_proof(
             &params,
             &pk,
             &[circuit.clone(), circuit.clone()],
@@ -427,6 +427,7 @@ fn plonk_api() {
             &mut transcript,
         )
         .expect("proof generation should not fail");
+        println!("proof: {:#?}", my_proof);
         let proof: Vec<u8> = transcript.finalize();
         assert_eq!(
             proof.len(),

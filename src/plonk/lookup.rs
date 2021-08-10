@@ -1,8 +1,26 @@
 use super::circuit::Expression;
+use crate::arithmetic::{CurveAffine, FieldExt};
 use ff::Field;
 
 pub(crate) mod prover;
 pub(crate) mod verifier;
+
+#[derive(Default, Clone, Debug)]
+pub struct Proof<C: CurveAffine> {
+    input_commitment: C,
+    table_commitment: C,
+    product_commitment: C,
+    evals: Evals<C::Scalar>,
+}
+
+#[derive(Default, Clone, Debug)]
+pub struct Evals<F: FieldExt> {
+    product_eval: F,
+    product_next_eval: F,
+    permuted_input_eval: F,
+    permuted_input_inv_eval: F,
+    permuted_table_eval: F,
+}
 
 #[derive(Clone, Debug)]
 pub(crate) struct Argument<F: Field> {

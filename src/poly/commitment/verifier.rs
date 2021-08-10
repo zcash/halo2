@@ -16,6 +16,8 @@ pub struct Guard<'a, C: CurveAffine, E: EncodedChallenge<C>> {
     challenges_packed: Vec<E>,
 }
 
+// TODO: "Half"-accumulator with value, commitment, and point.
+
 /// An accumulator instance consisting of an evaluation claim and a proof.
 #[derive(Debug, Clone)]
 pub struct Accumulator<C: CurveAffine, E: EncodedChallenge<C>> {

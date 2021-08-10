@@ -1,14 +1,13 @@
 use ff::Field;
 
 use super::super::{Coeff, Polynomial};
-use super::{Blind, Params};
+use super::{Blind, Params, Proof};
 use crate::arithmetic::{
     best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine, FieldExt,
 };
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use group::Curve;
-use std::io;
 
 /// Create a polynomial commitment opening proof for the polynomial defined
 /// by the coefficients `px`, the blinding factor `blind` used for the
@@ -29,7 +28,9 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C
     px: &Polynomial<C::Scalar, Coeff>,
     blind: Blind<C::Scalar>,
     x: C::Scalar,
-) -> io::Result<()> {
+) -> Result<Proof<C>, std::io::Error> {
+    let mut proof = Proof::default();
+
     // We're limited to polynomials of degree n - 1.
     assert!(px.len() <= params.n as usize);
 
@@ -48,6 +49,7 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C
 
     // Write a commitment to the random polynomial to the transcript
     let s_poly_commitment = params.commit(&s_poly, s_poly_blind).to_affine();
+    proof.s_poly_commitment = s_poly_commitment;
     transcript.write_point(s_poly_commitment)?;
 
     // Challenge that will ensure that the prover cannot change P but can only
@@ -107,7 +109,9 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C
         let r = r.to_affine();
 
         // Feed L and R into the real transcript
+        proof.L.push(l);
         transcript.write_point(l)?;
+        proof.R.push(r);
         transcript.write_point(r)?;
 
         let challenge = *transcript.squeeze_challenge_scalar::<()>()?;
@@ -135,10 +139,13 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C
     assert_eq!(a.len(), 1);
     let a = a[0];
 
+    proof.a = a;
     transcript.write_scalar(a)?;
+
+    proof.xi = blind;
     transcript.write_scalar(blind)?; // \xi
 
-    Ok(())
+    Ok(proof)
 }
 
 fn parallel_generator_collapse<C: CurveAffine>(g: &mut [C], challenge: C::Scalar) {

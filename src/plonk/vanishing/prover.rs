@@ -3,7 +3,7 @@ use std::iter;
 use ff::Field;
 use group::Curve;
 
-use super::Argument;
+use super::{Argument, Proof};
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine, FieldExt},
     plonk::{ChallengeX, ChallengeY, Error},
@@ -37,6 +37,7 @@ impl<C: CurveAffine> Argument<C> {
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
         transcript: &mut T,
+        proof: &mut Proof<C>,
     ) -> Result<Committed<C>, Error> {
         // Sample a random polynomial of degree n - 1
         let mut random_poly = domain.empty_coeff();
@@ -48,6 +49,7 @@ impl<C: CurveAffine> Argument<C> {
 
         // Commit
         let c = params.commit(&random_poly, random_blind).to_affine();
+        proof.random_commitment = c;
         transcript
             .write_point(c)
             .map_err(|_| Error::TranscriptError)?;
@@ -67,6 +69,7 @@ impl<C: CurveAffine> Committed<C> {
         expressions: impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
         y: ChallengeY<C>,
         transcript: &mut T,
+        proof: &mut Proof<C>,
     ) -> Result<Constructed<C>, Error> {
         // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
         let h_poly = expressions.fold(domain.empty_extended(), |h_poly, v| h_poly * *y + &v);
@@ -95,6 +98,7 @@ impl<C: CurveAffine> Committed<C> {
         C::Curve::batch_normalize(&h_commitments_projective, &mut h_commitments);
         let h_commitments = h_commitments;
 
+        proof.h_commitments = h_commitments.clone();
         // Hash each h(X) piece
         for c in h_commitments.iter() {
             transcript
@@ -117,6 +121,7 @@ impl<C: CurveAffine> Constructed<C> {
         xn: C::Scalar,
         domain: &EvaluationDomain<C::Scalar>,
         transcript: &mut T,
+        proof: &mut Proof<C>,
     ) -> Result<Evaluated<C>, Error> {
         let h_poly = self
             .h_pieces
@@ -133,6 +138,7 @@ impl<C: CurveAffine> Constructed<C> {
             });
 
         let random_eval = eval_polynomial(&self.committed.random_poly, *x);
+        proof.random_eval = random_eval;
         transcript
             .write_scalar(random_eval)
             .map_err(|_| Error::TranscriptError)?;

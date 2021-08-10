@@ -1,6 +1,9 @@
-use super::super::{
-    commitment::{self, Blind, Params},
-    Coeff, Polynomial,
+use super::{
+    super::{
+        commitment::{self, Blind, Params},
+        Coeff, Polynomial,
+    },
+    Proof,
 };
 use super::{
     construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4, ProverQuery,
@@ -12,7 +15,6 @@ use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use ff::Field;
 use group::Curve;
-use std::io;
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone)]
@@ -28,10 +30,12 @@ pub fn create_proof<'a, I, C: CurveAffine, E: EncodedChallenge<C>, T: Transcript
     params: &Params<C>,
     transcript: &mut T,
     queries: I,
-) -> io::Result<()>
+) -> Result<Proof<C>, std::io::Error>
 where
     I: IntoIterator<Item = ProverQuery<'a, C>> + Clone,
 {
+    let mut proof = Proof::default();
+
     let x_1: ChallengeX1<_> = transcript.squeeze_challenge_scalar()?;
     let x_2: ChallengeX2<_> = transcript.squeeze_challenge_scalar()?;
 
@@ -89,6 +93,7 @@ where
     let f_blind = Blind(C::Scalar::rand());
     let f_commitment = params.commit(&f_poly, f_blind).to_affine();
 
+    proof.f_commitment = f_commitment;
     transcript.write_point(f_commitment)?;
 
     let x_3: ChallengeX3<_> = transcript.squeeze_challenge_scalar()?;
@@ -98,6 +103,7 @@ where
         .map(|poly| eval_polynomial(poly.as_ref().unwrap(), *x_3))
         .collect();
 
+    proof.q_evals = q_evals.clone();
     for eval in q_evals.iter() {
         transcript.write_scalar(*eval)?;
     }
@@ -114,7 +120,9 @@ where
         },
     );
 
-    commitment::create_proof(params, transcript, &f_poly, f_blind_try, *x_3)
+    proof.inner_product = commitment::create_proof(params, transcript, &f_poly, f_blind_try, *x_3)?;
+
+    Ok(proof)
 }
 
 #[doc(hidden)]

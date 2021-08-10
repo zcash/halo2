@@ -2,7 +2,7 @@ use super::super::{
     circuit::Expression, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error,
     ProvingKey,
 };
-use super::Argument;
+use super::{Argument, Proof};
 use crate::{
     arithmetic::{eval_polynomial, parallelize, BatchInvert, CurveAffine, FieldExt},
     poly::{
@@ -88,6 +88,7 @@ impl<F: FieldExt> Argument<F> {
         fixed_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         instance_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         transcript: &mut T,
+        proof: &mut Proof<C>,
     ) -> Result<Permuted<C>, Error>
     where
         C: CurveAffine<ScalarExt = F>,
@@ -211,11 +212,13 @@ impl<F: FieldExt> Argument<F> {
         transcript
             .write_point(permuted_input_commitment)
             .map_err(|_| Error::TranscriptError)?;
+        proof.input_commitment = permuted_input_commitment;
 
         // Hash permuted table commitment
         transcript
             .write_point(permuted_table_commitment)
             .map_err(|_| Error::TranscriptError)?;
+        proof.table_commitment = permuted_table_commitment;
 
         let permuted_input_coset = pk.vk.domain.coeff_to_extended(permuted_input_poly.clone());
         let permuted_table_coset = pk.vk.domain.coeff_to_extended(permuted_table_poly.clone());
@@ -253,6 +256,7 @@ impl<C: CurveAffine> Permuted<C> {
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
         transcript: &mut T,
+        proof: &mut Proof<C>,
     ) -> Result<Committed<C>, Error> {
         let blinding_factors = pk.vk.cs.blinding_factors();
         // Goal is to compute the products of fractions
@@ -392,6 +396,7 @@ impl<C: CurveAffine> Permuted<C> {
         transcript
             .write_point(product_commitment)
             .map_err(|_| Error::TranscriptError)?;
+        proof.product_commitment = product_commitment;
 
         Ok(Committed::<C> {
             permuted: self,
@@ -520,6 +525,7 @@ impl<C: CurveAffine> Constructed<C> {
         pk: &ProvingKey<C>,
         x: ChallengeX<C>,
         transcript: &mut T,
+        proof: &mut Proof<C>,
     ) -> Result<Evaluated<C>, Error> {
         let domain = &pk.vk.domain;
         let x_inv = domain.rotate_omega(*x, Rotation::prev());
@@ -530,6 +536,12 @@ impl<C: CurveAffine> Constructed<C> {
         let permuted_input_eval = eval_polynomial(&self.permuted_input_poly, *x);
         let permuted_input_inv_eval = eval_polynomial(&self.permuted_input_poly, x_inv);
         let permuted_table_eval = eval_polynomial(&self.permuted_table_poly, *x);
+
+        proof.evals.product_eval = product_eval;
+        proof.evals.product_next_eval = product_next_eval;
+        proof.evals.permuted_input_eval = permuted_input_eval;
+        proof.evals.permuted_input_inv_eval = permuted_input_inv_eval;
+        proof.evals.permuted_table_eval = permuted_table_eval;
 
         // Hash each advice evaluation
         for eval in iter::empty()
