@@ -263,7 +263,7 @@ impl FullViewingKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct DiversifierKey([u8; 32]);
 
 impl From<&FullViewingKey> for DiversifierKey {
@@ -345,7 +345,7 @@ impl Diversifier {
 /// decryption of notes). When we actually want to serialize ivk, we're guaranteed to get
 /// a valid base field element encoding, because we always construct ivk from an integer
 /// in the correct range.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct KeyAgreementPrivateKey(NonZeroPallasScalar);
 
 impl From<&FullViewingKey> for KeyAgreementPrivateKey {
@@ -382,7 +382,7 @@ impl KeyAgreementPrivateKey {
 /// Defined in [Zcash Protocol Spec § 5.6.4.3: Orchard Raw Incoming Viewing Keys][orchardinviewingkeyencoding].
 ///
 /// [orchardinviewingkeyencoding]: https://zips.z.cash/protocol/nu5.pdf#orchardinviewingkeyencoding
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct IncomingViewingKey {
     dk: DiversifierKey,
     ivk: KeyAgreementPrivateKey,
