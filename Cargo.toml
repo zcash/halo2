@@ -65,6 +65,10 @@ name = "note_decryption"
 harness = false
 
 [[bench]]
+name = "primitives"
+harness = false
+
+[[bench]]
 name = "small"
 harness = false
 
