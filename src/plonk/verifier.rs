@@ -1,5 +1,4 @@
 use ff::Field;
-use group::Curve;
 use std::iter;
 
 use super::{
@@ -8,7 +7,7 @@ use super::{
 };
 use crate::arithmetic::{CurveAffine, FieldExt};
 use crate::poly::{
-    commitment::{Blind, Guard, Params, MSM},
+    commitment::{Guard, Params, MSM},
     multiopen::{self, VerifierQuery},
 };
 use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
@@ -28,39 +27,27 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
         }
     }
 
-    let instance_commitments = instances
-        .iter()
-        .map(|instance| {
-            instance
-                .iter()
-                .map(|instance| {
-                    if instance.len() > params.n as usize - (vk.cs.blinding_factors() + 1) {
-                        return Err(Error::InstanceTooLarge);
-                    }
-                    let mut poly = instance.to_vec();
-                    poly.resize(params.n as usize, C::Scalar::zero());
-                    let poly = vk.domain.lagrange_from_vec(poly);
+    // The number of proof instances being verified.
+    let num_proofs = instances.len();
 
-                    Ok(params.commit_lagrange(&poly, Blind::default()).to_affine())
-                })
-                .collect::<Result<Vec<_>, _>>()
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    // Hash instance values into the transcript.
+    for instance_polys in instances.iter() {
+        if instance_polys.len() > params.n as usize - (vk.cs.blinding_factors() + 1) {
+            return Err(Error::InstanceTooLarge);
+        }
 
-    let num_proofs = instance_commitments.len();
+        for instance_poly in instance_polys.iter() {
+            for instance_value in instance_poly.iter() {
+                transcript
+                    .common_scalar(*instance_value)
+                    .map_err(|_| Error::TranscriptError)?
+            }
+        }
+    }
 
     // Hash verification key into transcript
     vk.hash_into(transcript)
         .map_err(|_| Error::TranscriptError)?;
-
-    for instance_commitments in instance_commitments.iter() {
-        // Hash the instance (external) commitments into the transcript
-        for commitment in instance_commitments {
-            transcript
-                .common_point(*commitment)
-                .map_err(|_| Error::TranscriptError)?
-        }
-    }
 
     let advice_commitments = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
@@ -234,31 +221,14 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
         vanishing.verify(params, expressions, y, xn)
     };
 
-    let queries = instance_commitments
+    let queries = advice_commitments
         .iter()
-        .zip(instance_evals.iter())
-        .zip(advice_commitments.iter())
         .zip(advice_evals.iter())
         .zip(permutations_evaluated.iter())
         .zip(lookups_evaluated.iter())
         .flat_map(
-            |(
-                (
-                    (((instance_commitments, instance_evals), advice_commitments), advice_evals),
-                    permutation,
-                ),
-                lookups,
-            )| {
+            |(((advice_commitments, advice_evals), permutation), lookups)| {
                 iter::empty()
-                    .chain(vk.cs.instance_queries.iter().enumerate().map(
-                        move |(query_index, &(column, at))| {
-                            VerifierQuery::new_commitment(
-                                &instance_commitments[column.index()],
-                                vk.domain.rotate_omega(*x, at),
-                                instance_evals[query_index],
-                            )
-                        },
-                    ))
                     .chain(vk.cs.advice_queries.iter().enumerate().map(
                         move |(query_index, &(column, at))| {
                             VerifierQuery::new_commitment(

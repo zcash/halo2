@@ -47,6 +47,21 @@ pub fn create_proof<
         }
     }
 
+    // Hash instance values into the transcript
+    for instance_polys in instances.iter() {
+        if instance_polys.len() > params.n as usize - (pk.vk.cs.blinding_factors() + 1) {
+            return Err(Error::InstanceTooLarge);
+        }
+
+        for instance_poly in instance_polys.iter() {
+            for instance_value in instance_poly.iter() {
+                transcript
+                    .common_scalar(*instance_value)
+                    .map_err(|_| Error::TranscriptError)?
+            }
+        }
+    }
+
     // Hash verification key into transcript
     pk.vk
         .hash_into(transcript)
@@ -83,21 +98,6 @@ pub fn create_proof<
                     Ok(poly)
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            let instance_commitments_projective: Vec<_> = instance_values
-                .iter()
-                .map(|poly| params.commit_lagrange(poly, Blind::default()))
-                .collect();
-            let mut instance_commitments =
-                vec![C::identity(); instance_commitments_projective.len()];
-            C::Curve::batch_normalize(&instance_commitments_projective, &mut instance_commitments);
-            let instance_commitments = instance_commitments;
-            drop(instance_commitments_projective);
-
-            for commitment in &instance_commitments {
-                transcript
-                    .common_point(*commitment)
-                    .map_err(|_| Error::TranscriptError)?;
-            }
 
             let instance_polys: Vec<_> = instance_values
                 .iter()
@@ -564,24 +564,12 @@ pub fn create_proof<
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let instances = instance
+    let instances = advice
         .iter()
-        .zip(advice.iter())
         .zip(permutations.iter())
         .zip(lookups.iter())
-        .flat_map(|(((instance, advice), permutation), lookups)| {
+        .flat_map(|((advice, permutation), lookups)| {
             iter::empty()
-                .chain(
-                    pk.vk
-                        .cs
-                        .instance_queries
-                        .iter()
-                        .map(move |&(column, at)| ProverQuery {
-                            point: domain.rotate_omega(*x, at),
-                            poly: &instance.instance_polys[column.index()],
-                            blind: Blind::default(),
-                        }),
-                )
                 .chain(
                     pk.vk
                         .cs
