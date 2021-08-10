@@ -1,3 +1,5 @@
+//! The Poseidon algebraic hash function.
+
 use std::array;
 use std::fmt;
 use std::iter;
@@ -17,13 +19,13 @@ pub use nullifier::OrchardNullifier;
 use grain::SboxType;
 
 /// The type used to hold permutation state.
-pub type State<F, const T: usize> = [F; T];
+pub(crate) type State<F, const T: usize> = [F; T];
 
 /// The type used to hold duplex sponge state.
-pub type SpongeState<F, const RATE: usize> = [Option<F>; RATE];
+pub(crate) type SpongeState<F, const RATE: usize> = [Option<F>; RATE];
 
 /// The type used to hold the MDS matrix and its inverse.
-pub type Mds<F, const T: usize> = [[F; T]; T];
+pub(crate) type Mds<F, const T: usize> = [[F; T]; T];
 
 /// A specification for a Poseidon permutation.
 pub trait Spec<F: FieldExt, const T: usize, const RATE: usize> {
@@ -151,7 +153,7 @@ impl<F: Copy, const RATE: usize> Sponge<F, RATE> {
 }
 
 /// A Poseidon duplex sponge.
-pub struct Duplex<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> {
+pub(crate) struct Duplex<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> {
     sponge: Sponge<F, RATE>,
     state: State<F, T>,
     pad_and_add: Box<dyn Fn(&mut State<F, T>, &SpongeState<F, RATE>)>,
@@ -162,7 +164,7 @@ pub struct Duplex<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: 
 
 impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> Duplex<F, S, T, RATE> {
     /// Constructs a new duplex sponge for the given Poseidon specification.
-    pub fn new(
+    pub(crate) fn new(
         spec: S,
         initial_capacity_element: F,
         pad_and_add: Box<dyn Fn(&mut State<F, T>, &SpongeState<F, RATE>)>,
@@ -184,7 +186,7 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> Duplex
     }
 
     /// Absorbs an element into the sponge.
-    pub fn absorb(&mut self, value: F) {
+    pub(crate) fn absorb(&mut self, value: F) {
         match self.sponge {
             Sponge::Absorbing(ref mut input) => {
                 for entry in input.iter_mut() {
@@ -212,7 +214,7 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> Duplex
     }
 
     /// Squeezes an element from the sponge.
-    pub fn squeeze(&mut self) -> F {
+    pub(crate) fn squeeze(&mut self) -> F {
         loop {
             match self.sponge {
                 Sponge::Absorbing(ref input) => {
@@ -246,6 +248,7 @@ pub trait Domain<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: u
     /// The initial capacity element, encoding this domain.
     fn initial_capacity_element(&self) -> F;
 
+    /// The padding that will be added to each state word by [`Domain::pad_and_add`].
     fn padding(&self) -> SpongeState<F, RATE>;
 
     /// Returns a function that will update the given state with the given input to a
@@ -303,6 +306,25 @@ pub struct Hash<
 > {
     duplex: Duplex<F, S, T, RATE>,
     domain: D,
+}
+
+impl<
+        F: FieldExt,
+        S: Spec<F, T, RATE>,
+        D: Domain<F, S, T, RATE>,
+        const T: usize,
+        const RATE: usize,
+    > fmt::Debug for Hash<F, S, D, T, RATE>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Hash")
+            .field("width", &T)
+            .field("rate", &RATE)
+            .field("R_F", &S::full_rounds())
+            .field("R_P", &S::partial_rounds())
+            .field("domain", &self.domain)
+            .finish()
+    }
 }
 
 impl<
