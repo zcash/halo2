@@ -6,7 +6,7 @@ use std::mem;
 use aes::Aes256;
 use blake2b_simd::{Hash as Blake2bHash, Params};
 use fpe::ff1::{BinaryNumeralString, FF1};
-use group::GroupEncoding;
+use group::{prime::PrimeCurveAffine, Curve, GroupEncoding};
 use halo2::arithmetic::FieldExt;
 use pasta_curves::pallas;
 use rand::RngCore;
@@ -567,15 +567,34 @@ impl SharedSecret {
         self.0.to_bytes()
     }
 
+    /// Only for use in batched note encryption.
+    pub(crate) fn batch_to_affine(shared_secrets: &[Option<Self>]) -> Vec<pallas::Affine> {
+        let secrets: Vec<_> = shared_secrets
+            .iter()
+            .filter_map(|s| s.as_ref().map(|s| *(s.0)))
+            .collect();
+        let mut secrets_affine = vec![pallas::Affine::identity(); shared_secrets.len()];
+        group::Curve::batch_normalize(&secrets, &mut secrets_affine);
+        secrets_affine
+    }
+
     /// Defined in [Zcash Protocol Spec § 5.4.5.6: Orchard Key Agreement][concreteorchardkdf].
     ///
     /// [concreteorchardkdf]: https://zips.z.cash/protocol/nu5.pdf#concreteorchardkdf
     pub(crate) fn kdf_orchard(self, ephemeral_key: &EphemeralKeyBytes) -> Blake2bHash {
+        Self::kdf_orchard_inner(self.0.to_affine(), ephemeral_key)
+    }
+
+    /// Only for direct use in batched note encryption.
+    pub(crate) fn kdf_orchard_inner(
+        secret: pallas::Affine,
+        ephemeral_key: &EphemeralKeyBytes,
+    ) -> Blake2bHash {
         Params::new()
             .hash_length(32)
             .personal(KDF_ORCHARD_PERSONALIZATION)
             .to_state()
-            .update(&self.0.to_bytes())
+            .update(&secret.to_bytes())
             .update(&ephemeral_key.0)
             .finalize()
     }

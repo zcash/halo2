@@ -141,6 +141,24 @@ impl Domain for OrchardDomain {
         secret.kdf_orchard(ephemeral_key)
     }
 
+    fn batch_kdf<'a>(
+        items: impl Iterator<Item = (Option<Self::SharedSecret>, &'a EphemeralKeyBytes)>,
+    ) -> Vec<Option<Self::SymmetricKey>> {
+        let (shared_secrets, ephemeral_keys): (Vec<_>, Vec<_>) = items.unzip();
+
+        let secrets_affine = SharedSecret::batch_to_affine(&shared_secrets);
+
+        let mut secrets_affine = secrets_affine.into_iter();
+        shared_secrets
+            .into_iter()
+            .map(|s| s.and_then(|_| secrets_affine.next()))
+            .zip(ephemeral_keys.into_iter())
+            .map(|(secret, ephemeral_key)| {
+                secret.map(|dhsecret| SharedSecret::kdf_orchard_inner(dhsecret, ephemeral_key))
+            })
+            .collect()
+    }
+
     fn note_plaintext_bytes(
         note: &Self::Note,
         _: &Self::Recipient,
