@@ -27,16 +27,16 @@ impl Add for IncompletePoint {
 
     #[allow(clippy::suspicious_arithmetic_impl)]
     fn add(self, rhs: Self) -> Self::Output {
-        // ⊥ ⊹ ⊥ = ⊥
-        // ⊥ ⊹ P = ⊥
+        // ⊥ ⸭ ⊥ = ⊥
+        // ⊥ ⸭ P = ⊥
         IncompletePoint(self.0.and_then(|p| {
-            // P ⊹ ⊥ = ⊥
+            // P ⸭ ⊥ = ⊥
             rhs.0.and_then(|q| {
-                // 0 ⊹ 0 = ⊥
-                // 0 ⊹ P = ⊥
-                // P ⊹ 0 = ⊥
-                // (x, y) ⊹ (x', y') = ⊥ if x == x'
-                // (x, y) ⊹ (x', y') = (x, y) + (x', y') if x != x'
+                // 0 ⸭ 0 = ⊥
+                // 0 ⸭ P = ⊥
+                // P ⸭ 0 = ⊥
+                // (x, y) ⸭ (x', y') = ⊥ if x == x'
+                // (x, y) ⸭ (x', y') = (x, y) + (x', y') if x != x'
                 CtOption::new(
                     p + q,
                     !(p.is_identity() | q.is_identity() | p.ct_eq(&q) | p.ct_eq(&-q)),
@@ -60,17 +60,17 @@ impl Add<pallas::Affine> for IncompletePoint {
     /// Specialisation of incomplete addition for mixed addition.
     #[allow(clippy::suspicious_arithmetic_impl)]
     fn add(self, rhs: pallas::Affine) -> Self::Output {
-        // ⊥ ⊹ ⊥ = ⊥
-        // ⊥ ⊹ P = ⊥
+        // ⊥ ⸭ ⊥ = ⊥
+        // ⊥ ⸭ P = ⊥
         IncompletePoint(self.0.and_then(|p| {
-            // P ⊹ ⊥ = ⊥ is satisfied by definition.
+            // P ⸭ ⊥ = ⊥ is satisfied by definition.
             let q = rhs.to_curve();
 
-            // 0 ⊹ 0 = ⊥
-            // 0 ⊹ P = ⊥
-            // P ⊹ 0 = ⊥
-            // (x, y) ⊹ (x', y') = ⊥ if x == x'
-            // (x, y) ⊹ (x', y') = (x, y) + (x', y') if x != x'
+            // 0 ⸭ 0 = ⊥
+            // 0 ⸭ P = ⊥
+            // P ⸭ 0 = ⊥
+            // (x, y) ⸭ (x', y') = ⊥ if x == x'
+            // (x, y) ⸭ (x', y') = (x, y) + (x', y') if x != x'
             CtOption::new(
                 // Use mixed addition for efficiency.
                 p + rhs,
