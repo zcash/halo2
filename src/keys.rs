@@ -568,14 +568,24 @@ impl SharedSecret {
     }
 
     /// Only for use in batched note encryption.
-    pub(crate) fn batch_to_affine(shared_secrets: &[Option<Self>]) -> Vec<pallas::Affine> {
+    pub(crate) fn batch_to_affine(
+        shared_secrets: Vec<Option<Self>>,
+    ) -> impl Iterator<Item = Option<pallas::Affine>> {
+        // Filter out the positions for which ephemeral_key was not a valid encoding.
         let secrets: Vec<_> = shared_secrets
             .iter()
             .filter_map(|s| s.as_ref().map(|s| *(s.0)))
             .collect();
+
+        // Batch-normalize the shared secrets.
         let mut secrets_affine = vec![pallas::Affine::identity(); secrets.len()];
         group::Curve::batch_normalize(&secrets, &mut secrets_affine);
-        secrets_affine
+
+        // Re-insert the invalid ephemeral_key positions.
+        let mut secrets_affine = secrets_affine.into_iter();
+        shared_secrets
+            .into_iter()
+            .map(move |s| s.and_then(|_| secrets_affine.next()))
     }
 
     /// Defined in [Zcash Protocol Spec § 5.4.5.6: Orchard Key Agreement][concreteorchardkdf].
