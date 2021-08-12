@@ -31,8 +31,11 @@ use crate::{
 /// are zero-padded internally.
 pub fn create_proof<
     C: CurveAffine,
+    CRemote: CurveAffine<Base = C::Scalar>,
     E: EncodedChallenge<C>,
+    ERemote: EncodedChallenge<CRemote>,
     T: TranscriptWrite<C, E>,
+    TRemote: TranscriptWrite<CRemote, ERemote>,
     ConcreteCircuit: Circuit<C::Scalar>,
 >(
     params: &Params<C>,
@@ -40,6 +43,7 @@ pub fn create_proof<
     circuits: &[ConcreteCircuit],
     instances: &[&[&[C::Scalar]]],
     transcript: &mut T,
+    transcript_remote: &mut TRemote,
 ) -> Result<(), Error> {
     for instance in instances.iter() {
         if instance.len() != pk.vk.cs.num_instance_columns {

@@ -10,7 +10,7 @@ use halo2::plonk::{
     Error, Fixed, TableColumn, VerifyingKey,
 };
 use halo2::poly::{commitment::Params, Rotation};
-use halo2::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
+use halo2::transcript::{Blake2bWrite, Challenge255, PoseidonRead};
 use std::marker::PhantomData;
 
 #[test]
@@ -426,7 +426,7 @@ fn plonk_api() {
         );
 
         let msm = params.empty_msm();
-        let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+        let mut transcript = PoseidonRead::<_, _, Challenge255<_>>::init(&proof[..]);
         let guard = verify_proof(
             &params,
             pk.get_vk(),
@@ -446,7 +446,7 @@ fn plonk_api() {
         }
         let msm = guard.clone().use_challenges();
         assert!(msm.clone().eval());
-        let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+        let mut transcript = PoseidonRead::<_, _, Challenge255<_>>::init(&proof[..]);
         let mut vk_buffer = vec![];
         pk.get_vk().write(&mut vk_buffer).unwrap();
         let vk = VerifyingKey::<EqAffine>::read::<_, MyCircuit<Fp>>(&mut &vk_buffer[..], &params)

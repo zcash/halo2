@@ -37,6 +37,7 @@ harness = false
 
 [dependencies]
 backtrace = { version = "0.3", optional = true }
+bitvec = "0.22"
 rayon = "1.5.1"
 ff = "0.10"
 group = "0.10"

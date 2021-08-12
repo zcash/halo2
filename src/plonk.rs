@@ -87,7 +87,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
         hasher.update(&(s.len() as u64).to_le_bytes());
         hasher.update(s.as_bytes());
 
-        // Hash in final Blake2bState
+        // Hash in final PoseidonState
         transcript.common_scalar(C::Scalar::from_bytes_wide(hasher.finalize().as_array()))?;
 
         Ok(())

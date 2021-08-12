@@ -1,13 +1,20 @@
 //! This module contains utilities and traits for dealing with Fiat-Shamir
 //! transcripts.
+use crate::poseidon::{self, ConstantLength, Domain, Duplex as PoseidonState, Spec};
 
-use blake2b_simd::{Params as Blake2bParams, State as Blake2bState};
+use blake2b_simd::Params as Blake2bParams;
 use std::convert::TryInto;
 
 use crate::arithmetic::{Coordinates, CurveAffine, FieldExt};
 
 use std::io::{self, Read, Write};
 use std::marker::PhantomData;
+
+/// Poseidon width
+const T: usize = 3;
+
+/// Poseidon rate
+const RATE: usize = 2;
 
 /// Prefix to a prover's message soliciting a challenge
 const BLAKE2B_PREFIX_CHALLENGE: u8 = 0;
@@ -41,7 +48,7 @@ pub trait Transcript<C: CurveAffine, E: EncodedChallenge<C>> {
 }
 
 /// Transcript view from the perspective of a verifier that has access to an
-/// input stream of data from the prover to the verifier.
+// input stream of data from the prover to the verifier.
 pub trait TranscriptRead<C: CurveAffine, E: EncodedChallenge<C>>: Transcript<C, E> {
     /// Read a curve point from the prover.
     fn read_point(&mut self) -> io::Result<C>;
@@ -60,22 +67,47 @@ pub trait TranscriptWrite<C: CurveAffine, E: EncodedChallenge<C>>: Transcript<C,
     fn write_scalar(&mut self, scalar: C::Scalar) -> io::Result<()>;
 }
 
-/// We will replace BLAKE2b with an algebraic hash function in a later version.
-#[derive(Debug, Clone)]
-pub struct Blake2bRead<R: Read, C: CurveAffine, E: EncodedChallenge<C>> {
-    state: Blake2bState,
+/// TODO
+pub struct PoseidonRead<
+    R: Read,
+    C: CurveAffine,
+    E: EncodedChallenge<C>,
+    BaseSpec: Spec<C::Base, T, RATE>,
+    ScalarSpec: Spec<C::Scalar, T, RATE>,
+> {
+    base_state: PoseidonState<C::Base, BaseSpec, T, RATE>,
+    scalar_state: PoseidonState<C::Scalar, ScalarSpec, T, RATE>,
     reader: R,
-    _marker: PhantomData<(C, E)>,
+    _marker: PhantomData<E>,
 }
 
-impl<R: Read, C: CurveAffine, E: EncodedChallenge<C>> Blake2bRead<R, C, E> {
+impl<
+        R: Read,
+        C: CurveAffine,
+        E: EncodedChallenge<C>,
+        BaseSpec: Spec<C::Base, T, RATE>,
+        ScalarSpec: Spec<C::Scalar, T, RATE>,
+    > PoseidonRead<R, C, E, BaseSpec, ScalarSpec>
+{
     /// Initialize a transcript given an input buffer.
-    pub fn init(reader: R) -> Self {
-        Blake2bRead {
-            state: Blake2bParams::new()
-                .hash_length(64)
-                .personal(b"Halo2-Transcript")
-                .to_state(),
+    pub fn init(
+        reader: R,
+        base_spec: BaseSpec,
+        base_domain: impl Domain<C::Base, BaseSpec, T, RATE>,
+        scalar_spec: ScalarSpec,
+        scalar_domain: impl Domain<C::Scalar, ScalarSpec, T, RATE>,
+    ) -> Self {
+        PoseidonRead {
+            base_state: PoseidonState::new(
+                base_spec,
+                base_domain.initial_capacity_element(),
+                base_domain.pad_and_add(),
+            ),
+            scalar_state: PoseidonState::new(
+                scalar_spec,
+                scalar_domain.initial_capacity_element(),
+                scalar_domain.pad_and_add(),
+            ),
             reader,
             _marker: PhantomData,
         }
@@ -83,7 +115,7 @@ impl<R: Read, C: CurveAffine, E: EncodedChallenge<C>> Blake2bRead<R, C, E> {
 }
 
 impl<R: Read, C: CurveAffine> TranscriptRead<C, Challenge255<C>>
-    for Blake2bRead<R, C, Challenge255<C>>
+    for PoseidonRead<R, C, Challenge255<C>>
 {
     fn read_point(&mut self) -> io::Result<C> {
         let mut compressed = C::Repr::default();
@@ -112,7 +144,7 @@ impl<R: Read, C: CurveAffine> TranscriptRead<C, Challenge255<C>>
 }
 
 impl<R: Read, C: CurveAffine> Transcript<C, Challenge255<C>>
-    for Blake2bRead<R, C, Challenge255<C>>
+    for PoseidonRead<R, C, Challenge255<C>>
 {
     fn squeeze_challenge(&mut self) -> Challenge255<C> {
         self.state.update(&[BLAKE2B_PREFIX_CHALLENGE]);
@@ -146,7 +178,7 @@ impl<R: Read, C: CurveAffine> Transcript<C, Challenge255<C>>
 /// We will replace BLAKE2b with an algebraic hash function in a later version.
 #[derive(Debug, Clone)]
 pub struct Blake2bWrite<W: Write, C: CurveAffine, E: EncodedChallenge<C>> {
-    state: Blake2bState,
+    state: PoseidonState,
     writer: W,
     _marker: PhantomData<(C, E)>,
 }

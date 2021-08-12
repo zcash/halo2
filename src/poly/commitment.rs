@@ -306,7 +306,7 @@ fn test_opening_proof() {
     use crate::arithmetic::{eval_polynomial, FieldExt};
     use crate::pasta::{EpAffine, Fq};
     use crate::transcript::{
-        Blake2bRead, Blake2bWrite, Challenge255, Transcript, TranscriptRead, TranscriptWrite,
+        Blake2bWrite, Challenge255, PoseidonRead, Transcript, TranscriptRead, TranscriptWrite,
     };
 
     let params = Params::<EpAffine>::new(K);
@@ -340,7 +340,7 @@ fn test_opening_proof() {
     };
 
     // Verify the opening proof
-    let mut transcript = Blake2bRead::<&[u8], EpAffine, Challenge255<EpAffine>>::init(&proof[..]);
+    let mut transcript = PoseidonRead::<&[u8], EpAffine, Challenge255<EpAffine>>::init(&proof[..]);
     let p_prime = transcript.read_point().unwrap();
     assert_eq!(p, p_prime);
     let x_prime = transcript.squeeze_challenge_scalar::<()>();

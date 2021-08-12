@@ -28,6 +28,7 @@ pub use pasta_curves as pasta;
 mod multicore;
 pub mod plonk;
 pub mod poly;
+mod poseidon;
 pub mod transcript;
 
 pub mod dev;

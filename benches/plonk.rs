@@ -7,7 +7,7 @@ use halo2::circuit::{Cell, Layouter, SimpleFloorPlanner};
 use halo2::pasta::{EqAffine, Fp};
 use halo2::plonk::*;
 use halo2::poly::{commitment::Params, Rotation};
-use halo2::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
+use halo2::transcript::{Blake2bWrite, Challenge255, PoseidonRead};
 
 use std::marker::PhantomData;
 
@@ -284,7 +284,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     c.bench_function(&verifier_name, |b| {
         b.iter(|| {
             let msm = params.empty_msm();
-            let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+            let mut transcript = PoseidonRead::<_, _, Challenge255<_>>::init(&proof[..]);
             let guard = verify_proof(&params, pk.get_vk(), msm, &[&[]], &mut transcript).unwrap();
             let msm = guard.clone().use_challenges();
             assert!(msm.eval());

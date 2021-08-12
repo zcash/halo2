@@ -314,7 +314,7 @@ fn test_roundtrip() {
     {
         let mut proof = &proof[..];
         let mut transcript =
-            crate::transcript::Blake2bRead::<_, _, Challenge255<_>>::init(&mut proof);
+            crate::transcript::PoseidonRead::<_, _, Challenge255<_>>::init(&mut proof);
         let msm = params.empty_msm();
 
         let guard = verify_proof(
@@ -336,7 +336,7 @@ fn test_roundtrip() {
         let mut proof = &proof[..];
 
         let mut transcript =
-            crate::transcript::Blake2bRead::<_, _, Challenge255<_>>::init(&mut proof);
+            crate::transcript::PoseidonRead::<_, _, Challenge255<_>>::init(&mut proof);
         let msm = params.empty_msm();
 
         let guard = verify_proof(
