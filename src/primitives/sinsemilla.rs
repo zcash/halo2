@@ -13,7 +13,7 @@ use self::addition::IncompletePoint;
 mod constants;
 mod sinsemilla_s;
 pub use constants::*;
-pub use sinsemilla_s::*;
+pub(crate) use sinsemilla_s::*;
 
 pub(crate) fn lebs2ip_k(bits: &[bool]) -> u32 {
     assert!(bits.len() == K);
@@ -120,7 +120,8 @@ impl HashDomain {
             .chunks(K)
             .fold(IncompletePoint::from(self.Q), |acc, chunk| {
                 let (S_x, S_y) = SINSEMILLA_S[lebs2ip_k(chunk) as usize];
-                acc + pallas::Affine::from_xy(S_x, S_y).unwrap().to_curve() + acc
+                let S_chunk = pallas::Affine::from_xy(S_x, S_y).unwrap().to_curve();
+                (acc + S_chunk) + acc
             })
     }
 
