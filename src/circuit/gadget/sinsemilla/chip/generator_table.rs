@@ -1,16 +1,11 @@
-use crate::primitives::sinsemilla::{self, sinsemilla_s_generators, S_PERSONALIZATION};
+use crate::primitives::sinsemilla::{self, SINSEMILLA_S};
 use halo2::{
     circuit::Layouter,
     plonk::{ConstraintSystem, Error, Expression, TableColumn},
     poly::Rotation,
 };
 
-use pasta_curves::{
-    arithmetic::{CurveAffine, CurveExt, FieldExt},
-    pallas,
-};
-
-use group::Curve;
+use pasta_curves::{arithmetic::FieldExt, pallas};
 
 /// Table containing independent generators S[0..2^k]
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
@@ -69,10 +64,7 @@ impl GeneratorTableConfig {
 
             // Lookup expressions default to the first entry when `q_s1`
             // is not enabled.
-            let (init_x, init_y) = {
-                let init_p = get_s_by_idx(0).to_affine().coordinates().unwrap();
-                (*init_p.x(), *init_p.y())
-            };
+            let (init_x, init_y) = SINSEMILLA_S[0];
             let not_q_s1 = Expression::Constant(pallas::Base::one()) - q_s1.clone();
 
             let m = q_s1.clone() * word; // The first table index is 0.
@@ -87,41 +79,18 @@ impl GeneratorTableConfig {
         layouter.assign_table(
             || "generator_table",
             |mut table| {
-                // We generate the row values lazily (we only need them during keygen).
-                let mut rows = sinsemilla_s_generators();
-
-                for index in 0..(1 << sinsemilla::K) {
-                    let mut row = None;
+                for (index, (x, y)) in SINSEMILLA_S.iter().enumerate() {
                     table.assign_cell(
                         || "table_idx",
                         self.table_idx,
                         index,
-                        || {
-                            row = rows.next();
-                            Ok(pallas::Base::from_u64(index as u64))
-                        },
+                        || Ok(pallas::Base::from_u64(index as u64)),
                     )?;
-                    table.assign_cell(
-                        || "table_x",
-                        self.table_x,
-                        index,
-                        || row.map(|(x, _)| x).ok_or(Error::SynthesisError),
-                    )?;
-                    table.assign_cell(
-                        || "table_y",
-                        self.table_y,
-                        index,
-                        || row.map(|(_, y)| y).ok_or(Error::SynthesisError),
-                    )?;
+                    table.assign_cell(|| "table_x", self.table_x, index, || Ok(*x))?;
+                    table.assign_cell(|| "table_y", self.table_y, index, || Ok(*y))?;
                 }
                 Ok(())
             },
         )
     }
-}
-
-/// Get generator S by index
-pub fn get_s_by_idx(idx: u32) -> pallas::Point {
-    let hash = pallas::Point::hash_to_curve(S_PERSONALIZATION);
-    hash(&idx.to_le_bytes())
 }

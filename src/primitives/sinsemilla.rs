@@ -1,6 +1,7 @@
 //! The Sinsemilla hash function and commitment scheme.
 
-use halo2::arithmetic::CurveExt;
+use group::prime::PrimeCurveAffine;
+use halo2::arithmetic::{CurveAffine, CurveExt};
 use pasta_curves::pallas;
 use subtle::CtOption;
 
@@ -12,6 +13,7 @@ use self::addition::IncompletePoint;
 mod constants;
 mod sinsemilla_s;
 pub use constants::*;
+pub(crate) use sinsemilla_s::*;
 
 pub(crate) fn lebs2ip_k(bits: &[bool]) -> u32 {
     assert!(bits.len() == K);
@@ -114,13 +116,12 @@ impl HashDomain {
     fn hash_to_point_inner(&self, msg: impl Iterator<Item = bool>) -> IncompletePoint {
         let padded: Vec<_> = Pad::new(msg).collect();
 
-        let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
-        let S = |chunk: &[bool]| hasher_S(&lebs2ip_k(chunk).to_le_bytes());
-
         padded
             .chunks(K)
             .fold(IncompletePoint::from(self.Q), |acc, chunk| {
-                (acc + S(chunk)) + acc
+                let (S_x, S_y) = SINSEMILLA_S[lebs2ip_k(chunk) as usize];
+                let S_chunk = pallas::Affine::from_xy(S_x, S_y).unwrap().to_curve();
+                (acc + S_chunk) + acc
             })
     }
 

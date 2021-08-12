@@ -25,7 +25,6 @@ use halo2::{
 use pasta_curves::pallas;
 
 mod generator_table;
-pub use generator_table::get_s_by_idx;
 use generator_table::GeneratorTableConfig;
 
 mod hash_to_point;
