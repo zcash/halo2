@@ -92,67 +92,147 @@ hold the remaining constraints. We will need to witness 40 separate variables in
 region, so we use two selectors that we activate on adjacent rows, in order to limit the
 required rotations to the set `[Rotation::prev(), Rotation::cur(), Rotation::next()]`.
 
-## Bit length constraints
+## Message piece decomposition
+We check the decomposition of each message piece in its own region. There is no need to check the whole pieces:
+- $a$ ($250$ bits) is witnessed and constrained outside the gate;
+- $c$ ($250$ bits) is witnessed and constrained outside the gate;
+- $f$ ($250$ bits) is witnessed and constrained outside the gate;
 
-Chunks $a$, $c$, and $f$ are directly constrained by Sinsemilla. For the remaining chunks,
-we use the following constraints:
-
+The following helper gates are defined:
+- $\BoolCheck{x} = x \cdot (1 - x)$.
+- $\ShortLookupRangeCheck{}$ is a [short lookup range check](../decomposition.md#short-range-check).
+### $b = b_0 \bconcat b_1 \bconcat b_2 \bconcat b_3$
+$b$ has been constrained to be $10$ bits by the Sinsemilla hash.
+#### Region layout
 $$
-\begin{array}{|c|l|}
+\begin{array}{|c|c|c|c|}
 \hline
-\text{Degree} & \text{Constraint} \\\hline
-  & \ShortLookupRangeCheck{b_0, 4} \\\hline
-  & \ShortLookupRangeCheck{b_3, 4} \\\hline
-  & \ShortLookupRangeCheck{d_2, 8} \\\hline
-  & \ShortLookupRangeCheck{e_0, 6} \\\hline
-  & \ShortLookupRangeCheck{e_1, 4} \\\hline
-  & \ShortLookupRangeCheck{g_1, 9} \\\hline
-  & \ShortLookupRangeCheck{h_0, 5} \\\hline
-3 & q_{\NoteCommit,1} \cdot \BoolCheck{b_1} = 0 \\\hline
-3 & q_{\NoteCommit,1} \cdot \BoolCheck{b_2} = 0 \\\hline
-3 & q_{\NoteCommit,1} \cdot \BoolCheck{d_0} = 0 \\\hline
-3 & q_{\NoteCommit,1} \cdot \BoolCheck{d_1} = 0 \\\hline
-3 & q_{\NoteCommit,1} \cdot \BoolCheck{g_0} = 0 \\\hline
-3 & q_{\NoteCommit,1} \cdot \BoolCheck{h_1} = 0 \\\hline
-  & d_3 := z_{d,1} \\\hline
-  & g_2 := z_{g,1} \\\hline
+ A_6 & A_7 & A_8 & q_{\NoteCommit,b} \\\hline
+  b  & b_0 & b_1 &       1           \\\hline
+     & b_2 & b_3 &       0           \\\hline
 \end{array}
 $$
 
-where:
-- $\BoolCheck{x} = x \cdot (1 - x)$.
-- $\ShortLookupRangeCheck{}$ is a [short lookup range check](../decomposition.md#short-range-check).
-- $z_{d,1}$ is the index-1 running sum output of $\SinsemillaHash(d),$ constrained by the
-  hash to be 50 bits.
-- $z_{g,1}$ is the index-1 running sum output of $\SinsemillaHash(g),$ constrained by the
-  hash to be 240 bits.
-- $d_3$ and $g_2$ are equality-constrained to their respective running sum outputs.
+#### Constraints
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint}                           \\\hline
+       3      & q_{\NoteCommit,b} \cdot \BoolCheck{b_1} = 0 \\\hline
+       3      & q_{\NoteCommit,b} \cdot \BoolCheck{b_2} = 0 \\\hline
+       2      & q_{\NoteCommit,b} \cdot (b - (b_0 + b_1 \cdot 2^4 + b_2 \cdot 2^5 + b_3 \cdot 2^6)) = 0 \\\hline
+\end{array}
+$$
 
+Outside this gate, we have constrained:
+- $\ShortLookupRangeCheck{b_0, 4}$
+- $\ShortLookupRangeCheck{b_3, 4}$
+
+### $d = d_0 \bconcat d_1 \bconcat d_2 \bconcat d_3$
+$d$ has been constrained to be $60$ bits by the $\SinsemillaHash$.
+#### Region layout
+$$
+\begin{array}{|c|c|c|c|}
+\hline
+ A_6 & A_7 & A_8 & q_{\NoteCommit,d} \\\hline
+  d  & d_0 & d_1 &       1           \\\hline
+     & d_2 & d_3 &       0           \\\hline
+\end{array}
+$$
+
+#### Constraints
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint}                           \\\hline
+       3      & q_{\NoteCommit,d} \cdot \BoolCheck{d_0} = 0 \\\hline
+       3      & q_{\NoteCommit,d} \cdot \BoolCheck{d_1} = 0 \\\hline
+       2      & q_{\NoteCommit,d} \cdot (d - (d_0 + d_1 \cdot 2 + d_2 \cdot 2^2 + d_3 \cdot 2^{10})) = 0 \\\hline
+\end{array}
+$$
+
+Outside this gate, we have constrained:
+- $\ShortLookupRangeCheck{d_2, 8}$
+- $d_3$ is equality-constrained to $z_{d,1}$, where the latter is the index-1 running sum output of
+  $\SinsemillaHash(d),$ constrained by the hash to be $50$ bits.
+
+### $e = e_0 \bconcat e_1$
+$e$ has been constrained to be $10$ bits by the $\SinsemillaHash$.
+#### Region layout
+$$
+\begin{array}{|c|c|c|c|}
+\hline
+ A_6 & A_7 & A_8 & q_{\NoteCommit,e} \\\hline
+  e  & e_0 & e_1 &       1           \\\hline
+\end{array}
+$$
+
+#### Constraints
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint}                                       \\\hline
+       2      & q_{\NoteCommit,e} \cdot (e - (e_0 + e_1 \cdot 2^6)) = 0 \\\hline
+\end{array}
+$$
+
+Outside this gate, we have constrained:
+- $\ShortLookupRangeCheck{e_0, 6}$
+- $\ShortLookupRangeCheck{e_1, 4}$
+
+### $g = g_0 \bconcat g_1 \bconcat g_2$
+$g$ has been constrained to be $250$ bits by the $\SinsemillaHash$.
+#### Region layout
+$$
+\begin{array}{|c|c|c|c|}
+\hline
+ A_6 & A_7 & q_{\NoteCommit,g} \\\hline
+  g  & g_0 &       1           \\\hline
+ g_1 & g_2 &       0           \\\hline
+\end{array}
+$$
+
+#### Constraints
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint}                           \\\hline
+      3       & q_{\NoteCommit,g} \cdot \BoolCheck{g_0} = 0 \\\hline
+2 & q_{\NoteCommit,g} \cdot (g - (g_0 + g_1 \cdot 2 + g_2 \cdot 2^{10})) = 0 \\\hline
+\end{array}
+$$
+
+Outside this gate, we have constrained:
+- $\ShortLookupRangeCheck{g_1, 9}$
+- $g_2$ is equality-constrained to $z_{g,1}$, where the latter is the index-1 running sum output of 
+  $\SinsemillaHash(g),$ constrained by the hash to be 240 bits.
+
+### $h = h_0 \bconcat h_1 \bconcat h_2$
+$h$ has been constrained to be $10$ bits by the $\SinsemillaHash$.
+#### Region layout
+$$
+\begin{array}{|c|c|c|c|}
+\hline
+ A_6 & A_7 & A_8 & q_{\NoteCommit,h} \\\hline
+  h  & h_0 & h_1 &       1           \\\hline
+\end{array}
+$$
+
+#### Constraints
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint}                           \\\hline
+      3       & q_{\NoteCommit,h} \cdot \BoolCheck{h_1} = 0 \\\hline
+2 & q_{\NoteCommit,h} \cdot (h - (h_0 + h_1 \cdot 2^5)) = 0 \\\hline
+\end{array}
+$$
+
+Outside this gate, we have constrained:
+- $\ShortLookupRangeCheck{h_0, 5}$
+
+## Field element decompositions
 ## Decomposition constraints
-
-We have now derived or witnessed every subpiece, and range-constrained every subpiece:
-- $a$ ($250$ bits) is witnessed and constrained outside the gate;
-- $b_0$ ($4$ bits) is witnessed and constrained outside the gate;
-- $b_1$ ($1$ bit) is witnessed and boolean-constrained in the gate;
-- $b_2$ ($1$ bit) is witnessed and boolean-constrained in the gate;
-- $b_3$ ($4$ bits) is witnessed and constrained outside the gate;
-- $c$ ($250$ bits) is witnessed and constrained outside the gate;
-- $d_0$ ($1$ bit) is witnessed and boolean-constrained in the gate;
-- $d_1$ ($1$ bit) is witnessed and boolean-constrained in the gate;
-- $d_2$ ($8$ bits) is witnessed and constrained outside the gate;
-- $d_3$ ($50$ bits), equal to $z_{d,1}$;
-- $e_0$ ($6$ bits) is witnessed and constrained outside the gate;
-- $e_1$ ($4$ bit) is witnessed and constrained outside the gate;
-- $f$ ($250$ bits) is witnessed and constrained outside the gate;
-- $g_0$ ($1$ bit) is witnessed and boolean-constrained in the gate;
-- $g_1$ ($9$ bits) is witnessed and constrained outside the gate;
-- $g_2$ ($240$ bits), equal to $z_{g,1}$;
-- $h_0$ ($5$ bits) is witnessed and constrained outside the gate;
-- $h_1$ ($1$ bit) is witnessed and boolean-constrained in the gate;
-- $h_2$ ($4$ bit) is a zero term, and can be omitted as the other chunks will not overlap it.
-
-We can now use them to reconstruct both the (chunked) message pieces, and the original
-field element inputs:
 
 $$
 \begin{align}
@@ -173,11 +253,6 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-2 & q_{\NoteCommit,1} \cdot (b - (b_0 + b_1 \cdot 2^4 + b_2 \cdot 2^5 + b_3 \cdot 2^6)) = 0 \\\hline
-2 & q_{\NoteCommit,1} \cdot (d - (d_0 + d_1 \cdot 2 + d_2 \cdot 2^2 + d_3 \cdot 2^{10})) = 0 \\\hline
-2 & q_{\NoteCommit,1} \cdot (e - (e_0 + e_1 \cdot 2^6)) = 0 \\\hline
-2 & q_{\NoteCommit,1} \cdot (g - (g_0 + g_1 \cdot 2 + g_2 \cdot 2^{10})) = 0 \\\hline
-2 & q_{\NoteCommit,1} \cdot (h - (h_0 + h_1 \cdot 2^5)) = 0 \\\hline
 2 & q_{\NoteCommit,1} \cdot (a + b_0 \cdot 2^{250} + b_1 \cdot 2^{254} - \mathsf{x(g_d)}) = 0 \\\hline
 2 & q_{\NoteCommit,1} \cdot (b_3 + c \cdot 2^4 + d_0 \cdot 2^{254} - \mathsf{x(pk_d)} = 0 \\\hline
 2 & q_{\NoteCommit,1} \cdot (d_2 + d_3 \cdot 2^8 + e_0 \cdot 2^{58} - \mathsf{v}) = 0 \\\hline
@@ -431,20 +506,5 @@ $$
 3 & q_{\NoteCommit,2} \cdot h_1 \cdot z_{g,13} = 0 \\\hline
 2 & q_{\NoteCommit,1} \cdot (g_1 + g_2 \cdot 2^9 + 2^{130} - t_\mathbb{P} - {g_1}{g_2}') = 0 \\\hline
 3 & q_{\NoteCommit,2} \cdot g_0 \cdot z_{{g_1}{g_2}',13} = 0 \\\hline
-\end{array}
-$$
-
-## Region layout
-
-The constraints controlled by the $(q_{\NoteCommit,1}, q_{\NoteCommit,2})$ selectors are
-arranged in a single region across 10 advice columns, requiring four rows.
-
-$$
-\begin{array}{|c|c|c|c|c|c|c|c|c|c|cc}
-          &                &                &        &          &                   &          &                &          &           & q_{\NoteCommit,1} & q_{\NoteCommit,2} \\\hline
-    b     &        d       &        e       &   g    &     h    &        d_1        &  x(pk_d) &      b_3       &     a'   &   b_2     &        0          &         0         \\\hline
-  {e_1}f' &  {g_1}{g_2}'   &        v       &  d_2   &  z_{d,1} &        e_0        &{b_3}{c}' &       c        &     a    &  x(g_d)   &        1          &         0         \\\hline
-   e_1    &        f       &       g_0      &  g_1   &  z_{g,1} &        h_0        &    h_1   &      d_0       &    b_0   &   b_1     &        0          &         1         \\\hline
-  \rho    &    z_{f,13}    & z_{{e_1}f',14} &  \psi  & z_{g,13} &z_{{g_1}{g_2}',13} & z_{c,13} & z_{{b_3}c',14} & z_{a,13} & z_{a',13} &        0          &         0         \\\hline
 \end{array}
 $$
