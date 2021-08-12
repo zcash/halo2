@@ -1,13 +1,12 @@
 use super::super::SinsemillaInstructions;
-use super::{get_s_by_idx, CellValue, EccPoint, SinsemillaChip, Var};
-use crate::primitives::sinsemilla::{self, lebs2ip_k, INV_TWO_POW_K};
+use super::{CellValue, EccPoint, SinsemillaChip, Var};
+use crate::primitives::sinsemilla::{self, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S};
 use halo2::{
     circuit::{Chip, Region},
     plonk::Error,
 };
 
 use ff::{Field, PrimeFieldBits};
-use group::Curve;
 use pasta_curves::{
     arithmetic::{CurveAffine, FieldExt},
     pallas,
@@ -112,7 +111,7 @@ impl SinsemillaChip {
         {
             use crate::circuit::gadget::sinsemilla::message::MessagePiece;
             use crate::primitives::sinsemilla::{K, S_PERSONALIZATION};
-            use group::prime::PrimeCurveAffine;
+            use group::{prime::PrimeCurveAffine, Curve};
             use pasta_curves::arithmetic::CurveExt;
 
             let field_elems: Option<Vec<pallas::Base>> =
@@ -235,22 +234,13 @@ impl SinsemillaChip {
                 .collect()
         });
 
-        // Get (x_p, y_p) for each word. We precompute this here so that we can use `batch_normalize()`.
-        let generators_projective: Option<Vec<pallas::Point>> = words
-            .clone()
-            .map(|words| words.iter().map(|word| get_s_by_idx(*word)).collect());
-        let generators: Option<Vec<(pallas::Base, pallas::Base)>> =
-            generators_projective.map(|generators_projective| {
-                let mut generators = vec![pallas::Affine::default(); generators_projective.len()];
-                pallas::Point::batch_normalize(&generators_projective, &mut generators);
-                generators
-                    .iter()
-                    .map(|gen| {
-                        let point = gen.coordinates().unwrap();
-                        (*point.x(), *point.y())
-                    })
-                    .collect()
-            });
+        // Get (x_p, y_p) for each word.
+        let generators: Option<Vec<(pallas::Base, pallas::Base)>> = words.clone().map(|words| {
+            words
+                .iter()
+                .map(|word| SINSEMILLA_S[*word as usize])
+                .collect()
+        });
 
         // Convert `words` from `Option<Vec<u32>>` to `Vec<Option<u32>>`
         let words: Vec<Option<u32>> = if let Some(words) = words {
