@@ -22,7 +22,7 @@ pub(crate) fn lebs2ip_k(bits: &[bool]) -> u32 {
 
 /// The sequence of K bits in little-endian order representing an integer
 /// up to `2^K` - 1.
-pub fn i2lebsp_k(int: usize) -> [bool; K] {
+pub(crate) fn i2lebsp_k(int: usize) -> [bool; K] {
     assert!(int < (1 << K));
     i2lebsp(int as u64)
 }
@@ -97,7 +97,7 @@ pub struct HashDomain {
 
 impl HashDomain {
     /// Constructs a new `HashDomain` with a specific prefix string.
-    pub(crate) fn new(domain: &str) -> Self {
+    pub fn new(domain: &str) -> Self {
         HashDomain {
             Q: pallas::Point::hash_to_curve(Q_PERSONALIZATION)(domain.as_bytes()),
         }
@@ -106,7 +106,7 @@ impl HashDomain {
     /// $\mathsf{SinsemillaHashToPoint}$ from [§ 5.4.1.9][concretesinsemillahash].
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
-    pub(crate) fn hash_to_point(&self, msg: impl Iterator<Item = bool>) -> CtOption<pallas::Point> {
+    pub fn hash_to_point(&self, msg: impl Iterator<Item = bool>) -> CtOption<pallas::Point> {
         self.hash_to_point_inner(msg).into()
     }
 
@@ -131,7 +131,7 @@ impl HashDomain {
     /// # Panics
     ///
     /// This panics if the message length is greater than [`K`] * [`C`]
-    pub(crate) fn hash(&self, msg: impl Iterator<Item = bool>) -> CtOption<pallas::Base> {
+    pub fn hash(&self, msg: impl Iterator<Item = bool>) -> CtOption<pallas::Base> {
         extract_p_bottom(self.hash_to_point(msg))
     }
 
@@ -154,7 +154,7 @@ pub struct CommitDomain {
 
 impl CommitDomain {
     /// Constructs a new `CommitDomain` with a specific prefix string.
-    pub(crate) fn new(domain: &str) -> Self {
+    pub fn new(domain: &str) -> Self {
         let m_prefix = format!("{}-M", domain);
         let r_prefix = format!("{}-r", domain);
         let hasher_r = pallas::Point::hash_to_curve(&r_prefix);
@@ -168,7 +168,7 @@ impl CommitDomain {
     ///
     /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
     #[allow(non_snake_case)]
-    pub(crate) fn commit(
+    pub fn commit(
         &self,
         msg: impl Iterator<Item = bool>,
         r: &pallas::Scalar,
@@ -179,7 +179,7 @@ impl CommitDomain {
     /// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
     ///
     /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
-    pub(crate) fn short_commit(
+    pub fn short_commit(
         &self,
         msg: impl Iterator<Item = bool>,
         r: &pallas::Scalar,
