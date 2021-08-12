@@ -573,7 +573,7 @@ impl SharedSecret {
             .iter()
             .filter_map(|s| s.as_ref().map(|s| *(s.0)))
             .collect();
-        let mut secrets_affine = vec![pallas::Affine::identity(); shared_secrets.len()];
+        let mut secrets_affine = vec![pallas::Affine::identity(); secrets.len()];
         group::Curve::batch_normalize(&secrets, &mut secrets_affine);
         secrets_affine
     }
