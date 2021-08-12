@@ -58,6 +58,7 @@ impl Add<pallas::Affine> for IncompletePoint {
     type Output = IncompletePoint;
 
     /// Specialisation of incomplete addition for mixed addition.
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn add(self, rhs: pallas::Affine) -> Self::Output {
         // ⊥ ⊹ ⊥ = ⊥
         // ⊥ ⊹ P = ⊥
