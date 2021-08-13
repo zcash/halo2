@@ -231,37 +231,231 @@ $$
 Outside this gate, we have constrained:
 - $\ShortLookupRangeCheck{h_0, 5}$
 
-## Field element decompositions
-## Decomposition constraints
-
-$$
+## Field element checks
+All message pieces and subpieces have been range-constrained by the earlier decomposition gates. They are now used to:
+- constrain each field element $\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(g_d)})$,
+$\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(pk_d)})$,
+$\ItoLEBSP{\BaseLength{Orchard}}(\rho)$, and $\ItoLEBSP{\BaseLength{Orchard}}(\psi)$ to be
+255-bit values, with top bits $b_1$, $d_0$, $g_0$, and $h_1$ respectively.
+- constrain $$
 \begin{align}
-b &= b_0 + 2^4 \cdot b_1 + 2^5 \cdot b_2 + 2^6 \cdot b_3 \\
-d &= d_0 + 2 \cdot d_1 + 2^2 \cdot d_2 + 2^{10} \cdot d_3 \\
-e &= e_0 + 2^6 \cdot e_1 \\
-g &= g_0 + 2 \cdot g_1 + 2^{10} \cdot g_2 \\
-h &= h_0 + 2^5 \cdot h_1 \\
-\mathsf{x(g_d)} &= a + 2^{250} \cdot b_0 + 2^{254} \cdot b_1 \\
-\mathsf{x(pk_d)} &= b_3 + 2^4 \cdot c + 2^{254} \cdot d_0 \\
-\mathsf{v} &= d_2 + 2^8 \cdot d_3 + 2^{58} \cdot e_0 \\
-\rho &= e_1 + 2^4 \cdot f + 2^{254} \cdot g_0 \\
-\psi &= g_1 + 2^9 \cdot g_2 + 2^{249} \cdot h_0 + 2^{254} \cdot h_1 \\
+\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(g_d)}) &= \mathsf{x(g_d)} \pmod{q_\mathbb{P}} \\
+\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(pk_d)}) &= \mathsf{x(pk_d)} \pmod{q_\mathbb{P}} \\
+\ItoLEBSP{\BaseLength{Orchard}}(\rho) &= \rho \pmod{q_\mathbb{P}} \\
+\ItoLEBSP{\BaseLength{Orchard}}(\psi) &= \psi \pmod{q_\mathbb{P}} \\
+\end{align}
+$$
+where $q_\mathbb{P}$ is the Pallas base field modulus.
+- check that these are indeed canonically-encoded field elements, i.e. $$
+\begin{align}
+\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(g_d)}) &< q_\mathbb{P} \\
+\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(pk_d)}) &< q_\mathbb{P} \\
+\ItoLEBSP{\BaseLength{Orchard}}(\rho) &< q_\mathbb{P} \\
+\ItoLEBSP{\BaseLength{Orchard}}(\psi) &< q_\mathbb{P} \\
 \end{align}
 $$
 
+The Pallas base field modulus has the form $q_\mathbb{P} = 2^{254} + t_\mathbb{P}$, where
+$$t_\mathbb{P} = \mathtt{0x224698fc094cf91b992d30ed00000001}$$
+is 126 bits. We therefore know that if the top bit is not set, then the remaining bits
+will always comprise a canonical encoding of a field element. Thus the canonicity checks
+below are enforced if and only if the corresponding top bit is set to 1.
+
+> In the constraints below we use a base-$2^{10}$ variant of the method used in libsnark
+> (originally from [[SVPBABW2012](https://eprint.iacr.org/2012/598.pdf), Appendix C.1]) for
+> range constraints $0 \leq x < t$:
+>
+> - Let $t'$ be the smallest power of $2^{10}$ greater than $t$.
+> - Enforce $0 \leq x < t'$.
+> - Let $x' = x + t' - t$.
+> - Enforce $0 \leq x' < t'$.
+### $\mathsf{x(g_d)}$ with $b_1 = 1 \implies \mathsf{x(g_d)} \geq 2^{254}$
+Recall that $\mathsf{x(g_d)} = a + 2^{250} \cdot b_0 + 2^{254} \cdot b_1$. When the top bit $b_1$ is set, we check that $\mathsf{x(g_d)}_{0..=253} < t_\mathbb{P}$:
+
+1. $b_1 = 1 \implies b_0 = 0.$
+
+   Since $b_1 = 1 \implies \mathsf{x(g_d)}_{0..=253} < t_\mathbb{P} < 2^{126},$ we know that
+   $\mathsf{x(g_d)}_{126..=253} = 0,$ and in particular
+   $$b_0 := \mathsf{x(g_d)}_{250..=253} = 0.$$
+
+2. $b_1 = 1 \implies 0 \leq a < t_\mathbb{P}.$
+
+   To check that $a < t_\mathbb{P}$, we use two constraints:
+
+    a) $0 \leq a < 2^{130}$. This is expressed in the custom gate as
+       $$b_1 \cdot z_{a,13} = 0,$$
+       where $z_{a,13}$ is the index-13 running sum output by $\SinsemillaHash(a).$
+
+    b) $0 \leq a + 2^{130} - t_\mathbb{P} < 2^{130}$. To check this, we decompose
+       $a' = a + 2^{130} - t_\mathbb{P}$ into thirteen 10-bit words (little-endian) using
+       a running sum $z_{a'}$, looking up each word in a $10$-bit lookup table. We then
+       enforce in the custom gate that
+       $$b_1 \cdot z_{a',13} = 0.$$
+#### Region layout
+$$
+\begin{array}{|c|c|c|c|c|}
+\hline
+ A_6   & A_7 & A_8 &    A_9   & q_{\NoteCommit,x(g_d)} \\\hline
+x(g_d) & b_0 &  a  & z_{a,13} &           1            \\\hline
+       & b_1 &  a' & z_{a',13}&           0            \\\hline
+\end{array}
+$$
+#### Constraints
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint}                           \\\hline
+2 & q_{\NoteCommit,x(g_d)} \cdot (a + b_0 \cdot 2^{250} + b_1 \cdot 2^{254} - \mathsf{x(g_d)}) = 0 \\\hline
+3 & q_{\NoteCommit,x(g_d)} \cdot b_1 \cdot b_0 = 0 \\\hline
+3 & q_{\NoteCommit,x(g_d)} \cdot b_1 \cdot z_{a,13} = 0 \\\hline
+2 & q_{\NoteCommit,x(g_d)} \cdot (a + 2^{130} - t_\mathbb{P} - a') = 0 \\\hline
+3 & q_{\NoteCommit,x(g_d)} \cdot b_1 \cdot z_{a',13} = 0 \\\hline
+\end{array}
+$$
+
+### $\mathsf{x(pk_d)}$ with $d_0 = 1 \implies \mathsf{x(pk_d)} \geq 2^{254}$
+Recall that $\mathsf{x(pk_d)} = b_3 + 2^4 \cdot c + 2^{254} \cdot d_0$. When the top bit $d_0$ is set, we check that $\mathsf{x(pk_d)}_{0..=253} < t_\mathbb{P}$:
+
+1. $d_0 = 1 \implies 0 \leq b_3 + 2^{4} \cdot c < t_\mathbb{P}.$
+
+   To check that $0 \leq b_3 + 2^{4} \cdot c < t_\mathbb{P},$ we use two constraints:
+
+    a) $0 \leq b_3 + 2^{4} \cdot c < 2^{140}.$ $b_3$ is already constrained individually
+       to be a $4$-bit value. $z_{c,13}$ is the index-13 running sum output by
+       $\SinsemillaHash(c).$ By constraining $$d_0 \cdot z_{c,13} = 0,$$ we constrain
+       $b_3 + 2^4 \cdot c < 2^{134} < 2^{140}.$
+
+    b) $0 \leq b_3 + 2^{4} \cdot c + 2^{140} - t_\mathbb{P} < 2^{140}$. To check this, we
+       decompose ${b_3}c' = b_3 + 2^{4} \cdot c + 2^{140} - t_\mathbb{P}$ into fourteen
+       10-bit words (little-endian) using a running sum $z_{{b_3}c'}$, looking up each
+       word in a $10$-bit lookup table. We then enforce in the custom gate that
+       $$d_0 \cdot z_{{b_3}c',14} = 0.$$
+
+#### Region layout
+$$
+\begin{array}{|c|c|c|c|c|}
+\hline
+  A_6   & A_7 &  A_8  &      A_9    & q_{\NoteCommit,x(pk_d)} \\\hline
+x(pk_d) & b_3 &   c   & z_{c,13}    &           1            \\\hline
+        & d_0 & b_3c' & z_{b_3c',14}&           0            \\\hline
+\end{array}
+$$
+#### Constraints
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-2 & q_{\NoteCommit,1} \cdot (a + b_0 \cdot 2^{250} + b_1 \cdot 2^{254} - \mathsf{x(g_d)}) = 0 \\\hline
-2 & q_{\NoteCommit,1} \cdot (b_3 + c \cdot 2^4 + d_0 \cdot 2^{254} - \mathsf{x(pk_d)} = 0 \\\hline
-2 & q_{\NoteCommit,1} \cdot (d_2 + d_3 \cdot 2^8 + e_0 \cdot 2^{58} - \mathsf{v}) = 0 \\\hline
-2 & q_{\NoteCommit,2} \cdot (e_1 + f \cdot 2^4 + g_0 \cdot 2^{254} - \rho) = 0 \\\hline
-2 & q_{\NoteCommit,2} \cdot (g_1 + g_2 \cdot 2^9 + h_0 \cdot 2^{249} + h_1 \cdot 2^{254} - \psi) = 0 \\\hline
+2 & q_{\NoteCommit,x(pk_d)} \cdot (b_3 + c \cdot 2^4 + d_0 \cdot 2^{254} - \mathsf{x(pk_d)} = 0 \\\hline
+3 & q_{\NoteCommit,x(pk_d)} \cdot d_0 \cdot z_{c,13} = 0 \\\hline
+2 & q_{\NoteCommit,x(pk_d)} \cdot (b_3 + c \cdot 2^4 + 2^{140} - t_\mathbb{P} - {b_3}c') = 0 \\\hline
+3 & q_{\NoteCommit,x(pk_d)} \cdot d_0 \cdot z_{{b_3}c',14} = 0 \\\hline
 \end{array}
 $$
 
+### $\mathsf{v} &= d_2 + 2^8 \cdot d_3 + 2^{58} \cdot e_0$
+#### Region layout
+$$
+\begin{array}{|c|c|c|c|c|}
+\hline
+  A_6   & A_7 &  A_8  &   A_9   & q_{\NoteCommit,value} \\\hline
+ value  & d_2 &  d_3  &   e_0   &           1           \\\hline
+\end{array}
+$$
 
+#### Constraints
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+2 & q_{\NoteCommit,value} \cdot (d_2 + d_3 \cdot 2^8 + e_0 \cdot 2^{58} - \mathsf{value}) = 0 \\\hline
+\end{array}
+$$
+
+### $\rho$ with $g_0 = 1 \implies \rho \geq 2^{254}$
+Recall that $\rho = e_1 + 2^4 \cdot f + 2^{254} \cdot g_0$. When the top bit $g_0$ is set, we check that $\rho_{0..=253} < t_\mathbb{P}$:
+
+1. $g_0 = 1 \implies 0 \leq e_1 + 2^{4} \cdot f < t_\mathbb{P}.$
+
+   To check that $0 \leq e_1 + 2^{4} \cdot f < t_\mathbb{P},$ we use two constraints:
+
+    a) $0 \leq e_1 + 2^{4} \cdot f < 2^{140}.$ $e_1$ is already constrained individually
+       to be a $4$-bit value. $z_{f,13}$ is the index-13 running sum output by
+       $\SinsemillaHash(f).$ By constraining $$g_0 \cdot z_{f,13} = 0,$$ we constrain
+       $e_1 + 2^4 \cdot f < 2^{134} < 2^{140}.$
+
+    b) $0 \leq e_1 + 2^{4} \cdot f + 2^{140} - t_\mathbb{P} < 2^{140}$. To check this, we
+       decompose ${e_1}f' = e_1 + 2^{4} \cdot f + 2^{140} - t_\mathbb{P}$ into fourteen
+       10-bit words (little-endian) using a running sum $z_{{e_1}f'}$, looking up each
+       word in a $10$-bit lookup table. We then enforce in the custom gate that
+       $$g_0 \cdot z_{{e_1}f',14} = 0.$$
+
+#### Region layout
+$$
+\begin{array}{|c|c|c|c|c|}
+\hline
+  A_6   & A_7 &  A_8  &      A_9    & q_{\NoteCommit,\rho} \\\hline
+  \rho  & e_1 &   f   & z_{f,13}    &           1          \\\hline
+        & g_0 & e_1f' & z_{e_1f',14}&           0          \\\hline
+\end{array}
+$$
+#### Constraints
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+2 & q_{\NoteCommit,\rho} \cdot (e_1 + f \cdot 2^4 + g_0 \cdot 2^{254} - \rho) = 0 \\\hline
+3 & q_{\NoteCommit,\rho} \cdot g_0 \cdot z_{f,13} = 0 \\\hline
+2 & q_{\NoteCommit,\rho} \cdot (e_1 + f \cdot 2^4 + 2^{140} - t_\mathbb{P} - {e_1}f') = 0 \\\hline
+3 & q_{\NoteCommit,\rho} \cdot g_0 \cdot z_{{e_1}f',14} = 0 \\\hline
+\end{array}
+$$
+
+### $\psi$ with $h_1 = 1 \implies \psi \geq 2^{254}$
+Recall that $\psi = g_1 + 2^9 \cdot g_2 + 2^{249} \cdot h_0 + 2^{254} \cdot h_1$. When the top bit $h_1$ is set, we check that $\psi_{0..=253} < t_\mathbb{P}$:
+
+1. $h_1 = 1 \implies h_0 = 0.$
+
+   Since $h_1 = 1 \implies \psi_{0..=253} < t_\mathbb{P} < 2^{126},$ we know that $\psi_{126..=253} = 0,$
+   and in particular $h_0 := \psi_{249..=253} = 0.$
+
+2. $h_1 = 1 \implies 0 \leq g_1 + 2^{9} \cdot g_2 < t_\mathbb{P}.$
+
+   To check that $0 \leq g_1 + 2^{9} \cdot g_2 < t_\mathbb{P},$ we use two constraints:
+
+    a) $0 \leq g_1 + 2^{9} \cdot g_2 < 2^{140}.$ $g_1$ is already constrained individually
+       to be a $9$-bit value. $z_{g,13}$ is the index-13 running sum output by
+       $\SinsemillaHash(g).$ By constraining $$h_1 \cdot z_{g,13} = 0,$$ we constrain
+       $g_1 + 2^9 \cdot g_2 < 2^{129} < 2^{130}.$
+
+    b) $0 \leq g_1 + 2^{9} \cdot g_2 + 2^{130} - t_\mathbb{P} < 2^{130}$. To check this,
+       we decompose ${g_1}{g_2}' = g_1 + 2^{9} \cdot g_2 + 2^{130} - t_\mathbb{P}$ into
+       thirteen 10-bit words (little-endian) using a running sum $z_{{g_1}{g_2}'}$,
+       looking up each word in a $10$-bit lookup table. We then enforce in the custom gate
+       that $$h_1 \cdot z_{{g_1}{g_2}',13} = 0.$$
+
+#### Region layout
+$$
+\begin{array}{|c|c|c|c|c|}
+\hline
+  A_6   & A_7 &   A_8   &       A_9     & q_{\NoteCommit,\psi} \\\hline
+  \psi  & g_1 &   g_2   &  z_{g,13}     &           1          \\\hline
+        & h_1 & g_1g_2' & z_{g_1g_2',13}&           0          \\\hline
+\end{array}
+$$
+#### Constraints
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+2 & q_{\NoteCommit,\psi} \cdot (g_1 + g_2 \cdot 2^9 + h_0 \cdot 2^{249} + h_1 \cdot 2^{254} - \psi) = 0 \\\hline
+3 & q_{\NoteCommit,\psi} \cdot h_1 \cdot h_0 = 0 \\\hline
+3 & q_{\NoteCommit,\psi} \cdot h_1 \cdot z_{g,13} = 0 \\\hline
+2 & q_{\NoteCommit,\psi} \cdot (g_1 + g_2 \cdot 2^9 + 2^{130} - t_\mathbb{P} - {g_1}{g_2}') = 0 \\\hline
+3 & q_{\NoteCommit,\psi} \cdot g_0 \cdot z_{{g_1}{g_2}',13} = 0 \\\hline
+\end{array}
+$$
+
+### $y$-coordinate checks.
 Note that only the $ỹ$ LSB of the $y$-coordinates $\mathsf{y(g_d), y(pk_d)}$ was input to the hash, while the other bits of the $y$-coordinate were unused. However, we must still check that the witnessed $ỹ$ bit matches the original point's $y$-coordinate. The checks for $\mathsf{y(g_d), y(pk_d)}$ will follow the same format. For each $y$-coordinate, we witness:
 
 $$
@@ -296,85 +490,6 @@ $$
 \text{Degree} & \text{Constraint} \\\hline
 2 & q_{\NoteCommit,3} \cdot \left(j - (\textsf{LSB} + k_0 \cdot 2 + k_1 \cdot 2^{10}) \right) = 0 \\\hline
 2 & q_{\NoteCommit,3} \cdot \left(y - (j + k_2 \cdot 2^{250} + k_3 \cdot 2^{254}) \right) = 0 \\\hline
-\end{array}
-$$
-
-## Canonicity checks
-
-At this point, we have constrained $\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(g_d)})$,
-$\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(pk_d)})$,
-$\ItoLEBSP{\BaseLength{Orchard}}(\rho)$, and $\ItoLEBSP{\BaseLength{Orchard}}(\psi)$ to be
-255-bit values, with top bits $b_1$, $d_0$, $g_0$, and $h_1$ respectively. We have also
-constrained:
-
-$$
-\begin{align}
-\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(g_d)}) &= \mathsf{x(g_d)} \pmod{q_\mathbb{P}} \\
-\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(pk_d)}) &= \mathsf{x(pk_d)} \pmod{q_\mathbb{P}} \\
-\ItoLEBSP{\BaseLength{Orchard}}(\rho) &= \rho \pmod{q_\mathbb{P}} \\
-\ItoLEBSP{\BaseLength{Orchard}}(\psi) &= \psi \pmod{q_\mathbb{P}} \\
-\end{align}
-$$
-
-where $q_\mathbb{P}$ is the Pallas base field modulus. The remaining constraints will
-enforce that these are indeed canonically-encoded field elements, i.e.
-
-$$
-\begin{align}
-\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(g_d)}) &< q_\mathbb{P} \\
-\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(pk_d)}) &< q_\mathbb{P} \\
-\ItoLEBSP{\BaseLength{Orchard}}(\rho) &< q_\mathbb{P} \\
-\ItoLEBSP{\BaseLength{Orchard}}(\psi) &< q_\mathbb{P} \\
-\end{align}
-$$
-
-The Pallas base field modulus has the form $q_\mathbb{P} = 2^{254} + t_\mathbb{P}$, where
-$$t_\mathbb{P} = \mathtt{0x224698fc094cf91b992d30ed00000001}$$
-is 126 bits. We therefore know that if the top bit is not set, then the remaining bits
-will always comprise a canonical encoding of a field element. Thus the canonicity checks
-below are enforced if and only if the corresponding top bit is set to 1.
-
-> In the constraints below we use a base-$2^{10}$ variant of the method used in libsnark
-> (originally from [[SVPBABW2012](https://eprint.iacr.org/2012/598.pdf), Appendix C.1]) for
-> range constraints $0 \leq x < t$:
->
-> - Let $t'$ be the smallest power of $2^{10}$ greater than $t$.
-> - Enforce $0 \leq x < t'$.
-> - Let $x' = x + t' - t$.
-> - Enforce $0 \leq x' < t'$.
-
-### $\mathsf{x(g_d)}$ with $b_1 = 1 \implies \mathsf{x(g_d)} \geq 2^{254}$
-
-In these cases, we check that $\mathsf{x(g_d)}_{0..=253} < t_\mathbb{P}$:
-
-1. $b_1 = 1 \implies b_0 = 0.$
-
-   Since $b_1 = 1 \implies \mathsf{x(g_d)}_{0..=253} < t_\mathbb{P} < 2^{126},$ we know that
-   $\mathsf{x(g_d)}_{126..=253} = 0,$ and in particular
-   $$b_0 := \mathsf{x(g_d)}_{250..=253} = 0.$$
-
-2. $b_1 = 1 \implies 0 \leq a < t_\mathbb{P}.$
-
-   To check that $a < t_\mathbb{P}$, we use two constraints:
-
-    a) $0 \leq a < 2^{130}$. This is expressed in the custom gate as
-       $$b_1 \cdot z_{a,13} = 0,$$
-       where $z_{a,13}$ is the index-13 running sum output by $\SinsemillaHash(a).$
-
-    b) $0 \leq a + 2^{130} - t_\mathbb{P} < 2^{130}$. To check this, we decompose
-       $a' = a + 2^{130} - t_\mathbb{P}$ into thirteen 10-bit words (little-endian) using
-       a running sum $z_{a'}$, looking up each word in a $10$-bit lookup table. We then
-       enforce in the custom gate that
-       $$b_1 \cdot z_{a',13} = 0.$$
-
-$$
-\begin{array}{|c|l|}
-\hline
-\text{Degree} & \text{Constraint} \\\hline
-3 & q_{\NoteCommit,2} \cdot b_1 \cdot b_0 = 0 \\\hline
-3 & q_{\NoteCommit,2} \cdot b_1 \cdot z_{a,13} = 0 \\\hline
-2 & q_{\NoteCommit,1} \cdot (a + 2^{130} - t_\mathbb{P} - a') = 0 \\\hline
-3 & q_{\NoteCommit,2} \cdot b_1 \cdot z_{a',13} = 0 \\\hline
 \end{array}
 $$
 
@@ -413,98 +528,5 @@ $$
 \end{array}
 $$
 
-### $\mathsf{x(pk_d)}$ with $d_0 = 1 \implies \mathsf{x(pk_d)} \geq 2^{254}$
-
-In these cases, we check that $\mathsf{x(pk_d)}_{0..=253} < t_\mathbb{P}$:
-
-1. $d_0 = 1 \implies 0 \leq b_3 + 2^{4} \cdot c < t_\mathbb{P}.$
-
-   To check that $0 \leq b_3 + 2^{4} \cdot c < t_\mathbb{P},$ we use two constraints:
-
-    a) $0 \leq b_3 + 2^{4} \cdot c < 2^{140}.$ $b_3$ is already constrained individually
-       to be a $4$-bit value. $z_{c,13}$ is the index-13 running sum output by
-       $\SinsemillaHash(c).$ By constraining $$d_0 \cdot z_{c,13} = 0,$$ we constrain
-       $b_3 + 2^4 \cdot c < 2^{134} < 2^{140}.$
-
-    b) $0 \leq b_3 + 2^{4} \cdot c + 2^{140} - t_\mathbb{P} < 2^{140}$. To check this, we
-       decompose ${b_3}c' = b_3 + 2^{4} \cdot c + 2^{140} - t_\mathbb{P}$ into fourteen
-       10-bit words (little-endian) using a running sum $z_{{b_3}c'}$, looking up each
-       word in a $10$-bit lookup table. We then enforce in the custom gate that
-       $$d_0 \cdot z_{{b_3}c',14} = 0.$$
-
-$$
-\begin{array}{|c|l|}
-\hline
-\text{Degree} & \text{Constraint} \\\hline
-3 & q_{\NoteCommit,2} \cdot d_0 \cdot z_{c,13} = 0 \\\hline
-2 & q_{\NoteCommit,1} \cdot (b_3 + c \cdot 2^4 + 2^{140} - t_\mathbb{P} - {b_3}c') = 0 \\\hline
-3 & q_{\NoteCommit,2} \cdot d_0 \cdot z_{{b_3}c',14} = 0 \\\hline
-\end{array}
-$$
-
 ### $\mathsf{y(pk_d)}$
 This can be checked in exactly the same way as $\mathsf{y(g_d)}$, with $b_2$ replaced by $d_1$.
-
-### $\rho$ with $g_0 = 1 \implies \rho \geq 2^{254}$
-
-In these cases, we check that $\rho_{0..=253} < t_\mathbb{P}$:
-
-1. $g_0 = 1 \implies 0 \leq e_1 + 2^{4} \cdot f < t_\mathbb{P}.$
-
-   To check that $0 \leq e_1 + 2^{4} \cdot f < t_\mathbb{P},$ we use two constraints:
-
-    a) $0 \leq e_1 + 2^{4} \cdot f < 2^{140}.$ $e_1$ is already constrained individually
-       to be a $4$-bit value. $z_{f,13}$ is the index-13 running sum output by
-       $\SinsemillaHash(f).$ By constraining $$g_0 \cdot z_{f,13} = 0,$$ we constrain
-       $e_1 + 2^4 \cdot f < 2^{134} < 2^{140}.$
-
-    b) $0 \leq e_1 + 2^{4} \cdot f + 2^{140} - t_\mathbb{P} < 2^{140}$. To check this, we
-       decompose ${e_1}f' = e_1 + 2^{4} \cdot f + 2^{140} - t_\mathbb{P}$ into fourteen
-       10-bit words (little-endian) using a running sum $z_{{e_1}f'}$, looking up each
-       word in a $10$-bit lookup table. We then enforce in the custom gate that
-       $$g_0 \cdot z_{{e_1}f',14} = 0.$$
-
-$$
-\begin{array}{|c|l|}
-\hline
-\text{Degree} & \text{Constraint} \\\hline
-3 & q_{\NoteCommit,2} \cdot g_0 \cdot z_{f,13} = 0 \\\hline
-2 & q_{\NoteCommit,1} \cdot (e_1 + f \cdot 2^4 + 2^{140} - t_\mathbb{P} - {e_1}f') = 0 \\\hline
-3 & q_{\NoteCommit,2} \cdot g_0 \cdot z_{{e_1}f',14} = 0 \\\hline
-\end{array}
-$$
-
-### $\psi$ with $h_1 = 1 \implies \psi \geq 2^{254}$
-
-In these cases, we check that $\psi_{0..=253} < t_\mathbb{P}$:
-
-1. $h_1 = 1 \implies h_0 = 0.$
-
-   Since $h_1 = 1 \implies \psi_{0..=253} < t_\mathbb{P} < 2^{126},$ we know that $\psi_{126..=253} = 0,$
-   and in particular $h_0 := \psi_{249..=253} = 0.$
-
-2. $h_1 = 1 \implies 0 \leq g_1 + 2^{9} \cdot g_2 < t_\mathbb{P}.$
-
-   To check that $0 \leq g_1 + 2^{9} \cdot g_2 < t_\mathbb{P},$ we use two constraints:
-
-    a) $0 \leq g_1 + 2^{9} \cdot g_2 < 2^{140}.$ $g_1$ is already constrained individually
-       to be a $9$-bit value. $z_{g,13}$ is the index-13 running sum output by
-       $\SinsemillaHash(g).$ By constraining $$h_1 \cdot z_{g,13} = 0,$$ we constrain
-       $g_1 + 2^9 \cdot g_2 < 2^{129} < 2^{130}.$
-
-    b) $0 \leq g_1 + 2^{9} \cdot g_2 + 2^{130} - t_\mathbb{P} < 2^{130}$. To check this,
-       we decompose ${g_1}{g_2}' = g_1 + 2^{9} \cdot g_2 + 2^{130} - t_\mathbb{P}$ into
-       thirteen 10-bit words (little-endian) using a running sum $z_{{g_1}{g_2}'}$,
-       looking up each word in a $10$-bit lookup table. We then enforce in the custom gate
-       that $$h_1 \cdot z_{{g_1}{g_2}',13} = 0.$$
-
-$$
-\begin{array}{|c|l|}
-\hline
-\text{Degree} & \text{Constraint} \\\hline
-3 & q_{\NoteCommit,2} \cdot h_1 \cdot h_0 = 0 \\\hline
-3 & q_{\NoteCommit,2} \cdot h_1 \cdot z_{g,13} = 0 \\\hline
-2 & q_{\NoteCommit,1} \cdot (g_1 + g_2 \cdot 2^9 + 2^{130} - t_\mathbb{P} - {g_1}{g_2}') = 0 \\\hline
-3 & q_{\NoteCommit,2} \cdot g_0 \cdot z_{{g_1}{g_2}',13} = 0 \\\hline
-\end{array}
-$$
