@@ -6,7 +6,7 @@ use std::mem;
 use aes::Aes256;
 use blake2b_simd::{Hash as Blake2bHash, Params};
 use fpe::ff1::{BinaryNumeralString, FF1};
-use group::GroupEncoding;
+use group::{prime::PrimeCurveAffine, Curve, GroupEncoding};
 use halo2::arithmetic::FieldExt;
 use pasta_curves::pallas;
 use rand::RngCore;
@@ -263,7 +263,7 @@ impl FullViewingKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct DiversifierKey([u8; 32]);
 
 impl From<&FullViewingKey> for DiversifierKey {
@@ -345,7 +345,7 @@ impl Diversifier {
 /// decryption of notes). When we actually want to serialize ivk, we're guaranteed to get
 /// a valid base field element encoding, because we always construct ivk from an integer
 /// in the correct range.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct KeyAgreementPrivateKey(NonZeroPallasScalar);
 
 impl From<&FullViewingKey> for KeyAgreementPrivateKey {
@@ -382,7 +382,7 @@ impl KeyAgreementPrivateKey {
 /// Defined in [Zcash Protocol Spec § 5.6.4.3: Orchard Raw Incoming Viewing Keys][orchardinviewingkeyencoding].
 ///
 /// [orchardinviewingkeyencoding]: https://zips.z.cash/protocol/nu5.pdf#orchardinviewingkeyencoding
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct IncomingViewingKey {
     dk: DiversifierKey,
     ivk: KeyAgreementPrivateKey,
@@ -567,15 +567,44 @@ impl SharedSecret {
         self.0.to_bytes()
     }
 
+    /// Only for use in batched note encryption.
+    pub(crate) fn batch_to_affine(
+        shared_secrets: Vec<Option<Self>>,
+    ) -> impl Iterator<Item = Option<pallas::Affine>> {
+        // Filter out the positions for which ephemeral_key was not a valid encoding.
+        let secrets: Vec<_> = shared_secrets
+            .iter()
+            .filter_map(|s| s.as_ref().map(|s| *(s.0)))
+            .collect();
+
+        // Batch-normalize the shared secrets.
+        let mut secrets_affine = vec![pallas::Affine::identity(); secrets.len()];
+        group::Curve::batch_normalize(&secrets, &mut secrets_affine);
+
+        // Re-insert the invalid ephemeral_key positions.
+        let mut secrets_affine = secrets_affine.into_iter();
+        shared_secrets
+            .into_iter()
+            .map(move |s| s.and_then(|_| secrets_affine.next()))
+    }
+
     /// Defined in [Zcash Protocol Spec § 5.4.5.6: Orchard Key Agreement][concreteorchardkdf].
     ///
     /// [concreteorchardkdf]: https://zips.z.cash/protocol/nu5.pdf#concreteorchardkdf
     pub(crate) fn kdf_orchard(self, ephemeral_key: &EphemeralKeyBytes) -> Blake2bHash {
+        Self::kdf_orchard_inner(self.0.to_affine(), ephemeral_key)
+    }
+
+    /// Only for direct use in batched note encryption.
+    pub(crate) fn kdf_orchard_inner(
+        secret: pallas::Affine,
+        ephemeral_key: &EphemeralKeyBytes,
+    ) -> Blake2bHash {
         Params::new()
             .hash_length(32)
             .personal(KDF_ORCHARD_PERSONALIZATION)
             .to_state()
-            .update(&self.0.to_bytes())
+            .update(&secret.to_bytes())
             .update(&ephemeral_key.0)
             .finalize()
     }

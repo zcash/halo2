@@ -1,4 +1,6 @@
-use criterion::{criterion_group, criterion_main, Criterion, Throughput};
+use std::array;
+
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use orchard::{
     builder::Builder,
     bundle::Flags,
@@ -9,7 +11,7 @@ use orchard::{
     Anchor, Bundle,
 };
 use rand::rngs::OsRng;
-use zcash_note_encryption::{try_compact_note_decryption, try_note_decryption};
+use zcash_note_encryption::{batch, try_compact_note_decryption, try_note_decryption};
 
 #[cfg(unix)]
 use pprof::criterion::{Output, PProfProfiler};
@@ -63,6 +65,7 @@ fn bench_note_decryption(c: &mut Criterion) {
 
     let compact = {
         let mut group = c.benchmark_group("note-decryption");
+        group.throughput(Throughput::Elements(1));
 
         group.bench_function("valid", |b| {
             b.iter(|| try_note_decryption(&domain, &valid_ivk, action).unwrap())
@@ -92,6 +95,47 @@ fn bench_note_decryption(c: &mut Criterion) {
                 }
             })
         });
+    }
+
+    {
+        // Benchmark with 2 IVKs to emulate a wallet with two pools of funds.
+        let ivks = 2;
+        let valid_ivks = vec![valid_ivk; ivks];
+        let actions: Vec<_> = (0..100)
+            .map(|_| (OrchardDomain::for_action(action), action.clone()))
+            .collect();
+        let compact: Vec<_> = (0..100)
+            .map(|_| {
+                (
+                    OrchardDomain::for_action(action),
+                    CompactAction::from(action),
+                )
+            })
+            .collect();
+
+        let mut group = c.benchmark_group("batch-note-decryption");
+
+        for size in array::IntoIter::new([10, 50, 100]) {
+            group.throughput(Throughput::Elements((ivks * size) as u64));
+
+            group.bench_function(BenchmarkId::new("valid", size), |b| {
+                b.iter(|| batch::try_note_decryption(&valid_ivks, &actions[..size]))
+            });
+
+            group.bench_function(BenchmarkId::new("invalid", size), |b| {
+                b.iter(|| batch::try_note_decryption(&invalid_ivks[..ivks], &actions[..size]))
+            });
+
+            group.bench_function(BenchmarkId::new("compact-valid", size), |b| {
+                b.iter(|| batch::try_compact_note_decryption(&valid_ivks, &compact[..size]))
+            });
+
+            group.bench_function(BenchmarkId::new("compact-invalid", size), |b| {
+                b.iter(|| {
+                    batch::try_compact_note_decryption(&invalid_ivks[..ivks], &compact[..size])
+                })
+            });
+        }
     }
 }
 
