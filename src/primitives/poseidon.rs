@@ -242,9 +242,7 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> Duplex
 }
 
 /// A domain in which a Poseidon hash function is being used.
-pub trait Domain<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>:
-    Copy + fmt::Debug
-{
+pub trait Domain<F: FieldExt, const T: usize, const RATE: usize>: Copy + fmt::Debug {
     /// The initial capacity element, encoding this domain.
     fn initial_capacity_element(&self) -> F;
 
@@ -262,8 +260,8 @@ pub trait Domain<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: u
 #[derive(Clone, Copy, Debug)]
 pub struct ConstantLength<const L: usize>;
 
-impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, const L: usize>
-    Domain<F, S, T, RATE> for ConstantLength<L>
+impl<F: FieldExt, const T: usize, const RATE: usize, const L: usize> Domain<F, T, RATE>
+    for ConstantLength<L>
 {
     fn initial_capacity_element(&self) -> F {
         // Capacity value is $length \cdot 2^64 + (o-1)$ where o is the output length.
@@ -300,7 +298,7 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, const 
 pub struct Hash<
     F: FieldExt,
     S: Spec<F, T, RATE>,
-    D: Domain<F, S, T, RATE>,
+    D: Domain<F, T, RATE>,
     const T: usize,
     const RATE: usize,
 > {
@@ -311,7 +309,7 @@ pub struct Hash<
 impl<
         F: FieldExt,
         S: Spec<F, T, RATE>,
-        D: Domain<F, S, T, RATE>,
+        D: Domain<F, T, RATE>,
         const T: usize,
         const RATE: usize,
     > fmt::Debug for Hash<F, S, D, T, RATE>
@@ -330,7 +328,7 @@ impl<
 impl<
         F: FieldExt,
         S: Spec<F, T, RATE>,
-        D: Domain<F, S, T, RATE>,
+        D: Domain<F, T, RATE>,
         const T: usize,
         const RATE: usize,
     > Hash<F, S, D, T, RATE>

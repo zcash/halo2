@@ -43,14 +43,14 @@ pub trait PoseidonDuplexInstructions<
     fn initial_state(
         &self,
         layouter: &mut impl Layouter<F>,
-        domain: &impl Domain<F, S, T, RATE>,
+        domain: &impl Domain<F, T, RATE>,
     ) -> Result<State<Self::Word, T>, Error>;
 
     /// Pads the given input (according to the specified domain) and adds it to the state.
     fn pad_and_add(
         &self,
         layouter: &mut impl Layouter<F>,
-        domain: &impl Domain<F, S, T, RATE>,
+        domain: &impl Domain<F, T, RATE>,
         initial_state: &State<Self::Word, T>,
         input: &SpongeState<Self::Word, RATE>,
     ) -> Result<State<Self::Word, T>, Error>;
@@ -91,7 +91,7 @@ fn poseidon_duplex<
     F: FieldExt,
     PoseidonChip: PoseidonDuplexInstructions<F, S, T, RATE>,
     S: Spec<F, T, RATE>,
-    D: Domain<F, S, T, RATE>,
+    D: Domain<F, T, RATE>,
     const T: usize,
     const RATE: usize,
 >(
@@ -111,7 +111,7 @@ pub struct Duplex<
     F: FieldExt,
     PoseidonChip: PoseidonDuplexInstructions<F, S, T, RATE>,
     S: Spec<F, T, RATE>,
-    D: Domain<F, S, T, RATE>,
+    D: Domain<F, T, RATE>,
     const T: usize,
     const RATE: usize,
 > {
@@ -125,7 +125,7 @@ impl<
         F: FieldExt,
         PoseidonChip: PoseidonDuplexInstructions<F, S, T, RATE>,
         S: Spec<F, T, RATE>,
-        D: Domain<F, S, T, RATE>,
+        D: Domain<F, T, RATE>,
         const T: usize,
         const RATE: usize,
     > Duplex<F, PoseidonChip, S, D, T, RATE>
@@ -215,7 +215,7 @@ pub struct Hash<
     F: FieldExt,
     PoseidonChip: PoseidonDuplexInstructions<F, S, T, RATE>,
     S: Spec<F, T, RATE>,
-    D: Domain<F, S, T, RATE>,
+    D: Domain<F, T, RATE>,
     const T: usize,
     const RATE: usize,
 > {
@@ -226,7 +226,7 @@ impl<
         F: FieldExt,
         PoseidonChip: PoseidonDuplexInstructions<F, S, T, RATE>,
         S: Spec<F, T, RATE>,
-        D: Domain<F, S, T, RATE>,
+        D: Domain<F, T, RATE>,
         const T: usize,
         const RATE: usize,
     > Hash<F, PoseidonChip, S, D, T, RATE>
