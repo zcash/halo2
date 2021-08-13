@@ -1,6 +1,6 @@
 //! The Sinsemilla hash function and commitment scheme.
 
-use group::prime::PrimeCurveAffine;
+use group::Wnaf;
 use halo2::arithmetic::{CurveAffine, CurveExt};
 use pasta_curves::pallas;
 use subtle::CtOption;
@@ -120,7 +120,7 @@ impl HashDomain {
             .chunks(K)
             .fold(IncompletePoint::from(self.Q), |acc, chunk| {
                 let (S_x, S_y) = SINSEMILLA_S[lebs2ip_k(chunk) as usize];
-                let S_chunk = pallas::Affine::from_xy(S_x, S_y).unwrap().to_curve();
+                let S_chunk = pallas::Affine::from_xy(S_x, S_y).unwrap();
                 (acc + S_chunk) + acc
             })
     }
@@ -174,7 +174,7 @@ impl CommitDomain {
         msg: impl Iterator<Item = bool>,
         r: &pallas::Scalar,
     ) -> CtOption<pallas::Point> {
-        (self.M.hash_to_point_inner(msg) + self.R * r).into()
+        (self.M.hash_to_point_inner(msg) + Wnaf::new().scalar(r).base(self.R)).into()
     }
 
     /// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
