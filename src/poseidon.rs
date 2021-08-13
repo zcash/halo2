@@ -1,12 +1,13 @@
-use std::array;
+//! TODO
+
 use std::fmt;
 use std::iter;
 use std::marker::PhantomData;
 
 use crate::arithmetic::FieldExt;
 
-pub(crate) mod fp;
-pub(crate) mod fq;
+pub mod fp;
+pub mod fq;
 pub(crate) mod grain;
 pub(crate) mod mds;
 
@@ -160,6 +161,14 @@ pub struct Duplex<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: 
     _marker: PhantomData<S>,
 }
 
+impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> fmt::Debug
+    for Duplex<F, S, T, RATE>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Duplex")
+    }
+}
+
 impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> Duplex<F, S, T, RATE> {
     /// Constructs a new duplex sponge for the given Poseidon specification.
     pub fn new(
@@ -240,12 +249,11 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> Duplex
 }
 
 /// A domain in which a Poseidon hash function is being used.
-pub trait Domain<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>:
-    Copy + fmt::Debug
-{
+pub trait Domain<F: FieldExt, const T: usize, const RATE: usize>: Copy + fmt::Debug {
     /// The initial capacity element, encoding this domain.
     fn initial_capacity_element(&self) -> F;
 
+    /// TODO
     fn padding(&self) -> SpongeState<F, RATE>;
 
     /// Returns a function that will update the given state with the given input to a
@@ -257,10 +265,10 @@ pub trait Domain<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: u
 ///
 /// Domain specified in section 4.2 of https://eprint.iacr.org/2019/458.pdf
 #[derive(Clone, Copy, Debug)]
-pub struct ConstantLength<const L: usize>;
+pub struct ConstantLength<const L: usize, const T: usize, const RATE: usize>;
 
-impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, const L: usize>
-    Domain<F, S, T, RATE> for ConstantLength<L>
+impl<F: FieldExt, const T: usize, const RATE: usize, const L: usize> Domain<F, T, RATE>
+    for ConstantLength<L, T, RATE>
 {
     fn initial_capacity_element(&self) -> F {
         // Capacity value is $length \cdot 2^64 + (o-1)$ where o is the output length.
@@ -290,50 +298,5 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, const 
                 }
             }
         })
-    }
-}
-
-/// A Poseidon hash function, built around a duplex sponge.
-pub struct Hash<
-    F: FieldExt,
-    S: Spec<F, T, RATE>,
-    D: Domain<F, S, T, RATE>,
-    const T: usize,
-    const RATE: usize,
-> {
-    duplex: Duplex<F, S, T, RATE>,
-    domain: D,
-}
-
-impl<
-        F: FieldExt,
-        S: Spec<F, T, RATE>,
-        D: Domain<F, S, T, RATE>,
-        const T: usize,
-        const RATE: usize,
-    > Hash<F, S, D, T, RATE>
-{
-    /// Initializes a new hasher.
-    pub fn init(spec: S, domain: D) -> Self {
-        Hash {
-            duplex: Duplex::new(
-                spec,
-                domain.initial_capacity_element(),
-                domain.pad_and_add(),
-            ),
-            domain,
-        }
-    }
-}
-
-impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, const L: usize>
-    Hash<F, S, ConstantLength<L>, T, RATE>
-{
-    /// Hashes the given input.
-    pub fn hash(mut self, message: [F; L]) -> F {
-        for value in array::IntoIter::new(message) {
-            self.duplex.absorb(value);
-        }
-        self.duplex.squeeze()
     }
 }

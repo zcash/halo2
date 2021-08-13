@@ -248,16 +248,17 @@ where
 
 #[test]
 fn test_roundtrip() {
-    use group::Curve;
+    use group::{Curve, Group};
 
     use super::commitment::{Blind, Params};
     use crate::arithmetic::{eval_polynomial, FieldExt};
-    use crate::pasta::{EqAffine, Fp};
+    use crate::pasta::{vesta, Fp};
+    use crate::poseidon::{fp::PoseidonFp, fq::PoseidonFq};
     use crate::transcript::Challenge255;
 
     const K: u32 = 4;
 
-    let params: Params<EqAffine> = Params::new(K);
+    let params: Params<vesta::Affine> = Params::new(K);
     let domain = EvaluationDomain::new(1, K);
 
     let mut ax = domain.empty_coeff();
@@ -287,7 +288,15 @@ fn test_roundtrip() {
     let bvx = eval_polynomial(&bx, x);
     let cvy = eval_polynomial(&cx, y);
 
-    let mut transcript = crate::transcript::Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+    let commitment_base = vesta::Point::generator().to_affine();
+
+    let mut transcript = crate::transcript::PoseidonWrite::<
+        Vec<u8>,
+        vesta::Affine,
+        Challenge255<vesta::Affine>,
+        PoseidonFq,
+        PoseidonFp,
+    >::init(commitment_base, vec![], PoseidonFq, PoseidonFp);
     create_proof(
         &params,
         &mut transcript,
@@ -313,8 +322,13 @@ fn test_roundtrip() {
 
     {
         let mut proof = &proof[..];
-        let mut transcript =
-            crate::transcript::PoseidonRead::<_, _, Challenge255<_>>::init(&mut proof);
+        let mut transcript = crate::transcript::PoseidonRead::<
+            &[u8],
+            vesta::Affine,
+            Challenge255<vesta::Affine>,
+            PoseidonFq,
+            PoseidonFp,
+        >::init(commitment_base, &proof[..], PoseidonFq, PoseidonFp);
         let msm = params.empty_msm();
 
         let guard = verify_proof(
@@ -335,8 +349,13 @@ fn test_roundtrip() {
     {
         let mut proof = &proof[..];
 
-        let mut transcript =
-            crate::transcript::PoseidonRead::<_, _, Challenge255<_>>::init(&mut proof);
+        let mut transcript = crate::transcript::PoseidonRead::<
+            &[u8],
+            vesta::Affine,
+            Challenge255<vesta::Affine>,
+            PoseidonFq,
+            PoseidonFp,
+        >::init(commitment_base, &proof[..], PoseidonFq, PoseidonFp);
         let msm = params.empty_msm();
 
         let guard = verify_proof(

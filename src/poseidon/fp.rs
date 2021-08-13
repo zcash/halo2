@@ -1,10 +1,14 @@
+//! TODO
+
 use super::{Mds, Spec};
 use ff::Field;
 use pasta_curves::Fp;
 
 /// TODO
+#[derive(Debug)]
 pub struct PoseidonFp;
-// Vesta base
+
+// Pallas base
 impl Spec<Fp, 3, 2> for PoseidonFp {
     fn full_rounds() -> usize {
         8

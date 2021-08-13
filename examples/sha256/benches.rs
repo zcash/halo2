@@ -7,7 +7,7 @@ use halo2::{
         Error, VerifyingKey,
     },
     poly::commitment::Params,
-    transcript::{PoseidonRead, Blake2bWrite, Challenge255},
+    transcript::{PoseidonRead, PoseidonWrite, Challenge255},
 };
 
 use std::{
@@ -118,7 +118,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     // /// Benchmark proof creation
     // c.bench_function(&prover_name, |b| {
     //     b.iter(|| {
-    //         let mut transcript = Blake2bWrite::init(Fq::one());
+    //         let mut transcript = PoseidonWrite::init(Fq::one());
     //         create_proof(&params, &pk, &circuit, &[], &mut transcript)
     //             .expect("proof generation should not fail");
     //         let proof: Vec<u8> = transcript.finalize();
@@ -128,7 +128,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     // Create a proof
     let proof_path = Path::new("./benches/sha256_assets/sha256_proof");
     if File::open(&proof_path).is_err() {
-        let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+        let mut transcript = PoseidonWrite::<_, _, Challenge255<_>>::init(vec![]);
         create_proof(&params, &pk, &[circuit], &[], &mut transcript)
             .expect("proof generation should not fail");
         let proof: Vec<u8> = transcript.finalize();

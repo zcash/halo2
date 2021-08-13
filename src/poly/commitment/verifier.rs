@@ -78,11 +78,15 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
     msm.add_constant_term(-v);
     let s_poly_commitment = transcript.read_point().map_err(|_| Error::OpeningError)?;
 
-    let iota = *transcript.squeeze_challenge_scalar::<()>();
+    let iota = *transcript
+        .squeeze_challenge_scalar::<()>()
+        .map_err(|_| Error::TranscriptError)?;
 
     msm.append_term(iota, s_poly_commitment);
 
-    let z = *transcript.squeeze_challenge_scalar::<()>();
+    let z = *transcript
+        .squeeze_challenge_scalar::<()>()
+        .map_err(|_| Error::TranscriptError)?;
 
     let mut rounds = vec![];
     for _ in 0..k {
@@ -90,7 +94,9 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
         let l = transcript.read_point().map_err(|_| Error::OpeningError)?;
         let r = transcript.read_point().map_err(|_| Error::OpeningError)?;
 
-        let challenge_packed = transcript.squeeze_challenge();
+        let challenge_packed = transcript
+            .squeeze_challenge()
+            .map_err(|_| Error::TranscriptError)?;
         let challenge = *challenge_packed.as_challenge_scalar::<()>();
 
         rounds.push((

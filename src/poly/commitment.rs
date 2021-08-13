@@ -304,15 +304,16 @@ fn test_opening_proof() {
         EvaluationDomain,
     };
     use crate::arithmetic::{eval_polynomial, FieldExt};
-    use crate::pasta::{EpAffine, Fq};
+    use crate::pasta::{pallas, Fq};
+    use crate::poseidon::{fp::PoseidonFp, fq::PoseidonFq};
     use crate::transcript::{
-        Blake2bWrite, Challenge255, PoseidonRead, Transcript, TranscriptRead, TranscriptWrite,
+        Challenge255, PoseidonRead, PoseidonWrite, Transcript, TranscriptRead, TranscriptWrite,
     };
 
-    let params = Params::<EpAffine>::new(K);
+    let params = Params::<pallas::Affine>::new(K);
     let mut params_buffer = vec![];
     params.write(&mut params_buffer).unwrap();
-    let params: Params<EpAffine> = Params::read::<_>(&mut &params_buffer[..]).unwrap();
+    let params: Params<pallas::Affine> = Params::read::<_>(&mut &params_buffer[..]).unwrap();
 
     let domain = EvaluationDomain::new(1, K);
 
@@ -323,27 +324,40 @@ fn test_opening_proof() {
     }
 
     let blind = Blind(Fq::rand());
+    let commitment_base = pallas::Point::generator().to_affine();
 
     let p = params.commit(&px, blind).to_affine();
 
-    let mut transcript = Blake2bWrite::<Vec<u8>, EpAffine, Challenge255<EpAffine>>::init(vec![]);
+    let mut transcript = PoseidonWrite::<
+        Vec<u8>,
+        pallas::Affine,
+        Challenge255<pallas::Affine>,
+        PoseidonFp,
+        PoseidonFq,
+    >::init(commitment_base, vec![], PoseidonFp, PoseidonFq);
     transcript.write_point(p).unwrap();
-    let x = transcript.squeeze_challenge_scalar::<()>();
+    let x = transcript.squeeze_challenge_scalar::<()>().unwrap();
     // Evaluate the polynomial
     let v = eval_polynomial(&px, *x);
     transcript.write_scalar(v).unwrap();
 
     let (proof, ch_prover) = {
         create_proof(&params, &mut transcript, &px, blind, *x).unwrap();
-        let ch_prover = transcript.squeeze_challenge();
+        let ch_prover = transcript.squeeze_challenge().unwrap();
         (transcript.finalize(), ch_prover)
     };
 
     // Verify the opening proof
-    let mut transcript = PoseidonRead::<&[u8], EpAffine, Challenge255<EpAffine>>::init(&proof[..]);
+    let mut transcript = PoseidonRead::<
+        &[u8],
+        pallas::Affine,
+        Challenge255<pallas::Affine>,
+        PoseidonFp,
+        PoseidonFq,
+    >::init(commitment_base, &proof[..], PoseidonFp, PoseidonFq);
     let p_prime = transcript.read_point().unwrap();
     assert_eq!(p, p_prime);
-    let x_prime = transcript.squeeze_challenge_scalar::<()>();
+    let x_prime = transcript.squeeze_challenge_scalar::<()>().unwrap();
     assert_eq!(*x, *x_prime);
     let v_prime = transcript.read_scalar().unwrap();
     assert_eq!(v, v_prime);
@@ -351,7 +365,7 @@ fn test_opening_proof() {
     let mut commitment_msm = params.empty_msm();
     commitment_msm.append_term(Field::one(), p);
     let guard = verify_proof(&params, commitment_msm, &mut transcript, *x, v).unwrap();
-    let ch_verifier = transcript.squeeze_challenge();
+    let ch_verifier = transcript.squeeze_challenge().unwrap();
     assert_eq!(*ch_prover, *ch_verifier);
 
     // Test guard behavior prior to checking another proof

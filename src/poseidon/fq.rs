@@ -1,9 +1,13 @@
+//! TODO
+
 use super::{Mds, Spec};
 use ff::Field;
 use pasta_curves::Fq;
 
 /// TODO
+#[derive(Debug)]
 pub struct PoseidonFq;
+
 // Vesta base
 impl Spec<Fq, 3, 2> for PoseidonFq {
     fn full_rounds() -> usize {

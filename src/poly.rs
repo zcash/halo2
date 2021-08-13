@@ -26,6 +26,8 @@ pub enum Error {
     OpeningError,
     /// Caller needs to re-sample a point
     SamplingError,
+    /// Transcript error
+    TranscriptError,
 }
 
 /// The basis over which a polynomial is described.

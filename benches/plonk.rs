@@ -2,12 +2,14 @@
 extern crate criterion;
 
 extern crate halo2;
+use group::{Curve, Group};
 use halo2::arithmetic::FieldExt;
 use halo2::circuit::{Cell, Layouter, SimpleFloorPlanner};
-use halo2::pasta::{EqAffine, Fp};
+use halo2::pasta::{vesta, EqAffine, Fp};
 use halo2::plonk::*;
 use halo2::poly::{commitment::Params, Rotation};
-use halo2::transcript::{Blake2bWrite, Challenge255, PoseidonRead};
+use halo2::poseidon::{fp::PoseidonFp, fq::PoseidonFq};
+use halo2::transcript::{Challenge255, PoseidonRead, PoseidonWrite};
 
 use std::marker::PhantomData;
 
@@ -248,6 +250,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     }
 
     let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None, k };
+    let commitment_base = vesta::Point::generator().to_affine();
 
     // Initialize the proving key
     let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
@@ -264,7 +267,14 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
             };
 
             // Create a proof
-            let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+            let mut transcript =
+                PoseidonWrite::<
+                    Vec<u8>,
+                    vesta::Affine,
+                    Challenge255<vesta::Affine>,
+                    PoseidonFq,
+                    PoseidonFp,
+                >::init(commitment_base, vec![], PoseidonFq, PoseidonFp);
             create_proof(&params, &pk, &[circuit], &[&[]], &mut transcript)
                 .expect("proof generation should not fail")
         });
@@ -276,7 +286,13 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     };
 
     // Create a proof
-    let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+    let mut transcript = PoseidonWrite::<
+        Vec<u8>,
+        vesta::Affine,
+        Challenge255<vesta::Affine>,
+        PoseidonFq,
+        PoseidonFp,
+    >::init(commitment_base, vec![], PoseidonFq, PoseidonFp);
     create_proof(&params, &pk, &[circuit], &[&[]], &mut transcript)
         .expect("proof generation should not fail");
     let proof = transcript.finalize();
@@ -284,7 +300,14 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
     c.bench_function(&verifier_name, |b| {
         b.iter(|| {
             let msm = params.empty_msm();
-            let mut transcript = PoseidonRead::<_, _, Challenge255<_>>::init(&proof[..]);
+            let mut transcript =
+                PoseidonRead::<
+                    &[u8],
+                    vesta::Affine,
+                    Challenge255<vesta::Affine>,
+                    PoseidonFq,
+                    PoseidonFp,
+                >::init(commitment_base, &proof[..], PoseidonFq, PoseidonFp);
             let guard = verify_proof(&params, pk.get_vk(), msm, &[&[]], &mut transcript).unwrap();
             let msm = guard.clone().use_challenges();
             assert!(msm.eval());
