@@ -142,10 +142,10 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-2   & q_{S4} \cdot (2 \cdot y_Q - Y_{A,0}) = 0 \\\hline
-5   & q_{S1,i} \Rightarrow (m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P} \\\hline
+4   & q_{S4} \cdot (2 \cdot y_Q - Y_{A,0}) = 0 \\\hline
+6   & q_{S1,i} \Rightarrow (m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P} \\\hline
 3   & q_{S1,i} \cdot \big(\lambda_{2,i}^2 - (x_{A,i+1} + x_{R,i} + x_{A,i})\big) \\\hline
-6   & q_{S1,i} \cdot \left(4 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - (2 \cdot Y_{A,i} + (2 - q_{S3,i}) \cdot Y_{A,i+1} + 2 \cdot q_{S3,i} \cdot y_{A,n})\right) = 0 \\\hline
+5   & q_{S1,i} \cdot \left(4 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - (2 \cdot Y_{A,i} + (2 - q_{S3,i}) \cdot Y_{A,i+1} + 2 \cdot q_{S3,i} \cdot y_{A,n})\right) = 0 \\\hline
 \end{array}
 $$
 
