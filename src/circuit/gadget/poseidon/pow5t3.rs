@@ -273,7 +273,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, 2>> PoseidonDuplexInstructions<F, S, WIDTH, 
     fn initial_state(
         &self,
         layouter: &mut impl Layouter<F>,
-        domain: &impl Domain<F, S, WIDTH, 2>,
+        domain: &impl Domain<F, WIDTH, 2>,
     ) -> Result<State<Self::Word, WIDTH>, Error> {
         let config = self.config();
         layouter.assign_region(
@@ -304,7 +304,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, 2>> PoseidonDuplexInstructions<F, S, WIDTH, 
     fn pad_and_add(
         &self,
         layouter: &mut impl Layouter<F>,
-        domain: &impl Domain<F, S, WIDTH, 2>,
+        domain: &impl Domain<F, WIDTH, 2>,
         initial_state: &State<Self::Word, WIDTH>,
         input: &SpongeState<Self::Word, 2>,
     ) -> Result<State<Self::Word, WIDTH>, Error> {
