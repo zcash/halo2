@@ -327,7 +327,9 @@ impl NoteCommitConfig {
                 .map(move |(name, poly)| (name, q_notecommit_pk_d.clone() * poly))
         });
 
-        // | value | d_2 | d_3 | e_0 |
+        // |  A_6  | A_7 | A_8 | A_9 | q_notecommit_value |
+        // ------------------------------------------------
+        // | value | d_2 | d_3 | e_0 |          1         |
         meta.create_gate("NoteCommit input value", |meta| {
             let q_notecommit_value = meta.query_selector(config.q_notecommit_value);
 
