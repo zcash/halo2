@@ -481,11 +481,12 @@ pub mod tests {
         },
         utilities::UtilitiesInstructions,
     };
+    use crate::constants::OrchardFixedBases;
 
     pub fn test_mul(
-        chip: EccChip,
+        chip: EccChip<OrchardFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
-        p: &NonIdentityPoint<pallas::Affine, EccChip>,
+        p: &NonIdentityPoint<pallas::Affine, EccChip<OrchardFixedBases>>,
         p_val: pallas::Affine,
     ) -> Result<(), Error> {
         let column = chip.config().advices[0];

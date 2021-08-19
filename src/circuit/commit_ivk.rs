@@ -9,26 +9,31 @@ use crate::{
     circuit::gadget::{
         ecc::{chip::EccChip, X},
         sinsemilla::{
-            chip::{SinsemillaChip, SinsemillaCommitDomains, SinsemillaConfig},
+            chip::{SinsemillaChip, SinsemillaConfig},
             CommitDomain, Message, MessagePiece,
         },
         utilities::{bitrange_subset, bool_check},
     },
-    constants::T_P,
+    constants::{OrchardCommitDomains, OrchardFixedBases, OrchardHashDomains, T_P},
 };
 
 #[derive(Clone, Debug)]
 pub struct CommitIvkConfig {
     q_commit_ivk: Selector,
     advices: [Column<Advice>; 10],
-    sinsemilla_config: SinsemillaConfig,
+    sinsemilla_config:
+        SinsemillaConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
 }
 
 impl CommitIvkConfig {
     pub(in crate::circuit) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 10],
-        sinsemilla_config: SinsemillaConfig,
+        sinsemilla_config: SinsemillaConfig<
+            OrchardHashDomains,
+            OrchardCommitDomains,
+            OrchardFixedBases,
+        >,
     ) -> Self {
         let q_commit_ivk = meta.selector();
 
@@ -221,13 +226,17 @@ impl CommitIvkConfig {
     #[allow(clippy::type_complexity)]
     pub(in crate::circuit) fn assign_region(
         &self,
-        sinsemilla_chip: SinsemillaChip,
-        ecc_chip: EccChip,
+        sinsemilla_chip: SinsemillaChip<
+            OrchardHashDomains,
+            OrchardCommitDomains,
+            OrchardFixedBases,
+        >,
+        ecc_chip: EccChip<OrchardFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
         ak: AssignedCell<pallas::Base, pallas::Base>,
         nk: AssignedCell<pallas::Base, pallas::Base>,
         rivk: Option<pallas::Scalar>,
-    ) -> Result<X<pallas::Affine, EccChip>, Error> {
+    ) -> Result<X<pallas::Affine, EccChip<OrchardFixedBases>>, Error> {
         // <https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit>
         // We need to hash `ak || nk` where each of `ak`, `nk` is a field element (255 bits).
         //
@@ -328,11 +337,8 @@ impl CommitIvkConfig {
                 sinsemilla_chip.clone(),
                 vec![a.clone(), b.clone(), c.clone(), d.clone()],
             );
-            let domain = CommitDomain::new(
-                sinsemilla_chip,
-                ecc_chip,
-                &SinsemillaCommitDomains::CommitIvk,
-            );
+            let domain =
+                CommitDomain::new(sinsemilla_chip, ecc_chip, &OrchardCommitDomains::CommitIvk);
             domain.short_commit(layouter.namespace(|| "Hash ak||nk"), message, rivk)?
         };
 
@@ -635,7 +641,10 @@ mod tests {
             sinsemilla::chip::SinsemillaChip,
             utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
         },
-        constants::{COMMIT_IVK_PERSONALIZATION, L_ORCHARD_BASE, T_Q},
+        constants::{
+            OrchardCommitDomains, OrchardFixedBases, OrchardHashDomains,
+            COMMIT_IVK_PERSONALIZATION, L_ORCHARD_BASE, T_Q,
+        },
         primitives::sinsemilla::CommitDomain,
     };
     use group::ff::{Field, PrimeFieldBits};
@@ -662,7 +671,7 @@ mod tests {
         }
 
         impl Circuit<pallas::Base> for MyCircuit {
-            type Config = (CommitIvkConfig, EccConfig);
+            type Config = (CommitIvkConfig, EccConfig<OrchardFixedBases>);
             type FloorPlanner = SimpleFloorPlanner;
 
             fn without_witnesses(&self) -> Self {
@@ -708,7 +717,11 @@ mod tests {
                 ];
 
                 let range_check = LookupRangeCheckConfig::configure(meta, advices[9], table_idx);
-                let sinsemilla_config = SinsemillaChip::configure(
+                let sinsemilla_config = SinsemillaChip::<
+                    OrchardHashDomains,
+                    OrchardCommitDomains,
+                    OrchardFixedBases,
+                >::configure(
                     meta,
                     advices[..5].try_into().unwrap(),
                     advices[2],
@@ -720,7 +733,12 @@ mod tests {
                 let commit_ivk_config =
                     CommitIvkConfig::configure(meta, advices, sinsemilla_config);
 
-                let ecc_config = EccChip::configure(meta, advices, lagrange_coeffs, range_check);
+                let ecc_config = EccChip::<OrchardFixedBases>::configure(
+                    meta,
+                    advices,
+                    lagrange_coeffs,
+                    range_check,
+                );
 
                 (commit_ivk_config, ecc_config)
             }
@@ -733,7 +751,7 @@ mod tests {
                 let (commit_ivk_config, ecc_config) = config;
 
                 // Load the Sinsemilla generator lookup table used by the whole circuit.
-                SinsemillaChip::load(commit_ivk_config.sinsemilla_config.clone(), &mut layouter)?;
+                SinsemillaChip::<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>::load(commit_ivk_config.sinsemilla_config.clone(), &mut layouter)?;
 
                 // Construct a Sinsemilla chip
                 let sinsemilla_chip =

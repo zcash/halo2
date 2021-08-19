@@ -1,4 +1,12 @@
 //! Constants used in the Orchard protocol.
+use crate::circuit::gadget::{
+    ecc::{chip::FixedPoint, FixedPoints},
+    sinsemilla::{CommitDomains, HashDomains},
+};
+use crate::primitives::sinsemilla::{
+    Q_COMMIT_IVK_M_GENERATOR, Q_MERKLE_CRH, Q_NOTE_COMMITMENT_M_GENERATOR,
+};
+
 use arrayvec::ArrayVec;
 use ff::{Field, PrimeField};
 use group::Curve;
@@ -15,10 +23,7 @@ pub mod spend_auth_g;
 pub mod value_commit_r;
 pub mod value_commit_v;
 
-pub mod load;
 pub mod util;
-
-pub use load::{NullifierK, OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV};
 
 /// The Pallas scalar field modulus is $q = 2^{254} + \mathsf{t_q}$.
 /// <https://github.com/zcash/pasta>
@@ -194,6 +199,177 @@ fn find_zs_and_us<C: CurveAffine>(base: C, num_windows: usize) -> Option<Vec<(u6
         .iter()
         .map(|window_points| find_z_and_us(window_points))
         .collect()
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+// A sum type for both full-width and short bases. This enables us to use the
+// shared functionality of full-width and short fixed-base scalar multiplication.
+pub enum OrchardFixedBases {
+    Full(OrchardFixedBasesFull),
+    NullifierK,
+    ValueCommitV,
+}
+
+impl From<OrchardFixedBasesFull> for OrchardFixedBases {
+    fn from(full_width_base: OrchardFixedBasesFull) -> Self {
+        Self::Full(full_width_base)
+    }
+}
+
+impl From<ValueCommitV> for OrchardFixedBases {
+    fn from(_value_commit_v: ValueCommitV) -> Self {
+        Self::ValueCommitV
+    }
+}
+
+impl From<NullifierK> for OrchardFixedBases {
+    fn from(_nullifier_k: NullifierK) -> Self {
+        Self::NullifierK
+    }
+}
+
+/// The Orchard fixed bases used in scalar mul with full-width scalars.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum OrchardFixedBasesFull {
+    CommitIvkR,
+    NoteCommitR,
+    ValueCommitR,
+    SpendAuthG,
+}
+
+/// NullifierK is used in scalar mul with a base field element.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct NullifierK;
+
+/// ValueCommitV is used in scalar mul with a short signed scalar.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct ValueCommitV;
+
+impl FixedPoints<pallas::Affine> for OrchardFixedBases {
+    type FullScalar = OrchardFixedBasesFull;
+    type Base = NullifierK;
+    type ShortScalar = ValueCommitV;
+}
+
+impl FixedPoint<pallas::Affine> for OrchardFixedBasesFull {
+    fn generator(&self) -> pallas::Affine {
+        match self {
+            Self::CommitIvkR => commit_ivk_r::generator(),
+            Self::NoteCommitR => note_commit_r::generator(),
+            Self::ValueCommitR => value_commit_r::generator(),
+            Self::SpendAuthG => spend_auth_g::generator(),
+        }
+    }
+
+    fn u(&self) -> Vec<[[u8; 32]; H]> {
+        match self {
+            Self::CommitIvkR => commit_ivk_r::U.to_vec(),
+            Self::NoteCommitR => note_commit_r::U.to_vec(),
+            Self::ValueCommitR => value_commit_r::U.to_vec(),
+            Self::SpendAuthG => spend_auth_g::U.to_vec(),
+        }
+    }
+
+    fn z(&self) -> Vec<u64> {
+        match self {
+            Self::CommitIvkR => commit_ivk_r::Z.to_vec(),
+            Self::NoteCommitR => note_commit_r::Z.to_vec(),
+            Self::ValueCommitR => value_commit_r::Z.to_vec(),
+            Self::SpendAuthG => spend_auth_g::Z.to_vec(),
+        }
+    }
+
+    fn lagrange_coeffs(&self) -> Vec<[pallas::Base; H]> {
+        compute_lagrange_coeffs(self.generator(), NUM_WINDOWS)
+    }
+}
+
+impl FixedPoint<pallas::Affine> for NullifierK {
+    fn generator(&self) -> pallas::Affine {
+        nullifier_k::generator()
+    }
+
+    fn u(&self) -> Vec<[[u8; 32]; H]> {
+        nullifier_k::U.to_vec()
+    }
+
+    fn z(&self) -> Vec<u64> {
+        nullifier_k::Z.to_vec()
+    }
+
+    fn lagrange_coeffs(&self) -> Vec<[pallas::Base; H]> {
+        compute_lagrange_coeffs(self.generator(), NUM_WINDOWS)
+    }
+}
+
+impl FixedPoint<pallas::Affine> for ValueCommitV {
+    fn generator(&self) -> pallas::Affine {
+        value_commit_v::generator()
+    }
+
+    fn u(&self) -> Vec<[[u8; 32]; H]> {
+        value_commit_v::U_SHORT.to_vec()
+    }
+
+    fn z(&self) -> Vec<u64> {
+        value_commit_v::Z_SHORT.to_vec()
+    }
+
+    fn lagrange_coeffs(&self) -> Vec<[pallas::Base; H]> {
+        compute_lagrange_coeffs(self.generator(), NUM_WINDOWS_SHORT)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum OrchardHashDomains {
+    NoteCommit,
+    CommitIvk,
+    MerkleCrh,
+}
+
+#[allow(non_snake_case)]
+impl HashDomains<pallas::Affine> for OrchardHashDomains {
+    fn Q(&self) -> pallas::Affine {
+        match self {
+            OrchardHashDomains::CommitIvk => pallas::Affine::from_xy(
+                pallas::Base::from_bytes(&Q_COMMIT_IVK_M_GENERATOR.0).unwrap(),
+                pallas::Base::from_bytes(&Q_COMMIT_IVK_M_GENERATOR.1).unwrap(),
+            )
+            .unwrap(),
+            OrchardHashDomains::NoteCommit => pallas::Affine::from_xy(
+                pallas::Base::from_bytes(&Q_NOTE_COMMITMENT_M_GENERATOR.0).unwrap(),
+                pallas::Base::from_bytes(&Q_NOTE_COMMITMENT_M_GENERATOR.1).unwrap(),
+            )
+            .unwrap(),
+            OrchardHashDomains::MerkleCrh => pallas::Affine::from_xy(
+                pallas::Base::from_bytes(&Q_MERKLE_CRH.0).unwrap(),
+                pallas::Base::from_bytes(&Q_MERKLE_CRH.1).unwrap(),
+            )
+            .unwrap(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum OrchardCommitDomains {
+    NoteCommit,
+    CommitIvk,
+}
+
+impl CommitDomains<pallas::Affine, OrchardFixedBases, OrchardHashDomains> for OrchardCommitDomains {
+    fn r(&self) -> OrchardFixedBasesFull {
+        match self {
+            Self::NoteCommit => OrchardFixedBasesFull::NoteCommitR,
+            Self::CommitIvk => OrchardFixedBasesFull::CommitIvkR,
+        }
+    }
+
+    fn hash_domain(&self) -> OrchardHashDomains {
+        match self {
+            Self::NoteCommit => OrchardHashDomains::NoteCommit,
+            Self::CommitIvk => OrchardHashDomains::CommitIvk,
+        }
+    }
 }
 
 #[cfg(test)]

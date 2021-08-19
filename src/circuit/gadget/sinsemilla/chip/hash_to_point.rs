@@ -1,5 +1,7 @@
-use super::super::SinsemillaInstructions;
+use super::super::{CommitDomains, HashDomains, SinsemillaInstructions};
 use super::{NonIdentityEccPoint, SinsemillaChip};
+
+use crate::circuit::gadget::ecc::FixedPoints;
 use crate::primitives::sinsemilla::{self, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S};
 use halo2::circuit::AssignedCell;
 use halo2::{
@@ -15,7 +17,12 @@ use pasta_curves::{
 
 use std::ops::Deref;
 
-impl SinsemillaChip {
+impl<Hash, Commit, Fixed> SinsemillaChip<Hash, Commit, Fixed>
+where
+    Hash: HashDomains<pallas::Affine>,
+    Fixed: FixedPoints<pallas::Affine>,
+    Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
+{
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
     pub(super) fn hash_message(

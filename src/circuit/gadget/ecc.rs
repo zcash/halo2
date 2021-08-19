@@ -13,7 +13,9 @@ use crate::circuit::gadget::utilities::UtilitiesInstructions;
 pub mod chip;
 
 /// The set of circuit instructions required to use the ECC gadgets.
-pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions<C::Base> {
+pub trait EccInstructions<C: CurveAffine>:
+    Chip<C::Base> + UtilitiesInstructions<C::Base> + Clone + Debug + Eq
+{
     /// Variable representing an element of the elliptic curve's base field, that
     /// is used as a scalar in variable-base scalar mul.
     ///
@@ -41,12 +43,11 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
     /// Variable representing the affine short Weierstrass x-coordinate of an
     /// elliptic curve point.
     type X: Clone + Debug;
-    /// Enumeration of the set of fixed bases to be used in scalar mul with a full-width scalar.
-    type FixedPoints: Clone + Debug;
-    /// Enumeration of the set of fixed bases to be used in scalar mul with a base field element.
-    type FixedPointsBaseField: Clone + Debug;
-    /// Enumeration of the set of fixed bases to be used in short signed scalar mul.
-    type FixedPointsShort: Clone + Debug;
+    /// Enumeration of the set of fixed bases to be used in scalar mul.
+    /// TODO: When associated consts can be used as const generics, introduce
+    /// `Self::NUM_WINDOWS`, `Self::NUM_WINDOWS_BASE_FIELD`, `Self::NUM_WINDOWS_SHORT`
+    /// and use them to differentiate `FixedPoints` types.
+    type FixedPoints: FixedPoints<C>;
 
     /// Constrains point `a` to be equal in value to point `b`.
     fn constrain_equal(
@@ -107,7 +108,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
         &self,
         layouter: &mut impl Layouter<C::Base>,
         scalar: Option<C::Scalar>,
-        base: &Self::FixedPoints,
+        base: &<Self::FixedPoints as FixedPoints<C>>::FullScalar,
     ) -> Result<(Self::Point, Self::ScalarFixed), Error>;
 
     /// Performs fixed-base scalar multiplication using a short signed scalar, returning
@@ -116,7 +117,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
         &self,
         layouter: &mut impl Layouter<C::Base>,
         magnitude_sign: (Self::Var, Self::Var),
-        base: &Self::FixedPointsShort,
+        base: &<Self::FixedPoints as FixedPoints<C>>::ShortScalar,
     ) -> Result<(Self::Point, Self::ScalarFixedShort), Error>;
 
     /// Performs fixed-base scalar multiplication using a base field element as the scalar.
@@ -126,8 +127,15 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
         &self,
         layouter: &mut impl Layouter<C::Base>,
         base_field_elem: Self::Var,
-        base: &Self::FixedPointsBaseField,
+        base: &<Self::FixedPoints as FixedPoints<C>>::Base,
     ) -> Result<Self::Point, Error>;
+}
+
+/// Defines the fixed points for a given instantiation of the ECC chip.
+pub trait FixedPoints<C: CurveAffine>: Debug + Eq + Clone {
+    type FullScalar: Debug + Eq + Clone;
+    type ShortScalar: Debug + Eq + Clone;
+    type Base: Debug + Eq + Clone;
 }
 
 /// An element of the given elliptic curve's base field, that is used as a scalar
@@ -142,41 +150,33 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
 /// to be in the base field of the curve. (See non-normative notes in
 /// https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents.)
 #[derive(Debug)]
-pub struct ScalarVar<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
+pub struct ScalarVar<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
     inner: EccChip::ScalarVar,
 }
 
 /// A full-width element of the given elliptic curve's scalar field, to be used for fixed-base scalar mul.
 #[derive(Debug)]
-pub struct ScalarFixed<C: CurveAffine, EccChip>
-where
-    EccChip: EccInstructions<C> + Clone + Debug + Eq,
-{
+pub struct ScalarFixed<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
     inner: EccChip::ScalarFixed,
 }
 
 /// A signed short element of the given elliptic curve's scalar field, to be used for fixed-base scalar mul.
 #[derive(Debug)]
-pub struct ScalarFixedShort<C: CurveAffine, EccChip>
-where
-    EccChip: EccInstructions<C> + Clone + Debug + Eq,
-{
+pub struct ScalarFixedShort<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
     inner: EccChip::ScalarFixedShort,
 }
 
 /// A non-identity elliptic curve point over the given curve.
 #[derive(Copy, Clone, Debug)]
-pub struct NonIdentityPoint<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
+pub struct NonIdentityPoint<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
     inner: EccChip::NonIdentityPoint,
 }
 
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
-    NonIdentityPoint<C, EccChip>
-{
+impl<C: CurveAffine, EccChip: EccInstructions<C>> NonIdentityPoint<C, EccChip> {
     /// Constructs a new point with the given value.
     pub fn new(
         chip: EccChip,
@@ -351,12 +351,12 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
 /// The affine short Weierstrass x-coordinate of an elliptic curve point over the
 /// given curve.
 #[derive(Debug)]
-pub struct X<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
+pub struct X<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
     inner: EccChip::X,
 }
 
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> X<C, EccChip> {
+impl<C: CurveAffine, EccChip: EccInstructions<C>> X<C, EccChip> {
     /// Wraps the given x-coordinate (obtained directly from an instruction) in a gadget.
     pub fn from_inner(chip: EccChip, inner: EccChip::X) -> Self {
         X { chip, inner }
@@ -373,18 +373,34 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> X<C, EccC
 ///
 /// Used in scalar multiplication with full-width scalars.
 #[derive(Clone, Debug)]
-pub struct FixedPoint<C: CurveAffine, EccChip>
+pub struct FixedPoint<C: CurveAffine, EccChip: EccInstructions<C>> {
+    chip: EccChip,
+    inner: <EccChip::FixedPoints as FixedPoints<C>>::FullScalar,
+}
+
+/// A constant elliptic curve point over the given curve, used in scalar multiplication
+/// with a base field element
+#[derive(Clone, Debug)]
+pub struct FixedPointBaseField<C: CurveAffine, EccChip>
 where
     EccChip: EccInstructions<C> + Clone + Debug + Eq,
 {
     chip: EccChip,
-    inner: EccChip::FixedPoints,
+    inner: <EccChip::FixedPoints as FixedPoints<C>>::Base,
 }
 
-impl<C: CurveAffine, EccChip> FixedPoint<C, EccChip>
+/// A constant elliptic curve point over the given curve, used in scalar multiplication
+/// with a short signed exponent
+#[derive(Clone, Debug)]
+pub struct FixedPointShort<C: CurveAffine, EccChip>
 where
     EccChip: EccInstructions<C> + Clone + Debug + Eq,
 {
+    chip: EccChip,
+    inner: <EccChip::FixedPoints as FixedPoints<C>>::ShortScalar,
+}
+
+impl<C: CurveAffine, EccChip: EccInstructions<C>> FixedPoint<C, EccChip> {
     #[allow(clippy::type_complexity)]
     /// Returns `[by] self`.
     pub fn mul(
@@ -409,26 +425,15 @@ where
     }
 
     /// Wraps the given fixed base (obtained directly from an instruction) in a gadget.
-    pub fn from_inner(chip: EccChip, inner: EccChip::FixedPoints) -> Self {
-        FixedPoint { chip, inner }
+    pub fn from_inner(
+        chip: EccChip,
+        inner: <EccChip::FixedPoints as FixedPoints<C>>::FullScalar,
+    ) -> Self {
+        Self { chip, inner }
     }
 }
 
-/// A constant elliptic curve point over the given curve, used in scalar multiplication
-/// with a base field element
-#[derive(Clone, Debug)]
-pub struct FixedPointBaseField<C: CurveAffine, EccChip>
-where
-    EccChip: EccInstructions<C> + Clone + Debug + Eq,
-{
-    chip: EccChip,
-    inner: EccChip::FixedPointsBaseField,
-}
-
-impl<C: CurveAffine, EccChip> FixedPointBaseField<C, EccChip>
-where
-    EccChip: EccInstructions<C> + Clone + Debug + Eq,
-{
+impl<C: CurveAffine, EccChip: EccInstructions<C>> FixedPointBaseField<C, EccChip> {
     #[allow(clippy::type_complexity)]
     /// Returns `[by] self`.
     pub fn mul(
@@ -445,26 +450,15 @@ where
     }
 
     /// Wraps the given fixed base (obtained directly from an instruction) in a gadget.
-    pub fn from_inner(chip: EccChip, inner: EccChip::FixedPointsBaseField) -> Self {
-        FixedPointBaseField { chip, inner }
+    pub fn from_inner(
+        chip: EccChip,
+        inner: <EccChip::FixedPoints as FixedPoints<C>>::Base,
+    ) -> Self {
+        Self { chip, inner }
     }
 }
 
-/// A constant elliptic curve point over the given curve, used in scalar multiplication
-/// with a short signed exponent
-#[derive(Clone, Debug)]
-pub struct FixedPointShort<C: CurveAffine, EccChip>
-where
-    EccChip: EccInstructions<C> + Clone + Debug + Eq,
-{
-    chip: EccChip,
-    inner: EccChip::FixedPointsShort,
-}
-
-impl<C: CurveAffine, EccChip> FixedPointShort<C, EccChip>
-where
-    EccChip: EccInstructions<C> + Clone + Debug + Eq,
-{
+impl<C: CurveAffine, EccChip: EccInstructions<C>> FixedPointShort<C, EccChip> {
     #[allow(clippy::type_complexity)]
     /// Returns `[by] self`.
     pub fn mul(
@@ -489,8 +483,11 @@ where
     }
 
     /// Wraps the given fixed base (obtained directly from an instruction) in a gadget.
-    pub fn from_inner(chip: EccChip, inner: EccChip::FixedPointsShort) -> Self {
-        FixedPointShort { chip, inner }
+    pub fn from_inner(
+        chip: EccChip,
+        inner: <EccChip::FixedPoints as FixedPoints<C>>::ShortScalar,
+    ) -> Self {
+        Self { chip, inner }
     }
 }
 
@@ -507,6 +504,7 @@ mod tests {
 
     use super::chip::{EccChip, EccConfig};
     use crate::circuit::gadget::utilities::lookup_range_check::LookupRangeCheckConfig;
+    use crate::constants::OrchardFixedBases;
 
     struct MyCircuit {
         test_errors: bool,
@@ -514,7 +512,7 @@ mod tests {
 
     #[allow(non_snake_case)]
     impl Circuit<pallas::Base> for MyCircuit {
-        type Config = EccConfig;
+        type Config = EccConfig<OrchardFixedBases>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
@@ -550,7 +548,7 @@ mod tests {
             meta.enable_constant(constants);
 
             let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
-            EccChip::configure(meta, advices, lagrange_coeffs, range_check)
+            EccChip::<OrchardFixedBases>::configure(meta, advices, lagrange_coeffs, range_check)
         }
 
         fn synthesize(

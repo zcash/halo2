@@ -4,17 +4,14 @@ use super::{
 };
 use crate::{
     circuit::gadget::{
-        ecc::chip::NonIdentityEccPoint, utilities::lookup_range_check::LookupRangeCheckConfig,
+        ecc::{chip::NonIdentityEccPoint, FixedPoints},
+        utilities::lookup_range_check::LookupRangeCheckConfig,
     },
-    constants::OrchardFixedBasesFull,
-    primitives::sinsemilla::{
-        self, Q_COMMIT_IVK_M_GENERATOR, Q_MERKLE_CRH, Q_NOTE_COMMITMENT_M_GENERATOR,
-    },
+    primitives::sinsemilla,
 };
+use std::marker::PhantomData;
 
-use group::ff::PrimeField;
 use halo2::{
-    arithmetic::CurveAffine,
     circuit::{AssignedCell, Chip, Layouter},
     plonk::{
         Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, TableColumn,
@@ -31,7 +28,12 @@ mod hash_to_point;
 
 /// Configuration for the Sinsemilla hash chip
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub struct SinsemillaConfig {
+pub struct SinsemillaConfig<Hash, Commit, F>
+where
+    Hash: HashDomains<pallas::Affine>,
+    F: FixedPoints<pallas::Affine>,
+    Commit: CommitDomains<pallas::Affine, F, Hash>,
+{
     /// Binary selector used in lookup argument and in the body of the Sinsemilla hash.
     q_sinsemilla1: Selector,
     /// Non-binary selector used in lookup argument and in the body of the Sinsemilla hash.
@@ -65,10 +67,16 @@ pub struct SinsemillaConfig {
     /// generators of the Sinsemilla hash.
     pub(super) generator_table: GeneratorTableConfig,
     /// An advice column configured to perform lookup range checks.
-    pub(super) lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    _marker: PhantomData<(Hash, Commit, F)>,
 }
 
-impl SinsemillaConfig {
+impl<Hash, Commit, F> SinsemillaConfig<Hash, Commit, F>
+where
+    Hash: HashDomains<pallas::Affine>,
+    F: FixedPoints<pallas::Affine>,
+    Commit: CommitDomains<pallas::Affine, F, Hash>,
+{
     /// Returns an array of all advice columns in this config, in arbitrary order.
     pub(super) fn advices(&self) -> [Column<Advice>; 5] {
         [self.x_a, self.x_p, self.bits, self.lambda_1, self.lambda_2]
@@ -81,12 +89,22 @@ impl SinsemillaConfig {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub struct SinsemillaChip {
-    config: SinsemillaConfig,
+pub struct SinsemillaChip<Hash, Commit, Fixed>
+where
+    Hash: HashDomains<pallas::Affine>,
+    Fixed: FixedPoints<pallas::Affine>,
+    Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
+{
+    config: SinsemillaConfig<Hash, Commit, Fixed>,
 }
 
-impl Chip<pallas::Base> for SinsemillaChip {
-    type Config = SinsemillaConfig;
+impl<Hash, Commit, Fixed> Chip<pallas::Base> for SinsemillaChip<Hash, Commit, Fixed>
+where
+    Hash: HashDomains<pallas::Affine>,
+    Fixed: FixedPoints<pallas::Affine>,
+    Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
+{
+    type Config = SinsemillaConfig<Hash, Commit, Fixed>;
     type Loaded = ();
 
     fn config(&self) -> &Self::Config {
@@ -98,13 +116,18 @@ impl Chip<pallas::Base> for SinsemillaChip {
     }
 }
 
-impl SinsemillaChip {
+impl<Hash, Commit, F> SinsemillaChip<Hash, Commit, F>
+where
+    Hash: HashDomains<pallas::Affine>,
+    F: FixedPoints<pallas::Affine>,
+    Commit: CommitDomains<pallas::Affine, F, Hash>,
+{
     pub fn construct(config: <Self as Chip<pallas::Base>>::Config) -> Self {
         Self { config }
     }
 
     pub fn load(
-        config: SinsemillaConfig,
+        config: SinsemillaConfig<Hash, Commit, F>,
         layouter: &mut impl Layouter<pallas::Base>,
     ) -> Result<<Self as Chip<pallas::Base>>::Loaded, Error> {
         // Load the lookup table.
@@ -129,7 +152,7 @@ impl SinsemillaChip {
             meta.enable_equality(*advice);
         }
 
-        let config = SinsemillaConfig {
+        let config = SinsemillaConfig::<Hash, Commit, F> {
             q_sinsemilla1: meta.complex_selector(),
             q_sinsemilla2: meta.fixed_column(),
             q_sinsemilla4: meta.selector(),
@@ -146,6 +169,7 @@ impl SinsemillaChip {
                 table_y: lookup.2,
             },
             lookup_config: range_check,
+            _marker: PhantomData,
         };
 
         // Set up lookup argument
@@ -241,8 +265,12 @@ impl SinsemillaChip {
 }
 
 // Implement `SinsemillaInstructions` for `SinsemillaChip`
-impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }>
-    for SinsemillaChip
+impl<Hash, Commit, F> SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }>
+    for SinsemillaChip<Hash, Commit, F>
+where
+    Hash: HashDomains<pallas::Affine>,
+    F: FixedPoints<pallas::Affine>,
+    Commit: CommitDomains<pallas::Affine, F, Hash>,
 {
     type CellValue = AssignedCell<pallas::Base, pallas::Base>;
 
@@ -253,10 +281,10 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
 
     type X = AssignedCell<pallas::Base, pallas::Base>;
     type NonIdentityPoint = NonIdentityEccPoint;
-    type FixedPoints = OrchardFixedBasesFull;
+    type FixedPoints = F;
 
-    type HashDomains = SinsemillaHashDomains;
-    type CommitDomains = SinsemillaCommitDomains;
+    type HashDomains = Hash;
+    type CommitDomains = Commit;
 
     fn witness_message_piece(
         &self,
@@ -296,59 +324,5 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
 
     fn extract(point: &Self::NonIdentityPoint) -> Self::X {
         point.x()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum SinsemillaHashDomains {
-    NoteCommit,
-    CommitIvk,
-    MerkleCrh,
-}
-
-#[allow(non_snake_case)]
-impl HashDomains<pallas::Affine> for SinsemillaHashDomains {
-    fn Q(&self) -> pallas::Affine {
-        match self {
-            SinsemillaHashDomains::CommitIvk => pallas::Affine::from_xy(
-                pallas::Base::from_repr(Q_COMMIT_IVK_M_GENERATOR.0).unwrap(),
-                pallas::Base::from_repr(Q_COMMIT_IVK_M_GENERATOR.1).unwrap(),
-            )
-            .unwrap(),
-            SinsemillaHashDomains::NoteCommit => pallas::Affine::from_xy(
-                pallas::Base::from_repr(Q_NOTE_COMMITMENT_M_GENERATOR.0).unwrap(),
-                pallas::Base::from_repr(Q_NOTE_COMMITMENT_M_GENERATOR.1).unwrap(),
-            )
-            .unwrap(),
-            SinsemillaHashDomains::MerkleCrh => pallas::Affine::from_xy(
-                pallas::Base::from_repr(Q_MERKLE_CRH.0).unwrap(),
-                pallas::Base::from_repr(Q_MERKLE_CRH.1).unwrap(),
-            )
-            .unwrap(),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum SinsemillaCommitDomains {
-    NoteCommit,
-    CommitIvk,
-}
-
-impl CommitDomains<pallas::Affine, OrchardFixedBasesFull, SinsemillaHashDomains>
-    for SinsemillaCommitDomains
-{
-    fn r(&self) -> OrchardFixedBasesFull {
-        match self {
-            Self::NoteCommit => OrchardFixedBasesFull::NoteCommitR,
-            Self::CommitIvk => OrchardFixedBasesFull::CommitIvkR,
-        }
-    }
-
-    fn hash_domain(&self) -> SinsemillaHashDomains {
-        match self {
-            Self::NoteCommit => SinsemillaHashDomains::NoteCommit,
-            Self::CommitIvk => SinsemillaHashDomains::CommitIvk,
-        }
     }
 }

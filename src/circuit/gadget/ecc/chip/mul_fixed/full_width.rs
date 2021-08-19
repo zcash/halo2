@@ -1,4 +1,4 @@
-use super::super::{EccPoint, EccScalarFixed, OrchardFixedBasesFull};
+use super::super::{EccPoint, EccScalarFixed, FixedPoints};
 
 use crate::{
     circuit::gadget::utilities::range_check,
@@ -13,15 +13,15 @@ use halo2::{
 use pasta_curves::pallas;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Config {
+pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
     q_mul_fixed_full: Selector,
-    super_config: super::Config,
+    super_config: super::Config<Fixed>,
 }
 
-impl Config {
+impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
     pub(crate) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
-        super_config: super::Config,
+        super_config: super::Config<Fixed>,
     ) -> Self {
         let config = Self {
             q_mul_fixed_full: meta.selector(),
@@ -122,8 +122,12 @@ impl Config {
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         scalar: Option<pallas::Scalar>,
-        base: OrchardFixedBasesFull,
-    ) -> Result<(EccPoint, EccScalarFixed), Error> {
+        base: &<Fixed as FixedPoints<pallas::Affine>>::FullScalar,
+    ) -> Result<(EccPoint, EccScalarFixed), Error>
+    where
+        <Fixed as FixedPoints<pallas::Affine>>::FullScalar:
+            super::super::FixedPoint<pallas::Affine>,
+    {
         let (scalar, acc, mul_b) = layouter.assign_region(
             || "Full-width fixed-base mul (incomplete addition)",
             |mut region| {
@@ -133,11 +137,11 @@ impl Config {
 
                 let (acc, mul_b) = self
                     .super_config
-                    .assign_region_inner::<{ constants::NUM_WINDOWS }>(
+                    .assign_region_inner::<_, { constants::NUM_WINDOWS }>(
                         &mut region,
                         offset,
                         &(&scalar).into(),
-                        base.into(),
+                        base,
                         self.q_mul_fixed_full,
                     )?;
 
@@ -161,9 +165,9 @@ impl Config {
         #[cfg(test)]
         // Check that the correct multiple is obtained.
         {
+            use super::super::FixedPoint;
             use group::Curve;
 
-            let base: super::OrchardFixedBases = base.into();
             let real_mul = scalar.value.map(|scalar| base.generator() * scalar);
             let result = result.point();
 
@@ -184,13 +188,13 @@ pub mod tests {
     use rand::rngs::OsRng;
 
     use crate::circuit::gadget::ecc::{
-        chip::{EccChip, OrchardFixedBasesFull},
+        chip::{EccChip, FixedPoint as FixedPointTrait},
         FixedPoint, NonIdentityPoint, Point,
     };
-    use crate::constants;
+    use crate::constants::{self, OrchardFixedBases, OrchardFixedBasesFull};
 
     pub fn test_mul_fixed(
-        chip: EccChip,
+        chip: EccChip<OrchardFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
         // commit_ivk_r
@@ -234,17 +238,17 @@ pub mod tests {
 
     #[allow(clippy::op_ref)]
     fn test_single_base(
-        chip: EccChip,
+        chip: EccChip<OrchardFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
-        base: FixedPoint<pallas::Affine, EccChip>,
+        base: FixedPoint<pallas::Affine, EccChip<OrchardFixedBases>>,
         base_val: pallas::Affine,
     ) -> Result<(), Error> {
         fn constrain_equal_non_id(
-            chip: EccChip,
+            chip: EccChip<OrchardFixedBases>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
             scalar_val: pallas::Scalar,
-            result: Point<pallas::Affine, EccChip>,
+            result: Point<pallas::Affine, EccChip<OrchardFixedBases>>,
         ) -> Result<(), Error> {
             let expected = NonIdentityPoint::new(
                 chip,

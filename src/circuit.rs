@@ -13,9 +13,8 @@ use rand::RngCore;
 
 use crate::{
     constants::{
-        load::{NullifierK, OrchardFixedBasesFull, ValueCommitV},
-        util::gen_const_array,
-        MERKLE_DEPTH_ORCHARD,
+        util::gen_const_array, NullifierK, OrchardCommitDomains, OrchardFixedBases,
+        OrchardFixedBasesFull, OrchardHashDomains, ValueCommitV, MERKLE_DEPTH_ORCHARD,
     },
     keys::{
         CommitIvkRandomness, DiversifiedTransmissionKey, NullifierDerivingKey, SpendValidatingKey,
@@ -41,7 +40,7 @@ use gadget::{
     },
     poseidon::{Hash as PoseidonHash, Pow5Chip as PoseidonChip, Pow5Config as PoseidonConfig},
     sinsemilla::{
-        chip::{SinsemillaChip, SinsemillaConfig, SinsemillaHashDomains},
+        chip::{SinsemillaChip, SinsemillaConfig},
         merkle::{
             chip::{MerkleChip, MerkleConfig},
             MerklePath,
@@ -79,12 +78,14 @@ pub struct Config {
     // Selector for the field addition gate poseidon_hash(nk, rho_old) + psi_old.
     q_add: Selector,
     advices: [Column<Advice>; 10],
-    ecc_config: EccConfig,
+    ecc_config: EccConfig<OrchardFixedBases>,
     poseidon_config: PoseidonConfig<pallas::Base, 3, 2>,
-    merkle_config_1: MerkleConfig,
-    merkle_config_2: MerkleConfig,
-    sinsemilla_config_1: SinsemillaConfig,
-    sinsemilla_config_2: SinsemillaConfig,
+    merkle_config_1: MerkleConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
+    merkle_config_2: MerkleConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
+    sinsemilla_config_1:
+        SinsemillaConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
+    sinsemilla_config_2:
+        SinsemillaConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
     commit_ivk_config: CommitIvkConfig,
     old_note_commit_config: NoteCommitConfig,
     new_note_commit_config: NoteCommitConfig,
@@ -234,7 +235,8 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
         // Configuration for curve point operations.
         // This uses 10 advice columns and spans the whole circuit.
-        let ecc_config = EccChip::configure(meta, advices, lagrange_coeffs, range_check);
+        let ecc_config =
+            EccChip::<OrchardFixedBases>::configure(meta, advices, lagrange_coeffs, range_check);
 
         // Configuration for the Poseidon hash.
         let poseidon_config = PoseidonChip::configure::<poseidon::P128Pow5T3>(
@@ -397,7 +399,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             let merkle_inputs = MerklePath {
                 chip_1: config.merkle_chip_1(),
                 chip_2: config.merkle_chip_2(),
-                domain: SinsemillaHashDomains::MerkleCrh,
+                domain: OrchardHashDomains::MerkleCrh,
                 leaf_pos: self.pos,
                 path,
             };
@@ -444,7 +446,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
             // commitment = [v_net] ValueCommitV
             let (commitment, _) = {
-                let value_commit_v = ValueCommitV::get();
+                let value_commit_v = ValueCommitV;
                 let value_commit_v = FixedPointShort::from_inner(ecc_chip.clone(), value_commit_v);
                 value_commit_v.mul(layouter.namespace(|| "[v_net] ValueCommitV"), v_net.clone())?
             };

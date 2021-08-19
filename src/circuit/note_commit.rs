@@ -12,12 +12,12 @@ use crate::{
             Point,
         },
         sinsemilla::{
-            chip::{SinsemillaChip, SinsemillaCommitDomains, SinsemillaConfig},
+            chip::{SinsemillaChip, SinsemillaConfig},
             CommitDomain, Message, MessagePiece,
         },
         utilities::{bitrange_subset, bool_check},
     },
-    constants::T_P,
+    constants::{OrchardCommitDomains, OrchardFixedBases, OrchardHashDomains, T_P},
 };
 
 /// The values of the running sum at the start and end of the range being used for a
@@ -55,7 +55,8 @@ pub struct NoteCommitConfig {
     q_notecommit_psi: Selector,
     q_y_canon: Selector,
     advices: [Column<Advice>; 10],
-    sinsemilla_config: SinsemillaConfig,
+    sinsemilla_config:
+        SinsemillaConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
 }
 
 impl NoteCommitConfig {
@@ -64,7 +65,11 @@ impl NoteCommitConfig {
     pub(in crate::circuit) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 10],
-        sinsemilla_config: SinsemillaConfig,
+        sinsemilla_config: SinsemillaConfig<
+            OrchardHashDomains,
+            OrchardCommitDomains,
+            OrchardFixedBases,
+        >,
     ) -> Self {
         let q_notecommit_b = meta.selector();
         let q_notecommit_d = meta.selector();
@@ -527,8 +532,8 @@ impl NoteCommitConfig {
     pub(in crate::circuit) fn assign_region(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        chip: SinsemillaChip,
-        ecc_chip: EccChip,
+        chip: SinsemillaChip<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
+        ecc_chip: EccChip<OrchardFixedBases>,
         g_d: &NonIdentityEccPoint,
         pk_d: &NonIdentityEccPoint,
         // TODO: Set V to Orchard value type
@@ -536,7 +541,7 @@ impl NoteCommitConfig {
         rho: AssignedCell<pallas::Base, pallas::Base>,
         psi: AssignedCell<pallas::Base, pallas::Base>,
         rcm: Option<pallas::Scalar>,
-    ) -> Result<Point<pallas::Affine, EccChip>, Error> {
+    ) -> Result<Point<pallas::Affine, EccChip<OrchardFixedBases>>, Error> {
         let (gd_x, gd_y) = (g_d.x(), g_d.y());
         let (pkd_x, pkd_y) = (pk_d.x(), pk_d.y());
         let (gd_x, gd_y) = (gd_x.value(), gd_y.value());
@@ -739,7 +744,7 @@ impl NoteCommitConfig {
                     h.clone(),
                 ],
             );
-            let domain = CommitDomain::new(chip, ecc_chip, &SinsemillaCommitDomains::NoteCommit);
+            let domain = CommitDomain::new(chip, ecc_chip, &OrchardCommitDomains::NoteCommit);
             domain.commit(
                 layouter.namespace(|| "Process NoteCommit inputs"),
                 message,
@@ -1459,7 +1464,10 @@ mod tests {
             sinsemilla::chip::SinsemillaChip,
             utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
         },
-        constants::{L_ORCHARD_BASE, L_VALUE, NOTE_COMMITMENT_PERSONALIZATION, T_Q},
+        constants::{
+            OrchardCommitDomains, OrchardFixedBases, OrchardHashDomains, L_ORCHARD_BASE, L_VALUE,
+            NOTE_COMMITMENT_PERSONALIZATION, T_Q,
+        },
         primitives::sinsemilla::CommitDomain,
     };
 
@@ -1495,7 +1503,7 @@ mod tests {
         }
 
         impl Circuit<pallas::Base> for MyCircuit {
-            type Config = (NoteCommitConfig, EccConfig);
+            type Config = (NoteCommitConfig, EccConfig<OrchardFixedBases>);
             type FloorPlanner = SimpleFloorPlanner;
 
             fn without_witnesses(&self) -> Self {
@@ -1542,7 +1550,11 @@ mod tests {
                 ];
 
                 let range_check = LookupRangeCheckConfig::configure(meta, advices[9], table_idx);
-                let sinsemilla_config = SinsemillaChip::configure(
+                let sinsemilla_config = SinsemillaChip::<
+                    OrchardHashDomains,
+                    OrchardCommitDomains,
+                    OrchardFixedBases,
+                >::configure(
                     meta,
                     advices[..5].try_into().unwrap(),
                     advices[2],
@@ -1553,7 +1565,12 @@ mod tests {
                 let note_commit_config =
                     NoteCommitConfig::configure(meta, advices, sinsemilla_config);
 
-                let ecc_config = EccChip::configure(meta, advices, lagrange_coeffs, range_check);
+                let ecc_config = EccChip::<OrchardFixedBases>::configure(
+                    meta,
+                    advices,
+                    lagrange_coeffs,
+                    range_check,
+                );
 
                 (note_commit_config, ecc_config)
             }
@@ -1566,7 +1583,11 @@ mod tests {
                 let (note_commit_config, ecc_config) = config;
 
                 // Load the Sinsemilla generator lookup table used by the whole circuit.
-                SinsemillaChip::load(note_commit_config.sinsemilla_config.clone(), &mut layouter)?;
+                SinsemillaChip::<
+                OrchardHashDomains,
+                OrchardCommitDomains,
+                OrchardFixedBases,
+            >::load(note_commit_config.sinsemilla_config.clone(), &mut layouter)?;
 
                 // Construct a Sinsemilla chip
                 let sinsemilla_chip =
