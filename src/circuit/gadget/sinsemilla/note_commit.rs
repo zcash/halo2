@@ -309,7 +309,7 @@ impl NoteCommitConfig {
             };
 
             // b3_c_prime = b_3 + (2^4)c + 2^140 - t_P
-            let b3_c_prime_check = b_3.clone() + (c.clone() * two_pow_4) + two_pow_140.clone()
+            let b3_c_prime_check = b_3 + (c * two_pow_4) + two_pow_140.clone()
                 - t_p.clone()
                 - b3_c_prime;
 
