@@ -146,7 +146,7 @@ impl NoteCommitConfig {
         meta.create_gate("NoteCommit MessagePiece d", |meta| {
             let q_notecommit_d = meta.query_selector(config.q_notecommit_d);
 
-            // d has been constrained to 10 bits by the Sinsemilla hash.
+            // d has been constrained to 60 bits by the Sinsemilla hash.
             let d = meta.query_advice(col_l, Rotation::cur());
             // This gate constrains d_0 to be boolean.
             let d_0 = meta.query_advice(col_m, Rotation::cur());
