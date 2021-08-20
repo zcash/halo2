@@ -642,8 +642,8 @@ mod tests {
             utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
         },
         constants::{
-            OrchardCommitDomains, OrchardFixedBases, OrchardHashDomains,
-            COMMIT_IVK_PERSONALIZATION, L_ORCHARD_BASE, T_Q,
+            fixed_bases::COMMIT_IVK_PERSONALIZATION, OrchardCommitDomains, OrchardFixedBases,
+            OrchardHashDomains, L_ORCHARD_BASE, T_Q,
         },
         primitives::sinsemilla::CommitDomain,
     };

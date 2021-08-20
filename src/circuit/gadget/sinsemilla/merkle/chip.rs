@@ -5,7 +5,7 @@ use halo2::{
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
-use super::MerkleInstructions;
+use super::{MerkleInstructions, L_ORCHARD_BASE, MERKLE_DEPTH_ORCHARD};
 
 use crate::{
     circuit::gadget::{
@@ -20,7 +20,6 @@ use crate::{
             UtilitiesInstructions,
         },
     },
-    constants::{L_ORCHARD_BASE, MERKLE_DEPTH_ORCHARD},
     primitives::sinsemilla,
 };
 use std::array;
@@ -345,10 +344,8 @@ where
         // Check layer hash output against Sinsemilla primitives hash
         #[cfg(test)]
         {
-            use crate::{
-                constants::MERKLE_CRH_PERSONALIZATION, primitives::sinsemilla::HashDomain,
-                spec::i2lebsp,
-            };
+            use super::MERKLE_CRH_PERSONALIZATION;
+            use crate::{primitives::sinsemilla::HashDomain, spec::i2lebsp};
             use group::ff::{PrimeField, PrimeFieldBits};
 
             if let (Some(left), Some(right)) = (left.value(), right.value()) {

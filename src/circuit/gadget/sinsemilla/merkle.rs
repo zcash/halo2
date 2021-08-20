@@ -13,6 +13,16 @@ use std::iter;
 
 pub(in crate::circuit) mod chip;
 
+/// SWU hash-to-curve personalization for the Merkle CRH generator
+pub const MERKLE_CRH_PERSONALIZATION: &str = "z.cash:Orchard-MerkleCRH";
+
+/// $\mathsf{MerkleDepth^{Orchard}}$
+pub(crate) const MERKLE_DEPTH_ORCHARD: usize = 32;
+
+/// $\ell^\mathsf{Orchard}_\mathsf{base}$
+/// Number of bits in a Pallas base field element.
+pub(crate) const L_ORCHARD_BASE: usize = 255;
+
 /// Instructions to check the validity of a Merkle path of a given `PATH_LENGTH`.
 /// The hash function used is a Sinsemilla instance with `K`-bit words.
 /// The hash function can process `MAX_WORDS` words.
@@ -130,7 +140,7 @@ where
 pub mod tests {
     use super::{
         chip::{MerkleChip, MerkleConfig},
-        MerklePath,
+        MerklePath, MERKLE_DEPTH_ORCHARD,
     };
 
     use crate::{
@@ -138,9 +148,7 @@ pub mod tests {
             sinsemilla::chip::SinsemillaChip,
             utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
         },
-        constants::{
-            OrchardCommitDomains, OrchardFixedBases, OrchardHashDomains, MERKLE_DEPTH_ORCHARD,
-        },
+        constants::{OrchardCommitDomains, OrchardFixedBases, OrchardHashDomains},
         note::commitment::ExtractedNoteCommitment,
         tree,
     };

@@ -51,7 +51,7 @@ use rand::RngCore;
 use subtle::CtOption;
 
 use crate::{
-    constants::{
+    constants::fixed_bases::{
         VALUE_COMMITMENT_PERSONALIZATION, VALUE_COMMITMENT_R_BYTES, VALUE_COMMITMENT_V_BYTES,
     },
     primitives::redpallas::{self, Binding},

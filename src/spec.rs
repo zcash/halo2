@@ -12,8 +12,8 @@ use subtle::{ConditionallySelectable, CtOption};
 
 use crate::{
     constants::{
-        util::gen_const_array, COMMIT_IVK_PERSONALIZATION, KEY_DIVERSIFICATION_PERSONALIZATION,
-        L_ORCHARD_BASE,
+        fixed_bases::COMMIT_IVK_PERSONALIZATION, util::gen_const_array,
+        KEY_DIVERSIFICATION_PERSONALIZATION, L_ORCHARD_BASE,
     },
     primitives::{poseidon, sinsemilla},
 };

@@ -1,11 +1,12 @@
-use super::super::{EccBaseFieldElemFixed, EccPoint, FixedPoints};
+use super::super::{
+    EccBaseFieldElemFixed, EccPoint, FixedPoints, L_ORCHARD_BASE, NUM_WINDOWS, T_P,
+};
 use super::H_BASE;
 
 use crate::{
     circuit::gadget::utilities::{
         bitrange_subset, lookup_range_check::LookupRangeCheckConfig, range_check,
     },
-    constants::{self, T_P},
     primitives::sinsemilla,
 };
 use halo2::circuit::AssignedCell;
@@ -18,7 +19,7 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 
 use std::convert::TryInto;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
     q_mul_fixed_base_field: Selector,
     canon_advices: [Column<Advice>; 3],
@@ -178,8 +179,8 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                         offset,
                         scalar.clone(),
                         true,
-                        constants::L_ORCHARD_BASE,
-                        constants::NUM_WINDOWS,
+                        L_ORCHARD_BASE,
+                        NUM_WINDOWS,
                     )?;
                     EccBaseFieldElemFixed {
                         base_field_elem: running_sum[0].clone(),
@@ -187,15 +188,13 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                     }
                 };
 
-                let (acc, mul_b) = self
-                    .super_config
-                    .assign_region_inner::<_, { constants::NUM_WINDOWS }>(
-                        &mut region,
-                        offset,
-                        &(&scalar).into(),
-                        base,
-                        self.super_config.running_sum_config.q_range_check,
-                    )?;
+                let (acc, mul_b) = self.super_config.assign_region_inner::<_, NUM_WINDOWS>(
+                    &mut region,
+                    offset,
+                    &(&scalar).into(),
+                    base,
+                    self.super_config.running_sum_config.q_range_check,
+                )?;
 
                 Ok((scalar, acc, mul_b))
             },
@@ -390,12 +389,12 @@ pub mod tests {
 
     use crate::circuit::gadget::{
         ecc::{
-            chip::{EccChip, FixedPoint},
+            chip::{EccChip, FixedPoint, H},
             FixedPointBaseField, NonIdentityPoint, Point,
         },
         utilities::UtilitiesInstructions,
     };
-    use crate::constants::{self, NullifierK, OrchardFixedBases};
+    use crate::constants::{NullifierK, OrchardFixedBases};
 
     pub fn test_mul_fixed_base_field(
         chip: EccChip<OrchardFixedBases>,
@@ -463,7 +462,7 @@ pub mod tests {
         // (There is another *non-canonical* sequence
         // 5333333333333333333333333333333333333333332711161673731021062440252244051273333333333 in octal.)
         {
-            let h = pallas::Base::from(constants::H as u64);
+            let h = pallas::Base::from(H as u64);
             let scalar_fixed = "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334"
                         .chars()
                         .fold(pallas::Base::zero(), |acc, c| {

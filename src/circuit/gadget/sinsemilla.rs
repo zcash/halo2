@@ -428,8 +428,8 @@ mod tests {
             utilities::lookup_range_check::LookupRangeCheckConfig,
         },
         constants::{
+            fixed_bases::COMMIT_IVK_PERSONALIZATION, sinsemilla::MERKLE_CRH_PERSONALIZATION,
             OrchardCommitDomains, OrchardFixedBases, OrchardHashDomains,
-            COMMIT_IVK_PERSONALIZATION, MERKLE_CRH_PERSONALIZATION,
         },
         primitives::sinsemilla::{self, K},
     };

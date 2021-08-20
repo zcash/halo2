@@ -1,7 +1,6 @@
-use super::{add, EccPoint, NonIdentityEccPoint};
+use super::{add, EccPoint, NonIdentityEccPoint, T_Q};
 use crate::{
     circuit::gadget::utilities::{bool_check, lookup_range_check::LookupRangeCheckConfig, ternary},
-    constants::T_Q,
     primitives::sinsemilla,
 };
 use std::{

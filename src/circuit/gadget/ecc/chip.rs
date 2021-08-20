@@ -3,7 +3,6 @@ use crate::{
     circuit::gadget::utilities::{
         lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions,
     },
-    constants,
     primitives::sinsemilla,
 };
 use arrayvec::ArrayVec;
@@ -23,6 +22,40 @@ pub(super) mod add_incomplete;
 pub(super) mod mul;
 pub(super) mod mul_fixed;
 pub(super) mod witness_point;
+
+/// Window size for fixed-base scalar multiplication
+pub const FIXED_BASE_WINDOW_SIZE: usize = 3;
+
+/// $2^{`FIXED_BASE_WINDOW_SIZE`}$
+pub const H: usize = 1 << FIXED_BASE_WINDOW_SIZE;
+
+/// Number of windows for a full-width scalar
+pub const NUM_WINDOWS: usize =
+    (L_ORCHARD_SCALAR + FIXED_BASE_WINDOW_SIZE - 1) / FIXED_BASE_WINDOW_SIZE;
+
+/// Number of windows for a short signed scalar
+pub const NUM_WINDOWS_SHORT: usize =
+    (L_VALUE + FIXED_BASE_WINDOW_SIZE - 1) / FIXED_BASE_WINDOW_SIZE;
+
+/// $\ell_\mathsf{value}$
+/// Number of bits in an unsigned short scalar.
+pub(crate) const L_VALUE: usize = 64;
+
+/// $\ell^\mathsf{Orchard}_\mathsf{base}$
+/// Number of bits in a Pallas base field element.
+pub(crate) const L_ORCHARD_BASE: usize = 255;
+
+/// $\ell^\mathsf{Orchard}_\mathsf{scalar}$
+/// Number of bits in a Pallas scalar field element.
+pub(crate) const L_ORCHARD_SCALAR: usize = 255;
+
+/// The Pallas scalar field modulus is $q = 2^{254} + \mathsf{t_q}$.
+/// <https://github.com/zcash/pasta>
+pub(crate) const T_Q: u128 = 45560315531506369815346746415080538113;
+
+/// The Pallas base field modulus is $p = 2^{254} + \mathsf{t_p}$.
+/// <https://github.com/zcash/pasta>
+pub(crate) const T_P: u128 = 45560315531419706090280762371685220353;
 
 /// A curve point represented in affine (x, y) coordinates, or the
 /// identity represented as (0, 0).
@@ -165,9 +198,9 @@ pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>> {
 /// arrays instead of `Vec`s.
 pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
     fn generator(&self) -> C;
-    fn u(&self) -> Vec<[[u8; 32]; constants::H]>;
+    fn u(&self) -> Vec<[[u8; 32]; H]>;
     fn z(&self) -> Vec<u64>;
-    fn lagrange_coeffs(&self) -> Vec<[C::Base; constants::H]>;
+    fn lagrange_coeffs(&self) -> Vec<[C::Base; H]>;
 }
 
 /// A chip implementing EccInstructions
@@ -276,7 +309,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
 #[derive(Clone, Debug)]
 pub struct EccScalarFixed {
     value: Option<pallas::Scalar>,
-    windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { constants::NUM_WINDOWS }>,
+    windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS }>,
 }
 
 // TODO: Make V a `u64`
@@ -301,8 +334,7 @@ type MagnitudeSign = (MagnitudeCell, SignCell);
 pub struct EccScalarFixedShort {
     magnitude: MagnitudeCell,
     sign: SignCell,
-    running_sum:
-        ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { constants::NUM_WINDOWS_SHORT + 1 }>,
+    running_sum: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS_SHORT + 1 }>,
 }
 
 /// A base field element used for fixed-base scalar multiplication.
@@ -317,7 +349,7 @@ pub struct EccScalarFixedShort {
 #[derive(Clone, Debug)]
 struct EccBaseFieldElemFixed {
     base_field_elem: AssignedCell<pallas::Base, pallas::Base>,
-    running_sum: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { constants::NUM_WINDOWS + 1 }>,
+    running_sum: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS + 1 }>,
 }
 
 impl EccBaseFieldElemFixed {

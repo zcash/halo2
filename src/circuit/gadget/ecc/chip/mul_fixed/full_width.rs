@@ -1,9 +1,8 @@
-use super::super::{EccPoint, EccScalarFixed, FixedPoints};
-
-use crate::{
-    circuit::gadget::utilities::{decompose_word, range_check},
-    constants::{self, L_ORCHARD_SCALAR, NUM_WINDOWS},
+use super::super::{
+    EccPoint, EccScalarFixed, FixedPoints, FIXED_BASE_WINDOW_SIZE, H, L_ORCHARD_SCALAR, NUM_WINDOWS,
 };
+
+use crate::circuit::gadget::utilities::{decompose_word, range_check};
 use arrayvec::ArrayVec;
 use halo2::{
     circuit::{AssignedCell, Layouter, Region},
@@ -12,7 +11,7 @@ use halo2::{
 };
 use pasta_curves::pallas;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
     q_mul_fixed_full: Selector,
     super_config: super::Config<Fixed>,
@@ -46,7 +45,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                 // 1 * (window - 0) * (window - 1) * ... * (window - 7)
                 .chain(Some((
                     "window range check",
-                    q_mul_fixed_full * range_check(window, constants::H),
+                    q_mul_fixed_full * range_check(window, H),
                 )))
         });
     }
@@ -84,11 +83,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
         // Decompose scalar into `k-bit` windows
         let scalar_windows: Option<Vec<u8>> = scalar.map(|scalar| {
-            decompose_word::<pallas::Scalar>(
-                &scalar,
-                SCALAR_NUM_BITS,
-                constants::FIXED_BASE_WINDOW_SIZE,
-            )
+            decompose_word::<pallas::Scalar>(&scalar, SCALAR_NUM_BITS, FIXED_BASE_WINDOW_SIZE)
         });
 
         // Store the scalar decomposition
@@ -135,15 +130,13 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
                 let scalar = self.witness(&mut region, offset, scalar)?;
 
-                let (acc, mul_b) = self
-                    .super_config
-                    .assign_region_inner::<_, { constants::NUM_WINDOWS }>(
-                        &mut region,
-                        offset,
-                        &(&scalar).into(),
-                        base,
-                        self.q_mul_fixed_full,
-                    )?;
+                let (acc, mul_b) = self.super_config.assign_region_inner::<_, NUM_WINDOWS>(
+                    &mut region,
+                    offset,
+                    &(&scalar).into(),
+                    base,
+                    self.q_mul_fixed_full,
+                )?;
 
                 Ok((scalar, acc, mul_b))
             },
@@ -188,10 +181,10 @@ pub mod tests {
     use rand::rngs::OsRng;
 
     use crate::circuit::gadget::ecc::{
-        chip::{EccChip, FixedPoint as FixedPointTrait},
+        chip::{EccChip, FixedPoint as FixedPointTrait, H},
         FixedPoint, NonIdentityPoint, Point,
     };
-    use crate::constants::{self, OrchardFixedBases, OrchardFixedBasesFull};
+    use crate::constants::{OrchardFixedBases, OrchardFixedBasesFull};
 
     pub fn test_mul_fixed(
         chip: EccChip<OrchardFixedBases>,
@@ -277,7 +270,7 @@ pub mod tests {
         // (There is another *non-canonical* sequence
         // 5333333333333333333333333333333333333333332711161673731021062440252244051273333333333 in octal.)
         {
-            let h = pallas::Scalar::from(constants::H as u64);
+            let h = pallas::Scalar::from(H as u64);
             let scalar_fixed = "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334"
                         .chars()
                         .fold(pallas::Scalar::zero(), |acc, c| {

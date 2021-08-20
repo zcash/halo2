@@ -1,10 +1,7 @@
 use std::{array, convert::TryInto};
 
-use super::super::{EccPoint, EccScalarFixedShort, FixedPoints};
-use crate::{
-    circuit::gadget::{ecc::chip::MagnitudeSign, utilities::bool_check},
-    constants::{L_VALUE, NUM_WINDOWS_SHORT},
-};
+use super::super::{EccPoint, EccScalarFixedShort, FixedPoints, L_VALUE, NUM_WINDOWS_SHORT};
+use crate::circuit::gadget::{ecc::chip::MagnitudeSign, utilities::bool_check};
 
 use halo2::{
     circuit::{Layouter, Region},
@@ -13,7 +10,7 @@ use halo2::{
 };
 use pasta_curves::pallas;
 
-#[derive(Clone, Debug, Copy, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
     // Selector used for fixed-base scalar mul with short signed exponent.
     q_mul_fixed_short: Selector,
