@@ -627,7 +627,7 @@ mod tests {
     use super::{PoseidonInstructions, Pow5T3Chip, Pow5T3Config, StateWord, WIDTH};
     use crate::{
         circuit::gadget::poseidon::{Hash, Word},
-        primitives::poseidon::{self, ConstantLength, OrchardNullifier, Spec},
+        primitives::poseidon::{self, ConstantLength, P128Pow5T3 as OrchardNullifier, Spec},
     };
 
     struct PermuteCircuit {}

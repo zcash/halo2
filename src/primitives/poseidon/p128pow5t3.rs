@@ -13,9 +13,9 @@ use super::{
 /// This is conveniently an even number of partial rounds, making it easier to
 /// construct a Halo 2 circuit.
 #[derive(Debug)]
-pub struct OrchardNullifier;
+pub struct P128Pow5T3;
 
-impl Spec<pallas::Base, 3, 2> for OrchardNullifier {
+impl Spec<pallas::Base, 3, 2> for P128Pow5T3 {
     fn full_rounds() -> usize {
         8
     }
@@ -53,9 +53,9 @@ mod tests {
 
     use crate::primitives::poseidon::{permute, ConstantLength, Hash, Spec};
 
-    use super::{OrchardNullifier, MDS, MDS_INV, ROUND_CONSTANTS};
+    use super::{MDS, MDS_INV, ROUND_CONSTANTS};
 
-    /// The same Poseidon specification as poseidon::OrchardNullifier, but constructed
+    /// The same Poseidon specification as poseidon::P128Pow5T3, but constructed
     /// such that its constants will be generated at runtime.
     #[derive(Debug)]
     pub struct P128Pow5T3<F: FieldExt> {
@@ -166,7 +166,7 @@ mod tests {
 
     #[test]
     fn permute_test_vectors() {
-        let (round_constants, mds, _) = OrchardNullifier.constants();
+        let (round_constants, mds, _) = super::P128Pow5T3.constants();
 
         for tv in crate::primitives::poseidon::test_vectors::permute() {
             let mut state = [
@@ -175,7 +175,7 @@ mod tests {
                 pallas::Base::from_repr(tv.initial_state[2]).unwrap(),
             ];
 
-            permute::<pallas::Base, OrchardNullifier, 3, 2>(&mut state, &mds, &round_constants);
+            permute::<pallas::Base, super::P128Pow5T3, 3, 2>(&mut state, &mds, &round_constants);
 
             for (expected, actual) in tv.final_state.iter().zip(state.iter()) {
                 assert_eq!(&actual.to_repr(), expected);
@@ -191,7 +191,7 @@ mod tests {
                 pallas::Base::from_repr(tv.input[1]).unwrap(),
             ];
 
-            let result = Hash::init(OrchardNullifier, ConstantLength).hash(message);
+            let result = Hash::init(super::P128Pow5T3, ConstantLength).hash(message);
 
             assert_eq!(result.to_repr(), tv.output);
         }
