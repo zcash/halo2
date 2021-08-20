@@ -7,6 +7,8 @@ use std::marker::PhantomData;
 
 use halo2::arithmetic::FieldExt;
 
+pub(crate) mod fp;
+pub(crate) mod fq;
 pub(crate) mod grain;
 pub(crate) mod mds;
 
