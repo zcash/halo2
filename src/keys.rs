@@ -72,6 +72,7 @@ impl SpendingKey {
 }
 
 /// A spend authorizing key, used to create spend authorization signatures.
+/// This type enforces that the corresponding public point (ak^ℙ) has ỹ = 0.
 ///
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
@@ -145,8 +146,11 @@ impl SpendValidatingKey {
         self.0.randomize(randomizer)
     }
 
-    /// Converts this spend validating key to its serialized form.
+    /// Converts this spend validating key to its serialized form,
+    /// I2LEOSP_256(ak).
     pub(crate) fn to_bytes(&self) -> [u8; 32] {
+        // This is correct because the wrapped point must have ỹ = 0, and
+        // so the point repr is the same as I2LEOSP of its x-coordinate.
         <[u8; 32]>::from(&self.0)
     }
 
@@ -485,7 +489,9 @@ impl From<&FullViewingKey> for IncomingViewingKey {
 }
 
 impl IncomingViewingKey {
-    /// Serializes an Orchard incoming viewing key to its raw encoding
+    /// Serializes an Orchard incoming viewing key to its raw encoding as specified in [Zcash Protocol Spec § 5.6.4.3: Orchard Raw Incoming Viewing Keys][orchardrawinviewingkeys]
+    ///
+    /// [orchardrawinviewingkeys]: https://zips.z.cash/protocol/protocol.pdf#orchardinviewingkeyencoding
     pub fn to_bytes(&self) -> [u8; 64] {
         let mut result = [0u8; 64];
         result.copy_from_slice(self.dk.to_bytes());
