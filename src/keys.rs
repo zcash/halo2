@@ -15,7 +15,7 @@ use zcash_note_encryption::EphemeralKeyBytes;
 
 use crate::{
     address::Address,
-    primitives::redpallas::{self, SpendAuth, VerificationKey},
+    primitives::redpallas::{self, SpendAuth},
     spec::{
         commit_ivk, diversify_hash, extract_p, ka_orchard, prf_nf, to_base, to_scalar,
         NonIdentityPallasPoint, NonZeroPallasBase, NonZeroPallasScalar, PrfExpand,
@@ -151,9 +151,16 @@ impl SpendValidatingKey {
     }
 
     pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        <[u8; 32]>::try_from(&bytes[..32])
+        <[u8; 32]>::try_from(bytes)
             .ok()
-            .and_then(|b| <VerificationKey<SpendAuth>>::try_from(b).ok())
+            .and_then(|b|
+                // check that the sign of the y-coordinate is positive
+                if b[31] & 0x80 == 0 {
+                    <redpallas::VerificationKey<SpendAuth>>::try_from(b).ok()
+                } else {
+                    None
+                }
+            )
             .map(SpendValidatingKey)
     }
 }
@@ -191,7 +198,7 @@ impl NullifierDerivingKey {
     }
 
     pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        let nk_bytes = <[u8; 32]>::try_from(&bytes[..32]).ok()?;
+        let nk_bytes = <[u8; 32]>::try_from(bytes).ok()?;
         let nk = pallas::Base::from_bytes(&nk_bytes).map(NullifierDerivingKey);
         if nk.is_some().into() {
             Some(nk.unwrap())
@@ -226,7 +233,7 @@ impl CommitIvkRandomness {
     }
 
     pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        let rivk_bytes = <[u8; 32]>::try_from(&bytes[..32]).ok()?;
+        let rivk_bytes = <[u8; 32]>::try_from(bytes).ok()?;
         let rivk = pallas::Scalar::from_bytes(&rivk_bytes).map(CommitIvkRandomness);
         if rivk.is_some().into() {
             Some(rivk.unwrap())
