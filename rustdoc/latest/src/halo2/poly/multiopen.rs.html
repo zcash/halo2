@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;poly&#x2F;multiopen.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>multiopen.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;poly&#x2F;multiopen.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>multiopen.rs - source</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-<style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../halo2/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input"name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
+<style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../../halo2/index.html'><div class='logo-container rust-logo'><img src='../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -532,8 +532,7 @@
 <span id="517">517</span>
 <span id="518">518</span>
 <span id="519">519</span>
-</pre><pre class="rust">
-<span class="doccomment">//! This module contains an optimisation of the polynomial commitment opening</span>
+</pre><pre class="rust"><code><span class="doccomment">//! This module contains an optimisation of the polynomial commitment opening</span>
 <span class="doccomment">//! scheme described in the [Halo][halo] paper.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! [halo]: https://eprint.iacr.org/2019/1021</span>
@@ -660,8 +659,8 @@
     <span class="kw">type</span> <span class="ident">Eval</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Default</span>;
 
     <span class="kw">fn</span> <span class="ident">get_point</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">F</span>;
-    <span class="kw">fn</span> <span class="ident">get_eval</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Eval</span>;
-    <span class="kw">fn</span> <span class="ident">get_commitment</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Commitment</span>;
+    <span class="kw">fn</span> <span class="ident">get_eval</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::Eval</span>;
+    <span class="kw">fn</span> <span class="ident">get_commitment</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::Commitment</span>;
 }
 
 <span class="kw">type</span> <span class="ident">IntermediateSets</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">Q</span><span class="op">&gt;</span> <span class="op">=</span> (
@@ -785,10 +784,10 @@
 <span class="kw">fn</span> <span class="ident">test_roundtrip</span>() {
     <span class="kw">use</span> <span class="ident">group::Curve</span>;
 
-    <span class="kw">use</span> <span class="kw">super</span><span class="ident">::commitment</span>::{<span class="ident">Blind</span>, <span class="ident">Params</span>};
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::arithmetic</span>::{<span class="ident">eval_polynomial</span>, <span class="ident">FieldExt</span>};
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::pasta</span>::{<span class="ident">EqAffine</span>, <span class="ident">Fp</span>};
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::transcript::Challenge255</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::commitment</span>::{<span class="ident">Blind</span>, <span class="ident">Params</span>};
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic</span>::{<span class="ident">eval_polynomial</span>, <span class="ident">FieldExt</span>};
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::pasta</span>::{<span class="ident">EqAffine</span>, <span class="ident">Fp</span>};
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transcript::Challenge255</span>;
 
     <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">4</span>;
 
@@ -822,7 +821,7 @@
     <span class="kw">let</span> <span class="ident">bvx</span> <span class="op">=</span> <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="ident">bx</span>, <span class="ident">x</span>);
     <span class="kw">let</span> <span class="ident">cvy</span> <span class="op">=</span> <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="ident">cx</span>, <span class="ident">y</span>);
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="kw">crate</span><span class="ident">::transcript::Blake2bWrite</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init</span>(<span class="macro">vec!</span>[]);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="ident"><span class="kw">crate</span>::transcript::Blake2bWrite</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init</span>(<span class="macro">vec!</span>[]);
     <span class="ident">create_proof</span>(
         <span class="kw-2">&amp;</span><span class="ident">params</span>,
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">transcript</span>,
@@ -849,7 +848,7 @@
     {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">proof</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">proof</span>[..];
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span>
-            <span class="kw">crate</span><span class="ident">::transcript::Blake2bRead</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">proof</span>);
+            <span class="ident"><span class="kw">crate</span>::transcript::Blake2bRead</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">proof</span>);
         <span class="kw">let</span> <span class="ident">msm</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">empty_msm</span>();
 
         <span class="kw">let</span> <span class="ident">guard</span> <span class="op">=</span> <span class="ident">verify_proof</span>(
@@ -871,7 +870,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">proof</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">proof</span>[..];
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span>
-            <span class="kw">crate</span><span class="ident">::transcript::Blake2bRead</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">proof</span>);
+            <span class="ident"><span class="kw">crate</span>::transcript::Blake2bRead</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">proof</span>);
         <span class="kw">let</span> <span class="ident">msm</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">empty_msm</span>();
 
         <span class="kw">let</span> <span class="ident">guard</span> <span class="op">=</span> <span class="ident">verify_proof</span>(
@@ -893,8 +892,8 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">construct_intermediate_sets</span>, <span class="ident">Query</span>};
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::arithmetic::FieldExt</span>;
-    <span class="kw">use</span> <span class="kw">crate</span><span class="ident">::pasta::Fp</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic::FieldExt</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::pasta::Fp</span>;
 
     <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
     <span class="kw">struct</span> <span class="ident">MyQuery</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
@@ -910,10 +909,10 @@
         <span class="kw">fn</span> <span class="ident">get_point</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">F</span> {
             <span class="self">self</span>.<span class="ident">point</span>.<span class="ident">clone</span>()
         }
-        <span class="kw">fn</span> <span class="ident">get_eval</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Eval</span> {
+        <span class="kw">fn</span> <span class="ident">get_eval</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::Eval</span> {
             <span class="self">self</span>.<span class="ident">eval</span>.<span class="ident">clone</span>()
         }
-        <span class="kw">fn</span> <span class="ident">get_commitment</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span><span class="ident">::Commitment</span> {
+        <span class="kw">fn</span> <span class="ident">get_commitment</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::Commitment</span> {
             <span class="self">self</span>.<span class="ident">commitment</span>
         }
     }
@@ -1052,7 +1051,7 @@
         }
     }
 }
-</pre></div>
+</code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2" data-search-index-js="../../../search-index.js" data-search-js="../../../search.js"></div>
     <script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script>
 </body></html>
