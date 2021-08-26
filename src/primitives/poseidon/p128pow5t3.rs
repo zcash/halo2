@@ -1,10 +1,7 @@
 use halo2::arithmetic::Field;
-use pasta_curves::pallas;
+use pasta_curves::{pallas, vesta};
 
-use super::{
-    fp::{MDS, MDS_INV, ROUND_CONSTANTS},
-    Mds, Spec,
-};
+use super::{Mds, Spec};
 
 /// Poseidon-128 using the $x^5$ S-box, with a width of 3 field elements, and the
 /// standard number of rounds for 128-bit security "with margin".
@@ -39,7 +36,43 @@ impl Spec<pallas::Base, 3, 2> for P128Pow5T3 {
         Mds<pallas::Base, 3>,
         Mds<pallas::Base, 3>,
     ) {
-        (ROUND_CONSTANTS[..].to_vec(), MDS, MDS_INV)
+        (
+            super::fp::ROUND_CONSTANTS[..].to_vec(),
+            super::fp::MDS,
+            super::fp::MDS_INV,
+        )
+    }
+}
+
+impl Spec<vesta::Base, 3, 2> for P128Pow5T3 {
+    fn full_rounds() -> usize {
+        8
+    }
+
+    fn partial_rounds() -> usize {
+        56
+    }
+
+    fn sbox(val: vesta::Base) -> vesta::Base {
+        val.pow_vartime(&[5])
+    }
+
+    fn secure_mds(&self) -> usize {
+        unimplemented!()
+    }
+
+    fn constants(
+        &self,
+    ) -> (
+        Vec<[vesta::Base; 3]>,
+        Mds<vesta::Base, 3>,
+        Mds<vesta::Base, 3>,
+    ) {
+        (
+            super::fq::ROUND_CONSTANTS[..].to_vec(),
+            super::fq::MDS,
+            super::fq::MDS_INV,
+        )
     }
 }
 
@@ -49,30 +82,29 @@ mod tests {
 
     use ff::PrimeField;
     use halo2::arithmetic::FieldExt;
-    use pasta_curves::pallas;
+    use pasta_curves::{pallas, vesta};
 
+    use super::super::{fp, fq};
     use crate::primitives::poseidon::{permute, ConstantLength, Hash, Spec};
-
-    use super::{MDS, MDS_INV, ROUND_CONSTANTS};
 
     /// The same Poseidon specification as poseidon::P128Pow5T3, but constructed
     /// such that its constants will be generated at runtime.
     #[derive(Debug)]
-    pub struct P128Pow5T3<F: FieldExt> {
+    pub struct P128Pow5T3Gen<F: FieldExt> {
         secure_mds: usize,
         _field: PhantomData<F>,
     }
 
-    impl<F: FieldExt> P128Pow5T3<F> {
+    impl<F: FieldExt> P128Pow5T3Gen<F> {
         pub fn new(secure_mds: usize) -> Self {
-            P128Pow5T3 {
+            P128Pow5T3Gen {
                 secure_mds,
                 _field: PhantomData::default(),
             }
         }
     }
 
-    impl<F: FieldExt> Spec<F, 3, 2> for P128Pow5T3<F> {
+    impl<F: FieldExt> Spec<F, 3, 2> for P128Pow5T3Gen<F> {
         fn full_rounds() -> usize {
             8
         }
@@ -92,23 +124,46 @@ mod tests {
 
     #[test]
     fn verify_constants() {
-        let poseidon = P128Pow5T3::<pallas::Base>::new(0);
-        let (round_constants, mds, mds_inv) = poseidon.constants();
-
-        for (actual, expected) in round_constants
-            .iter()
-            .flatten()
-            .zip(ROUND_CONSTANTS.iter().flatten())
         {
-            assert_eq!(actual, expected);
+            let poseidon = P128Pow5T3Gen::<pallas::Base>::new(0);
+            let (round_constants, mds, mds_inv) = poseidon.constants();
+
+            for (actual, expected) in round_constants
+                .iter()
+                .flatten()
+                .zip(fp::ROUND_CONSTANTS.iter().flatten())
+            {
+                assert_eq!(actual, expected);
+            }
+
+            for (actual, expected) in mds.iter().flatten().zip(fp::MDS.iter().flatten()) {
+                assert_eq!(actual, expected);
+            }
+
+            for (actual, expected) in mds_inv.iter().flatten().zip(fp::MDS_INV.iter().flatten()) {
+                assert_eq!(actual, expected);
+            }
         }
 
-        for (actual, expected) in mds.iter().flatten().zip(MDS.iter().flatten()) {
-            assert_eq!(actual, expected);
-        }
+        {
+            let poseidon = P128Pow5T3Gen::<vesta::Base>::new(0);
+            let (round_constants, mds, mds_inv) = poseidon.constants();
 
-        for (actual, expected) in mds_inv.iter().flatten().zip(MDS_INV.iter().flatten()) {
-            assert_eq!(actual, expected);
+            for (actual, expected) in round_constants
+                .iter()
+                .flatten()
+                .zip(fq::ROUND_CONSTANTS.iter().flatten())
+            {
+                assert_eq!(actual, expected);
+            }
+
+            for (actual, expected) in mds.iter().flatten().zip(fq::MDS.iter().flatten()) {
+                assert_eq!(actual, expected);
+            }
+
+            for (actual, expected) in mds_inv.iter().flatten().zip(fq::MDS_INV.iter().flatten()) {
+                assert_eq!(actual, expected);
+            }
         }
     }
 
@@ -160,7 +215,11 @@ mod tests {
             ]),
         ];
 
-        permute::<pallas::Base, P128Pow5T3<pallas::Base>, 3, 2>(&mut input, &MDS, &ROUND_CONSTANTS);
+        permute::<pallas::Base, P128Pow5T3Gen<pallas::Base>, 3, 2>(
+            &mut input,
+            &fp::MDS,
+            &fp::ROUND_CONSTANTS,
+        );
         assert_eq!(input, expected_output);
     }
 
