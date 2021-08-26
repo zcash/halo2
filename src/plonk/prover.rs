@@ -329,7 +329,9 @@ pub fn create_proof<
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample theta challenge for keeping lookup columns linearly independent
-    let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
+    let theta: ChallengeTheta<_> = transcript
+        .squeeze_challenge_scalar()
+        .map_err(|_| Error::TranscriptError)?;
 
     let lookups: Vec<Vec<lookup::prover::Permuted<C>>> = instance
         .iter()
@@ -360,10 +362,14 @@ pub fn create_proof<
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample beta challenge
-    let beta: ChallengeBeta<_> = transcript.squeeze_challenge_scalar();
+    let beta: ChallengeBeta<_> = transcript
+        .squeeze_challenge_scalar()
+        .map_err(|_| Error::TranscriptError)?;
 
     // Sample gamma challenge
-    let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
+    let gamma: ChallengeGamma<_> = transcript
+        .squeeze_challenge_scalar()
+        .map_err(|_| Error::TranscriptError)?;
 
     // Commit to permutations.
     let permutations: Vec<permutation::prover::Committed<C>> = instance
@@ -399,7 +405,9 @@ pub fn create_proof<
     let vanishing = vanishing::Argument::commit(params, domain, transcript)?;
 
     // Obtain challenge for keeping all separate gates linearly independent
-    let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
+    let y: ChallengeY<_> = transcript
+        .squeeze_challenge_scalar()
+        .map_err(|_| Error::TranscriptError)?;
 
     // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints.
     let (permutations, permutation_expressions): (Vec<_>, Vec<_>) = permutations
@@ -479,7 +487,9 @@ pub fn create_proof<
     // Construct the vanishing argument's h(X) commitments
     let vanishing = vanishing.construct(params, domain, expressions, y, transcript)?;
 
-    let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
+    let x: ChallengeX<_> = transcript
+        .squeeze_challenge_scalar()
+        .map_err(|_| Error::TranscriptError)?;
     let xn = x.pow(&[params.n as u64, 0, 0, 0]);
 
     // Compute and hash instance evals for each circuit instance

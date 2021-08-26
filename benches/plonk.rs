@@ -7,7 +7,7 @@ use halo2::circuit::{Cell, Layouter, SimpleFloorPlanner};
 use halo2::pasta::{EqAffine, Fp};
 use halo2::plonk::*;
 use halo2::poly::{commitment::Params, Rotation};
-use halo2::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
+use halo2::transcript::{Blake2bChallenge255 as Challenge255, Blake2bRead, Blake2bWrite};
 
 use std::marker::PhantomData;
 

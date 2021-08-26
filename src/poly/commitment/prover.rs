@@ -53,11 +53,11 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C
     // Challenge that will ensure that the prover cannot change P but can only
     // witness a random polynomial commitment that agrees with P at x, with high
     // probability.
-    let iota = *transcript.squeeze_challenge_scalar::<()>();
+    let iota = *transcript.squeeze_challenge_scalar::<()>()?;
 
     // Challenge that ensures that the prover did not interfere with the U term
     // in their commitments.
-    let z = *transcript.squeeze_challenge_scalar::<()>();
+    let z = *transcript.squeeze_challenge_scalar::<()>()?;
 
     // We'll be opening `s_poly_commitment * iota + P - [v] G_0` to ensure it
     // has a root at zero.
@@ -110,7 +110,7 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C
         transcript.write_point(l)?;
         transcript.write_point(r)?;
 
-        let challenge = *transcript.squeeze_challenge_scalar::<()>();
+        let challenge = *transcript.squeeze_challenge_scalar::<()>()?;
         let challenge_inv = challenge.invert().unwrap(); // TODO, bubble this up
 
         // Collapse `a` and `b`.

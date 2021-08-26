@@ -7,7 +7,7 @@ use halo2::{
         Error, VerifyingKey,
     },
     poly::commitment::Params,
-    transcript::{Blake2bRead, Blake2bWrite, Challenge255},
+    transcript::{Blake2bRead, Blake2bWrite, Blake2bChallenge255 as Challenge255},
 };
 
 use std::{

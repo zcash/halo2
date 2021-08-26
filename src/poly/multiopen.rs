@@ -253,7 +253,7 @@ fn test_roundtrip() {
     use super::commitment::{Blind, Params};
     use crate::arithmetic::{eval_polynomial, FieldExt};
     use crate::pasta::{EqAffine, Fp};
-    use crate::transcript::Challenge255;
+    use crate::transcript::Blake2bChallenge255 as Challenge255;
 
     const K: u32 = 4;
 

@@ -10,7 +10,7 @@ use halo2::plonk::{
     Error, Fixed, TableColumn, VerifyingKey,
 };
 use halo2::poly::{commitment::Params, Rotation};
-use halo2::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
+use halo2::transcript::{Blake2bChallenge255 as Challenge255, Blake2bRead, Blake2bWrite};
 use std::marker::PhantomData;
 
 #[test]

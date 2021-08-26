@@ -306,7 +306,8 @@ fn test_opening_proof() {
     use crate::arithmetic::{eval_polynomial, FieldExt};
     use crate::pasta::{EpAffine, Fq};
     use crate::transcript::{
-        Blake2bRead, Blake2bWrite, Challenge255, Transcript, TranscriptRead, TranscriptWrite,
+        Blake2bChallenge255 as Challenge255, Blake2bRead, Blake2bWrite, Transcript, TranscriptRead,
+        TranscriptWrite,
     };
 
     let params = Params::<EpAffine>::new(K);
@@ -328,14 +329,14 @@ fn test_opening_proof() {
 
     let mut transcript = Blake2bWrite::<Vec<u8>, EpAffine, Challenge255<EpAffine>>::init(vec![]);
     transcript.write_point(p).unwrap();
-    let x = transcript.squeeze_challenge_scalar::<()>();
+    let x = transcript.squeeze_challenge_scalar::<()>().unwrap();
     // Evaluate the polynomial
     let v = eval_polynomial(&px, *x);
     transcript.write_scalar(v).unwrap();
 
     let (proof, ch_prover) = {
         create_proof(&params, &mut transcript, &px, blind, *x).unwrap();
-        let ch_prover = transcript.squeeze_challenge();
+        let ch_prover = transcript.squeeze_challenge().unwrap();
         (transcript.finalize(), ch_prover)
     };
 
@@ -343,7 +344,7 @@ fn test_opening_proof() {
     let mut transcript = Blake2bRead::<&[u8], EpAffine, Challenge255<EpAffine>>::init(&proof[..]);
     let p_prime = transcript.read_point().unwrap();
     assert_eq!(p, p_prime);
-    let x_prime = transcript.squeeze_challenge_scalar::<()>();
+    let x_prime = transcript.squeeze_challenge_scalar::<()>().unwrap();
     assert_eq!(*x, *x_prime);
     let v_prime = transcript.read_scalar().unwrap();
     assert_eq!(v, v_prime);
@@ -351,7 +352,7 @@ fn test_opening_proof() {
     let mut commitment_msm = params.empty_msm();
     commitment_msm.append_term(Field::one(), p);
     let guard = verify_proof(&params, commitment_msm, &mut transcript, *x, v).unwrap();
-    let ch_verifier = transcript.squeeze_challenge();
+    let ch_verifier = transcript.squeeze_challenge().unwrap();
     assert_eq!(*ch_prover, *ch_verifier);
 
     // Test guard behavior prior to checking another proof

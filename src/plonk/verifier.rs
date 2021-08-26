@@ -70,7 +70,9 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample theta challenge for keeping lookup columns linearly independent
-    let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
+    let theta: ChallengeTheta<_> = transcript
+        .squeeze_challenge_scalar()
+        .map_err(|_| Error::TranscriptError)?;
 
     let lookups_permuted = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
@@ -84,10 +86,14 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
         .collect::<Result<Vec<_>, _>>()?;
 
     // Sample beta challenge
-    let beta: ChallengeBeta<_> = transcript.squeeze_challenge_scalar();
+    let beta: ChallengeBeta<_> = transcript
+        .squeeze_challenge_scalar()
+        .map_err(|_| Error::TranscriptError)?;
 
     // Sample gamma challenge
-    let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
+    let gamma: ChallengeGamma<_> = transcript
+        .squeeze_challenge_scalar()
+        .map_err(|_| Error::TranscriptError)?;
 
     let permutations_committed = (0..num_proofs)
         .map(|_| {
@@ -110,13 +116,17 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
     let vanishing = vanishing::Argument::read_commitments_before_y(transcript)?;
 
     // Sample y challenge, which keeps the gates linearly independent.
-    let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
+    let y: ChallengeY<_> = transcript
+        .squeeze_challenge_scalar()
+        .map_err(|_| Error::TranscriptError)?;
 
     let vanishing = vanishing.read_commitments_after_y(vk, transcript)?;
 
     // Sample x challenge, which is used to ensure the circuit is
     // satisfied with high probability.
-    let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
+    let x: ChallengeX<_> = transcript
+        .squeeze_challenge_scalar()
+        .map_err(|_| Error::TranscriptError)?;
     let instance_evals = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
             read_n_scalars(transcript, vk.cs.instance_queries.len())
