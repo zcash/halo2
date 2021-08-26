@@ -40,7 +40,9 @@ backtrace = { version = "0.3", optional = true }
 rayon = "1.5.1"
 ff = "0.10"
 group = "0.10"
+lazy_static = "1"
 pasta_curves = "0.1"
+poseidon = { package = "halo2_poseidon", version = "0.0", git = "https://github.com/therealyingtong/halo2-gadgets", branch = "main" }
 rand = "0.8"
 blake2b_simd = "0.5"
 
