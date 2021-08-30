@@ -1,3 +1,5 @@
+//! https://github.com/daira/pasta-hadeshash
+//!
 //! sage generate_parameters_grain.sage 1 0 255 3 8 56 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001
 use pasta_curves::vesta;
 
@@ -1295,7 +1297,7 @@ pub(crate) const ROUND_CONSTANTS: [[vesta::Base; 3]; 64] = [
 //  [True, None]
 // Result Algorithm 3:
 //  [True, None]
-// Prime number: 0x0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001
+// Prime number: 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001
 // MDS matrix:
 pub(crate) const MDS: [[vesta::Base; 3]; 3] = [
     [
