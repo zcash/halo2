@@ -264,29 +264,60 @@ mod tests {
 
     #[test]
     fn permute_test_vectors() {
-        let (round_constants, mds, _) = super::P128Pow5T3.constants();
+        {
+            let (round_constants, mds, _) = super::P128Pow5T3.constants();
 
-        for tv in crate::primitives::poseidon::test_vectors::permute() {
-            let mut state = [
-                Fp::from_repr(tv.initial_state[0]).unwrap(),
-                Fp::from_repr(tv.initial_state[1]).unwrap(),
-                Fp::from_repr(tv.initial_state[2]).unwrap(),
-            ];
+            for tv in crate::primitives::poseidon::test_vectors::fp::permute() {
+                let mut state = [
+                    Fp::from_repr(tv.initial_state[0]).unwrap(),
+                    Fp::from_repr(tv.initial_state[1]).unwrap(),
+                    Fp::from_repr(tv.initial_state[2]).unwrap(),
+                ];
 
-            permute::<Fp, super::P128Pow5T3, 3, 2>(&mut state, &mds, &round_constants);
+                permute::<Fp, super::P128Pow5T3, 3, 2>(&mut state, &mds, &round_constants);
 
-            for (expected, actual) in tv.final_state.iter().zip(state.iter()) {
-                assert_eq!(&actual.to_repr(), expected);
+                for (expected, actual) in tv.final_state.iter().zip(state.iter()) {
+                    assert_eq!(&actual.to_repr(), expected);
+                }
+            }
+        }
+
+        {
+            let (round_constants, mds, _) = super::P128Pow5T3.constants();
+
+            for tv in crate::primitives::poseidon::test_vectors::fq::permute() {
+                let mut state = [
+                    Fq::from_repr(tv.initial_state[0]).unwrap(),
+                    Fq::from_repr(tv.initial_state[1]).unwrap(),
+                    Fq::from_repr(tv.initial_state[2]).unwrap(),
+                ];
+
+                permute::<Fq, super::P128Pow5T3, 3, 2>(&mut state, &mds, &round_constants);
+
+                for (expected, actual) in tv.final_state.iter().zip(state.iter()) {
+                    assert_eq!(&actual.to_repr(), expected);
+                }
             }
         }
     }
 
     #[test]
     fn hash_test_vectors() {
-        for tv in crate::primitives::poseidon::test_vectors::hash() {
+        for tv in crate::primitives::poseidon::test_vectors::fp::hash() {
             let message = [
                 Fp::from_repr(tv.input[0]).unwrap(),
                 Fp::from_repr(tv.input[1]).unwrap(),
+            ];
+
+            let result = Hash::init(super::P128Pow5T3, ConstantLength).hash(message);
+
+            assert_eq!(result.to_repr(), tv.output);
+        }
+
+        for tv in crate::primitives::poseidon::test_vectors::fq::hash() {
+            let message = [
+                Fq::from_repr(tv.input[0]).unwrap(),
+                Fq::from_repr(tv.input[1]).unwrap(),
             ];
 
             let result = Hash::init(super::P128Pow5T3, ConstantLength).hash(message);
