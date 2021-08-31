@@ -114,47 +114,37 @@ mod tests {
 
     #[test]
     fn verify_constants() {
-        {
-            let poseidon = P128Pow5T3Gen::<Fp>::new(0);
+        fn verify_constants_helper<F: FieldExt>(
+            expected_round_constants: [[F; 3]; 64],
+            expected_mds: [[F; 3]; 3],
+            expected_mds_inv: [[F; 3]; 3],
+        ) {
+            let poseidon = P128Pow5T3Gen::<F>::new(0);
             let (round_constants, mds, mds_inv) = poseidon.constants();
 
             for (actual, expected) in round_constants
                 .iter()
                 .flatten()
-                .zip(fp::ROUND_CONSTANTS.iter().flatten())
+                .zip(expected_round_constants.iter().flatten())
             {
                 assert_eq!(actual, expected);
             }
 
-            for (actual, expected) in mds.iter().flatten().zip(fp::MDS.iter().flatten()) {
+            for (actual, expected) in mds.iter().flatten().zip(expected_mds.iter().flatten()) {
                 assert_eq!(actual, expected);
             }
 
-            for (actual, expected) in mds_inv.iter().flatten().zip(fp::MDS_INV.iter().flatten()) {
-                assert_eq!(actual, expected);
-            }
-        }
-
-        {
-            let poseidon = P128Pow5T3Gen::<Fq>::new(0);
-            let (round_constants, mds, mds_inv) = poseidon.constants();
-
-            for (actual, expected) in round_constants
+            for (actual, expected) in mds_inv
                 .iter()
                 .flatten()
-                .zip(fq::ROUND_CONSTANTS.iter().flatten())
+                .zip(expected_mds_inv.iter().flatten())
             {
                 assert_eq!(actual, expected);
             }
-
-            for (actual, expected) in mds.iter().flatten().zip(fq::MDS.iter().flatten()) {
-                assert_eq!(actual, expected);
-            }
-
-            for (actual, expected) in mds_inv.iter().flatten().zip(fq::MDS_INV.iter().flatten()) {
-                assert_eq!(actual, expected);
-            }
         }
+
+        verify_constants_helper(fp::ROUND_CONSTANTS, fp::MDS, fp::MDS_INV);
+        verify_constants_helper(fq::ROUND_CONSTANTS, fq::MDS, fq::MDS_INV);
     }
 
     #[test]
