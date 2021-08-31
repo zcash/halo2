@@ -659,7 +659,7 @@ pub mod testing {
         ) -> ArbitraryBundleInputs<StdRng> {
             ArbitraryBundleInputs {
                 rng: StdRng::from_seed(rng_seed),
-                sk: sk.clone(),
+                sk,
                 anchor,
                 notes: notes_and_auth_paths,
                 recipient_amounts
