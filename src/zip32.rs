@@ -1,6 +1,9 @@
 //! Key structures for Orchard.
 
-use std::{convert::TryInto, fmt};
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt,
+};
 
 use blake2b_simd::Params as Blake2bParams;
 
@@ -12,17 +15,22 @@ use crate::{
 const ZIP32_ORCHARD_PERSONALIZATION: &[u8; 16] = b"ZcashIP32Orchard";
 const ZIP32_ORCHARD_FVFP_PERSONALIZATION: &[u8; 16] = b"ZcashOrchardFVFP";
 
-/// A seed resulted in an invalid spending key
-#[derive(Debug)]
-pub struct InvalidSkError;
+/// Errors produced in derivation of extended spending keys
+#[derive(Debug, PartialEq, Eq)]
+pub enum Error {
+    /// A seed resulted in an invalid spending key
+    InvalidSpendingKey,
+    /// A child index in a derivation path exceeded 2^31
+    InvalidChildIndex(u32),
+}
 
-impl fmt::Display for InvalidSkError {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Seed produced invalid spending key.")
     }
 }
 
-impl std::error::Error for InvalidSkError {}
+//impl std::error::Error for Error {}
 
 /// An Orchard full viewing key fingerprint
 struct FvkFingerprint([u8; 32]);
@@ -59,16 +67,19 @@ impl FvkTag {
 }
 
 /// A hardened child index for a derived key.
-#[derive(Clone, Debug, PartialEq)]
-struct ChildIndex(u32);
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ChildIndex(u32);
 
-impl From<u32> for ChildIndex {
-    /// # Panics
-    ///
+impl TryFrom<u32> for ChildIndex {
+    type Error = Error;
+
     /// `index` must be less than 2^31
-    fn from(index: u32) -> Self {
-        assert!(index < (1 << 31));
-        Self(index + (1 << 31))
+    fn try_from(index: u32) -> Result<Self, Self::Error> {
+        if index < (1 << 31) {
+            Ok(Self(index + (1 << 31)))
+        } else {
+            Err(Error::InvalidChildIndex(32))
+        }
     }
 }
 
@@ -108,12 +119,12 @@ impl ExtendedSpendingKey {
     /// # Panics
     ///
     /// Panics if seed results in invalid spending key.
-    pub fn from_path(seed: &[u8], path: &[u32]) -> Self {
-        let mut xsk = Self::master(seed).unwrap();
-        for &i in path.iter() {
-            xsk = xsk.derive_child(i.into()).unwrap();
+    pub fn from_path(seed: &[u8], path: &[ChildIndex]) -> Result<Self, Error> {
+        let mut xsk = Self::master(seed)?;
+        for i in path {
+            xsk = xsk.derive_child(*i)?;
         }
-        xsk
+        Ok(xsk)
     }
 
     /// Generates the master key of an Orchard extended spending key.
@@ -125,7 +136,7 @@ impl ExtendedSpendingKey {
     /// # Panics
     ///
     /// Panics if the seed is shorter than 32 bytes or longer than 252 bytes.
-    fn master(seed: &[u8]) -> Result<Self, InvalidSkError> {
+    fn master(seed: &[u8]) -> Result<Self, Error> {
         assert!(seed.len() >= 32 && seed.len() <= 252);
         // I := BLAKE2b-512("ZcashIP32Orchard", seed)
         let I: [u8; 64] = {
@@ -139,7 +150,7 @@ impl ExtendedSpendingKey {
         // I_L is used as the master spending key sk_m.
         let sk_m = SpendingKey::from_bytes(I[..32].try_into().unwrap());
         if sk_m.is_none().into() {
-            return Err(InvalidSkError);
+            return Err(Error::InvalidSpendingKey);
         }
         let sk_m = sk_m.unwrap();
 
@@ -163,7 +174,7 @@ impl ExtendedSpendingKey {
     /// [orchardchildkey]: https://zips.z.cash/zip-0032#orchard-child-key-derivation
     ///
     /// Discards index if it results in an invalid sk
-    fn derive_child(&self, index: ChildIndex) -> Result<Self, InvalidSkError> {
+    fn derive_child(&self, index: ChildIndex) -> Result<Self, Error> {
         // I := PRF^Expand(c_par, [0x81] || sk_par || I2LEOSP(i))
         let I: [u8; 64] = PrfExpand::OrchardZip32Child.with_ad_slices(
             &self.chain_code.0,
@@ -173,7 +184,7 @@ impl ExtendedSpendingKey {
         // I_L is used as the child spending key sk_i.
         let sk_i = SpendingKey::from_bytes(I[..32].try_into().unwrap());
         if sk_i.is_none().into() {
-            return Err(InvalidSkError);
+            return Err(Error::InvalidSpendingKey);
         }
         let sk_i = sk_i.unwrap();
 
@@ -207,7 +218,7 @@ mod tests {
         let xsk_m = ExtendedSpendingKey::master(&seed).unwrap();
 
         let i_5 = 5;
-        let xsk_5 = xsk_m.derive_child(i_5.into());
+        let xsk_5 = xsk_m.derive_child(i_5.try_into().unwrap());
 
         assert!(xsk_5.is_ok());
     }
@@ -217,10 +228,17 @@ mod tests {
         let seed = [0; 32];
         let xsk_m = ExtendedSpendingKey::master(&seed).unwrap();
 
-        let xsk_5h = xsk_m.derive_child(5.into()).unwrap();
-        assert_eq!(ExtendedSpendingKey::from_path(&seed, &[5]), xsk_5h);
+        let xsk_5h = xsk_m.derive_child(5.try_into().unwrap()).unwrap();
+        assert_eq!(
+            ExtendedSpendingKey::from_path(&seed, &[5.try_into().unwrap()]).unwrap(),
+            xsk_5h
+        );
 
-        let xsk_5h_7 = xsk_5h.derive_child(7.into()).unwrap();
-        assert_eq!(ExtendedSpendingKey::from_path(&seed, &[5, 7]), xsk_5h_7);
+        let xsk_5h_7 = xsk_5h.derive_child(7.try_into().unwrap()).unwrap();
+        assert_eq!(
+            ExtendedSpendingKey::from_path(&seed, &[5.try_into().unwrap(), 7.try_into().unwrap()])
+                .unwrap(),
+            xsk_5h_7
+        );
     }
 }

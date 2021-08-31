@@ -21,7 +21,7 @@ use crate::{
         commit_ivk, diversify_hash, extract_p, ka_orchard, prf_nf, to_base, to_scalar,
         NonIdentityPallasPoint, NonZeroPallasBase, NonZeroPallasScalar, PrfExpand,
     },
-    zip32::ExtendedSpendingKey,
+    zip32::{self, ChildIndex, ExtendedSpendingKey},
 };
 
 const KDF_ORCHARD_PERSONALIZATION: &[u8; 16] = b"Zcash_OrchardKDF";
@@ -74,9 +74,18 @@ impl SpendingKey {
     }
 
     /// Derives the Orchard spending key for the given seed, coin type, and account.
-    pub fn from_zip32_seed(seed: &[u8], coin_type: u32, account: u32) -> Self {
+    pub fn from_zip32_seed(
+        seed: &[u8],
+        coin_type: u32,
+        account: u32,
+    ) -> Result<Self, zip32::Error> {
         // Call zip32 logic
-        ExtendedSpendingKey::from_path(&seed, &[ZIP32_PURPOSE, coin_type, account]).sk()
+        let path = &[
+            ChildIndex::try_from(ZIP32_PURPOSE)?,
+            ChildIndex::try_from(coin_type)?,
+            ChildIndex::try_from(account)?,
+        ];
+        ExtendedSpendingKey::from_path(seed, path).map(|esk| esk.sk())
     }
 }
 
