@@ -1,3 +1,7 @@
+use std::convert::TryInto;
+
+use subtle::CtOption;
+
 use crate::{
     keys::{DiversifiedTransmissionKey, Diversifier},
     spec::{diversify_hash, NonIdentityPallasPoint},
@@ -38,6 +42,26 @@ impl Address {
 
     pub(crate) fn pk_d(&self) -> &DiversifiedTransmissionKey {
         &self.pk_d
+    }
+
+    /// Serializes this address to its "raw" encoding as specified in [Zcash Protocol Spec § 5.6.4.2: Orchard Raw Payment Addresses][orchardpaymentaddrencoding]
+    ///
+    /// [orchardpaymentaddrencoding]: https://zips.z.cash/protocol/protocol.pdf#orchardpaymentaddrencoding
+    pub fn to_raw_address_bytes(&self) -> [u8; 43] {
+        let mut result = [0u8; 43];
+        result[..11].copy_from_slice(self.d.as_array());
+        result[11..].copy_from_slice(&self.pk_d.to_bytes());
+        result
+    }
+
+    /// Parse an address from its "raw" encoding as specified in [Zcash Protocol Spec § 5.6.4.2: Orchard Raw Payment Addresses][orchardpaymentaddrencoding]
+    ///
+    /// [orchardpaymentaddrencoding]: https://zips.z.cash/protocol/protocol.pdf#orchardpaymentaddrencoding
+    pub fn from_raw_address_bytes(bytes: &[u8; 43]) -> CtOption<Self> {
+        DiversifiedTransmissionKey::from_bytes(bytes[11..].try_into().unwrap()).map(|pk_d| {
+            let d = Diversifier::from_bytes(bytes[..11].try_into().unwrap());
+            Self::from_parts(d, pk_d)
+        })
     }
 }
 

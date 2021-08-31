@@ -1,5 +1,6 @@
 //! A minimal RedPallas implementation for use in Zcash.
 
+use std::cmp::{Ord, Ordering, PartialOrd};
 use std::convert::{TryFrom, TryInto};
 
 use pasta_curves::pallas;
@@ -94,6 +95,20 @@ impl<'a, T: SigType> From<&'a SigningKey<T>> for VerificationKey<T> {
 impl<T: SigType> PartialEq for VerificationKey<T> {
     fn eq(&self, other: &Self) -> bool {
         <[u8; 32]>::from(self).eq(&<[u8; 32]>::from(other))
+    }
+}
+
+impl<T: SigType> Eq for VerificationKey<T> {}
+
+impl<T: SigType> PartialOrd for VerificationKey<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        <[u8; 32]>::from(self).partial_cmp(&<[u8; 32]>::from(other))
+    }
+}
+
+impl<T: SigType> Ord for VerificationKey<T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        <[u8; 32]>::from(self).cmp(&<[u8; 32]>::from(other))
     }
 }
 

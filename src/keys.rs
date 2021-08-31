@@ -1,6 +1,6 @@
 //! Key structures for Orchard.
 
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::mem;
 
 use aes::Aes256;
@@ -10,8 +10,7 @@ use group::{prime::PrimeCurveAffine, Curve, GroupEncoding};
 use halo2::arithmetic::FieldExt;
 use pasta_curves::pallas;
 use rand::RngCore;
-use subtle::ConstantTimeEq;
-use subtle::CtOption;
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 use zcash_note_encryption::EphemeralKeyBytes;
 
 use crate::{
@@ -30,7 +29,7 @@ const KDF_ORCHARD_PERSONALIZATION: &[u8; 16] = b"Zcash_OrchardKDF";
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SpendingKey([u8; 32]);
 
 impl SpendingKey {
@@ -65,9 +64,15 @@ impl SpendingKey {
         let ivk = KeyAgreementPrivateKey::derive_inner(&(&sk).into());
         CtOption::new(sk, !(ask.ct_is_zero() | ivk.is_none()))
     }
+
+    /// Returns the raw bytes of the spending key.
+    pub fn to_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
 }
 
 /// A spend authorizing key, used to create spend authorization signatures.
+/// This type enforces that the corresponding public point (ak^ℙ) has ỹ = 0.
 ///
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
@@ -112,7 +117,7 @@ impl From<&SpendingKey> for SpendAuthorizingKey {
 /// $\mathsf{ak}$ but stored here as a RedPallas verification key.
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialOrd, Ord)]
 pub struct SpendValidatingKey(redpallas::VerificationKey<SpendAuth>);
 
 impl From<&SpendAuthorizingKey> for SpendValidatingKey {
@@ -133,10 +138,34 @@ impl PartialEq for SpendValidatingKey {
     }
 }
 
+impl Eq for SpendValidatingKey {}
+
 impl SpendValidatingKey {
     /// Randomizes this spend validating key with the given `randomizer`.
     pub fn randomize(&self, randomizer: &pallas::Scalar) -> redpallas::VerificationKey<SpendAuth> {
         self.0.randomize(randomizer)
+    }
+
+    /// Converts this spend validating key to its serialized form,
+    /// I2LEOSP_256(ak).
+    pub(crate) fn to_bytes(&self) -> [u8; 32] {
+        // This is correct because the wrapped point must have ỹ = 0, and
+        // so the point repr is the same as I2LEOSP of its x-coordinate.
+        <[u8; 32]>::from(&self.0)
+    }
+
+    pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        <[u8; 32]>::try_from(bytes)
+            .ok()
+            .and_then(|b|
+                // check that the sign of the y-coordinate is positive
+                if b[31] & 0x80 == 0 {
+                    <redpallas::VerificationKey<SpendAuth>>::try_from(b).ok()
+                } else {
+                    None
+                }
+            )
+            .map(SpendValidatingKey)
     }
 }
 
@@ -147,7 +176,7 @@ impl SpendValidatingKey {
 /// [`Nullifier`]: crate::note::Nullifier
 /// [`Note`]: crate::note::Note
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Copy, Debug, Clone)]
+#[derive(Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct NullifierDerivingKey(pallas::Base);
 
 impl NullifierDerivingKey {
@@ -166,6 +195,21 @@ impl NullifierDerivingKey {
     pub(crate) fn prf_nf(&self, rho: pallas::Base) -> pallas::Base {
         prf_nf(self.0, rho)
     }
+
+    /// Converts this nullifier deriving key to its serialized form.
+    pub(crate) fn to_bytes(&self) -> [u8; 32] {
+        <[u8; 32]>::from(self.0)
+    }
+
+    pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        let nk_bytes = <[u8; 32]>::try_from(bytes).ok()?;
+        let nk = pallas::Base::from_bytes(&nk_bytes).map(NullifierDerivingKey);
+        if nk.is_some().into() {
+            Some(nk.unwrap())
+        } else {
+            None
+        }
+    }
 }
 
 /// The randomness for $\mathsf{Commit}^\mathsf{ivk}$.
@@ -173,7 +217,7 @@ impl NullifierDerivingKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Copy, Debug, Clone)]
+#[derive(Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct CommitIvkRandomness(pallas::Scalar);
 
 impl From<&SpendingKey> for CommitIvkRandomness {
@@ -186,6 +230,21 @@ impl CommitIvkRandomness {
     pub(crate) fn inner(&self) -> pallas::Scalar {
         self.0
     }
+
+    /// Converts this nullifier deriving key to its serialized form.
+    pub(crate) fn to_bytes(&self) -> [u8; 32] {
+        <[u8; 32]>::from(self.0)
+    }
+
+    pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        let rivk_bytes = <[u8; 32]>::try_from(bytes).ok()?;
+        let rivk = pallas::Scalar::from_bytes(&rivk_bytes).map(CommitIvkRandomness);
+        if rivk.is_some().into() {
+            Some(rivk.unwrap())
+        } else {
+            None
+        }
+    }
 }
 
 /// A key that provides the capability to view incoming and outgoing transactions.
@@ -196,7 +255,7 @@ impl CommitIvkRandomness {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FullViewingKey {
     ak: SpendValidatingKey,
     nk: NullifierDerivingKey,
@@ -256,6 +315,28 @@ impl FullViewingKey {
         // Shortcut: we don't need to derive DiversifierKey.
         KeyAgreementPrivateKey::from(self).address(d)
     }
+
+    /// Serializes the full viewing key as specified in [Zcash Protocol Spec § 5.6.4.4: Orchard Raw Full Viewing Keys][orchardrawfullviewingkeys]
+    ///
+    /// [orchardrawfullviewingkeys]: https://zips.z.cash/protocol/protocol.pdf#orchardfullviewingkeyencoding
+    pub fn to_raw_fvk_bytes(&self) -> [u8; 96] {
+        let mut result = [0u8; 96];
+        result[..32].copy_from_slice(&self.ak.to_bytes());
+        result[32..64].copy_from_slice(&self.nk.to_bytes());
+        result[64..].copy_from_slice(&<[u8; 32]>::from(&self.rivk.0));
+        result
+    }
+
+    /// Parses a full viewing key from its "raw" encoding as specified in [Zcash Protocol Spec § 5.6.4.4: Orchard Raw Full Viewing Keys][orchardrawfullviewingkeys]
+    ///
+    /// [orchardrawfullviewingkeys]: https://zips.z.cash/protocol/protocol.pdf#orchardfullviewingkeyencoding
+    pub fn from_raw_fvk_bytes(bytes: &[u8; 96]) -> Option<Self> {
+        let ak = SpendValidatingKey::from_bytes(&bytes[..32])?;
+        let nk = NullifierDerivingKey::from_bytes(&bytes[32..64])?;
+        let rivk = CommitIvkRandomness::from_bytes(&bytes[64..])?;
+
+        Some(FullViewingKey { ak, nk, rivk })
+    }
 }
 
 /// A key that provides the capability to derive a sequence of diversifiers.
@@ -263,7 +344,7 @@ impl FullViewingKey {
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DiversifierKey([u8; 32]);
 
 impl From<&FullViewingKey> for DiversifierKey {
@@ -273,7 +354,7 @@ impl From<&FullViewingKey> for DiversifierKey {
 }
 
 /// The index for a particular diversifier.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DiversifierIndex([u8; 11]);
 
 macro_rules! di_from {
@@ -304,6 +385,16 @@ impl DiversifierKey {
             .encrypt(&[], &BinaryNumeralString::from_bytes_le(&j.into().0[..]))
             .unwrap();
         Diversifier(enc.to_bytes_le().try_into().unwrap())
+    }
+
+    /// Return the raw bytes of the diversifier key
+    pub fn to_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
+
+    /// Construct a diversifier key from bytes
+    pub fn from_bytes(bytes: [u8; 32]) -> Self {
+        DiversifierKey(bytes)
     }
 }
 
@@ -345,7 +436,7 @@ impl Diversifier {
 /// decryption of notes). When we actually want to serialize ivk, we're guaranteed to get
 /// a valid base field element encoding, because we always construct ivk from an integer
 /// in the correct range.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct KeyAgreementPrivateKey(NonZeroPallasScalar);
 
 impl From<&FullViewingKey> for KeyAgreementPrivateKey {
@@ -382,7 +473,7 @@ impl KeyAgreementPrivateKey {
 /// Defined in [Zcash Protocol Spec § 5.6.4.3: Orchard Raw Incoming Viewing Keys][orchardinviewingkeyencoding].
 ///
 /// [orchardinviewingkeyencoding]: https://zips.z.cash/protocol/nu5.pdf#orchardinviewingkeyencoding
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct IncomingViewingKey {
     dk: DiversifierKey,
     ivk: KeyAgreementPrivateKey,
@@ -398,6 +489,16 @@ impl From<&FullViewingKey> for IncomingViewingKey {
 }
 
 impl IncomingViewingKey {
+    /// Serializes an Orchard incoming viewing key to its raw encoding as specified in [Zcash Protocol Spec § 5.6.4.3: Orchard Raw Incoming Viewing Keys][orchardrawinviewingkeys]
+    ///
+    /// [orchardrawinviewingkeys]: https://zips.z.cash/protocol/protocol.pdf#orchardinviewingkeyencoding
+    pub fn to_bytes(&self) -> [u8; 64] {
+        let mut result = [0u8; 64];
+        result.copy_from_slice(self.dk.to_bytes());
+        result[32..].copy_from_slice(&self.ivk.0.to_bytes());
+        result
+    }
+
     /// Parses an Orchard incoming viewing key from its raw encoding.
     pub fn from_bytes(bytes: &[u8; 64]) -> CtOption<Self> {
         NonZeroPallasBase::from_bytes(bytes[32..].try_into().unwrap()).map(|ivk| {
@@ -489,6 +590,20 @@ impl DiversifiedTransmissionKey {
     /// $repr_P(self)$
     pub(crate) fn to_bytes(self) -> [u8; 32] {
         self.0.to_bytes()
+    }
+}
+
+impl Default for DiversifiedTransmissionKey {
+    fn default() -> Self {
+        DiversifiedTransmissionKey(NonIdentityPallasPoint::default())
+    }
+}
+
+impl ConditionallySelectable for DiversifiedTransmissionKey {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        DiversifiedTransmissionKey(NonIdentityPallasPoint::conditional_select(
+            &a.0, &b.0, choice,
+        ))
     }
 }
 
