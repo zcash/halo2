@@ -309,9 +309,8 @@ impl NoteCommitConfig {
             };
 
             // b3_c_prime = b_3 + (2^4)c + 2^140 - t_P
-            let b3_c_prime_check = b_3 + (c * two_pow_4) + two_pow_140.clone()
-                - t_p.clone()
-                - b3_c_prime;
+            let b3_c_prime_check =
+                b_3 + (c * two_pow_4) + two_pow_140.clone() - t_p.clone() - b3_c_prime;
 
             // The pkd_x_canonicity_checks are enforced if and only if `d_0` = 1.
             // `x(pk_d)` = `b_3 (4 bits) || c (250 bits) || d_0 (1 bit)`
