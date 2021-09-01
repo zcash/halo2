@@ -141,12 +141,11 @@ pub mod tests {
             sinsemilla::chip::{SinsemillaChip, SinsemillaHashDomains},
             utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions, Var},
         },
-        constants::{L_ORCHARD_BASE, MERKLE_CRH_PERSONALIZATION, MERKLE_DEPTH_ORCHARD},
-        primitives::sinsemilla::HashDomain,
-        spec::i2lebsp,
+        constants::MERKLE_DEPTH_ORCHARD,
+        note::commitment::ExtractedNoteCommitment,
+        tree,
     };
 
-    use ff::PrimeFieldBits;
     use halo2::{
         arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner},
@@ -259,51 +258,19 @@ pub mod tests {
 
             if let Some(leaf_pos) = self.leaf_pos {
                 // The expected final root
-                let pos_bool = i2lebsp::<32>(leaf_pos as u64);
-                let path: Option<Vec<pallas::Base>> = self.merkle_path.map(|path| path.to_vec());
-                let final_root = hash_path(self.leaf.unwrap(), &pos_bool, &path.unwrap());
+                let final_root = {
+                    let path = tree::MerklePath::new(leaf_pos, self.merkle_path.unwrap());
+                    let leaf = ExtractedNoteCommitment::from_bytes(&self.leaf.unwrap().to_bytes())
+                        .unwrap();
+                    path.root(leaf)
+                };
 
                 // Check the computed final root against the expected final root.
-                assert_eq!(computed_final_root.value().unwrap(), final_root);
+                assert_eq!(computed_final_root.value().unwrap(), final_root.inner());
             }
 
             Ok(())
         }
-    }
-
-    fn hash_path(leaf: pallas::Base, pos_bool: &[bool], path: &[pallas::Base]) -> pallas::Base {
-        let domain = HashDomain::new(MERKLE_CRH_PERSONALIZATION);
-
-        // Compute the root
-        let mut node = leaf;
-        for (l, (sibling, pos)) in path.iter().zip(pos_bool.iter()).enumerate() {
-            let (left, right) = if *pos {
-                (*sibling, node)
-            } else {
-                (node, *sibling)
-            };
-
-            let l_star = i2lebsp::<10>(l as u64);
-            let left: Vec<_> = left
-                .to_le_bits()
-                .iter()
-                .by_val()
-                .take(L_ORCHARD_BASE)
-                .collect();
-            let right: Vec<_> = right
-                .to_le_bits()
-                .iter()
-                .by_val()
-                .take(L_ORCHARD_BASE)
-                .collect();
-
-            let mut message = l_star.to_vec();
-            message.extend_from_slice(&left);
-            message.extend_from_slice(&right);
-
-            node = domain.hash(message.into_iter()).unwrap();
-        }
-        node
     }
 
     #[test]
@@ -311,15 +278,13 @@ pub mod tests {
         // Choose a random leaf and position
         let leaf = pallas::Base::rand();
         let pos = random::<u32>();
-        let pos_bool = i2lebsp::<32>(pos as u64);
 
         // Choose a path of random inner nodes
         let path: Vec<_> = (0..(MERKLE_DEPTH_ORCHARD))
             .map(|_| pallas::Base::rand())
             .collect();
 
-        // This root is provided as a public input in the Orchard circuit.
-        let _root = hash_path(leaf, &pos_bool, &path);
+        // The root is provided as a public input in the Orchard circuit.
 
         let circuit = MyCircuit {
             leaf: Some(leaf),

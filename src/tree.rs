@@ -88,6 +88,14 @@ impl MerklePath {
         }
     }
 
+    /// Instantiates a new Merkle path given a leaf position and authentication path.
+    pub(crate) fn new(position: u32, auth_path: [pallas::Base; MERKLE_DEPTH_ORCHARD]) -> Self {
+        Self {
+            position,
+            auth_path,
+        }
+    }
+
     /// <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
     /// The layer with 2^n nodes is called "layer n":
     ///      - leaves are at layer MERKLE_DEPTH_ORCHARD = 32;
