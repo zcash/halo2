@@ -439,7 +439,7 @@ $$
 \hline
   A_6   & A_7 &   A_8   &       A_9     & q_{\NoteCommit,\psi} \\\hline
   \psi  & g_1 &   g_2   &  z_{g,13}     &           1          \\\hline
-        & h_1 & g_1g_2' & z_{g_1g_2',13}&           0          \\\hline
+  h_0   & h_1 & g_1g_2' & z_{g_1g_2',13}&           0          \\\hline
 \end{array}
 $$
 #### Constraints
