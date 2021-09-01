@@ -944,7 +944,7 @@ mod tests {
                 let cv_net = ValueCommitment::derive(value.unwrap(), ValueCommitTrapdoor::zero());
 
                 let path = MerklePath::dummy(&mut rng);
-                let anchor = path.root(spent_note.commitment().into()).unwrap();
+                let anchor = path.root(spent_note.commitment().into());
 
                 (
                     Circuit {

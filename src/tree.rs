@@ -96,7 +96,7 @@ impl MerklePath {
     ///      - when hashing two leaves, we produce a node on the layer above the leaves, i.e.
     ///        layer = 31, l = 0
     ///      - when hashing to the final root, we produce the anchor with layer = 0, l = 31.
-    pub fn root(&self, cmx: ExtractedNoteCommitment) -> CtOption<Anchor> {
+    pub fn root(&self, cmx: ExtractedNoteCommitment) -> Anchor {
         self.auth_path
             .iter()
             .enumerate()
@@ -107,7 +107,8 @@ impl MerklePath {
                     node.and_then(|n| hash_with_l(l, cond_swap(swap, n, *sibling)))
                 },
             )
-            .map(Anchor)
+            .unwrap_or_else(pallas::Base::zero)
+            .into()
     }
 
     /// Returns the position of the leaf using this Merkle path.
@@ -435,7 +436,7 @@ pub mod testing {
             };
 
             // Compute anchor for this tree
-            let anchor = auth_paths[0].root(notes[0].commitment().into()).unwrap();
+            let anchor = auth_paths[0].root(notes[0].commitment().into());
 
             (
                 notes.into_iter().zip(auth_paths.into_iter()).map(|(note, auth_path)| (note, auth_path)).collect(),
@@ -452,7 +453,7 @@ pub mod testing {
             (notes_and_auth_paths, anchor) in (1usize..4).prop_flat_map(|n_notes| arb_tree(n_notes))
         ) {
             for (note, auth_path) in notes_and_auth_paths.iter() {
-                let computed_anchor = auth_path.root(note.commitment().into()).unwrap();
+                let computed_anchor = auth_path.root(note.commitment().into());
                 assert_eq!(anchor, computed_anchor);
             }
         }
