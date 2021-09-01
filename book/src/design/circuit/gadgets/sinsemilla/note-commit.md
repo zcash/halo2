@@ -352,7 +352,7 @@ $$
 \end{array}
 $$
 
-### $\mathsf{v} &= d_2 + 2^8 \cdot d_3 + 2^{58} \cdot e_0$
+### $\mathsf{v} = d_2 + 2^8 \cdot d_3 + 2^{58} \cdot e_0$
 #### Region layout
 $$
 \begin{array}{|c|c|c|c|c|}
