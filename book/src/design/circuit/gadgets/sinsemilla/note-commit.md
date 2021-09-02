@@ -451,7 +451,7 @@ $$
 3 & q_{\NoteCommit,\psi} \cdot h_1 \cdot h_0 = 0 \\\hline
 3 & q_{\NoteCommit,\psi} \cdot h_1 \cdot z_{g,13} = 0 \\\hline
 2 & q_{\NoteCommit,\psi} \cdot (g_1 + g_2 \cdot 2^9 + 2^{130} - t_\mathbb{P} - {g_1}{g_2}') = 0 \\\hline
-3 & q_{\NoteCommit,\psi} \cdot g_0 \cdot z_{{g_1}{g_2}',13} = 0 \\\hline
+3 & q_{\NoteCommit,\psi} \cdot h_1 \cdot z_{{g_1}{g_2}',13} = 0 \\\hline
 \end{array}
 $$
 
