@@ -28,13 +28,13 @@ where
         for p in iter {
             let q = *p;
             tmp.push((acc, p));
-            acc = F::conditional_select(&(acc * q), &acc, q.ct_is_zero());
+            acc = F::conditional_select(&(acc * q), &acc, q.is_zero());
         }
         acc = acc.invert().unwrap();
         let allinv = acc;
 
         for (tmp, p) in tmp.into_iter().rev() {
-            let skip = p.ct_is_zero();
+            let skip = p.is_zero();
 
             let tmp = tmp * acc;
             acc = F::conditional_select(&(acc * *p), &acc, skip);

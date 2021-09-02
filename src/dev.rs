@@ -202,7 +202,9 @@ impl<F: Group + Field> Mul for Value<F> {
             (Value::Real(a), Value::Real(b)) => Value::Real(a * b),
             // If poison is multiplied by zero, then we treat the poison as unconstrained
             // and we don't propagate it.
-            (Value::Real(x), Value::Poison) | (Value::Poison, Value::Real(x)) if x.is_zero() => {
+            (Value::Real(x), Value::Poison) | (Value::Poison, Value::Real(x))
+                if x.is_zero_vartime() =>
+            {
                 Value::Real(F::zero())
             }
             _ => Value::Poison,
@@ -218,7 +220,7 @@ impl<F: Group + Field> Mul<F> for Value<F> {
             Value::Real(lhs) => Value::Real(lhs * rhs),
             // If poison is multiplied by zero, then we treat the poison as unconstrained
             // and we don't propagate it.
-            Value::Poison if rhs.is_zero() => Value::Real(F::zero()),
+            Value::Poison if rhs.is_zero_vartime() => Value::Real(F::zero()),
             _ => Value::Poison,
         }
     }
@@ -686,7 +688,7 @@ impl<F: FieldExt> MockProver<F> {
                                 &|a, b| a * b,
                                 &|a, scalar| a * scalar,
                             ) {
-                                Value::Real(x) if x.is_zero() => None,
+                                Value::Real(x) if x.is_zero_vartime() => None,
                                 Value::Real(_) => Some(VerifyFailure::ConstraintNotSatisfied {
                                     constraint: (
                                         (gate_index, gate.name()).into(),

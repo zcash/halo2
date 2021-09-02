@@ -335,9 +335,9 @@ mod tests {
                     );
 
                     if activation {
-                        assert!(!eval.is_zero());
+                        assert!(!eval.is_zero_vartime());
                     } else {
-                        assert!(eval.is_zero());
+                        assert!(eval.is_zero_vartime());
                     }
                 }
 

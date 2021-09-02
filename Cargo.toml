@@ -38,9 +38,9 @@ harness = false
 [dependencies]
 backtrace = { version = "0.3", optional = true }
 rayon = "1.5.1"
-ff = "0.10"
-group = "0.10"
-pasta_curves = "0.1"
+ff = "0.11"
+group = "0.11"
+pasta_curves = "0.2"
 rand = "0.8"
 blake2b_simd = "0.5"
 
