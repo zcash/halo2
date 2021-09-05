@@ -168,7 +168,7 @@ also form a group under $\cdot$.
 
 In the previous section we said that $\alpha$ is a generator of the $(p - 1)$-order
 multiplicative group $\mathbb{F}_p^\times$. This group has _composite_ order, and so by
-the Chinese remainder theorem[^chinese-remainder] it has strict subgroups. As an example
+the Chinese remainder theorem[^chinese-remainder] it has proper subgroups. As an example
 let's imagine that $p = 11$, and so $p - 1$ factors into $5 \cdot 2$. Thus, there is a
 generator $\beta$ of the $5$-order subgroup and a generator $\gamma$ of the $2$-order
 subgroup. All elements in $\mathbb{F}_p^\times$, therefore, can be written uniquely as
