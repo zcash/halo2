@@ -48,7 +48,7 @@ and fewer axioms. They also have an identity, which we'll denote as $1$.
 [group]: https://en.wikipedia.org/wiki/Group_(mathematics)
 [group-axioms]: https://en.wikipedia.org/wiki/Group_(mathematics)#Definition
 
-Any non-zero element $a$ in a group has an _inverse_ $b = a^{-1}$,
+Any element $a$ in a group has an _inverse_ $b = a^{-1}$,
 which is the _unique_ element $b$ such that $a \cdot b = 1$.
      
 For example, the set of nonzero elements of $\mathbb{F}_p$ forms a group, where the
