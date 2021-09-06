@@ -61,7 +61,7 @@ impl Anchor {
 
 impl Anchor {
     /// Parses an Orchard anchor from a byte encoding.
-    pub fn from_bytes(bytes: [u8; 32]) -> Option<Anchor> {
+    pub fn from_bytes(bytes: [u8; 32]) -> CtOption<Anchor> {
         pallas::Base::from_repr(bytes).map(Anchor)
     }
 
