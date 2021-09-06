@@ -124,7 +124,7 @@ impl CircuitGates {
                         name: gate.constraint_name(i),
                         expression: constraint.evaluate(
                             &|s| {
-                                if s.is_zero() {
+                                if s.is_zero_vartime() {
                                     "0".into()
                                 } else if s == F::one() {
                                     "1".into()
