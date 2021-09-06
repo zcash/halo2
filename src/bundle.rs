@@ -3,9 +3,9 @@
 pub mod commitments;
 
 use std::io;
-use std::mem;
 
 use blake2b_simd::Hash as Blake2bHash;
+use memuse::{DynamicUsage, NoDynamicUsage};
 use nonempty::NonEmpty;
 use zcash_note_encryption::try_note_decryption;
 
@@ -133,6 +133,8 @@ impl<T> Action<T> {
         }
     }
 }
+
+impl NoDynamicUsage for Action<redpallas::Signature<SpendAuth>> {}
 
 /// Orchard-specific flags.
 #[derive(Clone, Copy, Debug)]
@@ -441,13 +443,6 @@ impl Authorized {
 }
 
 impl<V> Bundle<Authorized, V> {
-    /// Returns the amount of heap-allocated memory used by this bundle.
-    pub fn dynamic_usage(&self) -> usize {
-        // NonEmpty<T> stores its head element separately from its tail Vec<T>.
-        (self.actions.capacity() - 1) * mem::size_of::<Action<redpallas::Signature<SpendAuth>>>()
-            + self.authorization.proof.dynamic_usage()
-    }
-
     /// Computes a commitment to the authorizing data within for this bundle.
     ///
     /// This together with `Bundle::commitment` bind the entire bundle.
@@ -460,6 +455,31 @@ impl<V> Bundle<Authorized, V> {
         self.authorization()
             .proof()
             .verify(vk, &self.to_instances())
+    }
+}
+
+impl<V: DynamicUsage> DynamicUsage for Bundle<Authorized, V> {
+    fn dynamic_usage(&self) -> usize {
+        self.actions.dynamic_usage()
+            + self.value_balance.dynamic_usage()
+            + self.authorization.proof.dynamic_usage()
+    }
+
+    fn dynamic_usage_bounds(&self) -> (usize, Option<usize>) {
+        let bounds = (
+            self.actions.dynamic_usage_bounds(),
+            self.value_balance.dynamic_usage_bounds(),
+            self.authorization.proof.dynamic_usage_bounds(),
+        );
+        (
+            bounds.0 .0 + bounds.1 .0 + bounds.2 .0,
+            bounds
+                .0
+                 .1
+                .zip(bounds.1 .1)
+                .zip(bounds.2 .1)
+                .map(|((a, b), c)| a + b + c),
+        )
     }
 }
 
