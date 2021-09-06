@@ -130,7 +130,7 @@ impl<F: FieldExt> Grain<F> {
                 view[i / 8] |= if bit { 1 << (i % 8) } else { 0 };
             }
 
-            if let Some(f) = F::from_repr(bytes) {
+            if let Some(f) = F::from_repr_vartime(bytes) {
                 break f;
             }
         }

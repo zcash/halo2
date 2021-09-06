@@ -54,7 +54,7 @@ pub(super) fn generate_mds<F: FieldExt, const T: usize>(
             for j in 0..T {
                 let sum = xs[i] + ys[j];
                 // We leverage the secure MDS selection counter to also check this.
-                assert!(!sum.is_zero());
+                assert!(!sum.is_zero_vartime());
                 mds[i][j] = sum.invert().unwrap();
             }
         }

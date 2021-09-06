@@ -78,7 +78,7 @@ impl NonZeroPallasBase {
     }
 
     pub(crate) fn from_base(b: pallas::Base) -> CtOption<Self> {
-        CtOption::new(NonZeroPallasBase(b), !b.ct_is_zero())
+        CtOption::new(NonZeroPallasBase(b), !b.is_zero())
     }
 
     /// Constructs a wrapper for a base field element that is guaranteed to be non-zero.
@@ -87,7 +87,7 @@ impl NonZeroPallasBase {
     ///
     /// Panics if `s.is_zero()`.
     fn guaranteed(s: pallas::Base) -> Self {
-        assert!(!s.is_zero());
+        assert!(!bool::from(s.is_zero()));
         NonZeroPallasBase(s)
     }
 }
@@ -120,7 +120,7 @@ impl NonZeroPallasScalar {
     }
 
     pub(crate) fn from_scalar(s: pallas::Scalar) -> CtOption<Self> {
-        CtOption::new(NonZeroPallasScalar(s), !s.ct_is_zero())
+        CtOption::new(NonZeroPallasScalar(s), !s.is_zero())
     }
 
     /// Constructs a wrapper for a scalar field element that is guaranteed to be non-zero.
@@ -129,7 +129,7 @@ impl NonZeroPallasScalar {
     ///
     /// Panics if `s.is_zero()`.
     fn guaranteed(s: pallas::Scalar) -> Self {
-        assert!(!s.is_zero());
+        assert!(!bool::from(s.is_zero()));
         NonZeroPallasScalar(s)
     }
 }

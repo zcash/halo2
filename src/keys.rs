@@ -7,7 +7,7 @@ use std::mem;
 use aes::Aes256;
 use blake2b_simd::{Hash as Blake2bHash, Params};
 use fpe::ff1::{BinaryNumeralString, FF1};
-use group::{prime::PrimeCurveAffine, Curve, GroupEncoding};
+use group::{ff::Field, prime::PrimeCurveAffine, Curve, GroupEncoding};
 use halo2::arithmetic::FieldExt;
 use pasta_curves::pallas;
 use rand::RngCore;
@@ -65,7 +65,7 @@ impl SpendingKey {
         let ask = SpendAuthorizingKey::derive_inner(&sk);
         // If ivk = ⊥, discard this key.
         let ivk = KeyAgreementPrivateKey::derive_inner(&(&sk).into());
-        CtOption::new(sk, !(ask.ct_is_zero() | ivk.is_none()))
+        CtOption::new(sk, !(ask.is_zero() | ivk.is_none()))
     }
 
     /// Returns the raw bytes of the spending key.
@@ -116,7 +116,7 @@ impl From<&SpendingKey> for SpendAuthorizingKey {
     fn from(sk: &SpendingKey) -> Self {
         let ask = Self::derive_inner(sk);
         // SpendingKey cannot be constructed such that this assertion would fail.
-        assert!(!bool::from(ask.ct_is_zero()));
+        assert!(!bool::from(ask.is_zero()));
         // TODO: Add TryFrom<S::Scalar> for SpendAuthorizingKey.
         let ret = SpendAuthorizingKey(ask.to_bytes().try_into().unwrap());
         // If the last bit of repr_P(ak) is 1, negate ask.

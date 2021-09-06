@@ -1588,7 +1588,7 @@ mod tests {
                     let g_d = self.gd_x.zip(self.gd_y_lsb).map(|(x, y_lsb)| {
                         // Calculate y = (x^3 + 5).sqrt()
                         let mut y = (x.square() * x + pallas::Affine::b()).sqrt().unwrap();
-                        if y.is_odd() ^ y_lsb.is_odd() {
+                        if bool::from(y.is_odd() ^ y_lsb.is_odd()) {
                             y = -y;
                         }
                         pallas::Affine::from_xy(x, y).unwrap()
@@ -1602,7 +1602,7 @@ mod tests {
                     let pk_d = self.pkd_x.zip(self.pkd_y_lsb).map(|(x, y_lsb)| {
                         // Calculate y = (x^3 + 5).sqrt()
                         let mut y = (x.square() * x + pallas::Affine::b()).sqrt().unwrap();
-                        if y.is_odd() ^ y_lsb.is_odd() {
+                        if bool::from(y.is_odd() ^ y_lsb.is_odd()) {
                             y = -y;
                         }
                         pallas::Affine::from_xy(x, y).unwrap()
