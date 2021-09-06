@@ -97,9 +97,11 @@ impl NoteCommitConfig {
         let two_pow_8 = two_pow_4.square();
         let two_pow_9 = two_pow_8 * two;
         let two_pow_10 = two_pow_9 * two;
+        let two_pow_58 = pallas::Base::from_u64(1 << 58);
         let two_pow_130 = Expression::Constant(pallas::Base::from_u128(1 << 65).square());
         let two_pow_140 = Expression::Constant(pallas::Base::from_u128(1 << 70).square());
-        let two_pow_250 = pallas::Base::from_u128(1 << 125).square();
+        let two_pow_249 = pallas::Base::from_u128(1 << 124).square() * two;
+        let two_pow_250 = two_pow_249 * two;
         let two_pow_254 = pallas::Base::from_u128(1 << 127).square();
 
         let t_p = Expression::Constant(pallas::Base::from_u128(T_P));
@@ -342,11 +344,7 @@ impl NoteCommitConfig {
             let e_0 = meta.query_advice(col_z, Rotation::cur());
 
             // value = d_2 + (2^8)d_3 + (2^58)e_0
-            let value_check = {
-                let two_pow_8 = pallas::Base::from_u64(1 << 8);
-                let two_pow_58 = pallas::Base::from_u64(1 << 58);
-                d_2 + d_3 * two_pow_8 + e_0 * two_pow_58 - value
-            };
+            let value_check = d_2 + d_3 * two_pow_8 + e_0 * two_pow_58 - value;
 
             std::iter::empty()
                 .chain(Some(("value_check", value_check)))
@@ -418,8 +416,6 @@ impl NoteCommitConfig {
 
             // psi = g_1 + (2^9) g_2 + (2^249) h_0 + (2^254) h_1
             let decomposition_check = {
-                let two_pow_249 =
-                    pallas::Base::from_u128(1 << 124).square() * pallas::Base::from_u128(2);
                 let sum = g_1.clone()
                     + g_2.clone() * pallas::Base::from_u64(1 << 9)
                     + h_0.clone() * two_pow_249
@@ -428,10 +424,8 @@ impl NoteCommitConfig {
             };
 
             // g1_g2_prime = g_1 + (2^9)g_2 + 2^130 - t_P
-            let g1_g2_prime_check = {
-                let two_pow_9 = two_pow_4 * two_pow_5;
-                g_1 + (g_2 * two_pow_9) + two_pow_130.clone() - t_p.clone() - g1_g2_prime
-            };
+            let g1_g2_prime_check =
+                g_1 + (g_2 * two_pow_9) + two_pow_130.clone() - t_p.clone() - g1_g2_prime;
 
             // The psi_canonicity_checks are enforced if and only if `h_1` = 1.
             // `psi` = `g_1 (9 bits) || g_2 (240 bits) || h_0 (5 bits) || h_1 (1 bit)`
