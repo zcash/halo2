@@ -417,7 +417,7 @@ impl NoteCommitConfig {
             // psi = g_1 + (2^9) g_2 + (2^249) h_0 + (2^254) h_1
             let decomposition_check = {
                 let sum = g_1.clone()
-                    + g_2.clone() * pallas::Base::from_u64(1 << 9)
+                    + g_2.clone() * two_pow_9
                     + h_0.clone() * two_pow_249
                     + h_1.clone() * two_pow_254;
                 sum - psi
