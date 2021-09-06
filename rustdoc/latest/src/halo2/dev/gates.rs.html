@@ -433,7 +433,7 @@
                         <span class="ident">name</span>: <span class="ident">gate</span>.<span class="ident">constraint_name</span>(<span class="ident">i</span>),
                         <span class="ident">expression</span>: <span class="ident">constraint</span>.<span class="ident">evaluate</span>(
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">s</span><span class="op">|</span> {
-                                <span class="kw">if</span> <span class="ident">s</span>.<span class="ident">is_zero</span>() {
+                                <span class="kw">if</span> <span class="ident">s</span>.<span class="ident">is_zero_vartime</span>() {
                                     <span class="string">&quot;0&quot;</span>.<span class="ident">into</span>()
                                 } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">F::one</span>() {
                                     <span class="string">&quot;1&quot;</span>.<span class="ident">into</span>()

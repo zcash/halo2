@@ -947,6 +947,8 @@
 <span id="932">932</span>
 <span id="933">933</span>
 <span id="934">934</span>
+<span id="935">935</span>
+<span id="936">936</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Tools for developing circuits.</span>
 
 <span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
@@ -1151,7 +1153,9 @@
             (<span class="ident">Value::Real</span>(<span class="ident">a</span>), <span class="ident">Value::Real</span>(<span class="ident">b</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Real</span>(<span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>),
             <span class="comment">// If poison is multiplied by zero, then we treat the poison as unconstrained</span>
             <span class="comment">// and we don&#39;t propagate it.</span>
-            (<span class="ident">Value::Real</span>(<span class="ident">x</span>), <span class="ident">Value::Poison</span>) <span class="op">|</span> (<span class="ident">Value::Poison</span>, <span class="ident">Value::Real</span>(<span class="ident">x</span>)) <span class="kw">if</span> <span class="ident">x</span>.<span class="ident">is_zero</span>() <span class="op">=</span><span class="op">&gt;</span> {
+            (<span class="ident">Value::Real</span>(<span class="ident">x</span>), <span class="ident">Value::Poison</span>) <span class="op">|</span> (<span class="ident">Value::Poison</span>, <span class="ident">Value::Real</span>(<span class="ident">x</span>))
+                <span class="kw">if</span> <span class="ident">x</span>.<span class="ident">is_zero_vartime</span>() <span class="op">=</span><span class="op">&gt;</span>
+            {
                 <span class="ident">Value::Real</span>(<span class="ident">F::zero</span>())
             }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Poison</span>,
@@ -1167,7 +1171,7 @@
             <span class="ident">Value::Real</span>(<span class="ident">lhs</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Real</span>(<span class="ident">lhs</span> <span class="op">*</span> <span class="ident">rhs</span>),
             <span class="comment">// If poison is multiplied by zero, then we treat the poison as unconstrained</span>
             <span class="comment">// and we don&#39;t propagate it.</span>
-            <span class="ident">Value::Poison</span> <span class="kw">if</span> <span class="ident">rhs</span>.<span class="ident">is_zero</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Real</span>(<span class="ident">F::zero</span>()),
+            <span class="ident">Value::Poison</span> <span class="kw">if</span> <span class="ident">rhs</span>.<span class="ident">is_zero_vartime</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Real</span>(<span class="ident">F::zero</span>()),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Poison</span>,
         }
     }
@@ -1635,7 +1639,7 @@
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>,
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">scalar</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">scalar</span>,
                             ) {
-                                <span class="ident">Value::Real</span>(<span class="ident">x</span>) <span class="kw">if</span> <span class="ident">x</span>.<span class="ident">is_zero</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+                                <span class="ident">Value::Real</span>(<span class="ident">x</span>) <span class="kw">if</span> <span class="ident">x</span>.<span class="ident">is_zero_vartime</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
                                 <span class="ident">Value::Real</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">VerifyFailure::ConstraintNotSatisfied</span> {
                                     <span class="ident">constraint</span>: (
                                         (<span class="ident">gate_index</span>, <span class="ident">gate</span>.<span class="ident">name</span>()).<span class="ident">into</span>(),
