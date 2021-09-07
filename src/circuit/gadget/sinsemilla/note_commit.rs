@@ -1304,7 +1304,7 @@ impl NoteCommitConfig {
             |mut region| {
                 copy(&mut region, || "value", col_l, 0, &gate_cells.value)?;
                 copy(&mut region, || "d_2", col_m, 0, &gate_cells.d_2)?;
-                copy(&mut region, || "z1_d", col_r, 0, &gate_cells.z1_d)?;
+                copy(&mut region, || "d3 = z1_d", col_r, 0, &gate_cells.z1_d)?;
                 copy(&mut region, || "e_0", col_z, 0, &gate_cells.e_0)?;
 
                 self.q_notecommit_value.enable(&mut region, 0)
