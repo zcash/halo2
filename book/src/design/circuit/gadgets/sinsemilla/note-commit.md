@@ -26,14 +26,14 @@ chunks:
 $$
 \begin{aligned}
 \DiversifiedTransmitBaseRepr &= a \bconcat b_0 \bconcat b_1 \bconcat b_2 \\
- &= (\text{bits 0..=249 of } \mathsf{x(g_d)}) \bconcat
-    (\text{bits 250..=253 of } \mathsf{x(g_d)}) \bconcat
-    (\text{bit 254 of } \mathsf{x(g_d)}) \bconcat
+ &= (\text{bits 0..=249 of } x(\mathsf{g_d})) \bconcat
+    (\text{bits 250..=253 of } x(\mathsf{g_d})) \bconcat
+    (\text{bit 254 of } x(\mathsf{g_d})) \bconcat
     (ỹ \text{ bit of } \mathsf{g_d}) \\
 \DiversifiedTransmitPublicRepr &= b_3 \bconcat c \bconcat d_0 \bconcat d_1 \\
- &= (\text{bits 0..=3 of } \mathsf{x(pk_d)}) \bconcat
-    (\text{bits 4..=253 of } \mathsf{x(pk_d)}) \bconcat
-    (\text{bit 254 of } \mathsf{x(pk_d)}) \bconcat
+ &= (\text{bits 0..=3 of } x(\mathsf{pk_d})) \bconcat
+    (\text{bits 4..=253 of } x(\mathsf{pk_d})) \bconcat
+    (\text{bit 254 of } x(\mathsf{pk_d})) \bconcat
     (ỹ \text{ bit of } \mathsf{pk_d}) \\
 \ItoLEBSP{64}(v) &= d_2 \bconcat d_3 \bconcat e_0 \\
  &= (\text{bits 0..=7 of } v) \bconcat
@@ -93,16 +93,21 @@ region, so we use two selectors that we activate on adjacent rows, in order to l
 required rotations to the set `[Rotation::prev(), Rotation::cur(), Rotation::next()]`.
 
 ## Message piece decomposition
-We check the decomposition of each message piece in its own region. There is no need to check the whole pieces:
+
+We check the decomposition of each message piece in its own region. There is no need to
+check the whole pieces:
 - $a$ ($250$ bits) is witnessed and constrained outside the gate;
 - $c$ ($250$ bits) is witnessed and constrained outside the gate;
 - $f$ ($250$ bits) is witnessed and constrained outside the gate;
 
 The following helper gates are defined:
 - $\BoolCheck{x} = x \cdot (1 - x)$.
-- $\ShortLookupRangeCheck{}$ is a [short lookup range check](../decomposition.md#short-range-check).
+- $\ShortLookupRangeCheck{}$ is a
+  [short lookup range check](../decomposition.md#short-range-check).
+
 ### $b = b_0 \bconcat b_1 \bconcat b_2 \bconcat b_3$
 $b$ has been constrained to be $10$ bits by the Sinsemilla hash.
+
 #### Region layout
 $$
 \begin{array}{|c|c|c|c|}
@@ -130,6 +135,7 @@ Outside this gate, we have constrained:
 
 ### $d = d_0 \bconcat d_1 \bconcat d_2 \bconcat d_3$
 $d$ has been constrained to be $60$ bits by the $\SinsemillaHash$.
+
 #### Region layout
 $$
 \begin{array}{|c|c|c|c|}
@@ -153,11 +159,12 @@ $$
 
 Outside this gate, we have constrained:
 - $\ShortLookupRangeCheck{d_2, 8}$
-- $d_3$ is equality-constrained to $z_{d,1}$, where the latter is the index-1 running sum output of
-  $\SinsemillaHash(d),$ constrained by the hash to be $50$ bits.
+- $d_3$ is equality-constrained to $z_{d,1}$, where the latter is the index-1 running sum
+  output of $\SinsemillaHash(d),$ constrained by the hash to be $50$ bits.
 
 ### $e = e_0 \bconcat e_1$
 $e$ has been constrained to be $10$ bits by the $\SinsemillaHash$.
+
 #### Region layout
 $$
 \begin{array}{|c|c|c|c|}
@@ -182,6 +189,7 @@ Outside this gate, we have constrained:
 
 ### $g = g_0 \bconcat g_1 \bconcat g_2$
 $g$ has been constrained to be $250$ bits by the $\SinsemillaHash$.
+
 #### Region layout
 $$
 \begin{array}{|c|c|c|c|}
@@ -204,11 +212,12 @@ $$
 
 Outside this gate, we have constrained:
 - $\ShortLookupRangeCheck{g_1, 9}$
-- $g_2$ is equality-constrained to $z_{g,1}$, where the latter is the index-1 running sum output of 
-  $\SinsemillaHash(g),$ constrained by the hash to be 240 bits.
+- $g_2$ is equality-constrained to $z_{g,1}$, where the latter is the index-1 running sum
+  output of $\SinsemillaHash(g),$ constrained by the hash to be 240 bits.
 
 ### $h = h_0 \bconcat h_1 \bconcat h_2$
 $h$ has been constrained to be $10$ bits by the $\SinsemillaHash$.
+
 #### Region layout
 $$
 \begin{array}{|c|c|c|c|}
@@ -232,15 +241,17 @@ Outside this gate, we have constrained:
 - $\ShortLookupRangeCheck{h_0, 5}$
 
 ## Field element checks
-All message pieces and subpieces have been range-constrained by the earlier decomposition gates. They are now used to:
-- constrain each field element $\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(g_d)})$,
-$\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(pk_d)})$,
-$\ItoLEBSP{\BaseLength{Orchard}}(\rho)$, and $\ItoLEBSP{\BaseLength{Orchard}}(\psi)$ to be
-255-bit values, with top bits $b_1$, $d_0$, $g_0$, and $h_1$ respectively.
+
+All message pieces and subpieces have been range-constrained by the earlier decomposition
+gates. They are now used to:
+- constrain each field element $\ItoLEBSP{\BaseLength{Orchard}}(x(\mathsf{g_d}))$,
+  $\ItoLEBSP{\BaseLength{Orchard}}(x(\mathsf{pk_d}))$,
+  $\ItoLEBSP{\BaseLength{Orchard}}(\rho)$, and $\ItoLEBSP{\BaseLength{Orchard}}(\psi)$ to
+  be 255-bit values, with top bits $b_1$, $d_0$, $g_0$, and $h_1$ respectively.
 - constrain $$
 \begin{align}
-\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(g_d)}) &= \mathsf{x(g_d)} \pmod{q_\mathbb{P}} \\
-\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(pk_d)}) &= \mathsf{x(pk_d)} \pmod{q_\mathbb{P}} \\
+\ItoLEBSP{\BaseLength{Orchard}}(x(\mathsf{g_d})) &= x(\mathsf{g_d}) \pmod{q_\mathbb{P}} \\
+\ItoLEBSP{\BaseLength{Orchard}}(x(\mathsf{pk_d})) &= x(\mathsf{pk_d}) \pmod{q_\mathbb{P}} \\
 \ItoLEBSP{\BaseLength{Orchard}}(\rho) &= \rho \pmod{q_\mathbb{P}} \\
 \ItoLEBSP{\BaseLength{Orchard}}(\psi) &= \psi \pmod{q_\mathbb{P}} \\
 \end{align}
@@ -248,8 +259,8 @@ $$
 where $q_\mathbb{P}$ is the Pallas base field modulus.
 - check that these are indeed canonically-encoded field elements, i.e. $$
 \begin{align}
-\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(g_d)}) &< q_\mathbb{P} \\
-\ItoLEBSP{\BaseLength{Orchard}}(\mathsf{x(pk_d)}) &< q_\mathbb{P} \\
+\ItoLEBSP{\BaseLength{Orchard}}(x(\mathsf{g_d})) &< q_\mathbb{P} \\
+\ItoLEBSP{\BaseLength{Orchard}}(x(\mathsf{pk_d})) &< q_\mathbb{P} \\
 \ItoLEBSP{\BaseLength{Orchard}}(\rho) &< q_\mathbb{P} \\
 \ItoLEBSP{\BaseLength{Orchard}}(\psi) &< q_\mathbb{P} \\
 \end{align}
@@ -269,14 +280,16 @@ below are enforced if and only if the corresponding top bit is set to 1.
 > - Enforce $0 \leq x < t'$.
 > - Let $x' = x + t' - t$.
 > - Enforce $0 \leq x' < t'$.
-### $\mathsf{x(g_d)}$ with $b_1 = 1 \implies \mathsf{x(g_d)} \geq 2^{254}$
-Recall that $\mathsf{x(g_d)} = a + 2^{250} \cdot b_0 + 2^{254} \cdot b_1$. When the top bit $b_1$ is set, we check that $\mathsf{x(g_d)}_{0..=253} < t_\mathbb{P}$:
+
+### $x(\mathsf{g_d})$ with $b_1 = 1 \implies x(\mathsf{g_d}) \geq 2^{254}$
+Recall that $x(\mathsf{g_d}) = a + 2^{250} \cdot b_0 + 2^{254} \cdot b_1$. When the top
+bit $b_1$ is set, we check that $x(\mathsf{g_d})_{0..=253} < t_\mathbb{P}$:
 
 1. $b_1 = 1 \implies b_0 = 0.$
 
-   Since $b_1 = 1 \implies \mathsf{x(g_d)}_{0..=253} < t_\mathbb{P} < 2^{126},$ we know that
-   $\mathsf{x(g_d)}_{126..=253} = 0,$ and in particular
-   $$b_0 := \mathsf{x(g_d)}_{250..=253} = 0.$$
+   Since $b_1 = 1 \implies x(\mathsf{g_d})_{0..=253} < t_\mathbb{P} < 2^{126},$ we know
+   that $x(\mathsf{g_d})_{126..=253} = 0,$ and in particular
+   $$b_0 := x(\mathsf{g_d})_{250..=253} = 0.$$
 
 2. $b_1 = 1 \implies 0 \leq a < t_\mathbb{P}.$
 
@@ -291,30 +304,33 @@ Recall that $\mathsf{x(g_d)} = a + 2^{250} \cdot b_0 + 2^{254} \cdot b_1$. When 
        a running sum $z_{a'}$, looking up each word in a $10$-bit lookup table. We then
        enforce in the custom gate that
        $$b_1 \cdot z_{a',13} = 0.$$
+
 #### Region layout
 $$
 \begin{array}{|c|c|c|c|c|}
 \hline
- A_6   & A_7 & A_8 &    A_9   & q_{\NoteCommit,x(g_d)} \\\hline
-x(g_d) & b_0 &  a  & z_{a,13} &           1            \\\hline
-       & b_1 &  a' & z_{a',13}&           0            \\\hline
+      A_6       & A_7 & A_8 &    A_9   & q_{\NoteCommit,x(\mathsf{g_d})} \\\hline
+x(\mathsf{g_d}) & b_0 &  a  & z_{a,13} &                1                \\\hline
+                & b_1 &  a' & z_{a',13}&                0                \\\hline
 \end{array}
 $$
+
 #### Constraints
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint}                           \\\hline
-2 & q_{\NoteCommit,x(g_d)} \cdot (a + b_0 \cdot 2^{250} + b_1 \cdot 2^{254} - \mathsf{x(g_d)}) = 0 \\\hline
-3 & q_{\NoteCommit,x(g_d)} \cdot b_1 \cdot b_0 = 0 \\\hline
-3 & q_{\NoteCommit,x(g_d)} \cdot b_1 \cdot z_{a,13} = 0 \\\hline
-2 & q_{\NoteCommit,x(g_d)} \cdot (a + 2^{130} - t_\mathbb{P} - a') = 0 \\\hline
-3 & q_{\NoteCommit,x(g_d)} \cdot b_1 \cdot z_{a',13} = 0 \\\hline
+2 & q_{\NoteCommit,x(\mathsf{g_d})} \cdot (a + b_0 \cdot 2^{250} + b_1 \cdot 2^{254} - x(\mathsf{g_d})) = 0 \\\hline
+3 & q_{\NoteCommit,x(\mathsf{g_d})} \cdot b_1 \cdot b_0 = 0 \\\hline
+3 & q_{\NoteCommit,x(\mathsf{g_d})} \cdot b_1 \cdot z_{a,13} = 0 \\\hline
+2 & q_{\NoteCommit,x(\mathsf{g_d})} \cdot (a + 2^{130} - t_\mathbb{P} - a') = 0 \\\hline
+3 & q_{\NoteCommit,x(\mathsf{g_d})} \cdot b_1 \cdot z_{a',13} = 0 \\\hline
 \end{array}
 $$
 
-### $\mathsf{x(pk_d)}$ with $d_0 = 1 \implies \mathsf{x(pk_d)} \geq 2^{254}$
-Recall that $\mathsf{x(pk_d)} = b_3 + 2^4 \cdot c + 2^{254} \cdot d_0$. When the top bit $d_0$ is set, we check that $\mathsf{x(pk_d)}_{0..=253} < t_\mathbb{P}$:
+### $x(\mathsf{pk_d})$ with $d_0 = 1 \implies x(\mathsf{pk_d}) \geq 2^{254}$
+Recall that $x(\mathsf{pk_d}) = b_3 + 2^4 \cdot c + 2^{254} \cdot d_0$. When the top bit
+$d_0$ is set, we check that $x(\mathsf{pk_d})_{0..=253} < t_\mathbb{P}$:
 
 1. $d_0 = 1 \implies 0 \leq b_3 + 2^{4} \cdot c < t_\mathbb{P}.$
 
@@ -335,24 +351,26 @@ Recall that $\mathsf{x(pk_d)} = b_3 + 2^4 \cdot c + 2^{254} \cdot d_0$. When the
 $$
 \begin{array}{|c|c|c|c|c|}
 \hline
-  A_6   & A_7 &  A_8  &      A_9    & q_{\NoteCommit,x(pk_d)} \\\hline
-x(pk_d) & b_3 &   c   & z_{c,13}    &           1            \\\hline
-        & d_0 & b_3c' & z_{b_3c',14}&           0            \\\hline
+      A_6        & A_7 &  A_8  &      A_9     & q_{\NoteCommit,x(\mathsf{pk_d})} \\\hline
+x(\mathsf{pk_d}) & b_3 &   c   & z_{c,13}     &                1                 \\\hline
+                 & d_0 & b_3c' & z_{b_3c',14} &                0                 \\\hline
 \end{array}
 $$
+
 #### Constraints
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-2 & q_{\NoteCommit,x(pk_d)} \cdot (b_3 + c \cdot 2^4 + d_0 \cdot 2^{254} - \mathsf{x(pk_d)} = 0 \\\hline
-3 & q_{\NoteCommit,x(pk_d)} \cdot d_0 \cdot z_{c,13} = 0 \\\hline
-2 & q_{\NoteCommit,x(pk_d)} \cdot (b_3 + c \cdot 2^4 + 2^{140} - t_\mathbb{P} - {b_3}c') = 0 \\\hline
-3 & q_{\NoteCommit,x(pk_d)} \cdot d_0 \cdot z_{{b_3}c',14} = 0 \\\hline
+2 & q_{\NoteCommit,x(\mathsf{pk_d})} \cdot (b_3 + c \cdot 2^4 + d_0 \cdot 2^{254} - x(\mathsf{pk_d}) = 0 \\\hline
+3 & q_{\NoteCommit,x(\mathsf{pk_d})} \cdot d_0 \cdot z_{c,13} = 0 \\\hline
+2 & q_{\NoteCommit,x(\mathsf{pk_d})} \cdot (b_3 + c \cdot 2^4 + 2^{140} - t_\mathbb{P} - {b_3}c') = 0 \\\hline
+3 & q_{\NoteCommit,x(\mathsf{pk_d})} \cdot d_0 \cdot z_{{b_3}c',14} = 0 \\\hline
 \end{array}
 $$
 
 ### $\mathsf{v} = d_2 + 2^8 \cdot d_3 + 2^{58} \cdot e_0$
+
 #### Region layout
 $$
 \begin{array}{|c|c|c|c|c|}
@@ -372,7 +390,8 @@ $$
 $$
 
 ### $\rho$ with $g_0 = 1 \implies \rho \geq 2^{254}$
-Recall that $\rho = e_1 + 2^4 \cdot f + 2^{254} \cdot g_0$. When the top bit $g_0$ is set, we check that $\rho_{0..=253} < t_\mathbb{P}$:
+Recall that $\rho = e_1 + 2^4 \cdot f + 2^{254} \cdot g_0$. When the top bit $g_0$ is set,
+we check that $\rho_{0..=253} < t_\mathbb{P}$:
 
 1. $g_0 = 1 \implies 0 \leq e_1 + 2^{4} \cdot f < t_\mathbb{P}.$
 
@@ -398,6 +417,7 @@ $$
         & g_0 & e_1f' & z_{e_1f',14}&           0          \\\hline
 \end{array}
 $$
+
 #### Constraints
 $$
 \begin{array}{|c|l|}
@@ -411,12 +431,13 @@ $$
 $$
 
 ### $\psi$ with $h_1 = 1 \implies \psi \geq 2^{254}$
-Recall that $\psi = g_1 + 2^9 \cdot g_2 + 2^{249} \cdot h_0 + 2^{254} \cdot h_1$. When the top bit $h_1$ is set, we check that $\psi_{0..=253} < t_\mathbb{P}$:
+Recall that $\psi = g_1 + 2^9 \cdot g_2 + 2^{249} \cdot h_0 + 2^{254} \cdot h_1$. When the
+top bit $h_1$ is set, we check that $\psi_{0..=253} < t_\mathbb{P}$:
 
 1. $h_1 = 1 \implies h_0 = 0.$
 
-   Since $h_1 = 1 \implies \psi_{0..=253} < t_\mathbb{P} < 2^{126},$ we know that $\psi_{126..=253} = 0,$
-   and in particular $h_0 := \psi_{249..=253} = 0.$
+   Since $h_1 = 1 \implies \psi_{0..=253} < t_\mathbb{P} < 2^{126},$ we know that
+   $\psi_{126..=253} = 0,$ and in particular $h_0 := \psi_{249..=253} = 0.$
 
 2. $h_1 = 1 \implies 0 \leq g_1 + 2^{9} \cdot g_2 < t_\mathbb{P}.$
 
@@ -442,6 +463,7 @@ $$
   h_0   & h_1 & g_1g_2' & z_{g_1g_2',13}&           0          \\\hline
 \end{array}
 $$
+
 #### Constraints
 $$
 \begin{array}{|c|l|}
@@ -455,8 +477,13 @@ $$
 \end{array}
 $$
 
-### $y$-coordinate checks.
-Note that only the $ỹ$ LSB of the $y$-coordinates $\mathsf{y(g_d), y(pk_d)}$ was input to the hash, while the other bits of the $y$-coordinate were unused. However, we must still check that the witnessed $ỹ$ bit matches the original point's $y$-coordinate. The checks for $\mathsf{y(g_d), y(pk_d)}$ will follow the same format. For each $y$-coordinate, we witness:
+### $y$-coordinate checks
+
+Note that only the $ỹ$ LSB of the $y$-coordinates $y(\mathsf{g_d}), y(\mathsf{pk_d})$ was
+input to the hash, while the other bits of the $y$-coordinate were unused. However, we
+must still check that the witnessed $ỹ$ bit matches the original point's $y$-coordinate.
+The checks for $y(\mathsf{g_d}), y(\mathsf{pk_d})$ will follow the same format. For each
+$y$-coordinate, we witness:
 
 $$
 \begin{align}
@@ -469,9 +496,14 @@ y &= \textsf{LSB} \bconcat k_0 \bconcat k_1 \bconcat k_2 \bconcat k_3\\
 \end{align}
 $$
 
-where $\textsf{LSB}$ is $b_2$ for $\mathsf{y(g_d)}$, and $d_1$ for $\mathsf{y(pk_d)}$. Let $$j = \textsf{LSB} + 2 \cdot k_0 + 2^{10} \cdot k_1.$$ We decompose $j$ to be $250$ bits using a strict $25-$word [ten-bit lookup](../decomposition.md#lookup-decomposition). The running sum outputs allow us to susbstitute $k_1 = z_{j, 1}.$
+where $\textsf{LSB}$ is $b_2$ for $y(\mathsf{g_d})$, and $d_1$ for $y(\mathsf{pk_d})$.
+Let $$j = \textsf{LSB} + 2 \cdot k_0 + 2^{10} \cdot k_1.$$ We decompose $j$ to be $250$
+bits using a strict $25-$word [ten-bit lookup](../decomposition.md#lookup-decomposition).
+The running sum outputs allow us to susbstitute $k_1 = z_{j, 1}.$
 
-Recall that $b_2 = ỹ(g_d)$ and $d_1 = ỹ(pk_d)$ were pieces input to the Sinsemilla hash and have already been boolean-constrained. To constrain the remaining chunks, we use the following constraints:
+Recall that $b_2 = ỹ(\mathsf{g_d})$ and $d_1 = ỹ(\mathsf{pk_d})$ were pieces input to the
+Sinsemilla hash and have already been boolean-constrained. To constrain the remaining
+chunks, we use the following constraints:
 
 $$
 \begin{array}{|c|l|}
@@ -493,15 +525,15 @@ $$
 \end{array}
 $$
 
-### $\mathsf{y(g_d)}$ with $k_3 = 1 \implies \mathsf{y(g_d)} \geq 2^{254}$
+### $y(\mathsf{g_d})$ with $k_3 = 1 \implies y(\mathsf{g_d}) \geq 2^{254}$
 
-In these cases, we check that $\mathsf{y(g_d)}_{0..=253} < t_\mathbb{P}$:
+In these cases, we check that $y(\mathsf{g_d})_{0..=253} < t_\mathbb{P}$:
 
 1. $k_3 = 1 \implies k_2 = 0.$
 
-   Since $k_3 = 1 \implies \mathsf{y(g_d)}_{0..=253} < t_\mathbb{P} < 2^{126},$ we know that
-   $\mathsf{y(g_d)}_{126..=253} = 0,$ and in particular
-   $$k_2 := \mathsf{y(g_d)}_{250..=253} = 0.$$
+   Since $k_3 = 1 \implies y(\mathsf{g_d})_{0..=253} < t_\mathbb{P} < 2^{126},$ we know that
+   $y(\mathsf{g_d})_{126..=253} = 0,$ and in particular
+   $$k_2 := y(\mathsf{g_d})_{250..=253} = 0.$$
 
 2. $k_3 = 1 \implies 0 \leq j < t_\mathbb{P}.$
 
@@ -509,7 +541,8 @@ In these cases, we check that $\mathsf{y(g_d)}_{0..=253} < t_\mathbb{P}$:
 
     a) $0 \leq j < 2^{130}$. This is expressed in the custom gate as
        $$k_3 \cdot z_{j,13} = 0,$$
-       where $z_{j,13}$ is the index-13 running sum output by the $10$-bit lookup decomposition of $j$.
+       where $z_{j,13}$ is the index-13 running sum output by the $10$-bit lookup
+       decomposition of $j$.
 
     b) $0 \leq j + 2^{130} - t_\mathbb{P} < 2^{130}$. To check this, we decompose
        $j' = j + 2^{130} - t_\mathbb{P}$ into thirteen 10-bit words (little-endian) using
@@ -528,5 +561,6 @@ $$
 \end{array}
 $$
 
-### $\mathsf{y(pk_d)}$
-This can be checked in exactly the same way as $\mathsf{y(g_d)}$, with $b_2$ replaced by $d_1$.
+### $y(\mathsf{pk_d})$
+This can be checked in exactly the same way as $y(\mathsf{g_d})$, with $b_2$ replaced by
+$d_1$.
