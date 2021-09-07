@@ -86,11 +86,10 @@ However, we need additional constraints to enforce that:
   $\DiversifiedTransmitPublic$, $\rho$, and $\psi$ (or else the prover could witness
   multiple equivalent inputs to $\SinsemillaCommit$).
 
-Some of these constraints are implemented with reusable circuit gadgets. We define a
-custom gate controlled by a pair of selectors $(q_{\NoteCommit,1}, q_{\NoteCommit,2})$ to
-hold the remaining constraints. We will need to witness 40 separate variables in a single
-region, so we use two selectors that we activate on adjacent rows, in order to limit the
-required rotations to the set `[Rotation::prev(), Rotation::cur(), Rotation::next()]`.
+Some of these constraints are implemented with a reusable circuit gadget,
+$\ShortLookupRangeCheck$. We define custom gates for the remainder. Since these gates use
+simple boolean selectors activated on different rows, their selectors are eligible for
+combining, reducing the overall proof size.
 
 ## Message piece decomposition
 
@@ -511,7 +510,7 @@ $$
 \text{Degree} & \text{Constraint} \\\hline
   & \ShortLookupRangeCheck{k_0, 9} \\\hline
   & \ShortLookupRangeCheck{k_2, 4} \\\hline
-3 & q_{\NoteCommit,3} \cdot \BoolCheck{k_3} = 0 \\\hline
+3 & q_{\NoteCommit,y} \cdot \BoolCheck{k_3} = 0 \\\hline
 \end{array}
 $$
 
@@ -520,8 +519,8 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-2 & q_{\NoteCommit,3} \cdot \left(j - (\textsf{LSB} + k_0 \cdot 2 + k_1 \cdot 2^{10}) \right) = 0 \\\hline
-2 & q_{\NoteCommit,3} \cdot \left(y - (j + k_2 \cdot 2^{250} + k_3 \cdot 2^{254}) \right) = 0 \\\hline
+2 & q_{\NoteCommit,y} \cdot \left(j - (\textsf{LSB} + k_0 \cdot 2 + k_1 \cdot 2^{10}) \right) = 0 \\\hline
+2 & q_{\NoteCommit,y} \cdot \left(y - (j + k_2 \cdot 2^{250} + k_3 \cdot 2^{254}) \right) = 0 \\\hline
 \end{array}
 $$
 
@@ -550,14 +549,24 @@ In these cases, we check that $y(\mathsf{g_d})_{0..=253} < t_\mathbb{P}$:
        enforce in the custom gate that
        $$k_3 \cdot z_{j',13} = 0.$$
 
+#### Region layout
+$$
+\begin{array}{|c|c|c|c|c|c|}
+\hline
+A_5  & A_6  &   A_7    & A_8  &    A_9    & q_{\NoteCommit,y} \\\hline
+ y   &  ỹ   &   k_0    & k_2  &    k_3    &         1         \\\hline
+ j   & k_1  & z_{j,13} & j'   & z_{j',13} &         0         \\\hline
+\end{array}
+$$
+#### Constraints
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-3 & q_{\NoteCommit,3} \cdot k_3 \cdot k_2 = 0 \\\hline
-3 & q_{\NoteCommit,3} \cdot k_3 \cdot z_{j,13} = 0 \\\hline
-2 & q_{\NoteCommit,3} \cdot (j + 2^{130} - t_\mathbb{P} - j') = 0 \\\hline
-3 & q_{\NoteCommit,3} \cdot k_3 \cdot z_{j',13} = 0 \\\hline
+3 & q_{\NoteCommit,y} \cdot k_3 \cdot k_2 = 0 \\\hline
+3 & q_{\NoteCommit,y} \cdot k_3 \cdot z_{j,13} = 0 \\\hline
+2 & q_{\NoteCommit,y} \cdot (j + 2^{130} - t_\mathbb{P} - j') = 0 \\\hline
+3 & q_{\NoteCommit,y} \cdot k_3 \cdot z_{j',13} = 0 \\\hline
 \end{array}
 $$
 
