@@ -501,15 +501,14 @@ bits using a strict $25-$word [ten-bit lookup](../decomposition.md#lookup-decomp
 The running sum outputs allow us to susbstitute $k_1 = z_{j, 1}.$
 
 Recall that $b_2 = ỹ(\mathsf{g_d})$ and $d_1 = ỹ(\mathsf{pk_d})$ were pieces input to the
-Sinsemilla hash and have already been boolean-constrained. To constrain the remaining
-chunks, we use the following constraints:
+Sinsemilla hash and have already been boolean-constrained. $k_0$ and $k_2$ are constrained
+outside this gate to $9$ and $4$ bits respectively. To constrain the remaining chunks, we
+use the following constraints:
 
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-  & \ShortLookupRangeCheck{k_0, 9} \\\hline
-  & \ShortLookupRangeCheck{k_2, 4} \\\hline
 3 & q_{\NoteCommit,y} \cdot \BoolCheck{k_3} = 0 \\\hline
 \end{array}
 $$
@@ -558,6 +557,7 @@ A_5  & A_6  &   A_7    & A_8  &    A_9    & q_{\NoteCommit,y} \\\hline
  j   & k_1  & z_{j,13} & j'   & z_{j',13} &         0         \\\hline
 \end{array}
 $$
+
 #### Constraints
 $$
 \begin{array}{|c|l|}
@@ -569,6 +569,10 @@ $$
 3 & q_{\NoteCommit,y} \cdot k_3 \cdot z_{j',13} = 0 \\\hline
 \end{array}
 $$
+
+Outside this gate, we have constrained:
+- $\ShortLookupRangeCheck{k_0, 9}$
+- $\ShortLookupRangeCheck{k_2, 4}$
 
 ### $y(\mathsf{pk_d})$
 This can be checked in exactly the same way as $y(\mathsf{g_d})$, with $b_2$ replaced by
