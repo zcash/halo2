@@ -87,9 +87,9 @@ However, we need additional constraints to enforce that:
   multiple equivalent inputs to $\SinsemillaCommit$).
 
 Some of these constraints are implemented with a reusable circuit gadget,
-$\ShortLookupRangeCheck$. We define custom gates for the remainder. Since these gates use
-simple boolean selectors activated on different rows, their selectors are eligible for
-combining, reducing the overall proof size.
+$\ShortLookupRangeCheck{}$. We define custom gates for the remainder. Since these gates
+use simple boolean selectors activated on different rows, their selectors are eligible
+for combining, reducing the overall proof size.
 
 ## Message piece decomposition
 
