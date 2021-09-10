@@ -849,6 +849,12 @@ impl<F: Field> Mul<F> for Expression<F> {
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct PointIndex(pub usize);
 
+/// A gate comprised of multiple constraints.
+pub trait Gate {
+    /// The name of this gate.
+    const NAME: &'static str;
+}
+
 /// A "virtual cell" is a PLONK cell that has been queried at a particular relative offset
 /// within a custom gate.
 #[derive(Clone, Debug)]
@@ -894,7 +900,7 @@ impl<F: Field> From<Expression<F>> for Vec<Constraint<F>> {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct Gate<F: Field> {
+pub(crate) struct ConfiguredGate<F: Field> {
     name: &'static str,
     constraint_names: Vec<&'static str>,
     polys: Vec<Expression<F>>,
@@ -904,7 +910,7 @@ pub(crate) struct Gate<F: Field> {
     queried_cells: Vec<VirtualCell>,
 }
 
-impl<F: Field> Gate<F> {
+impl<F: Field> ConfiguredGate<F> {
     pub(crate) fn name(&self) -> &'static str {
         self.name
     }
@@ -935,7 +941,7 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) num_instance_columns: usize,
     pub(crate) num_selectors: usize,
     pub(crate) selector_map: Vec<Column<Fixed>>,
-    pub(crate) gates: Vec<Gate<F>>,
+    pub(crate) gates: Vec<ConfiguredGate<F>>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
     // Contains an integer for each advice column
     // identifying how many distinct queries it has
@@ -976,7 +982,7 @@ pub struct PinnedConstraintSystem<'a, F: Field> {
     minimum_degree: &'a Option<usize>,
 }
 
-struct PinnedGates<'a, F: Field>(&'a Vec<Gate<F>>);
+struct PinnedGates<'a, F: Field>(&'a Vec<ConfiguredGate<F>>);
 
 impl<'a, F: Field> std::fmt::Debug for PinnedGates<'a, F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
@@ -1183,6 +1189,27 @@ impl<F: Field> ConstraintSystem<F> {
         self.minimum_degree = Some(degree);
     }
 
+    /// Configures the given constraint system to include this gate.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if called more than once with the same `ConstraintSystem`.
+    /// TODO: Implement.
+    ///
+    /// A gate is required to contain polynomial constraints. This method will panic if
+    /// `constraints` returns an empty iterator.
+    pub fn configure_gate<G: Gate, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>>(
+        &mut self,
+        gate: G,
+        constraints: impl FnOnce(&mut VirtualCells<'_, F>, &G) -> Iter,
+    ) -> G {
+        // TODO(str4d): Is there a way to prevent `constraints` from querying cells
+        // outside of `gate`? I was trying to do this with generic parameters on concrete
+        // structs implementing `Gate`, but it does make things a little verbose.
+        self.create_gate(G::NAME, |cells| constraints(cells, &gate));
+        gate
+    }
+
     /// Creates a new gate.
     ///
     /// # Panics
@@ -1210,7 +1237,7 @@ impl<F: Field> ConstraintSystem<F> {
             "Gates must contain at least one constraint."
         );
 
-        self.gates.push(Gate {
+        self.gates.push(ConfiguredGate {
             name,
             constraint_names,
             polys,
