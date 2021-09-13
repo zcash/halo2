@@ -19,13 +19,13 @@ publish = false
 rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 
 [dependencies]
-aes = "0.6"
+aes = "0.7"
 arrayvec = "0.7.0"
 bigint = "4"
 bitvec = "0.22"
 blake2b_simd = "0.5"
 ff = "0.11"
-fpe = "0.4"
+fpe = "0.5"
 group = "0.11"
 halo2 = "0.0"
 lazy_static = "1"
