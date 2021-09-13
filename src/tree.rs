@@ -277,7 +277,8 @@ impl<'de> Deserialize<'de> for MerkleCrhOrchardOutput {
 pub mod testing {
     #[cfg(test)]
     use incrementalmerkletree::{
-        bridgetree::Frontier as BridgeFrontier, Altitude, Frontier, Hashable,
+        bridgetree::{BridgeTree, Frontier as BridgeFrontier},
+        Altitude, Frontier, Hashable, Tree,
     };
 
     use std::convert::TryInto;
@@ -304,6 +305,35 @@ pub mod testing {
 
         for (height, root) in EMPTY_ROOTS.iter().enumerate() {
             assert_eq!(tv_empty_roots[height], root.to_bytes());
+        }
+
+        let mut tree = BridgeTree::<MerkleCrhOrchardOutput, 4>::new(100);
+        for (i, tv) in crate::test_vectors::merkle_path::test_vectors()
+            .into_iter()
+            .enumerate()
+        {
+            let cmx = MerkleCrhOrchardOutput::from_bytes(&tv.leaves[i]).unwrap();
+            tree.append(&cmx);
+            tree.witness();
+
+            assert_eq!(tree.root().0, pallas::Base::from_bytes(&tv.root).unwrap());
+
+            // Check paths for all leaves up to this point. The test vectors include paths
+            // for not-yet-appended leaves (using UNCOMMITTED_ORCHARD as the leaf value),
+            // but BridgeTree doesn't encode these.
+            for j in 0..=i {
+                let leaf = MerkleCrhOrchardOutput::from_bytes(&tv.leaves[j]).unwrap();
+                assert_eq!(
+                    tree.authentication_path(&leaf),
+                    Some((
+                        j.try_into().unwrap(),
+                        tv.paths[j]
+                            .iter()
+                            .map(|v| MerkleCrhOrchardOutput::from_bytes(v).unwrap())
+                            .collect()
+                    ))
+                );
+            }
         }
     }
 
