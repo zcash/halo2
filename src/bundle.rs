@@ -5,7 +5,7 @@ pub mod commitments;
 use std::io;
 
 use blake2b_simd::Hash as Blake2bHash;
-use memuse::{DynamicUsage, NoDynamicUsage};
+use memuse::DynamicUsage;
 use nonempty::NonEmpty;
 use zcash_note_encryption::try_note_decryption;
 
@@ -134,7 +134,17 @@ impl<T> Action<T> {
     }
 }
 
-impl NoDynamicUsage for Action<redpallas::Signature<SpendAuth>> {}
+impl DynamicUsage for Action<redpallas::Signature<SpendAuth>> {
+    #[inline(always)]
+    fn dynamic_usage(&self) -> usize {
+        0
+    }
+
+    #[inline(always)]
+    fn dynamic_usage_bounds(&self) -> (usize, Option<usize>) {
+        (0, Some(0))
+    }
+}
 
 /// Orchard-specific flags.
 #[derive(Clone, Copy, Debug)]
