@@ -45,8 +45,8 @@ impl Config {
                 - Expression::Constant(pallas::Affine::b());
 
             vec![
-                q_point.clone() * x * curve_eqn.clone(),
-                q_point * y * curve_eqn,
+                ("x == 0 ∨ on_curve", q_point.clone() * x * curve_eqn.clone()),
+                ("y == 0 ∨ on_curve", q_point * y * curve_eqn),
             ]
         });
     }

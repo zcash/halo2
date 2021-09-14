@@ -99,12 +99,12 @@ impl Config {
         meta.create_gate("LSB check", |meta| {
             let q_mul_lsb = meta.query_selector(self.q_mul_lsb);
 
-            let z_1 = meta.query_advice(self.complete_config.z_complete, Rotation::prev());
-            let z_0 = meta.query_advice(self.complete_config.z_complete, Rotation::cur());
-            let x_p = meta.query_advice(self.add_config.x_p, Rotation::prev());
-            let y_p = meta.query_advice(self.add_config.y_p, Rotation::prev());
-            let base_x = meta.query_advice(self.add_config.x_p, Rotation::cur());
-            let base_y = meta.query_advice(self.add_config.y_p, Rotation::cur());
+            let z_1 = meta.query_advice(self.complete_config.z_complete, Rotation::cur());
+            let z_0 = meta.query_advice(self.complete_config.z_complete, Rotation::next());
+            let x_p = meta.query_advice(self.add_config.x_p, Rotation::cur());
+            let y_p = meta.query_advice(self.add_config.y_p, Rotation::cur());
+            let base_x = meta.query_advice(self.add_config.x_p, Rotation::next());
+            let base_y = meta.query_advice(self.add_config.y_p, Rotation::next());
 
             //    z_0 = 2 * z_1 + k_0
             // => k_0 = z_0 - 2 * z_1
@@ -118,8 +118,12 @@ impl Config {
             let lsb_x = (lsb.clone() * x_p.clone()) + one_minus_lsb.clone() * (x_p - base_x);
             let lsb_y = (lsb * y_p.clone()) + one_minus_lsb * (y_p + base_y);
 
-            std::array::IntoIter::new([bool_check, lsb_x, lsb_y])
-                .map(move |poly| q_mul_lsb.clone() * poly)
+            std::array::IntoIter::new([
+                ("bool_check", bool_check),
+                ("lsb_x", lsb_x),
+                ("lsb_y", lsb_y),
+            ])
+            .map(move |(name, poly)| (name, q_mul_lsb.clone() * poly))
         });
 
         self.hi_config.create_gate(meta);
@@ -271,8 +275,8 @@ impl Config {
     /// addition subregion.
     ///
     /// ```text
-    /// | x_p  | y_p  | acc_x | acc_y | complete addition  | z_1 |
-    /// |base_x|base_y| res_x | res_y |   |   |    |   |   | z_0 | q_mul_lsb = 1
+    /// | x_p  | y_p  | acc_x | acc_y | complete addition  | z_1 | q_mul_lsb = 1
+    /// |base_x|base_y| res_x | res_y |   |   |    |   |   | z_0 |
     /// ```
     fn process_lsb(
         &self,
@@ -284,7 +288,7 @@ impl Config {
         lsb: Option<bool>,
     ) -> Result<(EccPoint, Z<pallas::Base>), Error> {
         // Enforce switching logic on LSB using a custom gate
-        self.q_mul_lsb.enable(region, offset + 1)?;
+        self.q_mul_lsb.enable(region, offset)?;
 
         // z_1 has been assigned at (z_complete, offset).
         // Assign z_0 = 2⋅z_1 + k_0

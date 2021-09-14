@@ -42,6 +42,11 @@ impl Config {
     /// addition gate (controlled by `q_mul`) already checks scalar decomposition for
     /// the other bits.
     pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+        // | y_p | z_complete |
+        // --------------------
+        // | y_p | z_{i + 1}  |
+        // |     | base_y     |
+        // |     | z_i        |
         meta.create_gate(
             "Decompose scalar for complete bits of variable-base mul",
             |meta| {
@@ -121,6 +126,12 @@ impl Config {
         for (iter, k) in bits.iter().enumerate() {
             // Each iteration uses 2 rows (two complete additions)
             let row = 2 * iter;
+
+            // | x_p | y_p | x_qr  | y_qr  | z_complete |
+            // ------------------------------------------
+            // | U_x | U_y | acc_x | acc_y | z_{i + 1}  | row + offset
+            // |acc_x|acc_y|acc+U_x|acc+U_y| base_y     |
+            // |     |     | res_x | res_y | z_i        |
 
             // Update `z`.
             z = {

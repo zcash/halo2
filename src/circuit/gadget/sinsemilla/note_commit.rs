@@ -37,8 +37,16 @@ use super::{
 #[allow(non_snake_case)]
 #[derive(Clone, Debug)]
 pub struct NoteCommitConfig {
-    q_canon_1: Selector,
-    q_canon_2: Selector,
+    q_notecommit_b: Selector,
+    q_notecommit_d: Selector,
+    q_notecommit_e: Selector,
+    q_notecommit_g: Selector,
+    q_notecommit_h: Selector,
+    q_notecommit_g_d: Selector,
+    q_notecommit_pk_d: Selector,
+    q_notecommit_value: Selector,
+    q_notecommit_rho: Selector,
+    q_notecommit_psi: Selector,
     q_y_canon: Selector,
     advices: [Column<Advice>; 10],
     sinsemilla_config: SinsemillaConfig,
@@ -52,13 +60,29 @@ impl NoteCommitConfig {
         advices: [Column<Advice>; 10],
         sinsemilla_config: SinsemillaConfig,
     ) -> Self {
-        let q_canon_1 = meta.selector();
-        let q_canon_2 = meta.selector();
+        let q_notecommit_b = meta.selector();
+        let q_notecommit_d = meta.selector();
+        let q_notecommit_e = meta.selector();
+        let q_notecommit_g = meta.selector();
+        let q_notecommit_h = meta.selector();
+        let q_notecommit_g_d = meta.selector();
+        let q_notecommit_pk_d = meta.selector();
+        let q_notecommit_value = meta.selector();
+        let q_notecommit_rho = meta.selector();
+        let q_notecommit_psi = meta.selector();
         let q_y_canon = meta.selector();
 
         let config = Self {
-            q_canon_1,
-            q_canon_2,
+            q_notecommit_b,
+            q_notecommit_d,
+            q_notecommit_e,
+            q_notecommit_g,
+            q_notecommit_h,
+            q_notecommit_g_d,
+            q_notecommit_pk_d,
+            q_notecommit_value,
+            q_notecommit_rho,
+            q_notecommit_psi,
             q_y_canon,
             advices,
             sinsemilla_config,
@@ -73,12 +97,350 @@ impl NoteCommitConfig {
         let two_pow_8 = two_pow_4.square();
         let two_pow_9 = two_pow_8 * two;
         let two_pow_10 = two_pow_9 * two;
+        let two_pow_58 = pallas::Base::from_u64(1 << 58);
         let two_pow_130 = Expression::Constant(pallas::Base::from_u128(1 << 65).square());
         let two_pow_140 = Expression::Constant(pallas::Base::from_u128(1 << 70).square());
-        let two_pow_250 = pallas::Base::from_u128(1 << 125).square();
+        let two_pow_249 = pallas::Base::from_u128(1 << 124).square() * two;
+        let two_pow_250 = two_pow_249 * two;
         let two_pow_254 = pallas::Base::from_u128(1 << 127).square();
 
         let t_p = Expression::Constant(pallas::Base::from_u128(T_P));
+
+        // Columns used for MessagePiece and message input gates.
+        let col_l = config.advices[6];
+        let col_m = config.advices[7];
+        let col_r = config.advices[8];
+        let col_z = config.advices[9];
+
+        // | A_6 | A_7 | A_8 | q_notecommit_b |
+        // ------------------------------------
+        // |  b  | b_0 | b_1 |       1        |
+        // |     | b_2 | b_3 |       0        |
+        meta.create_gate("NoteCommit MessagePiece b", |meta| {
+            let q_notecommit_b = meta.query_selector(config.q_notecommit_b);
+
+            // b has been constrained to 10 bits by the Sinsemilla hash.
+            let b = meta.query_advice(col_l, Rotation::cur());
+            // b_0 has been constrained to be 4 bits outside this gate.
+            let b_0 = meta.query_advice(col_m, Rotation::cur());
+            // This gate constrains b_1 to be boolean.
+            let b_1 = meta.query_advice(col_r, Rotation::cur());
+            // This gate constrains b_2 to be boolean.
+            let b_2 = meta.query_advice(col_m, Rotation::next());
+            // b_3 has been constrained to 4 bits outside this gate.
+            let b_3 = meta.query_advice(col_r, Rotation::next());
+
+            // b = b_0 + (2^4) b_1 + (2^5) b_2 + (2^6) b_3
+            let decomposition_check =
+                b - (b_0 + b_1.clone() * two_pow_4 + b_2.clone() * two_pow_5 + b_3 * two_pow_6);
+
+            std::iter::empty()
+                .chain(Some(("bool_check b_1", bool_check(b_1))))
+                .chain(Some(("bool_check b_2", bool_check(b_2))))
+                .chain(Some(("decomposition", decomposition_check)))
+                .map(move |(name, poly)| (name, q_notecommit_b.clone() * poly))
+        });
+
+        // | A_6 | A_7 | A_8 | q_notecommit_d |
+        // ------------------------------------
+        // |  d  | d_0 | d_1 |       1        |
+        // |     | d_2 | d_3 |       0        |
+        meta.create_gate("NoteCommit MessagePiece d", |meta| {
+            let q_notecommit_d = meta.query_selector(config.q_notecommit_d);
+
+            // d has been constrained to 60 bits by the Sinsemilla hash.
+            let d = meta.query_advice(col_l, Rotation::cur());
+            // This gate constrains d_0 to be boolean.
+            let d_0 = meta.query_advice(col_m, Rotation::cur());
+            // This gate constrains d_1 to be boolean.
+            let d_1 = meta.query_advice(col_r, Rotation::cur());
+            // d_2 has been constrained to 8 bits outside this gate.
+            let d_2 = meta.query_advice(col_m, Rotation::next());
+            // d_3 is set to z1_d.
+            let d_3 = meta.query_advice(col_r, Rotation::next());
+
+            // d = d_0 + (2) d_1 + (2^2) d_2 + (2^10) d_3
+            let decomposition_check =
+                d - (d_0.clone() + d_1.clone() * two + d_2 * two_pow_2 + d_3 * two_pow_10);
+
+            std::iter::empty()
+                .chain(Some(("bool_check d_0", bool_check(d_0))))
+                .chain(Some(("bool_check d_1", bool_check(d_1))))
+                .chain(Some(("decomposition", decomposition_check)))
+                .map(move |(name, poly)| (name, q_notecommit_d.clone() * poly))
+        });
+
+        // | A_6 | A_7 | A_8 | q_notecommit_e |
+        // ------------------------------------
+        // |  e  | e_0 | e_1 |       1        |
+        meta.create_gate("NoteCommit MessagePiece e", |meta| {
+            let q_notecommit_e = meta.query_selector(config.q_notecommit_e);
+
+            // e has been constrained to 10 bits by the Sinsemilla hash.
+            let e = meta.query_advice(col_l, Rotation::cur());
+            // e_0 has been constrained to 6 bits outside this gate.
+            let e_0 = meta.query_advice(col_m, Rotation::cur());
+            // e_1 has been constrained to 4 bits outside this gate.
+            let e_1 = meta.query_advice(col_r, Rotation::cur());
+
+            // e = e_0 + (2^6) e_1
+            let decomposition_check = e - (e_0 + e_1 * two_pow_6);
+
+            std::iter::empty()
+                .chain(Some(("decomposition", decomposition_check)))
+                .map(move |(name, poly)| (name, q_notecommit_e.clone() * poly))
+        });
+
+        // | A_6 | A_7 | q_notecommit_g |
+        // ------------------------------
+        // |  g  | g_0 |       1        |
+        // | g_1 | g_2 |       0        |
+        meta.create_gate("NoteCommit MessagePiece g", |meta| {
+            let q_notecommit_g = meta.query_selector(config.q_notecommit_g);
+
+            // g has been constrained to 250 bits by the Sinsemilla hash.
+            let g = meta.query_advice(col_l, Rotation::cur());
+            // This gate constrains g_0 to be boolean.
+            let g_0 = meta.query_advice(col_m, Rotation::cur());
+            // g_1 has been constrained to 9 bits outside this gate.
+            let g_1 = meta.query_advice(col_l, Rotation::next());
+            // g_2 is set to z1_g.
+            let g_2 = meta.query_advice(col_m, Rotation::next());
+
+            // g = g_0 + (2) g_1 + (2^10) g_2
+            let decomposition_check = g - (g_0.clone() + g_1 * two + g_2 * two_pow_10);
+
+            std::iter::empty()
+                .chain(Some(("bool_check g_0", bool_check(g_0))))
+                .chain(Some(("decomposition", decomposition_check)))
+                .map(move |(name, poly)| (name, q_notecommit_g.clone() * poly))
+        });
+
+        // | A_6 | A_7 | A_8 | q_notecommit_h |
+        // ------------------------------------
+        // |  h  | h_0 | h_1 |       1        |
+        meta.create_gate("NoteCommit MessagePiece h", |meta| {
+            let q_notecommit_h = meta.query_selector(config.q_notecommit_h);
+
+            // h has been constrained to 10 bits by the Sinsemilla hash.
+            let h = meta.query_advice(col_l, Rotation::cur());
+            // h_0 has been constrained to be 5 bits outside this gate.
+            let h_0 = meta.query_advice(col_m, Rotation::cur());
+            // This gate constrains h_1 to be boolean.
+            let h_1 = meta.query_advice(col_r, Rotation::cur());
+
+            // h = h_0 + (2^5) h_1
+            let decomposition_check = h - (h_0 + h_1.clone() * two_pow_5);
+
+            std::iter::empty()
+                .chain(Some(("bool_check h_1", bool_check(h_1))))
+                .chain(Some(("decomposition", decomposition_check)))
+                .map(move |(name, poly)| (name, q_notecommit_h.clone() * poly))
+        });
+
+        // |  A_6   | A_7 |   A_8   |     A_9     | q_notecommit_g_d |
+        // -----------------------------------------------------------
+        // | x(g_d) | b_0 | a       | z13_a       |        1         |
+        // |        | b_1 | a_prime | z13_a_prime |        0         |
+        meta.create_gate("NoteCommit input g_d", |meta| {
+            let q_notecommit_g_d = meta.query_selector(config.q_notecommit_g_d);
+
+            let gd_x = meta.query_advice(col_l, Rotation::cur());
+
+            // b_0 has been constrained to be 4 bits outside this gate.
+            let b_0 = meta.query_advice(col_m, Rotation::cur());
+            // b_1 has been constrained to be boolean outside this gate.
+            let b_1 = meta.query_advice(col_m, Rotation::next());
+
+            // a has been constrained to 250 bits by the Sinsemilla hash.
+            let a = meta.query_advice(col_r, Rotation::cur());
+            let a_prime = meta.query_advice(col_r, Rotation::next());
+
+            let z13_a = meta.query_advice(col_z, Rotation::cur());
+            let z13_a_prime = meta.query_advice(col_z, Rotation::next());
+
+            // x(g_d) = a + (2^250)b_0 + (2^254)b_1
+            let decomposition_check = {
+                let sum = a.clone() + b_0.clone() * two_pow_250 + b_1.clone() * two_pow_254;
+                sum - gd_x
+            };
+
+            // a_prime = a + 2^130 - t_P
+            let a_prime_check = a + two_pow_130.clone() - t_p.clone() - a_prime;
+
+            // The gd_x_canonicity_checks are enforced if and only if `b_1` = 1.
+            // x(g_d) = a (250 bits) || b_0 (4 bits) || b_1 (1 bit)
+            let canonicity_checks = std::iter::empty()
+                .chain(Some(("b_1 = 1 => b_0", b_0)))
+                .chain(Some(("b_1 = 1 => z13_a", z13_a)))
+                .chain(Some(("b_1 = 1 => z13_a_prime", z13_a_prime)))
+                .map(move |(name, poly)| (name, b_1.clone() * poly));
+
+            std::iter::empty()
+                .chain(Some(("decomposition", decomposition_check)))
+                .chain(Some(("a_prime_check", a_prime_check)))
+                .chain(canonicity_checks)
+                .map(move |(name, poly)| (name, q_notecommit_g_d.clone() * poly))
+        });
+
+        // |   A_6   | A_7 |    A_8     |      A_9       | q_notecommit_pk_d |
+        // -------------------------------------------------------------------
+        // | x(pk_d) | b_3 |    c       | z13_c          |         1         |
+        // |         | d_0 | b3_c_prime | z14_b3_c_prime |         0         |
+        meta.create_gate("NoteCommit input pk_d", |meta| {
+            let q_notecommit_pk_d = meta.query_selector(config.q_notecommit_pk_d);
+
+            let pkd_x = meta.query_advice(col_l, Rotation::cur());
+
+            // `b_3` has been constrained to 4 bits outside this gate.
+            let b_3 = meta.query_advice(col_m, Rotation::cur());
+            // d_0 has been constrained to be boolean outside this gate.
+            let d_0 = meta.query_advice(col_m, Rotation::next());
+
+            // `c` has been constrained to 250 bits by the Sinsemilla hash.
+            let c = meta.query_advice(col_r, Rotation::cur());
+            let b3_c_prime = meta.query_advice(col_r, Rotation::next());
+
+            let z13_c = meta.query_advice(col_z, Rotation::cur());
+            let z14_b3_c_prime = meta.query_advice(col_z, Rotation::next());
+
+            // x(pk_d) = b_3 + (2^4)c + (2^254)d_0
+            let decomposition_check = {
+                let sum = b_3.clone() + c.clone() * two_pow_4 + d_0.clone() * two_pow_254;
+                sum - pkd_x
+            };
+
+            // b3_c_prime = b_3 + (2^4)c + 2^140 - t_P
+            let b3_c_prime_check =
+                b_3 + (c * two_pow_4) + two_pow_140.clone() - t_p.clone() - b3_c_prime;
+
+            // The pkd_x_canonicity_checks are enforced if and only if `d_0` = 1.
+            // `x(pk_d)` = `b_3 (4 bits) || c (250 bits) || d_0 (1 bit)`
+            let canonicity_checks = std::iter::empty()
+                .chain(Some(("d_0 = 1 => z13_c", z13_c)))
+                .chain(Some(("d_0 = 1 => z14_b3_c_prime", z14_b3_c_prime)))
+                .map(move |(name, poly)| (name, d_0.clone() * poly));
+
+            std::iter::empty()
+                .chain(Some(("decomposition", decomposition_check)))
+                .chain(Some(("b3_c_prime_check", b3_c_prime_check)))
+                .chain(canonicity_checks)
+                .map(move |(name, poly)| (name, q_notecommit_pk_d.clone() * poly))
+        });
+
+        // |  A_6  | A_7 | A_8 | A_9 | q_notecommit_value |
+        // ------------------------------------------------
+        // | value | d_2 | d_3 | e_0 |          1         |
+        meta.create_gate("NoteCommit input value", |meta| {
+            let q_notecommit_value = meta.query_selector(config.q_notecommit_value);
+
+            let value = meta.query_advice(col_l, Rotation::cur());
+            // d_2 has been constrained to 8 bits outside this gate.
+            let d_2 = meta.query_advice(col_m, Rotation::cur());
+            // z1_d has been constrained to 50 bits by the Sinsemilla hash.
+            let z1_d = meta.query_advice(col_r, Rotation::cur());
+            let d_3 = z1_d;
+            // `e_0` has been constrained to 6 bits outside this gate.
+            let e_0 = meta.query_advice(col_z, Rotation::cur());
+
+            // value = d_2 + (2^8)d_3 + (2^58)e_0
+            let value_check = d_2 + d_3 * two_pow_8 + e_0 * two_pow_58 - value;
+
+            std::iter::empty()
+                .chain(Some(("value_check", value_check)))
+                .map(move |(name, poly)| (name, q_notecommit_value.clone() * poly))
+        });
+
+        // | A_6 | A_7 |    A_8     |      A_9       | q_notecommit_rho |
+        // --------------------------------------------------------------
+        // | rho | e_1 |    f       | z13_f          |        1         |
+        // |     | g_0 | e1_f_prime | z14_e1_f_prime |        0         |
+        meta.create_gate("NoteCommit input rho", |meta| {
+            let q_notecommit_rho = meta.query_selector(config.q_notecommit_rho);
+
+            let rho = meta.query_advice(col_l, Rotation::cur());
+
+            // `e_1` has been constrained to 4 bits outside this gate.
+            let e_1 = meta.query_advice(col_m, Rotation::cur());
+            let g_0 = meta.query_advice(col_m, Rotation::next());
+
+            // `f` has been constrained to 250 bits by the Sinsemilla hash.
+            let f = meta.query_advice(col_r, Rotation::cur());
+            let e1_f_prime = meta.query_advice(col_r, Rotation::next());
+
+            let z13_f = meta.query_advice(col_z, Rotation::cur());
+            let z14_e1_f_prime = meta.query_advice(col_z, Rotation::next());
+
+            // rho = e_1 + (2^4) f + (2^254) g_0
+            let decomposition_check = {
+                let sum = e_1.clone() + f.clone() * two_pow_4 + g_0.clone() * two_pow_254;
+                sum - rho
+            };
+
+            // e1_f_prime = e_1 + (2^4)f + 2^140 - t_P
+            let e1_f_prime_check = e_1 + (f * two_pow_4) + two_pow_140 - t_p.clone() - e1_f_prime;
+
+            // The rho_canonicity_checks are enforced if and only if `g_0` = 1.
+            // rho = e_1 (4 bits) || f (250 bits) || g_0 (1 bit)
+            let canonicity_checks = std::iter::empty()
+                .chain(Some(("g_0 = 1 => z13_f", z13_f)))
+                .chain(Some(("g_0 = 1 => z14_e1_f_prime", z14_e1_f_prime)))
+                .map(move |(name, poly)| (name, g_0.clone() * poly));
+
+            std::iter::empty()
+                .chain(Some(("decomposition", decomposition_check)))
+                .chain(Some(("e1_f_prime_check", e1_f_prime_check)))
+                .chain(canonicity_checks)
+                .map(move |(name, poly)| (name, q_notecommit_rho.clone() * poly))
+        });
+
+        // | A_6 | A_7 |     A_8     |       A_9       | q_notecommit_psi |
+        // ----------------------------------------------------------------
+        // | psi | g_1 |   g_2       | z13_g           |        1         |
+        // | h_0 | h_1 | g1_g2_prime | z13_g1_g2_prime |        0         |
+        meta.create_gate("NoteCommit input psi", |meta| {
+            let q_notecommit_psi = meta.query_selector(config.q_notecommit_psi);
+
+            let psi = meta.query_advice(col_l, Rotation::cur());
+            let h_0 = meta.query_advice(col_l, Rotation::next());
+
+            let g_1 = meta.query_advice(col_m, Rotation::cur());
+            let h_1 = meta.query_advice(col_m, Rotation::next());
+
+            let z1_g = meta.query_advice(col_r, Rotation::cur());
+            let g_2 = z1_g;
+            let g1_g2_prime = meta.query_advice(col_r, Rotation::next());
+
+            let z13_g = meta.query_advice(col_z, Rotation::cur());
+            let z13_g1_g2_prime = meta.query_advice(col_z, Rotation::next());
+
+            // psi = g_1 + (2^9) g_2 + (2^249) h_0 + (2^254) h_1
+            let decomposition_check = {
+                let sum = g_1.clone()
+                    + g_2.clone() * two_pow_9
+                    + h_0.clone() * two_pow_249
+                    + h_1.clone() * two_pow_254;
+                sum - psi
+            };
+
+            // g1_g2_prime = g_1 + (2^9)g_2 + 2^130 - t_P
+            let g1_g2_prime_check =
+                g_1 + (g_2 * two_pow_9) + two_pow_130.clone() - t_p.clone() - g1_g2_prime;
+
+            // The psi_canonicity_checks are enforced if and only if `h_1` = 1.
+            // `psi` = `g_1 (9 bits) || g_2 (240 bits) || h_0 (5 bits) || h_1 (1 bit)`
+            let canonicity_checks = std::iter::empty()
+                .chain(Some(("h_1 = 1 => h_0", h_0)))
+                .chain(Some(("h_1 = 1 => z13_g", z13_g)))
+                .chain(Some(("h_1 = 1 => z13_g1_g2_prime", z13_g1_g2_prime)))
+                .map(move |(name, poly)| (name, h_1.clone() * poly));
+
+            std::iter::empty()
+                .chain(Some(("decomposition", decomposition_check)))
+                .chain(Some(("g1_g2_prime_check", g1_g2_prime_check)))
+                .chain(canonicity_checks)
+                .map(move |(name, poly)| (name, q_notecommit_psi.clone() * poly))
+        });
 
         /*
             Check decomposition and canonicity of y-coordinates.
@@ -127,7 +489,7 @@ impl NoteCommitConfig {
                 let y_check =
                     y - (j.clone() + k_2.clone() * two_pow_250 + k_3.clone() * two_pow_254);
                 // Check that j_prime = j + 2^130 - t_P
-                let j_prime_check = j + two_pow_130.clone() - t_p.clone() - j_prime;
+                let j_prime_check = j + two_pow_130 - t_p.clone() - j_prime;
 
                 std::iter::empty()
                     .chain(Some(("k3_check", k3_check)))
@@ -148,319 +510,6 @@ impl NoteCommitConfig {
             decomposition_checks
                 .chain(canonicity_checks)
                 .map(move |(name, poly)| (name, q_y_canon.clone() * poly))
-        });
-
-        meta.create_gate("NoteCommit decomposition check", |meta| {
-            /*
-                All bit ranges are inclusive.
-
-                a (250 bits) = bits 0..=249 of x(g_d)
-                b (10 bits)  = b_0 || b_1 || b_2 || b_3
-                             = (bits 250..=253 of x(g_d)) || (bit 254 of x(g_d)) || (ỹ bit of g_d) || (bits 0..=3 of pk★_d)
-                c (250 bits) = bits 4..=253 of pk★_d
-                d (60 bits)  = d_0 || d_1 || d_2 || d_3
-                             = (bit 254 of x(pk_d)) || (ỹ bit of pk_d) || (0..=7 of v) || (8..=57 of v)
-                e (10 bits)  = e_0 || e_1
-                             = (bits 58..=63 of v) || (bits 0..=3 of rho)
-                f (250 bits) = bits 4..=253 inclusive of rho
-                g (250 bits) = g_0 || g_1 || g_2
-                             = (bit 254 of rho) || (bits 0..=8 of psi) || (bits 9..=248 of psi)
-                h (10 bits)  = h_0 || h_1 || h_2
-                             = (bits 249..=253 of psi) || (bit 254 of psi) || 4 zero bits
-
-                |   A_0    |    A_1    |     A_2      | A_3 |  A_4  |       A_5     |    A_6   |     A_7      |  A_8  |    A_9    |  q_canon_1  |  q_canon_2  |
-                -----------------------------------------------------------------------------------------------------------------------------------------------
-                |    b     |     d     |      e       |  g  |   h   |       d_1     |  x(pk_d) |     b_3      |a_prime|    b_2    |      0      |      0      |
-                |e1_f_prime|g1_g2_prime|    value     | d_2 |  z1_d |       e_0     |b3_c_prime|      c       |   a   |  x(g_d)   |      1      |      0      |
-                |   e_1    |     f     |     g_0      | g_1 |  z1_g |       h_0     |    h_1   |     d_0      |  b_0  |    b_1    |      0      |      1      |
-                |   rho    |   z13_f   |z14_e1_f_prime| psi | z13_g |z13_g1_g2_prime|  z13_c   |z14_b3_c_prime| z13_a |z13_a_prime|      0      |      0      |
-
-             q_canon_1 checks that:
-              - piece decomposition:
-                  - b = b_0 + (2^4) b_1 + (2^5) b_2 + (2^6) b_3
-                    - b_1 is boolean
-                    - b_2 is boolean
-                  - d = d_0 + (2) d_1 + (2^2) d_2 + (2^10) d_3
-                    - d_0 is boolean
-                    - d_1 is boolean
-                  - e = e_0 + (2^6) e_1
-                  - g = g_0 + (2) g_1 + (2^10) g_2
-                    - g_0 is boolean
-                  - h = h_0 + (2^5) h_1
-                    - h_1 is boolean
-              - field element decomposition:
-                  - x(g_d) = a + (2^250) b_0 + (2^254) b_1
-                  - x(pk_d) = b_3 + (2^4) c + (2^254) d_0
-                  - value = d_2 + (2^8) d_3 + (2^58) e_0
-               - *_prime derivations:
-                  - a_prime = a + 2^130 - t_P
-                  - b3_c_prime = b_3 + (2^4)c + 2^140 - t_P
-                  - e1_f_prime = e_1 + (2^4)g + 2^140 - t_P
-                  - g1_g2_prime = g_1 + (2^9) g_2 + 2^140 - t_P
-            */
-            let q_canon_1 = meta.query_selector(config.q_canon_1);
-
-            // Offset prev
-            // `b` has been constrained to 10 bits by the Sinsemilla hash.
-            let b_whole = meta.query_advice(config.advices[0], Rotation::prev());
-            // `d` has been constrained to 10 bits by the Sinsemilla hash.
-            let d_whole = meta.query_advice(config.advices[1], Rotation::prev());
-            // `e` has been constrained to 10 bits by the Sinsemilla hash.
-            let e_whole = meta.query_advice(config.advices[2], Rotation::prev());
-            // `g` has been constrained to 250 bits by the Sinsemilla hash.
-            let g_whole = meta.query_advice(config.advices[3], Rotation::prev());
-            // `h` has been constrained to 10 bits by the Sinsemilla hash.
-            let h_whole = meta.query_advice(config.advices[4], Rotation::prev());
-            // This gate constrains d_1 to be boolean.
-            let d_1 = meta.query_advice(config.advices[5], Rotation::prev());
-            let pkd_x = meta.query_advice(config.advices[6], Rotation::prev());
-            // `b_3` has been constrained to 4 bits outside this gate.
-            let b_3 = meta.query_advice(config.advices[7], Rotation::prev());
-            let a_prime = meta.query_advice(config.advices[8], Rotation::prev());
-            // This gate constrains b_2 to be boolean.
-            let b_2 = meta.query_advice(config.advices[9], Rotation::prev());
-
-            // Offset cur
-            let e1_f_prime = meta.query_advice(config.advices[0], Rotation::cur());
-            let g1_g2_prime = meta.query_advice(config.advices[1], Rotation::cur());
-            // `z1_d` has been constrained to 50 bits by the Sinsemilla hash.
-            let value = meta.query_advice(config.advices[2], Rotation::cur());
-            // `d_2` has been constrained to 8 bits outside this gate.
-            let d_2 = meta.query_advice(config.advices[3], Rotation::cur());
-            let z1_d = meta.query_advice(config.advices[4], Rotation::cur());
-            let d_3 = z1_d;
-            // `e_0` has been constrained to 6 bits outside this gate.
-            let e_0 = meta.query_advice(config.advices[5], Rotation::cur());
-            let b3_c_prime = meta.query_advice(config.advices[6], Rotation::cur());
-            // `c` has been constrained to 250 bits by the Sinsemilla hash.
-            let c = meta.query_advice(config.advices[7], Rotation::cur());
-            // `a` has been constrained to 250 bits by the Sinsemilla hash.
-            let a = meta.query_advice(config.advices[8], Rotation::cur());
-            let gd_x = meta.query_advice(config.advices[9], Rotation::cur());
-
-            // Offset next
-            // `e_1` has been constrained to 4 bits outside this gate.
-            let e_1 = meta.query_advice(config.advices[0], Rotation::next());
-            // `f` has been constrained to 250 bits by the Sinsemilla hash.
-            let f = meta.query_advice(config.advices[1], Rotation::next());
-            // This gate constrains g_0 to be boolean.
-            let g_0 = meta.query_advice(config.advices[2], Rotation::next());
-            // `g_1` has been constrained to 9 bits outside this gate.
-            let g_1 = meta.query_advice(config.advices[3], Rotation::next());
-            // z1_g has been constrained to 240 bits by the Sinsemilla hash.
-            let z1_g = meta.query_advice(config.advices[4], Rotation::next());
-            let g_2 = z1_g;
-            // h_0 has been constrained to be 5 bits outside this gate.
-            let h_0 = meta.query_advice(config.advices[5], Rotation::next());
-            // This gate constrains h_1 to be boolean.
-            let h_1 = meta.query_advice(config.advices[6], Rotation::next());
-            // This gate constrains d_0 to be boolean.
-            let d_0 = meta.query_advice(config.advices[7], Rotation::next());
-            // b_0 has been constrained to be 4 bits outside this gate.
-            let b_0 = meta.query_advice(config.advices[8], Rotation::next());
-            // This gate constrains b_1 to be boolean.
-            let b_1 = meta.query_advice(config.advices[9], Rotation::next());
-
-            // Boolean checks on 1-bit pieces.
-            let boolean_checks = std::iter::empty()
-                .chain(Some(("bool_check b_1", bool_check(b_1.clone()))))
-                .chain(Some(("bool_check b_2", bool_check(b_2.clone()))))
-                .chain(Some(("bool_check d_0", bool_check(d_0.clone()))))
-                .chain(Some(("bool_check d_1", bool_check(d_1.clone()))))
-                .chain(Some(("bool_check g_0", bool_check(g_0.clone()))))
-                .chain(Some(("bool_check h_1", bool_check(h_1.clone()))));
-
-            // b = b_0 + (2^4) b_1 + (2^5) b_2 + (2^6) b_3
-            let b_check = b_whole
-                - (b_0.clone()
-                    + b_1.clone() * two_pow_4
-                    + b_2 * two_pow_5
-                    + b_3.clone() * two_pow_6);
-            // d = d_0 + (2) d_1 + (2^2) d_2 + (2^10) d_3
-            let d_check = d_whole
-                - (d_0.clone() + d_1 * two + d_2.clone() * two_pow_2 + d_3.clone() * two_pow_10);
-            // e = e_0 + (2^6) e_1
-            let e_check = e_whole - (e_0.clone() + e_1.clone() * two_pow_6);
-            // g = g_0 + (2) g_1 + (2^10) g_2
-            let g_check = g_whole - (g_0 + g_1.clone() * two + g_2.clone() * two_pow_10);
-            // h = h_0 + (2^5) h_1
-            let h_check = h_whole - (h_0 + h_1 * two_pow_5);
-
-            // Check that *_prime pieces were correctly derived.
-            // a_prime = a + 2^130 - t_P
-            let a_prime_check = a.clone() + two_pow_130.clone() - t_p.clone() - a_prime;
-
-            // b3_c_prime = b_3 + (2^4)c + 2^140 - t_P
-            let b3_c_prime_check = b_3.clone() + (c.clone() * two_pow_4) + two_pow_140.clone()
-                - t_p.clone()
-                - b3_c_prime;
-
-            // e1_f_prime = e_1 + (2^4)f + 2^140 - t_P
-            let e1_f_prime_check = e_1 + (f * two_pow_4) + two_pow_140 - t_p.clone() - e1_f_prime;
-
-            // g1_g2_prime = g_1 + (2^9)g_2 + 2^130 - t_P
-            let g1_g2_prime_check = {
-                let two_pow_9 = two_pow_4 * two_pow_5;
-                g_1 + (g_2 * two_pow_9) + two_pow_130 - t_p.clone() - g1_g2_prime
-            };
-
-            // x(g_d) = a + (2^250)b_0 + (2^254)b_1
-            let gd_x_check = {
-                let sum = a + b_0 * two_pow_250 + b_1 * two_pow_254;
-                sum - gd_x
-            };
-
-            // x(pk_d) = b_3 + (2^4)c + (2^254)d_0
-            let pkd_x_check = {
-                let sum = b_3 + c * two_pow_4 + d_0 * two_pow_254;
-                sum - pkd_x
-            };
-
-            // value = d_2 + (2^8)d_3 + (2^58)e_0
-            let value_check = {
-                let two_pow_8 = pallas::Base::from_u64(1 << 8);
-                let two_pow_58 = pallas::Base::from_u64(1 << 58);
-                d_2 + d_3 * two_pow_8 + e_0 * two_pow_58 - value
-            };
-
-            std::iter::empty()
-                .chain(boolean_checks)
-                .chain(Some(("a_prime_check", a_prime_check)))
-                .chain(Some(("b3_c_prime_check", b3_c_prime_check)))
-                .chain(Some(("e1_f_prime_check", e1_f_prime_check)))
-                .chain(Some(("g1_g2_prime_check", g1_g2_prime_check)))
-                .chain(Some(("b_check", b_check)))
-                .chain(Some(("d_check", d_check)))
-                .chain(Some(("e_check", e_check)))
-                .chain(Some(("g_check", g_check)))
-                .chain(Some(("h_check", h_check)))
-                .chain(Some(("gd_x_check", gd_x_check)))
-                .chain(Some(("pkd_x_check", pkd_x_check)))
-                .chain(Some(("value_check", value_check)))
-                .map(move |(name, poly)| (name, q_canon_1.clone() * poly))
-        });
-
-        meta.create_gate("Canonicity checks", |meta| {
-            /*
-                a (250 bits) = bits 0..=249 of x(g_d)
-                b (10 bits)  = b_0 || b_1 || b_2 || b_3
-                            = (bits 250..=253 of x(g_d)) || (bit 254 of x(g_d)) || (ỹ bit of g_d) || (bits 0..=3 of pk★_d)
-                c (250 bits) = bits 4..=253 of pk★_d
-                d (60 bits)  = d_0 || d_1 || d_2 || d_3
-                            = (bit 254 of x(pk_d)) || (ỹ bit of pk_d) || (0..=7 of v) || (8..=57 of v)
-                e (10 bits)  = e_0 || e_1
-                            = (bits 58..=63 of v) || (bits 0..=3 of rho)
-                f (250 bits) = bits 4..=253 inclusive of rho
-                g (250 bits) = g_0 || g_1 || g_2
-                            = (bit 254 of rho) || (bits 0..=8 of psi) || (bits 9..=248 of psi)
-                h (10 bits)  = h_0 || h_1 || h_2
-                            = (bits 249..=253 of psi) || (bit 254 of psi) || 4 zero bits
-
-                |   A_0    |    A_1    |     A_2      | A_3 |  A_4  |       A_5     |    A_6   |     A_7      |  A_8  |    A_9    |  q_canon_1  |  q_canon_2  |
-                -----------------------------------------------------------------------------------------------------------------------------------------------
-                |    b     |     d     |      e       |  g  |   h   |       d_1     |  x(pk_d) |     b_3      |a_prime|    b_2    |      0      |      0      |
-                |e1_f_prime|g1_g2_prime|    value     | d_2 |  z1_d |       e_0     |b3_c_prime|      c       |   a   |  x(g_d)   |      1      |      0      |
-                |   e_1    |     f     |     g_0      | g_1 |  z1_g |       h_0     |    h_1   |     d_0      |  b_0  |    b_1    |      0      |      1      |
-                |   rho    |   z13_f   |z14_e1_f_prime| psi | z13_g |z13_g1_g2_prime|  z13_c   |z14_b3_c_prime| z13_a |z13_a_prime|      0      |      0      |
-            */
-
-            // q_canon_2 checks that:
-            //   - field element decomposition:
-            //      - rho = e_1 + (2^4) f + (2^254) g_0
-            //      - psi = g_1 + (2^9) g_2 + (2^249) h_0 + (2^254) h_1
-            //   - canonicity:
-            //      - b_1 = 1 => b_0 = 0
-            //                && z13_a = 0
-            //                && z13_a_prime = 0
-            //      - d_0 = 1 => z13_c = 0
-            //                && z14_b3_c_prime = 0
-            //      - g_0 = 1 => z13_f = 0
-            //                && z14_e1_f_prime = 0
-            //      - h_1 = 1 => h_0 = 0
-            //                && z13_g1_g2_prime = 0
-
-            let q_canon_2 = meta.query_selector(config.q_canon_2);
-
-            // Offset cur
-            let e_1 = meta.query_advice(config.advices[0], Rotation::cur());
-            let f = meta.query_advice(config.advices[1], Rotation::cur());
-            let g_0 = meta.query_advice(config.advices[2], Rotation::cur());
-            let g_1 = meta.query_advice(config.advices[3], Rotation::cur());
-            let z1_g = meta.query_advice(config.advices[4], Rotation::cur());
-            let g_2 = z1_g;
-            let h_0 = meta.query_advice(config.advices[5], Rotation::cur());
-            let h_1 = meta.query_advice(config.advices[6], Rotation::cur());
-            let d_0 = meta.query_advice(config.advices[7], Rotation::cur());
-            let b_0 = meta.query_advice(config.advices[8], Rotation::cur());
-            let b_1 = meta.query_advice(config.advices[9], Rotation::cur());
-
-            // Offset next
-            let rho = meta.query_advice(config.advices[0], Rotation::next());
-            let z13_f = meta.query_advice(config.advices[1], Rotation::next());
-            let z14_e1_f_prime = meta.query_advice(config.advices[2], Rotation::next());
-            let psi = meta.query_advice(config.advices[3], Rotation::next());
-            let z13_g = meta.query_advice(config.advices[4], Rotation::next());
-            let z13_g1_g2_prime = meta.query_advice(config.advices[5], Rotation::next());
-            let z13_c = meta.query_advice(config.advices[6], Rotation::next());
-            let z14_b3_c_prime = meta.query_advice(config.advices[7], Rotation::next());
-            let z13_a = meta.query_advice(config.advices[8], Rotation::next());
-            let z13_a_prime = meta.query_advice(config.advices[9], Rotation::next());
-
-            // rho = e_1 + (2^4) f + (2^254) g_0
-            let rho_decomposition_check = {
-                let sum = e_1 + f * two_pow_4 + g_0.clone() * two_pow_254;
-                sum - rho
-            };
-
-            // psi = g_1 + (2^9) g_2 + (2^249) h_0 + (2^254) h_1
-            let psi_decomposition_check = {
-                let two_pow_249 =
-                    pallas::Base::from_u128(1 << 124).square() * pallas::Base::from_u128(2);
-                let sum = g_1
-                    + g_2 * pallas::Base::from_u64(1 << 9)
-                    + h_0.clone() * two_pow_249
-                    + h_1.clone() * two_pow_254;
-                sum - psi
-            };
-
-            // The gd_x_canonicity_checks are enforced if and only if `b_1` = 1.
-            // x(g_d) = a (250 bits) || b_0 (4 bits) || b_1 (1 bit)
-            let gd_x_canonicity_checks = std::iter::empty()
-                .chain(Some(("b_1 = 1 => b_0", b_0)))
-                .chain(Some(("b_1 = 1 => z13_a", z13_a)))
-                .chain(Some(("b_1 = 1 => z13_a_prime", z13_a_prime)))
-                .map(move |(name, poly)| (name, b_1.clone() * poly));
-
-            // The pkd_x_canonicity_checks are enforced if and only if `d_0` = 1.
-            // `x(pk_d)` = `b_3 (4 bits) || c (250 bits) || d_0 (1 bit)`
-            let pkd_x_canonicity_checks = std::iter::empty()
-                .chain(Some(("d_0 = 1 => z13_c", z13_c)))
-                .chain(Some(("d_0 = 1 => z14_b3_c_prime", z14_b3_c_prime)))
-                .map(move |(name, poly)| (name, d_0.clone() * poly));
-
-            // The rho_canonicity_checks are enforced if and only if `g_0` = 1.
-            // rho = e_1 (4 bits) || f (250 bits) || g_0 (1 bit)
-            let rho_canonicity_checks = std::iter::empty()
-                .chain(Some(("g_0 = 1 => z13_f", z13_f)))
-                .chain(Some(("g_0 = 1 => z14_e1_f_prime", z14_e1_f_prime)))
-                .map(move |(name, poly)| (name, g_0.clone() * poly));
-
-            // The psi_canonicity_checks are enforced if and only if `h_1` = 1.
-            // `psi` = `g_1 (9 bits) || g_2 (240 bits) || h_0 (5 bits) || h_1 (1 bit)`
-            let psi_canonicity_checks = std::iter::empty()
-                .chain(Some(("h_1 = 1 => h_0", h_0)))
-                .chain(Some(("h_1 = 1 => z13_g", z13_g)))
-                .chain(Some(("h_1 = 1 => z13_g1_g2_prime", z13_g1_g2_prime)))
-                .map(move |(name, poly)| (name, h_1.clone() * poly));
-
-            std::iter::empty()
-                .chain(Some(("rho_decomposition_check", rho_decomposition_check)))
-                .chain(Some(("psi_decomposition_check", psi_decomposition_check)))
-                .chain(gd_x_canonicity_checks)
-                .chain(pkd_x_canonicity_checks)
-                .chain(rho_canonicity_checks)
-                .chain(psi_canonicity_checks)
-                .map(move |(name, poly)| (name, q_canon_2.clone() * poly))
         });
 
         config
@@ -1058,353 +1107,276 @@ impl NoteCommitConfig {
         mut layouter: impl Layouter<pallas::Base>,
         gate_cells: GateCells,
     ) -> Result<(), Error> {
-        /*
-            The pieces are witnessed in the below configuration, such that no gate has to query an
-            offset greater than +/- 1 from its relative row.
+        // Columns used for MessagePiece gates.
+        let col_l = self.advices[6];
+        let col_m = self.advices[7];
+        let col_r = self.advices[8];
+        let col_z = self.advices[9];
 
-                |   A_0    |    A_1    |     A_2      | A_3 |  A_4  |       A_5     |    A_6   |     A_7      |  A_8  |    A_9    |  q_canon_1  |  q_canon_2  |
-                -----------------------------------------------------------------------------------------------------------------------------------------------
-                |    b     |     d     |      e       |  g  |   h   |       d_1     |  x(pk_d) |     b_3      |a_prime|    b_2    |      0      |      0      |
-                |e1_f_prime|g1_g2_prime|    value     | d_2 |  z1_d |       e_0     |b3_c_prime|      c       |   a   |  x(g_d)   |      1      |      0      |
-                |   e_1    |     f     |     g_0      | g_1 |  z1_g |       h_0     |    h_1   |     d_0      |  b_0  |    b_1    |      0      |      1      |
-                |   rho    |   z13_f   |z14_e1_f_prime| psi | z13_g |z13_g1_g2_prime|  z13_c   |z14_b3_c_prime| z13_a |z13_a_prime|      0      |      0      |
-        */
-        layouter.assign_region(
-            || "Assign gate cells",
+        // | A_6 | A_7 | A_8 | q_notecommit_b |
+        // ------------------------------------
+        // |  b  | b_0 | b_1 |       1        |
+        // |     | b_2 | b_3 |       0        |
+        let b_1 = layouter.assign_region(
+            || "NoteCommit MessagePiece b",
             |mut region| {
-                // Assign fixed column the correct values
-                self.q_canon_1.enable(&mut region, 1)?;
-                self.q_canon_2.enable(&mut region, 2)?;
+                self.q_notecommit_b.enable(&mut region, 0)?;
 
-                // Offset 0
-                {
-                    let offset = 0;
-
-                    // advices[0]
-                    copy(&mut region, || "b", self.advices[0], offset, &gate_cells.b)?;
-
-                    // advices[1]
-                    copy(&mut region, || "d", self.advices[1], offset, &gate_cells.d)?;
-
-                    // advices[2]
-                    copy(&mut region, || "e", self.advices[2], offset, &gate_cells.e)?;
-
-                    // advices[3]
-                    copy(&mut region, || "g", self.advices[3], offset, &gate_cells.g)?;
-
-                    // advices[4]
-                    copy(&mut region, || "h", self.advices[4], offset, &gate_cells.h)?;
-
-                    // advices[5]
-                    copy(
-                        &mut region,
-                        || "d_1",
-                        self.advices[5],
-                        offset,
-                        &gate_cells.d_1,
-                    )?;
-
-                    // advices[6]
-                    copy(
-                        &mut region,
-                        || "pkd_x",
-                        self.advices[6],
-                        offset,
-                        &gate_cells.pkd_x,
-                    )?;
-
-                    // advices[7]
-                    copy(
-                        &mut region,
-                        || "b_3",
-                        self.advices[7],
-                        offset,
-                        &gate_cells.b_3,
-                    )?;
-
-                    // advices[8]
-                    copy(
-                        &mut region,
-                        || "a_prime",
-                        self.advices[8],
-                        offset,
-                        &gate_cells.a_prime,
-                    )?;
-
-                    // advices[9]
-                    copy(
-                        &mut region,
-                        || "b_2",
-                        self.advices[9],
-                        offset,
-                        &gate_cells.b_2,
-                    )?;
-                }
-
-                // Offset 1
-                {
-                    let offset = 1;
-
-                    // advices[0]
-                    copy(
-                        &mut region,
-                        || "e1_f_prime",
-                        self.advices[0],
-                        offset,
-                        &gate_cells.e1_f_prime,
-                    )?;
-
-                    // advices[1]
-                    copy(
-                        &mut region,
-                        || "g1_g2_prime",
-                        self.advices[1],
-                        offset,
-                        &gate_cells.g1_g2_prime,
-                    )?;
-
-                    // advices[2]
-                    copy(
-                        &mut region,
-                        || "value",
-                        self.advices[2],
-                        offset,
-                        &gate_cells.value,
-                    )?;
-
-                    // advices[3]
-                    copy(
-                        &mut region,
-                        || "d_2",
-                        self.advices[3],
-                        offset,
-                        &gate_cells.d_2,
-                    )?;
-
-                    // advices[4]
-                    copy(
-                        &mut region,
-                        || "z1_d",
-                        self.advices[4],
-                        offset,
-                        &gate_cells.z1_d,
-                    )?;
-
-                    // advices[5]
-                    copy(
-                        &mut region,
-                        || "e_0",
-                        self.advices[5],
-                        offset,
-                        &gate_cells.e_0,
-                    )?;
-
-                    // advices[6]
-                    copy(
-                        &mut region,
-                        || "b3_c_prime",
-                        self.advices[6],
-                        offset,
-                        &gate_cells.b3_c_prime,
-                    )?;
-
-                    // advices[7]
-                    copy(&mut region, || "c", self.advices[7], offset, &gate_cells.c)?;
-
-                    // advices[8]
-                    copy(&mut region, || "a", self.advices[8], offset, &gate_cells.a)?;
-
-                    // advices[9]
-                    copy(
-                        &mut region,
-                        || "gd_x",
-                        self.advices[9],
-                        offset,
-                        &gate_cells.gd_x,
-                    )?;
-                }
-
-                // Offset 2
-                {
-                    let offset = 2;
-
-                    // advices[0]
-                    copy(
-                        &mut region,
-                        || "e_1",
-                        self.advices[0],
-                        offset,
-                        &gate_cells.e_1,
-                    )?;
-
-                    // advices[1]
-                    copy(&mut region, || "f", self.advices[1], offset, &gate_cells.f)?;
-
-                    // advices[2]
-                    region.assign_advice(
-                        || "g_0",
-                        self.advices[2],
-                        offset,
-                        || gate_cells.g_0.ok_or(Error::SynthesisError),
-                    )?;
-
-                    // advices[3]
-                    copy(
-                        &mut region,
-                        || "g_1",
-                        self.advices[3],
-                        offset,
-                        &gate_cells.g_1,
-                    )?;
-
-                    // advices[4]
-                    copy(
-                        &mut region,
-                        || "z1_g",
-                        self.advices[4],
-                        offset,
-                        &gate_cells.z1_g,
-                    )?;
-
-                    // advices[5]
-                    copy(
-                        &mut region,
-                        || "h_0",
-                        self.advices[5],
-                        offset,
-                        &gate_cells.h_0,
-                    )?;
-
-                    // advices[6]
-                    region.assign_advice(
-                        || "h_1",
-                        self.advices[6],
-                        offset,
-                        || gate_cells.h_1.ok_or(Error::SynthesisError),
-                    )?;
-
-                    // advices[7]
-                    region.assign_advice(
-                        || "d_0",
-                        self.advices[7],
-                        offset,
-                        || gate_cells.d_0.ok_or(Error::SynthesisError),
-                    )?;
-
-                    // advices[8]
-                    copy(
-                        &mut region,
-                        || "b_0",
-                        self.advices[8],
-                        offset,
-                        &gate_cells.b_0,
-                    )?;
-
-                    // advices[9]
-                    region.assign_advice(
+                copy(&mut region, || "b", col_l, 0, &gate_cells.b)?;
+                copy(&mut region, || "b_0", col_m, 0, &gate_cells.b_0)?;
+                let b_1 = {
+                    let cell = region.assign_advice(
                         || "b_1",
-                        self.advices[9],
-                        offset,
+                        col_r,
+                        0,
                         || gate_cells.b_1.ok_or(Error::SynthesisError),
                     )?;
-                }
+                    CellValue::new(cell, gate_cells.b_1)
+                };
 
-                // Offset 3
-                {
-                    let offset = 3;
+                copy(&mut region, || "b_2", col_m, 1, &gate_cells.b_2)?;
+                copy(&mut region, || "b_3", col_r, 1, &gate_cells.b_3)?;
 
-                    // advices[0]
-                    copy(
-                        &mut region,
-                        || "rho",
-                        self.advices[0],
-                        offset,
-                        &gate_cells.rho,
+                Ok(b_1)
+            },
+        )?;
+
+        // | A_6 | A_7 | A_8 | q_notecommit_d |
+        // ------------------------------------
+        // |  d  | d_0 | d_1 |       1        |
+        // |     | d_2 | d_3 |       0        |
+        let d_0 = layouter.assign_region(
+            || "NoteCommit MessagePiece d",
+            |mut region| {
+                self.q_notecommit_d.enable(&mut region, 0)?;
+
+                copy(&mut region, || "d", col_l, 0, &gate_cells.d)?;
+                let d_0 = {
+                    let cell = region.assign_advice(
+                        || "d_0",
+                        col_m,
+                        0,
+                        || gate_cells.d_0.ok_or(Error::SynthesisError),
                     )?;
+                    CellValue::new(cell, gate_cells.d_0)
+                };
+                copy(&mut region, || "d_1", col_r, 0, &gate_cells.d_1)?;
 
-                    // advices[1]
-                    copy(
-                        &mut region,
-                        || "z13_f",
-                        self.advices[1],
-                        offset,
-                        &gate_cells.z13_f,
-                    )?;
+                copy(&mut region, || "d_2", col_m, 1, &gate_cells.d_2)?;
+                copy(&mut region, || "d_3 = z1_d", col_r, 1, &gate_cells.z1_d)?;
 
-                    // advices[2]
-                    copy(
-                        &mut region,
-                        || "z14_e1_f_prime",
-                        self.advices[2],
-                        offset,
-                        &gate_cells.z14_e1_f_prime,
-                    )?;
+                Ok(d_0)
+            },
+        )?;
 
-                    // advices[3]
-                    copy(
-                        &mut region,
-                        || "psi",
-                        self.advices[3],
-                        offset,
-                        &gate_cells.psi,
-                    )?;
+        // | A_6 | A_7 | A_8 | q_notecommit_e |
+        // ------------------------------------
+        // |  e  | e_0 | e_1 |       1        |
+        layouter.assign_region(
+            || "NoteCommit MessagePiece e",
+            |mut region| {
+                self.q_notecommit_e.enable(&mut region, 0)?;
 
-                    // advices[4]
-                    copy(
-                        &mut region,
-                        || "z13_g",
-                        self.advices[4],
-                        offset,
-                        &gate_cells.z13_g,
-                    )?;
-
-                    // advices[5]
-                    copy(
-                        &mut region,
-                        || "z13_g1_g2_prime",
-                        self.advices[5],
-                        offset,
-                        &gate_cells.z13_g1_g2_prime,
-                    )?;
-
-                    // advices[6]
-                    copy(
-                        &mut region,
-                        || "z13_c",
-                        self.advices[6],
-                        offset,
-                        &gate_cells.z13_c,
-                    )?;
-
-                    // advices[7]
-                    copy(
-                        &mut region,
-                        || "z14_b3_c_prime",
-                        self.advices[7],
-                        offset,
-                        &gate_cells.z14_b3_c_prime,
-                    )?;
-
-                    // advices[8]
-                    copy(
-                        &mut region,
-                        || "z13_a",
-                        self.advices[8],
-                        offset,
-                        &gate_cells.z13_a,
-                    )?;
-
-                    // advices[9]
-                    copy(
-                        &mut region,
-                        || "z13_a_prime",
-                        self.advices[9],
-                        offset,
-                        &gate_cells.z13_a_prime,
-                    )?;
-                }
+                copy(&mut region, || "e", col_l, 0, &gate_cells.e)?;
+                copy(&mut region, || "e_0", col_m, 0, &gate_cells.e_0)?;
+                copy(&mut region, || "e_1", col_r, 0, &gate_cells.e_1)?;
 
                 Ok(())
+            },
+        )?;
+
+        // | A_6 | A_7 | q_notecommit_g |
+        // ------------------------------
+        // |  g  | g_0 |       1        |
+        // | g_1 | g_2 |       0        |
+        let g_0 = layouter.assign_region(
+            || "NoteCommit MessagePiece g",
+            |mut region| {
+                self.q_notecommit_g.enable(&mut region, 0)?;
+
+                copy(&mut region, || "g", col_l, 0, &gate_cells.g)?;
+                let g_0 = {
+                    let cell = region.assign_advice(
+                        || "g_0",
+                        col_m,
+                        0,
+                        || gate_cells.g_0.ok_or(Error::SynthesisError),
+                    )?;
+                    CellValue::new(cell, gate_cells.g_0)
+                };
+
+                copy(&mut region, || "g_1", col_l, 1, &gate_cells.g_1)?;
+                copy(&mut region, || "g_2 = z1_g", col_m, 1, &gate_cells.z1_g)?;
+
+                Ok(g_0)
+            },
+        )?;
+
+        // | A_6 | A_7 | A_8 | q_notecommit_h |
+        // ------------------------------------
+        // |  h  | h_0 | h_1 |       1        |
+        let h_1 = layouter.assign_region(
+            || "NoteCommit MessagePiece h",
+            |mut region| {
+                self.q_notecommit_h.enable(&mut region, 0)?;
+
+                copy(&mut region, || "h", col_l, 0, &gate_cells.h)?;
+                copy(&mut region, || "h_0", col_m, 0, &gate_cells.h_0)?;
+                let h_1 = {
+                    let cell = region.assign_advice(
+                        || "h_1",
+                        col_r,
+                        0,
+                        || gate_cells.h_1.ok_or(Error::SynthesisError),
+                    )?;
+                    CellValue::new(cell, gate_cells.h_1)
+                };
+
+                Ok(h_1)
+            },
+        )?;
+
+        // |  A_6   | A_7 |   A_8   |     A_9     | q_notecommit_g_d |
+        // -----------------------------------------------------------
+        // | x(g_d) | b_0 | a       | z13_a       |        1         |
+        // |        | b_1 | a_prime | z13_a_prime |        0         |
+        layouter.assign_region(
+            || "NoteCommit input g_d",
+            |mut region| {
+                copy(&mut region, || "gd_x", col_l, 0, &gate_cells.gd_x)?;
+
+                copy(&mut region, || "b_0", col_m, 0, &gate_cells.b_0)?;
+                copy(&mut region, || "b_1", col_m, 1, &b_1)?;
+
+                copy(&mut region, || "a", col_r, 0, &gate_cells.a)?;
+                copy(&mut region, || "a_prime", col_r, 1, &gate_cells.a_prime)?;
+
+                copy(&mut region, || "z13_a", col_z, 0, &gate_cells.z13_a)?;
+                copy(
+                    &mut region,
+                    || "z13_a_prime",
+                    col_z,
+                    1,
+                    &gate_cells.z13_a_prime,
+                )?;
+
+                self.q_notecommit_g_d.enable(&mut region, 0)
+            },
+        )?;
+
+        // |   A_6   | A_7 |    A_8     |      A_9       | q_notecommit_pk_d |
+        // -------------------------------------------------------------------
+        // | x(pk_d) | b_3 |    c       | z13_c          |         1         |
+        // |         | d_0 | b3_c_prime | z14_b3_c_prime |         0         |
+        layouter.assign_region(
+            || "NoteCommit input pk_d",
+            |mut region| {
+                copy(&mut region, || "pkd_x", col_l, 0, &gate_cells.pkd_x)?;
+
+                copy(&mut region, || "b_3", col_m, 0, &gate_cells.b_3)?;
+                copy(&mut region, || "d_0", col_m, 1, &d_0)?;
+
+                copy(&mut region, || "c", col_r, 0, &gate_cells.c)?;
+                copy(
+                    &mut region,
+                    || "b3_c_prime",
+                    col_r,
+                    1,
+                    &gate_cells.b3_c_prime,
+                )?;
+
+                copy(&mut region, || "z13_c", col_z, 0, &gate_cells.z13_c)?;
+                copy(
+                    &mut region,
+                    || "z14_b3_c_prime",
+                    col_z,
+                    1,
+                    &gate_cells.z14_b3_c_prime,
+                )?;
+
+                self.q_notecommit_pk_d.enable(&mut region, 0)
+            },
+        )?;
+
+        // | value | d_2 | d_3 | e_0 |
+        layouter.assign_region(
+            || "NoteCommit input value",
+            |mut region| {
+                copy(&mut region, || "value", col_l, 0, &gate_cells.value)?;
+                copy(&mut region, || "d_2", col_m, 0, &gate_cells.d_2)?;
+                copy(&mut region, || "d3 = z1_d", col_r, 0, &gate_cells.z1_d)?;
+                copy(&mut region, || "e_0", col_z, 0, &gate_cells.e_0)?;
+
+                self.q_notecommit_value.enable(&mut region, 0)
+            },
+        )?;
+
+        // | A_6 | A_7 |    A_8     |      A_9       | q_notecommit_rho |
+        // --------------------------------------------------------------
+        // | rho | e_1 |    f       | z13_f          |        1         |
+        // |     | g_0 | e1_f_prime | z14_e1_f_prime |        0         |
+        layouter.assign_region(
+            || "NoteCommit input rho",
+            |mut region| {
+                copy(&mut region, || "rho", col_l, 0, &gate_cells.rho)?;
+
+                copy(&mut region, || "e_1", col_m, 0, &gate_cells.e_1)?;
+                copy(&mut region, || "g_0", col_m, 1, &g_0)?;
+
+                copy(&mut region, || "f", col_r, 0, &gate_cells.f)?;
+                copy(
+                    &mut region,
+                    || "e1_f_prime",
+                    col_r,
+                    1,
+                    &gate_cells.e1_f_prime,
+                )?;
+
+                copy(&mut region, || "z13_f", col_z, 0, &gate_cells.z13_f)?;
+                copy(
+                    &mut region,
+                    || "z14_e1_f_prime",
+                    col_z,
+                    1,
+                    &gate_cells.z14_e1_f_prime,
+                )?;
+
+                self.q_notecommit_rho.enable(&mut region, 0)
+            },
+        )?;
+
+        // | A_6 | A_7 |     A_8     |       A_9       | q_notecommit_psi |
+        // ----------------------------------------------------------------
+        // | psi | g_1 |   g_2       | z13_g           |        1         |
+        // | h_0 | h_1 | g1_g2_prime | z13_g1_g2_prime |        0         |
+        layouter.assign_region(
+            || "NoteCommit input psi",
+            |mut region| {
+                copy(&mut region, || "psi", col_l, 0, &gate_cells.psi)?;
+                copy(&mut region, || "h_0", col_l, 1, &gate_cells.h_0)?;
+
+                copy(&mut region, || "g_1", col_m, 0, &gate_cells.g_1)?;
+                copy(&mut region, || "h_1", col_m, 1, &h_1)?;
+
+                copy(&mut region, || "g_2 = z1_g", col_r, 0, &gate_cells.z1_g)?;
+                copy(
+                    &mut region,
+                    || "g1_g2_prime",
+                    col_r,
+                    1,
+                    &gate_cells.g1_g2_prime,
+                )?;
+
+                copy(&mut region, || "z13_g", col_z, 0, &gate_cells.z13_g)?;
+                copy(
+                    &mut region,
+                    || "z13_g1_g2_prime",
+                    col_z,
+                    1,
+                    &gate_cells.z13_g1_g2_prime,
+                )?;
+
+                self.q_notecommit_psi.enable(&mut region, 0)
             },
         )
     }

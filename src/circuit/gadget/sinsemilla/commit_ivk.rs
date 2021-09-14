@@ -59,8 +59,8 @@ impl CommitIvkConfig {
 
             |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  |  A_5  |  A_6  |    A_7    |       A_8      | q_commit_ivk |
             -----------------------------------------------------------------------------------------------------
-            |   ak  |   a   |   b   |  b_0  |  b_1  |  b_2  | z13_a |  a_prime  |   z13_a_prime  |       0      |
-            |   nk  |   c   |   d   |  d_0  |  d_1  |       | z13_c | b2_c_prime| z14_b2_c_prime |       1      |
+            |   ak  |   a   |   b   |  b_0  |  b_1  |  b_2  | z13_a |  a_prime  |   z13_a_prime  |       1      |
+            |   nk  |   c   |   d   |  d_0  |  d_1  |       | z13_c | b2_c_prime| z14_b2_c_prime |       0      |
 
         */
         meta.create_gate("CommitIvk canonicity check", |meta| {
@@ -73,27 +73,27 @@ impl CommitIvkConfig {
             let two_pow_250 = pallas::Base::from_u128(1 << 125).square();
             let two_pow_254 = two_pow_250 * two_pow_4;
 
-            let ak = meta.query_advice(config.advices[0], Rotation::prev());
-            let nk = meta.query_advice(config.advices[0], Rotation::cur());
+            let ak = meta.query_advice(config.advices[0], Rotation::cur());
+            let nk = meta.query_advice(config.advices[0], Rotation::next());
 
             // `a` is constrained by the Sinsemilla hash to be 250 bits.
-            let a = meta.query_advice(config.advices[1], Rotation::prev());
+            let a = meta.query_advice(config.advices[1], Rotation::cur());
             // `b` is constrained by the Sinsemilla hash to be 10 bits.
-            let b_whole = meta.query_advice(config.advices[2], Rotation::prev());
+            let b_whole = meta.query_advice(config.advices[2], Rotation::cur());
             // `c` is constrained by the Sinsemilla hash to be 240 bits.
-            let c = meta.query_advice(config.advices[1], Rotation::cur());
+            let c = meta.query_advice(config.advices[1], Rotation::next());
             // `d` is constrained by the Sinsemilla hash to be 10 bits.
-            let d_whole = meta.query_advice(config.advices[2], Rotation::cur());
+            let d_whole = meta.query_advice(config.advices[2], Rotation::next());
 
             // b = b_0||b_1||b_2`
             //   = (bits 250..=253 of `ak`) || (bit 254 of  `ak`) || (bits 0..=4 of  `nk`)
             //
             // b_0 has been constrained outside this gate to be a four-bit value.
-            let b_0 = meta.query_advice(config.advices[3], Rotation::prev());
+            let b_0 = meta.query_advice(config.advices[3], Rotation::cur());
             // This gate constrains b_1 to be a one-bit value.
-            let b_1 = meta.query_advice(config.advices[4], Rotation::prev());
+            let b_1 = meta.query_advice(config.advices[4], Rotation::cur());
             // b_2 has been constrained outside this gate to be a five-bit value.
-            let b_2 = meta.query_advice(config.advices[5], Rotation::prev());
+            let b_2 = meta.query_advice(config.advices[5], Rotation::cur());
             // Check that b_whole is consistent with the witnessed subpieces.
             let b_decomposition_check =
                 b_whole - (b_0.clone() + b_1.clone() * two_pow_4 + b_2.clone() * two_pow_5);
@@ -101,9 +101,9 @@ impl CommitIvkConfig {
             // d = d_0||d_1` = (bits 245..=253 of `nk`) || (bit 254 of `nk`)
             //
             // d_0 has been constrained outside this gate to be a nine-bit value.
-            let d_0 = meta.query_advice(config.advices[3], Rotation::cur());
+            let d_0 = meta.query_advice(config.advices[3], Rotation::next());
             // This gate constrains d_1 to be a one-bit value.
-            let d_1 = meta.query_advice(config.advices[4], Rotation::cur());
+            let d_1 = meta.query_advice(config.advices[4], Rotation::next());
             // Check that d_whole is consistent with the witnessed subpieces.
             let d_decomposition_check = d_whole - (d_0.clone() + d_1.clone() * two_pow_9);
 
@@ -137,14 +137,14 @@ impl CommitIvkConfig {
                 // z13_a is the 13th running sum output by the 10-bit Sinsemilla decomposition of `a`.
                 // b_1 = 1 => z13_a = 0
                 let z13_a_check = {
-                    let z13_a = meta.query_advice(config.advices[6], Rotation::prev());
+                    let z13_a = meta.query_advice(config.advices[6], Rotation::cur());
                     b_1.clone() * z13_a
                 };
 
                 // Check that a_prime = a + 2^130 - t_P.
                 // This is checked regardless of the value of b_1.
                 let a_prime_check = {
-                    let a_prime = meta.query_advice(config.advices[7], Rotation::prev());
+                    let a_prime = meta.query_advice(config.advices[7], Rotation::cur());
                     let two_pow_130 =
                         Expression::Constant(pallas::Base::from_u128(1 << 65).square());
                     let t_p = Expression::Constant(pallas::Base::from_u128(T_P));
@@ -154,15 +154,15 @@ impl CommitIvkConfig {
                 // Check that the running sum output by the 130-bit little-endian decomposition of
                 // `a_prime` is zero.
                 let z13_a_prime = {
-                    let z13_a_prime = meta.query_advice(config.advices[8], Rotation::prev());
+                    let z13_a_prime = meta.query_advice(config.advices[8], Rotation::cur());
                     b_1 * z13_a_prime
                 };
 
                 std::iter::empty()
-                    .chain(Some(b0_canon_check))
-                    .chain(Some(z13_a_check))
-                    .chain(Some(a_prime_check))
-                    .chain(Some(z13_a_prime))
+                    .chain(Some(("b0_canon_check", b0_canon_check)))
+                    .chain(Some(("z13_a_check", z13_a_check)))
+                    .chain(Some(("a_prime_check", a_prime_check)))
+                    .chain(Some(("z13_a_prime", z13_a_prime)))
             };
 
             // nk = b_2 (5 bits) || c (240 bits) || d_0 (9 bits) || d_1 (1 bit)
@@ -174,7 +174,7 @@ impl CommitIvkConfig {
                 // d_1 = 1 => z13_c = 0, where z13_c is the 13th running sum
                 // output by the 10-bit Sinsemilla decomposition of `c`.
                 let z13_c_check = {
-                    let z13_c = meta.query_advice(config.advices[6], Rotation::cur());
+                    let z13_c = meta.query_advice(config.advices[6], Rotation::next());
                     d_1.clone() * z13_c
                 };
 
@@ -185,34 +185,34 @@ impl CommitIvkConfig {
                     let two_pow_140 =
                         Expression::Constant(pallas::Base::from_u128(1 << 70).square());
                     let t_p = Expression::Constant(pallas::Base::from_u128(T_P));
-                    let b2_c_prime = meta.query_advice(config.advices[7], Rotation::cur());
+                    let b2_c_prime = meta.query_advice(config.advices[7], Rotation::next());
                     b_2 + c * two_pow_5 + two_pow_140 - t_p - b2_c_prime
                 };
 
                 // Check that the running sum output by the 140-bit little-
                 // endian decomposition of b2_c_prime is zero.
                 let z14_b2_c_prime = {
-                    let z14_b2_c_prime = meta.query_advice(config.advices[8], Rotation::cur());
+                    let z14_b2_c_prime = meta.query_advice(config.advices[8], Rotation::next());
                     d_1 * z14_b2_c_prime
                 };
 
                 std::iter::empty()
-                    .chain(Some(c0_canon_check))
-                    .chain(Some(z13_c_check))
-                    .chain(Some(b2_c_prime_check))
-                    .chain(Some(z14_b2_c_prime))
+                    .chain(Some(("c0_canon_check", c0_canon_check)))
+                    .chain(Some(("z13_c_check", z13_c_check)))
+                    .chain(Some(("b2_c_prime_check", b2_c_prime_check)))
+                    .chain(Some(("z14_b2_c_prime", z14_b2_c_prime)))
             };
 
             std::iter::empty()
-                .chain(Some(b1_bool_check))
-                .chain(Some(d1_bool_check))
-                .chain(Some(b_decomposition_check))
-                .chain(Some(d_decomposition_check))
-                .chain(Some(ak_decomposition_check))
-                .chain(Some(nk_decomposition_check))
+                .chain(Some(("b1_bool_check", b1_bool_check)))
+                .chain(Some(("d1_bool_check", d1_bool_check)))
+                .chain(Some(("b_decomposition_check", b_decomposition_check)))
+                .chain(Some(("d_decomposition_check", d_decomposition_check)))
+                .chain(Some(("ak_decomposition_check", ak_decomposition_check)))
+                .chain(Some(("nk_decomposition_check", nk_decomposition_check)))
                 .chain(ak_canonicity_checks)
                 .chain(nk_canonicity_checks)
-                .map(move |poly| q_commit_ivk.clone() * poly)
+                .map(move |(name, poly)| (name, q_commit_ivk.clone() * poly))
         });
 
         config
@@ -455,8 +455,8 @@ impl CommitIvkConfig {
 
         |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  |  A_5  |  A_6  |    A_7    |       A_8      | q_commit_ivk |
         -----------------------------------------------------------------------------------------------------
-        |   ak  |   a   |   b   |  b_0  |  b_1  |  b_2  | z13_a |  a_prime  |   z13_a_prime  |       0      |
-        |   nk  |   c   |   d   |  d_0  |  d_1  |       | z13_c | b2_c_prime| z14_b2_c_prime |       1      |
+        |   ak  |   a   |   b   |  b_0  |  b_1  |  b_2  | z13_a |  a_prime  |   z13_a_prime  |       1      |
+        |   nk  |   c   |   d   |  d_0  |  d_1  |       | z13_c | b2_c_prime| z14_b2_c_prime |       0      |
 
     */
     fn assign_gate(
@@ -467,8 +467,8 @@ impl CommitIvkConfig {
         layouter.assign_region(
             || "Assign cells used in canonicity gate",
             |mut region| {
-                // Enable selector on offset 1
-                self.q_commit_ivk.enable(&mut region, 1)?;
+                // Enable selector on offset 0
+                self.q_commit_ivk.enable(&mut region, 0)?;
 
                 // Offset 0
                 {
