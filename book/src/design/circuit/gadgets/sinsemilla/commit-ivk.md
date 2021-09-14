@@ -223,7 +223,7 @@ advice columns, requiring two rows.
 $$
 \begin{array}{|c|c|c|c|c|c|c|c|c|c}
                 &   &   &     &     &     &          &         &                & q_\CommitIvk \\\hline
-\AuthSignPublic & a & b & b_0 & b_1 & b_2 & z_{a,13} & a'      & z_{a',13}      & 0 \\\hline
-\NullifierKey   & c & d & d_0 & d_1 &     & z_{c,13} & {b_2}c' & z_{{b_2}c',14} & 1 \\\hline
+\AuthSignPublic & a & b & b_0 & b_1 & b_2 & z_{a,13} & a'      & z_{a',13}      & 1 \\\hline
+\NullifierKey   & c & d & d_0 & d_1 &     & z_{c,13} & {b_2}c' & z_{{b_2}c',14} & 0 \\\hline
 \end{array}
 $$
