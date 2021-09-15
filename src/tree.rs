@@ -2,7 +2,8 @@
 
 use crate::{
     constants::{
-        util::gen_const_array, L_ORCHARD_MERKLE, MERKLE_CRH_PERSONALIZATION, MERKLE_DEPTH_ORCHARD,
+        util::gen_const_array_with_default, L_ORCHARD_MERKLE, MERKLE_CRH_PERSONALIZATION,
+        MERKLE_DEPTH_ORCHARD,
     },
     note::commitment::ExtractedNoteCommitment,
     primitives::sinsemilla::{i2lebsp_k, HashDomain},
@@ -16,6 +17,7 @@ use rand::RngCore;
 use serde::de::{Deserializer, Error};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
+use std::convert::TryInto;
 use std::iter;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
@@ -23,22 +25,17 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 // <https://zips.z.cash/protocol/protocol.pdf#thmuncommittedorchard>
 lazy_static! {
     static ref UNCOMMITTED_ORCHARD: pallas::Base = pallas::Base::from_u64(2);
-    pub(crate) static ref EMPTY_ROOTS: Vec<pallas::Base> = {
+    pub(crate) static ref EMPTY_ROOTS: Vec<MerkleCrhOrchardOutput> = {
         iter::empty()
-            .chain(Some(*UNCOMMITTED_ORCHARD))
-            .chain(
-                (0..MERKLE_DEPTH_ORCHARD).scan(*UNCOMMITTED_ORCHARD, |state, l| {
-                    *state = hash_with_l(
-                        l,
-                        Pair {
-                            left: *state,
-                            right: *state,
-                        },
-                    )
-                    .unwrap();
+            .chain(Some(MerkleCrhOrchardOutput::empty_leaf()))
+            .chain((0..MERKLE_DEPTH_ORCHARD).scan(
+                MerkleCrhOrchardOutput::empty_leaf(),
+                |state, l| {
+                    let l = l as u8;
+                    *state = MerkleCrhOrchardOutput::combine(l.into(), state, state);
                     Some(*state)
-                }),
-            )
+                },
+            ))
             .collect()
     };
 }
@@ -50,6 +47,12 @@ pub struct Anchor(pallas::Base);
 impl From<pallas::Base> for Anchor {
     fn from(anchor_field: pallas::Base) -> Anchor {
         Anchor(anchor_field)
+    }
+}
+
+impl From<MerkleCrhOrchardOutput> for Anchor {
+    fn from(anchor: MerkleCrhOrchardOutput) -> Anchor {
+        Anchor(anchor.0)
     }
 }
 
@@ -76,7 +79,7 @@ impl Anchor {
 #[derive(Debug)]
 pub struct MerklePath {
     position: u32,
-    auth_path: [pallas::Base; MERKLE_DEPTH_ORCHARD],
+    auth_path: [MerkleCrhOrchardOutput; MERKLE_DEPTH_ORCHARD],
 }
 
 impl MerklePath {
@@ -84,7 +87,9 @@ impl MerklePath {
     pub(crate) fn dummy(mut rng: &mut impl RngCore) -> Self {
         MerklePath {
             position: rng.next_u32(),
-            auth_path: gen_const_array(|_| pallas::Base::random(&mut rng)),
+            auth_path: gen_const_array_with_default(MerkleCrhOrchardOutput::empty_leaf(), |_| {
+                MerkleCrhOrchardOutput(pallas::Base::random(&mut rng))
+            }),
         }
     }
 
@@ -92,7 +97,12 @@ impl MerklePath {
     pub(crate) fn new(position: u32, auth_path: [pallas::Base; MERKLE_DEPTH_ORCHARD]) -> Self {
         Self {
             position,
-            auth_path,
+            auth_path: auth_path
+                .iter()
+                .map(|node| MerkleCrhOrchardOutput(*node))
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap(),
         }
     }
 
@@ -109,78 +119,28 @@ impl MerklePath {
             .iter()
             .enumerate()
             .fold(
-                CtOption::new(cmx.inner(), 1.into()),
+                MerkleCrhOrchardOutput::from_cmx(&cmx),
                 |node, (l, sibling)| {
-                    let swap = self.position & (1 << l) != 0;
-                    node.and_then(|n| hash_with_l(l, cond_swap(swap, n, *sibling)))
+                    let l = l as u8;
+                    if self.position & (1 << l) == 0 {
+                        MerkleCrhOrchardOutput::combine(l.into(), &node, sibling)
+                    } else {
+                        MerkleCrhOrchardOutput::combine(l.into(), sibling, &node)
+                    }
                 },
             )
-            .unwrap_or_else(pallas::Base::zero)
             .into()
     }
 
     /// Returns the position of the leaf using this Merkle path.
-    pub fn position(&self) -> u32 {
+    pub(crate) fn position(&self) -> u32 {
         self.position
     }
 
     /// Returns the authentication path.
-    pub fn auth_path(&self) -> [pallas::Base; MERKLE_DEPTH_ORCHARD] {
+    pub(crate) fn auth_path(&self) -> [MerkleCrhOrchardOutput; MERKLE_DEPTH_ORCHARD] {
         self.auth_path
     }
-}
-
-struct Pair {
-    left: pallas::Base,
-    right: pallas::Base,
-}
-
-fn cond_swap(swap: bool, node: pallas::Base, sibling: pallas::Base) -> Pair {
-    if swap {
-        Pair {
-            left: sibling,
-            right: node,
-        }
-    } else {
-        Pair {
-            left: node,
-            right: sibling,
-        }
-    }
-}
-
-/// Implements the function `hash` (internal to MerkleCRH^Orchard) defined
-/// in <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
-///
-/// The layer with 2^n nodes is called "layer n":
-///      - leaves are at layer MERKLE_DEPTH_ORCHARD = 32;
-///      - the root is at layer 0.
-/// `l` is MERKLE_DEPTH_ORCHARD - layer - 1.
-///      - when hashing two leaves, we produce a node on the layer above the leaves, i.e.
-///        layer = 31, l = 0
-///      - when hashing to the final root, we produce the anchor with layer = 0, l = 31.
-fn hash_with_l(l: usize, pair: Pair) -> CtOption<pallas::Base> {
-    // MerkleCRH Sinsemilla hash domain.
-    let domain = HashDomain::new(MERKLE_CRH_PERSONALIZATION);
-
-    domain.hash(
-        iter::empty()
-            .chain(i2lebsp_k(l).iter().copied())
-            .chain(
-                pair.left
-                    .to_le_bits()
-                    .iter()
-                    .by_val()
-                    .take(L_ORCHARD_MERKLE),
-            )
-            .chain(
-                pair.right
-                    .to_le_bits()
-                    .iter()
-                    .by_val()
-                    .take(L_ORCHARD_MERKLE),
-            ),
-    )
 }
 
 /// A newtype wrapper for leaves and internal nodes in the Orchard
@@ -198,6 +158,11 @@ impl MerkleCrhOrchardOutput {
     /// Orchard extracted note commitment.
     pub fn from_cmx(value: &ExtractedNoteCommitment) -> Self {
         MerkleCrhOrchardOutput(value.inner())
+    }
+
+    /// Only used in the circuit.
+    pub(crate) fn inner(&self) -> pallas::Base {
+        self.0
     }
 
     /// Convert this digest to its canonical byte representation.
@@ -247,20 +212,32 @@ impl Hashable for MerkleCrhOrchardOutput {
 
     /// Implements `MerkleCRH^Orchard` as defined in
     /// <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
+    ///
+    /// The layer with 2^n nodes is called "layer n":
+    ///      - leaves are at layer MERKLE_DEPTH_ORCHARD = 32;
+    ///      - the root is at layer 0.
+    /// `l` is MERKLE_DEPTH_ORCHARD - layer - 1.
+    ///      - when hashing two leaves, we produce a node on the layer above the leaves, i.e.
+    ///        layer = 31, l = 0
+    ///      - when hashing to the final root, we produce the anchor with layer = 0, l = 31.
     fn combine(altitude: Altitude, left: &Self, right: &Self) -> Self {
-        hash_with_l(
-            altitude.into(),
-            Pair {
-                left: left.0,
-                right: right.0,
-            },
+        // MerkleCRH Sinsemilla hash domain.
+        let domain = HashDomain::new(MERKLE_CRH_PERSONALIZATION);
+
+        MerkleCrhOrchardOutput(
+            domain
+                .hash(
+                    iter::empty()
+                        .chain(i2lebsp_k(altitude.into()).iter().copied())
+                        .chain(left.0.to_le_bits().iter().by_val().take(L_ORCHARD_MERKLE))
+                        .chain(right.0.to_le_bits().iter().by_val().take(L_ORCHARD_MERKLE)),
+                )
+                .unwrap_or(pallas::Base::zero()),
         )
-        .map(MerkleCrhOrchardOutput)
-        .unwrap_or_else(|| MerkleCrhOrchardOutput(pallas::Base::zero()))
     }
 
     fn empty_root(altitude: Altitude) -> Self {
-        MerkleCrhOrchardOutput(EMPTY_ROOTS[<usize>::from(altitude)])
+        EMPTY_ROOTS[<usize>::from(altitude)]
     }
 }
 
@@ -284,29 +261,27 @@ impl<'de> Deserialize<'de> for MerkleCrhOrchardOutput {
 /// Generators for property testing.
 #[cfg(any(test, feature = "test-dependencies"))]
 pub mod testing {
+    use incrementalmerkletree::Hashable;
     #[cfg(test)]
     use incrementalmerkletree::{
         bridgetree::{BridgeTree, Frontier as BridgeFrontier},
-        Altitude, Frontier, Hashable, Tree,
+        Altitude, Frontier, Tree,
     };
 
+    #[cfg(test)]
     use std::convert::TryInto;
 
     use crate::{
         constants::MERKLE_DEPTH_ORCHARD,
         note::{commitment::ExtractedNoteCommitment, testing::arb_note, Note},
+        tree::{Anchor, MerkleCrhOrchardOutput, MerklePath, EMPTY_ROOTS},
         value::{testing::arb_positive_note_value, MAX_NOTE_VALUE},
     };
     #[cfg(test)]
-    use pasta_curves::arithmetic::FieldExt;
-    use pasta_curves::pallas;
+    use pasta_curves::{arithmetic::FieldExt, pallas};
 
     use proptest::collection::vec;
     use proptest::prelude::*;
-
-    #[cfg(test)]
-    use super::MerkleCrhOrchardOutput;
-    use super::{hash_with_l, Anchor, MerklePath, Pair, EMPTY_ROOTS};
 
     #[test]
     fn test_vectors() {
@@ -378,8 +353,8 @@ pub mod testing {
             };
 
             let perfect_subtree = {
-                let mut perfect_subtree: Vec<Vec<Option<pallas::Base>>> = vec![
-                    padded_leaves.iter().map(|cmx| cmx.map(|cmx| cmx.inner())).collect()
+                let mut perfect_subtree: Vec<Vec<Option<MerkleCrhOrchardOutput>>> = vec![
+                    padded_leaves.iter().map(|cmx| cmx.map(|cmx| MerkleCrhOrchardOutput::from_cmx(&cmx))).collect()
                 ];
 
                 // <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
@@ -398,10 +373,10 @@ pub mod testing {
                             (None, None) => None,
                             (Some(left), None) => {
                                 let right = EMPTY_ROOTS[l];
-                                Some(hash_with_l(l, Pair {left, right}).unwrap())
+                                Some(MerkleCrhOrchardOutput::combine((l as u8).into(), &left, &right))
                             },
                             (Some(left), Some(right)) => {
-                                Some(hash_with_l(l, Pair {left, right}).unwrap())
+                                Some(MerkleCrhOrchardOutput::combine((l as u8).into(), &left, &right))
                             },
                             (None, Some(_)) => {
                                 unreachable!("The perfect subtree is left-packed.")
@@ -419,7 +394,7 @@ pub mod testing {
                 for (pos, _) in commitments.iter().enumerate() {
 
                     // Initialize the authentication path to the path for an empty tree.
-                    let mut auth_path: [pallas::Base; MERKLE_DEPTH_ORCHARD] = (0..MERKLE_DEPTH_ORCHARD).map(|idx| EMPTY_ROOTS[idx]).collect::<Vec<_>>().try_into().unwrap();
+                    let mut auth_path = [MerkleCrhOrchardOutput::empty_leaf(); MERKLE_DEPTH_ORCHARD];
 
                     let mut layer_pos = pos;
                     for height in 0..perfect_subtree_depth {
