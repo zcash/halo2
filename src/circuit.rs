@@ -31,7 +31,7 @@ use crate::{
         redpallas::{SpendAuth, VerificationKey},
     },
     spec::NonIdentityPallasPoint,
-    tree::{Anchor, MerkleCrhOrchardOutput},
+    tree::{Anchor, MerkleHashOrchard},
     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment},
 };
 use gadget::{
@@ -97,7 +97,7 @@ pub struct Config {
 /// The Orchard Action circuit.
 #[derive(Debug, Default)]
 pub struct Circuit {
-    pub(crate) path: Option<[MerkleCrhOrchardOutput; MERKLE_DEPTH_ORCHARD]>,
+    pub(crate) path: Option<[MerkleHashOrchard; MERKLE_DEPTH_ORCHARD]>,
     pub(crate) pos: Option<u32>,
     pub(crate) g_d_old: Option<NonIdentityPallasPoint>,
     pub(crate) pk_d_old: Option<DiversifiedTransmissionKey>,
