@@ -16,7 +16,7 @@ use pasta_curves::{
 use crate::{
     constants::{
         load::{NullifierK, OrchardFixedBasesFull, ValueCommitV},
-        util::gen_const_array_with_default,
+        util::gen_const_array,
         MERKLE_DEPTH_ORCHARD,
     },
     keys::{
@@ -55,7 +55,6 @@ use gadget::{
     },
     utilities::{copy, CellValue, UtilitiesInstructions, Var},
 };
-use incrementalmerkletree::Hashable;
 
 use std::convert::TryInto;
 
@@ -401,9 +400,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let anchor = {
             let path = self.path.map(|typed_path| {
                 // TODO: Replace with array::map once MSRV is 1.55.0.
-                gen_const_array_with_default(MerkleHashOrchard::empty_leaf().inner(), |i| {
-                    typed_path[i].inner()
-                })
+                gen_const_array(|i| typed_path[i].inner())
             });
             let merkle_inputs = MerklePath {
                 chip_1: config.merkle_chip_1(),

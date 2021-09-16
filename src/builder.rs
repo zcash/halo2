@@ -664,7 +664,8 @@ pub mod testing {
             ),
             rng_seed in prop::array::uniform32(prop::num::u8::ANY)
         ) -> ArbitraryBundleInputs<StdRng> {
-            let mut tree = BridgeTree::<MerkleHashOrchard, 4>::new(100);
+            const MERKLE_DEPTH_ORCHARD: u8 = crate::constants::MERKLE_DEPTH_ORCHARD as u8;
+            let mut tree = BridgeTree::<MerkleHashOrchard, MERKLE_DEPTH_ORCHARD>::new(100);
             let mut notes_and_auth_paths: Vec<(Note, MerklePath)> = Vec::new();
 
             for note in notes.iter() {
