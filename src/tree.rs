@@ -17,7 +17,6 @@ use rand::RngCore;
 use serde::de::{Deserializer, Error};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
-use std::convert::TryInto;
 use std::iter;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
@@ -96,12 +95,9 @@ impl MerklePath {
     pub(crate) fn new(position: u32, auth_path: [pallas::Base; MERKLE_DEPTH_ORCHARD]) -> Self {
         Self {
             position,
-            auth_path: auth_path
-                .iter()
-                .map(|node| MerkleHashOrchard(*node))
-                .collect::<Vec<_>>()
-                .try_into()
-                .unwrap(),
+            auth_path: gen_const_array_with_default(MerkleHashOrchard::empty_leaf(), |i| {
+                MerkleHashOrchard(auth_path[i])
+            }),
         }
     }
 
