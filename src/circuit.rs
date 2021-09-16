@@ -16,6 +16,7 @@ use pasta_curves::{
 use crate::{
     constants::{
         load::{NullifierK, OrchardFixedBasesFull, ValueCommitV},
+        util::gen_const_array,
         MERKLE_DEPTH_ORCHARD,
     },
     keys::{
@@ -31,7 +32,7 @@ use crate::{
         redpallas::{SpendAuth, VerificationKey},
     },
     spec::NonIdentityPallasPoint,
-    tree::Anchor,
+    tree::{Anchor, MerkleHashOrchard},
     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment},
 };
 use gadget::{
@@ -97,7 +98,7 @@ pub struct Config {
 /// The Orchard Action circuit.
 #[derive(Debug, Default)]
 pub struct Circuit {
-    pub(crate) path: Option<[pallas::Base; MERKLE_DEPTH_ORCHARD]>,
+    pub(crate) path: Option<[MerkleHashOrchard; MERKLE_DEPTH_ORCHARD]>,
     pub(crate) pos: Option<u32>,
     pub(crate) g_d_old: Option<NonIdentityPallasPoint>,
     pub(crate) pk_d_old: Option<DiversifiedTransmissionKey>,
@@ -397,12 +398,16 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
         // Merkle path validity check.
         let anchor = {
+            let path = self.path.map(|typed_path| {
+                // TODO: Replace with array::map once MSRV is 1.55.0.
+                gen_const_array(|i| typed_path[i].inner())
+            });
             let merkle_inputs = MerklePath {
                 chip_1: config.merkle_chip_1(),
                 chip_2: config.merkle_chip_2(),
                 domain: SinsemillaHashDomains::MerkleCrh,
                 leaf_pos: self.pos,
-                path: self.path,
+                path,
             };
             let leaf = *cm_old.extract_p().inner();
             merkle_inputs.calculate_root(layouter.namespace(|| "MerkleCRH"), leaf)?
@@ -944,7 +949,7 @@ mod tests {
                 let cv_net = ValueCommitment::derive(value.unwrap(), ValueCommitTrapdoor::zero());
 
                 let path = MerklePath::dummy(&mut rng);
-                let anchor = path.root(spent_note.commitment().into()).unwrap();
+                let anchor = path.root(spent_note.commitment().into());
 
                 (
                     Circuit {

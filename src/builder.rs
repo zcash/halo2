@@ -569,6 +569,8 @@ impl<V> Bundle<InProgress<Proof, PartiallyAuthorized>, V> {
 /// Generators for property testing.
 #[cfg(any(test, feature = "test-dependencies"))]
 pub mod testing {
+    use incrementalmerkletree::{bridgetree::BridgeTree, Frontier, Tree};
+
     use rand::{rngs::StdRng, CryptoRng, SeedableRng};
     use std::convert::TryFrom;
     use std::fmt::Debug;
@@ -584,7 +586,8 @@ pub mod testing {
             testing::arb_spending_key, FullViewingKey, OutgoingViewingKey, SpendAuthorizingKey,
             SpendingKey,
         },
-        tree::{testing::arb_tree, Anchor, MerklePath},
+        note::testing::arb_note,
+        tree::{Anchor, MerkleHashOrchard, MerklePath},
         value::{testing::arb_positive_note_value, NoteValue, MAX_NOTE_VALUE},
         Address, Note,
     };
@@ -647,7 +650,11 @@ pub mod testing {
             n_recipients in 1..30,
         )
         (
-            (notes_and_auth_paths, anchor) in arb_tree(n_notes),
+            // generate note values that we're certain won't exceed MAX_NOTE_VALUE in total
+            notes in vec(
+                arb_positive_note_value(MAX_NOTE_VALUE / n_notes as u64).prop_flat_map(arb_note),
+                n_notes
+            ),
             recipient_amounts in vec(
                 arb_address().prop_flat_map(move |a| {
                     arb_positive_note_value(MAX_NOTE_VALUE / n_recipients as u64)
@@ -657,10 +664,23 @@ pub mod testing {
             ),
             rng_seed in prop::array::uniform32(prop::num::u8::ANY)
         ) -> ArbitraryBundleInputs<StdRng> {
+            const MERKLE_DEPTH_ORCHARD: u8 = crate::constants::MERKLE_DEPTH_ORCHARD as u8;
+            let mut tree = BridgeTree::<MerkleHashOrchard, MERKLE_DEPTH_ORCHARD>::new(100);
+            let mut notes_and_auth_paths: Vec<(Note, MerklePath)> = Vec::new();
+
+            for note in notes.iter() {
+                let leaf = MerkleHashOrchard::from_cmx(&note.commitment().into());
+                tree.append(&leaf);
+                tree.witness();
+
+                let path = tree.authentication_path(&leaf).unwrap().into();
+                notes_and_auth_paths.push((*note, path));
+            }
+
             ArbitraryBundleInputs {
                 rng: StdRng::from_seed(rng_seed),
                 sk,
-                anchor,
+                anchor: tree.root().into(),
                 notes: notes_and_auth_paths,
                 recipient_amounts
             }
