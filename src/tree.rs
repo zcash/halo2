@@ -80,6 +80,19 @@ pub struct MerklePath {
     auth_path: [MerkleHashOrchard; MERKLE_DEPTH_ORCHARD],
 }
 
+#[cfg(any(test, feature = "test-dependencies"))]
+impl From<(incrementalmerkletree::Position, Vec<MerkleHashOrchard>)> for MerklePath {
+    fn from(path: (incrementalmerkletree::Position, Vec<MerkleHashOrchard>)) -> Self {
+        use std::convert::TryInto;
+
+        let position: u64 = path.0.into();
+        Self {
+            position: position as u32,
+            auth_path: path.1.try_into().unwrap(),
+        }
+    }
+}
+
 impl MerklePath {
     /// Generates a dummy Merkle path for use in dummy spent notes.
     pub(crate) fn dummy(mut rng: &mut impl RngCore) -> Self {
@@ -253,7 +266,6 @@ impl<'de> Deserialize<'de> for MerkleHashOrchard {
 /// Generators for property testing.
 #[cfg(any(test, feature = "test-dependencies"))]
 pub mod testing {
-    use incrementalmerkletree::Hashable;
     #[cfg(test)]
     use incrementalmerkletree::{
         bridgetree::{BridgeTree, Frontier as BridgeFrontier},
@@ -261,19 +273,11 @@ pub mod testing {
     };
 
     #[cfg(test)]
-    use std::convert::TryInto;
-
-    use crate::{
-        constants::MERKLE_DEPTH_ORCHARD,
-        note::{commitment::ExtractedNoteCommitment, testing::arb_note, Note},
-        tree::{Anchor, MerkleHashOrchard, MerklePath, EMPTY_ROOTS},
-        value::{testing::arb_positive_note_value, MAX_NOTE_VALUE},
-    };
+    use crate::tree::{MerkleHashOrchard, EMPTY_ROOTS};
     #[cfg(test)]
     use pasta_curves::{arithmetic::FieldExt, pallas};
-
-    use proptest::collection::vec;
-    use proptest::prelude::*;
+    #[cfg(test)]
+    use std::convert::TryInto;
 
     #[test]
     fn test_vectors() {
@@ -313,129 +317,10 @@ pub mod testing {
         }
     }
 
-    prop_compose! {
-        /// Generates an arbitrary Merkle tree of with `n_notes` nonempty leaves.
-        pub fn arb_tree(n_notes: usize)
-        (
-            // generate note values that we're certain won't exceed MAX_NOTE_VALUE in total
-            notes in vec(
-                arb_positive_note_value(MAX_NOTE_VALUE / n_notes as u64).prop_flat_map(arb_note),
-                n_notes
-            ),
-        )
-        -> (Vec<(Note, MerklePath)>, Anchor) {
-            // Inefficient algorithm to build a perfect subtree containing all notes.
-            let perfect_subtree_depth = (n_notes as f64).log2().ceil() as usize;
-            let n_leaves = 1 << perfect_subtree_depth;
-
-            let commitments: Vec<Option<ExtractedNoteCommitment>> = notes.iter().map(|note| {
-                let cmx: ExtractedNoteCommitment = note.commitment().into();
-                Some(cmx)
-            }).collect();
-
-            let padded_leaves = {
-                let mut padded_leaves = commitments.clone();
-
-                let pad = (0..(n_leaves - n_notes)).map(
-                    |_| None
-                ).collect::<Vec<_>>();
-
-                padded_leaves.extend_from_slice(&pad);
-                padded_leaves
-            };
-
-            let perfect_subtree = {
-                let mut perfect_subtree: Vec<Vec<Option<MerkleHashOrchard>>> = vec![
-                    padded_leaves.iter().map(|cmx| cmx.map(|cmx| MerkleHashOrchard::from_cmx(&cmx))).collect()
-                ];
-
-                // <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
-                // The layer with 2^n nodes is called "layer n":
-                //      - leaves are at layer MERKLE_DEPTH_ORCHARD = 32;
-                //      - the root is at layer 0.
-                // `l` is MERKLE_DEPTH_ORCHARD - layer - 1.
-                //      - when hashing two leaves, we produce a node on the layer above the leaves, i.e.
-                //        layer = 31, l = 0
-                //      - when hashing to the final root, we produce the anchor with layer = 0, l = 31.
-                for l in 0..perfect_subtree_depth {
-                    let inner_nodes = (0..(n_leaves >> (l + 1))).map(|pos| {
-                        let left = perfect_subtree[l][pos * 2];
-                        let right = perfect_subtree[l][pos * 2 + 1];
-                        match (left, right) {
-                            (None, None) => None,
-                            (Some(left), None) => {
-                                let right = EMPTY_ROOTS[l];
-                                Some(MerkleHashOrchard::combine((l as u8).into(), &left, &right))
-                            },
-                            (Some(left), Some(right)) => {
-                                Some(MerkleHashOrchard::combine((l as u8).into(), &left, &right))
-                            },
-                            (None, Some(_)) => {
-                                unreachable!("The perfect subtree is left-packed.")
-                            }
-                        }
-                    }).collect();
-                    perfect_subtree.push(inner_nodes);
-                };
-                perfect_subtree
-            };
-
-            // Get Merkle path for each note commitment
-            let auth_paths = {
-                let mut auth_paths: Vec<MerklePath> = Vec::new();
-                for (pos, _) in commitments.iter().enumerate() {
-
-                    // Initialize the authentication path to the path for an empty tree.
-                    let mut auth_path = [MerkleHashOrchard::empty_leaf(); MERKLE_DEPTH_ORCHARD];
-
-                    let mut layer_pos = pos;
-                    for height in 0..perfect_subtree_depth {
-                        let is_right_sibling = layer_pos & 1 == 1;
-                        let sibling = if is_right_sibling {
-                            // This node is the right sibling, so we need its left sibling at the current height.
-                            perfect_subtree[height][layer_pos - 1]
-                        } else {
-                            // This node is the left sibling, so we need its right sibling at the current height.
-                            perfect_subtree[height][layer_pos + 1]
-                        };
-                        if let Some(sibling) = sibling {
-                            auth_path[height] = sibling;
-                        }
-                        layer_pos = (layer_pos - is_right_sibling as usize) / 2;
-                    };
-
-                    let path = MerklePath {position: pos as u32, auth_path};
-                    auth_paths.push(path);
-                }
-                auth_paths
-            };
-
-            // Compute anchor for this tree
-            let anchor = auth_paths[0].root(notes[0].commitment().into());
-
-            (
-                notes.into_iter().zip(auth_paths.into_iter()).map(|(note, auth_path)| (note, auth_path)).collect(),
-                anchor
-            )
-        }
-    }
-
-    proptest! {
-        #![proptest_config(ProptestConfig::with_cases(10))]
-        #[allow(clippy::redundant_closure)]
-        #[test]
-        fn tree(
-            (notes_and_auth_paths, anchor) in (1usize..4).prop_flat_map(|n_notes| arb_tree(n_notes))
-        ) {
-            for (note, auth_path) in notes_and_auth_paths.iter() {
-                let computed_anchor = auth_path.root(note.commitment().into());
-                assert_eq!(anchor, computed_anchor);
-            }
-        }
-    }
-
     #[test]
     fn empty_roots_incremental() {
+        use incrementalmerkletree::Hashable;
+
         let tv_empty_roots = crate::test_vectors::commitment_tree::test_vectors().empty_roots;
 
         for (altitude, tv_root) in tv_empty_roots.iter().enumerate() {
