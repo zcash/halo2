@@ -36,14 +36,14 @@ Assuming the discrete log assumption holds, Pedersen commitments are also perfec
 and computationally binding:
 
 * **hiding**: the adversary chooses messages $m_0, m_1.$ The committer commits to one of
-  these messages $c = \text{Commit}(m_b;r), b \in \{0,1\}.$ Given $c,$ the probability of
+  these messages $c = \text{Commit}(m_b,r), b \in \{0,1\}.$ Given $c,$ the probability of
   the adversary guessing the correct $b$ is no more than $\frac{1}{2}$.
 * **binding**: the adversary cannot pick two different messages $m_0 \neq m_1,$ and
   randomness $r_0, r_1,$ such that $\text{Commit}(m_0,r_0) = \text{Commit}(m_1,r_1).$
 
 ### Vector Pedersen commitment
 We can use a variant of the Pedersen commitment scheme to commit to multiple messages at
-once, $\mathbf{m} = (m_1, \cdots, m_n)$. This time, we'll have to sample a corresponding
+once, $\mathbf{m} = (m_0, \cdots, m_{n-1})$. This time, we'll have to sample a corresponding
 number of random public generators $\mathbf{G} = (G_0, \cdots, G_{n-1}),$ along with a
 single random generator $H$ as before (for use in hiding). Then, our commitment scheme is:
 
@@ -57,9 +57,9 @@ $$
 
 > TODO: is this positionally binding?
 
-## Diffie--Hellman
+## Diffie-Hellman
 
-An example of a protocol that uses cryptographic groups is Diffie--Hellman key agreement
+An example of a protocol that uses cryptographic groups is Diffie-Hellman key agreement
 [[DH1976]]. The Diffie--Hellman protocol is a method for two users, Alice and Bob, to
 generate a shared private key. It proceeds as follows:
 
@@ -83,7 +83,7 @@ $g, p, A = [a]G,$ and $B = [b]G$: in other words, they would need to either get 
 discrete logarithm $a$ from $A = [a]G$ or $b$ from $B = [b]G,$ which we assume to be
 computationally infeasible in $\mathbb{F}_p^\times.$
 
-More generally, protocols that use similar ideas to Diffie--Hellman are used throughout
+More generally, protocols that use similar ideas to Diffie-Hellman are used throughout
 cryptography. One way of instantiating a cryptographic group is as an
 [elliptic curve](curves.md). Before we go into detail on elliptic curves, we'll describe
 some algorithms that can be used for any group.
