@@ -21,6 +21,7 @@
     - [Multipoint opening argument](design/proving-system/multipoint-opening.md)
     - [Inner product argument](design/proving-system/inner-product.md)
     - [Comparison to other work](design/proving-system/comparison.md)
+  - [Protocol Description](design/protocol.md)
   - [Implementation](design/implementation.md)
     - [Proofs](design/implementation/proofs.md)
     - [Fields](design/implementation/fields.md)
