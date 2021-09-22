@@ -14,7 +14,7 @@ the form:
 
 $$a \cdot (1 - a) \cdot (2 - a) \cdot (3 - a) \cdot (4 - a) = 0$$
 
-while to constraint $c$ to be either 7 or 13, you would use:
+while to constrain $c$ to be either 7 or 13, you would use:
 
 $$(7 - c) \cdot (13 - c) = 0$$
 

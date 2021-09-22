@@ -5,7 +5,7 @@ is arguably simpler than Plookup.
 
 ## Note on Language
 
-In addition to the [general notes on language](../design.md#note-on-language):
+In addition to the [general notes on language](design.md#note-on-language):
 
 - We call the $Z(X)$ polynomial (the grand product argument polynomial for the permutation
   argument) the "permutation product" column.

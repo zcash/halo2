@@ -30,7 +30,7 @@ representations of circuits.
   the surrounding cells.
 
 `halo2::dev::circuit_dot_graph` builds a [DOT graph string] representing the given
-circuit, which can then be rendered witha variety of [layout programs]. The graph is built
+circuit, which can then be rendered with a variety of [layout programs]. The graph is built
 from calls to `Layouter::namespace` both within the circuit, and inside the gadgets and
 chips that it uses.
 
