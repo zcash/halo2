@@ -11,12 +11,12 @@ Requires Rust 1.51+.
 
 ## License
 
-Copyright 2020 The Electric Coin Company.
+Copyright 2020-2021 The Electric Coin Company.
 
 You may use this package under the Bootstrap Open Source Licence, version 1.0,
-or at your option, any later version. See the file
-[`LICENSE-BOSL`](LICENSE-BOSL) for the terms of the Bootstrap Open Source
-Licence, version 1.0.
+or at your option, any later version. See the file [`COPYING`](COPYING) for
+more details, and [`LICENSE-BOSL`](LICENSE-BOSL) for the terms of the Bootstrap
+Open Source Licence, version 1.0.
 
 The purpose of the BOSL is to allow commercial improvements to the package
 while ensuring that all improvements are open source. See
