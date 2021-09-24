@@ -1,6 +1,6 @@
 [package]
 name = "halo2"
-version = "0.0.1"
+version = "0.1.0-beta.1"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
     "Ying Tong Lai <yingtong@electriccoin.co>",
@@ -15,9 +15,6 @@ license-file = "LICENSE-BOSL"
 repository = "https://github.com/zcash/halo2"
 documentation = "https://docs.rs/halo2"
 readme = "README.md"
-
-# We are not publishing this yet.
-publish = false
 
 [package.metadata.docs.rs]
 all-features = true
