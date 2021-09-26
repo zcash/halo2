@@ -1,6 +1,6 @@
 # Lookup argument
 
-halo2 uses the following lookup technique, which allows for lookups in arbitrary sets, and
+Halo2 uses the following lookup technique, which allows for lookups in arbitrary sets, and
 is arguably simpler than Plookup.
 
 ## Note on Language
@@ -147,7 +147,7 @@ soundness is not affected.
 
 ## Generalizations
 
-halo2's lookup argument implementation generalizes the above technique in the following
+Halo2's lookup argument implementation generalizes the above technique in the following
 ways:
 
 - $A$ and $S$ can be extended to multiple columns, combined using a random challenge. $A'$
