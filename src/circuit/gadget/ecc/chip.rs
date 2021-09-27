@@ -283,7 +283,7 @@ impl EccChip {
             running_sum_config,
         };
 
-        // Create witness point gates
+        // Create witness point gate
         {
             let config: witness_point::Config = (&config).into();
             config.create_gate(meta);

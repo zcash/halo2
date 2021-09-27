@@ -230,6 +230,9 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
     }
 
     /// Returns `self + other` using incomplete addition.
+    /// The arguments are type-constrained not to be the identity point,
+    /// and since exceptional cases return an Error, the result also cannot
+    /// be the identity point.
     pub fn add_incomplete(
         &self,
         mut layouter: impl Layouter<C::Base>,
