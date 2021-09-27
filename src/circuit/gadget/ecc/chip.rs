@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use super::EccInstructions;
 use crate::{
     circuit::gadget::utilities::{
@@ -22,9 +24,10 @@ pub(super) mod mul;
 pub(super) mod mul_fixed;
 pub(super) mod witness_point;
 
-/// A curve point represented in affine (x, y) coordinates. Each coordinate is
-/// assigned to a cell.
-#[derive(Clone, Debug)]
+/// A curve point represented in affine (x, y) coordinates, or the
+/// identity represented as (0, 0).
+/// Each coordinate is assigned to a cell.
+#[derive(Copy, Clone, Debug)]
 pub struct EccPoint {
     /// x-coordinate
     x: CellValue<pallas::Base>,
@@ -66,6 +69,76 @@ impl EccPoint {
     /// or 0 for the zero point.
     pub fn y(&self) -> CellValue<pallas::Base> {
         self.y
+    }
+
+    /// This point is the identity.
+    pub fn is_identity(&self) -> Option<bool> {
+        self.x.value().map(|x| x == pallas::Base::zero())
+    }
+}
+
+/// A non-identity point represented in affine (x, y) coordinates.
+/// Each coordinate is assigned to a cell.
+#[derive(Copy, Clone, Debug)]
+pub struct NonIdentityEccPoint {
+    /// x-coordinate
+    x: CellValue<pallas::Base>,
+    /// y-coordinate
+    y: CellValue<pallas::Base>,
+}
+
+impl NonIdentityEccPoint {
+    /// Constructs a point from its coordinates, without checking they are on the curve.
+    ///
+    /// This is an internal API that we only use where we know we have a valid non-identity
+    /// curve point (specifically inside Sinsemilla).
+    pub(in crate::circuit::gadget) fn from_coordinates_unchecked(
+        x: CellValue<pallas::Base>,
+        y: CellValue<pallas::Base>,
+    ) -> Self {
+        NonIdentityEccPoint { x, y }
+    }
+
+    /// Returns the value of this curve point, if known.
+    pub fn point(&self) -> Option<pallas::Affine> {
+        match (self.x.value(), self.y.value()) {
+            (Some(x), Some(y)) => {
+                assert!(x != pallas::Base::zero() && y != pallas::Base::zero());
+                Some(pallas::Affine::from_xy(x, y).unwrap())
+            }
+            _ => None,
+        }
+    }
+    /// The cell containing the affine short-Weierstrass x-coordinate.
+    pub fn x(&self) -> CellValue<pallas::Base> {
+        self.x
+    }
+    /// The cell containing the affine short-Weierstrass y-coordinate.
+    pub fn y(&self) -> CellValue<pallas::Base> {
+        self.y
+    }
+}
+
+impl From<NonIdentityEccPoint> for EccPoint {
+    fn from(non_id_point: NonIdentityEccPoint) -> Self {
+        Self {
+            x: non_id_point.x,
+            y: non_id_point.y,
+        }
+    }
+}
+
+impl TryFrom<EccPoint> for NonIdentityEccPoint {
+    type Error = Error;
+
+    fn try_from(point: EccPoint) -> Result<Self, Self::Error> {
+        if point.is_identity() == Some(true) {
+            return Err(Error::SynthesisError);
+        }
+        Ok(NonIdentityEccPoint {
+            x: point.x,
+            y: point.y,
+        })
     }
 }
 
