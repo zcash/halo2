@@ -181,8 +181,6 @@ pub struct EccConfig {
     /// when the scalar is a signed short exponent or a base-field element.
     pub q_mul_fixed_running_sum: Selector,
 
-    /// Witness point
-    pub q_point: Selector,
     /// Witness non-identity point
     pub q_point_non_id: Selector,
 
@@ -280,7 +278,6 @@ impl EccChip {
             q_mul_fixed_short: meta.selector(),
             q_mul_fixed_base_field: meta.selector(),
             q_mul_fixed_running_sum,
-            q_point: meta.selector(),
             q_point_non_id: meta.selector(),
             lookup_config: range_check,
             running_sum_config,
@@ -419,18 +416,6 @@ impl EccInstructions<pallas::Affine> for EccChip {
         )
     }
 
-    fn witness_point(
-        &self,
-        layouter: &mut impl Layouter<pallas::Base>,
-        value: Option<pallas::Affine>,
-    ) -> Result<Self::Point, Error> {
-        let config: witness_point::Config = self.config().into();
-        layouter.assign_region(
-            || "witness point",
-            |mut region| config.point(value, 0, &mut region),
-        )
-    }
-
     fn witness_point_non_id(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
@@ -441,6 +426,10 @@ impl EccInstructions<pallas::Affine> for EccChip {
             || "witness non-identity point",
             |mut region| config.point_non_id(value, 0, &mut region),
         )
+    }
+
+    fn is_identity(point: &Self::Point) -> Option<bool> {
+        point.is_identity()
     }
 
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X {

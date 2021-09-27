@@ -389,7 +389,7 @@ pub mod tests {
     use crate::circuit::gadget::{
         ecc::{
             chip::{EccChip, NullifierK},
-            FixedPointBaseField, Point,
+            FixedPointBaseField, NonIdentityPoint, Point,
         },
         utilities::UtilitiesInstructions,
     };
@@ -418,7 +418,7 @@ pub mod tests {
     ) -> Result<(), Error> {
         let column = chip.config().advices[0];
 
-        fn constrain_equal(
+        fn constrain_equal_non_id(
             chip: EccChip,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
@@ -427,7 +427,7 @@ pub mod tests {
         ) -> Result<(), Error> {
             // Move scalar from base field into scalar field (which always fits for Pallas).
             let scalar = pallas::Scalar::from_bytes(&scalar_val.to_bytes()).unwrap();
-            let expected = Point::new(
+            let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
                 Some((base_val * scalar).to_affine()),
@@ -446,7 +446,7 @@ pub mod tests {
                 )?;
                 base.mul(layouter.namespace(|| "random [a]B"), scalar_fixed)?
             };
-            constrain_equal(
+            constrain_equal_non_id(
                 chip.clone(),
                 layouter.namespace(|| "random [a]B"),
                 base_val,
@@ -474,7 +474,7 @@ pub mod tests {
                 )?;
                 base.mul(layouter.namespace(|| "mul with double"), scalar_fixed)?
             };
-            constrain_equal(
+            constrain_equal_non_id(
                 chip.clone(),
                 layouter.namespace(|| "mul with double"),
                 base_val,
@@ -492,13 +492,7 @@ pub mod tests {
                     chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_fixed))?;
                 base.mul(layouter.namespace(|| "mul by zero"), scalar_fixed)?
             };
-            constrain_equal(
-                chip.clone(),
-                layouter.namespace(|| "mul by zero"),
-                base_val,
-                scalar_fixed,
-                result,
-            )?;
+            assert!(result.is_identity().unwrap());
         }
 
         // [-1]B is the largest base field element
@@ -509,7 +503,7 @@ pub mod tests {
                     chip.load_private(layouter.namespace(|| "-1"), column, Some(scalar_fixed))?;
                 base.mul(layouter.namespace(|| "mul by -1"), scalar_fixed)?
             };
-            constrain_equal(
+            constrain_equal_non_id(
                 chip,
                 layouter.namespace(|| "mul by -1"),
                 base_val,

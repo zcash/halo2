@@ -391,13 +391,12 @@ pub mod tests {
     use halo2::{circuit::Layouter, plonk::Error};
     use pasta_curves::{arithmetic::CurveExt, pallas};
 
-    use crate::circuit::gadget::ecc::{EccInstructions, NonIdentityPoint, Point};
+    use crate::circuit::gadget::ecc::{EccInstructions, NonIdentityPoint};
 
     #[allow(clippy::too_many_arguments)]
     pub fn test_add<EccChip: EccInstructions<pallas::Affine> + Clone + Eq + std::fmt::Debug>(
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
-        zero: &Point<pallas::Affine, EccChip>,
         p_val: pallas::Affine,
         p: &NonIdentityPoint<pallas::Affine, EccChip>,
         q_val: pallas::Affine,
@@ -408,21 +407,22 @@ pub mod tests {
         assert_ne!(p_val, q_val);
 
         // Check complete addition P + (-P)
-        {
+        let zero = {
             let result = p.add(layouter.namespace(|| "P + (-P)"), p_neg)?;
-            result.constrain_equal(layouter.namespace(|| "P + (-P) = 𝒪"), zero)?;
-        }
+            assert!(result.is_identity().unwrap());
+            result
+        };
 
         // Check complete addition 𝒪 + 𝒪
         {
-            let result = zero.add(layouter.namespace(|| "𝒪 + 𝒪"), zero)?;
-            result.constrain_equal(layouter.namespace(|| "𝒪 + 𝒪 = 𝒪"), zero)?;
+            let result = zero.add(layouter.namespace(|| "𝒪 + 𝒪"), &zero)?;
+            result.constrain_equal(layouter.namespace(|| "𝒪 + 𝒪 = 𝒪"), &zero)?;
         }
 
         // Check P + Q
         {
             let result = p.add(layouter.namespace(|| "P + Q"), q)?;
-            let witnessed_result = Point::new(
+            let witnessed_result = NonIdentityPoint::new(
                 chip.clone(),
                 layouter.namespace(|| "witnessed P + Q"),
                 Some((p_val + q_val).to_affine()),
@@ -433,7 +433,7 @@ pub mod tests {
         // P + P
         {
             let result = p.add(layouter.namespace(|| "P + P"), p)?;
-            let witnessed_result = Point::new(
+            let witnessed_result = NonIdentityPoint::new(
                 chip.clone(),
                 layouter.namespace(|| "witnessed P + P"),
                 Some((p_val + p_val).to_affine()),
@@ -443,7 +443,7 @@ pub mod tests {
 
         // P + 𝒪
         {
-            let result = p.add(layouter.namespace(|| "P + 𝒪"), zero)?;
+            let result = p.add(layouter.namespace(|| "P + 𝒪"), &zero)?;
             result.constrain_equal(layouter.namespace(|| "P + 𝒪 = P"), p)?;
         }
 
@@ -455,7 +455,7 @@ pub mod tests {
 
         // (x, y) + (ζx, y) should behave like normal P + Q.
         let endo_p = p_val.to_curve().endo();
-        let endo_p = Point::new(
+        let endo_p = NonIdentityPoint::new(
             chip.clone(),
             layouter.namespace(|| "endo(P)"),
             Some(endo_p.to_affine()),
@@ -464,7 +464,7 @@ pub mod tests {
 
         // (x, y) + (ζx, -y) should also behave like normal P + Q.
         let endo_p_neg = (-p_val).to_curve().endo();
-        let endo_p_neg = Point::new(
+        let endo_p_neg = NonIdentityPoint::new(
             chip.clone(),
             layouter.namespace(|| "endo(-P)"),
             Some(endo_p_neg.to_affine()),
@@ -473,7 +473,7 @@ pub mod tests {
 
         // (x, y) + ((ζ^2)x, y)
         let endo_2_p = p_val.to_curve().endo().endo();
-        let endo_2_p = Point::new(
+        let endo_2_p = NonIdentityPoint::new(
             chip.clone(),
             layouter.namespace(|| "endo^2(P)"),
             Some(endo_2_p.to_affine()),
@@ -482,7 +482,7 @@ pub mod tests {
 
         // (x, y) + ((ζ^2)x, -y)
         let endo_2_p_neg = (-p_val).to_curve().endo().endo();
-        let endo_2_p_neg = Point::new(
+        let endo_2_p_neg = NonIdentityPoint::new(
             chip,
             layouter.namespace(|| "endo^2(-P)"),
             Some(endo_2_p_neg.to_affine()),

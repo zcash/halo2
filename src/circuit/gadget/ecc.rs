@@ -58,20 +58,15 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
     ) -> Result<(), Error>;
 
     /// Witnesses the given point as a private input to the circuit.
-    /// This maps the identity to (0, 0) in affine coordinates.
-    fn witness_point(
-        &self,
-        layouter: &mut impl Layouter<C::Base>,
-        value: Option<C>,
-    ) -> Result<Self::Point, Error>;
-
-    /// Witnesses the given point as a private input to the circuit.
     /// This returns an error if the point is the identity.
     fn witness_point_non_id(
         &self,
         layouter: &mut impl Layouter<C::Base>,
         value: Option<C>,
     ) -> Result<Self::NonIdentityPoint, Error>;
+
+    /// Checks if a point is the identity.
+    fn is_identity(point: &Self::Point) -> Option<bool>;
 
     /// Extracts the x-coordinate of a point.
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X;
@@ -310,17 +305,6 @@ pub struct Point<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + E
 }
 
 impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, EccChip> {
-    /// Constructs a new point with the given value.
-    #[cfg(test)]
-    pub fn new(
-        chip: EccChip,
-        mut layouter: impl Layouter<C::Base>,
-        value: Option<C>,
-    ) -> Result<Self, Error> {
-        let point = chip.witness_point(&mut layouter, value);
-        point.map(|inner| Point { chip, inner })
-    }
-
     /// Constrains this point to be equal in value to another point.
     pub fn constrain_equal<Other: Into<Point<C, EccChip>> + Clone>(
         &self,
@@ -335,6 +319,11 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
     /// Returns the inner point.
     pub fn inner(&self) -> &EccChip::Point {
         &self.inner
+    }
+
+    /// Checks is a point is the identity.
+    pub fn is_identity(&self) -> Option<bool> {
+        EccChip::is_identity(&self.inner)
     }
 
     /// Extracts the x-coordinate of a point.
@@ -513,7 +502,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use group::{prime::PrimeCurveAffine, Curve, Group};
+    use group::{Curve, Group};
 
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
@@ -604,15 +593,6 @@ mod tests {
             // Make sure P and Q are not the same point.
             assert_ne!(p_val, q_val);
 
-            // Generate a (0,0) point to be used in other tests.
-            let zero = {
-                super::Point::new(
-                    chip.clone(),
-                    layouter.namespace(|| "identity"),
-                    Some(pallas::Affine::identity()),
-                )?
-            };
-
             // Test witness non-identity point
             {
                 super::chip::witness_point::tests::test_witness_non_id(
@@ -626,7 +606,6 @@ mod tests {
                 super::chip::add::tests::test_add(
                     chip.clone(),
                     layouter.namespace(|| "complete addition"),
-                    &zero,
                     p_val,
                     &p,
                     q_val,

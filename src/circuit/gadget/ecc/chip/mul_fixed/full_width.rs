@@ -175,7 +175,7 @@ pub mod tests {
 
     use crate::circuit::gadget::ecc::{
         chip::{EccChip, OrchardFixedBasesFull},
-        FixedPoint, Point,
+        FixedPoint, NonIdentityPoint, Point,
     };
     use crate::constants;
 
@@ -229,14 +229,14 @@ pub mod tests {
         base: FixedPoint<pallas::Affine, EccChip>,
         base_val: pallas::Affine,
     ) -> Result<(), Error> {
-        fn constrain_equal(
+        fn constrain_equal_non_id(
             chip: EccChip,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
             scalar_val: pallas::Scalar,
             result: Point<pallas::Affine, EccChip>,
         ) -> Result<(), Error> {
-            let expected = Point::new(
+            let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
                 Some((base_val * scalar_val).to_affine()),
@@ -249,7 +249,7 @@ pub mod tests {
             let scalar_fixed = pallas::Scalar::rand();
 
             let (result, _) = base.mul(layouter.namespace(|| "random [a]B"), Some(scalar_fixed))?;
-            constrain_equal(
+            constrain_equal_non_id(
                 chip.clone(),
                 layouter.namespace(|| "random [a]B"),
                 base_val,
@@ -272,7 +272,7 @@ pub mod tests {
             let (result, _) =
                 base.mul(layouter.namespace(|| "mul with double"), Some(scalar_fixed))?;
 
-            constrain_equal(
+            constrain_equal_non_id(
                 chip.clone(),
                 layouter.namespace(|| "mul with double"),
                 base_val,
@@ -286,20 +286,14 @@ pub mod tests {
         {
             let scalar_fixed = pallas::Scalar::zero();
             let (result, _) = base.mul(layouter.namespace(|| "mul by zero"), Some(scalar_fixed))?;
-            constrain_equal(
-                chip.clone(),
-                layouter.namespace(|| "mul by zero"),
-                base_val,
-                scalar_fixed,
-                result,
-            )?;
+            assert!(result.is_identity().unwrap());
         }
 
         // [-1]B is the largest scalar field element.
         {
             let scalar_fixed = -pallas::Scalar::one();
             let (result, _) = base.mul(layouter.namespace(|| "mul by -1"), Some(scalar_fixed))?;
-            constrain_equal(
+            constrain_equal_non_id(
                 chip,
                 layouter.namespace(|| "mul by -1"),
                 base_val,

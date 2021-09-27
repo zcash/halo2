@@ -426,7 +426,7 @@ mod tests {
         circuit::gadget::{
             ecc::{
                 chip::{EccChip, EccConfig},
-                Point,
+                NonIdentityPoint,
             },
             utilities::lookup_range_check::LookupRangeCheckConfig,
         },
@@ -580,7 +580,7 @@ mod tests {
                         None
                     };
 
-                    Point::new(
+                    NonIdentityPoint::new(
                         ecc_chip.clone(),
                         layouter.namespace(|| "Witness expected parent"),
                         expected_parent,
@@ -631,7 +631,7 @@ mod tests {
                         None
                     };
 
-                    Point::new(
+                    NonIdentityPoint::new(
                         ecc_chip,
                         layouter.namespace(|| "Witness expected result"),
                         expected_result,

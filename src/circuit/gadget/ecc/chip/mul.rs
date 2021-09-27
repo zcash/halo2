@@ -464,7 +464,7 @@ pub mod tests {
     ) -> Result<(), Error> {
         let column = chip.config().advices[0];
 
-        fn constrain_equal<
+        fn constrain_equal_non_id<
             EccChip: EccInstructions<pallas::Affine> + Clone + Eq + std::fmt::Debug,
         >(
             chip: EccChip,
@@ -476,7 +476,7 @@ pub mod tests {
             // Move scalar from base field into scalar field (which always fits
             // for Pallas).
             let scalar = pallas::Scalar::from_bytes(&scalar_val.to_bytes()).unwrap();
-            let expected = Point::new(
+            let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
                 Some((base_val * scalar).to_affine()),
@@ -495,7 +495,7 @@ pub mod tests {
                 )?;
                 p.mul(layouter.namespace(|| "random [a]B"), &scalar)?
             };
-            constrain_equal(
+            constrain_equal_non_id(
                 chip.clone(),
                 layouter.namespace(|| "random [a]B"),
                 p_val,
@@ -513,13 +513,7 @@ pub mod tests {
                     chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_val))?;
                 p.mul(layouter.namespace(|| "[0]B"), &scalar)?
             };
-            constrain_equal(
-                chip.clone(),
-                layouter.namespace(|| "[0]B"),
-                p_val,
-                scalar_val,
-                result,
-            )?;
+            assert!(result.is_identity().unwrap());
         }
 
         // [-1]B (the largest possible base field element)
@@ -530,7 +524,7 @@ pub mod tests {
                     chip.load_private(layouter.namespace(|| "-1"), column, Some(scalar_val))?;
                 p.mul(layouter.namespace(|| "[-1]B"), &scalar)?
             };
-            constrain_equal(
+            constrain_equal_non_id(
                 chip,
                 layouter.namespace(|| "[-1]B"),
                 p_val,
