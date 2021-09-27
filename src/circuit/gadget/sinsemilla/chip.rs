@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     circuit::gadget::{
-        ecc::chip::EccPoint,
+        ecc::chip::NonIdentityEccPoint,
         utilities::{lookup_range_check::LookupRangeCheckConfig, CellValue, Var},
     },
     constants::OrchardFixedBasesFull,
@@ -247,7 +247,7 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
     type RunningSum = Vec<Self::CellValue>;
 
     type X = CellValue<pallas::Base>;
-    type Point = EccPoint;
+    type NonIdentityPoint = NonIdentityEccPoint;
     type FixedPoints = OrchardFixedBasesFull;
 
     type HashDomains = SinsemillaHashDomains;
@@ -282,14 +282,14 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
         mut layouter: impl Layouter<pallas::Base>,
         Q: pallas::Affine,
         message: Self::Message,
-    ) -> Result<(Self::Point, Vec<Self::RunningSum>), Error> {
+    ) -> Result<(Self::NonIdentityPoint, Vec<Self::RunningSum>), Error> {
         layouter.assign_region(
             || "hash_to_point",
             |mut region| self.hash_message(&mut region, Q, &message),
         )
     }
 
-    fn extract(point: &Self::Point) -> Self::X {
+    fn extract(point: &Self::NonIdentityPoint) -> Self::X {
         point.x()
     }
 }

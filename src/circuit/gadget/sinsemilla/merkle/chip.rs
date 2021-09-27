@@ -417,11 +417,11 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
         { sinsemilla::K },
         { sinsemilla::C },
     >>::X;
-    type Point = <SinsemillaChip as SinsemillaInstructions<
+    type NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<
         pallas::Affine,
         { sinsemilla::K },
         { sinsemilla::C },
-    >>::Point;
+    >>::NonIdentityPoint;
     type FixedPoints = <SinsemillaChip as SinsemillaInstructions<
         pallas::Affine,
         { sinsemilla::K },
@@ -457,13 +457,13 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
         layouter: impl Layouter<pallas::Base>,
         Q: pallas::Affine,
         message: Self::Message,
-    ) -> Result<(Self::Point, Vec<Vec<Self::CellValue>>), Error> {
+    ) -> Result<(Self::NonIdentityPoint, Vec<Vec<Self::CellValue>>), Error> {
         let config = self.config().sinsemilla_config.clone();
         let chip = SinsemillaChip::construct(config);
         chip.hash_to_point(layouter, Q, message)
     }
 
-    fn extract(point: &Self::Point) -> Self::X {
+    fn extract(point: &Self::NonIdentityPoint) -> Self::X {
         SinsemillaChip::extract(point)
     }
 }

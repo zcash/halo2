@@ -1,5 +1,5 @@
 use super::super::SinsemillaInstructions;
-use super::{CellValue, EccPoint, SinsemillaChip, Var};
+use super::{CellValue, NonIdentityEccPoint, SinsemillaChip, Var};
 use crate::primitives::sinsemilla::{self, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S};
 use halo2::{
     circuit::{Chip, Region},
@@ -26,7 +26,7 @@ impl SinsemillaChip {
             { sinsemilla::K },
             { sinsemilla::C },
         >>::Message,
-    ) -> Result<(EccPoint, Vec<Vec<CellValue<pallas::Base>>>), Error> {
+    ) -> Result<(NonIdentityEccPoint, Vec<Vec<CellValue<pallas::Base>>>), Error> {
         let config = self.config().clone();
         let mut offset = 0;
 
@@ -147,7 +147,14 @@ impl SinsemillaChip {
             }
         }
 
-        Ok((EccPoint::from_coordinates_unchecked(x_a.0, y_a), zs_sum))
+        if let Some(x_a) = x_a.value() {
+            if let Some(y_a) = y_a.value() {
+                if x_a == pallas::Base::zero() || y_a == pallas::Base::zero() {
+                    return Err(Error::SynthesisError);
+                }
+            }
+        }
+        Ok((NonIdentityEccPoint::from_coordinates_unchecked(x_a.0, y_a), zs_sum))
     }
 
     #[allow(clippy::type_complexity)]
