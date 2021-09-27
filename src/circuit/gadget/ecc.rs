@@ -615,6 +615,14 @@ mod tests {
                 )?
             };
 
+            // Test witness non-identity point
+            {
+                super::chip::witness_point::tests::test_witness_non_id(
+                    chip.clone(),
+                    layouter.namespace(|| "witness non-identity point"),
+                )
+            }
+
             // Test complete addition
             {
                 super::chip::add::tests::test_add(

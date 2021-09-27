@@ -183,6 +183,8 @@ pub struct EccConfig {
 
     /// Witness point
     pub q_point: Selector,
+    /// Witness non-identity point
+    pub q_point_non_id: Selector,
 
     /// Lookup range check using 10-bit lookup table
     pub lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
@@ -279,11 +281,12 @@ impl EccChip {
             q_mul_fixed_base_field: meta.selector(),
             q_mul_fixed_running_sum,
             q_point: meta.selector(),
+            q_point_non_id: meta.selector(),
             lookup_config: range_check,
             running_sum_config,
         };
 
-        // Create witness point gate
+        // Create witness point gates
         {
             let config: witness_point::Config = (&config).into();
             config.create_gate(meta);
@@ -393,6 +396,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
     type ScalarFixedShort = EccScalarFixedShort;
     type ScalarVar = CellValue<pallas::Base>;
     type Point = EccPoint;
+    type NonIdentityPoint = NonIdentityEccPoint;
     type X = CellValue<pallas::Base>;
     type FixedPoints = OrchardFixedBasesFull;
     type FixedPointsBaseField = NullifierK;
@@ -423,20 +427,33 @@ impl EccInstructions<pallas::Affine> for EccChip {
         let config: witness_point::Config = self.config().into();
         layouter.assign_region(
             || "witness point",
-            |mut region| config.assign_region(value, 0, &mut region),
+            |mut region| config.point(value, 0, &mut region),
         )
     }
 
-    fn extract_p(point: &Self::Point) -> &Self::X {
-        &point.x
+    fn witness_point_non_id(
+        &self,
+        layouter: &mut impl Layouter<pallas::Base>,
+        value: Option<pallas::Affine>,
+    ) -> Result<Self::NonIdentityPoint, Error> {
+        let config: witness_point::Config = self.config().into();
+        layouter.assign_region(
+            || "witness non-identity point",
+            |mut region| config.point_non_id(value, 0, &mut region),
+        )
+    }
+
+    fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X {
+        let point: EccPoint = (point.clone()).into();
+        point.x()
     }
 
     fn add_incomplete(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        a: &Self::Point,
-        b: &Self::Point,
-    ) -> Result<Self::Point, Error> {
+        a: &Self::NonIdentityPoint,
+        b: &Self::NonIdentityPoint,
+    ) -> Result<Self::NonIdentityPoint, Error> {
         let config: add_incomplete::Config = self.config().into();
         layouter.assign_region(
             || "incomplete point addition",
@@ -444,16 +461,18 @@ impl EccInstructions<pallas::Affine> for EccChip {
         )
     }
 
-    fn add(
+    fn add<A: Into<Self::Point> + Clone, B: Into<Self::Point> + Clone>(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        a: &Self::Point,
-        b: &Self::Point,
+        a: &A,
+        b: &B,
     ) -> Result<Self::Point, Error> {
         let config: add::Config = self.config().into();
         layouter.assign_region(
             || "complete point addition",
-            |mut region| config.assign_region(a, b, 0, &mut region),
+            |mut region| {
+                config.assign_region(&(a.clone()).into(), &(b.clone()).into(), 0, &mut region)
+            },
         )
     }
 
@@ -461,7 +480,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
         scalar: &Self::Var,
-        base: &Self::Point,
+        base: &Self::NonIdentityPoint,
     ) -> Result<(Self::Point, Self::ScalarVar), Error> {
         let config: mul::Config = self.config().into();
         config.assign(
