@@ -1,5 +1,6 @@
 //! Gadgets for elliptic curve operations.
 
+use std::convert::{TryFrom, TryInto};
 use std::fmt::Debug;
 
 use halo2::{
@@ -35,7 +36,9 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
     /// A `ScalarFixedShort` must be in the range [-(2^64 - 1), 2^64 - 1].
     type ScalarFixedShort: Clone + Debug;
     /// Variable representing an elliptic curve point.
-    type Point: Clone + Debug;
+    type Point: From<Self::NonIdentityPoint> + Clone + Debug;
+    /// Variable representing a non-identity elliptic curve point.
+    type NonIdentityPoint: TryFrom<Self::Point> + Clone + Debug;
     /// Variable representing the affine short Weierstrass x-coordinate of an
     /// elliptic curve point.
     type X: Clone + Debug;
@@ -62,8 +65,16 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
         value: Option<C>,
     ) -> Result<Self::Point, Error>;
 
+    /// Witnesses the given point as a private input to the circuit.
+    /// This returns an error if the point is the identity.
+    fn witness_point_non_id(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        value: Option<C>,
+    ) -> Result<Self::NonIdentityPoint, Error>;
+
     /// Extracts the x-coordinate of a point.
-    fn extract_p(point: &Self::Point) -> &Self::X;
+    fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X;
 
     /// Performs incomplete point addition, returning `a + b`.
     ///
@@ -71,16 +82,16 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
     fn add_incomplete(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        a: &Self::Point,
-        b: &Self::Point,
-    ) -> Result<Self::Point, Error>;
+        a: &Self::NonIdentityPoint,
+        b: &Self::NonIdentityPoint,
+    ) -> Result<Self::NonIdentityPoint, Error>;
 
     /// Performs complete point addition, returning `a + b`.
-    fn add(
+    fn add<A: Into<Self::Point> + Clone, B: Into<Self::Point> + Clone>(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        a: &Self::Point,
-        b: &Self::Point,
+        a: &A,
+        b: &B,
     ) -> Result<Self::Point, Error>;
 
     /// Performs variable-base scalar multiplication, returning `[scalar] base`.
@@ -89,7 +100,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
         &self,
         layouter: &mut impl Layouter<C::Base>,
         scalar: &Self::Var,
-        base: &Self::Point,
+        base: &Self::NonIdentityPoint,
     ) -> Result<(Self::Point, Self::ScalarVar), Error>;
 
     /// Performs fixed-base scalar multiplication using a full-width scalar, returning `[scalar] base`.
@@ -157,36 +168,42 @@ where
     inner: EccChip::ScalarFixedShort,
 }
 
-/// An elliptic curve point over the given curve.
+/// A non-identity elliptic curve point over the given curve.
 #[derive(Copy, Clone, Debug)]
-pub struct Point<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
+pub struct NonIdentityPoint<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
     chip: EccChip,
-    inner: EccChip::Point,
+    inner: EccChip::NonIdentityPoint,
 }
 
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, EccChip> {
+impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
+    NonIdentityPoint<C, EccChip>
+{
     /// Constructs a new point with the given value.
     pub fn new(
         chip: EccChip,
         mut layouter: impl Layouter<C::Base>,
         value: Option<C>,
     ) -> Result<Self, Error> {
-        let point = chip.witness_point(&mut layouter, value);
-        point.map(|inner| Point { chip, inner })
+        let point = chip.witness_point_non_id(&mut layouter, value);
+        point.map(|inner| NonIdentityPoint { chip, inner })
     }
 
     /// Constrains this point to be equal in value to another point.
-    pub fn constrain_equal(
+    pub fn constrain_equal<Other: Into<Point<C, EccChip>> + Clone>(
         &self,
         mut layouter: impl Layouter<C::Base>,
-        other: &Self,
+        other: &Other,
     ) -> Result<(), Error> {
-        self.chip
-            .constrain_equal(&mut layouter, &self.inner, &other.inner)
+        let other: Point<C, EccChip> = (other.clone()).into();
+        self.chip.constrain_equal(
+            &mut layouter,
+            &Point::<C, EccChip>::from(self.clone()).inner,
+            &other.inner,
+        )
     }
 
     /// Returns the inner point.
-    pub fn inner(&self) -> &EccChip::Point {
+    pub fn inner(&self) -> &EccChip::NonIdentityPoint {
         &self.inner
     }
 
@@ -196,12 +213,18 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
     }
 
     /// Wraps the given point (obtained directly from an instruction) in a gadget.
-    pub fn from_inner(chip: EccChip, inner: EccChip::Point) -> Self {
-        Point { chip, inner }
+    pub fn from_inner(chip: EccChip, inner: EccChip::NonIdentityPoint) -> Self {
+        NonIdentityPoint { chip, inner }
     }
 
     /// Returns `self + other` using complete addition.
-    pub fn add(&self, mut layouter: impl Layouter<C::Base>, other: &Self) -> Result<Self, Error> {
+    pub fn add<Other: Into<Point<C, EccChip>> + Clone>(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        other: &Other,
+    ) -> Result<Point<C, EccChip>, Error> {
+        let other: Point<C, EccChip> = (other.clone()).into();
+
         assert_eq!(self.chip, other.chip);
         self.chip
             .add(&mut layouter, &self.inner, &other.inner)
@@ -220,7 +243,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
         assert_eq!(self.chip, other.chip);
         self.chip
             .add_incomplete(&mut layouter, &self.inner, &other.inner)
-            .map(|inner| Point {
+            .map(|inner| NonIdentityPoint {
                 chip: self.chip.clone(),
                 inner,
             })
@@ -231,9 +254,9 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
         &self,
         mut layouter: impl Layouter<C::Base>,
         by: &EccChip::Var,
-    ) -> Result<(Self, ScalarVar<C, EccChip>), Error> {
+    ) -> Result<(Point<C, EccChip>, ScalarVar<C, EccChip>), Error> {
         self.chip
-            .mul(&mut layouter, by, &self.inner)
+            .mul(&mut layouter, by, &self.inner.clone().into())
             .map(|(point, scalar)| {
                 (
                     Point {
@@ -245,6 +268,101 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
                         inner: scalar,
                     },
                 )
+            })
+    }
+}
+
+impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
+    From<NonIdentityPoint<C, EccChip>> for Point<C, EccChip>
+{
+    fn from(non_id_point: NonIdentityPoint<C, EccChip>) -> Self {
+        Self {
+            chip: non_id_point.chip,
+            inner: non_id_point.inner.into(),
+        }
+    }
+}
+
+impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> TryFrom<Point<C, EccChip>>
+    for NonIdentityPoint<C, EccChip>
+{
+    type Error = Error;
+
+    fn try_from(point: Point<C, EccChip>) -> Result<Self, Self::Error> {
+        point
+            .inner
+            .clone()
+            .try_into()
+            .map(|inner| Self {
+                chip: point.chip,
+                inner,
+            })
+            .map_err(|_| Error::SynthesisError)
+    }
+}
+
+/// An elliptic curve point over the given curve.
+#[derive(Copy, Clone, Debug)]
+pub struct Point<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
+    chip: EccChip,
+    inner: EccChip::Point,
+}
+
+impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, EccChip> {
+    /// Constructs a new point with the given value.
+    #[cfg(test)]
+    pub fn new(
+        chip: EccChip,
+        mut layouter: impl Layouter<C::Base>,
+        value: Option<C>,
+    ) -> Result<Self, Error> {
+        let point = chip.witness_point(&mut layouter, value);
+        point.map(|inner| Point { chip, inner })
+    }
+
+    /// Constrains this point to be equal in value to another point.
+    pub fn constrain_equal<Other: Into<Point<C, EccChip>> + Clone>(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        other: &Other,
+    ) -> Result<(), Error> {
+        let other: Point<C, EccChip> = (other.clone()).into();
+        self.chip.constrain_equal(
+            &mut layouter,
+            &Point::<C, EccChip>::from(self.clone()).inner,
+            &other.inner,
+        )
+    }
+
+    /// Returns the inner point.
+    pub fn inner(&self) -> &EccChip::Point {
+        &self.inner
+    }
+
+    /// Extracts the x-coordinate of a point.
+    pub fn extract_p(&self) -> X<C, EccChip> {
+        X::from_inner(self.chip.clone(), EccChip::extract_p(&self.inner).clone())
+    }
+
+    /// Wraps the given point (obtained directly from an instruction) in a gadget.
+    pub fn from_inner(chip: EccChip, inner: EccChip::Point) -> Self {
+        Point { chip, inner }
+    }
+
+    /// Returns `self + other` using complete addition.
+    pub fn add<Other: Into<Point<C, EccChip>> + Clone>(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        other: &Other,
+    ) -> Result<Point<C, EccChip>, Error> {
+        let other: Point<C, EccChip> = (other.clone()).into();
+
+        assert_eq!(self.chip, other.chip);
+        self.chip
+            .add(&mut layouter, &self.inner, &other.inner)
+            .map(|inner| Point {
+                chip: self.chip.clone(),
+                inner,
             })
     }
 }
@@ -463,15 +581,27 @@ mod tests {
             // provided by the Sinsemilla chip.
             config.lookup_config.load(&mut layouter)?;
 
-            // Generate a random point P
+            // Generate a random non-identity point P
             let p_val = pallas::Point::random(rand::rngs::OsRng).to_affine(); // P
-            let p = super::Point::new(chip.clone(), layouter.namespace(|| "P"), Some(p_val))?;
+            let p = super::NonIdentityPoint::new(
+                chip.clone(),
+                layouter.namespace(|| "P"),
+                Some(p_val),
+            )?;
             let p_neg = -p_val;
-            let p_neg = super::Point::new(chip.clone(), layouter.namespace(|| "-P"), Some(p_neg))?;
+            let p_neg = super::NonIdentityPoint::new(
+                chip.clone(),
+                layouter.namespace(|| "-P"),
+                Some(p_neg),
+            )?;
 
-            // Generate a random point Q
+            // Generate a random non-identity point Q
             let q_val = pallas::Point::random(rand::rngs::OsRng).to_affine(); // Q
-            let q = super::Point::new(chip.clone(), layouter.namespace(|| "Q"), Some(q_val))?;
+            let q = super::NonIdentityPoint::new(
+                chip.clone(),
+                layouter.namespace(|| "Q"),
+                Some(q_val),
+            )?;
 
             // Make sure P and Q are not the same point.
             assert_ne!(p_val, q_val);
