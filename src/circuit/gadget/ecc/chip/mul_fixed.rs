@@ -1,6 +1,6 @@
 use super::{
-    add, add_incomplete, CellValue, EccBaseFieldElemFixed, EccConfig, EccPoint, EccScalarFixed,
-    EccScalarFixedShort, Var,
+    add, add_incomplete, CellValue, EccBaseFieldElemFixed, EccConfig, EccScalarFixed,
+    EccScalarFixedShort, NonIdentityEccPoint, Var,
 };
 use crate::constants::{
     self,
@@ -220,7 +220,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         scalar: &ScalarFixed,
         base: OrchardFixedBases,
         coords_check_toggle: Selector,
-    ) -> Result<(EccPoint, EccPoint), Error> {
+    ) -> Result<(NonIdentityEccPoint, NonIdentityEccPoint), Error> {
         // Assign fixed columns for given fixed base
         self.assign_fixed_constants(region, offset, base, coords_check_toggle)?;
 
@@ -320,7 +320,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         k: Option<pallas::Scalar>,
         k_usize: Option<usize>,
         base: OrchardFixedBases,
-    ) -> Result<EccPoint, Error> {
+    ) -> Result<NonIdentityEccPoint, Error> {
         let base_value = base.generator();
         let base_u = base.u();
 
@@ -330,7 +330,11 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
                 k.map(|k| base_value * (k + *TWO_SCALAR) * H_SCALAR.pow(&[w as u64, 0, 0, 0]));
             let mul_b = mul_b.map(|mul_b| mul_b.to_affine().coordinates().unwrap());
 
-            let x = mul_b.map(|mul_b| *mul_b.x());
+            let x = mul_b.map(|mul_b| {
+                let x = *mul_b.x();
+                assert!(x != pallas::Base::zero());
+                x
+            });
             let x_cell = region.assign_advice(
                 || format!("mul_b_x, window {}", w),
                 self.x_p,
@@ -339,7 +343,11 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
             )?;
             let x = CellValue::new(x_cell, x);
 
-            let y = mul_b.map(|mul_b| *mul_b.y());
+            let y = mul_b.map(|mul_b| {
+                let y = *mul_b.y();
+                assert!(y != pallas::Base::zero());
+                y
+            });
             let y_cell = region.assign_advice(
                 || format!("mul_b_y, window {}", w),
                 self.y_p,
@@ -348,7 +356,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
             )?;
             let y = CellValue::new(y_cell, y);
 
-            EccPoint { x, y }
+            NonIdentityEccPoint { x, y }
         };
 
         // Assign u = (y_p + z_w).sqrt()
@@ -369,7 +377,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         offset: usize,
         base: OrchardFixedBases,
         scalar: &ScalarFixed,
-    ) -> Result<EccPoint, Error> {
+    ) -> Result<NonIdentityEccPoint, Error> {
         // Recall that the message at each window `w` is represented as
         // `m_w = [(k_w + 2) ⋅ 8^w]B`.
         // When `w = 0`, we have `m_0 = [(k_0 + 2)]B`.
@@ -383,10 +391,10 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        mut acc: EccPoint,
+        mut acc: NonIdentityEccPoint,
         base: OrchardFixedBases,
         scalar: &ScalarFixed,
-    ) -> Result<EccPoint, Error> {
+    ) -> Result<NonIdentityEccPoint, Error> {
         let scalar_windows_field = scalar.windows_field();
         let scalar_windows_usize = scalar.windows_usize();
 
@@ -414,7 +422,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         offset: usize,
         base: OrchardFixedBases,
         scalar: &ScalarFixed,
-    ) -> Result<EccPoint, Error> {
+    ) -> Result<NonIdentityEccPoint, Error> {
         // Assign u = (y_p + z_w).sqrt() for the most significant window
         {
             let u_val =
@@ -445,16 +453,25 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
             let mul_b = scalar.map(|scalar| base.generator() * scalar);
             let mul_b = mul_b.map(|mul_b| mul_b.to_affine().coordinates().unwrap());
 
-            let x = mul_b.map(|mul_b| *mul_b.x());
+            let x = mul_b.map(|mul_b| {
+                let x = *mul_b.x();
+                assert!(x != pallas::Base::zero());
+                x
+            });
             let x_cell = region.assign_advice(
                 || format!("mul_b_x, window {}", NUM_WINDOWS - 1),
                 self.x_p,
                 offset + NUM_WINDOWS - 1,
                 || x.ok_or(Error::SynthesisError),
             )?;
+
             let x = CellValue::new(x_cell, x);
 
-            let y = mul_b.map(|mul_b| *mul_b.y());
+            let y = mul_b.map(|mul_b| {
+                let y = *mul_b.y();
+                assert!(y != pallas::Base::zero());
+                y
+            });
             let y_cell = region.assign_advice(
                 || format!("mul_b_y, window {}", NUM_WINDOWS - 1),
                 self.y_p,
@@ -463,7 +480,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
             )?;
             let y = CellValue::new(y_cell, y);
 
-            EccPoint { x, y }
+            NonIdentityEccPoint { x, y }
         };
 
         Ok(mul_b)

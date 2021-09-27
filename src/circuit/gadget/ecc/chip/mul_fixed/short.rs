@@ -127,8 +127,8 @@ impl Config {
                 let offset = 0;
                 // Add to the cumulative sum to get `[magnitude]B`.
                 let magnitude_mul = self.super_config.add_config.assign_region(
-                    &mul_b,
-                    &acc,
+                    &mul_b.into(),
+                    &acc.into(),
                     offset,
                     &mut region,
                 )?;
@@ -489,7 +489,7 @@ pub mod tests {
                     Err(vec![
                         VerifyFailure::ConstraintNotSatisfied {
                             constraint: (
-                                (16, "Short fixed-base mul gate").into(),
+                                (17, "Short fixed-base mul gate").into(),
                                 0,
                                 "last_window_check"
                             )
@@ -521,13 +521,13 @@ pub mod tests {
                 prover.verify(),
                 Err(vec![
                     VerifyFailure::ConstraintNotSatisfied {
-                        constraint: ((16, "Short fixed-base mul gate").into(), 1, "sign_check")
+                        constraint: ((17, "Short fixed-base mul gate").into(), 1, "sign_check")
                             .into(),
                         row: 26
                     },
                     VerifyFailure::ConstraintNotSatisfied {
                         constraint: (
-                            (16, "Short fixed-base mul gate").into(),
+                            (17, "Short fixed-base mul gate").into(),
                             3,
                             "negation_check"
                         )

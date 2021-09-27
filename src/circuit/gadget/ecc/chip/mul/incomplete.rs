@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use super::super::{copy, CellValue, EccConfig, EccPoint, Var};
+use super::super::{copy, CellValue, EccConfig, NonIdentityEccPoint, Var};
 use super::{INCOMPLETE_HI_RANGE, INCOMPLETE_LO_RANGE, X, Y, Z};
 use ff::Field;
 use halo2::{
@@ -198,18 +198,19 @@ impl Config {
         });
     }
 
-    // We perform incomplete addition on all but the last three bits of the
-    // decomposed scalar.
-    // We split the bits in the incomplete addition range into "hi" and "lo"
-    // halves and process them side by side, using the same rows but with
-    // non-overlapping columns.
-    // Returns (x, y, z).
+    /// We perform incomplete addition on all but the last three bits of the
+    /// decomposed scalar.
+    /// We split the bits in the incomplete addition range into "hi" and "lo"
+    /// halves and process them side by side, using the same rows but with
+    /// non-overlapping columns. The base is never the identity point even at
+    /// the boundary between halves.
+    /// Returns (x, y, z).
     #[allow(clippy::type_complexity)]
     pub(super) fn double_and_add(
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        base: &EccPoint,
+        base: &NonIdentityEccPoint,
         bits: &[Option<bool>],
         acc: (X<pallas::Base>, Y<pallas::Base>, Z<pallas::Base>),
     ) -> Result<(X<pallas::Base>, Y<pallas::Base>, Vec<Z<pallas::Base>>), Error> {

@@ -1,4 +1,4 @@
-use super::{add, CellValue, EccConfig, EccPoint, Var};
+use super::{add, CellValue, EccConfig, EccPoint, NonIdentityEccPoint, Var};
 use crate::{circuit::gadget::utilities::copy, constants::T_Q};
 use std::ops::{Deref, Range};
 
@@ -136,7 +136,7 @@ impl Config {
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         alpha: CellValue<pallas::Base>,
-        base: &EccPoint,
+        base: &NonIdentityEccPoint,
     ) -> Result<(EccPoint, CellValue<pallas::Base>), Error> {
         let (result, zs): (EccPoint, Vec<Z<pallas::Base>>) = layouter.assign_region(
             || "variable-base scalar mul",
@@ -151,9 +151,12 @@ impl Config {
                 let lsb = bits[pallas::Scalar::NUM_BITS as usize - 1];
 
                 // Initialize the accumulator `acc = [2]base`
-                let acc = self
-                    .add_config
-                    .assign_region(base, base, offset, &mut region)?;
+                let acc = self.add_config.assign_region(
+                    &(base.clone()).into(),
+                    &(base.clone()).into(),
+                    offset,
+                    &mut region,
+                )?;
 
                 // Increase the offset by 1 after complete addition.
                 let offset = offset + 1;
@@ -207,7 +210,7 @@ impl Config {
                         &mut region,
                         offset,
                         bits_complete,
-                        base,
+                        &(*base).into(),
                         x_a,
                         y_a,
                         *z,
@@ -282,7 +285,7 @@ impl Config {
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        base: &EccPoint,
+        base: &NonIdentityEccPoint,
         acc: EccPoint,
         z_1: Z<pallas::Base>,
         lsb: Option<bool>,
@@ -449,15 +452,14 @@ pub mod tests {
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
     use crate::circuit::gadget::{
-        ecc::{chip::EccChip, EccInstructions, Point},
+        ecc::{chip::EccChip, EccInstructions, NonIdentityPoint, Point},
         utilities::UtilitiesInstructions,
     };
 
     pub fn test_mul(
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
-        zero: &Point<pallas::Affine, EccChip>,
-        p: &Point<pallas::Affine, EccChip>,
+        p: &NonIdentityPoint<pallas::Affine, EccChip>,
         p_val: pallas::Affine,
     ) -> Result<(), Error> {
         let column = chip.config().advices[0];
@@ -500,19 +502,6 @@ pub mod tests {
                 scalar_val,
                 result,
             )?;
-        }
-
-        // [a]𝒪 should return an error since variable-base scalar multiplication
-        // uses incomplete addition at the beginning of its double-and-add.
-        {
-            let scalar_val = pallas::Base::rand();
-            let scalar = chip.load_private(
-                layouter.namespace(|| "random scalar"),
-                column,
-                Some(scalar_val),
-            )?;
-            zero.mul(layouter.namespace(|| "[a]𝒪"), &scalar)
-                .expect_err("[a]𝒪 should return an error");
         }
 
         // [0]B should return (0,0) since variable-base scalar multiplication

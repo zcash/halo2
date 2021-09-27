@@ -391,7 +391,7 @@ pub mod tests {
     use halo2::{circuit::Layouter, plonk::Error};
     use pasta_curves::{arithmetic::CurveExt, pallas};
 
-    use crate::circuit::gadget::ecc::{EccInstructions, Point};
+    use crate::circuit::gadget::ecc::{EccInstructions, NonIdentityPoint, Point};
 
     #[allow(clippy::too_many_arguments)]
     pub fn test_add<EccChip: EccInstructions<pallas::Affine> + Clone + Eq + std::fmt::Debug>(
@@ -399,10 +399,10 @@ pub mod tests {
         mut layouter: impl Layouter<pallas::Base>,
         zero: &Point<pallas::Affine, EccChip>,
         p_val: pallas::Affine,
-        p: &Point<pallas::Affine, EccChip>,
+        p: &NonIdentityPoint<pallas::Affine, EccChip>,
         q_val: pallas::Affine,
-        q: &Point<pallas::Affine, EccChip>,
-        p_neg: &Point<pallas::Affine, EccChip>,
+        q: &NonIdentityPoint<pallas::Affine, EccChip>,
+        p_neg: &NonIdentityPoint<pallas::Affine, EccChip>,
     ) -> Result<(), Error> {
         // Make sure P and Q are not the same point.
         assert_ne!(p_val, q_val);

@@ -196,9 +196,12 @@ impl Config {
         let result = layouter.assign_region(
             || "Base-field elem fixed-base mul (complete addition)",
             |mut region| {
-                self.super_config
-                    .add_config
-                    .assign_region(&mul_b, &acc, 0, &mut region)
+                self.super_config.add_config.assign_region(
+                    &mul_b.into(),
+                    &acc.into(),
+                    0,
+                    &mut region,
+                )
             },
         )?;
 

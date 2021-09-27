@@ -140,9 +140,12 @@ impl Config {
         let result = layouter.assign_region(
             || "Full-width fixed-base mul (last window, complete addition)",
             |mut region| {
-                self.super_config
-                    .add_config
-                    .assign_region(&mul_b, &acc, 0, &mut region)
+                self.super_config.add_config.assign_region(
+                    &mul_b.into(),
+                    &acc.into(),
+                    0,
+                    &mut region,
+                )
             },
         )?;
 

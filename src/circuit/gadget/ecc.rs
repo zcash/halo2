@@ -642,7 +642,6 @@ mod tests {
                 super::chip::add_incomplete::tests::test_add_incomplete(
                     chip.clone(),
                     layouter.namespace(|| "incomplete addition"),
-                    &zero,
                     p_val,
                     &p,
                     q_val,
@@ -656,7 +655,6 @@ mod tests {
                 super::chip::mul::tests::test_mul(
                     chip.clone(),
                     layouter.namespace(|| "variable-base scalar mul"),
-                    &zero,
                     &p,
                     p_val,
                 )?;
