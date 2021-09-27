@@ -37,9 +37,7 @@ impl Config {
             let y = meta.query_advice(self.y, Rotation::cur());
 
             // y^2 = x^3 + b
-            y.clone().square()
-                - (x.clone().square() * x.clone())
-                - Expression::Constant(pallas::Affine::b())
+            y.square() - (x.clone().square() * x) - Expression::Constant(pallas::Affine::b())
         };
 
         meta.create_gate("witness point", |meta| {
@@ -131,11 +129,9 @@ impl Config {
         // Enable `q_point_non_id` selector
         self.q_point_non_id.enable(region, offset)?;
 
-        if let Some(value) = value {
-            // Return an error if the point is the identity.
-            if value == pallas::Affine::identity() {
-                return Err(Error::SynthesisError);
-            }
+        // Return an error if the point is the identity.
+        if value == Some(pallas::Affine::identity()) {
+            return Err(Error::SynthesisError);
         };
 
         let value = value.map(|value| {

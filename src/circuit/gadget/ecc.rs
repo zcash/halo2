@@ -209,7 +209,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
 
     /// Extracts the x-coordinate of a point.
     pub fn extract_p(&self) -> X<C, EccChip> {
-        X::from_inner(self.chip.clone(), EccChip::extract_p(&self.inner).clone())
+        X::from_inner(self.chip.clone(), EccChip::extract_p(&self.inner))
     }
 
     /// Wraps the given point (obtained directly from an instruction) in a gadget.
@@ -250,13 +250,14 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
     }
 
     /// Returns `[by] self`.
+    #[allow(clippy::type_complexity)]
     pub fn mul(
         &self,
         mut layouter: impl Layouter<C::Base>,
         by: &EccChip::Var,
     ) -> Result<(Point<C, EccChip>, ScalarVar<C, EccChip>), Error> {
         self.chip
-            .mul(&mut layouter, by, &self.inner.clone().into())
+            .mul(&mut layouter, by, &self.inner.clone())
             .map(|(point, scalar)| {
                 (
                     Point {
@@ -327,11 +328,8 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
         other: &Other,
     ) -> Result<(), Error> {
         let other: Point<C, EccChip> = (other.clone()).into();
-        self.chip.constrain_equal(
-            &mut layouter,
-            &Point::<C, EccChip>::from(self.clone()).inner,
-            &other.inner,
-        )
+        self.chip
+            .constrain_equal(&mut layouter, &self.inner, &other.inner)
     }
 
     /// Returns the inner point.
@@ -341,7 +339,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
 
     /// Extracts the x-coordinate of a point.
     pub fn extract_p(&self) -> X<C, EccChip> {
-        X::from_inner(self.chip.clone(), EccChip::extract_p(&self.inner).clone())
+        X::from_inner(self.chip.clone(), EccChip::extract_p(&self.inner))
     }
 
     /// Wraps the given point (obtained directly from an instruction) in a gadget.
