@@ -22,9 +22,10 @@ pub(super) mod mul;
 pub(super) mod mul_fixed;
 pub(super) mod witness_point;
 
-/// A curve point represented in affine (x, y) coordinates. Each coordinate is
-/// assigned to a cell.
-#[derive(Clone, Debug)]
+/// A curve point represented in affine (x, y) coordinates, or the
+/// identity represented as (0, 0).
+/// Each coordinate is assigned to a cell.
+#[derive(Copy, Clone, Debug)]
 pub struct EccPoint {
     /// x-coordinate
     x: CellValue<pallas::Base>,
@@ -67,6 +68,62 @@ impl EccPoint {
     pub fn y(&self) -> CellValue<pallas::Base> {
         self.y
     }
+
+    #[cfg(test)]
+    fn is_identity(&self) -> Option<bool> {
+        self.x.value().map(|x| x == pallas::Base::zero())
+    }
+}
+
+/// A non-identity point represented in affine (x, y) coordinates.
+/// Each coordinate is assigned to a cell.
+#[derive(Copy, Clone, Debug)]
+pub struct NonIdentityEccPoint {
+    /// x-coordinate
+    x: CellValue<pallas::Base>,
+    /// y-coordinate
+    y: CellValue<pallas::Base>,
+}
+
+impl NonIdentityEccPoint {
+    /// Constructs a point from its coordinates, without checking they are on the curve.
+    ///
+    /// This is an internal API that we only use where we know we have a valid non-identity
+    /// curve point (specifically inside Sinsemilla).
+    pub(in crate::circuit::gadget) fn from_coordinates_unchecked(
+        x: CellValue<pallas::Base>,
+        y: CellValue<pallas::Base>,
+    ) -> Self {
+        NonIdentityEccPoint { x, y }
+    }
+
+    /// Returns the value of this curve point, if known.
+    pub fn point(&self) -> Option<pallas::Affine> {
+        match (self.x.value(), self.y.value()) {
+            (Some(x), Some(y)) => {
+                assert!(x != pallas::Base::zero() && y != pallas::Base::zero());
+                Some(pallas::Affine::from_xy(x, y).unwrap())
+            }
+            _ => None,
+        }
+    }
+    /// The cell containing the affine short-Weierstrass x-coordinate.
+    pub fn x(&self) -> CellValue<pallas::Base> {
+        self.x
+    }
+    /// The cell containing the affine short-Weierstrass y-coordinate.
+    pub fn y(&self) -> CellValue<pallas::Base> {
+        self.y
+    }
+}
+
+impl From<NonIdentityEccPoint> for EccPoint {
+    fn from(non_id_point: NonIdentityEccPoint) -> Self {
+        Self {
+            x: non_id_point.x,
+            y: non_id_point.y,
+        }
+    }
 }
 
 /// Configuration for the ECC chip
@@ -108,8 +165,10 @@ pub struct EccConfig {
     /// when the scalar is a signed short exponent or a base-field element.
     pub q_mul_fixed_running_sum: Selector,
 
-    /// Witness point
+    /// Witness point (can be identity)
     pub q_point: Selector,
+    /// Witness non-identity point
+    pub q_point_non_id: Selector,
 
     /// Lookup range check using 10-bit lookup table
     pub lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
@@ -206,6 +265,7 @@ impl EccChip {
             q_mul_fixed_base_field: meta.selector(),
             q_mul_fixed_running_sum,
             q_point: meta.selector(),
+            q_point_non_id: meta.selector(),
             lookup_config: range_check,
             running_sum_config,
         };
@@ -320,6 +380,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
     type ScalarFixedShort = EccScalarFixedShort;
     type ScalarVar = CellValue<pallas::Base>;
     type Point = EccPoint;
+    type NonIdentityPoint = NonIdentityEccPoint;
     type X = CellValue<pallas::Base>;
     type FixedPoints = OrchardFixedBasesFull;
     type FixedPointsBaseField = NullifierK;
@@ -350,20 +411,33 @@ impl EccInstructions<pallas::Affine> for EccChip {
         let config: witness_point::Config = self.config().into();
         layouter.assign_region(
             || "witness point",
-            |mut region| config.assign_region(value, 0, &mut region),
+            |mut region| config.point(value, 0, &mut region),
         )
     }
 
-    fn extract_p(point: &Self::Point) -> &Self::X {
-        &point.x
+    fn witness_point_non_id(
+        &self,
+        layouter: &mut impl Layouter<pallas::Base>,
+        value: Option<pallas::Affine>,
+    ) -> Result<Self::NonIdentityPoint, Error> {
+        let config: witness_point::Config = self.config().into();
+        layouter.assign_region(
+            || "witness non-identity point",
+            |mut region| config.point_non_id(value, 0, &mut region),
+        )
+    }
+
+    fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X {
+        let point: EccPoint = (point.clone()).into();
+        point.x()
     }
 
     fn add_incomplete(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        a: &Self::Point,
-        b: &Self::Point,
-    ) -> Result<Self::Point, Error> {
+        a: &Self::NonIdentityPoint,
+        b: &Self::NonIdentityPoint,
+    ) -> Result<Self::NonIdentityPoint, Error> {
         let config: add_incomplete::Config = self.config().into();
         layouter.assign_region(
             || "incomplete point addition",
@@ -371,16 +445,18 @@ impl EccInstructions<pallas::Affine> for EccChip {
         )
     }
 
-    fn add(
+    fn add<A: Into<Self::Point> + Clone, B: Into<Self::Point> + Clone>(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        a: &Self::Point,
-        b: &Self::Point,
+        a: &A,
+        b: &B,
     ) -> Result<Self::Point, Error> {
         let config: add::Config = self.config().into();
         layouter.assign_region(
             || "complete point addition",
-            |mut region| config.assign_region(a, b, 0, &mut region),
+            |mut region| {
+                config.assign_region(&(a.clone()).into(), &(b.clone()).into(), 0, &mut region)
+            },
         )
     }
 
@@ -388,7 +464,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
         scalar: &Self::Var,
-        base: &Self::Point,
+        base: &Self::NonIdentityPoint,
     ) -> Result<(Self::Point, Self::ScalarVar), Error> {
         let config: mul::Config = self.config().into();
         config.assign(

@@ -35,7 +35,9 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
     /// A `ScalarFixedShort` must be in the range [-(2^64 - 1), 2^64 - 1].
     type ScalarFixedShort: Clone + Debug;
     /// Variable representing an elliptic curve point.
-    type Point: Clone + Debug;
+    type Point: From<Self::NonIdentityPoint> + Clone + Debug;
+    /// Variable representing a non-identity elliptic curve point.
+    type NonIdentityPoint: Clone + Debug;
     /// Variable representing the affine short Weierstrass x-coordinate of an
     /// elliptic curve point.
     type X: Clone + Debug;
@@ -55,15 +57,24 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
     ) -> Result<(), Error>;
 
     /// Witnesses the given point as a private input to the circuit.
-    /// This maps the identity to (0, 0) in affine coordinates.
+    /// This allows the point to be the identity, mapped to (0, 0) in
+    /// affine coordinates.
     fn witness_point(
         &self,
         layouter: &mut impl Layouter<C::Base>,
         value: Option<C>,
     ) -> Result<Self::Point, Error>;
 
+    /// Witnesses the given point as a private input to the circuit.
+    /// This returns an error if the point is the identity.
+    fn witness_point_non_id(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        value: Option<C>,
+    ) -> Result<Self::NonIdentityPoint, Error>;
+
     /// Extracts the x-coordinate of a point.
-    fn extract_p(point: &Self::Point) -> &Self::X;
+    fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X;
 
     /// Performs incomplete point addition, returning `a + b`.
     ///
@@ -71,25 +82,24 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
     fn add_incomplete(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        a: &Self::Point,
-        b: &Self::Point,
-    ) -> Result<Self::Point, Error>;
+        a: &Self::NonIdentityPoint,
+        b: &Self::NonIdentityPoint,
+    ) -> Result<Self::NonIdentityPoint, Error>;
 
     /// Performs complete point addition, returning `a + b`.
-    fn add(
+    fn add<A: Into<Self::Point> + Clone, B: Into<Self::Point> + Clone>(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        a: &Self::Point,
-        b: &Self::Point,
+        a: &A,
+        b: &B,
     ) -> Result<Self::Point, Error>;
 
     /// Performs variable-base scalar multiplication, returning `[scalar] base`.
-    /// Multiplication of the identity `[scalar] 𝒪 ` returns an error.
     fn mul(
         &self,
         layouter: &mut impl Layouter<C::Base>,
         scalar: &Self::Var,
-        base: &Self::Point,
+        base: &Self::NonIdentityPoint,
     ) -> Result<(Self::Point, Self::ScalarVar), Error>;
 
     /// Performs fixed-base scalar multiplication using a full-width scalar, returning `[scalar] base`.
@@ -157,6 +167,125 @@ where
     inner: EccChip::ScalarFixedShort,
 }
 
+/// A non-identity elliptic curve point over the given curve.
+#[derive(Copy, Clone, Debug)]
+pub struct NonIdentityPoint<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
+    chip: EccChip,
+    inner: EccChip::NonIdentityPoint,
+}
+
+impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
+    NonIdentityPoint<C, EccChip>
+{
+    /// Constructs a new point with the given value.
+    pub fn new(
+        chip: EccChip,
+        mut layouter: impl Layouter<C::Base>,
+        value: Option<C>,
+    ) -> Result<Self, Error> {
+        let point = chip.witness_point_non_id(&mut layouter, value);
+        point.map(|inner| NonIdentityPoint { chip, inner })
+    }
+
+    /// Constrains this point to be equal in value to another point.
+    pub fn constrain_equal<Other: Into<Point<C, EccChip>> + Clone>(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        other: &Other,
+    ) -> Result<(), Error> {
+        let other: Point<C, EccChip> = (other.clone()).into();
+        self.chip.constrain_equal(
+            &mut layouter,
+            &Point::<C, EccChip>::from(self.clone()).inner,
+            &other.inner,
+        )
+    }
+
+    /// Returns the inner point.
+    pub fn inner(&self) -> &EccChip::NonIdentityPoint {
+        &self.inner
+    }
+
+    /// Extracts the x-coordinate of a point.
+    pub fn extract_p(&self) -> X<C, EccChip> {
+        X::from_inner(self.chip.clone(), EccChip::extract_p(&self.inner))
+    }
+
+    /// Wraps the given point (obtained directly from an instruction) in a gadget.
+    pub fn from_inner(chip: EccChip, inner: EccChip::NonIdentityPoint) -> Self {
+        NonIdentityPoint { chip, inner }
+    }
+
+    /// Returns `self + other` using complete addition.
+    pub fn add<Other: Into<Point<C, EccChip>> + Clone>(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        other: &Other,
+    ) -> Result<Point<C, EccChip>, Error> {
+        let other: Point<C, EccChip> = (other.clone()).into();
+
+        assert_eq!(self.chip, other.chip);
+        self.chip
+            .add(&mut layouter, &self.inner, &other.inner)
+            .map(|inner| Point {
+                chip: self.chip.clone(),
+                inner,
+            })
+    }
+
+    /// Returns `self + other` using incomplete addition.
+    /// The arguments are type-constrained not to be the identity point,
+    /// and since exceptional cases return an Error, the result also cannot
+    /// be the identity point.
+    pub fn add_incomplete(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        other: &Self,
+    ) -> Result<Self, Error> {
+        assert_eq!(self.chip, other.chip);
+        self.chip
+            .add_incomplete(&mut layouter, &self.inner, &other.inner)
+            .map(|inner| NonIdentityPoint {
+                chip: self.chip.clone(),
+                inner,
+            })
+    }
+
+    /// Returns `[by] self`.
+    #[allow(clippy::type_complexity)]
+    pub fn mul(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        by: &EccChip::Var,
+    ) -> Result<(Point<C, EccChip>, ScalarVar<C, EccChip>), Error> {
+        self.chip
+            .mul(&mut layouter, by, &self.inner.clone())
+            .map(|(point, scalar)| {
+                (
+                    Point {
+                        chip: self.chip.clone(),
+                        inner: point,
+                    },
+                    ScalarVar {
+                        chip: self.chip.clone(),
+                        inner: scalar,
+                    },
+                )
+            })
+    }
+}
+
+impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
+    From<NonIdentityPoint<C, EccChip>> for Point<C, EccChip>
+{
+    fn from(non_id_point: NonIdentityPoint<C, EccChip>) -> Self {
+        Self {
+            chip: non_id_point.chip,
+            inner: non_id_point.inner.into(),
+        }
+    }
+}
+
 /// An elliptic curve point over the given curve.
 #[derive(Copy, Clone, Debug)]
 pub struct Point<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
@@ -176,11 +305,12 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
     }
 
     /// Constrains this point to be equal in value to another point.
-    pub fn constrain_equal(
+    pub fn constrain_equal<Other: Into<Point<C, EccChip>> + Clone>(
         &self,
         mut layouter: impl Layouter<C::Base>,
-        other: &Self,
+        other: &Other,
     ) -> Result<(), Error> {
+        let other: Point<C, EccChip> = (other.clone()).into();
         self.chip
             .constrain_equal(&mut layouter, &self.inner, &other.inner)
     }
@@ -192,7 +322,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
 
     /// Extracts the x-coordinate of a point.
     pub fn extract_p(&self) -> X<C, EccChip> {
-        X::from_inner(self.chip.clone(), EccChip::extract_p(&self.inner).clone())
+        X::from_inner(self.chip.clone(), EccChip::extract_p(&self.inner))
     }
 
     /// Wraps the given point (obtained directly from an instruction) in a gadget.
@@ -201,50 +331,19 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
     }
 
     /// Returns `self + other` using complete addition.
-    pub fn add(&self, mut layouter: impl Layouter<C::Base>, other: &Self) -> Result<Self, Error> {
+    pub fn add<Other: Into<Point<C, EccChip>> + Clone>(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        other: &Other,
+    ) -> Result<Point<C, EccChip>, Error> {
+        let other: Point<C, EccChip> = (other.clone()).into();
+
         assert_eq!(self.chip, other.chip);
         self.chip
             .add(&mut layouter, &self.inner, &other.inner)
             .map(|inner| Point {
                 chip: self.chip.clone(),
                 inner,
-            })
-    }
-
-    /// Returns `self + other` using incomplete addition.
-    pub fn add_incomplete(
-        &self,
-        mut layouter: impl Layouter<C::Base>,
-        other: &Self,
-    ) -> Result<Self, Error> {
-        assert_eq!(self.chip, other.chip);
-        self.chip
-            .add_incomplete(&mut layouter, &self.inner, &other.inner)
-            .map(|inner| Point {
-                chip: self.chip.clone(),
-                inner,
-            })
-    }
-
-    /// Returns `[by] self`.
-    pub fn mul(
-        &self,
-        mut layouter: impl Layouter<C::Base>,
-        by: &EccChip::Var,
-    ) -> Result<(Self, ScalarVar<C, EccChip>), Error> {
-        self.chip
-            .mul(&mut layouter, by, &self.inner)
-            .map(|(point, scalar)| {
-                (
-                    Point {
-                        chip: self.chip.clone(),
-                        inner: point,
-                    },
-                    ScalarVar {
-                        chip: self.chip.clone(),
-                        inner: scalar,
-                    },
-                )
             })
     }
 }
@@ -463,34 +562,60 @@ mod tests {
             // provided by the Sinsemilla chip.
             config.lookup_config.load(&mut layouter)?;
 
-            // Generate a random point P
+            // Generate a random non-identity point P
             let p_val = pallas::Point::random(rand::rngs::OsRng).to_affine(); // P
-            let p = super::Point::new(chip.clone(), layouter.namespace(|| "P"), Some(p_val))?;
+            let p = super::NonIdentityPoint::new(
+                chip.clone(),
+                layouter.namespace(|| "P"),
+                Some(p_val),
+            )?;
             let p_neg = -p_val;
-            let p_neg = super::Point::new(chip.clone(), layouter.namespace(|| "-P"), Some(p_neg))?;
+            let p_neg = super::NonIdentityPoint::new(
+                chip.clone(),
+                layouter.namespace(|| "-P"),
+                Some(p_neg),
+            )?;
 
-            // Generate a random point Q
+            // Generate a random non-identity point Q
             let q_val = pallas::Point::random(rand::rngs::OsRng).to_affine(); // Q
-            let q = super::Point::new(chip.clone(), layouter.namespace(|| "Q"), Some(q_val))?;
+            let q = super::NonIdentityPoint::new(
+                chip.clone(),
+                layouter.namespace(|| "Q"),
+                Some(q_val),
+            )?;
 
             // Make sure P and Q are not the same point.
             assert_ne!(p_val, q_val);
 
-            // Generate a (0,0) point to be used in other tests.
-            let zero = {
-                super::Point::new(
+            // Test that we can witness the identity as a point, but not as a non-identity point.
+            {
+                let _ = super::Point::new(
                     chip.clone(),
                     layouter.namespace(|| "identity"),
                     Some(pallas::Affine::identity()),
-                )?
-            };
+                )?;
+
+                super::NonIdentityPoint::new(
+                    chip.clone(),
+                    layouter.namespace(|| "identity"),
+                    Some(pallas::Affine::identity()),
+                )
+                .expect_err("Trying to witness the identity should return an error");
+            }
+
+            // Test witness non-identity point
+            {
+                super::chip::witness_point::tests::test_witness_non_id(
+                    chip.clone(),
+                    layouter.namespace(|| "witness non-identity point"),
+                )
+            }
 
             // Test complete addition
             {
                 super::chip::add::tests::test_add(
                     chip.clone(),
                     layouter.namespace(|| "complete addition"),
-                    &zero,
                     p_val,
                     &p,
                     q_val,
@@ -504,7 +629,6 @@ mod tests {
                 super::chip::add_incomplete::tests::test_add_incomplete(
                     chip.clone(),
                     layouter.namespace(|| "incomplete addition"),
-                    &zero,
                     p_val,
                     &p,
                     q_val,
@@ -518,7 +642,6 @@ mod tests {
                 super::chip::mul::tests::test_mul(
                     chip.clone(),
                     layouter.namespace(|| "variable-base scalar mul"),
-                    &zero,
                     &p,
                     p_val,
                 )?;

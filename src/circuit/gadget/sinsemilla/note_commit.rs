@@ -8,7 +8,7 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 use crate::{
     circuit::gadget::{
         ecc::{
-            chip::{EccChip, EccPoint},
+            chip::{EccChip, NonIdentityEccPoint},
             Point,
         },
         utilities::{bitrange_subset, bool_check, copy, CellValue, Var},
@@ -523,8 +523,8 @@ impl NoteCommitConfig {
         mut layouter: impl Layouter<pallas::Base>,
         chip: SinsemillaChip,
         ecc_chip: EccChip,
-        g_d: &EccPoint,
-        pk_d: &EccPoint,
+        g_d: &NonIdentityEccPoint,
+        pk_d: &NonIdentityEccPoint,
         value: CellValue<pallas::Base>,
         rho: CellValue<pallas::Base>,
         psi: CellValue<pallas::Base>,
@@ -1432,7 +1432,7 @@ mod tests {
         circuit::gadget::{
             ecc::{
                 chip::{EccChip, EccConfig},
-                Point,
+                NonIdentityPoint,
             },
             sinsemilla::chip::SinsemillaChip,
             utilities::{
@@ -1566,7 +1566,11 @@ mod tests {
                         pallas::Affine::from_xy(x, y).unwrap()
                     });
 
-                    Point::new(ecc_chip.clone(), layouter.namespace(|| "witness g_d"), g_d)?
+                    NonIdentityPoint::new(
+                        ecc_chip.clone(),
+                        layouter.namespace(|| "witness g_d"),
+                        g_d,
+                    )?
                 };
 
                 // Witness pk_d
@@ -1580,7 +1584,7 @@ mod tests {
                         pallas::Affine::from_xy(x, y).unwrap()
                     });
 
-                    Point::new(
+                    NonIdentityPoint::new(
                         ecc_chip.clone(),
                         layouter.namespace(|| "witness pk_d"),
                         pk_d,
@@ -1674,7 +1678,11 @@ mod tests {
                         )
                         .unwrap()
                         .to_affine();
-                    Point::new(ecc_chip, layouter.namespace(|| "witness g_d"), Some(point))?
+                    NonIdentityPoint::new(
+                        ecc_chip,
+                        layouter.namespace(|| "witness cm"),
+                        Some(point),
+                    )?
                 };
                 cm.constrain_equal(layouter.namespace(|| "cm == expected cm"), &expected_cm)
             }

@@ -1,4 +1,4 @@
-use super::{add, CellValue, EccConfig, EccPoint, Var};
+use super::{add, CellValue, EccConfig, EccPoint, NonIdentityEccPoint, Var};
 use crate::{circuit::gadget::utilities::copy, constants::T_Q};
 use std::ops::{Deref, Range};
 
@@ -136,12 +136,16 @@ impl Config {
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         alpha: CellValue<pallas::Base>,
-        base: &EccPoint,
+        base: &NonIdentityEccPoint,
     ) -> Result<(EccPoint, CellValue<pallas::Base>), Error> {
         let (result, zs): (EccPoint, Vec<Z<pallas::Base>>) = layouter.assign_region(
             || "variable-base scalar mul",
             |mut region| {
                 let offset = 0;
+
+                // Case `base` into an `EccPoint` for later use.
+                let base_point: EccPoint = (*base).into();
+
                 // Decompose `k = alpha + t_q` bitwise (big-endian bit order).
                 let bits = decompose_for_scalar_mul(alpha.value());
 
@@ -151,9 +155,9 @@ impl Config {
                 let lsb = bits[pallas::Scalar::NUM_BITS as usize - 1];
 
                 // Initialize the accumulator `acc = [2]base`
-                let acc = self
-                    .add_config
-                    .assign_region(base, base, offset, &mut region)?;
+                let acc =
+                    self.add_config
+                        .assign_region(&base_point, &base_point, offset, &mut region)?;
 
                 // Increase the offset by 1 after complete addition.
                 let offset = offset + 1;
@@ -207,7 +211,7 @@ impl Config {
                         &mut region,
                         offset,
                         bits_complete,
-                        base,
+                        &base_point,
                         x_a,
                         y_a,
                         *z,
@@ -282,7 +286,7 @@ impl Config {
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        base: &EccPoint,
+        base: &NonIdentityEccPoint,
         acc: EccPoint,
         z_1: Z<pallas::Base>,
         lsb: Option<bool>,
@@ -449,21 +453,23 @@ pub mod tests {
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
     use crate::circuit::gadget::{
-        ecc::{chip::EccChip, EccInstructions, Point},
+        ecc::{
+            chip::{EccChip, EccPoint},
+            EccInstructions, NonIdentityPoint, Point,
+        },
         utilities::UtilitiesInstructions,
     };
 
     pub fn test_mul(
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
-        zero: &Point<pallas::Affine, EccChip>,
-        p: &Point<pallas::Affine, EccChip>,
+        p: &NonIdentityPoint<pallas::Affine, EccChip>,
         p_val: pallas::Affine,
     ) -> Result<(), Error> {
         let column = chip.config().advices[0];
 
-        fn constrain_equal<
-            EccChip: EccInstructions<pallas::Affine> + Clone + Eq + std::fmt::Debug,
+        fn constrain_equal_non_id<
+            EccChip: EccInstructions<pallas::Affine, Point = EccPoint> + Clone + Eq + std::fmt::Debug,
         >(
             chip: EccChip,
             mut layouter: impl Layouter<pallas::Base>,
@@ -474,7 +480,7 @@ pub mod tests {
             // Move scalar from base field into scalar field (which always fits
             // for Pallas).
             let scalar = pallas::Scalar::from_bytes(&scalar_val.to_bytes()).unwrap();
-            let expected = Point::new(
+            let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
                 Some((base_val * scalar).to_affine()),
@@ -493,26 +499,13 @@ pub mod tests {
                 )?;
                 p.mul(layouter.namespace(|| "random [a]B"), &scalar)?
             };
-            constrain_equal(
+            constrain_equal_non_id(
                 chip.clone(),
                 layouter.namespace(|| "random [a]B"),
                 p_val,
                 scalar_val,
                 result,
             )?;
-        }
-
-        // [a]𝒪 should return an error since variable-base scalar multiplication
-        // uses incomplete addition at the beginning of its double-and-add.
-        {
-            let scalar_val = pallas::Base::rand();
-            let scalar = chip.load_private(
-                layouter.namespace(|| "random scalar"),
-                column,
-                Some(scalar_val),
-            )?;
-            zero.mul(layouter.namespace(|| "[a]𝒪"), &scalar)
-                .expect_err("[a]𝒪 should return an error");
         }
 
         // [0]B should return (0,0) since variable-base scalar multiplication
@@ -524,13 +517,7 @@ pub mod tests {
                     chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_val))?;
                 p.mul(layouter.namespace(|| "[0]B"), &scalar)?
             };
-            constrain_equal(
-                chip.clone(),
-                layouter.namespace(|| "[0]B"),
-                p_val,
-                scalar_val,
-                result,
-            )?;
+            assert!(result.inner().is_identity().unwrap());
         }
 
         // [-1]B (the largest possible base field element)
@@ -541,7 +528,7 @@ pub mod tests {
                     chip.load_private(layouter.namespace(|| "-1"), column, Some(scalar_val))?;
                 p.mul(layouter.namespace(|| "[-1]B"), &scalar)?
             };
-            constrain_equal(
+            constrain_equal_non_id(
                 chip,
                 layouter.namespace(|| "[-1]B"),
                 p_val,

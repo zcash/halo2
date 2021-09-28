@@ -38,7 +38,7 @@ use crate::{
 use gadget::{
     ecc::{
         chip::{EccChip, EccConfig},
-        FixedPoint, FixedPointBaseField, FixedPointShort, Point,
+        FixedPoint, FixedPointBaseField, FixedPointShort, NonIdentityPoint, Point,
     },
     poseidon::{
         Hash as PoseidonHash, Pow5T3Chip as PoseidonChip, Pow5T3Config as PoseidonConfig,
@@ -356,7 +356,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             )?;
 
             // Witness g_d_old
-            let g_d_old = Point::new(
+            let g_d_old = NonIdentityPoint::new(
                 ecc_chip.clone(),
                 layouter.namespace(|| "gd_old"),
                 self.g_d_old.as_ref().map(|gd| gd.to_affine()),
@@ -364,7 +364,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
             // Witness ak.
             let ak: Option<pallas::Point> = self.ak.as_ref().map(|ak| ak.into());
-            let ak = Point::new(
+            let ak = NonIdentityPoint::new(
                 ecc_chip.clone(),
                 layouter.namespace(|| "ak"),
                 ak.map(|ak| ak.to_affine()),
@@ -621,7 +621,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 g_d_old.mul(layouter.namespace(|| "[ivk] g_d_old"), ivk.inner())?;
 
             // Constrain derived pk_d_old to equal witnessed pk_d_old
-            let pk_d_old = Point::new(
+            let pk_d_old = NonIdentityPoint::new(
                 ecc_chip.clone(),
                 layouter.namespace(|| "witness pk_d_old"),
                 self.pk_d_old.map(|pk_d_old| pk_d_old.inner().to_affine()),
@@ -666,7 +666,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 let g_d_new = self
                     .g_d_new_star
                     .map(|bytes| pallas::Affine::from_bytes(&bytes).unwrap());
-                Point::new(
+                NonIdentityPoint::new(
                     ecc_chip.clone(),
                     layouter.namespace(|| "witness g_d_new_star"),
                     g_d_new,
@@ -678,7 +678,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 let pk_d_new = self
                     .pk_d_new_star
                     .map(|bytes| pallas::Affine::from_bytes(&bytes).unwrap());
-                Point::new(
+                NonIdentityPoint::new(
                     ecc_chip,
                     layouter.namespace(|| "witness pk_d_new"),
                     pk_d_new,

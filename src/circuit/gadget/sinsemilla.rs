@@ -47,7 +47,7 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     /// The x-coordinate of a point output of [`Self::hash_to_point`].
     type X;
     /// A point output of [`Self::hash_to_point`].
-    type Point: Clone + Debug;
+    type NonIdentityPoint: Clone + Debug;
     /// A type enumerating the fixed points used in `CommitDomains`.
     type FixedPoints: Clone + Debug;
 
@@ -82,10 +82,10 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
         layouter: impl Layouter<C::Base>,
         Q: C,
         message: Self::Message,
-    ) -> Result<(Self::Point, Vec<Self::RunningSum>), Error>;
+    ) -> Result<(Self::NonIdentityPoint, Vec<Self::RunningSum>), Error>;
 
     /// Extracts the x-coordinate of the output of a Sinsemilla hash.
-    fn extract(point: &Self::Point) -> Self::X;
+    fn extract(point: &Self::NonIdentityPoint) -> Self::X;
 }
 
 /// A message to be hashed.
@@ -238,7 +238,7 @@ pub struct HashDomain<
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
     EccChip: EccInstructions<
             C,
-            Point = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::Point,
+            NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
             FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
         > + Clone
         + Debug
@@ -255,7 +255,7 @@ where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
     EccChip: EccInstructions<
             C,
-            Point = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::Point,
+            NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
             FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
         > + Clone
         + Debug
@@ -283,11 +283,11 @@ where
         &self,
         layouter: impl Layouter<C::Base>,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
-    ) -> Result<(ecc::Point<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
+    ) -> Result<(ecc::NonIdentityPoint<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
         assert_eq!(self.sinsemilla_chip, message.chip);
         self.sinsemilla_chip
             .hash_to_point(layouter, self.Q, message.inner)
-            .map(|(point, zs)| (ecc::Point::from_inner(self.ecc_chip.clone(), point), zs))
+            .map(|(point, zs)| (ecc::NonIdentityPoint::from_inner(self.ecc_chip.clone(), point), zs))
     }
 
     /// $\mathsf{SinsemillaHash}$ from [§ 5.4.1.9][concretesinsemillahash].
@@ -334,7 +334,7 @@ pub struct CommitDomain<
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
     EccChip: EccInstructions<
             C,
-            Point = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::Point,
+            NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
             FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
         > + Clone
         + Debug
@@ -350,7 +350,7 @@ where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
     EccChip: EccInstructions<
             C,
-            Point = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::Point,
+            NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
             FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
         > + Clone
         + Debug
@@ -377,11 +377,17 @@ where
         mut layouter: impl Layouter<C::Base>,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
         r: Option<C::Scalar>,
-    ) -> Result<(ecc::Point<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
+    ) -> Result<
+        (
+            ecc::Point<C, EccChip>,
+            Vec<SinsemillaChip::RunningSum>,
+        ),
+        Error,
+    > {
         assert_eq!(self.M.sinsemilla_chip, message.chip);
         let (blind, _) = self.R.mul(layouter.namespace(|| "[r] R"), r)?;
         let (p, zs) = self.M.hash_to_point(layouter.namespace(|| "M"), message)?;
-        let commitment = p.add_incomplete(layouter.namespace(|| "M ⸭ [r] R"), &blind)?;
+        let commitment = p.add(layouter.namespace(|| "M + [r] R"), &blind)?;
         Ok((commitment, zs))
     }
 
@@ -418,7 +424,7 @@ mod tests {
         circuit::gadget::{
             ecc::{
                 chip::{EccChip, EccConfig},
-                Point,
+                NonIdentityPoint,
             },
             utilities::lookup_range_check::LookupRangeCheckConfig,
         },
@@ -572,7 +578,7 @@ mod tests {
                         None
                     };
 
-                    Point::new(
+                    NonIdentityPoint::new(
                         ecc_chip.clone(),
                         layouter.namespace(|| "Witness expected parent"),
                         expected_parent,
@@ -623,7 +629,7 @@ mod tests {
                         None
                     };
 
-                    Point::new(
+                    NonIdentityPoint::new(
                         ecc_chip,
                         layouter.namespace(|| "Witness expected result"),
                         expected_result,

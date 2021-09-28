@@ -127,8 +127,8 @@ impl Config {
                 let offset = 0;
                 // Add to the cumulative sum to get `[magnitude]B`.
                 let magnitude_mul = self.super_config.add_config.assign_region(
-                    &mul_b,
-                    &acc,
+                    &mul_b.into(),
+                    &acc.into(),
                     offset,
                     &mut region,
                 )?;
@@ -244,7 +244,7 @@ pub mod tests {
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
     use crate::circuit::gadget::{
-        ecc::{chip::EccChip, FixedPointShort, Point},
+        ecc::{chip::EccChip, FixedPointShort, NonIdentityPoint, Point},
         utilities::{lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions},
     };
     use crate::constants::load::ValueCommitV;
@@ -273,14 +273,14 @@ pub mod tests {
             Ok((magnitude, sign))
         }
 
-        fn constrain_equal(
+        fn constrain_equal_non_id(
             chip: EccChip,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
             scalar_val: pallas::Scalar,
             result: Point<pallas::Affine, EccChip>,
         ) -> Result<(), Error> {
-            let expected = Point::new(
+            let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
                 Some((base_val * scalar_val).to_affine()),
@@ -289,8 +289,6 @@ pub mod tests {
         }
 
         let magnitude_signs = [
-            ("mul by +zero", pallas::Base::zero(), pallas::Base::one()),
-            ("mul by -zero", pallas::Base::zero(), -pallas::Base::one()),
             (
                 "random [a]B",
                 pallas::Base::from_u64(rand::random::<u64>()),
@@ -347,13 +345,31 @@ pub mod tests {
                 };
                 magnitude * sign
             };
-            constrain_equal(
+            constrain_equal_non_id(
                 chip.clone(),
                 layouter.namespace(|| *name),
                 base_val,
                 scalar,
                 result,
             )?;
+        }
+
+        let zero_magnitude_signs = [
+            ("mul by +zero", pallas::Base::zero(), pallas::Base::one()),
+            ("mul by -zero", pallas::Base::zero(), -pallas::Base::one()),
+        ];
+
+        for (name, magnitude, sign) in zero_magnitude_signs.iter() {
+            let (result, _) = {
+                let magnitude_sign = load_magnitude_sign(
+                    chip.clone(),
+                    layouter.namespace(|| *name),
+                    *magnitude,
+                    *sign,
+                )?;
+                value_commit_v.mul(layouter.namespace(|| *name), magnitude_sign)?
+            };
+            assert!(result.inner().is_identity().unwrap());
         }
 
         Ok(())
@@ -489,7 +505,7 @@ pub mod tests {
                     Err(vec![
                         VerifyFailure::ConstraintNotSatisfied {
                             constraint: (
-                                (16, "Short fixed-base mul gate").into(),
+                                (17, "Short fixed-base mul gate").into(),
                                 0,
                                 "last_window_check"
                             )
@@ -521,13 +537,13 @@ pub mod tests {
                 prover.verify(),
                 Err(vec![
                     VerifyFailure::ConstraintNotSatisfied {
-                        constraint: ((16, "Short fixed-base mul gate").into(), 1, "sign_check")
+                        constraint: ((17, "Short fixed-base mul gate").into(), 1, "sign_check")
                             .into(),
                         row: 26
                     },
                     VerifyFailure::ConstraintNotSatisfied {
                         constraint: (
-                            (16, "Short fixed-base mul gate").into(),
+                            (17, "Short fixed-base mul gate").into(),
                             3,
                             "negation_check"
                         )

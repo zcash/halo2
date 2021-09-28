@@ -1,6 +1,6 @@
 use std::{array, collections::HashSet};
 
-use super::{copy, CellValue, EccConfig, EccPoint, Var};
+use super::{copy, CellValue, EccConfig, NonIdentityEccPoint, Var};
 use group::Curve;
 use halo2::{
     circuit::Region,
@@ -67,11 +67,11 @@ impl Config {
 
     pub(super) fn assign_region(
         &self,
-        p: &EccPoint,
-        q: &EccPoint,
+        p: &NonIdentityEccPoint,
+        q: &NonIdentityEccPoint,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<EccPoint, Error> {
+    ) -> Result<NonIdentityEccPoint, Error> {
         // Enable `q_add_incomplete` selector
         self.q_add_incomplete.enable(region, offset)?;
 
@@ -134,7 +134,7 @@ impl Config {
             || y_r.ok_or(Error::SynthesisError),
         )?;
 
-        let result = EccPoint {
+        let result = NonIdentityEccPoint {
             x: CellValue::<pallas::Base>::new(x_r_var, x_r),
             y: CellValue::<pallas::Base>::new(y_r_var, y_r),
         };
@@ -149,7 +149,7 @@ pub mod tests {
     use halo2::{circuit::Layouter, plonk::Error};
     use pasta_curves::pallas;
 
-    use crate::circuit::gadget::ecc::{EccInstructions, Point};
+    use crate::circuit::gadget::ecc::{EccInstructions, NonIdentityPoint};
 
     #[allow(clippy::too_many_arguments)]
     pub fn test_add_incomplete<
@@ -157,17 +157,16 @@ pub mod tests {
     >(
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
-        zero: &Point<pallas::Affine, EccChip>,
         p_val: pallas::Affine,
-        p: &Point<pallas::Affine, EccChip>,
+        p: &NonIdentityPoint<pallas::Affine, EccChip>,
         q_val: pallas::Affine,
-        q: &Point<pallas::Affine, EccChip>,
-        p_neg: &Point<pallas::Affine, EccChip>,
+        q: &NonIdentityPoint<pallas::Affine, EccChip>,
+        p_neg: &NonIdentityPoint<pallas::Affine, EccChip>,
     ) -> Result<(), Error> {
         // P + Q
         {
             let result = p.add_incomplete(layouter.namespace(|| "P + Q"), q)?;
-            let witnessed_result = Point::new(
+            let witnessed_result = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "witnessed P + Q"),
                 Some((p_val + q_val).to_affine()),
@@ -182,18 +181,6 @@ pub mod tests {
         // P + (-P) should return an error
         p.add_incomplete(layouter.namespace(|| "P + (-P)"), p_neg)
             .expect_err("P + (-P) should return an error");
-
-        // P + 𝒪 should return an error
-        p.add_incomplete(layouter.namespace(|| "P + 𝒪"), zero)
-            .expect_err("P + 0 should return an error");
-
-        // 𝒪 + P should return an error
-        zero.add_incomplete(layouter.namespace(|| "𝒪 + P"), p)
-            .expect_err("0 + P should return an error");
-
-        // 𝒪 + 𝒪 should return an error
-        zero.add_incomplete(layouter.namespace(|| "𝒪 + 𝒪"), zero)
-            .expect_err("𝒪 + 𝒪 should return an error");
 
         Ok(())
     }

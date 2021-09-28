@@ -174,7 +174,9 @@ impl CommitDomain {
         msg: impl Iterator<Item = bool>,
         r: &pallas::Scalar,
     ) -> CtOption<pallas::Point> {
-        (self.M.hash_to_point_inner(msg) + Wnaf::new().scalar(r).base(self.R)).into()
+        // We use complete addition for the blinding factor.
+        CtOption::<pallas::Point>::from(self.M.hash_to_point_inner(msg))
+            .map(|p| p + Wnaf::new().scalar(r).base(self.R))
     }
 
     /// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
