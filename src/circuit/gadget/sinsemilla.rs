@@ -379,7 +379,7 @@ where
         r: Option<C::Scalar>,
     ) -> Result<
         (
-            ecc::NonIdentityPoint<C, EccChip>,
+            ecc::Point<C, EccChip>,
             Vec<SinsemillaChip::RunningSum>,
         ),
         Error,
@@ -387,8 +387,7 @@ where
         assert_eq!(self.M.sinsemilla_chip, message.chip);
         let (blind, _) = self.R.mul(layouter.namespace(|| "[r] R"), r)?;
         let (p, zs) = self.M.hash_to_point(layouter.namespace(|| "M"), message)?;
-        let blind = blind.try_into()?;
-        let commitment = p.add_incomplete(layouter.namespace(|| "M ⸭ [r] R"), &blind)?;
+        let commitment = p.add(layouter.namespace(|| "M + [r] R"), &blind)?;
         Ok((commitment, zs))
     }
 

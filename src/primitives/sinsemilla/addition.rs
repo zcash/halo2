@@ -46,14 +46,6 @@ impl Add for IncompletePoint {
     }
 }
 
-impl Add<pallas::Point> for IncompletePoint {
-    type Output = IncompletePoint;
-
-    fn add(self, rhs: pallas::Point) -> Self::Output {
-        self + IncompletePoint(CtOption::new(rhs, 1.into()))
-    }
-}
-
 impl Add<pallas::Affine> for IncompletePoint {
     type Output = IncompletePoint;
 

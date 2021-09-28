@@ -9,7 +9,7 @@ use crate::{
     circuit::gadget::{
         ecc::{
             chip::{EccChip, NonIdentityEccPoint},
-            NonIdentityPoint,
+            Point,
         },
         utilities::{bitrange_subset, bool_check, copy, CellValue, Var},
     },
@@ -529,7 +529,7 @@ impl NoteCommitConfig {
         rho: CellValue<pallas::Base>,
         psi: CellValue<pallas::Base>,
         rcm: Option<pallas::Scalar>,
-    ) -> Result<NonIdentityPoint<pallas::Affine, EccChip>, Error> {
+    ) -> Result<Point<pallas::Affine, EccChip>, Error> {
         let (gd_x, gd_y) = (g_d.x().value(), g_d.y().value());
         let (pkd_x, pkd_y) = (pk_d.x().value(), pk_d.y().value());
         let value_val = value.value();
