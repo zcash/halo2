@@ -57,6 +57,14 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
     ) -> Result<(), Error>;
 
     /// Witnesses the given point as a private input to the circuit.
+    /// This allows the point to be the identity.
+    fn witness_point(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        value: Option<C>,
+    ) -> Result<Self::Point, Error>;
+
+    /// Witnesses the given point as a private input to the circuit.
     /// This returns an error if the point is the identity.
     fn witness_point_non_id(
         &self,
@@ -290,6 +298,16 @@ pub struct Point<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + E
 }
 
 impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, EccChip> {
+    /// Constructs a new point with the given value.
+    pub fn new(
+        chip: EccChip,
+        mut layouter: impl Layouter<C::Base>,
+        value: Option<C>,
+    ) -> Result<Self, Error> {
+        let point = chip.witness_point(&mut layouter, value);
+        point.map(|inner| Point { chip, inner })
+    }
+
     /// Constrains this point to be equal in value to another point.
     pub fn constrain_equal<Other: Into<Point<C, EccChip>> + Clone>(
         &self,
