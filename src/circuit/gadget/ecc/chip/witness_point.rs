@@ -37,9 +37,7 @@ impl Config {
             let y = meta.query_advice(self.y, Rotation::cur());
 
             // y^2 = x^3 + b
-            y.clone().square()
-                - (x.clone().square() * x.clone())
-                - Expression::Constant(pallas::Affine::b())
+            y.square() - (x.clone().square() * x) - Expression::Constant(pallas::Affine::b())
         };
 
         meta.create_gate("witness point", |meta| {
