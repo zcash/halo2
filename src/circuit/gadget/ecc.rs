@@ -57,7 +57,8 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
     ) -> Result<(), Error>;
 
     /// Witnesses the given point as a private input to the circuit.
-    /// This allows the point to be the identity.
+    /// This allows the point to be the identity, mapped to (0, 0) in
+    /// affine coordinates.
     fn witness_point(
         &self,
         layouter: &mut impl Layouter<C::Base>,

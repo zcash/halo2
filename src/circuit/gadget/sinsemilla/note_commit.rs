@@ -1680,7 +1680,7 @@ mod tests {
                         .to_affine();
                     NonIdentityPoint::new(
                         ecc_chip,
-                        layouter.namespace(|| "witness g_d"),
+                        layouter.namespace(|| "witness cm"),
                         Some(point),
                     )?
                 };
