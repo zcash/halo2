@@ -177,7 +177,7 @@ impl Note {
         self.value
     }
 
-    /// Derives the ephemeral secret key for this note.
+    /// Returns the rseed value of this note.
     pub(crate) fn rseed(&self) -> &RandomSeed {
         &self.rseed
     }
