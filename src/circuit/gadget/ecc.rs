@@ -495,7 +495,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use group::{Curve, Group};
+    use group::{prime::PrimeCurveAffine, Curve, Group};
 
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
@@ -585,6 +585,22 @@ mod tests {
 
             // Make sure P and Q are not the same point.
             assert_ne!(p_val, q_val);
+
+            // Test that we can witness the identity as a point, but not as a non-identity point.
+            {
+                let _ = super::Point::new(
+                    chip.clone(),
+                    layouter.namespace(|| "identity"),
+                    Some(pallas::Affine::identity()),
+                )?;
+
+                super::NonIdentityPoint::new(
+                    chip.clone(),
+                    layouter.namespace(|| "identity"),
+                    Some(pallas::Affine::identity()),
+                )
+                .expect_err("Trying to witness the identity should return an error");
+            }
 
             // Test witness non-identity point
             {
