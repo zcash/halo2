@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use super::{EccInstructions, IsIdentity};
 use crate::{
     circuit::gadget::utilities::{
@@ -126,20 +124,6 @@ impl From<NonIdentityEccPoint> for EccPoint {
             x: non_id_point.x,
             y: non_id_point.y,
         }
-    }
-}
-
-impl TryFrom<EccPoint> for NonIdentityEccPoint {
-    type Error = Error;
-
-    fn try_from(point: EccPoint) -> Result<Self, Self::Error> {
-        if point.is_identity() == Some(true) {
-            return Err(Error::SynthesisError);
-        }
-        Ok(NonIdentityEccPoint {
-            x: point.x,
-            y: point.y,
-        })
     }
 }
 

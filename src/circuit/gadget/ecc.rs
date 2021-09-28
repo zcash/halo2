@@ -1,6 +1,5 @@
 //! Gadgets for elliptic curve operations.
 
-use std::convert::{TryFrom, TryInto};
 use std::fmt::Debug;
 
 use halo2::{
@@ -38,7 +37,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
     /// Variable representing an elliptic curve point.
     type Point: From<Self::NonIdentityPoint> + IsIdentity + Clone + Debug;
     /// Variable representing a non-identity elliptic curve point.
-    type NonIdentityPoint: TryFrom<Self::Point> + Clone + Debug;
+    type NonIdentityPoint: Clone + Debug;
     /// Variable representing the affine short Weierstrass x-coordinate of an
     /// elliptic curve point.
     type X: Clone + Debug;
@@ -280,24 +279,6 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
             chip: non_id_point.chip,
             inner: non_id_point.inner.into(),
         }
-    }
-}
-
-impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> TryFrom<Point<C, EccChip>>
-    for NonIdentityPoint<C, EccChip>
-{
-    type Error = Error;
-
-    fn try_from(point: Point<C, EccChip>) -> Result<Self, Self::Error> {
-        point
-            .inner
-            .clone()
-            .try_into()
-            .map(|inner| Self {
-                chip: point.chip,
-                inner,
-            })
-            .map_err(|_| Error::SynthesisError)
     }
 }
 
