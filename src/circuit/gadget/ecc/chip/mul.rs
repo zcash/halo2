@@ -142,6 +142,10 @@ impl Config {
             || "variable-base scalar mul",
             |mut region| {
                 let offset = 0;
+
+                // Case `base` into an `EccPoint` for later use.
+                let base_point: EccPoint = (*base).into();
+
                 // Decompose `k = alpha + t_q` bitwise (big-endian bit order).
                 let bits = decompose_for_scalar_mul(alpha.value());
 
@@ -151,12 +155,9 @@ impl Config {
                 let lsb = bits[pallas::Scalar::NUM_BITS as usize - 1];
 
                 // Initialize the accumulator `acc = [2]base`
-                let acc = self.add_config.assign_region(
-                    &(base.clone()).into(),
-                    &(base.clone()).into(),
-                    offset,
-                    &mut region,
-                )?;
+                let acc =
+                    self.add_config
+                        .assign_region(&base_point, &base_point, offset, &mut region)?;
 
                 // Increase the offset by 1 after complete addition.
                 let offset = offset + 1;
@@ -210,7 +211,7 @@ impl Config {
                         &mut region,
                         offset,
                         bits_complete,
-                        &(*base).into(),
+                        &base_point,
                         x_a,
                         y_a,
                         *z,
