@@ -987,6 +987,17 @@ mod tests {
             .unzip();
 
         let vk = VerifyingKey::build();
+
+        // Test that the pinned verification key (representing the circuit)
+        // is as expected.
+        {
+            // panic!("{:#?}", vk.vk.pinned());
+            assert_eq!(
+                format!("{:#?}\n", vk.vk.pinned()),
+                include_str!("circuit_description").replace("\r\n", "\n")
+            );
+        }
+
         for (circuit, instance) in circuits.iter().zip(instances.iter()) {
             assert_eq!(
                 MockProver::run(
