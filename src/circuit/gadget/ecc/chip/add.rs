@@ -391,10 +391,12 @@ pub mod tests {
     use halo2::{circuit::Layouter, plonk::Error};
     use pasta_curves::{arithmetic::CurveExt, pallas};
 
-    use crate::circuit::gadget::ecc::{EccInstructions, NonIdentityPoint};
+    use crate::circuit::gadget::ecc::{chip::EccPoint, EccInstructions, NonIdentityPoint};
 
     #[allow(clippy::too_many_arguments)]
-    pub fn test_add<EccChip: EccInstructions<pallas::Affine> + Clone + Eq + std::fmt::Debug>(
+    pub fn test_add<
+        EccChip: EccInstructions<pallas::Affine, Point = EccPoint> + Clone + Eq + std::fmt::Debug,
+    >(
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
         p_val: pallas::Affine,
@@ -409,7 +411,7 @@ pub mod tests {
         // Check complete addition P + (-P)
         let zero = {
             let result = p.add(layouter.namespace(|| "P + (-P)"), p_neg)?;
-            assert!(result.is_identity().unwrap());
+            assert!(result.inner().is_identity().unwrap());
             result
         };
 

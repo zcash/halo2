@@ -35,7 +35,7 @@ pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + UtilitiesInstructions
     /// A `ScalarFixedShort` must be in the range [-(2^64 - 1), 2^64 - 1].
     type ScalarFixedShort: Clone + Debug;
     /// Variable representing an elliptic curve point.
-    type Point: From<Self::NonIdentityPoint> + IsIdentity + Clone + Debug;
+    type Point: From<Self::NonIdentityPoint> + Clone + Debug;
     /// Variable representing a non-identity elliptic curve point.
     type NonIdentityPoint: Clone + Debug;
     /// Variable representing the affine short Weierstrass x-coordinate of an
@@ -164,11 +164,6 @@ where
 {
     chip: EccChip,
     inner: EccChip::ScalarFixedShort,
-}
-
-pub trait IsIdentity {
-    /// Checks if a point is the identity.
-    fn is_identity(&self) -> Option<bool>;
 }
 
 /// A non-identity elliptic curve point over the given curve.
@@ -322,11 +317,6 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
     /// Returns the inner point.
     pub fn inner(&self) -> &EccChip::Point {
         &self.inner
-    }
-
-    /// Checks is a point is the identity.
-    pub fn is_identity(&self) -> Option<bool> {
-        self.inner.is_identity()
     }
 
     /// Extracts the x-coordinate of a point.

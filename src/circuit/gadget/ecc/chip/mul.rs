@@ -453,7 +453,10 @@ pub mod tests {
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
     use crate::circuit::gadget::{
-        ecc::{chip::EccChip, EccInstructions, NonIdentityPoint, Point},
+        ecc::{
+            chip::{EccChip, EccPoint},
+            EccInstructions, NonIdentityPoint, Point,
+        },
         utilities::UtilitiesInstructions,
     };
 
@@ -466,7 +469,7 @@ pub mod tests {
         let column = chip.config().advices[0];
 
         fn constrain_equal_non_id<
-            EccChip: EccInstructions<pallas::Affine> + Clone + Eq + std::fmt::Debug,
+            EccChip: EccInstructions<pallas::Affine, Point = EccPoint> + Clone + Eq + std::fmt::Debug,
         >(
             chip: EccChip,
             mut layouter: impl Layouter<pallas::Base>,
@@ -514,7 +517,7 @@ pub mod tests {
                     chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_val))?;
                 p.mul(layouter.namespace(|| "[0]B"), &scalar)?
             };
-            assert!(result.is_identity().unwrap());
+            assert!(result.inner().is_identity().unwrap());
         }
 
         // [-1]B (the largest possible base field element)

@@ -1,4 +1,4 @@
-use super::{EccInstructions, IsIdentity};
+use super::EccInstructions;
 use crate::{
     circuit::gadget::utilities::{
         copy, decompose_running_sum::RunningSumConfig, lookup_range_check::LookupRangeCheckConfig,
@@ -68,9 +68,8 @@ impl EccPoint {
     pub fn y(&self) -> CellValue<pallas::Base> {
         self.y
     }
-}
 
-impl IsIdentity for EccPoint {
+    #[cfg(test)]
     fn is_identity(&self) -> Option<bool> {
         self.x.value().map(|x| x == pallas::Base::zero())
     }
