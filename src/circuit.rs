@@ -38,7 +38,7 @@ use crate::{
 use gadget::{
     ecc::{
         chip::{EccChip, EccConfig},
-        FixedPoint, FixedPointBaseField, FixedPointShort, NonIdentityPoint,
+        FixedPoint, FixedPointBaseField, FixedPointShort, NonIdentityPoint, Point,
     },
     poseidon::{
         Hash as PoseidonHash, Pow5T3Chip as PoseidonChip, Pow5T3Config as PoseidonConfig,
@@ -349,7 +349,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             )?;
 
             // Witness cm_old
-            let cm_old = NonIdentityPoint::new(
+            let cm_old = Point::new(
                 ecc_chip.clone(),
                 layouter.namespace(|| "cm_old"),
                 self.cm_old.as_ref().map(|cm| cm.inner().to_affine()),
