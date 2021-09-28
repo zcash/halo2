@@ -27,7 +27,7 @@ blake2b_simd = "0.5"
 ff = "0.11"
 fpe = "0.5"
 group = "0.11"
-halo2 = "0.0"
+halo2 = "=0.1.0-beta.1"
 lazy_static = "1"
 memuse = { version = "0.2", features = ["nonempty"] }
 pasta_curves = "0.2.1"
@@ -84,6 +84,5 @@ debug = true
 debug = true
 
 [patch.crates-io]
-halo2 = { git = "https://github.com/zcash/halo2.git", rev = "a7cd600eb60b1528159b92af5e426adcc615de1a" }
 zcash_note_encryption = { git = "https://github.com/zcash/librustzcash.git", rev = "13b023387bafdc7b5712c933dc0e16ee94b96a6a" }
 incrementalmerkletree = { git = "https://github.com/zcash/incrementalmerkletree.git", rev = "b7bd6246122a6e9ace8edb51553fbf5228906cbb" }
