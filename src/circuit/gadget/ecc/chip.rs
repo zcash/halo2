@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use super::EccInstructions;
+use super::{EccInstructions, IsIdentity};
 use crate::{
     circuit::gadget::utilities::{
         copy, decompose_running_sum::RunningSumConfig, lookup_range_check::LookupRangeCheckConfig,
@@ -70,9 +70,10 @@ impl EccPoint {
     pub fn y(&self) -> CellValue<pallas::Base> {
         self.y
     }
+}
 
-    /// This point is the identity.
-    pub fn is_identity(&self) -> Option<bool> {
+impl IsIdentity for EccPoint {
+    fn is_identity(&self) -> Option<bool> {
         self.x.value().map(|x| x == pallas::Base::zero())
     }
 }
@@ -426,10 +427,6 @@ impl EccInstructions<pallas::Affine> for EccChip {
             || "witness non-identity point",
             |mut region| config.point_non_id(value, 0, &mut region),
         )
-    }
-
-    fn is_identity(point: &Self::Point) -> Option<bool> {
-        point.is_identity()
     }
 
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X {

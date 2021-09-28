@@ -154,7 +154,10 @@ impl SinsemillaChip {
                 }
             }
         }
-        Ok((NonIdentityEccPoint::from_coordinates_unchecked(x_a.0, y_a), zs_sum))
+        Ok((
+            NonIdentityEccPoint::from_coordinates_unchecked(x_a.0, y_a),
+            zs_sum,
+        ))
     }
 
     #[allow(clippy::type_complexity)]
