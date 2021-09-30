@@ -201,7 +201,7 @@ fn serial_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
 
     let mut m = 1;
     for _ in 0..log_n {
-        let w_m = omega.pow(&[u64::from(n / (2 * m)), 0, 0, 0]);
+        let w_m = omega.pow_vartime(&[u64::from(n / (2 * m)), 0, 0, 0]);
 
         let mut k = 0;
         while k < n {
@@ -228,7 +228,7 @@ fn parallel_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32, log_threads
     let num_threads = 1 << log_threads;
     let log_new_n = log_n - log_threads;
     let mut tmp = vec![vec![G::group_zero(); 1 << log_new_n]; num_threads];
-    let new_omega = omega.pow(&[num_threads as u64, 0, 0, 0]);
+    let new_omega = omega.pow_vartime(&[num_threads as u64, 0, 0, 0]);
 
     multicore::scope(|scope| {
         let a = &*a;
@@ -236,8 +236,8 @@ fn parallel_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32, log_threads
         for (j, tmp) in tmp.iter_mut().enumerate() {
             scope.spawn(move |_| {
                 // Shuffle into a sub-FFT
-                let omega_j = omega.pow(&[j as u64, 0, 0, 0]);
-                let omega_step = omega.pow(&[(j as u64) << log_new_n, 0, 0, 0]);
+                let omega_j = omega.pow_vartime(&[j as u64, 0, 0, 0]);
+                let omega_step = omega.pow_vartime(&[(j as u64) << log_new_n, 0, 0, 0]);
 
                 let mut elt = G::Scalar::one();
 
