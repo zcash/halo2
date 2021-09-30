@@ -51,7 +51,7 @@ impl<G: Group> EvaluationDomain<G> {
             extended_k += 1;
         }
 
-        let mut extended_omega = G::Scalar::ROOT_OF_UNITY;
+        let mut extended_omega = G::Scalar::root_of_unity();
 
         // Get extended_omega, the 2^{extended_k}'th root of unity
         // The loop computes extended_omega = omega^{2 ^ (S - extended_k)}
