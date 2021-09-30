@@ -3,12 +3,15 @@
 
 use super::multicore;
 pub use ff::Field;
-use group::{ff::BatchInvert, Group as _};
+use group::{
+    ff::{BatchInvert, PrimeField},
+    Group as _,
+};
 
 pub use pasta_curves::arithmetic::*;
 
 fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut C::Curve) {
-    let coeffs: Vec<[u8; 32]> = coeffs.iter().map(|a| a.to_bytes()).collect();
+    let coeffs: Vec<_> = coeffs.iter().map(|a| a.to_repr()).collect();
 
     let c = if bases.len() < 4 {
         1
@@ -18,7 +21,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
         (f64::from(bases.len() as u32)).ln().ceil() as usize
     };
 
-    fn get_at(segment: usize, c: usize, bytes: &[u8; 32]) -> usize {
+    fn get_at<F: PrimeField>(segment: usize, c: usize, bytes: &F::Repr) -> usize {
         let skip_bits = segment * c;
         let skip_bytes = skip_bits / 8;
 
@@ -27,7 +30,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
         }
 
         let mut v = [0; 8];
-        for (v, o) in v.iter_mut().zip(bytes[skip_bytes..].iter()) {
+        for (v, o) in v.iter_mut().zip(bytes.as_ref()[skip_bytes..].iter()) {
             *v = *o;
         }
 
@@ -79,7 +82,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
         let mut buckets: Vec<Bucket<C>> = vec![Bucket::None; (1 << c) - 1];
 
         for (coeff, base) in coeffs.iter().zip(bases.iter()) {
-            let coeff = get_at(current_segment, c, coeff);
+            let coeff = get_at::<C::Scalar>(current_segment, c, coeff);
             if coeff != 0 {
                 buckets[coeff - 1].add_assign(base);
             }
@@ -100,7 +103,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
 /// Performs a small multi-exponentiation operation.
 /// Uses the double-and-add algorithm with doublings shared across points.
 pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
-    let coeffs: Vec<[u8; 32]> = coeffs.iter().map(|a| a.to_bytes()).collect();
+    let coeffs: Vec<_> = coeffs.iter().map(|a| a.to_repr()).collect();
     let mut acc = C::Curve::identity();
 
     // for byte idx
@@ -110,7 +113,7 @@ pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::C
             acc = acc.double();
             // for each coeff
             for coeff_idx in 0..coeffs.len() {
-                let byte = coeffs[coeff_idx][byte_idx];
+                let byte = coeffs[coeff_idx].as_ref()[byte_idx];
                 if ((byte >> bit_idx) & 1) != 0 {
                     acc += bases[coeff_idx];
                 }

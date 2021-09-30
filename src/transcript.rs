@@ -2,6 +2,7 @@
 //! transcripts.
 
 use blake2b_simd::{Params as Blake2bParams, State as Blake2bState};
+use group::ff::PrimeField;
 use std::convert::TryInto;
 
 use crate::arithmetic::{Coordinates, CurveAffine, FieldExt};
@@ -97,9 +98,9 @@ impl<R: Read, C: CurveAffine> TranscriptRead<C, Challenge255<C>>
     }
 
     fn read_scalar(&mut self) -> io::Result<C::Scalar> {
-        let mut data = [0u8; 32];
-        self.reader.read_exact(&mut data)?;
-        let scalar: C::Scalar = Option::from(C::Scalar::from_bytes(&data)).ok_or_else(|| {
+        let mut data = <C::Scalar as PrimeField>::Repr::default();
+        self.reader.read_exact(data.as_mut())?;
+        let scalar: C::Scalar = Option::from(C::Scalar::from_repr(data)).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::Other,
                 "invalid field element encoding in proof",
@@ -129,15 +130,15 @@ impl<R: Read, C: CurveAffine> Transcript<C, Challenge255<C>>
                 "cannot write points at infinity to the transcript",
             )
         })?;
-        self.state.update(&coords.x().to_bytes());
-        self.state.update(&coords.y().to_bytes());
+        self.state.update(coords.x().to_repr().as_ref());
+        self.state.update(coords.y().to_repr().as_ref());
 
         Ok(())
     }
 
     fn common_scalar(&mut self, scalar: C::Scalar) -> io::Result<()> {
         self.state.update(&[BLAKE2B_PREFIX_SCALAR]);
-        self.state.update(&scalar.to_bytes());
+        self.state.update(scalar.to_repr().as_ref());
 
         Ok(())
     }
@@ -181,8 +182,8 @@ impl<W: Write, C: CurveAffine> TranscriptWrite<C, Challenge255<C>>
     }
     fn write_scalar(&mut self, scalar: C::Scalar) -> io::Result<()> {
         self.common_scalar(scalar)?;
-        let data = scalar.to_bytes();
-        self.writer.write_all(&data[..])
+        let data = scalar.to_repr();
+        self.writer.write_all(data.as_ref())
     }
 }
 
@@ -204,15 +205,15 @@ impl<W: Write, C: CurveAffine> Transcript<C, Challenge255<C>>
                 "cannot write points at infinity to the transcript",
             )
         })?;
-        self.state.update(&coords.x().to_bytes());
-        self.state.update(&coords.y().to_bytes());
+        self.state.update(coords.x().to_repr().as_ref());
+        self.state.update(coords.y().to_repr().as_ref());
 
         Ok(())
     }
 
     fn common_scalar(&mut self, scalar: C::Scalar) -> io::Result<()> {
         self.state.update(&[BLAKE2B_PREFIX_SCALAR]);
-        self.state.update(&scalar.to_bytes());
+        self.state.update(scalar.to_repr().as_ref());
 
         Ok(())
     }
@@ -277,12 +278,18 @@ impl<C: CurveAffine> EncodedChallenge<C> for Challenge255<C> {
 
     fn new(challenge_input: &[u8; 64]) -> Self {
         Challenge255(
-            C::Scalar::from_bytes_wide(challenge_input).to_bytes(),
+            C::Scalar::from_bytes_wide(challenge_input)
+                .to_repr()
+                .as_ref()
+                .try_into()
+                .expect("Scalar fits into 256 bits"),
             PhantomData,
         )
     }
     fn get_scalar(&self) -> C::Scalar {
-        C::Scalar::from_bytes(&self.0).unwrap()
+        let mut repr = <C::Scalar as PrimeField>::Repr::default();
+        repr.as_mut().copy_from_slice(&self.0);
+        C::Scalar::from_repr(repr).unwrap()
     }
 }
 
