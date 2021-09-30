@@ -3,47 +3,9 @@
 
 use super::multicore;
 pub use ff::Field;
-use group::Group as _;
+use group::{ff::BatchInvert, Group as _};
 
 pub use pasta_curves::arithmetic::*;
-
-/// Extension trait for iterators over mutable field elements which allows those
-/// field elements to be inverted in a batch.
-pub trait BatchInvert<F: Field> {
-    /// Consume this iterator and invert each field element (when nonzero),
-    /// returning the inverse of all nonzero field elements. Zero elements
-    /// are left as zero.
-    fn batch_invert(self) -> F;
-}
-
-impl<'a, F, I> BatchInvert<F> for I
-where
-    F: FieldExt,
-    I: IntoIterator<Item = &'a mut F>,
-{
-    fn batch_invert(self) -> F {
-        let mut acc = F::one();
-        let iter = self.into_iter();
-        let mut tmp = Vec::with_capacity(iter.size_hint().0);
-        for p in iter {
-            let q = *p;
-            tmp.push((acc, p));
-            acc = F::conditional_select(&(acc * q), &acc, q.is_zero());
-        }
-        acc = acc.invert().unwrap();
-        let allinv = acc;
-
-        for (tmp, p) in tmp.into_iter().rev() {
-            let skip = p.is_zero();
-
-            let tmp = tmp * acc;
-            acc = F::conditional_select(&(acc * *p), &acc, skip);
-            *p = F::conditional_select(&tmp, p, skip);
-        }
-
-        allinv
-    }
-}
 
 fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut C::Curve) {
     let coeffs: Vec<[u8; 32]> = coeffs.iter().map(|a| a.to_bytes()).collect();

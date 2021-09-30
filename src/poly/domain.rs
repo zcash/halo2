@@ -2,13 +2,14 @@
 //! domain that is of a suitable size for the application.
 
 use crate::{
-    arithmetic::{best_fft, parallelize, BatchInvert, FieldExt, Group},
+    arithmetic::{best_fft, parallelize, FieldExt, Group},
     plonk::Assigned,
 };
 
 use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation};
 
-use ff::{Field, PrimeField};
+use group::ff::{BatchInvert, Field, PrimeField};
+
 use std::marker::PhantomData;
 
 /// This structure contains precomputed constants and other details needed for
