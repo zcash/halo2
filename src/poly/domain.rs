@@ -106,8 +106,8 @@ impl<G: Group> EvaluationDomain<G> {
             // We invert in a batch, below.
         }
 
-        let mut ifft_divisor = G::Scalar::from_u64(1 << k); // Inversion computed later
-        let mut extended_ifft_divisor = G::Scalar::from_u64(1 << extended_k); // Inversion computed later
+        let mut ifft_divisor = G::Scalar::from(1 << k); // Inversion computed later
+        let mut extended_ifft_divisor = G::Scalar::from(1 << extended_k); // Inversion computed later
 
         // The barycentric weight of 1 over the evaluation domain
         // 1 / \prod_{i != 0} (1 - omega^i)

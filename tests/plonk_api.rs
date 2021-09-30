@@ -379,7 +379,7 @@ fn plonk_api() {
         }
     }
 
-    let a = Fp::from_u64(2834758237) * Fp::ZETA;
+    let a = Fp::from(2834758237) * Fp::ZETA;
     let instance = Fp::one() + Fp::one();
     let lookup_table = vec![instance, a, a, Fp::zero()];
 

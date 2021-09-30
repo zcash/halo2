@@ -292,14 +292,14 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 ///         layouter.assign_region(|| "Example region", |mut region| {
 ///             config.s.enable(&mut region, 0)?;
 ///             region.assign_advice(|| "a", config.a, 0, || {
-///                 self.a.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
+///                 self.a.map(|v| F::from(v)).ok_or(Error::SynthesisError)
 ///             })?;
 ///             region.assign_advice(|| "b", config.b, 0, || {
-///                 self.b.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)
+///                 self.b.map(|v| F::from(v)).ok_or(Error::SynthesisError)
 ///             })?;
 ///             region.assign_advice(|| "c", config.c, 0, || {
 ///                 self.a
-///                     .and_then(|a| self.b.map(|b| F::from_u64(a * b)))
+///                     .and_then(|a| self.b.map(|b| F::from(a * b)))
 ///                     .ok_or(Error::SynthesisError)
 ///             })?;
 ///             Ok(())
