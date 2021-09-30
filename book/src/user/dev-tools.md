@@ -16,7 +16,13 @@ granular error messages that indicate which specific constraint (if any) is not 
 The `dev-graph` feature flag exposes several helper methods for creating graphical
 representations of circuits.
 
+### Circuit layout
+
 `halo2::dev::CircuitLayout` renders the circuit layout as a grid:
+
+```rust,ignore,no_run
+{{#include ../../../examples/circuit-layout.rs:dev-graph}}
+```
 
 - Columns are layed out from left to right as instance, advice, and fixed. The order of
   columns is otherwise without meaning.
@@ -28,6 +34,8 @@ representations of circuits.
 - Cells that have been assigned to by the circuit will be shaded in grey. If any cells are
   assigned to more than once (which is usually a mistake), they will be shaded darker than
   the surrounding cells.
+
+### Circuit structure
 
 `halo2::dev::circuit_dot_graph` builds a [DOT graph string] representing the given
 circuit, which can then be rendered witha variety of [layout programs]. The graph is built
