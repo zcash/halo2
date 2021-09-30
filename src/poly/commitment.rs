@@ -7,6 +7,7 @@ use super::{Coeff, LagrangeCoeff, Polynomial};
 use crate::arithmetic::{
     best_fft, best_multiexp, parallelize, CurveAffine, CurveExt, FieldExt, Group,
 };
+use crate::helpers::CurveRead;
 
 use ff::{Field, PrimeField};
 use group::{prime::PrimeCurveAffine, Curve, Group as _};
