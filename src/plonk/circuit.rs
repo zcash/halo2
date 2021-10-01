@@ -44,18 +44,10 @@ impl<C: ColumnType> Ord for Column<C> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // This ordering is consensus-critical! The layouters rely on deterministic column
         // orderings.
-        match (self.column_type.into(), other.column_type.into()) {
+        match self.column_type.into().cmp(&other.column_type.into()) {
             // Indices are assigned within column types.
-            (Any::Instance, Any::Instance)
-            | (Any::Advice, Any::Advice)
-            | (Any::Fixed, Any::Fixed) => self.index.cmp(&other.index),
-            // Across column types, sort Instance < Advice < Fixed.
-            (Any::Instance, Any::Advice)
-            | (Any::Advice, Any::Fixed)
-            | (Any::Instance, Any::Fixed) => std::cmp::Ordering::Less,
-            (Any::Fixed, Any::Instance)
-            | (Any::Fixed, Any::Advice)
-            | (Any::Advice, Any::Instance) => std::cmp::Ordering::Greater,
+            std::cmp::Ordering::Equal => self.index.cmp(&other.index),
+            order => order,
         }
     }
 }
@@ -87,6 +79,31 @@ pub enum Any {
     Fixed,
     /// An Instance variant
     Instance,
+}
+
+impl Ord for Any {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // This ordering is consensus-critical! The layouters rely on deterministic column
+        // orderings.
+        match (self, other) {
+            (Any::Instance, Any::Instance)
+            | (Any::Advice, Any::Advice)
+            | (Any::Fixed, Any::Fixed) => std::cmp::Ordering::Equal,
+            // Across column types, sort Instance < Advice < Fixed.
+            (Any::Instance, Any::Advice)
+            | (Any::Advice, Any::Fixed)
+            | (Any::Instance, Any::Fixed) => std::cmp::Ordering::Less,
+            (Any::Fixed, Any::Instance)
+            | (Any::Fixed, Any::Advice)
+            | (Any::Advice, Any::Instance) => std::cmp::Ordering::Greater,
+        }
+    }
+}
+
+impl PartialOrd for Any {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl ColumnType for Advice {}
