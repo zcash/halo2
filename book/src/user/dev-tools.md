@@ -45,6 +45,27 @@ chips that it uses.
 [DOT graph string]: https://graphviz.org/doc/info/lang.html
 [layout programs]: https://en.wikipedia.org/wiki/DOT_(graph_description_language)#Layout_programs
 
+```rust,ignore,no_run
+fn main() {
+    // Prepare the circuit you want to render.
+    // You don't need to include any witness variables.
+    let a = Fp::rand();
+    let instance = Fp::one() + Fp::one();
+    let lookup_table = vec![instance, a, a, Fp::zero()];
+    let circuit: MyCircuit<Fp> = MyCircuit {
+        a: None,
+        lookup_table,
+    };
+
+    // Generate the DOT graph string.
+    let dot_string = halo2::dev::circuit_dot_graph(&circuit);
+
+    // Now you can either handle it in Rust, or just
+    // print it out to use with command-line tools.
+    print!("{}", dot_string);
+}
+```
+
 ## Cost estimator
 
 The `cost-model` binary takes high-level parameters for a circuit design, and estimates
