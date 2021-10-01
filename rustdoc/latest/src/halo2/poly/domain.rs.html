@@ -629,17 +629,19 @@
 <span id="614">614</span>
 <span id="615">615</span>
 <span id="616">616</span>
+<span id="617">617</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains utilities for performing polynomial arithmetic over an evaluation</span>
 <span class="doccomment">//! domain that is of a suitable size for the application.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">arithmetic</span>::{<span class="ident">best_fft</span>, <span class="ident">parallelize</span>, <span class="ident">BatchInvert</span>, <span class="ident">FieldExt</span>, <span class="ident">Group</span>},
+    <span class="ident">arithmetic</span>::{<span class="ident">best_fft</span>, <span class="ident">parallelize</span>, <span class="ident">FieldExt</span>, <span class="ident">Group</span>},
     <span class="ident">plonk::Assigned</span>,
 };
 
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Coeff</span>, <span class="ident">ExtendedLagrangeCoeff</span>, <span class="ident">LagrangeCoeff</span>, <span class="ident">Polynomial</span>, <span class="ident">Rotation</span>};
 
-<span class="kw">use</span> <span class="ident">ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeField</span>};
+<span class="kw">use</span> <span class="ident">group::ff</span>::{<span class="ident">BatchInvert</span>, <span class="ident">Field</span>, <span class="ident">PrimeField</span>};
+
 <span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
 
 <span class="doccomment">/// This structure contains precomputed constants and other details needed for</span>
@@ -681,7 +683,7 @@
             <span class="ident">extended_k</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
         }
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extended_omega</span> <span class="op">=</span> <span class="ident">G::Scalar::ROOT_OF_UNITY</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extended_omega</span> <span class="op">=</span> <span class="ident">G::Scalar::root_of_unity</span>();
 
         <span class="comment">// Get extended_omega, the 2^{extended_k}&#39;th root of unity</span>
         <span class="comment">// The loop computes extended_omega = omega^{2 ^ (S - extended_k)}</span>
@@ -736,8 +738,8 @@
             <span class="comment">// We invert in a batch, below.</span>
         }
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ifft_divisor</span> <span class="op">=</span> <span class="ident">G::Scalar::from_u64</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">k</span>); <span class="comment">// Inversion computed later</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extended_ifft_divisor</span> <span class="op">=</span> <span class="ident">G::Scalar::from_u64</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">extended_k</span>); <span class="comment">// Inversion computed later</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ifft_divisor</span> <span class="op">=</span> <span class="ident">G::Scalar::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">k</span>); <span class="comment">// Inversion computed later</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extended_ifft_divisor</span> <span class="op">=</span> <span class="ident">G::Scalar::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">extended_k</span>); <span class="comment">// Inversion computed later</span>
 
         <span class="comment">// The barycentric weight of 1 over the evaluation domain</span>
         <span class="comment">// 1 / \prod_{i != 0} (1 - omega^i)</span>

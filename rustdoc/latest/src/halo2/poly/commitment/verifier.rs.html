@@ -196,14 +196,18 @@
 <span id="181">181</span>
 <span id="182">182</span>
 <span id="183">183</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ff::Field</span>;
-<span class="kw">use</span> <span class="ident">group::Curve</span>;
+<span id="184">184</span>
+<span id="185">185</span>
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">group</span>::{
+    <span class="ident">ff</span>::{<span class="ident">BatchInvert</span>, <span class="ident">Field</span>},
+    <span class="ident">Curve</span>,
+};
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::Error</span>;
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Params</span>, <span class="ident">MSM</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transcript</span>::{<span class="ident">EncodedChallenge</span>, <span class="ident">TranscriptRead</span>};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic</span>::{<span class="ident">best_multiexp</span>, <span class="ident">BatchInvert</span>, <span class="ident">CurveAffine</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic</span>::{<span class="ident">best_multiexp</span>, <span class="ident">CurveAffine</span>};
 
 <span class="doccomment">/// A guard returned by the verifier</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>

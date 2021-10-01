@@ -116,9 +116,11 @@
 <span id="101">101</span>
 <span id="102">102</span>
 <span id="103">103</span>
+<span id="104">104</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::circuit</span>::{<span class="ident">Any</span>, <span class="ident">Column</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">arithmetic::CurveAffine</span>,
+    <span class="ident">helpers::CurveRead</span>,
     <span class="ident">poly</span>::{<span class="ident">Coeff</span>, <span class="ident">ExtendedLagrangeCoeff</span>, <span class="ident">LagrangeCoeff</span>, <span class="ident">Polynomial</span>},
 };
 
@@ -198,7 +200,7 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">write</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">io::Write</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">writer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">W</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">for</span> <span class="ident">commitment</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">commitments</span> {
-            <span class="ident">commitment</span>.<span class="ident">write</span>(<span class="ident">writer</span>)<span class="question-mark">?</span>;
+            <span class="ident">writer</span>.<span class="ident">write_all</span>(<span class="ident">commitment</span>.<span class="ident">to_bytes</span>().<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())

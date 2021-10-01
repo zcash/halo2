@@ -1243,14 +1243,14 @@
 <span class="doccomment">///         layouter.assign_region(|| &quot;Example region&quot;, |mut region| {</span>
 <span class="doccomment">///             config.s.enable(&amp;mut region, 0)?;</span>
 <span class="doccomment">///             region.assign_advice(|| &quot;a&quot;, config.a, 0, || {</span>
-<span class="doccomment">///                 self.a.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)</span>
+<span class="doccomment">///                 self.a.map(|v| F::from(v)).ok_or(Error::SynthesisError)</span>
 <span class="doccomment">///             })?;</span>
 <span class="doccomment">///             region.assign_advice(|| &quot;b&quot;, config.b, 0, || {</span>
-<span class="doccomment">///                 self.b.map(|v| F::from_u64(v)).ok_or(Error::SynthesisError)</span>
+<span class="doccomment">///                 self.b.map(|v| F::from(v)).ok_or(Error::SynthesisError)</span>
 <span class="doccomment">///             })?;</span>
 <span class="doccomment">///             region.assign_advice(|| &quot;c&quot;, config.c, 0, || {</span>
 <span class="doccomment">///                 self.a</span>
-<span class="doccomment">///                     .and_then(|a| self.b.map(|b| F::from_u64(a * b)))</span>
+<span class="doccomment">///                     .and_then(|a| self.b.map(|b| F::from(a * b)))</span>
 <span class="doccomment">///                     .ok_or(Error::SynthesisError)</span>
 <span class="doccomment">///             })?;</span>
 <span class="doccomment">///             Ok(())</span>

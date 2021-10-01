@@ -325,16 +325,14 @@
 <span id="310">310</span>
 <span id="311">311</span>
 <span id="312">312</span>
-<span id="313">313</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains utilities for performing arithmetic over univariate polynomials in</span>
 <span class="doccomment">//! various forms, including computing commitments to them and provably opening</span>
 <span class="doccomment">//! the committed polynomials at arbitrary points.</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic::parallelize</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic::BatchInvert</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::plonk::Assigned</span>;
 
-<span class="kw">use</span> <span class="ident">ff::Field</span>;
+<span class="kw">use</span> <span class="ident">group::ff</span>::{<span class="ident">BatchInvert</span>, <span class="ident">Field</span>};
 <span class="kw">use</span> <span class="ident">pasta_curves::arithmetic::FieldExt</span>;
 <span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
 <span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;

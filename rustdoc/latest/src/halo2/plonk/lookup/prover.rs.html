@@ -697,13 +697,15 @@
 <span id="682">682</span>
 <span id="683">683</span>
 <span id="684">684</span>
+<span id="685">685</span>
+<span id="686">686</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{
     <span class="ident">circuit::Expression</span>, <span class="ident">ChallengeBeta</span>, <span class="ident">ChallengeGamma</span>, <span class="ident">ChallengeTheta</span>, <span class="ident">ChallengeX</span>, <span class="ident">Error</span>,
     <span class="ident">ProvingKey</span>,
 };
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::Argument</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">arithmetic</span>::{<span class="ident">eval_polynomial</span>, <span class="ident">parallelize</span>, <span class="ident">BatchInvert</span>, <span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>},
+    <span class="ident">arithmetic</span>::{<span class="ident">eval_polynomial</span>, <span class="ident">parallelize</span>, <span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>},
     <span class="ident">poly</span>::{
         <span class="ident">commitment</span>::{<span class="ident">Blind</span>, <span class="ident">Params</span>},
         <span class="ident">multiopen::ProverQuery</span>,
@@ -711,8 +713,10 @@
     },
     <span class="ident">transcript</span>::{<span class="ident">EncodedChallenge</span>, <span class="ident">TranscriptWrite</span>},
 };
-<span class="kw">use</span> <span class="ident">ff::Field</span>;
-<span class="kw">use</span> <span class="ident">group::Curve</span>;
+<span class="kw">use</span> <span class="ident">group</span>::{
+    <span class="ident">ff</span>::{<span class="ident">BatchInvert</span>, <span class="ident">Field</span>},
+    <span class="ident">Curve</span>,
+};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections::BTreeMap</span>,
     <span class="ident">iter</span>,

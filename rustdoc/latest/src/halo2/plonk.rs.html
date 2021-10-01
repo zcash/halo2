@@ -207,6 +207,7 @@
 <span id="192">192</span>
 <span id="193">193</span>
 <span id="194">194</span>
+<span id="195">195</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module provides an implementation of a variant of (Turbo)[PLONK][plonk]</span>
 <span class="doccomment">//! that is designed specifically for the polynomial commitment scheme described</span>
 <span class="doccomment">//! in the [Halo][halo] paper.</span>
@@ -217,6 +218,7 @@
 <span class="kw">use</span> <span class="ident">blake2b_simd::Params</span> <span class="kw">as</span> <span class="ident">Blake2bParams</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic</span>::{<span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>};
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::helpers::CurveRead</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::poly</span>::{
     <span class="ident">commitment::Params</span>, <span class="ident">Coeff</span>, <span class="ident">EvaluationDomain</span>, <span class="ident">ExtendedLagrangeCoeff</span>, <span class="ident">LagrangeCoeff</span>,
     <span class="ident">PinnedEvaluationDomain</span>, <span class="ident">Polynomial</span>,

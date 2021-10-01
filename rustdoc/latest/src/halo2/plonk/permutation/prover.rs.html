@@ -450,14 +450,18 @@
 <span id="435">435</span>
 <span id="436">436</span>
 <span id="437">437</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ff::Field</span>;
-<span class="kw">use</span> <span class="ident">group::Curve</span>;
+<span id="438">438</span>
+<span id="439">439</span>
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">group</span>::{
+    <span class="ident">ff</span>::{<span class="ident">BatchInvert</span>, <span class="ident">Field</span>},
+    <span class="ident">Curve</span>,
+};
 <span class="kw">use</span> <span class="ident">std::iter</span>::{<span class="self">self</span>, <span class="ident">ExactSizeIterator</span>};
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">circuit::Any</span>, <span class="ident">ChallengeBeta</span>, <span class="ident">ChallengeGamma</span>, <span class="ident">ChallengeX</span>};
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Argument</span>, <span class="ident">ProvingKey</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">arithmetic</span>::{<span class="ident">eval_polynomial</span>, <span class="ident">parallelize</span>, <span class="ident">BatchInvert</span>, <span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>},
+    <span class="ident">arithmetic</span>::{<span class="ident">eval_polynomial</span>, <span class="ident">parallelize</span>, <span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>},
     <span class="ident">plonk</span>::{<span class="self">self</span>, <span class="ident">Error</span>},
     <span class="ident">poly</span>::{
         <span class="ident">commitment</span>::{<span class="ident">Blind</span>, <span class="ident">Params</span>},

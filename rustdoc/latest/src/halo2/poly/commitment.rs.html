@@ -381,6 +381,7 @@
 <span id="366">366</span>
 <span id="367">367</span>
 <span id="368">368</span>
+<span id="369">369</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module contains an implementation of the polynomial commitment scheme</span>
 <span class="doccomment">//! described in the [Halo][halo] paper.</span>
 <span class="doccomment">//!</span>
@@ -390,6 +391,7 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic</span>::{
     <span class="ident">best_fft</span>, <span class="ident">best_multiexp</span>, <span class="ident">parallelize</span>, <span class="ident">CurveAffine</span>, <span class="ident">CurveExt</span>, <span class="ident">FieldExt</span>, <span class="ident">Group</span>,
 };
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::helpers::CurveRead</span>;
 
 <span class="kw">use</span> <span class="ident">ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeField</span>};
 <span class="kw">use</span> <span class="ident">group</span>::{<span class="ident">prime::PrimeCurveAffine</span>, <span class="ident">Curve</span>, <span class="ident">Group</span> <span class="kw">as</span> <span class="kw">_</span>};
