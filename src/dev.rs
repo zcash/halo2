@@ -12,12 +12,13 @@ use crate::{
     arithmetic::{FieldExt, Group},
     plonk::{
         permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Expression, Fixed, FloorPlanner, Instance, Selector,
+        Expression, Fixed, FloorPlanner, Instance, Selector, VirtualCell,
     },
     poly::Rotation,
 };
 
 pub mod metadata;
+mod util;
 
 pub mod cost;
 pub use cost::CircuitCost;
@@ -54,6 +55,8 @@ pub enum VerifyFailure {
         constraint: metadata::Constraint,
         /// The row on which this constraint is not satisfied.
         row: usize,
+        /// The values of the virtual cells used by this constraint.
+        cell_values: Vec<(metadata::VirtualCell, String)>,
     },
     /// A constraint was active on an unusable row, and is likely missing a selector.
     ConstraintPoisoned {
@@ -93,8 +96,16 @@ impl fmt::Display for VerifyFailure {
                     region, gate, column, offset
                 )
             }
-            Self::ConstraintNotSatisfied { constraint, row } => {
-                write!(f, "{} is not satisfied on row {}", constraint, row)
+            Self::ConstraintNotSatisfied {
+                constraint,
+                row,
+                cell_values,
+            } => {
+                writeln!(f, "{} is not satisfied on row {}", constraint, row)?;
+                for (name, value) in cell_values {
+                    writeln!(f, "- {} = {}", name, value)?;
+                }
+                Ok(())
             }
             Self::ConstraintPoisoned { constraint } => {
                 write!(
@@ -242,7 +253,7 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 ///     circuit::{Layouter, SimpleFloorPlanner},
 ///     dev::{MockProver, VerifyFailure},
 ///     pasta::Fp,
-///     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector},
+///     plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector},
 ///     poly::Rotation,
 /// };
 /// const K: u32 = 5;
@@ -321,7 +332,12 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 ///     prover.verify(),
 ///     Err(vec![VerifyFailure::ConstraintNotSatisfied {
 ///         constraint: ((0, "R1CS constraint").into(), 0, "buggy R1CS").into(),
-///         row: 0
+///         row: 0,
+///         cell_values: vec![
+///             (((Any::Advice, 0).into(), 0).into(), "0x2".to_string()),
+///             (((Any::Advice, 1).into(), 0).into(), "0x4".to_string()),
+///             (((Any::Advice, 2).into(), 0).into(), "0x8".to_string()),
+///         ],
 ///     }])
 /// );
 /// ```
@@ -697,6 +713,18 @@ impl<F: FieldExt> MockProver<F> {
                                     )
                                         .into(),
                                     row: (row - n) as usize,
+                                    cell_values: util::cell_values(
+                                        gate,
+                                        poly,
+                                        &load(n, row, &self.cs.fixed_queries, &self.fixed),
+                                        &load(n, row, &self.cs.advice_queries, &self.advice),
+                                        &load_instance(
+                                            n,
+                                            row,
+                                            &self.cs.instance_queries,
+                                            &self.instance,
+                                        ),
+                                    ),
                                 }),
                                 Value::Poison => Some(VerifyFailure::ConstraintPoisoned {
                                     constraint: (
