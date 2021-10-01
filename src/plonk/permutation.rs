@@ -1,6 +1,7 @@
 use super::circuit::{Any, Column};
 use crate::{
     arithmetic::CurveAffine,
+    helpers::CurveRead,
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
 };
 
@@ -80,7 +81,7 @@ pub(crate) struct VerifyingKey<C: CurveAffine> {
 impl<C: CurveAffine> VerifyingKey<C> {
     pub(crate) fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
         for commitment in &self.commitments {
-            commitment.write(writer)?;
+            writer.write_all(commitment.to_bytes().as_ref())?;
         }
 
         Ok(())

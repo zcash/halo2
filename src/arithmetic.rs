@@ -3,50 +3,15 @@
 
 use super::multicore;
 pub use ff::Field;
-use group::Group as _;
+use group::{
+    ff::{BatchInvert, PrimeField},
+    Group as _,
+};
 
 pub use pasta_curves::arithmetic::*;
 
-/// Extension trait for iterators over mutable field elements which allows those
-/// field elements to be inverted in a batch.
-pub trait BatchInvert<F: Field> {
-    /// Consume this iterator and invert each field element (when nonzero),
-    /// returning the inverse of all nonzero field elements. Zero elements
-    /// are left as zero.
-    fn batch_invert(self) -> F;
-}
-
-impl<'a, F, I> BatchInvert<F> for I
-where
-    F: FieldExt,
-    I: IntoIterator<Item = &'a mut F>,
-{
-    fn batch_invert(self) -> F {
-        let mut acc = F::one();
-        let iter = self.into_iter();
-        let mut tmp = Vec::with_capacity(iter.size_hint().0);
-        for p in iter {
-            let q = *p;
-            tmp.push((acc, p));
-            acc = F::conditional_select(&(acc * q), &acc, q.is_zero());
-        }
-        acc = acc.invert().unwrap();
-        let allinv = acc;
-
-        for (tmp, p) in tmp.into_iter().rev() {
-            let skip = p.is_zero();
-
-            let tmp = tmp * acc;
-            acc = F::conditional_select(&(acc * *p), &acc, skip);
-            *p = F::conditional_select(&tmp, p, skip);
-        }
-
-        allinv
-    }
-}
-
 fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut C::Curve) {
-    let coeffs: Vec<[u8; 32]> = coeffs.iter().map(|a| a.to_bytes()).collect();
+    let coeffs: Vec<_> = coeffs.iter().map(|a| a.to_repr()).collect();
 
     let c = if bases.len() < 4 {
         1
@@ -56,7 +21,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
         (f64::from(bases.len() as u32)).ln().ceil() as usize
     };
 
-    fn get_at(segment: usize, c: usize, bytes: &[u8; 32]) -> usize {
+    fn get_at<F: PrimeField>(segment: usize, c: usize, bytes: &F::Repr) -> usize {
         let skip_bits = segment * c;
         let skip_bytes = skip_bits / 8;
 
@@ -65,7 +30,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
         }
 
         let mut v = [0; 8];
-        for (v, o) in v.iter_mut().zip(bytes[skip_bytes..].iter()) {
+        for (v, o) in v.iter_mut().zip(bytes.as_ref()[skip_bytes..].iter()) {
             *v = *o;
         }
 
@@ -117,7 +82,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
         let mut buckets: Vec<Bucket<C>> = vec![Bucket::None; (1 << c) - 1];
 
         for (coeff, base) in coeffs.iter().zip(bases.iter()) {
-            let coeff = get_at(current_segment, c, coeff);
+            let coeff = get_at::<C::Scalar>(current_segment, c, coeff);
             if coeff != 0 {
                 buckets[coeff - 1].add_assign(base);
             }
@@ -138,7 +103,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
 /// Performs a small multi-exponentiation operation.
 /// Uses the double-and-add algorithm with doublings shared across points.
 pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
-    let coeffs: Vec<[u8; 32]> = coeffs.iter().map(|a| a.to_bytes()).collect();
+    let coeffs: Vec<_> = coeffs.iter().map(|a| a.to_repr()).collect();
     let mut acc = C::Curve::identity();
 
     // for byte idx
@@ -148,7 +113,7 @@ pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::C
             acc = acc.double();
             // for each coeff
             for coeff_idx in 0..coeffs.len() {
-                let byte = coeffs[coeff_idx][byte_idx];
+                let byte = coeffs[coeff_idx].as_ref()[byte_idx];
                 if ((byte >> bit_idx) & 1) != 0 {
                     acc += bases[coeff_idx];
                 }
@@ -236,7 +201,7 @@ fn serial_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
 
     let mut m = 1;
     for _ in 0..log_n {
-        let w_m = omega.pow(&[u64::from(n / (2 * m)), 0, 0, 0]);
+        let w_m = omega.pow_vartime(&[u64::from(n / (2 * m)), 0, 0, 0]);
 
         let mut k = 0;
         while k < n {
@@ -263,7 +228,7 @@ fn parallel_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32, log_threads
     let num_threads = 1 << log_threads;
     let log_new_n = log_n - log_threads;
     let mut tmp = vec![vec![G::group_zero(); 1 << log_new_n]; num_threads];
-    let new_omega = omega.pow(&[num_threads as u64, 0, 0, 0]);
+    let new_omega = omega.pow_vartime(&[num_threads as u64, 0, 0, 0]);
 
     multicore::scope(|scope| {
         let a = &*a;
@@ -271,8 +236,8 @@ fn parallel_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32, log_threads
         for (j, tmp) in tmp.iter_mut().enumerate() {
             scope.spawn(move |_| {
                 // Shuffle into a sub-FFT
-                let omega_j = omega.pow(&[j as u64, 0, 0, 0]);
-                let omega_step = omega.pow(&[(j as u64) << log_new_n, 0, 0, 0]);
+                let omega_j = omega.pow_vartime(&[j as u64, 0, 0, 0]);
+                let omega_step = omega.pow_vartime(&[(j as u64) << log_new_n, 0, 0, 0]);
 
                 let mut elt = G::Scalar::one();
 
