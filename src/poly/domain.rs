@@ -2,13 +2,14 @@
 //! domain that is of a suitable size for the application.
 
 use crate::{
-    arithmetic::{best_fft, parallelize, BatchInvert, FieldExt, Group},
+    arithmetic::{best_fft, parallelize, FieldExt, Group},
     plonk::Assigned,
 };
 
 use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation};
 
-use ff::{Field, PrimeField};
+use group::ff::{BatchInvert, Field, PrimeField};
+
 use std::marker::PhantomData;
 
 /// This structure contains precomputed constants and other details needed for
@@ -50,7 +51,7 @@ impl<G: Group> EvaluationDomain<G> {
             extended_k += 1;
         }
 
-        let mut extended_omega = G::Scalar::ROOT_OF_UNITY;
+        let mut extended_omega = G::Scalar::root_of_unity();
 
         // Get extended_omega, the 2^{extended_k}'th root of unity
         // The loop computes extended_omega = omega^{2 ^ (S - extended_k)}
@@ -105,8 +106,8 @@ impl<G: Group> EvaluationDomain<G> {
             // We invert in a batch, below.
         }
 
-        let mut ifft_divisor = G::Scalar::from_u64(1 << k); // Inversion computed later
-        let mut extended_ifft_divisor = G::Scalar::from_u64(1 << extended_k); // Inversion computed later
+        let mut ifft_divisor = G::Scalar::from(1 << k); // Inversion computed later
+        let mut extended_ifft_divisor = G::Scalar::from(1 << extended_k); // Inversion computed later
 
         // The barycentric weight of 1 over the evaluation domain
         // 1 / \prod_{i != 0} (1 - omega^i)

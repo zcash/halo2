@@ -21,6 +21,8 @@
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 #![deny(unsafe_code)]
+// Remove this once we update pasta_curves
+#![allow(unused_imports)]
 
 pub mod arithmetic;
 pub mod circuit;
@@ -31,3 +33,4 @@ pub mod poly;
 pub mod transcript;
 
 pub mod dev;
+mod helpers;

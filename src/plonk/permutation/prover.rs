@@ -1,11 +1,13 @@
-use ff::Field;
-use group::Curve;
+use group::{
+    ff::{BatchInvert, Field},
+    Curve,
+};
 use std::iter::{self, ExactSizeIterator};
 
 use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
 use super::{Argument, ProvingKey};
 use crate::{
-    arithmetic::{eval_polynomial, parallelize, BatchInvert, CurveAffine, FieldExt},
+    arithmetic::{eval_polynomial, parallelize, CurveAffine, FieldExt},
     plonk::{self, Error},
     poly::{
         commitment::{Blind, Params},

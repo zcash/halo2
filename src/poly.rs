@@ -3,10 +3,9 @@
 //! the committed polynomials at arbitrary points.
 
 use crate::arithmetic::parallelize;
-use crate::arithmetic::BatchInvert;
 use crate::plonk::Assigned;
 
-use ff::Field;
+use group::ff::{BatchInvert, Field};
 use pasta_curves::arithmetic::FieldExt;
 use std::fmt::Debug;
 use std::marker::PhantomData;

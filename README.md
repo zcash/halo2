@@ -1,6 +1,6 @@
 # halo2 [![Crates.io](https://img.shields.io/crates/v/halo2.svg)](https://crates.io/crates/halo2) #
 
-**IMPORTANT**: This library is being actively developed and should not be used in production software.
+**IMPORTANT**: This library is in beta, and should not be used in production software.
 
 ## [Documentation](https://docs.rs/halo2)
 

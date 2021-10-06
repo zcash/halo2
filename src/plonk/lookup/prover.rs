@@ -4,7 +4,7 @@ use super::super::{
 };
 use super::Argument;
 use crate::{
-    arithmetic::{eval_polynomial, parallelize, BatchInvert, CurveAffine, FieldExt},
+    arithmetic::{eval_polynomial, parallelize, CurveAffine, FieldExt},
     poly::{
         commitment::{Blind, Params},
         multiopen::ProverQuery,
@@ -12,8 +12,10 @@ use crate::{
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
-use ff::Field;
-use group::Curve;
+use group::{
+    ff::{BatchInvert, Field},
+    Curve,
+};
 use std::{
     collections::BTreeMap,
     iter,
