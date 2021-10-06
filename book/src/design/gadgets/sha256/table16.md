@@ -488,7 +488,7 @@ Output: $\Sigma_1(E) = R^{even} = R_0^{even} + 2^{16} R_1^{even}$
 
 ### σ_0 gate
 #### v1
-v1 of the $\sigma_0$ gate takes in a word that's split into $(3, 4, 11, 14)$-bit chunks (already constrained by message scheduling). We refer to these chunks respectively as $(a(3), b(4), c(11), d(14)).$  $b(4$ is further split into two 2-bit chunks $b(4)^{lo},b(4)^{hi}.$ We witness the spread versions of the small chunks. We already have $\texttt{spread}(c(11))$ and $\texttt{spread}(d(14))$ from the message scheduling.
+v1 of the $\sigma_0$ gate takes in a word that's split into $(3, 4, 11, 14)$-bit chunks (already constrained by message scheduling). We refer to these chunks respectively as $(a(3), b(4), c(11), d(14)).$  $b(4)$ is further split into two 2-bit chunks $b(4)^{lo},b(4)^{hi}.$ We witness the spread versions of the small chunks. We already have $\texttt{spread}(c(11))$ and $\texttt{spread}(d(14))$ from the message scheduling.
 
 $(X ⋙ 7) \oplus (X ⋙ 18) \oplus (X ≫ 3)$ is equivalent to
 $(X ⋙ 7) \oplus (X ⋘ 14) \oplus (X ≫ 3)$.
