@@ -158,7 +158,7 @@ where $x_0 \neq x_1,$ to obtain $R = P + Q = (x_2, y_2).$ The line $\overline{PQ
 $$\lambda = frac{y_1 - y_0}{x_1 - x_0} \implies y - y_0 = \lambda \cdot (x - x_0).$$
 
 Using the expression for $\overline{PQ}$, we compute $y$-coordinate $-y_2$ of $-R$ as:
-$$-y_2 - y_0 = \lambda \cdot (x_2 - x_0) \implies \boxed{y_2 = (x_0 - x_2) - y_0}.$$
+$$-y_2 - y_0 = \lambda \cdot (x_2 - x_0) \implies \boxed{y_2 = \lambda \cdot (x_0 - x_2) - y_0}.$$
 
 Plugging the expression for $\overline{PQ}$ into the curve equation $y^2 = x^3 + b$ yields
 $$
