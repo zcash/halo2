@@ -1,6 +1,6 @@
 //! Traits and structs for implementing circuit components.
 
-use std::{fmt, marker::PhantomData};
+use std::{convert::TryInto, fmt, marker::PhantomData};
 
 use ff::Field;
 
@@ -90,6 +90,59 @@ pub struct Cell {
     row_offset: usize,
     /// The column of this cell.
     column: Column<Any>,
+}
+
+/// An assigned cell.
+#[derive(Debug)]
+pub struct AssignedCell<V: Clone + Into<Assigned<F>>, F: Field> {
+    value: Option<V>,
+    cell: Cell,
+    _marker: PhantomData<F>,
+}
+
+impl<V: Clone + Into<Assigned<F>>, F: Field> AssignedCell<V, F> {
+    /// Returns the value of the [`AssignedCell`].
+    pub fn value(&self) -> Option<V> {
+        self.value.clone()
+    }
+
+    /// Returns the field element value of the [`AssignedCell`].
+    pub fn value_field(&self) -> Option<Assigned<F>> {
+        self.value().map(|v| v.into())
+    }
+
+    /// Returns the cell.
+    pub fn cell(&self) -> Cell {
+        self.cell
+    }
+
+    /// Copies the value to a given advice cell and constrains them to be equal.
+    ///
+    /// Returns an error if either this cell or the given cell are in columns
+    /// where equality has not been enabled.
+    pub fn copy_advice<A, AR>(
+        &self,
+        annotation: A,
+        region: &mut Region<'_, F>,
+        column: Column<Advice>,
+        offset: usize,
+    ) -> Result<Self, Error>
+    where
+        A: Fn() -> AR,
+        AR: Into<String>,
+    {
+        let value = self.value();
+        let cell = region.assign_advice(annotation, column, offset, || {
+            value.clone().ok_or(Error::Synthesis)
+        })?;
+        region.constrain_equal(cell, self.cell())?;
+
+        Ok(AssignedCell {
+            value,
+            cell,
+            _marker: PhantomData,
+        })
+    }
 }
 
 /// A region of the circuit in which a [`Chip`] can assign cells.
