@@ -232,7 +232,7 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">Guard</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Lets caller supply the challenges and obtain an MSM with updated</span>
     <span class="doccomment">/// scalars and points.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">use_challenges</span>(<span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">use_challenges</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">compute_s</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">challenges</span>, <span class="self">self</span>.<span class="ident">neg_a</span>);
         <span class="self">self</span>.<span class="ident">msm</span>.<span class="ident">add_to_g_scalars</span>(<span class="kw-2">&amp;</span><span class="ident">s</span>);
         <span class="self">self</span>.<span class="ident">msm</span>.<span class="ident">add_to_h_scalar</span>(<span class="self">self</span>.<span class="ident">neg_a</span>);
@@ -242,7 +242,7 @@
 
     <span class="doccomment">/// Lets caller supply the purported G point and simply appends</span>
     <span class="doccomment">/// [-a] G to return an updated MSM.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">use_g</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">g</span>: <span class="ident">C</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Accumulator</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">use_g</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">g</span>: <span class="ident">C</span>) -&gt; (<span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Accumulator</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>) {
         <span class="self">self</span>.<span class="ident">msm</span>.<span class="ident">append_term</span>(<span class="self">self</span>.<span class="ident">neg_a</span>, <span class="ident">g</span>);
 
         <span class="kw">let</span> <span class="ident">accumulator</span> <span class="op">=</span> <span class="ident">Accumulator</span> {
@@ -254,7 +254,7 @@
     }
 
     <span class="doccomment">/// Computes G + H, where G = ⟨s, params.g⟩ and H is used for blinding</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compute_g</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">C</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compute_g</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">C</span> {
         <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">compute_s</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">challenges</span>, <span class="ident">C::Scalar::one</span>());
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">best_multiexp</span>(<span class="kw-2">&amp;</span><span class="ident">s</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">msm</span>.<span class="ident">params</span>.<span class="ident">g</span>);
@@ -272,7 +272,7 @@
     <span class="ident">transcript</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>,
     <span class="ident">x</span>: <span class="ident">C::Scalar</span>,
     <span class="ident">v</span>: <span class="ident">C::Scalar</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Guard</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Guard</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">k</span> <span class="kw">as</span> <span class="ident">usize</span>;
 
     <span class="comment">//     P - [v] G_0 + S * iota</span>
@@ -351,7 +351,7 @@
 }
 
 <span class="doccomment">/// Computes $\prod\limits_{i=0}^{k-1} (1 + u_i x^{2^i})$.</span>
-<span class="kw">fn</span> <span class="ident">compute_b</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="ident">x</span>: <span class="ident">F</span>, <span class="ident">challenges</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">F</span> {
+<span class="kw">fn</span> <span class="ident">compute_b</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="ident">x</span>: <span class="ident">F</span>, <span class="ident">challenges</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>]) -&gt; <span class="ident">F</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">F::one</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur</span> <span class="op">=</span> <span class="ident">x</span>;
     <span class="kw">for</span> <span class="ident">challenge</span> <span class="kw">in</span> <span class="ident">challenges</span>.<span class="ident">iter</span>().<span class="ident">rev</span>() {
@@ -362,7 +362,7 @@
 }
 
 <span class="doccomment">/// Computes the coefficients of $g(X) = \prod\limits_{i=0}^{k-1} (1 + u_i X^{2^i})$.</span>
-<span class="kw">fn</span> <span class="ident">compute_s</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="ident">challenges</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>], <span class="ident">init</span>: <span class="ident">F</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">compute_s</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="ident">challenges</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>], <span class="ident">init</span>: <span class="ident">F</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
     <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">challenges</span>.<span class="ident">is_empty</span>());
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">F::zero</span>(); <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">challenges</span>.<span class="ident">len</span>()];
     <span class="ident">v</span>[<span class="number">0</span>] <span class="op">=</span> <span class="ident">init</span>;

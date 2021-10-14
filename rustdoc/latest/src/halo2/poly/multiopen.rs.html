@@ -596,7 +596,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Create a new verifier query based on a commitment</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_commitment</span>(<span class="ident">commitment</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="ident">C</span>, <span class="ident">point</span>: <span class="ident">C::Scalar</span>, <span class="ident">eval</span>: <span class="ident">C::Scalar</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_commitment</span>(<span class="ident">commitment</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="ident">C</span>, <span class="ident">point</span>: <span class="ident">C::Scalar</span>, <span class="ident">eval</span>: <span class="ident">C::Scalar</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">VerifierQuery</span> {
             <span class="ident">point</span>,
             <span class="ident">eval</span>,
@@ -609,7 +609,7 @@
         <span class="ident">msm</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="ident">commitment::MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span>,
         <span class="ident">point</span>: <span class="ident">C::Scalar</span>,
         <span class="ident">eval</span>: <span class="ident">C::Scalar</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    ) -&gt; <span class="self">Self</span> {
         <span class="ident">VerifierQuery</span> {
             <span class="ident">point</span>,
             <span class="ident">eval</span>,
@@ -625,13 +625,13 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">PartialEq</span> <span class="kw">for</span> <span class="ident">CommitmentReference</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident">bool</span> {
         <span class="kw">match</span> (<span class="self">self</span>, <span class="ident">other</span>) {
-            (<span class="kw-2">&amp;</span><span class="ident">CommitmentReference::Commitment</span>(<span class="ident">a</span>), <span class="kw-2">&amp;</span><span class="ident">CommitmentReference::Commitment</span>(<span class="ident">b</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            (<span class="kw-2">&amp;</span><span class="ident">CommitmentReference::Commitment</span>(<span class="ident">a</span>), <span class="kw-2">&amp;</span><span class="ident">CommitmentReference::Commitment</span>(<span class="ident">b</span>)) =&gt; {
                 <span class="ident">std::ptr::eq</span>(<span class="ident">a</span>, <span class="ident">b</span>)
             }
-            (<span class="kw-2">&amp;</span><span class="ident">CommitmentReference::MSM</span>(<span class="ident">a</span>), <span class="kw-2">&amp;</span><span class="ident">CommitmentReference::MSM</span>(<span class="ident">b</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">std::ptr::eq</span>(<span class="ident">a</span>, <span class="ident">b</span>),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
+            (<span class="kw-2">&amp;</span><span class="ident">CommitmentReference::MSM</span>(<span class="ident">a</span>), <span class="kw-2">&amp;</span><span class="ident">CommitmentReference::MSM</span>(<span class="ident">b</span>)) =&gt; <span class="ident">std::ptr::eq</span>(<span class="ident">a</span>, <span class="ident">b</span>),
+            <span class="kw">_</span> =&gt; <span class="bool-val">false</span>,
         }
     }
 }
@@ -644,7 +644,7 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span>: <span class="ident">PartialEq</span><span class="op">&gt;</span> <span class="ident">CommitmentData</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">commitment</span>: <span class="ident">T</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">commitment</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">CommitmentData</span> {
             <span class="ident">commitment</span>,
             <span class="ident">set_index</span>: <span class="number">0</span>,
@@ -658,9 +658,9 @@
     <span class="kw">type</span> <span class="ident">Commitment</span>: <span class="ident">PartialEq</span> <span class="op">+</span> <span class="ident">Copy</span>;
     <span class="kw">type</span> <span class="ident">Eval</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Default</span>;
 
-    <span class="kw">fn</span> <span class="ident">get_point</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">F</span>;
-    <span class="kw">fn</span> <span class="ident">get_eval</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::Eval</span>;
-    <span class="kw">fn</span> <span class="ident">get_commitment</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::Commitment</span>;
+    <span class="kw">fn</span> <span class="ident">get_point</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">F</span>;
+    <span class="kw">fn</span> <span class="ident">get_eval</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Eval</span>;
+    <span class="kw">fn</span> <span class="ident">get_commitment</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Commitment</span>;
 }
 
 <span class="kw">type</span> <span class="ident">IntermediateSets</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">Q</span><span class="op">&gt;</span> <span class="op">=</span> (
@@ -668,7 +668,7 @@
     <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 );
 
-<span class="kw">fn</span> <span class="ident">construct_intermediate_sets</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">I</span>, <span class="ident">Q</span>: <span class="ident">Query</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">queries</span>: <span class="ident">I</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">IntermediateSets</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">Q</span><span class="op">&gt;</span>
+<span class="kw">fn</span> <span class="ident">construct_intermediate_sets</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">I</span>, <span class="ident">Q</span>: <span class="ident">Query</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">queries</span>: <span class="ident">I</span>) -&gt; <span class="ident">IntermediateSets</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">Q</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">Q</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>,
 {
@@ -690,7 +690,7 @@
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">pos</span>) <span class="op">=</span> <span class="ident">commitment_map</span>
             .<span class="ident">iter</span>()
-            .<span class="ident">position</span>(<span class="op">|</span><span class="ident">comm</span><span class="op">|</span> <span class="ident">comm</span>.<span class="ident">commitment</span> <span class="op">=</span><span class="op">=</span> <span class="ident">query</span>.<span class="ident">get_commitment</span>())
+            .<span class="ident">position</span>(<span class="op">|</span><span class="ident">comm</span><span class="op">|</span> <span class="ident">comm</span>.<span class="ident">commitment</span> <span class="op">==</span> <span class="ident">query</span>.<span class="ident">get_commitment</span>())
         {
             <span class="ident">commitment_map</span>[<span class="ident">pos</span>].<span class="ident">point_indices</span>.<span class="ident">push</span>(<span class="kw-2">*</span><span class="ident">point_idx</span>);
         } <span class="kw">else</span> {
@@ -739,7 +739,7 @@
         <span class="comment">// The point_index_set at which the commitment was queried</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">point_index_set</span> <span class="op">=</span> <span class="ident">BTreeSet::new</span>();
         <span class="kw">for</span> (<span class="ident">commitment</span>, <span class="ident">point_idx_set</span>) <span class="kw">in</span> <span class="ident">commitment_set_map</span>.<span class="ident">iter</span>() {
-            <span class="kw">if</span> <span class="ident">query</span>.<span class="ident">get_commitment</span>() <span class="op">=</span><span class="op">=</span> <span class="kw-2">*</span><span class="ident">commitment</span> {
+            <span class="kw">if</span> <span class="ident">query</span>.<span class="ident">get_commitment</span>() <span class="op">==</span> <span class="kw-2">*</span><span class="ident">commitment</span> {
                 <span class="ident">point_index_set</span> <span class="op">=</span> <span class="ident">point_idx_set</span>.<span class="ident">clone</span>();
             }
         }
@@ -748,7 +748,7 @@
         <span class="comment">// The set_index of the point_index_set</span>
         <span class="kw">let</span> <span class="ident">set_index</span> <span class="op">=</span> <span class="ident">point_idx_sets</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">point_index_set</span>).<span class="ident">unwrap</span>();
         <span class="kw">for</span> <span class="ident">commitment_data</span> <span class="kw">in</span> <span class="ident">commitment_map</span>.<span class="ident">iter_mut</span>() {
-            <span class="kw">if</span> <span class="ident">query</span>.<span class="ident">get_commitment</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">commitment_data</span>.<span class="ident">commitment</span> {
+            <span class="kw">if</span> <span class="ident">query</span>.<span class="ident">get_commitment</span>() <span class="op">==</span> <span class="ident">commitment_data</span>.<span class="ident">commitment</span> {
                 <span class="ident">commitment_data</span>.<span class="ident">set_index</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">set_index</span>;
             }
         }
@@ -757,11 +757,11 @@
         <span class="comment">// The offset of the point_index in the point_index_set</span>
         <span class="kw">let</span> <span class="ident">point_index_in_set</span> <span class="op">=</span> <span class="ident">point_index_set</span>
             .<span class="ident">iter</span>()
-            .<span class="ident">position</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="ident">i</span> <span class="op">=</span><span class="op">=</span> <span class="ident">point_index</span>)
+            .<span class="ident">position</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="ident">i</span> <span class="op">==</span> <span class="ident">point_index</span>)
             .<span class="ident">unwrap</span>();
 
         <span class="kw">for</span> <span class="ident">commitment_data</span> <span class="kw">in</span> <span class="ident">commitment_map</span>.<span class="ident">iter_mut</span>() {
-            <span class="kw">if</span> <span class="ident">query</span>.<span class="ident">get_commitment</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">commitment_data</span>.<span class="ident">commitment</span> {
+            <span class="kw">if</span> <span class="ident">query</span>.<span class="ident">get_commitment</span>() <span class="op">==</span> <span class="ident">commitment_data</span>.<span class="ident">commitment</span> {
                 <span class="comment">// Insert the eval using the ordering of the point_index_set</span>
                 <span class="ident">commitment_data</span>.<span class="ident">evals</span>[<span class="ident">point_index_in_set</span>] <span class="op">=</span> <span class="ident">query</span>.<span class="ident">get_eval</span>();
             }
@@ -906,13 +906,13 @@
         <span class="kw">type</span> <span class="ident">Commitment</span> <span class="op">=</span> <span class="ident">usize</span>;
         <span class="kw">type</span> <span class="ident">Eval</span> <span class="op">=</span> <span class="ident">F</span>;
 
-        <span class="kw">fn</span> <span class="ident">get_point</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">F</span> {
+        <span class="kw">fn</span> <span class="ident">get_point</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">F</span> {
             <span class="self">self</span>.<span class="ident">point</span>.<span class="ident">clone</span>()
         }
-        <span class="kw">fn</span> <span class="ident">get_eval</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::Eval</span> {
+        <span class="kw">fn</span> <span class="ident">get_eval</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Eval</span> {
             <span class="self">self</span>.<span class="ident">eval</span>.<span class="ident">clone</span>()
         }
-        <span class="kw">fn</span> <span class="ident">get_commitment</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::Commitment</span> {
+        <span class="kw">fn</span> <span class="ident">get_commitment</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Commitment</span> {
             <span class="self">self</span>.<span class="ident">commitment</span>
         }
     }
@@ -1000,29 +1000,29 @@
 
         <span class="kw">for</span> (<span class="ident">i</span>, <span class="kw-2">mut</span> <span class="ident">point_set</span>) <span class="kw">in</span> <span class="ident">point_sets</span>.<span class="ident">into_iter</span>().<span class="ident">enumerate</span>() {
             <span class="ident">point_set</span>.<span class="ident">sort</span>();
-            <span class="kw">if</span> <span class="ident">point_set</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">1</span> {
+            <span class="kw">if</span> <span class="ident">point_set</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">1</span> {
                 <span class="macro">assert_eq!</span>(<span class="ident">point_set</span>[<span class="number">0</span>], <span class="ident">points</span>[<span class="number">4</span>]);
                 <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">a</span>);
                 <span class="ident">a</span> <span class="op">=</span> <span class="bool-val">true</span>;
                 <span class="ident">a_set</span> <span class="op">=</span> <span class="ident">i</span>;
-            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">point_set</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">2</span> {
+            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">point_set</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">2</span> {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v0</span> <span class="op">=</span> [<span class="ident">points</span>[<span class="number">0</span>], <span class="ident">points</span>[<span class="number">1</span>]];
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v1</span> <span class="op">=</span> [<span class="ident">points</span>[<span class="number">0</span>], <span class="ident">points</span>[<span class="number">3</span>]];
                 <span class="ident">v0</span>.<span class="ident">sort</span>();
                 <span class="ident">v1</span>.<span class="ident">sort</span>();
 
-                <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">point_set</span>[..] <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">v0</span>[..] {
+                <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">point_set</span>[..] <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">v0</span>[..] {
                     <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">b</span>);
                     <span class="ident">b</span> <span class="op">=</span> <span class="bool-val">true</span>;
                     <span class="ident">b_set</span> <span class="op">=</span> <span class="ident">i</span>;
-                } <span class="kw">else</span> <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">point_set</span>[..] <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">v1</span>[..] {
+                } <span class="kw">else</span> <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">point_set</span>[..] <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">v1</span>[..] {
                     <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">c</span>);
                     <span class="ident">c</span> <span class="op">=</span> <span class="bool-val">true</span>;
                     <span class="ident">c_set</span> <span class="op">=</span> <span class="ident">i</span>;
                 } <span class="kw">else</span> {
                     <span class="macro">panic!</span>(<span class="string">&quot;unexpected&quot;</span>);
                 }
-            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">point_set</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">3</span> {
+            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">point_set</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">3</span> {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> [<span class="ident">points</span>[<span class="number">0</span>], <span class="ident">points</span>[<span class="number">1</span>], <span class="ident">points</span>[<span class="number">2</span>]];
                 <span class="ident">v</span>.<span class="ident">sort</span>();
                 <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span><span class="ident">point_set</span>[..], <span class="kw-2">&amp;</span><span class="ident">v</span>[..]);
@@ -1040,12 +1040,12 @@
             <span class="macro">assert_eq!</span>(
                 <span class="ident">commitment_data</span>.<span class="ident">set_index</span>,
                 <span class="kw">match</span> <span class="ident">commitment_data</span>.<span class="ident">commitment</span> {
-                    <span class="number">0</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">b_set</span>,
-                    <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">b_set</span>,
-                    <span class="number">2</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">d_set</span>,
-                    <span class="number">3</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">c_set</span>,
-                    <span class="number">4</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">a_set</span>,
-                    <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable!</span>(),
+                    <span class="number">0</span> =&gt; <span class="ident">b_set</span>,
+                    <span class="number">1</span> =&gt; <span class="ident">b_set</span>,
+                    <span class="number">2</span> =&gt; <span class="ident">d_set</span>,
+                    <span class="number">3</span> =&gt; <span class="ident">c_set</span>,
+                    <span class="number">4</span> =&gt; <span class="ident">a_set</span>,
+                    <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(),
                 }
             );
         }

@@ -313,7 +313,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">vk</span>: <span class="kw-2">&amp;</span><span class="ident">plonk::VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
         <span class="ident">transcript</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">chunk_len</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">degree</span>() <span class="op">-</span> <span class="number">2</span>;
 
         <span class="kw">let</span> <span class="ident">permutation_product_commitments</span> <span class="op">=</span> <span class="self">self</span>
@@ -332,7 +332,7 @@
     <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">evaluate</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">T</span>: <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">transcript</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CommonEvaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CommonEvaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">permutation_evals</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">commitments</span>
             .<span class="ident">iter</span>()
@@ -347,7 +347,7 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">evaluate</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">T</span>: <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>(
         <span class="self">self</span>,
         <span class="ident">transcript</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Evaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Evaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sets</span> <span class="op">=</span> <span class="macro">vec!</span>[];
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">iter</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">permutation_product_commitments</span>.<span class="ident">into_iter</span>();
@@ -396,7 +396,7 @@
         <span class="ident">beta</span>: <span class="ident">ChallengeBeta</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
         <span class="ident">gamma</span>: <span class="ident">ChallengeGamma</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
         <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">C::Scalar</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span> {
+    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">C::Scalar</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span> {
         <span class="kw">let</span> <span class="ident">chunk_len</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">degree</span>() <span class="op">-</span> <span class="number">2</span>;
         <span class="ident">iter::empty</span>()
             <span class="comment">// Enforce only for the first set.</span>
@@ -443,13 +443,13 @@
                         <span class="kw">for</span> (<span class="ident">eval</span>, <span class="ident">permutation_eval</span>) <span class="kw">in</span> <span class="ident">columns</span>
                             .<span class="ident">iter</span>()
                             .<span class="ident">map</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">column</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">column</span>.<span class="ident">column_type</span>() {
-                                <span class="ident">Any::Advice</span> <span class="op">=</span><span class="op">&gt;</span> {
+                                <span class="ident">Any::Advice</span> =&gt; {
                                     <span class="ident">advice_evals</span>[<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
                                 }
-                                <span class="ident">Any::Fixed</span> <span class="op">=</span><span class="op">&gt;</span> {
+                                <span class="ident">Any::Fixed</span> =&gt; {
                                     <span class="ident">fixed_evals</span>[<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
                                 }
-                                <span class="ident">Any::Instance</span> <span class="op">=</span><span class="op">&gt;</span> {
+                                <span class="ident">Any::Instance</span> =&gt; {
                                     <span class="ident">instance_evals</span>
                                         [<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
                                 }
@@ -463,13 +463,13 @@
                         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">current_delta</span> <span class="op">=</span> (<span class="kw-2">*</span><span class="ident">beta</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">x</span>)
                             <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="ident">C::Scalar::DELTA</span>.<span class="ident">pow_vartime</span>(<span class="kw-2">&amp;</span>[(<span class="ident">chunk_index</span> <span class="op">*</span> <span class="ident">chunk_len</span>) <span class="kw">as</span> <span class="ident">u64</span>]));
                         <span class="kw">for</span> <span class="ident">eval</span> <span class="kw">in</span> <span class="ident">columns</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">column</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">column</span>.<span class="ident">column_type</span>() {
-                            <span class="ident">Any::Advice</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="ident">Any::Advice</span> =&gt; {
                                 <span class="ident">advice_evals</span>[<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
                             }
-                            <span class="ident">Any::Fixed</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="ident">Any::Fixed</span> =&gt; {
                                 <span class="ident">fixed_evals</span>[<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
                             }
-                            <span class="ident">Any::Instance</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="ident">Any::Instance</span> =&gt; {
                                 <span class="ident">instance_evals</span>[<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
                             }
                         }) {
@@ -486,7 +486,7 @@
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="self">self</span>,
         <span class="ident">vk</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="ident">plonk::VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
         <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> {
+    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> {
         <span class="kw">let</span> <span class="ident">blinding_factors</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">blinding_factors</span>();
         <span class="kw">let</span> <span class="ident">x_next</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">rotate_omega</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">Rotation::next</span>());
         <span class="kw">let</span> <span class="ident">x_last</span> <span class="op">=</span> <span class="ident">vk</span>
@@ -525,7 +525,7 @@
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="self">self</span>,
         <span class="ident">vkey</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="ident">VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
         <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> {
+    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> {
         <span class="comment">// Open permutation commitments for each permutation argument at x</span>
         <span class="ident">vkey</span>.<span class="ident">commitments</span>
             .<span class="ident">iter</span>()

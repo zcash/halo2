@@ -1030,34 +1030,34 @@
 }
 
 <span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">VerifyFailure</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt::Result</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident"><span class="self">Self</span>::Cell</span> {
                 <span class="ident">gate</span>,
                 <span class="ident">region</span>,
                 <span class="ident">column</span>,
                 <span class="ident">offset</span>,
-            } <span class="op">=</span><span class="op">&gt;</span> {
+            } =&gt; {
                 <span class="macro">write!</span>(
                     <span class="ident">f</span>,
                     <span class="string">&quot;{} uses {}, which requires cell in column {:?} at offset {} to be assigned.&quot;</span>,
                     <span class="ident">region</span>, <span class="ident">gate</span>, <span class="ident">column</span>, <span class="ident">offset</span>
                 )
             }
-            <span class="ident"><span class="self">Self</span>::ConstraintNotSatisfied</span> { <span class="ident">constraint</span>, <span class="ident">row</span> } <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident"><span class="self">Self</span>::ConstraintNotSatisfied</span> { <span class="ident">constraint</span>, <span class="ident">row</span> } =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{} is not satisfied on row {}&quot;</span>, <span class="ident">constraint</span>, <span class="ident">row</span>)
             }
-            <span class="ident"><span class="self">Self</span>::ConstraintPoisoned</span> { <span class="ident">constraint</span> } <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident"><span class="self">Self</span>::ConstraintPoisoned</span> { <span class="ident">constraint</span> } =&gt; {
                 <span class="macro">write!</span>(
                     <span class="ident">f</span>,
                     <span class="string">&quot;{} is active on an unusable row - missing selector?&quot;</span>,
                     <span class="ident">constraint</span>
                 )
             }
-            <span class="ident"><span class="self">Self</span>::Lookup</span> { <span class="ident">lookup_index</span>, <span class="ident">row</span> } <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident"><span class="self">Self</span>::Lookup</span> { <span class="ident">lookup_index</span>, <span class="ident">row</span> } =&gt; {
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Lookup {} is not satisfied on row {}&quot;</span>, <span class="ident">lookup_index</span>, <span class="ident">row</span>)
             }
-            <span class="ident"><span class="self">Self</span>::Permutation</span> { <span class="ident">column</span>, <span class="ident">row</span> } <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident"><span class="self">Self</span>::Permutation</span> { <span class="ident">column</span>, <span class="ident">row</span> } =&gt; {
                 <span class="macro">write!</span>(
                     <span class="ident">f</span>,
                     <span class="string">&quot;Equality constraint not satisfied by cell ({:?}, {})&quot;</span>,
@@ -1113,12 +1113,12 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Group</span> <span class="op">+</span> <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">CellValue</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">CellValue</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">CellValue</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">match</span> <span class="ident">value</span> {
             <span class="comment">// Cells that haven&#39;t been explicitly assigned to, default to zero.</span>
-            <span class="ident">CellValue::Unassigned</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Real</span>(<span class="ident">F::zero</span>()),
-            <span class="ident">CellValue::Assigned</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Real</span>(<span class="ident">v</span>),
-            <span class="ident">CellValue::Poison</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Poison</span>,
+            <span class="ident">CellValue::Unassigned</span> =&gt; <span class="ident">Value::Real</span>(<span class="ident">F::zero</span>()),
+            <span class="ident">CellValue::Assigned</span>(<span class="ident">v</span>) =&gt; <span class="ident">Value::Real</span>(<span class="ident">v</span>),
+            <span class="ident">CellValue::Poison</span>(<span class="kw">_</span>) =&gt; <span class="ident">Value::Poison</span>,
         }
     }
 }
@@ -1126,10 +1126,10 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Group</span> <span class="op">+</span> <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Neg</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span>;
 
-    <span class="kw">fn</span> <span class="ident">neg</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::Output</span> {
+    <span class="kw">fn</span> <span class="ident">neg</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Value::Real</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Real</span>(<span class="op">-</span><span class="ident">a</span>),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Poison</span>,
+            <span class="ident">Value::Real</span>(<span class="ident">a</span>) =&gt; <span class="ident">Value::Real</span>(<span class="op">-</span><span class="ident">a</span>),
+            <span class="kw">_</span> =&gt; <span class="ident">Value::Poison</span>,
         }
     }
 }
@@ -1137,10 +1137,10 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Group</span> <span class="op">+</span> <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Add</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span>;
 
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::Output</span> {
+    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="self">Self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
         <span class="kw">match</span> (<span class="self">self</span>, <span class="ident">rhs</span>) {
-            (<span class="ident">Value::Real</span>(<span class="ident">a</span>), <span class="ident">Value::Real</span>(<span class="ident">b</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Real</span>(<span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Poison</span>,
+            (<span class="ident">Value::Real</span>(<span class="ident">a</span>), <span class="ident">Value::Real</span>(<span class="ident">b</span>)) =&gt; <span class="ident">Value::Real</span>(<span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>),
+            <span class="kw">_</span> =&gt; <span class="ident">Value::Poison</span>,
         }
     }
 }
@@ -1148,17 +1148,17 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Group</span> <span class="op">+</span> <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Mul</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span>;
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="self">Self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::Output</span> {
+    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="self">Self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
         <span class="kw">match</span> (<span class="self">self</span>, <span class="ident">rhs</span>) {
-            (<span class="ident">Value::Real</span>(<span class="ident">a</span>), <span class="ident">Value::Real</span>(<span class="ident">b</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Real</span>(<span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>),
+            (<span class="ident">Value::Real</span>(<span class="ident">a</span>), <span class="ident">Value::Real</span>(<span class="ident">b</span>)) =&gt; <span class="ident">Value::Real</span>(<span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>),
             <span class="comment">// If poison is multiplied by zero, then we treat the poison as unconstrained</span>
             <span class="comment">// and we don&#39;t propagate it.</span>
             (<span class="ident">Value::Real</span>(<span class="ident">x</span>), <span class="ident">Value::Poison</span>) <span class="op">|</span> (<span class="ident">Value::Poison</span>, <span class="ident">Value::Real</span>(<span class="ident">x</span>))
-                <span class="kw">if</span> <span class="ident">x</span>.<span class="ident">is_zero_vartime</span>() <span class="op">=</span><span class="op">&gt;</span>
+                <span class="kw">if</span> <span class="ident">x</span>.<span class="ident">is_zero_vartime</span>() =&gt;
             {
                 <span class="ident">Value::Real</span>(<span class="ident">F::zero</span>())
             }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Poison</span>,
+            <span class="kw">_</span> =&gt; <span class="ident">Value::Poison</span>,
         }
     }
 }
@@ -1166,13 +1166,13 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Group</span> <span class="op">+</span> <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span>;
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::Output</span> {
+    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">Value::Real</span>(<span class="ident">lhs</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Real</span>(<span class="ident">lhs</span> <span class="op">*</span> <span class="ident">rhs</span>),
+            <span class="ident">Value::Real</span>(<span class="ident">lhs</span>) =&gt; <span class="ident">Value::Real</span>(<span class="ident">lhs</span> <span class="op">*</span> <span class="ident">rhs</span>),
             <span class="comment">// If poison is multiplied by zero, then we treat the poison as unconstrained</span>
             <span class="comment">// and we don&#39;t propagate it.</span>
-            <span class="ident">Value::Poison</span> <span class="kw">if</span> <span class="ident">rhs</span>.<span class="ident">is_zero_vartime</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Real</span>(<span class="ident">F::zero</span>()),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Value::Poison</span>,
+            <span class="ident">Value::Poison</span> <span class="kw">if</span> <span class="ident">rhs</span>.<span class="ident">is_zero_vartime</span>() =&gt; <span class="ident">Value::Real</span>(<span class="ident">F::zero</span>()),
+            <span class="kw">_</span> =&gt; <span class="ident">Value::Poison</span>,
         }
     }
 }
@@ -1306,7 +1306,7 @@
     <span class="kw">fn</span> <span class="ident">enter_region</span><span class="op">&lt;</span><span class="ident">NR</span>, <span class="ident">N</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="ident">N</span>)
     <span class="kw">where</span>
         <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">FnOnce</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NR</span>,
+        <span class="ident">N</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">NR</span>,
     {
         <span class="macro">assert!</span>(<span class="self">self</span>.<span class="ident">current_region</span>.<span class="ident">is_none</span>());
         <span class="self">self</span>.<span class="ident">current_region</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">Region</span> {
@@ -1321,9 +1321,9 @@
         <span class="self">self</span>.<span class="ident">regions</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">current_region</span>.<span class="ident">take</span>().<span class="ident">unwrap</span>());
     }
 
-    <span class="kw">fn</span> <span class="ident">enable_selector</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="kw">_</span>: <span class="ident">A</span>, <span class="ident">selector</span>: <span class="kw-2">&amp;</span><span class="ident">Selector</span>, <span class="ident">row</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
+    <span class="kw">fn</span> <span class="ident">enable_selector</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="kw">_</span>: <span class="ident">A</span>, <span class="ident">selector</span>: <span class="kw-2">&amp;</span><span class="ident">Selector</span>, <span class="ident">row</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">FnOnce</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AR</span>,
+        <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">row</span>) {
@@ -1345,7 +1345,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">query_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="ident">row</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">query_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="ident">row</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">row</span>) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::BoundsFailure</span>);
         }
@@ -1363,11 +1363,11 @@
         <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
         <span class="ident">row</span>: <span class="ident">usize</span>,
         <span class="ident">to</span>: <span class="ident">V</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnOnce</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
+        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
         <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">A</span>: <span class="ident">FnOnce</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AR</span>,
+        <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">row</span>) {
@@ -1394,11 +1394,11 @@
         <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
         <span class="ident">row</span>: <span class="ident">usize</span>,
         <span class="ident">to</span>: <span class="ident">V</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnOnce</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
+        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
         <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">A</span>: <span class="ident">FnOnce</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AR</span>,
+        <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">row</span>) {
@@ -1425,7 +1425,7 @@
         <span class="ident">left_row</span>: <span class="ident">usize</span>,
         <span class="ident">right_column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>,
         <span class="ident">right_row</span>: <span class="ident">usize</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident"><span class="kw">crate</span>::plonk::Error</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident"><span class="kw">crate</span>::plonk::Error</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">left_row</span>) <span class="op">|</span><span class="op">|</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">right_row</span>) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::BoundsFailure</span>);
         }
@@ -1439,7 +1439,7 @@
         <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
         <span class="ident">from_row</span>: <span class="ident">usize</span>,
         <span class="kw">_</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">from_row</span>) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::BoundsFailure</span>);
         }
@@ -1450,7 +1450,7 @@
     <span class="kw">fn</span> <span class="ident">push_namespace</span><span class="op">&lt;</span><span class="ident">NR</span>, <span class="ident">N</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="kw">_</span>: <span class="ident">N</span>)
     <span class="kw">where</span>
         <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">FnOnce</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NR</span>,
+        <span class="ident">N</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">NR</span>,
     {
         <span class="comment">// TODO: Do something with namespaces :)</span>
     }
@@ -1467,7 +1467,7 @@
         <span class="ident">k</span>: <span class="ident">u32</span>,
         <span class="ident">circuit</span>: <span class="kw-2">&amp;</span><span class="ident">ConcreteCircuit</span>,
         <span class="ident">instance</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">k</span>;
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cs</span> <span class="op">=</span> <span class="ident">ConstraintSystem::default</span>();
@@ -1544,7 +1544,7 @@
 
     <span class="doccomment">/// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating</span>
     <span class="doccomment">/// the reasons that the circuit is not satisfied.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">VerifyFailure</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">VerifyFailure</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">i32</span>;
 
         <span class="comment">// Check that within each region, all cells used in instantiated gates have been</span>
@@ -1604,7 +1604,7 @@
                             <span class="ident">row</span>: <span class="ident">i32</span>,
                             <span class="ident">queries</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [(<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">Rotation</span>)],
                             <span class="ident">cells</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>],
-                        ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="ident">usize</span>, <span class="ident">usize</span>, <span class="ident">Rotation</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
+                        ) -&gt; <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="ident">usize</span>, <span class="ident">usize</span>, <span class="ident">Rotation</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
                         {
                             <span class="kw">move</span> <span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> {
                                 <span class="kw">let</span> (<span class="ident">column</span>, <span class="ident">at</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">queries</span>[<span class="ident">index</span>];
@@ -1618,7 +1618,7 @@
                             <span class="ident">row</span>: <span class="ident">i32</span>,
                             <span class="ident">queries</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [(<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">Rotation</span>)],
                             <span class="ident">cells</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">CellValue</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>],
-                        ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="ident">usize</span>, <span class="ident">usize</span>, <span class="ident">Rotation</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
+                        ) -&gt; <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="ident">usize</span>, <span class="ident">usize</span>, <span class="ident">Rotation</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>
                         {
                             <span class="kw">move</span> <span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> {
                                 <span class="kw">let</span> (<span class="ident">column</span>, <span class="ident">at</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">queries</span>[<span class="ident">index</span>];
@@ -1639,8 +1639,8 @@
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>,
                                 <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">scalar</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">scalar</span>,
                             ) {
-                                <span class="ident">Value::Real</span>(<span class="ident">x</span>) <span class="kw">if</span> <span class="ident">x</span>.<span class="ident">is_zero_vartime</span>() <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-                                <span class="ident">Value::Real</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">VerifyFailure::ConstraintNotSatisfied</span> {
+                                <span class="ident">Value::Real</span>(<span class="ident">x</span>) <span class="kw">if</span> <span class="ident">x</span>.<span class="ident">is_zero_vartime</span>() =&gt; <span class="prelude-val">None</span>,
+                                <span class="ident">Value::Real</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">VerifyFailure::ConstraintNotSatisfied</span> {
                                     <span class="ident">constraint</span>: (
                                         (<span class="ident">gate_index</span>, <span class="ident">gate</span>.<span class="ident">name</span>()).<span class="ident">into</span>(),
                                         <span class="ident">poly_index</span>,
@@ -1649,7 +1649,7 @@
                                         .<span class="ident">into</span>(),
                                     <span class="ident">row</span>: (<span class="ident">row</span> <span class="op">-</span> <span class="ident">n</span>) <span class="kw">as</span> <span class="ident">usize</span>,
                                 }),
-                                <span class="ident">Value::Poison</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">VerifyFailure::ConstraintPoisoned</span> {
+                                <span class="ident">Value::Poison</span> =&gt; <span class="prelude-val">Some</span>(<span class="ident">VerifyFailure::ConstraintPoisoned</span> {
                                     <span class="ident">constraint</span>: (
                                         (<span class="ident">gate_index</span>, <span class="ident">gate</span>.<span class="ident">name</span>()).<span class="ident">into</span>(),
                                         <span class="ident">poly_index</span>,
@@ -1747,9 +1747,9 @@
                     .<span class="ident">get_columns</span>()
                     .<span class="ident">get</span>(<span class="ident">column</span>)
                     .<span class="ident">map</span>(<span class="op">|</span><span class="ident">c</span>: <span class="kw-2">&amp;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">c</span>.<span class="ident">column_type</span>() {
-                        <span class="ident">Any::Advice</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">advice</span>[<span class="ident">c</span>.<span class="ident">index</span>()][<span class="ident">row</span>],
-                        <span class="ident">Any::Fixed</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">fixed</span>[<span class="ident">c</span>.<span class="ident">index</span>()][<span class="ident">row</span>],
-                        <span class="ident">Any::Instance</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CellValue::Assigned</span>(<span class="self">self</span>.<span class="ident">instance</span>[<span class="ident">c</span>.<span class="ident">index</span>()][<span class="ident">row</span>]),
+                        <span class="ident">Any::Advice</span> =&gt; <span class="self">self</span>.<span class="ident">advice</span>[<span class="ident">c</span>.<span class="ident">index</span>()][<span class="ident">row</span>],
+                        <span class="ident">Any::Fixed</span> =&gt; <span class="self">self</span>.<span class="ident">fixed</span>[<span class="ident">c</span>.<span class="ident">index</span>()][<span class="ident">row</span>],
+                        <span class="ident">Any::Instance</span> =&gt; <span class="ident">CellValue::Assigned</span>(<span class="self">self</span>.<span class="ident">instance</span>[<span class="ident">c</span>.<span class="ident">index</span>()][<span class="ident">row</span>]),
                     })
                     .<span class="ident">unwrap</span>()
             };
@@ -1765,7 +1765,7 @@
                     <span class="ident">values</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>().<span class="ident">filter_map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">row</span>, <span class="ident">cell</span>)<span class="op">|</span> {
                         <span class="kw">let</span> <span class="ident">original_cell</span> <span class="op">=</span> <span class="ident">original</span>(<span class="ident">column</span>, <span class="ident">row</span>);
                         <span class="kw">let</span> <span class="ident">permuted_cell</span> <span class="op">=</span> <span class="ident">original</span>(<span class="ident">cell</span>.<span class="number">0</span>, <span class="ident">cell</span>.<span class="number">1</span>);
-                        <span class="kw">if</span> <span class="ident">original_cell</span> <span class="op">=</span><span class="op">=</span> <span class="ident">permuted_cell</span> {
+                        <span class="kw">if</span> <span class="ident">original_cell</span> <span class="op">==</span> <span class="ident">permuted_cell</span> {
                             <span class="prelude-val">None</span>
                         } <span class="kw">else</span> {
                             <span class="prelude-val">Some</span>(<span class="ident">VerifyFailure::Permutation</span> {
@@ -1794,8 +1794,8 @@
                 (
                     <span class="ident">a</span> @ <span class="ident">VerifyFailure::ConstraintPoisoned</span> { .. },
                     <span class="ident">b</span> @ <span class="ident">VerifyFailure::ConstraintPoisoned</span> { .. },
-                ) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">a</span> <span class="op">=</span><span class="op">=</span> <span class="ident">b</span>,
-                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
+                ) =&gt; <span class="ident">a</span> <span class="op">==</span> <span class="ident">b</span>,
+                <span class="kw">_</span> =&gt; <span class="bool-val">false</span>,
             });
             <span class="prelude-val">Err</span>(<span class="ident">errors</span>)
         }
@@ -1829,7 +1829,7 @@
             <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">FaultyCircuitConfig</span>;
             <span class="kw">type</span> <span class="ident">FloorPlanner</span> <span class="op">=</span> <span class="ident">SimpleFloorPlanner</span>;
 
-            <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::Config</span> {
+            <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Config</span> {
                 <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>();
                 <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>();
                 <span class="kw">let</span> <span class="ident">q</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
@@ -1846,7 +1846,7 @@
                 <span class="ident">FaultyCircuitConfig</span> { <span class="ident">a</span>, <span class="ident">q</span> }
             }
 
-            <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+            <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
                 <span class="self">Self</span> {}
             }
 
@@ -1854,7 +1854,7 @@
                 <span class="kw-2">&amp;</span><span class="self">self</span>,
                 <span class="ident">config</span>: <span class="ident"><span class="self">Self</span>::Config</span>,
                 <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span>,
-            ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+            ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
                 <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
                     <span class="op">|</span><span class="op">|</span> <span class="string">&quot;Faulty synthesis&quot;</span>,
                     <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {

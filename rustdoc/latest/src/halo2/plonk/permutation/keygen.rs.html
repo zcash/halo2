@@ -245,7 +245,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Assembly</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">n</span>: <span class="ident">usize</span>, <span class="ident">p</span>: <span class="kw-2">&amp;</span><span class="ident">Argument</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">n</span>: <span class="ident">usize</span>, <span class="ident">p</span>: <span class="kw-2">&amp;</span><span class="ident">Argument</span>) -&gt; <span class="self">Self</span> {
         <span class="comment">// Initialize the copy vector to keep track of copy constraints in all</span>
         <span class="comment">// the permutation arguments.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">columns</span> <span class="op">=</span> <span class="macro">vec!</span>[];
@@ -271,16 +271,16 @@
         <span class="ident">left_row</span>: <span class="ident">usize</span>,
         <span class="ident">right_column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>,
         <span class="ident">right_row</span>: <span class="ident">usize</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">left_column</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">columns</span>
             .<span class="ident">iter</span>()
-            .<span class="ident">position</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span> <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">left_column</span>)
+            .<span class="ident">position</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">left_column</span>)
             .<span class="ident">ok_or</span>(<span class="ident">Error::SynthesisError</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">right_column</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">columns</span>
             .<span class="ident">iter</span>()
-            .<span class="ident">position</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span> <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">right_column</span>)
+            .<span class="ident">position</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">right_column</span>)
             .<span class="ident">ok_or</span>(<span class="ident">Error::SynthesisError</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Check bounds</span>
@@ -296,7 +296,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">right_cycle</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">aux</span>[<span class="ident">right_column</span>][<span class="ident">right_row</span>];
 
         <span class="comment">// If left and right are in the same cycle, do nothing.</span>
-        <span class="kw">if</span> <span class="ident">left_cycle</span> <span class="op">=</span><span class="op">=</span> <span class="ident">right_cycle</span> {
+        <span class="kw">if</span> <span class="ident">left_cycle</span> <span class="op">==</span> <span class="ident">right_cycle</span> {
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
         }
 
@@ -310,7 +310,7 @@
         <span class="kw">loop</span> {
             <span class="self">self</span>.<span class="ident">aux</span>[<span class="ident">i</span>.<span class="number">0</span>][<span class="ident">i</span>.<span class="number">1</span>] <span class="op">=</span> <span class="ident">left_cycle</span>;
             <span class="ident">i</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">mapping</span>[<span class="ident">i</span>.<span class="number">0</span>][<span class="ident">i</span>.<span class="number">1</span>];
-            <span class="kw">if</span> <span class="ident">i</span> <span class="op">=</span><span class="op">=</span> <span class="ident">right_cycle</span> {
+            <span class="kw">if</span> <span class="ident">i</span> <span class="op">==</span> <span class="ident">right_cycle</span> {
                 <span class="kw">break</span>;
             }
         }
@@ -327,7 +327,7 @@
         <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
         <span class="ident">domain</span>: <span class="kw-2">&amp;</span><span class="ident">EvaluationDomain</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
         <span class="ident">p</span>: <span class="kw-2">&amp;</span><span class="ident">Argument</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="ident">VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
         <span class="comment">// Compute [omega^0, omega^1, ..., omega^{params.n - 1}]</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">omega_powers</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>);
         {
@@ -380,7 +380,7 @@
         <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
         <span class="ident">domain</span>: <span class="kw-2">&amp;</span><span class="ident">EvaluationDomain</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
         <span class="ident">p</span>: <span class="kw-2">&amp;</span><span class="ident">Argument</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="ident">ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
         <span class="comment">// Compute [omega^0, omega^1, ..., omega^{params.n - 1}]</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">omega_powers</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>);
         {

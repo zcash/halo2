@@ -334,7 +334,7 @@
     <span class="ident">msm</span>: <span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span>,
     <span class="ident">instances</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="ident">C::Scalar</span>]]],
     <span class="ident">transcript</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Guard</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Guard</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
     <span class="comment">// Check that instances matches the expected number of instance columns</span>
     <span class="kw">for</span> <span class="ident">instances</span> <span class="kw">in</span> <span class="ident">instances</span>.<span class="ident">iter</span>() {
         <span class="kw">if</span> <span class="ident">instances</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">num_instance_columns</span> {
@@ -377,7 +377,7 @@
     }
 
     <span class="kw">let</span> <span class="ident">advice_commitments</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">num_proofs</span>)
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> {
+        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> {
             <span class="comment">// Hash the prover&#39;s advice commitments into the transcript</span>
             <span class="ident">read_n_points</span>(<span class="ident">transcript</span>, <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">num_advice_columns</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Error::TranscriptError</span>)
         })
@@ -387,7 +387,7 @@
     <span class="kw">let</span> <span class="ident">theta</span>: <span class="ident">ChallengeTheta</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge_scalar</span>();
 
     <span class="kw">let</span> <span class="ident">lookups_permuted</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">num_proofs</span>)
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> {
+        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> {
             <span class="comment">// Hash each lookup permuted commitment</span>
             <span class="ident">vk</span>.<span class="ident">cs</span>
                 .<span class="ident">lookups</span>
@@ -432,14 +432,14 @@
     <span class="comment">// satisfied with high probability.</span>
     <span class="kw">let</span> <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge_scalar</span>();
     <span class="kw">let</span> <span class="ident">instance_evals</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">num_proofs</span>)
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> {
+        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> {
             <span class="ident">read_n_scalars</span>(<span class="ident">transcript</span>, <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">instance_queries</span>.<span class="ident">len</span>())
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Error::TranscriptError</span>)
         })
         .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="ident">advice_evals</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">num_proofs</span>)
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> {
+        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> {
             <span class="ident">read_n_scalars</span>(<span class="ident">transcript</span>, <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">advice_queries</span>.<span class="ident">len</span>())
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Error::TranscriptError</span>)
         })
@@ -459,7 +459,7 @@
 
     <span class="kw">let</span> <span class="ident">lookups_evaluated</span> <span class="op">=</span> <span class="ident">lookups_committed</span>
         .<span class="ident">into_iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">lookups</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> {
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">lookups</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> {
             <span class="ident">lookups</span>
                 .<span class="ident">into_iter</span>()
                 .<span class="ident">map</span>(<span class="op">|</span><span class="ident">lookup</span><span class="op">|</span> <span class="ident">lookup</span>.<span class="ident">evaluate</span>(<span class="ident">transcript</span>))

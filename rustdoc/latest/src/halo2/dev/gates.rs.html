@@ -406,7 +406,7 @@
 
 <span class="kw">impl</span> <span class="ident">CircuitGates</span> {
     <span class="doccomment">/// Collects the gates from within the circuit.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">collect</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span>, <span class="ident">C</span>: <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">collect</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span>, <span class="ident">C</span>: <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>() -&gt; <span class="self">Self</span> {
         <span class="comment">// Collect the graph details.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cs</span> <span class="op">=</span> <span class="ident">ConstraintSystem::default</span>();
         <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">C::configure</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cs</span>);
@@ -435,9 +435,9 @@
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">s</span><span class="op">|</span> {
                                 <span class="kw">if</span> <span class="ident">s</span>.<span class="ident">is_zero_vartime</span>() {
                                     <span class="string">&quot;0&quot;</span>.<span class="ident">into</span>()
-                                } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="ident">F::one</span>() {
+                                } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">s</span> <span class="op">==</span> <span class="ident">F::one</span>() {
                                     <span class="string">&quot;1&quot;</span>.<span class="ident">into</span>()
-                                } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">s</span> <span class="op">=</span><span class="op">=</span> <span class="op">-</span><span class="ident">F::one</span>() {
+                                } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">s</span> <span class="op">==</span> <span class="op">-</span><span class="ident">F::one</span>() {
                                     <span class="string">&quot;-1&quot;</span>.<span class="ident">into</span>()
                                 } <span class="kw">else</span> {
                                     <span class="ident">format_scalar</span>(<span class="ident">s</span>)
@@ -462,10 +462,10 @@
                                 }
                             },
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="kw">match</span> (<span class="ident">a</span>.<span class="ident">contains</span>(<span class="string">&#39; &#39;</span>), <span class="ident">b</span>.<span class="ident">contains</span>(<span class="string">&#39; &#39;</span>)) {
-                                (<span class="bool-val">false</span>, <span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{} * {}&quot;</span>, <span class="ident">a</span>, <span class="ident">b</span>),
-                                (<span class="bool-val">false</span>, <span class="bool-val">true</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{} * ({})&quot;</span>, <span class="ident">a</span>, <span class="ident">b</span>),
-                                (<span class="bool-val">true</span>, <span class="bool-val">false</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;({}) * {}&quot;</span>, <span class="ident">a</span>, <span class="ident">b</span>),
-                                (<span class="bool-val">true</span>, <span class="bool-val">true</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;({}) * ({})&quot;</span>, <span class="ident">a</span>, <span class="ident">b</span>),
+                                (<span class="bool-val">false</span>, <span class="bool-val">false</span>) =&gt; <span class="macro">format!</span>(<span class="string">&quot;{} * {}&quot;</span>, <span class="ident">a</span>, <span class="ident">b</span>),
+                                (<span class="bool-val">false</span>, <span class="bool-val">true</span>) =&gt; <span class="macro">format!</span>(<span class="string">&quot;{} * ({})&quot;</span>, <span class="ident">a</span>, <span class="ident">b</span>),
+                                (<span class="bool-val">true</span>, <span class="bool-val">false</span>) =&gt; <span class="macro">format!</span>(<span class="string">&quot;({}) * {}&quot;</span>, <span class="ident">a</span>, <span class="ident">b</span>),
+                                (<span class="bool-val">true</span>, <span class="bool-val">true</span>) =&gt; <span class="macro">format!</span>(<span class="string">&quot;({}) * ({})&quot;</span>, <span class="ident">a</span>, <span class="ident">b</span>),
                             },
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">s</span><span class="op">|</span> {
                                 <span class="kw">if</span> <span class="ident">a</span>.<span class="ident">contains</span>(<span class="string">&#39; &#39;</span>) {
@@ -540,7 +540,7 @@
     }
 
     <span class="doccomment">/// Prints the queries in this circuit to a CSV grid.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">queries_to_csv</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">queries_to_csv</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">queries</span> <span class="op">=</span> <span class="ident">BTreeSet::new</span>();
         <span class="kw">for</span> <span class="ident">gate</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">gates</span> {
             <span class="kw">for</span> <span class="ident">constraint</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">gate</span>.<span class="ident">constraints</span> {
@@ -575,7 +575,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">CircuitGates</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">fmt::Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">fmt::Error</span><span class="op">&gt;</span> {
         <span class="kw">for</span> <span class="ident">gate</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">gates</span> {
             <span class="macro">writeln!</span>(<span class="ident">f</span>, <span class="string">&quot;{}:&quot;</span>, <span class="ident">gate</span>.<span class="ident">name</span>)<span class="question-mark">?</span>;
             <span class="kw">for</span> <span class="ident">constraint</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">gate</span>.<span class="ident">constraints</span> {

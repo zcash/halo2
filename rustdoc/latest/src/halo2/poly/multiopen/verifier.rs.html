@@ -196,7 +196,7 @@
     <span class="ident">transcript</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">T</span>,
     <span class="ident">queries</span>: <span class="ident">I</span>,
     <span class="kw-2">mut</span> <span class="ident">msm</span>: <span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Guard</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Guard</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>,
 {
@@ -228,10 +228,10 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">accumulate</span> <span class="op">=</span> <span class="op">|</span><span class="ident">set_idx</span>: <span class="ident">usize</span>, <span class="ident">new_commitment</span>, <span class="ident">evals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span><span class="op">|</span> {
             <span class="ident">q_commitments</span>[<span class="ident">set_idx</span>].<span class="ident">scale</span>(<span class="kw-2">*</span><span class="ident">x_1</span>);
             <span class="kw">match</span> <span class="ident">new_commitment</span> {
-                <span class="ident">CommitmentReference::Commitment</span>(<span class="ident">c</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">CommitmentReference::Commitment</span>(<span class="ident">c</span>) =&gt; {
                     <span class="ident">q_commitments</span>[<span class="ident">set_idx</span>].<span class="ident">append_term</span>(<span class="ident">C::Scalar::one</span>(), <span class="kw-2">*</span><span class="ident">c</span>);
                 }
-                <span class="ident">CommitmentReference::MSM</span>(<span class="ident">msm</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">CommitmentReference::MSM</span>(<span class="ident">msm</span>) =&gt; {
                     <span class="ident">q_commitments</span>[<span class="ident">set_idx</span>].<span class="ident">add_msm</span>(<span class="ident">msm</span>);
                 }
             }
@@ -305,13 +305,13 @@
     <span class="kw">type</span> <span class="ident">Commitment</span> <span class="op">=</span> <span class="ident">CommitmentReference</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">C</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">Eval</span> <span class="op">=</span> <span class="ident">C::Scalar</span>;
 
-    <span class="kw">fn</span> <span class="ident">get_point</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">C::Scalar</span> {
+    <span class="kw">fn</span> <span class="ident">get_point</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">C::Scalar</span> {
         <span class="self">self</span>.<span class="ident">point</span>
     }
-    <span class="kw">fn</span> <span class="ident">get_eval</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">C::Scalar</span> {
+    <span class="kw">fn</span> <span class="ident">get_eval</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">C::Scalar</span> {
         <span class="self">self</span>.<span class="ident">eval</span>
     }
-    <span class="kw">fn</span> <span class="ident">get_commitment</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident"><span class="self">Self</span>::Commitment</span> {
+    <span class="kw">fn</span> <span class="ident">get_commitment</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Commitment</span> {
         <span class="self">self</span>.<span class="ident">commitment</span>
     }
 }

@@ -421,9 +421,9 @@
     <span class="kw-2">mut</span> <span class="ident">selectors</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SelectorDescription</span><span class="op">&gt;</span>,
     <span class="ident">max_degree</span>: <span class="ident">usize</span>,
     <span class="kw-2">mut</span> <span class="ident">allocate_fixed_column</span>: <span class="ident">E</span>,
-) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SelectorAssignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>)
+) -&gt; (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SelectorAssignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>)
 <span class="kw">where</span>
-    <span class="ident">E</span>: <span class="ident">FnMut</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+    <span class="ident">E</span>: <span class="ident">FnMut</span>() -&gt; <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
 {
     <span class="kw">if</span> <span class="ident">selectors</span>.<span class="ident">is_empty</span>() {
         <span class="comment">// There is nothing to optimize.</span>
@@ -432,7 +432,7 @@
 
     <span class="comment">// The length of all provided selectors must be the same.</span>
     <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">selectors</span>[<span class="number">0</span>].<span class="ident">activations</span>.<span class="ident">len</span>();
-    <span class="macro">assert!</span>(<span class="ident">selectors</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">activations</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">n</span>));
+    <span class="macro">assert!</span>(<span class="ident">selectors</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">activations</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="ident">n</span>));
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">combination_assignments</span> <span class="op">=</span> <span class="macro">vec!</span>[];
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">selector_assignments</span> <span class="op">=</span> <span class="macro">vec!</span>[];
@@ -442,7 +442,7 @@
     <span class="ident">selectors</span> <span class="op">=</span> <span class="ident">selectors</span>
         .<span class="ident">into_iter</span>()
         .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">selector</span><span class="op">|</span> {
-            <span class="kw">if</span> <span class="ident">selector</span>.<span class="ident">max_degree</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
+            <span class="kw">if</span> <span class="ident">selector</span>.<span class="ident">max_degree</span> <span class="op">==</span> <span class="number">0</span> {
                 <span class="comment">// This is a complex selector, or a selector that does not appear in any</span>
                 <span class="comment">// gate constraint.</span>
                 <span class="kw">let</span> <span class="ident">expression</span> <span class="op">=</span> <span class="ident">allocate_fixed_column</span>();
@@ -514,7 +514,7 @@
 
         <span class="comment">// Try to find other selectors that can join this one.</span>
         <span class="lifetime">&#39;try_selectors</span>: <span class="kw">for</span> (<span class="ident">j</span>, <span class="ident">selector</span>) <span class="kw">in</span> <span class="ident">selectors</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>().<span class="ident">skip</span>(<span class="ident">i</span> <span class="op">+</span> <span class="number">1</span>) {
-            <span class="kw">if</span> <span class="ident">d</span> <span class="op">+</span> <span class="ident">combination</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">max_degree</span> {
+            <span class="kw">if</span> <span class="ident">d</span> <span class="op">+</span> <span class="ident">combination</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="ident">max_degree</span> {
                 <span class="comment">// Short circuit; nothing can be added to this</span>
                 <span class="comment">// combination.</span>
                 <span class="kw">break</span> <span class="lifetime">&#39;try_selectors</span>;
@@ -610,7 +610,7 @@
         <span class="kw">fn</span> <span class="ident">arb_selector</span>(<span class="ident">assignment_size</span>: <span class="ident">usize</span>, <span class="ident">max_degree</span>: <span class="ident">usize</span>)
                        (<span class="ident">degree</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">max_degree</span>,
                         <span class="ident">assignment</span> <span class="kw">in</span> <span class="ident">vec</span>(<span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>(), <span class="ident">assignment_size</span>))
-                       <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">usize</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>) {
+                       -&gt; (<span class="ident">usize</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>) {
             (<span class="ident">degree</span>, <span class="ident">assignment</span>)
         }
     }
@@ -618,7 +618,7 @@
     <span class="macro">prop_compose!</span> {
         <span class="kw">fn</span> <span class="ident">arb_selector_list</span>(<span class="ident">assignment_size</span>: <span class="ident">usize</span>, <span class="ident">max_degree</span>: <span class="ident">usize</span>, <span class="ident">num_selectors</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">SizeRange</span><span class="op">&gt;</span>)
                             (<span class="ident">list</span> <span class="kw">in</span> <span class="ident">vec</span>(<span class="ident">arb_selector</span>(<span class="ident">assignment_size</span>, <span class="ident">max_degree</span>), <span class="ident">num_selectors</span>))
-                            <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SelectorDescription</span><span class="op">&gt;</span>
+                            -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SelectorDescription</span><span class="op">&gt;</span>
         {
             <span class="ident">list</span>.<span class="ident">into_iter</span>().<span class="ident">enumerate</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, (<span class="ident">max_degree</span>, <span class="ident">activations</span>))<span class="op">|</span> {
                 <span class="ident">SelectorDescription</span> {
@@ -639,7 +639,7 @@
                         <span class="ident">num_selectors</span> <span class="kw">in</span> <span class="number">1</span>..<span class="ident">max_selectors</span>)
                        (<span class="ident">list</span> <span class="kw">in</span> <span class="ident">arb_selector_list</span>(<span class="ident">assignment_size</span>, <span class="ident">degree</span>, <span class="ident">num_selectors</span>),
                         <span class="ident">degree</span> <span class="kw">in</span> <span class="ident">Just</span>(<span class="ident">degree</span>))
-                       <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SelectorDescription</span><span class="op">&gt;</span>, <span class="ident">usize</span>)
+                       -&gt; (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SelectorDescription</span><span class="op">&gt;</span>, <span class="ident">usize</span>)
         {
             (<span class="ident">list</span>, <span class="ident">degree</span>)
         }

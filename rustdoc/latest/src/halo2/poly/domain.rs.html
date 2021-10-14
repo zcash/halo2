@@ -668,7 +668,7 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">Group</span><span class="op">&gt;</span> <span class="ident">EvaluationDomain</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span> {
     <span class="doccomment">/// This constructs a new evaluation domain object based on the provided</span>
     <span class="doccomment">/// values $j, k$.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">j</span>: <span class="ident">u32</span>, <span class="ident">k</span>: <span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">j</span>: <span class="ident">u32</span>, <span class="ident">k</span>: <span class="ident">u32</span>) -&gt; <span class="self">Self</span> {
         <span class="comment">// quotient_poly_degree * params.n - 1 is the degree of the quotient polynomial</span>
         <span class="kw">let</span> <span class="ident">quotient_poly_degree</span> <span class="op">=</span> (<span class="ident">j</span> <span class="op">-</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">u64</span>;
 
@@ -723,7 +723,7 @@
             <span class="kw">loop</span> {
                 <span class="ident">t_evaluations</span>.<span class="ident">push</span>(<span class="ident">cur</span>);
                 <span class="ident">cur</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">step</span>;
-                <span class="kw">if</span> <span class="ident">cur</span> <span class="op">=</span><span class="op">=</span> <span class="ident">orig</span> {
+                <span class="kw">if</span> <span class="ident">cur</span> <span class="op">==</span> <span class="ident">orig</span> {
                     <span class="kw">break</span>;
                 }
             }
@@ -776,7 +776,7 @@
     <span class="doccomment">/// Obtains a polynomial in Lagrange form when given a vector of Lagrange</span>
     <span class="doccomment">/// coefficients of size `n`; panics if the provided vector is the wrong</span>
     <span class="doccomment">/// length.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lagrange_from_vec</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">values</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lagrange_from_vec</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">values</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span> {
         <span class="macro">assert_eq!</span>(<span class="ident">values</span>.<span class="ident">len</span>(), <span class="self">self</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>);
 
         <span class="ident">Polynomial</span> {
@@ -788,7 +788,7 @@
     <span class="doccomment">/// Obtains a polynomial in coefficient form when given a vector of</span>
     <span class="doccomment">/// coefficients of size `n`; panics if the provided vector is the wrong</span>
     <span class="doccomment">/// length.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">coeff_from_vec</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">values</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">Coeff</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">coeff_from_vec</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">values</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">Coeff</span><span class="op">&gt;</span> {
         <span class="macro">assert_eq!</span>(<span class="ident">values</span>.<span class="ident">len</span>(), <span class="self">self</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>);
 
         <span class="ident">Polynomial</span> {
@@ -798,7 +798,7 @@
     }
 
     <span class="doccomment">/// Returns an empty (zero) polynomial in the coefficient basis</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_coeff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">Coeff</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_coeff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">Coeff</span><span class="op">&gt;</span> {
         <span class="ident">Polynomial</span> {
             <span class="ident">values</span>: <span class="macro">vec!</span>[<span class="ident">G::group_zero</span>(); <span class="self">self</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>],
             <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
@@ -806,7 +806,7 @@
     }
 
     <span class="doccomment">/// Returns an empty (zero) polynomial in the Lagrange coefficient basis</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_lagrange</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_lagrange</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span> {
         <span class="ident">Polynomial</span> {
             <span class="ident">values</span>: <span class="macro">vec!</span>[<span class="ident">G::group_zero</span>(); <span class="self">self</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>],
             <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
@@ -815,7 +815,7 @@
 
     <span class="doccomment">/// Returns an empty (zero) polynomial in the Lagrange coefficient basis, with</span>
     <span class="doccomment">/// deferred inversions.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">empty_lagrange_assigned</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">empty_lagrange_assigned</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">G</span>: <span class="ident">Field</span>,
     {
@@ -826,7 +826,7 @@
     }
 
     <span class="doccomment">/// Returns a constant polynomial in the Lagrange coefficient basis</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">constant_lagrange</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">scalar</span>: <span class="ident">G</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">constant_lagrange</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">scalar</span>: <span class="ident">G</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span> {
         <span class="ident">Polynomial</span> {
             <span class="ident">values</span>: <span class="macro">vec!</span>[<span class="ident">scalar</span>; <span class="self">self</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>],
             <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
@@ -835,7 +835,7 @@
 
     <span class="doccomment">/// Returns an empty (zero) polynomial in the extended Lagrange coefficient</span>
     <span class="doccomment">/// basis</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_extended</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_extended</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
         <span class="ident">Polynomial</span> {
             <span class="ident">values</span>: <span class="macro">vec!</span>[<span class="ident">G::group_zero</span>(); <span class="self">self</span>.<span class="ident">extended_len</span>()],
             <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
@@ -844,7 +844,7 @@
 
     <span class="doccomment">/// Returns a constant polynomial in the extended Lagrange coefficient</span>
     <span class="doccomment">/// basis</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">constant_extended</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">scalar</span>: <span class="ident">G</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">constant_extended</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">scalar</span>: <span class="ident">G</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
         <span class="ident">Polynomial</span> {
             <span class="ident">values</span>: <span class="macro">vec!</span>[<span class="ident">scalar</span>; <span class="self">self</span>.<span class="ident">extended_len</span>()],
             <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
@@ -855,7 +855,7 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// This function will panic if the provided vector is not the correct</span>
     <span class="doccomment">/// length.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lagrange_to_coeff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">a</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">Coeff</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lagrange_to_coeff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">a</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">Coeff</span><span class="op">&gt;</span> {
         <span class="macro">assert_eq!</span>(<span class="ident">a</span>.<span class="ident">values</span>.<span class="ident">len</span>(), <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">k</span>);
 
         <span class="comment">// Perform inverse FFT to obtain the polynomial in coefficient form</span>
@@ -872,7 +872,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">coeff_to_extended</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut</span> <span class="ident">a</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">Coeff</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
         <span class="macro">assert_eq!</span>(<span class="ident">a</span>.<span class="ident">values</span>.<span class="ident">len</span>(), <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">k</span>);
 
         <span class="self">self</span>.<span class="ident">distribute_powers_zeta</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">a</span>.<span class="ident">values</span>, <span class="bool-val">true</span>);
@@ -891,7 +891,7 @@
         <span class="ident">right</span>: <span class="kw-2">&amp;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
         <span class="ident">rotation</span>: <span class="ident">Rotation</span>,
         <span class="ident">op</span>: <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">G</span>, <span class="kw-2">&amp;</span><span class="ident">G</span>) <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>
+    ) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">G</span>: <span class="ident">Field</span>,
     {
@@ -921,7 +921,7 @@
         <span class="ident">left</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
         <span class="ident">right</span>: <span class="kw-2">&amp;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
         <span class="ident">rotation</span>: <span class="ident">Rotation</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>
+    ) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">G</span>: <span class="ident">Field</span>,
     {
@@ -937,7 +937,7 @@
         <span class="ident">left</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
         <span class="ident">right</span>: <span class="kw-2">&amp;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
         <span class="ident">rotation</span>: <span class="ident">Rotation</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>
+    ) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">G</span>: <span class="ident">Field</span>,
     {
@@ -953,7 +953,7 @@
         <span class="ident">left</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
         <span class="ident">right</span>: <span class="kw-2">&amp;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
         <span class="ident">rotation</span>: <span class="ident">Rotation</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>
+    ) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">G</span>: <span class="ident">Field</span>,
     {
@@ -967,7 +967,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
         <span class="ident">rotation</span>: <span class="ident">Rotation</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">new_rotation</span> <span class="op">=</span> ((<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="self">self</span>.<span class="ident">extended_k</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">k</span>)) <span class="op">*</span> <span class="ident">rotation</span>.<span class="number">0</span>.<span class="ident">abs</span>()) <span class="kw">as</span> <span class="ident">usize</span>;
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">clone</span>();
@@ -987,7 +987,7 @@
     <span class="doccomment">/// This function will panic if the provided vector is not the correct</span>
     <span class="doccomment">/// length.</span>
     <span class="comment">// TODO/FIXME: caller should be responsible for truncating</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extended_to_coeff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">a</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extended_to_coeff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">a</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span> {
         <span class="macro">assert_eq!</span>(<span class="ident">a</span>.<span class="ident">values</span>.<span class="ident">len</span>(), <span class="self">self</span>.<span class="ident">extended_len</span>());
 
         <span class="comment">// Inverse FFT</span>
@@ -1016,7 +1016,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">divide_by_vanishing_poly</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut</span> <span class="ident">a</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
         <span class="macro">assert_eq!</span>(<span class="ident">a</span>.<span class="ident">values</span>.<span class="ident">len</span>(), <span class="self">self</span>.<span class="ident">extended_len</span>());
 
         <span class="comment">// Divide to obtain the quotient polynomial in the coset evaluation</span>
@@ -1070,29 +1070,29 @@
     }
 
     <span class="doccomment">/// Get the size of the extended domain</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extended_len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extended_len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
         <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">extended_k</span>
     }
 
     <span class="doccomment">/// Get $\omega$, the generator of the $2^k$ order multiplicative subgroup.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_omega</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">G::Scalar</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_omega</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">G::Scalar</span> {
         <span class="self">self</span>.<span class="ident">omega</span>
     }
 
     <span class="doccomment">/// Get $\omega^{-1}$, the inverse of the generator of the $2^k$ order</span>
     <span class="doccomment">/// multiplicative subgroup.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_omega_inv</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">G::Scalar</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_omega_inv</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">G::Scalar</span> {
         <span class="self">self</span>.<span class="ident">omega_inv</span>
     }
 
     <span class="doccomment">/// Get the generator of the extended domain&#39;s multiplicative subgroup.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_extended_omega</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">G::Scalar</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_extended_omega</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">G::Scalar</span> {
         <span class="self">self</span>.<span class="ident">extended_omega</span>
     }
 
     <span class="doccomment">/// Multiplies a value by some power of $\omega$, essentially rotating over</span>
     <span class="doccomment">/// the domain.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rotate_omega</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">value</span>: <span class="ident">G::Scalar</span>, <span class="ident">rotation</span>: <span class="ident">Rotation</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">G::Scalar</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rotate_omega</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">value</span>: <span class="ident">G::Scalar</span>, <span class="ident">rotation</span>: <span class="ident">Rotation</span>) -&gt; <span class="ident">G::Scalar</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">point</span> <span class="op">=</span> <span class="ident">value</span>;
         <span class="kw">if</span> <span class="ident">rotation</span>.<span class="number">0</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">0</span> {
             <span class="ident">point</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">get_omega</span>().<span class="ident">pow_vartime</span>(<span class="kw-2">&amp;</span>[<span class="ident">rotation</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">u64</span>]);
@@ -1136,7 +1136,7 @@
         <span class="ident">x</span>: <span class="ident">G::Scalar</span>,
         <span class="ident">xn</span>: <span class="ident">G::Scalar</span>,
         <span class="ident">rotations</span>: <span class="ident">I</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">G::Scalar</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">G::Scalar</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">results</span>;
         {
             <span class="kw">let</span> <span class="ident">rotations</span> <span class="op">=</span> <span class="ident">rotations</span>.<span class="ident">clone</span>().<span class="ident">into_iter</span>();
@@ -1159,14 +1159,14 @@
     }
 
     <span class="doccomment">/// Gets the quotient polynomial&#39;s degree (as a multiple of n)</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_quotient_poly_degree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_quotient_poly_degree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
         <span class="self">self</span>.<span class="ident">quotient_poly_degree</span> <span class="kw">as</span> <span class="ident">usize</span>
     }
 
     <span class="doccomment">/// Obtain a pinned version of this evaluation domain; a structure with the</span>
     <span class="doccomment">/// minimal parameters needed to determine the rest of the evaluation</span>
     <span class="doccomment">/// domain.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">pinned</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">PinnedEvaluationDomain</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">G</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">pinned</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">PinnedEvaluationDomain</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">G</span><span class="op">&gt;</span> {
         <span class="ident">PinnedEvaluationDomain</span> {
             <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">k</span>,
             <span class="ident">extended_k</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">extended_k</span>,
