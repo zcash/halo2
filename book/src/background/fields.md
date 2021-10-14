@@ -203,7 +203,7 @@ with $S = 32$ and $T$ odd (i.e. $p - 1$ has 32 lower zero-bits). This means they
 multiplicative subgroups of order $2^k$ for all $k \leq 32$. These 2-adic subgroups are
 nice for [efficient FFTs], as well as enabling a wide variety of circuit sizes.
 
-[PLONK-based]: upa.md
+[PLONK-based]: plonkish.md
 [efficient FFTs]: polynomials.md#fast-fourier-transform-fft
 
 ## Square roots
