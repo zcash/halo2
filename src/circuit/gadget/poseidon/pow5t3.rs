@@ -627,7 +627,7 @@ mod tests {
     use super::{PoseidonInstructions, Pow5T3Chip, Pow5T3Config, StateWord, WIDTH};
     use crate::{
         circuit::gadget::poseidon::{Hash, Word},
-        primitives::poseidon::{self, ConstantLength, OrchardNullifier, Spec},
+        primitives::poseidon::{self, ConstantLength, P128Pow5T3 as OrchardNullifier, Spec},
     };
 
     struct PermuteCircuit {}
@@ -833,7 +833,7 @@ mod tests {
 
     #[test]
     fn hash_test_vectors() {
-        for tv in crate::primitives::poseidon::test_vectors::hash() {
+        for tv in crate::primitives::poseidon::test_vectors::fp::hash() {
             let message = [
                 pallas::Base::from_repr(tv.input[0]).unwrap(),
                 pallas::Base::from_repr(tv.input[1]).unwrap(),

@@ -7,14 +7,16 @@ use std::marker::PhantomData;
 
 use halo2::arithmetic::FieldExt;
 
+pub(crate) mod fp;
+pub(crate) mod fq;
 pub(crate) mod grain;
 pub(crate) mod mds;
 
 #[cfg(test)]
 pub(crate) mod test_vectors;
 
-mod nullifier;
-pub use nullifier::OrchardNullifier;
+mod p128pow5t3;
+pub use p128pow5t3::P128Pow5T3;
 
 use grain::SboxType;
 
@@ -363,7 +365,7 @@ mod tests {
     use halo2::arithmetic::FieldExt;
     use pasta_curves::pallas;
 
-    use super::{permute, ConstantLength, Hash, OrchardNullifier, Spec};
+    use super::{permute, ConstantLength, Hash, P128Pow5T3 as OrchardNullifier, Spec};
 
     #[test]
     fn orchard_spec_equivalence() {
