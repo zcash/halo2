@@ -27,7 +27,7 @@ jobs:
           args: mdbook-katex
 
       - name: Build halo2 book
-        run: mdbook build book/
+        run: mdbook build ./halo2_core/book/
 
       - name: Build latest rustdocs
         uses: actions-rs/cargo@v1
@@ -37,11 +37,11 @@ jobs:
 
       - name: Move latest rustdocs into book
         run: |
-          mkdir -p ./book/book/rustdoc
-          mv ./target/doc ./book/book/rustdoc/latest
+          mkdir -p ./halo2_core/book/book/rustdoc
+          mv ./halo2_core/target/doc ./halo2_core/book/book/rustdoc/latest
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./book/book
+          publish_dir: ./halo2_core/book/book

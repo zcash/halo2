@@ -82,7 +82,7 @@ jobs:
         with:
           mdbook-version: '0.4.5'
       - name: Test halo2 book
-        run: mdbook test -L target/debug/deps book/
+        run: mdbook test -L ./halo2_core/target/debug/deps ./halo2_core/book/
 
   codecov:
     name: Code coverage
