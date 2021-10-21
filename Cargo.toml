@@ -1,4 +1,6 @@
 [workspace]
 members = [
+    "halo2",
     "halo2_core",
+    "halo2_gadgets"
 ]
