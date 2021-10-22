@@ -155,7 +155,7 @@ enum CellValue<F: Group + Field> {
 }
 
 /// A value within an expression.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
 enum Value<F: Group + Field> {
     Real(F),
     Poison,
@@ -756,7 +756,7 @@ impl<F: FieldExt> MockProver<F> {
 
                     // In the real prover, the lookup expressions are never enforced on
                     // unusable rows, due to the (1 - (l_last(X) + l_blind(X))) term.
-                    let table: Vec<_> = self
+                    let table: std::collections::BTreeSet<Vec<_>> = self
                         .usable_rows
                         .clone()
                         .map(|table_row| {
@@ -773,9 +773,7 @@ impl<F: FieldExt> MockProver<F> {
                             .iter()
                             .map(|c| load(c, input_row))
                             .collect();
-                        let lookup_passes = table
-                            .iter()
-                            .any(|table_row| table_row.iter().cloned().eq(inputs.iter().cloned()));
+                        let lookup_passes = table.contains(&inputs);
                         if lookup_passes {
                             None
                         } else {
