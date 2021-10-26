@@ -57,10 +57,10 @@ $$
 
 > TODO: is this positionally binding?
 
-## Diffie-Hellman
+## Diffie–Hellman
 
-An example of a protocol that uses cryptographic groups is Diffie-Hellman key agreement
-[[DH1976]]. The Diffie--Hellman protocol is a method for two users, Alice and Bob, to
+An example of a protocol that uses cryptographic groups is Diffie–Hellman key agreement
+[[DH1976]]. The Diffie–Hellman protocol is a method for two users, Alice and Bob, to
 generate a shared private key. It proceeds as follows:
 
 1. Alice and Bob publicly agree on two prime numbers, $p$ and $G,$ where $p$ is large and
@@ -83,7 +83,7 @@ $g, p, A = [a]G,$ and $B = [b]G$: in other words, they would need to either get 
 discrete logarithm $a$ from $A = [a]G$ or $b$ from $B = [b]G,$ which we assume to be
 computationally infeasible in $\mathbb{F}_p^\times.$
 
-More generally, protocols that use similar ideas to Diffie-Hellman are used throughout
+More generally, protocols that use similar ideas to Diffie–Hellman are used throughout
 cryptography. One way of instantiating a cryptographic group is as an
 [elliptic curve](curves.md). Before we go into detail on elliptic curves, we'll describe
 some algorithms that can be used for any group.
