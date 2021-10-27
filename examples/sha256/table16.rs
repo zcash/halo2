@@ -331,8 +331,9 @@ trait Table16Assignment<F: FieldExt> {
 }
 
 #[cfg(test)]
+#[cfg(feature = "dev-graph")]
 mod tests {
-    use super::super::{BlockWord, Sha256, BLOCK_SIZE};
+    use super::super::{Sha256, BLOCK_SIZE};
     use super::{message_schedule::msg_schedule_test_input, Table16Chip, Table16Config};
     use halo2::{
         arithmetic::FieldExt,
@@ -341,9 +342,9 @@ mod tests {
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    #[cfg(feature = "dev-graph")]
     #[test]
     fn print_sha256_circuit() {
+        use plotters::prelude::*;
         struct MyCircuit {}
 
         impl<F: FieldExt> Circuit<F> for MyCircuit {
@@ -381,53 +382,8 @@ mod tests {
             }
         }
 
-        let circuit: MyCircuit = MyCircuit {};
-        eprintln!("{}", halo2::dev::circuit_dot_graph::<Fq, _>(&circuit));
-    }
-
-    #[cfg(feature = "dev-graph")]
-    #[test]
-    fn print_table16_chip() {
-        use plotters::prelude::*;
-        struct MyCircuit {}
-
-        impl<F: FieldExt> Circuit<F> for MyCircuit {
-            type Config = Table16Config;
-            type FloorPlanner = SimpleFloorPlanner;
-
-            fn without_witnesses(&self) -> Self {
-                MyCircuit {}
-            }
-
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
-                Table16Chip::configure(meta)
-            }
-
-            fn synthesize(
-                &self,
-                config: Self::Config,
-                mut layouter: impl Layouter<F>,
-            ) -> Result<(), Error> {
-                let table16_chip = Table16Chip::<F>::construct(config.clone());
-                Table16Chip::<F>::load(config, &mut layouter)?;
-
-                // Test vector: "abc"
-                let test_input = msg_schedule_test_input();
-
-                // Create a message of length 2 blocks
-                let mut input = Vec::with_capacity(2 * BLOCK_SIZE);
-                for _ in 0..2 {
-                    input.extend_from_slice(&test_input);
-                }
-
-                Sha256::digest(table16_chip, layouter.namespace(|| "'abc' * 2"), &input)?;
-
-                Ok(())
-            }
-        }
-
         let root =
-            SVGBackend::new("sha-256-table16-chip-layout.svg", (1024, 20480)).into_drawing_area();
+            BitMapBackend::new("sha-256-table16-chip-layout.png", (1024, 3480)).into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root
             .titled("16-bit Table SHA-256 Chip", ("sans-serif", 60))
@@ -435,7 +391,7 @@ mod tests {
 
         let circuit = MyCircuit {};
         halo2::dev::CircuitLayout::default()
-            .render::<Fq, _, _>(&circuit, &root)
+            .render::<Fq, _, _>(17, &circuit, &root)
             .unwrap();
     }
 }

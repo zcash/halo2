@@ -2,7 +2,7 @@ use super::{util::*, CellValue16, CellValue32};
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Chip, Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
+    plonk::{Advice, Column, ConstraintSystem, Error, TableColumn},
     poly::Rotation,
 };
 use std::marker::PhantomData;
@@ -135,9 +135,9 @@ pub(super) struct SpreadInputs {
 
 #[derive(Clone, Debug)]
 pub(super) struct SpreadTable {
-    pub(super) tag: Column<Fixed>,
-    pub(super) dense: Column<Fixed>,
-    pub(super) spread: Column<Fixed>,
+    pub(super) tag: TableColumn,
+    pub(super) dense: TableColumn,
+    pub(super) spread: TableColumn,
 }
 
 #[derive(Clone, Debug)]
@@ -172,22 +172,19 @@ impl<F: FieldExt> SpreadTableChip<F> {
         input_dense: Column<Advice>,
         input_spread: Column<Advice>,
     ) -> <Self as Chip<F>>::Config {
-        let table_tag = meta.fixed_column();
-        let table_dense = meta.fixed_column();
-        let table_spread = meta.fixed_column();
+        let table_tag = meta.lookup_table_column();
+        let table_dense = meta.lookup_table_column();
+        let table_spread = meta.lookup_table_column();
 
         meta.lookup(|meta| {
             let tag_cur = meta.query_advice(input_tag, Rotation::cur());
             let dense_cur = meta.query_advice(input_dense, Rotation::cur());
             let spread_cur = meta.query_advice(input_spread, Rotation::cur());
-            let table_tag_cur = meta.query_fixed(table_tag, Rotation::cur());
-            let table_dense_cur = meta.query_fixed(table_dense, Rotation::cur());
-            let table_spread_cur = meta.query_fixed(table_spread, Rotation::cur());
 
             vec![
-                (tag_cur, table_tag_cur),
-                (dense_cur, table_dense_cur),
-                (spread_cur, table_spread_cur),
+                (tag_cur, table_tag),
+                (dense_cur, table_dense),
+                (spread_cur, table_spread),
             ]
         });
 
@@ -209,15 +206,15 @@ impl<F: FieldExt> SpreadTableChip<F> {
         config: SpreadTableConfig,
         layouter: &mut impl Layouter<F>,
     ) -> Result<<Self as Chip<F>>::Loaded, Error> {
-        layouter.assign_region(
+        layouter.assign_table(
             || "spread table",
-            |mut gate| {
+            |mut table| {
                 // We generate the row values lazily (we only need them during keygen).
                 let mut rows = SpreadTableConfig::generate::<F>();
 
                 for index in 0..(1 << 16) {
                     let mut row = None;
-                    gate.assign_fixed(
+                    table.assign_cell(
                         || "tag",
                         config.table.tag,
                         index,
@@ -226,13 +223,13 @@ impl<F: FieldExt> SpreadTableChip<F> {
                             row.map(|(tag, _, _)| tag).ok_or(Error::SynthesisError)
                         },
                     )?;
-                    gate.assign_fixed(
+                    table.assign_cell(
                         || "dense",
                         config.table.dense,
                         index,
                         || row.map(|(_, dense, _)| dense).ok_or(Error::SynthesisError),
                     )?;
-                    gate.assign_fixed(
+                    table.assign_cell(
                         || "spread",
                         config.table.spread,
                         index,
@@ -242,6 +239,7 @@ impl<F: FieldExt> SpreadTableChip<F> {
                         },
                     )?;
                 }
+
                 Ok(())
             },
         )
