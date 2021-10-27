@@ -23,9 +23,9 @@ impl CompressionConfig {
         let (a, b, c, d, e, f, g, h) = match_state(state);
 
         let abcd_row = 0;
-        region.assign_fixed(|| "s_digest", self.s_digest, abcd_row, || Ok(F::one()))?;
+        self.s_digest.enable(region, abcd_row)?;
         let efgh_row = abcd_row + 2;
-        region.assign_fixed(|| "s_digest", self.s_digest, efgh_row, || Ok(F::one()))?;
+        self.s_digest.enable(region, efgh_row)?;
 
         // Assign digest for A, B, C, D
         self.assign_and_constrain(region, || "a_lo", a_3, abcd_row, a.dense_halves.0)?;

@@ -161,12 +161,7 @@ impl CompressionConfig {
         ),
         Error,
     > {
-        region.assign_fixed(
-            || "s_decompose_abcd",
-            self.s_decompose_abcd,
-            row,
-            || Ok(F::one()),
-        )?;
+        self.s_decompose_abcd.enable(region, row)?;
 
         let a_3 = self.extras[0];
         let a_4 = self.extras[1];
@@ -208,12 +203,7 @@ impl CompressionConfig {
         ),
         Error,
     > {
-        region.assign_fixed(
-            || "s_decompose_efgh",
-            self.s_decompose_efgh,
-            row,
-            || Ok(F::one()),
-        )?;
+        self.s_decompose_efgh.enable(region, row)?;
 
         let a_3 = self.extras[0];
         let a_4 = self.extras[1];
@@ -297,12 +287,7 @@ impl CompressionConfig {
 
         let row = get_upper_sigma_0_row(idx);
 
-        region.assign_fixed(
-            || "s_upper_sigma_0",
-            self.s_upper_sigma_0,
-            row,
-            || Ok(F::one()),
-        )?;
+        self.s_upper_sigma_0.enable(region, row)?;
 
         // Assign `spread_a` and copy constraint
         self.assign_and_constrain(region, || "spread_a", a_3, row + 1, word.a.spread)?;
@@ -379,12 +364,7 @@ impl CompressionConfig {
 
         let row = get_upper_sigma_1_row(idx);
 
-        region.assign_fixed(
-            || "s_upper_sigma_1",
-            self.s_upper_sigma_1,
-            row,
-            || Ok(F::one()),
-        )?;
+        self.s_upper_sigma_1.enable(region, row)?;
 
         // Assign `spread_a_lo` and copy constraint
         self.assign_and_constrain(region, || "spread_a_lo", a_3, row + 1, word.a_lo.spread)?;
@@ -485,7 +465,7 @@ impl CompressionConfig {
 
         let row = get_ch_row(idx);
 
-        region.assign_fixed(|| "s_ch", self.s_ch, row, || Ok(F::one()))?;
+        self.s_ch.enable(region, row)?;
 
         // Assign and copy spread_e_lo, spread_e_hi
         self.assign_and_constrain(region, || "spread_e_lo", a_3, row - 1, spread_halves_e.0)?;
@@ -522,7 +502,7 @@ impl CompressionConfig {
     ) -> Result<(CellValue16, CellValue16), Error> {
         let row = get_ch_neg_row(idx);
 
-        region.assign_fixed(|| "s_ch_neg", self.s_ch_neg, row, || Ok(F::one()))?;
+        self.s_ch_neg.enable(region, row)?;
 
         let a_3 = self.extras[0];
         let a_4 = self.extras[1];
@@ -623,7 +603,7 @@ impl CompressionConfig {
 
         let row = get_maj_row(idx);
 
-        region.assign_fixed(|| "s_maj", self.s_maj, row, || Ok(F::one()))?;
+        self.s_maj.enable(region, row)?;
 
         // Assign and copy spread_a_lo, spread_a_hi
         self.assign_and_constrain(region, || "spread_a_lo", a_4, row - 1, spread_halves_a.0)?;
@@ -671,7 +651,7 @@ impl CompressionConfig {
         w: (CellValue16, CellValue16),
     ) -> Result<(CellValue16, CellValue16), Error> {
         let row = get_h_prime_row(idx);
-        region.assign_fixed(|| "s_h_prime", self.s_h_prime, row, || Ok(F::one()))?;
+        self.s_h_prime.enable(region, row)?;
 
         let a_4 = self.extras[1];
         let a_5 = self.message_schedule;
@@ -775,7 +755,7 @@ impl CompressionConfig {
     ) -> Result<(CellValue16, CellValue16), Error> {
         let row = get_e_new_row(idx);
 
-        region.assign_fixed(|| "s_e_new", self.s_e_new, row, || Ok(F::one()))?;
+        self.s_e_new.enable(region, row)?;
 
         let a_7 = self.extras[3];
         let a_8 = self.extras[4];
@@ -813,7 +793,7 @@ impl CompressionConfig {
     ) -> Result<(CellValue16, CellValue16), Error> {
         let row = get_a_new_row(idx);
 
-        region.assign_fixed(|| "s_a_new", self.s_a_new, row, || Ok(F::one()))?;
+        self.s_a_new.enable(region, row)?;
 
         let a_3 = self.extras[0];
         let a_6 = self.extras[2];
