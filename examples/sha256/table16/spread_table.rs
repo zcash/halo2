@@ -2,6 +2,7 @@ use super::{util::*, CellValue16, CellValue32};
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Chip, Layouter, Region},
+    pasta::pallas,
     plonk::{Advice, Column, ConstraintSystem, Error, TableColumn},
     poly::Rotation,
 };
@@ -30,7 +31,7 @@ impl SpreadWord {
 }
 
 /// A variable stored in advice columns corresponding to a row of [`SpreadTableConfig`].
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub(super) struct SpreadVar {
     pub tag: Option<u8>,
     pub dense: CellValue16,
@@ -38,8 +39,8 @@ pub(super) struct SpreadVar {
 }
 
 impl SpreadVar {
-    pub(super) fn with_lookup<F: FieldExt>(
-        region: &mut Region<'_, F>,
+    pub(super) fn with_lookup(
+        region: &mut Region<'_, pallas::Base>,
         cols: &SpreadInputs,
         row: usize,
         word: Option<SpreadWord>,
@@ -53,41 +54,21 @@ impl SpreadVar {
             cols.tag,
             row,
             || {
-                tag.map(|tag| F::from_u64(tag as u64))
+                tag.map(|tag| pallas::Base::from_u64(tag as u64))
                     .ok_or(Error::SynthesisError)
             },
         )?;
 
-        let dense_var = region.assign_advice(
-            || "dense",
-            cols.dense,
-            row,
-            || {
-                dense_val
-                    .map(|v| F::from_u64(v as u64))
-                    .ok_or(Error::SynthesisError)
-            },
-        )?;
-        let spread_var = region.assign_advice(
-            || "spread",
-            cols.spread,
-            row,
-            || {
-                spread_val
-                    .map(|v| F::from_u64(v as u64))
-                    .ok_or(Error::SynthesisError)
-            },
-        )?;
+        let dense = CellValue16::assign_unchecked(region, || "dense", cols.dense, row, dense_val)?;
 
-        Ok(SpreadVar {
-            tag,
-            dense: CellValue16::new(dense_var, dense_val),
-            spread: CellValue32::new(spread_var, spread_val),
-        })
+        let spread =
+            CellValue32::assign_unchecked(region, || "spread", cols.spread, row, spread_val)?;
+
+        Ok(SpreadVar { tag, dense, spread })
     }
 
-    pub(super) fn without_lookup<F: FieldExt>(
-        region: &mut Region<'_, F>,
+    pub(super) fn without_lookup(
+        region: &mut Region<'_, pallas::Base>,
         dense_col: Column<Advice>,
         dense_row: usize,
         spread_col: Column<Advice>,
@@ -97,32 +78,14 @@ impl SpreadVar {
         let tag = word.map(|word| word.tag);
         let dense_val = word.map(|word| word.dense);
         let spread_val = word.map(|word| word.spread);
-        let dense_var = region.assign_advice(
-            || "dense",
-            dense_col,
-            dense_row,
-            || {
-                dense_val
-                    .map(|v| F::from_u64(v as u64))
-                    .ok_or(Error::SynthesisError)
-            },
-        )?;
-        let spread_var = region.assign_advice(
-            || "spread",
-            spread_col,
-            spread_row,
-            || {
-                spread_val
-                    .map(|v| F::from_u64(v as u64))
-                    .ok_or(Error::SynthesisError)
-            },
-        )?;
 
-        Ok(SpreadVar {
-            tag,
-            dense: CellValue16::new(dense_var, dense_val),
-            spread: CellValue32::new(spread_var, spread_val),
-        })
+        let dense =
+            CellValue16::assign_unchecked(region, || "dense", dense_col, dense_row, dense_val)?;
+
+        let spread =
+            CellValue32::assign_unchecked(region, || "spread", spread_col, spread_row, spread_val)?;
+
+        Ok(SpreadVar { tag, dense, spread })
     }
 }
 

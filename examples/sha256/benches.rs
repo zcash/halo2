@@ -1,7 +1,6 @@
 use halo2::{
-    arithmetic::FieldExt,
     circuit::{Layouter, SimpleFloorPlanner},
-    pasta::EqAffine,
+    pasta::{pallas, EqAffine},
     plonk::{
         create_proof, keygen_pk, keygen_vk, verify_proof, Circuit, ConstraintSystem, Error,
         VerifyingKey,
@@ -25,7 +24,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     #[derive(Default)]
     struct MyCircuit {}
 
-    impl<F: FieldExt> Circuit<F> for MyCircuit {
+    impl Circuit<pallas::Base> for MyCircuit {
         type Config = Table16Config;
         type FloorPlanner = SimpleFloorPlanner;
 
@@ -33,17 +32,17 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
             Self::default()
         }
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+        fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
             Table16Chip::configure(meta)
         }
 
         fn synthesize(
             &self,
             config: Self::Config,
-            mut layouter: impl Layouter<F>,
+            mut layouter: impl Layouter<pallas::Base>,
         ) -> Result<(), Error> {
-            Table16Chip::<F>::load(config.clone(), &mut layouter)?;
-            let table16_chip = Table16Chip::<F>::construct(config);
+            Table16Chip::load(config.clone(), &mut layouter)?;
+            let table16_chip = Table16Chip::construct(config);
 
             // Test vector: "abc"
             let test_input = [

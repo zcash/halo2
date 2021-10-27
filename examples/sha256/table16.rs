@@ -3,8 +3,9 @@ use std::marker::PhantomData;
 use super::Sha256Instructions;
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Cell, Chip, Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error},
+    circuit::{AssignedCell, Chip, Layouter, Region},
+    pasta::pallas,
+    plonk::{Advice, Any, Column, ConstraintSystem, Error},
 };
 
 mod compression;
@@ -48,57 +49,117 @@ const IV: [u32; STATE] = [
 /// A word in a `Table16` message block.
 pub struct BlockWord(pub(crate) Option<u32>);
 
-pub trait CellValue<T> {
-    fn var(&self) -> Cell;
-    fn value(&self) -> Option<T>;
-}
+#[derive(Clone, Debug)]
+/// Newtype around u16
+pub struct U16(u16);
 
-#[derive(Clone, Copy, Debug)]
-pub struct CellValue16 {
-    var: Cell,
-    value: Option<u16>,
-}
-
-impl<F: FieldExt> CellValue<F> for CellValue16 {
-    fn var(&self) -> Cell {
-        self.var
-    }
-    fn value(&self) -> Option<F> {
-        self.value.map(|value| F::from_u64(value as u64))
+impl From<U16> for pallas::Base {
+    fn from(int: U16) -> pallas::Base {
+        pallas::Base::from_u64(int.0 as u64)
     }
 }
+
+impl From<U16> for u16 {
+    fn from(int: U16) -> u16 {
+        int.0
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct CellValue16(AssignedCell<pallas::Base, U16>);
 
 impl CellValue16 {
-    pub fn new(var: Cell, value: Option<u16>) -> Self {
-        CellValue16 { var, value }
+    pub fn assign_unchecked<A, AR>(
+        region: &mut Region<'_, pallas::Base>,
+        annotation: A,
+        column: impl Into<Column<Any>>,
+        offset: usize,
+        value: Option<u16>,
+    ) -> Result<Self, Error>
+    where
+        A: Fn() -> AR,
+        AR: Into<String>,
+    {
+        AssignedCell::<pallas::Base, U16>::assign_unchecked(
+            region,
+            annotation,
+            column,
+            offset,
+            value.map(U16),
+        )
+        .map(CellValue16)
+    }
+
+    pub fn value_u16(&self) -> Option<u16> {
+        self.value().map(|value| value.0)
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct CellValue32 {
-    var: Cell,
-    value: Option<u32>,
+impl From<AssignedCell<pallas::Base, U16>> for CellValue16 {
+    fn from(assigned_cell: AssignedCell<pallas::Base, U16>) -> CellValue16 {
+        CellValue16(assigned_cell)
+    }
 }
+
+impl std::ops::Deref for CellValue16 {
+    type Target = AssignedCell<pallas::Base, U16>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug)]
+/// Newtype around u32
+pub struct U32(u32);
+
+impl From<U32> for pallas::Base {
+    fn from(int: U32) -> pallas::Base {
+        pallas::Base::from_u64(int.0 as u64)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct CellValue32(AssignedCell<pallas::Base, U32>);
 
 impl CellValue32 {
-    pub fn new(var: Cell, value: Option<u32>) -> Self {
-        CellValue32 { var, value }
+    pub fn assign_unchecked<A, AR>(
+        region: &mut Region<'_, pallas::Base>,
+        annotation: A,
+        column: impl Into<Column<Any>>,
+        offset: usize,
+        value: Option<u32>,
+    ) -> Result<Self, Error>
+    where
+        A: Fn() -> AR,
+        AR: Into<String>,
+    {
+        AssignedCell::<pallas::Base, U32>::assign_unchecked(
+            region,
+            annotation,
+            column,
+            offset,
+            value.map(U32),
+        )
+        .map(CellValue32)
+    }
+
+    pub fn value_u32(&self) -> Option<u32> {
+        self.value().map(|value| value.0)
     }
 }
 
-impl<F: FieldExt> CellValue<F> for CellValue32 {
-    fn var(&self) -> Cell {
-        self.var
-    }
-    fn value(&self) -> Option<F> {
-        self.value.map(|value| F::from_u64(value as u64))
+impl From<AssignedCell<pallas::Base, U32>> for CellValue32 {
+    fn from(assigned_cell: AssignedCell<pallas::Base, U32>) -> CellValue32 {
+        CellValue32(assigned_cell)
     }
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<CellValue32> for CellValue16 {
-    fn into(self) -> CellValue32 {
-        CellValue32::new(self.var, self.value.map(|value| value as u32))
+impl std::ops::Deref for CellValue32 {
+    type Target = AssignedCell<pallas::Base, U32>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -112,12 +173,12 @@ pub struct Table16Config {
 
 /// A chip that implements SHA-256 with a maximum lookup table size of $2^16$.
 #[derive(Clone, Debug)]
-pub struct Table16Chip<F: FieldExt> {
+pub struct Table16Chip {
     config: Table16Config,
-    _marker: PhantomData<F>,
+    _marker: PhantomData<pallas::Base>,
 }
 
-impl<F: FieldExt> Chip<F> for Table16Chip<F> {
+impl Chip<pallas::Base> for Table16Chip {
     type Config = Table16Config;
     type Loaded = ();
 
@@ -130,15 +191,17 @@ impl<F: FieldExt> Chip<F> for Table16Chip<F> {
     }
 }
 
-impl<F: FieldExt> Table16Chip<F> {
-    pub fn construct(config: <Self as Chip<F>>::Config) -> Self {
+impl Table16Chip {
+    pub fn construct(config: <Self as Chip<pallas::Base>>::Config) -> Self {
         Self {
             config,
             _marker: PhantomData,
         }
     }
 
-    pub fn configure(meta: &mut ConstraintSystem<F>) -> <Self as Chip<F>>::Config {
+    pub fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+    ) -> <Self as Chip<pallas::Base>>::Config {
         // Columns required by this chip:
         let message_schedule = meta.advice_column();
         let extras = [
@@ -188,22 +251,28 @@ impl<F: FieldExt> Table16Chip<F> {
         }
     }
 
-    pub fn load(config: Table16Config, layouter: &mut impl Layouter<F>) -> Result<(), Error> {
+    pub fn load(
+        config: Table16Config,
+        layouter: &mut impl Layouter<pallas::Base>,
+    ) -> Result<(), Error> {
         SpreadTableChip::load(config.lookup, layouter)
     }
 }
 
-impl<F: FieldExt> Sha256Instructions<F> for Table16Chip<F> {
+impl Sha256Instructions<pallas::Base> for Table16Chip {
     type State = State;
     type BlockWord = BlockWord;
 
-    fn initialization_vector(&self, layouter: &mut impl Layouter<F>) -> Result<State, Error> {
+    fn initialization_vector(
+        &self,
+        layouter: &mut impl Layouter<pallas::Base>,
+    ) -> Result<State, Error> {
         self.config().compression.initialize_with_iv(layouter, IV)
     }
 
     fn initialization(
         &self,
-        layouter: &mut impl Layouter<F>,
+        layouter: &mut impl Layouter<pallas::Base>,
         init_state: &Self::State,
     ) -> Result<Self::State, Error> {
         self.config()
@@ -215,7 +284,7 @@ impl<F: FieldExt> Sha256Instructions<F> for Table16Chip<F> {
     // message block and return the final state.
     fn compress(
         &self,
-        layouter: &mut impl Layouter<F>,
+        layouter: &mut impl Layouter<pallas::Base>,
         initialized_state: &Self::State,
         input: [Self::BlockWord; super::BLOCK_SIZE],
     ) -> Result<Self::State, Error> {
@@ -228,7 +297,7 @@ impl<F: FieldExt> Sha256Instructions<F> for Table16Chip<F> {
 
     fn digest(
         &self,
-        layouter: &mut impl Layouter<F>,
+        layouter: &mut impl Layouter<pallas::Base>,
         state: &Self::State,
     ) -> Result<[Self::BlockWord; super::DIGEST_SIZE], Error> {
         // Copy the dense forms of the state variable chunks down to this gate.
@@ -238,13 +307,13 @@ impl<F: FieldExt> Sha256Instructions<F> for Table16Chip<F> {
 }
 
 /// Common assignment patterns used by Table16 regions.
-trait Table16Assignment<F: FieldExt> {
+trait Table16Assignment {
     // Assign cells for general spread computation used in sigma, ch, ch_neg, maj gates
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::type_complexity)]
     fn assign_spread_outputs(
         &self,
-        region: &mut Region<'_, F>,
+        region: &mut Region<'_, pallas::Base>,
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
         row: usize,
@@ -263,29 +332,13 @@ trait Table16Assignment<F: FieldExt> {
             SpreadVar::with_lookup(region, lookup, row + 2, SpreadWord::opt_new(r_1_odd))?;
 
         // Assign and copy R_1^{odd}
-        let r_1_odd_spread = region.assign_advice(
-            || "Assign and copy R_1^{odd}",
-            a_3,
-            row,
-            || {
-                r_1_odd
-                    .spread
-                    .value
-                    .map(|value| F::from_u64(value as u64))
-                    .ok_or(Error::SynthesisError)
-            },
-        )?;
-        region.constrain_equal(r_1_odd.spread.var, r_1_odd_spread)?;
+        r_1_odd
+            .spread
+            .copy_advice(|| "Assign and copy R_1^{odd}", region, a_3, row)?;
 
         Ok((
-            (
-                CellValue16::new(r_0_even.dense.var, r_0_even.dense.value),
-                CellValue16::new(r_1_even.dense.var, r_1_even.dense.value),
-            ),
-            (
-                CellValue16::new(r_0_odd.dense.var, r_0_odd.dense.value),
-                CellValue16::new(r_1_odd.dense.var, r_1_odd.dense.value),
-            ),
+            (r_0_even.dense, r_1_even.dense),
+            (r_0_odd.dense, r_1_odd.dense),
         ))
     }
 
@@ -293,7 +346,7 @@ trait Table16Assignment<F: FieldExt> {
     #[allow(clippy::too_many_arguments)]
     fn assign_sigma_outputs(
         &self,
-        region: &mut Region<'_, F>,
+        region: &mut Region<'_, pallas::Base>,
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
         row: usize,
@@ -308,26 +361,6 @@ trait Table16Assignment<F: FieldExt> {
 
         Ok(even)
     }
-
-    // Assign a cell the same value as another cell and set up a copy constraint between them
-    fn assign_and_constrain<A, AR>(
-        &self,
-        region: &mut Region<'_, F>,
-        annotation: A,
-        column: Column<Advice>,
-        row: usize,
-        copy: impl CellValue<F>,
-    ) -> Result<Cell, Error>
-    where
-        A: Fn() -> AR,
-        AR: Into<String>,
-    {
-        let cell = region.assign_advice(annotation, column, row, || {
-            copy.value().ok_or(Error::SynthesisError)
-        })?;
-        region.constrain_equal(cell, copy.var())?;
-        Ok(cell)
-    }
 }
 
 #[cfg(test)]
@@ -336,9 +369,8 @@ mod tests {
     use super::super::{Sha256, BLOCK_SIZE};
     use super::{message_schedule::msg_schedule_test_input, Table16Chip, Table16Config};
     use halo2::{
-        arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner},
-        pasta::Fq,
+        pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
@@ -347,7 +379,7 @@ mod tests {
         use plotters::prelude::*;
         struct MyCircuit {}
 
-        impl<F: FieldExt> Circuit<F> for MyCircuit {
+        impl Circuit<pallas::Base> for MyCircuit {
             type Config = Table16Config;
             type FloorPlanner = SimpleFloorPlanner;
 
@@ -355,17 +387,17 @@ mod tests {
                 MyCircuit {}
             }
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
                 Table16Chip::configure(meta)
             }
 
             fn synthesize(
                 &self,
                 config: Self::Config,
-                mut layouter: impl Layouter<F>,
+                mut layouter: impl Layouter<pallas::Base>,
             ) -> Result<(), Error> {
-                let table16_chip = Table16Chip::<F>::construct(config.clone());
-                Table16Chip::<F>::load(config, &mut layouter)?;
+                let table16_chip = Table16Chip::construct(config.clone());
+                Table16Chip::load(config, &mut layouter)?;
 
                 // Test vector: "abc"
                 let test_input = msg_schedule_test_input();
@@ -391,7 +423,7 @@ mod tests {
 
         let circuit = MyCircuit {};
         halo2::dev::CircuitLayout::default()
-            .render::<Fq, _, _>(17, &circuit, &root)
+            .render::<pallas::Base, _, _>(17, &circuit, &root)
             .unwrap();
     }
 }

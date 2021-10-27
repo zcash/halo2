@@ -1,12 +1,12 @@
 use super::super::{RoundWordDense, RoundWordSpread, StateWord, STATE};
 use super::{compression_util::*, CompressionConfig, State};
-use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
+use halo2::{circuit::Region, pasta::pallas, plonk::Error};
 
 impl CompressionConfig {
     #[allow(clippy::many_single_char_names)]
-    pub fn initialize_iv<F: FieldExt>(
+    pub fn initialize_iv(
         &self,
-        region: &mut Region<'_, F>,
+        region: &mut Region<'_, pallas::Base>,
         iv: [u32; STATE],
     ) -> Result<State, Error> {
         let a_7 = self.extras[3];
@@ -52,9 +52,9 @@ impl CompressionConfig {
     }
 
     #[allow(clippy::many_single_char_names)]
-    pub fn initialize_state<F: FieldExt>(
+    pub fn initialize_state(
         &self,
-        region: &mut Region<'_, F>,
+        region: &mut Region<'_, pallas::Base>,
         state: State,
     ) -> Result<State, Error> {
         let a_7 = self.extras[3];
@@ -63,33 +63,33 @@ impl CompressionConfig {
         let idx = -1;
 
         // Decompose E into (6, 5, 14, 7)-bit chunks
-        let e = val_from_dense_halves(e.dense_halves);
+        let e = val_from_dense_halves(&e.dense_halves);
         let e = self.decompose_e(region, idx, e)?;
 
         // Decompose F, G
-        let f = val_from_dense_halves(f.dense_halves);
+        let f = val_from_dense_halves(&f.dense_halves);
         let f = self.decompose_f(region, idx, f)?;
-        let g = val_from_dense_halves(g.dense_halves);
+        let g = val_from_dense_halves(&g.dense_halves);
         let g = self.decompose_g(region, idx, g)?;
 
         // Assign H
-        let h = val_from_dense_halves(h.dense_halves);
+        let h = val_from_dense_halves(&h.dense_halves);
         let h_row = get_h_row(idx);
         let h_dense = self.assign_word_halves_dense(region, h_row, a_7, h_row + 1, a_7, h)?;
         let h = RoundWordDense::new(h_dense);
 
         // Decompose A into (2, 11, 9, 10)-bit chunks
-        let a = val_from_dense_halves(a.dense_halves);
+        let a = val_from_dense_halves(&a.dense_halves);
         let a = self.decompose_a(region, idx, a)?;
 
         // Decompose B, C
-        let b = val_from_dense_halves(b.dense_halves);
+        let b = val_from_dense_halves(&b.dense_halves);
         let b = self.decompose_b(region, idx, b)?;
-        let c = val_from_dense_halves(c.dense_halves);
+        let c = val_from_dense_halves(&c.dense_halves);
         let c = self.decompose_c(region, idx, c)?;
 
         // Assign D
-        let d = val_from_dense_halves(d.dense_halves);
+        let d = val_from_dense_halves(&d.dense_halves);
         let d_row = get_d_row(idx);
         let d_dense = self.assign_word_halves_dense(region, d_row, a_7, d_row + 1, a_7, d)?;
         let d = RoundWordDense::new(d_dense);
@@ -106,9 +106,9 @@ impl CompressionConfig {
         ))
     }
 
-    fn decompose_b<F: FieldExt>(
+    fn decompose_b(
         &self,
-        region: &mut Region<'_, F>,
+        region: &mut Region<'_, pallas::Base>,
         idx: i32,
         b_val: Option<u32>,
     ) -> Result<RoundWordSpread, Error> {
@@ -119,9 +119,9 @@ impl CompressionConfig {
         Ok(RoundWordSpread::new(dense_halves, spread_halves))
     }
 
-    fn decompose_c<F: FieldExt>(
+    fn decompose_c(
         &self,
-        region: &mut Region<'_, F>,
+        region: &mut Region<'_, pallas::Base>,
         idx: i32,
         c_val: Option<u32>,
     ) -> Result<RoundWordSpread, Error> {
@@ -132,9 +132,9 @@ impl CompressionConfig {
         Ok(RoundWordSpread::new(dense_halves, spread_halves))
     }
 
-    fn decompose_f<F: FieldExt>(
+    fn decompose_f(
         &self,
-        region: &mut Region<'_, F>,
+        region: &mut Region<'_, pallas::Base>,
         idx: i32,
         f_val: Option<u32>,
     ) -> Result<RoundWordSpread, Error> {
@@ -145,9 +145,9 @@ impl CompressionConfig {
         Ok(RoundWordSpread::new(dense_halves, spread_halves))
     }
 
-    fn decompose_g<F: FieldExt>(
+    fn decompose_g(
         &self,
-        region: &mut Region<'_, F>,
+        region: &mut Region<'_, pallas::Base>,
         idx: i32,
         g_val: Option<u32>,
     ) -> Result<RoundWordSpread, Error> {

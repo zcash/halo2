@@ -1,16 +1,17 @@
-use super::super::{super::DIGEST_SIZE, BlockWord, CellValue16, Table16Assignment};
+use super::super::{super::DIGEST_SIZE, BlockWord, CellValue16};
 use super::{compression_util::*, CompressionConfig, State};
 use halo2::{
     arithmetic::FieldExt,
     circuit::Region,
+    pasta::pallas,
     plonk::{Advice, Column, Error},
 };
 
 impl CompressionConfig {
     #[allow(clippy::many_single_char_names)]
-    pub fn assign_digest<F: FieldExt>(
+    pub fn assign_digest(
         &self,
-        region: &mut Region<'_, F>,
+        region: &mut Region<'_, pallas::Base>,
         state: State,
     ) -> Result<[BlockWord; DIGEST_SIZE], Error> {
         let a_3 = self.extras[0];
@@ -28,15 +29,19 @@ impl CompressionConfig {
         self.s_digest.enable(region, efgh_row)?;
 
         // Assign digest for A, B, C, D
-        self.assign_and_constrain(region, || "a_lo", a_3, abcd_row, a.dense_halves.0)?;
-        self.assign_and_constrain(region, || "a_hi", a_4, abcd_row, a.dense_halves.1)?;
-        let a = val_from_dense_halves(a.dense_halves);
+        a.dense_halves
+            .0
+            .copy_advice(|| "a_lo", region, a_3, abcd_row)?;
+        a.dense_halves
+            .1
+            .copy_advice(|| "a_hi", region, a_4, abcd_row)?;
+        let a = val_from_dense_halves(&a.dense_halves);
         region.assign_advice(
             || "a",
             a_5,
             abcd_row,
             || {
-                a.map(|a| F::from_u64(a as u64))
+                a.map(|a| pallas::Base::from_u64(a as u64))
                     .ok_or(Error::SynthesisError)
             },
         )?;
@@ -46,15 +51,19 @@ impl CompressionConfig {
         let d = self.assign_digest_word(region, abcd_row + 1, a_6, a_7, a_8, d.dense_halves)?;
 
         // Assign digest for E, F, G, H
-        self.assign_and_constrain(region, || "e_lo", a_3, efgh_row, e.dense_halves.0)?;
-        self.assign_and_constrain(region, || "e_hi", a_4, efgh_row, e.dense_halves.1)?;
-        let e = val_from_dense_halves(e.dense_halves);
+        e.dense_halves
+            .0
+            .copy_advice(|| "e_lo", region, a_3, efgh_row)?;
+        e.dense_halves
+            .1
+            .copy_advice(|| "e_hi", region, a_4, efgh_row)?;
+        let e = val_from_dense_halves(&e.dense_halves);
         region.assign_advice(
             || "e",
             a_5,
             efgh_row,
             || {
-                e.map(|e| F::from_u64(e as u64))
+                e.map(|e| pallas::Base::from_u64(e as u64))
                     .ok_or(Error::SynthesisError)
             },
         )?;
@@ -75,25 +84,25 @@ impl CompressionConfig {
         ])
     }
 
-    fn assign_digest_word<F: FieldExt>(
+    fn assign_digest_word(
         &self,
-        region: &mut Region<'_, F>,
+        region: &mut Region<'_, pallas::Base>,
         row: usize,
         lo_col: Column<Advice>,
         hi_col: Column<Advice>,
         word_col: Column<Advice>,
         dense_halves: (CellValue16, CellValue16),
     ) -> Result<Option<u32>, Error> {
-        self.assign_and_constrain(region, || "lo", lo_col, row, dense_halves.0)?;
-        self.assign_and_constrain(region, || "hi", hi_col, row, dense_halves.1)?;
+        dense_halves.0.copy_advice(|| "lo", region, lo_col, row)?;
+        dense_halves.1.copy_advice(|| "hi", region, hi_col, row)?;
 
-        let val = val_from_dense_halves(dense_halves);
+        let val = val_from_dense_halves(&dense_halves);
         region.assign_advice(
             || "word",
             word_col,
             row,
             || {
-                val.map(|val| F::from_u64(val as u64))
+                val.map(|val| pallas::Base::from_u64(val as u64))
                     .ok_or(Error::SynthesisError)
             },
         )?;

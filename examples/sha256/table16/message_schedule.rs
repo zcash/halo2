@@ -1,9 +1,11 @@
 use std::convert::TryInto;
 
-use super::{super::BLOCK_SIZE, BlockWord, CellValue16, SpreadInputs, Table16Assignment, ROUNDS};
+use super::{
+    super::BLOCK_SIZE, BlockWord, CellValue16, CellValue32, SpreadInputs, Table16Assignment, ROUNDS,
+};
 use halo2::{
-    arithmetic::FieldExt,
-    circuit::{Cell, Layouter},
+    circuit::Layouter,
+    pasta::pallas,
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
@@ -21,9 +23,14 @@ use schedule_util::*;
 pub use schedule_util::msg_schedule_test_input;
 
 #[derive(Clone, Debug)]
-pub(super) struct MessageWord {
-    var: Cell,
-    value: Option<u32>,
+pub(super) struct MessageWord(CellValue32);
+
+impl std::ops::Deref for MessageWord {
+    type Target = CellValue32;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -52,7 +59,7 @@ pub(super) struct MessageScheduleConfig {
     s_lower_sigma_1_v2: Selector,
 }
 
-impl<F: FieldExt> Table16Assignment<F> for MessageScheduleConfig {}
+impl Table16Assignment for MessageScheduleConfig {}
 
 impl MessageScheduleConfig {
     /// Configures the message schedule.
@@ -65,8 +72,8 @@ impl MessageScheduleConfig {
     /// gates, and will not place any constraints on (such as lookup constraints) outside
     /// itself.
     #[allow(clippy::many_single_char_names)]
-    pub(super) fn configure<F: FieldExt>(
-        meta: &mut ConstraintSystem<F>,
+    pub(super) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
         lookup: SpreadInputs,
         message_schedule: Column<Advice>,
         extras: [Column<Advice>; 6],
@@ -297,9 +304,9 @@ impl MessageScheduleConfig {
     }
 
     #[allow(clippy::type_complexity)]
-    pub(super) fn process<F: FieldExt>(
+    pub(super) fn process(
         &self,
-        layouter: &mut impl Layouter<F>,
+        layouter: &mut impl Layouter<pallas::Base>,
         input: [BlockWord; BLOCK_SIZE],
     ) -> Result<([MessageWord; ROUNDS], [(CellValue16, CellValue16); ROUNDS]), Error> {
         let mut w = Vec::<MessageWord>::with_capacity(ROUNDS);
@@ -347,8 +354,8 @@ impl MessageScheduleConfig {
 
                 // Assign W[0..16]
                 for (i, word) in input.iter().enumerate() {
-                    let (var, halves) = self.assign_word_and_halves(&mut region, word.0, i)?;
-                    w.push(MessageWord { var, value: word.0 });
+                    let (word, halves) = self.assign_word_and_halves(&mut region, word.0, i)?;
+                    w.push(MessageWord(word));
                     w_halves.push(halves);
                 }
 
@@ -385,10 +392,9 @@ mod tests {
     use super::super::{super::BLOCK_SIZE, BlockWord, SpreadTableChip, Table16Chip, Table16Config};
     use super::schedule_util::*;
     use halo2::{
-        arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
-        pasta::Fp,
+        pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
@@ -396,7 +402,7 @@ mod tests {
     fn message_schedule() {
         struct MyCircuit {}
 
-        impl<F: FieldExt> Circuit<F> for MyCircuit {
+        impl Circuit<pallas::Base> for MyCircuit {
             type Config = Table16Config;
             type FloorPlanner = SimpleFloorPlanner;
 
@@ -404,14 +410,14 @@ mod tests {
                 MyCircuit {}
             }
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
                 Table16Chip::configure(meta)
             }
 
             fn synthesize(
                 &self,
                 config: Self::Config,
-                mut layouter: impl Layouter<F>,
+                mut layouter: impl Layouter<pallas::Base>,
             ) -> Result<(), Error> {
                 // Load lookup table
                 SpreadTableChip::load(config.lookup.clone(), &mut layouter)?;
@@ -423,7 +429,7 @@ mod tests {
                 // Run message_scheduler to get W_[0..64]
                 let (w, _) = config.message_schedule.process(&mut layouter, inputs)?;
                 for (word, test_word) in w.iter().zip(MSG_SCHEDULE_TEST_OUTPUT.iter()) {
-                    let word = word.value.unwrap();
+                    let word = word.value_u32().unwrap();
                     assert_eq!(word, *test_word);
                 }
                 Ok(())
@@ -432,7 +438,7 @@ mod tests {
 
         let circuit: MyCircuit = MyCircuit {};
 
-        let prover = match MockProver::<Fp>::run(17, &circuit, vec![]) {
+        let prover = match MockProver::<pallas::Base>::run(17, &circuit, vec![]) {
             Ok(prover) => prover,
             Err(e) => panic!("{:?}", e),
         };

@@ -3,8 +3,8 @@ use super::{
     Table16Assignment, ROUNDS, STATE,
 };
 use halo2::{
-    arithmetic::FieldExt,
     circuit::Layouter,
+    pasta::pallas,
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
@@ -27,7 +27,7 @@ use compression_gates::CompressionGate;
 ///   respectively in each round, we therefore also have the same pieces in earlier rows.
 ///   We align the columns to make it efficient to copy-constrain these forms where they
 ///   are needed.
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct AbcdVar {
     idx: i32,
     val: Option<u32>,
@@ -49,7 +49,7 @@ pub struct AbcdVar {
 ///   respectively in each round, we therefore also have the same pieces in earlier rows.
 ///   We align the columns to make it efficient to copy-constrain these forms where they
 ///   are needed.
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct EfghVar {
     idx: i32,
     val: Option<u32>,
@@ -257,11 +257,11 @@ pub(super) struct CompressionConfig {
     s_digest: Selector,
 }
 
-impl<F: FieldExt> Table16Assignment<F> for CompressionConfig {}
+impl Table16Assignment for CompressionConfig {}
 
 impl CompressionConfig {
-    pub(super) fn configure<F: FieldExt>(
-        meta: &mut ConstraintSystem<F>,
+    pub(super) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
         lookup: SpreadInputs,
         message_schedule: Column<Advice>,
         extras: [Column<Advice>; 6],
@@ -665,9 +665,9 @@ impl CompressionConfig {
 
     /// Initialize compression with a constant Initialization Vector of 32-byte words.
     /// Returns an initialized state.
-    pub(super) fn initialize_with_iv<F: FieldExt>(
+    pub(super) fn initialize_with_iv(
         &self,
-        layouter: &mut impl Layouter<F>,
+        layouter: &mut impl Layouter<pallas::Base>,
         init_state: [u32; STATE],
     ) -> Result<State, Error> {
         let mut new_state = State::empty_state();
@@ -683,9 +683,9 @@ impl CompressionConfig {
 
     /// Initialize compression with some initialized state. This could be a state
     /// output from a previous compression round.
-    pub(super) fn initialize_with_state<F: FieldExt>(
+    pub(super) fn initialize_with_state(
         &self,
-        layouter: &mut impl Layouter<F>,
+        layouter: &mut impl Layouter<pallas::Base>,
         init_state: State,
     ) -> Result<State, Error> {
         let mut new_state = State::empty_state();
@@ -700,9 +700,9 @@ impl CompressionConfig {
     }
 
     /// Given an initialized state and a message schedule, perform 64 compression rounds.
-    pub(super) fn compress<F: FieldExt>(
+    pub(super) fn compress(
         &self,
-        layouter: &mut impl Layouter<F>,
+        layouter: &mut impl Layouter<pallas::Base>,
         initialized_state: State,
         w_halves: [(CellValue16, CellValue16); ROUNDS],
     ) -> Result<State, Error> {
@@ -712,8 +712,12 @@ impl CompressionConfig {
             |mut region| {
                 state = initialized_state.clone();
                 for idx in 0..64 {
-                    state =
-                        self.assign_round(&mut region, idx, state.clone(), w_halves[idx as usize])?;
+                    state = self.assign_round(
+                        &mut region,
+                        idx,
+                        state.clone(),
+                        &w_halves[idx as usize],
+                    )?;
                 }
                 Ok(())
             },
@@ -722,9 +726,9 @@ impl CompressionConfig {
     }
 
     /// After the final round, convert the state into the final digest.
-    pub(super) fn digest<F: FieldExt>(
+    pub(super) fn digest(
         &self,
-        layouter: &mut impl Layouter<F>,
+        layouter: &mut impl Layouter<pallas::Base>,
         state: State,
     ) -> Result<[BlockWord; DIGEST_SIZE], Error> {
         let mut digest = [BlockWord(Some(0)); DIGEST_SIZE];
@@ -746,10 +750,9 @@ mod tests {
         super::BLOCK_SIZE, msg_schedule_test_input, BlockWord, Table16Chip, Table16Config, IV,
     };
     use halo2::{
-        arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
-        pasta::Fp,
+        pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
@@ -757,7 +760,7 @@ mod tests {
     fn compress() {
         struct MyCircuit {}
 
-        impl<F: FieldExt> Circuit<F> for MyCircuit {
+        impl Circuit<pallas::Base> for MyCircuit {
             type Config = Table16Config;
             type FloorPlanner = SimpleFloorPlanner;
 
@@ -765,16 +768,16 @@ mod tests {
                 MyCircuit {}
             }
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
                 Table16Chip::configure(meta)
             }
 
             fn synthesize(
                 &self,
                 config: Self::Config,
-                mut layouter: impl Layouter<F>,
+                mut layouter: impl Layouter<pallas::Base>,
             ) -> Result<(), Error> {
-                Table16Chip::<F>::load(config.clone(), &mut layouter)?;
+                Table16Chip::load(config.clone(), &mut layouter)?;
 
                 // Test vector: "abc"
                 let input: [BlockWord; BLOCK_SIZE] = msg_schedule_test_input();
@@ -803,7 +806,7 @@ mod tests {
 
         let circuit: MyCircuit = MyCircuit {};
 
-        let prover = match MockProver::<Fp>::run(17, &circuit, vec![]) {
+        let prover = match MockProver::<pallas::Base>::run(17, &circuit, vec![]) {
             Ok(prover) => prover,
             Err(e) => panic!("{:?}", e),
         };
