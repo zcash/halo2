@@ -1,4 +1,4 @@
-use super::super::{RoundWordDense, RoundWordSpread, StateWord, STATE};
+use super::super::{RoundWord, StateWord, STATE};
 use super::{compression_util::*, CompressionConfig, State};
 use halo2::{circuit::Region, pasta::pallas, plonk::Error};
 
@@ -20,9 +20,7 @@ impl CompressionConfig {
 
         // Assign H
         let h_row = get_h_row(RoundIdx::Init);
-        let h_dense =
-            self.assign_word_halves_dense(region, h_row, a_7, h_row + 1, a_7, Some(iv[7]))?;
-        let h = RoundWordDense::new(h_dense);
+        let h = self.assign_word_halves_dense(region, h_row, a_7, h_row + 1, a_7, Some(iv[7]))?;
 
         // Decompose A into (2, 11, 9, 10)-bit chunks
         let a = self.decompose_a(region, RoundIdx::Init, Some(iv[0]))?;
@@ -33,9 +31,7 @@ impl CompressionConfig {
 
         // Assign D
         let d_row = get_d_row(RoundIdx::Init);
-        let d_dense =
-            self.assign_word_halves_dense(region, d_row, a_7, d_row + 1, a_7, Some(iv[3]))?;
-        let d = RoundWordDense::new(d_dense);
+        let d = self.assign_word_halves_dense(region, d_row, a_7, d_row + 1, a_7, Some(iv[3]))?;
 
         Ok(State::new(
             StateWord::A(a),
@@ -59,36 +55,34 @@ impl CompressionConfig {
         let (a, b, c, d, e, f, g, h) = match_state(state);
 
         // Decompose E into (6, 5, 14, 7)-bit chunks
-        let e = val_from_dense_halves(&e.dense_halves);
+        let e = e.dense_halves.value();
         let e = self.decompose_e(region, RoundIdx::Init, e)?;
 
         // Decompose F, G
-        let f = val_from_dense_halves(&f.dense_halves);
+        let f = f.dense_halves.value();
         let f = self.decompose_f(region, RoundIdx::Init, f)?;
-        let g = val_from_dense_halves(&g.dense_halves);
+        let g = g.dense_halves.value();
         let g = self.decompose_g(region, RoundIdx::Init, g)?;
 
         // Assign H
-        let h = val_from_dense_halves(&h.dense_halves);
+        let h = h.value();
         let h_row = get_h_row(RoundIdx::Init);
-        let h_dense = self.assign_word_halves_dense(region, h_row, a_7, h_row + 1, a_7, h)?;
-        let h = RoundWordDense::new(h_dense);
+        let h = self.assign_word_halves_dense(region, h_row, a_7, h_row + 1, a_7, h)?;
 
         // Decompose A into (2, 11, 9, 10)-bit chunks
-        let a = val_from_dense_halves(&a.dense_halves);
+        let a = a.dense_halves.value();
         let a = self.decompose_a(region, RoundIdx::Init, a)?;
 
         // Decompose B, C
-        let b = val_from_dense_halves(&b.dense_halves);
+        let b = b.dense_halves.value();
         let b = self.decompose_b(region, RoundIdx::Init, b)?;
-        let c = val_from_dense_halves(&c.dense_halves);
+        let c = c.dense_halves.value();
         let c = self.decompose_c(region, RoundIdx::Init, c)?;
 
         // Assign D
-        let d = val_from_dense_halves(&d.dense_halves);
+        let d = d.value();
         let d_row = get_d_row(RoundIdx::Init);
-        let d_dense = self.assign_word_halves_dense(region, d_row, a_7, d_row + 1, a_7, d)?;
-        let d = RoundWordDense::new(d_dense);
+        let d = self.assign_word_halves_dense(region, d_row, a_7, d_row + 1, a_7, d)?;
 
         Ok(State::new(
             StateWord::A(a),
@@ -107,12 +101,12 @@ impl CompressionConfig {
         region: &mut Region<'_, pallas::Base>,
         round_idx: RoundIdx,
         b_val: Option<u32>,
-    ) -> Result<RoundWordSpread, Error> {
+    ) -> Result<RoundWord, Error> {
         let row = get_decompose_b_row(round_idx);
 
         let (dense_halves, spread_halves) = self.assign_word_halves(region, row, b_val)?;
         self.decompose_abcd(region, row, b_val)?;
-        Ok(RoundWordSpread::new(dense_halves, spread_halves))
+        Ok(RoundWord::new(dense_halves, spread_halves))
     }
 
     fn decompose_c(
@@ -120,12 +114,12 @@ impl CompressionConfig {
         region: &mut Region<'_, pallas::Base>,
         round_idx: RoundIdx,
         c_val: Option<u32>,
-    ) -> Result<RoundWordSpread, Error> {
+    ) -> Result<RoundWord, Error> {
         let row = get_decompose_c_row(round_idx);
 
         let (dense_halves, spread_halves) = self.assign_word_halves(region, row, c_val)?;
         self.decompose_abcd(region, row, c_val)?;
-        Ok(RoundWordSpread::new(dense_halves, spread_halves))
+        Ok(RoundWord::new(dense_halves, spread_halves))
     }
 
     fn decompose_f(
@@ -133,12 +127,12 @@ impl CompressionConfig {
         region: &mut Region<'_, pallas::Base>,
         round_idx: RoundIdx,
         f_val: Option<u32>,
-    ) -> Result<RoundWordSpread, Error> {
+    ) -> Result<RoundWord, Error> {
         let row = get_decompose_f_row(round_idx);
 
         let (dense_halves, spread_halves) = self.assign_word_halves(region, row, f_val)?;
         self.decompose_efgh(region, row, f_val)?;
-        Ok(RoundWordSpread::new(dense_halves, spread_halves))
+        Ok(RoundWord::new(dense_halves, spread_halves))
     }
 
     fn decompose_g(
@@ -146,11 +140,11 @@ impl CompressionConfig {
         region: &mut Region<'_, pallas::Base>,
         round_idx: RoundIdx,
         g_val: Option<u32>,
-    ) -> Result<RoundWordSpread, Error> {
+    ) -> Result<RoundWord, Error> {
         let row = get_decompose_g_row(round_idx);
 
         let (dense_halves, spread_halves) = self.assign_word_halves(region, row, g_val)?;
         self.decompose_efgh(region, row, g_val)?;
-        Ok(RoundWordSpread::new(dense_halves, spread_halves))
+        Ok(RoundWord::new(dense_halves, spread_halves))
     }
 }

@@ -1,4 +1,4 @@
-use super::{util::*, CellValue16, CellValue32};
+use super::{util::*, AssignedBits};
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Chip, Layouter, Region},
@@ -6,44 +6,79 @@ use halo2::{
     plonk::{Advice, Column, ConstraintSystem, Error, TableColumn},
     poly::Rotation,
 };
+use std::convert::TryInto;
 use std::marker::PhantomData;
+
+const BITS_7: usize = 1 << 7;
+const BITS_10: usize = 1 << 10;
+const BITS_11: usize = 1 << 11;
+const BITS_13: usize = 1 << 13;
+const BITS_14: usize = 1 << 14;
 
 /// An input word into a lookup, containing (tag, dense, spread)
 #[derive(Copy, Clone, Debug)]
-pub(super) struct SpreadWord {
+pub(super) struct SpreadWord<const DENSE: usize, const SPREAD: usize> {
     pub tag: u8,
-    pub dense: u16,
-    pub spread: u32,
+    pub dense: [bool; DENSE],
+    pub spread: [bool; SPREAD],
 }
 
-impl SpreadWord {
-    pub(super) fn new(word: u16) -> Self {
+/// Helper function that returns tag of 16-bit input
+pub fn get_tag(input: u16) -> u8 {
+    let input = input as usize;
+    if input < BITS_7 {
+        0
+    } else if input < BITS_10 {
+        1
+    } else if input < BITS_11 {
+        2
+    } else if input < BITS_13 {
+        3
+    } else if input < BITS_14 {
+        4
+    } else {
+        5
+    }
+}
+
+impl<const DENSE: usize, const SPREAD: usize> SpreadWord<DENSE, SPREAD> {
+    pub(super) fn new(dense: [bool; DENSE]) -> Self {
+        assert!(DENSE <= 16);
         SpreadWord {
-            tag: get_tag(word),
-            dense: word,
-            spread: interleave_u16_with_zeros(word),
+            tag: get_tag(lebs2ip(&dense) as u16),
+            dense,
+            spread: spread_bits(dense),
         }
     }
 
-    pub(super) fn opt_new(word: Option<u16>) -> Option<Self> {
-        word.map(SpreadWord::new)
+    pub(super) fn try_new<T: TryInto<[bool; DENSE]> + std::fmt::Debug>(dense: T) -> Self
+    where
+        <T as TryInto<[bool; DENSE]>>::Error: std::fmt::Debug,
+    {
+        assert!(DENSE <= 16);
+        let dense: [bool; DENSE] = dense.try_into().unwrap();
+        SpreadWord {
+            tag: get_tag(lebs2ip(&dense) as u16),
+            dense,
+            spread: spread_bits(dense),
+        }
     }
 }
 
 /// A variable stored in advice columns corresponding to a row of [`SpreadTableConfig`].
 #[derive(Clone, Debug)]
-pub(super) struct SpreadVar {
+pub(super) struct SpreadVar<const DENSE: usize, const SPREAD: usize> {
     pub tag: Option<u8>,
-    pub dense: CellValue16,
-    pub spread: CellValue32,
+    pub dense: AssignedBits<DENSE>,
+    pub spread: AssignedBits<SPREAD>,
 }
 
-impl SpreadVar {
+impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
     pub(super) fn with_lookup(
         region: &mut Region<'_, pallas::Base>,
         cols: &SpreadInputs,
         row: usize,
-        word: Option<SpreadWord>,
+        word: Option<SpreadWord<DENSE, SPREAD>>,
     ) -> Result<Self, Error> {
         let tag = word.map(|word| word.tag);
         let dense_val = word.map(|word| word.dense);
@@ -59,10 +94,11 @@ impl SpreadVar {
             },
         )?;
 
-        let dense = CellValue16::assign_unchecked(region, || "dense", cols.dense, row, dense_val)?;
+        let dense =
+            AssignedBits::<DENSE>::assign_bits(region, || "dense", cols.dense, row, dense_val)?;
 
         let spread =
-            CellValue32::assign_unchecked(region, || "spread", cols.spread, row, spread_val)?;
+            AssignedBits::<SPREAD>::assign_bits(region, || "spread", cols.spread, row, spread_val)?;
 
         Ok(SpreadVar { tag, dense, spread })
     }
@@ -73,17 +109,27 @@ impl SpreadVar {
         dense_row: usize,
         spread_col: Column<Advice>,
         spread_row: usize,
-        word: Option<SpreadWord>,
+        word: Option<SpreadWord<DENSE, SPREAD>>,
     ) -> Result<Self, Error> {
         let tag = word.map(|word| word.tag);
         let dense_val = word.map(|word| word.dense);
         let spread_val = word.map(|word| word.spread);
 
-        let dense =
-            CellValue16::assign_unchecked(region, || "dense", dense_col, dense_row, dense_val)?;
+        let dense = AssignedBits::<DENSE>::assign_bits(
+            region,
+            || "dense",
+            dense_col,
+            dense_row,
+            dense_val,
+        )?;
 
-        let spread =
-            CellValue32::assign_unchecked(region, || "spread", spread_col, spread_row, spread_val)?;
+        let spread = AssignedBits::<SPREAD>::assign_bits(
+            region,
+            || "spread",
+            spread_col,
+            spread_row,
+            spread_val,
+        )?;
 
         Ok(SpreadVar { tag, dense, spread })
     }
@@ -244,10 +290,9 @@ impl SpreadTableConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::{SpreadTableChip, SpreadTableConfig};
+    use super::{get_tag, SpreadTableChip, SpreadTableConfig};
     use rand::Rng;
 
-    use crate::table16::util::{get_tag, interleave_u16_with_zeros};
     use halo2::{
         arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner},
@@ -371,6 +416,15 @@ mod tests {
 
                         // Test random lookup values
                         let mut rng = rand::thread_rng();
+
+                        fn interleave_u16_with_zeros(word: u16) -> u32 {
+                            let mut word: u32 = word.into();
+                            word = (word ^ (word << 8)) & 0x00ff00ff;
+                            word = (word ^ (word << 4)) & 0x0f0f0f0f;
+                            word = (word ^ (word << 2)) & 0x33333333;
+                            word = (word ^ (word << 1)) & 0x55555555;
+                            word
+                        }
 
                         for _ in 0..10 {
                             let word: u16 = rng.gen();

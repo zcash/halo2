@@ -1,4 +1,4 @@
-use super::super::{CellValue16, RoundWordA, RoundWordE, StateWord, ROUND_CONSTANTS};
+use super::super::{AssignedBits, RoundWord, RoundWordA, RoundWordE, StateWord, ROUND_CONSTANTS};
 use super::{compression_util::*, CompressionConfig, State};
 use halo2::{circuit::Region, pasta::pallas, plonk::Error};
 
@@ -9,7 +9,7 @@ impl CompressionConfig {
         region: &mut Region<'_, pallas::Base>,
         round_idx: RoundIdx,
         state: State,
-        schedule_word: &(CellValue16, CellValue16),
+        schedule_word: &(AssignedBits<16>, AssignedBits<16>),
     ) -> Result<State, Error> {
         assert!(matches!(round_idx, RoundIdx::Main(_)));
 
@@ -52,7 +52,7 @@ impl CompressionConfig {
         let h_prime = self.assign_h_prime(
             region,
             round_idx,
-            h.dense_halves,
+            h,
             ch,
             ch_neg,
             sigma_1,
@@ -61,12 +61,12 @@ impl CompressionConfig {
         )?;
 
         // E_new = H' + D
-        let e_new_dense = self.assign_e_new(region, round_idx, &d.dense_halves, &h_prime)?;
-        let e_new_val = val_from_dense_halves(&e_new_dense);
+        let e_new_dense = self.assign_e_new(region, round_idx, &d, &h_prime)?;
+        let e_new_val = e_new_dense.value();
 
         // A_new = H' + Maj(A, B, C) + sigma_0(A)
         let a_new_dense = self.assign_a_new(region, round_idx, maj, sigma_0, h_prime)?;
-        let a_new_val = val_from_dense_halves(&a_new_dense);
+        let a_new_val = a_new_dense.value();
 
         if round_idx < 63.into() {
             // Assign and copy A_new
@@ -95,13 +95,13 @@ impl CompressionConfig {
 
             Ok(State::new(
                 StateWord::A(a_new),
-                StateWord::B(a.into()),
+                StateWord::B(RoundWord::new(a.dense_halves, a.spread_halves.unwrap())),
                 StateWord::C(b),
-                StateWord::D(c.into()),
+                StateWord::D(c.dense_halves),
                 StateWord::E(e_new),
-                StateWord::F(e.into()),
+                StateWord::F(RoundWord::new(e.dense_halves, e.spread_halves.unwrap())),
                 StateWord::G(f),
-                StateWord::H(g.into()),
+                StateWord::H(g.dense_halves),
             ))
         } else {
             let abcd_row = get_digest_abcd_row();
@@ -115,13 +115,13 @@ impl CompressionConfig {
 
             Ok(State::new(
                 StateWord::A(RoundWordA::new_dense(a_final)),
-                StateWord::B(a.into()),
+                StateWord::B(RoundWord::new(a.dense_halves, a.spread_halves.unwrap())),
                 StateWord::C(b),
-                StateWord::D(c.into()),
+                StateWord::D(c.dense_halves),
                 StateWord::E(RoundWordE::new_dense(e_final)),
-                StateWord::F(e.into()),
+                StateWord::F(RoundWord::new(e.dense_halves, e.spread_halves.unwrap())),
                 StateWord::G(f),
-                StateWord::H(g.into()),
+                StateWord::H(g.dense_halves),
             ))
         }
     }

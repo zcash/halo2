@@ -1,103 +1,104 @@
-pub const BITS_7: usize = 1 << 7;
-pub const BITS_10: usize = 1 << 10;
-pub const BITS_11: usize = 1 << 11;
-pub const BITS_13: usize = 1 << 13;
-pub const BITS_14: usize = 1 << 14;
 pub const MASK_EVEN_32: u32 = 0x55555555;
-pub const MASK_ODD_32: u32 = 0xAAAAAAAA;
 
-// Helper function that returns tag of 16-bit input
-pub fn get_tag(input: u16) -> u8 {
-    let input = input as usize;
-    if input < BITS_7 {
-        0
-    } else if input < BITS_10 {
-        1
-    } else if input < BITS_11 {
-        2
-    } else if input < BITS_13 {
-        3
-    } else if input < BITS_14 {
-        4
-    } else {
-        5
+/// The sequence of bits representing a u64 in little-endian order.
+///
+/// # Panics
+///
+/// Panics if the expected length of the sequence `NUM_BITS` exceeds
+/// 64.
+pub fn i2lebsp<const NUM_BITS: usize>(int: u64) -> [bool; NUM_BITS] {
+    /// Takes in an FnMut closure and returns a constant-length array with elements of
+    /// type `Output`.
+    fn gen_const_array<Output: Copy + Default, const LEN: usize>(
+        closure: impl FnMut(usize) -> Output,
+    ) -> [Output; LEN] {
+        gen_const_array_with_default(Default::default(), closure)
     }
-}
 
-/// Helper function that returns 32-bit spread version of 16-bit input.
-pub fn interleave_u16_with_zeros(word: u16) -> u32 {
-    let mut word: u32 = word.into();
-    word = (word ^ (word << 8)) & 0x00ff00ff;
-    word = (word ^ (word << 4)) & 0x0f0f0f0f;
-    word = (word ^ (word << 2)) & 0x33333333;
-    word = (word ^ (word << 1)) & 0x55555555;
-    word
-}
-
-// Reverses interleaving function by removing interleaved zeros.
-pub fn compress_u32(word: u32) -> u16 {
-    let mut word = word;
-    assert_eq!(word & MASK_EVEN_32, word);
-    word = (word | (word >> 1)) & 0x33333333;
-    word = (word | (word >> 2)) & 0x0f0f0f0f;
-    word = (word | (word >> 4)) & 0x00ff00ff;
-    word = (word | (word >> 8)) & 0x0000ffff;
-    word as u16
-}
-
-// Chops a 32-bit word into pieces of given length. The lengths are specified
-// starting from the little end.
-pub fn chop_u32(word: u32, lengths: &[u8]) -> Vec<u32> {
-    assert_eq!(lengths.iter().sum::<u8>(), 32u8);
-    let mut pieces: Vec<u32> = Vec::with_capacity(lengths.len());
-    for i in 0..lengths.len() {
-        assert!(lengths[i] > 0);
-        // lengths[i] bitstring of all 1's
-        let mask: u32 = (1 << lengths[i]) as u32 - 1;
-        // Shift mask by bits already shifted
-        let offset: u8 = lengths[0..i].iter().sum();
-        let mask: u32 = mask << offset;
-        pieces.push((word & mask) >> offset as u32);
+    fn gen_const_array_with_default<Output: Copy, const LEN: usize>(
+        default_value: Output,
+        mut closure: impl FnMut(usize) -> Output,
+    ) -> [Output; LEN] {
+        let mut ret: [Output; LEN] = [default_value; LEN];
+        for (bit, val) in ret.iter_mut().zip((0..LEN).map(|idx| closure(idx))) {
+            *bit = val;
+        }
+        ret
     }
-    pieces
+
+    assert!(NUM_BITS <= 64);
+    gen_const_array(|mask: usize| (int & (1 << mask)) != 0)
 }
 
-// Chops a 64-bit word into pieces of given length. The lengths are specified
-// starting from the little end.
-pub fn chop_u64(word: u64, lengths: &[u8]) -> Vec<u64> {
-    assert_eq!(lengths.iter().sum::<u8>(), 64u8);
-    let mut pieces: Vec<u64> = Vec::with_capacity(lengths.len());
-    for i in 0..lengths.len() {
-        assert!(lengths[i] > 0);
-        // lengths[i] bitstring of all 1's
-        let mask: u64 = (1u64 << lengths[i]) - 1;
-        // Shift mask by bits already shifted
-        let offset: u8 = lengths[0..i].iter().sum();
-        let mask: u64 = mask << offset;
-        pieces.push((word & mask) >> offset as u64);
+/// Returns the integer representation of a little-endian bit-array.
+/// Panics if the number of bits exceeds 64.
+pub fn lebs2ip<const K: usize>(bits: &[bool; K]) -> u64 {
+    assert!(K <= 64);
+    bits.iter()
+        .enumerate()
+        .fold(0u64, |acc, (i, b)| acc + if *b { 1 << i } else { 0 })
+}
+
+/// Helper function that interleaves a little-endian bit-array with zeros
+/// in the odd indices. That is, it takes the array
+///         [b_0, b_1, ..., b_n]
+/// to
+///         [b_0, 0, b_1, 0, ..., b_n, 0].
+/// Panics if bit-array is longer than 16 bits.
+pub fn spread_bits<const DENSE: usize, const SPREAD: usize>(
+    bits: impl Into<[bool; DENSE]>,
+) -> [bool; SPREAD] {
+    assert_eq!(DENSE * 2, SPREAD);
+    assert!(DENSE <= 16);
+
+    let bits: [bool; DENSE] = bits.into();
+    let mut spread = [false; SPREAD];
+
+    for (idx, bit) in bits.iter().enumerate() {
+        spread[idx * 2] = *bit;
     }
-    pieces
+
+    spread
 }
 
-// Returns compressed even and odd bits of 32-bit word
-pub fn get_even_and_odd_bits_u32(word: u32) -> (u16, u16) {
-    let even = word & MASK_EVEN_32;
-    let odd = (word & MASK_ODD_32) >> 1;
-    (compress_u32(even), compress_u32(odd))
+/// Negates the even bits in a spread bit-array.
+pub fn negate_spread<const LEN: usize>(arr: [bool; LEN]) -> [bool; LEN] {
+    assert_eq!(LEN % 2, 0);
+
+    let mut neg = arr;
+    for even_idx in (0..LEN).step_by(2) {
+        let odd_idx = even_idx + 1;
+        assert!(!arr[odd_idx]);
+
+        neg[even_idx] = !arr[even_idx];
+    }
+
+    neg
 }
 
-// Split 4-bit value into 2-bit lo and hi halves
-pub fn bisect_four_bit(word: impl Into<u32>) -> (u32, u32) {
-    let word: u32 = word.into();
-    assert!(word < (1 << 4)); // 4-bit range-check
-    let word_hi = (word & 0b1100) >> 2;
-    let word_lo = word & 0b0011;
-    (word_lo, word_hi)
+/// Returns even bits in a bit-array
+pub fn even_bits<const LEN: usize, const HALF: usize>(bits: [bool; LEN]) -> [bool; HALF] {
+    assert_eq!(LEN % 2, 0);
+    let mut even_bits = [false; HALF];
+    for idx in 0..HALF {
+        even_bits[idx] = bits[idx * 2]
+    }
+    even_bits
+}
+
+/// Returns odd bits in a bit-array
+pub fn odd_bits<const LEN: usize, const HALF: usize>(bits: [bool; LEN]) -> [bool; HALF] {
+    assert_eq!(LEN % 2, 0);
+    let mut odd_bits = [false; HALF];
+    for idx in 0..HALF {
+        odd_bits[idx] = bits[idx * 2 + 1]
+    }
+    odd_bits
 }
 
 /// Helper function to transpose an Option<Vec<F>> to a Vec<Option<F>>.
 /// The length of the vector must be `len`.
-pub fn transpose_option_vec<F: Copy>(vec: Option<Vec<F>>, len: usize) -> Vec<Option<F>> {
+pub fn transpose_option_vec<T: Clone>(vec: Option<Vec<T>>, len: usize) -> Vec<Option<T>> {
     if let Some(vec) = vec {
         vec.into_iter().map(Some).collect()
     } else {

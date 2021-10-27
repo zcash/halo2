@@ -1,6 +1,7 @@
 use super::{
-    super::DIGEST_SIZE, BlockWord, CellValue16, CellValue32, SpreadInputs, SpreadVar,
-    Table16Assignment, ROUNDS, STATE,
+    super::DIGEST_SIZE,
+    util::{i2lebsp, lebs2ip},
+    AssignedBits, BlockWord, SpreadInputs, SpreadVar, Table16Assignment, ROUNDS, STATE,
 };
 use halo2::{
     circuit::Layouter,
@@ -8,6 +9,8 @@ use halo2::{
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
+use std::convert::TryInto;
+use std::ops::Range;
 
 mod compression_gates;
 mod compression_util;
@@ -16,7 +19,55 @@ mod subregion_initial;
 mod subregion_main;
 
 use compression_gates::CompressionGate;
-use compression_util::RoundIdx;
+
+pub trait UpperSigmaVar<
+    const A_LEN: usize,
+    const B_LEN: usize,
+    const C_LEN: usize,
+    const D_LEN: usize,
+>
+{
+    fn spread_a(&self) -> Option<[bool; A_LEN]>;
+    fn spread_b(&self) -> Option<[bool; B_LEN]>;
+    fn spread_c(&self) -> Option<[bool; C_LEN]>;
+    fn spread_d(&self) -> Option<[bool; D_LEN]>;
+
+    fn xor_upper_sigma(&self) -> Option<[bool; 64]> {
+        self.spread_a()
+            .zip(self.spread_b())
+            .zip(self.spread_c())
+            .zip(self.spread_d())
+            .map(|(((a, b), c), d)| {
+                let xor_0 = b
+                    .iter()
+                    .chain(c.iter())
+                    .chain(d.iter())
+                    .chain(a.iter())
+                    .copied()
+                    .collect::<Vec<_>>();
+                let xor_1 = c
+                    .iter()
+                    .chain(d.iter())
+                    .chain(a.iter())
+                    .chain(b.iter())
+                    .copied()
+                    .collect::<Vec<_>>();
+                let xor_2 = d
+                    .iter()
+                    .chain(a.iter())
+                    .chain(b.iter())
+                    .chain(c.iter())
+                    .copied()
+                    .collect::<Vec<_>>();
+
+                let xor_0 = lebs2ip::<64>(&xor_0.try_into().unwrap());
+                let xor_1 = lebs2ip::<64>(&xor_1.try_into().unwrap());
+                let xor_2 = lebs2ip::<64>(&xor_2.try_into().unwrap());
+
+                i2lebsp(xor_0 + xor_1 + xor_2)
+            })
+    }
+}
 
 /// A variable that represents the `[A,B,C,D]` words of the SHA-256 internal state.
 ///
@@ -30,14 +81,81 @@ use compression_util::RoundIdx;
 ///   are needed.
 #[derive(Clone, Debug)]
 pub struct AbcdVar {
-    round_idx: RoundIdx,
-    val: Option<u32>,
-    a: SpreadVar,
-    b: SpreadVar,
-    c_lo: SpreadVar,
-    c_mid: SpreadVar,
-    c_hi: SpreadVar,
-    d: SpreadVar,
+    a: SpreadVar<2, 4>,
+    b: SpreadVar<11, 22>,
+    c_lo: SpreadVar<3, 6>,
+    c_mid: SpreadVar<3, 6>,
+    c_hi: SpreadVar<3, 6>,
+    d: SpreadVar<10, 20>,
+}
+
+impl AbcdVar {
+    fn a_range() -> Range<usize> {
+        0..2
+    }
+
+    fn b_range() -> Range<usize> {
+        2..13
+    }
+
+    fn c_lo_range() -> Range<usize> {
+        13..16
+    }
+
+    fn c_mid_range() -> Range<usize> {
+        16..19
+    }
+
+    fn c_hi_range() -> Range<usize> {
+        19..22
+    }
+
+    fn d_range() -> Range<usize> {
+        22..32
+    }
+
+    fn pieces(val: u32) -> Vec<Vec<bool>> {
+        let val: [bool; 32] = i2lebsp(val.into());
+        vec![
+            val[Self::a_range()].to_vec(),
+            val[Self::b_range()].to_vec(),
+            val[Self::c_lo_range()].to_vec(),
+            val[Self::c_mid_range()].to_vec(),
+            val[Self::c_hi_range()].to_vec(),
+            val[Self::d_range()].to_vec(),
+        ]
+    }
+}
+
+impl UpperSigmaVar<4, 22, 18, 20> for AbcdVar {
+    fn spread_a(&self) -> Option<[bool; 4]> {
+        self.a.spread.value().map(|v| v.0)
+    }
+
+    fn spread_b(&self) -> Option<[bool; 22]> {
+        self.b.spread.value().map(|v| v.0)
+    }
+
+    fn spread_c(&self) -> Option<[bool; 18]> {
+        self.c_lo
+            .spread
+            .value()
+            .zip(self.c_mid.spread.value())
+            .zip(self.c_hi.spread.value())
+            .map(|((c_lo, c_mid), c_hi)| {
+                c_lo.iter()
+                    .chain(c_mid.iter())
+                    .chain(c_hi.iter())
+                    .copied()
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .unwrap()
+            })
+    }
+
+    fn spread_d(&self) -> Option<[bool; 20]> {
+        self.d.spread.value().map(|v| v.0)
+    }
 }
 
 /// A variable that represents the `[E,F,G,H]` words of the SHA-256 internal state.
@@ -52,64 +170,140 @@ pub struct AbcdVar {
 ///   are needed.
 #[derive(Clone, Debug)]
 pub struct EfghVar {
-    round_idx: RoundIdx,
-    val: Option<u32>,
-    a_lo: SpreadVar,
-    a_hi: SpreadVar,
-    b_lo: SpreadVar,
-    b_hi: SpreadVar,
-    c: SpreadVar,
-    d: SpreadVar,
+    a_lo: SpreadVar<3, 6>,
+    a_hi: SpreadVar<3, 6>,
+    b_lo: SpreadVar<2, 4>,
+    b_hi: SpreadVar<3, 6>,
+    c: SpreadVar<14, 28>,
+    d: SpreadVar<7, 14>,
+}
+
+impl EfghVar {
+    fn a_lo_range() -> Range<usize> {
+        0..3
+    }
+
+    fn a_hi_range() -> Range<usize> {
+        3..6
+    }
+
+    fn b_lo_range() -> Range<usize> {
+        6..8
+    }
+
+    fn b_hi_range() -> Range<usize> {
+        8..11
+    }
+
+    fn c_range() -> Range<usize> {
+        11..25
+    }
+
+    fn d_range() -> Range<usize> {
+        25..32
+    }
+
+    fn pieces(val: u32) -> Vec<Vec<bool>> {
+        let val: [bool; 32] = i2lebsp(val.into());
+        vec![
+            val[Self::a_lo_range()].to_vec(),
+            val[Self::a_hi_range()].to_vec(),
+            val[Self::b_lo_range()].to_vec(),
+            val[Self::b_hi_range()].to_vec(),
+            val[Self::c_range()].to_vec(),
+            val[Self::d_range()].to_vec(),
+        ]
+    }
+}
+
+impl UpperSigmaVar<12, 10, 28, 14> for EfghVar {
+    fn spread_a(&self) -> Option<[bool; 12]> {
+        self.a_lo
+            .spread
+            .value()
+            .zip(self.a_hi.spread.value())
+            .map(|(a_lo, a_hi)| {
+                a_lo.iter()
+                    .chain(a_hi.iter())
+                    .copied()
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .unwrap()
+            })
+    }
+
+    fn spread_b(&self) -> Option<[bool; 10]> {
+        self.b_lo
+            .spread
+            .value()
+            .zip(self.b_hi.spread.value())
+            .map(|(b_lo, b_hi)| {
+                b_lo.iter()
+                    .chain(b_hi.iter())
+                    .copied()
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .unwrap()
+            })
+    }
+
+    fn spread_c(&self) -> Option<[bool; 28]> {
+        self.c.spread.value().map(|v| v.0)
+    }
+
+    fn spread_d(&self) -> Option<[bool; 14]> {
+        self.d.spread.value().map(|v| v.0)
+    }
 }
 
 #[derive(Clone, Debug)]
-pub struct RoundWordDense {
-    dense_halves: (CellValue16, CellValue16),
+pub struct RoundWordDense(AssignedBits<16>, AssignedBits<16>);
+
+impl From<(AssignedBits<16>, AssignedBits<16>)> for RoundWordDense {
+    fn from(halves: (AssignedBits<16>, AssignedBits<16>)) -> Self {
+        Self(halves.0, halves.1)
+    }
 }
 
 impl RoundWordDense {
-    pub fn new(dense_halves: (CellValue16, CellValue16)) -> Self {
-        RoundWordDense { dense_halves }
+    pub fn value(&self) -> Option<u32> {
+        self.0
+            .value_u16()
+            .zip(self.1.value_u16())
+            .map(|(lo, hi)| lo as u32 + (1 << 16) * hi as u32)
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct RoundWordSpread {
-    dense_halves: (CellValue16, CellValue16),
-    spread_halves: (CellValue32, CellValue32),
-}
+pub struct RoundWordSpread(AssignedBits<32>, AssignedBits<32>);
 
-impl RoundWordSpread {
-    pub fn new(
-        dense_halves: (CellValue16, CellValue16),
-        spread_halves: (CellValue32, CellValue32),
-    ) -> Self {
-        RoundWordSpread {
-            dense_halves,
-            spread_halves,
-        }
+impl From<(AssignedBits<32>, AssignedBits<32>)> for RoundWordSpread {
+    fn from(halves: (AssignedBits<32>, AssignedBits<32>)) -> Self {
+        Self(halves.0, halves.1)
     }
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<RoundWordDense> for RoundWordSpread {
-    fn into(self) -> RoundWordDense {
-        RoundWordDense::new(self.dense_halves)
+impl RoundWordSpread {
+    pub fn value(&self) -> Option<u64> {
+        self.0
+            .value_u32()
+            .zip(self.1.value_u32())
+            .map(|(lo, hi)| lo as u64 + (1 << 32) * hi as u64)
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct RoundWordA {
     pieces: Option<AbcdVar>,
-    dense_halves: (CellValue16, CellValue16),
-    spread_halves: Option<(CellValue32, CellValue32)>,
+    dense_halves: RoundWordDense,
+    spread_halves: Option<RoundWordSpread>,
 }
 
 impl RoundWordA {
     pub fn new(
         pieces: AbcdVar,
-        dense_halves: (CellValue16, CellValue16),
-        spread_halves: (CellValue32, CellValue32),
+        dense_halves: RoundWordDense,
+        spread_halves: RoundWordSpread,
     ) -> Self {
         RoundWordA {
             pieces: Some(pieces),
@@ -118,34 +312,27 @@ impl RoundWordA {
         }
     }
 
-    pub fn new_dense(dense_halves: (CellValue16, CellValue16)) -> Self {
+    pub fn new_dense(dense_halves: RoundWordDense) -> Self {
         RoundWordA {
             pieces: None,
             dense_halves,
             spread_halves: None,
         }
-    }
-}
-
-#[allow(clippy::from_over_into)]
-impl Into<RoundWordSpread> for RoundWordA {
-    fn into(self) -> RoundWordSpread {
-        RoundWordSpread::new(self.dense_halves, self.spread_halves.unwrap())
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct RoundWordE {
     pieces: Option<EfghVar>,
-    dense_halves: (CellValue16, CellValue16),
-    spread_halves: Option<(CellValue32, CellValue32)>,
+    dense_halves: RoundWordDense,
+    spread_halves: Option<RoundWordSpread>,
 }
 
 impl RoundWordE {
     pub fn new(
         pieces: EfghVar,
-        dense_halves: (CellValue16, CellValue16),
-        spread_halves: (CellValue32, CellValue32),
+        dense_halves: RoundWordDense,
+        spread_halves: RoundWordSpread,
     ) -> Self {
         RoundWordE {
             pieces: Some(pieces),
@@ -154,7 +341,7 @@ impl RoundWordE {
         }
     }
 
-    pub fn new_dense(dense_halves: (CellValue16, CellValue16)) -> Self {
+    pub fn new_dense(dense_halves: RoundWordDense) -> Self {
         RoundWordE {
             pieces: None,
             dense_halves,
@@ -163,10 +350,18 @@ impl RoundWordE {
     }
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<RoundWordSpread> for RoundWordE {
-    fn into(self) -> RoundWordSpread {
-        RoundWordSpread::new(self.dense_halves, self.spread_halves.unwrap())
+#[derive(Clone, Debug)]
+pub struct RoundWord {
+    dense_halves: RoundWordDense,
+    spread_halves: RoundWordSpread,
+}
+
+impl RoundWord {
+    pub fn new(dense_halves: RoundWordDense, spread_halves: RoundWordSpread) -> Self {
+        RoundWord {
+            dense_halves,
+            spread_halves,
+        }
     }
 }
 
@@ -225,12 +420,12 @@ impl State {
 #[derive(Clone, Debug)]
 pub enum StateWord {
     A(RoundWordA),
-    B(RoundWordSpread),
-    C(RoundWordSpread),
+    B(RoundWord),
+    C(RoundWord),
     D(RoundWordDense),
     E(RoundWordE),
-    F(RoundWordSpread),
-    G(RoundWordSpread),
+    F(RoundWord),
+    G(RoundWord),
     H(RoundWordDense),
 }
 
@@ -705,7 +900,7 @@ impl CompressionConfig {
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
         initialized_state: State,
-        w_halves: [(CellValue16, CellValue16); ROUNDS],
+        w_halves: [(AssignedBits<16>, AssignedBits<16>); ROUNDS],
     ) -> Result<State, Error> {
         let mut state = State::empty_state();
         layouter.assign_region(
@@ -713,7 +908,7 @@ impl CompressionConfig {
             |mut region| {
                 state = initialized_state.clone();
                 for (idx, w_halves) in w_halves.iter().enumerate() {
-                    state = self.assign_round(&mut region, idx.into(), state.clone(), &w_halves)?;
+                    state = self.assign_round(&mut region, idx.into(), state.clone(), w_halves)?;
                 }
                 Ok(())
             },

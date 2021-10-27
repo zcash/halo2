@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::marker::PhantomData;
 
 use super::Sha256Instructions;
@@ -18,6 +19,7 @@ use compression::*;
 use gates::*;
 use message_schedule::*;
 use spread_table::*;
+use util::*;
 
 const ROUNDS: usize = 64;
 const STATE: usize = 8;
@@ -50,26 +52,108 @@ const IV: [u32; STATE] = [
 pub struct BlockWord(pub(crate) Option<u32>);
 
 #[derive(Clone, Debug)]
-/// Newtype around u16
-pub struct U16(u16);
+/// Little-endian bits (up to 64 bits)
+pub struct Bits<const LEN: usize>([bool; LEN]);
 
-impl From<U16> for pallas::Base {
-    fn from(int: U16) -> pallas::Base {
-        pallas::Base::from_u64(int.0 as u64)
+impl<const LEN: usize> Bits<LEN> {
+    fn spread<const SPREAD: usize>(&self) -> [bool; SPREAD] {
+        spread_bits(self.0)
     }
 }
 
-impl From<U16> for u16 {
-    fn from(int: U16) -> u16 {
-        int.0
+impl<const LEN: usize> std::ops::Deref for Bits<LEN> {
+    type Target = [bool; LEN];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<const LEN: usize> From<[bool; LEN]> for Bits<LEN> {
+    fn from(bits: [bool; LEN]) -> Self {
+        Self(bits)
+    }
+}
+
+impl<const LEN: usize> From<Bits<LEN>> for [bool; LEN] {
+    fn from(bits: Bits<LEN>) -> Self {
+        bits.0
+    }
+}
+
+impl<const LEN: usize> From<Bits<LEN>> for pallas::Base {
+    fn from(bits: Bits<LEN>) -> pallas::Base {
+        assert!(LEN <= 64);
+        pallas::Base::from_u64(lebs2ip(&bits.0))
+    }
+}
+
+impl From<Bits<16>> for u16 {
+    fn from(bits: Bits<16>) -> u16 {
+        lebs2ip(&bits.0) as u16
+    }
+}
+
+impl From<u16> for Bits<16> {
+    fn from(int: u16) -> Bits<16> {
+        Bits(i2lebsp::<16>(int.into()))
+    }
+}
+
+impl From<Bits<32>> for u32 {
+    fn from(bits: Bits<32>) -> u32 {
+        lebs2ip(&bits.0) as u32
+    }
+}
+
+impl From<u32> for Bits<32> {
+    fn from(int: u32) -> Bits<32> {
+        Bits(i2lebsp::<32>(int.into()))
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct CellValue16(AssignedCell<pallas::Base, U16>);
+pub struct AssignedBits<const LEN: usize>(AssignedCell<pallas::Base, Bits<LEN>>);
 
-impl CellValue16 {
-    pub fn assign_unchecked<A, AR>(
+impl<const LEN: usize> std::ops::Deref for AssignedBits<LEN> {
+    type Target = AssignedCell<pallas::Base, Bits<LEN>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<const LEN: usize> AssignedBits<LEN> {
+    fn assign_bits<A, AR, T: TryInto<[bool; LEN]> + std::fmt::Debug>(
+        region: &mut Region<'_, pallas::Base>,
+        annotation: A,
+        column: impl Into<Column<Any>>,
+        offset: usize,
+        value: Option<T>,
+    ) -> Result<Self, Error>
+    where
+        A: Fn() -> AR,
+        AR: Into<String>,
+        <T as TryInto<[bool; LEN]>>::Error: std::fmt::Debug,
+    {
+        let value: Option<[bool; LEN]> = value.map(|v| v.try_into().unwrap());
+        AssignedCell::<_, Bits<LEN>>::assign_unchecked(
+            region,
+            annotation,
+            column,
+            offset,
+            value.map(|v| v.into()),
+        )
+        .map(AssignedBits)
+    }
+}
+
+impl AssignedBits<16> {
+    fn value_u16(&self) -> Option<u16> {
+        self.value().map(|v| v.into())
+    }
+
+    fn assign_unchecked<A, AR>(
         region: &mut Region<'_, pallas::Base>,
         annotation: A,
         column: impl Into<Column<Any>>,
@@ -80,50 +164,23 @@ impl CellValue16 {
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        AssignedCell::<pallas::Base, U16>::assign_unchecked(
+        AssignedCell::<_, Bits<16>>::assign_unchecked(
             region,
             annotation,
             column,
             offset,
-            value.map(U16),
+            value.map(|v| v.into()),
         )
-        .map(CellValue16)
-    }
-
-    pub fn value_u16(&self) -> Option<u16> {
-        self.value().map(|value| value.0)
+        .map(AssignedBits)
     }
 }
 
-impl From<AssignedCell<pallas::Base, U16>> for CellValue16 {
-    fn from(assigned_cell: AssignedCell<pallas::Base, U16>) -> CellValue16 {
-        CellValue16(assigned_cell)
+impl AssignedBits<32> {
+    fn value_u32(&self) -> Option<u32> {
+        self.value().map(|v| v.into())
     }
-}
 
-impl std::ops::Deref for CellValue16 {
-    type Target = AssignedCell<pallas::Base, U16>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-#[derive(Clone, Debug)]
-/// Newtype around u32
-pub struct U32(u32);
-
-impl From<U32> for pallas::Base {
-    fn from(int: U32) -> pallas::Base {
-        pallas::Base::from_u64(int.0 as u64)
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct CellValue32(AssignedCell<pallas::Base, U32>);
-
-impl CellValue32 {
-    pub fn assign_unchecked<A, AR>(
+    fn assign_unchecked<A, AR>(
         region: &mut Region<'_, pallas::Base>,
         annotation: A,
         column: impl Into<Column<Any>>,
@@ -134,32 +191,14 @@ impl CellValue32 {
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        AssignedCell::<pallas::Base, U32>::assign_unchecked(
+        AssignedCell::<_, Bits<32>>::assign_unchecked(
             region,
             annotation,
             column,
             offset,
-            value.map(U32),
+            value.map(|v| v.into()),
         )
-        .map(CellValue32)
-    }
-
-    pub fn value_u32(&self) -> Option<u32> {
-        self.value().map(|value| value.0)
-    }
-}
-
-impl From<AssignedCell<pallas::Base, U32>> for CellValue32 {
-    fn from(assigned_cell: AssignedCell<pallas::Base, U32>) -> CellValue32 {
-        CellValue32(assigned_cell)
-    }
-}
-
-impl std::ops::Deref for CellValue32 {
-    type Target = AssignedCell<pallas::Base, U32>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+        .map(AssignedBits)
     }
 }
 
@@ -308,7 +347,7 @@ impl Sha256Instructions<pallas::Base> for Table16Chip {
 
 /// Common assignment patterns used by Table16 regions.
 trait Table16Assignment {
-    // Assign cells for general spread computation used in sigma, ch, ch_neg, maj gates
+    /// Assign cells for general spread computation used in sigma, ch, ch_neg, maj gates
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::type_complexity)]
     fn assign_spread_outputs(
@@ -317,19 +356,38 @@ trait Table16Assignment {
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
         row: usize,
-        r_0_even: Option<u16>,
-        r_0_odd: Option<u16>,
-        r_1_even: Option<u16>,
-        r_1_odd: Option<u16>,
-    ) -> Result<((CellValue16, CellValue16), (CellValue16, CellValue16)), Error> {
+        r_0_even: Option<[bool; 16]>,
+        r_0_odd: Option<[bool; 16]>,
+        r_1_even: Option<[bool; 16]>,
+        r_1_odd: Option<[bool; 16]>,
+    ) -> Result<
+        (
+            (AssignedBits<16>, AssignedBits<16>),
+            (AssignedBits<16>, AssignedBits<16>),
+        ),
+        Error,
+    > {
         // Lookup R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
-        let r_0_even =
-            SpreadVar::with_lookup(region, lookup, row - 1, SpreadWord::opt_new(r_0_even))?;
-        let r_0_odd = SpreadVar::with_lookup(region, lookup, row, SpreadWord::opt_new(r_0_odd))?;
-        let r_1_even =
-            SpreadVar::with_lookup(region, lookup, row + 1, SpreadWord::opt_new(r_1_even))?;
-        let r_1_odd =
-            SpreadVar::with_lookup(region, lookup, row + 2, SpreadWord::opt_new(r_1_odd))?;
+        let r_0_even = SpreadVar::with_lookup(
+            region,
+            lookup,
+            row - 1,
+            r_0_even.map(SpreadWord::<16, 32>::new),
+        )?;
+        let r_0_odd =
+            SpreadVar::with_lookup(region, lookup, row, r_0_odd.map(SpreadWord::<16, 32>::new))?;
+        let r_1_even = SpreadVar::with_lookup(
+            region,
+            lookup,
+            row + 1,
+            r_1_even.map(SpreadWord::<16, 32>::new),
+        )?;
+        let r_1_odd = SpreadVar::with_lookup(
+            region,
+            lookup,
+            row + 2,
+            r_1_odd.map(SpreadWord::<16, 32>::new),
+        )?;
 
         // Assign and copy R_1^{odd}
         r_1_odd
@@ -342,7 +400,7 @@ trait Table16Assignment {
         ))
     }
 
-    // Assign outputs of sigma gates
+    /// Assign outputs of sigma gates
     #[allow(clippy::too_many_arguments)]
     fn assign_sigma_outputs(
         &self,
@@ -350,11 +408,11 @@ trait Table16Assignment {
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
         row: usize,
-        r_0_even: Option<u16>,
-        r_0_odd: Option<u16>,
-        r_1_even: Option<u16>,
-        r_1_odd: Option<u16>,
-    ) -> Result<(CellValue16, CellValue16), Error> {
+        r_0_even: Option<[bool; 16]>,
+        r_0_odd: Option<[bool; 16]>,
+        r_1_even: Option<[bool; 16]>,
+        r_1_odd: Option<[bool; 16]>,
+    ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
         let (even, _odd) = self.assign_spread_outputs(
             region, lookup, a_3, row, r_0_even, r_0_odd, r_1_even, r_1_odd,
         )?;

@@ -1,8 +1,6 @@
 use std::convert::TryInto;
 
-use super::{
-    super::BLOCK_SIZE, BlockWord, CellValue16, CellValue32, SpreadInputs, Table16Assignment, ROUNDS,
-};
+use super::{super::BLOCK_SIZE, AssignedBits, BlockWord, SpreadInputs, Table16Assignment, ROUNDS};
 use halo2::{
     circuit::Layouter,
     pasta::pallas,
@@ -23,10 +21,10 @@ use schedule_util::*;
 pub use schedule_util::msg_schedule_test_input;
 
 #[derive(Clone, Debug)]
-pub(super) struct MessageWord(CellValue32);
+pub(super) struct MessageWord(AssignedBits<32>);
 
 impl std::ops::Deref for MessageWord {
-    type Target = CellValue32;
+    type Target = AssignedBits<32>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -308,15 +306,21 @@ impl MessageScheduleConfig {
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
         input: [BlockWord; BLOCK_SIZE],
-    ) -> Result<([MessageWord; ROUNDS], [(CellValue16, CellValue16); ROUNDS]), Error> {
+    ) -> Result<
+        (
+            [MessageWord; ROUNDS],
+            [(AssignedBits<16>, AssignedBits<16>); ROUNDS],
+        ),
+        Error,
+    > {
         let mut w = Vec::<MessageWord>::with_capacity(ROUNDS);
-        let mut w_halves = Vec::<(CellValue16, CellValue16)>::with_capacity(ROUNDS);
+        let mut w_halves = Vec::<(AssignedBits<16>, AssignedBits<16>)>::with_capacity(ROUNDS);
 
         layouter.assign_region(
             || "process message block",
             |mut region| {
                 w = Vec::<MessageWord>::with_capacity(ROUNDS);
-                w_halves = Vec::<(CellValue16, CellValue16)>::with_capacity(ROUNDS);
+                w_halves = Vec::<(AssignedBits<16>, AssignedBits<16>)>::with_capacity(ROUNDS);
 
                 // Assign all fixed columns
                 for index in 1..14 {
@@ -389,7 +393,9 @@ impl MessageScheduleConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{super::BLOCK_SIZE, BlockWord, SpreadTableChip, Table16Chip, Table16Config};
+    use super::super::{
+        super::BLOCK_SIZE, util::lebs2ip, BlockWord, SpreadTableChip, Table16Chip, Table16Config,
+    };
     use super::schedule_util::*;
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
@@ -429,7 +435,7 @@ mod tests {
                 // Run message_scheduler to get W_[0..64]
                 let (w, _) = config.message_schedule.process(&mut layouter, inputs)?;
                 for (word, test_word) in w.iter().zip(MSG_SCHEDULE_TEST_OUTPUT.iter()) {
-                    let word = word.value_u32().unwrap();
+                    let word: u32 = lebs2ip(&word.value().unwrap()) as u32;
                     assert_eq!(word, *test_word);
                 }
                 Ok(())
