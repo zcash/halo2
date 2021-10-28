@@ -39,101 +39,155 @@ pub const SUBREGION_MAIN_WORD: usize =
     DECOMPOSE_ABCD + SIGMA_0_ROWS + DECOMPOSE_EFGH + SIGMA_1_ROWS + CH_ROWS + MAJ_ROWS;
 pub const SUBREGION_MAIN_ROWS: usize = SUBREGION_MAIN_LEN * SUBREGION_MAIN_WORD;
 
-/// Returns starting row number of a compression round
-pub fn get_round_row(round_idx: i32) -> usize {
-    assert!(round_idx >= -1);
-    assert!(round_idx < 64);
-    if round_idx == -1 {
-        // Init subregion
-        0
-    } else {
-        // Main subregion
-        (round_idx as usize) * SUBREGION_MAIN_WORD
+/// Round index.
+#[derive(Debug, Copy, Clone)]
+pub enum RoundIdx {
+    Init,
+    Main(usize),
+}
+
+impl RoundIdx {
+    pub(crate) fn as_usize(&self) -> usize {
+        match self {
+            Self::Main(idx) => *idx,
+            _ => panic!(),
+        }
     }
 }
 
-pub fn get_decompose_e_row(round_idx: i32) -> usize {
+impl From<usize> for RoundIdx {
+    fn from(idx: usize) -> Self {
+        Self::Main(idx)
+    }
+}
+
+impl std::ops::Add<usize> for RoundIdx {
+    type Output = Self;
+
+    fn add(self, rhs: usize) -> Self::Output {
+        match self {
+            Self::Main(idx) => Self::Main(idx + rhs),
+            _ => panic!(),
+        }
+    }
+}
+
+impl Ord for RoundIdx {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (Self::Main(idx_0), Self::Main(idx_1)) => idx_0.cmp(idx_1),
+            _ => panic!(),
+        }
+    }
+}
+
+impl PartialOrd for RoundIdx {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for RoundIdx {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Main(idx_0), Self::Main(idx_1)) => idx_0 == idx_1,
+            _ => panic!(),
+        }
+    }
+}
+
+impl Eq for RoundIdx {}
+
+/// Returns starting row number of a compression round
+pub fn get_round_row(round_idx: RoundIdx) -> usize {
+    match round_idx {
+        RoundIdx::Init => 0,
+        RoundIdx::Main(idx) => {
+            assert!(idx < 64);
+            (idx as usize) * SUBREGION_MAIN_WORD
+        }
+    }
+}
+
+pub fn get_decompose_e_row(round_idx: RoundIdx) -> usize {
     get_round_row(round_idx)
 }
 
-pub fn get_decompose_f_row(round_idx: i32) -> usize {
-    assert_eq!(round_idx, -1);
+pub fn get_decompose_f_row(round_idx: RoundIdx) -> usize {
+    assert!(matches!(round_idx, RoundIdx::Init));
     get_decompose_e_row(round_idx) + DECOMPOSE_EFGH
 }
 
-pub fn get_decompose_g_row(round_idx: i32) -> usize {
+pub fn get_decompose_g_row(round_idx: RoundIdx) -> usize {
     get_decompose_f_row(round_idx) + DECOMPOSE_EFGH
 }
 
-pub fn get_upper_sigma_1_row(round_idx: i32) -> usize {
-    assert!(round_idx >= 0);
+pub fn get_upper_sigma_1_row(round_idx: RoundIdx) -> usize {
+    assert!(matches!(round_idx, RoundIdx::Main(_)));
     get_decompose_e_row(round_idx) + DECOMPOSE_EFGH + 1
 }
 
-pub fn get_ch_row(round_idx: i32) -> usize {
-    assert!(round_idx >= 0);
+pub fn get_ch_row(round_idx: RoundIdx) -> usize {
+    assert!(matches!(round_idx, RoundIdx::Main(_)));
     get_decompose_e_row(round_idx) + DECOMPOSE_EFGH + SIGMA_1_ROWS + 1
 }
 
-pub fn get_ch_neg_row(round_idx: i32) -> usize {
+pub fn get_ch_neg_row(round_idx: RoundIdx) -> usize {
     get_ch_row(round_idx) + CH_ROWS / 2
 }
 
-pub fn get_decompose_a_row(round_idx: i32) -> usize {
-    if round_idx == -1 {
-        get_h_row(round_idx) + DECOMPOSE_EFGH
-    } else {
-        get_ch_neg_row(round_idx) - 1 + CH_ROWS / 2
+pub fn get_decompose_a_row(round_idx: RoundIdx) -> usize {
+    match round_idx {
+        RoundIdx::Init => get_h_row(round_idx) + DECOMPOSE_EFGH,
+        _ => get_ch_neg_row(round_idx) - 1 + CH_ROWS / 2,
     }
 }
 
-pub fn get_upper_sigma_0_row(round_idx: i32) -> usize {
-    assert!(round_idx >= 0);
+pub fn get_upper_sigma_0_row(round_idx: RoundIdx) -> usize {
+    assert!(matches!(round_idx, RoundIdx::Main(_)));
     get_decompose_a_row(round_idx) + DECOMPOSE_ABCD + 1
 }
 
-pub fn get_decompose_b_row(round_idx: i32) -> usize {
-    assert_eq!(round_idx, -1);
+pub fn get_decompose_b_row(round_idx: RoundIdx) -> usize {
+    assert!(matches!(round_idx, RoundIdx::Init));
     get_decompose_a_row(round_idx) + DECOMPOSE_ABCD
 }
 
-pub fn get_decompose_c_row(round_idx: i32) -> usize {
+pub fn get_decompose_c_row(round_idx: RoundIdx) -> usize {
     get_decompose_b_row(round_idx) + DECOMPOSE_ABCD
 }
 
-pub fn get_maj_row(round_idx: i32) -> usize {
-    assert!(round_idx >= 0);
+pub fn get_maj_row(round_idx: RoundIdx) -> usize {
+    assert!(matches!(round_idx, RoundIdx::Main(_)));
     get_upper_sigma_0_row(round_idx) + SIGMA_0_ROWS
 }
 
 // Get state word rows
-pub fn get_h_row(round_idx: i32) -> usize {
-    if round_idx == -1 {
-        get_decompose_g_row(round_idx) + DECOMPOSE_EFGH
-    } else {
-        get_ch_row(round_idx) - 1
+pub fn get_h_row(round_idx: RoundIdx) -> usize {
+    match round_idx {
+        RoundIdx::Init => get_decompose_g_row(round_idx) + DECOMPOSE_EFGH,
+        _ => get_ch_row(round_idx) - 1,
     }
 }
 
-pub fn get_h_prime_row(round_idx: i32) -> usize {
-    assert!(round_idx >= 0);
+pub fn get_h_prime_row(round_idx: RoundIdx) -> usize {
+    assert!(matches!(round_idx, RoundIdx::Main(_)));
     get_ch_row(round_idx)
 }
 
-pub fn get_d_row(round_idx: i32) -> usize {
-    if round_idx == -1 {
-        get_decompose_c_row(round_idx) + DECOMPOSE_ABCD
-    } else {
-        get_ch_row(round_idx) + 2
+pub fn get_d_row(round_idx: RoundIdx) -> usize {
+    match round_idx {
+        RoundIdx::Init => get_decompose_c_row(round_idx) + DECOMPOSE_ABCD,
+        _ => get_ch_row(round_idx) + 2,
     }
 }
 
-pub fn get_e_new_row(round_idx: i32) -> usize {
-    assert!(round_idx >= 0);
+pub fn get_e_new_row(round_idx: RoundIdx) -> usize {
+    assert!(matches!(round_idx, RoundIdx::Main(_)));
     get_d_row(round_idx)
 }
 
-pub fn get_a_new_row(round_idx: i32) -> usize {
+pub fn get_a_new_row(round_idx: RoundIdx) -> usize {
     get_maj_row(round_idx)
 }
 
@@ -232,15 +286,15 @@ impl CompressionConfig {
     pub(super) fn decompose_a(
         &self,
         region: &mut Region<'_, pallas::Base>,
-        idx: i32,
+        round_idx: RoundIdx,
         a_val: Option<u32>,
     ) -> Result<RoundWordA, Error> {
-        let row = get_decompose_a_row(idx);
+        let row = get_decompose_a_row(round_idx);
 
         let (dense_halves, spread_halves) = self.assign_word_halves(region, row, a_val)?;
         let (a, b, c_lo, c_mid, c_hi, d) = self.decompose_abcd(region, row, a_val)?;
         let a_pieces = AbcdVar {
-            idx,
+            round_idx,
             val: a_val,
             a,
             b,
@@ -255,15 +309,15 @@ impl CompressionConfig {
     pub(super) fn decompose_e(
         &self,
         region: &mut Region<'_, pallas::Base>,
-        idx: i32,
+        round_idx: RoundIdx,
         e_val: Option<u32>,
     ) -> Result<RoundWordE, Error> {
-        let row = get_decompose_e_row(idx);
+        let row = get_decompose_e_row(round_idx);
 
         let (dense_halves, spread_halves) = self.assign_word_halves(region, row, e_val)?;
         let (a_lo, a_hi, b_lo, b_hi, c, d) = self.decompose_efgh(region, row, e_val)?;
         let e_pieces = EfghVar {
-            idx,
+            round_idx,
             val: e_val,
             a_lo,
             a_hi,
@@ -278,7 +332,7 @@ impl CompressionConfig {
     pub(super) fn assign_upper_sigma_0(
         &self,
         region: &mut Region<'_, pallas::Base>,
-        idx: i32,
+        round_idx: RoundIdx,
         word: AbcdVar,
     ) -> Result<(CellValue16, CellValue16), Error> {
         // Rename these here for ease of matching the gates to the specification.
@@ -286,7 +340,7 @@ impl CompressionConfig {
         let a_4 = self.extras[1];
         let a_5 = self.message_schedule;
 
-        let row = get_upper_sigma_0_row(idx);
+        let row = get_upper_sigma_0_row(round_idx);
 
         self.s_upper_sigma_0.enable(region, row)?;
 
@@ -363,7 +417,7 @@ impl CompressionConfig {
     pub(super) fn assign_upper_sigma_1(
         &self,
         region: &mut Region<'_, pallas::Base>,
-        idx: i32,
+        round_idx: RoundIdx,
         word: EfghVar,
     ) -> Result<(CellValue16, CellValue16), Error> {
         // Rename these here for ease of matching the gates to the specification.
@@ -371,7 +425,7 @@ impl CompressionConfig {
         let a_4 = self.extras[1];
         let a_5 = self.message_schedule;
 
-        let row = get_upper_sigma_1_row(idx);
+        let row = get_upper_sigma_1_row(round_idx);
 
         self.s_upper_sigma_1.enable(region, row)?;
 
@@ -473,14 +527,14 @@ impl CompressionConfig {
     pub(super) fn assign_ch(
         &self,
         region: &mut Region<'_, pallas::Base>,
-        idx: i32,
+        round_idx: RoundIdx,
         spread_halves_e: (CellValue32, CellValue32),
         spread_halves_f: (CellValue32, CellValue32),
     ) -> Result<(CellValue16, CellValue16), Error> {
         let a_3 = self.extras[0];
         let a_4 = self.extras[1];
 
-        let row = get_ch_row(idx);
+        let row = get_ch_row(round_idx);
 
         self.s_ch.enable(region, row)?;
 
@@ -521,11 +575,11 @@ impl CompressionConfig {
     pub(super) fn assign_ch_neg(
         &self,
         region: &mut Region<'_, pallas::Base>,
-        idx: i32,
+        round_idx: RoundIdx,
         spread_halves_e: (CellValue32, CellValue32),
         spread_halves_g: (CellValue32, CellValue32),
     ) -> Result<(CellValue16, CellValue16), Error> {
-        let row = get_ch_neg_row(idx);
+        let row = get_ch_neg_row(round_idx);
 
         self.s_ch_neg.enable(region, row)?;
 
@@ -626,7 +680,7 @@ impl CompressionConfig {
     pub(super) fn assign_maj(
         &self,
         region: &mut Region<'_, pallas::Base>,
-        idx: i32,
+        round_idx: RoundIdx,
         spread_halves_a: (CellValue32, CellValue32),
         spread_halves_b: (CellValue32, CellValue32),
         spread_halves_c: (CellValue32, CellValue32),
@@ -634,7 +688,7 @@ impl CompressionConfig {
         let a_4 = self.extras[1];
         let a_5 = self.message_schedule;
 
-        let row = get_maj_row(idx);
+        let row = get_maj_row(round_idx);
 
         self.s_maj.enable(region, row)?;
 
@@ -687,7 +741,7 @@ impl CompressionConfig {
     pub(super) fn assign_h_prime(
         &self,
         region: &mut Region<'_, pallas::Base>,
-        idx: i32,
+        round_idx: RoundIdx,
         h: (CellValue16, CellValue16),
         ch: (CellValue16, CellValue16),
         ch_neg: (CellValue16, CellValue16),
@@ -695,7 +749,7 @@ impl CompressionConfig {
         k: u32,
         w: &(CellValue16, CellValue16),
     ) -> Result<(CellValue16, CellValue16), Error> {
-        let row = get_h_prime_row(idx);
+        let row = get_h_prime_row(round_idx);
         self.s_h_prime.enable(region, row)?;
 
         let a_4 = self.extras[1];
@@ -777,11 +831,11 @@ impl CompressionConfig {
     pub(super) fn assign_e_new(
         &self,
         region: &mut Region<'_, pallas::Base>,
-        idx: i32,
+        round_idx: RoundIdx,
         d: &(CellValue16, CellValue16),
         h_prime: &(CellValue16, CellValue16),
     ) -> Result<(CellValue16, CellValue16), Error> {
-        let row = get_e_new_row(idx);
+        let row = get_e_new_row(round_idx);
 
         self.s_e_new.enable(region, row)?;
 
@@ -818,12 +872,12 @@ impl CompressionConfig {
     pub(super) fn assign_a_new(
         &self,
         region: &mut Region<'_, pallas::Base>,
-        idx: i32,
+        round_idx: RoundIdx,
         maj: (CellValue16, CellValue16),
         sigma_0: (CellValue16, CellValue16),
         h_prime: (CellValue16, CellValue16),
     ) -> Result<(CellValue16, CellValue16), Error> {
-        let row = get_a_new_row(idx);
+        let row = get_a_new_row(round_idx);
 
         self.s_a_new.enable(region, row)?;
 

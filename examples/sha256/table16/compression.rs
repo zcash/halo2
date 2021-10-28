@@ -16,6 +16,7 @@ mod subregion_initial;
 mod subregion_main;
 
 use compression_gates::CompressionGate;
+use compression_util::RoundIdx;
 
 /// A variable that represents the `[A,B,C,D]` words of the SHA-256 internal state.
 ///
@@ -29,7 +30,7 @@ use compression_gates::CompressionGate;
 ///   are needed.
 #[derive(Clone, Debug)]
 pub struct AbcdVar {
-    idx: i32,
+    round_idx: RoundIdx,
     val: Option<u32>,
     a: SpreadVar,
     b: SpreadVar,
@@ -51,7 +52,7 @@ pub struct AbcdVar {
 ///   are needed.
 #[derive(Clone, Debug)]
 pub struct EfghVar {
-    idx: i32,
+    round_idx: RoundIdx,
     val: Option<u32>,
     a_lo: SpreadVar,
     a_hi: SpreadVar,
@@ -711,13 +712,8 @@ impl CompressionConfig {
             || "compress",
             |mut region| {
                 state = initialized_state.clone();
-                for idx in 0..64 {
-                    state = self.assign_round(
-                        &mut region,
-                        idx,
-                        state.clone(),
-                        &w_halves[idx as usize],
-                    )?;
+                for (idx, w_halves) in w_halves.iter().enumerate() {
+                    state = self.assign_round(&mut region, idx.into(), state.clone(), &w_halves)?;
                 }
                 Ok(())
             },
