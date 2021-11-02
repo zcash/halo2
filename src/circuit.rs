@@ -40,7 +40,7 @@ use gadget::{
         chip::{EccChip, EccConfig},
         FixedPoint, FixedPointBaseField, FixedPointShort, NonIdentityPoint, Point,
     },
-    poseidon::{Hash as PoseidonHash, Pow5T3Chip as PoseidonChip, Pow5T3Config as PoseidonConfig},
+    poseidon::{Hash as PoseidonHash, Pow5Chip as PoseidonChip, Pow5Config as PoseidonConfig},
     sinsemilla::{
         chip::{SinsemillaChip, SinsemillaConfig, SinsemillaHashDomains},
         commit_ivk::CommitIvkConfig,
@@ -82,7 +82,7 @@ pub struct Config {
     q_add: Selector,
     advices: [Column<Advice>; 10],
     ecc_config: EccConfig,
-    poseidon_config: PoseidonConfig<pallas::Base>,
+    poseidon_config: PoseidonConfig<pallas::Base, 3, 2>,
     merkle_config_1: MerkleConfig,
     merkle_config_2: MerkleConfig,
     sinsemilla_config_1: SinsemillaConfig,

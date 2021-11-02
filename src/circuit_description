@@ -10831,6 +10831,15 @@ PinnedVerificationKey {
                 Sum(
                     Sum(
                         Sum(
+                            Negated(
+                                Advice {
+                                    query_index: 22,
+                                    column_index: 6,
+                                    rotation: Rotation(
+                                        1,
+                                    ),
+                                },
+                            ),
                             Scaled(
                                 Product(
                                     Product(
@@ -10922,97 +10931,6 @@ PinnedVerificationKey {
                                 ),
                                 0x0ab5e5b874a68de7b3d59fbdc8c9ead497d7a0ab23850b56323f2486d7e11b63,
                             ),
-                            Scaled(
-                                Product(
-                                    Product(
-                                        Product(
-                                            Sum(
-                                                Advice {
-                                                    query_index: 7,
-                                                    column_index: 7,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                                Fixed {
-                                                    query_index: 5,
-                                                    column_index: 6,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                            ),
-                                            Sum(
-                                                Advice {
-                                                    query_index: 7,
-                                                    column_index: 7,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                                Fixed {
-                                                    query_index: 5,
-                                                    column_index: 6,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                            ),
-                                        ),
-                                        Product(
-                                            Sum(
-                                                Advice {
-                                                    query_index: 7,
-                                                    column_index: 7,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                                Fixed {
-                                                    query_index: 5,
-                                                    column_index: 6,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                            ),
-                                            Sum(
-                                                Advice {
-                                                    query_index: 7,
-                                                    column_index: 7,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                                Fixed {
-                                                    query_index: 5,
-                                                    column_index: 6,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                            ),
-                                        ),
-                                    ),
-                                    Sum(
-                                        Advice {
-                                            query_index: 7,
-                                            column_index: 7,
-                                            rotation: Rotation(
-                                                0,
-                                            ),
-                                        },
-                                        Fixed {
-                                            query_index: 5,
-                                            column_index: 6,
-                                            rotation: Rotation(
-                                                0,
-                                            ),
-                                        },
-                                    ),
-                                ),
-                                0x31916628e58a5abb293f0f0d886c7954240d4a7cbf7357368eca5596e996ab5e,
-                            ),
                         ),
                         Scaled(
                             Product(
@@ -11020,15 +10938,15 @@ PinnedVerificationKey {
                                     Product(
                                         Sum(
                                             Advice {
-                                                query_index: 8,
-                                                column_index: 8,
+                                                query_index: 7,
+                                                column_index: 7,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
                                             },
                                             Fixed {
-                                                query_index: 6,
-                                                column_index: 7,
+                                                query_index: 5,
+                                                column_index: 6,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
@@ -11036,15 +10954,15 @@ PinnedVerificationKey {
                                         ),
                                         Sum(
                                             Advice {
-                                                query_index: 8,
-                                                column_index: 8,
+                                                query_index: 7,
+                                                column_index: 7,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
                                             },
                                             Fixed {
-                                                query_index: 6,
-                                                column_index: 7,
+                                                query_index: 5,
+                                                column_index: 6,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
@@ -11054,15 +10972,15 @@ PinnedVerificationKey {
                                     Product(
                                         Sum(
                                             Advice {
-                                                query_index: 8,
-                                                column_index: 8,
+                                                query_index: 7,
+                                                column_index: 7,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
                                             },
                                             Fixed {
-                                                query_index: 6,
-                                                column_index: 7,
+                                                query_index: 5,
+                                                column_index: 6,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
@@ -11070,15 +10988,15 @@ PinnedVerificationKey {
                                         ),
                                         Sum(
                                             Advice {
-                                                query_index: 8,
-                                                column_index: 8,
+                                                query_index: 7,
+                                                column_index: 7,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
                                             },
                                             Fixed {
-                                                query_index: 6,
-                                                column_index: 7,
+                                                query_index: 5,
+                                                column_index: 6,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
@@ -11088,32 +11006,114 @@ PinnedVerificationKey {
                                 ),
                                 Sum(
                                     Advice {
-                                        query_index: 8,
-                                        column_index: 8,
+                                        query_index: 7,
+                                        column_index: 7,
                                         rotation: Rotation(
                                             0,
                                         ),
                                     },
                                     Fixed {
-                                        query_index: 6,
-                                        column_index: 7,
+                                        query_index: 5,
+                                        column_index: 6,
                                         rotation: Rotation(
                                             0,
                                         ),
                                     },
                                 ),
                             ),
-                            0x07c045d5f5e9e5a6d803952bbb364fdfa0a3b71a5fb1573519d1cf25d8e8345d,
+                            0x31916628e58a5abb293f0f0d886c7954240d4a7cbf7357368eca5596e996ab5e,
                         ),
                     ),
-                    Negated(
-                        Advice {
-                            query_index: 22,
-                            column_index: 6,
-                            rotation: Rotation(
-                                1,
+                    Scaled(
+                        Product(
+                            Product(
+                                Product(
+                                    Sum(
+                                        Advice {
+                                            query_index: 8,
+                                            column_index: 8,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                        Fixed {
+                                            query_index: 6,
+                                            column_index: 7,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                    ),
+                                    Sum(
+                                        Advice {
+                                            query_index: 8,
+                                            column_index: 8,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                        Fixed {
+                                            query_index: 6,
+                                            column_index: 7,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                Product(
+                                    Sum(
+                                        Advice {
+                                            query_index: 8,
+                                            column_index: 8,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                        Fixed {
+                                            query_index: 6,
+                                            column_index: 7,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                    ),
+                                    Sum(
+                                        Advice {
+                                            query_index: 8,
+                                            column_index: 8,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                        Fixed {
+                                            query_index: 6,
+                                            column_index: 7,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                    ),
+                                ),
                             ),
-                        },
+                            Sum(
+                                Advice {
+                                    query_index: 8,
+                                    column_index: 8,
+                                    rotation: Rotation(
+                                        0,
+                                    ),
+                                },
+                                Fixed {
+                                    query_index: 6,
+                                    column_index: 7,
+                                    rotation: Rotation(
+                                        0,
+                                    ),
+                                },
+                            ),
+                        ),
+                        0x07c045d5f5e9e5a6d803952bbb364fdfa0a3b71a5fb1573519d1cf25d8e8345d,
                     ),
                 ),
             ),
@@ -11176,6 +11176,15 @@ PinnedVerificationKey {
                 Sum(
                     Sum(
                         Sum(
+                            Negated(
+                                Advice {
+                                    query_index: 18,
+                                    column_index: 7,
+                                    rotation: Rotation(
+                                        1,
+                                    ),
+                                },
+                            ),
                             Scaled(
                                 Product(
                                     Product(
@@ -11267,97 +11276,6 @@ PinnedVerificationKey {
                                 ),
                                 0x233162630ebf9ed7f8e24f66822c2d9f3a0a464048bd770ad049cdc8d085167c,
                             ),
-                            Scaled(
-                                Product(
-                                    Product(
-                                        Product(
-                                            Sum(
-                                                Advice {
-                                                    query_index: 7,
-                                                    column_index: 7,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                                Fixed {
-                                                    query_index: 5,
-                                                    column_index: 6,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                            ),
-                                            Sum(
-                                                Advice {
-                                                    query_index: 7,
-                                                    column_index: 7,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                                Fixed {
-                                                    query_index: 5,
-                                                    column_index: 6,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                            ),
-                                        ),
-                                        Product(
-                                            Sum(
-                                                Advice {
-                                                    query_index: 7,
-                                                    column_index: 7,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                                Fixed {
-                                                    query_index: 5,
-                                                    column_index: 6,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                            ),
-                                            Sum(
-                                                Advice {
-                                                    query_index: 7,
-                                                    column_index: 7,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                                Fixed {
-                                                    query_index: 5,
-                                                    column_index: 6,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                            ),
-                                        ),
-                                    ),
-                                    Sum(
-                                        Advice {
-                                            query_index: 7,
-                                            column_index: 7,
-                                            rotation: Rotation(
-                                                0,
-                                            ),
-                                        },
-                                        Fixed {
-                                            query_index: 5,
-                                            column_index: 6,
-                                            rotation: Rotation(
-                                                0,
-                                            ),
-                                        },
-                                    ),
-                                ),
-                                0x25cae2599892a8b0b36664548d60957d78f8365c85bbab07402270113e047a2e,
-                            ),
                         ),
                         Scaled(
                             Product(
@@ -11365,15 +11283,15 @@ PinnedVerificationKey {
                                     Product(
                                         Sum(
                                             Advice {
-                                                query_index: 8,
-                                                column_index: 8,
+                                                query_index: 7,
+                                                column_index: 7,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
                                             },
                                             Fixed {
-                                                query_index: 6,
-                                                column_index: 7,
+                                                query_index: 5,
+                                                column_index: 6,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
@@ -11381,15 +11299,15 @@ PinnedVerificationKey {
                                         ),
                                         Sum(
                                             Advice {
-                                                query_index: 8,
-                                                column_index: 8,
+                                                query_index: 7,
+                                                column_index: 7,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
                                             },
                                             Fixed {
-                                                query_index: 6,
-                                                column_index: 7,
+                                                query_index: 5,
+                                                column_index: 6,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
@@ -11399,15 +11317,15 @@ PinnedVerificationKey {
                                     Product(
                                         Sum(
                                             Advice {
-                                                query_index: 8,
-                                                column_index: 8,
+                                                query_index: 7,
+                                                column_index: 7,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
                                             },
                                             Fixed {
-                                                query_index: 6,
-                                                column_index: 7,
+                                                query_index: 5,
+                                                column_index: 6,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
@@ -11415,15 +11333,15 @@ PinnedVerificationKey {
                                         ),
                                         Sum(
                                             Advice {
-                                                query_index: 8,
-                                                column_index: 8,
+                                                query_index: 7,
+                                                column_index: 7,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
                                             },
                                             Fixed {
-                                                query_index: 6,
-                                                column_index: 7,
+                                                query_index: 5,
+                                                column_index: 6,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
@@ -11433,32 +11351,114 @@ PinnedVerificationKey {
                                 ),
                                 Sum(
                                     Advice {
-                                        query_index: 8,
-                                        column_index: 8,
+                                        query_index: 7,
+                                        column_index: 7,
                                         rotation: Rotation(
                                             0,
                                         ),
                                     },
                                     Fixed {
-                                        query_index: 6,
-                                        column_index: 7,
+                                        query_index: 5,
+                                        column_index: 6,
                                         rotation: Rotation(
                                             0,
                                         ),
                                     },
                                 ),
                             ),
-                            0x22f5b5e1e6081c9774938717989a19579aad3d8262efd83ff84d806f685f747a,
+                            0x25cae2599892a8b0b36664548d60957d78f8365c85bbab07402270113e047a2e,
                         ),
                     ),
-                    Negated(
-                        Advice {
-                            query_index: 18,
-                            column_index: 7,
-                            rotation: Rotation(
-                                1,
+                    Scaled(
+                        Product(
+                            Product(
+                                Product(
+                                    Sum(
+                                        Advice {
+                                            query_index: 8,
+                                            column_index: 8,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                        Fixed {
+                                            query_index: 6,
+                                            column_index: 7,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                    ),
+                                    Sum(
+                                        Advice {
+                                            query_index: 8,
+                                            column_index: 8,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                        Fixed {
+                                            query_index: 6,
+                                            column_index: 7,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                Product(
+                                    Sum(
+                                        Advice {
+                                            query_index: 8,
+                                            column_index: 8,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                        Fixed {
+                                            query_index: 6,
+                                            column_index: 7,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                    ),
+                                    Sum(
+                                        Advice {
+                                            query_index: 8,
+                                            column_index: 8,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                        Fixed {
+                                            query_index: 6,
+                                            column_index: 7,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                    ),
+                                ),
                             ),
-                        },
+                            Sum(
+                                Advice {
+                                    query_index: 8,
+                                    column_index: 8,
+                                    rotation: Rotation(
+                                        0,
+                                    ),
+                                },
+                                Fixed {
+                                    query_index: 6,
+                                    column_index: 7,
+                                    rotation: Rotation(
+                                        0,
+                                    ),
+                                },
+                            ),
+                        ),
+                        0x22f5b5e1e6081c9774938717989a19579aad3d8262efd83ff84d806f685f747a,
                     ),
                 ),
             ),
@@ -11521,6 +11521,15 @@ PinnedVerificationKey {
                 Sum(
                     Sum(
                         Sum(
+                            Negated(
+                                Advice {
+                                    query_index: 19,
+                                    column_index: 8,
+                                    rotation: Rotation(
+                                        1,
+                                    ),
+                                },
+                            ),
                             Scaled(
                                 Product(
                                     Product(
@@ -11612,97 +11621,6 @@ PinnedVerificationKey {
                                 ),
                                 0x2e29dd59c64b1037f333aa91c383346421680eabc56bc15dfee7a9944f84dbe4,
                             ),
-                            Scaled(
-                                Product(
-                                    Product(
-                                        Product(
-                                            Sum(
-                                                Advice {
-                                                    query_index: 7,
-                                                    column_index: 7,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                                Fixed {
-                                                    query_index: 5,
-                                                    column_index: 6,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                            ),
-                                            Sum(
-                                                Advice {
-                                                    query_index: 7,
-                                                    column_index: 7,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                                Fixed {
-                                                    query_index: 5,
-                                                    column_index: 6,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                            ),
-                                        ),
-                                        Product(
-                                            Sum(
-                                                Advice {
-                                                    query_index: 7,
-                                                    column_index: 7,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                                Fixed {
-                                                    query_index: 5,
-                                                    column_index: 6,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                            ),
-                                            Sum(
-                                                Advice {
-                                                    query_index: 7,
-                                                    column_index: 7,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                                Fixed {
-                                                    query_index: 5,
-                                                    column_index: 6,
-                                                    rotation: Rotation(
-                                                        0,
-                                                    ),
-                                                },
-                                            ),
-                                        ),
-                                    ),
-                                    Sum(
-                                        Advice {
-                                            query_index: 7,
-                                            column_index: 7,
-                                            rotation: Rotation(
-                                                0,
-                                            ),
-                                        },
-                                        Fixed {
-                                            query_index: 5,
-                                            column_index: 6,
-                                            rotation: Rotation(
-                                                0,
-                                            ),
-                                        },
-                                    ),
-                                ),
-                                0x1d1aab4ec1cd678892d15e7dceef1665cbeaf48b3a0624c3c771effa43263664,
-                            ),
                         ),
                         Scaled(
                             Product(
@@ -11710,15 +11628,15 @@ PinnedVerificationKey {
                                     Product(
                                         Sum(
                                             Advice {
-                                                query_index: 8,
-                                                column_index: 8,
+                                                query_index: 7,
+                                                column_index: 7,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
                                             },
                                             Fixed {
-                                                query_index: 6,
-                                                column_index: 7,
+                                                query_index: 5,
+                                                column_index: 6,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
@@ -11726,15 +11644,15 @@ PinnedVerificationKey {
                                         ),
                                         Sum(
                                             Advice {
-                                                query_index: 8,
-                                                column_index: 8,
+                                                query_index: 7,
+                                                column_index: 7,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
                                             },
                                             Fixed {
-                                                query_index: 6,
-                                                column_index: 7,
+                                                query_index: 5,
+                                                column_index: 6,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
@@ -11744,15 +11662,15 @@ PinnedVerificationKey {
                                     Product(
                                         Sum(
                                             Advice {
-                                                query_index: 8,
-                                                column_index: 8,
+                                                query_index: 7,
+                                                column_index: 7,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
                                             },
                                             Fixed {
-                                                query_index: 6,
-                                                column_index: 7,
+                                                query_index: 5,
+                                                column_index: 6,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
@@ -11760,15 +11678,15 @@ PinnedVerificationKey {
                                         ),
                                         Sum(
                                             Advice {
-                                                query_index: 8,
-                                                column_index: 8,
+                                                query_index: 7,
+                                                column_index: 7,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
                                             },
                                             Fixed {
-                                                query_index: 6,
-                                                column_index: 7,
+                                                query_index: 5,
+                                                column_index: 6,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
@@ -11778,32 +11696,114 @@ PinnedVerificationKey {
                                 ),
                                 Sum(
                                     Advice {
-                                        query_index: 8,
-                                        column_index: 8,
+                                        query_index: 7,
+                                        column_index: 7,
                                         rotation: Rotation(
                                             0,
                                         ),
                                     },
                                     Fixed {
-                                        query_index: 6,
-                                        column_index: 7,
+                                        query_index: 5,
+                                        column_index: 6,
                                         rotation: Rotation(
                                             0,
                                         ),
                                     },
                                 ),
                             ),
-                            0x3bf763086a18936451e0cbead65516b975872c39b59a31f615639415f6e85ef1,
+                            0x1d1aab4ec1cd678892d15e7dceef1665cbeaf48b3a0624c3c771effa43263664,
                         ),
                     ),
-                    Negated(
-                        Advice {
-                            query_index: 19,
-                            column_index: 8,
-                            rotation: Rotation(
-                                1,
+                    Scaled(
+                        Product(
+                            Product(
+                                Product(
+                                    Sum(
+                                        Advice {
+                                            query_index: 8,
+                                            column_index: 8,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                        Fixed {
+                                            query_index: 6,
+                                            column_index: 7,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                    ),
+                                    Sum(
+                                        Advice {
+                                            query_index: 8,
+                                            column_index: 8,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                        Fixed {
+                                            query_index: 6,
+                                            column_index: 7,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                Product(
+                                    Sum(
+                                        Advice {
+                                            query_index: 8,
+                                            column_index: 8,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                        Fixed {
+                                            query_index: 6,
+                                            column_index: 7,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                    ),
+                                    Sum(
+                                        Advice {
+                                            query_index: 8,
+                                            column_index: 8,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                        Fixed {
+                                            query_index: 6,
+                                            column_index: 7,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                    ),
+                                ),
                             ),
-                        },
+                            Sum(
+                                Advice {
+                                    query_index: 8,
+                                    column_index: 8,
+                                    rotation: Rotation(
+                                        0,
+                                    ),
+                                },
+                                Fixed {
+                                    query_index: 6,
+                                    column_index: 7,
+                                    rotation: Rotation(
+                                        0,
+                                    ),
+                                },
+                            ),
+                        ),
+                        0x3bf763086a18936451e0cbead65516b975872c39b59a31f615639415f6e85ef1,
                     ),
                 ),
             ),

@@ -1,7 +1,7 @@
 use pasta_curves::pallas;
 
 use ecc::chip::EccChip;
-use poseidon::Pow5T3Chip as PoseidonChip;
+use poseidon::Pow5Chip as PoseidonChip;
 use sinsemilla::{chip::SinsemillaChip, merkle::chip::MerkleChip};
 
 pub(crate) mod ecc;
@@ -30,7 +30,7 @@ impl super::Config {
         MerkleChip::construct(self.merkle_config_2.clone())
     }
 
-    pub(super) fn poseidon_chip(&self) -> PoseidonChip<pallas::Base> {
+    pub(super) fn poseidon_chip(&self) -> PoseidonChip<pallas::Base, 3, 2> {
         PoseidonChip::construct(self.poseidon_config.clone())
     }
 }
