@@ -52,7 +52,6 @@ impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE
     // necessary for the permutation.
     pub fn configure<S: Spec<F, WIDTH, RATE>>(
         meta: &mut ConstraintSystem<F>,
-        spec: S,
         state: [Column<Advice>; WIDTH],
         partial_sbox: Column<Advice>,
         rc_a: [Column<Fixed>; WIDTH],
@@ -65,7 +64,7 @@ impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE
         assert!(S::partial_rounds() & 1 == 0);
         let half_full_rounds = S::full_rounds() / 2;
         let half_partial_rounds = S::partial_rounds() / 2;
-        let (round_constants, m_reg, m_inv) = spec.constants();
+        let (round_constants, m_reg, m_inv) = S::constants();
 
         // This allows state words to be initialized (by constraining them equal to fixed
         // values), and used in a permutation from an arbitrary region. rc_a is used in
@@ -649,7 +648,7 @@ mod tests {
                 meta.fixed_column(),
             ];
 
-            Pow5Chip::configure(meta, OrchardNullifier, state, partial_sbox, rc_a, rc_b)
+            Pow5Chip::configure::<OrchardNullifier>(meta, state, partial_sbox, rc_a, rc_b)
         }
 
         fn synthesize(
@@ -685,7 +684,7 @@ mod tests {
 
             // For the purpose of this test, compute the real final state inline.
             let mut expected_final_state = [Fp::zero(), Fp::one(), Fp::from_u64(2)];
-            let (round_constants, mds, _) = OrchardNullifier.constants();
+            let (round_constants, mds, _) = OrchardNullifier::constants();
             poseidon::permute::<_, OrchardNullifier, WIDTH, RATE>(
                 &mut expected_final_state,
                 &mds,
@@ -758,7 +757,7 @@ mod tests {
 
             meta.enable_constant(rc_b[0]);
 
-            Pow5Chip::configure(meta, OrchardNullifier, state, partial_sbox, rc_a, rc_b)
+            Pow5Chip::configure::<OrchardNullifier>(meta, state, partial_sbox, rc_a, rc_b)
         }
 
         fn synthesize(
@@ -811,7 +810,8 @@ mod tests {
     #[test]
     fn poseidon_hash() {
         let message = [Fp::rand(), Fp::rand()];
-        let output = poseidon::Hash::init(OrchardNullifier, ConstantLength::<2>).hash(message);
+        let output =
+            poseidon::Hash::<_, OrchardNullifier, _, 3, 2>::init(ConstantLength::<2>).hash(message);
 
         let k = 6;
         let circuit = HashCircuit {
@@ -829,7 +829,8 @@ mod tests {
                 pallas::Base::from_repr(tv.input[0]).unwrap(),
                 pallas::Base::from_repr(tv.input[1]).unwrap(),
             ];
-            let output = poseidon::Hash::init(OrchardNullifier, ConstantLength).hash(message);
+            let output =
+                poseidon::Hash::<_, OrchardNullifier, _, 3, 2>::init(ConstantLength).hash(message);
 
             let k = 6;
             let circuit = HashCircuit {

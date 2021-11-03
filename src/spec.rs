@@ -212,7 +212,8 @@ pub(crate) fn diversify_hash(d: &[u8; 11]) -> NonIdentityPallasPoint {
 ///
 /// [concreteprfs]: https://zips.z.cash/protocol/nu5.pdf#concreteprfs
 pub(crate) fn prf_nf(nk: pallas::Base, rho: pallas::Base) -> pallas::Base {
-    poseidon::Hash::init(poseidon::P128Pow5T3, poseidon::ConstantLength).hash([nk, rho])
+    poseidon::Hash::<_, poseidon::P128Pow5T3, _, 3, 2>::init(poseidon::ConstantLength)
+        .hash([nk, rho])
 }
 
 /// Defined in [Zcash Protocol Spec § 5.4.5.5: Orchard Key Agreement][concreteorchardkeyagreement].
