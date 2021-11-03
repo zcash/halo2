@@ -160,6 +160,14 @@ pub enum Error {
     NotEnoughColumnsForConstants,
 }
 
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{}", self)
+    }
+}
+
+impl std::error::Error for Error {}
+
 impl<C: CurveAffine> ProvingKey<C> {
     /// Get the underlying [`VerifyingKey`].
     pub fn get_vk(&self) -> &VerifyingKey<C> {
