@@ -615,40 +615,37 @@ mod tests {
         },
         primitives::poseidon::{self, ConstantLength, P128Pow5T3 as OrchardNullifier, Spec},
     };
+    use std::convert::TryInto;
+    use std::marker::PhantomData;
 
-    const WIDTH: usize = 3;
-    const RATE: usize = 2;
+    struct PermuteCircuit<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize>(
+        PhantomData<S>,
+    );
 
-    struct PermuteCircuit {}
-
-    impl Circuit<Fp> for PermuteCircuit {
+    impl<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize> Circuit<Fp>
+        for PermuteCircuit<S, WIDTH, RATE>
+    {
         type Config = Pow5Config<Fp, WIDTH, RATE>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            PermuteCircuit {}
+            PermuteCircuit::<S, WIDTH, RATE>(PhantomData)
         }
 
         fn configure(meta: &mut ConstraintSystem<Fp>) -> Pow5Config<Fp, WIDTH, RATE> {
-            let state = [
-                meta.advice_column(),
-                meta.advice_column(),
-                meta.advice_column(),
-            ];
+            let state = (0..WIDTH).map(|_| meta.advice_column()).collect::<Vec<_>>();
             let partial_sbox = meta.advice_column();
 
-            let rc_a = [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ];
-            let rc_b = [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ];
+            let rc_a = (0..WIDTH).map(|_| meta.fixed_column()).collect::<Vec<_>>();
+            let rc_b = (0..WIDTH).map(|_| meta.fixed_column()).collect::<Vec<_>>();
 
-            Pow5Chip::configure::<OrchardNullifier>(meta, state, partial_sbox, rc_a, rc_b)
+            Pow5Chip::configure::<S>(
+                meta,
+                state.try_into().unwrap(),
+                partial_sbox,
+                rc_a.try_into().unwrap(),
+                rc_b.try_into().unwrap(),
+            )
         }
 
         fn synthesize(
@@ -659,7 +656,7 @@ mod tests {
             let initial_state = layouter.assign_region(
                 || "prepare initial state",
                 |mut region| {
-                    let mut state_word = |i: usize| -> Result<_, Error> {
+                    let state_word = |i: usize| {
                         let value = Some(Fp::from(i as u64));
                         let var = region.assign_advice(
                             || format!("load state_{}", i),
@@ -670,22 +667,27 @@ mod tests {
                         Ok(StateWord { var, value })
                     };
 
-                    Ok([state_word(0)?, state_word(1)?, state_word(2)?])
+                    let state: Result<Vec<_>, Error> = (0..WIDTH).map(state_word).collect();
+                    Ok(state?.try_into().unwrap())
                 },
             )?;
 
             let chip = Pow5Chip::construct(config.clone());
             let final_state = <Pow5Chip<_, WIDTH, RATE> as PoseidonInstructions<
                 Fp,
-                OrchardNullifier,
+                S,
                 WIDTH,
-                2,
+                RATE,
             >>::permute(&chip, &mut layouter, &initial_state)?;
 
             // For the purpose of this test, compute the real final state inline.
-            let mut expected_final_state = [Fp::zero(), Fp::one(), Fp::from_u64(2)];
-            let (round_constants, mds, _) = OrchardNullifier::constants();
-            poseidon::permute::<_, OrchardNullifier, WIDTH, RATE>(
+            let mut expected_final_state = (0..WIDTH)
+                .map(|idx| Fp::from_u64(idx as u64))
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap();
+            let (round_constants, mds, _) = S::constants();
+            poseidon::permute::<_, S, WIDTH, RATE>(
                 &mut expected_final_state,
                 &mds,
                 &round_constants,
@@ -704,9 +706,11 @@ mod tests {
                         region.constrain_equal(final_state[i].var, var)
                     };
 
-                    final_state_word(0)?;
-                    final_state_word(1)?;
-                    final_state_word(2)
+                    for i in 0..(WIDTH - 1) {
+                        final_state_word(i)?;
+                    }
+
+                    final_state_word(WIDTH - 1)
                 },
             )
         }
@@ -715,49 +719,49 @@ mod tests {
     #[test]
     fn poseidon_permute() {
         let k = 6;
-        let circuit = PermuteCircuit {};
+        let circuit = PermuteCircuit::<OrchardNullifier, 3, 2>(PhantomData);
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
     }
 
-    #[derive(Default)]
-    struct HashCircuit {
+    struct HashCircuit<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize> {
         message: Option<[Fp; 2]>,
         // For the purpose of this test, witness the result.
         // TODO: Move this into an instance column.
         output: Option<Fp>,
+        _spec: PhantomData<S>,
     }
 
-    impl Circuit<Fp> for HashCircuit {
+    impl<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize> Circuit<Fp>
+        for HashCircuit<S, WIDTH, RATE>
+    {
         type Config = Pow5Config<Fp, WIDTH, RATE>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            Self::default()
+            Self {
+                message: None,
+                output: None,
+                _spec: PhantomData,
+            }
         }
 
         fn configure(meta: &mut ConstraintSystem<Fp>) -> Pow5Config<Fp, WIDTH, RATE> {
-            let state = [
-                meta.advice_column(),
-                meta.advice_column(),
-                meta.advice_column(),
-            ];
+            let state = (0..WIDTH).map(|_| meta.advice_column()).collect::<Vec<_>>();
             let partial_sbox = meta.advice_column();
 
-            let rc_a = [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ];
-            let rc_b = [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ];
+            let rc_a = (0..WIDTH).map(|_| meta.fixed_column()).collect::<Vec<_>>();
+            let rc_b = (0..WIDTH).map(|_| meta.fixed_column()).collect::<Vec<_>>();
 
             meta.enable_constant(rc_b[0]);
 
-            Pow5Chip::configure::<OrchardNullifier>(meta, state, partial_sbox, rc_a, rc_b)
+            Pow5Chip::configure::<S>(
+                meta,
+                state.try_into().unwrap(),
+                partial_sbox,
+                rc_a.try_into().unwrap(),
+                rc_b.try_into().unwrap(),
+            )
         }
 
         fn synthesize(
@@ -770,7 +774,7 @@ mod tests {
             let message = layouter.assign_region(
                 || "load message",
                 |mut region| {
-                    let mut message_word = |i: usize| -> Result<_, Error> {
+                    let message_word = |i: usize| {
                         let value = self.message.map(|message_vals| message_vals[i]);
                         let cell = region.assign_advice(
                             || format!("load message_{}", i),
@@ -781,14 +785,15 @@ mod tests {
                         Ok(CellValue::new(cell, value))
                     };
 
-                    Ok([message_word(0)?, message_word(1)?])
+                    let message: Result<Vec<_>, Error> = (0..RATE).map(message_word).collect();
+                    Ok(message?.try_into().unwrap())
                 },
             )?;
 
-            let hasher = Hash::<_, _, OrchardNullifier, _, WIDTH, 2>::init(
+            let hasher = Hash::<_, _, S, _, WIDTH, RATE>::init(
                 chip,
                 layouter.namespace(|| "init"),
-                ConstantLength::<2>,
+                ConstantLength::<RATE>,
             )?;
             let output = hasher.hash(layouter.namespace(|| "hash"), message)?;
 
@@ -814,9 +819,10 @@ mod tests {
             poseidon::Hash::<_, OrchardNullifier, _, 3, 2>::init(ConstantLength::<2>).hash(message);
 
         let k = 6;
-        let circuit = HashCircuit {
+        let circuit = HashCircuit::<OrchardNullifier, 3, 2> {
             message: Some(message),
             output: Some(output),
+            _spec: PhantomData,
         };
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
@@ -833,9 +839,10 @@ mod tests {
                 poseidon::Hash::<_, OrchardNullifier, _, 3, 2>::init(ConstantLength).hash(message);
 
             let k = 6;
-            let circuit = HashCircuit {
+            let circuit = HashCircuit::<OrchardNullifier, 3, 2> {
                 message: Some(message),
                 output: Some(output),
+                _spec: PhantomData,
             };
             let prover = MockProver::run(k, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
@@ -853,9 +860,10 @@ mod tests {
             .titled("Poseidon Chip Layout", ("sans-serif", 60))
             .unwrap();
 
-        let circuit = HashCircuit {
+        let circuit = HashCircuit::<OrchardNullifier, 3, 2> {
             message: None,
             output: None,
+            _spec: PhantomData,
         };
         halo2::dev::CircuitLayout::default()
             .render(6, &circuit, &root)

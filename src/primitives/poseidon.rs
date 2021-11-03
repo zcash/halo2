@@ -30,7 +30,7 @@ pub(crate) type SpongeState<F, const RATE: usize> = [Option<F>; RATE];
 pub(crate) type Mds<F, const T: usize> = [[F; T]; T];
 
 /// A specification for a Poseidon permutation.
-pub trait Spec<F: FieldExt, const T: usize, const RATE: usize> {
+pub trait Spec<F: FieldExt, const T: usize, const RATE: usize>: fmt::Debug {
     /// The number of full rounds for this specification.
     ///
     /// This must be an even number.
