@@ -1,3 +1,5 @@
+use std::error;
+use std::fmt;
 use std::io;
 
 /// This is an error that could occur during proving or circuit synthesis.
@@ -30,5 +32,35 @@ impl From<io::Error> for Error {
     fn from(error: io::Error) -> Self {
         // The only place we can get io::Error from is the transcript.
         Error::Transcript(error)
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::Synthesis => write!(f, "General synthesis error"),
+            Error::InvalidInstances => write!(f, "Provided instances do not match the circuit"),
+            Error::ConstraintSystemFailure => write!(f, "The constraint system is not satisfied"),
+            Error::BoundsFailure => write!(f, "An out-of-bounds index was passed to the backend"),
+            Error::Opening => write!(f, "Multi-opening proof was invalid"),
+            Error::Transcript(e) => write!(f, "Transcript error: {}", e),
+            Error::NotEnoughRowsAvailable => write!(f, "`k` is too small for the given circuit"),
+            Error::InstanceTooLarge => write!(f, "Instance vectors are larger than the circuit"),
+            Error::NotEnoughColumnsForConstants => {
+                write!(
+                    f,
+                    "Too few fixed columns are enabled for global constants usage"
+                )
+            }
+        }
+    }
+}
+
+impl error::Error for Error {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            Error::Transcript(e) => Some(e),
+            _ => None,
+        }
     }
 }
