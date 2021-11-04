@@ -77,6 +77,10 @@ harness = false
 name = "circuit"
 harness = false
 
+[[bench]]
+name = "poseidon"
+harness = false
+
 [profile.release]
 debug = true
 

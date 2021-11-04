@@ -141,6 +141,7 @@ fn poseidon_duplex<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE:
     output
 }
 
+#[derive(Debug)]
 pub(crate) enum Sponge<F, const RATE: usize> {
     Absorbing(SpongeState<F, RATE>),
     Squeezing(SpongeState<F, RATE>),

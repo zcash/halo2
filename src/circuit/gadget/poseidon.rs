@@ -80,11 +80,13 @@ impl<
         const RATE: usize,
     > Word<F, PoseidonChip, S, T, RATE>
 {
-    pub(crate) fn inner(&self) -> PoseidonChip::Word {
+    /// The word contained in this gadget.
+    pub fn inner(&self) -> PoseidonChip::Word {
         self.inner
     }
 
-    pub(crate) fn from_inner(inner: PoseidonChip::Word) -> Self {
+    /// Construct a [`Word`] gadget from the inner word.
+    pub fn from_inner(inner: PoseidonChip::Word) -> Self {
         Self { inner }
     }
 }
@@ -109,6 +111,7 @@ fn poseidon_duplex<
 }
 
 /// A Poseidon duplex sponge.
+#[derive(Debug)]
 pub struct Duplex<
     F: FieldExt,
     PoseidonChip: PoseidonDuplexInstructions<F, S, T, RATE>,
@@ -210,6 +213,7 @@ impl<
 }
 
 /// A Poseidon hash function, built around a duplex sponge.
+#[derive(Debug)]
 pub struct Hash<
     F: FieldExt,
     PoseidonChip: PoseidonDuplexInstructions<F, S, T, RATE>,

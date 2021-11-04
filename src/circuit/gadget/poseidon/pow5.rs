@@ -199,6 +199,7 @@ impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE
         }
     }
 
+    /// Construct a [`Pow5Chip`].
     pub fn construct(config: Pow5Config<F, WIDTH, RATE>) -> Self {
         Pow5Chip { config }
     }
@@ -401,16 +402,11 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
     }
 }
 
+/// A word in the Poseidon state.
 #[derive(Clone, Copy, Debug)]
 pub struct StateWord<F: FieldExt> {
     var: Cell,
     value: Option<F>,
-}
-
-impl<F: FieldExt> StateWord<F> {
-    pub fn new(var: Cell, value: Option<F>) -> Self {
-        Self { var, value }
-    }
 }
 
 impl<F: FieldExt> From<StateWord<F>> for CellValue<F> {
@@ -422,6 +418,20 @@ impl<F: FieldExt> From<StateWord<F>> for CellValue<F> {
 impl<F: FieldExt> From<CellValue<F>> for StateWord<F> {
     fn from(cell_value: CellValue<F>) -> StateWord<F> {
         StateWord::new(cell_value.cell(), cell_value.value())
+    }
+}
+
+impl<F: FieldExt> Var<F> for StateWord<F> {
+    fn new(var: Cell, value: Option<F>) -> Self {
+        Self { var, value }
+    }
+
+    fn cell(&self) -> Cell {
+        self.var
+    }
+
+    fn value(&self) -> Option<F> {
+        self.value
     }
 }
 
