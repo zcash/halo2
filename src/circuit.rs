@@ -817,6 +817,27 @@ pub struct Instance {
 }
 
 impl Instance {
+    /// Constructs an [`Instance`] from its constituent parts
+    pub fn from_parts(
+        anchor: Anchor,
+        cv_net: ValueCommitment,
+        nf_old: Nullifier,
+        rk: VerificationKey<SpendAuth>,
+        cmx: ExtractedNoteCommitment,
+        enable_spend: bool,
+        enable_output: bool,
+    ) -> Self {
+        Instance {
+            anchor,
+            cv_net,
+            nf_old,
+            rk,
+            cmx,
+            enable_spend,
+            enable_output,
+        }
+    }
+
     fn to_halo2_instance(&self) -> [[vesta::Scalar; 9]; 1] {
         let mut instance = [vesta::Scalar::zero(); 9];
 
