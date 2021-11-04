@@ -817,7 +817,13 @@ pub struct Instance {
 }
 
 impl Instance {
-    /// Constructs an [`Instance`] from its constituent parts
+    /// Constructs an [`Instance`] from its constituent parts.
+    ///
+    /// This API can be used in combination with [`Proof::verify`] to build verification
+    /// pipelines for many proofs, where you don't want to pass around the full bundle.
+    /// Use [`Bundle::verify_proof`] instead if you have the full bundle.
+    ///
+    /// [`Bundle::verify_proof`]: crate::Bundle::verify_proof
     pub fn from_parts(
         anchor: Anchor,
         cv_net: ValueCommitment,
