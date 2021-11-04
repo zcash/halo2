@@ -431,6 +431,12 @@ impl<F: FieldExt> From<StateWord<F>> for CellValue<F> {
     }
 }
 
+impl<F: FieldExt> From<CellValue<F>> for StateWord<F> {
+    fn from(cell_value: CellValue<F>) -> StateWord<F> {
+        StateWord::new(cell_value.cell(), cell_value.value())
+    }
+}
+
 #[derive(Debug)]
 struct Pow5T3State<F: FieldExt>([StateWord<F>; WIDTH]);
 
@@ -626,7 +632,10 @@ mod tests {
 
     use super::{PoseidonInstructions, Pow5T3Chip, Pow5T3Config, StateWord, WIDTH};
     use crate::{
-        circuit::gadget::poseidon::{Hash, Word},
+        circuit::gadget::{
+            poseidon::Hash,
+            utilities::{CellValue, Var},
+        },
         primitives::poseidon::{self, ConstantLength, P128Pow5T3 as OrchardNullifier, Spec},
     };
 
@@ -783,22 +792,24 @@ mod tests {
                 |mut region| {
                     let mut message_word = |i: usize| {
                         let value = self.message.map(|message_vals| message_vals[i]);
-                        let var = region.assign_advice(
+                        let cell = region.assign_advice(
                             || format!("load message_{}", i),
                             config.state[i],
                             0,
                             || value.ok_or(Error::SynthesisError),
                         )?;
-                        Ok(Word::<_, _, OrchardNullifier, WIDTH, 2> {
-                            inner: StateWord { var, value },
-                        })
+                        Ok(CellValue::new(cell, value))
                     };
 
                     Ok([message_word(0)?, message_word(1)?])
                 },
             )?;
 
-            let hasher = Hash::init(chip, layouter.namespace(|| "init"), ConstantLength::<2>)?;
+            let hasher = Hash::<_, _, OrchardNullifier, _, WIDTH, 2>::init(
+                chip,
+                layouter.namespace(|| "init"),
+                ConstantLength::<2>,
+            )?;
             let output = hasher.hash(layouter.namespace(|| "hash"), message)?;
 
             layouter.assign_region(

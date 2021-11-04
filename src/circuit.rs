@@ -40,10 +40,7 @@ use gadget::{
         chip::{EccChip, EccConfig},
         FixedPoint, FixedPointBaseField, FixedPointShort, NonIdentityPoint, Point,
     },
-    poseidon::{
-        Hash as PoseidonHash, Pow5T3Chip as PoseidonChip, Pow5T3Config as PoseidonConfig,
-        StateWord, Word,
-    },
+    poseidon::{Hash as PoseidonHash, Pow5T3Chip as PoseidonChip, Pow5T3Config as PoseidonConfig},
     sinsemilla::{
         chip::{SinsemillaChip, SinsemillaConfig, SinsemillaHashDomains},
         commit_ivk::CommitIvkConfig,
@@ -485,30 +482,8 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let nf_old = {
             // hash_old = poseidon_hash(nk, rho_old)
             let hash_old = {
-                let message = [nk, rho_old];
-
-                let poseidon_message = layouter.assign_region(
-                    || "load message",
-                    |mut region| {
-                        let mut message_word = |i: usize| {
-                            let value = message[i].value();
-                            let var = region.assign_advice(
-                                || format!("load message_{}", i),
-                                config.poseidon_config.state[i],
-                                0,
-                                || value.ok_or(plonk::Error::SynthesisError),
-                            )?;
-                            region.constrain_equal(var, message[i].cell())?;
-                            Ok(Word::<_, _, poseidon::P128Pow5T3, 3, 2>::from_inner(
-                                StateWord::new(var, value),
-                            ))
-                        };
-
-                        Ok([message_word(0)?, message_word(1)?])
-                    },
-                )?;
-
-                let poseidon_hasher = PoseidonHash::init(
+                let poseidon_message = [nk, rho_old];
+                let poseidon_hasher = PoseidonHash::<_, _, poseidon::P128Pow5T3, _, 3, 2>::init(
                     config.poseidon_chip(),
                     layouter.namespace(|| "Poseidon init"),
                     ConstantLength::<2>,
