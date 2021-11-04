@@ -13,7 +13,7 @@
         });
     });
 </script>
-<style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../halo2/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
+<style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../halo2/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -390,7 +390,7 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">IndexMut</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">index_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">index</span>: <span class="ident">usize</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">F</span> {
+    <span class="kw">fn</span> <span class="ident">index_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">index</span>: <span class="ident">usize</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident">F</span> {
         <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">index_mut</span>(<span class="ident">index</span>)
     }
 }
@@ -404,7 +404,7 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">IndexMut</span><span class="op">&lt;</span><span class="ident">RangeFrom</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">index_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">index</span>: <span class="ident">RangeFrom</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">F</span>] {
+    <span class="kw">fn</span> <span class="ident">index_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">index</span>: <span class="ident">RangeFrom</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">F</span>] {
         <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">index_mut</span>(<span class="ident">index</span>)
     }
 }
@@ -418,7 +418,7 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">IndexMut</span><span class="op">&lt;</span><span class="ident">RangeFull</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">index_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">index</span>: <span class="ident">RangeFull</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">F</span>] {
+    <span class="kw">fn</span> <span class="ident">index_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">index</span>: <span class="ident">RangeFull</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">F</span>] {
         <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">index_mut</span>(<span class="ident">index</span>)
     }
 }
@@ -432,8 +432,8 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">DerefMut</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">deref_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">F</span>] {
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">values</span>[..]
+    <span class="kw">fn</span> <span class="ident">deref_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">F</span>] {
+        <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">values</span>[..]
     }
 }
 
@@ -446,7 +446,7 @@
 
     <span class="doccomment">/// Iterate over the values mutably, which are either in coefficient or</span>
     <span class="doccomment">/// evaluation form depending on the basis `B`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter_mut</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">F</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">F</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">iter_mut</span>()
     }
 
@@ -509,7 +509,7 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Maps every coefficient `c` in `p` to `1 - c`.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">one_minus</span>(<span class="kw-2">mut</span> <span class="ident">p</span>: <span class="self">Self</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">parallelize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">p</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">p</span>, <span class="ident">_start</span><span class="op">|</span> {
+        <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="ident">p</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">p</span>, <span class="ident">_start</span><span class="op">|</span> {
             <span class="kw">for</span> <span class="ident">term</span> <span class="kw">in</span> <span class="ident">p</span> {
                 <span class="kw-2">*</span><span class="ident">term</span> <span class="op">=</span> <span class="ident">F::one</span>() <span class="op">-</span> <span class="kw-2">*</span><span class="ident">term</span>;
             }
@@ -522,7 +522,7 @@
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span>;
 
     <span class="kw">fn</span> <span class="ident">neg</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-        <span class="ident">parallelize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">lhs</span>, <span class="kw">_</span><span class="op">|</span> {
+        <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">lhs</span>, <span class="kw">_</span><span class="op">|</span> {
             <span class="kw">for</span> <span class="ident">lhs</span> <span class="kw">in</span> <span class="ident">lhs</span>.<span class="ident">iter_mut</span>() {
                 <span class="kw-2">*</span><span class="ident">lhs</span> <span class="op">=</span> <span class="op">-</span><span class="kw-2">*</span><span class="ident">lhs</span>;
             }
@@ -536,7 +536,7 @@
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span>;
 
     <span class="kw">fn</span> <span class="ident">add</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-        <span class="ident">parallelize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">lhs</span>, <span class="ident">start</span><span class="op">|</span> {
+        <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">lhs</span>, <span class="ident">start</span><span class="op">|</span> {
             <span class="kw">for</span> (<span class="ident">lhs</span>, <span class="ident">rhs</span>) <span class="kw">in</span> <span class="ident">lhs</span>.<span class="ident">iter_mut</span>().<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">values</span>[<span class="ident">start</span>..].<span class="ident">iter</span>()) {
                 <span class="kw-2">*</span><span class="ident">lhs</span> <span class="op">+</span><span class="op">=</span> <span class="kw-2">*</span><span class="ident">rhs</span>;
             }
@@ -550,7 +550,7 @@
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span>;
 
     <span class="kw">fn</span> <span class="ident">sub</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-        <span class="ident">parallelize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">lhs</span>, <span class="ident">start</span><span class="op">|</span> {
+        <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">lhs</span>, <span class="ident">start</span><span class="op">|</span> {
             <span class="kw">for</span> (<span class="ident">lhs</span>, <span class="ident">rhs</span>) <span class="kw">in</span> <span class="ident">lhs</span>.<span class="ident">iter_mut</span>().<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">values</span>[<span class="ident">start</span>..].<span class="ident">iter</span>()) {
                 <span class="kw-2">*</span><span class="ident">lhs</span> <span class="op">-</span><span class="op">=</span> <span class="kw-2">*</span><span class="ident">rhs</span>;
             }
@@ -569,7 +569,7 @@
         <span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
     ) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
-        <span class="ident">parallelize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">lhs</span>, <span class="ident">start</span><span class="op">|</span> {
+        <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">lhs</span>, <span class="ident">start</span><span class="op">|</span> {
             <span class="kw">for</span> (<span class="ident">lhs</span>, <span class="ident">rhs</span>) <span class="kw">in</span> <span class="ident">lhs</span>.<span class="ident">iter_mut</span>().<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">values</span>[<span class="ident">start</span>..].<span class="ident">iter</span>()) {
                 <span class="kw-2">*</span><span class="ident">lhs</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">*</span><span class="ident">rhs</span>;
             }
@@ -599,7 +599,7 @@
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span>;
 
     <span class="kw">fn</span> <span class="ident">mul</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-        <span class="ident">parallelize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">lhs</span>, <span class="kw">_</span><span class="op">|</span> {
+        <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">lhs</span>, <span class="kw">_</span><span class="op">|</span> {
             <span class="kw">for</span> <span class="ident">lhs</span> <span class="kw">in</span> <span class="ident">lhs</span>.<span class="ident">iter_mut</span>() {
                 <span class="kw-2">*</span><span class="ident">lhs</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">rhs</span>;
             }
