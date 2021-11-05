@@ -54,7 +54,7 @@ Formally, we use the game $\dlgame$ defined above to capture this problem.
 
 _Interactive proofs_ are a triple of algorithms $\ip = (\setup, \prover,
 \verifier)$. The algorithm $\setup(1^\sec)$ produces as its output some _public
-parameters_ commonly refered to by $\pp$. The prover $\prover$ and verifier
+parameters_ commonly referred to by $\pp$. The prover $\prover$ and verifier
 $\verifier$ are interactive machines (with access to $\pp$) and we denote by
 $\langle \prover(x), \verifier(y) \rangle$ an algorithm that executes a
 two-party protocol between them on inputs $x, y$. The output of this protocol, a
