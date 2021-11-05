@@ -805,7 +805,7 @@ impl ProvingKey {
 }
 
 /// Public inputs to the Orchard Action circuit.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Instance {
     pub(crate) anchor: Anchor,
     pub(crate) cv_net: ValueCommitment,
