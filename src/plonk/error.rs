@@ -25,6 +25,8 @@ pub enum Error {
     InstanceTooLarge,
     /// Circuit synthesis requires global constants, but circuit configuration did not
     /// call [`ConstraintSystem::enable_constant`] on fixed columns with sufficient space.
+    ///
+    /// [`ConstraintSystem::enable_constant`]: crate::plonk::ConstraintSystem::enable_constant
     NotEnoughColumnsForConstants,
 }
 
