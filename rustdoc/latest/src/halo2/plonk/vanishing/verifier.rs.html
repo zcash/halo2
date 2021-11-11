@@ -152,11 +152,6 @@
 <span id="137">137</span>
 <span id="138">138</span>
 <span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::iter</span>;
 
 <span class="kw">use</span> <span class="ident">ff::Field</span>;
@@ -203,9 +198,7 @@
     <span class="op">&gt;</span>(
         <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">random_poly_commitment</span> <span class="op">=</span> <span class="ident">transcript</span>
-            .<span class="ident">read_point</span>()
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Error::TranscriptError</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">random_poly_commitment</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">read_point</span>()<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">Committed</span> {
             <span class="ident">random_poly_commitment</span>,
@@ -223,8 +216,7 @@
         <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Constructed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="comment">// Obtain a commitment to h(X) in the form of multiple pieces of degree n - 1</span>
-        <span class="kw">let</span> <span class="ident">h_commitments</span> <span class="op">=</span> <span class="ident">read_n_points</span>(<span class="ident">transcript</span>, <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">get_quotient_poly_degree</span>())
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Error::TranscriptError</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">h_commitments</span> <span class="op">=</span> <span class="ident">read_n_points</span>(<span class="ident">transcript</span>, <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">get_quotient_poly_degree</span>())<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">Constructed</span> {
             <span class="ident">h_commitments</span>,
@@ -238,9 +230,7 @@
         <span class="self">self</span>,
         <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PartiallyEvaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">random_eval</span> <span class="op">=</span> <span class="ident">transcript</span>
-            .<span class="ident">read_scalar</span>()
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Error::TranscriptError</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">random_eval</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">read_scalar</span>()<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">PartiallyEvaluated</span> {
             <span class="ident">h_commitments</span>: <span class="self">self</span>.<span class="ident">h_commitments</span>,

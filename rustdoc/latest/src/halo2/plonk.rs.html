@@ -183,31 +183,6 @@
 <span id="168">168</span>
 <span id="169">169</span>
 <span id="170">170</span>
-<span id="171">171</span>
-<span id="172">172</span>
-<span id="173">173</span>
-<span id="174">174</span>
-<span id="175">175</span>
-<span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
-<span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module provides an implementation of a variant of (Turbo)[PLONK][plonk]</span>
 <span class="doccomment">//! that is designed specifically for the polynomial commitment scheme described</span>
 <span class="doccomment">//! in the [Halo][halo] paper.</span>
@@ -226,6 +201,7 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transcript</span>::{<span class="ident">ChallengeScalar</span>, <span class="ident">EncodedChallenge</span>, <span class="ident">Transcript</span>};
 
 <span class="kw">mod</span> <span class="ident">circuit</span>;
+<span class="kw">mod</span> <span class="ident">error</span>;
 <span class="kw">mod</span> <span class="ident">keygen</span>;
 <span class="kw">mod</span> <span class="ident">lookup</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">permutation</span>;
@@ -235,6 +211,7 @@
 <span class="kw">mod</span> <span class="ident">verifier</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">circuit</span>::<span class="kw-2">*</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">error</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">keygen</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">prover</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">verifier</span>::<span class="kw-2">*</span>;
@@ -341,33 +318,6 @@
     <span class="ident">fixed_polys</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">Coeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">fixed_cosets</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">permutation</span>: <span class="ident">permutation::ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-}
-
-<span class="doccomment">/// This is an error that could occur during proving or circuit synthesis.</span>
-<span class="comment">// TODO: these errors need to be cleaned up</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
-    <span class="doccomment">/// This is an error that can occur during synthesis of the circuit, for</span>
-    <span class="doccomment">/// example, when the witness is not present.</span>
-    <span class="ident">SynthesisError</span>,
-    <span class="doccomment">/// The structured reference string or the parameters are not compatible</span>
-    <span class="doccomment">/// with the circuit being synthesized.</span>
-    <span class="ident">IncompatibleParams</span>,
-    <span class="doccomment">/// The constraint system is not satisfied.</span>
-    <span class="ident">ConstraintSystemFailure</span>,
-    <span class="doccomment">/// Out of bounds index passed to a backend</span>
-    <span class="ident">BoundsFailure</span>,
-    <span class="doccomment">/// Opening error</span>
-    <span class="ident">OpeningError</span>,
-    <span class="doccomment">/// Transcript error</span>
-    <span class="ident">TranscriptError</span>,
-    <span class="doccomment">/// Instance provided has more rows than supported by circuit</span>
-    <span class="ident">NotEnoughRowsAvailable</span>,
-    <span class="doccomment">/// Instance provided exceeds number of available rows</span>
-    <span class="ident">InstanceTooLarge</span>,
-    <span class="doccomment">/// Circuit synthesis requires global constants, but circuit configuration did not</span>
-    <span class="doccomment">/// call [`ConstraintSystem::enable_constant`] on fixed columns with sufficient space.</span>
-    <span class="ident">NotEnoughColumnsForConstants</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {

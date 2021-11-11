@@ -147,6 +147,9 @@ granular error messages that indicate which specific constraint (if any) is not 
 <h2 id="circuit-visualizations"><a class="header" href="#circuit-visualizations">Circuit visualizations</a></h2>
 <p>The <code>dev-graph</code> feature flag exposes several helper methods for creating graphical
 representations of circuits.</p>
+<p>On Debian systems, you will need the following additional packages:</p>
+<pre><code class="language-plaintext">sudo apt install cmake libexpat1-dev libfreetype6-dev
+</code></pre>
 <h3 id="circuit-layout"><a class="header" href="#circuit-layout">Circuit layout</a></h3>
 <p><code>halo2::dev::CircuitLayout</code> renders the circuit layout as a grid:</p>
 <pre><code class="language-rust ignore no_run">fn main() {

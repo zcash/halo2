@@ -503,7 +503,7 @@
             .<span class="ident">ok_or</span>(<span class="ident">Error::BoundsFailure</span>)<span class="question-mark">?</span>;
 
         <span class="kw">for</span> <span class="ident">row</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">clone</span>().<span class="ident">skip</span>(<span class="ident">from_row</span>) {
-            <span class="ident">col</span>[<span class="ident">row</span>] <span class="op">=</span> <span class="ident">to</span>.<span class="ident">ok_or</span>(<span class="ident">Error::SynthesisError</span>)<span class="question-mark">?</span>;
+            <span class="ident">col</span>[<span class="ident">row</span>] <span class="op">=</span> <span class="ident">to</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())
