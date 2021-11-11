@@ -48,9 +48,7 @@ impl<C: CurveAffine> Argument<C> {
 
         // Commit
         let c = params.commit(&random_poly, random_blind).to_affine();
-        transcript
-            .write_point(c)
-            .map_err(|_| Error::TranscriptError)?;
+        transcript.write_point(c)?;
 
         Ok(Committed {
             random_poly,
@@ -97,9 +95,7 @@ impl<C: CurveAffine> Committed<C> {
 
         // Hash each h(X) piece
         for c in h_commitments.iter() {
-            transcript
-                .write_point(*c)
-                .map_err(|_| Error::TranscriptError)?;
+            transcript.write_point(*c)?;
         }
 
         Ok(Constructed {
@@ -133,9 +129,7 @@ impl<C: CurveAffine> Constructed<C> {
             });
 
         let random_eval = eval_polynomial(&self.committed.random_poly, *x);
-        transcript
-            .write_scalar(random_eval)
-            .map_err(|_| Error::TranscriptError)?;
+        transcript.write_scalar(random_eval)?;
 
         Ok(Evaluated {
             h_poly,

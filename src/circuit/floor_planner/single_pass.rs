@@ -180,7 +180,7 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
                     _ => None,
                 }) {
                 Some(Some(len)) => len,
-                _ => return Err(Error::SynthesisError), // TODO better error
+                _ => return Err(Error::Synthesis), // TODO better error
             }
         };
 
@@ -320,7 +320,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F>
         let value = self.layouter.cs.query_instance(instance, row)?;
 
         let cell = self.assign_advice(annotation, advice, offset, &mut || {
-            value.ok_or(Error::SynthesisError).map(|v| v.into())
+            value.ok_or(Error::Synthesis).map(|v| v.into())
         })?;
 
         self.layouter.cs.copy(
@@ -417,7 +417,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
         to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
     ) -> Result<(), Error> {
         if self.used_columns.contains(&column) {
-            return Err(Error::SynthesisError); // TODO better error
+            return Err(Error::Synthesis); // TODO better error
         }
 
         let entry = self.default_and_assigned.entry(column).or_default();
@@ -439,7 +439,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
             (true, 0) => entry.0 = Some(value),
             // Since there is already an existing default value for this table column,
             // the caller should not be attempting to assign another value at offset 0.
-            (false, 0) => return Err(Error::SynthesisError), // TODO better error
+            (false, 0) => return Err(Error::Synthesis), // TODO better error
             _ => (),
         }
         if entry.1.len() <= offset {
@@ -499,9 +499,9 @@ mod tests {
         }
 
         let circuit = MyCircuit {};
-        assert_eq!(
+        assert!(matches!(
             MockProver::run(3, &circuit, vec![]).unwrap_err(),
             Error::NotEnoughColumnsForConstants,
-        );
+        ));
     }
 }

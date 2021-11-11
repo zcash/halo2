@@ -16,6 +16,11 @@ granular error messages that indicate which specific constraint (if any) is not 
 The `dev-graph` feature flag exposes several helper methods for creating graphical
 representations of circuits.
 
+On Debian systems, you will need the following additional packages:
+```plaintext
+sudo apt install cmake libexpat1-dev libfreetype6-dev
+```
+
 ### Circuit layout
 
 `halo2::dev::CircuitLayout` renders the circuit layout as a grid:

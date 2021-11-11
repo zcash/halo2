@@ -321,7 +321,7 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
                     _ => None,
                 }) {
                 Some(Some(len)) => len,
-                _ => return Err(Error::SynthesisError), // TODO better error
+                _ => return Err(Error::Synthesis), // TODO better error
             }
         };
 
@@ -436,7 +436,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
         let value = self.plan.cs.query_instance(instance, row)?;
 
         let cell = self.assign_advice(annotation, advice, offset, &mut || {
-            value.ok_or(Error::SynthesisError).map(|v| v.into())
+            value.ok_or(Error::Synthesis).map(|v| v.into())
         })?;
 
         self.plan.cs.copy(
@@ -534,9 +534,9 @@ mod tests {
         }
 
         let circuit = MyCircuit {};
-        assert_eq!(
+        assert!(matches!(
             MockProver::run(3, &circuit, vec![]).unwrap_err(),
             Error::NotEnoughColumnsForConstants,
-        );
+        ));
     }
 }

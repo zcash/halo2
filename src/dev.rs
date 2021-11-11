@@ -292,15 +292,15 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 ///         layouter.assign_region(|| "Example region", |mut region| {
 ///             config.s.enable(&mut region, 0)?;
 ///             region.assign_advice(|| "a", config.a, 0, || {
-///                 self.a.map(|v| F::from(v)).ok_or(Error::SynthesisError)
+///                 self.a.map(|v| F::from(v)).ok_or(Error::Synthesis)
 ///             })?;
 ///             region.assign_advice(|| "b", config.b, 0, || {
-///                 self.b.map(|v| F::from(v)).ok_or(Error::SynthesisError)
+///                 self.b.map(|v| F::from(v)).ok_or(Error::Synthesis)
 ///             })?;
 ///             region.assign_advice(|| "c", config.c, 0, || {
 ///                 self.a
 ///                     .and_then(|a| self.b.map(|b| F::from(a * b)))
-///                     .ok_or(Error::SynthesisError)
+///                     .ok_or(Error::Synthesis)
 ///             })?;
 ///             Ok(())
 ///         })
@@ -528,7 +528,7 @@ impl<F: FieldExt> MockProver<F> {
         }
 
         if instance.len() != cs.num_instance_columns {
-            return Err(Error::IncompatibleParams);
+            return Err(Error::InvalidInstances);
         }
 
         let instance = instance

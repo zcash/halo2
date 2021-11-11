@@ -105,32 +105,32 @@ fn plonk_api() {
                         0,
                         || {
                             value = Some(f()?);
-                            Ok(value.ok_or(Error::SynthesisError)?.0)
+                            Ok(value.ok_or(Error::Synthesis)?.0)
                         },
                     )?;
                     region.assign_advice(
                         || "lhs^4",
                         self.config.d,
                         0,
-                        || Ok(value.ok_or(Error::SynthesisError)?.0.square().square()),
+                        || Ok(value.ok_or(Error::Synthesis)?.0.square().square()),
                     )?;
                     let rhs = region.assign_advice(
                         || "rhs",
                         self.config.b,
                         0,
-                        || Ok(value.ok_or(Error::SynthesisError)?.1),
+                        || Ok(value.ok_or(Error::Synthesis)?.1),
                     )?;
                     region.assign_advice(
                         || "rhs^4",
                         self.config.e,
                         0,
-                        || Ok(value.ok_or(Error::SynthesisError)?.1.square().square()),
+                        || Ok(value.ok_or(Error::Synthesis)?.1.square().square()),
                     )?;
                     let out = region.assign_advice(
                         || "out",
                         self.config.c,
                         0,
-                        || Ok(value.ok_or(Error::SynthesisError)?.2),
+                        || Ok(value.ok_or(Error::Synthesis)?.2),
                     )?;
 
                     region.assign_fixed(|| "a", self.config.sa, 0, || Ok(FF::zero()))?;
@@ -159,32 +159,32 @@ fn plonk_api() {
                         0,
                         || {
                             value = Some(f()?);
-                            Ok(value.ok_or(Error::SynthesisError)?.0)
+                            Ok(value.ok_or(Error::Synthesis)?.0)
                         },
                     )?;
                     region.assign_advice(
                         || "lhs^4",
                         self.config.d,
                         0,
-                        || Ok(value.ok_or(Error::SynthesisError)?.0.square().square()),
+                        || Ok(value.ok_or(Error::Synthesis)?.0.square().square()),
                     )?;
                     let rhs = region.assign_advice(
                         || "rhs",
                         self.config.b,
                         0,
-                        || Ok(value.ok_or(Error::SynthesisError)?.1),
+                        || Ok(value.ok_or(Error::Synthesis)?.1),
                     )?;
                     region.assign_advice(
                         || "rhs^4",
                         self.config.e,
                         0,
-                        || Ok(value.ok_or(Error::SynthesisError)?.1.square().square()),
+                        || Ok(value.ok_or(Error::Synthesis)?.1.square().square()),
                     )?;
                     let out = region.assign_advice(
                         || "out",
                         self.config.c,
                         0,
-                        || Ok(value.ok_or(Error::SynthesisError)?.2),
+                        || Ok(value.ok_or(Error::Synthesis)?.2),
                     )?;
 
                     region.assign_fixed(|| "a", self.config.sa, 0, || Ok(FF::one()))?;
@@ -356,17 +356,17 @@ fn plonk_api() {
                 let (a0, _, c0) = cs.raw_multiply(&mut layouter, || {
                     a_squared = self.a.map(|a| a.square());
                     Ok((
-                        self.a.ok_or(Error::SynthesisError)?,
-                        self.a.ok_or(Error::SynthesisError)?,
-                        a_squared.ok_or(Error::SynthesisError)?,
+                        self.a.ok_or(Error::Synthesis)?,
+                        self.a.ok_or(Error::Synthesis)?,
+                        a_squared.ok_or(Error::Synthesis)?,
                     ))
                 })?;
                 let (a1, b1, _) = cs.raw_add(&mut layouter, || {
                     let fin = a_squared.and_then(|a2| self.a.map(|a| a + a2));
                     Ok((
-                        self.a.ok_or(Error::SynthesisError)?,
-                        a_squared.ok_or(Error::SynthesisError)?,
-                        fin.ok_or(Error::SynthesisError)?,
+                        self.a.ok_or(Error::Synthesis)?,
+                        a_squared.ok_or(Error::Synthesis)?,
+                        fin.ok_or(Error::Synthesis)?,
                     ))
                 })?;
                 cs.copy(&mut layouter, a0, a1)?;
