@@ -2,9 +2,9 @@
 
 When implementing a circuit, we could use the features of the chips we've selected directly.
 Typically, though, we will use them via ***gadgets***. This indirection is useful because,
-for reasons of efficiency and limitations imposed by UPA, the chip interfaces will often be
-dependent on low-level implementation details. The gadget interface can provide a more convenient
-and stable API that abstracts away from extraneous detail.
+for reasons of efficiency and limitations imposed by PLONKish circuits, the chip interfaces will
+often be dependent on low-level implementation details. The gadget interface can provide a more
+convenient and stable API that abstracts away from extraneous detail.
 
 For example, consider a hash function such as SHA-256. The interface of a chip supporting
 SHA-256 might be dependent on internals of the hash function design such as the separation
