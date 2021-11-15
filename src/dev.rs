@@ -524,7 +524,7 @@ impl<F: FieldExt> MockProver<F> {
         let cs = cs;
 
         if n < cs.minimum_rows() {
-            return Err(Error::NotEnoughRowsAvailable);
+            return Err(Error::not_enough_rows_available(k, cs.minimum_rows()));
         }
 
         if instance.len() != cs.num_instance_columns {

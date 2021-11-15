@@ -191,7 +191,10 @@ where
     let (domain, cs, config) = create_domain::<C, ConcreteCircuit>(params);
 
     if (params.n as usize) < cs.minimum_rows() {
-        return Err(Error::NotEnoughRowsAvailable);
+        return Err(Error::not_enough_rows_available(
+            params.k,
+            cs.minimum_rows(),
+        ));
     }
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
@@ -251,7 +254,10 @@ where
     let cs = cs;
 
     if (params.n as usize) < cs.minimum_rows() {
-        return Err(Error::NotEnoughRowsAvailable);
+        return Err(Error::not_enough_rows_available(
+            params.k,
+            cs.minimum_rows(),
+        ));
     }
 
     let mut assembly: Assembly<C::Scalar> = Assembly {

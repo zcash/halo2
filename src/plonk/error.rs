@@ -19,8 +19,13 @@ pub enum Error {
     Opening,
     /// Transcript error
     Transcript(io::Error),
-    /// Instance provided has more rows than supported by circuit
-    NotEnoughRowsAvailable,
+    /// `k` is too small for the given circuit.
+    NotEnoughRowsAvailable {
+        /// The current value of `k` for the circuit.
+        current_k: u32,
+        /// The minimum value of `k` required for the circuit.
+        minimum_k: u32,
+    },
     /// Instance provided exceeds number of available rows
     InstanceTooLarge,
     /// Circuit synthesis requires global constants, but circuit configuration did not
@@ -37,6 +42,16 @@ impl From<io::Error> for Error {
     }
 }
 
+impl Error {
+    /// Constructs an `Error::NotEnoughRowsAvailable`, computing the required `k` value.
+    pub(crate) fn not_enough_rows_available(current_k: u32, required_rows: usize) -> Self {
+        Error::NotEnoughRowsAvailable {
+            current_k,
+            minimum_k: (required_rows.next_power_of_two() as f64).log2() as u32,
+        }
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -46,7 +61,14 @@ impl fmt::Display for Error {
             Error::BoundsFailure => write!(f, "An out-of-bounds index was passed to the backend"),
             Error::Opening => write!(f, "Multi-opening proof was invalid"),
             Error::Transcript(e) => write!(f, "Transcript error: {}", e),
-            Error::NotEnoughRowsAvailable => write!(f, "`k` is too small for the given circuit"),
+            Error::NotEnoughRowsAvailable {
+                current_k,
+                minimum_k,
+            } => write!(
+                f,
+                "`k = {}` is too small for the given circuit. Try increasing it to `k = {}`",
+                current_k, minimum_k,
+            ),
             Error::InstanceTooLarge => write!(f, "Instance vectors are larger than the circuit"),
             Error::NotEnoughColumnsForConstants => {
                 write!(
