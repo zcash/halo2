@@ -1,3 +1,4 @@
+use std::cmp;
 use std::error;
 use std::fmt;
 use std::io;
@@ -45,9 +46,16 @@ impl From<io::Error> for Error {
 impl Error {
     /// Constructs an `Error::NotEnoughRowsAvailable`, computing the required `k` value.
     pub(crate) fn not_enough_rows_available(current_k: u32, required_rows: usize) -> Self {
+        // To avoid needing to pass around the required number of blinding factors, we
+        // assume here that k always needs to increment by at least 1.
+        let minimum_k = cmp::max(
+            current_k + 1,
+            (required_rows.next_power_of_two() as f64).log2() as u32,
+        );
+
         Error::NotEnoughRowsAvailable {
             current_k,
-            minimum_k: (required_rows.next_power_of_two() as f64).log2() as u32,
+            minimum_k,
         }
     }
 }

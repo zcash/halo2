@@ -405,6 +405,17 @@ fn plonk_api() {
         }) if current_k == 1 && minimum_k == 3
     );
 
+    // Check that we get an error if we try to initialize the proving key with a value of
+    // k that is too small for the number of rows the circuit uses.
+    let slightly_too_small_params: Params<EqAffine> = Params::new(K - 1);
+    assert_matches!(
+        keygen_vk(&slightly_too_small_params, &empty_circuit),
+        Err(Error::NotEnoughRowsAvailable {
+            current_k,
+            minimum_k,
+        }) if current_k == K - 1 && minimum_k == K
+    );
+
     // Initialize the proving key
     let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
     let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
