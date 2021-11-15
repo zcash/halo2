@@ -145,8 +145,8 @@ the above desirable characteristics are easier to obtain by composing <em><stron
 efficient pre-built implementations of particular functionality.</p>
 <p>For example, we might have chips that implement particular cryptographic primitives such as a
 hash function or cipher, or algorithms like scalar multiplication or pairings.</p>
-<p>In UPA, it is possible to build up arbitrary logic just from standard gates that do field
-multiplication and addition. However, very significant efficiency gains can be obtained by
+<p>In PLONKish circuits, it is possible to build up arbitrary logic just from standard gates that do
+field multiplication and addition. However, very significant efficiency gains can be obtained by
 using custom gates.</p>
 <p>Using our API, we define chips that &quot;know&quot; how to use particular sets of custom gates. This
 creates an abstraction layer that isolates the implementation of a high-level circuit from the
@@ -157,9 +157,9 @@ the chips that it uses, the intention is that this separation will result in cod
 easier to understand, audit, and maintain/reuse. This is partly because some potential
 implementation errors are ruled out by construction.</p>
 </blockquote>
-<p>Gates in UPA refer to cells by <em><strong>relative references</strong></em>, i.e. to the cell in a given column,
-and the row at a given offset relative to the one in which the gate's selector is set. We call
-this an <em><strong>offset reference</strong></em> when the offset is nonzero (i.e. offset references are a subset
+<p>Gates in PLONKish circuits refer to cells by <em><strong>relative references</strong></em>, i.e. to the cell in a given
+column, and the row at a given offset relative to the one in which the gate's selector is set. We
+call this an <em><strong>offset reference</strong></em> when the offset is nonzero (i.e. offset references are a subset
 of relative references).</p>
 <p>Relative references contrast with <em><strong>absolute references</strong></em> used in equality constraints,
 which can point to any cell.</p>
@@ -171,7 +171,7 @@ offset references, we not only need fewer columns; we also do not need equality 
 be supported for all of those columns, which improves efficiency.</p>
 <p>In R1CS (another arithmetization which may be more familiar to some readers, but don't worry
 if it isn't), a circuit consists of a &quot;sea of gates&quot; with no semantically significant ordering.
-Because of offset references, the order of rows in a UPA circuit, on the other hand, <em>is</em>
+Because of offset references, the order of rows in a PLONKish circuit, on the other hand, <em>is</em>
 significant. We're going to make some simplifying assumptions and define some abstractions to
 tame the resulting complexity: the aim will be that, <a href="gadgets.html">at the gadget level</a> where
 we do most of our circuit construction, we will not have to deal with relative references or
@@ -198,7 +198,7 @@ should be distributed between lower-level chips.</p>
 <p>In the simplest case, each lower-level chips will use columns disjoint from the other chips.
 However, it is allowed to share a column between chips. It is important to optimize the number
 of advice columns in particular, because that affects proof size.</p>
-<p>The result (possibly after optimization) is a UPA configuration. Our circuit implementation
+<p>The result (possibly after optimization) is a PLONKish configuration. Our circuit implementation
 will be parameterized on a chip, and can use any features of the supported lower-level chips via
 the top-level chip.</p>
 <p>Our hope is that less expert users will normally be able to find an existing chip that
