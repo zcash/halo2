@@ -18,6 +18,8 @@ and this project adheres to Rust's notion of
   - `Error::SynthesisError` is now `Error::Synthesis`.
   - `Error::TranscriptError` is now `Error::Transcript`, and stores the
     underlying `io::Error`.
+- `halo2::dev::CircuitLayout::render` now takes `k` as a `u32`, matching the
+  regular parameter APIs.
 
 ### Removed
 - `halo2::arithmetic::BatchInvert` (use `ff::BatchInvert` instead).
