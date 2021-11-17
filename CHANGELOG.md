@@ -12,8 +12,7 @@ and this project adheres to Rust's notion of
   - `Error` no longer implements `PartialEq`. Tests can check for specific error
     cases with `assert!(matches!(..))`, or the `assert_matches` crate.
   - `Error::IncompatibleParams` is now `Error::InvalidInstances`.
-  - `Error::NotEnoughRowsAvailable` now stores the current and minimum-required
-    values of `k`.
+  - `Error::NotEnoughRowsAvailable` now stores the current value of `k`.
   - `Error::OpeningError` is now `Error::Opening`.
   - `Error::SynthesisError` is now `Error::Synthesis`.
   - `Error::TranscriptError` is now `Error::Transcript`, and stores the

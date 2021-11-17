@@ -423,7 +423,7 @@ impl<F: Field> Assignment<F> for Layout {
         if let Some(cell) = self.selectors[selector.0].get_mut(row) {
             *cell = true;
         } else {
-            return Err(Error::not_enough_rows_available(self.k, row + 1));
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         self.update((*selector).into(), row);

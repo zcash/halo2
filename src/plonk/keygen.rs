@@ -70,7 +70,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         AR: Into<String>,
     {
         if !self.usable_rows.contains(&row) {
-            return Err(Error::not_enough_rows_available(self.k, row + 1));
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         self.selectors[selector.0][row] = true;
@@ -80,7 +80,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
 
     fn query_instance(&self, _: Column<Instance>, row: usize) -> Result<Option<F>, Error> {
         if !self.usable_rows.contains(&row) {
-            return Err(Error::not_enough_rows_available(self.k, row + 1));
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         // There is no instance in this context.
@@ -118,7 +118,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         AR: Into<String>,
     {
         if !self.usable_rows.contains(&row) {
-            return Err(Error::not_enough_rows_available(self.k, row + 1));
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         *self
@@ -137,11 +137,8 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         right_column: Column<Any>,
         right_row: usize,
     ) -> Result<(), Error> {
-        if !self.usable_rows.contains(&left_row) {
-            return Err(Error::not_enough_rows_available(self.k, left_row + 1));
-        }
-        if !self.usable_rows.contains(&right_row) {
-            return Err(Error::not_enough_rows_available(self.k, right_row + 1));
+        if !self.usable_rows.contains(&left_row) || !self.usable_rows.contains(&right_row) {
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         self.permutation
@@ -155,7 +152,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         to: Option<Assigned<F>>,
     ) -> Result<(), Error> {
         if !self.usable_rows.contains(&from_row) {
-            return Err(Error::not_enough_rows_available(self.k, from_row + 1));
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         let col = self
@@ -195,10 +192,7 @@ where
     let (domain, cs, config) = create_domain::<C, ConcreteCircuit>(params);
 
     if (params.n as usize) < cs.minimum_rows() {
-        return Err(Error::not_enough_rows_available(
-            params.k,
-            cs.minimum_rows(),
-        ));
+        return Err(Error::not_enough_rows_available(params.k));
     }
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
@@ -259,10 +253,7 @@ where
     let cs = cs;
 
     if (params.n as usize) < cs.minimum_rows() {
-        return Err(Error::not_enough_rows_available(
-            params.k,
-            cs.minimum_rows(),
-        ));
+        return Err(Error::not_enough_rows_available(params.k));
     }
 
     let mut assembly: Assembly<C::Scalar> = Assembly {

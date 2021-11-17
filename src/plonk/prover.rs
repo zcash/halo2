@@ -169,7 +169,7 @@ pub fn create_proof<
                     row: usize,
                 ) -> Result<Option<F>, Error> {
                     if !self.usable_rows.contains(&row) {
-                        return Err(Error::not_enough_rows_available(self.k, row + 1));
+                        return Err(Error::not_enough_rows_available(self.k));
                     }
 
                     self.instances
@@ -193,7 +193,7 @@ pub fn create_proof<
                     AR: Into<String>,
                 {
                     if !self.usable_rows.contains(&row) {
-                        return Err(Error::not_enough_rows_available(self.k, row + 1));
+                        return Err(Error::not_enough_rows_available(self.k));
                     }
 
                     *self

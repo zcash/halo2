@@ -330,8 +330,7 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 ///     MockProver::<Fp>::run(2, &circuit, vec![]).unwrap_err(),
 ///     Error::NotEnoughRowsAvailable {
 ///         current_k,
-///         minimum_k,
-///     } if current_k == 2 && minimum_k == 3,
+///     } if current_k == 2,
 /// ));
 /// ```
 #[derive(Debug)]
@@ -386,7 +385,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         AR: Into<String>,
     {
         if !self.usable_rows.contains(&row) {
-            return Err(Error::not_enough_rows_available(self.k, row + 1));
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         // Track that this selector was enabled. We require that all selectors are enabled
@@ -406,7 +405,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
 
     fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Option<F>, Error> {
         if !self.usable_rows.contains(&row) {
-            return Err(Error::not_enough_rows_available(self.k, row + 1));
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         self.instance
@@ -430,7 +429,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         AR: Into<String>,
     {
         if !self.usable_rows.contains(&row) {
-            return Err(Error::not_enough_rows_available(self.k, row + 1));
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         if let Some(region) = self.current_region.as_mut() {
@@ -461,7 +460,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         AR: Into<String>,
     {
         if !self.usable_rows.contains(&row) {
-            return Err(Error::not_enough_rows_available(self.k, row + 1));
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         if let Some(region) = self.current_region.as_mut() {
@@ -485,11 +484,8 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         right_column: Column<Any>,
         right_row: usize,
     ) -> Result<(), crate::plonk::Error> {
-        if !self.usable_rows.contains(&left_row) {
-            return Err(Error::not_enough_rows_available(self.k, left_row + 1));
-        }
-        if !self.usable_rows.contains(&right_row) {
-            return Err(Error::not_enough_rows_available(self.k, right_row + 1));
+        if !self.usable_rows.contains(&left_row) || !self.usable_rows.contains(&right_row) {
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         self.permutation
@@ -503,7 +499,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         _: Option<Assigned<F>>,
     ) -> Result<(), Error> {
         if !self.usable_rows.contains(&from_row) {
-            return Err(Error::not_enough_rows_available(self.k, from_row + 1));
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         Ok(())
@@ -537,7 +533,7 @@ impl<F: FieldExt> MockProver<F> {
         let cs = cs;
 
         if n < cs.minimum_rows() {
-            return Err(Error::not_enough_rows_available(k, cs.minimum_rows()));
+            return Err(Error::not_enough_rows_available(k));
         }
 
         if instance.len() != cs.num_instance_columns {

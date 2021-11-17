@@ -401,8 +401,7 @@ fn plonk_api() {
         keygen_vk(&much_too_small_params, &empty_circuit),
         Err(Error::NotEnoughRowsAvailable {
             current_k,
-            minimum_k,
-        }) if current_k == 1 && minimum_k == 3
+        }) if current_k == 1
     );
 
     // Check that we get an error if we try to initialize the proving key with a value of
@@ -412,8 +411,7 @@ fn plonk_api() {
         keygen_vk(&slightly_too_small_params, &empty_circuit),
         Err(Error::NotEnoughRowsAvailable {
             current_k,
-            minimum_k,
-        }) if current_k == K - 1 && minimum_k == K
+        }) if current_k == K - 1
     );
 
     // Initialize the proving key

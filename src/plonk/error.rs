@@ -22,10 +22,8 @@ pub enum Error {
     Transcript(io::Error),
     /// `k` is too small for the given circuit.
     NotEnoughRowsAvailable {
-        /// The current value of `k` for the circuit.
+        /// The current value of `k` being used.
         current_k: u32,
-        /// The minimum value of `k` required for the circuit.
-        minimum_k: u32,
     },
     /// Instance provided exceeds number of available rows
     InstanceTooLarge,
@@ -44,19 +42,9 @@ impl From<io::Error> for Error {
 }
 
 impl Error {
-    /// Constructs an `Error::NotEnoughRowsAvailable`, computing the required `k` value.
-    pub(crate) fn not_enough_rows_available(current_k: u32, required_rows: usize) -> Self {
-        // To avoid needing to pass around the required number of blinding factors, we
-        // assume here that k always needs to increment by at least 1.
-        let minimum_k = cmp::max(
-            current_k + 1,
-            (required_rows.next_power_of_two() as f64).log2() as u32,
-        );
-
-        Error::NotEnoughRowsAvailable {
-            current_k,
-            minimum_k,
-        }
+    /// Constructs an `Error::NotEnoughRowsAvailable`.
+    pub(crate) fn not_enough_rows_available(current_k: u32) -> Self {
+        Error::NotEnoughRowsAvailable { current_k }
     }
 }
 
@@ -69,13 +57,10 @@ impl fmt::Display for Error {
             Error::BoundsFailure => write!(f, "An out-of-bounds index was passed to the backend"),
             Error::Opening => write!(f, "Multi-opening proof was invalid"),
             Error::Transcript(e) => write!(f, "Transcript error: {}", e),
-            Error::NotEnoughRowsAvailable {
-                current_k,
-                minimum_k,
-            } => write!(
+            Error::NotEnoughRowsAvailable { current_k } => write!(
                 f,
-                "`k = {}` is too small for the given circuit. Try increasing it to `k = {}`",
-                current_k, minimum_k,
+                "k = {} is too small for the given circuit. Try using a larger value of k",
+                current_k,
             ),
             Error::InstanceTooLarge => write!(f, "Instance vectors are larger than the circuit"),
             Error::NotEnoughColumnsForConstants => {
