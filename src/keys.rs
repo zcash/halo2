@@ -544,7 +544,7 @@ impl IncomingViewingKey {
     /// [orchardrawinviewingkeys]: https://zips.z.cash/protocol/protocol.pdf#orchardinviewingkeyencoding
     pub fn to_bytes(&self) -> [u8; 64] {
         let mut result = [0u8; 64];
-        result.copy_from_slice(self.dk.to_bytes());
+        result[..32].copy_from_slice(self.dk.to_bytes());
         result[32..].copy_from_slice(&self.ivk.0.to_bytes());
         result
     }
