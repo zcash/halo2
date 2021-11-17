@@ -81,7 +81,23 @@
 <span id="66">66</span>
 <span id="67">67</span>
 <span id="68">68</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::error</span>;
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::cmp</span>;
+<span class="kw">use</span> <span class="ident">std::error</span>;
 <span class="kw">use</span> <span class="ident">std::fmt</span>;
 <span class="kw">use</span> <span class="ident">std::io</span>;
 
@@ -102,8 +118,11 @@
     <span class="ident">Opening</span>,
     <span class="doccomment">/// Transcript error</span>
     <span class="ident">Transcript</span>(<span class="ident">io::Error</span>),
-    <span class="doccomment">/// Instance provided has more rows than supported by circuit</span>
-    <span class="ident">NotEnoughRowsAvailable</span>,
+    <span class="doccomment">/// `k` is too small for the given circuit.</span>
+    <span class="ident">NotEnoughRowsAvailable</span> {
+        <span class="doccomment">/// The current value of `k` being used.</span>
+        <span class="ident">current_k</span>: <span class="ident">u32</span>,
+    },
     <span class="doccomment">/// Instance provided exceeds number of available rows</span>
     <span class="ident">InstanceTooLarge</span>,
     <span class="doccomment">/// Circuit synthesis requires global constants, but circuit configuration did not</span>
@@ -120,6 +139,13 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">Error</span> {
+    <span class="doccomment">/// Constructs an `Error::NotEnoughRowsAvailable`.</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">not_enough_rows_available</span>(<span class="ident">current_k</span>: <span class="ident">u32</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident">Error::NotEnoughRowsAvailable</span> { <span class="ident">current_k</span> }
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">Error</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
         <span class="kw">match</span> <span class="self">self</span> {
@@ -129,7 +155,11 @@
             <span class="ident">Error::BoundsFailure</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;An out-of-bounds index was passed to the backend&quot;</span>),
             <span class="ident">Error::Opening</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Multi-opening proof was invalid&quot;</span>),
             <span class="ident">Error::Transcript</span>(<span class="ident">e</span>) =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Transcript error: {}&quot;</span>, <span class="ident">e</span>),
-            <span class="ident">Error::NotEnoughRowsAvailable</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;`k` is too small for the given circuit&quot;</span>),
+            <span class="ident">Error::NotEnoughRowsAvailable</span> { <span class="ident">current_k</span> } =&gt; <span class="macro">write!</span>(
+                <span class="ident">f</span>,
+                <span class="string">&quot;k = {} is too small for the given circuit. Try using a larger value of k&quot;</span>,
+                <span class="ident">current_k</span>,
+            ),
             <span class="ident">Error::InstanceTooLarge</span> =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Instance vectors are larger than the circuit&quot;</span>),
             <span class="ident">Error::NotEnoughColumnsForConstants</span> =&gt; {
                 <span class="macro">write!</span>(

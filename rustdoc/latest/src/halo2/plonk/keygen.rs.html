@@ -341,6 +341,9 @@
 <span id="326">326</span>
 <span id="327">327</span>
 <span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::int_plus_one</span>)]</span>
 
 <span class="kw">use</span> <span class="ident">std::ops::Range</span>;
@@ -385,6 +388,7 @@
 <span class="doccomment">/// Assembly to be used in circuit synthesis.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">struct</span> <span class="ident">Assembly</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> {
+    <span class="ident">k</span>: <span class="ident">u32</span>,
     <span class="ident">fixed</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">permutation</span>: <span class="ident">permutation::keygen::Assembly</span>,
     <span class="ident">selectors</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span>,
@@ -412,7 +416,7 @@
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">row</span>) {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::BoundsFailure</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::not_enough_rows_available</span>(<span class="self">self</span>.<span class="ident">k</span>));
         }
 
         <span class="self">self</span>.<span class="ident">selectors</span>[<span class="ident">selector</span>.<span class="number">0</span>][<span class="ident">row</span>] <span class="op">=</span> <span class="bool-val">true</span>;
@@ -422,7 +426,7 @@
 
     <span class="kw">fn</span> <span class="ident">query_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="ident">row</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">row</span>) {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::BoundsFailure</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::not_enough_rows_available</span>(<span class="self">self</span>.<span class="ident">k</span>));
         }
 
         <span class="comment">// There is no instance in this context.</span>
@@ -460,7 +464,7 @@
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">row</span>) {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::BoundsFailure</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::not_enough_rows_available</span>(<span class="self">self</span>.<span class="ident">k</span>));
         }
 
         <span class="kw-2">*</span><span class="self">self</span>
@@ -480,7 +484,7 @@
         <span class="ident">right_row</span>: <span class="ident">usize</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">left_row</span>) <span class="op">|</span><span class="op">|</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">right_row</span>) {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::BoundsFailure</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::not_enough_rows_available</span>(<span class="self">self</span>.<span class="ident">k</span>));
         }
 
         <span class="self">self</span>.<span class="ident">permutation</span>
@@ -494,7 +498,7 @@
         <span class="ident">to</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">from_row</span>) {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::BoundsFailure</span>);
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::not_enough_rows_available</span>(<span class="self">self</span>.<span class="ident">k</span>));
         }
 
         <span class="kw">let</span> <span class="ident">col</span> <span class="op">=</span> <span class="self">self</span>
@@ -534,10 +538,11 @@
     <span class="kw">let</span> (<span class="ident">domain</span>, <span class="ident">cs</span>, <span class="ident">config</span>) <span class="op">=</span> <span class="ident">create_domain</span>::<span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">ConcreteCircuit</span><span class="op">&gt;</span>(<span class="ident">params</span>);
 
     <span class="kw">if</span> (<span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>) <span class="op">&lt;</span> <span class="ident">cs</span>.<span class="ident">minimum_rows</span>() {
-        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::NotEnoughRowsAvailable</span>);
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::not_enough_rows_available</span>(<span class="ident">params</span>.<span class="ident">k</span>));
     }
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">assembly</span>: <span class="ident">Assembly</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Assembly</span> {
+        <span class="ident">k</span>: <span class="ident">params</span>.<span class="ident">k</span>,
         <span class="ident">fixed</span>: <span class="macro">vec!</span>[<span class="ident">domain</span>.<span class="ident">empty_lagrange_assigned</span>(); <span class="ident">cs</span>.<span class="ident">num_fixed_columns</span>],
         <span class="ident">permutation</span>: <span class="ident">permutation::keygen::Assembly::new</span>(<span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>, <span class="kw-2">&amp;</span><span class="ident">cs</span>.<span class="ident">permutation</span>),
         <span class="ident">selectors</span>: <span class="macro">vec!</span>[<span class="macro">vec!</span>[<span class="bool-val">false</span>; <span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>]; <span class="ident">cs</span>.<span class="ident">num_selectors</span>],
@@ -594,10 +599,11 @@
     <span class="kw">let</span> <span class="ident">cs</span> <span class="op">=</span> <span class="ident">cs</span>;
 
     <span class="kw">if</span> (<span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>) <span class="op">&lt;</span> <span class="ident">cs</span>.<span class="ident">minimum_rows</span>() {
-        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::NotEnoughRowsAvailable</span>);
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::not_enough_rows_available</span>(<span class="ident">params</span>.<span class="ident">k</span>));
     }
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">assembly</span>: <span class="ident">Assembly</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Assembly</span> {
+        <span class="ident">k</span>: <span class="ident">params</span>.<span class="ident">k</span>,
         <span class="ident">fixed</span>: <span class="macro">vec!</span>[<span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">empty_lagrange_assigned</span>(); <span class="ident">cs</span>.<span class="ident">num_fixed_columns</span>],
         <span class="ident">permutation</span>: <span class="ident">permutation::keygen::Assembly::new</span>(<span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>, <span class="kw-2">&amp;</span><span class="ident">cs</span>.<span class="ident">permutation</span>),
         <span class="ident">selectors</span>: <span class="macro">vec!</span>[<span class="macro">vec!</span>[<span class="bool-val">false</span>; <span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>]; <span class="ident">cs</span>.<span class="ident">num_selectors</span>],
