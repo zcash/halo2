@@ -5,7 +5,7 @@ use std::{convert::TryInto, fmt};
 use blake2b_simd::{Hash, Params};
 use halo2::arithmetic::FieldExt;
 use zcash_note_encryption::{
-    Domain, EphemeralKeyBytes, NotePlaintextBytes, NoteValidity, OutPlaintextBytes,
+    BatchDomain, Domain, EphemeralKeyBytes, NotePlaintextBytes, NoteValidity, OutPlaintextBytes,
     OutgoingCipherKey, ShieldedOutput, COMPACT_NOTE_SIZE, NOTE_PLAINTEXT_SIZE, OUT_PLAINTEXT_SIZE,
 };
 
@@ -141,19 +141,6 @@ impl Domain for OrchardDomain {
         secret.kdf_orchard(ephemeral_key)
     }
 
-    fn batch_kdf<'a>(
-        items: impl Iterator<Item = (Option<Self::SharedSecret>, &'a EphemeralKeyBytes)>,
-    ) -> Vec<Option<Self::SymmetricKey>> {
-        let (shared_secrets, ephemeral_keys): (Vec<_>, Vec<_>) = items.unzip();
-
-        SharedSecret::batch_to_affine(shared_secrets)
-            .zip(ephemeral_keys.into_iter())
-            .map(|(secret, ephemeral_key)| {
-                secret.map(|dhsecret| SharedSecret::kdf_orchard_inner(dhsecret, ephemeral_key))
-            })
-            .collect()
-    }
-
     fn note_plaintext_bytes(
         note: &Self::Note,
         _: &Self::Recipient,
@@ -252,6 +239,21 @@ impl Domain for OrchardDomain {
     fn extract_esk(out_plaintext: &[u8; OUT_PLAINTEXT_SIZE]) -> Option<Self::EphemeralSecretKey> {
         EphemeralSecretKey::from_bytes(out_plaintext[32..OUT_PLAINTEXT_SIZE].try_into().unwrap())
             .into()
+    }
+}
+
+impl BatchDomain for OrchardDomain {
+    fn batch_kdf<'a>(
+        items: impl Iterator<Item = (Option<Self::SharedSecret>, &'a EphemeralKeyBytes)>,
+    ) -> Vec<Option<Self::SymmetricKey>> {
+        let (shared_secrets, ephemeral_keys): (Vec<_>, Vec<_>) = items.unzip();
+
+        SharedSecret::batch_to_affine(shared_secrets)
+            .zip(ephemeral_keys.into_iter())
+            .map(|(secret, ephemeral_key)| {
+                secret.map(|dhsecret| SharedSecret::kdf_orchard_inner(dhsecret, ephemeral_key))
+            })
+            .collect()
     }
 }
 
