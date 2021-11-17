@@ -128,6 +128,7 @@ pub fn create_proof<
         .zip(instances.iter())
         .map(|(circuit, instances)| -> Result<AdviceSingle<C>, Error> {
             struct WitnessCollection<'a, F: Field> {
+                k: u32,
                 pub advice: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
                 instances: &'a [&'a [F]],
                 usable_rows: RangeTo<usize>,
@@ -168,7 +169,7 @@ pub fn create_proof<
                     row: usize,
                 ) -> Result<Option<F>, Error> {
                     if !self.usable_rows.contains(&row) {
-                        return Err(Error::BoundsFailure);
+                        return Err(Error::not_enough_rows_available(self.k));
                     }
 
                     self.instances
@@ -192,7 +193,7 @@ pub fn create_proof<
                     AR: Into<String>,
                 {
                     if !self.usable_rows.contains(&row) {
-                        return Err(Error::BoundsFailure);
+                        return Err(Error::not_enough_rows_available(self.k));
                     }
 
                     *self
@@ -259,6 +260,7 @@ pub fn create_proof<
             let unusable_rows_start = params.n as usize - (meta.blinding_factors() + 1);
 
             let mut witness = WitnessCollection {
+                k: params.k,
                 advice: vec![domain.empty_lagrange_assigned(); meta.num_advice_columns],
                 instances,
                 // The prover will not be allowed to assign values to advice

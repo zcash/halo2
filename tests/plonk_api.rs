@@ -1,6 +1,7 @@
 #![allow(clippy::many_single_char_names)]
 #![allow(clippy::op_ref)]
 
+use assert_matches::assert_matches;
 use halo2::arithmetic::FieldExt;
 use halo2::circuit::{Cell, Layouter, SimpleFloorPlanner};
 use halo2::dev::MockProver;
@@ -392,6 +393,26 @@ fn plonk_api() {
         a: Some(a),
         lookup_table,
     };
+
+    // Check that we get an error if we try to initialize the proving key with a value of
+    // k that is too small for the minimum required number of rows.
+    let much_too_small_params: Params<EqAffine> = Params::new(1);
+    assert_matches!(
+        keygen_vk(&much_too_small_params, &empty_circuit),
+        Err(Error::NotEnoughRowsAvailable {
+            current_k,
+        }) if current_k == 1
+    );
+
+    // Check that we get an error if we try to initialize the proving key with a value of
+    // k that is too small for the number of rows the circuit uses.
+    let slightly_too_small_params: Params<EqAffine> = Params::new(K - 1);
+    assert_matches!(
+        keygen_vk(&slightly_too_small_params, &empty_circuit),
+        Err(Error::NotEnoughRowsAvailable {
+            current_k,
+        }) if current_k == K - 1
+    );
 
     // Initialize the proving key
     let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");

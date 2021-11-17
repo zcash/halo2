@@ -33,7 +33,8 @@ use crate::plonk::{
 ///     .unwrap();
 ///
 /// let circuit = MyCircuit::default();
-/// CircuitLayout::default().render(&circuit, &drawing_area).unwrap();
+/// let k = 5; // Suitable size for MyCircuit
+/// CircuitLayout::default().render(k, &circuit, &drawing_area).unwrap();
 /// ```
 #[derive(Debug, Default)]
 pub struct CircuitLayout {
@@ -84,7 +85,7 @@ impl CircuitLayout {
     /// Renders the given circuit on the given drawing area.
     pub fn render<F: Field, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>(
         self,
-        k: usize,
+        k: u32,
         circuit: &ConcreteCircuit,
         drawing_area: &DrawingArea<DB, Shift>,
     ) -> Result<(), DrawingAreaErrorKind<DB::ErrorType>> {
@@ -95,7 +96,7 @@ impl CircuitLayout {
         // Collect the layout details.
         let mut cs = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut cs);
-        let mut layout = Layout::new(n, cs.num_selectors);
+        let mut layout = Layout::new(k, n, cs.num_selectors);
         ConcreteCircuit::FloorPlanner::synthesize(
             &mut layout,
             circuit,
@@ -336,6 +337,7 @@ struct Region {
 
 #[derive(Default)]
 struct Layout {
+    k: u32,
     regions: Vec<Region>,
     current_region: Option<usize>,
     total_rows: usize,
@@ -349,8 +351,9 @@ struct Layout {
 }
 
 impl Layout {
-    fn new(n: usize, num_selectors: usize) -> Self {
+    fn new(k: u32, n: usize, num_selectors: usize) -> Self {
         Layout {
+            k,
             regions: vec![],
             current_region: None,
             total_rows: 0,
@@ -417,7 +420,12 @@ impl<F: Field> Assignment<F> for Layout {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
-        self.selectors[selector.0][row] = true;
+        if let Some(cell) = self.selectors[selector.0].get_mut(row) {
+            *cell = true;
+        } else {
+            return Err(Error::not_enough_rows_available(self.k));
+        }
+
         self.update((*selector).into(), row);
         Ok(())
     }

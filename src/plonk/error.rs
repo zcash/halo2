@@ -1,3 +1,4 @@
+use std::cmp;
 use std::error;
 use std::fmt;
 use std::io;
@@ -19,8 +20,11 @@ pub enum Error {
     Opening,
     /// Transcript error
     Transcript(io::Error),
-    /// Instance provided has more rows than supported by circuit
-    NotEnoughRowsAvailable,
+    /// `k` is too small for the given circuit.
+    NotEnoughRowsAvailable {
+        /// The current value of `k` being used.
+        current_k: u32,
+    },
     /// Instance provided exceeds number of available rows
     InstanceTooLarge,
     /// Circuit synthesis requires global constants, but circuit configuration did not
@@ -37,6 +41,13 @@ impl From<io::Error> for Error {
     }
 }
 
+impl Error {
+    /// Constructs an `Error::NotEnoughRowsAvailable`.
+    pub(crate) fn not_enough_rows_available(current_k: u32) -> Self {
+        Error::NotEnoughRowsAvailable { current_k }
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -46,7 +57,11 @@ impl fmt::Display for Error {
             Error::BoundsFailure => write!(f, "An out-of-bounds index was passed to the backend"),
             Error::Opening => write!(f, "Multi-opening proof was invalid"),
             Error::Transcript(e) => write!(f, "Transcript error: {}", e),
-            Error::NotEnoughRowsAvailable => write!(f, "`k` is too small for the given circuit"),
+            Error::NotEnoughRowsAvailable { current_k } => write!(
+                f,
+                "k = {} is too small for the given circuit. Try using a larger value of k",
+                current_k,
+            ),
             Error::InstanceTooLarge => write!(f, "Instance vectors are larger than the circuit"),
             Error::NotEnoughColumnsForConstants => {
                 write!(

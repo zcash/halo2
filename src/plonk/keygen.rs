@@ -42,6 +42,7 @@ where
 /// Assembly to be used in circuit synthesis.
 #[derive(Debug)]
 struct Assembly<F: Field> {
+    k: u32,
     fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
     permutation: permutation::keygen::Assembly,
     selectors: Vec<Vec<bool>>,
@@ -69,7 +70,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         AR: Into<String>,
     {
         if !self.usable_rows.contains(&row) {
-            return Err(Error::BoundsFailure);
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         self.selectors[selector.0][row] = true;
@@ -79,7 +80,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
 
     fn query_instance(&self, _: Column<Instance>, row: usize) -> Result<Option<F>, Error> {
         if !self.usable_rows.contains(&row) {
-            return Err(Error::BoundsFailure);
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         // There is no instance in this context.
@@ -117,7 +118,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         AR: Into<String>,
     {
         if !self.usable_rows.contains(&row) {
-            return Err(Error::BoundsFailure);
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         *self
@@ -137,7 +138,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         right_row: usize,
     ) -> Result<(), Error> {
         if !self.usable_rows.contains(&left_row) || !self.usable_rows.contains(&right_row) {
-            return Err(Error::BoundsFailure);
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         self.permutation
@@ -151,7 +152,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         to: Option<Assigned<F>>,
     ) -> Result<(), Error> {
         if !self.usable_rows.contains(&from_row) {
-            return Err(Error::BoundsFailure);
+            return Err(Error::not_enough_rows_available(self.k));
         }
 
         let col = self
@@ -191,10 +192,11 @@ where
     let (domain, cs, config) = create_domain::<C, ConcreteCircuit>(params);
 
     if (params.n as usize) < cs.minimum_rows() {
-        return Err(Error::NotEnoughRowsAvailable);
+        return Err(Error::not_enough_rows_available(params.k));
     }
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
+        k: params.k,
         fixed: vec![domain.empty_lagrange_assigned(); cs.num_fixed_columns],
         permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
         selectors: vec![vec![false; params.n as usize]; cs.num_selectors],
@@ -251,10 +253,11 @@ where
     let cs = cs;
 
     if (params.n as usize) < cs.minimum_rows() {
-        return Err(Error::NotEnoughRowsAvailable);
+        return Err(Error::not_enough_rows_available(params.k));
     }
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
+        k: params.k,
         fixed: vec![vk.domain.empty_lagrange_assigned(); cs.num_fixed_columns],
         permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
         selectors: vec![vec![false; params.n as usize]; cs.num_selectors],
