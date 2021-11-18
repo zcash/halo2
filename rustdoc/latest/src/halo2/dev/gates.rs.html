@@ -291,22 +291,6 @@
 <span id="276">276</span>
 <span id="277">277</span>
 <span id="278">278</span>
-<span id="279">279</span>
-<span id="280">280</span>
-<span id="281">281</span>
-<span id="282">282</span>
-<span id="283">283</span>
-<span id="284">284</span>
-<span id="285">285</span>
-<span id="286">286</span>
-<span id="287">287</span>
-<span id="288">288</span>
-<span id="289">289</span>
-<span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections::BTreeSet</span>,
     <span class="ident">fmt</span>::{<span class="self">self</span>, <span class="ident">Write</span>},
@@ -314,7 +298,10 @@
 
 <span class="kw">use</span> <span class="ident">ff::PrimeField</span>;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::plonk</span>::{<span class="ident">Circuit</span>, <span class="ident">ConstraintSystem</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">dev::util</span>,
+    <span class="ident">plonk</span>::{<span class="ident">Circuit</span>, <span class="ident">ConstraintSystem</span>},
+};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">struct</span> <span class="ident">Constraint</span> {
@@ -411,15 +398,6 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cs</span> <span class="op">=</span> <span class="ident">ConstraintSystem::default</span>();
         <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">C::configure</span>(<span class="kw-2">&amp;mut</span> <span class="ident">cs</span>);
 
-        <span class="kw">let</span> <span class="ident">format_scalar</span> <span class="op">=</span> <span class="op">|</span><span class="ident">s</span>: <span class="ident">F</span><span class="op">|</span> {
-            <span class="comment">// Format scalar as hex.</span>
-            <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">s</span>);
-            <span class="comment">// Remove leading zeroes.</span>
-            <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">s</span>.<span class="ident">strip_prefix</span>(<span class="string">&quot;0x&quot;</span>).<span class="ident">unwrap</span>();
-            <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">s</span>.<span class="ident">trim_start_matches</span>(<span class="string">&#39;0&#39;</span>);
-            <span class="macro">format!</span>(<span class="string">&quot;0x{}&quot;</span>, <span class="ident">s</span>)
-        };
-
         <span class="kw">let</span> <span class="ident">gates</span> <span class="op">=</span> <span class="ident">cs</span>
             .<span class="ident">gates</span>
             .<span class="ident">iter</span>()
@@ -432,17 +410,7 @@
                     .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, <span class="ident">constraint</span>)<span class="op">|</span> <span class="ident">Constraint</span> {
                         <span class="ident">name</span>: <span class="ident">gate</span>.<span class="ident">constraint_name</span>(<span class="ident">i</span>),
                         <span class="ident">expression</span>: <span class="ident">constraint</span>.<span class="ident">evaluate</span>(
-                            <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">s</span><span class="op">|</span> {
-                                <span class="kw">if</span> <span class="ident">s</span>.<span class="ident">is_zero_vartime</span>() {
-                                    <span class="string">&quot;0&quot;</span>.<span class="ident">into</span>()
-                                } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">s</span> <span class="op">==</span> <span class="ident">F::one</span>() {
-                                    <span class="string">&quot;1&quot;</span>.<span class="ident">into</span>()
-                                } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">s</span> <span class="op">==</span> <span class="op">-</span><span class="ident">F::one</span>() {
-                                    <span class="string">&quot;-1&quot;</span>.<span class="ident">into</span>()
-                                } <span class="kw">else</span> {
-                                    <span class="ident">format_scalar</span>(<span class="ident">s</span>)
-                                }
-                            },
+                            <span class="kw-2">&amp;</span><span class="ident">util::format_value</span>,
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">selector</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;S{}&quot;</span>, <span class="ident">selector</span>.<span class="number">0</span>),
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span>, <span class="ident">column</span>, <span class="ident">rotation</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;F{}@{}&quot;</span>, <span class="ident">column</span>, <span class="ident">rotation</span>.<span class="number">0</span>),
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span>, <span class="ident">column</span>, <span class="ident">rotation</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;A{}@{}&quot;</span>, <span class="ident">column</span>, <span class="ident">rotation</span>.<span class="number">0</span>),
@@ -469,9 +437,9 @@
                             },
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">s</span><span class="op">|</span> {
                                 <span class="kw">if</span> <span class="ident">a</span>.<span class="ident">contains</span>(<span class="string">&#39; &#39;</span>) {
-                                    <span class="macro">format!</span>(<span class="string">&quot;({}) * {}&quot;</span>, <span class="ident">a</span>, <span class="ident">format_scalar</span>(<span class="ident">s</span>))
+                                    <span class="macro">format!</span>(<span class="string">&quot;({}) * {}&quot;</span>, <span class="ident">a</span>, <span class="ident">util::format_value</span>(<span class="ident">s</span>))
                                 } <span class="kw">else</span> {
-                                    <span class="macro">format!</span>(<span class="string">&quot;{} * {}&quot;</span>, <span class="ident">a</span>, <span class="ident">format_scalar</span>(<span class="ident">s</span>))
+                                    <span class="macro">format!</span>(<span class="string">&quot;{} * {}&quot;</span>, <span class="ident">a</span>, <span class="ident">util::format_value</span>(<span class="ident">s</span>))
                                 }
                             },
                         ),
