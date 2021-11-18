@@ -102,7 +102,7 @@ pub fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize>(
 
 /// Checks that an expresssion is either 1 or 0.
 pub fn bool_check<F: FieldExt>(value: Expression<F>) -> Expression<F> {
-    value.clone() * (Expression::Constant(F::one()) - value)
+    range_check(value, 2)
 }
 
 /// Takes a specified subsequence of the little-endian bit representation of a field element.
