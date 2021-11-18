@@ -70,8 +70,8 @@ impl Config {
                 // k_i = 0 => y_p = -base_y
                 // k_i = 1 => y_p = base_y
                 let y_switch = {
-                    let k_minus_one = k.clone() - Expression::Constant(pallas::Base::one());
-                    k_minus_one * (base_y.clone() + y_p.clone()) + k * (base_y - y_p)
+                    let one_minus_k = Expression::Constant(pallas::Base::one()) - k.clone();
+                    one_minus_k * (base_y.clone() + y_p.clone()) + k * (base_y - y_p)
                 };
 
                 std::array::IntoIter::new([("bool_check", bool_check), ("y_switch", y_switch)])
