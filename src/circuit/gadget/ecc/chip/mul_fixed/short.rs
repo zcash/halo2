@@ -2,7 +2,9 @@ use std::{array, convert::TryInto};
 
 use super::super::{EccConfig, EccPoint, EccScalarFixedShort};
 use crate::{
-    circuit::gadget::utilities::{copy, decompose_running_sum::RunningSumConfig, CellValue, Var},
+    circuit::gadget::utilities::{
+        bool_check, copy, decompose_running_sum::RunningSumConfig, CellValue, Var,
+    },
     constants::{ValueCommitV, FIXED_BASE_WINDOW_SIZE, L_VALUE, NUM_WINDOWS_SHORT},
 };
 
@@ -46,7 +48,7 @@ impl Config {
             let one = Expression::Constant(pallas::Base::one());
 
             // Check that last window is either 0 or 1.
-            let last_window_check = last_window.clone() * (one.clone() - last_window);
+            let last_window_check = bool_check(last_window);
             // Check that sign is either 1 or -1.
             let sign_check = sign.clone() * sign.clone() - one;
 

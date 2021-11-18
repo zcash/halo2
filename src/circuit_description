@@ -7418,32 +7418,32 @@ PinnedVerificationKey {
                         ),
                     ),
                     Sum(
-                        Sum(
-                            Advice {
-                                query_index: 10,
-                                column_index: 9,
-                                rotation: Rotation(
-                                    1,
-                                ),
-                            },
-                            Negated(
-                                Product(
-                                    Constant(
-                                        0x0000000000000000000000000000000000000000000000000000000000000002,
-                                    ),
-                                    Advice {
-                                        query_index: 11,
-                                        column_index: 9,
-                                        rotation: Rotation(
-                                            -1,
-                                        ),
-                                    },
-                                ),
-                            ),
+                        Constant(
+                            0x0000000000000000000000000000000000000000000000000000000000000001,
                         ),
                         Negated(
-                            Constant(
-                                0x0000000000000000000000000000000000000000000000000000000000000001,
+                            Sum(
+                                Advice {
+                                    query_index: 10,
+                                    column_index: 9,
+                                    rotation: Rotation(
+                                        1,
+                                    ),
+                                },
+                                Negated(
+                                    Product(
+                                        Constant(
+                                            0x0000000000000000000000000000000000000000000000000000000000000002,
+                                        ),
+                                        Advice {
+                                            query_index: 11,
+                                            column_index: 9,
+                                            rotation: Rotation(
+                                                -1,
+                                            ),
+                                        },
+                                    ),
+                                ),
                             ),
                         ),
                     ),

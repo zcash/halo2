@@ -102,10 +102,11 @@ $$
 \begin{array}{|c|l|l|}
 \hline
 \text{Degree} & \text{Constraint} & \text{Comment} \\\hline
-3 & q_\text{scalar-fixed-short} \cdot \left(k_{21} \cdot (1 - k_{21})\right) = 0 & \text{The last window must be a single bit.}\\\hline
+3 & q_\text{scalar-fixed-short} \cdot \BoolCheck{k_{21}} = 0 & \text{The last window must be a single bit.}\\\hline
 3 & q_\text{scalar-fixed-short} \cdot \left(s^2 - 1\right) = 0  &\text{The sign must be $1$ or $-1$.}\\\hline
 \end{array}
 $$
+where $\BoolCheck{x} = x \cdot (1 - x)$.
 
 ## Load fixed base
 Then, we precompute multiples of the fixed base $B$ for each window. This takes the form of a window table: $M[0..W)[0..8)$ such that:

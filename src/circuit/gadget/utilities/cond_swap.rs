@@ -1,4 +1,4 @@
-use super::{copy, CellValue, UtilitiesInstructions, Var};
+use super::{bool_check, copy, CellValue, UtilitiesInstructions, Var};
 use halo2::{
     circuit::{Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
@@ -179,7 +179,7 @@ impl<F: FieldExt> CondSwapChip<F> {
             let one = Expression::Constant(F::one());
 
             // a_swapped - b ⋅ swap - a ⋅ (1-swap) = 0
-            // This checks that `a_swapped` is equal to `y` when `swap` is set,
+            // This checks that `a_swapped` is equal to `b` when `swap` is set,
             // but remains as `a` when `swap` is not set.
             let a_check =
                 a_swapped - b.clone() * swap.clone() - a.clone() * (one.clone() - swap.clone());
@@ -187,10 +187,10 @@ impl<F: FieldExt> CondSwapChip<F> {
             // b_swapped - a ⋅ swap - b ⋅ (1-swap) = 0
             // This checks that `b_swapped` is equal to `a` when `swap` is set,
             // but remains as `b` when `swap` is not set.
-            let b_check = b_swapped - a * swap.clone() - b * (one.clone() - swap.clone());
+            let b_check = b_swapped - a * swap.clone() - b * (one - swap.clone());
 
             // Check `swap` is boolean.
-            let bool_check = swap.clone() * (one - swap);
+            let bool_check = bool_check(swap);
 
             array::IntoIter::new([a_check, b_check, bool_check])
                 .map(move |poly| q_swap.clone() * poly)
