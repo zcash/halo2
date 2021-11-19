@@ -42,11 +42,22 @@ type ChallengeX4<F> = ChallengeScalar<F, X4>;
 #[derive(Debug, Clone)]
 pub struct ProverQuery<'a, C: CurveAffine> {
     /// point at which polynomial is queried
-    pub point: C::Scalar,
+    point: C::Scalar,
     /// coefficients of polynomial
-    pub poly: &'a Polynomial<C::Scalar, Coeff>,
+    poly: &'a Polynomial<C::Scalar, Coeff>,
     /// blinding factor of polynomial
-    pub blind: commitment::Blind<C::Scalar>,
+    blind: commitment::Blind<C::Scalar>,
+}
+
+impl<'a, C: CurveAffine> ProverQuery<'a, C> {
+    /// Create a new prover query based on a polynomial
+    pub fn new(
+        poly: &'a Polynomial<C::Scalar, Coeff>,
+        point: C::Scalar,
+        blind: commitment::Blind<C::Scalar>,
+    ) -> Self {
+        ProverQuery { poly, point, blind }
+    }
 }
 
 /// A polynomial query at a point

@@ -314,11 +314,9 @@ impl<C: CurveAffine> super::ProvingKey<C> {
         &self,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
-        self.polys.iter().map(move |poly| ProverQuery {
-            point: *x,
-            poly,
-            blind: Blind::default(),
-        })
+        self.polys
+            .iter()
+            .map(move |poly| ProverQuery::new(poly, *x, Blind::default()))
     }
 
     pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
@@ -399,16 +397,16 @@ impl<C: CurveAffine> Evaluated<C> {
             .chain(self.constructed.sets.iter().flat_map(move |set| {
                 iter::empty()
                     // Open permutation product commitments at x and \omega x
-                    .chain(Some(ProverQuery {
-                        point: *x,
-                        poly: &set.permutation_product_poly,
-                        blind: set.permutation_product_blind,
-                    }))
-                    .chain(Some(ProverQuery {
-                        point: x_next,
-                        poly: &set.permutation_product_poly,
-                        blind: set.permutation_product_blind,
-                    }))
+                    .chain(Some(ProverQuery::new(
+                        &set.permutation_product_poly,
+                        *x,
+                        set.permutation_product_blind,
+                    )))
+                    .chain(Some(ProverQuery::new(
+                        &set.permutation_product_poly,
+                        x_next,
+                        set.permutation_product_blind,
+                    )))
             }))
             // Open it at \omega^{last} x for all but the last set. This rotation is only
             // sensical for the first row, but we only use this rotation in a constraint
@@ -420,11 +418,11 @@ impl<C: CurveAffine> Evaluated<C> {
                     .rev()
                     .skip(1)
                     .flat_map(move |set| {
-                        Some(ProverQuery {
-                            point: x_last,
-                            poly: &set.permutation_product_poly,
-                            blind: set.permutation_product_blind,
-                        })
+                        Some(ProverQuery::new(
+                            &set.permutation_product_poly,
+                            x_last,
+                            set.permutation_product_blind,
+                        ))
                     }),
             )
     }

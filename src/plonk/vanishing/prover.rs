@@ -145,15 +145,11 @@ impl<C: CurveAffine> Evaluated<C> {
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
         iter::empty()
-            .chain(Some(ProverQuery {
-                point: *x,
-                poly: &self.h_poly,
-                blind: self.h_blind,
-            }))
-            .chain(Some(ProverQuery {
-                point: *x,
-                poly: &self.committed.random_poly,
-                blind: self.committed.random_blind,
-            }))
+            .chain(Some(ProverQuery::new(&self.h_poly, *x, self.h_blind)))
+            .chain(Some(ProverQuery::new(
+                &self.committed.random_poly,
+                *x,
+                self.committed.random_blind,
+            )))
     }
 }

@@ -561,42 +561,30 @@ pub fn create_proof<
         .zip(lookups.iter())
         .flat_map(|(((instance, advice), permutation), lookups)| {
             iter::empty()
-                .chain(
-                    pk.vk
-                        .cs
-                        .instance_queries
-                        .iter()
-                        .map(move |&(column, at)| ProverQuery {
-                            point: domain.rotate_omega(*x, at),
-                            poly: &instance.instance_polys[column.index()],
-                            blind: Blind::default(),
-                        }),
-                )
-                .chain(
-                    pk.vk
-                        .cs
-                        .advice_queries
-                        .iter()
-                        .map(move |&(column, at)| ProverQuery {
-                            point: domain.rotate_omega(*x, at),
-                            poly: &advice.advice_polys[column.index()],
-                            blind: advice.advice_blinds[column.index()],
-                        }),
-                )
+                .chain(pk.vk.cs.instance_queries.iter().map(move |&(column, at)| {
+                    ProverQuery::new(
+                        &instance.instance_polys[column.index()],
+                        domain.rotate_omega(*x, at),
+                        Blind::default(),
+                    )
+                }))
+                .chain(pk.vk.cs.advice_queries.iter().map(move |&(column, at)| {
+                    ProverQuery::new(
+                        &advice.advice_polys[column.index()],
+                        domain.rotate_omega(*x, at),
+                        advice.advice_blinds[column.index()],
+                    )
+                }))
                 .chain(permutation.open(pk, x))
                 .chain(lookups.iter().flat_map(move |p| p.open(pk, x)).into_iter())
         })
-        .chain(
-            pk.vk
-                .cs
-                .fixed_queries
-                .iter()
-                .map(|&(column, at)| ProverQuery {
-                    point: domain.rotate_omega(*x, at),
-                    poly: &pk.fixed_polys[column.index()],
-                    blind: Blind::default(),
-                }),
-        )
+        .chain(pk.vk.cs.fixed_queries.iter().map(|&(column, at)| {
+            ProverQuery::new(
+                &pk.fixed_polys[column.index()],
+                domain.rotate_omega(*x, at),
+                Blind::default(),
+            )
+        }))
         .chain(pk.permutation.open(x))
         // We query the h(X) polynomial at x
         .chain(vanishing.open(x));

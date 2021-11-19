@@ -553,35 +553,35 @@ impl<C: CurveAffine> Evaluated<C> {
 
         iter::empty()
             // Open lookup product commitments at x
-            .chain(Some(ProverQuery {
-                point: *x,
-                poly: &self.constructed.product_poly,
-                blind: self.constructed.product_blind,
-            }))
+            .chain(Some(ProverQuery::new(
+                &self.constructed.product_poly,
+                *x,
+                self.constructed.product_blind,
+            )))
             // Open lookup input commitments at x
-            .chain(Some(ProverQuery {
-                point: *x,
-                poly: &self.constructed.permuted_input_poly,
-                blind: self.constructed.permuted_input_blind,
-            }))
+            .chain(Some(ProverQuery::new(
+                &self.constructed.permuted_input_poly,
+                *x,
+                self.constructed.permuted_input_blind,
+            )))
             // Open lookup table commitments at x
-            .chain(Some(ProverQuery {
-                point: *x,
-                poly: &self.constructed.permuted_table_poly,
-                blind: self.constructed.permuted_table_blind,
-            }))
+            .chain(Some(ProverQuery::new(
+                &self.constructed.permuted_table_poly,
+                *x,
+                self.constructed.permuted_table_blind,
+            )))
             // Open lookup input commitments at x_inv
-            .chain(Some(ProverQuery {
-                point: x_inv,
-                poly: &self.constructed.permuted_input_poly,
-                blind: self.constructed.permuted_input_blind,
-            }))
+            .chain(Some(ProverQuery::new(
+                &self.constructed.permuted_input_poly,
+                x_inv,
+                self.constructed.permuted_input_blind,
+            )))
             // Open lookup product commitments at x_next
-            .chain(Some(ProverQuery {
-                point: x_next,
-                poly: &self.constructed.product_poly,
-                blind: self.constructed.product_blind,
-            }))
+            .chain(Some(ProverQuery::new(
+                &self.constructed.product_poly,
+                x_next,
+                self.constructed.product_blind,
+            )))
     }
 }
 
