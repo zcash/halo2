@@ -821,8 +821,7 @@ mod tests {
                         0,
                         || self.output.ok_or(Error::SynthesisError),
                     )?;
-                    let word: StateWord<_> = output.inner;
-                    region.constrain_equal(word.var, expected_var)
+                    region.constrain_equal(output.cell(), expected_var)
                 },
             )
         }

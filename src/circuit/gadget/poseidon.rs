@@ -20,7 +20,7 @@ pub trait PoseidonInstructions<F: FieldExt, S: Spec<F, T, RATE>, const T: usize,
     Chip<F>
 {
     /// Variable representing the word over which the Poseidon permutation operates.
-    type Word: Copy + fmt::Debug + From<CellValue<F>>;
+    type Word: Copy + fmt::Debug + From<CellValue<F>> + Into<CellValue<F>>;
 
     /// Applies the Poseidon permutation to the given state.
     fn permute(
@@ -182,10 +182,7 @@ impl<
     }
 
     /// Squeezes an element from the sponge.
-    pub fn squeeze(
-        &mut self,
-        mut layouter: impl Layouter<F>,
-    ) -> Result<Word<F, PoseidonChip, S, T, RATE>, Error> {
+    pub fn squeeze(&mut self, mut layouter: impl Layouter<F>) -> Result<CellValue<F>, Error> {
         loop {
             match self.sponge {
                 Sponge::Absorbing(ref input) => {
@@ -200,7 +197,7 @@ impl<
                 Sponge::Squeezing(ref mut output) => {
                     for entry in output.iter_mut() {
                         if let Some(inner) = entry.take() {
-                            return Ok(Word { inner });
+                            return Ok(inner.into());
                         }
                     }
 
@@ -253,7 +250,7 @@ impl<
         mut self,
         mut layouter: impl Layouter<F>,
         message: [CellValue<F>; L],
-    ) -> Result<Word<F, PoseidonChip, S, T, RATE>, Error> {
+    ) -> Result<CellValue<F>, Error> {
         for (i, value) in array::IntoIter::new(message).enumerate() {
             self.duplex
                 .absorb(layouter.namespace(|| format!("absorb_{}", i)), value)?;

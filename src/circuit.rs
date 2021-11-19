@@ -488,12 +488,10 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                     layouter.namespace(|| "Poseidon init"),
                     ConstantLength::<2>,
                 )?;
-                let poseidon_output = poseidon_hasher.hash(
+                poseidon_hasher.hash(
                     layouter.namespace(|| "Poseidon hash (nk, rho_old)"),
                     poseidon_message,
-                )?;
-                let poseidon_output: CellValue<pallas::Base> = poseidon_output.inner().into();
-                poseidon_output
+                )?
             };
 
             // Add hash output to psi.
