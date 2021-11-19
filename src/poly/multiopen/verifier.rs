@@ -2,7 +2,7 @@ use ff::Field;
 
 use super::super::{
     commitment::{Guard, Params, MSM},
-    Error,
+    Error, EvaluationDomain, Rotation,
 };
 use super::{
     construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4,
@@ -27,6 +27,8 @@ pub fn verify_proof<
     T: TranscriptRead<C, E>,
 >(
     params: &'params Params<C>,
+    domain: &EvaluationDomain<C::Scalar>,
+    challenge: C::Scalar,
     transcript: &mut T,
     queries: I,
     mut msm: MSM<'params, C>,
@@ -106,8 +108,12 @@ where
         .zip(q_evals.iter())
         .fold(
             C::Scalar::zero(),
-            |msm_eval, ((points, evals), proof_eval)| {
-                let r_poly = lagrange_interpolate(points, evals);
+            |msm_eval, ((rotations, evals), proof_eval)| {
+                let points = rotations
+                    .iter()
+                    .map(|rotation| domain.rotate_omega(challenge, *rotation))
+                    .collect::<Vec<_>>();
+                let r_poly = lagrange_interpolate(&points, evals);
                 let r_eval = eval_polynomial(&r_poly, *x_3);
                 let eval = points.iter().fold(*proof_eval - &r_eval, |eval, point| {
                     eval * &(*x_3 - point).invert().unwrap()
@@ -139,8 +145,8 @@ impl<'a, 'b, C: CurveAffine> Query<C::Scalar> for VerifierQuery<'a, 'b, C> {
     type Commitment = CommitmentReference<'a, 'b, C>;
     type Eval = C::Scalar;
 
-    fn get_point(&self) -> C::Scalar {
-        self.point
+    fn get_rotation(&self) -> Rotation {
+        self.rotation
     }
     fn get_eval(&self) -> C::Scalar {
         self.eval

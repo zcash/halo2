@@ -41,8 +41,8 @@ type ChallengeX4<F> = ChallengeScalar<F, X4>;
 /// A polynomial query at a point
 #[derive(Debug, Clone)]
 pub struct ProverQuery<'a, C: CurveAffine> {
-    /// point at which polynomial is queried
-    point: C::Scalar,
+    /// rotation of challenge at which polynomial is queried
+    rotation: Rotation,
     /// coefficients of polynomial
     poly: &'a Polynomial<C::Scalar, Coeff>,
     /// blinding factor of polynomial
@@ -61,15 +61,19 @@ impl<'a, C: CurveAffine> ProverQuery<'a, C> {
     ) -> Self {
         assert_eq!(domain.rotate_omega(x, rotation), point);
 
-        ProverQuery { poly, point, blind }
+        ProverQuery {
+            poly,
+            rotation,
+            blind,
+        }
     }
 }
 
 /// A polynomial query at a point
 #[derive(Debug, Clone)]
 pub struct VerifierQuery<'r, 'params: 'r, C: CurveAffine> {
-    /// point at which polynomial is queried
-    point: C::Scalar,
+    /// rotation at which the challenge polynomial is queried
+    rotation: Rotation,
     /// commitment to polynomial
     commitment: CommitmentReference<'r, 'params, C>,
     /// evaluation of polynomial at query point
@@ -89,7 +93,7 @@ impl<'r, 'params: 'r, C: CurveAffine> VerifierQuery<'r, 'params, C> {
         assert_eq!(domain.rotate_omega(x, rotation), point);
 
         VerifierQuery {
-            point,
+            rotation,
             eval,
             commitment: CommitmentReference::Commitment(commitment),
         }
@@ -107,7 +111,7 @@ impl<'r, 'params: 'r, C: CurveAffine> VerifierQuery<'r, 'params, C> {
         assert_eq!(domain.rotate_omega(x, rotation), point);
 
         VerifierQuery {
-            point,
+            rotation,
             eval,
             commitment: CommitmentReference::MSM(msm),
         }
@@ -154,14 +158,14 @@ trait Query<F>: Sized {
     type Commitment: PartialEq + Copy;
     type Eval: Clone + Default;
 
-    fn get_point(&self) -> F;
+    fn get_rotation(&self) -> Rotation;
     fn get_eval(&self) -> Self::Eval;
     fn get_commitment(&self) -> Self::Commitment;
 }
 
 type IntermediateSets<F, Q> = (
     Vec<CommitmentData<<Q as Query<F>>::Eval, <Q as Query<F>>::Commitment>>,
-    Vec<Vec<F>>,
+    Vec<Vec<Rotation>>,
 );
 
 fn construct_intermediate_sets<F: FieldExt, I, Q: Query<F>>(queries: I) -> IntermediateSets<F, Q>
@@ -181,7 +185,7 @@ where
     for query in queries.clone() {
         let num_points = point_index_map.len();
         let point_idx = point_index_map
-            .entry(query.get_point())
+            .entry(query.get_rotation())
             .or_insert(num_points);
 
         if let Some(pos) = commitment_map
@@ -230,7 +234,7 @@ where
     // Populate set_index, evals and points for each commitment using point_idx_sets
     for query in queries {
         // The index of the point at which the commitment is queried
-        let point_index = point_index_map.get(&query.get_point()).unwrap();
+        let point_index = point_index_map.get(&query.get_rotation()).unwrap();
 
         // The point_index_set at which the commitment was queried
         let mut point_index_set = BTreeSet::new();
@@ -265,7 +269,7 @@ where
     }
 
     // Get actual points in each point set
-    let mut point_sets: Vec<Vec<F>> = vec![Vec::new(); point_idx_sets.len()];
+    let mut point_sets: Vec<Vec<Rotation>> = vec![Vec::new(); point_idx_sets.len()];
     for (point_idx_set, &set_idx) in point_idx_sets.iter() {
         for &point_idx in point_idx_set.iter() {
             let point = inverse_point_index_map.get(&point_idx).unwrap();
@@ -320,20 +324,22 @@ fn test_roundtrip() {
     let mut transcript = crate::transcript::Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
     create_proof(
         &params,
+        &domain,
+        x,
         &mut transcript,
         std::iter::empty()
             .chain(Some(ProverQuery {
-                point: x,
+                rotation: Rotation::cur(),
                 poly: &ax,
                 blind,
             }))
             .chain(Some(ProverQuery {
-                point: x,
+                rotation: Rotation::cur(),
                 poly: &bx,
                 blind,
             }))
             .chain(Some(ProverQuery {
-                point: y,
+                rotation: Rotation::next(),
                 poly: &cx,
                 blind,
             })),
@@ -349,6 +355,8 @@ fn test_roundtrip() {
 
         let guard = verify_proof(
             &params,
+            &domain,
+            x,
             &mut transcript,
             std::iter::empty()
                 .chain(Some(VerifierQuery::new_commitment(
@@ -392,6 +400,8 @@ fn test_roundtrip() {
 
         let guard = verify_proof(
             &params,
+            &domain,
+            x,
             &mut transcript,
             std::iter::empty()
                 .chain(Some(VerifierQuery::new_commitment(

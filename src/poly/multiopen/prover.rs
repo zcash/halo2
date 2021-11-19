@@ -1,6 +1,6 @@
 use super::super::{
     commitment::{self, Blind, Params},
-    Coeff, Polynomial,
+    Coeff, EvaluationDomain, Polynomial, Rotation,
 };
 use super::{
     construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4, ProverQuery,
@@ -26,6 +26,8 @@ struct CommitmentData<C: CurveAffine> {
 /// Create a multi-opening proof
 pub fn create_proof<'a, I, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
     params: &Params<C>,
+    domain: &EvaluationDomain<C::Scalar>,
+    challenge: C::Scalar,
     transcript: &mut T,
     queries: I,
 ) -> io::Result<()>
@@ -69,8 +71,9 @@ where
         .fold(None, |f_poly, (points, poly)| {
             let mut poly = points
                 .iter()
-                .fold(poly.clone().unwrap().values, |poly, point| {
-                    kate_division(&poly, *point)
+                .fold(poly.clone().unwrap().values, |poly, rotation| {
+                    let point = domain.rotate_omega(challenge, *rotation);
+                    kate_division(&poly, point)
                 });
             poly.resize(params.n as usize, C::Scalar::zero());
             let poly = Polynomial {
@@ -134,8 +137,8 @@ impl<'a, C: CurveAffine> Query<C::Scalar> for ProverQuery<'a, C> {
     type Commitment = PolynomialPointer<'a, C>;
     type Eval = ();
 
-    fn get_point(&self) -> C::Scalar {
-        self.point
+    fn get_rotation(&self) -> Rotation {
+        self.rotation
     }
     fn get_eval(&self) {}
     fn get_commitment(&self) -> Self::Commitment {
