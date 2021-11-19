@@ -52,15 +52,10 @@ pub struct ProverQuery<'a, C: CurveAffine> {
 impl<'a, C: CurveAffine> ProverQuery<'a, C> {
     /// Create a new prover query based on a polynomial
     pub fn new(
-        domain: &EvaluationDomain<C::Scalar>,
         poly: &'a Polynomial<C::Scalar, Coeff>,
-        point: C::Scalar,
-        x: C::Scalar,
         rotation: Rotation,
         blind: commitment::Blind<C::Scalar>,
     ) -> Self {
-        assert_eq!(domain.rotate_omega(x, rotation), point);
-
         ProverQuery {
             poly,
             rotation,
@@ -82,16 +77,7 @@ pub struct VerifierQuery<'r, 'params: 'r, C: CurveAffine> {
 
 impl<'r, 'params: 'r, C: CurveAffine> VerifierQuery<'r, 'params, C> {
     /// Create a new verifier query based on a commitment
-    pub fn new_commitment(
-        domain: &EvaluationDomain<C::Scalar>,
-        commitment: &'r C,
-        point: C::Scalar,
-        x: C::Scalar,
-        rotation: Rotation,
-        eval: C::Scalar,
-    ) -> Self {
-        assert_eq!(domain.rotate_omega(x, rotation), point);
-
+    pub fn new_commitment(commitment: &'r C, rotation: Rotation, eval: C::Scalar) -> Self {
         VerifierQuery {
             rotation,
             eval,
@@ -101,15 +87,10 @@ impl<'r, 'params: 'r, C: CurveAffine> VerifierQuery<'r, 'params, C> {
 
     /// Create a new verifier query based on a linear combination of commitments
     pub fn new_msm(
-        domain: &EvaluationDomain<C::Scalar>,
         msm: &'r commitment::MSM<'params, C>,
-        point: C::Scalar,
-        x: C::Scalar,
         rotation: Rotation,
         eval: C::Scalar,
     ) -> Self {
-        assert_eq!(domain.rotate_omega(x, rotation), point);
-
         VerifierQuery {
             rotation,
             eval,
@@ -360,26 +341,17 @@ fn test_roundtrip() {
             &mut transcript,
             std::iter::empty()
                 .chain(Some(VerifierQuery::new_commitment(
-                    &domain,
                     &a,
-                    x,
-                    x,
                     Rotation::cur(),
                     avx,
                 )))
                 .chain(Some(VerifierQuery::new_commitment(
-                    &domain,
                     &b,
-                    x,
-                    x,
                     Rotation::cur(),
                     avx,
                 ))) // NB: wrong!
                 .chain(Some(VerifierQuery::new_commitment(
-                    &domain,
                     &c,
-                    y,
-                    x,
                     Rotation::next(),
                     cvy,
                 ))),
@@ -405,26 +377,17 @@ fn test_roundtrip() {
             &mut transcript,
             std::iter::empty()
                 .chain(Some(VerifierQuery::new_commitment(
-                    &domain,
                     &a,
-                    x,
-                    x,
                     Rotation::cur(),
                     avx,
                 )))
                 .chain(Some(VerifierQuery::new_commitment(
-                    &domain,
                     &b,
-                    x,
-                    x,
                     Rotation::cur(),
                     bvx,
                 )))
                 .chain(Some(VerifierQuery::new_commitment(
-                    &domain,
                     &c,
-                    y,
-                    x,
                     Rotation::next(),
                     cvy,
                 ))),

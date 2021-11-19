@@ -202,31 +202,21 @@ impl<C: CurveAffine> Evaluated<C> {
     pub(in crate::plonk) fn queries<'r, 'params: 'r>(
         &'r self,
         vk: &'r plonk::VerifyingKey<C>,
-        x: ChallengeX<C>,
     ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone {
         let blinding_factors = vk.cs.blinding_factors();
-        let x_next = vk.domain.rotate_omega(*x, Rotation::next());
         let last_rotation = Rotation(-((blinding_factors + 1) as i32));
-        let x_last = vk.domain.rotate_omega(*x, last_rotation);
 
         iter::empty()
             .chain(self.sets.iter().flat_map(move |set| {
                 iter::empty()
-                    // Open permutation product commitments at x and \omega^{-1} x
                     // Open permutation product commitments at x and \omega x
                     .chain(Some(VerifierQuery::new_commitment(
-                        &vk.domain,
                         &set.permutation_product_commitment,
-                        *x,
-                        *x,
                         Rotation::cur(),
                         set.permutation_product_eval,
                     )))
                     .chain(Some(VerifierQuery::new_commitment(
-                        &vk.domain,
                         &set.permutation_product_commitment,
-                        x_next,
-                        *x,
                         Rotation::next(),
                         set.permutation_product_next_eval,
                     )))
@@ -234,10 +224,7 @@ impl<C: CurveAffine> Evaluated<C> {
             // Open it at \omega^{last} x for all but the last set
             .chain(self.sets.iter().rev().skip(1).flat_map(move |set| {
                 Some(VerifierQuery::new_commitment(
-                    &vk.domain,
                     &set.permutation_product_commitment,
-                    x_last,
-                    *x,
                     last_rotation,
                     set.permutation_product_last_eval.unwrap(),
                 ))
@@ -248,16 +235,14 @@ impl<C: CurveAffine> Evaluated<C> {
 impl<C: CurveAffine> CommonEvaluated<C> {
     pub(in crate::plonk) fn queries<'r, 'params: 'r>(
         &'r self,
-        domain: &'r EvaluationDomain<C::Scalar>,
         vkey: &'r VerifyingKey<C>,
-        x: ChallengeX<C>,
     ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone {
         // Open permutation commitments for each permutation argument at x
         vkey.commitments
             .iter()
             .zip(self.permutation_evals.iter())
             .map(move |(commitment, &eval)| {
-                VerifierQuery::new_commitment(domain, commitment, *x, *x, Rotation::cur(), eval)
+                VerifierQuery::new_commitment(commitment, Rotation::cur(), eval)
             })
     }
 }

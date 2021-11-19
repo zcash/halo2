@@ -167,55 +167,35 @@ impl<C: CurveAffine> Evaluated<C> {
 
     pub(in crate::plonk) fn queries<'r, 'params: 'r>(
         &'r self,
-        vk: &'r VerifyingKey<C>,
-        x: ChallengeX<C>,
     ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone {
-        let x_inv = vk.domain.rotate_omega(*x, Rotation::prev());
-        let x_next = vk.domain.rotate_omega(*x, Rotation::next());
-
         iter::empty()
             // Open lookup product commitment at x
             .chain(Some(VerifierQuery::new_commitment(
-                &vk.domain,
                 &self.committed.product_commitment,
-                *x,
-                *x,
                 Rotation::cur(),
                 self.product_eval,
             )))
             // Open lookup input commitments at x
             .chain(Some(VerifierQuery::new_commitment(
-                &vk.domain,
                 &self.committed.permuted.permuted_input_commitment,
-                *x,
-                *x,
                 Rotation::cur(),
                 self.permuted_input_eval,
             )))
             // Open lookup table commitments at x
             .chain(Some(VerifierQuery::new_commitment(
-                &vk.domain,
                 &self.committed.permuted.permuted_table_commitment,
-                *x,
-                *x,
                 Rotation::cur(),
                 self.permuted_table_eval,
             )))
             // Open lookup input commitments at \omega^{-1} x
             .chain(Some(VerifierQuery::new_commitment(
-                &vk.domain,
                 &self.committed.permuted.permuted_input_commitment,
-                x_inv,
-                *x,
                 Rotation::prev(),
                 self.permuted_input_inv_eval,
             )))
             // Open lookup product commitment at \omega x
             .chain(Some(VerifierQuery::new_commitment(
-                &vk.domain,
                 &self.committed.product_commitment,
-                x_next,
-                *x,
                 Rotation::next(),
                 self.product_next_eval,
             )))

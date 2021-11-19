@@ -543,57 +543,35 @@ impl<C: CurveAffine> Constructed<C> {
 }
 
 impl<C: CurveAffine> Evaluated<C> {
-    pub(in crate::plonk) fn open<'a>(
-        &'a self,
-        pk: &'a ProvingKey<C>,
-        x: ChallengeX<C>,
-    ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
-        let x_inv = pk.vk.domain.rotate_omega(*x, Rotation::prev());
-        let x_next = pk.vk.domain.rotate_omega(*x, Rotation::next());
-
+    pub(in crate::plonk) fn open(&self) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
         iter::empty()
             // Open lookup product commitments at x
             .chain(Some(ProverQuery::new(
-                &pk.vk.domain,
                 &self.constructed.product_poly,
-                *x,
-                *x,
                 Rotation::cur(),
                 self.constructed.product_blind,
             )))
             // Open lookup input commitments at x
             .chain(Some(ProverQuery::new(
-                &pk.vk.domain,
                 &self.constructed.permuted_input_poly,
-                *x,
-                *x,
                 Rotation::cur(),
                 self.constructed.permuted_input_blind,
             )))
             // Open lookup table commitments at x
             .chain(Some(ProverQuery::new(
-                &pk.vk.domain,
                 &self.constructed.permuted_table_poly,
-                *x,
-                *x,
                 Rotation::cur(),
                 self.constructed.permuted_table_blind,
             )))
             // Open lookup input commitments at x_inv
             .chain(Some(ProverQuery::new(
-                &pk.vk.domain,
                 &self.constructed.permuted_input_poly,
-                x_inv,
-                *x,
                 Rotation::prev(),
                 self.constructed.permuted_input_blind,
             )))
             // Open lookup product commitments at x_next
             .chain(Some(ProverQuery::new(
-                &pk.vk.domain,
                 &self.constructed.product_poly,
-                x_next,
-                *x,
                 Rotation::next(),
                 self.constructed.product_blind,
             )))

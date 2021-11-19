@@ -243,10 +243,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                     .chain(vk.cs.instance_queries.iter().enumerate().map(
                         move |(query_index, &(column, at))| {
                             VerifierQuery::new_commitment(
-                                &vk.domain,
                                 &instance_commitments[column.index()],
-                                vk.domain.rotate_omega(*x, at),
-                                *x,
                                 at,
                                 instance_evals[query_index],
                             )
@@ -255,22 +252,14 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                     .chain(vk.cs.advice_queries.iter().enumerate().map(
                         move |(query_index, &(column, at))| {
                             VerifierQuery::new_commitment(
-                                &vk.domain,
                                 &advice_commitments[column.index()],
-                                vk.domain.rotate_omega(*x, at),
-                                *x,
                                 at,
                                 advice_evals[query_index],
                             )
                         },
                     ))
-                    .chain(permutation.queries(vk, x))
-                    .chain(
-                        lookups
-                            .iter()
-                            .flat_map(move |p| p.queries(vk, x))
-                            .into_iter(),
-                    )
+                    .chain(permutation.queries(vk))
+                    .chain(lookups.iter().flat_map(move |p| p.queries()).into_iter())
             },
         )
         .chain(
@@ -280,17 +269,14 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
                 .enumerate()
                 .map(|(query_index, &(column, at))| {
                     VerifierQuery::new_commitment(
-                        &vk.domain,
                         &vk.fixed_commitments[column.index()],
-                        vk.domain.rotate_omega(*x, at),
-                        *x,
                         at,
                         fixed_evals[query_index],
                     )
                 }),
         )
-        .chain(permutations_common.queries(&vk.domain, &vk.permutation, x))
-        .chain(vanishing.queries(&vk.domain, x));
+        .chain(permutations_common.queries(&vk.permutation))
+        .chain(vanishing.queries());
 
     // We are now convinced the circuit is satisfied so long as the
     // polynomial commitments open to the correct values.

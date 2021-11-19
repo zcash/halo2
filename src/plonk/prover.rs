@@ -563,40 +563,27 @@ pub fn create_proof<
             iter::empty()
                 .chain(pk.vk.cs.instance_queries.iter().map(move |&(column, at)| {
                     ProverQuery::new(
-                        &domain,
                         &instance.instance_polys[column.index()],
-                        domain.rotate_omega(*x, at),
-                        *x,
                         at,
                         Blind::default(),
                     )
                 }))
                 .chain(pk.vk.cs.advice_queries.iter().map(move |&(column, at)| {
                     ProverQuery::new(
-                        &domain,
                         &advice.advice_polys[column.index()],
-                        domain.rotate_omega(*x, at),
-                        *x,
                         at,
                         advice.advice_blinds[column.index()],
                     )
                 }))
-                .chain(permutation.open(pk, x))
-                .chain(lookups.iter().flat_map(move |p| p.open(pk, x)).into_iter())
+                .chain(permutation.open(pk))
+                .chain(lookups.iter().flat_map(move |p| p.open()).into_iter())
         })
         .chain(pk.vk.cs.fixed_queries.iter().map(|&(column, at)| {
-            ProverQuery::new(
-                &domain,
-                &pk.fixed_polys[column.index()],
-                domain.rotate_omega(*x, at),
-                *x,
-                at,
-                Blind::default(),
-            )
+            ProverQuery::new(&pk.fixed_polys[column.index()], at, Blind::default())
         }))
-        .chain(pk.permutation.open(&domain, x))
+        .chain(pk.permutation.open())
         // We query the h(X) polynomial at x
-        .chain(vanishing.open(&domain, x));
+        .chain(vanishing.open());
 
     multiopen::create_proof(params, &domain, *x, transcript, instances).map_err(|_| Error::Opening)
 }
