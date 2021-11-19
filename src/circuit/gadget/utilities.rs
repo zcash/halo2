@@ -131,7 +131,7 @@ pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(field_elem: F, bitrange: Ra
 /// i.e. 0 ≤ word < range.
 pub fn range_check<F: FieldExt>(word: Expression<F>, range: usize) -> Expression<F> {
     (1..range).fold(word.clone(), |acc, i| {
-        acc * (word.clone() - Expression::Constant(F::from_u64(i as u64)))
+        acc * (Expression::Constant(F::from_u64(i as u64)) - word.clone())
     })
 }
 
