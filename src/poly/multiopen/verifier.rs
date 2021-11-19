@@ -10,12 +10,6 @@ use super::{
 };
 use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine, FieldExt};
 use crate::transcript::{EncodedChallenge, TranscriptRead};
-#[derive(Debug, Clone)]
-struct CommitmentData<C: CurveAffine> {
-    set_index: usize,
-    point_indices: Vec<usize>,
-    evals: Vec<C::Scalar>,
-}
 
 /// Verify a multi-opening proof
 pub fn verify_proof<
