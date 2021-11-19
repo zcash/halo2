@@ -12,7 +12,7 @@ use crate::{
     poly::{
         commitment::{Blind, Params},
         multiopen::ProverQuery,
-        Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
+        Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
@@ -310,13 +310,14 @@ impl<C: CurveAffine> Committed<C> {
 }
 
 impl<C: CurveAffine> super::ProvingKey<C> {
-    pub(in crate::plonk) fn open(
-        &self,
+    pub(in crate::plonk) fn open<'a>(
+        &'a self,
+        domain: &'a EvaluationDomain<C::Scalar>,
         x: ChallengeX<C>,
-    ) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
-        self.polys
-            .iter()
-            .map(move |poly| ProverQuery::new(poly, *x, Blind::default()))
+    ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
+        self.polys.iter().map(move |poly| {
+            ProverQuery::new(domain, poly, *x, *x, Rotation::cur(), Blind::default())
+        })
     }
 
     pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
@@ -388,23 +389,27 @@ impl<C: CurveAffine> Evaluated<C> {
     ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
         let blinding_factors = pk.vk.cs.blinding_factors();
         let x_next = pk.vk.domain.rotate_omega(*x, Rotation::next());
-        let x_last = pk
-            .vk
-            .domain
-            .rotate_omega(*x, Rotation(-((blinding_factors + 1) as i32)));
+        let last_rotation = Rotation(-((blinding_factors + 1) as i32));
+        let x_last = pk.vk.domain.rotate_omega(*x, last_rotation);
 
         iter::empty()
             .chain(self.constructed.sets.iter().flat_map(move |set| {
                 iter::empty()
                     // Open permutation product commitments at x and \omega x
                     .chain(Some(ProverQuery::new(
+                        &pk.vk.domain,
                         &set.permutation_product_poly,
                         *x,
+                        *x,
+                        Rotation::cur(),
                         set.permutation_product_blind,
                     )))
                     .chain(Some(ProverQuery::new(
+                        &pk.vk.domain,
                         &set.permutation_product_poly,
                         x_next,
+                        *x,
+                        Rotation::next(),
                         set.permutation_product_blind,
                     )))
             }))
@@ -419,8 +424,11 @@ impl<C: CurveAffine> Evaluated<C> {
                     .skip(1)
                     .flat_map(move |set| {
                         Some(ProverQuery::new(
+                            &pk.vk.domain,
                             &set.permutation_product_poly,
                             x_last,
+                            *x,
+                            last_rotation,
                             set.permutation_product_blind,
                         ))
                     }),

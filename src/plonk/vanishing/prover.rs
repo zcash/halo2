@@ -10,7 +10,7 @@ use crate::{
     poly::{
         commitment::{Blind, Params},
         multiopen::ProverQuery,
-        Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial,
+        Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial, Rotation,
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
@@ -142,13 +142,24 @@ impl<C: CurveAffine> Constructed<C> {
 impl<C: CurveAffine> Evaluated<C> {
     pub(in crate::plonk) fn open(
         &self,
+        domain: &EvaluationDomain<C::Scalar>,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
         iter::empty()
-            .chain(Some(ProverQuery::new(&self.h_poly, *x, self.h_blind)))
             .chain(Some(ProverQuery::new(
+                domain,
+                &self.h_poly,
+                *x,
+                *x,
+                Rotation::cur(),
+                self.h_blind,
+            )))
+            .chain(Some(ProverQuery::new(
+                domain,
                 &self.committed.random_poly,
                 *x,
+                *x,
+                Rotation::cur(),
                 self.committed.random_blind,
             )))
     }

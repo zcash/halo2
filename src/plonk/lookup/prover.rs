@@ -554,32 +554,47 @@ impl<C: CurveAffine> Evaluated<C> {
         iter::empty()
             // Open lookup product commitments at x
             .chain(Some(ProverQuery::new(
+                &pk.vk.domain,
                 &self.constructed.product_poly,
                 *x,
+                *x,
+                Rotation::cur(),
                 self.constructed.product_blind,
             )))
             // Open lookup input commitments at x
             .chain(Some(ProverQuery::new(
+                &pk.vk.domain,
                 &self.constructed.permuted_input_poly,
                 *x,
+                *x,
+                Rotation::cur(),
                 self.constructed.permuted_input_blind,
             )))
             // Open lookup table commitments at x
             .chain(Some(ProverQuery::new(
+                &pk.vk.domain,
                 &self.constructed.permuted_table_poly,
                 *x,
+                *x,
+                Rotation::cur(),
                 self.constructed.permuted_table_blind,
             )))
             // Open lookup input commitments at x_inv
             .chain(Some(ProverQuery::new(
+                &pk.vk.domain,
                 &self.constructed.permuted_input_poly,
                 x_inv,
+                *x,
+                Rotation::prev(),
                 self.constructed.permuted_input_blind,
             )))
             // Open lookup product commitments at x_next
             .chain(Some(ProverQuery::new(
+                &pk.vk.domain,
                 &self.constructed.product_poly,
                 x_next,
+                *x,
+                Rotation::next(),
                 self.constructed.product_blind,
             )))
     }
