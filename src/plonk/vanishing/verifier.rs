@@ -8,6 +8,7 @@ use crate::{
     poly::{
         commitment::{Params, MSM},
         multiopen::VerifierQuery,
+        EvaluationDomain, Rotation,
     },
     transcript::{read_n_points, EncodedChallenge, TranscriptRead},
 };
@@ -119,6 +120,7 @@ impl<C: CurveAffine> PartiallyEvaluated<C> {
 impl<'params, C: CurveAffine> Evaluated<'params, C> {
     pub(in crate::plonk) fn queries<'r>(
         &'r self,
+        domain: &EvaluationDomain<C::Scalar>,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone
     where
@@ -126,13 +128,19 @@ impl<'params, C: CurveAffine> Evaluated<'params, C> {
     {
         iter::empty()
             .chain(Some(VerifierQuery::new_msm(
+                domain,
                 &self.h_commitment,
                 *x,
+                *x,
+                Rotation::cur(),
                 self.expected_h_eval,
             )))
             .chain(Some(VerifierQuery::new_commitment(
+                domain,
                 &self.random_poly_commitment,
                 *x,
+                *x,
+                Rotation::cur(),
                 self.random_eval,
             )))
     }
