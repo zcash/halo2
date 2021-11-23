@@ -288,12 +288,6 @@ impl<'a, F: Field, B: Basis> Mul<F> for Polynomial<F, B> {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Rotation(pub i32);
 
-impl Default for Rotation {
-    fn default() -> Rotation {
-        Rotation(0)
-    }
-}
-
 impl Rotation {
     /// The current location in the evaluation domain
     pub fn cur() -> Rotation {
