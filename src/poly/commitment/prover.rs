@@ -143,9 +143,9 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C
 
 fn parallel_generator_collapse<C: CurveAffine>(g: &mut [C], challenge: C::Scalar) {
     let len = g.len() / 2;
-    let (mut g_lo, g_hi) = g.split_at_mut(len);
+    let (g_lo, g_hi) = g.split_at_mut(len);
 
-    parallelize(&mut g_lo, |g_lo, start| {
+    parallelize(g_lo, |g_lo, start| {
         let g_hi = &g_hi[start..];
         let mut tmp = Vec::with_capacity(g_lo.len());
         for (g_lo, g_hi) in g_lo.iter().zip(g_hi.iter()) {
