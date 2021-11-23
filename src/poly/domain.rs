@@ -544,6 +544,7 @@ impl<G: Group> EvaluationDomain<G> {
 }
 
 /// Represents the minimal parameters that determine an `EvaluationDomain`.
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct PinnedEvaluationDomain<'a, G: Group> {
     k: &'a u32,

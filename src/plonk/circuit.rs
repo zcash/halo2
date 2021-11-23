@@ -982,6 +982,7 @@ pub struct ConstraintSystem<F: Field> {
 }
 
 /// Represents the minimal parameters that determine a `ConstraintSystem`.
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct PinnedConstraintSystem<'a, F: Field> {
     num_fixed_columns: &'a usize,
