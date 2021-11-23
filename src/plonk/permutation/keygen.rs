@@ -51,12 +51,12 @@ impl Assembly {
             .columns
             .iter()
             .position(|c| c == &left_column)
-            .ok_or(Error::Synthesis)?;
+            .ok_or(Error::ColumnNotInPermutation(left_column))?;
         let right_column = self
             .columns
             .iter()
             .position(|c| c == &right_column)
-            .ok_or(Error::Synthesis)?;
+            .ok_or(Error::ColumnNotInPermutation(right_column))?;
 
         // Check bounds
         if left_row >= self.mapping[left_column].len()

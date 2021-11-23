@@ -3,6 +3,8 @@ use std::error;
 use std::fmt;
 use std::io;
 
+use super::{Any, Column};
+
 /// This is an error that could occur during proving or circuit synthesis.
 // TODO: these errors need to be cleaned up
 #[derive(Debug)]
@@ -32,6 +34,9 @@ pub enum Error {
     ///
     /// [`ConstraintSystem::enable_constant`]: crate::plonk::ConstraintSystem::enable_constant
     NotEnoughColumnsForConstants,
+    /// The instance sets up a copy constraint involving a column that has not been
+    /// included in the permutation.
+    ColumnNotInPermutation(Column<Any>),
 }
 
 impl From<io::Error> for Error {
@@ -69,6 +74,11 @@ impl fmt::Display for Error {
                     "Too few fixed columns are enabled for global constants usage"
                 )
             }
+            Error::ColumnNotInPermutation(column) => write!(
+                f,
+                "Column {:?} must be included in the permutation.",
+                column
+            ),
         }
     }
 }
