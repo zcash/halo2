@@ -169,7 +169,7 @@ impl MessageScheduleConfig {
                 get_word_row(new_word_idx - 16) + 1,
                 || {
                     word.map(|word| pallas::Base::from_u64(word as u64))
-                        .ok_or(Error::SynthesisError)
+                        .ok_or(Error::Synthesis)
                 },
             )?;
             region.assign_advice(
@@ -179,7 +179,7 @@ impl MessageScheduleConfig {
                 || {
                     carry
                         .map(|carry| pallas::Base::from_u64(carry as u64))
-                        .ok_or(Error::SynthesisError)
+                        .ok_or(Error::Synthesis)
                 },
             )?;
             let (word, halves) = self.assign_word_and_halves(region, word, new_word_idx)?;

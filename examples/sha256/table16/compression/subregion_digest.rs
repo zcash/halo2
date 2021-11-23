@@ -42,7 +42,7 @@ impl CompressionConfig {
             abcd_row,
             || {
                 a.map(|a| pallas::Base::from_u64(a as u64))
-                    .ok_or(Error::SynthesisError)
+                    .ok_or(Error::Synthesis)
             },
         )?;
 
@@ -64,7 +64,7 @@ impl CompressionConfig {
             efgh_row,
             || {
                 e.map(|e| pallas::Base::from_u64(e as u64))
-                    .ok_or(Error::SynthesisError)
+                    .ok_or(Error::Synthesis)
             },
         )?;
 
@@ -103,7 +103,7 @@ impl CompressionConfig {
             row,
             || {
                 val.map(|val| pallas::Base::from_u64(val as u64))
-                    .ok_or(Error::SynthesisError)
+                    .ok_or(Error::Synthesis)
             },
         )?;
 

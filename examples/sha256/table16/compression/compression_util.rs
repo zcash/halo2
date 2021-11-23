@@ -783,7 +783,7 @@ impl CompressionConfig {
                 || {
                     h_prime_carry
                         .map(|value| pallas::Base::from_u64(value as u64))
-                        .ok_or(Error::SynthesisError)
+                        .ok_or(Error::Synthesis)
                 },
             )?;
 
@@ -834,7 +834,7 @@ impl CompressionConfig {
             || {
                 e_new_carry
                     .map(pallas::Base::from_u64)
-                    .ok_or(Error::SynthesisError)
+                    .ok_or(Error::Synthesis)
             },
         )?;
 
@@ -892,7 +892,7 @@ impl CompressionConfig {
             || {
                 a_new_carry
                     .map(pallas::Base::from_u64)
-                    .ok_or(Error::SynthesisError)
+                    .ok_or(Error::Synthesis)
             },
         )?;
 

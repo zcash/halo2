@@ -90,7 +90,7 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
             row,
             || {
                 tag.map(|tag| pallas::Base::from_u64(tag as u64))
-                    .ok_or(Error::SynthesisError)
+                    .ok_or(Error::Synthesis)
             },
         )?;
 
@@ -229,23 +229,20 @@ impl<F: FieldExt> SpreadTableChip<F> {
                         index,
                         || {
                             row = rows.next();
-                            row.map(|(tag, _, _)| tag).ok_or(Error::SynthesisError)
+                            row.map(|(tag, _, _)| tag).ok_or(Error::Synthesis)
                         },
                     )?;
                     table.assign_cell(
                         || "dense",
                         config.table.dense,
                         index,
-                        || row.map(|(_, dense, _)| dense).ok_or(Error::SynthesisError),
+                        || row.map(|(_, dense, _)| dense).ok_or(Error::Synthesis),
                     )?;
                     table.assign_cell(
                         || "spread",
                         config.table.spread,
                         index,
-                        || {
-                            row.map(|(_, _, spread)| spread)
-                                .ok_or(Error::SynthesisError)
-                        },
+                        || row.map(|(_, _, spread)| spread).ok_or(Error::Synthesis),
                     )?;
                 }
 
@@ -336,7 +333,7 @@ mod tests {
                     || "spread_test",
                     |mut gate| {
                         let mut row = 0;
-                        let mut add_row = |tag, dense, spread| {
+                        let mut add_row = |tag, dense, spread| -> Result<(), Error> {
                             gate.assign_advice(|| "tag", config.input.tag, row, || Ok(tag))?;
                             gate.assign_advice(|| "dense", config.input.dense, row, || Ok(dense))?;
                             gate.assign_advice(
