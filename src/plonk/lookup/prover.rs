@@ -30,14 +30,12 @@ pub(in crate::plonk) struct Permuted<C: CurveAffine> {
     permuted_input_poly: Polynomial<C::Scalar, Coeff>,
     permuted_input_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permuted_input_blind: Blind<C::Scalar>,
-    permuted_input_commitment: C,
     unpermuted_table_expressions: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
     unpermuted_table_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     permuted_table_expression: Polynomial<C::Scalar, LagrangeCoeff>,
     permuted_table_poly: Polynomial<C::Scalar, Coeff>,
     permuted_table_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permuted_table_blind: Blind<C::Scalar>,
-    permuted_table_commitment: C,
 }
 
 #[derive(Debug)]
@@ -46,7 +44,6 @@ pub(in crate::plonk) struct Committed<C: CurveAffine> {
     product_poly: Polynomial<C::Scalar, Coeff>,
     product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     product_blind: Blind<C::Scalar>,
-    product_commitment: C,
 }
 
 pub(in crate::plonk) struct Constructed<C: CurveAffine> {
@@ -225,14 +222,12 @@ impl<F: FieldExt> Argument<F> {
             permuted_input_poly,
             permuted_input_coset,
             permuted_input_blind,
-            permuted_input_commitment,
             unpermuted_table_expressions,
             unpermuted_table_cosets,
             permuted_table_expression,
             permuted_table_poly,
             permuted_table_coset,
             permuted_table_blind,
-            permuted_table_commitment,
         })
     }
 }
@@ -393,7 +388,6 @@ impl<C: CurveAffine> Permuted<C> {
             permuted: self,
             product_poly: z,
             product_coset,
-            product_commitment,
             product_blind,
         })
     }
