@@ -95,12 +95,15 @@ impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE
             (0..WIDTH)
                 .map(|next_idx| {
                     let state_next = meta.query_advice(state[next_idx], Rotation::next());
-                    let expr = (0..WIDTH).fold(-state_next, |acc, idx| {
-                        let state_cur = meta.query_advice(state[idx], Rotation::cur());
-                        let rc_a = meta.query_fixed(rc_a[idx], Rotation::cur());
-                        acc + pow_5(state_cur + rc_a) * m_reg[next_idx][idx]
-                    });
-                    s_full.clone() * expr
+                    let expr = (0..WIDTH)
+                        .map(|idx| {
+                            let state_cur = meta.query_advice(state[idx], Rotation::cur());
+                            let rc_a = meta.query_fixed(rc_a[idx], Rotation::cur());
+                            pow_5(state_cur + rc_a) * m_reg[next_idx][idx]
+                        })
+                        .reduce(|acc, term| acc + term)
+                        .expect("WIDTH > 0");
+                    s_full.clone() * (expr - state_next)
                 })
                 .collect::<Vec<_>>()
         });
