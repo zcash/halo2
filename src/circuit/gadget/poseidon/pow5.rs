@@ -31,7 +31,10 @@ pub struct Pow5Config<F: FieldExt, const WIDTH: usize, const RATE: usize> {
     m_inv: Mds<F, WIDTH>,
 }
 
-/// A Poseidon chip using an $x^5$ S-Box, with a width of 3, suitable for a 2:1 reduction.
+/// A Poseidon chip using an $x^5$ S-Box.
+///
+/// The chip is implemented using a single round per row for full rounds, and two rounds
+/// per row for partial rounds.
 #[derive(Debug)]
 pub struct Pow5Chip<F: FieldExt, const WIDTH: usize, const RATE: usize> {
     config: Pow5Config<F, WIDTH, RATE>,
@@ -122,12 +125,13 @@ impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE
             };
 
             let next = |idx: usize, meta: &mut VirtualCells<F>| {
-                let next_0 = meta.query_advice(state[0], Rotation::next());
-                let next_0 = next_0 * m_inv[idx][0];
-                (1..WIDTH).fold(next_0, |acc, next_idx| {
-                    let next = meta.query_advice(state[next_idx], Rotation::next());
-                    acc + next * m_inv[idx][next_idx]
-                })
+                (0..WIDTH)
+                    .map(|next_idx| {
+                        let next = meta.query_advice(state[next_idx], Rotation::next());
+                        next * m_inv[idx][next_idx]
+                    })
+                    .reduce(|acc, next| acc + next)
+                    .expect("WIDTH > 0")
             };
 
             let partial_round_linear = |idx: usize, meta: &mut VirtualCells<F>| {
@@ -481,9 +485,9 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                 .iter()
                 .map(|m_i| {
                     r.as_ref().map(|r| {
-                        r.iter()
-                            .enumerate()
-                            .fold(F::zero(), |acc, (j, r_j)| acc + m_i[j] * r_j)
+                        m_i.iter()
+                            .zip(r.iter())
+                            .fold(F::zero(), |acc, (m_ij, r_j)| acc + *m_ij * r_j)
                     })
                 })
                 .collect();
@@ -514,9 +518,9 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                 .iter()
                 .map(|m_i| {
                     r_mid.as_ref().map(|r| {
-                        r.iter()
-                            .enumerate()
-                            .fold(F::zero(), |acc, (j, r_j)| acc + m_i[j] * r_j)
+                        m_i.iter()
+                            .zip(r.iter())
+                            .fold(F::zero(), |acc, (m_ij, r_j)| acc + *m_ij * r_j)
                     })
                 })
                 .collect();
