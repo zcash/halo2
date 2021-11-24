@@ -3,6 +3,7 @@
 use std::array;
 use std::convert::TryInto;
 use std::fmt;
+use std::marker::PhantomData;
 
 use halo2::{
     arithmetic::FieldExt,
@@ -13,7 +14,9 @@ use halo2::{
 mod pow5;
 pub use pow5::{Pow5Chip, Pow5Config, StateWord};
 
-use crate::primitives::poseidon::{ConstantLength, Domain, Spec, Sponge, SpongeRate, State};
+use crate::primitives::poseidon::{
+    Absorbing, ConstantLength, Domain, Spec, SpongeMode, SpongeRate, Squeezing, State,
+};
 
 /// The set of circuit instructions required to use the Poseidon permutation.
 pub trait PoseidonInstructions<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>:
@@ -30,10 +33,10 @@ pub trait PoseidonInstructions<F: FieldExt, S: Spec<F, T, RATE>, const T: usize,
     ) -> Result<State<Self::Word, T>, Error>;
 }
 
-/// The set of circuit instructions required to use the [`Duplex`] and [`Hash`] gadgets.
+/// The set of circuit instructions required to use the [`Sponge`] and [`Hash`] gadgets.
 ///
 /// [`Hash`]: self::Hash
-pub trait PoseidonDuplexInstructions<
+pub trait PoseidonSpongeInstructions<
     F: FieldExt,
     S: Spec<F, T, RATE>,
     const T: usize,
@@ -91,9 +94,9 @@ impl<
     }
 }
 
-fn poseidon_duplex<
+fn poseidon_sponge<
     F: FieldExt,
-    PoseidonChip: PoseidonDuplexInstructions<F, S, T, RATE>,
+    PoseidonChip: PoseidonSpongeInstructions<F, S, T, RATE>,
     S: Spec<F, T, RATE>,
     D: Domain<F, T, RATE>,
     const T: usize,
@@ -110,30 +113,32 @@ fn poseidon_duplex<
     Ok(PoseidonChip::get_output(state))
 }
 
-/// A Poseidon duplex sponge.
+/// A Poseidon sponge.
 #[derive(Debug)]
-pub struct Duplex<
+pub struct Sponge<
     F: FieldExt,
-    PoseidonChip: PoseidonDuplexInstructions<F, S, T, RATE>,
+    PoseidonChip: PoseidonSpongeInstructions<F, S, T, RATE>,
     S: Spec<F, T, RATE>,
+    M: SpongeMode,
     D: Domain<F, T, RATE>,
     const T: usize,
     const RATE: usize,
 > {
     chip: PoseidonChip,
-    sponge: Sponge<PoseidonChip::Word, RATE>,
+    mode: M,
     state: State<PoseidonChip::Word, T>,
     domain: D,
+    _marker: PhantomData<M>,
 }
 
 impl<
         F: FieldExt,
-        PoseidonChip: PoseidonDuplexInstructions<F, S, T, RATE>,
+        PoseidonChip: PoseidonSpongeInstructions<F, S, T, RATE>,
         S: Spec<F, T, RATE>,
         D: Domain<F, T, RATE>,
         const T: usize,
         const RATE: usize,
-    > Duplex<F, PoseidonChip, S, D, T, RATE>
+    > Sponge<F, PoseidonChip, S, Absorbing<PoseidonChip::Word, RATE>, D, T, RATE>
 {
     /// Constructs a new duplex sponge for the given Poseidon specification.
     pub fn new(
@@ -142,9 +147,9 @@ impl<
         domain: D,
     ) -> Result<Self, Error> {
         chip.initial_state(&mut layouter, &domain)
-            .map(|state| Duplex {
+            .map(|state| Sponge {
                 chip,
-                sponge: Sponge::Absorbing(
+                mode: Absorbing(
                     (0..RATE)
                         .map(|_| None)
                         .collect::<Vec<_>>()
@@ -153,6 +158,7 @@ impl<
                 ),
                 state,
                 domain,
+                _marker: PhantomData::default(),
             })
     }
 
@@ -162,84 +168,97 @@ impl<
         mut layouter: impl Layouter<F>,
         value: AssignedCell<F, F>,
     ) -> Result<(), Error> {
-        match self.sponge {
-            Sponge::Absorbing(ref mut input) => {
-                for entry in input.iter_mut() {
-                    if entry.is_none() {
-                        *entry = Some(value.into());
-                        return Ok(());
-                    }
-                }
-
-                // We've already absorbed as many elements as we can
-                let _ = poseidon_duplex(
-                    &self.chip,
-                    layouter.namespace(|| "PoseidonDuplex"),
-                    &self.domain,
-                    &mut self.state,
-                    input,
-                )?;
-                self.sponge = Sponge::absorb(value.into());
-            }
-            Sponge::Squeezing(_) => {
-                // Drop the remaining output elements
-                self.sponge = Sponge::absorb(value.into());
+        for entry in self.mode.0.iter_mut() {
+            if entry.is_none() {
+                *entry = Some(value.into());
+                return Ok(());
             }
         }
+
+        // We've already absorbed as many elements as we can
+        let _ = poseidon_sponge(
+            &self.chip,
+            layouter.namespace(|| "PoseidonSponge"),
+            &self.domain,
+            &mut self.state,
+            &self.mode.0,
+        )?;
+        self.mode = Absorbing::init_with(value.into());
 
         Ok(())
     }
 
+    /// Transitions the sponge into its squeezing state.
+    #[allow(clippy::type_complexity)]
+    pub fn finish_absorbing(
+        mut self,
+        mut layouter: impl Layouter<F>,
+    ) -> Result<Sponge<F, PoseidonChip, S, Squeezing<PoseidonChip::Word, RATE>, D, T, RATE>, Error>
+    {
+        let mode = Squeezing(poseidon_sponge(
+            &self.chip,
+            layouter.namespace(|| "PoseidonSponge"),
+            &self.domain,
+            &mut self.state,
+            &self.mode.0,
+        )?);
+
+        Ok(Sponge {
+            chip: self.chip,
+            mode,
+            state: self.state,
+            domain: self.domain,
+            _marker: PhantomData::default(),
+        })
+    }
+}
+
+impl<
+        F: FieldExt,
+        PoseidonChip: PoseidonSpongeInstructions<F, S, T, RATE>,
+        S: Spec<F, T, RATE>,
+        D: Domain<F, T, RATE>,
+        const T: usize,
+        const RATE: usize,
+    > Sponge<F, PoseidonChip, S, Squeezing<PoseidonChip::Word, RATE>, D, T, RATE>
+{
     /// Squeezes an element from the sponge.
     pub fn squeeze(&mut self, mut layouter: impl Layouter<F>) -> Result<AssignedCell<F, F>, Error> {
         loop {
-            match self.sponge {
-                Sponge::Absorbing(ref input) => {
-                    self.sponge = Sponge::Squeezing(poseidon_duplex(
-                        &self.chip,
-                        layouter.namespace(|| "PoseidonDuplex"),
-                        &self.domain,
-                        &mut self.state,
-                        input,
-                    )?);
-                }
-                Sponge::Squeezing(ref mut output) => {
-                    for entry in output.iter_mut() {
-                        if let Some(inner) = entry.take() {
-                            return Ok(inner.into());
-                        }
-                    }
-
-                    // We've already squeezed out all available elements
-                    self.sponge = Sponge::Absorbing(
-                        (0..RATE)
-                            .map(|_| None)
-                            .collect::<Vec<_>>()
-                            .try_into()
-                            .unwrap(),
-                    );
+            for entry in self.mode.0.iter_mut() {
+                if let Some(inner) = entry.take() {
+                    return Ok(inner.into());
                 }
             }
+
+            // We've already squeezed out all available elements
+            self.mode = Squeezing(poseidon_sponge(
+                &self.chip,
+                layouter.namespace(|| "PoseidonSponge"),
+                &self.domain,
+                &mut self.state,
+                &self.mode.0,
+            )?);
         }
     }
 }
 
-/// A Poseidon hash function, built around a duplex sponge.
+/// A Poseidon hash function, built around a sponge.
 #[derive(Debug)]
 pub struct Hash<
     F: FieldExt,
-    PoseidonChip: PoseidonDuplexInstructions<F, S, T, RATE>,
+    PoseidonChip: PoseidonSpongeInstructions<F, S, T, RATE>,
     S: Spec<F, T, RATE>,
     D: Domain<F, T, RATE>,
     const T: usize,
     const RATE: usize,
 > {
-    duplex: Duplex<F, PoseidonChip, S, D, T, RATE>,
+    sponge: Sponge<F, PoseidonChip, S, Absorbing<PoseidonChip::Word, RATE>, D, T, RATE>,
 }
 
 impl<
         F: FieldExt,
-        PoseidonChip: PoseidonDuplexInstructions<F, S, T, RATE>,
+        PoseidonChip: PoseidonSpongeInstructions<F, S, T, RATE>,
         S: Spec<F, T, RATE>,
         D: Domain<F, T, RATE>,
         const T: usize,
@@ -248,13 +267,13 @@ impl<
 {
     /// Initializes a new hasher.
     pub fn init(chip: PoseidonChip, layouter: impl Layouter<F>, domain: D) -> Result<Self, Error> {
-        Duplex::new(chip, layouter, domain).map(|duplex| Hash { duplex })
+        Sponge::new(chip, layouter, domain).map(|sponge| Hash { sponge })
     }
 }
 
 impl<
         F: FieldExt,
-        PoseidonChip: PoseidonDuplexInstructions<F, S, T, RATE>,
+        PoseidonChip: PoseidonSpongeInstructions<F, S, T, RATE>,
         S: Spec<F, T, RATE>,
         const T: usize,
         const RATE: usize,
@@ -268,9 +287,11 @@ impl<
         message: [AssignedCell<F, F>; L],
     ) -> Result<AssignedCell<F, F>, Error> {
         for (i, value) in array::IntoIter::new(message).enumerate() {
-            self.duplex
+            self.sponge
                 .absorb(layouter.namespace(|| format!("absorb_{}", i)), value)?;
         }
-        self.duplex.squeeze(layouter.namespace(|| "squeeze"))
+        self.sponge
+            .finish_absorbing(layouter.namespace(|| "finish absorbing"))?
+            .squeeze(layouter.namespace(|| "squeeze"))
     }
 }

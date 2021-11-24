@@ -8,7 +8,7 @@ use halo2::{
     poly::Rotation,
 };
 
-use super::{PoseidonDuplexInstructions, PoseidonInstructions};
+use super::{PoseidonInstructions, PoseidonSpongeInstructions};
 use crate::circuit::gadget::utilities::Var;
 use crate::primitives::poseidon::{Domain, Mds, Spec, SpongeRate, State};
 
@@ -269,7 +269,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
 }
 
 impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize>
-    PoseidonDuplexInstructions<F, S, WIDTH, RATE> for Pow5Chip<F, WIDTH, RATE>
+    PoseidonSpongeInstructions<F, S, WIDTH, RATE> for Pow5Chip<F, WIDTH, RATE>
 {
     fn initial_state(
         &self,

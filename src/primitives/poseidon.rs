@@ -24,7 +24,7 @@ use grain::SboxType;
 /// The type used to hold permutation state.
 pub(crate) type State<F, const T: usize> = [F; T];
 
-/// The type used to hold duplex sponge state.
+/// The type used to hold sponge rate.
 pub(crate) type SpongeRate<F, const RATE: usize> = [Option<F>; RATE];
 
 /// The type used to hold the MDS matrix and its inverse.
@@ -124,7 +124,7 @@ pub(crate) fn permute<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RA
         });
 }
 
-fn poseidon_duplex<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
+fn poseidon_sponge<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
     state: &mut State<F, T>,
     input: &SpongeRate<F, RATE>,
     pad_and_add: &dyn Fn(&mut State<F, T>, &SpongeRate<F, RATE>),
@@ -142,48 +142,65 @@ fn poseidon_duplex<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE:
     output
 }
 
-#[derive(Debug)]
-pub(crate) enum Sponge<F, const RATE: usize> {
-    Absorbing(SpongeRate<F, RATE>),
-    Squeezing(SpongeRate<F, RATE>),
-}
+/// The state of the [`Sponge`].
+// TODO: Seal this trait?
+pub trait SpongeMode {}
 
-impl<F: fmt::Debug, const RATE: usize> Sponge<F, RATE> {
-    pub(crate) fn absorb(val: F) -> Self {
-        let mut input: [Option<F>; RATE] = (0..RATE)
-            .map(|_| None)
-            .collect::<Vec<_>>()
-            .try_into()
-            .unwrap();
-        input[0] = Some(val);
-        Sponge::Absorbing(input)
+/// The absorbing state of the [`Sponge`].
+#[derive(Debug)]
+pub struct Absorbing<F, const RATE: usize>(pub(crate) SpongeRate<F, RATE>);
+
+/// The squeezing state of the [`Sponge`].
+#[derive(Debug)]
+pub struct Squeezing<F, const RATE: usize>(pub(crate) SpongeRate<F, RATE>);
+
+impl<F, const RATE: usize> SpongeMode for Absorbing<F, RATE> {}
+impl<F, const RATE: usize> SpongeMode for Squeezing<F, RATE> {}
+
+impl<F: fmt::Debug, const RATE: usize> Absorbing<F, RATE> {
+    pub(crate) fn init_with(val: F) -> Self {
+        Self(
+            iter::once(Some(val))
+                .chain((1..RATE).map(|_| None))
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap(),
+        )
     }
 }
 
-/// A Poseidon duplex sponge.
-pub(crate) struct Duplex<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> {
-    sponge: Sponge<F, RATE>,
+/// A Poseidon sponge.
+pub(crate) struct Sponge<
+    F: FieldExt,
+    S: Spec<F, T, RATE>,
+    M: SpongeMode,
+    const T: usize,
+    const RATE: usize,
+> {
+    mode: M,
     state: State<F, T>,
     pad_and_add: Box<dyn Fn(&mut State<F, T>, &SpongeRate<F, RATE>)>,
     mds_matrix: Mds<F, T>,
     round_constants: Vec<[F; T]>,
-    _marker: PhantomData<S>,
+    _marker: PhantomData<(S, M)>,
 }
 
-impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> Duplex<F, S, T, RATE> {
-    /// Constructs a new duplex sponge for the given Poseidon specification.
+impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
+    Sponge<F, S, Absorbing<F, RATE>, T, RATE>
+{
+    /// Constructs a new sponge for the given Poseidon specification.
     pub(crate) fn new(
         initial_capacity_element: F,
         pad_and_add: Box<dyn Fn(&mut State<F, T>, &SpongeRate<F, RATE>)>,
     ) -> Self {
         let (round_constants, mds_matrix, _) = S::constants();
 
-        let input = [None; RATE];
+        let mode = Absorbing([None; RATE]);
         let mut state = [F::zero(); T];
         state[RATE] = initial_capacity_element;
 
-        Duplex {
-            sponge: Sponge::Absorbing(input),
+        Sponge {
+            mode,
             state,
             pad_and_add,
             mds_matrix,
@@ -194,56 +211,65 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> Duplex
 
     /// Absorbs an element into the sponge.
     pub(crate) fn absorb(&mut self, value: F) {
-        match self.sponge {
-            Sponge::Absorbing(ref mut input) => {
-                for entry in input.iter_mut() {
-                    if entry.is_none() {
-                        *entry = Some(value);
-                        return;
-                    }
-                }
-
-                // We've already absorbed as many elements as we can
-                let _ = poseidon_duplex::<F, S, T, RATE>(
-                    &mut self.state,
-                    input,
-                    &self.pad_and_add,
-                    &self.mds_matrix,
-                    &self.round_constants,
-                );
-                self.sponge = Sponge::absorb(value);
-            }
-            Sponge::Squeezing(_) => {
-                // Drop the remaining output elements
-                self.sponge = Sponge::absorb(value);
+        for entry in self.mode.0.iter_mut() {
+            if entry.is_none() {
+                *entry = Some(value);
+                return;
             }
         }
+
+        // We've already absorbed as many elements as we can
+        let _ = poseidon_sponge::<F, S, T, RATE>(
+            &mut self.state,
+            &self.mode.0,
+            &self.pad_and_add,
+            &self.mds_matrix,
+            &self.round_constants,
+        );
+        self.mode = Absorbing::init_with(value);
     }
 
+    /// Transitions the sponge into its squeezing state.
+    pub(crate) fn finish_absorbing(mut self) -> Sponge<F, S, Squeezing<F, RATE>, T, RATE> {
+        let mode = Squeezing(poseidon_sponge::<F, S, T, RATE>(
+            &mut self.state,
+            &self.mode.0,
+            &self.pad_and_add,
+            &self.mds_matrix,
+            &self.round_constants,
+        ));
+
+        Sponge {
+            mode,
+            state: self.state,
+            pad_and_add: self.pad_and_add,
+            mds_matrix: self.mds_matrix,
+            round_constants: self.round_constants,
+            _marker: PhantomData::default(),
+        }
+    }
+}
+
+impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
+    Sponge<F, S, Squeezing<F, RATE>, T, RATE>
+{
     /// Squeezes an element from the sponge.
     pub(crate) fn squeeze(&mut self) -> F {
         loop {
-            match self.sponge {
-                Sponge::Absorbing(ref input) => {
-                    self.sponge = Sponge::Squeezing(poseidon_duplex::<F, S, T, RATE>(
-                        &mut self.state,
-                        input,
-                        &self.pad_and_add,
-                        &self.mds_matrix,
-                        &self.round_constants,
-                    ));
-                }
-                Sponge::Squeezing(ref mut output) => {
-                    for entry in output.iter_mut() {
-                        if let Some(e) = entry.take() {
-                            return e;
-                        }
-                    }
-
-                    // We've already squeezed out all available elements
-                    self.sponge = Sponge::Absorbing([None; RATE]);
+            for entry in self.mode.0.iter_mut() {
+                if let Some(e) = entry.take() {
+                    return e;
                 }
             }
+
+            // We've already squeezed out all available elements
+            self.mode = Squeezing(poseidon_sponge::<F, S, T, RATE>(
+                &mut self.state,
+                &self.mode.0,
+                &self.pad_and_add,
+                &self.mds_matrix,
+                &self.round_constants,
+            ));
         }
     }
 }
@@ -301,7 +327,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize, const L: usize> Domain<F, T
     }
 }
 
-/// A Poseidon hash function, built around a duplex sponge.
+/// A Poseidon hash function, built around a sponge.
 pub struct Hash<
     F: FieldExt,
     S: Spec<F, T, RATE>,
@@ -309,7 +335,7 @@ pub struct Hash<
     const T: usize,
     const RATE: usize,
 > {
-    duplex: Duplex<F, S, T, RATE>,
+    sponge: Sponge<F, S, Absorbing<F, RATE>, T, RATE>,
     domain: D,
 }
 
@@ -343,7 +369,7 @@ impl<
     /// Initializes a new hasher.
     pub fn init(domain: D) -> Self {
         Hash {
-            duplex: Duplex::new(domain.initial_capacity_element(), domain.pad_and_add()),
+            sponge: Sponge::new(domain.initial_capacity_element(), domain.pad_and_add()),
             domain,
         }
     }
@@ -355,9 +381,9 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, const 
     /// Hashes the given input.
     pub fn hash(mut self, message: [F; L]) -> F {
         for value in array::IntoIter::new(message) {
-            self.duplex.absorb(value);
+            self.sponge.absorb(value);
         }
-        self.duplex.squeeze()
+        self.sponge.finish_absorbing().squeeze()
     }
 }
 
