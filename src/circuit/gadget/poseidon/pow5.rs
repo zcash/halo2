@@ -10,7 +10,7 @@ use halo2::{
 
 use super::{PoseidonDuplexInstructions, PoseidonInstructions};
 use crate::circuit::gadget::utilities::Var;
-use crate::primitives::poseidon::{Domain, Mds, Spec, SpongeState, State};
+use crate::primitives::poseidon::{Domain, Mds, Spec, SpongeRate, State};
 
 /// Configuration for a [`Pow5Chip`].
 #[derive(Clone, Debug)]
@@ -310,7 +310,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
         layouter: &mut impl Layouter<F>,
         domain: &impl Domain<F, WIDTH, RATE>,
         initial_state: &State<Self::Word, WIDTH>,
-        input: &SpongeState<Self::Word, RATE>,
+        input: &SpongeRate<Self::Word, RATE>,
     ) -> Result<State<Self::Word, WIDTH>, Error> {
         let config = self.config();
         layouter.assign_region(
@@ -386,7 +386,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
         )
     }
 
-    fn get_output(state: &State<Self::Word, WIDTH>) -> SpongeState<Self::Word, RATE> {
+    fn get_output(state: &State<Self::Word, WIDTH>) -> SpongeRate<Self::Word, RATE> {
         state[..RATE]
             .iter()
             .map(|word| Some(word.clone()))

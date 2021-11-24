@@ -13,7 +13,7 @@ use halo2::{
 mod pow5;
 pub use pow5::{Pow5Chip, Pow5Config, StateWord};
 
-use crate::primitives::poseidon::{ConstantLength, Domain, Spec, Sponge, SpongeState, State};
+use crate::primitives::poseidon::{ConstantLength, Domain, Spec, Sponge, SpongeRate, State};
 
 /// The set of circuit instructions required to use the Poseidon permutation.
 pub trait PoseidonInstructions<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>:
@@ -53,11 +53,11 @@ pub trait PoseidonDuplexInstructions<
         layouter: &mut impl Layouter<F>,
         domain: &impl Domain<F, T, RATE>,
         initial_state: &State<Self::Word, T>,
-        input: &SpongeState<Self::Word, RATE>,
+        input: &SpongeRate<Self::Word, RATE>,
     ) -> Result<State<Self::Word, T>, Error>;
 
     /// Extracts sponge output from the given state.
-    fn get_output(state: &State<Self::Word, T>) -> SpongeState<Self::Word, RATE>;
+    fn get_output(state: &State<Self::Word, T>) -> SpongeRate<Self::Word, RATE>;
 }
 
 /// A word over which the Poseidon permutation operates.
@@ -103,8 +103,8 @@ fn poseidon_duplex<
     mut layouter: impl Layouter<F>,
     domain: &D,
     state: &mut State<PoseidonChip::Word, T>,
-    input: &SpongeState<PoseidonChip::Word, RATE>,
-) -> Result<SpongeState<PoseidonChip::Word, RATE>, Error> {
+    input: &SpongeRate<PoseidonChip::Word, RATE>,
+) -> Result<SpongeRate<PoseidonChip::Word, RATE>, Error> {
     *state = chip.pad_and_add(&mut layouter, domain, state, input)?;
     *state = chip.permute(&mut layouter, state)?;
     Ok(PoseidonChip::get_output(state))

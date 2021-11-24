@@ -25,7 +25,7 @@ use grain::SboxType;
 pub(crate) type State<F, const T: usize> = [F; T];
 
 /// The type used to hold duplex sponge state.
-pub(crate) type SpongeState<F, const RATE: usize> = [Option<F>; RATE];
+pub(crate) type SpongeRate<F, const RATE: usize> = [Option<F>; RATE];
 
 /// The type used to hold the MDS matrix and its inverse.
 pub(crate) type Mds<F, const T: usize> = [[F; T]; T];
@@ -126,11 +126,11 @@ pub(crate) fn permute<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RA
 
 fn poseidon_duplex<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
     state: &mut State<F, T>,
-    input: &SpongeState<F, RATE>,
-    pad_and_add: &dyn Fn(&mut State<F, T>, &SpongeState<F, RATE>),
+    input: &SpongeRate<F, RATE>,
+    pad_and_add: &dyn Fn(&mut State<F, T>, &SpongeRate<F, RATE>),
     mds_matrix: &Mds<F, T>,
     round_constants: &[[F; T]],
-) -> SpongeState<F, RATE> {
+) -> SpongeRate<F, RATE> {
     pad_and_add(state, input);
 
     permute::<F, S, T, RATE>(state, mds_matrix, round_constants);
@@ -144,8 +144,8 @@ fn poseidon_duplex<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE:
 
 #[derive(Debug)]
 pub(crate) enum Sponge<F, const RATE: usize> {
-    Absorbing(SpongeState<F, RATE>),
-    Squeezing(SpongeState<F, RATE>),
+    Absorbing(SpongeRate<F, RATE>),
+    Squeezing(SpongeRate<F, RATE>),
 }
 
 impl<F: fmt::Debug, const RATE: usize> Sponge<F, RATE> {
@@ -164,7 +164,7 @@ impl<F: fmt::Debug, const RATE: usize> Sponge<F, RATE> {
 pub(crate) struct Duplex<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> {
     sponge: Sponge<F, RATE>,
     state: State<F, T>,
-    pad_and_add: Box<dyn Fn(&mut State<F, T>, &SpongeState<F, RATE>)>,
+    pad_and_add: Box<dyn Fn(&mut State<F, T>, &SpongeRate<F, RATE>)>,
     mds_matrix: Mds<F, T>,
     round_constants: Vec<[F; T]>,
     _marker: PhantomData<S>,
@@ -174,7 +174,7 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> Duplex
     /// Constructs a new duplex sponge for the given Poseidon specification.
     pub(crate) fn new(
         initial_capacity_element: F,
-        pad_and_add: Box<dyn Fn(&mut State<F, T>, &SpongeState<F, RATE>)>,
+        pad_and_add: Box<dyn Fn(&mut State<F, T>, &SpongeRate<F, RATE>)>,
     ) -> Self {
         let (round_constants, mds_matrix, _) = S::constants();
 
@@ -254,11 +254,11 @@ pub trait Domain<F: FieldExt, const T: usize, const RATE: usize>: Copy + fmt::De
     fn initial_capacity_element(&self) -> F;
 
     /// The padding that will be added to each state word by [`Domain::pad_and_add`].
-    fn padding(&self) -> SpongeState<F, RATE>;
+    fn padding(&self) -> SpongeRate<F, RATE>;
 
     /// Returns a function that will update the given state with the given input to a
     /// duplex permutation round, applying padding according to this domain specification.
-    fn pad_and_add(&self) -> Box<dyn Fn(&mut State<F, T>, &SpongeState<F, RATE>)>;
+    fn pad_and_add(&self) -> Box<dyn Fn(&mut State<F, T>, &SpongeRate<F, RATE>)>;
 }
 
 /// A Poseidon hash function used with constant input length.
@@ -276,7 +276,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize, const L: usize> Domain<F, T
         F::from_u128((L as u128) << 64)
     }
 
-    fn padding(&self) -> SpongeState<F, RATE> {
+    fn padding(&self) -> SpongeRate<F, RATE> {
         // For constant-input-length hashing, padding consists of the field elements being
         // zero.
         let mut padding = [None; RATE];
@@ -286,7 +286,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize, const L: usize> Domain<F, T
         padding
     }
 
-    fn pad_and_add(&self) -> Box<dyn Fn(&mut State<F, T>, &SpongeState<F, RATE>)> {
+    fn pad_and_add(&self) -> Box<dyn Fn(&mut State<F, T>, &SpongeRate<F, RATE>)> {
         Box::new(|state, input| {
             // `Iterator::zip` short-circuits when one iterator completes, so this will only
             // mutate the rate portion of the state.
