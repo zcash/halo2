@@ -229,7 +229,7 @@ impl Config {
             // x_p = x_a
             || (x_p == x_a)
             {
-                return Err(Error::SynthesisError);
+                return Err(Error::Synthesis);
             }
         }
 
@@ -276,7 +276,7 @@ impl Config {
                 || "z",
                 self.z,
                 row + offset,
-                || z_val.ok_or(Error::SynthesisError),
+                || z_val.ok_or(Error::Synthesis),
             )?;
             z = CellValue::new(z_cell, z_val);
             zs.push(Z(z));
@@ -286,13 +286,13 @@ impl Config {
                 || "x_p",
                 self.x_p,
                 row + offset,
-                || x_p.ok_or(Error::SynthesisError),
+                || x_p.ok_or(Error::Synthesis),
             )?;
             region.assign_advice(
                 || "y_p",
                 self.y_p,
                 row + offset,
-                || y_p.ok_or(Error::SynthesisError),
+                || y_p.ok_or(Error::Synthesis),
             )?;
 
             // If the bit is set, use `y`; if the bit is not set, use `-y`
@@ -310,7 +310,7 @@ impl Config {
                 || "lambda1",
                 self.lambda1,
                 row + offset,
-                || lambda1.ok_or(Error::SynthesisError),
+                || lambda1.ok_or(Error::Synthesis),
             )?;
 
             // x_R = λ1^2 - x_A - x_P
@@ -332,7 +332,7 @@ impl Config {
                 || "lambda2",
                 self.lambda2,
                 row + offset,
-                || lambda2.ok_or(Error::SynthesisError),
+                || lambda2.ok_or(Error::Synthesis),
             )?;
 
             // Compute and assign `x_a` for the next row
@@ -350,7 +350,7 @@ impl Config {
                 || "x_a",
                 self.x_a,
                 row + offset + 1,
-                || x_a_val.ok_or(Error::SynthesisError),
+                || x_a_val.ok_or(Error::Synthesis),
             )?;
             x_a = CellValue::new(x_a_cell, x_a_val);
         }
@@ -361,7 +361,7 @@ impl Config {
                 || "y_a",
                 self.lambda1,
                 offset + self.num_bits,
-                || y_a.ok_or(Error::SynthesisError),
+                || y_a.ok_or(Error::Synthesis),
             )?;
             CellValue::new(cell, y_a)
         };

@@ -176,7 +176,7 @@ impl Config {
                     || "y_var",
                     self.super_config.y_p,
                     offset,
-                    || y_val.ok_or(Error::SynthesisError),
+                    || y_val.ok_or(Error::Synthesis),
                 )?;
 
                 Ok(EccPoint {
@@ -238,6 +238,7 @@ impl Config {
 pub mod tests {
     use group::Curve;
     use halo2::{
+        arithmetic::CurveAffine,
         circuit::{Chip, Layouter},
         plonk::{Any, Error},
     };
@@ -391,6 +392,8 @@ pub mod tests {
         struct MyCircuit {
             magnitude: Option<pallas::Base>,
             sign: Option<pallas::Base>,
+            // For test checking
+            magnitude_error: Option<pallas::Base>,
         }
 
         impl UtilitiesInstructions<pallas::Base> for MyCircuit {
@@ -463,6 +466,25 @@ pub mod tests {
             }
         }
 
+        // Copied from halo2::dev::util
+        fn format_value(v: pallas::Base) -> String {
+            use ff::Field;
+            if v.is_zero_vartime() {
+                "0".into()
+            } else if v == pallas::Base::one() {
+                "1".into()
+            } else if v == -pallas::Base::one() {
+                "-1".into()
+            } else {
+                // Format value as hex.
+                let s = format!("{:?}", v);
+                // Remove leading zeroes.
+                let s = s.strip_prefix("0x").unwrap();
+                let s = s.trim_start_matches('0');
+                format!("0x{}", s)
+            }
+        }
+
         // Magnitude larger than 64 bits should fail
         {
             let circuits = [
@@ -470,31 +492,41 @@ pub mod tests {
                 MyCircuit {
                     magnitude: Some(pallas::Base::from_u128(1 << 64)),
                     sign: Some(pallas::Base::one()),
+                    magnitude_error: Some(pallas::Base::from(1 << 1)),
                 },
                 // -2^64
                 MyCircuit {
                     magnitude: Some(pallas::Base::from_u128(1 << 64)),
                     sign: Some(-pallas::Base::one()),
+                    magnitude_error: Some(pallas::Base::from(1 << 1)),
                 },
                 // 2^66
                 MyCircuit {
                     magnitude: Some(pallas::Base::from_u128(1 << 66)),
                     sign: Some(pallas::Base::one()),
+                    magnitude_error: Some(pallas::Base::from(1 << 3)),
                 },
                 // -2^66
                 MyCircuit {
                     magnitude: Some(pallas::Base::from_u128(1 << 66)),
                     sign: Some(-pallas::Base::one()),
+                    magnitude_error: Some(pallas::Base::from(1 << 3)),
                 },
                 // 2^254
                 MyCircuit {
                     magnitude: Some(pallas::Base::from_u128(1 << 127).square()),
                     sign: Some(pallas::Base::one()),
+                    magnitude_error: Some(
+                        pallas::Base::from_u128(1 << 95).square() * pallas::Base::from(2),
+                    ),
                 },
                 // -2^254
                 MyCircuit {
                     magnitude: Some(pallas::Base::from_u128(1 << 127).square()),
                     sign: Some(-pallas::Base::one()),
+                    magnitude_error: Some(
+                        pallas::Base::from_u128(1 << 95).square() * pallas::Base::from(2),
+                    ),
                 },
             ];
 
@@ -510,7 +542,11 @@ pub mod tests {
                                 "last_window_check"
                             )
                                 .into(),
-                            row: 26
+                            row: 26,
+                            cell_values: vec![(
+                                ((Any::Advice, 5).into(), 0).into(),
+                                format_value(circuit.magnitude_error.unwrap()),
+                            )],
                         },
                         VerifyFailure::Permutation {
                             column: (Any::Fixed, 9).into(),
@@ -527,9 +563,19 @@ pub mod tests {
 
         // Sign that is not +/- 1 should fail
         {
+            let magnitude_u64 = rand::random::<u64>();
             let circuit = MyCircuit {
-                magnitude: Some(pallas::Base::from_u64(rand::random::<u64>())),
+                magnitude: Some(pallas::Base::from_u64(magnitude_u64)),
                 sign: Some(pallas::Base::zero()),
+                magnitude_error: None,
+            };
+
+            let negation_check_y = {
+                *(ValueCommitV::get().generator * pallas::Scalar::from(magnitude_u64))
+                    .to_affine()
+                    .coordinates()
+                    .unwrap()
+                    .y()
             };
 
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
@@ -539,7 +585,8 @@ pub mod tests {
                     VerifyFailure::ConstraintNotSatisfied {
                         constraint: ((17, "Short fixed-base mul gate").into(), 1, "sign_check")
                             .into(),
-                        row: 26
+                        row: 26,
+                        cell_values: vec![(((Any::Advice, 4).into(), 0).into(), "0".to_string())],
                     },
                     VerifyFailure::ConstraintNotSatisfied {
                         constraint: (
@@ -548,7 +595,18 @@ pub mod tests {
                             "negation_check"
                         )
                             .into(),
-                        row: 26
+                        row: 26,
+                        cell_values: vec![
+                            (
+                                ((Any::Advice, 1).into(), 0).into(),
+                                format_value(negation_check_y),
+                            ),
+                            (
+                                ((Any::Advice, 3).into(), 0).into(),
+                                format_value(negation_check_y),
+                            ),
+                            (((Any::Advice, 4).into(), 0).into(), "0".to_string()),
+                        ],
                     }
                 ])
             );

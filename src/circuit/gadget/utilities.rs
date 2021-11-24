@@ -53,7 +53,7 @@ pub trait UtilitiesInstructions<F: FieldExt> {
                     || "load private",
                     column,
                     0,
-                    || value.ok_or(Error::SynthesisError),
+                    || value.ok_or(Error::Synthesis),
                 )?;
                 Ok(Var::new(cell, value))
             },
@@ -80,7 +80,7 @@ where
     AR: Into<String>,
 {
     let cell = region.assign_advice(annotation, column, offset, || {
-        copy.value.ok_or(Error::SynthesisError)
+        copy.value.ok_or(Error::Synthesis)
     })?;
 
     region.constrain_equal(cell, copy.cell)?;
@@ -143,7 +143,7 @@ mod tests {
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{MockProver, VerifyFailure},
-        plonk::{Circuit, ConstraintSystem, Error, Selector},
+        plonk::{Any, Circuit, ConstraintSystem, Error, Selector},
         poly::Rotation,
     };
     use pasta_curves::pallas;
@@ -219,7 +219,8 @@ mod tests {
                 prover.verify(),
                 Err(vec![VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((0, "range check").into(), 0, "").into(),
-                    row: 0
+                    row: 0,
+                    cell_values: vec![(((Any::Advice, 0).into(), 0).into(), "0x8".to_string())],
                 }])
             );
         }

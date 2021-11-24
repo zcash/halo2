@@ -81,7 +81,7 @@ impl SinsemillaChip {
                 || "y_a",
                 config.lambda_1,
                 offset,
-                || y_a.ok_or(Error::SynthesisError),
+                || y_a.ok_or(Error::Synthesis),
             )?;
 
             // Assign lambda_2 and x_p zero values since they are queried
@@ -150,7 +150,7 @@ impl SinsemillaChip {
         if let Some(x_a) = x_a.value() {
             if let Some(y_a) = y_a.value() {
                 if x_a == pallas::Base::zero() || y_a == pallas::Base::zero() {
-                    return Err(Error::SynthesisError);
+                    return Err(Error::Synthesis);
                 }
             }
         }
@@ -268,7 +268,7 @@ impl SinsemillaChip {
                 || "z_0 (copy of message piece)",
                 config.bits,
                 offset,
-                || piece.field_elem().ok_or(Error::SynthesisError),
+                || piece.field_elem().ok_or(Error::Synthesis),
             )?;
             region.constrain_equal(piece.cell(), cell)?;
             zs.push(CellValue::new(cell, piece.field_elem()));
@@ -293,7 +293,7 @@ impl SinsemillaChip {
                     || format!("z_{:?}", idx + 1),
                     config.bits,
                     offset + idx + 1,
-                    || z.ok_or(Error::SynthesisError),
+                    || z.ok_or(Error::Synthesis),
                 )?;
                 zs.push(CellValue::new(cell, z))
             }
@@ -320,7 +320,7 @@ impl SinsemillaChip {
                 || "x_p",
                 config.x_p,
                 offset + row,
-                || x_p.ok_or(Error::SynthesisError),
+                || x_p.ok_or(Error::Synthesis),
             )?;
 
             // Compute and assign `lambda_1`
@@ -337,7 +337,7 @@ impl SinsemillaChip {
                     || "lambda_1",
                     config.lambda_1,
                     offset + row,
-                    || lambda_1.ok_or(Error::SynthesisError),
+                    || lambda_1.ok_or(Error::Synthesis),
                 )?;
 
                 lambda_1
@@ -361,7 +361,7 @@ impl SinsemillaChip {
                     || "lambda_2",
                     config.lambda_2,
                     offset + row,
-                    || lambda_2.ok_or(Error::SynthesisError),
+                    || lambda_2.ok_or(Error::Synthesis),
                 )?;
 
                 lambda_2
@@ -378,7 +378,7 @@ impl SinsemillaChip {
                     || "x_a",
                     config.x_a,
                     offset + row + 1,
-                    || x_a_new.ok_or(Error::SynthesisError),
+                    || x_a_new.ok_or(Error::Synthesis),
                 )?;
 
                 CellValue::new(x_a_cell, x_a_new).into()

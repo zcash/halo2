@@ -339,7 +339,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
                 || format!("mul_b_x, window {}", w),
                 self.x_p,
                 offset + w,
-                || x.ok_or(Error::SynthesisError),
+                || x.ok_or(Error::Synthesis),
             )?;
             let x = CellValue::new(x_cell, x);
 
@@ -352,7 +352,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
                 || format!("mul_b_y, window {}", w),
                 self.y_p,
                 offset + w,
-                || y.ok_or(Error::SynthesisError),
+                || y.ok_or(Error::Synthesis),
             )?;
             let y = CellValue::new(y_cell, y);
 
@@ -361,12 +361,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
 
         // Assign u = (y_p + z_w).sqrt()
         let u_val = k_usize.map(|k| base_u[w].0[k]);
-        region.assign_advice(
-            || "u",
-            self.u,
-            offset + w,
-            || u_val.ok_or(Error::SynthesisError),
-        )?;
+        region.assign_advice(|| "u", self.u, offset + w, || u_val.ok_or(Error::Synthesis))?;
 
         Ok(mul_b)
     }
@@ -431,7 +426,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
                 || "u",
                 self.u,
                 offset + NUM_WINDOWS - 1,
-                || u_val.ok_or(Error::SynthesisError),
+                || u_val.ok_or(Error::Synthesis),
             )?;
         }
 
@@ -462,7 +457,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
                 || format!("mul_b_x, window {}", NUM_WINDOWS - 1),
                 self.x_p,
                 offset + NUM_WINDOWS - 1,
-                || x.ok_or(Error::SynthesisError),
+                || x.ok_or(Error::Synthesis),
             )?;
 
             let x = CellValue::new(x_cell, x);
@@ -476,7 +471,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
                 || format!("mul_b_y, window {}", NUM_WINDOWS - 1),
                 self.y_p,
                 offset + NUM_WINDOWS - 1,
-                || y.ok_or(Error::SynthesisError),
+                || y.ok_or(Error::Synthesis),
             )?;
             let y = CellValue::new(y_cell, y);
 

@@ -305,7 +305,7 @@ impl Config {
                 || "z_0",
                 self.complete_config.z_complete,
                 offset + 1,
-                || z_0_val.ok_or(Error::SynthesisError),
+                || z_0_val.ok_or(Error::Synthesis),
             )?;
 
             Z(CellValue::new(z_0_cell, z_0_val))
@@ -352,14 +352,14 @@ impl Config {
             || "x",
             self.add_config.x_p,
             offset,
-            || x.ok_or(Error::SynthesisError),
+            || x.ok_or(Error::Synthesis),
         )?;
 
         let y_cell = region.assign_advice(
             || "y",
             self.add_config.y_p,
             offset,
-            || y.ok_or(Error::SynthesisError),
+            || y.ok_or(Error::Synthesis),
         )?;
 
         let p = EccPoint {

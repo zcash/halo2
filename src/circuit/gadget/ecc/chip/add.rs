@@ -1,9 +1,8 @@
 use std::array;
 
 use super::{copy, CellValue, EccConfig, EccPoint, Var};
-use ff::Field;
+use ff::{BatchInvert, Field};
 use halo2::{
-    arithmetic::BatchInvert,
     circuit::Region,
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
@@ -243,28 +242,13 @@ impl Config {
         };
 
         // Assign α = inv0(x_q - x_p)
-        region.assign_advice(
-            || "α",
-            self.alpha,
-            offset,
-            || alpha.ok_or(Error::SynthesisError),
-        )?;
+        region.assign_advice(|| "α", self.alpha, offset, || alpha.ok_or(Error::Synthesis))?;
 
         // Assign β = inv0(x_p)
-        region.assign_advice(
-            || "β",
-            self.beta,
-            offset,
-            || beta.ok_or(Error::SynthesisError),
-        )?;
+        region.assign_advice(|| "β", self.beta, offset, || beta.ok_or(Error::Synthesis))?;
 
         // Assign γ = inv0(x_q)
-        region.assign_advice(
-            || "γ",
-            self.gamma,
-            offset,
-            || gamma.ok_or(Error::SynthesisError),
-        )?;
+        region.assign_advice(|| "γ", self.gamma, offset, || gamma.ok_or(Error::Synthesis))?;
 
         // Assign δ = inv0(y_q + y_p) if x_q = x_p, 0 otherwise
         region.assign_advice(
@@ -272,11 +256,11 @@ impl Config {
             self.delta,
             offset,
             || {
-                let x_p = x_p.ok_or(Error::SynthesisError)?;
-                let x_q = x_q.ok_or(Error::SynthesisError)?;
+                let x_p = x_p.ok_or(Error::Synthesis)?;
+                let x_q = x_q.ok_or(Error::Synthesis)?;
 
                 if x_q == x_p {
-                    delta.ok_or(Error::SynthesisError)
+                    delta.ok_or(Error::Synthesis)
                 } else {
                     Ok(pallas::Base::zero())
                 }
@@ -313,7 +297,7 @@ impl Config {
             || "λ",
             self.lambda,
             offset,
-            || lambda.ok_or(Error::SynthesisError),
+            || lambda.ok_or(Error::Synthesis),
         )?;
 
         // Calculate (x_r, y_r)
@@ -349,7 +333,7 @@ impl Config {
             || "x_r",
             self.x_qr,
             offset + 1,
-            || x_r.ok_or(Error::SynthesisError),
+            || x_r.ok_or(Error::Synthesis),
         )?;
 
         // Assign y_r
@@ -358,7 +342,7 @@ impl Config {
             || "y_r",
             self.y_qr,
             offset + 1,
-            || y_r.ok_or(Error::SynthesisError),
+            || y_r.ok_or(Error::Synthesis),
         )?;
 
         let result = EccPoint {

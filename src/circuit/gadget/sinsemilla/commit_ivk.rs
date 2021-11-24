@@ -502,7 +502,7 @@ impl CommitIvkConfig {
                         || "Witness b_1",
                         self.advices[4],
                         offset,
-                        || gate_cells.b_1.ok_or(Error::SynthesisError),
+                        || gate_cells.b_1.ok_or(Error::Synthesis),
                     )?;
 
                     // Copy in `b_2`
@@ -575,7 +575,7 @@ impl CommitIvkConfig {
                         || "Witness d_1",
                         self.advices[4],
                         offset,
-                        || gate_cells.d_1.ok_or(Error::SynthesisError),
+                        || gate_cells.d_1.ok_or(Error::Synthesis),
                     )?;
 
                     // Copy in z13_c

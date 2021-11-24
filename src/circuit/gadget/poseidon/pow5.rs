@@ -328,7 +328,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
                         || format!("load state_{}", i),
                         config.state[i],
                         0,
-                        || value.ok_or(Error::SynthesisError),
+                        || value.ok_or(Error::Synthesis),
                     )?;
                     region.constrain_equal(initial_state[i].var, var)?;
                     Ok(StateWord { var, value })
@@ -358,7 +358,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
                         || format!("load input_{}", i),
                         config.state[i],
                         1,
-                        || value.ok_or(Error::SynthesisError),
+                        || value.ok_or(Error::Synthesis),
                     )?;
                     region.constrain_equal(constraint_var, var)?;
 
@@ -381,7 +381,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
                         || format!("load output_{}", i),
                         config.state[i],
                         2,
-                        || value.ok_or(Error::SynthesisError),
+                        || value.ok_or(Error::Synthesis),
                     )?;
                     Ok(StateWord { var, value })
                 };
@@ -481,7 +481,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                 || format!("round_{} partial_sbox", round),
                 config.partial_sbox,
                 offset,
-                || r.as_ref().map(|r| r[0]).ok_or(Error::SynthesisError),
+                || r.as_ref().map(|r| r[0]).ok_or(Error::Synthesis),
             )?;
 
             let p_mid: Option<Vec<_>> = m
@@ -543,7 +543,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                 || format!("load state_{}", i),
                 config.state[i],
                 0,
-                || value.ok_or(Error::SynthesisError),
+                || value.ok_or(Error::Synthesis),
             )?;
             region.constrain_equal(initial_state[i].var, var)?;
             Ok(StateWord { var, value })
@@ -586,7 +586,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                 || format!("round_{} state_{}", next_round, i),
                 config.state[i],
                 offset + 1,
-                || value.ok_or(Error::SynthesisError),
+                || value.ok_or(Error::Synthesis),
             )?;
             Ok(StateWord { var, value })
         };
@@ -660,13 +660,13 @@ mod tests {
             let initial_state = layouter.assign_region(
                 || "prepare initial state",
                 |mut region| {
-                    let mut state_word = |i: usize| {
+                    let mut state_word = |i: usize| -> Result<_, Error> {
                         let value = Some(Fp::from(i as u64));
                         let var = region.assign_advice(
                             || format!("load state_{}", i),
                             config.state[i],
                             0,
-                            || value.ok_or(Error::SynthesisError),
+                            || value.ok_or(Error::Synthesis),
                         )?;
                         Ok(StateWord { var, value })
                     };
@@ -771,13 +771,13 @@ mod tests {
             let message = layouter.assign_region(
                 || "load message",
                 |mut region| {
-                    let mut message_word = |i: usize| {
+                    let mut message_word = |i: usize| -> Result<_, Error> {
                         let value = self.message.map(|message_vals| message_vals[i]);
                         let cell = region.assign_advice(
                             || format!("load message_{}", i),
                             config.state[i],
                             0,
-                            || value.ok_or(Error::SynthesisError),
+                            || value.ok_or(Error::Synthesis),
                         )?;
                         Ok(CellValue::new(cell, value))
                     };
@@ -800,7 +800,7 @@ mod tests {
                         || "load output",
                         config.state[0],
                         0,
-                        || self.output.ok_or(Error::SynthesisError),
+                        || self.output.ok_or(Error::Synthesis),
                     )?;
                     region.constrain_equal(output.cell(), expected_var)
                 },

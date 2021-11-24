@@ -81,7 +81,7 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                         || "witness b",
                         config.b,
                         0,
-                        || pair.1.ok_or(Error::SynthesisError),
+                        || pair.1.ok_or(Error::Synthesis),
                     )?;
                     CellValue::new(cell, pair.1)
                 };
@@ -92,7 +92,7 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                     || "swap",
                     config.swap,
                     0,
-                    || swap_val.ok_or(Error::SynthesisError),
+                    || swap_val.ok_or(Error::Synthesis),
                 )?;
 
                 // Conditionally swap a
@@ -106,7 +106,7 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                         || "a_swapped",
                         config.a_swapped,
                         0,
-                        || a_swapped.ok_or(Error::SynthesisError),
+                        || a_swapped.ok_or(Error::Synthesis),
                     )?;
                     CellValue {
                         cell: a_swapped_cell,
@@ -125,7 +125,7 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                         || "b_swapped",
                         config.b_swapped,
                         0,
-                        || b_swapped.ok_or(Error::SynthesisError),
+                        || b_swapped.ok_or(Error::Synthesis),
                     )?;
                     CellValue {
                         cell: b_swapped_cell,

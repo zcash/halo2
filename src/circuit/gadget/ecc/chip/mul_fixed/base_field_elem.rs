@@ -325,7 +325,7 @@ impl Config {
                         || "α_1 = α[252..=253]",
                         self.canon_advices[1],
                         offset,
-                        || alpha_1.ok_or(Error::SynthesisError),
+                        || alpha_1.ok_or(Error::Synthesis),
                     )?;
 
                     // Witness the MSB α_2 = α[254]
@@ -334,7 +334,7 @@ impl Config {
                         || "α_2 = α[254]",
                         self.canon_advices[2],
                         offset,
-                        || alpha_2.ok_or(Error::SynthesisError),
+                        || alpha_2.ok_or(Error::Synthesis),
                     )?;
                 }
 
