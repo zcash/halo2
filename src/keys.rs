@@ -422,6 +422,12 @@ di_from!(u32);
 di_from!(u64);
 di_from!(usize);
 
+impl From<[u8; 11]> for DiversifierIndex {
+    fn from(j_bytes: [u8; 11]) -> Self {
+        DiversifierIndex(j_bytes)
+    }
+}
+
 impl DiversifierKey {
     /// Returns the diversifier at index 0.
     pub fn default_diversifier(&self) -> Diversifier {
