@@ -9,8 +9,8 @@ use halo2::{
     plonk::Error,
 };
 
-mod pow5t3;
-pub use pow5t3::{Pow5T3Chip, Pow5T3Config, StateWord};
+mod pow5;
+pub use pow5::{Pow5Chip, Pow5Config, StateWord};
 
 use crate::circuit::gadget::utilities::CellValue;
 use crate::primitives::poseidon::{ConstantLength, Domain, Spec, Sponge, SpongeState, State};
