@@ -104,7 +104,7 @@ impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
         region.assign_fixed(|| "b", self.config.sb, 0, || Ok(FF::zero()))?;
         region.assign_fixed(|| "c", self.config.sc, 0, || Ok(FF::one()))?;
         region.assign_fixed(|| "a * b", self.config.sm, 0, || Ok(FF::one()))?;
-        Ok((lhs, rhs, out))
+        Ok((lhs.cell(), rhs.cell(), out.cell()))
     }
     fn raw_add<F>(&self, region: &mut Region<FF>, mut f: F) -> Result<(Cell, Cell, Cell), Error>
     where
@@ -149,7 +149,7 @@ impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
         region.assign_fixed(|| "b", self.config.sb, 0, || Ok(FF::one()))?;
         region.assign_fixed(|| "c", self.config.sc, 0, || Ok(FF::one()))?;
         region.assign_fixed(|| "a * b", self.config.sm, 0, || Ok(FF::zero()))?;
-        Ok((lhs, rhs, out))
+        Ok((lhs.cell(), rhs.cell(), out.cell()))
     }
     fn copy(&self, region: &mut Region<FF>, left: Cell, right: Cell) -> Result<(), Error> {
         region.constrain_equal(left, right)
