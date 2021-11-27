@@ -93,7 +93,7 @@ pub struct Cell {
 }
 
 /// An assigned cell.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct AssignedCell<V: Clone + Into<Assigned<F>>, F: Field> {
     value: Option<V>,
     cell: Cell,
@@ -132,16 +132,12 @@ impl<V: Clone + Into<Assigned<F>>, F: Field> AssignedCell<V, F> {
         AR: Into<String>,
     {
         let value = self.value();
-        let cell = region.assign_advice(annotation, column, offset, || {
+        let assigned_cell = region.assign_advice(annotation, column, offset, || {
             value.clone().ok_or(Error::Synthesis)
         })?;
-        region.constrain_equal(cell, self.cell())?;
+        region.constrain_equal(assigned_cell.cell(), self.cell())?;
 
-        Ok(AssignedCell {
-            value,
-            cell,
-            _marker: PhantomData,
-        })
+        Ok(assigned_cell)
     }
 }
 
@@ -192,17 +188,28 @@ impl<'r, F: Field> Region<'r, F> {
         column: Column<Advice>,
         offset: usize,
         mut to: V,
-    ) -> Result<Cell, Error>
+    ) -> Result<AssignedCell<VR, F>, Error>
     where
         V: FnMut() -> Result<VR, Error> + 'v,
-        VR: Into<Assigned<F>>,
+        VR: Clone + Into<Assigned<F>>,
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        self.region
-            .assign_advice(&|| annotation().into(), column, offset, &mut || {
-                to().map(|v| v.into())
-            })
+        let mut value = None;
+        let cell =
+            self.region
+                .assign_advice(&|| annotation().into(), column, offset, &mut || {
+                    let v = to()?;
+                    let value_f = v.clone().into();
+                    value = Some(v);
+                    Ok(value_f)
+                })?;
+
+        Ok(AssignedCell {
+            value,
+            cell,
+            _marker: PhantomData,
+        })
     }
 
     /// Assigns a constant value to the column `advice` at `offset` within this region.
@@ -217,18 +224,24 @@ impl<'r, F: Field> Region<'r, F> {
         column: Column<Advice>,
         offset: usize,
         constant: VR,
-    ) -> Result<Cell, Error>
+    ) -> Result<AssignedCell<VR, F>, Error>
     where
-        VR: Into<Assigned<F>>,
+        VR: Clone + Into<Assigned<F>>,
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        self.region.assign_advice_from_constant(
+        let cell = self.region.assign_advice_from_constant(
             &|| annotation().into(),
             column,
             offset,
-            constant.into(),
-        )
+            constant.clone().into(),
+        )?;
+
+        Ok(AssignedCell {
+            value: Some(constant),
+            cell,
+            _marker: PhantomData,
+        })
     }
 
     /// Assign the value of the instance column's cell at absolute location
@@ -242,18 +255,24 @@ impl<'r, F: Field> Region<'r, F> {
         row: usize,
         advice: Column<Advice>,
         offset: usize,
-    ) -> Result<(Cell, Option<F>), Error>
+    ) -> Result<AssignedCell<F, F>, Error>
     where
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        self.region.assign_advice_from_instance(
+        let (cell, value) = self.region.assign_advice_from_instance(
             &|| annotation().into(),
             instance,
             row,
             advice,
             offset,
-        )
+        )?;
+
+        Ok(AssignedCell {
+            value,
+            cell,
+            _marker: PhantomData,
+        })
     }
 
     /// Assign a fixed value.
@@ -265,17 +284,28 @@ impl<'r, F: Field> Region<'r, F> {
         column: Column<Fixed>,
         offset: usize,
         mut to: V,
-    ) -> Result<Cell, Error>
+    ) -> Result<AssignedCell<VR, F>, Error>
     where
         V: FnMut() -> Result<VR, Error> + 'v,
-        VR: Into<Assigned<F>>,
+        VR: Clone + Into<Assigned<F>>,
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        self.region
-            .assign_fixed(&|| annotation().into(), column, offset, &mut || {
-                to().map(|v| v.into())
-            })
+        let mut value = None;
+        let cell =
+            self.region
+                .assign_fixed(&|| annotation().into(), column, offset, &mut || {
+                    let v = to()?;
+                    let value_f = v.clone().into();
+                    value = Some(v);
+                    Ok(value_f)
+                })?;
+
+        Ok(AssignedCell {
+            value,
+            cell,
+            _marker: PhantomData,
+        })
     }
 
     /// Constrains a cell to have a constant value.
