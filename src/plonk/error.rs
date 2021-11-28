@@ -7,7 +7,7 @@ use super::{Any, Column};
 
 /// This is an error that could occur during proving or circuit synthesis.
 // TODO: these errors need to be cleaned up
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Error {
     /// This is an error that can occur during synthesis of the circuit, for
     /// example, when the witness is not present.
