@@ -160,26 +160,14 @@ impl MessageScheduleConfig {
 
         let w_lo = {
             let w_lo_val = word.map(|word| word as u16);
-            AssignedBits::<16>::assign_unchecked(
-                region,
-                || format!("W_{}_lo", word_idx),
-                a_3,
-                row,
-                w_lo_val,
-            )?
+            AssignedBits::<16>::assign(region, || format!("W_{}_lo", word_idx), a_3, row, w_lo_val)?
         };
         let w_hi = {
             let w_hi_val = word.map(|word| (word >> 16) as u16);
-            AssignedBits::<16>::assign_unchecked(
-                region,
-                || format!("W_{}_hi", word_idx),
-                a_4,
-                row,
-                w_hi_val,
-            )?
+            AssignedBits::<16>::assign(region, || format!("W_{}_hi", word_idx), a_4, row, w_hi_val)?
         };
 
-        let word = AssignedBits::<32>::assign_unchecked(
+        let word = AssignedBits::<32>::assign(
             region,
             || format!("W_{}", word_idx),
             self.message_schedule,

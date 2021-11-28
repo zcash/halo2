@@ -6,7 +6,7 @@ use halo2::{
     arithmetic::FieldExt,
     circuit::{AssignedCell, Chip, Layouter, Region},
     pasta::pallas,
-    plonk::{Advice, Any, Column, ConstraintSystem, Error},
+    plonk::{Advice, Any, Assigned, Column, ConstraintSystem, Error},
 };
 
 mod compression;
@@ -81,10 +81,10 @@ impl<const LEN: usize> From<Bits<LEN>> for [bool; LEN] {
     }
 }
 
-impl<const LEN: usize> From<Bits<LEN>> for pallas::Base {
-    fn from(bits: Bits<LEN>) -> pallas::Base {
+impl<const LEN: usize> From<Bits<LEN>> for Assigned<pallas::Base> {
+    fn from(bits: Bits<LEN>) -> Assigned<pallas::Base> {
         assert!(LEN <= 64);
-        pallas::Base::from_u64(lebs2ip(&bits.0))
+        pallas::Base::from_u64(lebs2ip(&bits.0)).into()
     }
 }
 
@@ -113,10 +113,10 @@ impl From<u32> for Bits<32> {
 }
 
 #[derive(Clone, Debug)]
-pub struct AssignedBits<const LEN: usize>(AssignedCell<pallas::Base, Bits<LEN>>);
+pub struct AssignedBits<const LEN: usize>(AssignedCell<Bits<LEN>, pallas::Base>);
 
 impl<const LEN: usize> std::ops::Deref for AssignedBits<LEN> {
-    type Target = AssignedCell<pallas::Base, Bits<LEN>>;
+    type Target = AssignedCell<Bits<LEN>, pallas::Base>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -124,7 +124,7 @@ impl<const LEN: usize> std::ops::Deref for AssignedBits<LEN> {
 }
 
 impl<const LEN: usize> AssignedBits<LEN> {
-    fn assign_bits<A, AR, T: TryInto<[bool; LEN]> + std::fmt::Debug>(
+    fn assign_bits<A, AR, T: TryInto<[bool; LEN]> + std::fmt::Debug + Clone>(
         region: &mut Region<'_, pallas::Base>,
         annotation: A,
         column: impl Into<Column<Any>>,
@@ -137,13 +137,22 @@ impl<const LEN: usize> AssignedBits<LEN> {
         <T as TryInto<[bool; LEN]>>::Error: std::fmt::Debug,
     {
         let value: Option<[bool; LEN]> = value.map(|v| v.try_into().unwrap());
-        AssignedCell::<_, Bits<LEN>>::assign_unchecked(
-            region,
-            annotation,
-            column,
-            offset,
-            value.map(|v| v.into()),
-        )
+        let value: Option<Bits<LEN>> = value.map(|v| v.into());
+
+        let column: Column<Any> = column.into();
+        match column.column_type() {
+            Any::Advice => {
+                region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
+                    value.clone().ok_or(Error::Synthesis)
+                })
+            }
+            Any::Fixed => {
+                region.assign_fixed(annotation, column.try_into().unwrap(), offset, || {
+                    value.clone().ok_or(Error::Synthesis)
+                })
+            }
+            _ => panic!("Cannot assign to instance column"),
+        }
         .map(AssignedBits)
     }
 }
@@ -153,7 +162,7 @@ impl AssignedBits<16> {
         self.value().map(|v| v.into())
     }
 
-    fn assign_unchecked<A, AR>(
+    fn assign<A, AR>(
         region: &mut Region<'_, pallas::Base>,
         annotation: A,
         column: impl Into<Column<Any>>,
@@ -164,13 +173,21 @@ impl AssignedBits<16> {
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        AssignedCell::<_, Bits<16>>::assign_unchecked(
-            region,
-            annotation,
-            column,
-            offset,
-            value.map(|v| v.into()),
-        )
+        let column: Column<Any> = column.into();
+        let value: Option<Bits<16>> = value.map(|v| v.into());
+        match column.column_type() {
+            Any::Advice => {
+                region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
+                    value.clone().ok_or(Error::Synthesis)
+                })
+            }
+            Any::Fixed => {
+                region.assign_fixed(annotation, column.try_into().unwrap(), offset, || {
+                    value.clone().ok_or(Error::Synthesis)
+                })
+            }
+            _ => panic!("Cannot assign to instance column"),
+        }
         .map(AssignedBits)
     }
 }
@@ -180,7 +197,7 @@ impl AssignedBits<32> {
         self.value().map(|v| v.into())
     }
 
-    fn assign_unchecked<A, AR>(
+    fn assign<A, AR>(
         region: &mut Region<'_, pallas::Base>,
         annotation: A,
         column: impl Into<Column<Any>>,
@@ -191,13 +208,21 @@ impl AssignedBits<32> {
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        AssignedCell::<_, Bits<32>>::assign_unchecked(
-            region,
-            annotation,
-            column,
-            offset,
-            value.map(|v| v.into()),
-        )
+        let column: Column<Any> = column.into();
+        let value: Option<Bits<32>> = value.map(|v| v.into());
+        match column.column_type() {
+            Any::Advice => {
+                region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
+                    value.clone().ok_or(Error::Synthesis)
+                })
+            }
+            Any::Fixed => {
+                region.assign_fixed(annotation, column.try_into().unwrap(), offset, || {
+                    value.clone().ok_or(Error::Synthesis)
+                })
+            }
+            _ => panic!("Cannot assign to instance column"),
+        }
         .map(AssignedBits)
     }
 }
