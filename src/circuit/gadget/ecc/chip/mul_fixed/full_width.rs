@@ -1,9 +1,8 @@
-use super::super::{
-    EccPoint, EccScalarFixed, FixedPoints, FIXED_BASE_WINDOW_SIZE, H, L_ORCHARD_SCALAR, NUM_WINDOWS,
-};
+use super::super::{EccPoint, EccScalarFixed, FixedPoints, FIXED_BASE_WINDOW_SIZE, H, NUM_WINDOWS};
 
 use crate::circuit::gadget::utilities::{decompose_word, range_check};
 use arrayvec::ArrayVec;
+use ff::PrimeField;
 use halo2::{
     circuit::{AssignedCell, Layouter, Region},
     plonk::{ConstraintSystem, Error, Selector},
@@ -59,7 +58,9 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         offset: usize,
         scalar: Option<pallas::Scalar>,
     ) -> Result<EccScalarFixed, Error> {
-        let windows = self.decompose_scalar_fixed::<L_ORCHARD_SCALAR>(scalar, offset, region)?;
+        let windows = self.decompose_scalar_fixed::<{ pallas::Scalar::NUM_BITS as usize }>(
+            scalar, offset, region,
+        )?;
 
         Ok(EccScalarFixed {
             value: scalar,

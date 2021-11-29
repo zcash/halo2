@@ -6,6 +6,7 @@ use crate::{
     primitives::sinsemilla,
 };
 use arrayvec::ArrayVec;
+use ff::PrimeField;
 
 use ff::Field;
 use group::prime::PrimeCurveAffine;
@@ -31,23 +32,15 @@ pub const H: usize = 1 << FIXED_BASE_WINDOW_SIZE;
 
 /// Number of windows for a full-width scalar
 pub const NUM_WINDOWS: usize =
-    (L_ORCHARD_SCALAR + FIXED_BASE_WINDOW_SIZE - 1) / FIXED_BASE_WINDOW_SIZE;
+    (pallas::Scalar::NUM_BITS as usize + FIXED_BASE_WINDOW_SIZE - 1) / FIXED_BASE_WINDOW_SIZE;
 
 /// Number of windows for a short signed scalar
 pub const NUM_WINDOWS_SHORT: usize =
-    (L_VALUE + FIXED_BASE_WINDOW_SIZE - 1) / FIXED_BASE_WINDOW_SIZE;
+    (L_SCALAR_SHORT + FIXED_BASE_WINDOW_SIZE - 1) / FIXED_BASE_WINDOW_SIZE;
 
 /// $\ell_\mathsf{value}$
 /// Number of bits in an unsigned short scalar.
-pub(crate) const L_VALUE: usize = 64;
-
-/// $\ell^\mathsf{Orchard}_\mathsf{base}$
-/// Number of bits in a Pallas base field element.
-pub(crate) const L_ORCHARD_BASE: usize = 255;
-
-/// $\ell^\mathsf{Orchard}_\mathsf{scalar}$
-/// Number of bits in a Pallas scalar field element.
-pub(crate) const L_ORCHARD_SCALAR: usize = 255;
+pub(crate) const L_SCALAR_SHORT: usize = 64;
 
 /// The Pallas scalar field modulus is $q = 2^{254} + \mathsf{t_q}$.
 /// <https://github.com/zcash/pasta>

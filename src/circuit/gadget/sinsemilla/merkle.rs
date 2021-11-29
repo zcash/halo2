@@ -16,12 +16,8 @@ pub(in crate::circuit) mod chip;
 /// SWU hash-to-curve personalization for the Merkle CRH generator
 pub const MERKLE_CRH_PERSONALIZATION: &str = "z.cash:Orchard-MerkleCRH";
 
-/// $\mathsf{MerkleDepth^{Orchard}}$
-pub(crate) const MERKLE_DEPTH_ORCHARD: usize = 32;
-
-/// $\ell^\mathsf{Orchard}_\mathsf{base}$
-/// Number of bits in a Pallas base field element.
-pub(crate) const L_ORCHARD_BASE: usize = 255;
+/// Depth of Merkle tree
+pub(crate) const MERKLE_DEPTH: usize = 32;
 
 /// Instructions to check the validity of a Merkle path of a given `PATH_LENGTH`.
 /// The hash function used is a Sinsemilla instance with `K`-bit words.
@@ -39,7 +35,7 @@ pub trait MerkleInstructions<
 {
     /// Compute MerkleCRH for a given `layer`. The hash that computes the root
     /// is at layer 0, and the hashes that are applied to two leaves are at
-    /// layer `MERKLE_DEPTH_ORCHARD - 1` = layer 31.
+    /// layer `MERKLE_DEPTH - 1` = layer 31.
     #[allow(non_snake_case)]
     fn hash_layer(
         &self,
@@ -107,7 +103,7 @@ where
 
         let mut node = leaf;
         for (l, ((sibling, pos), chip)) in path.iter().zip(pos.iter()).zip(chips).enumerate() {
-            // `l` = MERKLE_DEPTH_ORCHARD - layer - 1, which is the index obtained from
+            // `l` = MERKLE_DEPTH - layer - 1, which is the index obtained from
             // enumerating this Merkle path (going from leaf to root).
             // For example, when `layer = 31` (the first sibling on the Merkle path),
             // we have `l` = 32 - 31 - 1 = 0.
@@ -140,7 +136,7 @@ where
 pub mod tests {
     use super::{
         chip::{MerkleChip, MerkleConfig},
-        MerklePath, MERKLE_DEPTH_ORCHARD,
+        MerklePath, MERKLE_DEPTH,
     };
 
     use crate::{
@@ -168,7 +164,7 @@ pub mod tests {
     struct MyCircuit {
         leaf: Option<pallas::Base>,
         leaf_pos: Option<u32>,
-        merkle_path: Option<[pallas::Base; MERKLE_DEPTH_ORCHARD]>,
+        merkle_path: Option<[pallas::Base; MERKLE_DEPTH]>,
     }
 
     impl Circuit<pallas::Base> for MyCircuit {
@@ -295,7 +291,7 @@ pub mod tests {
         let pos = rng.next_u32();
 
         // Choose a path of random inner nodes
-        let path: Vec<_> = (0..(MERKLE_DEPTH_ORCHARD))
+        let path: Vec<_> = (0..(MERKLE_DEPTH))
             .map(|_| pallas::Base::random(rng))
             .collect();
 

@@ -5,7 +5,7 @@ use halo2::{
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
-use super::{MerkleInstructions, L_ORCHARD_BASE, MERKLE_DEPTH_ORCHARD};
+use super::{MerkleInstructions, MERKLE_DEPTH};
 
 use crate::{
     circuit::gadget::{
@@ -22,6 +22,7 @@ use crate::{
     },
     primitives::sinsemilla,
 };
+use group::ff::PrimeField;
 use std::array;
 
 #[derive(Clone, Debug)]
@@ -180,7 +181,7 @@ where
 }
 
 impl<Hash, Commit, F>
-    MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K }, { sinsemilla::C }>
+    MerkleInstructions<pallas::Affine, MERKLE_DEPTH, { sinsemilla::K }, { sinsemilla::C }>
     for MerkleChip<Hash, Commit, F>
 where
     Hash: HashDomains<pallas::Affine>,
@@ -192,7 +193,7 @@ where
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         Q: pallas::Affine,
-        // l = MERKLE_DEPTH_ORCHARD - layer - 1
+        // l = MERKLE_DEPTH - layer - 1
         l: usize,
         left: Self::Var,
         right: Self::Var,
@@ -234,7 +235,7 @@ where
             let b_1 = {
                 let b_1 = left
                     .value()
-                    .map(|value| bitrange_subset(value, 250..L_ORCHARD_BASE));
+                    .map(|value| bitrange_subset(value, 250..(pallas::Base::NUM_BITS as usize)));
 
                 config
                     .sinsemilla_config
@@ -274,7 +275,7 @@ where
             // `c = bits 5..=254 of `right`
             let c = right
                 .value()
-                .map(|value| bitrange_subset(value, 5..L_ORCHARD_BASE));
+                .map(|value| bitrange_subset(value, 5..(pallas::Base::NUM_BITS as usize)));
             self.witness_message_piece(layouter.namespace(|| "Witness c"), c, 25)?
         };
 
@@ -299,7 +300,7 @@ where
                 || "Check piece decomposition",
                 |mut region| {
                     // Set the fixed column `l` to the current l.
-                    // Recall that l = MERKLE_DEPTH_ORCHARD - layer - 1.
+                    // Recall that l = MERKLE_DEPTH - layer - 1.
                     // The layer with 2^n nodes is called "layer n".
                     config.q_decompose.enable(&mut region, 0)?;
                     region.assign_advice_from_constant(
@@ -346,7 +347,7 @@ where
         {
             use super::MERKLE_CRH_PERSONALIZATION;
             use crate::{primitives::sinsemilla::HashDomain, spec::i2lebsp};
-            use group::ff::{PrimeField, PrimeFieldBits};
+            use group::ff::PrimeFieldBits;
 
             if let (Some(left), Some(right)) = (left.value(), right.value()) {
                 let l = i2lebsp::<10>(l as u64);
@@ -354,13 +355,13 @@ where
                     .to_le_bits()
                     .iter()
                     .by_val()
-                    .take(L_ORCHARD_BASE)
+                    .take(pallas::Base::NUM_BITS as usize)
                     .collect();
                 let right: Vec<_> = right
                     .to_le_bits()
                     .iter()
                     .by_val()
-                    .take(L_ORCHARD_BASE)
+                    .take(pallas::Base::NUM_BITS as usize)
                     .collect();
                 let merkle_crh = HashDomain::new(MERKLE_CRH_PERSONALIZATION);
 

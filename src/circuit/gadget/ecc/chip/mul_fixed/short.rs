@@ -1,6 +1,6 @@
 use std::{array, convert::TryInto};
 
-use super::super::{EccPoint, EccScalarFixedShort, FixedPoints, L_VALUE, NUM_WINDOWS_SHORT};
+use super::super::{EccPoint, EccScalarFixedShort, FixedPoints, L_SCALAR_SHORT, NUM_WINDOWS_SHORT};
 use crate::circuit::gadget::{ecc::chip::MagnitudeSign, utilities::bool_check};
 
 use halo2::{
@@ -81,7 +81,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             offset,
             magnitude.clone(),
             true,
-            L_VALUE,
+            L_SCALAR_SHORT,
             NUM_WINDOWS_SHORT,
         )?;
 

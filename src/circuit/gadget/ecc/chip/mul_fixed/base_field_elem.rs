@@ -1,6 +1,4 @@
-use super::super::{
-    EccBaseFieldElemFixed, EccPoint, FixedPoints, L_ORCHARD_BASE, NUM_WINDOWS, T_P,
-};
+use super::super::{EccBaseFieldElemFixed, EccPoint, FixedPoints, NUM_WINDOWS, T_P};
 use super::H_BASE;
 
 use crate::{
@@ -9,9 +7,10 @@ use crate::{
     },
     primitives::sinsemilla,
 };
-use halo2::circuit::AssignedCell;
+
+use group::ff::PrimeField;
 use halo2::{
-    circuit::Layouter,
+    circuit::{AssignedCell, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
@@ -179,7 +178,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                         offset,
                         scalar.clone(),
                         true,
-                        L_ORCHARD_BASE,
+                        pallas::Base::NUM_BITS as usize,
                         NUM_WINDOWS,
                     )?;
                     EccBaseFieldElemFixed {
@@ -217,7 +216,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         // Check that the correct multiple is obtained.
         {
             use super::super::FixedPoint;
-            use group::{ff::PrimeField, Curve};
+            use group::Curve;
 
             let scalar = &scalar
                 .base_field_elem()

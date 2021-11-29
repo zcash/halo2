@@ -546,7 +546,7 @@ mod tests {
                     &OrchardHashDomains::MerkleCrh,
                 );
 
-                // Layer 31, l = MERKLE_DEPTH_ORCHARD - 1 - layer = 0
+                // Layer 31, l = MERKLE_DEPTH - 1 - layer = 0
                 let l_bitstring = vec![Some(false); K];
                 let l = MessagePiece::from_bitstring(
                     chip1.clone(),
