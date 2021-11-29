@@ -218,7 +218,7 @@ impl<F: FieldExt> AddInstructions<F> for AddChip<F> {
                 b.0.copy_advice(|| "rhs", &mut region, config.advice[1], 0)?;
 
                 // Now we can assign the addition result into the output position.
-                let value = a.0.value().and_then(|a| b.0.value().map(|b| a + b));
+                let value = a.0.value().and_then(|a| b.0.value().map(|b| *a + *b));
 
                 // Finally, we return a variable representing the output,
                 // to be used in another part of the circuit.
@@ -343,7 +343,7 @@ impl<F: FieldExt> MulInstructions<F> for MulChip<F> {
                 b.0.copy_advice(|| "rhs", &mut region, config.advice[1], 0)?;
 
                 // Now we can assign the multiplication result into the output position.
-                let value = a.0.value().and_then(|a| b.0.value().map(|b| a * b));
+                let value = a.0.value().and_then(|a| b.0.value().map(|b| *a * *b));
 
                 // Finally, we return a variable representing the output,
                 // to be used in another part of the circuit.

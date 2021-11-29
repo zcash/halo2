@@ -94,28 +94,38 @@ pub struct Cell {
 
 /// An assigned cell.
 #[derive(Clone, Debug)]
-pub struct AssignedCell<V: Clone + Into<Assigned<F>>, F: Field> {
+pub struct AssignedCell<V, F: Field> {
     value: Option<V>,
     cell: Cell,
     _marker: PhantomData<F>,
 }
 
-impl<V: Clone + Into<Assigned<F>>, F: Field> AssignedCell<V, F> {
+impl<V, F: Field> AssignedCell<V, F> {
     /// Returns the value of the [`AssignedCell`].
-    pub fn value(&self) -> Option<V> {
-        self.value.clone()
-    }
-
-    /// Returns the field element value of the [`AssignedCell`].
-    pub fn value_field(&self) -> Option<Assigned<F>> {
-        self.value().map(|v| v.into())
+    pub fn value(&self) -> Option<&V> {
+        self.value.as_ref()
     }
 
     /// Returns the cell.
     pub fn cell(&self) -> Cell {
         self.cell
     }
+}
 
+impl<V, F: Field> AssignedCell<V, F>
+where
+    for<'v> Assigned<F>: From<&'v V>,
+{
+    /// Returns the field element value of the [`AssignedCell`].
+    pub fn value_field(&self) -> Option<Assigned<F>> {
+        self.value().map(|v| v.into())
+    }
+}
+
+impl<V: Clone, F: Field> AssignedCell<V, F>
+where
+    for<'v> Assigned<F>: From<&'v V>,
+{
     /// Copies the value to a given advice cell and constrains them to be equal.
     ///
     /// Returns an error if either this cell or the given cell are in columns
@@ -131,9 +141,8 @@ impl<V: Clone + Into<Assigned<F>>, F: Field> AssignedCell<V, F> {
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        let value = self.value();
         let assigned_cell = region.assign_advice(annotation, column, offset, || {
-            value.clone().ok_or(Error::Synthesis)
+            self.value.clone().ok_or(Error::Synthesis)
         })?;
         region.constrain_equal(assigned_cell.cell(), self.cell())?;
 
@@ -191,7 +200,7 @@ impl<'r, F: Field> Region<'r, F> {
     ) -> Result<AssignedCell<VR, F>, Error>
     where
         V: FnMut() -> Result<VR, Error> + 'v,
-        VR: Clone + Into<Assigned<F>>,
+        for<'vr> Assigned<F>: From<&'vr VR>,
         A: Fn() -> AR,
         AR: Into<String>,
     {
@@ -200,7 +209,7 @@ impl<'r, F: Field> Region<'r, F> {
             self.region
                 .assign_advice(&|| annotation().into(), column, offset, &mut || {
                     let v = to()?;
-                    let value_f = v.clone().into();
+                    let value_f = (&v).into();
                     value = Some(v);
                     Ok(value_f)
                 })?;
@@ -226,7 +235,7 @@ impl<'r, F: Field> Region<'r, F> {
         constant: VR,
     ) -> Result<AssignedCell<VR, F>, Error>
     where
-        VR: Clone + Into<Assigned<F>>,
+        for<'vr> Assigned<F>: From<&'vr VR>,
         A: Fn() -> AR,
         AR: Into<String>,
     {
@@ -234,7 +243,7 @@ impl<'r, F: Field> Region<'r, F> {
             &|| annotation().into(),
             column,
             offset,
-            constant.clone().into(),
+            (&constant).into(),
         )?;
 
         Ok(AssignedCell {
@@ -287,7 +296,7 @@ impl<'r, F: Field> Region<'r, F> {
     ) -> Result<AssignedCell<VR, F>, Error>
     where
         V: FnMut() -> Result<VR, Error> + 'v,
-        VR: Clone + Into<Assigned<F>>,
+        for<'vr> Assigned<F>: From<&'vr VR>,
         A: Fn() -> AR,
         AR: Into<String>,
     {
@@ -296,7 +305,7 @@ impl<'r, F: Field> Region<'r, F> {
             self.region
                 .assign_fixed(&|| annotation().into(), column, offset, &mut || {
                     let v = to()?;
-                    let value_f = v.clone().into();
+                    let value_f = (&v).into();
                     value = Some(v);
                     Ok(value_f)
                 })?;
