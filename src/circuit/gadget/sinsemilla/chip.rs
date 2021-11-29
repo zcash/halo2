@@ -268,7 +268,7 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
                     || "witness message piece",
                     config.witness_pieces,
                     0,
-                    || field_elem.ok_or(Error::SynthesisError),
+                    || field_elem.ok_or(Error::Synthesis),
                 )
             },
         )?;

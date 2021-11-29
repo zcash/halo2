@@ -115,7 +115,7 @@ impl Config {
                         || "s = alpha + k_254 ⋅ 2^130",
                         self.advices[0],
                         0,
-                        || s_val.ok_or(Error::SynthesisError),
+                        || s_val.ok_or(Error::Synthesis),
                     )?;
                     Ok(CellValue::new(s_cell, s_val))
                 },
@@ -160,7 +160,7 @@ impl Config {
                         || "η = inv0(z_130)",
                         self.advices[0],
                         offset + 2,
-                        || eta.ok_or(Error::SynthesisError),
+                        || eta.ok_or(Error::Synthesis),
                     )?;
                 }
 

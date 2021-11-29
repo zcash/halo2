@@ -110,7 +110,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
                 || "z_0 = alpha",
                 self.z,
                 offset,
-                || alpha.ok_or(Error::SynthesisError),
+                || alpha.ok_or(Error::Synthesis),
             )?;
             CellValue::new(cell, alpha)
         };
@@ -198,7 +198,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
                     || format!("z_{:?}", i + 1),
                     self.z,
                     offset + i + 1,
-                    || z_next_val.ok_or(Error::SynthesisError),
+                    || z_next_val.ok_or(Error::Synthesis),
                 )?;
                 CellValue::new(cell, z_next_val)
             };

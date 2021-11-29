@@ -173,7 +173,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                         || "Witness element",
                         self.running_sum,
                         0,
-                        || value.ok_or(Error::SynthesisError),
+                        || value.ok_or(Error::Synthesis),
                     )?;
                     CellValue::new(cell, value)
                 };
@@ -251,7 +251,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                     || format!("z_{:?}", idx + 1),
                     self.running_sum,
                     idx + 1,
-                    || z_val.ok_or(Error::SynthesisError),
+                    || z_val.ok_or(Error::Synthesis),
                 )?;
 
                 CellValue::new(z_cell, z_val)
@@ -311,7 +311,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                         || "Witness element",
                         self.running_sum,
                         0,
-                        || element.ok_or(Error::SynthesisError),
+                        || element.ok_or(Error::Synthesis),
                     )?;
                     CellValue::new(cell, element)
                 };
@@ -351,7 +351,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             || format!("element * 2^({}-{})", K, num_bits),
             self.running_sum,
             1,
-            || shifted.ok_or(Error::SynthesisError),
+            || shifted.ok_or(Error::Synthesis),
         )?;
 
         // Assign 2^{-num_bits} from a fixed column.

@@ -103,7 +103,7 @@ impl Config {
                 || format!("k[{:?}]", offset + idx),
                 self.super_config.window,
                 offset + idx,
-                || window.ok_or(Error::SynthesisError),
+                || window.ok_or(Error::Synthesis),
             )?;
             windows.push(CellValue::new(window_cell, window));
         }

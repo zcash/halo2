@@ -89,7 +89,7 @@ impl Config {
                 // x_p = x_q
                 || (x_p == x_q)
                 {
-                    Err(Error::SynthesisError)
+                    Err(Error::Synthesis)
                 } else {
                     Ok(())
                 }
@@ -123,7 +123,7 @@ impl Config {
             || "x_r",
             self.x_qr,
             offset + 1,
-            || x_r.ok_or(Error::SynthesisError),
+            || x_r.ok_or(Error::Synthesis),
         )?;
 
         let y_r = r.1;
@@ -131,7 +131,7 @@ impl Config {
             || "y_r",
             self.y_qr,
             offset + 1,
-            || y_r.ok_or(Error::SynthesisError),
+            || y_r.ok_or(Error::Synthesis),
         )?;
 
         let result = NonIdentityEccPoint {

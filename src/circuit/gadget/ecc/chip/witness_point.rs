@@ -73,21 +73,13 @@ impl Config {
     ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
         // Assign `x` value
         let x_val = value.map(|value| value.0);
-        let x_var = region.assign_advice(
-            || "x",
-            self.x,
-            offset,
-            || x_val.ok_or(Error::SynthesisError),
-        )?;
+        let x_var =
+            region.assign_advice(|| "x", self.x, offset, || x_val.ok_or(Error::Synthesis))?;
 
         // Assign `y` value
         let y_val = value.map(|value| value.1);
-        let y_var = region.assign_advice(
-            || "y",
-            self.y,
-            offset,
-            || y_val.ok_or(Error::SynthesisError),
-        )?;
+        let y_var =
+            region.assign_advice(|| "y", self.y, offset, || y_val.ok_or(Error::Synthesis))?;
 
         Ok((
             CellValue::<pallas::Base>::new(x_var, x_val),
@@ -132,7 +124,7 @@ impl Config {
         if let Some(value) = value {
             // Return an error if the point is the identity.
             if value == pallas::Affine::identity() {
-                return Err(Error::SynthesisError);
+                return Err(Error::Synthesis);
             }
         };
 

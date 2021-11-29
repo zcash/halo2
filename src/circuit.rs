@@ -525,7 +525,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                         || "poseidon_hash(nk, rho_old) + psi_old",
                         config.advices[6],
                         0,
-                        || scalar_val.ok_or(plonk::Error::SynthesisError),
+                        || scalar_val.ok_or(plonk::Error::Synthesis),
                     )?;
                     Ok(CellValue::new(cell, scalar_val))
                 },
@@ -1055,7 +1055,7 @@ mod tests {
         halo2::dev::CircuitLayout::default()
             .show_labels(false)
             .view_height(0..(1 << 11))
-            .render(K as usize, &circuit, &root)
+            .render(K, &circuit, &root)
             .unwrap();
     }
 }

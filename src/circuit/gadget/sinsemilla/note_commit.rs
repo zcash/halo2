@@ -1044,7 +1044,7 @@ impl NoteCommitConfig {
                             || "witness LSB",
                             self.advices[6],
                             offset,
-                            || lsb.ok_or(Error::SynthesisError),
+                            || lsb.ok_or(Error::Synthesis),
                         )?;
                         CellValue::new(cell, lsb)
                     };
@@ -1057,7 +1057,7 @@ impl NoteCommitConfig {
                         || "witness k_3",
                         self.advices[9],
                         offset,
-                        || k_3.ok_or(Error::SynthesisError),
+                        || k_3.ok_or(Error::Synthesis),
                     )?;
 
                     lsb
@@ -1129,7 +1129,7 @@ impl NoteCommitConfig {
                         || "b_1",
                         col_r,
                         0,
-                        || gate_cells.b_1.ok_or(Error::SynthesisError),
+                        || gate_cells.b_1.ok_or(Error::Synthesis),
                     )?;
                     CellValue::new(cell, gate_cells.b_1)
                 };
@@ -1156,7 +1156,7 @@ impl NoteCommitConfig {
                         || "d_0",
                         col_m,
                         0,
-                        || gate_cells.d_0.ok_or(Error::SynthesisError),
+                        || gate_cells.d_0.ok_or(Error::Synthesis),
                     )?;
                     CellValue::new(cell, gate_cells.d_0)
                 };
@@ -1200,7 +1200,7 @@ impl NoteCommitConfig {
                         || "g_0",
                         col_m,
                         0,
-                        || gate_cells.g_0.ok_or(Error::SynthesisError),
+                        || gate_cells.g_0.ok_or(Error::Synthesis),
                     )?;
                     CellValue::new(cell, gate_cells.g_0)
                 };
@@ -1227,7 +1227,7 @@ impl NoteCommitConfig {
                         || "h_1",
                         col_r,
                         0,
-                        || gate_cells.h_1.ok_or(Error::SynthesisError),
+                        || gate_cells.h_1.ok_or(Error::Synthesis),
                     )?;
                     CellValue::new(cell, gate_cells.h_1)
                 };

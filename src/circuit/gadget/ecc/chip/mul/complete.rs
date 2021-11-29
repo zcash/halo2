@@ -143,7 +143,7 @@ impl Config {
                     || "z",
                     self.z_complete,
                     row + offset + 2,
-                    || z_val.ok_or(Error::SynthesisError),
+                    || z_val.ok_or(Error::Synthesis),
                 )?;
                 Z(CellValue::new(z_cell, z_val))
             };
@@ -169,7 +169,7 @@ impl Config {
                     || "y_p",
                     self.add_config.y_p,
                     row + offset,
-                    || y_p.ok_or(Error::SynthesisError),
+                    || y_p.ok_or(Error::Synthesis),
                 )?;
                 CellValue::<pallas::Base>::new(y_p_cell, y_p)
             };
