@@ -1,5 +1,8 @@
 use super::{add, CellValue, EccConfig, EccPoint, NonIdentityEccPoint, Var};
-use crate::{circuit::gadget::utilities::copy, constants::T_Q};
+use crate::{
+    circuit::gadget::utilities::{bool_check, copy},
+    constants::T_Q,
+};
 use std::ops::{Deref, Range};
 
 use bigint::U256;
@@ -109,14 +112,18 @@ impl Config {
             //    z_0 = 2 * z_1 + k_0
             // => k_0 = z_0 - 2 * z_1
             let lsb = z_0 - z_1 * pallas::Base::from_u64(2);
-            let one_minus_lsb = Expression::Constant(pallas::Base::one()) - lsb.clone();
 
-            let bool_check = lsb.clone() * one_minus_lsb.clone();
+            let bool_check = bool_check(lsb.clone());
 
             // `lsb` = 0 => (x_p, y_p) = (x, -y)
             // `lsb` = 1 => (x_p, y_p) = (0,0)
-            let lsb_x = (lsb.clone() * x_p.clone()) + one_minus_lsb.clone() * (x_p - base_x);
-            let lsb_y = (lsb * y_p.clone()) + one_minus_lsb * (y_p + base_y);
+            let (lsb_x, lsb_y) = {
+                let one_minus_lsb = Expression::Constant(pallas::Base::one()) - lsb.clone();
+                let lsb_x = (lsb.clone() * x_p.clone()) + one_minus_lsb.clone() * (x_p - base_x);
+                let lsb_y = (lsb * y_p.clone()) + one_minus_lsb * (y_p + base_y);
+
+                (lsb_x, lsb_y)
+            };
 
             std::array::IntoIter::new([
                 ("bool_check", bool_check),

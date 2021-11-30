@@ -32,4 +32,5 @@
 # Circuit constraint helper methods
 
 \BoolCheck:{\texttt{bool\_check}({#1})}
+\RangeCheck:{\texttt{range\_check}({#1, #2})}
 \ShortLookupRangeCheck:{\texttt{short\_lookup\_range\_check}({#1})}

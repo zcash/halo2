@@ -1,5 +1,6 @@
 use super::super::{add, copy, CellValue, EccConfig, EccPoint, Var};
 use super::{COMPLETE_RANGE, X, Y, Z};
+use crate::circuit::gadget::utilities::bool_check;
 
 use halo2::{
     circuit::Region,
@@ -58,9 +59,8 @@ impl Config {
 
                 // k_{i} = z_{i} - 2⋅z_{i+1}
                 let k = z_next - Expression::Constant(pallas::Base::from_u64(2)) * z_prev;
-                let k_minus_one = k.clone() - Expression::Constant(pallas::Base::one());
-                // (k_i) ⋅ (k_i - 1) = 0
-                let bool_check = k.clone() * k_minus_one.clone();
+                // (k_i) ⋅ (1 - k_i) = 0
+                let bool_check = bool_check(k.clone());
 
                 // base_y
                 let base_y = meta.query_advice(self.z_complete, Rotation::cur());
@@ -69,7 +69,10 @@ impl Config {
 
                 // k_i = 0 => y_p = -base_y
                 // k_i = 1 => y_p = base_y
-                let y_switch = k_minus_one * (base_y.clone() + y_p.clone()) + k * (base_y - y_p);
+                let y_switch = {
+                    let one_minus_k = Expression::Constant(pallas::Base::one()) - k.clone();
+                    one_minus_k * (base_y.clone() + y_p.clone()) + k * (base_y - y_p)
+                };
 
                 std::array::IntoIter::new([("bool_check", bool_check), ("y_switch", y_switch)])
                     .map(move |(name, poly)| (name, q_mul_decompose_var.clone() * poly))

@@ -102,7 +102,7 @@ pub fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize>(
 
 /// Checks that an expresssion is either 1 or 0.
 pub fn bool_check<F: FieldExt>(value: Expression<F>) -> Expression<F> {
-    value.clone() * (Expression::Constant(F::one()) - value)
+    range_check(value, 2)
 }
 
 /// Takes a specified subsequence of the little-endian bit representation of a field element.
@@ -131,7 +131,7 @@ pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(field_elem: F, bitrange: Ra
 /// i.e. 0 ≤ word < range.
 pub fn range_check<F: FieldExt>(word: Expression<F>, range: usize) -> Expression<F> {
     (1..range).fold(word.clone(), |acc, i| {
-        acc * (word.clone() - Expression::Constant(F::from_u64(i as u64)))
+        acc * (Expression::Constant(F::from_u64(i as u64)) - word.clone())
     })
 }
 

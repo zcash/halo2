@@ -2,6 +2,7 @@ use std::ops::Deref;
 
 use super::super::{copy, CellValue, EccConfig, NonIdentityEccPoint, Var};
 use super::{INCOMPLETE_HI_RANGE, INCOMPLETE_LO_RANGE, X, Y, Z};
+use crate::circuit::gadget::utilities::bool_check;
 use ff::Field;
 use halo2::{
     circuit::Region,
@@ -133,7 +134,7 @@ impl Config {
             // i from n down to 0. So z_{i+1} corresponds to the `z_prev` query.
             let k = z_cur - z_prev * pallas::Base::from_u64(2);
             // Check booleanity of decomposition.
-            let bool_check = k.clone() * (one.clone() - k.clone());
+            let bool_check = bool_check(k.clone());
 
             // λ_{1,i}⋅(x_{A,i} − x_{P,i}) − y_{A,i} + (2k_i - 1) y_{P,i} = 0
             let gradient_1 = lambda1_cur * (x_a_cur.clone() - x_p_cur) - y_a_cur.clone()
