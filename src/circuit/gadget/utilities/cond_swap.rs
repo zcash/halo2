@@ -1,7 +1,7 @@
-use super::{bool_check, copy, CellValue, UtilitiesInstructions, Var};
+use super::{bool_check, copy, ternary, CellValue, UtilitiesInstructions, Var};
 use halo2::{
     circuit::{Chip, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
 use pasta_curves::arithmetic::FieldExt;
@@ -176,18 +176,13 @@ impl<F: FieldExt> CondSwapChip<F> {
             let b_swapped = meta.query_advice(config.b_swapped, Rotation::cur());
             let swap = meta.query_advice(config.swap, Rotation::cur());
 
-            let one = Expression::Constant(F::one());
-
-            // a_swapped - b ⋅ swap - a ⋅ (1-swap) = 0
             // This checks that `a_swapped` is equal to `b` when `swap` is set,
             // but remains as `a` when `swap` is not set.
-            let a_check =
-                a_swapped - b.clone() * swap.clone() - a.clone() * (one.clone() - swap.clone());
+            let a_check = a_swapped - ternary(swap.clone(), b.clone(), a.clone());
 
-            // b_swapped - a ⋅ swap - b ⋅ (1-swap) = 0
             // This checks that `b_swapped` is equal to `a` when `swap` is set,
             // but remains as `b` when `swap` is not set.
-            let b_check = b_swapped - a * swap.clone() - b * (one - swap.clone());
+            let b_check = b_swapped - ternary(swap.clone(), a, b);
 
             // Check `swap` is boolean.
             let bool_check = bool_check(swap);
