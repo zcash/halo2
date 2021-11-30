@@ -1,6 +1,6 @@
 //! Traits and structs for implementing circuit components.
 
-use std::{fmt, marker::PhantomData};
+use std::{convert::TryInto, fmt, marker::PhantomData};
 
 use ff::Field;
 
@@ -92,6 +92,64 @@ pub struct Cell {
     column: Column<Any>,
 }
 
+/// An assigned cell.
+#[derive(Clone, Debug)]
+pub struct AssignedCell<V, F: Field> {
+    value: Option<V>,
+    cell: Cell,
+    _marker: PhantomData<F>,
+}
+
+impl<V, F: Field> AssignedCell<V, F> {
+    /// Returns the value of the [`AssignedCell`].
+    pub fn value(&self) -> Option<&V> {
+        self.value.as_ref()
+    }
+
+    /// Returns the cell.
+    pub fn cell(&self) -> Cell {
+        self.cell
+    }
+}
+
+impl<V, F: Field> AssignedCell<V, F>
+where
+    for<'v> Assigned<F>: From<&'v V>,
+{
+    /// Returns the field element value of the [`AssignedCell`].
+    pub fn value_field(&self) -> Option<Assigned<F>> {
+        self.value().map(|v| v.into())
+    }
+}
+
+impl<V: Clone, F: Field> AssignedCell<V, F>
+where
+    for<'v> Assigned<F>: From<&'v V>,
+{
+    /// Copies the value to a given advice cell and constrains them to be equal.
+    ///
+    /// Returns an error if either this cell or the given cell are in columns
+    /// where equality has not been enabled.
+    pub fn copy_advice<A, AR>(
+        &self,
+        annotation: A,
+        region: &mut Region<'_, F>,
+        column: Column<Advice>,
+        offset: usize,
+    ) -> Result<Self, Error>
+    where
+        A: Fn() -> AR,
+        AR: Into<String>,
+    {
+        let assigned_cell = region.assign_advice(annotation, column, offset, || {
+            self.value.clone().ok_or(Error::Synthesis)
+        })?;
+        region.constrain_equal(assigned_cell.cell(), self.cell())?;
+
+        Ok(assigned_cell)
+    }
+}
+
 /// A region of the circuit in which a [`Chip`] can assign cells.
 ///
 /// Inside a region, the chip may freely use relative offsets; the [`Layouter`] will
@@ -139,17 +197,28 @@ impl<'r, F: Field> Region<'r, F> {
         column: Column<Advice>,
         offset: usize,
         mut to: V,
-    ) -> Result<Cell, Error>
+    ) -> Result<AssignedCell<VR, F>, Error>
     where
         V: FnMut() -> Result<VR, Error> + 'v,
-        VR: Into<Assigned<F>>,
+        for<'vr> Assigned<F>: From<&'vr VR>,
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        self.region
-            .assign_advice(&|| annotation().into(), column, offset, &mut || {
-                to().map(|v| v.into())
-            })
+        let mut value = None;
+        let cell =
+            self.region
+                .assign_advice(&|| annotation().into(), column, offset, &mut || {
+                    let v = to()?;
+                    let value_f = (&v).into();
+                    value = Some(v);
+                    Ok(value_f)
+                })?;
+
+        Ok(AssignedCell {
+            value,
+            cell,
+            _marker: PhantomData,
+        })
     }
 
     /// Assigns a constant value to the column `advice` at `offset` within this region.
@@ -164,18 +233,24 @@ impl<'r, F: Field> Region<'r, F> {
         column: Column<Advice>,
         offset: usize,
         constant: VR,
-    ) -> Result<Cell, Error>
+    ) -> Result<AssignedCell<VR, F>, Error>
     where
-        VR: Into<Assigned<F>>,
+        for<'vr> Assigned<F>: From<&'vr VR>,
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        self.region.assign_advice_from_constant(
+        let cell = self.region.assign_advice_from_constant(
             &|| annotation().into(),
             column,
             offset,
-            constant.into(),
-        )
+            (&constant).into(),
+        )?;
+
+        Ok(AssignedCell {
+            value: Some(constant),
+            cell,
+            _marker: PhantomData,
+        })
     }
 
     /// Assign the value of the instance column's cell at absolute location
@@ -189,18 +264,24 @@ impl<'r, F: Field> Region<'r, F> {
         row: usize,
         advice: Column<Advice>,
         offset: usize,
-    ) -> Result<(Cell, Option<F>), Error>
+    ) -> Result<AssignedCell<F, F>, Error>
     where
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        self.region.assign_advice_from_instance(
+        let (cell, value) = self.region.assign_advice_from_instance(
             &|| annotation().into(),
             instance,
             row,
             advice,
             offset,
-        )
+        )?;
+
+        Ok(AssignedCell {
+            value,
+            cell,
+            _marker: PhantomData,
+        })
     }
 
     /// Assign a fixed value.
@@ -212,17 +293,28 @@ impl<'r, F: Field> Region<'r, F> {
         column: Column<Fixed>,
         offset: usize,
         mut to: V,
-    ) -> Result<Cell, Error>
+    ) -> Result<AssignedCell<VR, F>, Error>
     where
         V: FnMut() -> Result<VR, Error> + 'v,
-        VR: Into<Assigned<F>>,
+        for<'vr> Assigned<F>: From<&'vr VR>,
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        self.region
-            .assign_fixed(&|| annotation().into(), column, offset, &mut || {
-                to().map(|v| v.into())
-            })
+        let mut value = None;
+        let cell =
+            self.region
+                .assign_fixed(&|| annotation().into(), column, offset, &mut || {
+                    let v = to()?;
+                    let value_f = (&v).into();
+                    value = Some(v);
+                    Ok(value_f)
+                })?;
+
+        Ok(AssignedCell {
+            value,
+            cell,
+            _marker: PhantomData,
+        })
     }
 
     /// Constrains a cell to have a constant value.

@@ -110,7 +110,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
                     region.assign_fixed(|| "b", self.config.sb, 0, || Ok(FF::zero()))?;
                     region.assign_fixed(|| "c", self.config.sc, 0, || Ok(FF::one()))?;
                     region.assign_fixed(|| "a * b", self.config.sm, 0, || Ok(FF::one()))?;
-                    Ok((lhs, rhs, out))
+                    Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )
         }
@@ -152,7 +152,7 @@ fn bench_with_k(name: &str, k: u32, c: &mut Criterion) {
                     region.assign_fixed(|| "b", self.config.sb, 0, || Ok(FF::one()))?;
                     region.assign_fixed(|| "c", self.config.sc, 0, || Ok(FF::one()))?;
                     region.assign_fixed(|| "a * b", self.config.sm, 0, || Ok(FF::zero()))?;
-                    Ok((lhs, rhs, out))
+                    Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )
         }

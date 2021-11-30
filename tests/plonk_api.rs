@@ -41,6 +41,7 @@ fn plonk_api() {
         sl: TableColumn,
     }
 
+    #[allow(clippy::type_complexity)]
     trait StandardCs<FF: FieldExt> {
         fn raw_multiply<F>(
             &self,
@@ -138,7 +139,7 @@ fn plonk_api() {
                     region.assign_fixed(|| "b", self.config.sb, 0, || Ok(FF::zero()))?;
                     region.assign_fixed(|| "c", self.config.sc, 0, || Ok(FF::one()))?;
                     region.assign_fixed(|| "a * b", self.config.sm, 0, || Ok(FF::one()))?;
-                    Ok((lhs, rhs, out))
+                    Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )
         }
@@ -192,7 +193,7 @@ fn plonk_api() {
                     region.assign_fixed(|| "b", self.config.sb, 0, || Ok(FF::one()))?;
                     region.assign_fixed(|| "c", self.config.sc, 0, || Ok(FF::one()))?;
                     region.assign_fixed(|| "a * b", self.config.sm, 0, || Ok(FF::zero()))?;
-                    Ok((lhs, rhs, out))
+                    Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )
         }
@@ -220,7 +221,7 @@ fn plonk_api() {
                     let value = region.assign_advice(|| "value", self.config.a, 0, || f())?;
                     region.assign_fixed(|| "public", self.config.sp, 0, || Ok(FF::one()))?;
 
-                    Ok(value)
+                    Ok(value.cell())
                 },
             )
         }
