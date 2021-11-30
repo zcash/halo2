@@ -216,11 +216,12 @@ impl<F: FieldExt> NumericInstructions<F> for FieldChip<F> {
                 a.0.copy_advice(|| "lhs", &mut region, config.advice[0], 0)?;
                 b.0.copy_advice(|| "rhs", &mut region, config.advice[1], 0)?;
 
-                // Now we can assign the multiplication result into the output position.
+                // Now we can assign the multiplication result, which is to be assigned
+                // into the output position.
                 let value = a.0.value().and_then(|a| b.0.value().map(|b| *a * *b));
 
-                // Finally, we return a variable representing the output,
-                // to be used in another part of the circuit.
+                // Finally, we do the assignment to the output, returning a
+                // variable to be used in another part of the circuit.
                 region
                     .assign_advice(
                         || "lhs * rhs",
