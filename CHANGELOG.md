@@ -19,6 +19,8 @@ and this project adheres to Rust's notion of
     underlying `io::Error`.
 - `halo2::dev::CircuitLayout::render` now takes `k` as a `u32`, matching the
   regular parameter APIs.
+- `halo2::dev::VerifyFailure::ConstraintNotSatisfied` now has a `cell_values`
+  field, storing the values of the cells used in the unsatisfied constraint.
 
 ### Removed
 - `halo2::arithmetic::BatchInvert` (use `ff::BatchInvert` instead).
