@@ -297,10 +297,7 @@ impl&lt;F: FieldExt&gt; FieldChip&lt;F&gt; {
 <h2 id="implement-chip-traits"><a class="header" href="#implement-chip-traits">Implement chip traits</a></h2>
 <pre><code class="language-rust ignore no_run">/// A variable representing a number.
 #[derive(Clone)]
-struct Number&lt;F: FieldExt&gt; {
-    cell: Cell,
-    value: Option&lt;F&gt;,
-}
+struct Number&lt;F: FieldExt&gt;(AssignedCell&lt;F, F&gt;);
 
 impl&lt;F: FieldExt&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
     type Num = Number&lt;F&gt;;
@@ -312,21 +309,19 @@ impl&lt;F: FieldExt&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
     ) -&gt; Result&lt;Self::Num, Error&gt; {
         let config = self.config();
 
-        let mut num = None;
         layouter.assign_region(
             || &quot;load private&quot;,
             |mut region| {
-                let cell = region.assign_advice(
-                    || &quot;private input&quot;,
-                    config.advice[0],
-                    0,
-                    || value.ok_or(Error::Synthesis),
-                )?;
-                num = Some(Number { cell, value });
-                Ok(())
+                region
+                    .assign_advice(
+                        || &quot;private input&quot;,
+                        config.advice[0],
+                        0,
+                        || value.ok_or(Error::Synthesis),
+                    )
+                    .map(Number)
             },
-        )?;
-        Ok(num.unwrap())
+        )
     }
 
     fn load_constant(
@@ -336,24 +331,14 @@ impl&lt;F: FieldExt&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
     ) -&gt; Result&lt;Self::Num, Error&gt; {
         let config = self.config();
 
-        let mut num = None;
         layouter.assign_region(
             || &quot;load constant&quot;,
             |mut region| {
-                let cell = region.assign_advice_from_constant(
-                    || &quot;constant value&quot;,
-                    config.advice[0],
-                    0,
-                    constant,
-                )?;
-                num = Some(Number {
-                    cell,
-                    value: Some(constant),
-                });
-                Ok(())
+                region
+                    .assign_advice_from_constant(|| &quot;constant value&quot;, config.advice[0], 0, constant)
+                    .map(Number)
             },
-        )?;
-        Ok(num.unwrap())
+        )
     }
 
     fn mul(
@@ -364,7 +349,6 @@ impl&lt;F: FieldExt&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
     ) -&gt; Result&lt;Self::Num, Error&gt; {
         let config = self.config();
 
-        let mut out = None;
         layouter.assign_region(
             || &quot;mul&quot;,
             |mut region: Region&lt;'_, F&gt;| {
@@ -377,38 +361,25 @@ impl&lt;F: FieldExt&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
                 // but we can only rely on relative offsets inside this region. So we
                 // assign new cells inside the region and constrain them to have the
                 // same values as the inputs.
-                let lhs = region.assign_advice(
-                    || &quot;lhs&quot;,
-                    config.advice[0],
-                    0,
-                    || a.value.ok_or(Error::Synthesis),
-                )?;
-                let rhs = region.assign_advice(
-                    || &quot;rhs&quot;,
-                    config.advice[1],
-                    0,
-                    || b.value.ok_or(Error::Synthesis),
-                )?;
-                region.constrain_equal(a.cell, lhs)?;
-                region.constrain_equal(b.cell, rhs)?;
+                a.0.copy_advice(|| &quot;lhs&quot;, &amp;mut region, config.advice[0], 0)?;
+                b.0.copy_advice(|| &quot;rhs&quot;, &amp;mut region, config.advice[1], 0)?;
 
-                // Now we can assign the multiplication result into the output position.
-                let value = a.value.and_then(|a| b.value.map(|b| a * b));
-                let cell = region.assign_advice(
-                    || &quot;lhs * rhs&quot;,
-                    config.advice[0],
-                    1,
-                    || value.ok_or(Error::Synthesis),
-                )?;
+                // Now we can assign the multiplication result, which is to be assigned
+                // into the output position.
+                let value = a.0.value().and_then(|a| b.0.value().map(|b| *a * *b));
 
-                // Finally, we return a variable representing the output,
-                // to be used in another part of the circuit.
-                out = Some(Number { cell, value });
-                Ok(())
+                // Finally, we do the assignment to the output, returning a
+                // variable to be used in another part of the circuit.
+                region
+                    .assign_advice(
+                        || &quot;lhs * rhs&quot;,
+                        config.advice[0],
+                        1,
+                        || value.ok_or(Error::Synthesis),
+                    )
+                    .map(Number)
             },
-        )?;
-
-        Ok(out.unwrap())
+        )
     }
 
     fn expose_public(
@@ -419,7 +390,7 @@ impl&lt;F: FieldExt&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
     ) -&gt; Result&lt;(), Error&gt; {
         let config = self.config();
 
-        layouter.constrain_instance(num.cell, config.instance, row)
+        layouter.constrain_instance(num.0.cell(), config.instance, row)
     }
 }
 </code></pre>

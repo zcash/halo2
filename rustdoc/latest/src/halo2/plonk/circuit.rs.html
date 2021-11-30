@@ -1572,6 +1572,12 @@
 <span id="1556">1556</span>
 <span id="1557">1557</span>
 <span id="1558">1558</span>
+<span id="1559">1559</span>
+<span id="1560">1560</span>
+<span id="1561">1561</span>
+<span id="1562">1562</span>
+<span id="1563">1563</span>
+<span id="1564">1564</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">core::cmp::max</span>;
 <span class="kw">use</span> <span class="ident">core::ops</span>::{<span class="ident">Add</span>, <span class="ident">Mul</span>};
 <span class="kw">use</span> <span class="ident">ff::Field</span>;
@@ -1877,6 +1883,12 @@
     <span class="ident">Trivial</span>(<span class="ident">F</span>),
     <span class="doccomment">/// A value stored as a fraction to enable batch inversion.</span>
     <span class="ident">Rational</span>(<span class="ident">F</span>, <span class="ident">F</span>),
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">numerator</span>: <span class="kw-2">&amp;</span><span class="ident">F</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident">Assigned::Trivial</span>(<span class="kw-2">*</span><span class="ident">numerator</span>)
+    }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
