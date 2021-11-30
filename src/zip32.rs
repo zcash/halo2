@@ -6,6 +6,7 @@ use std::{
 };
 
 use blake2b_simd::Params as Blake2bParams;
+use subtle::{Choice, ConstantTimeEq};
 
 use crate::{
     keys::{FullViewingKey, SpendingKey},
@@ -99,6 +100,16 @@ pub(crate) struct ExtendedSpendingKey {
     child_index: ChildIndex,
     chain_code: ChainCode,
     sk: SpendingKey,
+}
+
+impl ConstantTimeEq for ExtendedSpendingKey {
+    fn ct_eq(&self, rhs: &Self) -> Choice {
+        self.depth.ct_eq(&rhs.depth)
+            & self.parent_fvk_tag.0.ct_eq(&rhs.parent_fvk_tag.0)
+            & self.child_index.0.ct_eq(&rhs.child_index.0)
+            & self.chain_code.0.ct_eq(&rhs.chain_code.0)
+            & self.sk.ct_eq(&rhs.sk)
+    }
 }
 
 impl std::cmp::PartialEq for ExtendedSpendingKey {

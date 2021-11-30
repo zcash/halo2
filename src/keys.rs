@@ -35,6 +35,12 @@ const ZIP32_PURPOSE: u32 = 32;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SpendingKey([u8; 32]);
 
+impl ConstantTimeEq for SpendingKey {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        self.to_bytes().ct_eq(other.to_bytes())
+    }
+}
+
 impl SpendingKey {
     /// Generates a random spending key.
     ///
