@@ -105,6 +105,14 @@ pub fn bool_check<F: FieldExt>(value: Expression<F>) -> Expression<F> {
     range_check(value, 2)
 }
 
+/// If `a` then `b`, else `c`. Returns (a * b) + (1 - a) * c.
+///
+/// `a` must be a boolean-constrained expression.
+pub fn ternary<F: FieldExt>(a: Expression<F>, b: Expression<F>, c: Expression<F>) -> Expression<F> {
+    let one_minus_a = Expression::Constant(F::one()) - a.clone();
+    a * b + one_minus_a * c
+}
+
 /// Takes a specified subsequence of the little-endian bit representation of a field element.
 /// The bits are numbered from 0 for the LSB.
 pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(field_elem: F, bitrange: Range<usize>) -> F {
