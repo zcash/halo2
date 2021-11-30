@@ -112,16 +112,6 @@ impl ConstantTimeEq for ExtendedSpendingKey {
     }
 }
 
-impl std::cmp::PartialEq for ExtendedSpendingKey {
-    fn eq(&self, rhs: &ExtendedSpendingKey) -> bool {
-        self.depth == rhs.depth
-            && self.parent_fvk_tag == rhs.parent_fvk_tag
-            && self.child_index == rhs.child_index
-            && self.chain_code == rhs.chain_code
-            && self.sk == rhs.sk
-    }
-}
-
 #[allow(non_snake_case)]
 impl ExtendedSpendingKey {
     /// Returns the spending key of the child key corresponding to
@@ -240,16 +230,17 @@ mod tests {
         let xsk_m = ExtendedSpendingKey::master(&seed).unwrap();
 
         let xsk_5h = xsk_m.derive_child(5.try_into().unwrap()).unwrap();
-        assert_eq!(
-            ExtendedSpendingKey::from_path(&seed, &[5.try_into().unwrap()]).unwrap(),
-            xsk_5h
-        );
+        assert!(bool::from(
+            ExtendedSpendingKey::from_path(&seed, &[5.try_into().unwrap()])
+                .unwrap()
+                .ct_eq(&xsk_5h)
+        ));
 
         let xsk_5h_7 = xsk_5h.derive_child(7.try_into().unwrap()).unwrap();
-        assert_eq!(
+        assert!(bool::from(
             ExtendedSpendingKey::from_path(&seed, &[5.try_into().unwrap(), 7.try_into().unwrap()])
-                .unwrap(),
-            xsk_5h_7
-        );
+                .unwrap()
+                .ct_eq(&xsk_5h_7)
+        ));
     }
 }
