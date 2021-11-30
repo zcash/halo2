@@ -1,6 +1,6 @@
 use super::{add, CellValue, EccConfig, EccPoint, NonIdentityEccPoint, Var};
 use crate::{
-    circuit::gadget::utilities::{bool_check, copy},
+    circuit::gadget::utilities::{bool_check, copy, ternary},
     constants::T_Q,
 };
 use std::ops::{Deref, Range};
@@ -10,7 +10,7 @@ use ff::PrimeField;
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Layouter, Region},
-    plonk::{ConstraintSystem, Error, Expression, Selector},
+    plonk::{ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
 
@@ -117,13 +117,8 @@ impl Config {
 
             // `lsb` = 0 => (x_p, y_p) = (x, -y)
             // `lsb` = 1 => (x_p, y_p) = (0,0)
-            let (lsb_x, lsb_y) = {
-                let one_minus_lsb = Expression::Constant(pallas::Base::one()) - lsb.clone();
-                let lsb_x = (lsb.clone() * x_p.clone()) + one_minus_lsb.clone() * (x_p - base_x);
-                let lsb_y = (lsb * y_p.clone()) + one_minus_lsb * (y_p + base_y);
-
-                (lsb_x, lsb_y)
-            };
+            let lsb_x = ternary(lsb.clone(), x_p.clone(), x_p - base_x);
+            let lsb_y = ternary(lsb, y_p.clone(), y_p + base_y);
 
             std::array::IntoIter::new([
                 ("bool_check", bool_check),
