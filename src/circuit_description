@@ -7524,6 +7524,49 @@ PinnedVerificationKey {
                 Sum(
                     Product(
                         Sum(
+                            Advice {
+                                query_index: 10,
+                                column_index: 9,
+                                rotation: Rotation(
+                                    1,
+                                ),
+                            },
+                            Negated(
+                                Product(
+                                    Constant(
+                                        0x0000000000000000000000000000000000000000000000000000000000000002,
+                                    ),
+                                    Advice {
+                                        query_index: 11,
+                                        column_index: 9,
+                                        rotation: Rotation(
+                                            -1,
+                                        ),
+                                    },
+                                ),
+                            ),
+                        ),
+                        Sum(
+                            Advice {
+                                query_index: 9,
+                                column_index: 9,
+                                rotation: Rotation(
+                                    0,
+                                ),
+                            },
+                            Negated(
+                                Advice {
+                                    query_index: 21,
+                                    column_index: 1,
+                                    rotation: Rotation(
+                                        -1,
+                                    ),
+                                },
+                            ),
+                        ),
+                    ),
+                    Product(
+                        Sum(
                             Constant(
                                 0x0000000000000000000000000000000000000000000000000000000000000001,
                             ),
@@ -7568,49 +7611,6 @@ PinnedVerificationKey {
                                     -1,
                                 ),
                             },
-                        ),
-                    ),
-                    Product(
-                        Sum(
-                            Advice {
-                                query_index: 10,
-                                column_index: 9,
-                                rotation: Rotation(
-                                    1,
-                                ),
-                            },
-                            Negated(
-                                Product(
-                                    Constant(
-                                        0x0000000000000000000000000000000000000000000000000000000000000002,
-                                    ),
-                                    Advice {
-                                        query_index: 11,
-                                        column_index: 9,
-                                        rotation: Rotation(
-                                            -1,
-                                        ),
-                                    },
-                                ),
-                            ),
-                        ),
-                        Sum(
-                            Advice {
-                                query_index: 9,
-                                column_index: 9,
-                                rotation: Rotation(
-                                    0,
-                                ),
-                            },
-                            Negated(
-                                Advice {
-                                    query_index: 21,
-                                    column_index: 1,
-                                    rotation: Rotation(
-                                        -1,
-                                    ),
-                                },
-                            ),
                         ),
                     ),
                 ),

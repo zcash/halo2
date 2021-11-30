@@ -1,6 +1,6 @@
 use super::super::{add, copy, CellValue, EccConfig, EccPoint, Var};
 use super::{COMPLETE_RANGE, X, Y, Z};
-use crate::circuit::gadget::utilities::bool_check;
+use crate::circuit::gadget::utilities::{bool_check, ternary};
 
 use halo2::{
     circuit::Region,
@@ -69,10 +69,7 @@ impl Config {
 
                 // k_i = 0 => y_p = -base_y
                 // k_i = 1 => y_p = base_y
-                let y_switch = {
-                    let one_minus_k = Expression::Constant(pallas::Base::one()) - k.clone();
-                    one_minus_k * (base_y.clone() + y_p.clone()) + k * (base_y - y_p)
-                };
+                let y_switch = ternary(k, base_y.clone() - y_p.clone(), base_y + y_p);
 
                 std::array::IntoIter::new([("bool_check", bool_check), ("y_switch", y_switch)])
                     .map(move |(name, poly)| (name, q_mul_decompose_var.clone() * poly))
