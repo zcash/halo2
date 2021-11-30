@@ -145,9 +145,9 @@ pub struct EccConfig {
     add: add::Config,
 
     /// Variable-base scalar multiplication (hi half)
-    pub q_mul_hi: (Selector, Selector, Selector),
+    mul_hi: mul::incomplete::Config<{ mul::INCOMPLETE_HI_LEN }>,
     /// Variable-base scalar multiplication (lo half)
-    pub q_mul_lo: (Selector, Selector, Selector),
+    mul_lo: mul::incomplete::Config<{ mul::INCOMPLETE_LO_LEN }>,
     /// Selector used to enforce boolean decomposition in variable-base scalar mul
     pub q_mul_decompose_var: Selector,
     /// Selector used to enforce switching logic on LSB in variable-base scalar mul
@@ -253,14 +253,23 @@ impl EccChip {
             advices[6], advices[7], advices[8],
         );
 
+        // Components of mul::Config
+        // TODO: Move this into mul::Config.
+        let mul_hi = mul::incomplete::Config::configure(
+            meta, advices[9], advices[3], advices[0], advices[1], advices[4], advices[5],
+        );
+        let mul_lo = mul::incomplete::Config::configure(
+            meta, advices[6], advices[7], advices[0], advices[1], advices[8], advices[2],
+        );
+
         let config = EccConfig {
             advices,
             lagrange_coeffs,
             fixed_z: meta.fixed_column(),
             add_incomplete,
             add,
-            q_mul_hi: (meta.selector(), meta.selector(), meta.selector()),
-            q_mul_lo: (meta.selector(), meta.selector(), meta.selector()),
+            mul_hi,
+            mul_lo,
             q_mul_decompose_var: meta.selector(),
             q_mul_overflow: meta.selector(),
             q_mul_lsb: meta.selector(),

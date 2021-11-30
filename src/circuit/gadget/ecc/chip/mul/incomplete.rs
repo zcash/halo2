@@ -1,7 +1,5 @@
-use std::ops::Deref;
-
-use super::super::{copy, CellValue, EccConfig, NonIdentityEccPoint, Var};
-use super::{INCOMPLETE_HI_RANGE, INCOMPLETE_LO_RANGE, X, Y, Z};
+use super::super::{copy, CellValue, NonIdentityEccPoint, Var};
+use super::{X, Y, Z};
 use crate::circuit::gadget::utilities::bool_check;
 use ff::Field;
 use halo2::{
@@ -12,10 +10,8 @@ use halo2::{
 
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
-#[derive(Copy, Clone)]
-pub(super) struct Config {
-    // Number of bits covered by this incomplete range.
-    num_bits: usize,
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) struct Config<const NUM_BITS: usize> {
     // Selectors used to constrain the cells used in incomplete addition.
     pub(super) q_mul: (Selector, Selector, Selector),
     // Cumulative sum used to decompose the scalar.
@@ -32,61 +28,37 @@ pub(super) struct Config {
     pub(super) lambda2: Column<Advice>,
 }
 
-// Columns used in processing the `hi` bits of the scalar.
-// `x_p, y_p` are shared across the `hi` and `lo` halves.
-pub(super) struct HiConfig(Config);
-impl From<&EccConfig> for HiConfig {
-    fn from(ecc_config: &EccConfig) -> Self {
-        let config = Config {
-            num_bits: INCOMPLETE_HI_RANGE.len(),
-            q_mul: ecc_config.q_mul_hi,
-            x_p: ecc_config.advices[0],
-            y_p: ecc_config.advices[1],
-            z: ecc_config.advices[9],
-            x_a: ecc_config.advices[3],
-            lambda1: ecc_config.advices[4],
-            lambda2: ecc_config.advices[5],
+impl<const NUM_BITS: usize> Config<NUM_BITS> {
+    // TODO: Make this pub(super).
+    pub(crate) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        z: Column<Advice>,
+        x_a: Column<Advice>,
+        x_p: Column<Advice>,
+        y_p: Column<Advice>,
+        lambda1: Column<Advice>,
+        lambda2: Column<Advice>,
+    ) -> Self {
+        meta.enable_equality(z.into());
+        meta.enable_equality(lambda1.into());
+
+        let config = Self {
+            q_mul: (meta.selector(), meta.selector(), meta.selector()),
+            z,
+            x_a,
+            x_p,
+            y_p,
+            lambda1,
+            lambda2,
         };
-        Self(config)
-    }
-}
-impl Deref for HiConfig {
-    type Target = Config;
 
-    fn deref(&self) -> &Config {
-        &self.0
-    }
-}
+        config.create_gate(meta);
 
-// Columns used in processing the `lo` bits of the scalar.
-// `x_p, y_p` are shared across the `hi` and `lo` halves.
-pub(super) struct LoConfig(Config);
-impl From<&EccConfig> for LoConfig {
-    fn from(ecc_config: &EccConfig) -> Self {
-        let config = Config {
-            num_bits: INCOMPLETE_LO_RANGE.len(),
-            q_mul: ecc_config.q_mul_lo,
-            x_p: ecc_config.advices[0],
-            y_p: ecc_config.advices[1],
-            z: ecc_config.advices[6],
-            x_a: ecc_config.advices[7],
-            lambda1: ecc_config.advices[8],
-            lambda2: ecc_config.advices[2],
-        };
-        Self(config)
+        config
     }
-}
-impl Deref for LoConfig {
-    type Target = Config;
 
-    fn deref(&self) -> &Config {
-        &self.0
-    }
-}
-
-impl Config {
     // Gate for incomplete addition part of variable-base scalar multiplication.
-    pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // Closure to compute x_{R,i} = λ_{1,i}^2 - x_{A,i} - x_{P,i}
         let x_r = |meta: &mut VirtualCells<pallas::Base>, rotation: Rotation| {
             let x_a = meta.query_advice(self.x_a, rotation);
@@ -216,7 +188,7 @@ impl Config {
         acc: (X<pallas::Base>, Y<pallas::Base>, Z<pallas::Base>),
     ) -> Result<(X<pallas::Base>, Y<pallas::Base>, Vec<Z<pallas::Base>>), Error> {
         // Check that we have the correct number of bits for this double-and-add.
-        assert_eq!(bits.len(), self.num_bits);
+        assert_eq!(bits.len(), NUM_BITS);
 
         // Handle exceptional cases
         let (x_p, y_p) = (base.x.value(), base.y.value());
@@ -241,12 +213,12 @@ impl Config {
 
             let offset = offset + 1;
             // q_mul_2 = 1 on all rows after offset 0, excluding the last row.
-            for idx in 0..(self.num_bits - 1) {
+            for idx in 0..(NUM_BITS - 1) {
                 self.q_mul.1.enable(region, offset + idx)?;
             }
 
             // q_mul_3 = 1 on the last row.
-            self.q_mul.2.enable(region, offset + self.num_bits - 1)?;
+            self.q_mul.2.enable(region, offset + NUM_BITS - 1)?;
         }
 
         // Initialise double-and-add
@@ -361,7 +333,7 @@ impl Config {
             let cell = region.assign_advice(
                 || "y_a",
                 self.lambda1,
-                offset + self.num_bits,
+                offset + NUM_BITS,
                 || y_a.ok_or(Error::Synthesis),
             )?;
             CellValue::new(cell, y_a)

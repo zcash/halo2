@@ -17,7 +17,8 @@ use halo2::{
 use pasta_curves::pallas;
 
 mod complete;
-mod incomplete;
+// TODO: Undo this pub(crate).
+pub(crate) mod incomplete;
 mod overflow;
 
 /// Number of bits for which complete addition needs to be used in variable-base
@@ -33,10 +34,12 @@ const INCOMPLETE_RANGE: Range<usize> = 0..INCOMPLETE_LEN;
 // (It is a coincidence that k_{130} matches the boundary of the
 // overflow check described in [the book](https://zcash.github.io/halo2/design/gadgets/ecc/var-base-scalar-mul.html#overflow-check).)
 const INCOMPLETE_HI_RANGE: Range<usize> = 0..(INCOMPLETE_LEN / 2);
+pub const INCOMPLETE_HI_LEN: usize = INCOMPLETE_LEN / 2;
 
 // Bits k_{254} to k_{4} inclusive are used in incomplete addition.
 // The `lo` half is k_{129} to k_{4} inclusive (length 126 bits).
 const INCOMPLETE_LO_RANGE: Range<usize> = (INCOMPLETE_LEN / 2)..INCOMPLETE_LEN;
+pub const INCOMPLETE_LO_LEN: usize = (INCOMPLETE_LEN / 2) + 1;
 
 // Bits k_{3} to k_{1} inclusive are used in complete addition.
 // Bit k_{0} is handled separately.
@@ -48,9 +51,9 @@ pub struct Config {
     // Configuration used in complete addition
     add_config: add::Config,
     // Configuration used for `hi` bits of the scalar
-    hi_config: incomplete::HiConfig,
+    hi_config: incomplete::Config<INCOMPLETE_HI_LEN>,
     // Configuration used for `lo` bits of the scalar
-    lo_config: incomplete::LoConfig,
+    lo_config: incomplete::Config<INCOMPLETE_LO_LEN>,
     // Configuration used for complete addition part of double-and-add algorithm
     complete_config: complete::Config,
     // Configuration used to check for overflow
@@ -62,8 +65,8 @@ impl From<&EccConfig> for Config {
         let config = Self {
             q_mul_lsb: ecc_config.q_mul_lsb,
             add_config: ecc_config.add,
-            hi_config: ecc_config.into(),
-            lo_config: ecc_config.into(),
+            hi_config: ecc_config.mul_hi,
+            lo_config: ecc_config.mul_lo,
             complete_config: ecc_config.into(),
             overflow_config: ecc_config.into(),
         };
@@ -81,13 +84,23 @@ impl From<&EccConfig> for Config {
         // z and lambda1 are assigned on the same row as the add_config output.
         // Therefore, z and lambda1 must not overlap with add_config.x_qr, add_config.y_qr.
         let add_config_outputs = config.add_config.output_columns();
-        for config in [&(*config.hi_config), &(*config.lo_config)].iter() {
+        {
             assert!(
-                !add_config_outputs.contains(&config.z),
+                !add_config_outputs.contains(&config.hi_config.z),
                 "incomplete config z cannot overlap with complete addition columns."
             );
             assert!(
-                !add_config_outputs.contains(&config.lambda1),
+                !add_config_outputs.contains(&config.hi_config.lambda1),
+                "incomplete config lambda1 cannot overlap with complete addition columns."
+            );
+        }
+        {
+            assert!(
+                !add_config_outputs.contains(&config.lo_config.z),
+                "incomplete config z cannot overlap with complete addition columns."
+            );
+            assert!(
+                !add_config_outputs.contains(&config.lo_config.lambda1),
                 "incomplete config lambda1 cannot overlap with complete addition columns."
             );
         }
@@ -98,8 +111,6 @@ impl From<&EccConfig> for Config {
 
 impl Config {
     pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
-        self.hi_config.create_gate(meta);
-        self.lo_config.create_gate(meta);
         self.complete_config.create_gate(meta);
         self.overflow_config.create_gate(meta);
 
