@@ -139,7 +139,7 @@ pub struct EccConfig {
     pub fixed_z: Column<Fixed>,
 
     /// Incomplete addition
-    pub q_add_incomplete: Selector,
+    add_incomplete: add_incomplete::Config,
 
     /// Complete addition
     pub q_add: Selector,
@@ -249,12 +249,15 @@ impl EccChip {
 
         // Create witness point gate
         let witness_point = witness_point::Config::configure(meta, advices[0], advices[1]);
+        // Create incomplete point addition gate
+        let add_incomplete =
+            add_incomplete::Config::configure(meta, advices[0], advices[1], advices[2], advices[3]);
 
         let config = EccConfig {
             advices,
             lagrange_coeffs,
             fixed_z: meta.fixed_column(),
-            q_add_incomplete: meta.selector(),
+            add_incomplete,
             q_add: meta.selector(),
             q_mul_hi: (meta.selector(), meta.selector(), meta.selector()),
             q_mul_lo: (meta.selector(), meta.selector(), meta.selector()),
@@ -269,12 +272,6 @@ impl EccChip {
             lookup_config: range_check,
             running_sum_config,
         };
-
-        // Create incomplete point addition gate
-        {
-            let config: add_incomplete::Config = (&config).into();
-            config.create_gate(meta);
-        }
 
         // Create complete point addition gate
         {
@@ -432,7 +429,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
         a: &Self::NonIdentityPoint,
         b: &Self::NonIdentityPoint,
     ) -> Result<Self::NonIdentityPoint, Error> {
-        let config: add_incomplete::Config = self.config().into();
+        let config = self.config().add_incomplete;
         layouter.assign_region(
             || "incomplete point addition",
             |mut region| config.assign_region(a, b, 0, &mut region),

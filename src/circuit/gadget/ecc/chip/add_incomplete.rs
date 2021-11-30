@@ -1,6 +1,6 @@
 use std::{array, collections::HashSet};
 
-use super::{copy, CellValue, EccConfig, NonIdentityEccPoint, Var};
+use super::{copy, CellValue, NonIdentityEccPoint, Var};
 use group::Curve;
 use halo2::{
     circuit::Region,
@@ -9,7 +9,7 @@ use halo2::{
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Config {
     q_add_incomplete: Selector,
     // x-coordinate of P in P + Q = R
@@ -22,24 +22,37 @@ pub struct Config {
     pub y_qr: Column<Advice>,
 }
 
-impl From<&EccConfig> for Config {
-    fn from(ecc_config: &EccConfig) -> Self {
-        Self {
-            q_add_incomplete: ecc_config.q_add_incomplete,
-            x_p: ecc_config.advices[0],
-            y_p: ecc_config.advices[1],
-            x_qr: ecc_config.advices[2],
-            y_qr: ecc_config.advices[3],
-        }
-    }
-}
-
 impl Config {
+    pub(super) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        x_p: Column<Advice>,
+        y_p: Column<Advice>,
+        x_qr: Column<Advice>,
+        y_qr: Column<Advice>,
+    ) -> Self {
+        meta.enable_equality(x_p.into());
+        meta.enable_equality(y_p.into());
+        meta.enable_equality(x_qr.into());
+        meta.enable_equality(y_qr.into());
+
+        let config = Self {
+            q_add_incomplete: meta.selector(),
+            x_p,
+            y_p,
+            x_qr,
+            y_qr,
+        };
+
+        config.create_gate(meta);
+
+        config
+    }
+
     pub(crate) fn advice_columns(&self) -> HashSet<Column<Advice>> {
         core::array::IntoIter::new([self.x_p, self.y_p, self.x_qr, self.y_qr]).collect()
     }
 
-    pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("incomplete addition gates", |meta| {
             let q_add_incomplete = meta.query_selector(self.q_add_incomplete);
             let x_p = meta.query_advice(self.x_p, Rotation::cur());

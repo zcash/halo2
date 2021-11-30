@@ -108,7 +108,7 @@ impl<const NUM_WINDOWS: usize> From<&EccConfig> for Config<NUM_WINDOWS> {
             window: ecc_config.advices[4],
             u: ecc_config.advices[5],
             add_config: ecc_config.into(),
-            add_incomplete_config: ecc_config.into(),
+            add_incomplete_config: ecc_config.add_incomplete,
         };
 
         // Check relationships between this config and `add_config`.
