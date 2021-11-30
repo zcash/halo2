@@ -24,7 +24,7 @@ impl From<&EccConfig> for Config {
         let config = Self {
             q_mul_decompose_var: ecc_config.q_mul_decompose_var,
             z_complete: ecc_config.advices[9],
-            add_config: ecc_config.into(),
+            add_config: ecc_config.add,
         };
 
         let add_config_advices = config.add_config.advice_columns();

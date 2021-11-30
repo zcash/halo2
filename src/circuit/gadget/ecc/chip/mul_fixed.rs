@@ -107,7 +107,7 @@ impl<const NUM_WINDOWS: usize> From<&EccConfig> for Config<NUM_WINDOWS> {
             y_p: ecc_config.advices[1],
             window: ecc_config.advices[4],
             u: ecc_config.advices[5],
-            add_config: ecc_config.into(),
+            add_config: ecc_config.add,
             add_incomplete_config: ecc_config.add_incomplete,
         };
 

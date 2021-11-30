@@ -142,7 +142,7 @@ pub struct EccConfig {
     add_incomplete: add_incomplete::Config,
 
     /// Complete addition
-    pub q_add: Selector,
+    add: add::Config,
 
     /// Variable-base scalar multiplication (hi half)
     pub q_mul_hi: (Selector, Selector, Selector),
@@ -214,12 +214,6 @@ impl EccChip {
     ) -> <Self as Chip<pallas::Base>>::Config {
         // The following columns need to be equality-enabled for their use in sub-configs:
         //
-        // add::Config and add_incomplete::Config:
-        // - advices[0]: x_p,
-        // - advices[1]: y_p,
-        // - advices[2]: x_qr,
-        // - advices[3]: y_qr,
-        //
         // mul_fixed::Config:
         // - advices[4]: window
         // - advices[5]: u
@@ -253,12 +247,18 @@ impl EccChip {
         let add_incomplete =
             add_incomplete::Config::configure(meta, advices[0], advices[1], advices[2], advices[3]);
 
+        // Create complete point addition gate
+        let add = add::Config::configure(
+            meta, advices[0], advices[1], advices[2], advices[3], advices[4], advices[5],
+            advices[6], advices[7], advices[8],
+        );
+
         let config = EccConfig {
             advices,
             lagrange_coeffs,
             fixed_z: meta.fixed_column(),
             add_incomplete,
-            q_add: meta.selector(),
+            add,
             q_mul_hi: (meta.selector(), meta.selector(), meta.selector()),
             q_mul_lo: (meta.selector(), meta.selector(), meta.selector()),
             q_mul_decompose_var: meta.selector(),
@@ -272,12 +272,6 @@ impl EccChip {
             lookup_config: range_check,
             running_sum_config,
         };
-
-        // Create complete point addition gate
-        {
-            let add_config: add::Config = (&config).into();
-            add_config.create_gate(meta);
-        }
 
         // Create variable-base scalar mul gates
         {
@@ -442,7 +436,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
         a: &A,
         b: &B,
     ) -> Result<Self::Point, Error> {
-        let config: add::Config = self.config().into();
+        let config = self.config().add;
         layouter.assign_region(
             || "complete point addition",
             |mut region| {

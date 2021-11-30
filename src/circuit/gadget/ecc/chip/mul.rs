@@ -61,7 +61,7 @@ impl From<&EccConfig> for Config {
     fn from(ecc_config: &EccConfig) -> Self {
         let config = Self {
             q_mul_lsb: ecc_config.q_mul_lsb,
-            add_config: ecc_config.into(),
+            add_config: ecc_config.add,
             hi_config: ecc_config.into(),
             lo_config: ecc_config.into(),
             complete_config: ecc_config.into(),
