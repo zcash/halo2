@@ -1,27 +1,30 @@
-use super::{add, CellValue, EccConfig, EccPoint, NonIdentityEccPoint, Var};
+use super::{add, CellValue, EccPoint, NonIdentityEccPoint, Var};
 use crate::{
-    circuit::gadget::utilities::{bool_check, copy, ternary},
+    circuit::gadget::utilities::{
+        bool_check, copy, lookup_range_check::LookupRangeCheckConfig, ternary,
+    },
     constants::T_Q,
+    primitives::sinsemilla,
 };
-use std::ops::{Deref, Range};
+use std::{
+    convert::TryInto,
+    ops::{Deref, Range},
+};
 
 use bigint::U256;
 use ff::PrimeField;
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Layouter, Region},
-    plonk::{ConstraintSystem, Error, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
 
 use pasta_curves::pallas;
 
-// TODO: Undo this pub(crate).
-pub(crate) mod complete;
-// TODO: Undo this pub(crate).
-pub(crate) mod incomplete;
-// TODO: Undo this pub(crate).
-pub(crate) mod overflow;
+mod complete;
+mod incomplete;
+mod overflow;
 
 /// Number of bits for which complete addition needs to be used in variable-base
 /// scalar multiplication
@@ -36,17 +39,18 @@ const INCOMPLETE_RANGE: Range<usize> = 0..INCOMPLETE_LEN;
 // (It is a coincidence that k_{130} matches the boundary of the
 // overflow check described in [the book](https://zcash.github.io/halo2/design/gadgets/ecc/var-base-scalar-mul.html#overflow-check).)
 const INCOMPLETE_HI_RANGE: Range<usize> = 0..(INCOMPLETE_LEN / 2);
-pub const INCOMPLETE_HI_LEN: usize = INCOMPLETE_LEN / 2;
+const INCOMPLETE_HI_LEN: usize = INCOMPLETE_LEN / 2;
 
 // Bits k_{254} to k_{4} inclusive are used in incomplete addition.
 // The `lo` half is k_{129} to k_{4} inclusive (length 126 bits).
 const INCOMPLETE_LO_RANGE: Range<usize> = (INCOMPLETE_LEN / 2)..INCOMPLETE_LEN;
-pub const INCOMPLETE_LO_LEN: usize = (INCOMPLETE_LEN / 2) + 1;
+const INCOMPLETE_LO_LEN: usize = (INCOMPLETE_LEN / 2) + 1;
 
 // Bits k_{3} to k_{1} inclusive are used in complete addition.
 // Bit k_{0} is handled separately.
 const COMPLETE_RANGE: Range<usize> = INCOMPLETE_LEN..(INCOMPLETE_LEN + NUM_COMPLETE_BITS);
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
     // Selector used to check switching logic on LSB
     q_mul_lsb: Selector,
@@ -62,16 +66,33 @@ pub struct Config {
     overflow_config: overflow::Config,
 }
 
-impl From<&EccConfig> for Config {
-    fn from(ecc_config: &EccConfig) -> Self {
+impl Config {
+    pub(super) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        add_config: add::Config,
+        lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+        advices: [Column<Advice>; 10],
+    ) -> Self {
+        let hi_config = incomplete::Config::configure(
+            meta, advices[9], advices[3], advices[0], advices[1], advices[4], advices[5],
+        );
+        let lo_config = incomplete::Config::configure(
+            meta, advices[6], advices[7], advices[0], advices[1], advices[8], advices[2],
+        );
+        let complete_config = complete::Config::configure(meta, advices[9], add_config);
+        let overflow_config =
+            overflow::Config::configure(meta, lookup_config, advices[6..9].try_into().unwrap());
+
         let config = Self {
-            q_mul_lsb: ecc_config.q_mul_lsb,
-            add_config: ecc_config.add,
-            hi_config: ecc_config.mul_hi,
-            lo_config: ecc_config.mul_lo,
-            complete_config: ecc_config.mul_complete,
-            overflow_config: ecc_config.mul_overflow,
+            q_mul_lsb: meta.selector(),
+            add_config,
+            hi_config,
+            lo_config,
+            complete_config,
+            overflow_config,
         };
+
+        config.create_gate(meta);
 
         assert_eq!(
             config.hi_config.x_p, config.lo_config.x_p,
@@ -109,10 +130,8 @@ impl From<&EccConfig> for Config {
 
         config
     }
-}
 
-impl Config {
-    pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // If `lsb` is 0, (x, y) = (x_p, -y_p). If `lsb` is 1, (x, y) = (0,0).
         meta.create_gate("LSB check", |meta| {
             let q_mul_lsb = meta.query_selector(self.q_mul_lsb);

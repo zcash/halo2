@@ -29,8 +29,7 @@ pub(crate) struct Config<const NUM_BITS: usize> {
 }
 
 impl<const NUM_BITS: usize> Config<NUM_BITS> {
-    // TODO: Make this pub(super).
-    pub(crate) fn configure(
+    pub(super) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         z: Column<Advice>,
         x_a: Column<Advice>,

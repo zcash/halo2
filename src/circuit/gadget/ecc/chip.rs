@@ -16,8 +16,6 @@ use halo2::{
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
-use std::convert::TryInto;
-
 pub(super) mod add;
 pub(super) mod add_incomplete;
 pub(super) mod mul;
@@ -146,16 +144,8 @@ pub struct EccConfig {
     /// Complete addition
     add: add::Config,
 
-    /// Variable-base scalar multiplication (hi half)
-    mul_hi: mul::incomplete::Config<{ mul::INCOMPLETE_HI_LEN }>,
-    /// Variable-base scalar multiplication (lo half)
-    mul_lo: mul::incomplete::Config<{ mul::INCOMPLETE_LO_LEN }>,
-    /// Selector used to enforce boolean decomposition in variable-base scalar mul
-    pub mul_complete: mul::complete::Config,
-    /// Selector used to enforce switching logic on LSB in variable-base scalar mul
-    pub q_mul_lsb: Selector,
-    /// Variable-base scalar multiplication (overflow check)
-    pub mul_overflow: mul::overflow::Config,
+    /// Variable-base scalar multiplication
+    mul: mul::Config,
 
     /// Fixed-base full-width scalar multiplication
     pub q_mul_fixed_full: Selector,
@@ -223,10 +213,6 @@ impl EccChip {
         // mul_fixed::base_field_element::Config:
         // - [advices[6], advices[7], advices[8]]: canon_advices
         //
-        // mul::incomplete::Config
-        // - advices[4]: lambda1
-        // - advices[9]: z
-        //
         // TODO: Refactor away from `impl From<EccConfig> for _` so that sub-configs can
         // equality-enable the columns they need to.
         for column in &advices {
@@ -249,17 +235,8 @@ impl EccChip {
             advices[6], advices[7], advices[8],
         );
 
-        // Components of mul::Config
-        // TODO: Move this into mul::Config.
-        let mul_hi = mul::incomplete::Config::configure(
-            meta, advices[9], advices[3], advices[0], advices[1], advices[4], advices[5],
-        );
-        let mul_lo = mul::incomplete::Config::configure(
-            meta, advices[6], advices[7], advices[0], advices[1], advices[8], advices[2],
-        );
-        let mul_complete = mul::complete::Config::configure(meta, advices[9], add);
-        let mul_overflow =
-            mul::overflow::Config::configure(meta, range_check, advices[6..9].try_into().unwrap());
+        // Create variable-base scalar mul gates
+        let mul = mul::Config::configure(meta, add, range_check, advices);
 
         let config = EccConfig {
             advices,
@@ -267,11 +244,7 @@ impl EccChip {
             fixed_z: meta.fixed_column(),
             add_incomplete,
             add,
-            mul_hi,
-            mul_lo,
-            mul_complete,
-            mul_overflow,
-            q_mul_lsb: meta.selector(),
+            mul,
             q_mul_fixed_full: meta.selector(),
             q_mul_fixed_short: meta.selector(),
             q_mul_fixed_base_field: meta.selector(),
@@ -280,12 +253,6 @@ impl EccChip {
             lookup_config: range_check,
             running_sum_config,
         };
-
-        // Create variable-base scalar mul gates
-        {
-            let mul_config: mul::Config = (&config).into();
-            mul_config.create_gate(meta);
-        }
 
         // Create gate that is used both in fixed-base mul using a short signed exponent,
         // and fixed-base mul using a base field element.
@@ -459,7 +426,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
         scalar: &Self::Var,
         base: &Self::NonIdentityPoint,
     ) -> Result<(Self::Point, Self::ScalarVar), Error> {
-        let config: mul::Config = self.config().into();
+        let config = self.config().mul;
         config.assign(
             layouter.namespace(|| "variable-base scalar mul"),
             *scalar,

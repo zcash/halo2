@@ -26,8 +26,7 @@ pub struct Config {
 }
 
 impl Config {
-    // TODO: Make this pub(super).
-    pub(crate) fn configure(
+    pub(super) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
         advices: [Column<Advice>; 3],

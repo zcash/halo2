@@ -21,8 +21,7 @@ pub struct Config {
 }
 
 impl Config {
-    /// TODO: Make this pub(super).
-    pub(crate) fn configure(
+    pub(super) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         z_complete: Column<Advice>,
         add_config: add::Config,
