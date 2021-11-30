@@ -16,7 +16,8 @@ use halo2::{
 
 use pasta_curves::pallas;
 
-mod complete;
+// TODO: Undo this pub(crate).
+pub(crate) mod complete;
 // TODO: Undo this pub(crate).
 pub(crate) mod incomplete;
 mod overflow;
@@ -67,7 +68,7 @@ impl From<&EccConfig> for Config {
             add_config: ecc_config.add,
             hi_config: ecc_config.mul_hi,
             lo_config: ecc_config.mul_lo,
-            complete_config: ecc_config.into(),
+            complete_config: ecc_config.mul_complete,
             overflow_config: ecc_config.into(),
         };
 
@@ -111,7 +112,6 @@ impl From<&EccConfig> for Config {
 
 impl Config {
     pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
-        self.complete_config.create_gate(meta);
         self.overflow_config.create_gate(meta);
 
         // If `lsb` is 0, (x, y) = (x_p, -y_p). If `lsb` is 1, (x, y) = (0,0).
