@@ -28,10 +28,10 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-9 & q_\text{decompose-base-field} \cdot \texttt{range\_check}(\text{word}, 2^3) = 0 \\\hline
+9 & q_\text{decompose-base-field} \cdot \RangeCheck{\text{word}}{2^3} = 0 \\\hline
 \end{array}
 $$
-where $\texttt{range\_check}(\text{word}, \texttt{range}) = \text{word} \cdot (1 - \text{word}) \cdots (\texttt{range} - 1 - \text{word}).$
+where $\RangeCheck{\text{word}}{\texttt{range}} = \text{word} \cdot (1 - \text{word}) \cdots (\texttt{range} - 1 - \text{word}).$
 
 ### Base field element
 We support using a base field element as the scalar in fixed-base multiplication. This occurs, for example, in the scalar multiplication for the nullifier computation of the Action circuit $\mathsf{DeriveNullifier_{nk}} = \mathsf{Extract}_\mathbb{P}\left(\left[(\mathsf{PRF_{nk}^{nfOrchard}}(\rho) + \psi) \bmod{q_\mathbb{P}}\right]\mathcal{K}^\mathsf{Orchard} + \mathsf{cm}\right)$: here, the scalar $$\left[(\mathsf{PRF_{nk}^{nfOrchard}}(\rho) + \psi) \bmod{q_\mathbb{P}}\right]$$ is the result of a base field addition.
@@ -47,8 +47,8 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-5 & q_\text{canon-base-field} \cdot \texttt{range\_check}(\alpha_1, 2^2) = 0 \\\hline
-3 & q_\text{canon-base-field} \cdot \texttt{range\_check}(\alpha_2, 2^1) = 0 \\\hline
+5 & q_\text{canon-base-field} \cdot \RangeCheck{\alpha_1}{2^2} = 0 \\\hline
+3 & q_\text{canon-base-field} \cdot \RangeCheck{\alpha_2}{2^1} = 0 \\\hline
 2 & q_\text{canon-base-field} \cdot \left(z_{84} - (\alpha_1 + \alpha_2 \cdot 2^2)\right) = 0 \\\hline
 \end{array}
 $$
