@@ -165,10 +165,8 @@ pub struct EccConfig {
     /// when the scalar is a signed short exponent or a base-field element.
     pub q_mul_fixed_running_sum: Selector,
 
-    /// Witness point (can be identity)
-    pub q_point: Selector,
-    /// Witness non-identity point
-    pub q_point_non_id: Selector,
+    /// Witness point
+    witness_point: witness_point::Config,
 
     /// Lookup range check using 10-bit lookup table
     pub lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
@@ -249,6 +247,9 @@ impl EccChip {
         let running_sum_config =
             RunningSumConfig::configure(meta, q_mul_fixed_running_sum, advices[4]);
 
+        // Create witness point gate
+        let witness_point = witness_point::Config::configure(meta, advices[0], advices[1]);
+
         let config = EccConfig {
             advices,
             lagrange_coeffs,
@@ -264,17 +265,10 @@ impl EccChip {
             q_mul_fixed_short: meta.selector(),
             q_mul_fixed_base_field: meta.selector(),
             q_mul_fixed_running_sum,
-            q_point: meta.selector(),
-            q_point_non_id: meta.selector(),
+            witness_point,
             lookup_config: range_check,
             running_sum_config,
         };
-
-        // Create witness point gate
-        {
-            let config: witness_point::Config = (&config).into();
-            config.create_gate(meta);
-        }
 
         // Create incomplete point addition gate
         {
@@ -408,7 +402,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
         layouter: &mut impl Layouter<pallas::Base>,
         value: Option<pallas::Affine>,
     ) -> Result<Self::Point, Error> {
-        let config: witness_point::Config = self.config().into();
+        let config = self.config().witness_point;
         layouter.assign_region(
             || "witness point",
             |mut region| config.point(value, 0, &mut region),
@@ -420,7 +414,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
         layouter: &mut impl Layouter<pallas::Base>,
         value: Option<pallas::Affine>,
     ) -> Result<Self::NonIdentityPoint, Error> {
-        let config: witness_point::Config = self.config().into();
+        let config = self.config().witness_point;
         layouter.assign_region(
             || "witness non-identity point",
             |mut region| config.point_non_id(value, 0, &mut region),
