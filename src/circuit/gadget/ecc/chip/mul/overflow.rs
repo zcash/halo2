@@ -28,7 +28,7 @@ impl From<&EccConfig> for Config {
     fn from(ecc_config: &EccConfig) -> Self {
         Self {
             q_mul_overflow: ecc_config.q_mul_overflow,
-            lookup_config: ecc_config.lookup_config.clone(),
+            lookup_config: ecc_config.lookup_config,
             // Use advice columns that don't conflict with the either the incomplete
             // additions in fixed-base scalar mul, or the lookup range checks.
             advices: [

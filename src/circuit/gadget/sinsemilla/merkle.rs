@@ -210,7 +210,7 @@ pub mod tests {
                 advices[7],
                 fixed_y_q_1,
                 lookup,
-                range_check.clone(),
+                range_check,
             );
             let config1 = MerkleChip::configure(meta, sinsemilla_config_1);
 

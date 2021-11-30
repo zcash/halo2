@@ -487,8 +487,7 @@ mod tests {
 
             let range_check = LookupRangeCheckConfig::configure(meta, advices[9], table_idx);
 
-            let ecc_config =
-                EccChip::configure(meta, advices, lagrange_coeffs, range_check.clone());
+            let ecc_config = EccChip::configure(meta, advices, lagrange_coeffs, range_check);
 
             let config1 = SinsemillaChip::configure(
                 meta,
@@ -496,7 +495,7 @@ mod tests {
                 advices[2],
                 lagrange_coeffs[0],
                 lookup,
-                range_check.clone(),
+                range_check,
             );
             let config2 = SinsemillaChip::configure(
                 meta,

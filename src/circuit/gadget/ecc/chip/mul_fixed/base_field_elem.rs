@@ -33,7 +33,7 @@ impl From<&EccConfig> for Config {
             q_mul_fixed_running_sum: config.q_mul_fixed_running_sum,
             q_mul_fixed_base_field: config.q_mul_fixed_base_field,
             canon_advices: [config.advices[6], config.advices[7], config.advices[8]],
-            lookup_config: config.lookup_config.clone(),
+            lookup_config: config.lookup_config,
             running_sum_config: config.running_sum_config.clone(),
             super_config: config.into(),
         };
