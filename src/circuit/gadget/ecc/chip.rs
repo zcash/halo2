@@ -16,6 +16,8 @@ use halo2::{
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
+use std::convert::TryInto;
+
 pub(super) mod add;
 pub(super) mod add_incomplete;
 pub(super) mod mul;
@@ -153,7 +155,7 @@ pub struct EccConfig {
     /// Selector used to enforce switching logic on LSB in variable-base scalar mul
     pub q_mul_lsb: Selector,
     /// Variable-base scalar multiplication (overflow check)
-    pub q_mul_overflow: Selector,
+    pub mul_overflow: mul::overflow::Config,
 
     /// Fixed-base full-width scalar multiplication
     pub q_mul_fixed_full: Selector,
@@ -221,9 +223,6 @@ impl EccChip {
         // mul_fixed::base_field_element::Config:
         // - [advices[6], advices[7], advices[8]]: canon_advices
         //
-        // mul::overflow::Config:
-        // - [advices[0], advices[1], advices[2]]: advices
-        //
         // mul::incomplete::Config
         // - advices[4]: lambda1
         // - advices[9]: z
@@ -259,6 +258,8 @@ impl EccChip {
             meta, advices[6], advices[7], advices[0], advices[1], advices[8], advices[2],
         );
         let mul_complete = mul::complete::Config::configure(meta, advices[9], add);
+        let mul_overflow =
+            mul::overflow::Config::configure(meta, range_check, advices[6..9].try_into().unwrap());
 
         let config = EccConfig {
             advices,
@@ -269,7 +270,7 @@ impl EccChip {
             mul_hi,
             mul_lo,
             mul_complete,
-            q_mul_overflow: meta.selector(),
+            mul_overflow,
             q_mul_lsb: meta.selector(),
             q_mul_fixed_full: meta.selector(),
             q_mul_fixed_short: meta.selector(),

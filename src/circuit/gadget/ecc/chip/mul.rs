@@ -20,7 +20,8 @@ use pasta_curves::pallas;
 pub(crate) mod complete;
 // TODO: Undo this pub(crate).
 pub(crate) mod incomplete;
-mod overflow;
+// TODO: Undo this pub(crate).
+pub(crate) mod overflow;
 
 /// Number of bits for which complete addition needs to be used in variable-base
 /// scalar multiplication
@@ -69,7 +70,7 @@ impl From<&EccConfig> for Config {
             hi_config: ecc_config.mul_hi,
             lo_config: ecc_config.mul_lo,
             complete_config: ecc_config.mul_complete,
-            overflow_config: ecc_config.into(),
+            overflow_config: ecc_config.mul_overflow,
         };
 
         assert_eq!(
@@ -112,8 +113,6 @@ impl From<&EccConfig> for Config {
 
 impl Config {
     pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
-        self.overflow_config.create_gate(meta);
-
         // If `lsb` is 0, (x, y) = (x_p, -y_p). If `lsb` is 1, (x, y) = (0,0).
         meta.create_gate("LSB check", |meta| {
             let q_mul_lsb = meta.query_selector(self.q_mul_lsb);
