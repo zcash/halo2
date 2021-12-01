@@ -8,6 +8,7 @@ use crate::{
 };
 use arrayvec::ArrayVec;
 
+use ff::Field;
 use group::prime::PrimeCurveAffine;
 use halo2::{
     circuit::{Chip, Layouter},
@@ -50,7 +51,7 @@ impl EccPoint {
     pub fn point(&self) -> Option<pallas::Affine> {
         match (self.x.value(), self.y.value()) {
             (Some(x), Some(y)) => {
-                if x == pallas::Base::zero() && y == pallas::Base::zero() {
+                if x.is_zero_vartime() && y.is_zero_vartime() {
                     Some(pallas::Affine::identity())
                 } else {
                     Some(pallas::Affine::from_xy(x, y).unwrap())
@@ -72,7 +73,7 @@ impl EccPoint {
 
     #[cfg(test)]
     fn is_identity(&self) -> Option<bool> {
-        self.x.value().map(|x| x == pallas::Base::zero())
+        self.x.value().map(|x| x.is_zero_vartime())
     }
 }
 
@@ -102,7 +103,7 @@ impl NonIdentityEccPoint {
     pub fn point(&self) -> Option<pallas::Affine> {
         match (self.x.value(), self.y.value()) {
             (Some(x), Some(y)) => {
-                assert!(x != pallas::Base::zero() && y != pallas::Base::zero());
+                assert!(!x.is_zero_vartime() && !y.is_zero_vartime());
                 Some(pallas::Affine::from_xy(x, y).unwrap())
             }
             _ => None,

@@ -149,7 +149,7 @@ impl SinsemillaChip {
 
         if let Some(x_a) = x_a.value() {
             if let Some(y_a) = y_a.value() {
-                if x_a == pallas::Base::zero() || y_a == pallas::Base::zero() {
+                if x_a.is_zero_vartime() || y_a.is_zero_vartime() {
                     return Err(Error::Synthesis);
                 }
             }

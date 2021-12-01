@@ -155,7 +155,7 @@ impl Config {
                 // Witness η = inv0(z_130), where inv0(x) = 0 if x = 0, 1/x otherwise
                 {
                     let eta = zs[130].value().map(|z_130| {
-                        if z_130 == pallas::Base::zero() {
+                        if z_130.is_zero_vartime() {
                             pallas::Base::zero()
                         } else {
                             z_130.invert().unwrap()

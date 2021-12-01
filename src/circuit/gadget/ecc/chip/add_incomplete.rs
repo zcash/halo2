@@ -1,6 +1,7 @@
 use std::{array, collections::HashSet};
 
 use super::{copy, CellValue, NonIdentityEccPoint, Var};
+use ff::Field;
 use group::Curve;
 use halo2::{
     circuit::Region,
@@ -96,9 +97,9 @@ impl Config {
             .zip(y_q)
             .map(|(((x_p, y_p), x_q), y_q)| {
                 // P is point at infinity
-                if (x_p == pallas::Base::zero() && y_p == pallas::Base::zero())
+                if (x_p.is_zero_vartime() && y_p.is_zero_vartime())
                 // Q is point at infinity
-                || (x_q == pallas::Base::zero() && y_q == pallas::Base::zero())
+                || (x_q.is_zero_vartime() && y_q.is_zero_vartime())
                 // x_p = x_q
                 || (x_p == x_q)
                 {

@@ -195,9 +195,9 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
 
         if let (Some(x_a), Some(y_a), Some(x_p), Some(y_p)) = (x_a, y_a, x_p, y_p) {
             // A is point at infinity
-            if (x_p == pallas::Base::zero() && y_p == pallas::Base::zero())
+            if (x_p.is_zero_vartime() && y_p.is_zero_vartime())
             // Q is point at infinity
-            || (x_a == pallas::Base::zero() && y_a == pallas::Base::zero())
+            || (x_a.is_zero_vartime() && y_a.is_zero_vartime())
             // x_p = x_a
             || (x_p == x_a)
             {

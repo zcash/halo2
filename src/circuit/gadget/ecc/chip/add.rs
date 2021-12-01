@@ -300,7 +300,7 @@ impl Config {
                         // know that x_q != x_p in this branch.
                         (y_q - y_p) * alpha
                     } else {
-                        if y_p != pallas::Base::zero() {
+                        if !y_p.is_zero_vartime() {
                             // 3(x_p)^2
                             let three_x_p_sq = pallas::Base::from_u64(3) * x_p.square();
                             // 1 / 2(y_p)
@@ -327,10 +327,10 @@ impl Config {
                 .zip(lambda)
                 .map(|((((x_p, y_p), x_q), y_q), lambda)| {
                     {
-                        if x_p == pallas::Base::zero() {
+                        if x_p.is_zero_vartime() {
                             // 0 + Q = Q
                             (x_q, y_q)
-                        } else if x_q == pallas::Base::zero() {
+                        } else if x_q.is_zero_vartime() {
                             // P + 0 = P
                             (x_p, y_p)
                         } else if (x_q == x_p) && (y_q == -y_p) {
