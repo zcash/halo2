@@ -102,6 +102,7 @@ impl<'r, 'params: 'r, C: CurveAffine> PartialEq for CommitmentReference<'r, 'par
     }
 }
 
+#[derive(Debug)]
 struct CommitmentData<F, T: PartialEq> {
     commitment: T,
     set_index: usize,
@@ -382,138 +383,118 @@ mod tests {
             self.commitment
         }
     }
+}
 
-    #[test]
-    fn test_coherence() {
-        let points = &[Fp::rand(), Fp::rand(), Fp::rand(), Fp::rand(), Fp::rand()];
+#[cfg(test)]
+mod proptests {
+    use proptest::{
+        collection::vec,
+        prelude::*,
+        sample::{select, subsequence},
+        strategy::Strategy,
+    };
 
-        let build_queries = || {
-            vec![
-                MyQuery {
-                    commitment: 0,
-                    point: points[0],
-                    eval: Fp::rand(),
-                },
-                MyQuery {
-                    commitment: 0,
-                    point: points[1],
-                    eval: Fp::rand(),
-                },
-                MyQuery {
-                    commitment: 1,
-                    point: points[0],
-                    eval: Fp::rand(),
-                },
-                MyQuery {
-                    commitment: 1,
-                    point: points[1],
-                    eval: Fp::rand(),
-                },
-                MyQuery {
-                    commitment: 2,
-                    point: points[0],
-                    eval: Fp::rand(),
-                },
-                MyQuery {
-                    commitment: 2,
-                    point: points[1],
-                    eval: Fp::rand(),
-                },
-                MyQuery {
-                    commitment: 2,
-                    point: points[2],
-                    eval: Fp::rand(),
-                },
-                MyQuery {
-                    commitment: 3,
-                    point: points[0],
-                    eval: Fp::rand(),
-                },
-                MyQuery {
-                    commitment: 3,
-                    point: points[3],
-                    eval: Fp::rand(),
-                },
-                MyQuery {
-                    commitment: 4,
-                    point: points[4],
-                    eval: Fp::rand(),
-                },
-            ]
-        };
+    use super::construct_intermediate_sets;
+    use crate::poly::Rotation;
+    use pasta_curves::{arithmetic::FieldExt, Fp};
 
-        let queries = build_queries();
+    use std::collections::BTreeMap;
+    use std::convert::TryFrom;
 
-        let (commitment_data, point_sets) = construct_intermediate_sets(queries);
+    #[derive(Debug, Clone)]
+    struct MyQuery<F> {
+        point: F,
+        eval: F,
+        commitment: usize,
+    }
 
-        // It shouldn't matter what the point or eval values are; we should get
-        // the same exact point sets again.
-        {
-            let new_queries = build_queries();
-            let (_, new_point_sets) = construct_intermediate_sets(new_queries);
+    impl super::Query<Fp> for MyQuery<Fp> {
+        type Commitment = usize;
+        type Eval = Fp;
 
-            assert_eq!(point_sets, new_point_sets);
+        fn get_point(&self) -> Fp {
+            self.point
         }
 
-        let mut a = false;
-        let mut a_set = 0;
-        let mut b = false;
-        let mut b_set = 0;
-        let mut c = false;
-        let mut c_set = 0;
-        let mut d = false;
-        let mut d_set = 0;
+        fn get_eval(&self) -> Self::Eval {
+            self.eval
+        }
 
-        for (i, mut point_set) in point_sets.into_iter().enumerate() {
-            point_set.sort();
-            if point_set.len() == 1 {
-                assert_eq!(point_set[0], points[4]);
-                assert!(!a);
-                a = true;
-                a_set = i;
-            } else if point_set.len() == 2 {
-                let mut v0 = [points[0], points[1]];
-                let mut v1 = [points[0], points[3]];
-                v0.sort();
-                v1.sort();
+        fn get_commitment(&self) -> Self::Commitment {
+            self.commitment
+        }
+    }
 
-                if &point_set[..] == &v0[..] {
-                    assert!(!b);
-                    b = true;
-                    b_set = i;
-                } else if &point_set[..] == &v1[..] {
-                    assert!(!c);
-                    c = true;
-                    c_set = i;
-                } else {
-                    panic!("unexpected");
-                }
-            } else if point_set.len() == 3 {
-                let mut v = [points[0], points[1], points[2]];
-                v.sort();
-                assert_eq!(&point_set[..], &v[..]);
-                assert!(!d);
-                d = true;
-                d_set = i;
-            } else {
-                panic!("unexpected");
+    prop_compose! {
+        fn arb_point()(
+            bytes in vec(any::<u8>(), 64)
+        ) -> Fp {
+            Fp::from_bytes_wide(&<[u8; 64]>::try_from(bytes).unwrap())
+        }
+    }
+
+    prop_compose! {
+        fn arb_query(commitment: usize, point: Fp)(
+            eval in arb_point()
+        ) -> MyQuery<Fp> {
+            MyQuery {
+                point,
+                eval,
+                commitment
             }
         }
+    }
 
-        assert!(a & b & c & d);
+    prop_compose! {
+        // Mapping from column index to point index.
+        fn arb_queries_inner(num_points: usize, num_cols: usize, num_queries: usize)(
+            col_indices in vec(select((0..num_cols).collect::<Vec<_>>()), num_queries),
+            point_indices in vec(select((0..num_points).collect::<Vec<_>>()), num_queries)
+        ) -> Vec<(usize, usize)> {
+            col_indices.into_iter().zip(point_indices.into_iter()).collect()
+        }
+    }
 
-        for commitment_data in commitment_data {
-            assert_eq!(
-                commitment_data.set_index,
-                match commitment_data.commitment {
-                    0 => b_set,
-                    1 => b_set,
-                    2 => d_set,
-                    3 => c_set,
-                    4 => a_set,
-                    _ => unreachable!(),
-                }
-            );
+    prop_compose! {
+        fn compare_queries(
+            num_points: usize,
+            num_cols: usize,
+            num_queries: usize,
+        )(
+            points_1 in vec(arb_point(), num_points),
+            points_2 in vec(arb_point(), num_points),
+            mapping in arb_queries_inner(num_points, num_cols, num_queries)
+        )(
+            queries_1 in mapping.iter().map(|(commitment, point_idx)| arb_query(*commitment, points_1[*point_idx])).collect::<Vec<_>>(),
+            queries_2 in mapping.iter().map(|(commitment, point_idx)| arb_query(*commitment, points_2[*point_idx])).collect::<Vec<_>>(),
+        ) -> (
+            Vec<MyQuery<Fp>>,
+            Vec<MyQuery<Fp>>
+        ) {
+            (
+                queries_1,
+                queries_2,
+            )
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_intermediate_sets(
+            (queries_1, queries_2) in compare_queries(8, 8, 16)
+        ) {
+            let (commitment_data, _point_sets) = construct_intermediate_sets(queries_1);
+            let set_indices = commitment_data.iter().map(|data| data.set_index).collect::<Vec<_>>();
+            let point_indices = commitment_data.iter().map(|data| data.point_indices.clone()).collect::<Vec<_>>();
+
+            // It shouldn't matter what the point or eval values are; we should get
+            // the same exact point set indices and point indices again.
+            let (new_commitment_data, _new_point_sets) = construct_intermediate_sets(queries_2);
+            let new_set_indices = new_commitment_data.iter().map(|data| data.set_index).collect::<Vec<_>>();
+            let new_point_indices = new_commitment_data.iter().map(|data| data.point_indices.clone()).collect::<Vec<_>>();
+
+            assert_eq!(set_indices, new_set_indices);
+            assert_eq!(point_indices, new_point_indices);
         }
     }
 }
