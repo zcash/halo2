@@ -1,6 +1,7 @@
 //! Gadget and chips for the Poseidon algebraic hash function.
 
 use std::array;
+use std::convert::TryInto;
 use std::fmt;
 
 use halo2::{
@@ -20,7 +21,7 @@ pub trait PoseidonInstructions<F: FieldExt, S: Spec<F, T, RATE>, const T: usize,
     Chip<F>
 {
     /// Variable representing the word over which the Poseidon permutation operates.
-    type Word: Copy + fmt::Debug + From<CellValue<F>> + Into<CellValue<F>>;
+    type Word: Clone + fmt::Debug + From<CellValue<F>> + Into<CellValue<F>>;
 
     /// Applies the Poseidon permutation to the given state.
     fn permute(
@@ -82,7 +83,7 @@ impl<
 {
     /// The word contained in this gadget.
     pub fn inner(&self) -> PoseidonChip::Word {
-        self.inner
+        self.inner.clone()
     }
 
     /// Construct a [`Word`] gadget from the inner word.
@@ -144,7 +145,13 @@ impl<
         chip.initial_state(&mut layouter, &domain)
             .map(|state| Duplex {
                 chip,
-                sponge: Sponge::Absorbing([None; RATE]),
+                sponge: Sponge::Absorbing(
+                    (0..RATE)
+                        .map(|_| None)
+                        .collect::<Vec<_>>()
+                        .try_into()
+                        .unwrap(),
+                ),
                 state,
                 domain,
             })
@@ -205,7 +212,13 @@ impl<
                     }
 
                     // We've already squeezed out all available elements
-                    self.sponge = Sponge::Absorbing([None; RATE]);
+                    self.sponge = Sponge::Absorbing(
+                        (0..RATE)
+                            .map(|_| None)
+                            .collect::<Vec<_>>()
+                            .try_into()
+                            .unwrap(),
+                    );
                 }
             }
         }

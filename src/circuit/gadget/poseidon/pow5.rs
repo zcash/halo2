@@ -341,7 +341,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
 
                 // Load the input and padding into this region.
                 let load_input_word = |i: usize| {
-                    let (constraint_var, value) = match (input[i], padding_values[i]) {
+                    let (constraint_var, value) = match (input[i].clone(), padding_values[i]) {
                         (Some(word), None) => (word.var, word.value),
                         (None, Some(padding_value)) => {
                             let padding_var = region.assign_fixed(
@@ -395,7 +395,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
     fn get_output(state: &State<Self::Word, WIDTH>) -> SpongeState<Self::Word, RATE> {
         state[..RATE]
             .iter()
-            .map(|word| Some(*word))
+            .map(|word| Some(word.clone()))
             .collect::<Vec<_>>()
             .try_into()
             .unwrap()
@@ -403,7 +403,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
 }
 
 /// A word in the Poseidon state.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct StateWord<F: FieldExt> {
     var: Cell,
     value: Option<F>,
