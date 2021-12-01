@@ -1,4 +1,4 @@
-use super::super::{EccBaseFieldElemFixed, EccConfig, EccPoint, NullifierK};
+use super::super::{EccBaseFieldElemFixed, EccPoint, NullifierK};
 use super::H_BASE;
 
 use crate::{
@@ -18,6 +18,7 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 
 use std::convert::TryInto;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
     q_mul_fixed_base_field: Selector,
     canon_advices: [Column<Advice>; 3],
@@ -25,13 +26,22 @@ pub struct Config {
     super_config: super::Config,
 }
 
-impl From<&EccConfig> for Config {
-    fn from(config: &EccConfig) -> Self {
+impl Config {
+    pub(crate) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        canon_advices: [Column<Advice>; 3],
+        lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+        super_config: super::Config,
+    ) -> Self {
+        for advice in canon_advices.iter() {
+            meta.enable_equality((*advice).into());
+        }
+
         let config = Self {
-            q_mul_fixed_base_field: config.q_mul_fixed_base_field,
-            canon_advices: [config.advices[6], config.advices[7], config.advices[8]],
-            lookup_config: config.lookup_config,
-            super_config: config.mul_fixed,
+            q_mul_fixed_base_field: meta.selector(),
+            canon_advices,
+            lookup_config,
+            super_config,
         };
 
         let add_incomplete_advices = config.super_config.add_incomplete_config.advice_columns();
@@ -42,12 +52,12 @@ impl From<&EccConfig> for Config {
             );
         }
 
+        config.create_gate(meta);
+
         config
     }
-}
 
-impl Config {
-    pub fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // Check that the base field element is canonical.
         meta.create_gate("Canonicity checks", |meta| {
             let q_mul_fixed_base_field = meta.query_selector(self.q_mul_fixed_base_field);
