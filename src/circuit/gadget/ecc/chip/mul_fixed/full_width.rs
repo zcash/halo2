@@ -124,13 +124,15 @@ impl Config {
 
                 let scalar = self.witness(&mut region, offset, scalar)?;
 
-                let (acc, mul_b) = self.super_config.assign_region_inner::<NUM_WINDOWS>(
-                    &mut region,
-                    offset,
-                    &(&scalar).into(),
-                    base.into(),
-                    self.q_mul_fixed_full,
-                )?;
+                let (acc, mul_b) = self
+                    .super_config
+                    .assign_region_inner::<{ constants::NUM_WINDOWS }>(
+                        &mut region,
+                        offset,
+                        &(&scalar).into(),
+                        base.into(),
+                        self.q_mul_fixed_full,
+                    )?;
 
                 Ok((scalar, acc, mul_b))
             },

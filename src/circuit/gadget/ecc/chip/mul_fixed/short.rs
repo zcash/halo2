@@ -2,10 +2,8 @@ use std::{array, convert::TryInto};
 
 use super::super::{EccConfig, EccPoint, EccScalarFixedShort};
 use crate::{
-    circuit::gadget::utilities::{
-        bool_check, copy, decompose_running_sum::RunningSumConfig, CellValue, Var,
-    },
-    constants::{ValueCommitV, FIXED_BASE_WINDOW_SIZE, L_VALUE, NUM_WINDOWS_SHORT},
+    circuit::gadget::utilities::{bool_check, copy, CellValue, Var},
+    constants::{ValueCommitV, L_VALUE, NUM_WINDOWS_SHORT},
 };
 
 use halo2::{
@@ -19,8 +17,6 @@ use pasta_curves::pallas;
 pub struct Config {
     // Selector used for fixed-base scalar mul with short signed exponent.
     q_mul_fixed_short: Selector,
-    q_mul_fixed_running_sum: Selector,
-    running_sum_config: RunningSumConfig<pallas::Base, { FIXED_BASE_WINDOW_SIZE }>,
     super_config: super::Config,
 }
 
@@ -28,8 +24,6 @@ impl From<&EccConfig> for Config {
     fn from(config: &EccConfig) -> Self {
         Self {
             q_mul_fixed_short: config.q_mul_fixed_short,
-            q_mul_fixed_running_sum: config.q_mul_fixed_running_sum,
-            running_sum_config: config.running_sum_config.clone(),
             super_config: config.mul_fixed,
         }
     }
@@ -80,7 +74,7 @@ impl Config {
         let (magnitude, sign) = magnitude_sign;
 
         // Decompose magnitude
-        let running_sum = self.running_sum_config.copy_decompose(
+        let running_sum = self.super_config.running_sum_config.copy_decompose(
             region,
             offset,
             magnitude,
@@ -115,7 +109,7 @@ impl Config {
                     offset,
                     &(&scalar).into(),
                     base.clone().into(),
-                    self.q_mul_fixed_running_sum,
+                    self.super_config.running_sum_config.q_range_check,
                 )?;
 
                 Ok((scalar, acc, mul_b))

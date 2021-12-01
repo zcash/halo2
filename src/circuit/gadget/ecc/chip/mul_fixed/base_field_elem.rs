@@ -3,8 +3,8 @@ use super::H_BASE;
 
 use crate::{
     circuit::gadget::utilities::{
-        bitrange_subset, copy, decompose_running_sum::RunningSumConfig,
-        lookup_range_check::LookupRangeCheckConfig, range_check, CellValue, Var,
+        bitrange_subset, copy, lookup_range_check::LookupRangeCheckConfig, range_check, CellValue,
+        Var,
     },
     constants::{self, T_P},
     primitives::sinsemilla,
@@ -19,22 +19,18 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 use std::convert::TryInto;
 
 pub struct Config {
-    q_mul_fixed_running_sum: Selector,
     q_mul_fixed_base_field: Selector,
     canon_advices: [Column<Advice>; 3],
     lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
-    running_sum_config: RunningSumConfig<pallas::Base, { constants::FIXED_BASE_WINDOW_SIZE }>,
     super_config: super::Config,
 }
 
 impl From<&EccConfig> for Config {
     fn from(config: &EccConfig) -> Self {
         let config = Self {
-            q_mul_fixed_running_sum: config.q_mul_fixed_running_sum,
             q_mul_fixed_base_field: config.q_mul_fixed_base_field,
             canon_advices: [config.advices[6], config.advices[7], config.advices[8]],
             lookup_config: config.lookup_config,
-            running_sum_config: config.running_sum_config.clone(),
             super_config: config.mul_fixed,
         };
 
@@ -45,8 +41,6 @@ impl From<&EccConfig> for Config {
                 "Deconflict canon_advice columns with incomplete addition columns."
             );
         }
-
-        assert_eq!(config.running_sum_config.z, config.super_config.window);
 
         config
     }
@@ -166,7 +160,7 @@ impl Config {
 
                 // Decompose scalar
                 let scalar = {
-                    let running_sum = self.running_sum_config.copy_decompose(
+                    let running_sum = self.super_config.running_sum_config.copy_decompose(
                         &mut region,
                         offset,
                         scalar,
@@ -187,7 +181,7 @@ impl Config {
                         offset,
                         &(&scalar).into(),
                         base.into(),
-                        self.q_mul_fixed_running_sum,
+                        self.super_config.running_sum_config.q_range_check,
                     )?;
 
                 Ok((scalar, acc, mul_b))

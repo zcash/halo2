@@ -44,9 +44,9 @@ impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct RunningSumConfig<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> {
-    q_range_check: Selector,
+    pub q_range_check: Selector,
     pub z: Column<Advice>,
     _marker: PhantomData<F>,
 }

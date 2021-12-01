@@ -2,6 +2,7 @@ use super::{
     add, add_incomplete, CellValue, EccBaseFieldElemFixed, EccScalarFixed, EccScalarFixedShort,
     NonIdentityEccPoint, Var,
 };
+use crate::circuit::gadget::utilities::decompose_running_sum::RunningSumConfig;
 use crate::constants::{
     self,
     load::{NullifierK, OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV, WindowUs},
@@ -77,7 +78,7 @@ impl OrchardFixedBases {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Config {
-    q_mul_fixed_running_sum: Selector,
+    running_sum_config: RunningSumConfig<pallas::Base, { constants::FIXED_BASE_WINDOW_SIZE }>,
     // The fixed Lagrange interpolation coefficients for `x_p`.
     lagrange_coeffs: [Column<Fixed>; constants::H],
     // The fixed `z` for each window such that `y + z = u^2`.
@@ -101,7 +102,6 @@ impl Config {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
-        q_mul_fixed_running_sum: Selector,
         lagrange_coeffs: [Column<Fixed>; constants::H],
         window: Column<Advice>,
         x_p: Column<Advice>,
@@ -113,8 +113,11 @@ impl Config {
         meta.enable_equality(window.into());
         meta.enable_equality(u.into());
 
+        let q_running_sum = meta.selector();
+        let running_sum_config = RunningSumConfig::configure(meta, q_running_sum, window);
+
         let config = Self {
-            q_mul_fixed_running_sum,
+            running_sum_config,
             lagrange_coeffs,
             fixed_z: meta.fixed_column(),
             window,
@@ -171,7 +174,8 @@ impl Config {
     /// via a running sum.
     fn running_sum_coords_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("Running sum coordinates check", |meta| {
-            let q_mul_fixed_running_sum = meta.query_selector(self.q_mul_fixed_running_sum);
+            let q_mul_fixed_running_sum =
+                meta.query_selector(self.running_sum_config.q_range_check);
 
             let z_cur = meta.query_advice(self.window, Rotation::cur());
             let z_next = meta.query_advice(self.window, Rotation::next());

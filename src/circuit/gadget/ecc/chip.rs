@@ -1,8 +1,7 @@
 use super::EccInstructions;
 use crate::{
     circuit::gadget::utilities::{
-        copy, decompose_running_sum::RunningSumConfig, lookup_range_check::LookupRangeCheckConfig,
-        CellValue, UtilitiesInstructions, Var,
+        copy, lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions, Var,
     },
     constants::{self, NullifierK, OrchardFixedBasesFull, ValueCommitV},
     primitives::sinsemilla,
@@ -151,17 +150,12 @@ pub struct EccConfig {
     pub q_mul_fixed_short: Selector,
     /// Canonicity checks on base field element used as scalar in fixed-base mul
     pub q_mul_fixed_base_field: Selector,
-    /// Running sum decomposition of a scalar used in fixed-base mul. This is used
-    /// when the scalar is a signed short exponent or a base-field element.
-    pub q_mul_fixed_running_sum: Selector,
 
     /// Witness point
     witness_point: witness_point::Config,
 
     /// Lookup range check using 10-bit lookup table
     pub lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
-    /// Running sum decomposition.
-    pub running_sum_config: RunningSumConfig<pallas::Base, { constants::FIXED_BASE_WINDOW_SIZE }>,
 }
 
 /// A chip implementing EccInstructions
@@ -213,10 +207,6 @@ impl EccChip {
             meta.enable_equality((*column).into());
         }
 
-        let q_mul_fixed_running_sum = meta.selector();
-        let running_sum_config =
-            RunningSumConfig::configure(meta, q_mul_fixed_running_sum, advices[4]);
-
         // Create witness point gate
         let witness_point = witness_point::Config::configure(meta, advices[0], advices[1]);
         // Create incomplete point addition gate
@@ -236,7 +226,6 @@ impl EccChip {
         // fixed-base scalar mul.
         let mul_fixed = mul_fixed::Config::configure(
             meta,
-            q_mul_fixed_running_sum,
             lagrange_coeffs,
             advices[4],
             advices[0],
@@ -255,10 +244,8 @@ impl EccChip {
             q_mul_fixed_full: meta.selector(),
             q_mul_fixed_short: meta.selector(),
             q_mul_fixed_base_field: meta.selector(),
-            q_mul_fixed_running_sum,
             witness_point,
             lookup_config: range_check,
-            running_sum_config,
         };
 
         // Create gate that is only used in full-width fixed-base scalar mul.
