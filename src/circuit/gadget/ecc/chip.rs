@@ -145,7 +145,7 @@ pub struct EccConfig {
     pub mul_fixed: mul_fixed::Config,
 
     /// Fixed-base full-width scalar multiplication
-    pub q_mul_fixed_full: Selector,
+    mul_fixed_full: mul_fixed::full_width::Config,
     /// Fixed-base signed short scalar multiplication
     pub q_mul_fixed_short: Selector,
     /// Canonicity checks on base field element used as scalar in fixed-base mul
@@ -235,24 +235,21 @@ impl EccChip {
             add_incomplete,
         );
 
+        // Create gate that is only used in full-width fixed-base scalar mul.
+        let mul_fixed_full = mul_fixed::full_width::Config::configure(meta, mul_fixed);
+
         let config = EccConfig {
             advices,
             add_incomplete,
             add,
             mul,
             mul_fixed,
-            q_mul_fixed_full: meta.selector(),
+            mul_fixed_full,
             q_mul_fixed_short: meta.selector(),
             q_mul_fixed_base_field: meta.selector(),
             witness_point,
             lookup_config: range_check,
         };
-
-        // Create gate that is only used in full-width fixed-base scalar mul.
-        {
-            let mul_fixed_full_config: mul_fixed::full_width::Config = (&config).into();
-            mul_fixed_full_config.create_gate(meta);
-        }
 
         // Create gate that is only used in short fixed-base scalar mul.
         {
@@ -426,7 +423,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
         scalar: Option<pallas::Scalar>,
         base: &Self::FixedPoints,
     ) -> Result<(Self::Point, Self::ScalarFixed), Error> {
-        let config: mul_fixed::full_width::Config = self.config().into();
+        let config = self.config().mul_fixed_full;
         config.assign(
             layouter.namespace(|| format!("fixed-base mul of {:?}", base)),
             scalar,
