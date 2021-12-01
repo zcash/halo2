@@ -143,9 +143,6 @@ pub struct EccConfig {
     /// Variable-base scalar multiplication
     mul: mul::Config,
 
-    /// TODO: Remove this.
-    pub mul_fixed: mul_fixed::Config,
-
     /// Fixed-base full-width scalar multiplication
     mul_fixed_full: mul_fixed::full_width::Config,
     /// Fixed-base signed short scalar multiplication
@@ -198,12 +195,6 @@ impl EccChip {
         lagrange_coeffs: [Column<Fixed>; 8],
         range_check: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     ) -> <Self as Chip<pallas::Base>>::Config {
-        // TODO: Refactor away from `impl From<EccConfig> for _` so that sub-configs can
-        // equality-enable the columns they need to.
-        for column in &advices {
-            meta.enable_equality((*column).into());
-        }
-
         // Create witness point gate
         let witness_point = witness_point::Config::configure(meta, advices[0], advices[1]);
         // Create incomplete point addition gate
@@ -246,20 +237,17 @@ impl EccChip {
             mul_fixed,
         );
 
-        let config = EccConfig {
+        EccConfig {
             advices,
             add_incomplete,
             add,
             mul,
-            mul_fixed,
             mul_fixed_full,
             mul_fixed_short,
             mul_fixed_base_field,
             witness_point,
             lookup_config: range_check,
-        };
-
-        config
+        }
     }
 }
 
