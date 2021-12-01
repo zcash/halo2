@@ -21,7 +21,7 @@ fn bench_primitives(c: &mut Criterion) {
         let message = [pallas::Base::random(rng), pallas::Base::random(rng)];
 
         group.bench_function("2-to-1", |b| {
-            b.iter(|| poseidon::Hash::init(P128Pow5T3, ConstantLength).hash(message))
+            b.iter(|| poseidon::Hash::<_, P128Pow5T3, _, 3, 2>::init(ConstantLength).hash(message))
         });
     }
 

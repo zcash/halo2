@@ -30,7 +30,7 @@ pub(crate) type SpongeState<F, const RATE: usize> = [Option<F>; RATE];
 pub(crate) type Mds<F, const T: usize> = [[F; T]; T];
 
 /// A specification for a Poseidon permutation.
-pub trait Spec<F: FieldExt, const T: usize, const RATE: usize> {
+pub trait Spec<F: FieldExt, const T: usize, const RATE: usize>: fmt::Debug {
     /// The number of full rounds for this specification.
     ///
     /// This must be an even number.
@@ -47,10 +47,10 @@ pub trait Spec<F: FieldExt, const T: usize, const RATE: usize> {
     ///
     /// This is used by the default implementation of [`Spec::constants`]. If you are
     /// hard-coding the constants, you may leave this unimplemented.
-    fn secure_mds(&self) -> usize;
+    fn secure_mds() -> usize;
 
     /// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.
-    fn constants(&self) -> (Vec<[F; T]>, Mds<F, T>, Mds<F, T>) {
+    fn constants() -> (Vec<[F; T]>, Mds<F, T>, Mds<F, T>) {
         let r_f = Self::full_rounds();
         let r_p = Self::partial_rounds();
 
@@ -69,7 +69,7 @@ pub trait Spec<F: FieldExt, const T: usize, const RATE: usize> {
             })
             .collect();
 
-        let (mds, mds_inv) = mds::generate_mds::<F, T>(&mut grain, self.secure_mds());
+        let (mds, mds_inv) = mds::generate_mds::<F, T>(&mut grain, Self::secure_mds());
 
         (round_constants, mds, mds_inv)
     }
@@ -141,6 +141,7 @@ fn poseidon_duplex<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE:
     output
 }
 
+#[derive(Debug)]
 pub(crate) enum Sponge<F, const RATE: usize> {
     Absorbing(SpongeState<F, RATE>),
     Squeezing(SpongeState<F, RATE>),
@@ -167,11 +168,10 @@ pub(crate) struct Duplex<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const
 impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize> Duplex<F, S, T, RATE> {
     /// Constructs a new duplex sponge for the given Poseidon specification.
     pub(crate) fn new(
-        spec: S,
         initial_capacity_element: F,
         pad_and_add: Box<dyn Fn(&mut State<F, T>, &SpongeState<F, RATE>)>,
     ) -> Self {
-        let (round_constants, mds_matrix, _) = spec.constants();
+        let (round_constants, mds_matrix, _) = S::constants();
 
         let input = [None; RATE];
         let mut state = [F::zero(); T];
@@ -336,13 +336,9 @@ impl<
     > Hash<F, S, D, T, RATE>
 {
     /// Initializes a new hasher.
-    pub fn init(spec: S, domain: D) -> Self {
+    pub fn init(domain: D) -> Self {
         Hash {
-            duplex: Duplex::new(
-                spec,
-                domain.initial_capacity_element(),
-                domain.pad_and_add(),
-            ),
+            duplex: Duplex::new(domain.initial_capacity_element(), domain.pad_and_add()),
             domain,
         }
     }
@@ -371,9 +367,9 @@ mod tests {
     fn orchard_spec_equivalence() {
         let message = [pallas::Base::from_u64(6), pallas::Base::from_u64(42)];
 
-        let (round_constants, mds, _) = OrchardNullifier.constants();
+        let (round_constants, mds, _) = OrchardNullifier::constants();
 
-        let hasher = Hash::init(OrchardNullifier, ConstantLength);
+        let hasher = Hash::<_, OrchardNullifier, _, 3, 2>::init(ConstantLength);
         let result = hasher.hash(message);
 
         // The result should be equivalent to just directly applying the permutation and

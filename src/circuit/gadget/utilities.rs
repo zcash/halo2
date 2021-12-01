@@ -1,3 +1,5 @@
+//! Utility gadgets.
+
 use ff::PrimeFieldBits;
 use halo2::{
     circuit::{Cell, Layouter, Region},
@@ -17,9 +19,15 @@ pub struct CellValue<F: FieldExt> {
     value: Option<F>,
 }
 
+/// Trait for a variable in the circuit.
 pub trait Var<F: FieldExt>: Copy + Clone + std::fmt::Debug {
+    /// Construct a new variable.
     fn new(cell: Cell, value: Option<F>) -> Self;
+
+    /// The cell at which this variable was allocated.
     fn cell(&self) -> Cell;
+
+    /// The value allocated to this variable.
     fn value(&self) -> Option<F>;
 }
 
@@ -37,9 +45,12 @@ impl<F: FieldExt> Var<F> for CellValue<F> {
     }
 }
 
+/// Trait for utilities used across circuits.
 pub trait UtilitiesInstructions<F: FieldExt> {
+    /// Variable in the circuit.
     type Var: Var<F>;
 
+    /// Load a variable.
     fn load_private(
         &self,
         mut layouter: impl Layouter<F>,
@@ -88,7 +99,7 @@ where
     Ok(CellValue::new(cell, copy.value))
 }
 
-pub fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize>(
+pub(crate) fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize>(
     option_array: Option<[T; LEN]>,
 ) -> [Option<T>; LEN] {
     let mut ret = [None; LEN];

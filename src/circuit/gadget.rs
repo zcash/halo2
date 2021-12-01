@@ -1,3 +1,5 @@
+//! Gadgets used in the Orchard circuit.
+
 use pasta_curves::pallas;
 
 use ecc::chip::EccChip;
@@ -5,9 +7,9 @@ use poseidon::Pow5Chip as PoseidonChip;
 use sinsemilla::{chip::SinsemillaChip, merkle::chip::MerkleChip};
 
 pub(crate) mod ecc;
-pub(crate) mod poseidon;
+pub mod poseidon;
 pub(crate) mod sinsemilla;
-pub(crate) mod utilities;
+pub mod utilities;
 
 impl super::Config {
     pub(super) fn ecc_chip(&self) -> EccChip {

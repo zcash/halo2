@@ -57,7 +57,7 @@ use std::convert::TryInto;
 
 use self::gadget::utilities::lookup_range_check::LookupRangeCheckConfig;
 
-pub(crate) mod gadget;
+pub mod gadget;
 
 /// Size of the Orchard circuit.
 const K: u32 = 11;
@@ -239,9 +239,8 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let ecc_config = EccChip::configure(meta, advices, lagrange_coeffs, range_check.clone());
 
         // Configuration for the Poseidon hash.
-        let poseidon_config = PoseidonChip::configure(
+        let poseidon_config = PoseidonChip::configure::<poseidon::P128Pow5T3>(
             meta,
-            poseidon::P128Pow5T3,
             // We place the state columns after the partial_sbox column so that the
             // pad-and-add region can be layed out more efficiently.
             advices[6..9].try_into().unwrap(),
