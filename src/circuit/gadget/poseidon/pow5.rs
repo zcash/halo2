@@ -716,11 +716,11 @@ mod tests {
                         region.constrain_equal(final_state[i].var, var)
                     };
 
-                    for i in 0..(WIDTH - 1) {
+                    for i in 0..(WIDTH) {
                         final_state_word(i)?;
                     }
 
-                    final_state_word(WIDTH - 1)
+                    Ok(())
                 },
             )
         }
@@ -734,16 +734,21 @@ mod tests {
         assert_eq!(prover.verify(), Ok(()))
     }
 
-    struct HashCircuit<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize> {
-        message: Option<[Fp; 2]>,
+    struct HashCircuit<
+        S: Spec<Fp, WIDTH, RATE>,
+        const WIDTH: usize,
+        const RATE: usize,
+        const L: usize,
+    > {
+        message: Option<[Fp; L]>,
         // For the purpose of this test, witness the result.
         // TODO: Move this into an instance column.
         output: Option<Fp>,
         _spec: PhantomData<S>,
     }
 
-    impl<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize> Circuit<Fp>
-        for HashCircuit<S, WIDTH, RATE>
+    impl<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize, const L: usize>
+        Circuit<Fp> for HashCircuit<S, WIDTH, RATE, L>
     {
         type Config = Pow5Config<Fp, WIDTH, RATE>;
         type FloorPlanner = SimpleFloorPlanner;
@@ -795,7 +800,7 @@ mod tests {
                         Ok(CellValue::new(cell, value))
                     };
 
-                    let message: Result<Vec<_>, Error> = (0..RATE).map(message_word).collect();
+                    let message: Result<Vec<_>, Error> = (0..L).map(message_word).collect();
                     Ok(message?.try_into().unwrap())
                 },
             )?;
@@ -803,7 +808,7 @@ mod tests {
             let hasher = Hash::<_, _, S, _, WIDTH, RATE>::init(
                 chip,
                 layouter.namespace(|| "init"),
-                ConstantLength::<RATE>,
+                ConstantLength::<L>,
             )?;
             let output = hasher.hash(layouter.namespace(|| "hash"), message)?;
 
@@ -829,7 +834,7 @@ mod tests {
             poseidon::Hash::<_, OrchardNullifier, _, 3, 2>::init(ConstantLength::<2>).hash(message);
 
         let k = 6;
-        let circuit = HashCircuit::<OrchardNullifier, 3, 2> {
+        let circuit = HashCircuit::<OrchardNullifier, 3, 2, 2> {
             message: Some(message),
             output: Some(output),
             _spec: PhantomData,
@@ -849,7 +854,7 @@ mod tests {
                 poseidon::Hash::<_, OrchardNullifier, _, 3, 2>::init(ConstantLength).hash(message);
 
             let k = 6;
-            let circuit = HashCircuit::<OrchardNullifier, 3, 2> {
+            let circuit = HashCircuit::<OrchardNullifier, 3, 2, 2> {
                 message: Some(message),
                 output: Some(output),
                 _spec: PhantomData,
@@ -870,7 +875,7 @@ mod tests {
             .titled("Poseidon Chip Layout", ("sans-serif", 60))
             .unwrap();
 
-        let circuit = HashCircuit::<OrchardNullifier, 3, 2> {
+        let circuit = HashCircuit::<OrchardNullifier, 3, 2, 2> {
             message: None,
             output: None,
             _spec: PhantomData,

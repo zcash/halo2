@@ -25,11 +25,11 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use rand::rngs::OsRng;
 
 #[derive(Clone, Copy)]
-struct HashCircuit<S, const WIDTH: usize, const RATE: usize>
+struct HashCircuit<S, const WIDTH: usize, const RATE: usize, const L: usize>
 where
     S: Spec<Fp, WIDTH, RATE> + Clone + Copy,
 {
-    message: Option<[Fp; RATE]>,
+    message: Option<[Fp; L]>,
     // For the purpose of this test, witness the result.
     // TODO: Move this into an instance column.
     output: Option<Fp>,
@@ -37,16 +37,17 @@ where
 }
 
 #[derive(Debug, Clone)]
-struct MyConfig<const WIDTH: usize, const RATE: usize> {
-    input: [Column<Advice>; RATE],
+struct MyConfig<const WIDTH: usize, const RATE: usize, const L: usize> {
+    input: [Column<Advice>; L],
     poseidon_config: Pow5Config<Fp, WIDTH, RATE>,
 }
 
-impl<S, const WIDTH: usize, const RATE: usize> Circuit<Fp> for HashCircuit<S, WIDTH, RATE>
+impl<S, const WIDTH: usize, const RATE: usize, const L: usize> Circuit<Fp>
+    for HashCircuit<S, WIDTH, RATE, L>
 where
     S: Spec<Fp, WIDTH, RATE> + Copy + Clone,
 {
-    type Config = MyConfig<WIDTH, RATE>;
+    type Config = MyConfig<WIDTH, RATE, L>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -94,12 +95,12 @@ where
                         || format!("load message_{}", i),
                         config.input[i],
                         0,
-                        || value.ok_or(Error::SynthesisError),
+                        || value.ok_or(Error::Synthesis),
                     )?;
                     Ok(CellValue::new(cell, value))
                 };
 
-                let message: Result<Vec<_>, Error> = (0..RATE).map(message_word).collect();
+                let message: Result<Vec<_>, Error> = (0..L).map(message_word).collect();
                 Ok(message?.try_into().unwrap())
             },
         )?;
@@ -107,7 +108,7 @@ where
         let hasher = Hash::<_, _, S, _, WIDTH, RATE>::init(
             chip,
             layouter.namespace(|| "init"),
-            ConstantLength::<RATE>,
+            ConstantLength::<L>,
         )?;
         let output = hasher.hash(layouter.namespace(|| "hash"), message)?;
 
@@ -118,7 +119,7 @@ where
                     || "load output",
                     config.input[0],
                     0,
-                    || self.output.ok_or(Error::SynthesisError),
+                    || self.output.ok_or(Error::Synthesis),
                 )?;
                 region.constrain_equal(output.cell(), expected_var)
             },
@@ -185,14 +186,16 @@ impl Spec<Fp, 12, 11> for MySpec<12, 11> {
 
 const K: u32 = 6;
 
-fn bench_poseidon<S, const WIDTH: usize, const RATE: usize>(name: &str, c: &mut Criterion)
-where
+fn bench_poseidon<S, const WIDTH: usize, const RATE: usize, const L: usize>(
+    name: &str,
+    c: &mut Criterion,
+) where
     S: Spec<Fp, WIDTH, RATE> + Copy + Clone,
 {
     // Initialize the polynomial commitment parameters
     let params: Params<vesta::Affine> = Params::new(K);
 
-    let empty_circuit = HashCircuit::<S, WIDTH, RATE> {
+    let empty_circuit = HashCircuit::<S, WIDTH, RATE, L> {
         message: None,
         output: None,
         _spec: PhantomData,
@@ -206,14 +209,14 @@ where
     let verifier_name = name.to_string() + "-verifier";
 
     let rng = OsRng;
-    let message = (0..RATE)
+    let message = (0..L)
         .map(|_| pallas::Base::random(rng))
         .collect::<Vec<_>>()
         .try_into()
         .unwrap();
-    let output = poseidon::Hash::<_, S, _, WIDTH, RATE>::init(ConstantLength::<RATE>).hash(message);
+    let output = poseidon::Hash::<_, S, _, WIDTH, RATE>::init(ConstantLength::<L>).hash(message);
 
-    let circuit = HashCircuit::<S, WIDTH, RATE> {
+    let circuit = HashCircuit::<S, WIDTH, RATE, L> {
         message: Some(message),
         output: Some(output),
         _spec: PhantomData,
@@ -246,9 +249,9 @@ where
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    bench_poseidon::<MySpec<3, 2>, 3, 2>("WIDTH = 3, RATE = 2", c);
-    bench_poseidon::<MySpec<9, 8>, 9, 8>("WIDTH = 9, RATE = 8", c);
-    bench_poseidon::<MySpec<12, 11>, 12, 11>("WIDTH = 12, RATE = 11", c);
+    bench_poseidon::<MySpec<3, 2>, 3, 2, 2>("WIDTH = 3, RATE = 2", c);
+    bench_poseidon::<MySpec<9, 8>, 9, 8, 8>("WIDTH = 9, RATE = 8", c);
+    bench_poseidon::<MySpec<12, 11>, 12, 11, 11>("WIDTH = 12, RATE = 11", c);
 }
 
 criterion_group!(benches, criterion_benchmark);
