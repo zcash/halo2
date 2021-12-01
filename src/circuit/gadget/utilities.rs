@@ -13,14 +13,14 @@ pub(crate) mod decompose_running_sum;
 pub(crate) mod lookup_range_check;
 
 /// A variable representing a field element.
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct CellValue<F: FieldExt> {
     cell: Cell,
     value: Option<F>,
 }
 
 /// Trait for a variable in the circuit.
-pub trait Var<F: FieldExt>: Copy + Clone + std::fmt::Debug {
+pub trait Var<F: FieldExt>: Clone + std::fmt::Debug {
     /// Construct a new variable.
     fn new(cell: Cell, value: Option<F>) -> Self;
 

@@ -149,8 +149,8 @@ impl Config {
             || "Full-width fixed-base mul (last window, complete addition)",
             |mut region| {
                 self.super_config.add_config.assign_region(
-                    &mul_b.into(),
-                    &acc.into(),
+                    &mul_b.clone().into(),
+                    &acc.clone().into(),
                     0,
                     &mut region,
                 )

@@ -251,7 +251,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
                 || z_val.ok_or(Error::Synthesis),
             )?;
             z = CellValue::new(z_cell, z_val);
-            zs.push(Z(z));
+            zs.push(Z(z.clone()));
 
             // Assign `x_p`, `y_p`
             region.assign_advice(

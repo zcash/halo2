@@ -107,7 +107,7 @@ impl Config {
         // In the overflow check gate, we check that s is properly derived
         // from alpha and k_254.
         let s = {
-            let k_254 = *zs[254];
+            let k_254 = zs[254].clone();
             let s_val = alpha
                 .value()
                 .zip(k_254.value())
@@ -130,7 +130,7 @@ impl Config {
         // Subtract the first 130 low bits of s = alpha + k_254 ⋅ 2^130
         // using thirteen 10-bit lookups, s_{0..=129}
         let s_minus_lo_130 =
-            self.s_minus_lo_130(layouter.namespace(|| "decompose s_{0..=129}"), s)?;
+            self.s_minus_lo_130(layouter.namespace(|| "decompose s_{0..=129}"), s.clone())?;
 
         layouter.assign_region(
             || "overflow check",
@@ -223,6 +223,6 @@ impl Config {
             false,
         )?;
         // (s - (2^0 s_0 + 2^1 s_1 + ... + 2^129 s_129)) / 2^130
-        Ok(zs[zs.len() - 1])
+        Ok(zs[zs.len() - 1].clone())
     }
 }

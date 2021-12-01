@@ -337,8 +337,8 @@ impl CommitIvkConfig {
             domain.short_commit(layouter.namespace(|| "Hash ak||nk"), message, rivk)?
         };
 
-        let z13_a = zs[0][13];
-        let z13_c = zs[2][13];
+        let z13_a = zs[0][13].clone();
+        let z13_c = zs[2][13].clone();
 
         let (a_prime, z13_a_prime) = self.ak_canonicity(
             layouter.namespace(|| "ak canonicity"),
@@ -347,7 +347,7 @@ impl CommitIvkConfig {
 
         let (b2_c_prime, z14_b2_c_prime) = self.nk_canonicity(
             layouter.namespace(|| "nk canonicity"),
-            b_2,
+            b_2.clone(),
             c.inner().cell_value(),
         )?;
 
@@ -406,10 +406,10 @@ impl CommitIvkConfig {
             13,
             false,
         )?;
-        let a_prime = zs[0];
+        let a_prime = zs[0].clone();
         assert_eq!(zs.len(), 14); // [z_0, z_1, ..., z13_a]
 
-        Ok((a_prime, zs[13]))
+        Ok((a_prime, zs[13].clone()))
     }
 
     #[allow(clippy::type_complexity)]
@@ -443,10 +443,10 @@ impl CommitIvkConfig {
             14,
             false,
         )?;
-        let b2_c_prime = zs[0];
+        let b2_c_prime = zs[0].clone();
         assert_eq!(zs.len(), 15); // [z_0, z_1, ..., z14]
 
-        Ok((b2_c_prime, zs[14]))
+        Ok((b2_c_prime, zs[14].clone()))
     }
 
     // Assign cells for the canonicity gate.

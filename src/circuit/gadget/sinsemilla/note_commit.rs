@@ -738,13 +738,13 @@ impl NoteCommitConfig {
             )?
         };
 
-        let z13_a = zs[0][13];
-        let z13_c = zs[2][13];
-        let z1_d = zs[3][1];
-        let z13_f = zs[5][13];
-        let z1_g = zs[6][1];
-        let g_2 = z1_g;
-        let z13_g = zs[6][13];
+        let z13_a = zs[0][13].clone();
+        let z13_c = zs[2][13].clone();
+        let z1_d = zs[3][1].clone();
+        let z13_f = zs[5][13].clone();
+        let z1_g = zs[6][1].clone();
+        let g_2 = z1_g.clone();
+        let z13_g = zs[6][13].clone();
 
         let (a_prime, z13_a_prime) = self.canon_bitshift_130(
             layouter.namespace(|| "x(g_d) canonicity"),
@@ -753,18 +753,18 @@ impl NoteCommitConfig {
 
         let (b3_c_prime, z14_b3_c_prime) = self.pkd_x_canonicity(
             layouter.namespace(|| "x(pk_d) canonicity"),
-            b_3,
+            b_3.clone(),
             c.inner().cell_value(),
         )?;
 
         let (e1_f_prime, z14_e1_f_prime) = self.rho_canonicity(
             layouter.namespace(|| "rho canonicity"),
-            e_1,
+            e_1.clone(),
             f.inner().cell_value(),
         )?;
 
         let (g1_g2_prime, z13_g1_g2_prime) =
-            self.psi_canonicity(layouter.namespace(|| "psi canonicity"), g_1, g_2)?;
+            self.psi_canonicity(layouter.namespace(|| "psi canonicity"), g_1.clone(), g_2)?;
 
         let gate_cells = GateCells {
             a: a.inner().cell_value(),
@@ -841,10 +841,10 @@ impl NoteCommitConfig {
             13,
             false,
         )?;
-        let a_prime = zs[0];
+        let a_prime = zs[0].clone();
         assert_eq!(zs.len(), 14); // [z_0, z_1, ..., z_13]
 
-        Ok((a_prime, zs[13]))
+        Ok((a_prime, zs[13].clone()))
     }
 
     // Check canonicity of `x(pk_d)` encoding
@@ -880,10 +880,10 @@ impl NoteCommitConfig {
             14,
             false,
         )?;
-        let b3_c_prime = zs[0];
+        let b3_c_prime = zs[0].clone();
         assert_eq!(zs.len(), 15); // [z_0, z_1, ..., z_13, z_14]
 
-        Ok((b3_c_prime, zs[14]))
+        Ok((b3_c_prime, zs[14].clone()))
     }
 
     #[allow(clippy::type_complexity)]
@@ -920,10 +920,10 @@ impl NoteCommitConfig {
             14,
             false,
         )?;
-        let e1_f_prime = zs[0];
+        let e1_f_prime = zs[0].clone();
         assert_eq!(zs.len(), 15); // [z_0, z_1, ..., z_13, z_14]
 
-        Ok((e1_f_prime, zs[14]))
+        Ok((e1_f_prime, zs[14].clone()))
     }
 
     // Check canonicity of `psi` encoding
@@ -957,10 +957,10 @@ impl NoteCommitConfig {
             13,
             false,
         )?;
-        let g1_g2_prime = zs[0];
+        let g1_g2_prime = zs[0].clone();
         assert_eq!(zs.len(), 14); // [z_0, z_1, ..., z_13]
 
-        Ok((g1_g2_prime, zs[13]))
+        Ok((g1_g2_prime, zs[13].clone()))
     }
 
     // Check canonicity of y-coordinate given its LSB as a value.
@@ -1010,13 +1010,15 @@ impl NoteCommitConfig {
                 25,
                 true,
             )?;
-            (zs[0], zs[1], zs[13])
+            (zs[0].clone(), zs[1].clone(), zs[13].clone())
         };
 
         // Decompose j_prime = j + 2^130 - t_P using 13 ten-bit lookups.
         // We can reuse the canon_bitshift_130 logic here.
-        let (j_prime, z13_j_prime) =
-            self.canon_bitshift_130(layouter.namespace(|| "j_prime = j + 2^130 - t_P"), j)?;
+        let (j_prime, z13_j_prime) = self.canon_bitshift_130(
+            layouter.namespace(|| "j_prime = j + 2^130 - t_P"),
+            j.clone(),
+        )?;
 
         /*
 

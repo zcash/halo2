@@ -252,8 +252,11 @@ mod tests {
                 // Load the pair and the swap flag into the circuit.
                 let a = chip.load_private(layouter.namespace(|| "a"), config.a, self.a)?;
                 // Return the swapped pair.
-                let swapped_pair =
-                    chip.swap(layouter.namespace(|| "swap"), (a, self.b), self.swap)?;
+                let swapped_pair = chip.swap(
+                    layouter.namespace(|| "swap"),
+                    (a.clone(), self.b),
+                    self.swap,
+                )?;
 
                 if let Some(swap) = self.swap {
                     if swap {

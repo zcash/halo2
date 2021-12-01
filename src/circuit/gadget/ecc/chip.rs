@@ -26,7 +26,7 @@ pub(super) mod witness_point;
 /// A curve point represented in affine (x, y) coordinates, or the
 /// identity represented as (0, 0).
 /// Each coordinate is assigned to a cell.
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct EccPoint {
     /// x-coordinate
     x: CellValue<pallas::Base>,
@@ -62,12 +62,12 @@ impl EccPoint {
     /// The cell containing the affine short-Weierstrass x-coordinate,
     /// or 0 for the zero point.
     pub fn x(&self) -> CellValue<pallas::Base> {
-        self.x
+        self.x.clone()
     }
     /// The cell containing the affine short-Weierstrass y-coordinate,
     /// or 0 for the zero point.
     pub fn y(&self) -> CellValue<pallas::Base> {
-        self.y
+        self.y.clone()
     }
 
     #[cfg(test)]
@@ -78,7 +78,7 @@ impl EccPoint {
 
 /// A non-identity point represented in affine (x, y) coordinates.
 /// Each coordinate is assigned to a cell.
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct NonIdentityEccPoint {
     /// x-coordinate
     x: CellValue<pallas::Base>,
@@ -110,11 +110,11 @@ impl NonIdentityEccPoint {
     }
     /// The cell containing the affine short-Weierstrass x-coordinate.
     pub fn x(&self) -> CellValue<pallas::Base> {
-        self.x
+        self.x.clone()
     }
     /// The cell containing the affine short-Weierstrass y-coordinate.
     pub fn y(&self) -> CellValue<pallas::Base> {
-        self.y
+        self.y.clone()
     }
 }
 
@@ -298,7 +298,7 @@ struct EccBaseFieldElemFixed {
 
 impl EccBaseFieldElemFixed {
     fn base_field_elem(&self) -> CellValue<pallas::Base> {
-        self.base_field_elem
+        self.base_field_elem.clone()
     }
 }
 
@@ -396,7 +396,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
         let config = self.config().mul;
         config.assign(
             layouter.namespace(|| "variable-base scalar mul"),
-            *scalar,
+            scalar.clone(),
             base,
         )
     }

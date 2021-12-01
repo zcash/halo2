@@ -32,7 +32,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize, const MAX_WORDS: usize> std::
 ///
 /// The piece must fit within a base field element, which means its length
 /// cannot exceed the base field's `NUM_BITS`.
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct MessagePiece<F: FieldExt, const K: usize> {
     cell_value: CellValue<F>,
     /// The number of K-bit words in this message piece.
@@ -62,6 +62,6 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> MessagePiece<F, K> {
     }
 
     pub fn cell_value(&self) -> CellValue<F> {
-        self.cell_value
+        self.cell_value.clone()
     }
 }

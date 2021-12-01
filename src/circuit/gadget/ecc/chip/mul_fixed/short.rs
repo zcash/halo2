@@ -82,7 +82,7 @@ impl Config {
         let running_sum = self.super_config.running_sum_config.copy_decompose(
             region,
             offset,
-            magnitude,
+            magnitude.clone(),
             true,
             L_VALUE,
             NUM_WINDOWS_SHORT,
@@ -107,7 +107,7 @@ impl Config {
                 let offset = 0;
 
                 // Decompose the scalar
-                let scalar = self.decompose(&mut region, offset, magnitude_sign)?;
+                let scalar = self.decompose(&mut region, offset, magnitude_sign.clone())?;
 
                 let (acc, mul_b) = self.super_config.assign_region_inner::<NUM_WINDOWS_SHORT>(
                     &mut region,
@@ -128,8 +128,8 @@ impl Config {
                 let offset = 0;
                 // Add to the cumulative sum to get `[magnitude]B`.
                 let magnitude_mul = self.super_config.add_config.assign_region(
-                    &mul_b.into(),
-                    &acc.into(),
+                    &mul_b.clone().into(),
+                    &acc.clone().into(),
                     offset,
                     &mut region,
                 )?;
@@ -149,7 +149,7 @@ impl Config {
                 // Copy last window to `u` column.
                 // (Although the last window is not a `u` value; we are copying it into the `u`
                 // column because there is an available cell there.)
-                let z_21 = scalar.running_sum[21];
+                let z_21 = scalar.running_sum[21].clone();
                 copy(
                     &mut region,
                     || "last_window",

@@ -405,7 +405,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 leaf_pos: self.pos,
                 path,
             };
-            let leaf = *cm_old.extract_p().inner();
+            let leaf = cm_old.extract_p().inner().clone();
             merkle_inputs.calculate_root(layouter.namespace(|| "MerkleCRH"), leaf)?
         };
 
@@ -454,7 +454,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             let (commitment, _) = {
                 let value_commit_v = ValueCommitV::get();
                 let value_commit_v = FixedPointShort::from_inner(ecc_chip.clone(), value_commit_v);
-                value_commit_v.mul(layouter.namespace(|| "[v_net] ValueCommitV"), v_net)?
+                value_commit_v.mul(layouter.namespace(|| "[v_net] ValueCommitV"), v_net.clone())?
             };
 
             // blind = [rcv] ValueCommitR
@@ -481,7 +481,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let nf_old = {
             // hash_old = poseidon_hash(nk, rho_old)
             let hash_old = {
-                let poseidon_message = [nk, rho_old];
+                let poseidon_message = [nk.clone(), rho_old.clone()];
                 let poseidon_hasher = PoseidonHash::<_, _, poseidon::P128Pow5T3, _, 3, 2>::init(
                     config.poseidon_chip(),
                     layouter.namespace(|| "Poseidon init"),
@@ -581,7 +581,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                     config.sinsemilla_chip_1(),
                     ecc_chip.clone(),
                     layouter.namespace(|| "CommitIvk"),
-                    *ak.extract_p().inner(),
+                    ak.extract_p().inner().clone(),
                     nk,
                     rivk,
                 )?
@@ -619,7 +619,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 config.ecc_chip(),
                 g_d_old.inner(),
                 pk_d_old.inner(),
-                v_old,
+                v_old.clone(),
                 rho_old,
                 psi_old,
                 rcm_old,
@@ -675,8 +675,8 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 config.ecc_chip(),
                 g_d_new.inner(),
                 pk_d_new.inner(),
-                v_new,
-                *nf_old.inner(),
+                v_new.clone(),
+                nf_old.inner().clone(),
                 psi_new,
                 rcm_new,
             )?;
@@ -694,7 +694,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             |mut region| {
                 copy(&mut region, || "v_old", config.advices[0], 0, &v_old)?;
                 copy(&mut region, || "v_new", config.advices[1], 0, &v_new)?;
-                let (magnitude, sign) = v_net;
+                let (magnitude, sign) = v_net.clone();
                 copy(
                     &mut region,
                     || "v_net magnitude",

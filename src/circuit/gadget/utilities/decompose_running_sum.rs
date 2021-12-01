@@ -179,7 +179,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         };
 
         // Initialize empty vector to store running sum values [z_0, ..., z_W].
-        let mut zs: Vec<CellValue<F>> = vec![z_0];
+        let mut zs: Vec<CellValue<F>> = vec![z_0.clone()];
         let mut z = z_0;
 
         // Assign running sum `z_{i+1}` = (z_i - k_i) / (2^K) for i = 0..=n-1.
@@ -205,7 +205,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
 
             // Update `z`.
             z = z_next;
-            zs.push(z);
+            zs.push(z.clone());
         }
         assert_eq!(zs.len(), num_windows + 1);
 
@@ -284,7 +284,7 @@ mod tests {
                             WORD_NUM_BITS,
                             NUM_WINDOWS,
                         )?;
-                        let alpha = zs[0];
+                        let alpha = zs[0].clone();
 
                         let offset = offset + NUM_WINDOWS + 1;
 

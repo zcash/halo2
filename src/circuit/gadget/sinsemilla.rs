@@ -32,7 +32,7 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     ///
     /// For example, in the case `K = 10`, `NUM_BITS = 255`, we can fit
     /// up to `N = 25` words in a single base field element.
-    type MessagePiece: Copy + Clone + Debug;
+    type MessagePiece: Clone + Debug;
 
     /// A cumulative sum `z` is used to decompose a Sinsemilla message. It
     /// produces intermediate values for each word in the message, such
@@ -170,7 +170,7 @@ where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
 {
     fn inner(&self) -> SinsemillaChip::MessagePiece {
-        self.inner
+        self.inner.clone()
     }
 }
 

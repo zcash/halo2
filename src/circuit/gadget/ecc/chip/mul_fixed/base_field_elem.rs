@@ -173,13 +173,13 @@ impl Config {
                     let running_sum = self.super_config.running_sum_config.copy_decompose(
                         &mut region,
                         offset,
-                        scalar,
+                        scalar.clone(),
                         true,
                         constants::L_ORCHARD_BASE,
                         constants::NUM_WINDOWS,
                     )?;
                     EccBaseFieldElemFixed {
-                        base_field_elem: running_sum[0],
+                        base_field_elem: running_sum[0].clone(),
                         running_sum: (*running_sum).as_slice().try_into().unwrap(),
                     }
                 };
@@ -203,8 +203,8 @@ impl Config {
             || "Base-field elem fixed-base mul (complete addition)",
             |mut region| {
                 self.super_config.add_config.assign_region(
-                    &mul_b.into(),
-                    &acc.into(),
+                    &mul_b.clone().into(),
+                    &acc.clone().into(),
                     0,
                     &mut region,
                 )
@@ -249,9 +249,9 @@ impl Config {
         //                => z_13_alpha_0_prime = 0
         //
         let (alpha, running_sum) = (scalar.base_field_elem, &scalar.running_sum);
-        let z_43_alpha = running_sum[43];
-        let z_44_alpha = running_sum[44];
-        let z_84_alpha = running_sum[84];
+        let z_43_alpha = running_sum[43].clone();
+        let z_44_alpha = running_sum[44].clone();
+        let z_84_alpha = running_sum[84].clone();
 
         // α_0 = α - z_84_alpha * 2^252
         let alpha_0 = alpha
@@ -275,9 +275,9 @@ impl Config {
                 13,
                 false,
             )?;
-            let alpha_0_prime = zs[0];
+            let alpha_0_prime = zs[0].clone();
 
-            (alpha_0_prime, zs[13])
+            (alpha_0_prime, zs[13].clone())
         };
 
         layouter.assign_region(

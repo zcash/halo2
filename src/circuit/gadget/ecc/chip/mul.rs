@@ -175,7 +175,7 @@ impl Config {
                 let offset = 0;
 
                 // Case `base` into an `EccPoint` for later use.
-                let base_point: EccPoint = (*base).into();
+                let base_point: EccPoint = base.clone().into();
 
                 // Decompose `k = alpha + t_q` bitwise (big-endian bit order).
                 let bits = decompose_for_scalar_mul(alpha.value());
@@ -211,7 +211,7 @@ impl Config {
                     offset,
                     base,
                     bits_incomplete_hi,
-                    (X(acc.x), Y(acc.y), z_init),
+                    (X(acc.x), Y(acc.y), z_init.clone()),
                 )?;
 
                 // Double-and-add (incomplete addition) for the `lo` half of the scalar decomposition
@@ -221,7 +221,7 @@ impl Config {
                     offset,
                     base,
                     bits_incomplete_lo,
-                    (x_a, y_a, *z),
+                    (x_a, y_a, z.clone()),
                 )?;
 
                 // Move from incomplete addition to complete addition.
@@ -245,7 +245,7 @@ impl Config {
                         &base_point,
                         x_a,
                         y_a,
-                        *z,
+                        z.clone(),
                     )?
                 };
 
@@ -253,8 +253,8 @@ impl Config {
                 let offset = offset + COMPLETE_RANGE.len() * 2;
 
                 // Process the least significant bit
-                let z_1 = zs_complete.last().unwrap();
-                let (result, z_0) = self.process_lsb(&mut region, offset, base, acc, *z_1, lsb)?;
+                let z_1 = zs_complete.last().unwrap().clone();
+                let (result, z_0) = self.process_lsb(&mut region, offset, base, acc, z_1, lsb)?;
 
                 #[cfg(test)]
                 // Check that the correct multiple is obtained.
@@ -292,8 +292,11 @@ impl Config {
             },
         )?;
 
-        self.overflow_config
-            .overflow_check(layouter.namespace(|| "overflow check"), alpha, &zs)?;
+        self.overflow_config.overflow_check(
+            layouter.namespace(|| "overflow check"),
+            alpha.clone(),
+            &zs,
+        )?;
 
         Ok((result, alpha))
     }
@@ -416,7 +419,7 @@ impl<F: FieldExt> Deref for X<F> {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 // `y`-coordinate of the accumulator.
 struct Y<F: FieldExt>(CellValue<F>);
 impl<F: FieldExt> Deref for Y<F> {
@@ -427,7 +430,7 @@ impl<F: FieldExt> Deref for Y<F> {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 // Cumulative sum `z` used to decompose the scalar.
 struct Z<F: FieldExt>(CellValue<F>);
 impl<F: FieldExt> Deref for Z<F> {

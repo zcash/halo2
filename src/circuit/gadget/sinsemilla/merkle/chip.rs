@@ -257,10 +257,10 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
         let (point, zs) = self.hash_to_point(
             layouter.namespace(|| format!("hash at l = {}", l)),
             Q,
-            vec![a, b, c].into(),
+            vec![a.clone(), b.clone(), c.clone()].into(),
         )?;
-        let z1_a = zs[0][1];
-        let z1_b = zs[1][1];
+        let z1_a = zs[0][1].clone();
+        let z1_b = zs[1][1].clone();
 
         // Check that the pieces have been decomposed properly.
         /*

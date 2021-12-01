@@ -223,7 +223,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             }
         };
 
-        let mut zs = vec![element];
+        let mut zs = vec![element.clone()];
 
         // Assign cumulative sum such that
         //          z_i = 2^{K}⋅z_{i + 1} + a_i
@@ -256,7 +256,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
 
                 CellValue::new(z_cell, z_val)
             };
-            zs.push(z);
+            zs.push(z.clone());
         }
 
         if strict {
@@ -316,7 +316,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                     CellValue::new(cell, element)
                 };
 
-                self.short_range_check(&mut region, element, num_bits)?;
+                self.short_range_check(&mut region, element.clone(), num_bits)?;
 
                 Ok(element)
             },

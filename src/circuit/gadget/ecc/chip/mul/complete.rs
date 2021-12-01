@@ -106,7 +106,7 @@ impl Config {
         }
 
         // Use x_a, y_a output from incomplete addition
-        let mut acc = EccPoint { x: *x_a, y: *y_a };
+        let mut acc = EccPoint { x: x_a.0, y: y_a.0 };
 
         // Copy running sum `z` from incomplete addition
         let mut z = {
@@ -148,7 +148,7 @@ impl Config {
                 )?;
                 Z(CellValue::new(z_cell, z_val))
             };
-            zs.push(z);
+            zs.push(z.clone());
 
             // Assign `y_p` for complete addition.
             let y_p = {
@@ -176,7 +176,10 @@ impl Config {
             };
 
             // U = P if the bit is set; U = -P is the bit is not set.
-            let U = EccPoint { x: base.x, y: y_p };
+            let U = EccPoint {
+                x: base.x.clone(),
+                y: y_p,
+            };
 
             // Acc + U
             let tmp_acc = self
