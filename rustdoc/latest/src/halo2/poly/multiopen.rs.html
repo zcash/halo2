@@ -514,25 +514,6 @@
 <span id="498">498</span>
 <span id="499">499</span>
 <span id="500">500</span>
-<span id="501">501</span>
-<span id="502">502</span>
-<span id="503">503</span>
-<span id="504">504</span>
-<span id="505">505</span>
-<span id="506">506</span>
-<span id="507">507</span>
-<span id="508">508</span>
-<span id="509">509</span>
-<span id="510">510</span>
-<span id="511">511</span>
-<span id="512">512</span>
-<span id="513">513</span>
-<span id="514">514</span>
-<span id="515">515</span>
-<span id="516">516</span>
-<span id="517">517</span>
-<span id="518">518</span>
-<span id="519">519</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module contains an optimisation of the polynomial commitment opening</span>
 <span class="doccomment">//! scheme described in the [Halo][halo] paper.</span>
 <span class="doccomment">//!</span>
@@ -637,6 +618,7 @@
     }
 }
 
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">struct</span> <span class="ident">CommitmentData</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span>: <span class="ident">PartialEq</span><span class="op">&gt;</span> {
     <span class="ident">commitment</span>: <span class="ident">T</span>,
     <span class="ident">set_index</span>: <span class="ident">usize</span>,
@@ -917,141 +899,121 @@
             <span class="self">self</span>.<span class="ident">commitment</span>
         }
     }
+}
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_coherence</span>() {
-        <span class="kw">let</span> <span class="ident">points</span> <span class="op">=</span> <span class="kw-2">&amp;</span>[<span class="ident">Fp::rand</span>(), <span class="ident">Fp::rand</span>(), <span class="ident">Fp::rand</span>(), <span class="ident">Fp::rand</span>(), <span class="ident">Fp::rand</span>()];
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">mod</span> <span class="ident">proptests</span> {
+    <span class="kw">use</span> <span class="ident">proptest</span>::{
+        <span class="ident">collection::vec</span>,
+        <span class="ident">prelude</span>::<span class="kw-2">*</span>,
+        <span class="ident">sample</span>::{<span class="ident">select</span>, <span class="ident">subsequence</span>},
+        <span class="ident">strategy::Strategy</span>,
+    };
 
-        <span class="kw">let</span> <span class="ident">build_queries</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> {
-            <span class="macro">vec!</span>[
-                <span class="ident">MyQuery</span> {
-                    <span class="ident">commitment</span>: <span class="number">0</span>,
-                    <span class="ident">point</span>: <span class="ident">points</span>[<span class="number">0</span>],
-                    <span class="ident">eval</span>: <span class="ident">Fp::rand</span>(),
-                },
-                <span class="ident">MyQuery</span> {
-                    <span class="ident">commitment</span>: <span class="number">0</span>,
-                    <span class="ident">point</span>: <span class="ident">points</span>[<span class="number">1</span>],
-                    <span class="ident">eval</span>: <span class="ident">Fp::rand</span>(),
-                },
-                <span class="ident">MyQuery</span> {
-                    <span class="ident">commitment</span>: <span class="number">1</span>,
-                    <span class="ident">point</span>: <span class="ident">points</span>[<span class="number">0</span>],
-                    <span class="ident">eval</span>: <span class="ident">Fp::rand</span>(),
-                },
-                <span class="ident">MyQuery</span> {
-                    <span class="ident">commitment</span>: <span class="number">1</span>,
-                    <span class="ident">point</span>: <span class="ident">points</span>[<span class="number">1</span>],
-                    <span class="ident">eval</span>: <span class="ident">Fp::rand</span>(),
-                },
-                <span class="ident">MyQuery</span> {
-                    <span class="ident">commitment</span>: <span class="number">2</span>,
-                    <span class="ident">point</span>: <span class="ident">points</span>[<span class="number">0</span>],
-                    <span class="ident">eval</span>: <span class="ident">Fp::rand</span>(),
-                },
-                <span class="ident">MyQuery</span> {
-                    <span class="ident">commitment</span>: <span class="number">2</span>,
-                    <span class="ident">point</span>: <span class="ident">points</span>[<span class="number">1</span>],
-                    <span class="ident">eval</span>: <span class="ident">Fp::rand</span>(),
-                },
-                <span class="ident">MyQuery</span> {
-                    <span class="ident">commitment</span>: <span class="number">2</span>,
-                    <span class="ident">point</span>: <span class="ident">points</span>[<span class="number">2</span>],
-                    <span class="ident">eval</span>: <span class="ident">Fp::rand</span>(),
-                },
-                <span class="ident">MyQuery</span> {
-                    <span class="ident">commitment</span>: <span class="number">3</span>,
-                    <span class="ident">point</span>: <span class="ident">points</span>[<span class="number">0</span>],
-                    <span class="ident">eval</span>: <span class="ident">Fp::rand</span>(),
-                },
-                <span class="ident">MyQuery</span> {
-                    <span class="ident">commitment</span>: <span class="number">3</span>,
-                    <span class="ident">point</span>: <span class="ident">points</span>[<span class="number">3</span>],
-                    <span class="ident">eval</span>: <span class="ident">Fp::rand</span>(),
-                },
-                <span class="ident">MyQuery</span> {
-                    <span class="ident">commitment</span>: <span class="number">4</span>,
-                    <span class="ident">point</span>: <span class="ident">points</span>[<span class="number">4</span>],
-                    <span class="ident">eval</span>: <span class="ident">Fp::rand</span>(),
-                },
-            ]
-        };
+    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::construct_intermediate_sets</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::poly::Rotation</span>;
+    <span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">Fp</span>};
 
-        <span class="kw">let</span> <span class="ident">queries</span> <span class="op">=</span> <span class="ident">build_queries</span>();
+    <span class="kw">use</span> <span class="ident">std::collections::BTreeMap</span>;
+    <span class="kw">use</span> <span class="ident">std::convert::TryFrom</span>;
 
-        <span class="kw">let</span> (<span class="ident">commitment_data</span>, <span class="ident">point_sets</span>) <span class="op">=</span> <span class="ident">construct_intermediate_sets</span>(<span class="ident">queries</span>);
+    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
+    <span class="kw">struct</span> <span class="ident">MyQuery</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
+        <span class="ident">point</span>: <span class="ident">F</span>,
+        <span class="ident">eval</span>: <span class="ident">F</span>,
+        <span class="ident">commitment</span>: <span class="ident">usize</span>,
+    }
 
-        <span class="comment">// It shouldn&#39;t matter what the point or eval values are; we should get</span>
-        <span class="comment">// the same exact point sets again.</span>
-        {
-            <span class="kw">let</span> <span class="ident">new_queries</span> <span class="op">=</span> <span class="ident">build_queries</span>();
-            <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">new_point_sets</span>) <span class="op">=</span> <span class="ident">construct_intermediate_sets</span>(<span class="ident">new_queries</span>);
+    <span class="kw">impl</span> <span class="ident"><span class="kw">super</span>::Query</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyQuery</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span> {
+        <span class="kw">type</span> <span class="ident">Commitment</span> <span class="op">=</span> <span class="ident">usize</span>;
+        <span class="kw">type</span> <span class="ident">Eval</span> <span class="op">=</span> <span class="ident">Fp</span>;
 
-            <span class="macro">assert_eq!</span>(<span class="ident">point_sets</span>, <span class="ident">new_point_sets</span>);
+        <span class="kw">fn</span> <span class="ident">get_point</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Fp</span> {
+            <span class="self">self</span>.<span class="ident">point</span>
         }
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">a</span> <span class="op">=</span> <span class="bool-val">false</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">a_set</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">b</span> <span class="op">=</span> <span class="bool-val">false</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">b_set</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">c</span> <span class="op">=</span> <span class="bool-val">false</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">c_set</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">d</span> <span class="op">=</span> <span class="bool-val">false</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">d_set</span> <span class="op">=</span> <span class="number">0</span>;
+        <span class="kw">fn</span> <span class="ident">get_eval</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Eval</span> {
+            <span class="self">self</span>.<span class="ident">eval</span>
+        }
 
-        <span class="kw">for</span> (<span class="ident">i</span>, <span class="kw-2">mut</span> <span class="ident">point_set</span>) <span class="kw">in</span> <span class="ident">point_sets</span>.<span class="ident">into_iter</span>().<span class="ident">enumerate</span>() {
-            <span class="ident">point_set</span>.<span class="ident">sort</span>();
-            <span class="kw">if</span> <span class="ident">point_set</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">1</span> {
-                <span class="macro">assert_eq!</span>(<span class="ident">point_set</span>[<span class="number">0</span>], <span class="ident">points</span>[<span class="number">4</span>]);
-                <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">a</span>);
-                <span class="ident">a</span> <span class="op">=</span> <span class="bool-val">true</span>;
-                <span class="ident">a_set</span> <span class="op">=</span> <span class="ident">i</span>;
-            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">point_set</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">2</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v0</span> <span class="op">=</span> [<span class="ident">points</span>[<span class="number">0</span>], <span class="ident">points</span>[<span class="number">1</span>]];
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v1</span> <span class="op">=</span> [<span class="ident">points</span>[<span class="number">0</span>], <span class="ident">points</span>[<span class="number">3</span>]];
-                <span class="ident">v0</span>.<span class="ident">sort</span>();
-                <span class="ident">v1</span>.<span class="ident">sort</span>();
+        <span class="kw">fn</span> <span class="ident">get_commitment</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Commitment</span> {
+            <span class="self">self</span>.<span class="ident">commitment</span>
+        }
+    }
 
-                <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">point_set</span>[..] <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">v0</span>[..] {
-                    <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">b</span>);
-                    <span class="ident">b</span> <span class="op">=</span> <span class="bool-val">true</span>;
-                    <span class="ident">b_set</span> <span class="op">=</span> <span class="ident">i</span>;
-                } <span class="kw">else</span> <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">point_set</span>[..] <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">v1</span>[..] {
-                    <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">c</span>);
-                    <span class="ident">c</span> <span class="op">=</span> <span class="bool-val">true</span>;
-                    <span class="ident">c_set</span> <span class="op">=</span> <span class="ident">i</span>;
-                } <span class="kw">else</span> {
-                    <span class="macro">panic!</span>(<span class="string">&quot;unexpected&quot;</span>);
-                }
-            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">point_set</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">3</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> [<span class="ident">points</span>[<span class="number">0</span>], <span class="ident">points</span>[<span class="number">1</span>], <span class="ident">points</span>[<span class="number">2</span>]];
-                <span class="ident">v</span>.<span class="ident">sort</span>();
-                <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span><span class="ident">point_set</span>[..], <span class="kw-2">&amp;</span><span class="ident">v</span>[..]);
-                <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">d</span>);
-                <span class="ident">d</span> <span class="op">=</span> <span class="bool-val">true</span>;
-                <span class="ident">d_set</span> <span class="op">=</span> <span class="ident">i</span>;
-            } <span class="kw">else</span> {
-                <span class="macro">panic!</span>(<span class="string">&quot;unexpected&quot;</span>);
+    <span class="macro">prop_compose!</span> {
+        <span class="kw">fn</span> <span class="ident">arb_point</span>()(
+            <span class="ident">bytes</span> <span class="kw">in</span> <span class="ident">vec</span>(<span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>(), <span class="number">64</span>)
+        ) -&gt; <span class="ident">Fp</span> {
+            <span class="ident">Fp::from_bytes_wide</span>(<span class="kw-2">&amp;</span><span class="op">&lt;</span>[<span class="ident">u8</span>; <span class="number">64</span>]<span class="op">&gt;</span><span class="ident">::try_from</span>(<span class="ident">bytes</span>).<span class="ident">unwrap</span>())
+        }
+    }
+
+    <span class="macro">prop_compose!</span> {
+        <span class="kw">fn</span> <span class="ident">arb_query</span>(<span class="ident">commitment</span>: <span class="ident">usize</span>, <span class="ident">point</span>: <span class="ident">Fp</span>)(
+            <span class="ident">eval</span> <span class="kw">in</span> <span class="ident">arb_point</span>()
+        ) -&gt; <span class="ident">MyQuery</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span> {
+            <span class="ident">MyQuery</span> {
+                <span class="ident">point</span>,
+                <span class="ident">eval</span>,
+                <span class="ident">commitment</span>
             }
         }
+    }
 
-        <span class="macro">assert!</span>(<span class="ident">a</span> <span class="op">&amp;</span> <span class="ident">b</span> <span class="op">&amp;</span> <span class="ident">c</span> <span class="op">&amp;</span> <span class="ident">d</span>);
+    <span class="macro">prop_compose!</span> {
+        <span class="comment">// Mapping from column index to point index.</span>
+        <span class="kw">fn</span> <span class="ident">arb_queries_inner</span>(<span class="ident">num_points</span>: <span class="ident">usize</span>, <span class="ident">num_cols</span>: <span class="ident">usize</span>, <span class="ident">num_queries</span>: <span class="ident">usize</span>)(
+            <span class="ident">col_indices</span> <span class="kw">in</span> <span class="ident">vec</span>(<span class="ident">select</span>((<span class="number">0</span>..<span class="ident">num_cols</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()), <span class="ident">num_queries</span>),
+            <span class="ident">point_indices</span> <span class="kw">in</span> <span class="ident">vec</span>(<span class="ident">select</span>((<span class="number">0</span>..<span class="ident">num_points</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()), <span class="ident">num_queries</span>)
+        ) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">usize</span>, <span class="ident">usize</span>)<span class="op">&gt;</span> {
+            <span class="ident">col_indices</span>.<span class="ident">into_iter</span>().<span class="ident">zip</span>(<span class="ident">point_indices</span>.<span class="ident">into_iter</span>()).<span class="ident">collect</span>()
+        }
+    }
 
-        <span class="kw">for</span> <span class="ident">commitment_data</span> <span class="kw">in</span> <span class="ident">commitment_data</span> {
-            <span class="macro">assert_eq!</span>(
-                <span class="ident">commitment_data</span>.<span class="ident">set_index</span>,
-                <span class="kw">match</span> <span class="ident">commitment_data</span>.<span class="ident">commitment</span> {
-                    <span class="number">0</span> =&gt; <span class="ident">b_set</span>,
-                    <span class="number">1</span> =&gt; <span class="ident">b_set</span>,
-                    <span class="number">2</span> =&gt; <span class="ident">d_set</span>,
-                    <span class="number">3</span> =&gt; <span class="ident">c_set</span>,
-                    <span class="number">4</span> =&gt; <span class="ident">a_set</span>,
-                    <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(),
-                }
-            );
+    <span class="macro">prop_compose!</span> {
+        <span class="kw">fn</span> <span class="ident">compare_queries</span>(
+            <span class="ident">num_points</span>: <span class="ident">usize</span>,
+            <span class="ident">num_cols</span>: <span class="ident">usize</span>,
+            <span class="ident">num_queries</span>: <span class="ident">usize</span>,
+        )(
+            <span class="ident">points_1</span> <span class="kw">in</span> <span class="ident">vec</span>(<span class="ident">arb_point</span>(), <span class="ident">num_points</span>),
+            <span class="ident">points_2</span> <span class="kw">in</span> <span class="ident">vec</span>(<span class="ident">arb_point</span>(), <span class="ident">num_points</span>),
+            <span class="ident">mapping</span> <span class="kw">in</span> <span class="ident">arb_queries_inner</span>(<span class="ident">num_points</span>, <span class="ident">num_cols</span>, <span class="ident">num_queries</span>)
+        )(
+            <span class="ident">queries_1</span> <span class="kw">in</span> <span class="ident">mapping</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">commitment</span>, <span class="ident">point_idx</span>)<span class="op">|</span> <span class="ident">arb_query</span>(<span class="kw-2">*</span><span class="ident">commitment</span>, <span class="ident">points_1</span>[<span class="kw-2">*</span><span class="ident">point_idx</span>])).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+            <span class="ident">queries_2</span> <span class="kw">in</span> <span class="ident">mapping</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">commitment</span>, <span class="ident">point_idx</span>)<span class="op">|</span> <span class="ident">arb_query</span>(<span class="kw-2">*</span><span class="ident">commitment</span>, <span class="ident">points_2</span>[<span class="kw-2">*</span><span class="ident">point_idx</span>])).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+        ) -&gt; (
+            <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MyQuery</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+            <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MyQuery</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span><span class="op">&gt;</span>
+        ) {
+            (
+                <span class="ident">queries_1</span>,
+                <span class="ident">queries_2</span>,
+            )
+        }
+    }
+
+    <span class="macro">proptest!</span> {
+        <span class="attribute">#[<span class="ident">test</span>]</span>
+        <span class="kw">fn</span> <span class="ident">test_intermediate_sets</span>(
+            (<span class="ident">queries_1</span>, <span class="ident">queries_2</span>) <span class="kw">in</span> <span class="ident">compare_queries</span>(<span class="number">8</span>, <span class="number">8</span>, <span class="number">16</span>)
+        ) {
+            <span class="kw">let</span> (<span class="ident">commitment_data</span>, <span class="ident">_point_sets</span>) <span class="op">=</span> <span class="ident">construct_intermediate_sets</span>(<span class="ident">queries_1</span>);
+            <span class="kw">let</span> <span class="ident">set_indices</span> <span class="op">=</span> <span class="ident">commitment_data</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">data</span><span class="op">|</span> <span class="ident">data</span>.<span class="ident">set_index</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+            <span class="kw">let</span> <span class="ident">point_indices</span> <span class="op">=</span> <span class="ident">commitment_data</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">data</span><span class="op">|</span> <span class="ident">data</span>.<span class="ident">point_indices</span>.<span class="ident">clone</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+
+            <span class="comment">// It shouldn&#39;t matter what the point or eval values are; we should get</span>
+            <span class="comment">// the same exact point set indices and point indices again.</span>
+            <span class="kw">let</span> (<span class="ident">new_commitment_data</span>, <span class="ident">_new_point_sets</span>) <span class="op">=</span> <span class="ident">construct_intermediate_sets</span>(<span class="ident">queries_2</span>);
+            <span class="kw">let</span> <span class="ident">new_set_indices</span> <span class="op">=</span> <span class="ident">new_commitment_data</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">data</span><span class="op">|</span> <span class="ident">data</span>.<span class="ident">set_index</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+            <span class="kw">let</span> <span class="ident">new_point_indices</span> <span class="op">=</span> <span class="ident">new_commitment_data</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">data</span><span class="op">|</span> <span class="ident">data</span>.<span class="ident">point_indices</span>.<span class="ident">clone</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+
+            <span class="macro">assert_eq!</span>(<span class="ident">set_indices</span>, <span class="ident">new_set_indices</span>);
+            <span class="macro">assert_eq!</span>(<span class="ident">point_indices</span>, <span class="ident">new_point_indices</span>);
         }
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (6db0a0e9a 2021-11-29)" ></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (207c80f10 2021-11-30)" ></div>
 </body></html>
