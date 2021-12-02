@@ -29,7 +29,7 @@ use halo2::{
     poly::Rotation,
 };
 
-use super::{copy, range_check, CellValue};
+use super::{range_check, CellValue};
 use crate::constants::util::decompose_word;
 use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
@@ -127,7 +127,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         word_num_bits: usize,
         num_windows: usize,
     ) -> Result<RunningSum<F>, Error> {
-        let z_0 = copy(region, || "copy z_0 = alpha", self.z, offset, &alpha)?;
+        let z_0 = alpha.copy_advice(|| "copy z_0 = alpha", region, self.z, offset)?;
         self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
 

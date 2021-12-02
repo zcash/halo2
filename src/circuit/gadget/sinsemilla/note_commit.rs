@@ -11,7 +11,7 @@ use crate::{
             chip::{EccChip, NonIdentityEccPoint},
             Point,
         },
-        utilities::{bitrange_subset, bool_check, copy, CellValue},
+        utilities::{bitrange_subset, bool_check, CellValue},
     },
     constants::T_P,
 };
@@ -1041,7 +1041,7 @@ impl NoteCommitConfig {
                     let offset = 0;
 
                     // Copy y.
-                    copy(&mut region, || "copy y", self.advices[5], offset, &y)?;
+                    y.copy_advice(|| "copy y", &mut region, self.advices[5], offset)?;
                     // Witness LSB.
                     let lsb = region.assign_advice(
                         || "witness LSB",
@@ -1050,9 +1050,9 @@ impl NoteCommitConfig {
                         || lsb.ok_or(Error::Synthesis),
                     )?;
                     // Witness k_0.
-                    copy(&mut region, || "copy k_0", self.advices[7], offset, &k_0)?;
+                    k_0.copy_advice(|| "copy k_0", &mut region, self.advices[7], offset)?;
                     // Copy k_2.
-                    copy(&mut region, || "copy k_2", self.advices[8], offset, &k_2)?;
+                    k_2.copy_advice(|| "copy k_2", &mut region, self.advices[8], offset)?;
                     // Witness k_3.
                     region.assign_advice(
                         || "witness k_3",
@@ -1069,32 +1069,19 @@ impl NoteCommitConfig {
                     let offset = 1;
 
                     // Copy j.
-                    copy(&mut region, || "copy j", self.advices[5], offset, &j)?;
+                    j.copy_advice(|| "copy j", &mut region, self.advices[5], offset)?;
                     // Copy z1_j.
-                    copy(&mut region, || "copy z1_j", self.advices[6], offset, &z1_j)?;
+                    z1_j.copy_advice(|| "copy z1_j", &mut region, self.advices[6], offset)?;
                     // Copy z13_j.
-                    copy(
-                        &mut region,
-                        || "copy z13_j",
-                        self.advices[7],
-                        offset,
-                        &z13_j,
-                    )?;
+                    z13_j.copy_advice(|| "copy z13_j", &mut region, self.advices[7], offset)?;
                     // Copy j_prime.
-                    copy(
-                        &mut region,
-                        || "copy j_prime",
-                        self.advices[8],
-                        offset,
-                        &j_prime,
-                    )?;
+                    j_prime.copy_advice(|| "copy j_prime", &mut region, self.advices[8], offset)?;
                     // Copy z13_j_prime.
-                    copy(
-                        &mut region,
+                    z13_j_prime.copy_advice(
                         || "copy z13_j_prime",
+                        &mut region,
                         self.advices[9],
                         offset,
-                        &z13_j_prime,
                     )?;
                 }
 
@@ -1123,8 +1110,10 @@ impl NoteCommitConfig {
             |mut region| {
                 self.q_notecommit_b.enable(&mut region, 0)?;
 
-                copy(&mut region, || "b", col_l, 0, &gate_cells.b)?;
-                copy(&mut region, || "b_0", col_m, 0, &gate_cells.b_0)?;
+                gate_cells.b.copy_advice(|| "b", &mut region, col_l, 0)?;
+                gate_cells
+                    .b_0
+                    .copy_advice(|| "b_0", &mut region, col_m, 0)?;
                 let b_1 = region.assign_advice(
                     || "b_1",
                     col_r,
@@ -1132,8 +1121,12 @@ impl NoteCommitConfig {
                     || gate_cells.b_1.ok_or(Error::Synthesis),
                 )?;
 
-                copy(&mut region, || "b_2", col_m, 1, &gate_cells.b_2)?;
-                copy(&mut region, || "b_3", col_r, 1, &gate_cells.b_3)?;
+                gate_cells
+                    .b_2
+                    .copy_advice(|| "b_2", &mut region, col_m, 1)?;
+                gate_cells
+                    .b_3
+                    .copy_advice(|| "b_3", &mut region, col_r, 1)?;
 
                 Ok(b_1)
             },
@@ -1148,17 +1141,23 @@ impl NoteCommitConfig {
             |mut region| {
                 self.q_notecommit_d.enable(&mut region, 0)?;
 
-                copy(&mut region, || "d", col_l, 0, &gate_cells.d)?;
+                gate_cells.d.copy_advice(|| "d", &mut region, col_l, 0)?;
                 let d_0 = region.assign_advice(
                     || "d_0",
                     col_m,
                     0,
                     || gate_cells.d_0.ok_or(Error::Synthesis),
                 )?;
-                copy(&mut region, || "d_1", col_r, 0, &gate_cells.d_1)?;
+                gate_cells
+                    .d_1
+                    .copy_advice(|| "d_1", &mut region, col_r, 0)?;
 
-                copy(&mut region, || "d_2", col_m, 1, &gate_cells.d_2)?;
-                copy(&mut region, || "d_3 = z1_d", col_r, 1, &gate_cells.z1_d)?;
+                gate_cells
+                    .d_2
+                    .copy_advice(|| "d_2", &mut region, col_m, 1)?;
+                gate_cells
+                    .z1_d
+                    .copy_advice(|| "d_3 = z1_d", &mut region, col_r, 1)?;
 
                 Ok(d_0)
             },
@@ -1172,9 +1171,13 @@ impl NoteCommitConfig {
             |mut region| {
                 self.q_notecommit_e.enable(&mut region, 0)?;
 
-                copy(&mut region, || "e", col_l, 0, &gate_cells.e)?;
-                copy(&mut region, || "e_0", col_m, 0, &gate_cells.e_0)?;
-                copy(&mut region, || "e_1", col_r, 0, &gate_cells.e_1)?;
+                gate_cells.e.copy_advice(|| "e", &mut region, col_l, 0)?;
+                gate_cells
+                    .e_0
+                    .copy_advice(|| "e_0", &mut region, col_m, 0)?;
+                gate_cells
+                    .e_1
+                    .copy_advice(|| "e_1", &mut region, col_r, 0)?;
 
                 Ok(())
             },
@@ -1189,7 +1192,7 @@ impl NoteCommitConfig {
             |mut region| {
                 self.q_notecommit_g.enable(&mut region, 0)?;
 
-                copy(&mut region, || "g", col_l, 0, &gate_cells.g)?;
+                gate_cells.g.copy_advice(|| "g", &mut region, col_l, 0)?;
                 let g_0 = region.assign_advice(
                     || "g_0",
                     col_m,
@@ -1197,8 +1200,12 @@ impl NoteCommitConfig {
                     || gate_cells.g_0.ok_or(Error::Synthesis),
                 )?;
 
-                copy(&mut region, || "g_1", col_l, 1, &gate_cells.g_1)?;
-                copy(&mut region, || "g_2 = z1_g", col_m, 1, &gate_cells.z1_g)?;
+                gate_cells
+                    .g_1
+                    .copy_advice(|| "g_1", &mut region, col_l, 1)?;
+                gate_cells
+                    .z1_g
+                    .copy_advice(|| "g_2 = z1_g", &mut region, col_m, 1)?;
 
                 Ok(g_0)
             },
@@ -1212,8 +1219,10 @@ impl NoteCommitConfig {
             |mut region| {
                 self.q_notecommit_h.enable(&mut region, 0)?;
 
-                copy(&mut region, || "h", col_l, 0, &gate_cells.h)?;
-                copy(&mut region, || "h_0", col_m, 0, &gate_cells.h_0)?;
+                gate_cells.h.copy_advice(|| "h", &mut region, col_l, 0)?;
+                gate_cells
+                    .h_0
+                    .copy_advice(|| "h_0", &mut region, col_m, 0)?;
                 let h_1 = region.assign_advice(
                     || "h_1",
                     col_r,
@@ -1232,22 +1241,26 @@ impl NoteCommitConfig {
         layouter.assign_region(
             || "NoteCommit input g_d",
             |mut region| {
-                copy(&mut region, || "gd_x", col_l, 0, &gate_cells.gd_x)?;
+                gate_cells
+                    .gd_x
+                    .copy_advice(|| "gd_x", &mut region, col_l, 0)?;
 
-                copy(&mut region, || "b_0", col_m, 0, &gate_cells.b_0)?;
-                copy(&mut region, || "b_1", col_m, 1, &b_1)?;
+                gate_cells
+                    .b_0
+                    .copy_advice(|| "b_0", &mut region, col_m, 0)?;
+                b_1.copy_advice(|| "b_1", &mut region, col_m, 1)?;
 
-                copy(&mut region, || "a", col_r, 0, &gate_cells.a)?;
-                copy(&mut region, || "a_prime", col_r, 1, &gate_cells.a_prime)?;
+                gate_cells.a.copy_advice(|| "a", &mut region, col_r, 0)?;
+                gate_cells
+                    .a_prime
+                    .copy_advice(|| "a_prime", &mut region, col_r, 1)?;
 
-                copy(&mut region, || "z13_a", col_z, 0, &gate_cells.z13_a)?;
-                copy(
-                    &mut region,
-                    || "z13_a_prime",
-                    col_z,
-                    1,
-                    &gate_cells.z13_a_prime,
-                )?;
+                gate_cells
+                    .z13_a
+                    .copy_advice(|| "z13_a", &mut region, col_z, 0)?;
+                gate_cells
+                    .z13_a_prime
+                    .copy_advice(|| "z13_a_prime", &mut region, col_z, 1)?;
 
                 self.q_notecommit_g_d.enable(&mut region, 0)
             },
@@ -1260,27 +1273,28 @@ impl NoteCommitConfig {
         layouter.assign_region(
             || "NoteCommit input pk_d",
             |mut region| {
-                copy(&mut region, || "pkd_x", col_l, 0, &gate_cells.pkd_x)?;
+                gate_cells
+                    .pkd_x
+                    .copy_advice(|| "pkd_x", &mut region, col_l, 0)?;
 
-                copy(&mut region, || "b_3", col_m, 0, &gate_cells.b_3)?;
-                copy(&mut region, || "d_0", col_m, 1, &d_0)?;
+                gate_cells
+                    .b_3
+                    .copy_advice(|| "b_3", &mut region, col_m, 0)?;
+                d_0.copy_advice(|| "d_0", &mut region, col_m, 1)?;
 
-                copy(&mut region, || "c", col_r, 0, &gate_cells.c)?;
-                copy(
-                    &mut region,
-                    || "b3_c_prime",
-                    col_r,
-                    1,
-                    &gate_cells.b3_c_prime,
-                )?;
+                gate_cells.c.copy_advice(|| "c", &mut region, col_r, 0)?;
+                gate_cells
+                    .b3_c_prime
+                    .copy_advice(|| "b3_c_prime", &mut region, col_r, 1)?;
 
-                copy(&mut region, || "z13_c", col_z, 0, &gate_cells.z13_c)?;
-                copy(
-                    &mut region,
+                gate_cells
+                    .z13_c
+                    .copy_advice(|| "z13_c", &mut region, col_z, 0)?;
+                gate_cells.z14_b3_c_prime.copy_advice(
                     || "z14_b3_c_prime",
+                    &mut region,
                     col_z,
                     1,
-                    &gate_cells.z14_b3_c_prime,
                 )?;
 
                 self.q_notecommit_pk_d.enable(&mut region, 0)
@@ -1291,10 +1305,18 @@ impl NoteCommitConfig {
         layouter.assign_region(
             || "NoteCommit input value",
             |mut region| {
-                copy(&mut region, || "value", col_l, 0, &gate_cells.value)?;
-                copy(&mut region, || "d_2", col_m, 0, &gate_cells.d_2)?;
-                copy(&mut region, || "d3 = z1_d", col_r, 0, &gate_cells.z1_d)?;
-                copy(&mut region, || "e_0", col_z, 0, &gate_cells.e_0)?;
+                gate_cells
+                    .value
+                    .copy_advice(|| "value", &mut region, col_l, 0)?;
+                gate_cells
+                    .d_2
+                    .copy_advice(|| "d_2", &mut region, col_m, 0)?;
+                gate_cells
+                    .z1_d
+                    .copy_advice(|| "d3 = z1_d", &mut region, col_r, 0)?;
+                gate_cells
+                    .e_0
+                    .copy_advice(|| "e_0", &mut region, col_z, 0)?;
 
                 self.q_notecommit_value.enable(&mut region, 0)
             },
@@ -1307,27 +1329,28 @@ impl NoteCommitConfig {
         layouter.assign_region(
             || "NoteCommit input rho",
             |mut region| {
-                copy(&mut region, || "rho", col_l, 0, &gate_cells.rho)?;
+                gate_cells
+                    .rho
+                    .copy_advice(|| "rho", &mut region, col_l, 0)?;
 
-                copy(&mut region, || "e_1", col_m, 0, &gate_cells.e_1)?;
-                copy(&mut region, || "g_0", col_m, 1, &g_0)?;
+                gate_cells
+                    .e_1
+                    .copy_advice(|| "e_1", &mut region, col_m, 0)?;
+                g_0.copy_advice(|| "g_0", &mut region, col_m, 1)?;
 
-                copy(&mut region, || "f", col_r, 0, &gate_cells.f)?;
-                copy(
-                    &mut region,
-                    || "e1_f_prime",
-                    col_r,
-                    1,
-                    &gate_cells.e1_f_prime,
-                )?;
+                gate_cells.f.copy_advice(|| "f", &mut region, col_r, 0)?;
+                gate_cells
+                    .e1_f_prime
+                    .copy_advice(|| "e1_f_prime", &mut region, col_r, 1)?;
 
-                copy(&mut region, || "z13_f", col_z, 0, &gate_cells.z13_f)?;
-                copy(
-                    &mut region,
+                gate_cells
+                    .z13_f
+                    .copy_advice(|| "z13_f", &mut region, col_z, 0)?;
+                gate_cells.z14_e1_f_prime.copy_advice(
                     || "z14_e1_f_prime",
+                    &mut region,
                     col_z,
                     1,
-                    &gate_cells.z14_e1_f_prime,
                 )?;
 
                 self.q_notecommit_rho.enable(&mut region, 0)
@@ -1341,28 +1364,33 @@ impl NoteCommitConfig {
         layouter.assign_region(
             || "NoteCommit input psi",
             |mut region| {
-                copy(&mut region, || "psi", col_l, 0, &gate_cells.psi)?;
-                copy(&mut region, || "h_0", col_l, 1, &gate_cells.h_0)?;
+                gate_cells
+                    .psi
+                    .copy_advice(|| "psi", &mut region, col_l, 0)?;
+                gate_cells
+                    .h_0
+                    .copy_advice(|| "h_0", &mut region, col_l, 1)?;
 
-                copy(&mut region, || "g_1", col_m, 0, &gate_cells.g_1)?;
-                copy(&mut region, || "h_1", col_m, 1, &h_1)?;
+                gate_cells
+                    .g_1
+                    .copy_advice(|| "g_1", &mut region, col_m, 0)?;
+                h_1.copy_advice(|| "h_1", &mut region, col_m, 1)?;
 
-                copy(&mut region, || "g_2 = z1_g", col_r, 0, &gate_cells.z1_g)?;
-                copy(
-                    &mut region,
-                    || "g1_g2_prime",
-                    col_r,
-                    1,
-                    &gate_cells.g1_g2_prime,
-                )?;
+                gate_cells
+                    .z1_g
+                    .copy_advice(|| "g_2 = z1_g", &mut region, col_r, 0)?;
+                gate_cells
+                    .g1_g2_prime
+                    .copy_advice(|| "g1_g2_prime", &mut region, col_r, 1)?;
 
-                copy(&mut region, || "z13_g", col_z, 0, &gate_cells.z13_g)?;
-                copy(
-                    &mut region,
+                gate_cells
+                    .z13_g
+                    .copy_advice(|| "z13_g", &mut region, col_z, 0)?;
+                gate_cells.z13_g1_g2_prime.copy_advice(
                     || "z13_g1_g2_prime",
+                    &mut region,
                     col_z,
                     1,
-                    &gate_cells.z13_g1_g2_prime,
                 )?;
 
                 self.q_notecommit_psi.enable(&mut region, 0)

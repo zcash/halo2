@@ -3,7 +3,7 @@ use super::H_BASE;
 
 use crate::{
     circuit::gadget::utilities::{
-        bitrange_subset, copy, lookup_range_check::LookupRangeCheckConfig, range_check, CellValue,
+        bitrange_subset, lookup_range_check::LookupRangeCheckConfig, range_check, CellValue,
     },
     constants::{self, T_P},
     primitives::sinsemilla,
@@ -290,21 +290,14 @@ impl Config {
                     let offset = 0;
 
                     // Copy α
-                    copy(
-                        &mut region,
-                        || "Copy α",
-                        self.canon_advices[0],
-                        offset,
-                        &alpha,
-                    )?;
+                    alpha.copy_advice(|| "Copy α", &mut region, self.canon_advices[0], offset)?;
 
                     // z_84_alpha = the top three bits of alpha.
-                    copy(
-                        &mut region,
+                    z_84_alpha.copy_advice(
                         || "Copy z_84_alpha",
+                        &mut region,
                         self.canon_advices[2],
                         offset,
-                        &z_84_alpha,
                     )?;
                 }
 
@@ -313,12 +306,11 @@ impl Config {
                     let offset = 1;
                     // Copy alpha_0_prime = alpha_0 + 2^130 - t_p.
                     // We constrain this in the custom gate to be derived correctly.
-                    copy(
-                        &mut region,
+                    alpha_0_prime.copy_advice(
                         || "Copy α_0 + 2^130 - t_p",
+                        &mut region,
                         self.canon_advices[0],
                         offset,
-                        &alpha_0_prime,
                     )?;
 
                     // Decompose α into three pieces,
@@ -347,30 +339,27 @@ impl Config {
                 {
                     let offset = 2;
                     // Copy z_13_alpha_0_prime
-                    copy(
-                        &mut region,
+                    z_13_alpha_0_prime.copy_advice(
                         || "Copy z_13_alpha_0_prime",
+                        &mut region,
                         self.canon_advices[0],
                         offset,
-                        &z_13_alpha_0_prime,
                     )?;
 
                     // Copy z_44_alpha
-                    copy(
-                        &mut region,
+                    z_44_alpha.copy_advice(
                         || "Copy z_44_alpha",
+                        &mut region,
                         self.canon_advices[1],
                         offset,
-                        &z_44_alpha,
                     )?;
 
                     // Copy z_43_alpha
-                    copy(
-                        &mut region,
+                    z_43_alpha.copy_advice(
                         || "Copy z_43_alpha",
+                        &mut region,
                         self.canon_advices[2],
                         offset,
-                        &z_43_alpha,
                     )?;
                 }
 

@@ -1,4 +1,4 @@
-use super::super::{copy, NonIdentityEccPoint};
+use super::super::NonIdentityEccPoint;
 use super::{X, Y, Z};
 use crate::circuit::gadget::utilities::bool_check;
 use ff::Field;
@@ -223,11 +223,15 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         // Initialise double-and-add
         let (mut x_a, mut y_a, mut z) = {
             // Initialise the running `z` sum for the scalar bits.
-            let z = copy(region, || "starting z", self.z, offset, &acc.2)?;
+            let z = acc.2.copy_advice(|| "starting z", region, self.z, offset)?;
 
             // Initialise acc
-            let x_a = copy(region, || "starting x_a", self.x_a, offset + 1, &acc.0)?;
-            let y_a = copy(region, || "starting y_a", self.lambda1, offset, &acc.1)?;
+            let x_a = acc
+                .0
+                .copy_advice(|| "starting x_a", region, self.x_a, offset + 1)?;
+            let y_a = acc
+                .1
+                .copy_advice(|| "starting y_a", region, self.lambda1, offset)?;
 
             (x_a, y_a.value().cloned(), z)
         };

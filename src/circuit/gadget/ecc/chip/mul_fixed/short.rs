@@ -2,7 +2,7 @@ use std::{array, convert::TryInto};
 
 use super::super::{EccPoint, EccScalarFixedShort};
 use crate::{
-    circuit::gadget::utilities::{bool_check, copy, CellValue},
+    circuit::gadget::utilities::{bool_check, CellValue},
     constants::{ValueCommitV, L_VALUE, NUM_WINDOWS_SHORT},
 };
 
@@ -138,25 +138,18 @@ impl Config {
                 let offset = offset + 1;
 
                 // Copy sign to `window` column
-                let sign = copy(
-                    &mut region,
+                let sign = scalar.sign.copy_advice(
                     || "sign",
+                    &mut region,
                     self.super_config.window,
                     offset,
-                    &scalar.sign,
                 )?;
 
                 // Copy last window to `u` column.
                 // (Although the last window is not a `u` value; we are copying it into the `u`
                 // column because there is an available cell there.)
                 let z_21 = scalar.running_sum[21].clone();
-                copy(
-                    &mut region,
-                    || "last_window",
-                    self.super_config.u,
-                    offset,
-                    &z_21,
-                )?;
+                z_21.copy_advice(|| "last_window", &mut region, self.super_config.u, offset)?;
 
                 // Conditionally negate `y`-coordinate
                 let y_val = if let Some(sign) = sign.value() {

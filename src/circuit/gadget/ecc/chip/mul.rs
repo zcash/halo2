@@ -1,8 +1,6 @@
 use super::{add, CellValue, EccPoint, NonIdentityEccPoint};
 use crate::{
-    circuit::gadget::utilities::{
-        bool_check, copy, lookup_range_check::LookupRangeCheckConfig, ternary,
-    },
+    circuit::gadget::utilities::{bool_check, lookup_range_check::LookupRangeCheckConfig, ternary},
     constants::T_Q,
     primitives::sinsemilla,
 };
@@ -342,20 +340,10 @@ impl Config {
         };
 
         // Copy in `base_x`, `base_y` to use in the LSB gate
-        copy(
-            region,
-            || "copy base_x",
-            self.add_config.x_p,
-            offset + 1,
-            &base.x(),
-        )?;
-        copy(
-            region,
-            || "copy base_y",
-            self.add_config.y_p,
-            offset + 1,
-            &base.y(),
-        )?;
+        base.x()
+            .copy_advice(|| "copy base_x", region, self.add_config.x_p, offset + 1)?;
+        base.y()
+            .copy_advice(|| "copy base_y", region, self.add_config.y_p, offset + 1)?;
 
         // If `lsb` is 0, return `Acc + (-P)`. If `lsb` is 1, simply return `Acc + 0`.
         let x = if let Some(lsb) = lsb {

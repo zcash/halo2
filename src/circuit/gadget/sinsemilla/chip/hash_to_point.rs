@@ -261,14 +261,13 @@ impl SinsemillaChip {
             let mut zs = Vec::with_capacity(piece.num_words() + 1);
 
             // Copy message and initialize running sum `z` to decompose message in-circuit
-            let cell = region.assign_advice(
+            let initial_z = piece.cell_value().copy_advice(
                 || "z_0 (copy of message piece)",
+                region,
                 config.bits,
                 offset,
-                || piece.field_elem().ok_or(Error::Synthesis),
             )?;
-            region.constrain_equal(piece.cell(), cell.cell())?;
-            zs.push(cell);
+            zs.push(initial_z);
 
             // Assign cumulative sum such that for 0 <= i < n,
             //          z_i = 2^K * z_{i + 1} + m_{i + 1}

@@ -2,7 +2,7 @@
 
 use ff::PrimeFieldBits;
 use halo2::{
-    circuit::{AssignedCell, Cell, Layouter, Region},
+    circuit::{AssignedCell, Cell, Layouter},
     plonk::{Advice, Column, Error, Expression},
 };
 use pasta_curves::arithmetic::FieldExt;
@@ -60,29 +60,6 @@ pub trait UtilitiesInstructions<F: FieldExt> {
             },
         )
     }
-}
-
-/// Assigns a cell at a specific offset within the given region, constraining it
-/// to the same value as another cell (which may be in any region).
-///
-/// Returns an error if either `column` or `copy` is not in a column that was passed to
-/// [`ConstraintSystem::enable_equality`] during circuit configuration.
-///
-/// [`ConstraintSystem::enable_equality`]: halo2::plonk::ConstraintSystem::enable_equality
-pub fn copy<A, AR, F: FieldExt>(
-    region: &mut Region<'_, F>,
-    annotation: A,
-    column: Column<Advice>,
-    offset: usize,
-    copy: &CellValue<F>,
-) -> Result<CellValue<F>, Error>
-where
-    A: Fn() -> AR,
-    AR: Into<String>,
-{
-    // Temporarily implement `copy()` in terms of `AssignedCell::copy_advice`.
-    // We will remove this in a subsequent commit.
-    copy.copy_advice(annotation, region, column, offset)
 }
 
 pub(crate) fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize>(

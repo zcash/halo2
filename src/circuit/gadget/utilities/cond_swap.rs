@@ -1,4 +1,4 @@
-use super::{bool_check, copy, ternary, CellValue, UtilitiesInstructions};
+use super::{bool_check, ternary, CellValue, UtilitiesInstructions};
 use halo2::{
     circuit::{Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
@@ -73,7 +73,7 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                 config.q_swap.enable(&mut region, 0)?;
 
                 // Copy in `a` value
-                let a = copy(&mut region, || "copy a", config.a, 0, &pair.0)?;
+                let a = pair.0.copy_advice(|| "copy a", &mut region, config.a, 0)?;
 
                 // Witness `b` value
                 let b = region.assign_advice(

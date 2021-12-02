@@ -320,15 +320,15 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
 
                 // Load the initial state into this region.
                 let load_state_word = |i: usize| {
-                    let value = initial_state[i].0.value().cloned();
-                    let var = region.assign_advice(
-                        || format!("load state_{}", i),
-                        config.state[i],
-                        0,
-                        || value.ok_or(Error::Synthesis),
-                    )?;
-                    region.constrain_equal(initial_state[i].0.cell(), var.cell())?;
-                    Ok(StateWord(var))
+                    initial_state[i]
+                        .0
+                        .copy_advice(
+                            || format!("load state_{}", i),
+                            &mut region,
+                            config.state[i],
+                            0,
+                        )
+                        .map(StateWord)
                 };
                 let initial_state: Result<Vec<_>, Error> =
                     (0..WIDTH).map(load_state_word).collect();
@@ -338,28 +338,24 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
 
                 // Load the input and padding into this region.
                 let load_input_word = |i: usize| {
-                    let (constraint_var, value) = match (input[i].clone(), padding_values[i]) {
-                        (Some(word), None) => (word.0.cell(), word.0.value().cloned()),
-                        (None, Some(padding_value)) => {
-                            let padding_var = region.assign_fixed(
-                                || format!("load pad_{}", i),
-                                config.rc_b[i],
-                                1,
-                                || Ok(padding_value),
-                            )?;
-                            (padding_var.cell(), Some(padding_value))
-                        }
+                    let constraint_var = match (input[i].clone(), padding_values[i]) {
+                        (Some(word), None) => word.0,
+                        (None, Some(padding_value)) => region.assign_fixed(
+                            || format!("load pad_{}", i),
+                            config.rc_b[i],
+                            1,
+                            || Ok(padding_value),
+                        )?,
                         _ => panic!("Input and padding don't match"),
                     };
-                    let var = region.assign_advice(
-                        || format!("load input_{}", i),
-                        config.state[i],
-                        1,
-                        || value.ok_or(Error::Synthesis),
-                    )?;
-                    region.constrain_equal(constraint_var, var.cell())?;
-
-                    Ok(StateWord(var))
+                    constraint_var
+                        .copy_advice(
+                            || format!("load input_{}", i),
+                            &mut region,
+                            config.state[i],
+                            1,
+                        )
+                        .map(StateWord)
                 };
                 let input: Result<Vec<_>, Error> = (0..RATE).map(load_input_word).collect();
                 let input = input?;
@@ -538,15 +534,10 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
         initial_state: &State<StateWord<F>, WIDTH>,
     ) -> Result<Self, Error> {
         let load_state_word = |i: usize| {
-            let value = initial_state[i].0.value().cloned();
-            let var = region.assign_advice(
-                || format!("load state_{}", i),
-                config.state[i],
-                0,
-                || value.ok_or(Error::Synthesis),
-            )?;
-            region.constrain_equal(initial_state[i].0.cell(), var.cell())?;
-            Ok(StateWord(var))
+            initial_state[i]
+                .0
+                .copy_advice(|| format!("load state_{}", i), region, config.state[i], 0)
+                .map(StateWord)
         };
 
         let state: Result<Vec<_>, _> = (0..WIDTH).map(load_state_word).collect();

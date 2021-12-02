@@ -1,6 +1,6 @@
 use std::array;
 
-use super::{copy, EccPoint};
+use super::EccPoint;
 use ff::{BatchInvert, Field};
 use halo2::{
     circuit::Region,
@@ -223,12 +223,12 @@ impl Config {
         self.q_add.enable(region, offset)?;
 
         // Copy point `p` into `x_p`, `y_p` columns
-        copy(region, || "x_p", self.x_p, offset, &p.x)?;
-        copy(region, || "y_p", self.y_p, offset, &p.y)?;
+        p.x.copy_advice(|| "x_p", region, self.x_p, offset)?;
+        p.y.copy_advice(|| "y_p", region, self.y_p, offset)?;
 
         // Copy point `q` into `x_qr`, `y_qr` columns
-        copy(region, || "x_q", self.x_qr, offset, &q.x)?;
-        copy(region, || "y_q", self.y_qr, offset, &q.y)?;
+        q.x.copy_advice(|| "x_q", region, self.x_qr, offset)?;
+        q.y.copy_advice(|| "y_q", region, self.y_qr, offset)?;
 
         let (x_p, y_p) = (p.x.value(), p.y.value());
         let (x_q, y_q) = (q.x.value(), q.y.value());

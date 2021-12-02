@@ -1,4 +1,4 @@
-use super::super::{add, copy, EccPoint};
+use super::super::{add, EccPoint};
 use super::{COMPLETE_RANGE, X, Y, Z};
 use crate::circuit::gadget::utilities::{bool_check, ternary};
 
@@ -110,12 +110,11 @@ impl Config {
 
         // Copy running sum `z` from incomplete addition
         let mut z = {
-            let z = copy(
-                region,
+            let z = z.copy_advice(
                 || "Copy `z` running sum from incomplete addition",
+                region,
                 self.z_complete,
                 offset,
-                &z,
             )?;
             Z(z)
         };
@@ -152,12 +151,11 @@ impl Config {
 
             // Assign `y_p` for complete addition.
             let y_p = {
-                let base_y = copy(
-                    region,
+                let base_y = base.y.copy_advice(
                     || "Copy `base.y`",
+                    region,
                     self.z_complete,
                     row + offset + 1,
-                    &base.y,
                 )?;
 
                 // If the bit is set, use `y`; if the bit is not set, use `-y`

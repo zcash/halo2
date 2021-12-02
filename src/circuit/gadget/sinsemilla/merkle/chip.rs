@@ -15,7 +15,7 @@ use crate::{
     circuit::gadget::utilities::{
         bitrange_subset,
         cond_swap::{CondSwapChip, CondSwapConfig, CondSwapInstructions},
-        copy, CellValue, UtilitiesInstructions,
+        CellValue, UtilitiesInstructions,
     },
     constants::{L_ORCHARD_BASE, MERKLE_DEPTH_ORCHARD},
     primitives::sinsemilla,
@@ -287,43 +287,28 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
 
                     // Offset 0
                     // Copy and assign `a` at the correct position.
-                    copy(
-                        &mut region,
-                        || "copy a",
-                        config.advices[0],
-                        0,
-                        &a.cell_value(),
-                    )?;
+                    a.cell_value()
+                        .copy_advice(|| "copy a", &mut region, config.advices[0], 0)?;
                     // Copy and assign `b` at the correct position.
-                    copy(
-                        &mut region,
-                        || "copy b",
-                        config.advices[1],
-                        0,
-                        &b.cell_value(),
-                    )?;
+                    b.cell_value()
+                        .copy_advice(|| "copy b", &mut region, config.advices[1], 0)?;
                     // Copy and assign `c` at the correct position.
-                    copy(
-                        &mut region,
-                        || "copy c",
-                        config.advices[2],
-                        0,
-                        &c.cell_value(),
-                    )?;
+                    c.cell_value()
+                        .copy_advice(|| "copy c", &mut region, config.advices[2], 0)?;
                     // Copy and assign the left node at the correct position.
-                    copy(&mut region, || "left", config.advices[3], 0, &left)?;
+                    left.copy_advice(|| "left", &mut region, config.advices[3], 0)?;
                     // Copy and assign the right node at the correct position.
-                    copy(&mut region, || "right", config.advices[4], 0, &right)?;
+                    right.copy_advice(|| "right", &mut region, config.advices[4], 0)?;
 
                     // Offset 1
                     // Copy and assign z_1 of SinsemillaHash(a) = a_1
-                    copy(&mut region, || "z1_a", config.advices[0], 1, &z1_a)?;
+                    z1_a.copy_advice(|| "z1_a", &mut region, config.advices[0], 1)?;
                     // Copy and assign z_1 of SinsemillaHash(b) = b_1
-                    copy(&mut region, || "z1_b", config.advices[1], 1, &z1_b)?;
+                    z1_b.copy_advice(|| "z1_b", &mut region, config.advices[1], 1)?;
                     // Copy `b_1`, which has been constrained to be a 5-bit value
-                    copy(&mut region, || "b_1", config.advices[2], 1, &b_1)?;
+                    b_1.copy_advice(|| "b_1", &mut region, config.advices[2], 1)?;
                     // Copy `b_2`, which has been constrained to be a 5-bit value
-                    copy(&mut region, || "b_2", config.advices[3], 1, &b_2)?;
+                    b_2.copy_advice(|| "b_2", &mut region, config.advices[3], 1)?;
 
                     Ok(())
                 },

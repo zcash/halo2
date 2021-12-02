@@ -1,6 +1,6 @@
 use std::{array, collections::HashSet};
 
-use super::{copy, NonIdentityEccPoint};
+use super::NonIdentityEccPoint;
 use ff::Field;
 use group::Curve;
 use halo2::{
@@ -111,12 +111,12 @@ impl Config {
             .transpose()?;
 
         // Copy point `p` into `x_p`, `y_p` columns
-        copy(region, || "x_p", self.x_p, offset, &p.x)?;
-        copy(region, || "y_p", self.y_p, offset, &p.y)?;
+        p.x.copy_advice(|| "x_p", region, self.x_p, offset)?;
+        p.y.copy_advice(|| "y_p", region, self.y_p, offset)?;
 
         // Copy point `q` into `x_qr`, `y_qr` columns
-        copy(region, || "x_q", self.x_qr, offset, &q.x)?;
-        copy(region, || "y_q", self.y_qr, offset, &q.y)?;
+        q.x.copy_advice(|| "x_q", region, self.x_qr, offset)?;
+        q.y.copy_advice(|| "y_q", region, self.y_qr, offset)?;
 
         // Compute the sum `P + Q = R`
         let r = {

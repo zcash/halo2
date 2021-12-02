@@ -1,4 +1,4 @@
-use super::super::{copy, CellValue};
+use super::super::CellValue;
 use super::Z;
 use crate::{
     circuit::gadget::utilities::lookup_range_check::LookupRangeCheckConfig, constants::T_Q,
@@ -140,16 +140,10 @@ impl Config {
                 self.q_mul_overflow.enable(&mut region, offset + 1)?;
 
                 // Copy `z_0`
-                copy(&mut region, || "copy z_0", self.advices[0], offset, &*zs[0])?;
+                zs[0].copy_advice(|| "copy z_0", &mut region, self.advices[0], offset)?;
 
                 // Copy `z_130`
-                copy(
-                    &mut region,
-                    || "copy z_130",
-                    self.advices[0],
-                    offset + 1,
-                    &*zs[130],
-                )?;
+                zs[130].copy_advice(|| "copy z_130", &mut region, self.advices[0], offset + 1)?;
 
                 // Witness η = inv0(z_130), where inv0(x) = 0 if x = 0, 1/x otherwise
                 {
@@ -169,34 +163,26 @@ impl Config {
                 }
 
                 // Copy `k_254` = z_254
-                copy(
-                    &mut region,
-                    || "copy k_254",
-                    self.advices[1],
-                    offset,
-                    &*zs[254],
-                )?;
+                zs[254].copy_advice(|| "copy k_254", &mut region, self.advices[1], offset)?;
 
                 // Copy original alpha
-                copy(
-                    &mut region,
+                alpha.copy_advice(
                     || "copy original alpha",
+                    &mut region,
                     self.advices[1],
                     offset + 1,
-                    &alpha,
                 )?;
 
                 // Copy weighted sum of the decomposition of s = alpha + k_254 ⋅ 2^130.
-                copy(
-                    &mut region,
+                s_minus_lo_130.copy_advice(
                     || "copy s_minus_lo_130",
+                    &mut region,
                     self.advices[1],
                     offset + 2,
-                    &s_minus_lo_130,
                 )?;
 
                 // Copy witnessed s to check that it was properly derived from alpha and k_254.
-                copy(&mut region, || "copy s", self.advices[2], offset + 1, &s)?;
+                s.copy_advice(|| "copy s", &mut region, self.advices[2], offset + 1)?;
 
                 Ok(())
             },

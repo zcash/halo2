@@ -50,7 +50,7 @@ use gadget::{
         },
         note_commit::NoteCommitConfig,
     },
-    utilities::{copy, CellValue, UtilitiesInstructions},
+    utilities::{CellValue, UtilitiesInstructions},
 };
 
 use std::convert::TryInto;
@@ -501,20 +501,8 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 |mut region| {
                     config.q_add.enable(&mut region, 0)?;
 
-                    copy(
-                        &mut region,
-                        || "copy hash_old",
-                        config.advices[7],
-                        0,
-                        &hash_old,
-                    )?;
-                    copy(
-                        &mut region,
-                        || "copy psi_old",
-                        config.advices[8],
-                        0,
-                        &psi_old,
-                    )?;
+                    hash_old.copy_advice(|| "copy hash_old", &mut region, config.advices[7], 0)?;
+                    psi_old.copy_advice(|| "copy psi_old", &mut region, config.advices[8], 0)?;
 
                     let scalar_val = hash_old
                         .value()
@@ -691,19 +679,13 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         layouter.assign_region(
             || "v_old - v_new = magnitude * sign",
             |mut region| {
-                copy(&mut region, || "v_old", config.advices[0], 0, &v_old)?;
-                copy(&mut region, || "v_new", config.advices[1], 0, &v_new)?;
+                v_old.copy_advice(|| "v_old", &mut region, config.advices[0], 0)?;
+                v_new.copy_advice(|| "v_new", &mut region, config.advices[1], 0)?;
                 let (magnitude, sign) = v_net.clone();
-                copy(
-                    &mut region,
-                    || "v_net magnitude",
-                    config.advices[2],
-                    0,
-                    &magnitude,
-                )?;
-                copy(&mut region, || "v_net sign", config.advices[3], 0, &sign)?;
+                magnitude.copy_advice(|| "v_net magnitude", &mut region, config.advices[2], 0)?;
+                sign.copy_advice(|| "v_net sign", &mut region, config.advices[3], 0)?;
 
-                copy(&mut region, || "anchor", config.advices[4], 0, &anchor)?;
+                anchor.copy_advice(|| "anchor", &mut region, config.advices[4], 0)?;
                 region.assign_advice_from_instance(
                     || "pub input anchor",
                     config.primary,

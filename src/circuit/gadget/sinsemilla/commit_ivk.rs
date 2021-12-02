@@ -8,7 +8,7 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 use crate::{
     circuit::gadget::{
         ecc::{chip::EccChip, X},
-        utilities::{bitrange_subset, bool_check, copy, CellValue},
+        utilities::{bitrange_subset, bool_check, CellValue},
     },
     constants::T_P,
 };
@@ -474,28 +474,24 @@ impl CommitIvkConfig {
                 {
                     let offset = 0;
                     // Copy in `ak`
-                    copy(
-                        &mut region,
-                        || "ak",
-                        self.advices[0],
-                        offset,
-                        &gate_cells.ak,
-                    )?;
+                    gate_cells
+                        .ak
+                        .copy_advice(|| "ak", &mut region, self.advices[0], offset)?;
 
                     // Copy in `a`
-                    copy(&mut region, || "a", self.advices[1], offset, &gate_cells.a)?;
+                    gate_cells
+                        .a
+                        .copy_advice(|| "a", &mut region, self.advices[1], offset)?;
 
                     // Copy in `b`
-                    copy(&mut region, || "b", self.advices[2], offset, &gate_cells.b)?;
+                    gate_cells
+                        .b
+                        .copy_advice(|| "b", &mut region, self.advices[2], offset)?;
 
                     // Copy in `b_0`
-                    copy(
-                        &mut region,
-                        || "b_0",
-                        self.advices[3],
-                        offset,
-                        &gate_cells.b_0,
-                    )?;
+                    gate_cells
+                        .b_0
+                        .copy_advice(|| "b_0", &mut region, self.advices[3], offset)?;
 
                     // Witness `b_1`
                     region.assign_advice(
@@ -506,39 +502,32 @@ impl CommitIvkConfig {
                     )?;
 
                     // Copy in `b_2`
-                    copy(
-                        &mut region,
-                        || "b_2",
-                        self.advices[5],
-                        offset,
-                        &gate_cells.b_2,
-                    )?;
+                    gate_cells
+                        .b_2
+                        .copy_advice(|| "b_2", &mut region, self.advices[5], offset)?;
 
                     // Copy in z13_a
-                    copy(
-                        &mut region,
+                    gate_cells.z13_a.copy_advice(
                         || "z13_a",
+                        &mut region,
                         self.advices[6],
                         offset,
-                        &gate_cells.z13_a,
                     )?;
 
                     // Copy in a_prime
-                    copy(
-                        &mut region,
+                    gate_cells.a_prime.copy_advice(
                         || "a_prime",
+                        &mut region,
                         self.advices[7],
                         offset,
-                        &gate_cells.a_prime,
                     )?;
 
                     // Copy in z13_a_prime
-                    copy(
-                        &mut region,
+                    gate_cells.z13_a_prime.copy_advice(
                         || "z13_a_prime",
+                        &mut region,
                         self.advices[8],
                         offset,
-                        &gate_cells.z13_a_prime,
                     )?;
                 }
 
@@ -547,28 +536,24 @@ impl CommitIvkConfig {
                     let offset = 1;
 
                     // Copy in `nk`
-                    copy(
-                        &mut region,
-                        || "nk",
-                        self.advices[0],
-                        offset,
-                        &gate_cells.nk,
-                    )?;
+                    gate_cells
+                        .nk
+                        .copy_advice(|| "nk", &mut region, self.advices[0], offset)?;
 
                     // Copy in `c`
-                    copy(&mut region, || "c", self.advices[1], offset, &gate_cells.c)?;
+                    gate_cells
+                        .c
+                        .copy_advice(|| "c", &mut region, self.advices[1], offset)?;
 
                     // Copy in `d`
-                    copy(&mut region, || "d", self.advices[2], offset, &gate_cells.d)?;
+                    gate_cells
+                        .d
+                        .copy_advice(|| "d", &mut region, self.advices[2], offset)?;
 
                     // Copy in `d_0`
-                    copy(
-                        &mut region,
-                        || "d_0",
-                        self.advices[3],
-                        offset,
-                        &gate_cells.d_0,
-                    )?;
+                    gate_cells
+                        .d_0
+                        .copy_advice(|| "d_0", &mut region, self.advices[3], offset)?;
 
                     // Witness `d_1`
                     region.assign_advice(
@@ -579,30 +564,27 @@ impl CommitIvkConfig {
                     )?;
 
                     // Copy in z13_c
-                    copy(
-                        &mut region,
+                    gate_cells.z13_c.copy_advice(
                         || "z13_c",
+                        &mut region,
                         self.advices[6],
                         offset,
-                        &gate_cells.z13_c,
                     )?;
 
                     // Copy in b2_c_prime
-                    copy(
-                        &mut region,
+                    gate_cells.b2_c_prime.copy_advice(
                         || "b2_c_prime",
+                        &mut region,
                         self.advices[7],
                         offset,
-                        &gate_cells.b2_c_prime,
                     )?;
 
                     // Copy in z14_b2_c_prime
-                    copy(
-                        &mut region,
+                    gate_cells.z14_b2_c_prime.copy_advice(
                         || "z14_b2_c_prime",
+                        &mut region,
                         self.advices[8],
                         offset,
-                        &gate_cells.z14_b2_c_prime,
                     )?;
                 }
 

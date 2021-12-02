@@ -151,7 +151,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             || format!("{:?} words range check", num_words),
             |mut region| {
                 // Copy `element` and initialize running sum `z_0 = element` to decompose it.
-                let z_0 = copy(&mut region, || "z_0", self.running_sum, 0, &element)?;
+                let z_0 = element.copy_advice(|| "z_0", &mut region, self.running_sum, 0)?;
                 self.range_check(&mut region, z_0, num_words, strict)
             },
         )
@@ -278,7 +278,8 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             || format!("Range check {:?} bits", num_bits),
             |mut region| {
                 // Copy `element` to use in the k-bit lookup.
-                let element = copy(&mut region, || "element", self.running_sum, 0, &element)?;
+                let element =
+                    element.copy_advice(|| "element", &mut region, self.running_sum, 0)?;
 
                 self.short_range_check(&mut region, element, num_bits)
             },
