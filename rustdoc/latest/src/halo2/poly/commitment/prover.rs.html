@@ -315,9 +315,9 @@
 
 <span class="kw">fn</span> <span class="ident">parallel_generator_collapse</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>(<span class="ident">g</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">C</span>], <span class="ident">challenge</span>: <span class="ident">C::Scalar</span>) {
     <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">g</span>.<span class="ident">len</span>() <span class="op">/</span> <span class="number">2</span>;
-    <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">g_lo</span>, <span class="ident">g_hi</span>) <span class="op">=</span> <span class="ident">g</span>.<span class="ident">split_at_mut</span>(<span class="ident">len</span>);
+    <span class="kw">let</span> (<span class="ident">g_lo</span>, <span class="ident">g_hi</span>) <span class="op">=</span> <span class="ident">g</span>.<span class="ident">split_at_mut</span>(<span class="ident">len</span>);
 
-    <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="ident">g_lo</span>, <span class="op">|</span><span class="ident">g_lo</span>, <span class="ident">start</span><span class="op">|</span> {
+    <span class="ident">parallelize</span>(<span class="ident">g_lo</span>, <span class="op">|</span><span class="ident">g_lo</span>, <span class="ident">start</span><span class="op">|</span> {
         <span class="kw">let</span> <span class="ident">g_hi</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">g_hi</span>[<span class="ident">start</span>..];
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">g_lo</span>.<span class="ident">len</span>());
         <span class="kw">for</span> (<span class="ident">g_lo</span>, <span class="ident">g_hi</span>) <span class="kw">in</span> <span class="ident">g_lo</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">g_hi</span>.<span class="ident">iter</span>()) {
@@ -327,5 +327,5 @@
     });
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (207c80f10 2021-11-30)" ></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (48a5999fc 2021-12-01)" ></div>
 </body></html>

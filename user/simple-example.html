@@ -229,9 +229,6 @@ struct FieldConfig {
     // This is important when building larger circuits, where columns are used by
     // multiple sets of instructions.
     s_mul: Selector,
-
-    /// The fixed column used to load constants.
-    constant: Column&lt;Fixed&gt;,
 }
 
 impl&lt;F: FieldExt&gt; FieldChip&lt;F&gt; {
@@ -289,7 +286,6 @@ impl&lt;F: FieldExt&gt; FieldChip&lt;F&gt; {
             advice,
             instance,
             s_mul,
-            constant,
         }
     }
 }

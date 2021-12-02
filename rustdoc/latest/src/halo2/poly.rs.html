@@ -320,12 +320,6 @@
 <span id="304">304</span>
 <span id="305">305</span>
 <span id="306">306</span>
-<span id="307">307</span>
-<span id="308">308</span>
-<span id="309">309</span>
-<span id="310">310</span>
-<span id="311">311</span>
-<span id="312">312</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains utilities for performing arithmetic over univariate polynomials in</span>
 <span class="doccomment">//! various forms, including computing commitments to them and provably opening</span>
 <span class="doccomment">//! the committed polynomials at arbitrary points.</span>
@@ -616,12 +610,6 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Rotation</span>(<span class="kw">pub</span> <span class="ident">i32</span>);
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Rotation</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="ident">Rotation</span> {
-        <span class="ident">Rotation</span>(<span class="number">0</span>)
-    }
-}
-
 <span class="kw">impl</span> <span class="ident">Rotation</span> {
     <span class="doccomment">/// The current location in the evaluation domain</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cur</span>() -&gt; <span class="ident">Rotation</span> {
@@ -639,5 +627,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (207c80f10 2021-11-30)" ></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (48a5999fc 2021-12-01)" ></div>
 </body></html>

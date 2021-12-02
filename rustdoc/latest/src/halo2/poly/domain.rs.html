@@ -631,6 +631,7 @@
 <span id="615">615</span>
 <span id="616">616</span>
 <span id="617">617</span>
+<span id="618">618</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains utilities for performing polynomial arithmetic over an evaluation</span>
 <span class="doccomment">//! domain that is of a suitable size for the application.</span>
 
@@ -1042,13 +1043,13 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// `into_coset` should be set to `true` when moving into the coset,</span>
     <span class="doccomment">/// and `false` when moving out. This toggles the choice of `zeta`.</span>
-    <span class="kw">fn</span> <span class="ident">distribute_powers_zeta</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">a</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">G</span>], <span class="ident">into_coset</span>: <span class="ident">bool</span>) {
+    <span class="kw">fn</span> <span class="ident">distribute_powers_zeta</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">a</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">G</span>], <span class="ident">into_coset</span>: <span class="ident">bool</span>) {
         <span class="kw">let</span> <span class="ident">coset_powers</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">into_coset</span> {
             [<span class="self">self</span>.<span class="ident">g_coset</span>, <span class="self">self</span>.<span class="ident">g_coset_inv</span>]
         } <span class="kw">else</span> {
             [<span class="self">self</span>.<span class="ident">g_coset_inv</span>, <span class="self">self</span>.<span class="ident">g_coset</span>]
         };
-        <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="ident">a</span>, <span class="op">|</span><span class="ident">a</span>, <span class="kw-2">mut</span> <span class="ident">index</span><span class="op">|</span> {
+        <span class="ident">parallelize</span>(<span class="ident">a</span>, <span class="op">|</span><span class="ident">a</span>, <span class="kw-2">mut</span> <span class="ident">index</span><span class="op">|</span> {
             <span class="kw">for</span> <span class="ident">a</span> <span class="kw">in</span> <span class="ident">a</span> {
                 <span class="comment">// Distribute powers to move into/from coset</span>
                 <span class="kw">let</span> <span class="ident">i</span> <span class="op">=</span> <span class="ident">index</span> <span class="op">%</span> (<span class="ident">coset_powers</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="number">1</span>);
@@ -1177,6 +1178,7 @@
 }
 
 <span class="doccomment">/// Represents the minimal parameters that determine an `EvaluationDomain`.</span>
+<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PinnedEvaluationDomain</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">G</span>: <span class="ident">Group</span><span class="op">&gt;</span> {
     <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">u32</span>,
@@ -1249,5 +1251,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (207c80f10 2021-11-30)" ></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (48a5999fc 2021-12-01)" ></div>
 </body></html>
