@@ -40,7 +40,7 @@ pub struct MessagePiece<F: FieldExt, const K: usize> {
 }
 
 impl<F: FieldExt + PrimeFieldBits, const K: usize> MessagePiece<F, K> {
-    pub fn new(cell: Cell, field_elem: Option<F>, num_words: usize) -> Self {
+    pub fn new(cell: CellValue<F>, field_elem: Option<F>, num_words: usize) -> Self {
         assert!(num_words * K < F::NUM_BITS as usize);
         let cell_value = CellValue::new(cell, field_elem);
         Self {
@@ -58,7 +58,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> MessagePiece<F, K> {
     }
 
     pub fn field_elem(&self) -> Option<F> {
-        self.cell_value.value()
+        self.cell_value.value().cloned()
     }
 
     pub fn cell_value(&self) -> CellValue<F> {

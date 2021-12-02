@@ -530,8 +530,10 @@ impl NoteCommitConfig {
         psi: CellValue<pallas::Base>,
         rcm: Option<pallas::Scalar>,
     ) -> Result<Point<pallas::Affine, EccChip>, Error> {
-        let (gd_x, gd_y) = (g_d.x().value(), g_d.y().value());
-        let (pkd_x, pkd_y) = (pk_d.x().value(), pk_d.y().value());
+        let (gd_x, gd_y) = (g_d.x(), g_d.y());
+        let (pkd_x, pkd_y) = (pk_d.x(), pk_d.y());
+        let (gd_x, gd_y) = (gd_x.value(), gd_y.value());
+        let (pkd_x, pkd_y) = (pkd_x.value(), pkd_y.value());
         let value_val = value.value();
         let rho_val = rho.value();
         let psi_val = psi.value();

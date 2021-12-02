@@ -4,7 +4,6 @@ use super::H_BASE;
 use crate::{
     circuit::gadget::utilities::{
         bitrange_subset, copy, lookup_range_check::LookupRangeCheckConfig, range_check, CellValue,
-        Var,
     },
     constants::{self, T_P},
     primitives::sinsemilla,

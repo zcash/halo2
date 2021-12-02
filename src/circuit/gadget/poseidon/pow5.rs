@@ -3,13 +3,13 @@ use std::iter;
 
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Cell, Chip, Layouter, Region},
+    circuit::{AssignedCell, Cell, Chip, Layouter, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector},
     poly::Rotation,
 };
 
 use super::{PoseidonDuplexInstructions, PoseidonInstructions};
-use crate::circuit::gadget::utilities::{CellValue, Var};
+use crate::circuit::gadget::utilities::Var;
 use crate::primitives::poseidon::{Domain, Mds, Spec, SpongeState, State};
 
 /// Configuration for a [`Pow5Chip`].
@@ -288,10 +288,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
                         0,
                         value,
                     )?;
-                    state.push(StateWord {
-                        var,
-                        value: Some(value),
-                    });
+                    state.push(StateWord(var));
 
                     Ok(())
                 };
@@ -323,15 +320,15 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
 
                 // Load the initial state into this region.
                 let load_state_word = |i: usize| {
-                    let value = initial_state[i].value;
+                    let value = initial_state[i].0.value().cloned();
                     let var = region.assign_advice(
                         || format!("load state_{}", i),
                         config.state[i],
                         0,
                         || value.ok_or(Error::Synthesis),
                     )?;
-                    region.constrain_equal(initial_state[i].var, var)?;
-                    Ok(StateWord { var, value })
+                    region.constrain_equal(initial_state[i].0.cell(), var.cell())?;
+                    Ok(StateWord(var))
                 };
                 let initial_state: Result<Vec<_>, Error> =
                     (0..WIDTH).map(load_state_word).collect();
@@ -342,7 +339,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
                 // Load the input and padding into this region.
                 let load_input_word = |i: usize| {
                     let (constraint_var, value) = match (input[i].clone(), padding_values[i]) {
-                        (Some(word), None) => (word.var, word.value),
+                        (Some(word), None) => (word.0.cell(), word.0.value().cloned()),
                         (None, Some(padding_value)) => {
                             let padding_var = region.assign_fixed(
                                 || format!("load pad_{}", i),
@@ -350,7 +347,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
                                 1,
                                 || Ok(padding_value),
                             )?;
-                            (padding_var, Some(padding_value))
+                            (padding_var.cell(), Some(padding_value))
                         }
                         _ => panic!("Input and padding don't match"),
                     };
@@ -360,30 +357,31 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
                         1,
                         || value.ok_or(Error::Synthesis),
                     )?;
-                    region.constrain_equal(constraint_var, var)?;
+                    region.constrain_equal(constraint_var, var.cell())?;
 
-                    Ok(StateWord { var, value })
+                    Ok(StateWord(var))
                 };
                 let input: Result<Vec<_>, Error> = (0..RATE).map(load_input_word).collect();
                 let input = input?;
 
                 // Constrain the output.
                 let constrain_output_word = |i: usize| {
-                    let value = initial_state[i].value.and_then(|initial_word| {
+                    let value = initial_state[i].0.value().and_then(|initial_word| {
                         input
                             .get(i)
-                            .map(|word| word.value)
+                            .map(|word| word.0.value().cloned())
                             // The capacity element is never altered by the input.
                             .unwrap_or_else(|| Some(F::zero()))
-                            .map(|input_word| initial_word + input_word)
+                            .map(|input_word| *initial_word + input_word)
                     });
-                    let var = region.assign_advice(
-                        || format!("load output_{}", i),
-                        config.state[i],
-                        2,
-                        || value.ok_or(Error::Synthesis),
-                    )?;
-                    Ok(StateWord { var, value })
+                    region
+                        .assign_advice(
+                            || format!("load output_{}", i),
+                            config.state[i],
+                            2,
+                            || value.ok_or(Error::Synthesis),
+                        )
+                        .map(StateWord)
                 };
 
                 let output: Result<Vec<_>, Error> = (0..WIDTH).map(constrain_output_word).collect();
@@ -404,34 +402,31 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
 
 /// A word in the Poseidon state.
 #[derive(Clone, Debug)]
-pub struct StateWord<F: FieldExt> {
-    var: Cell,
-    value: Option<F>,
-}
+pub struct StateWord<F: FieldExt>(AssignedCell<F, F>);
 
-impl<F: FieldExt> From<StateWord<F>> for CellValue<F> {
-    fn from(state_word: StateWord<F>) -> CellValue<F> {
-        CellValue::new(state_word.var, state_word.value)
+impl<F: FieldExt> From<StateWord<F>> for AssignedCell<F, F> {
+    fn from(state_word: StateWord<F>) -> AssignedCell<F, F> {
+        state_word.0
     }
 }
 
-impl<F: FieldExt> From<CellValue<F>> for StateWord<F> {
-    fn from(cell_value: CellValue<F>) -> StateWord<F> {
-        StateWord::new(cell_value.cell(), cell_value.value())
+impl<F: FieldExt> From<AssignedCell<F, F>> for StateWord<F> {
+    fn from(cell_value: AssignedCell<F, F>) -> StateWord<F> {
+        StateWord(cell_value)
     }
 }
 
 impl<F: FieldExt> Var<F> for StateWord<F> {
-    fn new(var: Cell, value: Option<F>) -> Self {
-        Self { var, value }
+    fn new(var: AssignedCell<F, F>, value: Option<F>) -> Self {
+        Self(var)
     }
 
     fn cell(&self) -> Cell {
-        self.var
+        self.0.cell()
     }
 
     fn value(&self) -> Option<F> {
-        self.value
+        self.0.value().cloned()
     }
 }
 
@@ -447,11 +442,11 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
         offset: usize,
     ) -> Result<Self, Error> {
         Self::round(region, config, round, offset, config.s_full, |_| {
-            let q = self
-                .0
-                .iter()
-                .enumerate()
-                .map(|(idx, word)| word.value.map(|v| v + config.round_constants[round][idx]));
+            let q = self.0.iter().enumerate().map(|(idx, word)| {
+                word.0
+                    .value()
+                    .map(|v| *v + config.round_constants[round][idx])
+            });
             let r: Option<Vec<F>> = q.map(|q| q.map(|q| q.pow(&config.alpha))).collect();
             let m = &config.m_reg;
             let state = m.iter().map(|m_i| {
@@ -475,7 +470,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
     ) -> Result<Self, Error> {
         Self::round(region, config, round, offset, config.s_partial, |region| {
             let m = &config.m_reg;
-            let p: Option<Vec<_>> = self.0.iter().map(|word| word.value).collect();
+            let p: Option<Vec<_>> = self.0.iter().map(|word| word.0.value().cloned()).collect();
 
             let r: Option<Vec<_>> = p.map(|p| {
                 let r_0 = (p[0] + config.round_constants[round][0]).pow(&config.alpha);
@@ -547,15 +542,15 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
         initial_state: &State<StateWord<F>, WIDTH>,
     ) -> Result<Self, Error> {
         let load_state_word = |i: usize| {
-            let value = initial_state[i].value;
+            let value = initial_state[i].0.value().cloned();
             let var = region.assign_advice(
                 || format!("load state_{}", i),
                 config.state[i],
                 0,
                 || value.ok_or(Error::Synthesis),
             )?;
-            region.constrain_equal(initial_state[i].var, var)?;
-            Ok(StateWord { var, value })
+            region.constrain_equal(initial_state[i].0.cell(), var.cell())?;
+            Ok(StateWord(var))
         };
 
         let state: Result<Vec<_>, _> = (0..WIDTH).map(load_state_word).collect();
@@ -597,7 +592,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                 offset + 1,
                 || value.ok_or(Error::Synthesis),
             )?;
-            Ok(StateWord { var, value })
+            Ok(StateWord(var))
         };
 
         let next_state: Result<Vec<_>, _> = (0..WIDTH).map(next_state_word).collect();
@@ -674,7 +669,7 @@ mod tests {
                             0,
                             || value.ok_or(Error::Synthesis),
                         )?;
-                        Ok(StateWord { var, value })
+                        Ok(StateWord(var))
                     };
 
                     let state: Result<Vec<_>, Error> = (0..WIDTH).map(state_word).collect();
@@ -713,7 +708,7 @@ mod tests {
                             0,
                             || Ok(expected_final_state[i]),
                         )?;
-                        region.constrain_equal(final_state[i].var, var)
+                        region.constrain_equal(final_state[i].0.cell(), var.cell())
                     };
 
                     for i in 0..(WIDTH) {
@@ -821,7 +816,7 @@ mod tests {
                         0,
                         || self.output.ok_or(Error::Synthesis),
                     )?;
-                    region.constrain_equal(output.cell(), expected_var)
+                    region.constrain_equal(output.cell(), expected_var.cell())
                 },
             )
         }

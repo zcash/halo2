@@ -139,7 +139,7 @@ pub mod tests {
     use crate::{
         circuit::gadget::{
             sinsemilla::chip::{SinsemillaChip, SinsemillaHashDomains},
-            utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions, Var},
+            utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
         },
         constants::MERKLE_DEPTH_ORCHARD,
         note::commitment::ExtractedNoteCommitment,
@@ -266,7 +266,7 @@ pub mod tests {
                 };
 
                 // Check the computed final root against the expected final root.
-                assert_eq!(computed_final_root.value().unwrap(), final_root.inner());
+                assert_eq!(computed_final_root.value().unwrap(), &final_root.inner());
             }
 
             Ok(())

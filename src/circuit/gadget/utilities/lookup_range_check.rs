@@ -244,7 +244,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                 let z_val = z
                     .value()
                     .zip(*word)
-                    .map(|(z, word)| (z - word) * inv_two_pow_k);
+                    .map(|(z, word)| (*z - word) * inv_two_pow_k);
 
                 // Assign z_next
                 let z_cell = region.assign_advice(
@@ -344,7 +344,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         // Assign shifted `element * 2^{K - num_bits}`
         let shifted = element.value().map(|element| {
             let shift = F::from_u64(1 << (K - num_bits));
-            element * shift
+            *element * shift
         });
 
         region.assign_advice(
@@ -369,7 +369,6 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
 
 #[cfg(test)]
 mod tests {
-    use super::super::Var;
     use super::LookupRangeCheckConfig;
 
     use crate::primitives::sinsemilla::{INV_TWO_POW_K, K};
@@ -468,7 +467,7 @@ mod tests {
 
                     for (expected_z, z) in expected_zs.into_iter().zip(zs.iter()) {
                         if let Some(z) = z.value() {
-                            assert_eq!(expected_z, z);
+                            assert_eq!(&expected_z, z);
                         }
                     }
                 }

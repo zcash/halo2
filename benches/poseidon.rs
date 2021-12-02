@@ -121,7 +121,7 @@ where
                     0,
                     || self.output.ok_or(Error::Synthesis),
                 )?;
-                region.constrain_equal(output.cell(), expected_var)
+                region.constrain_equal(output.cell(), expected_var.cell())
             },
         )
     }

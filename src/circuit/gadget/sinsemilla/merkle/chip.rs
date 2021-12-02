@@ -15,7 +15,7 @@ use crate::{
     circuit::gadget::utilities::{
         bitrange_subset,
         cond_swap::{CondSwapChip, CondSwapConfig, CondSwapInstructions},
-        copy, CellValue, UtilitiesInstructions, Var,
+        copy, CellValue, UtilitiesInstructions,
     },
     constants::{L_ORCHARD_BASE, MERKLE_DEPTH_ORCHARD},
     primitives::sinsemilla,
@@ -185,7 +185,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
         let a = {
             let a = {
                 // a_0 = l
-                let a_0 = bitrange_subset(pallas::Base::from_u64(l as u64), 0..10);
+                let a_0 = bitrange_subset(&pallas::Base::from_u64(l as u64), 0..10);
 
                 // a_1 = (bits 0..=239 of `left`)
                 let a_1 = left.value().map(|value| bitrange_subset(value, 0..240));

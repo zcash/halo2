@@ -193,7 +193,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
                 let z_next_val = z
                     .value()
                     .zip(word)
-                    .map(|(z_cur_val, word)| (z_cur_val - word) * two_pow_k_inv);
+                    .map(|(z_cur_val, word)| (*z_cur_val - word) * two_pow_k_inv);
                 let cell = region.assign_advice(
                     || format!("z_{:?}", i + 1),
                     self.z,

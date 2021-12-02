@@ -54,7 +54,7 @@ impl EccPoint {
                 if x.is_zero_vartime() && y.is_zero_vartime() {
                     Some(pallas::Affine::identity())
                 } else {
-                    Some(pallas::Affine::from_xy(x, y).unwrap())
+                    Some(pallas::Affine::from_xy(*x, *y).unwrap())
                 }
             }
             _ => None,
@@ -104,7 +104,7 @@ impl NonIdentityEccPoint {
         match (self.x.value(), self.y.value()) {
             (Some(x), Some(y)) => {
                 assert!(!x.is_zero_vartime() && !y.is_zero_vartime());
-                Some(pallas::Affine::from_xy(x, y).unwrap())
+                Some(pallas::Affine::from_xy(*x, *y).unwrap())
             }
             _ => None,
         }

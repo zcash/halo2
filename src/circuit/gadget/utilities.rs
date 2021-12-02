@@ -2,7 +2,7 @@
 
 use ff::PrimeFieldBits;
 use halo2::{
-    circuit::{Cell, Layouter, Region},
+    circuit::{AssignedCell, Cell, Layouter, Region},
     plonk::{Advice, Column, Error, Expression},
 };
 use pasta_curves::arithmetic::FieldExt;
@@ -13,16 +13,12 @@ pub(crate) mod decompose_running_sum;
 pub(crate) mod lookup_range_check;
 
 /// A variable representing a field element.
-#[derive(Clone, Debug)]
-pub struct CellValue<F: FieldExt> {
-    cell: Cell,
-    value: Option<F>,
-}
+pub type CellValue<F> = AssignedCell<F, F>;
 
 /// Trait for a variable in the circuit.
 pub trait Var<F: FieldExt>: Clone + std::fmt::Debug {
     /// Construct a new variable.
-    fn new(cell: Cell, value: Option<F>) -> Self;
+    fn new(cell: AssignedCell<F, F>, value: Option<F>) -> Self;
 
     /// The cell at which this variable was allocated.
     fn cell(&self) -> Cell;
@@ -32,16 +28,16 @@ pub trait Var<F: FieldExt>: Clone + std::fmt::Debug {
 }
 
 impl<F: FieldExt> Var<F> for CellValue<F> {
-    fn new(cell: Cell, value: Option<F>) -> Self {
-        Self { cell, value }
+    fn new(cell: AssignedCell<F, F>, _value: Option<F>) -> Self {
+        cell
     }
 
     fn cell(&self) -> Cell {
-        self.cell
+        self.cell()
     }
 
     fn value(&self) -> Option<F> {
-        self.value
+        self.value().cloned()
     }
 }
 
@@ -90,13 +86,9 @@ where
     A: Fn() -> AR,
     AR: Into<String>,
 {
-    let cell = region.assign_advice(annotation, column, offset, || {
-        copy.value.ok_or(Error::Synthesis)
-    })?;
-
-    region.constrain_equal(cell, copy.cell)?;
-
-    Ok(CellValue::new(cell, copy.value))
+    // Temporarily implement `copy()` in terms of `AssignedCell::copy_advice`.
+    // We will remove this in a subsequent commit.
+    copy.copy_advice(annotation, region, column, offset)
 }
 
 pub(crate) fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize>(
@@ -126,7 +118,7 @@ pub fn ternary<F: FieldExt>(a: Expression<F>, b: Expression<F>, c: Expression<F>
 
 /// Takes a specified subsequence of the little-endian bit representation of a field element.
 /// The bits are numbered from 0 for the LSB.
-pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(field_elem: F, bitrange: Range<usize>) -> F {
+pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(field_elem: &F, bitrange: Range<usize>) -> F {
     assert!(bitrange.end <= F::NUM_BITS as usize);
 
     let bits: Vec<bool> = field_elem
@@ -251,7 +243,7 @@ mod tests {
         {
             let field_elem = pallas::Base::rand();
             let bitrange = 0..(pallas::Base::NUM_BITS as usize);
-            let subset = bitrange_subset(field_elem, bitrange);
+            let subset = bitrange_subset(&field_elem, bitrange);
             assert_eq!(field_elem, subset);
         }
 
@@ -259,7 +251,7 @@ mod tests {
         {
             let field_elem = pallas::Base::rand();
             let bitrange = 0..0;
-            let subset = bitrange_subset(field_elem, bitrange);
+            let subset = bitrange_subset(&field_elem, bitrange);
             assert_eq!(pallas::Base::zero(), subset);
         }
 
@@ -286,7 +278,7 @@ mod tests {
 
             let subsets = ranges
                 .iter()
-                .map(|range| bitrange_subset(field_elem, range.clone()))
+                .map(|range| bitrange_subset(&field_elem, range.clone()))
                 .collect::<Vec<_>>();
 
             let mut sum = subsets[0];

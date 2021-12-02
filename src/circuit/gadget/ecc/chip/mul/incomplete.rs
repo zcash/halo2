@@ -190,8 +190,8 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         assert_eq!(bits.len(), NUM_BITS);
 
         // Handle exceptional cases
-        let (x_p, y_p) = (base.x.value(), base.y.value());
-        let (x_a, y_a) = (acc.0.value(), acc.1.value());
+        let (x_p, y_p) = (base.x.value().cloned(), base.y.value().cloned());
+        let (x_a, y_a) = (acc.0.value().cloned(), acc.1.value().cloned());
 
         if let (Some(x_a), Some(y_a), Some(x_p), Some(y_p)) = (x_a, y_a, x_p, y_p) {
             // A is point at infinity
@@ -229,7 +229,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             let x_a = copy(region, || "starting x_a", self.x_a, offset + 1, &acc.0)?;
             let y_a = copy(region, || "starting y_a", self.lambda1, offset, &acc.1)?;
 
-            (x_a, y_a.value(), z)
+            (x_a, y_a.value().cloned(), z)
         };
 
         // Increase offset by 1; we used row 0 for initializing `z`.
@@ -313,7 +313,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
                 .zip(x_r)
                 .map(|((lambda2, x_a), x_r)| lambda2.square() - x_a - x_r);
             y_a = lambda2
-                .zip(x_a.value())
+                .zip(x_a.value().cloned())
                 .zip(x_a_new)
                 .zip(y_a)
                 .map(|(((lambda2, x_a), x_a_new), y_a)| lambda2 * (x_a - x_a_new) - y_a);

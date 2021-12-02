@@ -8,7 +8,7 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 use crate::{
     circuit::gadget::{
         ecc::{chip::EccChip, X},
-        utilities::{bitrange_subset, bool_check, copy, CellValue, Var},
+        utilities::{bitrange_subset, bool_check, copy, CellValue},
     },
     constants::T_P,
 };
@@ -641,7 +641,7 @@ mod tests {
             ecc::chip::{EccChip, EccConfig},
             sinsemilla::chip::SinsemillaChip,
             utilities::{
-                lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions, Var,
+                lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions,
             },
         },
         constants::{COMMIT_IVK_PERSONALIZATION, L_ORCHARD_BASE, T_Q},
@@ -803,7 +803,7 @@ mod tests {
                         .unwrap()
                 };
 
-                assert_eq!(expected_ivk, ivk.inner().value().unwrap());
+                assert_eq!(&expected_ivk, ivk.inner().value().unwrap());
 
                 Ok(())
             }

@@ -142,7 +142,7 @@ impl SinsemillaChip {
                     .chunks(K)
                     .fold(Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
                 let actual_point =
-                    pallas::Affine::from_xy(x_a.value().unwrap(), y_a.value().unwrap()).unwrap();
+                    pallas::Affine::from_xy(*x_a.value().unwrap(), *y_a.value().unwrap()).unwrap();
                 assert_eq!(expected_point.to_affine(), actual_point);
             }
         }
@@ -270,7 +270,7 @@ impl SinsemillaChip {
                 offset,
                 || piece.field_elem().ok_or(Error::Synthesis),
             )?;
-            region.constrain_equal(piece.cell(), cell)?;
+            region.constrain_equal(piece.cell(), cell.cell())?;
             zs.push(CellValue::new(cell, piece.field_elem()));
 
             // Assign cumulative sum such that for 0 <= i < n,

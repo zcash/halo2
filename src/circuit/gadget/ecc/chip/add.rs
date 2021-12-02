@@ -248,7 +248,7 @@ impl Config {
                     let gamma = x_q;
                     let delta = y_q + y_p;
 
-                    let mut inverses = [alpha, beta, gamma, delta];
+                    let mut inverses = [alpha, *beta, *gamma, delta];
                     inverses.batch_invert();
                     inverses
                 });
@@ -329,11 +329,11 @@ impl Config {
                     {
                         if x_p.is_zero_vartime() {
                             // 0 + Q = Q
-                            (x_q, y_q)
+                            (*x_q, *y_q)
                         } else if x_q.is_zero_vartime() {
                             // P + 0 = P
-                            (x_p, y_p)
-                        } else if (x_q == x_p) && (y_q == -y_p) {
+                            (*x_p, *y_p)
+                        } else if (x_q == x_p) && (*y_q == -y_p) {
                             // P + (-P) maps to (0,0)
                             (pallas::Base::zero(), pallas::Base::zero())
                         } else {

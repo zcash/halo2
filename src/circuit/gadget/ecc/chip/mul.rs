@@ -364,7 +364,7 @@ impl Config {
         // If `lsb` is 0, return `Acc + (-P)`. If `lsb` is 1, simply return `Acc + 0`.
         let x = if let Some(lsb) = lsb {
             if !lsb {
-                base.x.value()
+                base.x.value().cloned()
             } else {
                 Some(pallas::Base::zero())
             }
@@ -441,7 +441,7 @@ impl<F: FieldExt> Deref for Z<F> {
     }
 }
 
-fn decompose_for_scalar_mul(scalar: Option<pallas::Base>) -> Vec<Option<bool>> {
+fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> {
     let bitstring = scalar.map(|scalar| {
         // We use `k = scalar + t_q` in the double-and-add algorithm, where
         // the scalar field `F_q = 2^254 + t_q`.

@@ -161,10 +161,12 @@ impl Config {
                 )?;
 
                 // If the bit is set, use `y`; if the bit is not set, use `-y`
-                let y_p = base_y
-                    .value()
-                    .zip(k.as_ref())
-                    .map(|(base_y, k)| if !k { -base_y } else { base_y });
+                let y_p =
+                    base_y
+                        .value()
+                        .cloned()
+                        .zip(k.as_ref())
+                        .map(|(base_y, k)| if !k { -base_y } else { base_y });
 
                 let y_p_cell = region.assign_advice(
                     || "y_p",

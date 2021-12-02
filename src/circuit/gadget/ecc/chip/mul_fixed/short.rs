@@ -160,10 +160,10 @@ impl Config {
 
                 // Conditionally negate `y`-coordinate
                 let y_val = if let Some(sign) = sign.value() {
-                    if sign == -pallas::Base::one() {
-                        magnitude_mul.y.value().map(|y: pallas::Base| -y)
+                    if sign == &-pallas::Base::one() {
+                        magnitude_mul.y.value().cloned().map(|y: pallas::Base| -y)
                     } else {
-                        magnitude_mul.y.value()
+                        magnitude_mul.y.value().cloned()
                     }
                 } else {
                     None
@@ -199,7 +199,7 @@ impl Config {
 
             if let (Some(magnitude), Some(sign)) = (scalar.magnitude.value(), scalar.sign.value()) {
                 let magnitude_is_valid =
-                    magnitude <= pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64);
+                    magnitude <= &pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64);
                 let sign_is_valid = sign * sign == pallas::Base::one();
                 if magnitude_is_valid && sign_is_valid {
                     let base: super::OrchardFixedBases = base.clone().into();
@@ -211,7 +211,7 @@ impl Config {
                             let magnitude =
                                 pallas::Scalar::from_bytes(&magnitude.to_bytes()).unwrap();
 
-                            let sign = if sign == pallas::Base::one() {
+                            let sign = if sign == &pallas::Base::one() {
                                 pallas::Scalar::one()
                             } else {
                                 -pallas::Scalar::one()

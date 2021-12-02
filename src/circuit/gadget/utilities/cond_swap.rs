@@ -98,39 +98,33 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                 // Conditionally swap a
                 let a_swapped = {
                     let a_swapped = a
-                        .value
-                        .zip(b.value)
+                        .value()
+                        .zip(b.value())
                         .zip(swap)
-                        .map(|((a, b), swap)| if swap { b } else { a });
-                    let a_swapped_cell = region.assign_advice(
+                        .map(|((a, b), swap)| if swap { b } else { a })
+                        .cloned();
+                    region.assign_advice(
                         || "a_swapped",
                         config.a_swapped,
                         0,
                         || a_swapped.ok_or(Error::Synthesis),
-                    )?;
-                    CellValue {
-                        cell: a_swapped_cell,
-                        value: a_swapped,
-                    }
+                    )?
                 };
 
                 // Conditionally swap b
                 let b_swapped = {
                     let b_swapped = a
-                        .value
-                        .zip(b.value)
+                        .value()
+                        .zip(b.value())
                         .zip(swap)
-                        .map(|((a, b), swap)| if swap { a } else { b });
-                    let b_swapped_cell = region.assign_advice(
+                        .map(|((a, b), swap)| if swap { a } else { b })
+                        .cloned();
+                    region.assign_advice(
                         || "b_swapped",
                         config.b_swapped,
                         0,
                         || b_swapped.ok_or(Error::Synthesis),
-                    )?;
-                    CellValue {
-                        cell: b_swapped_cell,
-                        value: b_swapped,
-                    }
+                    )?
                 };
 
                 // Return swapped pair
@@ -261,12 +255,12 @@ mod tests {
                 if let Some(swap) = self.swap {
                     if swap {
                         // Check that `a` and `b` have been swapped
-                        assert_eq!(swapped_pair.0.value.unwrap(), self.b.unwrap());
-                        assert_eq!(swapped_pair.1.value.unwrap(), a.value.unwrap());
+                        assert_eq!(swapped_pair.0.value().unwrap(), &self.b.unwrap());
+                        assert_eq!(swapped_pair.1.value().unwrap(), a.value().unwrap());
                     } else {
                         // Check that `a` and `b` have not been swapped
-                        assert_eq!(swapped_pair.0.value.unwrap(), a.value.unwrap());
-                        assert_eq!(swapped_pair.1.value.unwrap(), self.b.unwrap());
+                        assert_eq!(swapped_pair.0.value().unwrap(), a.value().unwrap());
+                        assert_eq!(swapped_pair.1.value().unwrap(), &self.b.unwrap());
                     }
                 }
 
