@@ -15,14 +15,6 @@ use group::Curve;
 use std::io;
 use std::marker::PhantomData;
 
-#[derive(Debug, Clone)]
-struct CommitmentData<C: CurveAffine> {
-    set_index: usize,
-    blind: Blind<C::Scalar>,
-    point_indices: Vec<usize>,
-    evals: Vec<C::Scalar>,
-}
-
 /// Create a multi-opening proof
 pub fn create_proof<'a, I, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
     params: &Params<C>,

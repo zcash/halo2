@@ -218,7 +218,7 @@ fn plonk_api() {
             layouter.assign_region(
                 || "public_input",
                 |mut region| {
-                    let value = region.assign_advice(|| "value", self.config.a, 0, || f())?;
+                    let value = region.assign_advice(|| "value", self.config.a, 0, &mut f)?;
                     region.assign_fixed(|| "public", self.config.sp, 0, || Ok(FF::one()))?;
 
                     Ok(value.cell())

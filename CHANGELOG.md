@@ -24,6 +24,7 @@ and this project adheres to Rust's notion of
 
 ### Removed
 - `halo2::arithmetic::BatchInvert` (use `ff::BatchInvert` instead).
+- `impl Default for halo2::poly::Rotation` (use `Rotation::cur()` instead).
 
 ## [0.1.0-beta.1] - 2021-09-24
 Initial beta release!

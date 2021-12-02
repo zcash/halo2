@@ -409,13 +409,13 @@ impl<G: Group> EvaluationDomain<G> {
     ///
     /// `into_coset` should be set to `true` when moving into the coset,
     /// and `false` when moving out. This toggles the choice of `zeta`.
-    fn distribute_powers_zeta(&self, mut a: &mut [G], into_coset: bool) {
+    fn distribute_powers_zeta(&self, a: &mut [G], into_coset: bool) {
         let coset_powers = if into_coset {
             [self.g_coset, self.g_coset_inv]
         } else {
             [self.g_coset_inv, self.g_coset]
         };
-        parallelize(&mut a, |a, mut index| {
+        parallelize(a, |a, mut index| {
             for a in a {
                 // Distribute powers to move into/from coset
                 let i = index % (coset_powers.len() + 1);
@@ -544,6 +544,7 @@ impl<G: Group> EvaluationDomain<G> {
 }
 
 /// Represents the minimal parameters that determine an `EvaluationDomain`.
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct PinnedEvaluationDomain<'a, G: Group> {
     k: &'a u32,

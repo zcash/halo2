@@ -112,6 +112,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
 
 /// Minimal representation of a verification key that can be used to identify
 /// its active contents.
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct PinnedVerificationKey<'a, C: CurveAffine> {
     base_modulus: &'static str,
