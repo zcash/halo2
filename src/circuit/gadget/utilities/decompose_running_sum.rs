@@ -24,22 +24,22 @@
 
 use ff::PrimeFieldBits;
 use halo2::{
-    circuit::Region,
+    circuit::{AssignedCell, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
 
-use super::{range_check, CellValue};
+use super::range_check;
 use crate::constants::util::decompose_word;
 use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
 /// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
-pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<CellValue<F>>);
+pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<AssignedCell<F, F>>);
 impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
-    type Target = Vec<CellValue<F>>;
+    type Target = Vec<AssignedCell<F, F>>;
 
-    fn deref(&self) -> &Vec<CellValue<F>> {
+    fn deref(&self) -> &Vec<AssignedCell<F, F>> {
         &self.0
     }
 }
@@ -122,7 +122,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
-        alpha: CellValue<F>,
+        alpha: AssignedCell<F, F>,
         strict: bool,
         word_num_bits: usize,
         num_windows: usize,
@@ -140,7 +140,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
-        z_0: CellValue<F>,
+        z_0: AssignedCell<F, F>,
         strict: bool,
         word_num_bits: usize,
         num_windows: usize,
@@ -176,7 +176,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         };
 
         // Initialize empty vector to store running sum values [z_0, ..., z_W].
-        let mut zs: Vec<CellValue<F>> = vec![z_0.clone()];
+        let mut zs: Vec<AssignedCell<F, F>> = vec![z_0.clone()];
         let mut z = z_0;
 
         // Assign running sum `z_{i+1}` = (z_i - k_i) / (2^K) for i = 0..=n-1.

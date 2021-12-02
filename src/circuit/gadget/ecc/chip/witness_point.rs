@@ -1,9 +1,9 @@
-use super::{CellValue, EccPoint, NonIdentityEccPoint};
+use super::{EccPoint, NonIdentityEccPoint};
 
 use group::prime::PrimeCurveAffine;
 
 use halo2::{
-    circuit::Region,
+    circuit::{AssignedCell, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector, VirtualCells},
     poly::Rotation,
 };
@@ -76,7 +76,13 @@ impl Config {
         value: Option<(pallas::Base, pallas::Base)>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+    ) -> Result<
+        (
+            AssignedCell<pallas::Base, pallas::Base>,
+            AssignedCell<pallas::Base, pallas::Base>,
+        ),
+        Error,
+    > {
         // Assign `x` value
         let x_val = value.map(|value| value.0);
         let x_var =

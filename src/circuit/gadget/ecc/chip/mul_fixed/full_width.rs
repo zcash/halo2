@@ -1,12 +1,12 @@
 use super::super::{EccPoint, EccScalarFixed, OrchardFixedBasesFull};
 
 use crate::{
-    circuit::gadget::utilities::{range_check, CellValue},
+    circuit::gadget::utilities::range_check,
     constants::{self, util, L_ORCHARD_SCALAR, NUM_WINDOWS},
 };
 use arrayvec::ArrayVec;
 use halo2::{
-    circuit::{Layouter, Region},
+    circuit::{AssignedCell, Layouter, Region},
     plonk::{ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
@@ -76,7 +76,7 @@ impl Config {
         scalar: Option<pallas::Scalar>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<ArrayVec<CellValue<pallas::Base>, NUM_WINDOWS>, Error> {
+    ) -> Result<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, NUM_WINDOWS>, Error> {
         // Enable `q_mul_fixed_full` selector
         for idx in 0..NUM_WINDOWS {
             self.q_mul_fixed_full.enable(region, offset + idx)?;
@@ -92,7 +92,8 @@ impl Config {
         });
 
         // Store the scalar decomposition
-        let mut windows: ArrayVec<CellValue<pallas::Base>, NUM_WINDOWS> = ArrayVec::new();
+        let mut windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, NUM_WINDOWS> =
+            ArrayVec::new();
 
         let scalar_windows: Vec<Option<pallas::Base>> = if let Some(windows) = scalar_windows {
             assert_eq!(windows.len(), NUM_WINDOWS);

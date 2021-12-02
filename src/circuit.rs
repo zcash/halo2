@@ -2,7 +2,7 @@
 
 use group::{Curve, GroupEncoding};
 use halo2::{
-    circuit::{floor_planner, Layouter},
+    circuit::{floor_planner, AssignedCell, Layouter},
     plonk::{self, Advice, Column, Expression, Instance as InstanceColumn, Selector},
     poly::Rotation,
     transcript::{Blake2bRead, Blake2bWrite},
@@ -50,7 +50,7 @@ use gadget::{
         },
         note_commit::NoteCommitConfig,
     },
-    utilities::{CellValue, UtilitiesInstructions},
+    utilities::UtilitiesInstructions,
 };
 
 use std::convert::TryInto;
@@ -117,7 +117,7 @@ pub struct Circuit {
 }
 
 impl UtilitiesInstructions<pallas::Base> for Circuit {
-    type Var = CellValue<pallas::Base>;
+    type Var = AssignedCell<pallas::Base, pallas::Base>;
 }
 
 impl plonk::Circuit<pallas::Base> for Circuit {

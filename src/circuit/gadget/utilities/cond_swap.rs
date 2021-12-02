@@ -1,6 +1,6 @@
-use super::{bool_check, ternary, CellValue, UtilitiesInstructions};
+use super::{bool_check, ternary, UtilitiesInstructions};
 use halo2::{
-    circuit::{Chip, Layouter},
+    circuit::{AssignedCell, Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
@@ -53,7 +53,7 @@ pub struct CondSwapConfig {
 }
 
 impl<F: FieldExt> UtilitiesInstructions<F> for CondSwapChip<F> {
-    type Var = CellValue<F>;
+    type Var = AssignedCell<F, F>;
 }
 
 impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {

@@ -1,5 +1,5 @@
 use super::{
-    add, add_incomplete, CellValue, EccBaseFieldElemFixed, EccScalarFixed, EccScalarFixedShort,
+    add, add_incomplete, EccBaseFieldElemFixed, EccScalarFixed, EccScalarFixedShort,
     NonIdentityEccPoint,
 };
 use crate::circuit::gadget::utilities::decompose_running_sum::RunningSumConfig;
@@ -10,7 +10,7 @@ use crate::constants::{
 
 use group::Curve;
 use halo2::{
-    circuit::Region,
+    circuit::{AssignedCell, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, VirtualCells},
     poly::Rotation,
 };
@@ -523,7 +523,7 @@ impl ScalarFixed {
     // The scalar decomposition was done in the base field. For computation
     // outside the circuit, we now convert them back into the scalar field.
     fn windows_field(&self) -> Vec<Option<pallas::Scalar>> {
-        let running_sum_to_windows = |zs: Vec<CellValue<pallas::Base>>| {
+        let running_sum_to_windows = |zs: Vec<AssignedCell<pallas::Base, pallas::Base>>| {
             (0..(zs.len() - 1))
                 .map(|idx| {
                     let z_cur = zs[idx].value();

@@ -3,7 +3,7 @@
 
 use crate::spec::lebs2ip;
 use halo2::{
-    circuit::{Layouter, Region},
+    circuit::{AssignedCell, Layouter, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector, TableColumn},
     poly::Rotation,
 };
@@ -14,11 +14,11 @@ use ff::PrimeFieldBits;
 use super::*;
 
 /// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
-pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<CellValue<F>>);
+pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<AssignedCell<F, F>>);
 impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
-    type Target = Vec<CellValue<F>>;
+    type Target = Vec<AssignedCell<F, F>>;
 
-    fn deref(&self) -> &Vec<CellValue<F>> {
+    fn deref(&self) -> &Vec<AssignedCell<F, F>> {
         &self.0
     }
 }
@@ -143,7 +143,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     pub fn copy_check(
         &self,
         mut layouter: impl Layouter<F>,
-        element: CellValue<F>,
+        element: AssignedCell<F, F>,
         num_words: usize,
         strict: bool,
     ) -> Result<RunningSum<F>, Error> {
@@ -189,7 +189,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     fn range_check(
         &self,
         region: &mut Region<'_, F>,
-        element: CellValue<F>,
+        element: AssignedCell<F, F>,
         num_words: usize,
         strict: bool,
     ) -> Result<RunningSum<F>, Error> {
@@ -270,7 +270,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     pub fn copy_short_check(
         &self,
         mut layouter: impl Layouter<F>,
-        element: CellValue<F>,
+        element: AssignedCell<F, F>,
         num_bits: usize,
     ) -> Result<(), Error> {
         assert!(num_bits < K);
@@ -322,7 +322,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     fn short_range_check(
         &self,
         region: &mut Region<'_, F>,
-        element: CellValue<F>,
+        element: AssignedCell<F, F>,
         num_bits: usize,
     ) -> Result<(), Error> {
         // Enable lookup for `element`, to constrain it to 10 bits.

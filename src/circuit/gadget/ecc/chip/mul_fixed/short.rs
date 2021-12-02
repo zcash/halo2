@@ -2,12 +2,12 @@ use std::{array, convert::TryInto};
 
 use super::super::{EccPoint, EccScalarFixedShort};
 use crate::{
-    circuit::gadget::utilities::{bool_check, CellValue},
+    circuit::gadget::utilities::bool_check,
     constants::{ValueCommitV, L_VALUE, NUM_WINDOWS_SHORT},
 };
 
 use halo2::{
-    circuit::{Layouter, Region},
+    circuit::{AssignedCell, Layouter, Region},
     plonk::{ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
@@ -74,7 +74,10 @@ impl Config {
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        magnitude_sign: (CellValue<pallas::Base>, CellValue<pallas::Base>),
+        magnitude_sign: (
+            AssignedCell<pallas::Base, pallas::Base>,
+            AssignedCell<pallas::Base, pallas::Base>,
+        ),
     ) -> Result<EccScalarFixedShort, Error> {
         let (magnitude, sign) = magnitude_sign;
 
@@ -98,7 +101,10 @@ impl Config {
     pub fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        magnitude_sign: (CellValue<pallas::Base>, CellValue<pallas::Base>),
+        magnitude_sign: (
+            AssignedCell<pallas::Base, pallas::Base>,
+            AssignedCell<pallas::Base, pallas::Base>,
+        ),
         base: &ValueCommitV,
     ) -> Result<(EccPoint, EccScalarFixedShort), Error> {
         let (scalar, acc, mul_b) = layouter.assign_region(
@@ -233,14 +239,14 @@ pub mod tests {
     use group::Curve;
     use halo2::{
         arithmetic::CurveAffine,
-        circuit::{Chip, Layouter},
+        circuit::{AssignedCell, Chip, Layouter},
         plonk::{Any, Error},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
     use crate::circuit::gadget::{
         ecc::{chip::EccChip, FixedPointShort, NonIdentityPoint, Point},
-        utilities::{lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions},
+        utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
     };
     use crate::constants::load::ValueCommitV;
 
@@ -259,7 +265,13 @@ pub mod tests {
             mut layouter: impl Layouter<pallas::Base>,
             magnitude: pallas::Base,
             sign: pallas::Base,
-        ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+        ) -> Result<
+            (
+                AssignedCell<pallas::Base, pallas::Base>,
+                AssignedCell<pallas::Base, pallas::Base>,
+            ),
+            Error,
+        > {
             let column = chip.config().advices[0];
             let magnitude =
                 chip.load_private(layouter.namespace(|| "magnitude"), column, Some(magnitude))?;
@@ -372,10 +384,7 @@ pub mod tests {
 
     #[test]
     fn invalid_magnitude_sign() {
-        use crate::circuit::gadget::{
-            ecc::chip::EccConfig,
-            utilities::{CellValue, UtilitiesInstructions},
-        };
+        use crate::circuit::gadget::{ecc::chip::EccConfig, utilities::UtilitiesInstructions};
         use halo2::{
             circuit::{Layouter, SimpleFloorPlanner},
             dev::{MockProver, VerifyFailure},
@@ -391,7 +400,7 @@ pub mod tests {
         }
 
         impl UtilitiesInstructions<pallas::Base> for MyCircuit {
-            type Var = CellValue<pallas::Base>;
+            type Var = AssignedCell<pallas::Base, pallas::Base>;
         }
 
         impl Circuit<pallas::Base> for MyCircuit {

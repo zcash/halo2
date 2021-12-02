@@ -6,14 +6,13 @@ use std::fmt;
 
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Chip, Layouter},
+    circuit::{AssignedCell, Chip, Layouter},
     plonk::Error,
 };
 
 mod pow5;
 pub use pow5::{Pow5Chip, Pow5Config, StateWord};
 
-use crate::circuit::gadget::utilities::CellValue;
 use crate::primitives::poseidon::{ConstantLength, Domain, Spec, Sponge, SpongeState, State};
 
 /// The set of circuit instructions required to use the Poseidon permutation.
@@ -21,7 +20,7 @@ pub trait PoseidonInstructions<F: FieldExt, S: Spec<F, T, RATE>, const T: usize,
     Chip<F>
 {
     /// Variable representing the word over which the Poseidon permutation operates.
-    type Word: Clone + fmt::Debug + From<CellValue<F>> + Into<CellValue<F>>;
+    type Word: Clone + fmt::Debug + From<AssignedCell<F, F>> + Into<AssignedCell<F, F>>;
 
     /// Applies the Poseidon permutation to the given state.
     fn permute(
@@ -161,7 +160,7 @@ impl<
     pub fn absorb(
         &mut self,
         mut layouter: impl Layouter<F>,
-        value: CellValue<F>,
+        value: AssignedCell<F, F>,
     ) -> Result<(), Error> {
         match self.sponge {
             Sponge::Absorbing(ref mut input) => {
@@ -192,7 +191,7 @@ impl<
     }
 
     /// Squeezes an element from the sponge.
-    pub fn squeeze(&mut self, mut layouter: impl Layouter<F>) -> Result<CellValue<F>, Error> {
+    pub fn squeeze(&mut self, mut layouter: impl Layouter<F>) -> Result<AssignedCell<F, F>, Error> {
         loop {
             match self.sponge {
                 Sponge::Absorbing(ref input) => {
@@ -266,8 +265,8 @@ impl<
     pub fn hash(
         mut self,
         mut layouter: impl Layouter<F>,
-        message: [CellValue<F>; L],
-    ) -> Result<CellValue<F>, Error> {
+        message: [AssignedCell<F, F>; L],
+    ) -> Result<AssignedCell<F, F>, Error> {
         for (i, value) in array::IntoIter::new(message).enumerate() {
             self.duplex
                 .absorb(layouter.namespace(|| format!("absorb_{}", i)), value)?;

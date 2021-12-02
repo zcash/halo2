@@ -1,4 +1,4 @@
-use super::{add, CellValue, EccPoint, NonIdentityEccPoint};
+use super::{add, EccPoint, NonIdentityEccPoint};
 use crate::{
     circuit::gadget::utilities::{bool_check, lookup_range_check::LookupRangeCheckConfig, ternary},
     constants::T_Q,
@@ -13,7 +13,7 @@ use bigint::U256;
 use ff::PrimeField;
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Layouter, Region},
+    circuit::{AssignedCell, Layouter, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
@@ -164,9 +164,9 @@ impl Config {
     pub(super) fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        alpha: CellValue<pallas::Base>,
+        alpha: AssignedCell<pallas::Base, pallas::Base>,
         base: &NonIdentityEccPoint,
-    ) -> Result<(EccPoint, CellValue<pallas::Base>), Error> {
+    ) -> Result<(EccPoint, AssignedCell<pallas::Base, pallas::Base>), Error> {
         let (result, zs): (EccPoint, Vec<Z<pallas::Base>>) = layouter.assign_region(
             || "variable-base scalar mul",
             |mut region| {
@@ -394,9 +394,9 @@ impl Config {
 
 #[derive(Clone, Debug)]
 // `x`-coordinate of the accumulator.
-struct X<F: FieldExt>(CellValue<F>);
+struct X<F: FieldExt>(AssignedCell<F, F>);
 impl<F: FieldExt> Deref for X<F> {
-    type Target = CellValue<F>;
+    type Target = AssignedCell<F, F>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -405,9 +405,9 @@ impl<F: FieldExt> Deref for X<F> {
 
 #[derive(Clone, Debug)]
 // `y`-coordinate of the accumulator.
-struct Y<F: FieldExt>(CellValue<F>);
+struct Y<F: FieldExt>(AssignedCell<F, F>);
 impl<F: FieldExt> Deref for Y<F> {
-    type Target = CellValue<F>;
+    type Target = AssignedCell<F, F>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -416,9 +416,9 @@ impl<F: FieldExt> Deref for Y<F> {
 
 #[derive(Clone, Debug)]
 // Cumulative sum `z` used to decompose the scalar.
-struct Z<F: FieldExt>(CellValue<F>);
+struct Z<F: FieldExt>(AssignedCell<F, F>);
 impl<F: FieldExt> Deref for Z<F> {
-    type Target = CellValue<F>;
+    type Target = AssignedCell<F, F>;
 
     fn deref(&self) -> &Self::Target {
         &self.0

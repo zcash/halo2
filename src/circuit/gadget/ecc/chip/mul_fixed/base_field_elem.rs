@@ -3,11 +3,12 @@ use super::H_BASE;
 
 use crate::{
     circuit::gadget::utilities::{
-        bitrange_subset, lookup_range_check::LookupRangeCheckConfig, range_check, CellValue,
+        bitrange_subset, lookup_range_check::LookupRangeCheckConfig, range_check,
     },
     constants::{self, T_P},
     primitives::sinsemilla,
 };
+use halo2::circuit::AssignedCell;
 use halo2::{
     circuit::Layouter,
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
@@ -159,7 +160,7 @@ impl Config {
     pub fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        scalar: CellValue<pallas::Base>,
+        scalar: AssignedCell<pallas::Base, pallas::Base>,
         base: NullifierK,
     ) -> Result<EccPoint, Error> {
         let (scalar, acc, mul_b) = layouter.assign_region(

@@ -1,5 +1,5 @@
 use halo2::{
-    circuit::Layouter,
+    circuit::{AssignedCell, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
@@ -8,7 +8,7 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 use crate::{
     circuit::gadget::{
         ecc::{chip::EccChip, X},
-        utilities::{bitrange_subset, bool_check, CellValue},
+        utilities::{bitrange_subset, bool_check},
     },
     constants::T_P,
 };
@@ -225,8 +225,8 @@ impl CommitIvkConfig {
         sinsemilla_chip: SinsemillaChip,
         ecc_chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,
-        ak: CellValue<pallas::Base>,
-        nk: CellValue<pallas::Base>,
+        ak: AssignedCell<pallas::Base, pallas::Base>,
+        nk: AssignedCell<pallas::Base, pallas::Base>,
         rivk: Option<pallas::Scalar>,
     ) -> Result<X<pallas::Affine, EccChip>, Error> {
         // <https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit>
@@ -384,8 +384,14 @@ impl CommitIvkConfig {
     fn ak_canonicity(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        a: CellValue<pallas::Base>,
-    ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+        a: AssignedCell<pallas::Base, pallas::Base>,
+    ) -> Result<
+        (
+            AssignedCell<pallas::Base, pallas::Base>,
+            AssignedCell<pallas::Base, pallas::Base>,
+        ),
+        Error,
+    > {
         // `ak` = `a (250 bits) || b_0 (4 bits) || b_1 (1 bit)`
         // - b_1 = 1 => b_0 = 0
         // - b_1 = 1 => a < t_P
@@ -417,9 +423,15 @@ impl CommitIvkConfig {
     fn nk_canonicity(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        b_2: CellValue<pallas::Base>,
-        c: CellValue<pallas::Base>,
-    ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+        b_2: AssignedCell<pallas::Base, pallas::Base>,
+        c: AssignedCell<pallas::Base, pallas::Base>,
+    ) -> Result<
+        (
+            AssignedCell<pallas::Base, pallas::Base>,
+            AssignedCell<pallas::Base, pallas::Base>,
+        ),
+        Error,
+    > {
         // `nk` = `b_2 (5 bits) || c (240 bits) || d_0 (9 bits) || d_1 (1 bit)
         // - d_1 = 1 => d_0 = 0
         // - d_1 = 1 => b_2 + c * 2^5 < t_P
@@ -596,23 +608,23 @@ impl CommitIvkConfig {
 
 // Cells used in the canonicity gate.
 struct GateCells {
-    a: CellValue<pallas::Base>,
-    b: CellValue<pallas::Base>,
-    c: CellValue<pallas::Base>,
-    d: CellValue<pallas::Base>,
-    ak: CellValue<pallas::Base>,
-    nk: CellValue<pallas::Base>,
-    b_0: CellValue<pallas::Base>,
+    a: AssignedCell<pallas::Base, pallas::Base>,
+    b: AssignedCell<pallas::Base, pallas::Base>,
+    c: AssignedCell<pallas::Base, pallas::Base>,
+    d: AssignedCell<pallas::Base, pallas::Base>,
+    ak: AssignedCell<pallas::Base, pallas::Base>,
+    nk: AssignedCell<pallas::Base, pallas::Base>,
+    b_0: AssignedCell<pallas::Base, pallas::Base>,
     b_1: Option<pallas::Base>,
-    b_2: CellValue<pallas::Base>,
-    d_0: CellValue<pallas::Base>,
+    b_2: AssignedCell<pallas::Base, pallas::Base>,
+    d_0: AssignedCell<pallas::Base, pallas::Base>,
     d_1: Option<pallas::Base>,
-    z13_a: CellValue<pallas::Base>,
-    a_prime: CellValue<pallas::Base>,
-    z13_a_prime: CellValue<pallas::Base>,
-    z13_c: CellValue<pallas::Base>,
-    b2_c_prime: CellValue<pallas::Base>,
-    z14_b2_c_prime: CellValue<pallas::Base>,
+    z13_a: AssignedCell<pallas::Base, pallas::Base>,
+    a_prime: AssignedCell<pallas::Base, pallas::Base>,
+    z13_a_prime: AssignedCell<pallas::Base, pallas::Base>,
+    z13_c: AssignedCell<pallas::Base, pallas::Base>,
+    b2_c_prime: AssignedCell<pallas::Base, pallas::Base>,
+    z14_b2_c_prime: AssignedCell<pallas::Base, pallas::Base>,
 }
 
 #[cfg(test)]
@@ -622,16 +634,14 @@ mod tests {
         circuit::gadget::{
             ecc::chip::{EccChip, EccConfig},
             sinsemilla::chip::SinsemillaChip,
-            utilities::{
-                lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions,
-            },
+            utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
         },
         constants::{COMMIT_IVK_PERSONALIZATION, L_ORCHARD_BASE, T_Q},
         primitives::sinsemilla::CommitDomain,
     };
     use ff::PrimeFieldBits;
     use halo2::{
-        circuit::{Layouter, SimpleFloorPlanner},
+        circuit::{AssignedCell, Layouter, SimpleFloorPlanner},
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
@@ -648,7 +658,7 @@ mod tests {
         }
 
         impl UtilitiesInstructions<pallas::Base> for MyCircuit {
-            type Var = CellValue<pallas::Base>;
+            type Var = AssignedCell<pallas::Base, pallas::Base>;
         }
 
         impl Circuit<pallas::Base> for MyCircuit {

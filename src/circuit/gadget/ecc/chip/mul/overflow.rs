@@ -1,9 +1,9 @@
-use super::super::CellValue;
 use super::Z;
 use crate::{
     circuit::gadget::utilities::lookup_range_check::LookupRangeCheckConfig, constants::T_Q,
     primitives::sinsemilla,
 };
+use halo2::circuit::AssignedCell;
 use halo2::{
     circuit::Layouter,
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
@@ -99,7 +99,7 @@ impl Config {
     pub(super) fn overflow_check(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        alpha: CellValue<pallas::Base>,
+        alpha: AssignedCell<pallas::Base, pallas::Base>,
         zs: &[Z<pallas::Base>], // [z_0, z_1, ..., z_{254}, z_{255}]
     ) -> Result<(), Error> {
         // s = alpha + k_254 ⋅ 2^130 is witnessed here, and then copied into
@@ -194,8 +194,8 @@ impl Config {
     fn s_minus_lo_130(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        s: CellValue<pallas::Base>,
-    ) -> Result<CellValue<pallas::Base>, Error> {
+        s: AssignedCell<pallas::Base, pallas::Base>,
+    ) -> Result<AssignedCell<pallas::Base, pallas::Base>, Error> {
         // Number of k-bit words we can use in the lookup decomposition.
         let num_words = 130 / sinsemilla::K;
         assert!(num_words * sinsemilla::K == 130);

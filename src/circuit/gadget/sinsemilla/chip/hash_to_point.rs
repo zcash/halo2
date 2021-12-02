@@ -1,6 +1,7 @@
 use super::super::SinsemillaInstructions;
-use super::{CellValue, NonIdentityEccPoint, SinsemillaChip};
+use super::{NonIdentityEccPoint, SinsemillaChip};
 use crate::primitives::sinsemilla::{self, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S};
+use halo2::circuit::AssignedCell;
 use halo2::{
     circuit::{Chip, Region},
     plonk::Error,
@@ -26,7 +27,13 @@ impl SinsemillaChip {
             { sinsemilla::K },
             { sinsemilla::C },
         >>::Message,
-    ) -> Result<(NonIdentityEccPoint, Vec<Vec<CellValue<pallas::Base>>>), Error> {
+    ) -> Result<
+        (
+            NonIdentityEccPoint,
+            Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
+        ),
+        Error,
+    > {
         let config = self.config().clone();
         let mut offset = 0;
 
@@ -52,7 +59,7 @@ impl SinsemillaChip {
             x_a.into()
         };
 
-        let mut zs_sum: Vec<Vec<CellValue<pallas::Base>>> = Vec::new();
+        let mut zs_sum: Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>> = Vec::new();
 
         // Hash each piece in the message.
         for (idx, piece) in message.iter().enumerate() {
@@ -180,7 +187,7 @@ impl SinsemillaChip {
         (
             X<pallas::Base>,
             Y<pallas::Base>,
-            Vec<CellValue<pallas::Base>>,
+            Vec<AssignedCell<pallas::Base, pallas::Base>>,
         ),
         Error,
     > {
@@ -398,18 +405,18 @@ impl SinsemillaChip {
 }
 
 /// The x-coordinate of the accumulator in a Sinsemilla hash instance.
-struct X<F: FieldExt>(CellValue<F>);
+struct X<F: FieldExt>(AssignedCell<F, F>);
 
-impl<F: FieldExt> From<CellValue<F>> for X<F> {
-    fn from(cell_value: CellValue<F>) -> Self {
+impl<F: FieldExt> From<AssignedCell<F, F>> for X<F> {
+    fn from(cell_value: AssignedCell<F, F>) -> Self {
         X(cell_value)
     }
 }
 
 impl<F: FieldExt> Deref for X<F> {
-    type Target = CellValue<F>;
+    type Target = AssignedCell<F, F>;
 
-    fn deref(&self) -> &CellValue<F> {
+    fn deref(&self) -> &AssignedCell<F, F> {
         &self.0
     }
 }

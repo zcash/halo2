@@ -1,5 +1,5 @@
 use halo2::{
-    circuit::Layouter,
+    circuit::{AssignedCell, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
@@ -11,7 +11,7 @@ use crate::{
             chip::{EccChip, NonIdentityEccPoint},
             Point,
         },
-        utilities::{bitrange_subset, bool_check, CellValue},
+        utilities::{bitrange_subset, bool_check},
     },
     constants::T_P,
 };
@@ -525,9 +525,10 @@ impl NoteCommitConfig {
         ecc_chip: EccChip,
         g_d: &NonIdentityEccPoint,
         pk_d: &NonIdentityEccPoint,
-        value: CellValue<pallas::Base>,
-        rho: CellValue<pallas::Base>,
-        psi: CellValue<pallas::Base>,
+        // TODO: Set V to Orchard value type
+        value: AssignedCell<pallas::Base, pallas::Base>,
+        rho: AssignedCell<pallas::Base, pallas::Base>,
+        psi: AssignedCell<pallas::Base, pallas::Base>,
         rcm: Option<pallas::Scalar>,
     ) -> Result<Point<pallas::Affine, EccChip>, Error> {
         let (gd_x, gd_y) = (g_d.x(), g_d.y());
@@ -821,8 +822,14 @@ impl NoteCommitConfig {
     fn canon_bitshift_130(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        a: CellValue<pallas::Base>,
-    ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+        a: AssignedCell<pallas::Base, pallas::Base>,
+    ) -> Result<
+        (
+            AssignedCell<pallas::Base, pallas::Base>,
+            AssignedCell<pallas::Base, pallas::Base>,
+        ),
+        Error,
+    > {
         // element = `a (250 bits) || b_0 (4 bits) || b_1 (1 bit)`
         // - b_1 = 1 => b_0 = 0
         // - b_1 = 1 => a < t_P
@@ -853,9 +860,15 @@ impl NoteCommitConfig {
     fn pkd_x_canonicity(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        b_3: CellValue<pallas::Base>,
-        c: CellValue<pallas::Base>,
-    ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+        b_3: AssignedCell<pallas::Base, pallas::Base>,
+        c: AssignedCell<pallas::Base, pallas::Base>,
+    ) -> Result<
+        (
+            AssignedCell<pallas::Base, pallas::Base>,
+            AssignedCell<pallas::Base, pallas::Base>,
+        ),
+        Error,
+    > {
         // `x(pk_d)` = `b_3 (4 bits) || c (250 bits) || d_0 (1 bit)`
         // - d_0 = 1 => b_3 + 2^4 c < t_P
         //     - 0 ≤ b_3 + 2^4 c < 2^134
@@ -893,9 +906,15 @@ impl NoteCommitConfig {
     fn rho_canonicity(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        e_1: CellValue<pallas::Base>,
-        f: CellValue<pallas::Base>,
-    ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+        e_1: AssignedCell<pallas::Base, pallas::Base>,
+        f: AssignedCell<pallas::Base, pallas::Base>,
+    ) -> Result<
+        (
+            AssignedCell<pallas::Base, pallas::Base>,
+            AssignedCell<pallas::Base, pallas::Base>,
+        ),
+        Error,
+    > {
         // `rho` = `e_1 (4 bits) || f (250 bits) || g_0 (1 bit)`
         // - g_0 = 1 => e_1 + 2^4 f < t_P
         // - 0 ≤ e_1 + 2^4 f < 2^134
@@ -932,9 +951,15 @@ impl NoteCommitConfig {
     fn psi_canonicity(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        g_1: CellValue<pallas::Base>,
-        g_2: CellValue<pallas::Base>,
-    ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+        g_1: AssignedCell<pallas::Base, pallas::Base>,
+        g_2: AssignedCell<pallas::Base, pallas::Base>,
+    ) -> Result<
+        (
+            AssignedCell<pallas::Base, pallas::Base>,
+            AssignedCell<pallas::Base, pallas::Base>,
+        ),
+        Error,
+    > {
         // `psi` = `g_1 (9 bits) || g_2 (240 bits) || h_0 (5 bits) || h_1 (1 bit)`
         // - h_1 = 1 => (h_0 = 0) ∧ (g_1 + 2^9 g_2 < t_P)
         // - 0 ≤ g_1 + 2^9 g_2 < 2^130
@@ -970,9 +995,9 @@ impl NoteCommitConfig {
     fn y_canonicity(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        y: CellValue<pallas::Base>,
+        y: AssignedCell<pallas::Base, pallas::Base>,
         lsb: Option<pallas::Base>,
-    ) -> Result<CellValue<pallas::Base>, Error> {
+    ) -> Result<AssignedCell<pallas::Base, pallas::Base>, Error> {
         // Decompose the field element
         //      y = LSB || k_0 || k_1 || k_2 || k_3
         //        = (bit 0) || (bits 1..=9) || (bits 10..=249) || (bits 250..=253) || (bit 254)
@@ -1400,46 +1425,46 @@ impl NoteCommitConfig {
 }
 
 struct GateCells {
-    a: CellValue<pallas::Base>,
-    b: CellValue<pallas::Base>,
-    b_0: CellValue<pallas::Base>,
+    a: AssignedCell<pallas::Base, pallas::Base>,
+    b: AssignedCell<pallas::Base, pallas::Base>,
+    b_0: AssignedCell<pallas::Base, pallas::Base>,
     b_1: Option<pallas::Base>,
-    b_2: CellValue<pallas::Base>,
-    b_3: CellValue<pallas::Base>,
-    c: CellValue<pallas::Base>,
-    d: CellValue<pallas::Base>,
+    b_2: AssignedCell<pallas::Base, pallas::Base>,
+    b_3: AssignedCell<pallas::Base, pallas::Base>,
+    c: AssignedCell<pallas::Base, pallas::Base>,
+    d: AssignedCell<pallas::Base, pallas::Base>,
     d_0: Option<pallas::Base>,
-    d_1: CellValue<pallas::Base>,
-    d_2: CellValue<pallas::Base>,
-    z1_d: CellValue<pallas::Base>,
-    e: CellValue<pallas::Base>,
-    e_0: CellValue<pallas::Base>,
-    e_1: CellValue<pallas::Base>,
-    f: CellValue<pallas::Base>,
-    g: CellValue<pallas::Base>,
+    d_1: AssignedCell<pallas::Base, pallas::Base>,
+    d_2: AssignedCell<pallas::Base, pallas::Base>,
+    z1_d: AssignedCell<pallas::Base, pallas::Base>,
+    e: AssignedCell<pallas::Base, pallas::Base>,
+    e_0: AssignedCell<pallas::Base, pallas::Base>,
+    e_1: AssignedCell<pallas::Base, pallas::Base>,
+    f: AssignedCell<pallas::Base, pallas::Base>,
+    g: AssignedCell<pallas::Base, pallas::Base>,
     g_0: Option<pallas::Base>,
-    g_1: CellValue<pallas::Base>,
-    z1_g: CellValue<pallas::Base>,
-    h: CellValue<pallas::Base>,
-    h_0: CellValue<pallas::Base>,
+    g_1: AssignedCell<pallas::Base, pallas::Base>,
+    z1_g: AssignedCell<pallas::Base, pallas::Base>,
+    h: AssignedCell<pallas::Base, pallas::Base>,
+    h_0: AssignedCell<pallas::Base, pallas::Base>,
     h_1: Option<pallas::Base>,
-    gd_x: CellValue<pallas::Base>,
-    pkd_x: CellValue<pallas::Base>,
-    value: CellValue<pallas::Base>,
-    rho: CellValue<pallas::Base>,
-    psi: CellValue<pallas::Base>,
-    a_prime: CellValue<pallas::Base>,
-    b3_c_prime: CellValue<pallas::Base>,
-    e1_f_prime: CellValue<pallas::Base>,
-    g1_g2_prime: CellValue<pallas::Base>,
-    z13_a_prime: CellValue<pallas::Base>,
-    z14_b3_c_prime: CellValue<pallas::Base>,
-    z14_e1_f_prime: CellValue<pallas::Base>,
-    z13_g1_g2_prime: CellValue<pallas::Base>,
-    z13_a: CellValue<pallas::Base>,
-    z13_c: CellValue<pallas::Base>,
-    z13_f: CellValue<pallas::Base>,
-    z13_g: CellValue<pallas::Base>,
+    gd_x: AssignedCell<pallas::Base, pallas::Base>,
+    pkd_x: AssignedCell<pallas::Base, pallas::Base>,
+    value: AssignedCell<pallas::Base, pallas::Base>,
+    rho: AssignedCell<pallas::Base, pallas::Base>,
+    psi: AssignedCell<pallas::Base, pallas::Base>,
+    a_prime: AssignedCell<pallas::Base, pallas::Base>,
+    b3_c_prime: AssignedCell<pallas::Base, pallas::Base>,
+    e1_f_prime: AssignedCell<pallas::Base, pallas::Base>,
+    g1_g2_prime: AssignedCell<pallas::Base, pallas::Base>,
+    z13_a_prime: AssignedCell<pallas::Base, pallas::Base>,
+    z14_b3_c_prime: AssignedCell<pallas::Base, pallas::Base>,
+    z14_e1_f_prime: AssignedCell<pallas::Base, pallas::Base>,
+    z13_g1_g2_prime: AssignedCell<pallas::Base, pallas::Base>,
+    z13_a: AssignedCell<pallas::Base, pallas::Base>,
+    z13_c: AssignedCell<pallas::Base, pallas::Base>,
+    z13_f: AssignedCell<pallas::Base, pallas::Base>,
+    z13_g: AssignedCell<pallas::Base, pallas::Base>,
 }
 
 #[cfg(test)]
@@ -1452,9 +1477,7 @@ mod tests {
                 NonIdentityPoint,
             },
             sinsemilla::chip::SinsemillaChip,
-            utilities::{
-                lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions,
-            },
+            utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
         },
         constants::{L_ORCHARD_BASE, L_VALUE, NOTE_COMMITMENT_PERSONALIZATION, T_Q},
         primitives::sinsemilla::CommitDomain,
@@ -1463,7 +1486,7 @@ mod tests {
     use ff::{Field, PrimeField, PrimeFieldBits};
     use group::Curve;
     use halo2::{
-        circuit::{Layouter, SimpleFloorPlanner},
+        circuit::{AssignedCell, Layouter, SimpleFloorPlanner},
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
@@ -1488,7 +1511,7 @@ mod tests {
         }
 
         impl UtilitiesInstructions<pallas::Base> for MyCircuit {
-            type Var = CellValue<pallas::Base>;
+            type Var = AssignedCell<pallas::Base, pallas::Base>;
         }
 
         impl Circuit<pallas::Base> for MyCircuit {

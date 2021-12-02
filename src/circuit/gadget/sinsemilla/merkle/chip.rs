@@ -1,5 +1,5 @@
 use halo2::{
-    circuit::{Chip, Layouter},
+    circuit::{AssignedCell, Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
@@ -15,7 +15,7 @@ use crate::{
     circuit::gadget::utilities::{
         bitrange_subset,
         cond_swap::{CondSwapChip, CondSwapConfig, CondSwapInstructions},
-        CellValue, UtilitiesInstructions,
+        UtilitiesInstructions,
     },
     constants::{L_ORCHARD_BASE, MERKLE_DEPTH_ORCHARD},
     primitives::sinsemilla,
@@ -357,7 +357,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
 }
 
 impl UtilitiesInstructions<pallas::Base> for MerkleChip {
-    type Var = CellValue<pallas::Base>;
+    type Var = AssignedCell<pallas::Base, pallas::Base>;
 }
 
 impl CondSwapInstructions<pallas::Base> for MerkleChip {

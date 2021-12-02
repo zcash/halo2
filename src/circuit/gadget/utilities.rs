@@ -12,9 +12,6 @@ pub(crate) mod cond_swap;
 pub(crate) mod decompose_running_sum;
 pub(crate) mod lookup_range_check;
 
-/// A variable representing a field element.
-pub type CellValue<F> = AssignedCell<F, F>;
-
 /// Trait for a variable in the circuit.
 pub trait Var<F: FieldExt>: Clone + std::fmt::Debug + From<AssignedCell<F, F>> {
     /// The cell at which this variable was allocated.
@@ -24,7 +21,7 @@ pub trait Var<F: FieldExt>: Clone + std::fmt::Debug + From<AssignedCell<F, F>> {
     fn value(&self) -> Option<F>;
 }
 
-impl<F: FieldExt> Var<F> for CellValue<F> {
+impl<F: FieldExt> Var<F> for AssignedCell<F, F> {
     fn cell(&self) -> Cell {
         self.cell()
     }
@@ -135,7 +132,7 @@ mod tests {
         struct MyCircuit<const RANGE: usize>(u8);
 
         impl<const RANGE: usize> UtilitiesInstructions<pallas::Base> for MyCircuit<RANGE> {
-            type Var = CellValue<pallas::Base>;
+            type Var = AssignedCell<pallas::Base, pallas::Base>;
         }
 
         #[derive(Clone)]
