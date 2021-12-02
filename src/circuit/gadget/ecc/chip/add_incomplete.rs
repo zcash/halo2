@@ -1,6 +1,6 @@
 use std::{array, collections::HashSet};
 
-use super::{copy, CellValue, NonIdentityEccPoint, Var};
+use super::{copy, NonIdentityEccPoint};
 use ff::Field;
 use group::Curve;
 use halo2::{
@@ -149,8 +149,8 @@ impl Config {
         )?;
 
         let result = NonIdentityEccPoint {
-            x: CellValue::<pallas::Base>::new(x_r_var, x_r),
-            y: CellValue::<pallas::Base>::new(y_r_var, y_r),
+            x: x_r_var,
+            y: y_r_var,
         };
 
         Ok(result)

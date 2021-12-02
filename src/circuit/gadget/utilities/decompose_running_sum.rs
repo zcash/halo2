@@ -29,7 +29,7 @@ use halo2::{
     poly::Rotation,
 };
 
-use super::{copy, range_check, CellValue, Var};
+use super::{copy, range_check, CellValue};
 use crate::constants::util::decompose_word;
 use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
@@ -105,15 +105,12 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         word_num_bits: usize,
         num_windows: usize,
     ) -> Result<RunningSum<F>, Error> {
-        let z_0 = {
-            let cell = region.assign_advice(
-                || "z_0 = alpha",
-                self.z,
-                offset,
-                || alpha.ok_or(Error::Synthesis),
-            )?;
-            CellValue::new(cell, alpha)
-        };
+        let z_0 = region.assign_advice(
+            || "z_0 = alpha",
+            self.z,
+            offset,
+            || alpha.ok_or(Error::Synthesis),
+        )?;
         self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
 
@@ -194,13 +191,12 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
                     .value()
                     .zip(word)
                     .map(|(z_cur_val, word)| (*z_cur_val - word) * two_pow_k_inv);
-                let cell = region.assign_advice(
+                region.assign_advice(
                     || format!("z_{:?}", i + 1),
                     self.z,
                     offset + i + 1,
                     || z_next_val.ok_or(Error::Synthesis),
-                )?;
-                CellValue::new(cell, z_next_val)
+                )?
             };
 
             // Update `z`.

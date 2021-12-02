@@ -1,4 +1,4 @@
-use super::{add, CellValue, EccPoint, NonIdentityEccPoint, Var};
+use super::{add, CellValue, EccPoint, NonIdentityEccPoint};
 use crate::{
     circuit::gadget::utilities::{
         bool_check, copy, lookup_range_check::LookupRangeCheckConfig, ternary,
@@ -194,16 +194,12 @@ impl Config {
                 let offset = offset + 1;
 
                 // Initialize the running sum for scalar decomposition to zero
-                let z_init = {
-                    let z_init_cell = region.assign_advice_from_constant(
-                        || "z_init = 0",
-                        self.hi_config.z,
-                        offset,
-                        pallas::Base::zero(),
-                    )?;
-
-                    Z(CellValue::new(z_init_cell, Some(pallas::Base::zero())))
-                };
+                let z_init = Z(region.assign_advice_from_constant(
+                    || "z_init = 0",
+                    self.hi_config.z,
+                    offset,
+                    pallas::Base::zero(),
+                )?);
 
                 // Double-and-add (incomplete addition) for the `hi` half of the scalar decomposition
                 let (x_a, y_a, zs_incomplete_hi) = self.hi_config.double_and_add(
@@ -342,7 +338,7 @@ impl Config {
                 || z_0_val.ok_or(Error::Synthesis),
             )?;
 
-            Z(CellValue::new(z_0_cell, z_0_val))
+            Z(z_0_cell)
         };
 
         // Copy in `base_x`, `base_y` to use in the LSB gate
@@ -397,8 +393,8 @@ impl Config {
         )?;
 
         let p = EccPoint {
-            x: CellValue::<pallas::Base>::new(x_cell, x),
-            y: CellValue::<pallas::Base>::new(y_cell, y),
+            x: x_cell,
+            y: y_cell,
         };
 
         // Return the result of the final complete addition as `[scalar]B`

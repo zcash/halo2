@@ -1,7 +1,7 @@
 use super::super::{EccPoint, EccScalarFixed, OrchardFixedBasesFull};
 
 use crate::{
-    circuit::gadget::utilities::{range_check, CellValue, Var},
+    circuit::gadget::utilities::{range_check, CellValue},
     constants::{self, util, L_ORCHARD_SCALAR, NUM_WINDOWS},
 };
 use arrayvec::ArrayVec;
@@ -111,7 +111,7 @@ impl Config {
                 offset + idx,
                 || window.ok_or(Error::Synthesis),
             )?;
-            windows.push(CellValue::new(window_cell, window));
+            windows.push(window_cell);
         }
 
         Ok(windows)

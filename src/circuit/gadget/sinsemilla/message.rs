@@ -1,5 +1,5 @@
 //! Gadget and chips for the Sinsemilla hash function.
-use crate::circuit::gadget::utilities::{CellValue, Var};
+use crate::circuit::gadget::utilities::CellValue;
 use ff::PrimeFieldBits;
 use halo2::{arithmetic::FieldExt, circuit::Cell};
 use std::fmt::Debug;
@@ -40,9 +40,8 @@ pub struct MessagePiece<F: FieldExt, const K: usize> {
 }
 
 impl<F: FieldExt + PrimeFieldBits, const K: usize> MessagePiece<F, K> {
-    pub fn new(cell: CellValue<F>, field_elem: Option<F>, num_words: usize) -> Self {
+    pub fn new(cell_value: CellValue<F>, field_elem: Option<F>, num_words: usize) -> Self {
         assert!(num_words * K < F::NUM_BITS as usize);
-        let cell_value = CellValue::new(cell, field_elem);
         Self {
             cell_value,
             num_words,

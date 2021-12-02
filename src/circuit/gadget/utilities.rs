@@ -16,10 +16,7 @@ pub(crate) mod lookup_range_check;
 pub type CellValue<F> = AssignedCell<F, F>;
 
 /// Trait for a variable in the circuit.
-pub trait Var<F: FieldExt>: Clone + std::fmt::Debug {
-    /// Construct a new variable.
-    fn new(cell: AssignedCell<F, F>, value: Option<F>) -> Self;
-
+pub trait Var<F: FieldExt>: Clone + std::fmt::Debug + From<AssignedCell<F, F>> {
     /// The cell at which this variable was allocated.
     fn cell(&self) -> Cell;
 
@@ -28,10 +25,6 @@ pub trait Var<F: FieldExt>: Clone + std::fmt::Debug {
 }
 
 impl<F: FieldExt> Var<F> for CellValue<F> {
-    fn new(cell: AssignedCell<F, F>, _value: Option<F>) -> Self {
-        cell
-    }
-
     fn cell(&self) -> Cell {
         self.cell()
     }
@@ -56,13 +49,14 @@ pub trait UtilitiesInstructions<F: FieldExt> {
         layouter.assign_region(
             || "load private",
             |mut region| {
-                let cell = region.assign_advice(
-                    || "load private",
-                    column,
-                    0,
-                    || value.ok_or(Error::Synthesis),
-                )?;
-                Ok(Var::new(cell, value))
+                region
+                    .assign_advice(
+                        || "load private",
+                        column,
+                        0,
+                        || value.ok_or(Error::Synthesis),
+                    )
+                    .map(Self::Var::from)
             },
         )
     }

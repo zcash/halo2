@@ -11,7 +11,7 @@ use crate::{
             chip::{EccChip, NonIdentityEccPoint},
             Point,
         },
-        utilities::{bitrange_subset, bool_check, copy, CellValue, Var},
+        utilities::{bitrange_subset, bool_check, copy, CellValue},
     },
     constants::T_P,
 };
@@ -1043,15 +1043,12 @@ impl NoteCommitConfig {
                     // Copy y.
                     copy(&mut region, || "copy y", self.advices[5], offset, &y)?;
                     // Witness LSB.
-                    let lsb = {
-                        let cell = region.assign_advice(
-                            || "witness LSB",
-                            self.advices[6],
-                            offset,
-                            || lsb.ok_or(Error::Synthesis),
-                        )?;
-                        CellValue::new(cell, lsb)
-                    };
+                    let lsb = region.assign_advice(
+                        || "witness LSB",
+                        self.advices[6],
+                        offset,
+                        || lsb.ok_or(Error::Synthesis),
+                    )?;
                     // Witness k_0.
                     copy(&mut region, || "copy k_0", self.advices[7], offset, &k_0)?;
                     // Copy k_2.
@@ -1128,15 +1125,12 @@ impl NoteCommitConfig {
 
                 copy(&mut region, || "b", col_l, 0, &gate_cells.b)?;
                 copy(&mut region, || "b_0", col_m, 0, &gate_cells.b_0)?;
-                let b_1 = {
-                    let cell = region.assign_advice(
-                        || "b_1",
-                        col_r,
-                        0,
-                        || gate_cells.b_1.ok_or(Error::Synthesis),
-                    )?;
-                    CellValue::new(cell, gate_cells.b_1)
-                };
+                let b_1 = region.assign_advice(
+                    || "b_1",
+                    col_r,
+                    0,
+                    || gate_cells.b_1.ok_or(Error::Synthesis),
+                )?;
 
                 copy(&mut region, || "b_2", col_m, 1, &gate_cells.b_2)?;
                 copy(&mut region, || "b_3", col_r, 1, &gate_cells.b_3)?;
@@ -1155,15 +1149,12 @@ impl NoteCommitConfig {
                 self.q_notecommit_d.enable(&mut region, 0)?;
 
                 copy(&mut region, || "d", col_l, 0, &gate_cells.d)?;
-                let d_0 = {
-                    let cell = region.assign_advice(
-                        || "d_0",
-                        col_m,
-                        0,
-                        || gate_cells.d_0.ok_or(Error::Synthesis),
-                    )?;
-                    CellValue::new(cell, gate_cells.d_0)
-                };
+                let d_0 = region.assign_advice(
+                    || "d_0",
+                    col_m,
+                    0,
+                    || gate_cells.d_0.ok_or(Error::Synthesis),
+                )?;
                 copy(&mut region, || "d_1", col_r, 0, &gate_cells.d_1)?;
 
                 copy(&mut region, || "d_2", col_m, 1, &gate_cells.d_2)?;
@@ -1199,15 +1190,12 @@ impl NoteCommitConfig {
                 self.q_notecommit_g.enable(&mut region, 0)?;
 
                 copy(&mut region, || "g", col_l, 0, &gate_cells.g)?;
-                let g_0 = {
-                    let cell = region.assign_advice(
-                        || "g_0",
-                        col_m,
-                        0,
-                        || gate_cells.g_0.ok_or(Error::Synthesis),
-                    )?;
-                    CellValue::new(cell, gate_cells.g_0)
-                };
+                let g_0 = region.assign_advice(
+                    || "g_0",
+                    col_m,
+                    0,
+                    || gate_cells.g_0.ok_or(Error::Synthesis),
+                )?;
 
                 copy(&mut region, || "g_1", col_l, 1, &gate_cells.g_1)?;
                 copy(&mut region, || "g_2 = z1_g", col_m, 1, &gate_cells.z1_g)?;
@@ -1226,15 +1214,12 @@ impl NoteCommitConfig {
 
                 copy(&mut region, || "h", col_l, 0, &gate_cells.h)?;
                 copy(&mut region, || "h_0", col_m, 0, &gate_cells.h_0)?;
-                let h_1 = {
-                    let cell = region.assign_advice(
-                        || "h_1",
-                        col_r,
-                        0,
-                        || gate_cells.h_1.ok_or(Error::Synthesis),
-                    )?;
-                    CellValue::new(cell, gate_cells.h_1)
-                };
+                let h_1 = region.assign_advice(
+                    || "h_1",
+                    col_r,
+                    0,
+                    || gate_cells.h_1.ok_or(Error::Synthesis),
+                )?;
 
                 Ok(h_1)
             },

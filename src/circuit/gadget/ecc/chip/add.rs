@@ -1,6 +1,6 @@
 use std::array;
 
-use super::{copy, CellValue, EccPoint, Var};
+use super::{copy, EccPoint};
 use ff::{BatchInvert, Field};
 use halo2::{
     circuit::Region,
@@ -365,8 +365,8 @@ impl Config {
         )?;
 
         let result = EccPoint {
-            x: CellValue::<pallas::Base>::new(x_r_cell, x_r),
-            y: CellValue::<pallas::Base>::new(y_r_cell, y_r),
+            x: x_r_cell,
+            y: y_r_cell,
         };
 
         #[cfg(test)]

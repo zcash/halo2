@@ -1,4 +1,4 @@
-use super::{CellValue, EccPoint, NonIdentityEccPoint, Var};
+use super::{CellValue, EccPoint, NonIdentityEccPoint};
 
 use group::prime::PrimeCurveAffine;
 
@@ -87,10 +87,7 @@ impl Config {
         let y_var =
             region.assign_advice(|| "y", self.y, offset, || y_val.ok_or(Error::Synthesis))?;
 
-        Ok((
-            CellValue::<pallas::Base>::new(x_var, x_val),
-            CellValue::<pallas::Base>::new(y_var, y_val),
-        ))
+        Ok((x_var, y_var))
     }
 
     /// Assigns a point that can be the identity.

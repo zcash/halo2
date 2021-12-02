@@ -2,7 +2,7 @@ use std::{array, convert::TryInto};
 
 use super::super::{EccPoint, EccScalarFixedShort};
 use crate::{
-    circuit::gadget::utilities::{bool_check, copy, CellValue, Var},
+    circuit::gadget::utilities::{bool_check, copy, CellValue},
     constants::{ValueCommitV, L_VALUE, NUM_WINDOWS_SHORT},
 };
 
@@ -182,7 +182,7 @@ impl Config {
 
                 Ok(EccPoint {
                     x: magnitude_mul.x,
-                    y: CellValue::new(y_var, y_val),
+                    y: y_var,
                 })
             },
         )?;

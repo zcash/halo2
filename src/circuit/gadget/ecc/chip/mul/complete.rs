@@ -1,4 +1,4 @@
-use super::super::{add, copy, CellValue, EccPoint, Var};
+use super::super::{add, copy, EccPoint};
 use super::{COMPLETE_RANGE, X, Y, Z};
 use crate::circuit::gadget::utilities::{bool_check, ternary};
 
@@ -146,7 +146,7 @@ impl Config {
                     row + offset + 2,
                     || z_val.ok_or(Error::Synthesis),
                 )?;
-                Z(CellValue::new(z_cell, z_val))
+                Z(z_cell)
             };
             zs.push(z.clone());
 
@@ -168,13 +168,12 @@ impl Config {
                         .zip(k.as_ref())
                         .map(|(base_y, k)| if !k { -base_y } else { base_y });
 
-                let y_p_cell = region.assign_advice(
+                region.assign_advice(
                     || "y_p",
                     self.add_config.y_p,
                     row + offset,
                     || y_p.ok_or(Error::Synthesis),
-                )?;
-                CellValue::<pallas::Base>::new(y_p_cell, y_p)
+                )?
             };
 
             // U = P if the bit is set; U = -P is the bit is not set.

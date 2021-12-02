@@ -168,15 +168,12 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         layouter.assign_region(
             || "Witness element",
             |mut region| {
-                let z_0 = {
-                    let cell = region.assign_advice(
-                        || "Witness element",
-                        self.running_sum,
-                        0,
-                        || value.ok_or(Error::Synthesis),
-                    )?;
-                    CellValue::new(cell, value)
-                };
+                let z_0 = region.assign_advice(
+                    || "Witness element",
+                    self.running_sum,
+                    0,
+                    || value.ok_or(Error::Synthesis),
+                )?;
                 self.range_check(&mut region, z_0, num_words, strict)
             },
         )
@@ -247,14 +244,12 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                     .map(|(z, word)| (*z - word) * inv_two_pow_k);
 
                 // Assign z_next
-                let z_cell = region.assign_advice(
+                region.assign_advice(
                     || format!("z_{:?}", idx + 1),
                     self.running_sum,
                     idx + 1,
                     || z_val.ok_or(Error::Synthesis),
-                )?;
-
-                CellValue::new(z_cell, z_val)
+                )?
             };
             zs.push(z.clone());
         }
@@ -300,21 +295,18 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         mut layouter: impl Layouter<F>,
         element: Option<F>,
         num_bits: usize,
-    ) -> Result<CellValue<F>, Error> {
+    ) -> Result<AssignedCell<F, F>, Error> {
         assert!(num_bits <= K);
         layouter.assign_region(
             || format!("Range check {:?} bits", num_bits),
             |mut region| {
                 // Witness `element` to use in the k-bit lookup.
-                let element = {
-                    let cell = region.assign_advice(
-                        || "Witness element",
-                        self.running_sum,
-                        0,
-                        || element.ok_or(Error::Synthesis),
-                    )?;
-                    CellValue::new(cell, element)
-                };
+                let element = region.assign_advice(
+                    || "Witness element",
+                    self.running_sum,
+                    0,
+                    || element.ok_or(Error::Synthesis),
+                )?;
 
                 self.short_range_check(&mut region, element.clone(), num_bits)?;
 

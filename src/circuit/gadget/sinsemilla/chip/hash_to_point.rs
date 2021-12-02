@@ -1,5 +1,5 @@
 use super::super::SinsemillaInstructions;
-use super::{CellValue, NonIdentityEccPoint, SinsemillaChip, Var};
+use super::{CellValue, NonIdentityEccPoint, SinsemillaChip};
 use crate::primitives::sinsemilla::{self, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S};
 use halo2::{
     circuit::{Chip, Region},
@@ -46,11 +46,8 @@ impl SinsemillaChip {
 
         // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
         let mut x_a: X<pallas::Base> = {
-            let x_a = {
-                let cell =
-                    region.assign_advice_from_constant(|| "fixed x_q", config.x_a, offset, x_q)?;
-                CellValue::new(cell, Some(x_q))
-            };
+            let x_a =
+                region.assign_advice_from_constant(|| "fixed x_q", config.x_a, offset, x_q)?;
 
             x_a.into()
         };
@@ -102,7 +99,7 @@ impl SinsemillaChip {
                 )?;
             }
 
-            CellValue::new(y_a_cell, y_a.0)
+            y_a_cell
         };
 
         #[cfg(test)]
@@ -271,7 +268,7 @@ impl SinsemillaChip {
                 || piece.field_elem().ok_or(Error::Synthesis),
             )?;
             region.constrain_equal(piece.cell(), cell.cell())?;
-            zs.push(CellValue::new(cell, piece.field_elem()));
+            zs.push(cell);
 
             // Assign cumulative sum such that for 0 <= i < n,
             //          z_i = 2^K * z_{i + 1} + m_{i + 1}
@@ -295,7 +292,7 @@ impl SinsemillaChip {
                     offset + idx + 1,
                     || z.ok_or(Error::Synthesis),
                 )?;
-                zs.push(CellValue::new(cell, z))
+                zs.push(cell)
             }
 
             zs
@@ -381,7 +378,7 @@ impl SinsemillaChip {
                     || x_a_new.ok_or(Error::Synthesis),
                 )?;
 
-                CellValue::new(x_a_cell, x_a_new).into()
+                x_a_cell.into()
             };
 
             // Compute y_a for the next row.

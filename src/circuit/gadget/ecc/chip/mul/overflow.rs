@@ -1,4 +1,4 @@
-use super::super::{copy, CellValue, Var};
+use super::super::{copy, CellValue};
 use super::Z;
 use crate::{
     circuit::gadget::utilities::lookup_range_check::LookupRangeCheckConfig, constants::T_Q,
@@ -116,13 +116,12 @@ impl Config {
             layouter.assign_region(
                 || "s = alpha + k_254 ⋅ 2^130",
                 |mut region| {
-                    let s_cell = region.assign_advice(
+                    region.assign_advice(
                         || "s = alpha + k_254 ⋅ 2^130",
                         self.advices[0],
                         0,
                         || s_val.ok_or(Error::Synthesis),
-                    )?;
-                    Ok(CellValue::new(s_cell, s_val))
+                    )
                 },
             )?
         };

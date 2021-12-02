@@ -1,7 +1,7 @@
 use super::EccInstructions;
 use crate::{
     circuit::gadget::utilities::{
-        copy, lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions, Var,
+        copy, lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions,
     },
     constants::{self, NullifierK, OrchardFixedBasesFull, ValueCommitV},
     primitives::sinsemilla,

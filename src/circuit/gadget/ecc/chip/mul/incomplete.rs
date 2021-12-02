@@ -1,4 +1,4 @@
-use super::super::{copy, CellValue, NonIdentityEccPoint, Var};
+use super::super::{copy, NonIdentityEccPoint};
 use super::{X, Y, Z};
 use crate::circuit::gadget::utilities::bool_check;
 use ff::Field;
@@ -244,13 +244,12 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             let z_val = z.value().zip(k.as_ref()).map(|(z_val, k)| {
                 pallas::Base::from_u64(2) * z_val + pallas::Base::from_u64(*k as u64)
             });
-            let z_cell = region.assign_advice(
+            z = region.assign_advice(
                 || "z",
                 self.z,
                 row + offset,
                 || z_val.ok_or(Error::Synthesis),
             )?;
-            z = CellValue::new(z_cell, z_val);
             zs.push(Z(z.clone()));
 
             // Assign `x_p`, `y_p`
@@ -318,25 +317,21 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
                 .zip(y_a)
                 .map(|(((lambda2, x_a), x_a_new), y_a)| lambda2 * (x_a - x_a_new) - y_a);
             let x_a_val = x_a_new;
-            let x_a_cell = region.assign_advice(
+            x_a = region.assign_advice(
                 || "x_a",
                 self.x_a,
                 row + offset + 1,
                 || x_a_val.ok_or(Error::Synthesis),
             )?;
-            x_a = CellValue::new(x_a_cell, x_a_val);
         }
 
         // Witness final y_a
-        let y_a = {
-            let cell = region.assign_advice(
-                || "y_a",
-                self.lambda1,
-                offset + NUM_BITS,
-                || y_a.ok_or(Error::Synthesis),
-            )?;
-            CellValue::new(cell, y_a)
-        };
+        let y_a = region.assign_advice(
+            || "y_a",
+            self.lambda1,
+            offset + NUM_BITS,
+            || y_a.ok_or(Error::Synthesis),
+        )?;
 
         Ok((X(x_a), Y(y_a), zs))
     }

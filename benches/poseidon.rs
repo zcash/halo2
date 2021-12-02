@@ -12,10 +12,7 @@ use halo2::{
 use pasta_curves::{pallas, vesta};
 
 use orchard::{
-    circuit::gadget::{
-        poseidon::{Hash, Pow5Chip, Pow5Config},
-        utilities::{CellValue, Var},
-    },
+    circuit::gadget::poseidon::{Hash, Pow5Chip, Pow5Config},
     primitives::poseidon::{self, ConstantLength, Spec},
 };
 use std::convert::TryInto;
@@ -91,13 +88,12 @@ where
             |mut region| {
                 let message_word = |i: usize| {
                     let value = self.message.map(|message_vals| message_vals[i]);
-                    let cell = region.assign_advice(
+                    region.assign_advice(
                         || format!("load message_{}", i),
                         config.input[i],
                         0,
                         || value.ok_or(Error::Synthesis),
-                    )?;
-                    Ok(CellValue::new(cell, value))
+                    )
                 };
 
                 let message: Result<Vec<_>, Error> = (0..L).map(message_word).collect();

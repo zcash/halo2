@@ -5,7 +5,7 @@ use super::{
 use crate::{
     circuit::gadget::{
         ecc::chip::NonIdentityEccPoint,
-        utilities::{lookup_range_check::LookupRangeCheckConfig, CellValue, Var},
+        utilities::{lookup_range_check::LookupRangeCheckConfig, CellValue},
     },
     constants::OrchardFixedBasesFull,
     primitives::sinsemilla::{

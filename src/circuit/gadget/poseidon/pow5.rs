@@ -417,10 +417,6 @@ impl<F: FieldExt> From<AssignedCell<F, F>> for StateWord<F> {
 }
 
 impl<F: FieldExt> Var<F> for StateWord<F> {
-    fn new(var: AssignedCell<F, F>, value: Option<F>) -> Self {
-        Self(var)
-    }
-
     fn cell(&self) -> Cell {
         self.0.cell()
     }
@@ -614,10 +610,7 @@ mod tests {
 
     use super::{PoseidonInstructions, Pow5Chip, Pow5Config, StateWord};
     use crate::{
-        circuit::gadget::{
-            poseidon::Hash,
-            utilities::{CellValue, Var},
-        },
+        circuit::gadget::poseidon::Hash,
         primitives::poseidon::{self, ConstantLength, P128Pow5T3 as OrchardNullifier, Spec},
     };
     use std::convert::TryInto;
@@ -786,13 +779,12 @@ mod tests {
                 |mut region| {
                     let message_word = |i: usize| {
                         let value = self.message.map(|message_vals| message_vals[i]);
-                        let cell = region.assign_advice(
+                        region.assign_advice(
                             || format!("load message_{}", i),
                             config.state[i],
                             0,
                             || value.ok_or(Error::Synthesis),
-                        )?;
-                        Ok(CellValue::new(cell, value))
+                        )
                     };
 
                     let message: Result<Vec<_>, Error> = (0..L).map(message_word).collect();

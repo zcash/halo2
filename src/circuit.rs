@@ -50,7 +50,7 @@ use gadget::{
         },
         note_commit::NoteCommitConfig,
     },
-    utilities::{copy, CellValue, UtilitiesInstructions, Var},
+    utilities::{copy, CellValue, UtilitiesInstructions},
 };
 
 use std::convert::TryInto;
@@ -520,13 +520,12 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                         .value()
                         .zip(psi_old.value())
                         .map(|(hash_old, psi_old)| hash_old + psi_old);
-                    let cell = region.assign_advice(
+                    region.assign_advice(
                         || "poseidon_hash(nk, rho_old) + psi_old",
                         config.advices[6],
                         0,
                         || scalar_val.ok_or(plonk::Error::Synthesis),
-                    )?;
-                    Ok(CellValue::new(cell, scalar_val))
+                    )
                 },
             )?;
 

@@ -1,4 +1,4 @@
-use super::{bool_check, copy, ternary, CellValue, UtilitiesInstructions, Var};
+use super::{bool_check, copy, ternary, CellValue, UtilitiesInstructions};
 use halo2::{
     circuit::{Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
@@ -76,15 +76,12 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                 let a = copy(&mut region, || "copy a", config.a, 0, &pair.0)?;
 
                 // Witness `b` value
-                let b = {
-                    let cell = region.assign_advice(
-                        || "witness b",
-                        config.b,
-                        0,
-                        || pair.1.ok_or(Error::Synthesis),
-                    )?;
-                    CellValue::new(cell, pair.1)
-                };
+                let b = region.assign_advice(
+                    || "witness b",
+                    config.b,
+                    0,
+                    || pair.1.ok_or(Error::Synthesis),
+                )?;
 
                 // Witness `swap` value
                 let swap_val = swap.map(|swap| F::from_u64(swap as u64));
