@@ -294,7 +294,7 @@ impl MessageScheduleConfig {
     fn decompose_word(
         &self,
         region: &mut Region<'_, pallas::Base>,
-        word: Option<Bits<32>>,
+        word: Option<&Bits<32>>,
         index: usize,
     ) -> Result<Subregion2Word, Error> {
         let row = get_word_row(index);
