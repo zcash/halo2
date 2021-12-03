@@ -299,7 +299,7 @@ impl Table16Chip {
 
         // Add all advice columns to permutation
         for column in [a_1, a_2, a_3, a_4, a_5, a_6, a_7, a_8].iter() {
-            meta.enable_equality((*column).into());
+            meta.enable_equality(*column);
         }
 
         let compression =

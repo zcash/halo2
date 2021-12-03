@@ -263,9 +263,9 @@ fn plonk_api() {
             let d = meta.advice_column();
             let p = meta.instance_column();
 
-            meta.enable_equality(a.into());
-            meta.enable_equality(b.into());
-            meta.enable_equality(c.into());
+            meta.enable_equality(a);
+            meta.enable_equality(b);
+            meta.enable_equality(c);
 
             let sm = meta.fixed_column();
             let sa = meta.fixed_column();
@@ -291,7 +291,7 @@ fn plonk_api() {
              */
 
             meta.lookup(|meta| {
-                let a_ = meta.query_any(a.into(), Rotation::cur());
+                let a_ = meta.query_any(a, Rotation::cur());
                 vec![(a_, sl)]
             });
 
@@ -319,15 +319,15 @@ fn plonk_api() {
                 vec![sp * (a - p)]
             });
 
-            meta.enable_equality(sf.into());
-            meta.enable_equality(e.into());
-            meta.enable_equality(d.into());
-            meta.enable_equality(p.into());
-            meta.enable_equality(sm.into());
-            meta.enable_equality(sa.into());
-            meta.enable_equality(sb.into());
-            meta.enable_equality(sc.into());
-            meta.enable_equality(sp.into());
+            meta.enable_equality(sf);
+            meta.enable_equality(e);
+            meta.enable_equality(d);
+            meta.enable_equality(p);
+            meta.enable_equality(sm);
+            meta.enable_equality(sa);
+            meta.enable_equality(sb);
+            meta.enable_equality(sc);
+            meta.enable_equality(sp);
 
             PlonkConfig {
                 a,

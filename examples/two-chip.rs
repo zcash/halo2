@@ -266,7 +266,7 @@ impl<F: FieldExt> MulChip<F> {
         advice: [Column<Advice>; 2],
     ) -> <Self as Chip<F>>::Config {
         for column in &advice {
-            meta.enable_equality((*column).into());
+            meta.enable_equality(*column);
         }
         let s_mul = meta.selector();
 
@@ -395,7 +395,7 @@ impl<F: FieldExt> FieldChip<F> {
         let add_config = AddChip::configure(meta, advice);
         let mul_config = MulChip::configure(meta, advice);
 
-        meta.enable_equality(instance.into());
+        meta.enable_equality(instance);
 
         FieldConfig {
             advice,
