@@ -76,7 +76,7 @@ impl fmt::Display for Error {
             }
             Error::ColumnNotInPermutation(column) => write!(
                 f,
-                "Column {:?} must be included in the permutation.",
+                "Column {:?} must be included in the permutation. Help: try applying `meta.enable_equalty` on the column",
                 column
             ),
         }
