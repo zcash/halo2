@@ -75,21 +75,21 @@ impl<const LEN: usize> From<[bool; LEN]> for Bits<LEN> {
     }
 }
 
-impl<const LEN: usize> From<Bits<LEN>> for [bool; LEN] {
-    fn from(bits: Bits<LEN>) -> Self {
+impl<const LEN: usize> From<&Bits<LEN>> for [bool; LEN] {
+    fn from(bits: &Bits<LEN>) -> Self {
         bits.0
     }
 }
 
-impl<const LEN: usize> From<Bits<LEN>> for Assigned<pallas::Base> {
-    fn from(bits: Bits<LEN>) -> Assigned<pallas::Base> {
+impl<const LEN: usize> From<&Bits<LEN>> for Assigned<pallas::Base> {
+    fn from(bits: &Bits<LEN>) -> Assigned<pallas::Base> {
         assert!(LEN <= 64);
         pallas::Base::from_u64(lebs2ip(&bits.0)).into()
     }
 }
 
-impl From<Bits<16>> for u16 {
-    fn from(bits: Bits<16>) -> u16 {
+impl From<&Bits<16>> for u16 {
+    fn from(bits: &Bits<16>) -> u16 {
         lebs2ip(&bits.0) as u16
     }
 }
@@ -100,8 +100,8 @@ impl From<u16> for Bits<16> {
     }
 }
 
-impl From<Bits<32>> for u32 {
-    fn from(bits: Bits<32>) -> u32 {
+impl From<&Bits<32>> for u32 {
+    fn from(bits: &Bits<32>) -> u32 {
         lebs2ip(&bits.0) as u32
     }
 }
