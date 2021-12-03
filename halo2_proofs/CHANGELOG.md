@@ -11,6 +11,8 @@ and this project adheres to Rust's notion of
   - `MockProver::assert_satisfied`, for requiring that a circuit is satisfied.
     It panics like `assert_eq!(mock_prover.verify(), Ok(()))`, but pretty-prints
     any verification failures before panicking.
+- `halo2_proofs::plonk::Constraints` helper, for constructing a gate from a set
+  of constraints with a common selector.
 
 ### Changed
 - `halo2_proofs::dev`:

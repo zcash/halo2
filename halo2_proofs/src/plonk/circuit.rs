@@ -755,6 +755,84 @@ impl<F: Field> From<Expression<F>> for Vec<Constraint<F>> {
     }
 }
 
+/// A set of polynomial constraints with a common selector.
+///
+/// ```
+/// use halo2_proofs::{pasta::Fp, plonk::{Constraints, Expression}, poly::Rotation};
+/// # use halo2_proofs::plonk::ConstraintSystem;
+///
+/// # let mut meta = ConstraintSystem::<Fp>::default();
+/// let a = meta.advice_column();
+/// let b = meta.advice_column();
+/// let c = meta.advice_column();
+/// let s = meta.selector();
+///
+/// meta.create_gate("foo", |meta| {
+///     let next = meta.query_advice(a, Rotation::next());
+///     let a = meta.query_advice(a, Rotation::cur());
+///     let b = meta.query_advice(b, Rotation::cur());
+///     let c = meta.query_advice(c, Rotation::cur());
+///     let s_ternary = meta.query_selector(s);
+///
+///     let one_minus_a = Expression::Constant(Fp::one()) - a.clone();
+///
+///     Constraints::with_selector(
+///         s_ternary,
+///         std::array::IntoIter::new([
+///             ("a is boolean", a.clone() * one_minus_a.clone()),
+///             ("next == a ? b : c", next - (a * b + one_minus_a * c)),
+///         ]),
+///     )
+/// });
+/// ```
+#[derive(Debug)]
+pub struct Constraints<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> {
+    selector: Expression<F>,
+    constraints: Iter,
+}
+
+impl<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> Constraints<F, C, Iter> {
+    /// Constructs a set of constraints that are controlled by the given selector.
+    ///
+    /// Each constraint `c` in `iterator` will be converted into the constraint
+    /// `selector * c`.
+    pub fn with_selector(selector: Expression<F>, constraints: Iter) -> Self {
+        Constraints {
+            selector,
+            constraints,
+        }
+    }
+}
+
+fn apply_selector_to_constraint<F: Field, C: Into<Constraint<F>>>(
+    (selector, c): (Expression<F>, C),
+) -> Constraint<F> {
+    let constraint: Constraint<F> = c.into();
+    Constraint {
+        name: constraint.name,
+        poly: selector * constraint.poly,
+    }
+}
+
+type ApplySelectorToConstraint<F, C> = fn((Expression<F>, C)) -> Constraint<F>;
+type ConstraintsIterator<F, C, I> = std::iter::Map<
+    std::iter::Zip<std::iter::Repeat<Expression<F>>, I>,
+    ApplySelectorToConstraint<F, C>,
+>;
+
+impl<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> IntoIterator
+    for Constraints<F, C, Iter>
+{
+    type Item = Constraint<F>;
+    type IntoIter = ConstraintsIterator<F, C, Iter::IntoIter>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        std::iter::repeat(self.selector)
+            .zip(self.constraints.into_iter())
+            .map(apply_selector_to_constraint)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct Gate<F: Field> {
     name: &'static str,
