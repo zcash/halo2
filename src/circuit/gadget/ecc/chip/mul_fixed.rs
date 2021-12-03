@@ -1,6 +1,6 @@
 use super::{
-    add, add_incomplete, CellValue, EccBaseFieldElemFixed, EccConfig, EccScalarFixed,
-    EccScalarFixedShort, NonIdentityEccPoint, Var,
+    add, add_incomplete, CellValue, EccBaseFieldElemFixed, EccScalarFixed, EccScalarFixedShort,
+    NonIdentityEccPoint, Var,
 };
 use crate::constants::{
     self,
@@ -75,8 +75,8 @@ impl OrchardFixedBases {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct Config<const NUM_WINDOWS: usize> {
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Config {
     q_mul_fixed_running_sum: Selector,
     // The fixed Lagrange interpolation coefficients for `x_p`.
     lagrange_coeffs: [Column<Fixed>; constants::H],
@@ -97,18 +97,32 @@ pub struct Config<const NUM_WINDOWS: usize> {
     add_incomplete_config: add_incomplete::Config,
 }
 
-impl<const NUM_WINDOWS: usize> From<&EccConfig> for Config<NUM_WINDOWS> {
-    fn from(ecc_config: &EccConfig) -> Self {
+impl Config {
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        q_mul_fixed_running_sum: Selector,
+        lagrange_coeffs: [Column<Fixed>; constants::H],
+        window: Column<Advice>,
+        x_p: Column<Advice>,
+        y_p: Column<Advice>,
+        u: Column<Advice>,
+        add_config: add::Config,
+        add_incomplete_config: add_incomplete::Config,
+    ) -> Self {
+        meta.enable_equality(window.into());
+        meta.enable_equality(u.into());
+
         let config = Self {
-            q_mul_fixed_running_sum: ecc_config.q_mul_fixed_running_sum,
-            lagrange_coeffs: ecc_config.lagrange_coeffs,
-            fixed_z: ecc_config.fixed_z,
-            x_p: ecc_config.advices[0],
-            y_p: ecc_config.advices[1],
-            window: ecc_config.advices[4],
-            u: ecc_config.advices[5],
-            add_config: ecc_config.add,
-            add_incomplete_config: ecc_config.add_incomplete,
+            q_mul_fixed_running_sum,
+            lagrange_coeffs,
+            fixed_z: meta.fixed_column(),
+            window,
+            x_p,
+            y_p,
+            u,
+            add_config,
+            add_incomplete_config,
         };
 
         // Check relationships between this config and `add_config`.
@@ -141,11 +155,11 @@ impl<const NUM_WINDOWS: usize> From<&EccConfig> for Config<NUM_WINDOWS> {
             );
         }
 
+        config.running_sum_coords_gate(meta);
+
         config
     }
-}
 
-impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
     /// Check that each window in the running sum decomposition uses the correct y_p
     /// and interpolated x_p.
     ///
@@ -155,7 +169,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
     /// This gate is not used in the mul_fixed::full_width helper, since the full-width
     /// scalar is witnessed directly as three-bit windows instead of being decomposed
     /// via a running sum.
-    pub(crate) fn running_sum_coords_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn running_sum_coords_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("Running sum coordinates check", |meta| {
             let q_mul_fixed_running_sum = meta.query_selector(self.q_mul_fixed_running_sum);
 
@@ -213,7 +227,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
     }
 
     #[allow(clippy::type_complexity)]
-    fn assign_region_inner(
+    fn assign_region_inner<const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
@@ -222,7 +236,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         coords_check_toggle: Selector,
     ) -> Result<(NonIdentityEccPoint, NonIdentityEccPoint), Error> {
         // Assign fixed columns for given fixed base
-        self.assign_fixed_constants(region, offset, base, coords_check_toggle)?;
+        self.assign_fixed_constants::<NUM_WINDOWS>(region, offset, base, coords_check_toggle)?;
 
         // Initialize accumulator
         let acc = self.initialize_accumulator(region, offset, base, scalar)?;
@@ -231,12 +245,12 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         let acc = self.add_incomplete(region, offset, acc, base, scalar)?;
 
         // Process most significant window using complete addition
-        let mul_b = self.process_msb(region, offset, base, scalar)?;
+        let mul_b = self.process_msb::<NUM_WINDOWS>(region, offset, base, scalar)?;
 
         Ok((acc, mul_b))
     }
 
-    fn assign_fixed_constants(
+    fn assign_fixed_constants<const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
@@ -411,7 +425,7 @@ impl<const NUM_WINDOWS: usize> Config<NUM_WINDOWS> {
         Ok(acc)
     }
 
-    fn process_msb(
+    fn process_msb<const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,

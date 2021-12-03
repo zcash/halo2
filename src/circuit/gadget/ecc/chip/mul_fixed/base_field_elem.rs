@@ -24,7 +24,7 @@ pub struct Config {
     canon_advices: [Column<Advice>; 3],
     lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     running_sum_config: RunningSumConfig<pallas::Base, { constants::FIXED_BASE_WINDOW_SIZE }>,
-    super_config: super::Config<{ constants::NUM_WINDOWS }>,
+    super_config: super::Config,
 }
 
 impl From<&EccConfig> for Config {
@@ -35,7 +35,7 @@ impl From<&EccConfig> for Config {
             canon_advices: [config.advices[6], config.advices[7], config.advices[8]],
             lookup_config: config.lookup_config,
             running_sum_config: config.running_sum_config.clone(),
-            super_config: config.into(),
+            super_config: config.mul_fixed,
         };
 
         let add_incomplete_advices = config.super_config.add_incomplete_config.advice_columns();
@@ -180,13 +180,15 @@ impl Config {
                     }
                 };
 
-                let (acc, mul_b) = self.super_config.assign_region_inner(
-                    &mut region,
-                    offset,
-                    &(&scalar).into(),
-                    base.into(),
-                    self.q_mul_fixed_running_sum,
-                )?;
+                let (acc, mul_b) = self
+                    .super_config
+                    .assign_region_inner::<{ constants::NUM_WINDOWS }>(
+                        &mut region,
+                        offset,
+                        &(&scalar).into(),
+                        base.into(),
+                        self.q_mul_fixed_running_sum,
+                    )?;
 
                 Ok((scalar, acc, mul_b))
             },

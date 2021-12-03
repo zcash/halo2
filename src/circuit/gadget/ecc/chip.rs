@@ -133,11 +133,6 @@ pub struct EccConfig {
     /// Advice columns needed by instructions in the ECC chip.
     pub advices: [Column<Advice>; 10],
 
-    /// Coefficients of interpolation polynomials for x-coordinates (used in fixed-base scalar multiplication)
-    pub lagrange_coeffs: [Column<Fixed>; constants::H],
-    /// Fixed z such that y + z = u^2 some square, and -y + z is a non-square. (Used in fixed-base scalar multiplication)
-    pub fixed_z: Column<Fixed>,
-
     /// Incomplete addition
     add_incomplete: add_incomplete::Config,
 
@@ -146,6 +141,9 @@ pub struct EccConfig {
 
     /// Variable-base scalar multiplication
     mul: mul::Config,
+
+    /// TODO: Remove this.
+    pub mul_fixed: mul_fixed::Config,
 
     /// Fixed-base full-width scalar multiplication
     pub q_mul_fixed_full: Selector,
@@ -206,10 +204,6 @@ impl EccChip {
     ) -> <Self as Chip<pallas::Base>>::Config {
         // The following columns need to be equality-enabled for their use in sub-configs:
         //
-        // mul_fixed::Config:
-        // - advices[4]: window
-        // - advices[5]: u
-        //
         // mul_fixed::base_field_element::Config:
         // - [advices[6], advices[7], advices[8]]: canon_advices
         //
@@ -238,13 +232,26 @@ impl EccChip {
         // Create variable-base scalar mul gates
         let mul = mul::Config::configure(meta, add, range_check, advices);
 
+        // Create config that is shared across short, base-field, and full-width
+        // fixed-base scalar mul.
+        let mul_fixed = mul_fixed::Config::configure(
+            meta,
+            q_mul_fixed_running_sum,
+            lagrange_coeffs,
+            advices[4],
+            advices[0],
+            advices[1],
+            advices[5],
+            add,
+            add_incomplete,
+        );
+
         let config = EccConfig {
             advices,
-            lagrange_coeffs,
-            fixed_z: meta.fixed_column(),
             add_incomplete,
             add,
             mul,
+            mul_fixed,
             q_mul_fixed_full: meta.selector(),
             q_mul_fixed_short: meta.selector(),
             q_mul_fixed_base_field: meta.selector(),
@@ -253,14 +260,6 @@ impl EccChip {
             lookup_config: range_check,
             running_sum_config,
         };
-
-        // Create gate that is used both in fixed-base mul using a short signed exponent,
-        // and fixed-base mul using a base field element.
-        {
-            // The const generic does not matter when creating gates.
-            let mul_fixed_config: mul_fixed::Config<{ constants::NUM_WINDOWS }> = (&config).into();
-            mul_fixed_config.running_sum_coords_gate(meta);
-        }
 
         // Create gate that is only used in full-width fixed-base scalar mul.
         {

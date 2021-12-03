@@ -21,7 +21,7 @@ pub struct Config {
     q_mul_fixed_short: Selector,
     q_mul_fixed_running_sum: Selector,
     running_sum_config: RunningSumConfig<pallas::Base, { FIXED_BASE_WINDOW_SIZE }>,
-    super_config: super::Config<NUM_WINDOWS_SHORT>,
+    super_config: super::Config,
 }
 
 impl From<&EccConfig> for Config {
@@ -30,7 +30,7 @@ impl From<&EccConfig> for Config {
             q_mul_fixed_short: config.q_mul_fixed_short,
             q_mul_fixed_running_sum: config.q_mul_fixed_running_sum,
             running_sum_config: config.running_sum_config.clone(),
-            super_config: config.into(),
+            super_config: config.mul_fixed,
         }
     }
 }
@@ -110,7 +110,7 @@ impl Config {
                 // Decompose the scalar
                 let scalar = self.decompose(&mut region, offset, magnitude_sign)?;
 
-                let (acc, mul_b) = self.super_config.assign_region_inner(
+                let (acc, mul_b) = self.super_config.assign_region_inner::<NUM_WINDOWS_SHORT>(
                     &mut region,
                     offset,
                     &(&scalar).into(),
