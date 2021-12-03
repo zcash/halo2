@@ -1,114 +1,137 @@
-use super::{util::*, CellValue16, CellValue32};
+use super::{util::*, AssignedBits};
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Chip, Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
+    pasta::pallas,
+    plonk::{Advice, Column, ConstraintSystem, Error, TableColumn},
     poly::Rotation,
 };
+use std::convert::TryInto;
 use std::marker::PhantomData;
+
+const BITS_7: usize = 1 << 7;
+const BITS_10: usize = 1 << 10;
+const BITS_11: usize = 1 << 11;
+const BITS_13: usize = 1 << 13;
+const BITS_14: usize = 1 << 14;
 
 /// An input word into a lookup, containing (tag, dense, spread)
 #[derive(Copy, Clone, Debug)]
-pub(super) struct SpreadWord {
+pub(super) struct SpreadWord<const DENSE: usize, const SPREAD: usize> {
     pub tag: u8,
-    pub dense: u16,
-    pub spread: u32,
+    pub dense: [bool; DENSE],
+    pub spread: [bool; SPREAD],
 }
 
-impl SpreadWord {
-    pub(super) fn new(word: u16) -> Self {
+/// Helper function that returns tag of 16-bit input
+pub fn get_tag(input: u16) -> u8 {
+    let input = input as usize;
+    if input < BITS_7 {
+        0
+    } else if input < BITS_10 {
+        1
+    } else if input < BITS_11 {
+        2
+    } else if input < BITS_13 {
+        3
+    } else if input < BITS_14 {
+        4
+    } else {
+        5
+    }
+}
+
+impl<const DENSE: usize, const SPREAD: usize> SpreadWord<DENSE, SPREAD> {
+    pub(super) fn new(dense: [bool; DENSE]) -> Self {
+        assert!(DENSE <= 16);
         SpreadWord {
-            tag: get_tag(word),
-            dense: word,
-            spread: interleave_u16_with_zeros(word),
+            tag: get_tag(lebs2ip(&dense) as u16),
+            dense,
+            spread: spread_bits(dense),
+        }
+    }
+
+    pub(super) fn try_new<T: TryInto<[bool; DENSE]> + std::fmt::Debug>(dense: T) -> Self
+    where
+        <T as TryInto<[bool; DENSE]>>::Error: std::fmt::Debug,
+    {
+        assert!(DENSE <= 16);
+        let dense: [bool; DENSE] = dense.try_into().unwrap();
+        SpreadWord {
+            tag: get_tag(lebs2ip(&dense) as u16),
+            dense,
+            spread: spread_bits(dense),
         }
     }
 }
 
 /// A variable stored in advice columns corresponding to a row of [`SpreadTableConfig`].
-#[derive(Copy, Clone, Debug)]
-pub(super) struct SpreadVar {
-    pub tag: u8,
-    pub dense: CellValue16,
-    pub spread: CellValue32,
+#[derive(Clone, Debug)]
+pub(super) struct SpreadVar<const DENSE: usize, const SPREAD: usize> {
+    pub tag: Option<u8>,
+    pub dense: AssignedBits<DENSE>,
+    pub spread: AssignedBits<SPREAD>,
 }
 
-impl SpreadVar {
-    pub(super) fn with_lookup<F: FieldExt>(
-        region: &mut Region<'_, F>,
+impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
+    pub(super) fn with_lookup(
+        region: &mut Region<'_, pallas::Base>,
         cols: &SpreadInputs,
         row: usize,
-        word: SpreadWord,
+        word: Option<SpreadWord<DENSE, SPREAD>>,
     ) -> Result<Self, Error> {
-        let tag = word.tag;
-        let dense_val = Some(word.dense);
-        let spread_val = Some(word.spread);
-        region.assign_advice(|| "tag", cols.tag, row, || Ok(F::from_u64(tag as u64)))?;
-        let dense_var = region.assign_advice(
-            || "dense",
-            cols.dense,
+        let tag = word.map(|word| word.tag);
+        let dense_val = word.map(|word| word.dense);
+        let spread_val = word.map(|word| word.spread);
+
+        region.assign_advice(
+            || "tag",
+            cols.tag,
             row,
             || {
-                dense_val
-                    .map(|v| F::from_u64(v as u64))
-                    .ok_or(Error::SynthesisError)
-            },
-        )?;
-        let spread_var = region.assign_advice(
-            || "spread",
-            cols.spread,
-            row,
-            || {
-                spread_val
-                    .map(|v| F::from_u64(v as u64))
-                    .ok_or(Error::SynthesisError)
+                tag.map(|tag| pallas::Base::from_u64(tag as u64))
+                    .ok_or(Error::Synthesis)
             },
         )?;
 
-        Ok(SpreadVar {
-            tag,
-            dense: CellValue16::new(dense_var, dense_val.unwrap()),
-            spread: CellValue32::new(spread_var, spread_val.unwrap()),
-        })
+        let dense =
+            AssignedBits::<DENSE>::assign_bits(region, || "dense", cols.dense, row, dense_val)?;
+
+        let spread =
+            AssignedBits::<SPREAD>::assign_bits(region, || "spread", cols.spread, row, spread_val)?;
+
+        Ok(SpreadVar { tag, dense, spread })
     }
 
-    pub(super) fn without_lookup<F: FieldExt>(
-        region: &mut Region<'_, F>,
+    pub(super) fn without_lookup(
+        region: &mut Region<'_, pallas::Base>,
         dense_col: Column<Advice>,
         dense_row: usize,
         spread_col: Column<Advice>,
         spread_row: usize,
-        word: SpreadWord,
+        word: Option<SpreadWord<DENSE, SPREAD>>,
     ) -> Result<Self, Error> {
-        let tag = word.tag;
-        let dense_val = Some(word.dense);
-        let spread_val = Some(word.spread);
-        let dense_var = region.assign_advice(
+        let tag = word.map(|word| word.tag);
+        let dense_val = word.map(|word| word.dense);
+        let spread_val = word.map(|word| word.spread);
+
+        let dense = AssignedBits::<DENSE>::assign_bits(
+            region,
             || "dense",
             dense_col,
             dense_row,
-            || {
-                dense_val
-                    .map(|v| F::from_u64(v as u64))
-                    .ok_or(Error::SynthesisError)
-            },
+            dense_val,
         )?;
-        let spread_var = region.assign_advice(
+
+        let spread = AssignedBits::<SPREAD>::assign_bits(
+            region,
             || "spread",
             spread_col,
             spread_row,
-            || {
-                spread_val
-                    .map(|v| F::from_u64(v as u64))
-                    .ok_or(Error::SynthesisError)
-            },
+            spread_val,
         )?;
 
-        Ok(SpreadVar {
-            tag,
-            dense: CellValue16::new(dense_var, dense_val.unwrap()),
-            spread: CellValue32::new(spread_var, spread_val.unwrap()),
-        })
+        Ok(SpreadVar { tag, dense, spread })
     }
 }
 
@@ -121,9 +144,9 @@ pub(super) struct SpreadInputs {
 
 #[derive(Clone, Debug)]
 pub(super) struct SpreadTable {
-    pub(super) tag: Column<Fixed>,
-    pub(super) dense: Column<Fixed>,
-    pub(super) spread: Column<Fixed>,
+    pub(super) tag: TableColumn,
+    pub(super) dense: TableColumn,
+    pub(super) spread: TableColumn,
 }
 
 #[derive(Clone, Debug)]
@@ -158,22 +181,19 @@ impl<F: FieldExt> SpreadTableChip<F> {
         input_dense: Column<Advice>,
         input_spread: Column<Advice>,
     ) -> <Self as Chip<F>>::Config {
-        let table_tag = meta.fixed_column();
-        let table_dense = meta.fixed_column();
-        let table_spread = meta.fixed_column();
+        let table_tag = meta.lookup_table_column();
+        let table_dense = meta.lookup_table_column();
+        let table_spread = meta.lookup_table_column();
 
         meta.lookup(|meta| {
             let tag_cur = meta.query_advice(input_tag, Rotation::cur());
             let dense_cur = meta.query_advice(input_dense, Rotation::cur());
             let spread_cur = meta.query_advice(input_spread, Rotation::cur());
-            let table_tag_cur = meta.query_fixed(table_tag, Rotation::cur());
-            let table_dense_cur = meta.query_fixed(table_dense, Rotation::cur());
-            let table_spread_cur = meta.query_fixed(table_spread, Rotation::cur());
 
             vec![
-                (tag_cur, table_tag_cur),
-                (dense_cur, table_dense_cur),
-                (spread_cur, table_spread_cur),
+                (tag_cur, table_tag),
+                (dense_cur, table_dense),
+                (spread_cur, table_spread),
             ]
         });
 
@@ -195,39 +215,37 @@ impl<F: FieldExt> SpreadTableChip<F> {
         config: SpreadTableConfig,
         layouter: &mut impl Layouter<F>,
     ) -> Result<<Self as Chip<F>>::Loaded, Error> {
-        layouter.assign_region(
+        layouter.assign_table(
             || "spread table",
-            |mut gate| {
+            |mut table| {
                 // We generate the row values lazily (we only need them during keygen).
                 let mut rows = SpreadTableConfig::generate::<F>();
 
                 for index in 0..(1 << 16) {
                     let mut row = None;
-                    gate.assign_fixed(
+                    table.assign_cell(
                         || "tag",
                         config.table.tag,
                         index,
                         || {
                             row = rows.next();
-                            row.map(|(tag, _, _)| tag).ok_or(Error::SynthesisError)
+                            row.map(|(tag, _, _)| tag).ok_or(Error::Synthesis)
                         },
                     )?;
-                    gate.assign_fixed(
+                    table.assign_cell(
                         || "dense",
                         config.table.dense,
                         index,
-                        || row.map(|(_, dense, _)| dense).ok_or(Error::SynthesisError),
+                        || row.map(|(_, dense, _)| dense).ok_or(Error::Synthesis),
                     )?;
-                    gate.assign_fixed(
+                    table.assign_cell(
                         || "spread",
                         config.table.spread,
                         index,
-                        || {
-                            row.map(|(_, _, spread)| spread)
-                                .ok_or(Error::SynthesisError)
-                        },
+                        || row.map(|(_, _, spread)| spread).ok_or(Error::Synthesis),
                     )?;
                 }
+
                 Ok(())
             },
         )
@@ -269,16 +287,15 @@ impl SpreadTableConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::{SpreadTableChip, SpreadTableConfig};
+    use super::{get_tag, SpreadTableChip, SpreadTableConfig};
     use rand::Rng;
 
-    use crate::table16::util::{get_tag, interleave_u16_with_zeros};
     use halo2::{
         arithmetic::FieldExt,
-        circuit::{layouter::SingleChipLayouter, Layouter},
+        circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         pasta::Fp,
-        plonk::{Advice, Assignment, Circuit, Column, ConstraintSystem, Error},
+        plonk::{Advice, Circuit, Column, ConstraintSystem, Error},
     };
 
     #[test]
@@ -291,6 +308,11 @@ mod tests {
 
         impl<F: FieldExt> Circuit<F> for MyCircuit {
             type Config = SpreadTableConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                MyCircuit {}
+            }
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let input_tag = meta.advice_column();
@@ -302,17 +324,16 @@ mod tests {
 
             fn synthesize(
                 &self,
-                cs: &mut impl Assignment<F>,
                 config: Self::Config,
+                mut layouter: impl Layouter<F>,
             ) -> Result<(), Error> {
-                let mut layouter = SingleChipLayouter::new(cs)?;
                 SpreadTableChip::load(config.clone(), &mut layouter)?;
 
                 layouter.assign_region(
                     || "spread_test",
                     |mut gate| {
                         let mut row = 0;
-                        let mut add_row = |tag, dense, spread| {
+                        let mut add_row = |tag, dense, spread| -> Result<(), Error> {
                             gate.assign_advice(|| "tag", config.input.tag, row, || Ok(tag))?;
                             gate.assign_advice(|| "dense", config.input.dense, row, || Ok(dense))?;
                             gate.assign_advice(
@@ -393,6 +414,15 @@ mod tests {
                         // Test random lookup values
                         let mut rng = rand::thread_rng();
 
+                        fn interleave_u16_with_zeros(word: u16) -> u32 {
+                            let mut word: u32 = word.into();
+                            word = (word ^ (word << 8)) & 0x00ff00ff;
+                            word = (word ^ (word << 4)) & 0x0f0f0f0f;
+                            word = (word ^ (word << 2)) & 0x33333333;
+                            word = (word ^ (word << 1)) & 0x55555555;
+                            word
+                        }
+
                         for _ in 0..10 {
                             let word: u16 = rng.gen();
                             add_row(
@@ -410,7 +440,7 @@ mod tests {
 
         let circuit: MyCircuit = MyCircuit {};
 
-        let prover = match MockProver::<Fp>::run(16, &circuit, vec![]) {
+        let prover = match MockProver::<Fp>::run(17, &circuit, vec![]) {
             Ok(prover) => prover,
             Err(e) => panic!("{:?}", e),
         };

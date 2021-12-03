@@ -1,28 +1,81 @@
-use super::super::{
-    util::*, BlockWord, CellValue16, CellValue32, SpreadVar, SpreadWord, Table16Assignment,
-};
+use super::super::{util::*, AssignedBits, BlockWord, SpreadVar, SpreadWord, Table16Assignment};
 use super::{schedule_util::*, MessageScheduleConfig};
-use halo2::{arithmetic::FieldExt, circuit::Region, plonk::Error};
+use halo2::{circuit::Region, pasta::pallas, plonk::Error};
+use std::convert::TryInto;
 
 // A word in subregion 1
 // (3, 4, 11, 14)-bit chunks
 #[derive(Debug)]
 pub struct Subregion1Word {
     index: usize,
-    a: CellValue32,
-    b: CellValue32,
-    c: CellValue32,
-    d: CellValue32,
-    spread_c: CellValue32,
-    spread_d: CellValue32,
+    a: AssignedBits<3>,
+    b: AssignedBits<4>,
+    c: AssignedBits<11>,
+    d: AssignedBits<14>,
+    spread_c: AssignedBits<22>,
+    spread_d: AssignedBits<28>,
+}
+
+impl Subregion1Word {
+    fn spread_a(&self) -> Option<[bool; 6]> {
+        self.a.value().map(|v| v.spread())
+    }
+
+    fn spread_b(&self) -> Option<[bool; 8]> {
+        self.b.value().map(|v| v.spread())
+    }
+
+    fn spread_c(&self) -> Option<[bool; 22]> {
+        self.spread_c.value().map(|v| v.0)
+    }
+
+    fn spread_d(&self) -> Option<[bool; 28]> {
+        self.spread_d.value().map(|v| v.0)
+    }
+
+    fn xor_lower_sigma_0(&self) -> Option<[bool; 64]> {
+        self.spread_a()
+            .zip(self.spread_b())
+            .zip(self.spread_c())
+            .zip(self.spread_d())
+            .map(|(((a, b), c), d)| {
+                let xor_0 = b
+                    .iter()
+                    .chain(c.iter())
+                    .chain(d.iter())
+                    .chain(std::iter::repeat(&false).take(6))
+                    .copied()
+                    .collect::<Vec<_>>();
+                let xor_1 = c
+                    .iter()
+                    .chain(d.iter())
+                    .chain(a.iter())
+                    .chain(b.iter())
+                    .copied()
+                    .collect::<Vec<_>>();
+                let xor_2 = d
+                    .iter()
+                    .chain(a.iter())
+                    .chain(b.iter())
+                    .chain(c.iter())
+                    .copied()
+                    .collect::<Vec<_>>();
+
+                let xor_0 = lebs2ip::<64>(&xor_0.try_into().unwrap());
+                let xor_1 = lebs2ip::<64>(&xor_1.try_into().unwrap());
+                let xor_2 = lebs2ip::<64>(&xor_2.try_into().unwrap());
+
+                i2lebsp(xor_0 + xor_1 + xor_2)
+            })
+    }
 }
 
 impl MessageScheduleConfig {
-    pub fn assign_subregion1<F: FieldExt>(
+    pub fn assign_subregion1(
         &self,
-        region: &mut Region<'_, F>,
+        region: &mut Region<'_, pallas::Base>,
         input: &[BlockWord],
-    ) -> Result<Vec<(CellValue16, CellValue16)>, Error> {
+    ) -> Result<Vec<(AssignedBits<16>, AssignedBits<16>)>, Error> {
         assert_eq!(input.len(), SUBREGION_1_LEN);
         Ok(input
             .iter()
@@ -30,7 +83,11 @@ impl MessageScheduleConfig {
             .map(|(idx, word)| {
                 // s_decompose_1 on W_[1..14]
                 let subregion1_word = self
-                    .decompose_subregion1_word(region, word.value.unwrap(), idx + 1)
+                    .decompose_subregion1_word(
+                        region,
+                        word.0.map(|word| i2lebsp(word.into())),
+                        idx + 1,
+                    )
                     .unwrap();
 
                 // lower_sigma_0 on W_[1..14]
@@ -39,10 +96,11 @@ impl MessageScheduleConfig {
             .collect::<Vec<_>>())
     }
 
-    fn decompose_subregion1_word<F: FieldExt>(
+    /// Pieces of length [3, 4, 11, 14]
+    fn decompose_subregion1_word(
         &self,
-        region: &mut Region<'_, F>,
-        word: u32,
+        region: &mut Region<'_, pallas::Base>,
+        word: Option<[bool; 32]>,
         index: usize,
     ) -> Result<Subregion1Word, Error> {
         let row = get_word_row(index);
@@ -51,49 +109,49 @@ impl MessageScheduleConfig {
         let a_3 = self.extras[0];
         let a_4 = self.extras[1];
 
-        let pieces = chop_u32(word, &[3, 4, 11, 14]);
+        let pieces = word.map(|word| {
+            vec![
+                word[0..3].to_vec(),
+                word[3..7].to_vec(),
+                word[7..18].to_vec(),
+                word[18..32].to_vec(),
+            ]
+        });
+        let pieces = transpose_option_vec(pieces, 4);
 
         // Assign `a` (3-bit piece)
-        let a = region.assign_advice(
-            || "word_a",
-            a_3,
-            row + 1,
-            || Ok(F::from_u64(pieces[0] as u64)),
-        )?;
+        let a =
+            AssignedBits::<3>::assign_bits(region, || "word_a", a_3, row + 1, pieces[0].clone())?;
         // Assign `b` (4-bit piece)
-        let b = region.assign_advice(
-            || "word_b",
-            a_4,
-            row + 1,
-            || Ok(F::from_u64(pieces[1] as u64)),
-        )?;
+        let b =
+            AssignedBits::<4>::assign_bits(region, || "word_b", a_4, row + 1, pieces[1].clone())?;
 
         // Assign `c` (11-bit piece) lookup
-        let spread_c = SpreadWord::new(pieces[2] as u16);
+        let spread_c = pieces[2].clone().map(SpreadWord::try_new);
         let spread_c = SpreadVar::with_lookup(region, &self.lookup, row + 1, spread_c)?;
 
         // Assign `d` (14-bit piece) lookup
-        let spread_d = SpreadWord::new(pieces[3] as u16);
+        let spread_d = pieces[3].clone().map(SpreadWord::try_new);
         let spread_d = SpreadVar::with_lookup(region, &self.lookup, row, spread_d)?;
 
         Ok(Subregion1Word {
             index,
-            a: CellValue32::new(a, pieces[0]),
-            b: CellValue32::new(b, pieces[1]),
-            c: CellValue32::new(spread_c.dense.var, spread_c.dense.value.unwrap().into()),
-            d: CellValue32::new(spread_d.dense.var, spread_d.dense.value.unwrap().into()),
-            spread_c: CellValue32::new(spread_c.spread.var, spread_c.spread.value.unwrap()),
-            spread_d: CellValue32::new(spread_d.spread.var, spread_d.spread.value.unwrap()),
+            a,
+            b,
+            c: spread_c.dense,
+            d: spread_d.dense,
+            spread_c: spread_c.spread,
+            spread_d: spread_d.spread,
         })
     }
 
     // sigma_0 v1 on a word in W_1 to W_13
     // (3, 4, 11, 14)-bit chunks
-    fn lower_sigma_0<F: FieldExt>(
+    fn lower_sigma_0(
         &self,
-        region: &mut Region<'_, F>,
+        region: &mut Region<'_, pallas::Base>,
         word: Subregion1Word,
-    ) -> Result<(CellValue16, CellValue16), Error> {
+    ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
         let a_3 = self.extras[0];
         let a_4 = self.extras[1];
         let a_5 = self.message_schedule;
@@ -102,76 +160,55 @@ impl MessageScheduleConfig {
         let row = get_word_row(word.index) + 3;
 
         // Assign `a` and copy constraint
-        self.assign_and_constrain(region, || "a", a_5, row + 1, &word.a, &self.perm)?;
+        word.a.copy_advice(|| "a", region, a_5, row + 1)?;
 
         // Witness `spread_a`
-        let spread_a = interleave_u16_with_zeros(word.a.value.unwrap() as u16);
-        region.assign_advice(
-            || "spread_a",
-            a_6,
-            row + 1,
-            || Ok(F::from_u64(spread_a as u64)),
-        )?;
+        let spread_a = word.a.value().map(|bits| spread_bits(bits.0));
+        AssignedBits::<6>::assign_bits(region, || "spread_a", a_6, row + 1, spread_a)?;
+
+        // Split `b` (4-bit chunk) into `b_hi` and `b_lo`
+        // Assign `b_lo`, `spread_b_lo`
+        let b_lo: Option<[bool; 2]> = word.b.value().map(|b| b.0[..2].try_into().unwrap());
+        let spread_b_lo = b_lo.map(spread_bits);
+        {
+            AssignedBits::<2>::assign_bits(region, || "b_lo", a_3, row - 1, b_lo)?;
+
+            AssignedBits::<4>::assign_bits(region, || "spread_b_lo", a_4, row - 1, spread_b_lo)?;
+        };
 
         // Split `b` (2-bit chunk) into `b_hi` and `b_lo`
-        let b = word.b.value.unwrap();
-        let (b_lo, b_hi) = bisect_four_bit(b);
-        let spread_b_lo = interleave_u16_with_zeros(b_lo as u16);
-        let spread_b_hi = interleave_u16_with_zeros(b_hi as u16);
+        // Assign `b_hi`, `spread_b_hi`
+        let b_hi: Option<[bool; 2]> = word.b.value().map(|b| b.0[2..].try_into().unwrap());
+        let spread_b_hi = b_hi.map(spread_bits);
+        {
+            AssignedBits::<2>::assign_bits(region, || "b_hi", a_5, row - 1, b_hi)?;
 
-        // Assign `b_hi`, `spread_b_hi`, `b_lo`, `spread_b_lo`
-        region.assign_advice(|| "b_lo", a_3, row - 1, || Ok(F::from_u64(b_lo as u64)))?;
-        region.assign_advice(
-            || "spread_b_lo",
-            a_4,
-            row - 1,
-            || Ok(F::from_u64(spread_b_lo as u64)),
-        )?;
-        region.assign_advice(|| "b_hi", a_5, row - 1, || Ok(F::from_u64(b_hi as u64)))?;
-        region.assign_advice(
-            || "spread_b_hi",
-            a_6,
-            row - 1,
-            || Ok(F::from_u64(spread_b_hi as u64)),
-        )?;
+            AssignedBits::<4>::assign_bits(region, || "spread_b_hi", a_6, row - 1, spread_b_hi)?;
+        };
 
         // Assign `b` and copy constraint
-        self.assign_and_constrain(region, || "b", a_6, row, &word.b, &self.perm)?;
+        word.b.copy_advice(|| "b", region, a_6, row)?;
 
         // Assign `spread_c` and copy constraint
-        self.assign_and_constrain(region, || "spread_c", a_4, row, &word.spread_c, &self.perm)?;
+        word.spread_c.copy_advice(|| "spread_c", region, a_4, row)?;
 
         // Assign `spread_d` and copy constraint
-        self.assign_and_constrain(region, || "spread_d", a_5, row, &word.spread_d, &self.perm)?;
+        word.spread_d.copy_advice(|| "spread_d", region, a_5, row)?;
 
         // Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
-        let spread_a = spread_a as u64;
-        let spread_b_lo = spread_b_lo as u64;
-        let spread_b_hi = spread_b_hi as u64;
-        let spread_c = word.spread_c.value.unwrap() as u64;
-        let spread_d = word.spread_d.value.unwrap() as u64;
-        let xor_0: u64 =
-            spread_b_lo + (1 << 4) * spread_b_hi + (1 << 8) * spread_c + (1 << 30) * spread_d;
-        let xor_1: u64 = spread_c
-            + (1 << 22) * spread_d
-            + (1 << 50) * spread_a
-            + (1 << 56) * spread_b_lo
-            + (1 << 60) * spread_b_hi;
-        let xor_2: u64 = spread_d
-            + (1 << 28) * spread_a
-            + (1 << 34) * spread_b_lo
-            + (1 << 38) * spread_b_hi
-            + (1 << 42) * spread_c;
-        let r = xor_0 + xor_1 + xor_2;
-        let r_pieces = chop_u64(r, &[32, 32]); // r_0, r_1
-        let (r_0_even, r_0_odd) = get_even_and_odd_bits_u32(r_pieces[0] as u32);
-        let (r_1_even, r_1_odd) = get_even_and_odd_bits_u32(r_pieces[1] as u32);
+        let r = word.xor_lower_sigma_0();
+        let r_0: Option<[bool; 32]> = r.map(|r| r[..32].try_into().unwrap());
+        let r_0_even = r_0.map(even_bits);
+        let r_0_odd = r_0.map(odd_bits);
+
+        let r_1: Option<[bool; 32]> = r.map(|r| r[32..].try_into().unwrap());
+        let r_1_even = r_1.map(even_bits);
+        let r_1_odd = r_1.map(odd_bits);
 
         self.assign_sigma_outputs(
             region,
             &self.lookup,
             a_3,
-            &self.perm,
             row,
             r_0_even,
             r_0_odd,
