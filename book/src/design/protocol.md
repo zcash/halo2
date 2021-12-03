@@ -337,7 +337,7 @@ In the following protocol, we take it for granted that each polynomial $a_i(X, \
 4. $\prover$ computes univariate polynomial $h(X) = \frac{g'(X)}{t(X)}$ of degree $n_g(n - 1) - n$.
 5. $\prover$ computes at most $n - 1$ degree polynomials $h_0(X), h_1(X), ..., h_{n_g - 2}(X)$ such that $h(X) = \sum\limits_{i=0}^{n_g - 2} X^{ni} h_i(X)$.
 6. $\prover$ sends commitments $H_i = \innerprod{\mathbf{h_i}}{\mathbf{G}} + [\cdot] W$ for all $i$ where $\mathbf{h_i}$ denotes the vector of coefficients for $h_i(X)$.
-7. $\verifier$ responds with challenge $x$ and computes $H' = \sum\limits_{i=0}^{n_g - 2} [x^{ni}] H_i$.
+7. $\verifier$ responds with challenge $x$ (prohibited from being $0$ or in the domain $D$) and computes $H' = \sum\limits_{i=0}^{n_g - 2} [x^{ni}] H_i$.
 8. $\prover$ sets $h'(X) = \sum\limits_{i=0}^{n_g - 2} x^{ni} h_i(X)$.
 9. $\prover$ sends $r = r(x)$ and for all $i \in [0, n_a)$ sends $\mathbf{a_i}$ such that $(\mathbf{a_i})_j = a'_i(\omega^{(\mathbf{p_i})_j} x)$ for all $j \in [0, n_e]$.
 10. For all $i \in [0, n_a)$ $\prover$ and $\verifier$ set $s_i(X)$ to be the lowest degree univariate polynomial defined such that $s_i(\omega^{(\mathbf{p_i})_j} x) = (\mathbf{a_i})_j$ for all $j \in [0, n_e)$.
@@ -348,7 +348,7 @@ In the following protocol, we take it for granted that each polynomial $a_i(X, \
   * Starting at $i=0$ and ending at $n_a - 1$ $\prover$ sets $q_{\sigma(i)} := x_1 q_{\sigma(i)} + a'(X)$.
   * $\prover$ finally sets $q_0(X) := x_1^2 q_0(X) + x_1 h'(X) + r(X)$.
 13. $\prover$ and $\verifier$ initialize $r_0(X), r_1(X), ..., r_{n_q - 1}(X) = 0$.
-  * Starting at $i=0$ and ending at $n_a - 1$ $\prover$ and $\verifier$ set $r_{\sigma(i)}(X) := x_1 r_{\sigma(i)}(X) + s_i(X)$.
+  * Starting at $i = 0$ and ending at $n_a - 1$ $\prover$ and $\verifier$ set $r_{\sigma(i)}(X) := x_1 r_{\sigma(i)}(X) + s_i(X)$.
   * Finally $\prover$ and $\verifier$ set $r_0 := x_1^2 r_0 + x_1 h + r$ and where $h$ is computed by $\verifier$ as $\frac{g'(x)}{t(x)}$ using the values $r, \mathbf{a}$ provided by $\prover$.
 14. $\prover$ sends $Q' = \innerprod{\mathbf{q'}}{\mathbf{G}} + [\cdot] W$ where $\mathbf{q'}$ defines the coefficients of the polynomial
 $$q'(X) = \sum\limits_{i=0}^{n_q - 1}
@@ -401,3 +401,49 @@ $$
   * $\prover$ sets $\mathbf{p'} := \mathbf{p'}_\lo + u_j^{-1} \mathbf{p'}_\hi$.
 25. $\prover$ sends $c = \mathbf{p'}_0$ and synthetic blinding factor $f$.
 26. $\verifier$ accepts only if $\sum_{j=0}^{k - 1} [u_j^{-1}] L_j + P' + \sum_{j=0}^{k - 1} [u_j] R_j = [c] \mathbf{G'}_0 + [c \mathbf{b}_0 z] U + [f] W$.
+
+### Zero-knowledge and Completeness
+
+We claim that this protocol is _perfectly complete_. This can be verified by
+inspection of the protocol; given a valid witness $a_i(X, \cdots) \forall i$ the
+prover succeeds in convincing the verifier with probability $1$.
+
+We claim that this protocol is _perfect special honest-verifier zero knowledge_.
+We do this by showing that a simulator $\sim$ exists which can produce an
+accepting transcript that is equally distributed with a valid prover's
+interaction with a verifier with the same public coins. The simulator will act
+as an honest prover would, with the following exceptions:
+
+1. In step $1$ of the protocol $\sim$ chooses random degree $n - 1$ polynomials (in $X$) $a_i(X, \cdots) \forall i$.
+2. In step $5$ of the protocol $\sim$ chooses a random $n - 1$ degree polynomials $h_0(X), h_1(X), ..., h_{n_g - 2}(X)$.
+3. In step $14$ of the protocol $\sim$ chooses a random $n - 1$ degree polynomial $q'(X)$.
+4. In step $20$ of the protocol $\sim$ uses its foreknowledge of the verifier's choice of $\xi$ to produce a degree $n - 1$ polynomial $s(X)$ conditioned only such that $p(X) - v + \xi s(X)$ has a root at $x_3$.
+
+First, let us consider why this simulator always succeeds in producing an
+_accepting_ transcript. $\sim$ lacks a valid witness and simply commits to
+random polynomials whenever knowledge of a valid witness would be required by
+the honest prover. The verifier places no conditions on the scalar values in the
+transcript. $\sim$ must only guarantee that the check in step $26$ of the
+protocol succeeds. It does so by using its knowledge of the challenge $\xi$ to
+produce a polynomial which interferes with $p'(X)$ to ensure it has a root at
+$x_3$. The transcript will thus always be accepting due to perfect completeness.
+
+In order to see why $\sim$ produces transcripts distributed identically to the
+honest prover, we will look at each piece of the transcript and compare the
+distributions. First, note that $\sim$ (just as the honest prover) uses a
+freshly random blinding factor for every group element in the transcript, and so
+we need only consider the _scalars_ in the transcript. $\sim$ acts just as the
+prover does except in the mentioned cases so we will analyze each case:
+
+1. $\sim$ and an honest prover reveal $n_e$ openings of each polynomial $a_i(X, \cdots)$, and at most one additional opening of each $a_i(X, \cdots)$ in step $16$. However, the honest prover blinds their polynomials $a_i(X, \cdots)$ (in $X$) with $n_e + 1$ random evaluations over the domain $D$. Thus, the openings of $a_i(X, \cdots)$ at the challenge $x$ (which is prohibited from being $0$ or in the domain $D$ by the protocol) are distributed identically between $\sim$ and an honest prover.
+2. Neither $\sim$ nor the honest prover reveal $h(x)$ as it is computed by the verifier. However, the honest prover may reveal $h'(x)$ --- which has a non-trivial releationship with $h(X)$ --- were it not for the fact that the honest prover also commits to a random degree $n - 1$ polynomial $r(X)$ in step $3$, producing a commitment $R$ and ensuring that in step $12$ when the prover sets $q_0(X) := x_1^2 q_0(X) + x_1 h'(X) + r(X)$ the distribution of $q_0(x)$ is uniformly random. Thus, $h'(x_3)$ is never revealed by the honest prover nor by $\sim$.
+3. The expected value of $q'(x_3)$ is computed by the verifier (in step $18$) and so the simulator's actual choice of $q'(X)$ is irrelevant.
+4. $p(X) - v + \xi s(X)$ is conditioned on having a root at $x_3$, but otherwise no conditions are placed on $s(X)$ and so the distribution of the degree $n - 1$ polynomial $p(X) - v + \xi s(X)$ is uniformly random whether or not $s(X)$ has a root at $x_3$. Thus, the distribution of $c$ produced in step $25$ is identical between $\sim$ and an honest prover. The synthetic blinding factor $f$ also revealed in step $25$ is a trivial function of the prover's other blinding factors and so is distributed identically between $\sim$ and an honest prover.
+
+Notes:
+
+1. In an earlier version of our protocol, the prover would open each individual commitment $H_0, H_1, ...$ at $x$ as part of the multipoint opening argument, and the verifier would confirm that a linear combination of these openings (with powers of $x^n$) agreed to the expected value of $h(x)$. This was done because it's more efficient in recursive proofs. However, it was unclear to us what the expected distribution of the openings of these commitments $H_0, H_1, ...$ was and so proving that the argument was zero-knowledge is difficult. Instead, we changed the argument so that the _verifier_ computes a linear combination of the commitments and that linear combination is opened at $x$. This avoided leaking $h_i(x)$.
+2. As mentioned, in step $3$ the prover commits to a random polynomial as a way of ensuring that $h'(x_3)$ is not revealed in the multiopen argument. This is done because it's unclear what the distribution of $h'(x_3)$ would be.
+3. Technically it's also possible for us to prove zero-knowledge with a simulator that uses its foreknowledge of the challenge $x$ to commit to an $h(X)$ which agrees at $x$ to the value it will be expected to. This would obviate the need for the random polynomial $s(X)$ in the protocol. This may make the analysis of zero-knowledge for the remainder of the protocol a little bit tricky though, so we didn't go this route.
+4. Group element blinding factors are _technically_ not necessary after step $23$ in which the polynomial is completely randomized. However, it's simpler in practice for us to ensure that every group element in the protocol is randomly blinded to make edge cases involving the point at infinity harder.
+
