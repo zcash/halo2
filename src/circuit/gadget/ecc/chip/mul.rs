@@ -98,6 +98,11 @@ impl From<&EccConfig> for Config {
 
 impl Config {
     pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+        self.hi_config.create_gate(meta);
+        self.lo_config.create_gate(meta);
+        self.complete_config.create_gate(meta);
+        self.overflow_config.create_gate(meta);
+
         // If `lsb` is 0, (x, y) = (x_p, -y_p). If `lsb` is 1, (x, y) = (0,0).
         meta.create_gate("LSB check", |meta| {
             let q_mul_lsb = meta.query_selector(self.q_mul_lsb);
@@ -127,11 +132,6 @@ impl Config {
             ])
             .map(move |(name, poly)| (name, q_mul_lsb.clone() * poly))
         });
-
-        self.hi_config.create_gate(meta);
-        self.lo_config.create_gate(meta);
-        self.complete_config.create_gate(meta);
-        self.overflow_config.create_gate(meta);
     }
 
     pub(super) fn assign(
