@@ -1025,6 +1025,16 @@ mod tests {
             );
         }
 
+        // Test that the proof size is as expected.
+        {
+            let circuit_cost = halo2::dev::CircuitCost::<pasta_curves::vesta::Point, _>::measure(
+                K as usize,
+                &circuits[0],
+            );
+            assert_eq!(usize::from(circuit_cost.proof_size(1)), 4992);
+            assert_eq!(usize::from(circuit_cost.proof_size(2)), 7264);
+        }
+
         for (circuit, instance) in circuits.iter().zip(instances.iter()) {
             assert_eq!(
                 MockProver::run(
