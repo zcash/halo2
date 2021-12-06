@@ -1025,6 +1025,17 @@ mod tests {
             );
         }
 
+        // Test that the proof size is as expected.
+        let expected_proof_size = {
+            let circuit_cost = halo2::dev::CircuitCost::<pasta_curves::vesta::Point, _>::measure(
+                K as usize,
+                &circuits[0],
+            );
+            assert_eq!(usize::from(circuit_cost.proof_size(1)), 4992);
+            assert_eq!(usize::from(circuit_cost.proof_size(2)), 7264);
+            usize::from(circuit_cost.proof_size(instances.len()))
+        };
+
         for (circuit, instance) in circuits.iter().zip(instances.iter()) {
             assert_eq!(
                 MockProver::run(
@@ -1045,6 +1056,7 @@ mod tests {
         let pk = ProvingKey::build();
         let proof = Proof::create(&pk, &circuits, &instances).unwrap();
         assert!(proof.verify(&vk, &instances).is_ok());
+        assert_eq!(proof.0.len(), expected_proof_size);
     }
 
     #[cfg(feature = "dev-graph")]
