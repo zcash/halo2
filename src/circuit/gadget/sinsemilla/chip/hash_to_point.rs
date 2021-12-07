@@ -7,7 +7,7 @@ use halo2::{
     plonk::Error,
 };
 
-use ff::{Field, PrimeFieldBits};
+use group::ff::{Field, PrimeField, PrimeFieldBits};
 use pasta_curves::{
     arithmetic::{CurveAffine, FieldExt},
     pallas,
@@ -284,7 +284,7 @@ impl SinsemillaChip {
             // We end up with z_n = 0. (z_n is not directly encoded as a cell value;
             // it is implicitly taken as 0 by adjusting the definition of m_{i+1}.)
             let mut z = piece.field_elem();
-            let inv_2_k = pallas::Base::from_bytes(&INV_TWO_POW_K).unwrap();
+            let inv_2_k = pallas::Base::from_repr(INV_TWO_POW_K).unwrap();
 
             // We do not assign the final z_n as it is constrained to be zero.
             for (idx, word) in words[0..(words.len() - 1)].iter().enumerate() {

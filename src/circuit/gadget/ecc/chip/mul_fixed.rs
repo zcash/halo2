@@ -8,7 +8,7 @@ use crate::constants::{
     load::{NullifierK, OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV, WindowUs},
 };
 
-use group::Curve;
+use group::{ff::PrimeField, Curve};
 use halo2::{
     circuit::{AssignedCell, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, VirtualCells},
@@ -531,7 +531,7 @@ impl ScalarFixed {
                     let word = z_cur
                         .zip(z_next)
                         .map(|(z_cur, z_next)| z_cur - z_next * *H_BASE);
-                    word.map(|word| pallas::Scalar::from_bytes(&word.to_bytes()).unwrap())
+                    word.map(|word| pallas::Scalar::from_repr(word.to_repr()).unwrap())
                 })
                 .collect::<Vec<_>>()
         };
@@ -543,7 +543,7 @@ impl ScalarFixed {
                 .iter()
                 .map(|bits| {
                     bits.value()
-                        .map(|value| pallas::Scalar::from_bytes(&value.to_bytes()).unwrap())
+                        .map(|value| pallas::Scalar::from_repr(value.to_repr()).unwrap())
                 })
                 .collect::<Vec<_>>(),
         }

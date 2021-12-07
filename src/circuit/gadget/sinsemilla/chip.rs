@@ -12,8 +12,9 @@ use crate::{
     },
 };
 
+use group::ff::PrimeField;
 use halo2::{
-    arithmetic::{CurveAffine, FieldExt},
+    arithmetic::CurveAffine,
     circuit::{AssignedCell, Chip, Layouter},
     plonk::{
         Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, TableColumn,
@@ -305,18 +306,18 @@ impl HashDomains<pallas::Affine> for SinsemillaHashDomains {
     fn Q(&self) -> pallas::Affine {
         match self {
             SinsemillaHashDomains::CommitIvk => pallas::Affine::from_xy(
-                pallas::Base::from_bytes(&Q_COMMIT_IVK_M_GENERATOR.0).unwrap(),
-                pallas::Base::from_bytes(&Q_COMMIT_IVK_M_GENERATOR.1).unwrap(),
+                pallas::Base::from_repr(Q_COMMIT_IVK_M_GENERATOR.0).unwrap(),
+                pallas::Base::from_repr(Q_COMMIT_IVK_M_GENERATOR.1).unwrap(),
             )
             .unwrap(),
             SinsemillaHashDomains::NoteCommit => pallas::Affine::from_xy(
-                pallas::Base::from_bytes(&Q_NOTE_COMMITMENT_M_GENERATOR.0).unwrap(),
-                pallas::Base::from_bytes(&Q_NOTE_COMMITMENT_M_GENERATOR.1).unwrap(),
+                pallas::Base::from_repr(Q_NOTE_COMMITMENT_M_GENERATOR.0).unwrap(),
+                pallas::Base::from_repr(Q_NOTE_COMMITMENT_M_GENERATOR.1).unwrap(),
             )
             .unwrap(),
             SinsemillaHashDomains::MerkleCrh => pallas::Affine::from_xy(
-                pallas::Base::from_bytes(&Q_MERKLE_CRH.0).unwrap(),
-                pallas::Base::from_bytes(&Q_MERKLE_CRH.1).unwrap(),
+                pallas::Base::from_repr(Q_MERKLE_CRH.0).unwrap(),
+                pallas::Base::from_repr(Q_MERKLE_CRH.1).unwrap(),
             )
             .unwrap(),
         }

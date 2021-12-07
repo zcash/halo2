@@ -5,8 +5,8 @@ use crate::circuit::gadget::{
 };
 use ff::PrimeField;
 use halo2::{circuit::Layouter, plonk::Error};
-use pasta_curves::arithmetic::{CurveAffine, FieldExt};
-use std::{convert::TryInto, fmt::Debug};
+use pasta_curves::arithmetic::CurveAffine;
+use std::fmt::Debug;
 
 pub mod chip;
 pub mod commit_ivk;
@@ -207,7 +207,13 @@ where
                     .map(|byte| byte.iter().rev().fold(0u8, |acc, bit| acc * 2 + *bit as u8))
                     .collect()
             });
-            bytes.map(|bytes| C::Base::from_bytes(&bytes.try_into().unwrap()).unwrap())
+            bytes.map(|bytes| {
+                let mut repr = <C::Base as PrimeField>::Repr::default();
+                // The above code assumes the byte representation is 256 bits.
+                assert_eq!(repr.as_ref().len(), 32);
+                repr.as_mut().copy_from_slice(&bytes);
+                C::Base::from_repr(repr).unwrap()
+            })
         };
 
         let piece_value = to_base_field(bitstring);

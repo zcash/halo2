@@ -258,7 +258,7 @@ impl Config {
                     let base = base.point();
                     let alpha = alpha
                         .value()
-                        .map(|alpha| pallas::Scalar::from_bytes(&alpha.to_bytes()).unwrap());
+                        .map(|alpha| pallas::Scalar::from_repr(alpha.to_repr()).unwrap());
                     let real_mul = base.zip(alpha).map(|(base, alpha)| base * alpha);
                     let result = result.point();
 
@@ -431,7 +431,7 @@ fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> 
         // the scalar field `F_q = 2^254 + t_q`.
         // Note that the addition `scalar + t_q` is not reduced.
         //
-        let scalar = U256::from_little_endian(&scalar.to_bytes());
+        let scalar = U256::from_little_endian(&scalar.to_repr());
         let t_q = U256::from_little_endian(&T_Q.to_le_bytes());
         let k = scalar + t_q;
 
@@ -463,7 +463,7 @@ fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> 
 
 #[cfg(test)]
 pub mod tests {
-    use group::Curve;
+    use group::{ff::PrimeField, Curve};
     use halo2::{
         circuit::{Chip, Layouter},
         plonk::Error,
@@ -497,7 +497,7 @@ pub mod tests {
         ) -> Result<(), Error> {
             // Move scalar from base field into scalar field (which always fits
             // for Pallas).
-            let scalar = pallas::Scalar::from_bytes(&scalar_val.to_bytes()).unwrap();
+            let scalar = pallas::Scalar::from_repr(scalar_val.to_repr()).unwrap();
             let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),

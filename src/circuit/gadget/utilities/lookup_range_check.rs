@@ -431,7 +431,9 @@ mod tests {
                             .collect::<Vec<_>>()
                     };
                     let expected_zs = {
-                        let inv_two_pow_k = F::from_bytes(&INV_TWO_POW_K).unwrap();
+                        let mut repr = F::Repr::default();
+                        repr.as_mut().copy_from_slice(&INV_TWO_POW_K);
+                        let inv_two_pow_k = F::from_repr(repr).unwrap();
                         chunks.iter().fold(vec![element], |mut zs, a_i| {
                             // z_{i + 1} = (z_i - a_i) / 2^{K}
                             let z = (zs[zs.len() - 1] - a_i) * inv_two_pow_k;

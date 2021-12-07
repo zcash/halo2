@@ -214,13 +214,13 @@ impl Config {
         #[cfg(test)]
         // Check that the correct multiple is obtained.
         {
-            use group::Curve;
+            use group::{ff::PrimeField, Curve};
 
             let base: super::OrchardFixedBases = base.into();
             let scalar = &scalar
                 .base_field_elem()
                 .value()
-                .map(|scalar| pallas::Scalar::from_bytes(&scalar.to_bytes()).unwrap());
+                .map(|scalar| pallas::Scalar::from_repr(scalar.to_repr()).unwrap());
             let real_mul = scalar.map(|scalar| base.generator() * scalar);
             let result = result.point();
 
@@ -374,7 +374,7 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
-    use group::Curve;
+    use group::{ff::PrimeField, Curve};
     use halo2::{
         circuit::{Chip, Layouter},
         plonk::Error,
@@ -421,7 +421,7 @@ pub mod tests {
             result: Point<pallas::Affine, EccChip>,
         ) -> Result<(), Error> {
             // Move scalar from base field into scalar field (which always fits for Pallas).
-            let scalar = pallas::Scalar::from_bytes(&scalar_val.to_bytes()).unwrap();
+            let scalar = pallas::Scalar::from_repr(scalar_val.to_repr()).unwrap();
             let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),

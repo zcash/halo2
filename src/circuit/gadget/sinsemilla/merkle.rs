@@ -146,6 +146,7 @@ pub mod tests {
         tree,
     };
 
+    use group::ff::PrimeField;
     use halo2::{
         arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner},
@@ -260,8 +261,8 @@ pub mod tests {
                 // The expected final root
                 let final_root = {
                     let path = tree::MerklePath::new(leaf_pos, self.merkle_path.unwrap());
-                    let leaf = ExtractedNoteCommitment::from_bytes(&self.leaf.unwrap().to_bytes())
-                        .unwrap();
+                    let leaf =
+                        ExtractedNoteCommitment::from_bytes(&self.leaf.unwrap().to_repr()).unwrap();
                     path.root(leaf)
                 };
 

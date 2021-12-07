@@ -187,8 +187,7 @@ impl Config {
         // Invalid values result in constraint failures which are
         // tested at the circuit-level.
         {
-            use group::Curve;
-            use pasta_curves::arithmetic::FieldExt;
+            use group::{ff::PrimeField, Curve};
 
             if let (Some(magnitude), Some(sign)) = (scalar.magnitude.value(), scalar.sign.value()) {
                 let magnitude_is_valid = magnitude <= &pallas::Base::from(0xFFFF_FFFF_FFFF_FFFFu64);
@@ -200,8 +199,7 @@ impl Config {
                         |(magnitude, sign)| {
                             // Move magnitude from base field into scalar field (which always fits
                             // for Pallas).
-                            let magnitude =
-                                pallas::Scalar::from_bytes(&magnitude.to_bytes()).unwrap();
+                            let magnitude = pallas::Scalar::from_repr(magnitude.to_repr()).unwrap();
 
                             let sign = if sign == &pallas::Base::one() {
                                 pallas::Scalar::one()
@@ -229,7 +227,7 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
-    use group::Curve;
+    use group::{ff::PrimeField, Curve};
     use halo2::{
         arithmetic::CurveAffine,
         circuit::{AssignedCell, Chip, Layouter},
@@ -330,7 +328,7 @@ pub mod tests {
             };
             // Move from base field into scalar field
             let scalar = {
-                let magnitude = pallas::Scalar::from_bytes(&magnitude.to_bytes()).unwrap();
+                let magnitude = pallas::Scalar::from_repr(magnitude.to_repr()).unwrap();
                 let sign = if *sign == pallas::Base::one() {
                     pallas::Scalar::one()
                 } else {

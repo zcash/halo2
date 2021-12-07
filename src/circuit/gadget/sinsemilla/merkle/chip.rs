@@ -323,7 +323,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                 constants::MERKLE_CRH_PERSONALIZATION, primitives::sinsemilla::HashDomain,
                 spec::i2lebsp,
             };
-            use ff::PrimeFieldBits;
+            use group::ff::{PrimeField, PrimeFieldBits};
 
             if let (Some(left), Some(right)) = (left.value(), right.value()) {
                 let l = i2lebsp::<10>(l as u64);
@@ -347,7 +347,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
 
                 let expected = merkle_crh.hash(message.into_iter()).unwrap();
 
-                assert_eq!(expected.to_bytes(), result.value().unwrap().to_bytes());
+                assert_eq!(expected.to_repr(), result.value().unwrap().to_repr());
             }
         }
 

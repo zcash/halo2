@@ -6,7 +6,7 @@ use halo2::{
     plonk::{Advice, Column, Error, Expression},
 };
 use pasta_curves::arithmetic::FieldExt;
-use std::{array, convert::TryInto, ops::Range};
+use std::{array, ops::Range};
 
 pub(crate) mod cond_swap;
 pub(crate) mod decompose_running_sum;
@@ -86,7 +86,7 @@ pub fn ternary<F: FieldExt>(a: Expression<F>, b: Expression<F>, c: Expression<F>
 
 /// Takes a specified subsequence of the little-endian bit representation of a field element.
 /// The bits are numbered from 0 for the LSB.
-pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(field_elem: &F, bitrange: Range<usize>) -> F {
+pub fn bitrange_subset<F: PrimeFieldBits>(field_elem: &F, bitrange: Range<usize>) -> F {
     assert!(bitrange.end <= F::NUM_BITS as usize);
 
     let bits: Vec<bool> = field_elem
@@ -103,7 +103,11 @@ pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(field_elem: &F, bitrange: R
         .map(|byte| byte.iter().rev().fold(0u8, |acc, bit| acc * 2 + *bit as u8))
         .collect();
 
-    F::from_bytes(&bytearray.try_into().unwrap()).unwrap()
+    let mut repr = F::Repr::default();
+    // The above code assumes the byte representation is 256 bits.
+    assert_eq!(repr.as_ref().len(), 32);
+    repr.as_mut().copy_from_slice(&bytearray);
+    F::from_repr(repr).unwrap()
 }
 
 /// Check that an expression is in the small range [0..range),
@@ -261,7 +265,7 @@ mod tests {
                         .to_little_endian(&mut range_shift);
                     range_shift
                 };
-                sum += subset * pallas::Base::from_bytes(&range_shift).unwrap();
+                sum += subset * pallas::Base::from_repr(range_shift).unwrap();
             }
             assert_eq!(field_elem, sum);
         };
