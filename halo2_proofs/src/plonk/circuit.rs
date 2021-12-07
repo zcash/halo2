@@ -785,6 +785,10 @@ impl<F: Field> From<Expression<F>> for Vec<Constraint<F>> {
 ///     )
 /// });
 /// ```
+///
+/// Note that the use of `std::array::IntoIter::new` is only necessary if you need to
+/// support Rust 1.51 or 1.52. If your minimum supported Rust version is 1.53 or greater,
+/// you can pass an array directly.
 #[derive(Debug)]
 pub struct Constraints<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> {
     selector: Expression<F>,
