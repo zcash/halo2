@@ -1151,12 +1151,8 @@ impl<F: Field> ConstraintSystem<F> {
     fn query_any_index<C: Into<Column<Any>>>(&mut self, column: C, at: Rotation) -> usize {
         let column = column.into();
         match column.column_type() {
-            Any::Advice => {
-                self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at)
-            }
-            Any::Fixed => {
-                self.query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at)
-            }
+            Any::Advice => self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
+            Any::Fixed => self.query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
             Any::Instance => {
                 self.query_instance_index(Column::<Instance>::try_from(column).unwrap(), at)
             }
@@ -1206,8 +1202,9 @@ impl<F: Field> ConstraintSystem<F> {
             Any::Fixed => {
                 self.get_fixed_query_index(Column::<Fixed>::try_from(column).unwrap(), at)
             }
-            Any::Instance => self
-                .get_instance_query_index(Column::<Instance>::try_from(column).unwrap(), at),
+            Any::Instance => {
+                self.get_instance_query_index(Column::<Instance>::try_from(column).unwrap(), at)
+            }
         }
     }
 
@@ -1566,20 +1563,12 @@ impl<'a, F: Field> VirtualCells<'a, F> {
     }
 
     /// Query an Any column at a relative position
-    pub fn query_any<C: Into<Column<Any>>>(
-        &mut self,
-        column: C,
-        at: Rotation,
-    ) -> Expression<F> {
+    pub fn query_any<C: Into<Column<Any>>>(&mut self, column: C, at: Rotation) -> Expression<F> {
         let column = column.into();
         match column.column_type() {
-            Any::Advice => {
-                self.query_advice(Column::<Advice>::try_from(column).unwrap(), at)
-            }
+            Any::Advice => self.query_advice(Column::<Advice>::try_from(column).unwrap(), at),
             Any::Fixed => self.query_fixed(Column::<Fixed>::try_from(column).unwrap(), at),
-            Any::Instance => {
-                self.query_instance(Column::<Instance>::try_from(column).unwrap(), at)
-            }
+            Any::Instance => self.query_instance(Column::<Instance>::try_from(column).unwrap(), at),
         }
     }
 }
