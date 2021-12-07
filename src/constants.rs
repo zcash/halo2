@@ -100,8 +100,8 @@ fn compute_window_table<C: CurveAffine>(base: C, num_windows: usize) -> Vec<[C; 
             (0..H)
                 .map(|k| {
                     // scalar = (k+2)*(8^w)
-                    let scalar = C::ScalarExt::from_u64(k as u64 + 2)
-                        * C::ScalarExt::from_u64(H as u64).pow(&[w as u64, 0, 0, 0]);
+                    let scalar = C::Scalar::from(k as u64 + 2)
+                        * C::Scalar::from(H as u64).pow(&[w as u64, 0, 0, 0]);
                     (base * scalar).to_affine()
                 })
                 .collect::<ArrayVec<C, H>>()
@@ -114,19 +114,14 @@ fn compute_window_table<C: CurveAffine>(base: C, num_windows: usize) -> Vec<[C; 
     // For the last window, we compute [k * (2^3)^w - sum]B, where sum is defined
     // as sum = \sum_{j = 0}^{`num_windows - 2`} 2^{3j+1}
     let sum = (0..(num_windows - 1)).fold(C::ScalarExt::zero(), |acc, j| {
-        acc + C::ScalarExt::from_u64(2).pow(&[
-            FIXED_BASE_WINDOW_SIZE as u64 * j as u64 + 1,
-            0,
-            0,
-            0,
-        ])
+        acc + C::Scalar::from(2).pow(&[FIXED_BASE_WINDOW_SIZE as u64 * j as u64 + 1, 0, 0, 0])
     });
     window_table.push(
         (0..H)
             .map(|k| {
                 // scalar = k * (2^3)^w - sum, where w = `num_windows - 1`
-                let scalar = C::ScalarExt::from_u64(k as u64)
-                    * C::ScalarExt::from_u64(H as u64).pow(&[(num_windows - 1) as u64, 0, 0, 0])
+                let scalar = C::Scalar::from(k as u64)
+                    * C::Scalar::from(H as u64).pow(&[(num_windows - 1) as u64, 0, 0, 0])
                     - sum;
                 (base * scalar).to_affine()
             })
@@ -142,7 +137,7 @@ fn compute_window_table<C: CurveAffine>(base: C, num_windows: usize) -> Vec<[C; 
 /// Here, we pre-compute and store the coefficients of the interpolation polynomial.
 fn compute_lagrange_coeffs<C: CurveAffine>(base: C, num_windows: usize) -> Vec<[C::Base; H]> {
     // We are interpolating over the 3-bit window, k \in [0..8)
-    let points: Vec<_> = (0..H).map(|i| C::Base::from_u64(i as u64)).collect();
+    let points: Vec<_> = (0..H).map(|i| C::Base::from(i as u64)).collect();
 
     let window_table = compute_window_table(base, num_windows);
 
@@ -183,8 +178,8 @@ fn find_zs_and_us<C: CurveAffine>(base: C, num_windows: usize) -> Option<Vec<(u6
         (0..(1000 * (1 << (2 * H)))).find_map(|z| {
             ys.iter()
                 .map(|&y| {
-                    if (-y + C::Base::from_u64(z)).sqrt().is_none().into() {
-                        (y + C::Base::from_u64(z)).sqrt().into()
+                    if (-y + C::Base::from(z)).sqrt().is_none().into() {
+                        (y + C::Base::from(z)).sqrt().into()
                     } else {
                         None
                     }
@@ -217,8 +212,8 @@ fn test_lagrange_coeffs<C: CurveAffine>(base: C, num_windows: usize) {
 
                 // Compute the actual x-coordinate of the multiple [(k+2)*(8^w)]B.
                 let point = base
-                    * C::Scalar::from_u64(bits as u64 + 2)
-                    * C::Scalar::from_u64(H as u64).pow(&[idx as u64, 0, 0, 0]);
+                    * C::Scalar::from(bits as u64 + 2)
+                    * C::Scalar::from(H as u64).pow(&[idx as u64, 0, 0, 0]);
                 let x = *point.to_affine().coordinates().unwrap().x();
 
                 // Check that the interpolated x-coordinate matches the actual one.
@@ -235,15 +230,10 @@ fn test_lagrange_coeffs<C: CurveAffine>(base: C, num_windows: usize) {
         // Compute the actual x-coordinate of the multiple [k * (8^84) - offset]B,
         // where offset = \sum_{j = 0}^{83} 2^{3j+1}
         let offset = (0..(num_windows - 1)).fold(C::Scalar::zero(), |acc, w| {
-            acc + C::Scalar::from_u64(2).pow(&[
-                FIXED_BASE_WINDOW_SIZE as u64 * w as u64 + 1,
-                0,
-                0,
-                0,
-            ])
+            acc + C::Scalar::from(2).pow(&[FIXED_BASE_WINDOW_SIZE as u64 * w as u64 + 1, 0, 0, 0])
         });
-        let scalar = C::Scalar::from_u64(bits as u64)
-            * C::Scalar::from_u64(H as u64).pow(&[(num_windows - 1) as u64, 0, 0, 0])
+        let scalar = C::Scalar::from(bits as u64)
+            * C::Scalar::from(H as u64).pow(&[(num_windows - 1) as u64, 0, 0, 0])
             - offset;
         let point = base * scalar;
         let x = *point.to_affine().coordinates().unwrap().x();
@@ -265,8 +255,8 @@ fn test_zs_and_us<C: CurveAffine>(base: C, z: &[u64], u: &[[[u8; 32]; H]], num_w
         for (u, point) in u.iter().zip(window_points.iter()) {
             let y = *point.coordinates().unwrap().y();
             let u = C::Base::from_bytes(u).unwrap();
-            assert_eq!(C::Base::from_u64(*z) + y, u * u); // allow either square root
-            assert!(bool::from((C::Base::from_u64(*z) - y).sqrt().is_none()));
+            assert_eq!(C::Base::from(*z) + y, u * u); // allow either square root
+            assert!(bool::from((C::Base::from(*z) - y).sqrt().is_none()));
         }
     }
 }

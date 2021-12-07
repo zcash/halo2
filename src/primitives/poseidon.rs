@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn orchard_spec_equivalence() {
-        let message = [pallas::Base::from_u64(6), pallas::Base::from_u64(42)];
+        let message = [pallas::Base::from(6), pallas::Base::from(42)];
 
         let (round_constants, mds, _) = OrchardNullifier::constants();
 

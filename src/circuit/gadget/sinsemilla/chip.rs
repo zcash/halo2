@@ -145,7 +145,7 @@ impl SinsemillaChip {
         // Set up lookup argument
         GeneratorTableConfig::configure(meta, config.clone());
 
-        let two = pallas::Base::from_u64(2);
+        let two = pallas::Base::from(2);
 
         // Closures for expressions that are derived multiple times
         // x_r = lambda_1^2 - x_a - x_p
@@ -210,7 +210,7 @@ impl SinsemillaChip {
             //    - rhs = (2 * Y_A_cur + (2 - q_s3) * Y_A_next + 2 * q_s3 * y_a_final)
             let y_check = {
                 // lhs = 4 * lambda_2_cur * (x_a_cur - x_a_next)
-                let lhs = lambda_2_cur * pallas::Base::from_u64(4) * (x_a_cur - x_a_next);
+                let lhs = lambda_2_cur * pallas::Base::from(4) * (x_a_cur - x_a_next);
 
                 // rhs = 2 * Y_A_cur + (2 - q_s3) * Y_A_next + 2 * q_s3 * y_a_final
                 let rhs = {

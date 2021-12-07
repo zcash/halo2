@@ -224,7 +224,7 @@ impl SinsemillaChip {
                 offset + piece.num_words() - 1,
                 || {
                     Ok(if final_piece {
-                        pallas::Base::from_u64(2)
+                        pallas::Base::from(2)
                     } else {
                         pallas::Base::zero()
                     })
@@ -291,7 +291,7 @@ impl SinsemillaChip {
                 // z_{i + 1} = (z_i - m_{i + 1}) / 2^K
                 z = z
                     .zip(*word)
-                    .map(|(z, word)| (z - pallas::Base::from_u64(word as u64)) * inv_2_k);
+                    .map(|(z, word)| (z - pallas::Base::from(word as u64)) * inv_2_k);
                 let cell = region.assign_advice(
                     || format!("z_{:?}", idx + 1),
                     config.bits,
@@ -356,7 +356,7 @@ impl SinsemillaChip {
             let lambda_2 = {
                 let lambda_2 = x_a.value().zip(y_a.0).zip(x_r).zip(lambda_1).map(
                     |(((x_a, y_a), x_r), lambda_1)| {
-                        pallas::Base::from_u64(2) * y_a * (x_a - x_r).invert().unwrap() - lambda_1
+                        pallas::Base::from(2) * y_a * (x_a - x_r).invert().unwrap() - lambda_1
                     },
                 );
 

@@ -177,7 +177,7 @@ impl From<[u64; NUM_WINDOWS]> for Z {
     fn from(zs: [u64; NUM_WINDOWS]) -> Self {
         Self(
             zs.iter()
-                .map(|z| pallas::Base::from_u64(*z))
+                .map(|z| pallas::Base::from(*z))
                 .collect::<Vec<_>>()
                 .into_boxed_slice()
                 .try_into()
@@ -194,7 +194,7 @@ impl From<[u64; NUM_WINDOWS_SHORT]> for ZShort {
     fn from(zs: [u64; NUM_WINDOWS_SHORT]) -> Self {
         Self(
             zs.iter()
-                .map(|z| pallas::Base::from_u64(*z))
+                .map(|z| pallas::Base::from(*z))
                 .collect::<Vec<_>>()
                 .into_boxed_slice()
                 .try_into()

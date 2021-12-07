@@ -25,10 +25,10 @@ pub mod full_width;
 pub mod short;
 
 lazy_static! {
-    static ref TWO_SCALAR: pallas::Scalar = pallas::Scalar::from_u64(2);
+    static ref TWO_SCALAR: pallas::Scalar = pallas::Scalar::from(2);
     // H = 2^3 (3-bit window)
-    static ref H_SCALAR: pallas::Scalar = pallas::Scalar::from_u64(constants::H as u64);
-    static ref H_BASE: pallas::Base = pallas::Base::from_u64(constants::H as u64);
+    static ref H_SCALAR: pallas::Scalar = pallas::Scalar::from(constants::H as u64);
+    static ref H_BASE: pallas::Base = pallas::Base::from(constants::H as u64);
 }
 
 // A sum type for both full-width and short bases. This enables us to use the
@@ -182,7 +182,7 @@ impl Config {
 
             //    z_{i+1} = (z_i - a_i) / 2^3
             // => a_i = z_i - z_{i+1} * 2^3
-            let word = z_cur - z_next * pallas::Base::from_u64(constants::H as u64);
+            let word = z_cur - z_next * pallas::Base::from(constants::H as u64);
 
             self.coords_check(meta, q_mul_fixed_running_sum, word)
         });

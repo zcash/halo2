@@ -110,7 +110,7 @@ pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(field_elem: &F, bitrange: R
 /// i.e. 0 ≤ word < range.
 pub fn range_check<F: FieldExt>(word: Expression<F>, range: usize) -> Expression<F> {
     (1..range).fold(word.clone(), |acc, i| {
-        acc * (Expression::Constant(F::from_u64(i as u64)) - word.clone())
+        acc * (Expression::Constant(F::from(i as u64)) - word.clone())
     })
 }
 
@@ -176,7 +176,7 @@ mod tests {
                             || format!("witness {}", self.0),
                             config.advice,
                             0,
-                            || Ok(pallas::Base::from_u64(self.0.into())),
+                            || Ok(pallas::Base::from(self.0 as u64)),
                         )?;
 
                         Ok(())

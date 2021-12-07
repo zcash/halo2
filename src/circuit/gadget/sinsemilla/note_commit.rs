@@ -96,15 +96,15 @@ impl NoteCommitConfig {
         };
 
         // Useful constants
-        let two = pallas::Base::from_u64(2);
-        let two_pow_2 = pallas::Base::from_u64(1 << 2);
+        let two = pallas::Base::from(2);
+        let two_pow_2 = pallas::Base::from(1 << 2);
         let two_pow_4 = two_pow_2.square();
         let two_pow_5 = two_pow_4 * two;
         let two_pow_6 = two_pow_5 * two;
         let two_pow_8 = two_pow_4.square();
         let two_pow_9 = two_pow_8 * two;
         let two_pow_10 = two_pow_9 * two;
-        let two_pow_58 = pallas::Base::from_u64(1 << 58);
+        let two_pow_58 = pallas::Base::from(1 << 58);
         let two_pow_130 = Expression::Constant(pallas::Base::from_u128(1 << 65).square());
         let two_pow_140 = Expression::Constant(pallas::Base::from_u128(1 << 70).square());
         let two_pow_249 = pallas::Base::from_u128(1 << 124).square() * two;
@@ -579,9 +579,9 @@ impl NoteCommitConfig {
 
                 let b = b_0.value().zip(b_1).zip(b_2).zip(b_3.value()).map(
                     |(((b_0, b_1), b_2), b_3)| {
-                        let b1_shifted = b_1 * pallas::Base::from_u64(1 << 4);
-                        let b2_shifted = b_2 * pallas::Base::from_u64(1 << 5);
-                        let b3_shifted = b_3 * pallas::Base::from_u64(1 << 6);
+                        let b1_shifted = b_1 * pallas::Base::from(1 << 4);
+                        let b2_shifted = b_2 * pallas::Base::from(1 << 5);
+                        let b3_shifted = b_3 * pallas::Base::from(1 << 6);
                         b_0 + b1_shifted + b2_shifted + b3_shifted
                     },
                 );
@@ -621,9 +621,9 @@ impl NoteCommitConfig {
                 .zip(d_2.value())
                 .zip(d_3)
                 .map(|(((d_0, d_1), d_2), d_3)| {
-                    let d1_shifted = d_1 * pallas::Base::from_u64(2);
-                    let d2_shifted = d_2 * pallas::Base::from_u64(1 << 2);
-                    let d3_shifted = d_3 * pallas::Base::from_u64(1 << 10);
+                    let d1_shifted = d_1 * pallas::Base::from(2);
+                    let d2_shifted = d_2 * pallas::Base::from(1 << 2);
+                    let d3_shifted = d_3 * pallas::Base::from(1 << 10);
                     d_0 + d1_shifted + d2_shifted + d3_shifted
                 });
 
@@ -654,7 +654,7 @@ impl NoteCommitConfig {
             let e = e_0
                 .value()
                 .zip(e_1.value())
-                .map(|(e_0, e_1)| e_0 + e_1 * pallas::Base::from_u64(1 << 6));
+                .map(|(e_0, e_1)| e_0 + e_1 * pallas::Base::from(1 << 6));
             let e = MessagePiece::from_field_elem(chip.clone(), layouter.namespace(|| "e"), e, 1)?;
 
             (e_0, e_1, e)
@@ -684,8 +684,8 @@ impl NoteCommitConfig {
             // g_2 = z1_g from the SinsemillaHash(g) running sum output.
 
             let g = g_0.zip(g_1.value()).zip(g_2).map(|((g_0, g_1), g_2)| {
-                let g1_shifted = g_1 * pallas::Base::from_u64(2);
-                let g2_shifted = g_2 * pallas::Base::from_u64(1 << 10);
+                let g1_shifted = g_1 * pallas::Base::from(2);
+                let g2_shifted = g_2 * pallas::Base::from(1 << 10);
                 g_0 + g1_shifted + g2_shifted
             });
             let g = MessagePiece::from_field_elem(chip.clone(), layouter.namespace(|| "g"), g, 25)?;
@@ -711,7 +711,7 @@ impl NoteCommitConfig {
             let h = h_0
                 .value()
                 .zip(h_1)
-                .map(|(h_0, h_1)| h_0 + h_1 * pallas::Base::from_u64(1 << 5));
+                .map(|(h_0, h_1)| h_0 + h_1 * pallas::Base::from(1 << 5));
             let h = MessagePiece::from_field_elem(chip.clone(), layouter.namespace(|| "h"), h, 1)?;
 
             (h_0, h_1, h)
@@ -877,7 +877,7 @@ impl NoteCommitConfig {
         // and output the running sum at the end of it.
         // If b3_c_prime < 2^140, the running sum will be 0.
         let b3_c_prime = b_3.value().zip(c.value()).map(|(b_3, c)| {
-            let two_pow_4 = pallas::Base::from_u64(1u64 << 4);
+            let two_pow_4 = pallas::Base::from(1u64 << 4);
             let two_pow_140 = pallas::Base::from_u128(1u128 << 70).square();
             let t_p = pallas::Base::from_u128(T_P);
             b_3 + (two_pow_4 * c) + two_pow_140 - t_p
@@ -913,7 +913,7 @@ impl NoteCommitConfig {
         // - 0 ≤ e_1 + 2^4 f + 2^140 - t_P < 2^140 (14 ten-bit lookups)
 
         let e1_f_prime = e_1.value().zip(f.value()).map(|(e_1, f)| {
-            let two_pow_4 = pallas::Base::from_u64(1u64 << 4);
+            let two_pow_4 = pallas::Base::from(1u64 << 4);
             let two_pow_140 = pallas::Base::from_u128(1u128 << 70).square();
             let t_p = pallas::Base::from_u128(T_P);
             e_1 + (two_pow_4 * f) + two_pow_140 - t_p
@@ -953,7 +953,7 @@ impl NoteCommitConfig {
         // and output the running sum at the end of it.
         // If g1_g2_prime < 2^130, the running sum will be 0.
         let g1_g2_prime = g_1.value().zip(g_2.value()).map(|(g_1, g_2)| {
-            let two_pow_9 = pallas::Base::from_u64(1u64 << 9);
+            let two_pow_9 = pallas::Base::from(1u64 << 9);
             let two_pow_130 = pallas::Base::from_u128(1u128 << 65).square();
             let t_p = pallas::Base::from_u128(T_P);
             g_1 + (two_pow_9 * g_2) + two_pow_130 - t_p
@@ -1008,8 +1008,8 @@ impl NoteCommitConfig {
         // Decompose j = LSB + (2)k_0 + (2^10)k_1 using 25 ten-bit lookups.
         let (j, z1_j, z13_j) = {
             let j = lsb.zip(k_0.value()).zip(k_1).map(|((lsb, k_0), k_1)| {
-                let two = pallas::Base::from_u64(2);
-                let two_pow_10 = pallas::Base::from_u64(1 << 10);
+                let two = pallas::Base::from(2);
+                let two_pow_10 = pallas::Base::from(1 << 10);
                 lsb + two * k_0 + two_pow_10 * k_1
             });
             let zs = self.sinsemilla_config.lookup_config.witness_check(
@@ -1616,7 +1616,7 @@ mod tests {
                 // A note value cannot be negative.
                 let value = {
                     let mut rng = OsRng;
-                    pallas::Base::from_u64(rng.next_u64())
+                    pallas::Base::from(rng.next_u64())
                 };
                 let value_var = {
                     self.load_private(

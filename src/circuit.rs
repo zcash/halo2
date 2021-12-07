@@ -8,10 +8,7 @@ use halo2::{
     transcript::{Blake2bRead, Blake2bWrite},
 };
 use memuse::DynamicUsage;
-use pasta_curves::{
-    arithmetic::{CurveAffine, FieldExt},
-    pallas, vesta,
-};
+use pasta_curves::{arithmetic::CurveAffine, pallas, vesta};
 
 use crate::{
     constants::{
@@ -377,16 +374,14 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             let v_old = self.load_private(
                 layouter.namespace(|| "witness v_old"),
                 config.advices[0],
-                self.v_old
-                    .map(|v_old| pallas::Base::from_u64(v_old.inner())),
+                self.v_old.map(|v_old| pallas::Base::from(v_old.inner())),
             )?;
 
             // Witness v_new.
             let v_new = self.load_private(
                 layouter.namespace(|| "witness v_new"),
                 config.advices[0],
-                self.v_new
-                    .map(|v_new| pallas::Base::from_u64(v_new.inner())),
+                self.v_new.map(|v_new| pallas::Base::from(v_new.inner())),
             )?;
 
             (psi_old, rho_old, cm_old, g_d_old, ak, nk, v_old, v_new)
@@ -415,12 +410,8 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             let v_net = {
                 // v_old, v_new are guaranteed to be 64-bit values. Therefore, we can
                 // move them into the base field.
-                let v_old = self
-                    .v_old
-                    .map(|v_old| pallas::Base::from_u64(v_old.inner()));
-                let v_new = self
-                    .v_new
-                    .map(|v_new| pallas::Base::from_u64(v_new.inner()));
+                let v_old = self.v_old.map(|v_old| pallas::Base::from(v_old.inner()));
+                let v_new = self.v_new.map(|v_new| pallas::Base::from(v_new.inner()));
 
                 let magnitude_sign = v_old.zip(v_new).map(|(v_old, v_new)| {
                     let is_negative = v_old < v_new;
@@ -814,8 +805,8 @@ impl Instance {
         instance[RK_X] = *rk.x();
         instance[RK_Y] = *rk.y();
         instance[CMX] = self.cmx.inner();
-        instance[ENABLE_SPEND] = vesta::Scalar::from_u64(self.enable_spend.into());
-        instance[ENABLE_OUTPUT] = vesta::Scalar::from_u64(self.enable_output.into());
+        instance[ENABLE_SPEND] = vesta::Scalar::from(u64::from(self.enable_spend));
+        instance[ENABLE_OUTPUT] = vesta::Scalar::from(u64::from(self.enable_output));
 
         [instance]
     }

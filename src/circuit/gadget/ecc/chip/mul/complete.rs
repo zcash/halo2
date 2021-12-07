@@ -8,7 +8,7 @@ use halo2::{
     poly::Rotation,
 };
 
-use pasta_curves::{arithmetic::FieldExt, pallas};
+use pasta_curves::pallas;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
@@ -59,7 +59,7 @@ impl Config {
                 let z_next = meta.query_advice(self.z_complete, Rotation::next());
 
                 // k_{i} = z_{i} - 2⋅z_{i+1}
-                let k = z_next - Expression::Constant(pallas::Base::from_u64(2)) * z_prev;
+                let k = z_next - Expression::Constant(pallas::Base::from(2)) * z_prev;
                 // (k_i) ⋅ (1 - k_i) = 0
                 let bool_check = bool_check(k.clone());
 
@@ -137,7 +137,7 @@ impl Config {
             z = {
                 // z_next = z_cur * 2 + k_next
                 let z_val = z.value().zip(k.as_ref()).map(|(z_val, k)| {
-                    pallas::Base::from_u64(2) * z_val + pallas::Base::from_u64(*k as u64)
+                    pallas::Base::from(2) * z_val + pallas::Base::from(*k as u64)
                 });
                 let z_cell = region.assign_advice(
                     || "z",

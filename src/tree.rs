@@ -23,7 +23,7 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 // The uncommitted leaf is defined as pallas::Base(2).
 // <https://zips.z.cash/protocol/protocol.pdf#thmuncommittedorchard>
 lazy_static! {
-    static ref UNCOMMITTED_ORCHARD: pallas::Base = pallas::Base::from_u64(2);
+    static ref UNCOMMITTED_ORCHARD: pallas::Base = pallas::Base::from(2);
     pub(crate) static ref EMPTY_ROOTS: Vec<MerkleHashOrchard> = {
         iter::empty()
             .chain(Some(MerkleHashOrchard::empty_leaf()))

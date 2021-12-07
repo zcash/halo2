@@ -76,7 +76,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             let running_sum_lookup = {
                 let running_sum_word = {
                     let z_next = meta.query_advice(config.running_sum, Rotation::next());
-                    z_cur.clone() - z_next * F::from_u64(1 << K)
+                    z_cur.clone() - z_next * F::from(1 << K)
                 };
 
                 q_running.clone() * running_sum_word
@@ -104,7 +104,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             let shifted_word = meta.query_advice(config.running_sum, Rotation::cur());
             let inv_two_pow_s = meta.query_advice(config.running_sum, Rotation::next());
 
-            let two_pow_k = F::from_u64(1 << K);
+            let two_pow_k = F::from(1 << K);
 
             // shifted_word = word * 2^{K-s}
             //              = word * 2^K * inv_two_pow_s
@@ -128,7 +128,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                         || "table_idx",
                         self.table_idx,
                         index,
-                        || Ok(F::from_u64(index as u64)),
+                        || Ok(F::from(index as u64)),
                     )?;
                 }
                 Ok(())
@@ -210,7 +210,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
 
             let words: Option<Vec<F>> = bits.map(|bits| {
                 bits.chunks_exact(K)
-                    .map(|word| F::from_u64(lebs2ip::<K>(&(word.try_into().unwrap()))))
+                    .map(|word| F::from(lebs2ip::<K>(&(word.try_into().unwrap()))))
                     .collect::<Vec<_>>()
             });
             if let Some(words) = words {
@@ -229,7 +229,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         // For `element` = a_0 + 2^10 a_1 + ... + 2^{120} a_{12}}, initialize z_0 = `element`.
         // If `element` fits in 130 bits, we end up with z_{13} = 0.
         let mut z = element;
-        let inv_two_pow_k = F::from_u64(1u64 << K).invert().unwrap();
+        let inv_two_pow_k = F::from(1u64 << K).invert().unwrap();
         for (idx, word) in words.iter().enumerate() {
             // Enable q_lookup on this row
             self.q_lookup.enable(region, idx)?;
@@ -336,7 +336,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
 
         // Assign shifted `element * 2^{K - num_bits}`
         let shifted = element.value().map(|element| {
-            let shift = F::from_u64(1 << (K - num_bits));
+            let shift = F::from(1 << (K - num_bits));
             *element * shift
         });
 
@@ -348,7 +348,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         )?;
 
         // Assign 2^{-num_bits} from a fixed column.
-        let inv_two_pow_s = F::from_u64(1 << num_bits).invert().unwrap();
+        let inv_two_pow_s = F::from(1 << num_bits).invert().unwrap();
         region.assign_advice_from_constant(
             || format!("2^(-{})", num_bits),
             self.running_sum,
@@ -411,12 +411,8 @@ mod tests {
 
                 // Lookup constraining element to be no longer than num_words * K bits.
                 let elements_and_expected_final_zs = [
-                    (
-                        F::from_u64((1 << (self.num_words * K)) - 1),
-                        F::zero(),
-                        true,
-                    ), // a word that is within self.num_words * K bits long
-                    (F::from_u64(1 << (self.num_words * K)), F::one(), false), // a word that is just over self.num_words * K bits long
+                    (F::from((1 << (self.num_words * K)) - 1), F::zero(), true), // a word that is within self.num_words * K bits long
+                    (F::from(1 << (self.num_words * K)), F::one(), false), // a word that is just over self.num_words * K bits long
                 ];
 
                 fn expected_zs<F: FieldExt + PrimeFieldBits, const K: usize>(
@@ -431,7 +427,7 @@ mod tests {
                             .take(num_words * K)
                             .collect::<Vec<_>>()
                             .chunks_exact(K)
-                            .map(|chunk| F::from_u64(lebs2ip::<K>(chunk.try_into().unwrap())))
+                            .map(|chunk| F::from(lebs2ip::<K>(chunk.try_into().unwrap())))
                             .collect::<Vec<_>>()
                     };
                     let expected_zs = {
@@ -538,7 +534,7 @@ mod tests {
         // Edge case: K bits
         {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
-                element: Some(pallas::Base::from_u64((1 << K) - 1)),
+                element: Some(pallas::Base::from((1 << K) - 1)),
                 num_bits: K,
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
@@ -548,7 +544,7 @@ mod tests {
         // Element within `num_bits`
         {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
-                element: Some(pallas::Base::from_u64((1 << 6) - 1)),
+                element: Some(pallas::Base::from((1 << 6) - 1)),
                 num_bits: 6,
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
@@ -558,7 +554,7 @@ mod tests {
         // Element larger than `num_bits` but within K bits
         {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
-                element: Some(pallas::Base::from_u64(1 << 6)),
+                element: Some(pallas::Base::from(1 << 6)),
                 num_bits: 6,
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
@@ -574,7 +570,7 @@ mod tests {
         // Element larger than K bits
         {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
-                element: Some(pallas::Base::from_u64(1 << K)),
+                element: Some(pallas::Base::from(1 << K)),
                 num_bits: 6,
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
@@ -597,11 +593,11 @@ mod tests {
         // num_bits
         {
             let num_bits = 6;
-            let shifted = pallas::Base::from_u64((1 << num_bits) - 1);
+            let shifted = pallas::Base::from((1 << num_bits) - 1);
             // Recall that shifted = element * 2^{K-s}
             //          => element = shifted * 2^{s-K}
             let element = shifted
-                * pallas::Base::from_u64(1 << (K as u64 - num_bits))
+                * pallas::Base::from(1 << (K as u64 - num_bits))
                     .invert()
                     .unwrap();
             let circuit: MyCircuit<pallas::Base> = MyCircuit {

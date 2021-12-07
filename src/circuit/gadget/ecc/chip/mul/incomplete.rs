@@ -103,13 +103,13 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             // The current bit in the scalar decomposition, k_i = z_i - 2⋅z_{i+1}.
             // Recall that we assigned the cumulative variable `z_i` in descending order,
             // i from n down to 0. So z_{i+1} corresponds to the `z_prev` query.
-            let k = z_cur - z_prev * pallas::Base::from_u64(2);
+            let k = z_cur - z_prev * pallas::Base::from(2);
             // Check booleanity of decomposition.
             let bool_check = bool_check(k.clone());
 
             // λ_{1,i}⋅(x_{A,i} − x_{P,i}) − y_{A,i} + (2k_i - 1) y_{P,i} = 0
             let gradient_1 = lambda1_cur * (x_a_cur.clone() - x_p_cur) - y_a_cur.clone()
-                + (k * pallas::Base::from_u64(2) - one) * y_p_cur;
+                + (k * pallas::Base::from(2) - one) * y_p_cur;
 
             // λ_{2,i}^2 − x_{A,i-1} − x_{R,i} − x_{A,i} = 0
             let secant_line = lambda2_cur.clone().square()
@@ -245,9 +245,10 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         // Incomplete addition
         for (row, k) in bits.iter().enumerate() {
             // z_{i} = 2 * z_{i+1} + k_i
-            let z_val = z.value().zip(k.as_ref()).map(|(z_val, k)| {
-                pallas::Base::from_u64(2) * z_val + pallas::Base::from_u64(*k as u64)
-            });
+            let z_val = z
+                .value()
+                .zip(k.as_ref())
+                .map(|(z_val, k)| pallas::Base::from(2) * z_val + pallas::Base::from(*k as u64));
             z = region.assign_advice(
                 || "z",
                 self.z,
@@ -301,7 +302,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
                     .zip(x_a.value())
                     .zip(x_r)
                     .map(|(((lambda1, y_a), x_a), x_r)| {
-                        pallas::Base::from_u64(2) * y_a * (x_a - x_r).invert().unwrap() - lambda1
+                        pallas::Base::from(2) * y_a * (x_a - x_r).invert().unwrap() - lambda1
                     });
             region.assign_advice(
                 || "lambda2",

@@ -191,8 +191,7 @@ impl Config {
             use pasta_curves::arithmetic::FieldExt;
 
             if let (Some(magnitude), Some(sign)) = (scalar.magnitude.value(), scalar.sign.value()) {
-                let magnitude_is_valid =
-                    magnitude <= &pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64);
+                let magnitude_is_valid = magnitude <= &pallas::Base::from(0xFFFF_FFFF_FFFF_FFFFu64);
                 let sign_is_valid = sign * sign == pallas::Base::one();
                 if magnitude_is_valid && sign_is_valid {
                     let base: super::OrchardFixedBases = base.clone().into();
@@ -287,25 +286,21 @@ pub mod tests {
         }
 
         let magnitude_signs = [
-            (
-                "random [a]B",
-                pallas::Base::from_u64(rand::random::<u64>()),
-                {
-                    let mut random_sign = pallas::Base::one();
-                    if rand::random::<bool>() {
-                        random_sign = -random_sign;
-                    }
-                    random_sign
-                },
-            ),
+            ("random [a]B", pallas::Base::from(rand::random::<u64>()), {
+                let mut random_sign = pallas::Base::one();
+                if rand::random::<bool>() {
+                    random_sign = -random_sign;
+                }
+                random_sign
+            }),
             (
                 "[2^64 - 1]B",
-                pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64),
+                pallas::Base::from(0xFFFF_FFFF_FFFF_FFFFu64),
                 pallas::Base::one(),
             ),
             (
                 "-[2^64 - 1]B",
-                pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64),
+                pallas::Base::from(0xFFFF_FFFF_FFFF_FFFFu64),
                 -pallas::Base::one(),
             ),
             // There is a single canonical sequence of window values for which a doubling occurs on the last step:
@@ -313,12 +308,12 @@ pub mod tests {
             // [0xB6DB_6DB6_DB6D_B6DC] B
             (
                 "mul_with_double",
-                pallas::Base::from_u64(0xB6DB_6DB6_DB6D_B6DCu64),
+                pallas::Base::from(0xB6DB_6DB6_DB6D_B6DCu64),
                 pallas::Base::one(),
             ),
             (
                 "mul_with_double negative",
-                pallas::Base::from_u64(0xB6DB_6DB6_DB6D_B6DCu64),
+                pallas::Base::from(0xB6DB_6DB6_DB6D_B6DCu64),
                 -pallas::Base::one(),
             ),
         ];
@@ -561,7 +556,7 @@ pub mod tests {
         {
             let magnitude_u64 = rand::random::<u64>();
             let circuit = MyCircuit {
-                magnitude: Some(pallas::Base::from_u64(magnitude_u64)),
+                magnitude: Some(pallas::Base::from(magnitude_u64)),
                 sign: Some(pallas::Base::zero()),
                 magnitude_error: None,
             };

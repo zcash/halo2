@@ -143,7 +143,7 @@ impl Config {
 
             //    z_0 = 2 * z_1 + k_0
             // => k_0 = z_0 - 2 * z_1
-            let lsb = z_0 - z_1 * pallas::Base::from_u64(2);
+            let lsb = z_0 - z_1 * pallas::Base::from(2);
 
             let bool_check = bool_check(lsb.clone());
 
@@ -326,8 +326,8 @@ impl Config {
         // Assign z_0 = 2⋅z_1 + k_0
         let z_0 = {
             let z_0_val = z_1.value().zip(lsb).map(|(z_1, lsb)| {
-                let lsb = pallas::Base::from_u64(lsb as u64);
-                z_1 * pallas::Base::from_u64(2) + lsb
+                let lsb = pallas::Base::from(lsb as u64);
+                z_1 * pallas::Base::from(2) + lsb
             });
             let z_0_cell = region.assign_advice(
                 || "z_0",

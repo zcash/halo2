@@ -135,7 +135,7 @@ mod tests {
 
     #[test]
     fn inv_two_pow_k() {
-        let two_pow_k = pallas::Base::from_u64(1u64 << K);
+        let two_pow_k = pallas::Base::from(1u64 << K);
         let inv_two_pow_k = pallas::Base::from_bytes(&INV_TWO_POW_K).unwrap();
 
         assert_eq!(two_pow_k * inv_two_pow_k, pallas::Base::one());

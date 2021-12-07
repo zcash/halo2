@@ -84,7 +84,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
             let z_next = meta.query_advice(config.z, Rotation::next());
             //    z_i = 2^{K}⋅z_{i + 1} + k_i
             // => k_i = z_i - 2^{K}⋅z_{i + 1}
-            let word = z_cur - z_next * F::from_u64(1 << WINDOW_NUM_BITS);
+            let word = z_cur - z_next * F::from(1 << WINDOW_NUM_BITS);
 
             vec![q_range_check * range_check(word, 1 << WINDOW_NUM_BITS)]
         });
@@ -182,11 +182,11 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         // Assign running sum `z_{i+1}` = (z_i - k_i) / (2^K) for i = 0..=n-1.
         // Outside of this helper, z_0 = alpha must have already been loaded into the
         // `z` column at `offset`.
-        let two_pow_k_inv = F::from_u64(1 << WINDOW_NUM_BITS as u64).invert().unwrap();
+        let two_pow_k_inv = F::from(1 << WINDOW_NUM_BITS as u64).invert().unwrap();
         for (i, word) in words.iter().enumerate() {
             // z_next = (z_cur - word) / (2^K)
             let z_next = {
-                let word = word.map(|word| F::from_u64(word as u64));
+                let word = word.map(|word| F::from(word as u64));
                 let z_next_val = z
                     .value()
                     .zip(word)
@@ -319,7 +319,7 @@ mod tests {
 
         // Random 64-bit word
         {
-            let alpha = pallas::Base::from_u64(rand::random());
+            let alpha = pallas::Base::from(rand::random::<u64>());
 
             // Strict full decomposition should pass.
             let circuit: MyCircuit<

@@ -89,7 +89,7 @@ impl Config {
                 let alpha_2_range_check = range_check(alpha_2.clone(), 1 << 1);
                 // Check that α_1 + 2^2 α_2 = z_84_alpha
                 let z_84_alpha_check = z_84_alpha.clone()
-                    - (alpha_1.clone() + alpha_2.clone() * pallas::Base::from_u64(1 << 2));
+                    - (alpha_1.clone() + alpha_2.clone() * pallas::Base::from(1 << 2));
 
                 std::iter::empty()
                     .chain(Some(("alpha_1_range_check", alpha_1_range_check)))
@@ -455,11 +455,11 @@ pub mod tests {
         // (There is another *non-canonical* sequence
         // 5333333333333333333333333333333333333333332711161673731021062440252244051273333333333 in octal.)
         {
-            let h = pallas::Base::from_u64(constants::H as u64);
+            let h = pallas::Base::from(constants::H as u64);
             let scalar_fixed = "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334"
                         .chars()
                         .fold(pallas::Base::zero(), |acc, c| {
-                            acc * &h + &pallas::Base::from_u64(c.to_digit(8).unwrap().into())
+                            acc * &h + &pallas::Base::from(c.to_digit(8).unwrap() as u64)
                         });
             let result = {
                 let scalar_fixed = chip.load_private(

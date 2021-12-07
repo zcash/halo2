@@ -67,8 +67,8 @@ impl CommitIvkConfig {
             let q_commit_ivk = meta.query_selector(config.q_commit_ivk);
 
             // Useful constants
-            let two_pow_4 = pallas::Base::from_u64(1 << 4);
-            let two_pow_5 = pallas::Base::from_u64(1 << 5);
+            let two_pow_4 = pallas::Base::from(1 << 4);
+            let two_pow_5 = pallas::Base::from(1 << 5);
             let two_pow_9 = two_pow_4 * two_pow_5;
             let two_pow_250 = pallas::Base::from_u128(1 << 125).square();
             let two_pow_254 = two_pow_250 * two_pow_4;
@@ -119,7 +119,7 @@ impl CommitIvkConfig {
 
             // Check that nk = b_2 (5 bits) || c (240 bits) || d_0 (9 bits) || d_1 (1 bit)
             let nk_decomposition_check = {
-                let two_pow_245 = pallas::Base::from_u64(1 << 49).pow(&[5, 0, 0, 0]);
+                let two_pow_245 = pallas::Base::from(1 << 49).pow(&[5, 0, 0, 0]);
 
                 b_2.clone()
                     + c.clone() * two_pow_5
@@ -181,7 +181,7 @@ impl CommitIvkConfig {
                 // Check that b2_c_prime = b_2 + c * 2^5 + 2^140 - t_P.
                 // This is checked regardless of the value of d_1.
                 let b2_c_prime_check = {
-                    let two_pow_5 = pallas::Base::from_u64(1 << 5);
+                    let two_pow_5 = pallas::Base::from(1 << 5);
                     let two_pow_140 =
                         Expression::Constant(pallas::Base::from_u128(1 << 70).square());
                     let t_p = Expression::Constant(pallas::Base::from_u128(T_P));
@@ -257,8 +257,8 @@ impl CommitIvkConfig {
             let b_2 = nk.value().map(|value| bitrange_subset(value, 0..5));
 
             let b = b_0.zip(b_1).zip(b_2).map(|((b_0, b_1), b_2)| {
-                let b1_shifted = b_1 * pallas::Base::from_u64(1 << 4);
-                let b2_shifted = b_2 * pallas::Base::from_u64(1 << 5);
+                let b1_shifted = b_1 * pallas::Base::from(1 << 4);
+                let b2_shifted = b_2 * pallas::Base::from(1 << 5);
                 b_0 + b1_shifted + b2_shifted
             });
 
@@ -304,7 +304,7 @@ impl CommitIvkConfig {
 
             let d = d_0
                 .zip(d_1)
-                .map(|(d_0, d_1)| d_0 + d_1 * pallas::Base::from_u64(1 << 9));
+                .map(|(d_0, d_1)| d_0 + d_1 * pallas::Base::from(1 << 9));
 
             // Constrain d_0 to be 9 bits.
             let d_0 = self.sinsemilla_config.lookup_config.witness_short_check(
@@ -444,7 +444,7 @@ impl CommitIvkConfig {
         // Decompose the low 140 bits of b2_c_prime = b_2 + c * 2^5 + 2^140 - t_P, and output
         // the running sum at the end of it. If b2_c_prime < 2^140, the running sum will be 0.
         let b2_c_prime = b_2.value().zip(c.value()).map(|(b_2, c)| {
-            let two_pow_5 = pallas::Base::from_u64(1 << 5);
+            let two_pow_5 = pallas::Base::from(1 << 5);
             let two_pow_140 = pallas::Base::from_u128(1u128 << 70).square();
             let t_p = pallas::Base::from_u128(T_P);
             b_2 + c * two_pow_5 + two_pow_140 - t_p

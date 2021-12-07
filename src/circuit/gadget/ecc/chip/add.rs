@@ -121,8 +121,8 @@ impl Config {
 
             // Useful constants
             let one = Expression::Constant(pallas::Base::one());
-            let two = Expression::Constant(pallas::Base::from_u64(2));
-            let three = Expression::Constant(pallas::Base::from_u64(3));
+            let two = Expression::Constant(pallas::Base::from(2));
+            let three = Expression::Constant(pallas::Base::from(3));
 
             // (x_q − x_p)⋅((x_q − x_p)⋅λ − (y_q−y_p)) = 0
             let poly1 = {
@@ -302,7 +302,7 @@ impl Config {
                     } else {
                         if !y_p.is_zero_vartime() {
                             // 3(x_p)^2
-                            let three_x_p_sq = pallas::Base::from_u64(3) * x_p.square();
+                            let three_x_p_sq = pallas::Base::from(3) * x_p.square();
                             // 1 / 2(y_p)
                             let inv_two_y_p = y_p.invert().unwrap() * pallas::Base::TWO_INV;
                             // λ = 3(x_p)^2 / 2(y_p)
