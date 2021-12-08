@@ -1,4 +1,4 @@
-use super::{CellValue, EccConfig, EccPoint, NonIdentityEccPoint, Var};
+use super::{CellValue, EccPoint, NonIdentityEccPoint, Var};
 
 use group::prime::PrimeCurveAffine;
 
@@ -9,7 +9,7 @@ use halo2::{
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Config {
     q_point: Selector,
     q_point_non_id: Selector,
@@ -19,19 +19,25 @@ pub struct Config {
     pub y: Column<Advice>,
 }
 
-impl From<&EccConfig> for Config {
-    fn from(ecc_config: &EccConfig) -> Self {
-        Self {
-            q_point: ecc_config.q_point,
-            q_point_non_id: ecc_config.q_point_non_id,
-            x: ecc_config.advices[0],
-            y: ecc_config.advices[1],
-        }
-    }
-}
-
 impl Config {
-    pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    pub(super) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        x: Column<Advice>,
+        y: Column<Advice>,
+    ) -> Self {
+        let config = Self {
+            q_point: meta.selector(),
+            q_point_non_id: meta.selector(),
+            x,
+            y,
+        };
+
+        config.create_gate(meta);
+
+        config
+    }
+
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         let curve_eqn = |meta: &mut VirtualCells<pallas::Base>| {
             let x = meta.query_advice(self.x, Rotation::cur());
             let y = meta.query_advice(self.y, Rotation::cur());

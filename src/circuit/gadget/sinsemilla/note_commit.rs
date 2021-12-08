@@ -1528,7 +1528,7 @@ mod tests {
                     advices[2],
                     lagrange_coeffs[0],
                     lookup,
-                    range_check.clone(),
+                    range_check,
                 );
                 let note_commit_config =
                     NoteCommitConfig::configure(meta, advices, sinsemilla_config);

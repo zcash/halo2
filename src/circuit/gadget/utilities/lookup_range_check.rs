@@ -23,7 +23,7 @@ impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub struct LookupRangeCheckConfig<F: FieldExt + PrimeFieldBits, const K: usize> {
     pub q_lookup: Selector,
     pub q_running: Selector,

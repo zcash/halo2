@@ -1,11 +1,9 @@
 use std::{array, convert::TryInto};
 
-use super::super::{EccConfig, EccPoint, EccScalarFixedShort};
+use super::super::{EccPoint, EccScalarFixedShort};
 use crate::{
-    circuit::gadget::utilities::{
-        bool_check, copy, decompose_running_sum::RunningSumConfig, CellValue, Var,
-    },
-    constants::{ValueCommitV, FIXED_BASE_WINDOW_SIZE, L_VALUE, NUM_WINDOWS_SHORT},
+    circuit::gadget::utilities::{bool_check, copy, CellValue, Var},
+    constants::{ValueCommitV, L_VALUE, NUM_WINDOWS_SHORT},
 };
 
 use halo2::{
@@ -15,28 +13,29 @@ use halo2::{
 };
 use pasta_curves::pallas;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Copy, Eq, PartialEq)]
 pub struct Config {
     // Selector used for fixed-base scalar mul with short signed exponent.
     q_mul_fixed_short: Selector,
-    q_mul_fixed_running_sum: Selector,
-    running_sum_config: RunningSumConfig<pallas::Base, { FIXED_BASE_WINDOW_SIZE }>,
-    super_config: super::Config<NUM_WINDOWS_SHORT>,
-}
-
-impl From<&EccConfig> for Config {
-    fn from(config: &EccConfig) -> Self {
-        Self {
-            q_mul_fixed_short: config.q_mul_fixed_short,
-            q_mul_fixed_running_sum: config.q_mul_fixed_running_sum,
-            running_sum_config: config.running_sum_config.clone(),
-            super_config: config.into(),
-        }
-    }
+    super_config: super::Config,
 }
 
 impl Config {
-    pub(crate) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    pub(crate) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        super_config: super::Config,
+    ) -> Self {
+        let config = Self {
+            q_mul_fixed_short: meta.selector(),
+            super_config,
+        };
+
+        config.create_gate(meta);
+
+        config
+    }
+
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("Short fixed-base mul gate", |meta| {
             let q_mul_fixed_short = meta.query_selector(self.q_mul_fixed_short);
             let y_p = meta.query_advice(self.super_config.y_p, Rotation::cur());
@@ -80,7 +79,7 @@ impl Config {
         let (magnitude, sign) = magnitude_sign;
 
         // Decompose magnitude
-        let running_sum = self.running_sum_config.copy_decompose(
+        let running_sum = self.super_config.running_sum_config.copy_decompose(
             region,
             offset,
             magnitude,
@@ -110,12 +109,12 @@ impl Config {
                 // Decompose the scalar
                 let scalar = self.decompose(&mut region, offset, magnitude_sign)?;
 
-                let (acc, mul_b) = self.super_config.assign_region_inner(
+                let (acc, mul_b) = self.super_config.assign_region_inner::<NUM_WINDOWS_SHORT>(
                     &mut region,
                     offset,
                     &(&scalar).into(),
                     base.clone().into(),
-                    self.q_mul_fixed_running_sum,
+                    self.super_config.running_sum_config.q_range_check,
                 )?;
 
                 Ok((scalar, acc, mul_b))
@@ -450,7 +449,7 @@ pub mod tests {
             ) -> Result<(), Error> {
                 let column = config.advices[0];
 
-                let short_config: super::Config = (&config).into();
+                let short_config = config.mul_fixed_short;
                 let magnitude_sign = {
                     let magnitude = self.load_private(
                         layouter.namespace(|| "load magnitude"),

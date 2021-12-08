@@ -236,7 +236,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
         // Configuration for curve point operations.
         // This uses 10 advice columns and spans the whole circuit.
-        let ecc_config = EccChip::configure(meta, advices, lagrange_coeffs, range_check.clone());
+        let ecc_config = EccChip::configure(meta, advices, lagrange_coeffs, range_check);
 
         // Configuration for the Poseidon hash.
         let poseidon_config = PoseidonChip::configure::<poseidon::P128Pow5T3>(
@@ -260,7 +260,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 advices[6],
                 lagrange_coeffs[0],
                 lookup,
-                range_check.clone(),
+                range_check,
             );
             let merkle_config_1 = MerkleChip::configure(meta, sinsemilla_config_1.clone());
 

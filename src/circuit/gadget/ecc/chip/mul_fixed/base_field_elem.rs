@@ -1,10 +1,10 @@
-use super::super::{EccBaseFieldElemFixed, EccConfig, EccPoint, NullifierK};
+use super::super::{EccBaseFieldElemFixed, EccPoint, NullifierK};
 use super::H_BASE;
 
 use crate::{
     circuit::gadget::utilities::{
-        bitrange_subset, copy, decompose_running_sum::RunningSumConfig,
-        lookup_range_check::LookupRangeCheckConfig, range_check, CellValue, Var,
+        bitrange_subset, copy, lookup_range_check::LookupRangeCheckConfig, range_check, CellValue,
+        Var,
     },
     constants::{self, T_P},
     primitives::sinsemilla,
@@ -18,24 +18,30 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 
 use std::convert::TryInto;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
-    q_mul_fixed_running_sum: Selector,
     q_mul_fixed_base_field: Selector,
     canon_advices: [Column<Advice>; 3],
     lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
-    running_sum_config: RunningSumConfig<pallas::Base, { constants::FIXED_BASE_WINDOW_SIZE }>,
-    super_config: super::Config<{ constants::NUM_WINDOWS }>,
+    super_config: super::Config,
 }
 
-impl From<&EccConfig> for Config {
-    fn from(config: &EccConfig) -> Self {
+impl Config {
+    pub(crate) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        canon_advices: [Column<Advice>; 3],
+        lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+        super_config: super::Config,
+    ) -> Self {
+        for advice in canon_advices.iter() {
+            meta.enable_equality((*advice).into());
+        }
+
         let config = Self {
-            q_mul_fixed_running_sum: config.q_mul_fixed_running_sum,
-            q_mul_fixed_base_field: config.q_mul_fixed_base_field,
-            canon_advices: [config.advices[6], config.advices[7], config.advices[8]],
-            lookup_config: config.lookup_config.clone(),
-            running_sum_config: config.running_sum_config.clone(),
-            super_config: config.into(),
+            q_mul_fixed_base_field: meta.selector(),
+            canon_advices,
+            lookup_config,
+            super_config,
         };
 
         let add_incomplete_advices = config.super_config.add_incomplete_config.advice_columns();
@@ -46,14 +52,12 @@ impl From<&EccConfig> for Config {
             );
         }
 
-        assert_eq!(config.running_sum_config.z, config.super_config.window);
+        config.create_gate(meta);
 
         config
     }
-}
 
-impl Config {
-    pub fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // Check that the base field element is canonical.
         meta.create_gate("Canonicity checks", |meta| {
             let q_mul_fixed_base_field = meta.query_selector(self.q_mul_fixed_base_field);
@@ -166,7 +170,7 @@ impl Config {
 
                 // Decompose scalar
                 let scalar = {
-                    let running_sum = self.running_sum_config.copy_decompose(
+                    let running_sum = self.super_config.running_sum_config.copy_decompose(
                         &mut region,
                         offset,
                         scalar,
@@ -180,13 +184,15 @@ impl Config {
                     }
                 };
 
-                let (acc, mul_b) = self.super_config.assign_region_inner(
-                    &mut region,
-                    offset,
-                    &(&scalar).into(),
-                    base.into(),
-                    self.q_mul_fixed_running_sum,
-                )?;
+                let (acc, mul_b) = self
+                    .super_config
+                    .assign_region_inner::<{ constants::NUM_WINDOWS }>(
+                        &mut region,
+                        offset,
+                        &(&scalar).into(),
+                        base.into(),
+                        self.super_config.running_sum_config.q_range_check,
+                    )?;
 
                 Ok((scalar, acc, mul_b))
             },

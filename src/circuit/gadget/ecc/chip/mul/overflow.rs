@@ -1,4 +1,4 @@
-use super::super::{copy, CellValue, EccConfig, Var};
+use super::super::{copy, CellValue, Var};
 use super::Z;
 use crate::{
     circuit::gadget::utilities::lookup_range_check::LookupRangeCheckConfig, constants::T_Q,
@@ -15,6 +15,7 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 
 use std::iter;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
     // Selector to check z_0 = alpha + t_q (mod p)
     q_mul_overflow: Selector,
@@ -24,24 +25,28 @@ pub struct Config {
     advices: [Column<Advice>; 3],
 }
 
-impl From<&EccConfig> for Config {
-    fn from(ecc_config: &EccConfig) -> Self {
-        Self {
-            q_mul_overflow: ecc_config.q_mul_overflow,
-            lookup_config: ecc_config.lookup_config.clone(),
-            // Use advice columns that don't conflict with the either the incomplete
-            // additions in fixed-base scalar mul, or the lookup range checks.
-            advices: [
-                ecc_config.advices[6],
-                ecc_config.advices[7],
-                ecc_config.advices[8],
-            ],
-        }
-    }
-}
-
 impl Config {
-    pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    pub(super) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+        advices: [Column<Advice>; 3],
+    ) -> Self {
+        for advice in advices.iter() {
+            meta.enable_equality((*advice).into());
+        }
+
+        let config = Self {
+            q_mul_overflow: meta.selector(),
+            lookup_config,
+            advices,
+        };
+
+        config.create_gate(meta);
+
+        config
+    }
+
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("overflow checks", |meta| {
             let q_mul_overflow = meta.query_selector(self.q_mul_overflow);
 

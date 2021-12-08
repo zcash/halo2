@@ -1,4 +1,4 @@
-use super::super::{EccConfig, EccPoint, EccScalarFixed, OrchardFixedBasesFull};
+use super::super::{EccPoint, EccScalarFixed, OrchardFixedBasesFull};
 
 use crate::{
     circuit::gadget::utilities::{range_check, CellValue, Var},
@@ -12,22 +12,28 @@ use halo2::{
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Config {
     q_mul_fixed_full: Selector,
-    super_config: super::Config<NUM_WINDOWS>,
-}
-
-impl From<&EccConfig> for Config {
-    fn from(config: &EccConfig) -> Self {
-        Self {
-            q_mul_fixed_full: config.q_mul_fixed_full,
-            super_config: config.into(),
-        }
-    }
+    super_config: super::Config,
 }
 
 impl Config {
-    pub fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    pub(crate) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        super_config: super::Config,
+    ) -> Self {
+        let config = Self {
+            q_mul_fixed_full: meta.selector(),
+            super_config,
+        };
+
+        config.create_gate(meta);
+
+        config
+    }
+
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // Check that each window `k` is within 3 bits
         meta.create_gate("Full-width fixed-base scalar mul", |meta| {
             let q_mul_fixed_full = meta.query_selector(self.q_mul_fixed_full);
@@ -124,13 +130,15 @@ impl Config {
 
                 let scalar = self.witness(&mut region, offset, scalar)?;
 
-                let (acc, mul_b) = self.super_config.assign_region_inner(
-                    &mut region,
-                    offset,
-                    &(&scalar).into(),
-                    base.into(),
-                    self.q_mul_fixed_full,
-                )?;
+                let (acc, mul_b) = self
+                    .super_config
+                    .assign_region_inner::<{ constants::NUM_WINDOWS }>(
+                        &mut region,
+                        offset,
+                        &(&scalar).into(),
+                        base.into(),
+                        self.q_mul_fixed_full,
+                    )?;
 
                 Ok((scalar, acc, mul_b))
             },

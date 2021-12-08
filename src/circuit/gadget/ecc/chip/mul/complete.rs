@@ -1,4 +1,4 @@
-use super::super::{add, copy, CellValue, EccConfig, EccPoint, Var};
+use super::super::{add, copy, CellValue, EccPoint, Var};
 use super::{COMPLETE_RANGE, X, Y, Z};
 use crate::circuit::gadget::utilities::{bool_check, ternary};
 
@@ -10,6 +10,7 @@ use halo2::{
 
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
     // Selector used to constrain the cells used in complete addition.
     q_mul_decompose_var: Selector,
@@ -19,30 +20,30 @@ pub struct Config {
     add_config: add::Config,
 }
 
-impl From<&EccConfig> for Config {
-    fn from(ecc_config: &EccConfig) -> Self {
+impl Config {
+    pub(super) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        z_complete: Column<Advice>,
+        add_config: add::Config,
+    ) -> Self {
+        meta.enable_equality(z_complete.into());
+
         let config = Self {
-            q_mul_decompose_var: ecc_config.q_mul_decompose_var,
-            z_complete: ecc_config.advices[9],
-            add_config: ecc_config.into(),
+            q_mul_decompose_var: meta.selector(),
+            z_complete,
+            add_config,
         };
 
-        let add_config_advices = config.add_config.advice_columns();
-        assert!(
-            !add_config_advices.contains(&config.z_complete),
-            "z_complete cannot overlap with complete addition columns."
-        );
+        config.create_gate(meta);
 
         config
     }
-}
 
-impl Config {
     /// Gate used to check scalar decomposition is correct.
     /// This is used to check the bits used in complete addition, since the incomplete
     /// addition gate (controlled by `q_mul`) already checks scalar decomposition for
     /// the other bits.
-    pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // | y_p | z_complete |
         // --------------------
         // | y_p | z_{i + 1}  |
