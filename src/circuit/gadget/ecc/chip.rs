@@ -263,6 +263,12 @@ pub struct EccScalarFixed {
     windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { constants::NUM_WINDOWS }>,
 }
 
+// TODO: Make V a `u64`
+type MagnitudeCell = AssignedCell<pallas::Base, pallas::Base>;
+// TODO: Make V an enum Sign { Positive, Negative }
+type SignCell = AssignedCell<pallas::Base, pallas::Base>;
+type MagnitudeSign = (MagnitudeCell, SignCell);
+
 /// A signed short scalar used for fixed-base scalar multiplication.
 /// A short scalar must have magnitude in the range [0..2^64), with
 /// a sign of either 1 or -1.
@@ -277,9 +283,8 @@ pub struct EccScalarFixed {
 /// k_21 must be a single bit, i.e. 0 or 1.
 #[derive(Clone, Debug)]
 pub struct EccScalarFixedShort {
-    magnitude: AssignedCell<pallas::Base, pallas::Base>,
-    // TODO: Make V an enum Sign { Positive, Negative }
-    sign: AssignedCell<pallas::Base, pallas::Base>,
+    magnitude: MagnitudeCell,
+    sign: SignCell,
     running_sum:
         ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { constants::NUM_WINDOWS_SHORT + 1 }>,
 }
@@ -421,11 +426,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
     fn mul_fixed_short(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        // TODO: Return AssignedCell<Sign, pallas::Base>
-        magnitude_sign: (
-            AssignedCell<pallas::Base, pallas::Base>,
-            AssignedCell<pallas::Base, pallas::Base>,
-        ),
+        magnitude_sign: MagnitudeSign,
         base: &Self::FixedPointsShort,
     ) -> Result<(Self::Point, Self::ScalarFixedShort), Error> {
         let config: mul_fixed::short::Config = self.config().mul_fixed_short;

@@ -2,12 +2,12 @@ use std::{array, convert::TryInto};
 
 use super::super::{EccPoint, EccScalarFixedShort};
 use crate::{
-    circuit::gadget::utilities::bool_check,
+    circuit::gadget::{ecc::chip::MagnitudeSign, utilities::bool_check},
     constants::{ValueCommitV, L_VALUE, NUM_WINDOWS_SHORT},
 };
 
 use halo2::{
-    circuit::{AssignedCell, Layouter, Region},
+    circuit::{Layouter, Region},
     plonk::{ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
@@ -74,10 +74,7 @@ impl Config {
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        magnitude_sign: (
-            AssignedCell<pallas::Base, pallas::Base>,
-            AssignedCell<pallas::Base, pallas::Base>,
-        ),
+        magnitude_sign: MagnitudeSign,
     ) -> Result<EccScalarFixedShort, Error> {
         let (magnitude, sign) = magnitude_sign;
 
@@ -101,10 +98,7 @@ impl Config {
     pub fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        magnitude_sign: (
-            AssignedCell<pallas::Base, pallas::Base>,
-            AssignedCell<pallas::Base, pallas::Base>,
-        ),
+        magnitude_sign: MagnitudeSign,
         base: &ValueCommitV,
     ) -> Result<(EccPoint, EccScalarFixedShort), Error> {
         let (scalar, acc, mul_b) = layouter.assign_region(
@@ -245,7 +239,10 @@ pub mod tests {
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
     use crate::circuit::gadget::{
-        ecc::{chip::EccChip, FixedPointShort, NonIdentityPoint, Point},
+        ecc::{
+            chip::{EccChip, MagnitudeSign},
+            FixedPointShort, NonIdentityPoint, Point,
+        },
         utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
     };
     use crate::constants::load::ValueCommitV;
@@ -265,13 +262,7 @@ pub mod tests {
             mut layouter: impl Layouter<pallas::Base>,
             magnitude: pallas::Base,
             sign: pallas::Base,
-        ) -> Result<
-            (
-                AssignedCell<pallas::Base, pallas::Base>,
-                AssignedCell<pallas::Base, pallas::Base>,
-            ),
-            Error,
-        > {
+        ) -> Result<MagnitudeSign, Error> {
             let column = chip.config().advices[0];
             let magnitude =
                 chip.load_private(layouter.namespace(|| "magnitude"), column, Some(magnitude))?;
