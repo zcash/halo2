@@ -9,6 +9,11 @@ use halo2::{
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
+type Coordinates = (
+    AssignedCell<pallas::Base, pallas::Base>,
+    AssignedCell<pallas::Base, pallas::Base>,
+);
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Config {
     q_point: Selector,
@@ -76,13 +81,7 @@ impl Config {
         value: Option<(pallas::Base, pallas::Base)>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<
-        (
-            AssignedCell<pallas::Base, pallas::Base>,
-            AssignedCell<pallas::Base, pallas::Base>,
-        ),
-        Error,
-    > {
+    ) -> Result<Coordinates, Error> {
         // Assign `x` value
         let x_val = value.map(|value| value.0);
         let x_var =

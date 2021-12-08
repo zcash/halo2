@@ -21,6 +21,13 @@ use super::{
     CommitDomain, Message, MessagePiece,
 };
 
+/// The values of the running sum at the start and end of the range being used for a
+/// canonicity check.
+type CanonicityBounds = (
+    AssignedCell<pallas::Base, pallas::Base>,
+    AssignedCell<pallas::Base, pallas::Base>,
+);
+
 /*
     <https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit>
     We need to hash g★_d || pk★_d || i2lebsp_{64}(v) || rho || psi,
@@ -817,19 +824,12 @@ impl NoteCommitConfig {
         Ok(cm)
     }
 
-    #[allow(clippy::type_complexity)]
     // A canonicity check helper used in checking x(g_d), y(g_d), and y(pk_d).
     fn canon_bitshift_130(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         a: AssignedCell<pallas::Base, pallas::Base>,
-    ) -> Result<
-        (
-            AssignedCell<pallas::Base, pallas::Base>,
-            AssignedCell<pallas::Base, pallas::Base>,
-        ),
-        Error,
-    > {
+    ) -> Result<CanonicityBounds, Error> {
         // element = `a (250 bits) || b_0 (4 bits) || b_1 (1 bit)`
         // - b_1 = 1 => b_0 = 0
         // - b_1 = 1 => a < t_P
@@ -862,13 +862,7 @@ impl NoteCommitConfig {
         mut layouter: impl Layouter<pallas::Base>,
         b_3: AssignedCell<pallas::Base, pallas::Base>,
         c: AssignedCell<pallas::Base, pallas::Base>,
-    ) -> Result<
-        (
-            AssignedCell<pallas::Base, pallas::Base>,
-            AssignedCell<pallas::Base, pallas::Base>,
-        ),
-        Error,
-    > {
+    ) -> Result<CanonicityBounds, Error> {
         // `x(pk_d)` = `b_3 (4 bits) || c (250 bits) || d_0 (1 bit)`
         // - d_0 = 1 => b_3 + 2^4 c < t_P
         //     - 0 ≤ b_3 + 2^4 c < 2^134
@@ -901,20 +895,13 @@ impl NoteCommitConfig {
         Ok((b3_c_prime, zs[14].clone()))
     }
 
-    #[allow(clippy::type_complexity)]
     // Check canonicity of `rho` encoding
     fn rho_canonicity(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         e_1: AssignedCell<pallas::Base, pallas::Base>,
         f: AssignedCell<pallas::Base, pallas::Base>,
-    ) -> Result<
-        (
-            AssignedCell<pallas::Base, pallas::Base>,
-            AssignedCell<pallas::Base, pallas::Base>,
-        ),
-        Error,
-    > {
+    ) -> Result<CanonicityBounds, Error> {
         // `rho` = `e_1 (4 bits) || f (250 bits) || g_0 (1 bit)`
         // - g_0 = 1 => e_1 + 2^4 f < t_P
         // - 0 ≤ e_1 + 2^4 f < 2^134
@@ -953,13 +940,7 @@ impl NoteCommitConfig {
         mut layouter: impl Layouter<pallas::Base>,
         g_1: AssignedCell<pallas::Base, pallas::Base>,
         g_2: AssignedCell<pallas::Base, pallas::Base>,
-    ) -> Result<
-        (
-            AssignedCell<pallas::Base, pallas::Base>,
-            AssignedCell<pallas::Base, pallas::Base>,
-        ),
-        Error,
-    > {
+    ) -> Result<CanonicityBounds, Error> {
         // `psi` = `g_1 (9 bits) || g_2 (240 bits) || h_0 (5 bits) || h_1 (1 bit)`
         // - h_1 = 1 => (h_0 = 0) ∧ (g_1 + 2^9 g_2 < t_P)
         // - 0 ≤ g_1 + 2^9 g_2 < 2^130
