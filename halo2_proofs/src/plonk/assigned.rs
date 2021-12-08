@@ -152,6 +152,18 @@ impl<F: Field> Assigned<F> {
         }
     }
 
+    /// Returns true iff this element is zero.
+    pub fn is_zero_vartime(&self) -> bool {
+        match self {
+            Self::Zero => true,
+            Self::Trivial(x) => x.is_zero_vartime(),
+            // Assigned maps x/0 -> 0.
+            Self::Rational(numerator, denominator) => {
+                numerator.is_zero_vartime() || denominator.is_zero_vartime()
+            }
+        }
+    }
+
     /// Inverts this assigned value (taking the inverse of zero to be zero).
     pub fn invert(&self) -> Self {
         match self {
