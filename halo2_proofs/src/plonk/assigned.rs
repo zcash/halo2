@@ -17,6 +17,12 @@ pub enum Assigned<F> {
     Rational(F, F),
 }
 
+impl<F: Field> From<&Assigned<F>> for Assigned<F> {
+    fn from(val: &Assigned<F>) -> Self {
+        *val
+    }
+}
+
 impl<F: Field> From<&F> for Assigned<F> {
     fn from(numerator: &F) -> Self {
         Assigned::Trivial(*numerator)
