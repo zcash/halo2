@@ -487,7 +487,9 @@ pub mod tests {
                     chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_fixed))?;
                 base.mul(layouter.namespace(|| "mul by zero"), scalar_fixed)?
             };
-            assert!(result.inner().is_identity().unwrap());
+            if let Some(is_identity) = result.inner().is_identity() {
+                assert!(is_identity);
+            }
         }
 
         // [-1]B is the largest base field element

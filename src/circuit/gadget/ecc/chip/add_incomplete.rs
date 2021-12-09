@@ -176,6 +176,7 @@ pub mod tests {
         q_val: pallas::Affine,
         q: &NonIdentityPoint<pallas::Affine, EccChip>,
         p_neg: &NonIdentityPoint<pallas::Affine, EccChip>,
+        test_errors: bool,
     ) -> Result<(), Error> {
         // P + Q
         {
@@ -188,13 +189,15 @@ pub mod tests {
             result.constrain_equal(layouter.namespace(|| "constrain P + Q"), &witnessed_result)?;
         }
 
-        // P + P should return an error
-        p.add_incomplete(layouter.namespace(|| "P + P"), p)
-            .expect_err("P + P should return an error");
+        if test_errors {
+            // P + P should return an error
+            p.add_incomplete(layouter.namespace(|| "P + P"), p)
+                .expect_err("P + P should return an error");
 
-        // P + (-P) should return an error
-        p.add_incomplete(layouter.namespace(|| "P + (-P)"), p_neg)
-            .expect_err("P + (-P) should return an error");
+            // P + (-P) should return an error
+            p.add_incomplete(layouter.namespace(|| "P + (-P)"), p_neg)
+                .expect_err("P + (-P) should return an error");
+        }
 
         Ok(())
     }

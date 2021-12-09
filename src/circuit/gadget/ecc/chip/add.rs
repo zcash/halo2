@@ -414,7 +414,9 @@ pub mod tests {
         // Check complete addition P + (-P)
         let zero = {
             let result = p.add(layouter.namespace(|| "P + (-P)"), p_neg)?;
-            assert!(result.inner().is_identity().unwrap());
+            if let Some(is_identity) = result.inner().is_identity() {
+                assert!(is_identity);
+            }
             result
         };
 

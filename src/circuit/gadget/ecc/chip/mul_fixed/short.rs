@@ -367,7 +367,9 @@ pub mod tests {
                 )?;
                 value_commit_v.mul(layouter.namespace(|| *name), magnitude_sign)?
             };
-            assert!(result.inner().is_identity().unwrap());
+            if let Some(is_identity) = result.inner().is_identity() {
+                assert!(is_identity);
+            }
         }
 
         Ok(())

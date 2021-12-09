@@ -295,7 +295,9 @@ pub mod tests {
         {
             let scalar_fixed = pallas::Scalar::zero();
             let (result, _) = base.mul(layouter.namespace(|| "mul by zero"), Some(scalar_fixed))?;
-            assert!(result.inner().is_identity().unwrap());
+            if let Some(is_identity) = result.inner().is_identity() {
+                assert!(is_identity);
+            }
         }
 
         // [-1]B is the largest scalar field element.
