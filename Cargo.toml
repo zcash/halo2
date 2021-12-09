@@ -56,6 +56,9 @@ dev-graph = ["plotters", "tabbycat"]
 gadget-traces = ["backtrace"]
 sanity-checks = []
 
+[lib]
+bench = false
+
 [[example]]
 name = "circuit-layout"
 required-features = ["dev-graph"]
