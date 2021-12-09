@@ -482,11 +482,11 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             // hash_old = poseidon_hash(nk, rho_old)
             let hash_old = {
                 let poseidon_message = [nk.clone(), rho_old.clone()];
-                let poseidon_hasher = PoseidonHash::<_, _, poseidon::P128Pow5T3, _, 3, 2>::init(
-                    config.poseidon_chip(),
-                    layouter.namespace(|| "Poseidon init"),
-                    ConstantLength::<2>,
-                )?;
+                let poseidon_hasher =
+                    PoseidonHash::<_, _, poseidon::P128Pow5T3, ConstantLength<2>, 3, 2>::init(
+                        config.poseidon_chip(),
+                        layouter.namespace(|| "Poseidon init"),
+                    )?;
                 poseidon_hasher.hash(
                     layouter.namespace(|| "Poseidon hash (nk, rho_old)"),
                     poseidon_message,

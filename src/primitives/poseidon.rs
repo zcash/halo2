@@ -275,16 +275,19 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
 }
 
 /// A domain in which a Poseidon hash function is being used.
-pub trait Domain<F: FieldExt, const T: usize, const RATE: usize>: Copy + fmt::Debug {
+pub trait Domain<F: FieldExt, const T: usize, const RATE: usize> {
+    /// The name of this domain, for debug formatting purposes.
+    fn name() -> String;
+
     /// The initial capacity element, encoding this domain.
-    fn initial_capacity_element(&self) -> F;
+    fn initial_capacity_element() -> F;
 
     /// The padding that will be added to each state word by [`Domain::pad_and_add`].
-    fn padding(&self) -> SpongeRate<F, RATE>;
+    fn padding() -> SpongeRate<F, RATE>;
 
     /// Returns a function that will update the given state with the given input to a
     /// duplex permutation round, applying padding according to this domain specification.
-    fn pad_and_add(&self) -> Box<dyn Fn(&mut State<F, T>, &SpongeRate<F, RATE>)>;
+    fn pad_and_add() -> Box<dyn Fn(&mut State<F, T>, &SpongeRate<F, RATE>)>;
 }
 
 /// A Poseidon hash function used with constant input length.
@@ -296,13 +299,17 @@ pub struct ConstantLength<const L: usize>;
 impl<F: FieldExt, const T: usize, const RATE: usize, const L: usize> Domain<F, T, RATE>
     for ConstantLength<L>
 {
-    fn initial_capacity_element(&self) -> F {
+    fn name() -> String {
+        format!("ConstantLength<{}>", L)
+    }
+
+    fn initial_capacity_element() -> F {
         // Capacity value is $length \cdot 2^64 + (o-1)$ where o is the output length.
         // We hard-code an output length of 1.
         F::from_u128((L as u128) << 64)
     }
 
-    fn padding(&self) -> SpongeRate<F, RATE> {
+    fn padding() -> SpongeRate<F, RATE> {
         // For constant-input-length hashing, padding consists of the field elements being
         // zero.
         let mut padding = [None; RATE];
@@ -312,7 +319,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize, const L: usize> Domain<F, T
         padding
     }
 
-    fn pad_and_add(&self) -> Box<dyn Fn(&mut State<F, T>, &SpongeRate<F, RATE>)> {
+    fn pad_and_add() -> Box<dyn Fn(&mut State<F, T>, &SpongeRate<F, RATE>)> {
         Box::new(|state, input| {
             // `Iterator::zip` short-circuits when one iterator completes, so this will only
             // mutate the rate portion of the state.
@@ -336,7 +343,7 @@ pub struct Hash<
     const RATE: usize,
 > {
     sponge: Sponge<F, S, Absorbing<F, RATE>, T, RATE>,
-    domain: D,
+    _domain: PhantomData<D>,
 }
 
 impl<
@@ -353,7 +360,7 @@ impl<
             .field("rate", &RATE)
             .field("R_F", &S::full_rounds())
             .field("R_P", &S::partial_rounds())
-            .field("domain", &self.domain)
+            .field("domain", &D::name())
             .finish()
     }
 }
@@ -367,10 +374,10 @@ impl<
     > Hash<F, S, D, T, RATE>
 {
     /// Initializes a new hasher.
-    pub fn init(domain: D) -> Self {
+    pub fn init() -> Self {
         Hash {
-            sponge: Sponge::new(domain.initial_capacity_element(), domain.pad_and_add()),
-            domain,
+            sponge: Sponge::new(D::initial_capacity_element(), D::pad_and_add()),
+            _domain: PhantomData::default(),
         }
     }
 }
@@ -400,7 +407,7 @@ mod tests {
 
         let (round_constants, mds, _) = OrchardNullifier::constants();
 
-        let hasher = Hash::<_, OrchardNullifier, _, 3, 2>::init(ConstantLength);
+        let hasher = Hash::<_, OrchardNullifier, ConstantLength<2>, 3, 2>::init();
         let result = hasher.hash(message);
 
         // The result should be equivalent to just directly applying the permutation and

@@ -268,17 +268,21 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
     }
 }
 
-impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize>
-    PoseidonSpongeInstructions<F, S, WIDTH, RATE> for Pow5Chip<F, WIDTH, RATE>
+impl<
+        F: FieldExt,
+        S: Spec<F, WIDTH, RATE>,
+        D: Domain<F, WIDTH, RATE>,
+        const WIDTH: usize,
+        const RATE: usize,
+    > PoseidonSpongeInstructions<F, S, D, WIDTH, RATE> for Pow5Chip<F, WIDTH, RATE>
 {
     fn initial_state(
         &self,
         layouter: &mut impl Layouter<F>,
-        domain: &impl Domain<F, WIDTH, RATE>,
     ) -> Result<State<Self::Word, WIDTH>, Error> {
         let config = self.config();
         let state = layouter.assign_region(
-            || format!("initial state for domain {:?}", domain),
+            || format!("initial state for domain {}", D::name()),
             |mut region| {
                 let mut state = Vec::with_capacity(WIDTH);
                 let mut load_state_word = |i: usize, value: F| -> Result<_, Error> {
@@ -296,7 +300,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
                 for i in 0..RATE {
                     load_state_word(i, F::zero())?;
                 }
-                load_state_word(RATE, domain.initial_capacity_element())?;
+                load_state_word(RATE, D::initial_capacity_element())?;
 
                 Ok(state)
             },
@@ -308,13 +312,12 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
     fn pad_and_add(
         &self,
         layouter: &mut impl Layouter<F>,
-        domain: &impl Domain<F, WIDTH, RATE>,
         initial_state: &State<Self::Word, WIDTH>,
         input: &SpongeRate<Self::Word, RATE>,
     ) -> Result<State<Self::Word, WIDTH>, Error> {
         let config = self.config();
         layouter.assign_region(
-            || format!("pad-and-add for domain {:?}", domain),
+            || format!("pad-and-add for domain {}", D::name()),
             |mut region| {
                 config.s_pad_and_add.enable(&mut region, 1)?;
 
@@ -334,7 +337,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
                     (0..WIDTH).map(load_state_word).collect();
                 let initial_state = initial_state?;
 
-                let padding_values = domain.padding();
+                let padding_values = D::padding();
 
                 // Load the input and padding into this region.
                 let load_input_word = |i: usize| {
@@ -783,10 +786,9 @@ mod tests {
                 },
             )?;
 
-            let hasher = Hash::<_, _, S, _, WIDTH, RATE>::init(
+            let hasher = Hash::<_, _, S, ConstantLength<L>, WIDTH, RATE>::init(
                 chip,
                 layouter.namespace(|| "init"),
-                ConstantLength::<L>,
             )?;
             let output = hasher.hash(layouter.namespace(|| "hash"), message)?;
 
@@ -809,7 +811,7 @@ mod tests {
     fn poseidon_hash() {
         let message = [Fp::rand(), Fp::rand()];
         let output =
-            poseidon::Hash::<_, OrchardNullifier, _, 3, 2>::init(ConstantLength::<2>).hash(message);
+            poseidon::Hash::<_, OrchardNullifier, ConstantLength<2>, 3, 2>::init().hash(message);
 
         let k = 6;
         let circuit = HashCircuit::<OrchardNullifier, 3, 2, 2> {
@@ -828,8 +830,8 @@ mod tests {
                 pallas::Base::from_repr(tv.input[0]).unwrap(),
                 pallas::Base::from_repr(tv.input[1]).unwrap(),
             ];
-            let output =
-                poseidon::Hash::<_, OrchardNullifier, _, 3, 2>::init(ConstantLength).hash(message);
+            let output = poseidon::Hash::<_, OrchardNullifier, ConstantLength<2>, 3, 2>::init()
+                .hash(message);
 
             let k = 6;
             let circuit = HashCircuit::<OrchardNullifier, 3, 2, 2> {
