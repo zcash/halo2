@@ -2,7 +2,7 @@
 
 use ff::PrimeFieldBits;
 use halo2::{
-    circuit::{Cell, Layouter, Region},
+    circuit::{AssignedCell, Cell, Layouter},
     plonk::{Advice, Column, Error, Expression},
 };
 use pasta_curves::arithmetic::FieldExt;
@@ -12,18 +12,8 @@ pub(crate) mod cond_swap;
 pub(crate) mod decompose_running_sum;
 pub(crate) mod lookup_range_check;
 
-/// A variable representing a field element.
-#[derive(Copy, Clone, Debug)]
-pub struct CellValue<F: FieldExt> {
-    cell: Cell,
-    value: Option<F>,
-}
-
 /// Trait for a variable in the circuit.
-pub trait Var<F: FieldExt>: Copy + Clone + std::fmt::Debug {
-    /// Construct a new variable.
-    fn new(cell: Cell, value: Option<F>) -> Self;
-
+pub trait Var<F: FieldExt>: Clone + std::fmt::Debug + From<AssignedCell<F, F>> {
     /// The cell at which this variable was allocated.
     fn cell(&self) -> Cell;
 
@@ -31,17 +21,13 @@ pub trait Var<F: FieldExt>: Copy + Clone + std::fmt::Debug {
     fn value(&self) -> Option<F>;
 }
 
-impl<F: FieldExt> Var<F> for CellValue<F> {
-    fn new(cell: Cell, value: Option<F>) -> Self {
-        Self { cell, value }
-    }
-
+impl<F: FieldExt> Var<F> for AssignedCell<F, F> {
     fn cell(&self) -> Cell {
-        self.cell
+        self.cell()
     }
 
     fn value(&self) -> Option<F> {
-        self.value
+        self.value().cloned()
     }
 }
 
@@ -60,43 +46,17 @@ pub trait UtilitiesInstructions<F: FieldExt> {
         layouter.assign_region(
             || "load private",
             |mut region| {
-                let cell = region.assign_advice(
-                    || "load private",
-                    column,
-                    0,
-                    || value.ok_or(Error::Synthesis),
-                )?;
-                Ok(Var::new(cell, value))
+                region
+                    .assign_advice(
+                        || "load private",
+                        column,
+                        0,
+                        || value.ok_or(Error::Synthesis),
+                    )
+                    .map(Self::Var::from)
             },
         )
     }
-}
-
-/// Assigns a cell at a specific offset within the given region, constraining it
-/// to the same value as another cell (which may be in any region).
-///
-/// Returns an error if either `column` or `copy` is not in a column that was passed to
-/// [`ConstraintSystem::enable_equality`] during circuit configuration.
-///
-/// [`ConstraintSystem::enable_equality`]: halo2::plonk::ConstraintSystem::enable_equality
-pub fn copy<A, AR, F: FieldExt>(
-    region: &mut Region<'_, F>,
-    annotation: A,
-    column: Column<Advice>,
-    offset: usize,
-    copy: &CellValue<F>,
-) -> Result<CellValue<F>, Error>
-where
-    A: Fn() -> AR,
-    AR: Into<String>,
-{
-    let cell = region.assign_advice(annotation, column, offset, || {
-        copy.value.ok_or(Error::Synthesis)
-    })?;
-
-    region.constrain_equal(cell, copy.cell)?;
-
-    Ok(CellValue::new(cell, copy.value))
 }
 
 pub(crate) fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize>(
@@ -126,7 +86,7 @@ pub fn ternary<F: FieldExt>(a: Expression<F>, b: Expression<F>, c: Expression<F>
 
 /// Takes a specified subsequence of the little-endian bit representation of a field element.
 /// The bits are numbered from 0 for the LSB.
-pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(field_elem: F, bitrange: Range<usize>) -> F {
+pub fn bitrange_subset<F: FieldExt + PrimeFieldBits>(field_elem: &F, bitrange: Range<usize>) -> F {
     assert!(bitrange.end <= F::NUM_BITS as usize);
 
     let bits: Vec<bool> = field_elem
@@ -172,7 +132,7 @@ mod tests {
         struct MyCircuit<const RANGE: usize>(u8);
 
         impl<const RANGE: usize> UtilitiesInstructions<pallas::Base> for MyCircuit<RANGE> {
-            type Var = CellValue<pallas::Base>;
+            type Var = AssignedCell<pallas::Base, pallas::Base>;
         }
 
         #[derive(Clone)]
@@ -251,7 +211,7 @@ mod tests {
         {
             let field_elem = pallas::Base::rand();
             let bitrange = 0..(pallas::Base::NUM_BITS as usize);
-            let subset = bitrange_subset(field_elem, bitrange);
+            let subset = bitrange_subset(&field_elem, bitrange);
             assert_eq!(field_elem, subset);
         }
 
@@ -259,7 +219,7 @@ mod tests {
         {
             let field_elem = pallas::Base::rand();
             let bitrange = 0..0;
-            let subset = bitrange_subset(field_elem, bitrange);
+            let subset = bitrange_subset(&field_elem, bitrange);
             assert_eq!(pallas::Base::zero(), subset);
         }
 
@@ -286,7 +246,7 @@ mod tests {
 
             let subsets = ranges
                 .iter()
-                .map(|range| bitrange_subset(field_elem, range.clone()))
+                .map(|range| bitrange_subset(&field_elem, range.clone()))
                 .collect::<Vec<_>>();
 
             let mut sum = subsets[0];

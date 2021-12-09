@@ -1,12 +1,12 @@
 use super::super::{EccPoint, EccScalarFixed, OrchardFixedBasesFull};
 
 use crate::{
-    circuit::gadget::utilities::{range_check, CellValue, Var},
+    circuit::gadget::utilities::range_check,
     constants::{self, util, L_ORCHARD_SCALAR, NUM_WINDOWS},
 };
 use arrayvec::ArrayVec;
 use halo2::{
-    circuit::{Layouter, Region},
+    circuit::{AssignedCell, Layouter, Region},
     plonk::{ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
@@ -76,7 +76,7 @@ impl Config {
         scalar: Option<pallas::Scalar>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<ArrayVec<CellValue<pallas::Base>, NUM_WINDOWS>, Error> {
+    ) -> Result<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, NUM_WINDOWS>, Error> {
         // Enable `q_mul_fixed_full` selector
         for idx in 0..NUM_WINDOWS {
             self.q_mul_fixed_full.enable(region, offset + idx)?;
@@ -85,14 +85,15 @@ impl Config {
         // Decompose scalar into `k-bit` windows
         let scalar_windows: Option<Vec<u8>> = scalar.map(|scalar| {
             util::decompose_word::<pallas::Scalar>(
-                scalar,
+                &scalar,
                 SCALAR_NUM_BITS,
                 constants::FIXED_BASE_WINDOW_SIZE,
             )
         });
 
         // Store the scalar decomposition
-        let mut windows: ArrayVec<CellValue<pallas::Base>, NUM_WINDOWS> = ArrayVec::new();
+        let mut windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, NUM_WINDOWS> =
+            ArrayVec::new();
 
         let scalar_windows: Vec<Option<pallas::Base>> = if let Some(windows) = scalar_windows {
             assert_eq!(windows.len(), NUM_WINDOWS);
@@ -111,7 +112,7 @@ impl Config {
                 offset + idx,
                 || window.ok_or(Error::Synthesis),
             )?;
-            windows.push(CellValue::new(window_cell, window));
+            windows.push(window_cell);
         }
 
         Ok(windows)
@@ -149,8 +150,8 @@ impl Config {
             || "Full-width fixed-base mul (last window, complete addition)",
             |mut region| {
                 self.super_config.add_config.assign_region(
-                    &mul_b.into(),
-                    &acc.into(),
+                    &mul_b.clone().into(),
+                    &acc.clone().into(),
                     0,
                     &mut region,
                 )
@@ -294,7 +295,9 @@ pub mod tests {
         {
             let scalar_fixed = pallas::Scalar::zero();
             let (result, _) = base.mul(layouter.namespace(|| "mul by zero"), Some(scalar_fixed))?;
-            assert!(result.inner().is_identity().unwrap());
+            if let Some(is_identity) = result.inner().is_identity() {
+                assert!(is_identity);
+            }
         }
 
         // [-1]B is the largest scalar field element.

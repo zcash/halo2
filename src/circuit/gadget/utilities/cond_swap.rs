@@ -1,6 +1,6 @@
-use super::{bool_check, copy, ternary, CellValue, UtilitiesInstructions, Var};
+use super::{bool_check, ternary, UtilitiesInstructions};
 use halo2::{
-    circuit::{Chip, Layouter},
+    circuit::{AssignedCell, Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
@@ -53,7 +53,7 @@ pub struct CondSwapConfig {
 }
 
 impl<F: FieldExt> UtilitiesInstructions<F> for CondSwapChip<F> {
-    type Var = CellValue<F>;
+    type Var = AssignedCell<F, F>;
 }
 
 impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
@@ -73,18 +73,15 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                 config.q_swap.enable(&mut region, 0)?;
 
                 // Copy in `a` value
-                let a = copy(&mut region, || "copy a", config.a, 0, &pair.0)?;
+                let a = pair.0.copy_advice(|| "copy a", &mut region, config.a, 0)?;
 
                 // Witness `b` value
-                let b = {
-                    let cell = region.assign_advice(
-                        || "witness b",
-                        config.b,
-                        0,
-                        || pair.1.ok_or(Error::Synthesis),
-                    )?;
-                    CellValue::new(cell, pair.1)
-                };
+                let b = region.assign_advice(
+                    || "witness b",
+                    config.b,
+                    0,
+                    || pair.1.ok_or(Error::Synthesis),
+                )?;
 
                 // Witness `swap` value
                 let swap_val = swap.map(|swap| F::from_u64(swap as u64));
@@ -98,39 +95,33 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                 // Conditionally swap a
                 let a_swapped = {
                     let a_swapped = a
-                        .value
-                        .zip(b.value)
+                        .value()
+                        .zip(b.value())
                         .zip(swap)
-                        .map(|((a, b), swap)| if swap { b } else { a });
-                    let a_swapped_cell = region.assign_advice(
+                        .map(|((a, b), swap)| if swap { b } else { a })
+                        .cloned();
+                    region.assign_advice(
                         || "a_swapped",
                         config.a_swapped,
                         0,
                         || a_swapped.ok_or(Error::Synthesis),
-                    )?;
-                    CellValue {
-                        cell: a_swapped_cell,
-                        value: a_swapped,
-                    }
+                    )?
                 };
 
                 // Conditionally swap b
                 let b_swapped = {
                     let b_swapped = a
-                        .value
-                        .zip(b.value)
+                        .value()
+                        .zip(b.value())
                         .zip(swap)
-                        .map(|((a, b), swap)| if swap { a } else { b });
-                    let b_swapped_cell = region.assign_advice(
+                        .map(|((a, b), swap)| if swap { a } else { b })
+                        .cloned();
+                    region.assign_advice(
                         || "b_swapped",
                         config.b_swapped,
                         0,
                         || b_swapped.ok_or(Error::Synthesis),
-                    )?;
-                    CellValue {
-                        cell: b_swapped_cell,
-                        value: b_swapped,
-                    }
+                    )?
                 };
 
                 // Return swapped pair
@@ -252,18 +243,21 @@ mod tests {
                 // Load the pair and the swap flag into the circuit.
                 let a = chip.load_private(layouter.namespace(|| "a"), config.a, self.a)?;
                 // Return the swapped pair.
-                let swapped_pair =
-                    chip.swap(layouter.namespace(|| "swap"), (a, self.b), self.swap)?;
+                let swapped_pair = chip.swap(
+                    layouter.namespace(|| "swap"),
+                    (a.clone(), self.b),
+                    self.swap,
+                )?;
 
                 if let Some(swap) = self.swap {
                     if swap {
                         // Check that `a` and `b` have been swapped
-                        assert_eq!(swapped_pair.0.value.unwrap(), self.b.unwrap());
-                        assert_eq!(swapped_pair.1.value.unwrap(), a.value.unwrap());
+                        assert_eq!(swapped_pair.0.value().unwrap(), &self.b.unwrap());
+                        assert_eq!(swapped_pair.1.value().unwrap(), a.value().unwrap());
                     } else {
                         // Check that `a` and `b` have not been swapped
-                        assert_eq!(swapped_pair.0.value.unwrap(), a.value.unwrap());
-                        assert_eq!(swapped_pair.1.value.unwrap(), self.b.unwrap());
+                        assert_eq!(swapped_pair.0.value().unwrap(), a.value().unwrap());
+                        assert_eq!(swapped_pair.1.value().unwrap(), &self.b.unwrap());
                     }
                 }
 

@@ -1,4 +1,4 @@
-use super::super::{copy, CellValue, NonIdentityEccPoint, Var};
+use super::super::NonIdentityEccPoint;
 use super::{X, Y, Z};
 use crate::circuit::gadget::utilities::bool_check;
 use ff::Field;
@@ -190,14 +190,14 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         assert_eq!(bits.len(), NUM_BITS);
 
         // Handle exceptional cases
-        let (x_p, y_p) = (base.x.value(), base.y.value());
-        let (x_a, y_a) = (acc.0.value(), acc.1.value());
+        let (x_p, y_p) = (base.x.value().cloned(), base.y.value().cloned());
+        let (x_a, y_a) = (acc.0.value().cloned(), acc.1.value().cloned());
 
         if let (Some(x_a), Some(y_a), Some(x_p), Some(y_p)) = (x_a, y_a, x_p, y_p) {
             // A is point at infinity
-            if (x_p == pallas::Base::zero() && y_p == pallas::Base::zero())
+            if (x_p.is_zero_vartime() && y_p.is_zero_vartime())
             // Q is point at infinity
-            || (x_a == pallas::Base::zero() && y_a == pallas::Base::zero())
+            || (x_a.is_zero_vartime() && y_a.is_zero_vartime())
             // x_p = x_a
             || (x_p == x_a)
             {
@@ -223,13 +223,17 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         // Initialise double-and-add
         let (mut x_a, mut y_a, mut z) = {
             // Initialise the running `z` sum for the scalar bits.
-            let z = copy(region, || "starting z", self.z, offset, &acc.2)?;
+            let z = acc.2.copy_advice(|| "starting z", region, self.z, offset)?;
 
             // Initialise acc
-            let x_a = copy(region, || "starting x_a", self.x_a, offset + 1, &acc.0)?;
-            let y_a = copy(region, || "starting y_a", self.lambda1, offset, &acc.1)?;
+            let x_a = acc
+                .0
+                .copy_advice(|| "starting x_a", region, self.x_a, offset + 1)?;
+            let y_a = acc
+                .1
+                .copy_advice(|| "starting y_a", region, self.lambda1, offset)?;
 
-            (x_a, y_a.value(), z)
+            (x_a, y_a.value().cloned(), z)
         };
 
         // Increase offset by 1; we used row 0 for initializing `z`.
@@ -244,14 +248,13 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             let z_val = z.value().zip(k.as_ref()).map(|(z_val, k)| {
                 pallas::Base::from_u64(2) * z_val + pallas::Base::from_u64(*k as u64)
             });
-            let z_cell = region.assign_advice(
+            z = region.assign_advice(
                 || "z",
                 self.z,
                 row + offset,
                 || z_val.ok_or(Error::Synthesis),
             )?;
-            z = CellValue::new(z_cell, z_val);
-            zs.push(Z(z));
+            zs.push(Z(z.clone()));
 
             // Assign `x_p`, `y_p`
             region.assign_advice(
@@ -313,30 +316,26 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
                 .zip(x_r)
                 .map(|((lambda2, x_a), x_r)| lambda2.square() - x_a - x_r);
             y_a = lambda2
-                .zip(x_a.value())
+                .zip(x_a.value().cloned())
                 .zip(x_a_new)
                 .zip(y_a)
                 .map(|(((lambda2, x_a), x_a_new), y_a)| lambda2 * (x_a - x_a_new) - y_a);
             let x_a_val = x_a_new;
-            let x_a_cell = region.assign_advice(
+            x_a = region.assign_advice(
                 || "x_a",
                 self.x_a,
                 row + offset + 1,
                 || x_a_val.ok_or(Error::Synthesis),
             )?;
-            x_a = CellValue::new(x_a_cell, x_a_val);
         }
 
         // Witness final y_a
-        let y_a = {
-            let cell = region.assign_advice(
-                || "y_a",
-                self.lambda1,
-                offset + NUM_BITS,
-                || y_a.ok_or(Error::Synthesis),
-            )?;
-            CellValue::new(cell, y_a)
-        };
+        let y_a = region.assign_advice(
+            || "y_a",
+            self.lambda1,
+            offset + NUM_BITS,
+            || y_a.ok_or(Error::Synthesis),
+        )?;
 
         Ok((X(x_a), Y(y_a), zs))
     }

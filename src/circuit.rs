@@ -2,7 +2,7 @@
 
 use group::{Curve, GroupEncoding};
 use halo2::{
-    circuit::{floor_planner, Layouter},
+    circuit::{floor_planner, AssignedCell, Layouter},
     plonk::{self, Advice, Column, Expression, Instance as InstanceColumn, Selector},
     poly::Rotation,
     transcript::{Blake2bRead, Blake2bWrite},
@@ -50,7 +50,7 @@ use gadget::{
         },
         note_commit::NoteCommitConfig,
     },
-    utilities::{copy, CellValue, UtilitiesInstructions, Var},
+    utilities::UtilitiesInstructions,
 };
 
 use std::convert::TryInto;
@@ -117,7 +117,7 @@ pub struct Circuit {
 }
 
 impl UtilitiesInstructions<pallas::Base> for Circuit {
-    type Var = CellValue<pallas::Base>;
+    type Var = AssignedCell<pallas::Base, pallas::Base>;
 }
 
 impl plonk::Circuit<pallas::Base> for Circuit {
@@ -405,7 +405,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 leaf_pos: self.pos,
                 path,
             };
-            let leaf = *cm_old.extract_p().inner();
+            let leaf = cm_old.extract_p().inner().clone();
             merkle_inputs.calculate_root(layouter.namespace(|| "MerkleCRH"), leaf)?
         };
 
@@ -454,7 +454,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
             let (commitment, _) = {
                 let value_commit_v = ValueCommitV::get();
                 let value_commit_v = FixedPointShort::from_inner(ecc_chip.clone(), value_commit_v);
-                value_commit_v.mul(layouter.namespace(|| "[v_net] ValueCommitV"), v_net)?
+                value_commit_v.mul(layouter.namespace(|| "[v_net] ValueCommitV"), v_net.clone())?
             };
 
             // blind = [rcv] ValueCommitR
@@ -481,7 +481,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         let nf_old = {
             // hash_old = poseidon_hash(nk, rho_old)
             let hash_old = {
-                let poseidon_message = [nk, rho_old];
+                let poseidon_message = [nk.clone(), rho_old.clone()];
                 let poseidon_hasher = PoseidonHash::<_, _, poseidon::P128Pow5T3, _, 3, 2>::init(
                     config.poseidon_chip(),
                     layouter.namespace(|| "Poseidon init"),
@@ -501,32 +501,19 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 |mut region| {
                     config.q_add.enable(&mut region, 0)?;
 
-                    copy(
-                        &mut region,
-                        || "copy hash_old",
-                        config.advices[7],
-                        0,
-                        &hash_old,
-                    )?;
-                    copy(
-                        &mut region,
-                        || "copy psi_old",
-                        config.advices[8],
-                        0,
-                        &psi_old,
-                    )?;
+                    hash_old.copy_advice(|| "copy hash_old", &mut region, config.advices[7], 0)?;
+                    psi_old.copy_advice(|| "copy psi_old", &mut region, config.advices[8], 0)?;
 
                     let scalar_val = hash_old
                         .value()
                         .zip(psi_old.value())
                         .map(|(hash_old, psi_old)| hash_old + psi_old);
-                    let cell = region.assign_advice(
+                    region.assign_advice(
                         || "poseidon_hash(nk, rho_old) + psi_old",
                         config.advices[6],
                         0,
                         || scalar_val.ok_or(plonk::Error::Synthesis),
-                    )?;
-                    Ok(CellValue::new(cell, scalar_val))
+                    )
                 },
             )?;
 
@@ -581,7 +568,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                     config.sinsemilla_chip_1(),
                     ecc_chip.clone(),
                     layouter.namespace(|| "CommitIvk"),
-                    *ak.extract_p().inner(),
+                    ak.extract_p().inner().clone(),
                     nk,
                     rivk,
                 )?
@@ -619,7 +606,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 config.ecc_chip(),
                 g_d_old.inner(),
                 pk_d_old.inner(),
-                v_old,
+                v_old.clone(),
                 rho_old,
                 psi_old,
                 rcm_old,
@@ -675,8 +662,8 @@ impl plonk::Circuit<pallas::Base> for Circuit {
                 config.ecc_chip(),
                 g_d_new.inner(),
                 pk_d_new.inner(),
-                v_new,
-                *nf_old.inner(),
+                v_new.clone(),
+                nf_old.inner().clone(),
                 psi_new,
                 rcm_new,
             )?;
@@ -692,19 +679,13 @@ impl plonk::Circuit<pallas::Base> for Circuit {
         layouter.assign_region(
             || "v_old - v_new = magnitude * sign",
             |mut region| {
-                copy(&mut region, || "v_old", config.advices[0], 0, &v_old)?;
-                copy(&mut region, || "v_new", config.advices[1], 0, &v_new)?;
-                let (magnitude, sign) = v_net;
-                copy(
-                    &mut region,
-                    || "v_net magnitude",
-                    config.advices[2],
-                    0,
-                    &magnitude,
-                )?;
-                copy(&mut region, || "v_net sign", config.advices[3], 0, &sign)?;
+                v_old.copy_advice(|| "v_old", &mut region, config.advices[0], 0)?;
+                v_new.copy_advice(|| "v_new", &mut region, config.advices[1], 0)?;
+                let (magnitude, sign) = v_net.clone();
+                magnitude.copy_advice(|| "v_net magnitude", &mut region, config.advices[2], 0)?;
+                sign.copy_advice(|| "v_net sign", &mut region, config.advices[3], 0)?;
 
-                copy(&mut region, || "anchor", config.advices[4], 0, &anchor)?;
+                anchor.copy_advice(|| "anchor", &mut region, config.advices[4], 0)?;
                 region.assign_advice_from_instance(
                     || "pub input anchor",
                     config.primary,

@@ -2,7 +2,7 @@ use std::{array, convert::TryInto};
 
 use super::super::{EccPoint, EccScalarFixedShort};
 use crate::{
-    circuit::gadget::utilities::{bool_check, copy, CellValue, Var},
+    circuit::gadget::{ecc::chip::MagnitudeSign, utilities::bool_check},
     constants::{ValueCommitV, L_VALUE, NUM_WINDOWS_SHORT},
 };
 
@@ -74,7 +74,7 @@ impl Config {
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        magnitude_sign: (CellValue<pallas::Base>, CellValue<pallas::Base>),
+        magnitude_sign: MagnitudeSign,
     ) -> Result<EccScalarFixedShort, Error> {
         let (magnitude, sign) = magnitude_sign;
 
@@ -82,7 +82,7 @@ impl Config {
         let running_sum = self.super_config.running_sum_config.copy_decompose(
             region,
             offset,
-            magnitude,
+            magnitude.clone(),
             true,
             L_VALUE,
             NUM_WINDOWS_SHORT,
@@ -98,7 +98,7 @@ impl Config {
     pub fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        magnitude_sign: (CellValue<pallas::Base>, CellValue<pallas::Base>),
+        magnitude_sign: MagnitudeSign,
         base: &ValueCommitV,
     ) -> Result<(EccPoint, EccScalarFixedShort), Error> {
         let (scalar, acc, mul_b) = layouter.assign_region(
@@ -107,7 +107,7 @@ impl Config {
                 let offset = 0;
 
                 // Decompose the scalar
-                let scalar = self.decompose(&mut region, offset, magnitude_sign)?;
+                let scalar = self.decompose(&mut region, offset, magnitude_sign.clone())?;
 
                 let (acc, mul_b) = self.super_config.assign_region_inner::<NUM_WINDOWS_SHORT>(
                     &mut region,
@@ -128,8 +128,8 @@ impl Config {
                 let offset = 0;
                 // Add to the cumulative sum to get `[magnitude]B`.
                 let magnitude_mul = self.super_config.add_config.assign_region(
-                    &mul_b.into(),
-                    &acc.into(),
+                    &mul_b.clone().into(),
+                    &acc.clone().into(),
                     offset,
                     &mut region,
                 )?;
@@ -138,32 +138,25 @@ impl Config {
                 let offset = offset + 1;
 
                 // Copy sign to `window` column
-                let sign = copy(
-                    &mut region,
+                let sign = scalar.sign.copy_advice(
                     || "sign",
+                    &mut region,
                     self.super_config.window,
                     offset,
-                    &scalar.sign,
                 )?;
 
                 // Copy last window to `u` column.
                 // (Although the last window is not a `u` value; we are copying it into the `u`
                 // column because there is an available cell there.)
-                let z_21 = scalar.running_sum[21];
-                copy(
-                    &mut region,
-                    || "last_window",
-                    self.super_config.u,
-                    offset,
-                    &z_21,
-                )?;
+                let z_21 = scalar.running_sum[21].clone();
+                z_21.copy_advice(|| "last_window", &mut region, self.super_config.u, offset)?;
 
                 // Conditionally negate `y`-coordinate
                 let y_val = if let Some(sign) = sign.value() {
-                    if sign == -pallas::Base::one() {
-                        magnitude_mul.y.value().map(|y: pallas::Base| -y)
+                    if sign == &-pallas::Base::one() {
+                        magnitude_mul.y.value().cloned().map(|y: pallas::Base| -y)
                     } else {
-                        magnitude_mul.y.value()
+                        magnitude_mul.y.value().cloned()
                     }
                 } else {
                     None
@@ -182,7 +175,7 @@ impl Config {
 
                 Ok(EccPoint {
                     x: magnitude_mul.x,
-                    y: CellValue::new(y_var, y_val),
+                    y: y_var,
                 })
             },
         )?;
@@ -199,7 +192,7 @@ impl Config {
 
             if let (Some(magnitude), Some(sign)) = (scalar.magnitude.value(), scalar.sign.value()) {
                 let magnitude_is_valid =
-                    magnitude <= pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64);
+                    magnitude <= &pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64);
                 let sign_is_valid = sign * sign == pallas::Base::one();
                 if magnitude_is_valid && sign_is_valid {
                     let base: super::OrchardFixedBases = base.clone().into();
@@ -211,7 +204,7 @@ impl Config {
                             let magnitude =
                                 pallas::Scalar::from_bytes(&magnitude.to_bytes()).unwrap();
 
-                            let sign = if sign == pallas::Base::one() {
+                            let sign = if sign == &pallas::Base::one() {
                                 pallas::Scalar::one()
                             } else {
                                 -pallas::Scalar::one()
@@ -240,14 +233,17 @@ pub mod tests {
     use group::Curve;
     use halo2::{
         arithmetic::CurveAffine,
-        circuit::{Chip, Layouter},
+        circuit::{AssignedCell, Chip, Layouter},
         plonk::{Any, Error},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
     use crate::circuit::gadget::{
-        ecc::{chip::EccChip, FixedPointShort, NonIdentityPoint, Point},
-        utilities::{lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions},
+        ecc::{
+            chip::{EccChip, MagnitudeSign},
+            FixedPointShort, NonIdentityPoint, Point,
+        },
+        utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
     };
     use crate::constants::load::ValueCommitV;
 
@@ -266,7 +262,7 @@ pub mod tests {
             mut layouter: impl Layouter<pallas::Base>,
             magnitude: pallas::Base,
             sign: pallas::Base,
-        ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+        ) -> Result<MagnitudeSign, Error> {
             let column = chip.config().advices[0];
             let magnitude =
                 chip.load_private(layouter.namespace(|| "magnitude"), column, Some(magnitude))?;
@@ -371,7 +367,9 @@ pub mod tests {
                 )?;
                 value_commit_v.mul(layouter.namespace(|| *name), magnitude_sign)?
             };
-            assert!(result.inner().is_identity().unwrap());
+            if let Some(is_identity) = result.inner().is_identity() {
+                assert!(is_identity);
+            }
         }
 
         Ok(())
@@ -379,10 +377,7 @@ pub mod tests {
 
     #[test]
     fn invalid_magnitude_sign() {
-        use crate::circuit::gadget::{
-            ecc::chip::EccConfig,
-            utilities::{CellValue, UtilitiesInstructions},
-        };
+        use crate::circuit::gadget::{ecc::chip::EccConfig, utilities::UtilitiesInstructions};
         use halo2::{
             circuit::{Layouter, SimpleFloorPlanner},
             dev::{MockProver, VerifyFailure},
@@ -398,7 +393,7 @@ pub mod tests {
         }
 
         impl UtilitiesInstructions<pallas::Base> for MyCircuit {
-            type Var = CellValue<pallas::Base>;
+            type Var = AssignedCell<pallas::Base, pallas::Base>;
         }
 
         impl Circuit<pallas::Base> for MyCircuit {

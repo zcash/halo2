@@ -1,6 +1,7 @@
 //! The Poseidon algebraic hash function.
 
 use std::array;
+use std::convert::TryInto;
 use std::fmt;
 use std::iter;
 use std::marker::PhantomData;
@@ -147,9 +148,13 @@ pub(crate) enum Sponge<F, const RATE: usize> {
     Squeezing(SpongeState<F, RATE>),
 }
 
-impl<F: Copy, const RATE: usize> Sponge<F, RATE> {
+impl<F: fmt::Debug, const RATE: usize> Sponge<F, RATE> {
     pub(crate) fn absorb(val: F) -> Self {
-        let mut input = [None; RATE];
+        let mut input: [Option<F>; RATE] = (0..RATE)
+            .map(|_| None)
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap();
         input[0] = Some(val);
         Sponge::Absorbing(input)
     }

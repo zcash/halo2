@@ -1,4 +1,4 @@
-use super::super::{add, copy, CellValue, EccPoint, Var};
+use super::super::{add, EccPoint};
 use super::{COMPLETE_RANGE, X, Y, Z};
 use crate::circuit::gadget::utilities::{bool_check, ternary};
 
@@ -106,16 +106,15 @@ impl Config {
         }
 
         // Use x_a, y_a output from incomplete addition
-        let mut acc = EccPoint { x: *x_a, y: *y_a };
+        let mut acc = EccPoint { x: x_a.0, y: y_a.0 };
 
         // Copy running sum `z` from incomplete addition
         let mut z = {
-            let z = copy(
-                region,
+            let z = z.copy_advice(
                 || "Copy `z` running sum from incomplete addition",
+                region,
                 self.z_complete,
                 offset,
-                &z,
             )?;
             Z(z)
         };
@@ -146,37 +145,40 @@ impl Config {
                     row + offset + 2,
                     || z_val.ok_or(Error::Synthesis),
                 )?;
-                Z(CellValue::new(z_cell, z_val))
+                Z(z_cell)
             };
-            zs.push(z);
+            zs.push(z.clone());
 
             // Assign `y_p` for complete addition.
             let y_p = {
-                let base_y = copy(
-                    region,
+                let base_y = base.y.copy_advice(
                     || "Copy `base.y`",
+                    region,
                     self.z_complete,
                     row + offset + 1,
-                    &base.y,
                 )?;
 
                 // If the bit is set, use `y`; if the bit is not set, use `-y`
-                let y_p = base_y
-                    .value()
-                    .zip(k.as_ref())
-                    .map(|(base_y, k)| if !k { -base_y } else { base_y });
+                let y_p =
+                    base_y
+                        .value()
+                        .cloned()
+                        .zip(k.as_ref())
+                        .map(|(base_y, k)| if !k { -base_y } else { base_y });
 
-                let y_p_cell = region.assign_advice(
+                region.assign_advice(
                     || "y_p",
                     self.add_config.y_p,
                     row + offset,
                     || y_p.ok_or(Error::Synthesis),
-                )?;
-                CellValue::<pallas::Base>::new(y_p_cell, y_p)
+                )?
             };
 
             // U = P if the bit is set; U = -P is the bit is not set.
-            let U = EccPoint { x: base.x, y: y_p };
+            let U = EccPoint {
+                x: base.x.clone(),
+                y: y_p,
+            };
 
             // Acc + U
             let tmp_acc = self

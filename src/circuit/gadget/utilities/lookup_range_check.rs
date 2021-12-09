@@ -3,7 +3,7 @@
 
 use crate::spec::lebs2ip;
 use halo2::{
-    circuit::{Layouter, Region},
+    circuit::{AssignedCell, Layouter, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector, TableColumn},
     poly::Rotation,
 };
@@ -14,11 +14,11 @@ use ff::PrimeFieldBits;
 use super::*;
 
 /// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
-pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<CellValue<F>>);
+pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<AssignedCell<F, F>>);
 impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
-    type Target = Vec<CellValue<F>>;
+    type Target = Vec<AssignedCell<F, F>>;
 
-    fn deref(&self) -> &Vec<CellValue<F>> {
+    fn deref(&self) -> &Vec<AssignedCell<F, F>> {
         &self.0
     }
 }
@@ -143,7 +143,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     pub fn copy_check(
         &self,
         mut layouter: impl Layouter<F>,
-        element: CellValue<F>,
+        element: AssignedCell<F, F>,
         num_words: usize,
         strict: bool,
     ) -> Result<RunningSum<F>, Error> {
@@ -151,7 +151,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             || format!("{:?} words range check", num_words),
             |mut region| {
                 // Copy `element` and initialize running sum `z_0 = element` to decompose it.
-                let z_0 = copy(&mut region, || "z_0", self.running_sum, 0, &element)?;
+                let z_0 = element.copy_advice(|| "z_0", &mut region, self.running_sum, 0)?;
                 self.range_check(&mut region, z_0, num_words, strict)
             },
         )
@@ -168,15 +168,12 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         layouter.assign_region(
             || "Witness element",
             |mut region| {
-                let z_0 = {
-                    let cell = region.assign_advice(
-                        || "Witness element",
-                        self.running_sum,
-                        0,
-                        || value.ok_or(Error::Synthesis),
-                    )?;
-                    CellValue::new(cell, value)
-                };
+                let z_0 = region.assign_advice(
+                    || "Witness element",
+                    self.running_sum,
+                    0,
+                    || value.ok_or(Error::Synthesis),
+                )?;
                 self.range_check(&mut region, z_0, num_words, strict)
             },
         )
@@ -192,7 +189,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     fn range_check(
         &self,
         region: &mut Region<'_, F>,
-        element: CellValue<F>,
+        element: AssignedCell<F, F>,
         num_words: usize,
         strict: bool,
     ) -> Result<RunningSum<F>, Error> {
@@ -223,7 +220,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             }
         };
 
-        let mut zs = vec![element];
+        let mut zs = vec![element.clone()];
 
         // Assign cumulative sum such that
         //          z_i = 2^{K}⋅z_{i + 1} + a_i
@@ -244,19 +241,17 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                 let z_val = z
                     .value()
                     .zip(*word)
-                    .map(|(z, word)| (z - word) * inv_two_pow_k);
+                    .map(|(z, word)| (*z - word) * inv_two_pow_k);
 
                 // Assign z_next
-                let z_cell = region.assign_advice(
+                region.assign_advice(
                     || format!("z_{:?}", idx + 1),
                     self.running_sum,
                     idx + 1,
                     || z_val.ok_or(Error::Synthesis),
-                )?;
-
-                CellValue::new(z_cell, z_val)
+                )?
             };
-            zs.push(z);
+            zs.push(z.clone());
         }
 
         if strict {
@@ -275,7 +270,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     pub fn copy_short_check(
         &self,
         mut layouter: impl Layouter<F>,
-        element: CellValue<F>,
+        element: AssignedCell<F, F>,
         num_bits: usize,
     ) -> Result<(), Error> {
         assert!(num_bits < K);
@@ -283,7 +278,8 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             || format!("Range check {:?} bits", num_bits),
             |mut region| {
                 // Copy `element` to use in the k-bit lookup.
-                let element = copy(&mut region, || "element", self.running_sum, 0, &element)?;
+                let element =
+                    element.copy_advice(|| "element", &mut region, self.running_sum, 0)?;
 
                 self.short_range_check(&mut region, element, num_bits)
             },
@@ -300,23 +296,20 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         mut layouter: impl Layouter<F>,
         element: Option<F>,
         num_bits: usize,
-    ) -> Result<CellValue<F>, Error> {
+    ) -> Result<AssignedCell<F, F>, Error> {
         assert!(num_bits <= K);
         layouter.assign_region(
             || format!("Range check {:?} bits", num_bits),
             |mut region| {
                 // Witness `element` to use in the k-bit lookup.
-                let element = {
-                    let cell = region.assign_advice(
-                        || "Witness element",
-                        self.running_sum,
-                        0,
-                        || element.ok_or(Error::Synthesis),
-                    )?;
-                    CellValue::new(cell, element)
-                };
+                let element = region.assign_advice(
+                    || "Witness element",
+                    self.running_sum,
+                    0,
+                    || element.ok_or(Error::Synthesis),
+                )?;
 
-                self.short_range_check(&mut region, element, num_bits)?;
+                self.short_range_check(&mut region, element.clone(), num_bits)?;
 
                 Ok(element)
             },
@@ -329,7 +322,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     fn short_range_check(
         &self,
         region: &mut Region<'_, F>,
-        element: CellValue<F>,
+        element: AssignedCell<F, F>,
         num_bits: usize,
     ) -> Result<(), Error> {
         // Enable lookup for `element`, to constrain it to 10 bits.
@@ -344,7 +337,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         // Assign shifted `element * 2^{K - num_bits}`
         let shifted = element.value().map(|element| {
             let shift = F::from_u64(1 << (K - num_bits));
-            element * shift
+            *element * shift
         });
 
         region.assign_advice(
@@ -369,7 +362,6 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
 
 #[cfg(test)]
 mod tests {
-    use super::super::Var;
     use super::LookupRangeCheckConfig;
 
     use crate::primitives::sinsemilla::{INV_TWO_POW_K, K};
@@ -468,7 +460,7 @@ mod tests {
 
                     for (expected_z, z) in expected_zs.into_iter().zip(zs.iter()) {
                         if let Some(z) = z.value() {
-                            assert_eq!(expected_z, z);
+                            assert_eq!(&expected_z, z);
                         }
                     }
                 }

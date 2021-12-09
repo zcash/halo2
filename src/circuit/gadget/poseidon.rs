@@ -1,18 +1,18 @@
 //! Gadget and chips for the Poseidon algebraic hash function.
 
 use std::array;
+use std::convert::TryInto;
 use std::fmt;
 
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Chip, Layouter},
+    circuit::{AssignedCell, Chip, Layouter},
     plonk::Error,
 };
 
 mod pow5;
 pub use pow5::{Pow5Chip, Pow5Config, StateWord};
 
-use crate::circuit::gadget::utilities::CellValue;
 use crate::primitives::poseidon::{ConstantLength, Domain, Spec, Sponge, SpongeState, State};
 
 /// The set of circuit instructions required to use the Poseidon permutation.
@@ -20,7 +20,7 @@ pub trait PoseidonInstructions<F: FieldExt, S: Spec<F, T, RATE>, const T: usize,
     Chip<F>
 {
     /// Variable representing the word over which the Poseidon permutation operates.
-    type Word: Copy + fmt::Debug + From<CellValue<F>> + Into<CellValue<F>>;
+    type Word: Clone + fmt::Debug + From<AssignedCell<F, F>> + Into<AssignedCell<F, F>>;
 
     /// Applies the Poseidon permutation to the given state.
     fn permute(
@@ -82,7 +82,7 @@ impl<
 {
     /// The word contained in this gadget.
     pub fn inner(&self) -> PoseidonChip::Word {
-        self.inner
+        self.inner.clone()
     }
 
     /// Construct a [`Word`] gadget from the inner word.
@@ -144,7 +144,13 @@ impl<
         chip.initial_state(&mut layouter, &domain)
             .map(|state| Duplex {
                 chip,
-                sponge: Sponge::Absorbing([None; RATE]),
+                sponge: Sponge::Absorbing(
+                    (0..RATE)
+                        .map(|_| None)
+                        .collect::<Vec<_>>()
+                        .try_into()
+                        .unwrap(),
+                ),
                 state,
                 domain,
             })
@@ -154,7 +160,7 @@ impl<
     pub fn absorb(
         &mut self,
         mut layouter: impl Layouter<F>,
-        value: CellValue<F>,
+        value: AssignedCell<F, F>,
     ) -> Result<(), Error> {
         match self.sponge {
             Sponge::Absorbing(ref mut input) => {
@@ -185,7 +191,7 @@ impl<
     }
 
     /// Squeezes an element from the sponge.
-    pub fn squeeze(&mut self, mut layouter: impl Layouter<F>) -> Result<CellValue<F>, Error> {
+    pub fn squeeze(&mut self, mut layouter: impl Layouter<F>) -> Result<AssignedCell<F, F>, Error> {
         loop {
             match self.sponge {
                 Sponge::Absorbing(ref input) => {
@@ -205,7 +211,13 @@ impl<
                     }
 
                     // We've already squeezed out all available elements
-                    self.sponge = Sponge::Absorbing([None; RATE]);
+                    self.sponge = Sponge::Absorbing(
+                        (0..RATE)
+                            .map(|_| None)
+                            .collect::<Vec<_>>()
+                            .try_into()
+                            .unwrap(),
+                    );
                 }
             }
         }
@@ -253,8 +265,8 @@ impl<
     pub fn hash(
         mut self,
         mut layouter: impl Layouter<F>,
-        message: [CellValue<F>; L],
-    ) -> Result<CellValue<F>, Error> {
+        message: [AssignedCell<F, F>; L],
+    ) -> Result<AssignedCell<F, F>, Error> {
         for (i, value) in array::IntoIter::new(message).enumerate() {
             self.duplex
                 .absorb(layouter.namespace(|| format!("absorb_{}", i)), value)?;

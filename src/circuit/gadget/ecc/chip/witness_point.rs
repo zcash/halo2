@@ -1,13 +1,18 @@
-use super::{CellValue, EccPoint, NonIdentityEccPoint, Var};
+use super::{EccPoint, NonIdentityEccPoint};
 
 use group::prime::PrimeCurveAffine;
 
 use halo2::{
-    circuit::Region,
+    circuit::{AssignedCell, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector, VirtualCells},
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
+
+type Coordinates = (
+    AssignedCell<pallas::Base, pallas::Base>,
+    AssignedCell<pallas::Base, pallas::Base>,
+);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Config {
@@ -76,7 +81,7 @@ impl Config {
         value: Option<(pallas::Base, pallas::Base)>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+    ) -> Result<Coordinates, Error> {
         // Assign `x` value
         let x_val = value.map(|value| value.0);
         let x_var =
@@ -87,10 +92,7 @@ impl Config {
         let y_var =
             region.assign_advice(|| "y", self.y, offset, || y_val.ok_or(Error::Synthesis))?;
 
-        Ok((
-            CellValue::<pallas::Base>::new(x_var, x_val),
-            CellValue::<pallas::Base>::new(y_var, y_val),
-        ))
+        Ok((x_var, y_var))
     }
 
     /// Assigns a point that can be the identity.

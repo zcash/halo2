@@ -1,6 +1,7 @@
 use std::{array, collections::HashSet};
 
-use super::{copy, CellValue, NonIdentityEccPoint, Var};
+use super::NonIdentityEccPoint;
+use ff::Field;
 use group::Curve;
 use halo2::{
     circuit::Region,
@@ -96,9 +97,9 @@ impl Config {
             .zip(y_q)
             .map(|(((x_p, y_p), x_q), y_q)| {
                 // P is point at infinity
-                if (x_p == pallas::Base::zero() && y_p == pallas::Base::zero())
+                if (x_p.is_zero_vartime() && y_p.is_zero_vartime())
                 // Q is point at infinity
-                || (x_q == pallas::Base::zero() && y_q == pallas::Base::zero())
+                || (x_q.is_zero_vartime() && y_q.is_zero_vartime())
                 // x_p = x_q
                 || (x_p == x_q)
                 {
@@ -110,12 +111,12 @@ impl Config {
             .transpose()?;
 
         // Copy point `p` into `x_p`, `y_p` columns
-        copy(region, || "x_p", self.x_p, offset, &p.x)?;
-        copy(region, || "y_p", self.y_p, offset, &p.y)?;
+        p.x.copy_advice(|| "x_p", region, self.x_p, offset)?;
+        p.y.copy_advice(|| "y_p", region, self.y_p, offset)?;
 
         // Copy point `q` into `x_qr`, `y_qr` columns
-        copy(region, || "x_q", self.x_qr, offset, &q.x)?;
-        copy(region, || "y_q", self.y_qr, offset, &q.y)?;
+        q.x.copy_advice(|| "x_q", region, self.x_qr, offset)?;
+        q.y.copy_advice(|| "y_q", region, self.y_qr, offset)?;
 
         // Compute the sum `P + Q = R`
         let r = {
@@ -148,8 +149,8 @@ impl Config {
         )?;
 
         let result = NonIdentityEccPoint {
-            x: CellValue::<pallas::Base>::new(x_r_var, x_r),
-            y: CellValue::<pallas::Base>::new(y_r_var, y_r),
+            x: x_r_var,
+            y: y_r_var,
         };
 
         Ok(result)
@@ -175,6 +176,7 @@ pub mod tests {
         q_val: pallas::Affine,
         q: &NonIdentityPoint<pallas::Affine, EccChip>,
         p_neg: &NonIdentityPoint<pallas::Affine, EccChip>,
+        test_errors: bool,
     ) -> Result<(), Error> {
         // P + Q
         {
@@ -187,13 +189,15 @@ pub mod tests {
             result.constrain_equal(layouter.namespace(|| "constrain P + Q"), &witnessed_result)?;
         }
 
-        // P + P should return an error
-        p.add_incomplete(layouter.namespace(|| "P + P"), p)
-            .expect_err("P + P should return an error");
+        if test_errors {
+            // P + P should return an error
+            p.add_incomplete(layouter.namespace(|| "P + P"), p)
+                .expect_err("P + P should return an error");
 
-        // P + (-P) should return an error
-        p.add_incomplete(layouter.namespace(|| "P + (-P)"), p_neg)
-            .expect_err("P + (-P) should return an error");
+            // P + (-P) should return an error
+            p.add_incomplete(layouter.namespace(|| "P + (-P)"), p_neg)
+                .expect_err("P + (-P) should return an error");
+        }
 
         Ok(())
     }

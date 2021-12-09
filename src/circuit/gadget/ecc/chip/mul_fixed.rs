@@ -1,6 +1,6 @@
 use super::{
-    add, add_incomplete, CellValue, EccBaseFieldElemFixed, EccScalarFixed, EccScalarFixedShort,
-    NonIdentityEccPoint, Var,
+    add, add_incomplete, EccBaseFieldElemFixed, EccScalarFixed, EccScalarFixedShort,
+    NonIdentityEccPoint,
 };
 use crate::circuit::gadget::utilities::decompose_running_sum::RunningSumConfig;
 use crate::constants::{
@@ -10,7 +10,7 @@ use crate::constants::{
 
 use group::Curve;
 use halo2::{
-    circuit::Region,
+    circuit::{AssignedCell, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, VirtualCells},
     poly::Rotation,
 };
@@ -353,26 +353,24 @@ impl Config {
                 assert!(x != pallas::Base::zero());
                 x
             });
-            let x_cell = region.assign_advice(
+            let x = region.assign_advice(
                 || format!("mul_b_x, window {}", w),
                 self.x_p,
                 offset + w,
                 || x.ok_or(Error::Synthesis),
             )?;
-            let x = CellValue::new(x_cell, x);
 
             let y = mul_b.map(|mul_b| {
                 let y = *mul_b.y();
                 assert!(y != pallas::Base::zero());
                 y
             });
-            let y_cell = region.assign_advice(
+            let y = region.assign_advice(
                 || format!("mul_b_y, window {}", w),
                 self.y_p,
                 offset + w,
                 || y.ok_or(Error::Synthesis),
             )?;
-            let y = CellValue::new(y_cell, y);
 
             NonIdentityEccPoint { x, y }
         };
@@ -471,27 +469,24 @@ impl Config {
                 assert!(x != pallas::Base::zero());
                 x
             });
-            let x_cell = region.assign_advice(
+            let x = region.assign_advice(
                 || format!("mul_b_x, window {}", NUM_WINDOWS - 1),
                 self.x_p,
                 offset + NUM_WINDOWS - 1,
                 || x.ok_or(Error::Synthesis),
             )?;
 
-            let x = CellValue::new(x_cell, x);
-
             let y = mul_b.map(|mul_b| {
                 let y = *mul_b.y();
                 assert!(y != pallas::Base::zero());
                 y
             });
-            let y_cell = region.assign_advice(
+            let y = region.assign_advice(
                 || format!("mul_b_y, window {}", NUM_WINDOWS - 1),
                 self.y_p,
                 offset + NUM_WINDOWS - 1,
                 || y.ok_or(Error::Synthesis),
             )?;
-            let y = CellValue::new(y_cell, y);
 
             NonIdentityEccPoint { x, y }
         };
@@ -528,7 +523,7 @@ impl ScalarFixed {
     // The scalar decomposition was done in the base field. For computation
     // outside the circuit, we now convert them back into the scalar field.
     fn windows_field(&self) -> Vec<Option<pallas::Scalar>> {
-        let running_sum_to_windows = |zs: Vec<CellValue<pallas::Base>>| {
+        let running_sum_to_windows = |zs: Vec<AssignedCell<pallas::Base, pallas::Base>>| {
             (0..(zs.len() - 1))
                 .map(|idx| {
                     let z_cur = zs[idx].value();

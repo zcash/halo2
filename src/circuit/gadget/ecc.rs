@@ -508,7 +508,9 @@ mod tests {
     use super::chip::{EccChip, EccConfig};
     use crate::circuit::gadget::utilities::lookup_range_check::LookupRangeCheckConfig;
 
-    struct MyCircuit {}
+    struct MyCircuit {
+        test_errors: bool,
+    }
 
     #[allow(non_snake_case)]
     impl Circuit<pallas::Base> for MyCircuit {
@@ -516,7 +518,7 @@ mod tests {
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            MyCircuit {}
+            MyCircuit { test_errors: false }
         }
 
         fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
@@ -634,6 +636,7 @@ mod tests {
                     q_val,
                     &q,
                     &p_neg,
+                    self.test_errors,
                 )?;
             }
 
@@ -678,7 +681,7 @@ mod tests {
     #[test]
     fn ecc_chip() {
         let k = 13;
-        let circuit = MyCircuit {};
+        let circuit = MyCircuit { test_errors: true };
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
     }
@@ -692,7 +695,7 @@ mod tests {
         root.fill(&WHITE).unwrap();
         let root = root.titled("Ecc Chip Layout", ("sans-serif", 60)).unwrap();
 
-        let circuit = MyCircuit {};
+        let circuit = MyCircuit { test_errors: false };
         halo2::dev::CircuitLayout::default()
             .render(13, &circuit, &root)
             .unwrap();

@@ -3,12 +3,12 @@ use super::H_BASE;
 
 use crate::{
     circuit::gadget::utilities::{
-        bitrange_subset, copy, lookup_range_check::LookupRangeCheckConfig, range_check, CellValue,
-        Var,
+        bitrange_subset, lookup_range_check::LookupRangeCheckConfig, range_check,
     },
     constants::{self, T_P},
     primitives::sinsemilla,
 };
+use halo2::circuit::AssignedCell;
 use halo2::{
     circuit::Layouter,
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
@@ -160,7 +160,7 @@ impl Config {
     pub fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        scalar: CellValue<pallas::Base>,
+        scalar: AssignedCell<pallas::Base, pallas::Base>,
         base: NullifierK,
     ) -> Result<EccPoint, Error> {
         let (scalar, acc, mul_b) = layouter.assign_region(
@@ -173,13 +173,13 @@ impl Config {
                     let running_sum = self.super_config.running_sum_config.copy_decompose(
                         &mut region,
                         offset,
-                        scalar,
+                        scalar.clone(),
                         true,
                         constants::L_ORCHARD_BASE,
                         constants::NUM_WINDOWS,
                     )?;
                     EccBaseFieldElemFixed {
-                        base_field_elem: running_sum[0],
+                        base_field_elem: running_sum[0].clone(),
                         running_sum: (*running_sum).as_slice().try_into().unwrap(),
                     }
                 };
@@ -203,8 +203,8 @@ impl Config {
             || "Base-field elem fixed-base mul (complete addition)",
             |mut region| {
                 self.super_config.add_config.assign_region(
-                    &mul_b.into(),
-                    &acc.into(),
+                    &mul_b.clone().into(),
+                    &acc.clone().into(),
                     0,
                     &mut region,
                 )
@@ -249,9 +249,9 @@ impl Config {
         //                => z_13_alpha_0_prime = 0
         //
         let (alpha, running_sum) = (scalar.base_field_elem, &scalar.running_sum);
-        let z_43_alpha = running_sum[43];
-        let z_44_alpha = running_sum[44];
-        let z_84_alpha = running_sum[84];
+        let z_43_alpha = running_sum[43].clone();
+        let z_44_alpha = running_sum[44].clone();
+        let z_84_alpha = running_sum[84].clone();
 
         // α_0 = α - z_84_alpha * 2^252
         let alpha_0 = alpha
@@ -275,9 +275,9 @@ impl Config {
                 13,
                 false,
             )?;
-            let alpha_0_prime = zs[0];
+            let alpha_0_prime = zs[0].clone();
 
-            (alpha_0_prime, zs[13])
+            (alpha_0_prime, zs[13].clone())
         };
 
         layouter.assign_region(
@@ -291,21 +291,14 @@ impl Config {
                     let offset = 0;
 
                     // Copy α
-                    copy(
-                        &mut region,
-                        || "Copy α",
-                        self.canon_advices[0],
-                        offset,
-                        &alpha,
-                    )?;
+                    alpha.copy_advice(|| "Copy α", &mut region, self.canon_advices[0], offset)?;
 
                     // z_84_alpha = the top three bits of alpha.
-                    copy(
-                        &mut region,
+                    z_84_alpha.copy_advice(
                         || "Copy z_84_alpha",
+                        &mut region,
                         self.canon_advices[2],
                         offset,
-                        &z_84_alpha,
                     )?;
                 }
 
@@ -314,12 +307,11 @@ impl Config {
                     let offset = 1;
                     // Copy alpha_0_prime = alpha_0 + 2^130 - t_p.
                     // We constrain this in the custom gate to be derived correctly.
-                    copy(
-                        &mut region,
+                    alpha_0_prime.copy_advice(
                         || "Copy α_0 + 2^130 - t_p",
+                        &mut region,
                         self.canon_advices[0],
                         offset,
-                        &alpha_0_prime,
                     )?;
 
                     // Decompose α into three pieces,
@@ -348,30 +340,27 @@ impl Config {
                 {
                     let offset = 2;
                     // Copy z_13_alpha_0_prime
-                    copy(
-                        &mut region,
+                    z_13_alpha_0_prime.copy_advice(
                         || "Copy z_13_alpha_0_prime",
+                        &mut region,
                         self.canon_advices[0],
                         offset,
-                        &z_13_alpha_0_prime,
                     )?;
 
                     // Copy z_44_alpha
-                    copy(
-                        &mut region,
+                    z_44_alpha.copy_advice(
                         || "Copy z_44_alpha",
+                        &mut region,
                         self.canon_advices[1],
                         offset,
-                        &z_44_alpha,
                     )?;
 
                     // Copy z_43_alpha
-                    copy(
-                        &mut region,
+                    z_43_alpha.copy_advice(
                         || "Copy z_43_alpha",
+                        &mut region,
                         self.canon_advices[2],
                         offset,
-                        &z_43_alpha,
                     )?;
                 }
 
@@ -498,7 +487,9 @@ pub mod tests {
                     chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_fixed))?;
                 base.mul(layouter.namespace(|| "mul by zero"), scalar_fixed)?
             };
-            assert!(result.inner().is_identity().unwrap());
+            if let Some(is_identity) = result.inner().is_identity() {
+                assert!(is_identity);
+            }
         }
 
         // [-1]B is the largest base field element

@@ -1,16 +1,17 @@
 use super::EccInstructions;
 use crate::{
     circuit::gadget::utilities::{
-        copy, lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions, Var,
+        lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions,
     },
     constants::{self, NullifierK, OrchardFixedBasesFull, ValueCommitV},
     primitives::sinsemilla,
 };
 use arrayvec::ArrayVec;
 
+use ff::Field;
 use group::prime::PrimeCurveAffine;
 use halo2::{
-    circuit::{Chip, Layouter},
+    circuit::{AssignedCell, Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
@@ -26,12 +27,12 @@ pub(super) mod witness_point;
 /// A curve point represented in affine (x, y) coordinates, or the
 /// identity represented as (0, 0).
 /// Each coordinate is assigned to a cell.
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct EccPoint {
     /// x-coordinate
-    x: CellValue<pallas::Base>,
+    x: AssignedCell<pallas::Base, pallas::Base>,
     /// y-coordinate
-    y: CellValue<pallas::Base>,
+    y: AssignedCell<pallas::Base, pallas::Base>,
 }
 
 impl EccPoint {
@@ -40,8 +41,8 @@ impl EccPoint {
     /// This is an internal API that we only use where we know we have a valid curve point
     /// (specifically inside Sinsemilla).
     pub(in crate::circuit::gadget) fn from_coordinates_unchecked(
-        x: CellValue<pallas::Base>,
-        y: CellValue<pallas::Base>,
+        x: AssignedCell<pallas::Base, pallas::Base>,
+        y: AssignedCell<pallas::Base, pallas::Base>,
     ) -> Self {
         EccPoint { x, y }
     }
@@ -50,10 +51,10 @@ impl EccPoint {
     pub fn point(&self) -> Option<pallas::Affine> {
         match (self.x.value(), self.y.value()) {
             (Some(x), Some(y)) => {
-                if x == pallas::Base::zero() && y == pallas::Base::zero() {
+                if x.is_zero_vartime() && y.is_zero_vartime() {
                     Some(pallas::Affine::identity())
                 } else {
-                    Some(pallas::Affine::from_xy(x, y).unwrap())
+                    Some(pallas::Affine::from_xy(*x, *y).unwrap())
                 }
             }
             _ => None,
@@ -61,29 +62,29 @@ impl EccPoint {
     }
     /// The cell containing the affine short-Weierstrass x-coordinate,
     /// or 0 for the zero point.
-    pub fn x(&self) -> CellValue<pallas::Base> {
-        self.x
+    pub fn x(&self) -> AssignedCell<pallas::Base, pallas::Base> {
+        self.x.clone()
     }
     /// The cell containing the affine short-Weierstrass y-coordinate,
     /// or 0 for the zero point.
-    pub fn y(&self) -> CellValue<pallas::Base> {
-        self.y
+    pub fn y(&self) -> AssignedCell<pallas::Base, pallas::Base> {
+        self.y.clone()
     }
 
     #[cfg(test)]
     fn is_identity(&self) -> Option<bool> {
-        self.x.value().map(|x| x == pallas::Base::zero())
+        self.x.value().map(|x| x.is_zero_vartime())
     }
 }
 
 /// A non-identity point represented in affine (x, y) coordinates.
 /// Each coordinate is assigned to a cell.
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct NonIdentityEccPoint {
     /// x-coordinate
-    x: CellValue<pallas::Base>,
+    x: AssignedCell<pallas::Base, pallas::Base>,
     /// y-coordinate
-    y: CellValue<pallas::Base>,
+    y: AssignedCell<pallas::Base, pallas::Base>,
 }
 
 impl NonIdentityEccPoint {
@@ -92,8 +93,8 @@ impl NonIdentityEccPoint {
     /// This is an internal API that we only use where we know we have a valid non-identity
     /// curve point (specifically inside Sinsemilla).
     pub(in crate::circuit::gadget) fn from_coordinates_unchecked(
-        x: CellValue<pallas::Base>,
-        y: CellValue<pallas::Base>,
+        x: AssignedCell<pallas::Base, pallas::Base>,
+        y: AssignedCell<pallas::Base, pallas::Base>,
     ) -> Self {
         NonIdentityEccPoint { x, y }
     }
@@ -102,19 +103,19 @@ impl NonIdentityEccPoint {
     pub fn point(&self) -> Option<pallas::Affine> {
         match (self.x.value(), self.y.value()) {
             (Some(x), Some(y)) => {
-                assert!(x != pallas::Base::zero() && y != pallas::Base::zero());
-                Some(pallas::Affine::from_xy(x, y).unwrap())
+                assert!(!x.is_zero_vartime() && !y.is_zero_vartime());
+                Some(pallas::Affine::from_xy(*x, *y).unwrap())
             }
             _ => None,
         }
     }
     /// The cell containing the affine short-Weierstrass x-coordinate.
-    pub fn x(&self) -> CellValue<pallas::Base> {
-        self.x
+    pub fn x(&self) -> AssignedCell<pallas::Base, pallas::Base> {
+        self.x.clone()
     }
     /// The cell containing the affine short-Weierstrass y-coordinate.
-    pub fn y(&self) -> CellValue<pallas::Base> {
-        self.y
+    pub fn y(&self) -> AssignedCell<pallas::Base, pallas::Base> {
+        self.y.clone()
     }
 }
 
@@ -177,7 +178,7 @@ impl Chip<pallas::Base> for EccChip {
 }
 
 impl UtilitiesInstructions<pallas::Base> for EccChip {
-    type Var = CellValue<pallas::Base>;
+    type Var = AssignedCell<pallas::Base, pallas::Base>;
 }
 
 impl EccChip {
@@ -259,8 +260,14 @@ impl EccChip {
 #[derive(Clone, Debug)]
 pub struct EccScalarFixed {
     value: Option<pallas::Scalar>,
-    windows: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS }>,
+    windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { constants::NUM_WINDOWS }>,
 }
+
+// TODO: Make V a `u64`
+type MagnitudeCell = AssignedCell<pallas::Base, pallas::Base>;
+// TODO: Make V an enum Sign { Positive, Negative }
+type SignCell = AssignedCell<pallas::Base, pallas::Base>;
+type MagnitudeSign = (MagnitudeCell, SignCell);
 
 /// A signed short scalar used for fixed-base scalar multiplication.
 /// A short scalar must have magnitude in the range [0..2^64), with
@@ -276,9 +283,10 @@ pub struct EccScalarFixed {
 /// k_21 must be a single bit, i.e. 0 or 1.
 #[derive(Clone, Debug)]
 pub struct EccScalarFixedShort {
-    magnitude: CellValue<pallas::Base>,
-    sign: CellValue<pallas::Base>,
-    running_sum: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS_SHORT + 1 }>,
+    magnitude: MagnitudeCell,
+    sign: SignCell,
+    running_sum:
+        ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { constants::NUM_WINDOWS_SHORT + 1 }>,
 }
 
 /// A base field element used for fixed-base scalar multiplication.
@@ -292,23 +300,23 @@ pub struct EccScalarFixedShort {
 /// `base_field_elem`.
 #[derive(Clone, Debug)]
 struct EccBaseFieldElemFixed {
-    base_field_elem: CellValue<pallas::Base>,
-    running_sum: ArrayVec<CellValue<pallas::Base>, { constants::NUM_WINDOWS + 1 }>,
+    base_field_elem: AssignedCell<pallas::Base, pallas::Base>,
+    running_sum: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { constants::NUM_WINDOWS + 1 }>,
 }
 
 impl EccBaseFieldElemFixed {
-    fn base_field_elem(&self) -> CellValue<pallas::Base> {
-        self.base_field_elem
+    fn base_field_elem(&self) -> AssignedCell<pallas::Base, pallas::Base> {
+        self.base_field_elem.clone()
     }
 }
 
 impl EccInstructions<pallas::Affine> for EccChip {
     type ScalarFixed = EccScalarFixed;
     type ScalarFixedShort = EccScalarFixedShort;
-    type ScalarVar = CellValue<pallas::Base>;
+    type ScalarVar = AssignedCell<pallas::Base, pallas::Base>;
     type Point = EccPoint;
     type NonIdentityPoint = NonIdentityEccPoint;
-    type X = CellValue<pallas::Base>;
+    type X = AssignedCell<pallas::Base, pallas::Base>;
     type FixedPoints = OrchardFixedBasesFull;
     type FixedPointsBaseField = NullifierK;
     type FixedPointsShort = ValueCommitV;
@@ -396,7 +404,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
         let config = self.config().mul;
         config.assign(
             layouter.namespace(|| "variable-base scalar mul"),
-            *scalar,
+            scalar.clone(),
             base,
         )
     }
@@ -418,7 +426,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
     fn mul_fixed_short(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        magnitude_sign: (CellValue<pallas::Base>, CellValue<pallas::Base>),
+        magnitude_sign: MagnitudeSign,
         base: &Self::FixedPointsShort,
     ) -> Result<(Self::Point, Self::ScalarFixedShort), Error> {
         let config: mul_fixed::short::Config = self.config().mul_fixed_short;
@@ -432,7 +440,7 @@ impl EccInstructions<pallas::Affine> for EccChip {
     fn mul_fixed_base_field_elem(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        base_field_elem: CellValue<pallas::Base>,
+        base_field_elem: AssignedCell<pallas::Base, pallas::Base>,
         base: &Self::FixedPointsBaseField,
     ) -> Result<Self::Point, Error> {
         let config = self.config().mul_fixed_base_field;

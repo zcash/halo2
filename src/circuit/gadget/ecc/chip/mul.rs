@@ -1,8 +1,6 @@
-use super::{add, CellValue, EccPoint, NonIdentityEccPoint, Var};
+use super::{add, EccPoint, NonIdentityEccPoint};
 use crate::{
-    circuit::gadget::utilities::{
-        bool_check, copy, lookup_range_check::LookupRangeCheckConfig, ternary,
-    },
+    circuit::gadget::utilities::{bool_check, lookup_range_check::LookupRangeCheckConfig, ternary},
     constants::T_Q,
     primitives::sinsemilla,
 };
@@ -15,7 +13,7 @@ use bigint::U256;
 use ff::PrimeField;
 use halo2::{
     arithmetic::FieldExt,
-    circuit::{Layouter, Region},
+    circuit::{AssignedCell, Layouter, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
@@ -166,16 +164,16 @@ impl Config {
     pub(super) fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        alpha: CellValue<pallas::Base>,
+        alpha: AssignedCell<pallas::Base, pallas::Base>,
         base: &NonIdentityEccPoint,
-    ) -> Result<(EccPoint, CellValue<pallas::Base>), Error> {
+    ) -> Result<(EccPoint, AssignedCell<pallas::Base, pallas::Base>), Error> {
         let (result, zs): (EccPoint, Vec<Z<pallas::Base>>) = layouter.assign_region(
             || "variable-base scalar mul",
             |mut region| {
                 let offset = 0;
 
                 // Case `base` into an `EccPoint` for later use.
-                let base_point: EccPoint = (*base).into();
+                let base_point: EccPoint = base.clone().into();
 
                 // Decompose `k = alpha + t_q` bitwise (big-endian bit order).
                 let bits = decompose_for_scalar_mul(alpha.value());
@@ -194,16 +192,12 @@ impl Config {
                 let offset = offset + 1;
 
                 // Initialize the running sum for scalar decomposition to zero
-                let z_init = {
-                    let z_init_cell = region.assign_advice_from_constant(
-                        || "z_init = 0",
-                        self.hi_config.z,
-                        offset,
-                        pallas::Base::zero(),
-                    )?;
-
-                    Z(CellValue::new(z_init_cell, Some(pallas::Base::zero())))
-                };
+                let z_init = Z(region.assign_advice_from_constant(
+                    || "z_init = 0",
+                    self.hi_config.z,
+                    offset,
+                    pallas::Base::zero(),
+                )?);
 
                 // Double-and-add (incomplete addition) for the `hi` half of the scalar decomposition
                 let (x_a, y_a, zs_incomplete_hi) = self.hi_config.double_and_add(
@@ -211,7 +205,7 @@ impl Config {
                     offset,
                     base,
                     bits_incomplete_hi,
-                    (X(acc.x), Y(acc.y), z_init),
+                    (X(acc.x), Y(acc.y), z_init.clone()),
                 )?;
 
                 // Double-and-add (incomplete addition) for the `lo` half of the scalar decomposition
@@ -221,7 +215,7 @@ impl Config {
                     offset,
                     base,
                     bits_incomplete_lo,
-                    (x_a, y_a, *z),
+                    (x_a, y_a, z.clone()),
                 )?;
 
                 // Move from incomplete addition to complete addition.
@@ -245,7 +239,7 @@ impl Config {
                         &base_point,
                         x_a,
                         y_a,
-                        *z,
+                        z.clone(),
                     )?
                 };
 
@@ -253,8 +247,8 @@ impl Config {
                 let offset = offset + COMPLETE_RANGE.len() * 2;
 
                 // Process the least significant bit
-                let z_1 = zs_complete.last().unwrap();
-                let (result, z_0) = self.process_lsb(&mut region, offset, base, acc, *z_1, lsb)?;
+                let z_1 = zs_complete.last().unwrap().clone();
+                let (result, z_0) = self.process_lsb(&mut region, offset, base, acc, z_1, lsb)?;
 
                 #[cfg(test)]
                 // Check that the correct multiple is obtained.
@@ -292,8 +286,11 @@ impl Config {
             },
         )?;
 
-        self.overflow_config
-            .overflow_check(layouter.namespace(|| "overflow check"), alpha, &zs)?;
+        self.overflow_config.overflow_check(
+            layouter.namespace(|| "overflow check"),
+            alpha.clone(),
+            &zs,
+        )?;
 
         Ok((result, alpha))
     }
@@ -339,29 +336,19 @@ impl Config {
                 || z_0_val.ok_or(Error::Synthesis),
             )?;
 
-            Z(CellValue::new(z_0_cell, z_0_val))
+            Z(z_0_cell)
         };
 
         // Copy in `base_x`, `base_y` to use in the LSB gate
-        copy(
-            region,
-            || "copy base_x",
-            self.add_config.x_p,
-            offset + 1,
-            &base.x(),
-        )?;
-        copy(
-            region,
-            || "copy base_y",
-            self.add_config.y_p,
-            offset + 1,
-            &base.y(),
-        )?;
+        base.x()
+            .copy_advice(|| "copy base_x", region, self.add_config.x_p, offset + 1)?;
+        base.y()
+            .copy_advice(|| "copy base_y", region, self.add_config.y_p, offset + 1)?;
 
         // If `lsb` is 0, return `Acc + (-P)`. If `lsb` is 1, simply return `Acc + 0`.
         let x = if let Some(lsb) = lsb {
             if !lsb {
-                base.x.value()
+                base.x.value().cloned()
             } else {
                 Some(pallas::Base::zero())
             }
@@ -394,8 +381,8 @@ impl Config {
         )?;
 
         let p = EccPoint {
-            x: CellValue::<pallas::Base>::new(x_cell, x),
-            y: CellValue::<pallas::Base>::new(y_cell, y),
+            x: x_cell,
+            y: y_cell,
         };
 
         // Return the result of the final complete addition as `[scalar]B`
@@ -407,38 +394,38 @@ impl Config {
 
 #[derive(Clone, Debug)]
 // `x`-coordinate of the accumulator.
-struct X<F: FieldExt>(CellValue<F>);
+struct X<F: FieldExt>(AssignedCell<F, F>);
 impl<F: FieldExt> Deref for X<F> {
-    type Target = CellValue<F>;
+    type Target = AssignedCell<F, F>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 // `y`-coordinate of the accumulator.
-struct Y<F: FieldExt>(CellValue<F>);
+struct Y<F: FieldExt>(AssignedCell<F, F>);
 impl<F: FieldExt> Deref for Y<F> {
-    type Target = CellValue<F>;
+    type Target = AssignedCell<F, F>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 // Cumulative sum `z` used to decompose the scalar.
-struct Z<F: FieldExt>(CellValue<F>);
+struct Z<F: FieldExt>(AssignedCell<F, F>);
 impl<F: FieldExt> Deref for Z<F> {
-    type Target = CellValue<F>;
+    type Target = AssignedCell<F, F>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-fn decompose_for_scalar_mul(scalar: Option<pallas::Base>) -> Vec<Option<bool>> {
+fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> {
     let bitstring = scalar.map(|scalar| {
         // We use `k = scalar + t_q` in the double-and-add algorithm, where
         // the scalar field `F_q = 2^254 + t_q`.
@@ -548,7 +535,9 @@ pub mod tests {
                     chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_val))?;
                 p.mul(layouter.namespace(|| "[0]B"), &scalar)?
             };
-            assert!(result.inner().is_identity().unwrap());
+            if let Some(is_identity) = result.inner().is_identity() {
+                assert!(is_identity);
+            }
         }
 
         // [-1]B (the largest possible base field element)

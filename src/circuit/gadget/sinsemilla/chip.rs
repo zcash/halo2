@@ -4,8 +4,7 @@ use super::{
 };
 use crate::{
     circuit::gadget::{
-        ecc::chip::NonIdentityEccPoint,
-        utilities::{lookup_range_check::LookupRangeCheckConfig, CellValue, Var},
+        ecc::chip::NonIdentityEccPoint, utilities::lookup_range_check::LookupRangeCheckConfig,
     },
     constants::OrchardFixedBasesFull,
     primitives::sinsemilla::{
@@ -15,7 +14,7 @@ use crate::{
 
 use halo2::{
     arithmetic::{CurveAffine, FieldExt},
-    circuit::{Chip, Layouter},
+    circuit::{AssignedCell, Chip, Layouter},
     plonk::{
         Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, TableColumn,
         VirtualCells,
@@ -239,14 +238,14 @@ impl SinsemillaChip {
 impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }>
     for SinsemillaChip
 {
-    type CellValue = CellValue<pallas::Base>;
+    type CellValue = AssignedCell<pallas::Base, pallas::Base>;
 
     type Message = Message<pallas::Base, { sinsemilla::K }, { sinsemilla::C }>;
     type MessagePiece = MessagePiece<pallas::Base, { sinsemilla::K }>;
 
     type RunningSum = Vec<Self::CellValue>;
 
-    type X = CellValue<pallas::Base>;
+    type X = AssignedCell<pallas::Base, pallas::Base>;
     type NonIdentityPoint = NonIdentityEccPoint;
     type FixedPoints = OrchardFixedBasesFull;
 
@@ -272,7 +271,7 @@ impl SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }
                 )
             },
         )?;
-        Ok(MessagePiece::new(cell, field_elem, num_words))
+        Ok(MessagePiece::new(cell, num_words))
     }
 
     #[allow(non_snake_case)]
