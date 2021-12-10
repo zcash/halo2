@@ -50,8 +50,18 @@ impl<F: Field> Add for Assigned<F> {
     type Output = Assigned<F>;
     fn add(self, rhs: Assigned<F>) -> Assigned<F> {
         match (self, rhs) {
+            // One side is directly zero.
             (Self::Zero, _) => rhs,
             (_, Self::Zero) => self,
+
+            // One side is x/0 which maps to zero.
+            (Self::Rational(_, denominator), other) | (other, Self::Rational(_, denominator))
+                if denominator.is_zero_vartime() =>
+            {
+                other
+            }
+
+            // Okay, we need to do some actual math...
             (Self::Trivial(lhs), Self::Trivial(rhs)) => Self::Trivial(lhs + rhs),
             (Self::Rational(numerator, denominator), Self::Trivial(other))
             | (Self::Trivial(other), Self::Rational(numerator, denominator)) => {
