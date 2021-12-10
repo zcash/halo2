@@ -824,6 +824,22 @@ mod tests {
     }
 
     #[test]
+    fn poseidon_hash_longer_input() {
+        let message = [Fp::rand(), Fp::rand(), Fp::rand()];
+        let output =
+            poseidon::Hash::<_, OrchardNullifier, ConstantLength<3>, 3, 2>::init().hash(message);
+
+        let k = 7;
+        let circuit = HashCircuit::<OrchardNullifier, 3, 2, 3> {
+            message: Some(message),
+            output: Some(output),
+            _spec: PhantomData,
+        };
+        let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+        assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[test]
     fn hash_test_vectors() {
         for tv in crate::primitives::poseidon::test_vectors::fp::hash() {
             let message = [
