@@ -229,3 +229,93 @@ mod tests {
         assert_eq!((a * b).evaluate(), Fp::zero());
     }
 }
+
+#[cfg(test)]
+mod proptests {
+    use std::{
+        convert::TryFrom,
+        ops::{Add, Mul, Sub},
+    };
+
+    use pasta_curves::{arithmetic::FieldExt, Fp};
+    use proptest::{collection::vec, prelude::*, sample::select};
+
+    use super::Assigned;
+
+    #[derive(Clone, Debug)]
+    enum Operation {
+        Add,
+        Sub,
+        Mul,
+    }
+
+    const OPERATIONS: &[Operation] = &[Operation::Add, Operation::Sub, Operation::Mul];
+
+    impl Operation {
+        fn apply<F: Add<Output = F> + Sub<Output = F> + Mul<Output = F>>(&self, a: F, b: F) -> F {
+            match self {
+                Self::Add => a + b,
+                Self::Sub => a - b,
+                Self::Mul => a * b,
+            }
+        }
+    }
+
+    prop_compose! {
+        /// Use narrow that can be easily reduced.
+        fn arb_element()(val in any::<u64>()) -> Fp {
+            Fp::from(val)
+        }
+    }
+
+    prop_compose! {
+        fn arb_trivial()(element in arb_element()) -> Assigned<Fp> {
+            Assigned::Trivial(element)
+        }
+    }
+
+    prop_compose! {
+        /// Generates half of the denominators as zero to represent a deferred inversion.
+        fn arb_rational()(
+            numerator in arb_element(),
+            denominator in prop_oneof![Just(Fp::zero()), arb_element()],
+        ) -> Assigned<Fp> {
+            Assigned::Rational(numerator, denominator)
+        }
+    }
+
+    prop_compose! {
+        fn arb_testcase()(
+            num_operations in 1usize..5,
+        )(
+            values in vec(
+                prop_oneof![Just(Assigned::Zero), arb_trivial(), arb_rational()],
+                num_operations + 1),
+            operations in vec(select(OPERATIONS), num_operations),
+        ) -> (Vec<Assigned<Fp>>, Vec<Operation>) {
+            (values, operations)
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn operation_commutativity((values, operations) in arb_testcase()) {
+            // Evaluate the values at the start.
+            let elements: Vec<_> = values.iter().cloned().map(|v| v.evaluate()).collect();
+
+            // Apply the operations to both the deferred and evaluated values.
+            let deferred_result = {
+                let mut ops = operations.iter();
+                values.into_iter().reduce(|a, b| ops.next().unwrap().apply(a, b)).unwrap()
+            };
+            let evaluated_result = {
+                let mut ops = operations.iter();
+                elements.into_iter().reduce(|a, b| ops.next().unwrap().apply(a, b)).unwrap()
+            };
+
+            // The two should be equal, i.e. deferred inversion should commute with the
+            // list of operations.
+            assert_eq!(deferred_result.evaluate(), evaluated_result);
+        }
+    }
+}
