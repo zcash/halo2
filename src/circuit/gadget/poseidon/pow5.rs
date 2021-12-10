@@ -8,7 +8,7 @@ use halo2::{
     poly::Rotation,
 };
 
-use super::{PoseidonInstructions, PoseidonSpongeInstructions};
+use super::{PaddedWord, PoseidonInstructions, PoseidonSpongeInstructions};
 use crate::circuit::gadget::utilities::Var;
 use crate::primitives::poseidon::{Domain, Mds, Spec, SpongeRate, State};
 
@@ -271,7 +271,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
 impl<
         F: FieldExt,
         S: Spec<F, WIDTH, RATE>,
-        D: Domain<F, WIDTH, RATE>,
+        D: Domain<F, RATE>,
         const WIDTH: usize,
         const RATE: usize,
     > PoseidonSpongeInstructions<F, S, D, WIDTH, RATE> for Pow5Chip<F, WIDTH, RATE>
@@ -309,15 +309,15 @@ impl<
         Ok(state.try_into().unwrap())
     }
 
-    fn pad_and_add(
+    fn add_input(
         &self,
         layouter: &mut impl Layouter<F>,
         initial_state: &State<Self::Word, WIDTH>,
-        input: &SpongeRate<Self::Word, RATE>,
+        input: &SpongeRate<PaddedWord<F>, RATE>,
     ) -> Result<State<Self::Word, WIDTH>, Error> {
         let config = self.config();
         layouter.assign_region(
-            || format!("pad-and-add for domain {}", D::name()),
+            || format!("add input for domain {}", D::name()),
             |mut region| {
                 config.s_pad_and_add.enable(&mut region, 1)?;
 
@@ -337,19 +337,17 @@ impl<
                     (0..WIDTH).map(load_state_word).collect();
                 let initial_state = initial_state?;
 
-                let padding_values = D::padding();
-
-                // Load the input and padding into this region.
+                // Load the input into this region.
                 let load_input_word = |i: usize| {
-                    let constraint_var = match (input[i].clone(), padding_values[i]) {
-                        (Some(word), None) => word.0,
-                        (None, Some(padding_value)) => region.assign_fixed(
+                    let constraint_var = match input[i].clone() {
+                        Some(PaddedWord::Message(word)) => word,
+                        Some(PaddedWord::Padding(padding_value)) => region.assign_fixed(
                             || format!("load pad_{}", i),
                             config.rc_b[i],
                             1,
                             || Ok(padding_value),
                         )?,
-                        _ => panic!("Input and padding don't match"),
+                        _ => panic!("Input is not padded"),
                     };
                     constraint_var
                         .copy_advice(
