@@ -9,8 +9,11 @@ use halo2::{
 };
 
 use super::{PaddedWord, PoseidonInstructions, PoseidonSpongeInstructions};
-use crate::circuit::gadget::utilities::Var;
-use crate::primitives::poseidon::{Domain, Mds, Spec, SpongeRate, State};
+use crate::primitives::poseidon::{Domain, Mds, Spec, State};
+use crate::{
+    circuit::gadget::utilities::Var,
+    primitives::poseidon::{Absorbing, Squeezing},
+};
 
 /// Configuration for a [`Pow5Chip`].
 #[derive(Clone, Debug)]
@@ -313,7 +316,7 @@ impl<
         &self,
         layouter: &mut impl Layouter<F>,
         initial_state: &State<Self::Word, WIDTH>,
-        input: &SpongeRate<PaddedWord<F>, RATE>,
+        input: &Absorbing<PaddedWord<F>, RATE>,
     ) -> Result<State<Self::Word, WIDTH>, Error> {
         let config = self.config();
         layouter.assign_region(
@@ -339,7 +342,7 @@ impl<
 
                 // Load the input into this region.
                 let load_input_word = |i: usize| {
-                    let constraint_var = match input[i].clone() {
+                    let constraint_var = match input.0[i].clone() {
                         Some(PaddedWord::Message(word)) => word,
                         Some(PaddedWord::Padding(padding_value)) => region.assign_fixed(
                             || format!("load pad_{}", i),
@@ -387,13 +390,15 @@ impl<
         )
     }
 
-    fn get_output(state: &State<Self::Word, WIDTH>) -> SpongeRate<Self::Word, RATE> {
-        state[..RATE]
-            .iter()
-            .map(|word| Some(word.clone()))
-            .collect::<Vec<_>>()
-            .try_into()
-            .unwrap()
+    fn get_output(state: &State<Self::Word, WIDTH>) -> Squeezing<Self::Word, RATE> {
+        Squeezing(
+            state[..RATE]
+                .iter()
+                .map(|word| Some(word.clone()))
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap(),
+        )
     }
 }
 

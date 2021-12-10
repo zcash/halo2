@@ -16,7 +16,7 @@ mod pow5;
 pub use pow5::{Pow5Chip, Pow5Config, StateWord};
 
 use crate::primitives::poseidon::{
-    Absorbing, ConstantLength, Domain, Spec, SpongeMode, SpongeRate, Squeezing, State,
+    Absorbing, ConstantLength, Domain, Spec, SpongeMode, Squeezing, State,
 };
 
 /// A word from the padded input to a Poseidon sponge.
@@ -63,11 +63,11 @@ pub trait PoseidonSpongeInstructions<
         &self,
         layouter: &mut impl Layouter<F>,
         initial_state: &State<Self::Word, T>,
-        input: &SpongeRate<PaddedWord<F>, RATE>,
+        input: &Absorbing<PaddedWord<F>, RATE>,
     ) -> Result<State<Self::Word, T>, Error>;
 
     /// Extracts sponge output from the given state.
-    fn get_output(state: &State<Self::Word, T>) -> SpongeRate<Self::Word, RATE>;
+    fn get_output(state: &State<Self::Word, T>) -> Squeezing<Self::Word, RATE>;
 }
 
 /// A word over which the Poseidon permutation operates.
@@ -112,9 +112,11 @@ fn poseidon_sponge<
     chip: &PoseidonChip,
     mut layouter: impl Layouter<F>,
     state: &mut State<PoseidonChip::Word, T>,
-    input: &SpongeRate<PaddedWord<F>, RATE>,
-) -> Result<SpongeRate<PoseidonChip::Word, RATE>, Error> {
-    *state = chip.add_input(&mut layouter, state, input)?;
+    input: Option<&Absorbing<PaddedWord<F>, RATE>>,
+) -> Result<Squeezing<PoseidonChip::Word, RATE>, Error> {
+    if let Some(input) = input {
+        *state = chip.add_input(&mut layouter, state, input)?;
+    }
     *state = chip.permute(&mut layouter, state)?;
     Ok(PoseidonChip::get_output(state))
 }
@@ -179,7 +181,7 @@ impl<
             &self.chip,
             layouter.namespace(|| "PoseidonSponge"),
             &mut self.state,
-            &self.mode.0,
+            Some(&self.mode),
         )?;
         self.mode = Absorbing::init_with(value);
 
@@ -193,12 +195,12 @@ impl<
         mut layouter: impl Layouter<F>,
     ) -> Result<Sponge<F, PoseidonChip, S, Squeezing<PoseidonChip::Word, RATE>, D, T, RATE>, Error>
     {
-        let mode = Squeezing(poseidon_sponge(
+        let mode = poseidon_sponge(
             &self.chip,
             layouter.namespace(|| "PoseidonSponge"),
             &mut self.state,
-            &self.mode.0,
-        )?);
+            Some(&self.mode),
+        )?;
 
         Ok(Sponge {
             chip: self.chip,
@@ -228,16 +230,12 @@ impl<
             }
 
             // We've already squeezed out all available elements
-            self.mode = Squeezing(poseidon_sponge(
+            self.mode = poseidon_sponge(
                 &self.chip,
                 layouter.namespace(|| "PoseidonSponge"),
                 &mut self.state,
-                &(0..RATE)
-                    .map(|_| Some(PaddedWord::Padding(F::zero())))
-                    .collect::<Vec<_>>()
-                    .try_into()
-                    .unwrap(),
-            )?);
+                None,
+            )?;
         }
     }
 }

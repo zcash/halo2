@@ -126,14 +126,16 @@ pub(crate) fn permute<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RA
 
 fn poseidon_sponge<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
     state: &mut State<F, T>,
-    input: &SpongeRate<F, RATE>,
+    input: Option<&Absorbing<F, RATE>>,
     mds_matrix: &Mds<F, T>,
     round_constants: &[[F; T]],
-) -> SpongeRate<F, RATE> {
-    // `Iterator::zip` short-circuits when one iterator completes, so this will only
-    // mutate the rate portion of the state.
-    for (word, value) in state.iter_mut().zip(input.iter()) {
-        *word += value.expect("poseidon_sponge is called with a padded input");
+) -> Squeezing<F, RATE> {
+    if let Some(Absorbing(input)) = input {
+        // `Iterator::zip` short-circuits when one iterator completes, so this will only
+        // mutate the rate portion of the state.
+        for (word, value) in state.iter_mut().zip(input.iter()) {
+            *word += value.expect("poseidon_sponge is called with a padded input");
+        }
     }
 
     permute::<F, S, T, RATE>(state, mds_matrix, round_constants);
@@ -142,7 +144,7 @@ fn poseidon_sponge<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE:
     for (word, value) in output.iter_mut().zip(state.iter()) {
         *word = Some(*value);
     }
-    output
+    Squeezing(output)
 }
 
 /// The state of the [`Sponge`].
@@ -219,7 +221,7 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
         // We've already absorbed as many elements as we can
         let _ = poseidon_sponge::<F, S, T, RATE>(
             &mut self.state,
-            &self.mode.0,
+            Some(&self.mode),
             &self.mds_matrix,
             &self.round_constants,
         );
@@ -228,12 +230,12 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
 
     /// Transitions the sponge into its squeezing state.
     pub(crate) fn finish_absorbing(mut self) -> Sponge<F, S, Squeezing<F, RATE>, T, RATE> {
-        let mode = Squeezing(poseidon_sponge::<F, S, T, RATE>(
+        let mode = poseidon_sponge::<F, S, T, RATE>(
             &mut self.state,
-            &self.mode.0,
+            Some(&self.mode),
             &self.mds_matrix,
             &self.round_constants,
-        ));
+        );
 
         Sponge {
             mode,
@@ -258,12 +260,12 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
             }
 
             // We've already squeezed out all available elements
-            self.mode = Squeezing(poseidon_sponge::<F, S, T, RATE>(
+            self.mode = poseidon_sponge::<F, S, T, RATE>(
                 &mut self.state,
-                &self.mode.0,
+                None,
                 &self.mds_matrix,
                 &self.round_constants,
-            ));
+            );
         }
     }
 }
