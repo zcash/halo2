@@ -522,7 +522,10 @@ mod proptests {
         /// Generates half of the denominators as zero to represent a deferred inversion.
         fn arb_rational()(
             numerator in arb_element(),
-            denominator in prop_oneof![Just(Fp::zero()), arb_element()],
+            denominator in prop_oneof![
+                1 => Just(Fp::zero()),
+                2 => arb_element(),
+            ],
         ) -> Assigned<Fp> {
             Assigned::Rational(numerator, denominator)
         }
@@ -546,7 +549,11 @@ mod proptests {
             num_binary in 0usize..5,
         )(
             values in vec(
-                prop_oneof![Just(Assigned::Zero), arb_trivial(), arb_rational()],
+                prop_oneof![
+                    1 => Just(Assigned::Zero),
+                    2 => arb_trivial(),
+                    2 => arb_rational(),
+                ],
                 // Ensure that:
                 // - we have at least one value to apply unary operators to.
                 // - we can apply every binary operator pairwise sequentially.
