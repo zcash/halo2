@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Neg, Sub};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use group::ff::Field;
 
@@ -121,6 +121,25 @@ impl<F: Field> Add<F> for Assigned<F> {
     }
 }
 
+impl<F: Field> Add<&Assigned<F>> for Assigned<F> {
+    type Output = Assigned<F>;
+    fn add(self, rhs: &Self) -> Assigned<F> {
+        self + *rhs
+    }
+}
+
+impl<F: Field> AddAssign for Assigned<F> {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
+impl<F: Field> AddAssign<&Assigned<F>> for Assigned<F> {
+    fn add_assign(&mut self, rhs: &Self) {
+        *self = *self + rhs;
+    }
+}
+
 impl<F: Field> Sub for Assigned<F> {
     type Output = Assigned<F>;
     fn sub(self, rhs: Assigned<F>) -> Assigned<F> {
@@ -132,6 +151,25 @@ impl<F: Field> Sub<F> for Assigned<F> {
     type Output = Assigned<F>;
     fn sub(self, rhs: F) -> Assigned<F> {
         self + (-rhs)
+    }
+}
+
+impl<F: Field> Sub<&Assigned<F>> for Assigned<F> {
+    type Output = Assigned<F>;
+    fn sub(self, rhs: &Self) -> Assigned<F> {
+        self - *rhs
+    }
+}
+
+impl<F: Field> SubAssign for Assigned<F> {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
+impl<F: Field> SubAssign<&Assigned<F>> for Assigned<F> {
+    fn sub_assign(&mut self, rhs: &Self) {
+        *self = *self - rhs;
     }
 }
 
@@ -160,6 +198,25 @@ impl<F: Field> Mul<F> for Assigned<F> {
     type Output = Assigned<F>;
     fn mul(self, rhs: F) -> Assigned<F> {
         self * Self::Trivial(rhs)
+    }
+}
+
+impl<F: Field> Mul<&Assigned<F>> for Assigned<F> {
+    type Output = Assigned<F>;
+    fn mul(self, rhs: &Assigned<F>) -> Assigned<F> {
+        self * *rhs
+    }
+}
+
+impl<F: Field> MulAssign for Assigned<F> {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = *self * rhs;
+    }
+}
+
+impl<F: Field> MulAssign<&Assigned<F>> for Assigned<F> {
+    fn mul_assign(&mut self, rhs: &Self) {
+        *self = *self * rhs;
     }
 }
 
