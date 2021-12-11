@@ -251,6 +251,36 @@ impl<F: Field> Assigned<F> {
         }
     }
 
+    /// Doubles this element.
+    #[must_use]
+    pub fn double(&self) -> Self {
+        match self {
+            Self::Zero => Self::Zero,
+            Self::Trivial(x) => Self::Trivial(x.double()),
+            Self::Rational(numerator, denominator) => {
+                Self::Rational(numerator.double(), *denominator)
+            }
+        }
+    }
+
+    /// Squares this element.
+    #[must_use]
+    pub fn square(&self) -> Self {
+        match self {
+            Self::Zero => Self::Zero,
+            Self::Trivial(x) => Self::Trivial(x.square()),
+            Self::Rational(numerator, denominator) => {
+                Self::Rational(numerator.square(), denominator.square())
+            }
+        }
+    }
+
+    /// Cubes this element.
+    #[must_use]
+    pub fn cube(&self) -> Self {
+        self.square() * self
+    }
+
     /// Inverts this assigned value (taking the inverse of zero to be zero).
     pub fn invert(&self) -> Self {
         match self {
