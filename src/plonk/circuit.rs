@@ -1148,8 +1148,7 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
-    fn query_any_index<C: Into<Column<Any>>>(&mut self, column: C, at: Rotation) -> usize {
-        let column = column.into();
+    fn query_any_index(&mut self, column: Column<Any>, at: Rotation) -> usize {
         match column.column_type() {
             Any::Advice => self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
             Any::Fixed => self.query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
@@ -1189,12 +1188,11 @@ impl<F: Field> ConstraintSystem<F> {
         panic!("get_instance_query_index called for non-existent query");
     }
 
-    pub(crate) fn get_any_query_index<C: Into<Column<Any>> + Copy>(
+    pub(crate) fn get_any_query_index(
         &self,
-        column: C,
+        column: Column<Any>,
         at: Rotation,
     ) -> usize {
-        let column = column.into();
         match column.column_type() {
             Any::Advice => {
                 self.get_advice_query_index(Column::<Advice>::try_from(column).unwrap(), at)

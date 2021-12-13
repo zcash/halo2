@@ -61,8 +61,7 @@ impl Argument {
         3
     }
 
-    pub(crate) fn add_column<C: Into<Column<Any>>>(&mut self, column: C) {
-        let column = column.into();
+    pub(crate) fn add_column(&mut self, column: Column<Any>) {
         if !self.columns.contains(&column) {
             self.columns.push(column);
         }
