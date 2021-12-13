@@ -21,6 +21,9 @@ and this project adheres to Rust's notion of
   regular parameter APIs.
 - `halo2::dev::VerifyFailure::ConstraintNotSatisfied` now has a `cell_values`
   field, storing the values of the cells used in the unsatisfied constraint.
+- `halo2::plonk::ConstraintSystem::enable_equality` and 
+  `halo2::plonk::ConstraintSystem::query_any` now take `Into<Column<Any>>` instead 
+  of `Column<Any>` as a parameter to avoid excesive `.into()` usage.
 
 ### Removed
 - `halo2::arithmetic::BatchInvert` (use `ff::BatchInvert` instead).
