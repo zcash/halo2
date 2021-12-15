@@ -248,17 +248,15 @@ fn test_lagrange_coeffs<C: CurveAffine>(base: C, num_windows: usize) {
 //      1. z + y = u^2,
 //      2. z - y is not a square
 // for the y-coordinate of each fixed-base multiple in each window.
-fn test_zs_and_us<C: CurveAffine>(base: C, z: &[u64], u: &[[[u8; 32]; H]], num_windows: usize) {
+fn test_zs_and_us(base: pallas::Affine, z: &[u64], u: &[[[u8; 32]; H]], num_windows: usize) {
     let window_table = compute_window_table(base, num_windows);
 
     for ((u, z), window_points) in u.iter().zip(z.iter()).zip(window_table) {
         for (u, point) in u.iter().zip(window_points.iter()) {
             let y = *point.coordinates().unwrap().y();
-            let mut u_repr = <C::Base as PrimeField>::Repr::default();
-            u_repr.as_mut().copy_from_slice(u);
-            let u = C::Base::from_repr(u_repr).unwrap();
-            assert_eq!(C::Base::from(*z) + y, u * u); // allow either square root
-            assert!(bool::from((C::Base::from(*z) - y).sqrt().is_none()));
+            let u = pallas::Base::from_repr(*u).unwrap();
+            assert_eq!(pallas::Base::from(*z) + y, u * u); // allow either square root
+            assert!(bool::from((pallas::Base::from(*z) - y).sqrt().is_none()));
         }
     }
 }

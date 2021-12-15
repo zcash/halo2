@@ -3,7 +3,7 @@ use crate::circuit::gadget::{
     ecc::{self, EccInstructions},
     utilities::Var,
 };
-use ff::PrimeField;
+use group::ff::{Field, PrimeField};
 use halo2::{circuit::Layouter, plonk::Error};
 use pasta_curves::arithmetic::CurveAffine;
 use std::fmt::Debug;
@@ -194,25 +194,19 @@ where
 
         // Closure to parse a bitstring (little-endian) into a base field element.
         let to_base_field = |bits: &[Option<bool>]| -> Option<C::Base> {
-            assert!(bits.len() <= C::Base::NUM_BITS as usize);
+            // To simplify the following logic, require that the all-ones bitstring is
+            // canonical in the field, by not allowing a length of NUM_BITS.
+            assert!(bits.len() < C::Base::NUM_BITS as usize);
 
             let bits: Option<Vec<bool>> = bits.iter().cloned().collect();
-            let bytes: Option<Vec<u8>> = bits.map(|bits| {
-                // Pad bits to 256 bits
-                let pad_len = 256 - bits.len();
-                let mut bits = bits;
-                bits.extend_from_slice(&vec![false; pad_len]);
-
-                bits.chunks_exact(8)
-                    .map(|byte| byte.iter().rev().fold(0u8, |acc, bit| acc * 2 + *bit as u8))
-                    .collect()
-            });
-            bytes.map(|bytes| {
-                let mut repr = <C::Base as PrimeField>::Repr::default();
-                // The above code assumes the byte representation is 256 bits.
-                assert_eq!(repr.as_ref().len(), 32);
-                repr.as_mut().copy_from_slice(&bytes);
-                C::Base::from_repr(repr).unwrap()
+            bits.map(|bits| {
+                bits.into_iter().rev().fold(C::Base::zero(), |acc, bit| {
+                    if bit {
+                        acc.double() + C::Base::one()
+                    } else {
+                        acc.double()
+                    }
+                })
             })
         };
 

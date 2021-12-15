@@ -87,27 +87,24 @@ pub fn ternary<F: FieldExt>(a: Expression<F>, b: Expression<F>, c: Expression<F>
 /// Takes a specified subsequence of the little-endian bit representation of a field element.
 /// The bits are numbered from 0 for the LSB.
 pub fn bitrange_subset<F: PrimeFieldBits>(field_elem: &F, bitrange: Range<usize>) -> F {
+    // We can allow a subsequence of length NUM_BITS, because
+    // field_elem.to_le_bits() returns canonical bitstrings.
     assert!(bitrange.end <= F::NUM_BITS as usize);
 
-    let bits: Vec<bool> = field_elem
+    field_elem
         .to_le_bits()
         .iter()
         .by_val()
         .skip(bitrange.start)
         .take(bitrange.end - bitrange.start)
-        .chain(std::iter::repeat(false))
-        .take(256)
-        .collect();
-    let bytearray: Vec<u8> = bits
-        .chunks_exact(8)
-        .map(|byte| byte.iter().rev().fold(0u8, |acc, bit| acc * 2 + *bit as u8))
-        .collect();
-
-    let mut repr = F::Repr::default();
-    // The above code assumes the byte representation is 256 bits.
-    assert_eq!(repr.as_ref().len(), 32);
-    repr.as_mut().copy_from_slice(&bytearray);
-    F::from_repr(repr).unwrap()
+        .rev()
+        .fold(F::zero(), |acc, bit| {
+            if bit {
+                acc.double() + F::one()
+            } else {
+                acc.double()
+            }
+        })
 }
 
 /// Check that an expression is in the small range [0..range),

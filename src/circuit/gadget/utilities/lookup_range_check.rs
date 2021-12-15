@@ -364,7 +364,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
 mod tests {
     use super::LookupRangeCheckConfig;
 
-    use crate::primitives::sinsemilla::{INV_TWO_POW_K, K};
+    use crate::primitives::sinsemilla::K;
     use crate::spec::lebs2ip;
     use ff::{Field, PrimeFieldBits};
     use halo2::{
@@ -431,9 +431,7 @@ mod tests {
                             .collect::<Vec<_>>()
                     };
                     let expected_zs = {
-                        let mut repr = F::Repr::default();
-                        repr.as_mut().copy_from_slice(&INV_TWO_POW_K);
-                        let inv_two_pow_k = F::from_repr(repr).unwrap();
+                        let inv_two_pow_k = F::from(1 << K).invert().unwrap();
                         chunks.iter().fold(vec![element], |mut zs, a_i| {
                             // z_{i + 1} = (z_i - a_i) / 2^{K}
                             let z = (zs[zs.len() - 1] - a_i) * inv_two_pow_k;
