@@ -135,7 +135,7 @@ pub struct Sponge<
     chip: PoseidonChip,
     mode: M,
     state: State<PoseidonChip::Word, T>,
-    _marker: PhantomData<(M, D)>,
+    _marker: PhantomData<D>,
 }
 
 impl<

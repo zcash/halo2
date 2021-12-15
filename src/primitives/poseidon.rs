@@ -186,7 +186,7 @@ pub(crate) struct Sponge<
     state: State<F, T>,
     mds_matrix: Mds<F, T>,
     round_constants: Vec<[F; T]>,
-    _marker: PhantomData<(S, M)>,
+    _marker: PhantomData<S>,
 }
 
 impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
