@@ -181,14 +181,17 @@ impl SpendValidatingKey {
     pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
         <[u8; 32]>::try_from(bytes)
             .ok()
-            .and_then(|b|
-                // check that the sign of the y-coordinate is positive
-                if b[31] & 0x80 == 0 {
+            .and_then(|b| {
+                // Structural validity checks for ak_P:
+                // - The point must not be the identity
+                //   (which for Pallas is canonically encoded as all-zeroes).
+                // - The sign of the y-coordinate must be positive.
+                if b != [0; 32] && b[31] & 0x80 == 0 {
                     <redpallas::VerificationKey<SpendAuth>>::try_from(b).ok()
                 } else {
                     None
                 }
-            )
+            })
             .map(SpendValidatingKey)
     }
 }
@@ -837,6 +840,12 @@ mod tests {
         value::NoteValue,
         Note,
     };
+
+    #[test]
+    fn spend_validating_key_from_bytes() {
+        // ak_P must not be the identity.
+        assert!(SpendValidatingKey::from_bytes(&[0; 32]).is_none());
+    }
 
     #[test]
     fn parsers_reject_invalid() {
