@@ -28,9 +28,9 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     /// A piece in a message containing a number of `K`-bit words.
     /// A [`Self::MessagePiece`] fits in a single base field element,
     /// which means it can only contain up to `N` words, where
-    /// `N*K <= C::Base::NUM_BITS`.
+    /// `N*K <= C::Base::CAPACITY`.
     ///
-    /// For example, in the case `K = 10`, `NUM_BITS = 255`, we can fit
+    /// For example, in the case `K = 10`, `CAPACITY = 254`, we can fit
     /// up to `N = 25` words in a single base field element.
     type MessagePiece: Clone + Debug;
 
@@ -118,8 +118,8 @@ where
         // Message must have at most `MAX_WORDS` words.
         assert!(bitstring.len() / K <= MAX_WORDS);
 
-        // Message piece must be at most `ceil(C::NUM_BITS / K)` bits
-        let piece_num_words = C::Base::NUM_BITS as usize / K;
+        // Each message piece must have at most `floor(C::CAPACITY / K)` words.
+        let piece_num_words = C::Base::CAPACITY as usize / K;
         let pieces: Result<Vec<_>, _> = bitstring
             .chunks(piece_num_words * K)
             .enumerate()
@@ -188,16 +188,13 @@ where
         assert_eq!(bitstring.len() % K, 0);
         let num_words = bitstring.len() / K;
 
-        // Message piece must be at most `ceil(C::Base::NUM_BITS / K)` bits
-        let piece_max_num_words = C::Base::NUM_BITS as usize / K;
+        // Each message piece must have at most `floor(C::Base::CAPACITY / K)` words.
+        // This ensures that the all-ones bitstring is canonical in the field.
+        let piece_max_num_words = C::Base::CAPACITY as usize / K;
         assert!(num_words <= piece_max_num_words as usize);
 
         // Closure to parse a bitstring (little-endian) into a base field element.
         let to_base_field = |bits: &[Option<bool>]| -> Option<C::Base> {
-            // To simplify the following logic, require that the all-ones bitstring is
-            // canonical in the field, by not allowing a length of NUM_BITS.
-            assert!(bits.len() <= C::Base::CAPACITY as usize);
-
             let bits: Option<Vec<bool>> = bits.iter().cloned().collect();
             bits.map(|bits| {
                 bits.into_iter().rev().fold(C::Base::zero(), |acc, bit| {
