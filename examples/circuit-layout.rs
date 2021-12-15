@@ -188,9 +188,9 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
         let c = meta.advice_column();
         let d = meta.advice_column();
 
-        meta.enable_equality(a.into());
-        meta.enable_equality(b.into());
-        meta.enable_equality(c.into());
+        meta.enable_equality(a);
+        meta.enable_equality(b);
+        meta.enable_equality(c);
 
         let sm = meta.fixed_column();
         let sa = meta.fixed_column();
@@ -214,7 +214,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
          * ]
          */
         meta.lookup(|meta| {
-            let a_ = meta.query_any(a.into(), Rotation::cur());
+            let a_ = meta.query_any(a, Rotation::cur());
             vec![(a_, sl)]
         });
 

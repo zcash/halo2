@@ -1062,12 +1062,13 @@ impl<F: Field> ConstraintSystem<F> {
     pub fn enable_constant(&mut self, column: Column<Fixed>) {
         if !self.constants.contains(&column) {
             self.constants.push(column);
-            self.enable_equality(column.into());
+            self.enable_equality(column);
         }
     }
 
     /// Enable the ability to enforce equality over cells in this column
-    pub fn enable_equality(&mut self, column: Column<Any>) {
+    pub fn enable_equality<C: Into<Column<Any>>>(&mut self, column: C) {
+        let column = column.into();
         self.query_any_index(column, Rotation::cur());
         self.permutation.add_column(column);
     }
@@ -1556,7 +1557,8 @@ impl<'a, F: Field> VirtualCells<'a, F> {
     }
 
     /// Query an Any column at a relative position
-    pub fn query_any(&mut self, column: Column<Any>, at: Rotation) -> Expression<F> {
+    pub fn query_any<C: Into<Column<Any>>>(&mut self, column: C, at: Rotation) -> Expression<F> {
+        let column = column.into();
         match column.column_type() {
             Any::Advice => self.query_advice(Column::<Advice>::try_from(column).unwrap(), at),
             Any::Fixed => self.query_fixed(Column::<Fixed>::try_from(column).unwrap(), at),
