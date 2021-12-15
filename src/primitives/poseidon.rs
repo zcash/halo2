@@ -147,15 +147,15 @@ fn poseidon_sponge<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE:
     Squeezing(output)
 }
 
-/// The state of the [`Sponge`].
+/// The state of the `Sponge`.
 // TODO: Seal this trait?
 pub trait SpongeMode {}
 
-/// The absorbing state of the [`Sponge`].
+/// The absorbing state of the `Sponge`.
 #[derive(Debug)]
 pub struct Absorbing<F, const RATE: usize>(pub(crate) SpongeRate<F, RATE>);
 
-/// The squeezing state of the [`Sponge`].
+/// The squeezing state of the `Sponge`.
 #[derive(Debug)]
 pub struct Squeezing<F, const RATE: usize>(pub(crate) SpongeRate<F, RATE>);
 
@@ -307,8 +307,8 @@ impl<F: FieldExt, const RATE: usize, const L: usize> Domain<F, RATE> for Constan
     fn padding(input_len: usize) -> Self::Padding {
         assert_eq!(input_len, L);
         // For constant-input-length hashing, we pad the input with zeroes to a multiple
-        // of RATE. On its own this is not sponge-compliant padding, but the Poseidon
-        // authors instead encode the constant length into the capacity element, ensuring
+        // of RATE. On its own this would not be sponge-compliant padding, but the
+        // Poseidon authors encode the constant length into the capacity element, ensuring
         // that inputs of different lengths do not share the same permutation.
         let k = (L + RATE - 1) / RATE;
         iter::repeat(F::zero()).take(k * RATE - L)
