@@ -147,9 +147,14 @@ fn poseidon_sponge<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE:
     Squeezing(output)
 }
 
+mod private {
+    pub trait SealedSpongeMode {}
+    impl<F, const RATE: usize> SealedSpongeMode for super::Absorbing<F, RATE> {}
+    impl<F, const RATE: usize> SealedSpongeMode for super::Squeezing<F, RATE> {}
+}
+
 /// The state of the `Sponge`.
-// TODO: Seal this trait?
-pub trait SpongeMode {}
+pub trait SpongeMode: private::SealedSpongeMode {}
 
 /// The absorbing state of the `Sponge`.
 #[derive(Debug)]
