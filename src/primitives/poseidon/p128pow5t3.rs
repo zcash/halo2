@@ -292,7 +292,8 @@ mod tests {
                 Fp::from_repr(tv.input[1]).unwrap(),
             ];
 
-            let result = Hash::<_, super::P128Pow5T3, _, 3, 2>::init(ConstantLength).hash(message);
+            let result =
+                Hash::<_, super::P128Pow5T3, ConstantLength<2>, 3, 2>::init().hash(message);
 
             assert_eq!(result.to_repr(), tv.output);
         }
@@ -303,7 +304,8 @@ mod tests {
                 Fq::from_repr(tv.input[1]).unwrap(),
             ];
 
-            let result = Hash::<_, super::P128Pow5T3, _, 3, 2>::init(ConstantLength).hash(message);
+            let result =
+                Hash::<_, super::P128Pow5T3, ConstantLength<2>, 3, 2>::init().hash(message);
 
             assert_eq!(result.to_repr(), tv.output);
         }

@@ -101,10 +101,9 @@ where
             },
         )?;
 
-        let hasher = Hash::<_, _, S, _, WIDTH, RATE>::init(
+        let hasher = Hash::<_, _, S, ConstantLength<L>, WIDTH, RATE>::init(
             chip,
             layouter.namespace(|| "init"),
-            ConstantLength::<L>,
         )?;
         let output = hasher.hash(layouter.namespace(|| "hash"), message)?;
 
@@ -210,7 +209,7 @@ fn bench_poseidon<S, const WIDTH: usize, const RATE: usize, const L: usize>(
         .collect::<Vec<_>>()
         .try_into()
         .unwrap();
-    let output = poseidon::Hash::<_, S, _, WIDTH, RATE>::init(ConstantLength::<L>).hash(message);
+    let output = poseidon::Hash::<_, S, ConstantLength<L>, WIDTH, RATE>::init().hash(message);
 
     let circuit = HashCircuit::<S, WIDTH, RATE, L> {
         message: Some(message),
