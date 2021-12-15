@@ -196,7 +196,7 @@ where
         let to_base_field = |bits: &[Option<bool>]| -> Option<C::Base> {
             // To simplify the following logic, require that the all-ones bitstring is
             // canonical in the field, by not allowing a length of NUM_BITS.
-            assert!(bits.len() < C::Base::NUM_BITS as usize);
+            assert!(bits.len() <= C::Base::CAPACITY as usize);
 
             let bits: Option<Vec<bool>> = bits.iter().cloned().collect();
             bits.map(|bits| {
