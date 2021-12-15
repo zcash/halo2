@@ -25,7 +25,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     let vk = VerifyingKey::build();
     let pk = ProvingKey::build();
 
-    for num_recipients in 1..=4 {
+    let create_bundle = |num_recipients| {
         let mut builder = Builder::new(
             Flags::from_parts(true, true),
             Anchor::from_bytes([0; 32]).unwrap(),
@@ -43,9 +43,16 @@ fn criterion_benchmark(c: &mut Criterion) {
             .map(|a| a.to_instance(*bundle.flags(), *bundle.anchor()))
             .collect();
 
-        {
-            let mut group = c.benchmark_group("proving");
-            group.sample_size(10);
+        (bundle, instances)
+    };
+
+    let recipients_range = 1..=4;
+
+    {
+        let mut group = c.benchmark_group("proving");
+        group.sample_size(10);
+        for num_recipients in recipients_range.clone() {
+            let (bundle, instances) = create_bundle(num_recipients);
             group.bench_function(BenchmarkId::new("bundle", num_recipients), |b| {
                 b.iter(|| {
                     bundle
@@ -55,9 +62,12 @@ fn criterion_benchmark(c: &mut Criterion) {
                 });
             });
         }
+    }
 
-        {
-            let mut group = c.benchmark_group("verifying");
+    {
+        let mut group = c.benchmark_group("verifying");
+        for num_recipients in recipients_range {
+            let (bundle, instances) = create_bundle(num_recipients);
             let bundle = bundle
                 .create_proof(&pk)
                 .unwrap()
