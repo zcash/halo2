@@ -1580,6 +1580,8 @@
 <span id="1564">1564</span>
 <span id="1565">1565</span>
 <span id="1566">1566</span>
+<span id="1567">1567</span>
+<span id="1568">1568</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">core::cmp::max</span>;
 <span class="kw">use</span> <span class="ident">core::ops</span>::{<span class="ident">Add</span>, <span class="ident">Mul</span>};
 <span class="kw">use</span> <span class="ident">ff::Field</span>;
@@ -2644,12 +2646,13 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">enable_constant</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>) {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">constants</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">column</span>) {
             <span class="self">self</span>.<span class="ident">constants</span>.<span class="ident">push</span>(<span class="ident">column</span>);
-            <span class="self">self</span>.<span class="ident">enable_equality</span>(<span class="ident">column</span>.<span class="ident">into</span>());
+            <span class="self">self</span>.<span class="ident">enable_equality</span>(<span class="ident">column</span>);
         }
     }
 
     <span class="doccomment">/// Enable the ability to enforce equality over cells in this column</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">enable_equality</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">enable_equality</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">column</span>: <span class="ident">C</span>) {
+        <span class="kw">let</span> <span class="ident">column</span> <span class="op">=</span> <span class="ident">column</span>.<span class="ident">into</span>();
         <span class="self">self</span>.<span class="ident">query_any_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>());
         <span class="self">self</span>.<span class="ident">permutation</span>.<span class="ident">add_column</span>(<span class="ident">column</span>);
     }
@@ -3138,7 +3141,8 @@
     }
 
     <span class="doccomment">/// Query an Any column at a relative position</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">query_any</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>, <span class="ident">at</span>: <span class="ident">Rotation</span>) -&gt; <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">query_any</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">column</span>: <span class="ident">C</span>, <span class="ident">at</span>: <span class="ident">Rotation</span>) -&gt; <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">column</span> <span class="op">=</span> <span class="ident">column</span>.<span class="ident">into</span>();
         <span class="kw">match</span> <span class="ident">column</span>.<span class="ident">column_type</span>() {
             <span class="ident">Any::Advice</span> =&gt; <span class="self">self</span>.<span class="ident">query_advice</span>(<span class="ident">Column</span>::<span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span><span class="ident">::try_from</span>(<span class="ident">column</span>).<span class="ident">unwrap</span>(), <span class="ident">at</span>),
             <span class="ident">Any::Fixed</span> =&gt; <span class="self">self</span>.<span class="ident">query_fixed</span>(<span class="ident">Column</span>::<span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span><span class="ident">::try_from</span>(<span class="ident">column</span>).<span class="ident">unwrap</span>(), <span class="ident">at</span>),

@@ -245,10 +245,10 @@ impl&lt;F: FieldExt&gt; FieldChip&lt;F&gt; {
         instance: Column&lt;Instance&gt;,
         constant: Column&lt;Fixed&gt;,
     ) -&gt; &lt;Self as Chip&lt;F&gt;&gt;::Config {
-        meta.enable_equality(instance.into());
+        meta.enable_equality(instance);
         meta.enable_constant(constant);
         for column in &amp;advice {
-            meta.enable_equality((*column).into());
+            meta.enable_equality(*column);
         }
         let s_mul = meta.selector();
 
