@@ -677,7 +677,7 @@ mod tests {
 
             // For the purpose of this test, compute the real final state inline.
             let mut expected_final_state = (0..WIDTH)
-                .map(|idx| Fp::from_u64(idx as u64))
+                .map(|idx| Fp::from(idx as u64))
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap();

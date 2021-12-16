@@ -7,7 +7,7 @@ use halo2::{
     plonk::Error,
 };
 
-use ff::{Field, PrimeFieldBits};
+use group::ff::{Field, PrimeField, PrimeFieldBits};
 use pasta_curves::{
     arithmetic::{CurveAffine, FieldExt},
     pallas,
@@ -224,7 +224,7 @@ impl SinsemillaChip {
                 offset + piece.num_words() - 1,
                 || {
                     Ok(if final_piece {
-                        pallas::Base::from_u64(2)
+                        pallas::Base::from(2)
                     } else {
                         pallas::Base::zero()
                     })
@@ -284,14 +284,14 @@ impl SinsemillaChip {
             // We end up with z_n = 0. (z_n is not directly encoded as a cell value;
             // it is implicitly taken as 0 by adjusting the definition of m_{i+1}.)
             let mut z = piece.field_elem();
-            let inv_2_k = pallas::Base::from_bytes(&INV_TWO_POW_K).unwrap();
+            let inv_2_k = pallas::Base::from_repr(INV_TWO_POW_K).unwrap();
 
             // We do not assign the final z_n as it is constrained to be zero.
             for (idx, word) in words[0..(words.len() - 1)].iter().enumerate() {
                 // z_{i + 1} = (z_i - m_{i + 1}) / 2^K
                 z = z
                     .zip(*word)
-                    .map(|(z, word)| (z - pallas::Base::from_u64(word as u64)) * inv_2_k);
+                    .map(|(z, word)| (z - pallas::Base::from(word as u64)) * inv_2_k);
                 let cell = region.assign_advice(
                     || format!("z_{:?}", idx + 1),
                     config.bits,
@@ -356,7 +356,7 @@ impl SinsemillaChip {
             let lambda_2 = {
                 let lambda_2 = x_a.value().zip(y_a.0).zip(x_r).zip(lambda_1).map(
                     |(((x_a, y_a), x_r), lambda_1)| {
-                        pallas::Base::from_u64(2) * y_a * (x_a - x_r).invert().unwrap() - lambda_1
+                        pallas::Base::from(2) * y_a * (x_a - x_r).invert().unwrap() - lambda_1
                     },
                 );
 

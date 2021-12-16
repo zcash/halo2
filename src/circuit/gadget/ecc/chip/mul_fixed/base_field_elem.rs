@@ -89,7 +89,7 @@ impl Config {
                 let alpha_2_range_check = range_check(alpha_2.clone(), 1 << 1);
                 // Check that α_1 + 2^2 α_2 = z_84_alpha
                 let z_84_alpha_check = z_84_alpha.clone()
-                    - (alpha_1.clone() + alpha_2.clone() * pallas::Base::from_u64(1 << 2));
+                    - (alpha_1.clone() + alpha_2.clone() * pallas::Base::from(1 << 2));
 
                 std::iter::empty()
                     .chain(Some(("alpha_1_range_check", alpha_1_range_check)))
@@ -214,13 +214,13 @@ impl Config {
         #[cfg(test)]
         // Check that the correct multiple is obtained.
         {
-            use group::Curve;
+            use group::{ff::PrimeField, Curve};
 
             let base: super::OrchardFixedBases = base.into();
             let scalar = &scalar
                 .base_field_elem()
                 .value()
-                .map(|scalar| pallas::Scalar::from_bytes(&scalar.to_bytes()).unwrap());
+                .map(|scalar| pallas::Scalar::from_repr(scalar.to_repr()).unwrap());
             let real_mul = scalar.map(|scalar| base.generator() * scalar);
             let result = result.point();
 
@@ -374,7 +374,7 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
-    use group::Curve;
+    use group::{ff::PrimeField, Curve};
     use halo2::{
         circuit::{Chip, Layouter},
         plonk::Error,
@@ -421,7 +421,7 @@ pub mod tests {
             result: Point<pallas::Affine, EccChip>,
         ) -> Result<(), Error> {
             // Move scalar from base field into scalar field (which always fits for Pallas).
-            let scalar = pallas::Scalar::from_bytes(&scalar_val.to_bytes()).unwrap();
+            let scalar = pallas::Scalar::from_repr(scalar_val.to_repr()).unwrap();
             let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
@@ -455,11 +455,11 @@ pub mod tests {
         // (There is another *non-canonical* sequence
         // 5333333333333333333333333333333333333333332711161673731021062440252244051273333333333 in octal.)
         {
-            let h = pallas::Base::from_u64(constants::H as u64);
+            let h = pallas::Base::from(constants::H as u64);
             let scalar_fixed = "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334"
                         .chars()
                         .fold(pallas::Base::zero(), |acc, c| {
-                            acc * &h + &pallas::Base::from_u64(c.to_digit(8).unwrap().into())
+                            acc * &h + &pallas::Base::from(c.to_digit(8).unwrap() as u64)
                         });
             let result = {
                 let scalar_fixed = chip.load_private(

@@ -70,11 +70,11 @@ impl ConditionallySelectable for NonZeroPallasBase {
 
 impl NonZeroPallasBase {
     pub(crate) fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
-        pallas::Base::from_bytes(bytes).and_then(NonZeroPallasBase::from_base)
+        pallas::Base::from_repr(*bytes).and_then(NonZeroPallasBase::from_base)
     }
 
     pub(crate) fn to_bytes(&self) -> [u8; 32] {
-        self.0.to_bytes()
+        self.0.to_repr()
     }
 
     pub(crate) fn from_base(b: pallas::Base) -> CtOption<Self> {
@@ -116,7 +116,7 @@ impl ConditionallySelectable for NonZeroPallasScalar {
 
 impl NonZeroPallasScalar {
     pub(crate) fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
-        pallas::Scalar::from_bytes(bytes).and_then(NonZeroPallasScalar::from_scalar)
+        pallas::Scalar::from_repr(*bytes).and_then(NonZeroPallasScalar::from_scalar)
     }
 
     pub(crate) fn from_scalar(s: pallas::Scalar) -> CtOption<Self> {
@@ -251,8 +251,8 @@ pub(crate) fn extract_p_bottom(point: CtOption<pallas::Point>) -> CtOption<palla
 
 /// The field element representation of a u64 integer represented by
 /// an L-bit little-endian bitstring.
-pub fn lebs2ip_field<F: FieldExt, const L: usize>(bits: &[bool; L]) -> F {
-    F::from_u64(lebs2ip::<L>(bits))
+pub fn lebs2ip_field<F: PrimeField, const L: usize>(bits: &[bool; L]) -> F {
+    F::from(lebs2ip::<L>(bits))
 }
 
 /// The u64 integer represented by an L-bit little-endian bitstring.

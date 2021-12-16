@@ -8,7 +8,7 @@ use crate::constants::{
     load::{NullifierK, OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV, WindowUs},
 };
 
-use group::Curve;
+use group::{ff::PrimeField, Curve};
 use halo2::{
     circuit::{AssignedCell, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, VirtualCells},
@@ -25,10 +25,10 @@ pub mod full_width;
 pub mod short;
 
 lazy_static! {
-    static ref TWO_SCALAR: pallas::Scalar = pallas::Scalar::from_u64(2);
+    static ref TWO_SCALAR: pallas::Scalar = pallas::Scalar::from(2);
     // H = 2^3 (3-bit window)
-    static ref H_SCALAR: pallas::Scalar = pallas::Scalar::from_u64(constants::H as u64);
-    static ref H_BASE: pallas::Base = pallas::Base::from_u64(constants::H as u64);
+    static ref H_SCALAR: pallas::Scalar = pallas::Scalar::from(constants::H as u64);
+    static ref H_BASE: pallas::Base = pallas::Base::from(constants::H as u64);
 }
 
 // A sum type for both full-width and short bases. This enables us to use the
@@ -182,7 +182,7 @@ impl Config {
 
             //    z_{i+1} = (z_i - a_i) / 2^3
             // => a_i = z_i - z_{i+1} * 2^3
-            let word = z_cur - z_next * pallas::Base::from_u64(constants::H as u64);
+            let word = z_cur - z_next * pallas::Base::from(constants::H as u64);
 
             self.coords_check(meta, q_mul_fixed_running_sum, word)
         });
@@ -531,7 +531,7 @@ impl ScalarFixed {
                     let word = z_cur
                         .zip(z_next)
                         .map(|(z_cur, z_next)| z_cur - z_next * *H_BASE);
-                    word.map(|word| pallas::Scalar::from_bytes(&word.to_bytes()).unwrap())
+                    word.map(|word| pallas::Scalar::from_repr(word.to_repr()).unwrap())
                 })
                 .collect::<Vec<_>>()
         };
@@ -543,7 +543,7 @@ impl ScalarFixed {
                 .iter()
                 .map(|bits| {
                     bits.value()
-                        .map(|value| pallas::Scalar::from_bytes(&value.to_bytes()).unwrap())
+                        .map(|value| pallas::Scalar::from_repr(value.to_repr()).unwrap())
                 })
                 .collect::<Vec<_>>(),
         }

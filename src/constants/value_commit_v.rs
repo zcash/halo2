@@ -1,7 +1,5 @@
-use pasta_curves::{
-    arithmetic::{CurveAffine, FieldExt},
-    pallas,
-};
+use group::ff::PrimeField;
+use pasta_curves::{arithmetic::CurveAffine, pallas};
 
 /// The value commitment is used to check balance between inputs and outputs. The value is
 /// placed over this generator.
@@ -776,8 +774,8 @@ pub const U_SHORT: [[[u8; 32]; super::H]; super::NUM_WINDOWS_SHORT] = [
 
 pub fn generator() -> pallas::Affine {
     pallas::Affine::from_xy(
-        pallas::Base::from_bytes(&GENERATOR.0).unwrap(),
-        pallas::Base::from_bytes(&GENERATOR.1).unwrap(),
+        pallas::Base::from_repr(GENERATOR.0).unwrap(),
+        pallas::Base::from_repr(GENERATOR.1).unwrap(),
     )
     .unwrap()
 }
@@ -790,7 +788,7 @@ mod tests {
     use super::*;
     use group::Curve;
     use pasta_curves::{
-        arithmetic::{CurveAffine, CurveExt, FieldExt},
+        arithmetic::{CurveAffine, CurveExt},
         pallas,
     };
 
@@ -800,8 +798,8 @@ mod tests {
         let point = hasher(b"v");
         let coords = point.to_affine().coordinates().unwrap();
 
-        assert_eq!(*coords.x(), pallas::Base::from_bytes(&GENERATOR.0).unwrap());
-        assert_eq!(*coords.y(), pallas::Base::from_bytes(&GENERATOR.1).unwrap());
+        assert_eq!(*coords.x(), pallas::Base::from_repr(GENERATOR.0).unwrap());
+        assert_eq!(*coords.y(), pallas::Base::from_repr(GENERATOR.1).unwrap());
     }
 
     #[test]

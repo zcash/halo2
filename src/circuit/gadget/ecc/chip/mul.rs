@@ -143,7 +143,7 @@ impl Config {
 
             //    z_0 = 2 * z_1 + k_0
             // => k_0 = z_0 - 2 * z_1
-            let lsb = z_0 - z_1 * pallas::Base::from_u64(2);
+            let lsb = z_0 - z_1 * pallas::Base::from(2);
 
             let bool_check = bool_check(lsb.clone());
 
@@ -258,7 +258,7 @@ impl Config {
                     let base = base.point();
                     let alpha = alpha
                         .value()
-                        .map(|alpha| pallas::Scalar::from_bytes(&alpha.to_bytes()).unwrap());
+                        .map(|alpha| pallas::Scalar::from_repr(alpha.to_repr()).unwrap());
                     let real_mul = base.zip(alpha).map(|(base, alpha)| base * alpha);
                     let result = result.point();
 
@@ -326,8 +326,8 @@ impl Config {
         // Assign z_0 = 2⋅z_1 + k_0
         let z_0 = {
             let z_0_val = z_1.value().zip(lsb).map(|(z_1, lsb)| {
-                let lsb = pallas::Base::from_u64(lsb as u64);
-                z_1 * pallas::Base::from_u64(2) + lsb
+                let lsb = pallas::Base::from(lsb as u64);
+                z_1 * pallas::Base::from(2) + lsb
             });
             let z_0_cell = region.assign_advice(
                 || "z_0",
@@ -431,7 +431,7 @@ fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> 
         // the scalar field `F_q = 2^254 + t_q`.
         // Note that the addition `scalar + t_q` is not reduced.
         //
-        let scalar = U256::from_little_endian(&scalar.to_bytes());
+        let scalar = U256::from_little_endian(&scalar.to_repr());
         let t_q = U256::from_little_endian(&T_Q.to_le_bytes());
         let k = scalar + t_q;
 
@@ -463,7 +463,7 @@ fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> 
 
 #[cfg(test)]
 pub mod tests {
-    use group::Curve;
+    use group::{ff::PrimeField, Curve};
     use halo2::{
         circuit::{Chip, Layouter},
         plonk::Error,
@@ -497,7 +497,7 @@ pub mod tests {
         ) -> Result<(), Error> {
             // Move scalar from base field into scalar field (which always fits
             // for Pallas).
-            let scalar = pallas::Scalar::from_bytes(&scalar_val.to_bytes()).unwrap();
+            let scalar = pallas::Scalar::from_repr(scalar_val.to_repr()).unwrap();
             let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),

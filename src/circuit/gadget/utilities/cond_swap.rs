@@ -84,7 +84,7 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                 )?;
 
                 // Witness `swap` value
-                let swap_val = swap.map(|swap| F::from_u64(swap as u64));
+                let swap_val = swap.map(|swap| F::from(swap as u64));
                 region.assign_advice(
                     || "swap",
                     config.swap,

@@ -187,12 +187,10 @@ impl Config {
         // Invalid values result in constraint failures which are
         // tested at the circuit-level.
         {
-            use group::Curve;
-            use pasta_curves::arithmetic::FieldExt;
+            use group::{ff::PrimeField, Curve};
 
             if let (Some(magnitude), Some(sign)) = (scalar.magnitude.value(), scalar.sign.value()) {
-                let magnitude_is_valid =
-                    magnitude <= &pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64);
+                let magnitude_is_valid = magnitude <= &pallas::Base::from(0xFFFF_FFFF_FFFF_FFFFu64);
                 let sign_is_valid = sign * sign == pallas::Base::one();
                 if magnitude_is_valid && sign_is_valid {
                     let base: super::OrchardFixedBases = base.clone().into();
@@ -201,8 +199,7 @@ impl Config {
                         |(magnitude, sign)| {
                             // Move magnitude from base field into scalar field (which always fits
                             // for Pallas).
-                            let magnitude =
-                                pallas::Scalar::from_bytes(&magnitude.to_bytes()).unwrap();
+                            let magnitude = pallas::Scalar::from_repr(magnitude.to_repr()).unwrap();
 
                             let sign = if sign == &pallas::Base::one() {
                                 pallas::Scalar::one()
@@ -230,7 +227,7 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
-    use group::Curve;
+    use group::{ff::PrimeField, Curve};
     use halo2::{
         arithmetic::CurveAffine,
         circuit::{AssignedCell, Chip, Layouter},
@@ -287,25 +284,21 @@ pub mod tests {
         }
 
         let magnitude_signs = [
-            (
-                "random [a]B",
-                pallas::Base::from_u64(rand::random::<u64>()),
-                {
-                    let mut random_sign = pallas::Base::one();
-                    if rand::random::<bool>() {
-                        random_sign = -random_sign;
-                    }
-                    random_sign
-                },
-            ),
+            ("random [a]B", pallas::Base::from(rand::random::<u64>()), {
+                let mut random_sign = pallas::Base::one();
+                if rand::random::<bool>() {
+                    random_sign = -random_sign;
+                }
+                random_sign
+            }),
             (
                 "[2^64 - 1]B",
-                pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64),
+                pallas::Base::from(0xFFFF_FFFF_FFFF_FFFFu64),
                 pallas::Base::one(),
             ),
             (
                 "-[2^64 - 1]B",
-                pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64),
+                pallas::Base::from(0xFFFF_FFFF_FFFF_FFFFu64),
                 -pallas::Base::one(),
             ),
             // There is a single canonical sequence of window values for which a doubling occurs on the last step:
@@ -313,12 +306,12 @@ pub mod tests {
             // [0xB6DB_6DB6_DB6D_B6DC] B
             (
                 "mul_with_double",
-                pallas::Base::from_u64(0xB6DB_6DB6_DB6D_B6DCu64),
+                pallas::Base::from(0xB6DB_6DB6_DB6D_B6DCu64),
                 pallas::Base::one(),
             ),
             (
                 "mul_with_double negative",
-                pallas::Base::from_u64(0xB6DB_6DB6_DB6D_B6DCu64),
+                pallas::Base::from(0xB6DB_6DB6_DB6D_B6DCu64),
                 -pallas::Base::one(),
             ),
         ];
@@ -335,7 +328,7 @@ pub mod tests {
             };
             // Move from base field into scalar field
             let scalar = {
-                let magnitude = pallas::Scalar::from_bytes(&magnitude.to_bytes()).unwrap();
+                let magnitude = pallas::Scalar::from_repr(magnitude.to_repr()).unwrap();
                 let sign = if *sign == pallas::Base::one() {
                     pallas::Scalar::one()
                 } else {
@@ -561,7 +554,7 @@ pub mod tests {
         {
             let magnitude_u64 = rand::random::<u64>();
             let circuit = MyCircuit {
-                magnitude: Some(pallas::Base::from_u64(magnitude_u64)),
+                magnitude: Some(pallas::Base::from(magnitude_u64)),
                 sign: Some(pallas::Base::zero()),
                 magnitude_error: None,
             };

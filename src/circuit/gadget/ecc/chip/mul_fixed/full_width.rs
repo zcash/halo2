@@ -10,7 +10,7 @@ use halo2::{
     plonk::{ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
-use pasta_curves::{arithmetic::FieldExt, pallas};
+use pasta_curves::pallas;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Config {
@@ -99,7 +99,7 @@ impl Config {
             assert_eq!(windows.len(), NUM_WINDOWS);
             windows
                 .into_iter()
-                .map(|window| Some(pallas::Base::from_u64(window as u64)))
+                .map(|window| Some(pallas::Base::from(window as u64)))
                 .collect()
         } else {
             vec![None; NUM_WINDOWS]
@@ -272,11 +272,11 @@ pub mod tests {
         // (There is another *non-canonical* sequence
         // 5333333333333333333333333333333333333333332711161673731021062440252244051273333333333 in octal.)
         {
-            let h = pallas::Scalar::from_u64(constants::H as u64);
+            let h = pallas::Scalar::from(constants::H as u64);
             let scalar_fixed = "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334"
                         .chars()
                         .fold(pallas::Scalar::zero(), |acc, c| {
-                            acc * &h + &pallas::Scalar::from_u64(c.to_digit(8).unwrap().into())
+                            acc * &h + &pallas::Scalar::from(c.to_digit(8).unwrap() as u64)
                         });
             let (result, _) =
                 base.mul(layouter.namespace(|| "mul with double"), Some(scalar_fixed))?;

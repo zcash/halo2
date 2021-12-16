@@ -23,7 +23,7 @@ use bitvec::{array::BitArray, order::Lsb0};
 use ff::{Field, PrimeField};
 use group::{Curve, Group, GroupEncoding};
 use pasta_curves::{
-    arithmetic::{CurveAffine, CurveExt, FieldExt},
+    arithmetic::{CurveAffine, CurveExt},
     pallas,
 };
 use rand::RngCore;
@@ -252,9 +252,9 @@ impl ValueCommitment {
         let abs_value = u64::try_from(value.0.abs()).expect("value must be in valid range");
 
         let value = if value.0.is_negative() {
-            -pallas::Scalar::from_u64(abs_value)
+            -pallas::Scalar::from(abs_value)
         } else {
-            pallas::Scalar::from_u64(abs_value)
+            pallas::Scalar::from(abs_value)
         };
 
         ValueCommitment(V * value + R * rcv.0)

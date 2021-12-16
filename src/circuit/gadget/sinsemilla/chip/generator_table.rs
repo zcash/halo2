@@ -42,7 +42,7 @@ impl GeneratorTableConfig {
             let word = {
                 let z_cur = meta.query_advice(config.bits, Rotation::cur());
                 let z_next = meta.query_advice(config.bits, Rotation::next());
-                z_cur - ((q_s2 - q_s3) * z_next * pallas::Base::from_u64(1 << sinsemilla::K))
+                z_cur - ((q_s2 - q_s3) * z_next * pallas::Base::from(1 << sinsemilla::K))
             };
 
             let x_p = meta.query_advice(config.x_p, Rotation::cur());
@@ -84,7 +84,7 @@ impl GeneratorTableConfig {
                         || "table_idx",
                         self.table_idx,
                         index,
-                        || Ok(pallas::Base::from_u64(index as u64)),
+                        || Ok(pallas::Base::from(index as u64)),
                     )?;
                     table.assign_cell(|| "table_x", self.table_x, index, || Ok(*x))?;
                     table.assign_cell(|| "table_y", self.table_y, index, || Ok(*y))?;

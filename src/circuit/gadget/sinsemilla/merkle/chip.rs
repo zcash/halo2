@@ -82,7 +82,7 @@ impl MerkleChip {
             let q_decompose = meta.query_selector(q_decompose);
             let l_whole = meta.query_advice(advices[4], Rotation::next());
 
-            let two_pow_5 = pallas::Base::from_u64(1 << 5);
+            let two_pow_5 = pallas::Base::from(1 << 5);
             let two_pow_10 = two_pow_5.square();
 
             // a_whole is constrained by Sinsemilla to be 250 bits.
@@ -101,7 +101,7 @@ impl MerkleChip {
             let z1_a = meta.query_advice(advices[0], Rotation::next());
             let a_1 = z1_a;
             // a_0 = a - (a_1 * 2^10)
-            let a_0 = a_whole - a_1.clone() * pallas::Base::from_u64(1 << 10);
+            let a_0 = a_whole - a_1.clone() * pallas::Base::from(1 << 10);
             let l_check = a_0 - l_whole;
 
             // b = b_0||b_1||b_2
@@ -185,12 +185,12 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
         let a = {
             let a = {
                 // a_0 = l
-                let a_0 = bitrange_subset(&pallas::Base::from_u64(l as u64), 0..10);
+                let a_0 = bitrange_subset(&pallas::Base::from(l as u64), 0..10);
 
                 // a_1 = (bits 0..=239 of `left`)
                 let a_1 = left.value().map(|value| bitrange_subset(value, 0..240));
 
-                a_1.map(|a_1| a_0 + a_1 * pallas::Base::from_u64(1 << 10))
+                a_1.map(|a_1| a_0 + a_1 * pallas::Base::from(1 << 10))
             };
 
             self.witness_message_piece(layouter.namespace(|| "Witness a = a_0 || a_1"), a, 25)?
@@ -233,8 +233,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                     .zip(b_1.value())
                     .zip(b_2.value())
                     .map(|((b_0, b_1), b_2)| {
-                        b_0 + b_1 * pallas::Base::from_u64(1 << 10)
-                            + b_2 * pallas::Base::from_u64(1 << 15)
+                        b_0 + b_1 * pallas::Base::from(1 << 10) + b_2 * pallas::Base::from(1 << 15)
                     });
                 self.witness_message_piece(
                     layouter.namespace(|| "Witness b = b_0 || b_1 || b_2"),
@@ -282,7 +281,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                         || format!("l {}", l),
                         config.advices[4],
                         1,
-                        pallas::Base::from_u64(l as u64),
+                        pallas::Base::from(l as u64),
                     )?;
 
                     // Offset 0
@@ -324,7 +323,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                 constants::MERKLE_CRH_PERSONALIZATION, primitives::sinsemilla::HashDomain,
                 spec::i2lebsp,
             };
-            use ff::PrimeFieldBits;
+            use group::ff::{PrimeField, PrimeFieldBits};
 
             if let (Some(left), Some(right)) = (left.value(), right.value()) {
                 let l = i2lebsp::<10>(l as u64);
@@ -348,7 +347,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
 
                 let expected = merkle_crh.hash(message.into_iter()).unwrap();
 
-                assert_eq!(expected.to_bytes(), result.value().unwrap().to_bytes());
+                assert_eq!(expected.to_repr(), result.value().unwrap().to_repr());
             }
         }
 
