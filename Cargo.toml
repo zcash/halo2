@@ -37,7 +37,7 @@ reddsa = "0.1"
 nonempty = "0.7"
 serde = { version = "1.0", features = ["derive"] }
 subtle = "2.3"
-zcash_note_encryption = "0.0"
+zcash_note_encryption = "0.1"
 incrementalmerkletree = "0.2"
 
 # Developer tooling dependencies
@@ -47,7 +47,7 @@ plotters = { version = "0.3.0", optional = true }
 criterion = "0.3"
 hex = "0.4"
 proptest = "1.0.0"
-zcash_note_encryption = { version = "0.0", features = ["pre-zip-212"] }
+zcash_note_encryption = { version = "0.1", features = ["pre-zip-212"] }
 
 [target.'cfg(unix)'.dev-dependencies]
 pprof = { version = "0.6", features = ["criterion", "flamegraph"] }
@@ -80,6 +80,3 @@ debug = true
 
 [profile.bench]
 debug = true
-
-[patch.crates-io]
-zcash_note_encryption = { git = "https://github.com/zcash/librustzcash.git", rev = "76f364593a6d5b190dd23d26f8202adcd031b2d3" }
