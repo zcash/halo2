@@ -1,19 +1,21 @@
 [package]
 name = "orchard"
-version = "0.0.0"
+version = "0.1.0-beta.1"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
     "Jack Grigg <jack@electriccoin.co>",
+    "Daira Hopwood <daira@jacaranda.org>",
+    "Ying Tong Lai <yingtong@electriccoin.co>",
+    "Kris Nuttycombe <kris@electriccoin.co>",
 ]
 edition = "2018"
-description = "Sapling on stilts!"
+description = "[BETA] The Orchard shielded transaction protocol"
 license-file = "LICENSE-BOSL"
 repository = "https://github.com/zcash/orchard"
 documentation = "https://docs.rs/orchard"
 readme = "README.md"
-
-# We are not publishing this yet.
-publish = false
+categories = ["cryptography::cryptocurrencies"]
+keywords = ["zcash"]
 
 [package.metadata.docs.rs]
 all-features = true
