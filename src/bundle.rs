@@ -506,6 +506,7 @@ pub struct BundleAuthorizingCommitment(pub Blake2bHash);
 
 /// Generators for property testing.
 #[cfg(any(test, feature = "test-dependencies"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "test-dependencies")))]
 pub mod testing {
     use nonempty::NonEmpty;
     use pasta_curves::{arithmetic::FieldExt, pallas};

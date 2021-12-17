@@ -81,6 +81,7 @@ pub struct MerklePath {
 }
 
 #[cfg(any(test, feature = "test-dependencies"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "test-dependencies")))]
 impl From<(incrementalmerkletree::Position, Vec<MerkleHashOrchard>)> for MerklePath {
     fn from(path: (incrementalmerkletree::Position, Vec<MerkleHashOrchard>)) -> Self {
         use std::convert::TryInto;
@@ -265,6 +266,7 @@ impl<'de> Deserialize<'de> for MerkleHashOrchard {
 
 /// Generators for property testing.
 #[cfg(any(test, feature = "test-dependencies"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "test-dependencies")))]
 pub mod testing {
     #[cfg(test)]
     use incrementalmerkletree::{
