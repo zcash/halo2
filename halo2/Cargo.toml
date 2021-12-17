@@ -20,8 +20,8 @@ rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "../katex-header.html"]
 [dependencies]
 ff = "0.11"
 group = "0.11"
-halo2_proofs = { version = "=0.1.0-beta.2", path = "../halo2_proofs" }
 halo2_gadgets = { version = "=0.1.0-beta.1", path = "../halo2_gadgets" }
+halo2_proofs = { version = "=0.1.0-beta.2", path = "../halo2_proofs" }
 pasta_curves = "0.3"
 rand = "0.8"
 subtle = "2.3"
