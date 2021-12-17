@@ -1,29 +1,32 @@
 [package]
 name = "orchard"
-version = "0.0.0"
+version = "0.1.0-beta.1"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
     "Jack Grigg <jack@electriccoin.co>",
+    "Daira Hopwood <daira@jacaranda.org>",
+    "Ying Tong Lai <yingtong@electriccoin.co>",
+    "Kris Nuttycombe <kris@electriccoin.co>",
 ]
 edition = "2018"
-description = "Sapling on stilts!"
+description = "[BETA] The Orchard shielded transaction protocol"
 license-file = "LICENSE-BOSL"
 repository = "https://github.com/zcash/orchard"
 documentation = "https://docs.rs/orchard"
 readme = "README.md"
-
-# We are not publishing this yet.
-publish = false
+categories = ["cryptography::cryptocurrencies"]
+keywords = ["zcash"]
 
 [package.metadata.docs.rs]
-rustdoc-args = [ "--html-in-header", "katex-header.html" ]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 
 [dependencies]
 aes = "0.7"
 arrayvec = "0.7.0"
 bigint = "4"
 bitvec = "0.22"
-blake2b_simd = "0.5"
+blake2b_simd = "1"
 ff = "0.11"
 fpe = "0.5"
 group = "0.11"
@@ -37,8 +40,8 @@ reddsa = "0.1"
 nonempty = "0.7"
 serde = { version = "1.0", features = ["derive"] }
 subtle = "2.3"
-zcash_note_encryption = "0.0"
-incrementalmerkletree = "0.1"
+zcash_note_encryption = "0.1"
+incrementalmerkletree = "0.2"
 
 # Developer tooling dependencies
 plotters = { version = "0.3.0", optional = true }
@@ -47,10 +50,10 @@ plotters = { version = "0.3.0", optional = true }
 criterion = "0.3"
 hex = "0.4"
 proptest = "1.0.0"
-zcash_note_encryption = { version = "0.0", features = ["pre-zip-212"] }
+zcash_note_encryption = { version = "0.1", features = ["pre-zip-212"] }
 
 [target.'cfg(unix)'.dev-dependencies]
-pprof = { version = "0.5", features = ["criterion", "flamegraph"] }
+pprof = { version = "0.6", features = ["criterion", "flamegraph"] }
 
 [lib]
 bench = false
@@ -80,7 +83,3 @@ debug = true
 
 [profile.bench]
 debug = true
-
-[patch.crates-io]
-zcash_note_encryption = { git = "https://github.com/zcash/librustzcash.git", rev = "76f364593a6d5b190dd23d26f8202adcd031b2d3" }
-incrementalmerkletree = { git = "https://github.com/zcash/incrementalmerkletree.git", rev = "b7bd6246122a6e9ace8edb51553fbf5228906cbb" }
