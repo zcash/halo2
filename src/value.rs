@@ -131,7 +131,7 @@ impl Sub for NoteValue {
     }
 }
 
-/// A sum of Orchard note values
+/// A sum of Orchard note values.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ValueSum(i128);
 
@@ -139,14 +139,6 @@ impl ValueSum {
     pub(crate) fn zero() -> Self {
         // Default for i64 is zero.
         Default::default()
-    }
-
-    /// Creates a value sum from its raw numeric value.
-    ///
-    /// This only enforces that the value is a signed 63-bit integer. Callers should
-    /// enforce any additional constraints on the value's valid range themselves.
-    pub fn from_raw(value: i64) -> Self {
-        ValueSum(value as i128)
     }
 }
 
