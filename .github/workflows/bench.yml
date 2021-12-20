@@ -1,29 +1,35 @@
 name: Benchmarks
-
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
-env:
-  CARGO_TERM_COLOR: always
+permissions:
+  contents: write
+  deployments: write
 
 jobs:
-  build:
-    name: Run orchard benchmarks
+  benchmark:
+    name: Performance regression check
     runs-on: ubuntu-latest
-    env:
-      CRITERION_TOKEN: ${{ secrets.CRITERION_TOKEN }}
     steps:
       - uses: actions/checkout@v2
-      - name: Run benchmarks
-        run: |
-          # run benchmarks and save baseline in a directory called "new"
-          cargo bench -- --verbose
-      - name: Upload benchmarks
-        run: |
-          # upload the files
-          bash <(curl -s https://criterion.dev/bash)
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.51.0
+          override: true
+      - name: Run benchmark
+        run: cargo bench -- --output-format bencher | tee output.txt
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Orchard Benchmarks
+          tool: 'cargo'
+          output-file-path: output.txt
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          # Show alert with commit comment on detecting possible performance regression
+          alert-threshold: '200%'
+          comment-on-alert: true
+          fail-on-alert: true
+          alert-comment-cc-users: '@str4d'

@@ -35,8 +35,14 @@ const ZIP32_PURPOSE: u32 = 32;
 /// Defined in [Zcash Protocol Spec § 4.2.3: Orchard Key Components][orchardkeycomponents].
 ///
 /// [orchardkeycomponents]: https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone)]
 pub struct SpendingKey([u8; 32]);
+
+impl ConstantTimeEq for SpendingKey {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        self.to_bytes().ct_eq(other.to_bytes())
+    }
+}
 
 impl SpendingKey {
     /// Generates a random spending key.
@@ -178,14 +184,17 @@ impl SpendValidatingKey {
     pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
         <[u8; 32]>::try_from(bytes)
             .ok()
-            .and_then(|b|
-                // check that the sign of the y-coordinate is positive
-                if b[31] & 0x80 == 0 {
+            .and_then(|b| {
+                // Structural validity checks for ak_P:
+                // - The point must not be the identity
+                //   (which for Pallas is canonically encoded as all-zeroes).
+                // - The sign of the y-coordinate must be positive.
+                if b != [0; 32] && b[31] & 0x80 == 0 {
                     <redpallas::VerificationKey<SpendAuth>>::try_from(b).ok()
                 } else {
                     None
                 }
-            )
+            })
             .map(SpendValidatingKey)
     }
 }
@@ -424,6 +433,12 @@ macro_rules! di_from {
 di_from!(u32);
 di_from!(u64);
 di_from!(usize);
+
+impl From<[u8; 11]> for DiversifierIndex {
+    fn from(j_bytes: [u8; 11]) -> Self {
+        DiversifierIndex(j_bytes)
+    }
+}
 
 impl DiversifierKey {
     /// Returns the diversifier at index 0.
@@ -780,6 +795,7 @@ impl SharedSecret {
 
 /// Generators for property testing.
 #[cfg(any(test, feature = "test-dependencies"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "test-dependencies")))]
 pub mod testing {
     use proptest::prelude::*;
 
@@ -828,6 +844,12 @@ mod tests {
         value::NoteValue,
         Note,
     };
+
+    #[test]
+    fn spend_validating_key_from_bytes() {
+        // ak_P must not be the identity.
+        assert!(SpendValidatingKey::from_bytes(&[0; 32]).is_none());
+    }
 
     #[test]
     fn parsers_reject_invalid() {

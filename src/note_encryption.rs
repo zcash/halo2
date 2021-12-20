@@ -5,8 +5,9 @@ use std::{convert::TryInto, fmt};
 use blake2b_simd::{Hash, Params};
 use group::ff::PrimeField;
 use zcash_note_encryption::{
-    BatchDomain, Domain, EphemeralKeyBytes, NotePlaintextBytes, NoteValidity, OutPlaintextBytes,
-    OutgoingCipherKey, ShieldedOutput, COMPACT_NOTE_SIZE, NOTE_PLAINTEXT_SIZE, OUT_PLAINTEXT_SIZE,
+    BatchDomain, Domain, EphemeralKeyBytes, NotePlaintextBytes, OutPlaintextBytes,
+    OutgoingCipherKey, ShieldedOutput, COMPACT_NOTE_SIZE, ENC_CIPHERTEXT_SIZE, NOTE_PLAINTEXT_SIZE,
+    OUT_PLAINTEXT_SIZE,
 };
 
 use crate::{
@@ -182,13 +183,6 @@ impl Domain for OrchardDomain {
         EphemeralPublicKey::from_bytes(&ephemeral_key.0).into()
     }
 
-    fn check_epk_bytes<F: Fn(&Self::EphemeralSecretKey) -> NoteValidity>(
-        note: &Self::Note,
-        check: F,
-    ) -> NoteValidity {
-        check(&note.esk())
-    }
-
     fn cmstar(note: &Self::Note) -> Self::ExtractedCommitment {
         note.commitment().into()
     }
@@ -208,9 +202,9 @@ impl Domain for OrchardDomain {
         pk_d: &Self::DiversifiedTransmissionKey,
         esk: &Self::EphemeralSecretKey,
         ephemeral_key: &EphemeralKeyBytes,
-        plaintext: &[u8],
+        plaintext: &NotePlaintextBytes,
     ) -> Option<(Self::Note, Self::Recipient)> {
-        orchard_parse_note_plaintext_without_memo(self, plaintext, |diversifier| {
+        orchard_parse_note_plaintext_without_memo(self, &plaintext.0, |diversifier| {
             if esk
                 .derive_public(diversify_hash(diversifier.as_array()))
                 .to_bytes()
@@ -224,20 +218,18 @@ impl Domain for OrchardDomain {
         })
     }
 
-    fn extract_memo(&self, plaintext: &[u8]) -> Self::Memo {
-        plaintext[COMPACT_NOTE_SIZE..NOTE_PLAINTEXT_SIZE]
+    fn extract_memo(&self, plaintext: &NotePlaintextBytes) -> Self::Memo {
+        plaintext.0[COMPACT_NOTE_SIZE..NOTE_PLAINTEXT_SIZE]
             .try_into()
             .unwrap()
     }
 
-    fn extract_pk_d(
-        out_plaintext: &[u8; OUT_PLAINTEXT_SIZE],
-    ) -> Option<Self::DiversifiedTransmissionKey> {
-        DiversifiedTransmissionKey::from_bytes(out_plaintext[0..32].try_into().unwrap()).into()
+    fn extract_pk_d(out_plaintext: &OutPlaintextBytes) -> Option<Self::DiversifiedTransmissionKey> {
+        DiversifiedTransmissionKey::from_bytes(out_plaintext.0[0..32].try_into().unwrap()).into()
     }
 
-    fn extract_esk(out_plaintext: &[u8; OUT_PLAINTEXT_SIZE]) -> Option<Self::EphemeralSecretKey> {
-        EphemeralSecretKey::from_bytes(out_plaintext[32..OUT_PLAINTEXT_SIZE].try_into().unwrap())
+    fn extract_esk(out_plaintext: &OutPlaintextBytes) -> Option<Self::EphemeralSecretKey> {
+        EphemeralSecretKey::from_bytes(out_plaintext.0[32..OUT_PLAINTEXT_SIZE].try_into().unwrap())
             .into()
     }
 }
@@ -260,7 +252,7 @@ impl BatchDomain for OrchardDomain {
 /// Implementation of in-band secret distribution for Orchard bundles.
 pub type OrchardNoteEncryption = zcash_note_encryption::NoteEncryption<OrchardDomain>;
 
-impl<T> ShieldedOutput<OrchardDomain> for Action<T> {
+impl<T> ShieldedOutput<OrchardDomain, ENC_CIPHERTEXT_SIZE> for Action<T> {
     fn ephemeral_key(&self) -> EphemeralKeyBytes {
         EphemeralKeyBytes(self.encrypted_note().epk_bytes)
     }
@@ -269,7 +261,7 @@ impl<T> ShieldedOutput<OrchardDomain> for Action<T> {
         self.cmx().to_bytes()
     }
 
-    fn enc_ciphertext(&self) -> &[u8] {
+    fn enc_ciphertext(&self) -> &[u8; ENC_CIPHERTEXT_SIZE] {
         &self.encrypted_note().enc_ciphertext
     }
 }
@@ -299,7 +291,7 @@ impl<T> From<&Action<T>> for CompactAction {
     }
 }
 
-impl ShieldedOutput<OrchardDomain> for CompactAction {
+impl ShieldedOutput<OrchardDomain, COMPACT_NOTE_SIZE> for CompactAction {
     fn ephemeral_key(&self) -> EphemeralKeyBytes {
         EphemeralKeyBytes(self.ephemeral_key.0)
     }
@@ -308,7 +300,7 @@ impl ShieldedOutput<OrchardDomain> for CompactAction {
         self.cmx.to_bytes()
     }
 
-    fn enc_ciphertext(&self) -> &[u8] {
+    fn enc_ciphertext(&self) -> &[u8; COMPACT_NOTE_SIZE] {
         &self.enc_ciphertext
     }
 }
