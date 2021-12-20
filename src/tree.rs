@@ -151,11 +151,6 @@ impl MerklePath {
 
 /// A newtype wrapper for leaves and internal nodes in the Orchard
 /// incremental note commitment tree.
-///
-/// This wraps a CtOption<pallas::Base> because Sinsemilla hashes
-/// can produce a bottom value which needs to be accounted for in
-/// the production of a Merkle root. Leaf nodes are always wrapped
-/// with the `Some` constructor.
 #[derive(Copy, Clone, Debug)]
 pub struct MerkleHashOrchard(pallas::Base);
 
