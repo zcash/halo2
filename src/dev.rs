@@ -1,6 +1,7 @@
 //! Tools for developing circuits.
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt;
 use std::iter;
 use std::ops::{Add, Mul, Neg, Range};
@@ -165,8 +166,10 @@ impl fmt::Display for VerifyFailure {
 struct Region {
     /// The name of the region. Not required to be unique.
     name: String,
-    /// The row that this region starts on, if known.
-    start: Option<usize>,
+    /// The columns involved in this region.
+    columns: HashSet<Column<Any>>,
+    /// The rows that this region starts and ends on, if known.
+    rows: Option<(usize, usize)>,
     /// The selectors that have been enabled in this region. All other selectors are by
     /// construction not enabled.
     enabled_selectors: HashMap<Selector, Vec<usize>>,
@@ -176,14 +179,20 @@ struct Region {
 }
 
 impl Region {
-    fn update_start(&mut self, row: usize) {
+    fn update_extent(&mut self, column: Column<Any>, row: usize) {
+        self.columns.insert(column);
+
         // The region start is the earliest row assigned to.
-        let mut start = self.start.unwrap_or(row);
+        // The region end is the latest row assigned to.
+        let (mut start, mut end) = self.rows.unwrap_or((row, row));
         if row < start {
             // The first row assigned was not at start 0 within the region.
             start = row;
         }
-        self.start = Some(start);
+        if row > end {
+            end = row;
+        }
+        self.rows = Some((start, end));
     }
 }
 
@@ -418,7 +427,8 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         assert!(self.current_region.is_none());
         self.current_region = Some(Region {
             name: name().into(),
-            start: None,
+            columns: HashSet::default(),
+            rows: None,
             enabled_selectors: HashMap::default(),
             cells: vec![],
         });
@@ -482,7 +492,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         }
 
         if let Some(region) = self.current_region.as_mut() {
-            region.update_start(row);
+            region.update_extent(column.into(), row);
             region.cells.push((column.into(), row));
         }
 
@@ -513,7 +523,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         }
 
         if let Some(region) = self.current_region.as_mut() {
-            region.update_start(row);
+            region.update_extent(column.into(), row);
             region.cells.push((column.into(), row));
         }
 
@@ -689,7 +699,7 @@ impl<F: FieldExt> MockProver<F> {
                                         gate: (gate_index, gate.name()).into(),
                                         region: (r_i, r.name.clone()).into(),
                                         column: cell.column,
-                                        offset: cell_row as isize - r.start.unwrap() as isize,
+                                        offset: cell_row as isize - r.rows.unwrap().0 as isize,
                                     })
                                 }
                             })
@@ -848,11 +858,64 @@ impl<F: FieldExt> MockProver<F> {
                         if lookup_passes {
                             None
                         } else {
+                            let input_columns: HashSet<Column<Any>> = lookup
+                                .input_expressions
+                                .iter()
+                                .flat_map(|expression| {
+                                    expression.evaluate(
+                                        &|_| vec![],
+                                        &|_| {
+                                            panic!(
+                                                "virtual selectors are removed during optimization"
+                                            )
+                                        },
+                                        &|index, _, _| vec![self.cs.fixed_queries[index].0.into()],
+                                        &|index, _, _| vec![self.cs.advice_queries[index].0.into()],
+                                        &|index, _, _| {
+                                            vec![self.cs.instance_queries[index].0.into()]
+                                        },
+                                        &|a| a,
+                                        &|mut a, mut b| {
+                                            a.append(&mut b);
+                                            a
+                                        },
+                                        &|mut a, mut b| {
+                                            a.append(&mut b);
+                                            a
+                                        },
+                                        &|a, _| a,
+                                    )
+                                })
+                                .collect();
+                            println!("Lookup input columns: {:?}", &input_columns);
+
+                            // Figure out whether the lookup location
+                            // overlaps an assigned region.
+                            let location = self
+                                .regions
+                                .iter()
+                                .enumerate()
+                                .find(|(_, r)| {
+                                    let (start, end) = r.rows.unwrap();
+                                    // We match the region if any input columns overlap,
+                                    // rather than all of them, because matching complex
+                                    // selector columns is hard. This is probably going to
+                                    // cause some mismatches, which we'll fix later.
+                                    input_row >= start
+                                        && input_row <= end
+                                        && !input_columns.is_disjoint(&r.columns)
+                                })
+                                .map(|(r_i, r)| LookupFailure::InRegion {
+                                    region: (r_i, r.name.clone()).into(),
+                                    offset: input_row as usize - r.rows.unwrap().0 as usize,
+                                })
+                                .unwrap_or_else(|| LookupFailure::OutsideRegion {
+                                    row: input_row as usize,
+                                });
+
                             Some(VerifyFailure::Lookup {
                                 lookup_index,
-                                location: LookupFailure::OutsideRegion {
-                                    row: input_row as usize,
-                                },
+                                location,
                             })
                         }
                     })
