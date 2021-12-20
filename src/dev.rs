@@ -61,7 +61,7 @@ pub enum LookupFailure {
 #[derive(Debug, PartialEq)]
 pub enum VerifyFailure {
     /// A cell used in an active gate was not assigned to.
-    Cell {
+    CellNotAssigned {
         /// The index of the active gate.
         gate: metadata::Gate,
         /// The region in which this cell should be assigned.
@@ -108,7 +108,7 @@ pub enum VerifyFailure {
 impl fmt::Display for VerifyFailure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Cell {
+            Self::CellNotAssigned {
                 gate,
                 region,
                 column,
@@ -695,7 +695,7 @@ impl<F: FieldExt> MockProver<F> {
                                 if r.cells.contains(&(cell.column, cell_row)) {
                                     None
                                 } else {
-                                    Some(VerifyFailure::Cell {
+                                    Some(VerifyFailure::CellNotAssigned {
                                         gate: (gate_index, gate.name()).into(),
                                         region: (r_i, r.name.clone()).into(),
                                         column: cell.column,
@@ -1059,7 +1059,7 @@ mod tests {
         let prover = MockProver::run(K, &FaultyCircuit {}, vec![]).unwrap();
         assert_eq!(
             prover.verify(),
-            Err(vec![VerifyFailure::Cell {
+            Err(vec![VerifyFailure::CellNotAssigned {
                 gate: (0, "Equality check").into(),
                 region: (0, "Faulty synthesis".to_owned()).into(),
                 column: Column::new(1, Any::Advice),
