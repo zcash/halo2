@@ -1,5 +1,5 @@
 use halo2::{
-    circuit::Layouter,
+    circuit::{AssignedCell, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
@@ -11,7 +11,7 @@ use crate::{
             chip::{EccChip, NonIdentityEccPoint},
             Point,
         },
-        utilities::{bitrange_subset, bool_check, copy, CellValue, Var},
+        utilities::{bitrange_subset, bool_check},
     },
     constants::T_P,
 };
@@ -20,6 +20,13 @@ use super::{
     chip::{SinsemillaChip, SinsemillaCommitDomains, SinsemillaConfig},
     CommitDomain, Message, MessagePiece,
 };
+
+/// The values of the running sum at the start and end of the range being used for a
+/// canonicity check.
+type CanonicityBounds = (
+    AssignedCell<pallas::Base, pallas::Base>,
+    AssignedCell<pallas::Base, pallas::Base>,
+);
 
 /*
     <https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit>
@@ -89,15 +96,15 @@ impl NoteCommitConfig {
         };
 
         // Useful constants
-        let two = pallas::Base::from_u64(2);
-        let two_pow_2 = pallas::Base::from_u64(1 << 2);
+        let two = pallas::Base::from(2);
+        let two_pow_2 = pallas::Base::from(1 << 2);
         let two_pow_4 = two_pow_2.square();
         let two_pow_5 = two_pow_4 * two;
         let two_pow_6 = two_pow_5 * two;
         let two_pow_8 = two_pow_4.square();
         let two_pow_9 = two_pow_8 * two;
         let two_pow_10 = two_pow_9 * two;
-        let two_pow_58 = pallas::Base::from_u64(1 << 58);
+        let two_pow_58 = pallas::Base::from(1 << 58);
         let two_pow_130 = Expression::Constant(pallas::Base::from_u128(1 << 65).square());
         let two_pow_140 = Expression::Constant(pallas::Base::from_u128(1 << 70).square());
         let two_pow_249 = pallas::Base::from_u128(1 << 124).square() * two;
@@ -525,13 +532,16 @@ impl NoteCommitConfig {
         ecc_chip: EccChip,
         g_d: &NonIdentityEccPoint,
         pk_d: &NonIdentityEccPoint,
-        value: CellValue<pallas::Base>,
-        rho: CellValue<pallas::Base>,
-        psi: CellValue<pallas::Base>,
+        // TODO: Set V to Orchard value type
+        value: AssignedCell<pallas::Base, pallas::Base>,
+        rho: AssignedCell<pallas::Base, pallas::Base>,
+        psi: AssignedCell<pallas::Base, pallas::Base>,
         rcm: Option<pallas::Scalar>,
     ) -> Result<Point<pallas::Affine, EccChip>, Error> {
-        let (gd_x, gd_y) = (g_d.x().value(), g_d.y().value());
-        let (pkd_x, pkd_y) = (pk_d.x().value(), pk_d.y().value());
+        let (gd_x, gd_y) = (g_d.x(), g_d.y());
+        let (pkd_x, pkd_y) = (pk_d.x(), pk_d.y());
+        let (gd_x, gd_y) = (gd_x.value(), gd_y.value());
+        let (pkd_x, pkd_y) = (pkd_x.value(), pkd_y.value());
         let value_val = value.value();
         let rho_val = rho.value();
         let psi_val = psi.value();
@@ -569,9 +579,9 @@ impl NoteCommitConfig {
 
                 let b = b_0.value().zip(b_1).zip(b_2).zip(b_3.value()).map(
                     |(((b_0, b_1), b_2), b_3)| {
-                        let b1_shifted = b_1 * pallas::Base::from_u64(1 << 4);
-                        let b2_shifted = b_2 * pallas::Base::from_u64(1 << 5);
-                        let b3_shifted = b_3 * pallas::Base::from_u64(1 << 6);
+                        let b1_shifted = b_1 * pallas::Base::from(1 << 4);
+                        let b2_shifted = b_2 * pallas::Base::from(1 << 5);
+                        let b3_shifted = b_3 * pallas::Base::from(1 << 6);
                         b_0 + b1_shifted + b2_shifted + b3_shifted
                     },
                 );
@@ -611,9 +621,9 @@ impl NoteCommitConfig {
                 .zip(d_2.value())
                 .zip(d_3)
                 .map(|(((d_0, d_1), d_2), d_3)| {
-                    let d1_shifted = d_1 * pallas::Base::from_u64(2);
-                    let d2_shifted = d_2 * pallas::Base::from_u64(1 << 2);
-                    let d3_shifted = d_3 * pallas::Base::from_u64(1 << 10);
+                    let d1_shifted = d_1 * pallas::Base::from(2);
+                    let d2_shifted = d_2 * pallas::Base::from(1 << 2);
+                    let d3_shifted = d_3 * pallas::Base::from(1 << 10);
                     d_0 + d1_shifted + d2_shifted + d3_shifted
                 });
 
@@ -644,7 +654,7 @@ impl NoteCommitConfig {
             let e = e_0
                 .value()
                 .zip(e_1.value())
-                .map(|(e_0, e_1)| e_0 + e_1 * pallas::Base::from_u64(1 << 6));
+                .map(|(e_0, e_1)| e_0 + e_1 * pallas::Base::from(1 << 6));
             let e = MessagePiece::from_field_elem(chip.clone(), layouter.namespace(|| "e"), e, 1)?;
 
             (e_0, e_1, e)
@@ -674,8 +684,8 @@ impl NoteCommitConfig {
             // g_2 = z1_g from the SinsemillaHash(g) running sum output.
 
             let g = g_0.zip(g_1.value()).zip(g_2).map(|((g_0, g_1), g_2)| {
-                let g1_shifted = g_1 * pallas::Base::from_u64(2);
-                let g2_shifted = g_2 * pallas::Base::from_u64(1 << 10);
+                let g1_shifted = g_1 * pallas::Base::from(2);
+                let g2_shifted = g_2 * pallas::Base::from(1 << 10);
                 g_0 + g1_shifted + g2_shifted
             });
             let g = MessagePiece::from_field_elem(chip.clone(), layouter.namespace(|| "g"), g, 25)?;
@@ -701,7 +711,7 @@ impl NoteCommitConfig {
             let h = h_0
                 .value()
                 .zip(h_1)
-                .map(|(h_0, h_1)| h_0 + h_1 * pallas::Base::from_u64(1 << 5));
+                .map(|(h_0, h_1)| h_0 + h_1 * pallas::Base::from(1 << 5));
             let h = MessagePiece::from_field_elem(chip.clone(), layouter.namespace(|| "h"), h, 1)?;
 
             (h_0, h_1, h)
@@ -738,13 +748,13 @@ impl NoteCommitConfig {
             )?
         };
 
-        let z13_a = zs[0][13];
-        let z13_c = zs[2][13];
-        let z1_d = zs[3][1];
-        let z13_f = zs[5][13];
-        let z1_g = zs[6][1];
-        let g_2 = z1_g;
-        let z13_g = zs[6][13];
+        let z13_a = zs[0][13].clone();
+        let z13_c = zs[2][13].clone();
+        let z1_d = zs[3][1].clone();
+        let z13_f = zs[5][13].clone();
+        let z1_g = zs[6][1].clone();
+        let g_2 = z1_g.clone();
+        let z13_g = zs[6][13].clone();
 
         let (a_prime, z13_a_prime) = self.canon_bitshift_130(
             layouter.namespace(|| "x(g_d) canonicity"),
@@ -753,18 +763,18 @@ impl NoteCommitConfig {
 
         let (b3_c_prime, z14_b3_c_prime) = self.pkd_x_canonicity(
             layouter.namespace(|| "x(pk_d) canonicity"),
-            b_3,
+            b_3.clone(),
             c.inner().cell_value(),
         )?;
 
         let (e1_f_prime, z14_e1_f_prime) = self.rho_canonicity(
             layouter.namespace(|| "rho canonicity"),
-            e_1,
+            e_1.clone(),
             f.inner().cell_value(),
         )?;
 
         let (g1_g2_prime, z13_g1_g2_prime) =
-            self.psi_canonicity(layouter.namespace(|| "psi canonicity"), g_1, g_2)?;
+            self.psi_canonicity(layouter.namespace(|| "psi canonicity"), g_1.clone(), g_2)?;
 
         let gate_cells = GateCells {
             a: a.inner().cell_value(),
@@ -814,13 +824,12 @@ impl NoteCommitConfig {
         Ok(cm)
     }
 
-    #[allow(clippy::type_complexity)]
     // A canonicity check helper used in checking x(g_d), y(g_d), and y(pk_d).
     fn canon_bitshift_130(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        a: CellValue<pallas::Base>,
-    ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+        a: AssignedCell<pallas::Base, pallas::Base>,
+    ) -> Result<CanonicityBounds, Error> {
         // element = `a (250 bits) || b_0 (4 bits) || b_1 (1 bit)`
         // - b_1 = 1 => b_0 = 0
         // - b_1 = 1 => a < t_P
@@ -841,19 +850,19 @@ impl NoteCommitConfig {
             13,
             false,
         )?;
-        let a_prime = zs[0];
+        let a_prime = zs[0].clone();
         assert_eq!(zs.len(), 14); // [z_0, z_1, ..., z_13]
 
-        Ok((a_prime, zs[13]))
+        Ok((a_prime, zs[13].clone()))
     }
 
     // Check canonicity of `x(pk_d)` encoding
     fn pkd_x_canonicity(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        b_3: CellValue<pallas::Base>,
-        c: CellValue<pallas::Base>,
-    ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+        b_3: AssignedCell<pallas::Base, pallas::Base>,
+        c: AssignedCell<pallas::Base, pallas::Base>,
+    ) -> Result<CanonicityBounds, Error> {
         // `x(pk_d)` = `b_3 (4 bits) || c (250 bits) || d_0 (1 bit)`
         // - d_0 = 1 => b_3 + 2^4 c < t_P
         //     - 0 ≤ b_3 + 2^4 c < 2^134
@@ -868,7 +877,7 @@ impl NoteCommitConfig {
         // and output the running sum at the end of it.
         // If b3_c_prime < 2^140, the running sum will be 0.
         let b3_c_prime = b_3.value().zip(c.value()).map(|(b_3, c)| {
-            let two_pow_4 = pallas::Base::from_u64(1u64 << 4);
+            let two_pow_4 = pallas::Base::from(1u64 << 4);
             let two_pow_140 = pallas::Base::from_u128(1u128 << 70).square();
             let t_p = pallas::Base::from_u128(T_P);
             b_3 + (two_pow_4 * c) + two_pow_140 - t_p
@@ -880,20 +889,19 @@ impl NoteCommitConfig {
             14,
             false,
         )?;
-        let b3_c_prime = zs[0];
+        let b3_c_prime = zs[0].clone();
         assert_eq!(zs.len(), 15); // [z_0, z_1, ..., z_13, z_14]
 
-        Ok((b3_c_prime, zs[14]))
+        Ok((b3_c_prime, zs[14].clone()))
     }
 
-    #[allow(clippy::type_complexity)]
     // Check canonicity of `rho` encoding
     fn rho_canonicity(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        e_1: CellValue<pallas::Base>,
-        f: CellValue<pallas::Base>,
-    ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+        e_1: AssignedCell<pallas::Base, pallas::Base>,
+        f: AssignedCell<pallas::Base, pallas::Base>,
+    ) -> Result<CanonicityBounds, Error> {
         // `rho` = `e_1 (4 bits) || f (250 bits) || g_0 (1 bit)`
         // - g_0 = 1 => e_1 + 2^4 f < t_P
         // - 0 ≤ e_1 + 2^4 f < 2^134
@@ -905,7 +913,7 @@ impl NoteCommitConfig {
         // - 0 ≤ e_1 + 2^4 f + 2^140 - t_P < 2^140 (14 ten-bit lookups)
 
         let e1_f_prime = e_1.value().zip(f.value()).map(|(e_1, f)| {
-            let two_pow_4 = pallas::Base::from_u64(1u64 << 4);
+            let two_pow_4 = pallas::Base::from(1u64 << 4);
             let two_pow_140 = pallas::Base::from_u128(1u128 << 70).square();
             let t_p = pallas::Base::from_u128(T_P);
             e_1 + (two_pow_4 * f) + two_pow_140 - t_p
@@ -920,19 +928,19 @@ impl NoteCommitConfig {
             14,
             false,
         )?;
-        let e1_f_prime = zs[0];
+        let e1_f_prime = zs[0].clone();
         assert_eq!(zs.len(), 15); // [z_0, z_1, ..., z_13, z_14]
 
-        Ok((e1_f_prime, zs[14]))
+        Ok((e1_f_prime, zs[14].clone()))
     }
 
     // Check canonicity of `psi` encoding
     fn psi_canonicity(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        g_1: CellValue<pallas::Base>,
-        g_2: CellValue<pallas::Base>,
-    ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+        g_1: AssignedCell<pallas::Base, pallas::Base>,
+        g_2: AssignedCell<pallas::Base, pallas::Base>,
+    ) -> Result<CanonicityBounds, Error> {
         // `psi` = `g_1 (9 bits) || g_2 (240 bits) || h_0 (5 bits) || h_1 (1 bit)`
         // - h_1 = 1 => (h_0 = 0) ∧ (g_1 + 2^9 g_2 < t_P)
         // - 0 ≤ g_1 + 2^9 g_2 < 2^130
@@ -945,7 +953,7 @@ impl NoteCommitConfig {
         // and output the running sum at the end of it.
         // If g1_g2_prime < 2^130, the running sum will be 0.
         let g1_g2_prime = g_1.value().zip(g_2.value()).map(|(g_1, g_2)| {
-            let two_pow_9 = pallas::Base::from_u64(1u64 << 9);
+            let two_pow_9 = pallas::Base::from(1u64 << 9);
             let two_pow_130 = pallas::Base::from_u128(1u128 << 65).square();
             let t_p = pallas::Base::from_u128(T_P);
             g_1 + (two_pow_9 * g_2) + two_pow_130 - t_p
@@ -957,10 +965,10 @@ impl NoteCommitConfig {
             13,
             false,
         )?;
-        let g1_g2_prime = zs[0];
+        let g1_g2_prime = zs[0].clone();
         assert_eq!(zs.len(), 14); // [z_0, z_1, ..., z_13]
 
-        Ok((g1_g2_prime, zs[13]))
+        Ok((g1_g2_prime, zs[13].clone()))
     }
 
     // Check canonicity of y-coordinate given its LSB as a value.
@@ -968,9 +976,9 @@ impl NoteCommitConfig {
     fn y_canonicity(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        y: CellValue<pallas::Base>,
+        y: AssignedCell<pallas::Base, pallas::Base>,
         lsb: Option<pallas::Base>,
-    ) -> Result<CellValue<pallas::Base>, Error> {
+    ) -> Result<AssignedCell<pallas::Base, pallas::Base>, Error> {
         // Decompose the field element
         //      y = LSB || k_0 || k_1 || k_2 || k_3
         //        = (bit 0) || (bits 1..=9) || (bits 10..=249) || (bits 250..=253) || (bit 254)
@@ -1000,8 +1008,8 @@ impl NoteCommitConfig {
         // Decompose j = LSB + (2)k_0 + (2^10)k_1 using 25 ten-bit lookups.
         let (j, z1_j, z13_j) = {
             let j = lsb.zip(k_0.value()).zip(k_1).map(|((lsb, k_0), k_1)| {
-                let two = pallas::Base::from_u64(2);
-                let two_pow_10 = pallas::Base::from_u64(1 << 10);
+                let two = pallas::Base::from(2);
+                let two_pow_10 = pallas::Base::from(1 << 10);
                 lsb + two * k_0 + two_pow_10 * k_1
             });
             let zs = self.sinsemilla_config.lookup_config.witness_check(
@@ -1010,13 +1018,15 @@ impl NoteCommitConfig {
                 25,
                 true,
             )?;
-            (zs[0], zs[1], zs[13])
+            (zs[0].clone(), zs[1].clone(), zs[13].clone())
         };
 
         // Decompose j_prime = j + 2^130 - t_P using 13 ten-bit lookups.
         // We can reuse the canon_bitshift_130 logic here.
-        let (j_prime, z13_j_prime) =
-            self.canon_bitshift_130(layouter.namespace(|| "j_prime = j + 2^130 - t_P"), j)?;
+        let (j_prime, z13_j_prime) = self.canon_bitshift_130(
+            layouter.namespace(|| "j_prime = j + 2^130 - t_P"),
+            j.clone(),
+        )?;
 
         /*
 
@@ -1037,27 +1047,24 @@ impl NoteCommitConfig {
                     let offset = 0;
 
                     // Copy y.
-                    copy(&mut region, || "copy y", self.advices[5], offset, &y)?;
+                    y.copy_advice(|| "copy y", &mut region, self.advices[5], offset)?;
                     // Witness LSB.
-                    let lsb = {
-                        let cell = region.assign_advice(
-                            || "witness LSB",
-                            self.advices[6],
-                            offset,
-                            || lsb.ok_or(Error::SynthesisError),
-                        )?;
-                        CellValue::new(cell, lsb)
-                    };
+                    let lsb = region.assign_advice(
+                        || "witness LSB",
+                        self.advices[6],
+                        offset,
+                        || lsb.ok_or(Error::Synthesis),
+                    )?;
                     // Witness k_0.
-                    copy(&mut region, || "copy k_0", self.advices[7], offset, &k_0)?;
+                    k_0.copy_advice(|| "copy k_0", &mut region, self.advices[7], offset)?;
                     // Copy k_2.
-                    copy(&mut region, || "copy k_2", self.advices[8], offset, &k_2)?;
+                    k_2.copy_advice(|| "copy k_2", &mut region, self.advices[8], offset)?;
                     // Witness k_3.
                     region.assign_advice(
                         || "witness k_3",
                         self.advices[9],
                         offset,
-                        || k_3.ok_or(Error::SynthesisError),
+                        || k_3.ok_or(Error::Synthesis),
                     )?;
 
                     lsb
@@ -1068,32 +1075,19 @@ impl NoteCommitConfig {
                     let offset = 1;
 
                     // Copy j.
-                    copy(&mut region, || "copy j", self.advices[5], offset, &j)?;
+                    j.copy_advice(|| "copy j", &mut region, self.advices[5], offset)?;
                     // Copy z1_j.
-                    copy(&mut region, || "copy z1_j", self.advices[6], offset, &z1_j)?;
+                    z1_j.copy_advice(|| "copy z1_j", &mut region, self.advices[6], offset)?;
                     // Copy z13_j.
-                    copy(
-                        &mut region,
-                        || "copy z13_j",
-                        self.advices[7],
-                        offset,
-                        &z13_j,
-                    )?;
+                    z13_j.copy_advice(|| "copy z13_j", &mut region, self.advices[7], offset)?;
                     // Copy j_prime.
-                    copy(
-                        &mut region,
-                        || "copy j_prime",
-                        self.advices[8],
-                        offset,
-                        &j_prime,
-                    )?;
+                    j_prime.copy_advice(|| "copy j_prime", &mut region, self.advices[8], offset)?;
                     // Copy z13_j_prime.
-                    copy(
-                        &mut region,
+                    z13_j_prime.copy_advice(
                         || "copy z13_j_prime",
+                        &mut region,
                         self.advices[9],
                         offset,
-                        &z13_j_prime,
                     )?;
                 }
 
@@ -1122,20 +1116,23 @@ impl NoteCommitConfig {
             |mut region| {
                 self.q_notecommit_b.enable(&mut region, 0)?;
 
-                copy(&mut region, || "b", col_l, 0, &gate_cells.b)?;
-                copy(&mut region, || "b_0", col_m, 0, &gate_cells.b_0)?;
-                let b_1 = {
-                    let cell = region.assign_advice(
-                        || "b_1",
-                        col_r,
-                        0,
-                        || gate_cells.b_1.ok_or(Error::SynthesisError),
-                    )?;
-                    CellValue::new(cell, gate_cells.b_1)
-                };
+                gate_cells.b.copy_advice(|| "b", &mut region, col_l, 0)?;
+                gate_cells
+                    .b_0
+                    .copy_advice(|| "b_0", &mut region, col_m, 0)?;
+                let b_1 = region.assign_advice(
+                    || "b_1",
+                    col_r,
+                    0,
+                    || gate_cells.b_1.ok_or(Error::Synthesis),
+                )?;
 
-                copy(&mut region, || "b_2", col_m, 1, &gate_cells.b_2)?;
-                copy(&mut region, || "b_3", col_r, 1, &gate_cells.b_3)?;
+                gate_cells
+                    .b_2
+                    .copy_advice(|| "b_2", &mut region, col_m, 1)?;
+                gate_cells
+                    .b_3
+                    .copy_advice(|| "b_3", &mut region, col_r, 1)?;
 
                 Ok(b_1)
             },
@@ -1150,20 +1147,23 @@ impl NoteCommitConfig {
             |mut region| {
                 self.q_notecommit_d.enable(&mut region, 0)?;
 
-                copy(&mut region, || "d", col_l, 0, &gate_cells.d)?;
-                let d_0 = {
-                    let cell = region.assign_advice(
-                        || "d_0",
-                        col_m,
-                        0,
-                        || gate_cells.d_0.ok_or(Error::SynthesisError),
-                    )?;
-                    CellValue::new(cell, gate_cells.d_0)
-                };
-                copy(&mut region, || "d_1", col_r, 0, &gate_cells.d_1)?;
+                gate_cells.d.copy_advice(|| "d", &mut region, col_l, 0)?;
+                let d_0 = region.assign_advice(
+                    || "d_0",
+                    col_m,
+                    0,
+                    || gate_cells.d_0.ok_or(Error::Synthesis),
+                )?;
+                gate_cells
+                    .d_1
+                    .copy_advice(|| "d_1", &mut region, col_r, 0)?;
 
-                copy(&mut region, || "d_2", col_m, 1, &gate_cells.d_2)?;
-                copy(&mut region, || "d_3 = z1_d", col_r, 1, &gate_cells.z1_d)?;
+                gate_cells
+                    .d_2
+                    .copy_advice(|| "d_2", &mut region, col_m, 1)?;
+                gate_cells
+                    .z1_d
+                    .copy_advice(|| "d_3 = z1_d", &mut region, col_r, 1)?;
 
                 Ok(d_0)
             },
@@ -1177,9 +1177,13 @@ impl NoteCommitConfig {
             |mut region| {
                 self.q_notecommit_e.enable(&mut region, 0)?;
 
-                copy(&mut region, || "e", col_l, 0, &gate_cells.e)?;
-                copy(&mut region, || "e_0", col_m, 0, &gate_cells.e_0)?;
-                copy(&mut region, || "e_1", col_r, 0, &gate_cells.e_1)?;
+                gate_cells.e.copy_advice(|| "e", &mut region, col_l, 0)?;
+                gate_cells
+                    .e_0
+                    .copy_advice(|| "e_0", &mut region, col_m, 0)?;
+                gate_cells
+                    .e_1
+                    .copy_advice(|| "e_1", &mut region, col_r, 0)?;
 
                 Ok(())
             },
@@ -1194,19 +1198,20 @@ impl NoteCommitConfig {
             |mut region| {
                 self.q_notecommit_g.enable(&mut region, 0)?;
 
-                copy(&mut region, || "g", col_l, 0, &gate_cells.g)?;
-                let g_0 = {
-                    let cell = region.assign_advice(
-                        || "g_0",
-                        col_m,
-                        0,
-                        || gate_cells.g_0.ok_or(Error::SynthesisError),
-                    )?;
-                    CellValue::new(cell, gate_cells.g_0)
-                };
+                gate_cells.g.copy_advice(|| "g", &mut region, col_l, 0)?;
+                let g_0 = region.assign_advice(
+                    || "g_0",
+                    col_m,
+                    0,
+                    || gate_cells.g_0.ok_or(Error::Synthesis),
+                )?;
 
-                copy(&mut region, || "g_1", col_l, 1, &gate_cells.g_1)?;
-                copy(&mut region, || "g_2 = z1_g", col_m, 1, &gate_cells.z1_g)?;
+                gate_cells
+                    .g_1
+                    .copy_advice(|| "g_1", &mut region, col_l, 1)?;
+                gate_cells
+                    .z1_g
+                    .copy_advice(|| "g_2 = z1_g", &mut region, col_m, 1)?;
 
                 Ok(g_0)
             },
@@ -1220,17 +1225,16 @@ impl NoteCommitConfig {
             |mut region| {
                 self.q_notecommit_h.enable(&mut region, 0)?;
 
-                copy(&mut region, || "h", col_l, 0, &gate_cells.h)?;
-                copy(&mut region, || "h_0", col_m, 0, &gate_cells.h_0)?;
-                let h_1 = {
-                    let cell = region.assign_advice(
-                        || "h_1",
-                        col_r,
-                        0,
-                        || gate_cells.h_1.ok_or(Error::SynthesisError),
-                    )?;
-                    CellValue::new(cell, gate_cells.h_1)
-                };
+                gate_cells.h.copy_advice(|| "h", &mut region, col_l, 0)?;
+                gate_cells
+                    .h_0
+                    .copy_advice(|| "h_0", &mut region, col_m, 0)?;
+                let h_1 = region.assign_advice(
+                    || "h_1",
+                    col_r,
+                    0,
+                    || gate_cells.h_1.ok_or(Error::Synthesis),
+                )?;
 
                 Ok(h_1)
             },
@@ -1243,22 +1247,26 @@ impl NoteCommitConfig {
         layouter.assign_region(
             || "NoteCommit input g_d",
             |mut region| {
-                copy(&mut region, || "gd_x", col_l, 0, &gate_cells.gd_x)?;
+                gate_cells
+                    .gd_x
+                    .copy_advice(|| "gd_x", &mut region, col_l, 0)?;
 
-                copy(&mut region, || "b_0", col_m, 0, &gate_cells.b_0)?;
-                copy(&mut region, || "b_1", col_m, 1, &b_1)?;
+                gate_cells
+                    .b_0
+                    .copy_advice(|| "b_0", &mut region, col_m, 0)?;
+                b_1.copy_advice(|| "b_1", &mut region, col_m, 1)?;
 
-                copy(&mut region, || "a", col_r, 0, &gate_cells.a)?;
-                copy(&mut region, || "a_prime", col_r, 1, &gate_cells.a_prime)?;
+                gate_cells.a.copy_advice(|| "a", &mut region, col_r, 0)?;
+                gate_cells
+                    .a_prime
+                    .copy_advice(|| "a_prime", &mut region, col_r, 1)?;
 
-                copy(&mut region, || "z13_a", col_z, 0, &gate_cells.z13_a)?;
-                copy(
-                    &mut region,
-                    || "z13_a_prime",
-                    col_z,
-                    1,
-                    &gate_cells.z13_a_prime,
-                )?;
+                gate_cells
+                    .z13_a
+                    .copy_advice(|| "z13_a", &mut region, col_z, 0)?;
+                gate_cells
+                    .z13_a_prime
+                    .copy_advice(|| "z13_a_prime", &mut region, col_z, 1)?;
 
                 self.q_notecommit_g_d.enable(&mut region, 0)
             },
@@ -1271,27 +1279,28 @@ impl NoteCommitConfig {
         layouter.assign_region(
             || "NoteCommit input pk_d",
             |mut region| {
-                copy(&mut region, || "pkd_x", col_l, 0, &gate_cells.pkd_x)?;
+                gate_cells
+                    .pkd_x
+                    .copy_advice(|| "pkd_x", &mut region, col_l, 0)?;
 
-                copy(&mut region, || "b_3", col_m, 0, &gate_cells.b_3)?;
-                copy(&mut region, || "d_0", col_m, 1, &d_0)?;
+                gate_cells
+                    .b_3
+                    .copy_advice(|| "b_3", &mut region, col_m, 0)?;
+                d_0.copy_advice(|| "d_0", &mut region, col_m, 1)?;
 
-                copy(&mut region, || "c", col_r, 0, &gate_cells.c)?;
-                copy(
-                    &mut region,
-                    || "b3_c_prime",
-                    col_r,
-                    1,
-                    &gate_cells.b3_c_prime,
-                )?;
+                gate_cells.c.copy_advice(|| "c", &mut region, col_r, 0)?;
+                gate_cells
+                    .b3_c_prime
+                    .copy_advice(|| "b3_c_prime", &mut region, col_r, 1)?;
 
-                copy(&mut region, || "z13_c", col_z, 0, &gate_cells.z13_c)?;
-                copy(
-                    &mut region,
+                gate_cells
+                    .z13_c
+                    .copy_advice(|| "z13_c", &mut region, col_z, 0)?;
+                gate_cells.z14_b3_c_prime.copy_advice(
                     || "z14_b3_c_prime",
+                    &mut region,
                     col_z,
                     1,
-                    &gate_cells.z14_b3_c_prime,
                 )?;
 
                 self.q_notecommit_pk_d.enable(&mut region, 0)
@@ -1302,10 +1311,18 @@ impl NoteCommitConfig {
         layouter.assign_region(
             || "NoteCommit input value",
             |mut region| {
-                copy(&mut region, || "value", col_l, 0, &gate_cells.value)?;
-                copy(&mut region, || "d_2", col_m, 0, &gate_cells.d_2)?;
-                copy(&mut region, || "d3 = z1_d", col_r, 0, &gate_cells.z1_d)?;
-                copy(&mut region, || "e_0", col_z, 0, &gate_cells.e_0)?;
+                gate_cells
+                    .value
+                    .copy_advice(|| "value", &mut region, col_l, 0)?;
+                gate_cells
+                    .d_2
+                    .copy_advice(|| "d_2", &mut region, col_m, 0)?;
+                gate_cells
+                    .z1_d
+                    .copy_advice(|| "d3 = z1_d", &mut region, col_r, 0)?;
+                gate_cells
+                    .e_0
+                    .copy_advice(|| "e_0", &mut region, col_z, 0)?;
 
                 self.q_notecommit_value.enable(&mut region, 0)
             },
@@ -1318,27 +1335,28 @@ impl NoteCommitConfig {
         layouter.assign_region(
             || "NoteCommit input rho",
             |mut region| {
-                copy(&mut region, || "rho", col_l, 0, &gate_cells.rho)?;
+                gate_cells
+                    .rho
+                    .copy_advice(|| "rho", &mut region, col_l, 0)?;
 
-                copy(&mut region, || "e_1", col_m, 0, &gate_cells.e_1)?;
-                copy(&mut region, || "g_0", col_m, 1, &g_0)?;
+                gate_cells
+                    .e_1
+                    .copy_advice(|| "e_1", &mut region, col_m, 0)?;
+                g_0.copy_advice(|| "g_0", &mut region, col_m, 1)?;
 
-                copy(&mut region, || "f", col_r, 0, &gate_cells.f)?;
-                copy(
-                    &mut region,
-                    || "e1_f_prime",
-                    col_r,
-                    1,
-                    &gate_cells.e1_f_prime,
-                )?;
+                gate_cells.f.copy_advice(|| "f", &mut region, col_r, 0)?;
+                gate_cells
+                    .e1_f_prime
+                    .copy_advice(|| "e1_f_prime", &mut region, col_r, 1)?;
 
-                copy(&mut region, || "z13_f", col_z, 0, &gate_cells.z13_f)?;
-                copy(
-                    &mut region,
+                gate_cells
+                    .z13_f
+                    .copy_advice(|| "z13_f", &mut region, col_z, 0)?;
+                gate_cells.z14_e1_f_prime.copy_advice(
                     || "z14_e1_f_prime",
+                    &mut region,
                     col_z,
                     1,
-                    &gate_cells.z14_e1_f_prime,
                 )?;
 
                 self.q_notecommit_rho.enable(&mut region, 0)
@@ -1352,28 +1370,33 @@ impl NoteCommitConfig {
         layouter.assign_region(
             || "NoteCommit input psi",
             |mut region| {
-                copy(&mut region, || "psi", col_l, 0, &gate_cells.psi)?;
-                copy(&mut region, || "h_0", col_l, 1, &gate_cells.h_0)?;
+                gate_cells
+                    .psi
+                    .copy_advice(|| "psi", &mut region, col_l, 0)?;
+                gate_cells
+                    .h_0
+                    .copy_advice(|| "h_0", &mut region, col_l, 1)?;
 
-                copy(&mut region, || "g_1", col_m, 0, &gate_cells.g_1)?;
-                copy(&mut region, || "h_1", col_m, 1, &h_1)?;
+                gate_cells
+                    .g_1
+                    .copy_advice(|| "g_1", &mut region, col_m, 0)?;
+                h_1.copy_advice(|| "h_1", &mut region, col_m, 1)?;
 
-                copy(&mut region, || "g_2 = z1_g", col_r, 0, &gate_cells.z1_g)?;
-                copy(
-                    &mut region,
-                    || "g1_g2_prime",
-                    col_r,
-                    1,
-                    &gate_cells.g1_g2_prime,
-                )?;
+                gate_cells
+                    .z1_g
+                    .copy_advice(|| "g_2 = z1_g", &mut region, col_r, 0)?;
+                gate_cells
+                    .g1_g2_prime
+                    .copy_advice(|| "g1_g2_prime", &mut region, col_r, 1)?;
 
-                copy(&mut region, || "z13_g", col_z, 0, &gate_cells.z13_g)?;
-                copy(
-                    &mut region,
+                gate_cells
+                    .z13_g
+                    .copy_advice(|| "z13_g", &mut region, col_z, 0)?;
+                gate_cells.z13_g1_g2_prime.copy_advice(
                     || "z13_g1_g2_prime",
+                    &mut region,
                     col_z,
                     1,
-                    &gate_cells.z13_g1_g2_prime,
                 )?;
 
                 self.q_notecommit_psi.enable(&mut region, 0)
@@ -1383,46 +1406,46 @@ impl NoteCommitConfig {
 }
 
 struct GateCells {
-    a: CellValue<pallas::Base>,
-    b: CellValue<pallas::Base>,
-    b_0: CellValue<pallas::Base>,
+    a: AssignedCell<pallas::Base, pallas::Base>,
+    b: AssignedCell<pallas::Base, pallas::Base>,
+    b_0: AssignedCell<pallas::Base, pallas::Base>,
     b_1: Option<pallas::Base>,
-    b_2: CellValue<pallas::Base>,
-    b_3: CellValue<pallas::Base>,
-    c: CellValue<pallas::Base>,
-    d: CellValue<pallas::Base>,
+    b_2: AssignedCell<pallas::Base, pallas::Base>,
+    b_3: AssignedCell<pallas::Base, pallas::Base>,
+    c: AssignedCell<pallas::Base, pallas::Base>,
+    d: AssignedCell<pallas::Base, pallas::Base>,
     d_0: Option<pallas::Base>,
-    d_1: CellValue<pallas::Base>,
-    d_2: CellValue<pallas::Base>,
-    z1_d: CellValue<pallas::Base>,
-    e: CellValue<pallas::Base>,
-    e_0: CellValue<pallas::Base>,
-    e_1: CellValue<pallas::Base>,
-    f: CellValue<pallas::Base>,
-    g: CellValue<pallas::Base>,
+    d_1: AssignedCell<pallas::Base, pallas::Base>,
+    d_2: AssignedCell<pallas::Base, pallas::Base>,
+    z1_d: AssignedCell<pallas::Base, pallas::Base>,
+    e: AssignedCell<pallas::Base, pallas::Base>,
+    e_0: AssignedCell<pallas::Base, pallas::Base>,
+    e_1: AssignedCell<pallas::Base, pallas::Base>,
+    f: AssignedCell<pallas::Base, pallas::Base>,
+    g: AssignedCell<pallas::Base, pallas::Base>,
     g_0: Option<pallas::Base>,
-    g_1: CellValue<pallas::Base>,
-    z1_g: CellValue<pallas::Base>,
-    h: CellValue<pallas::Base>,
-    h_0: CellValue<pallas::Base>,
+    g_1: AssignedCell<pallas::Base, pallas::Base>,
+    z1_g: AssignedCell<pallas::Base, pallas::Base>,
+    h: AssignedCell<pallas::Base, pallas::Base>,
+    h_0: AssignedCell<pallas::Base, pallas::Base>,
     h_1: Option<pallas::Base>,
-    gd_x: CellValue<pallas::Base>,
-    pkd_x: CellValue<pallas::Base>,
-    value: CellValue<pallas::Base>,
-    rho: CellValue<pallas::Base>,
-    psi: CellValue<pallas::Base>,
-    a_prime: CellValue<pallas::Base>,
-    b3_c_prime: CellValue<pallas::Base>,
-    e1_f_prime: CellValue<pallas::Base>,
-    g1_g2_prime: CellValue<pallas::Base>,
-    z13_a_prime: CellValue<pallas::Base>,
-    z14_b3_c_prime: CellValue<pallas::Base>,
-    z14_e1_f_prime: CellValue<pallas::Base>,
-    z13_g1_g2_prime: CellValue<pallas::Base>,
-    z13_a: CellValue<pallas::Base>,
-    z13_c: CellValue<pallas::Base>,
-    z13_f: CellValue<pallas::Base>,
-    z13_g: CellValue<pallas::Base>,
+    gd_x: AssignedCell<pallas::Base, pallas::Base>,
+    pkd_x: AssignedCell<pallas::Base, pallas::Base>,
+    value: AssignedCell<pallas::Base, pallas::Base>,
+    rho: AssignedCell<pallas::Base, pallas::Base>,
+    psi: AssignedCell<pallas::Base, pallas::Base>,
+    a_prime: AssignedCell<pallas::Base, pallas::Base>,
+    b3_c_prime: AssignedCell<pallas::Base, pallas::Base>,
+    e1_f_prime: AssignedCell<pallas::Base, pallas::Base>,
+    g1_g2_prime: AssignedCell<pallas::Base, pallas::Base>,
+    z13_a_prime: AssignedCell<pallas::Base, pallas::Base>,
+    z14_b3_c_prime: AssignedCell<pallas::Base, pallas::Base>,
+    z14_e1_f_prime: AssignedCell<pallas::Base, pallas::Base>,
+    z13_g1_g2_prime: AssignedCell<pallas::Base, pallas::Base>,
+    z13_a: AssignedCell<pallas::Base, pallas::Base>,
+    z13_c: AssignedCell<pallas::Base, pallas::Base>,
+    z13_f: AssignedCell<pallas::Base, pallas::Base>,
+    z13_g: AssignedCell<pallas::Base, pallas::Base>,
 }
 
 #[cfg(test)]
@@ -1435,9 +1458,7 @@ mod tests {
                 NonIdentityPoint,
             },
             sinsemilla::chip::SinsemillaChip,
-            utilities::{
-                lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions,
-            },
+            utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
         },
         constants::{L_ORCHARD_BASE, L_VALUE, NOTE_COMMITMENT_PERSONALIZATION, T_Q},
         primitives::sinsemilla::CommitDomain,
@@ -1446,7 +1467,7 @@ mod tests {
     use ff::{Field, PrimeField, PrimeFieldBits};
     use group::Curve;
     use halo2::{
-        circuit::{Layouter, SimpleFloorPlanner},
+        circuit::{AssignedCell, Layouter, SimpleFloorPlanner},
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
@@ -1471,7 +1492,7 @@ mod tests {
         }
 
         impl UtilitiesInstructions<pallas::Base> for MyCircuit {
-            type Var = CellValue<pallas::Base>;
+            type Var = AssignedCell<pallas::Base, pallas::Base>;
         }
 
         impl Circuit<pallas::Base> for MyCircuit {
@@ -1528,7 +1549,7 @@ mod tests {
                     advices[2],
                     lagrange_coeffs[0],
                     lookup,
-                    range_check.clone(),
+                    range_check,
                 );
                 let note_commit_config =
                     NoteCommitConfig::configure(meta, advices, sinsemilla_config);
@@ -1595,7 +1616,7 @@ mod tests {
                 // A note value cannot be negative.
                 let value = {
                     let mut rng = OsRng;
-                    pallas::Base::from_u64(rng.next_u64())
+                    pallas::Base::from(rng.next_u64())
                 };
                 let value_var = {
                     self.load_private(

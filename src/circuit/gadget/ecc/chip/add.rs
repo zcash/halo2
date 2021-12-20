@@ -1,9 +1,8 @@
 use std::array;
 
-use super::{copy, CellValue, EccConfig, EccPoint, Var};
-use ff::Field;
+use super::EccPoint;
+use ff::{BatchInvert, Field};
 use halo2::{
-    arithmetic::BatchInvert,
     circuit::Region,
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
@@ -11,7 +10,7 @@ use halo2::{
 use pasta_curves::{arithmetic::FieldExt, pallas};
 use std::collections::HashSet;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Config {
     q_add: Selector,
     // lambda
@@ -34,24 +33,43 @@ pub struct Config {
     delta: Column<Advice>,
 }
 
-impl From<&EccConfig> for Config {
-    fn from(ecc_config: &EccConfig) -> Self {
-        Self {
-            q_add: ecc_config.q_add,
-            x_p: ecc_config.advices[0],
-            y_p: ecc_config.advices[1],
-            x_qr: ecc_config.advices[2],
-            y_qr: ecc_config.advices[3],
-            lambda: ecc_config.advices[4],
-            alpha: ecc_config.advices[5],
-            beta: ecc_config.advices[6],
-            gamma: ecc_config.advices[7],
-            delta: ecc_config.advices[8],
-        }
-    }
-}
-
 impl Config {
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        x_p: Column<Advice>,
+        y_p: Column<Advice>,
+        x_qr: Column<Advice>,
+        y_qr: Column<Advice>,
+        lambda: Column<Advice>,
+        alpha: Column<Advice>,
+        beta: Column<Advice>,
+        gamma: Column<Advice>,
+        delta: Column<Advice>,
+    ) -> Self {
+        meta.enable_equality(x_p.into());
+        meta.enable_equality(y_p.into());
+        meta.enable_equality(x_qr.into());
+        meta.enable_equality(y_qr.into());
+
+        let config = Self {
+            q_add: meta.selector(),
+            x_p,
+            y_p,
+            x_qr,
+            y_qr,
+            lambda,
+            alpha,
+            beta,
+            gamma,
+            delta,
+        };
+
+        config.create_gate(meta);
+
+        config
+    }
+
     pub(crate) fn advice_columns(&self) -> HashSet<Column<Advice>> {
         core::array::IntoIter::new([
             self.x_p,
@@ -71,7 +89,7 @@ impl Config {
         core::array::IntoIter::new([self.x_qr, self.y_qr]).collect()
     }
 
-    pub(crate) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("complete addition gates", |meta| {
             let q_add = meta.query_selector(self.q_add);
             let x_p = meta.query_advice(self.x_p, Rotation::cur());
@@ -103,8 +121,8 @@ impl Config {
 
             // Useful constants
             let one = Expression::Constant(pallas::Base::one());
-            let two = Expression::Constant(pallas::Base::from_u64(2));
-            let three = Expression::Constant(pallas::Base::from_u64(3));
+            let two = Expression::Constant(pallas::Base::from(2));
+            let three = Expression::Constant(pallas::Base::from(3));
 
             // (x_q − x_p)⋅((x_q − x_p)⋅λ − (y_q−y_p)) = 0
             let poly1 = {
@@ -205,12 +223,12 @@ impl Config {
         self.q_add.enable(region, offset)?;
 
         // Copy point `p` into `x_p`, `y_p` columns
-        copy(region, || "x_p", self.x_p, offset, &p.x)?;
-        copy(region, || "y_p", self.y_p, offset, &p.y)?;
+        p.x.copy_advice(|| "x_p", region, self.x_p, offset)?;
+        p.y.copy_advice(|| "y_p", region, self.y_p, offset)?;
 
         // Copy point `q` into `x_qr`, `y_qr` columns
-        copy(region, || "x_q", self.x_qr, offset, &q.x)?;
-        copy(region, || "y_q", self.y_qr, offset, &q.y)?;
+        q.x.copy_advice(|| "x_q", region, self.x_qr, offset)?;
+        q.y.copy_advice(|| "y_q", region, self.y_qr, offset)?;
 
         let (x_p, y_p) = (p.x.value(), p.y.value());
         let (x_q, y_q) = (q.x.value(), q.y.value());
@@ -230,7 +248,7 @@ impl Config {
                     let gamma = x_q;
                     let delta = y_q + y_p;
 
-                    let mut inverses = [alpha, beta, gamma, delta];
+                    let mut inverses = [alpha, *beta, *gamma, delta];
                     inverses.batch_invert();
                     inverses
                 });
@@ -243,28 +261,13 @@ impl Config {
         };
 
         // Assign α = inv0(x_q - x_p)
-        region.assign_advice(
-            || "α",
-            self.alpha,
-            offset,
-            || alpha.ok_or(Error::SynthesisError),
-        )?;
+        region.assign_advice(|| "α", self.alpha, offset, || alpha.ok_or(Error::Synthesis))?;
 
         // Assign β = inv0(x_p)
-        region.assign_advice(
-            || "β",
-            self.beta,
-            offset,
-            || beta.ok_or(Error::SynthesisError),
-        )?;
+        region.assign_advice(|| "β", self.beta, offset, || beta.ok_or(Error::Synthesis))?;
 
         // Assign γ = inv0(x_q)
-        region.assign_advice(
-            || "γ",
-            self.gamma,
-            offset,
-            || gamma.ok_or(Error::SynthesisError),
-        )?;
+        region.assign_advice(|| "γ", self.gamma, offset, || gamma.ok_or(Error::Synthesis))?;
 
         // Assign δ = inv0(y_q + y_p) if x_q = x_p, 0 otherwise
         region.assign_advice(
@@ -272,11 +275,11 @@ impl Config {
             self.delta,
             offset,
             || {
-                let x_p = x_p.ok_or(Error::SynthesisError)?;
-                let x_q = x_q.ok_or(Error::SynthesisError)?;
+                let x_p = x_p.ok_or(Error::Synthesis)?;
+                let x_q = x_q.ok_or(Error::Synthesis)?;
 
                 if x_q == x_p {
-                    delta.ok_or(Error::SynthesisError)
+                    delta.ok_or(Error::Synthesis)
                 } else {
                     Ok(pallas::Base::zero())
                 }
@@ -297,9 +300,9 @@ impl Config {
                         // know that x_q != x_p in this branch.
                         (y_q - y_p) * alpha
                     } else {
-                        if y_p != pallas::Base::zero() {
+                        if !y_p.is_zero_vartime() {
                             // 3(x_p)^2
-                            let three_x_p_sq = pallas::Base::from_u64(3) * x_p.square();
+                            let three_x_p_sq = pallas::Base::from(3) * x_p.square();
                             // 1 / 2(y_p)
                             let inv_two_y_p = y_p.invert().unwrap() * pallas::Base::TWO_INV;
                             // λ = 3(x_p)^2 / 2(y_p)
@@ -313,7 +316,7 @@ impl Config {
             || "λ",
             self.lambda,
             offset,
-            || lambda.ok_or(Error::SynthesisError),
+            || lambda.ok_or(Error::Synthesis),
         )?;
 
         // Calculate (x_r, y_r)
@@ -324,13 +327,13 @@ impl Config {
                 .zip(lambda)
                 .map(|((((x_p, y_p), x_q), y_q), lambda)| {
                     {
-                        if x_p == pallas::Base::zero() {
+                        if x_p.is_zero_vartime() {
                             // 0 + Q = Q
-                            (x_q, y_q)
-                        } else if x_q == pallas::Base::zero() {
+                            (*x_q, *y_q)
+                        } else if x_q.is_zero_vartime() {
                             // P + 0 = P
-                            (x_p, y_p)
-                        } else if (x_q == x_p) && (y_q == -y_p) {
+                            (*x_p, *y_p)
+                        } else if (x_q == x_p) && (*y_q == -y_p) {
                             // P + (-P) maps to (0,0)
                             (pallas::Base::zero(), pallas::Base::zero())
                         } else {
@@ -349,7 +352,7 @@ impl Config {
             || "x_r",
             self.x_qr,
             offset + 1,
-            || x_r.ok_or(Error::SynthesisError),
+            || x_r.ok_or(Error::Synthesis),
         )?;
 
         // Assign y_r
@@ -358,12 +361,12 @@ impl Config {
             || "y_r",
             self.y_qr,
             offset + 1,
-            || y_r.ok_or(Error::SynthesisError),
+            || y_r.ok_or(Error::Synthesis),
         )?;
 
         let result = EccPoint {
-            x: CellValue::<pallas::Base>::new(x_r_cell, x_r),
-            y: CellValue::<pallas::Base>::new(y_r_cell, y_r),
+            x: x_r_cell,
+            y: y_r_cell,
         };
 
         #[cfg(test)]
@@ -411,7 +414,9 @@ pub mod tests {
         // Check complete addition P + (-P)
         let zero = {
             let result = p.add(layouter.namespace(|| "P + (-P)"), p_neg)?;
-            assert!(result.inner().is_identity().unwrap());
+            if let Some(is_identity) = result.inner().is_identity() {
+                assert!(is_identity);
+            }
             result
         };
 

@@ -24,29 +24,29 @@
 
 use ff::PrimeFieldBits;
 use halo2::{
-    circuit::Region,
+    circuit::{AssignedCell, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
 
-use super::{copy, range_check, CellValue, Var};
+use super::range_check;
 use crate::constants::util::decompose_word;
 use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
 /// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
-pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<CellValue<F>>);
+pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<AssignedCell<F, F>>);
 impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
-    type Target = Vec<CellValue<F>>;
+    type Target = Vec<AssignedCell<F, F>>;
 
-    fn deref(&self) -> &Vec<CellValue<F>> {
+    fn deref(&self) -> &Vec<AssignedCell<F, F>> {
         &self.0
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct RunningSumConfig<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> {
-    q_range_check: Selector,
+    pub q_range_check: Selector,
     pub z: Column<Advice>,
     _marker: PhantomData<F>,
 }
@@ -84,7 +84,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
             let z_next = meta.query_advice(config.z, Rotation::next());
             //    z_i = 2^{K}⋅z_{i + 1} + k_i
             // => k_i = z_i - 2^{K}⋅z_{i + 1}
-            let word = z_cur - z_next * F::from_u64(1 << WINDOW_NUM_BITS);
+            let word = z_cur - z_next * F::from(1 << WINDOW_NUM_BITS);
 
             vec![q_range_check * range_check(word, 1 << WINDOW_NUM_BITS)]
         });
@@ -105,15 +105,12 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         word_num_bits: usize,
         num_windows: usize,
     ) -> Result<RunningSum<F>, Error> {
-        let z_0 = {
-            let cell = region.assign_advice(
-                || "z_0 = alpha",
-                self.z,
-                offset,
-                || alpha.ok_or(Error::SynthesisError),
-            )?;
-            CellValue::new(cell, alpha)
-        };
+        let z_0 = region.assign_advice(
+            || "z_0 = alpha",
+            self.z,
+            offset,
+            || alpha.ok_or(Error::Synthesis),
+        )?;
         self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
 
@@ -125,12 +122,12 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
-        alpha: CellValue<F>,
+        alpha: AssignedCell<F, F>,
         strict: bool,
         word_num_bits: usize,
         num_windows: usize,
     ) -> Result<RunningSum<F>, Error> {
-        let z_0 = copy(region, || "copy z_0 = alpha", self.z, offset, &alpha)?;
+        let z_0 = alpha.copy_advice(|| "copy z_0 = alpha", region, self.z, offset)?;
         self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
 
@@ -143,7 +140,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
-        z_0: CellValue<F>,
+        z_0: AssignedCell<F, F>,
         strict: bool,
         word_num_bits: usize,
         num_windows: usize,
@@ -179,33 +176,32 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         };
 
         // Initialize empty vector to store running sum values [z_0, ..., z_W].
-        let mut zs: Vec<CellValue<F>> = vec![z_0];
+        let mut zs: Vec<AssignedCell<F, F>> = vec![z_0.clone()];
         let mut z = z_0;
 
         // Assign running sum `z_{i+1}` = (z_i - k_i) / (2^K) for i = 0..=n-1.
         // Outside of this helper, z_0 = alpha must have already been loaded into the
         // `z` column at `offset`.
-        let two_pow_k_inv = F::from_u64(1 << WINDOW_NUM_BITS as u64).invert().unwrap();
+        let two_pow_k_inv = F::from(1 << WINDOW_NUM_BITS as u64).invert().unwrap();
         for (i, word) in words.iter().enumerate() {
             // z_next = (z_cur - word) / (2^K)
             let z_next = {
-                let word = word.map(|word| F::from_u64(word as u64));
+                let word = word.map(|word| F::from(word as u64));
                 let z_next_val = z
                     .value()
                     .zip(word)
-                    .map(|(z_cur_val, word)| (z_cur_val - word) * two_pow_k_inv);
-                let cell = region.assign_advice(
+                    .map(|(z_cur_val, word)| (*z_cur_val - word) * two_pow_k_inv);
+                region.assign_advice(
                     || format!("z_{:?}", i + 1),
                     self.z,
                     offset + i + 1,
-                    || z_next_val.ok_or(Error::SynthesisError),
-                )?;
-                CellValue::new(cell, z_next_val)
+                    || z_next_val.ok_or(Error::Synthesis),
+                )?
             };
 
             // Update `z`.
             z = z_next;
-            zs.push(z);
+            zs.push(z.clone());
         }
         assert_eq!(zs.len(), num_windows + 1);
 
@@ -284,7 +280,7 @@ mod tests {
                             WORD_NUM_BITS,
                             NUM_WINDOWS,
                         )?;
-                        let alpha = zs[0];
+                        let alpha = zs[0].clone();
 
                         let offset = offset + NUM_WINDOWS + 1;
 
@@ -323,7 +319,7 @@ mod tests {
 
         // Random 64-bit word
         {
-            let alpha = pallas::Base::from_u64(rand::random());
+            let alpha = pallas::Base::from(rand::random::<u64>());
 
             // Strict full decomposition should pass.
             let circuit: MyCircuit<

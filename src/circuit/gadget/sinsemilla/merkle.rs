@@ -139,13 +139,14 @@ pub mod tests {
     use crate::{
         circuit::gadget::{
             sinsemilla::chip::{SinsemillaChip, SinsemillaHashDomains},
-            utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions, Var},
+            utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
         },
         constants::MERKLE_DEPTH_ORCHARD,
         note::commitment::ExtractedNoteCommitment,
         tree,
     };
 
+    use group::ff::PrimeField;
     use halo2::{
         arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner},
@@ -210,7 +211,7 @@ pub mod tests {
                 advices[7],
                 fixed_y_q_1,
                 lookup,
-                range_check.clone(),
+                range_check,
             );
             let config1 = MerkleChip::configure(meta, sinsemilla_config_1);
 
@@ -260,13 +261,13 @@ pub mod tests {
                 // The expected final root
                 let final_root = {
                     let path = tree::MerklePath::new(leaf_pos, self.merkle_path.unwrap());
-                    let leaf = ExtractedNoteCommitment::from_bytes(&self.leaf.unwrap().to_bytes())
-                        .unwrap();
+                    let leaf =
+                        ExtractedNoteCommitment::from_bytes(&self.leaf.unwrap().to_repr()).unwrap();
                     path.root(leaf)
                 };
 
                 // Check the computed final root against the expected final root.
-                assert_eq!(computed_final_root.value().unwrap(), final_root.inner());
+                assert_eq!(computed_final_root.value().unwrap(), &final_root.inner());
             }
 
             Ok(())

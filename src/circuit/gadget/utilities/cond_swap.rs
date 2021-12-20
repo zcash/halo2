@@ -1,7 +1,7 @@
-use super::{copy, CellValue, UtilitiesInstructions, Var};
+use super::{bool_check, ternary, UtilitiesInstructions};
 use halo2::{
-    circuit::{Chip, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
+    circuit::{AssignedCell, Chip, Layouter},
+    plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
 use pasta_curves::arithmetic::FieldExt;
@@ -53,7 +53,7 @@ pub struct CondSwapConfig {
 }
 
 impl<F: FieldExt> UtilitiesInstructions<F> for CondSwapChip<F> {
-    type Var = CellValue<F>;
+    type Var = AssignedCell<F, F>;
 }
 
 impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
@@ -73,64 +73,55 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                 config.q_swap.enable(&mut region, 0)?;
 
                 // Copy in `a` value
-                let a = copy(&mut region, || "copy a", config.a, 0, &pair.0)?;
+                let a = pair.0.copy_advice(|| "copy a", &mut region, config.a, 0)?;
 
                 // Witness `b` value
-                let b = {
-                    let cell = region.assign_advice(
-                        || "witness b",
-                        config.b,
-                        0,
-                        || pair.1.ok_or(Error::SynthesisError),
-                    )?;
-                    CellValue::new(cell, pair.1)
-                };
+                let b = region.assign_advice(
+                    || "witness b",
+                    config.b,
+                    0,
+                    || pair.1.ok_or(Error::Synthesis),
+                )?;
 
                 // Witness `swap` value
-                let swap_val = swap.map(|swap| F::from_u64(swap as u64));
+                let swap_val = swap.map(|swap| F::from(swap as u64));
                 region.assign_advice(
                     || "swap",
                     config.swap,
                     0,
-                    || swap_val.ok_or(Error::SynthesisError),
+                    || swap_val.ok_or(Error::Synthesis),
                 )?;
 
                 // Conditionally swap a
                 let a_swapped = {
                     let a_swapped = a
-                        .value
-                        .zip(b.value)
+                        .value()
+                        .zip(b.value())
                         .zip(swap)
-                        .map(|((a, b), swap)| if swap { b } else { a });
-                    let a_swapped_cell = region.assign_advice(
+                        .map(|((a, b), swap)| if swap { b } else { a })
+                        .cloned();
+                    region.assign_advice(
                         || "a_swapped",
                         config.a_swapped,
                         0,
-                        || a_swapped.ok_or(Error::SynthesisError),
-                    )?;
-                    CellValue {
-                        cell: a_swapped_cell,
-                        value: a_swapped,
-                    }
+                        || a_swapped.ok_or(Error::Synthesis),
+                    )?
                 };
 
                 // Conditionally swap b
                 let b_swapped = {
                     let b_swapped = a
-                        .value
-                        .zip(b.value)
+                        .value()
+                        .zip(b.value())
                         .zip(swap)
-                        .map(|((a, b), swap)| if swap { a } else { b });
-                    let b_swapped_cell = region.assign_advice(
+                        .map(|((a, b), swap)| if swap { a } else { b })
+                        .cloned();
+                    region.assign_advice(
                         || "b_swapped",
                         config.b_swapped,
                         0,
-                        || b_swapped.ok_or(Error::SynthesisError),
-                    )?;
-                    CellValue {
-                        cell: b_swapped_cell,
-                        value: b_swapped,
-                    }
+                        || b_swapped.ok_or(Error::Synthesis),
+                    )?
                 };
 
                 // Return swapped pair
@@ -176,21 +167,16 @@ impl<F: FieldExt> CondSwapChip<F> {
             let b_swapped = meta.query_advice(config.b_swapped, Rotation::cur());
             let swap = meta.query_advice(config.swap, Rotation::cur());
 
-            let one = Expression::Constant(F::one());
-
-            // a_swapped - b ⋅ swap - a ⋅ (1-swap) = 0
-            // This checks that `a_swapped` is equal to `y` when `swap` is set,
+            // This checks that `a_swapped` is equal to `b` when `swap` is set,
             // but remains as `a` when `swap` is not set.
-            let a_check =
-                a_swapped - b.clone() * swap.clone() - a.clone() * (one.clone() - swap.clone());
+            let a_check = a_swapped - ternary(swap.clone(), b.clone(), a.clone());
 
-            // b_swapped - a ⋅ swap - b ⋅ (1-swap) = 0
             // This checks that `b_swapped` is equal to `a` when `swap` is set,
             // but remains as `b` when `swap` is not set.
-            let b_check = b_swapped - a * swap.clone() - b * (one.clone() - swap.clone());
+            let b_check = b_swapped - ternary(swap.clone(), a, b);
 
             // Check `swap` is boolean.
-            let bool_check = swap.clone() * (one - swap);
+            let bool_check = bool_check(swap);
 
             array::IntoIter::new([a_check, b_check, bool_check])
                 .map(move |poly| q_swap.clone() * poly)
@@ -257,18 +243,21 @@ mod tests {
                 // Load the pair and the swap flag into the circuit.
                 let a = chip.load_private(layouter.namespace(|| "a"), config.a, self.a)?;
                 // Return the swapped pair.
-                let swapped_pair =
-                    chip.swap(layouter.namespace(|| "swap"), (a, self.b), self.swap)?;
+                let swapped_pair = chip.swap(
+                    layouter.namespace(|| "swap"),
+                    (a.clone(), self.b),
+                    self.swap,
+                )?;
 
                 if let Some(swap) = self.swap {
                     if swap {
                         // Check that `a` and `b` have been swapped
-                        assert_eq!(swapped_pair.0.value.unwrap(), self.b.unwrap());
-                        assert_eq!(swapped_pair.1.value.unwrap(), a.value.unwrap());
+                        assert_eq!(swapped_pair.0.value().unwrap(), &self.b.unwrap());
+                        assert_eq!(swapped_pair.1.value().unwrap(), a.value().unwrap());
                     } else {
                         // Check that `a` and `b` have not been swapped
-                        assert_eq!(swapped_pair.0.value.unwrap(), a.value.unwrap());
-                        assert_eq!(swapped_pair.1.value.unwrap(), self.b.unwrap());
+                        assert_eq!(swapped_pair.0.value().unwrap(), a.value().unwrap());
+                        assert_eq!(swapped_pair.1.value().unwrap(), &self.b.unwrap());
                     }
                 }
 

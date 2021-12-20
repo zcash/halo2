@@ -1,7 +1,8 @@
 use std::convert::TryInto;
 
 use crate::constants::{self, compute_lagrange_coeffs, H, NUM_WINDOWS, NUM_WINDOWS_SHORT};
-use pasta_curves::{arithmetic::FieldExt, pallas};
+use group::ff::PrimeField;
+use pasta_curves::pallas;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum OrchardFixedBasesFull {
@@ -177,7 +178,7 @@ impl From<[u64; NUM_WINDOWS]> for Z {
     fn from(zs: [u64; NUM_WINDOWS]) -> Self {
         Self(
             zs.iter()
-                .map(|z| pallas::Base::from_u64(*z))
+                .map(|z| pallas::Base::from(*z))
                 .collect::<Vec<_>>()
                 .into_boxed_slice()
                 .try_into()
@@ -194,7 +195,7 @@ impl From<[u64; NUM_WINDOWS_SHORT]> for ZShort {
     fn from(zs: [u64; NUM_WINDOWS_SHORT]) -> Self {
         Self(
             zs.iter()
-                .map(|z| pallas::Base::from_u64(*z))
+                .map(|z| pallas::Base::from(*z))
                 .collect::<Vec<_>>()
                 .into_boxed_slice()
                 .try_into()
@@ -212,7 +213,7 @@ impl From<&[[u8; 32]; H]> for WindowUs {
         Self(
             window_us
                 .iter()
-                .map(|u| pallas::Base::from_bytes(u).unwrap())
+                .map(|u| pallas::Base::from_repr(*u).unwrap())
                 .collect::<Vec<_>>()
                 .into_boxed_slice()
                 .try_into()

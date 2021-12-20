@@ -1,14 +1,14 @@
-use super::super::{EccBaseFieldElemFixed, EccConfig, EccPoint, NullifierK};
+use super::super::{EccBaseFieldElemFixed, EccPoint, NullifierK};
 use super::H_BASE;
 
 use crate::{
     circuit::gadget::utilities::{
-        bitrange_subset, copy, decompose_running_sum::RunningSumConfig,
-        lookup_range_check::LookupRangeCheckConfig, range_check, CellValue, Var,
+        bitrange_subset, lookup_range_check::LookupRangeCheckConfig, range_check,
     },
     constants::{self, T_P},
     primitives::sinsemilla,
 };
+use halo2::circuit::AssignedCell;
 use halo2::{
     circuit::Layouter,
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
@@ -18,24 +18,30 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 
 use std::convert::TryInto;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
-    q_mul_fixed_running_sum: Selector,
     q_mul_fixed_base_field: Selector,
     canon_advices: [Column<Advice>; 3],
     lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
-    running_sum_config: RunningSumConfig<pallas::Base, { constants::FIXED_BASE_WINDOW_SIZE }>,
-    super_config: super::Config<{ constants::NUM_WINDOWS }>,
+    super_config: super::Config,
 }
 
-impl From<&EccConfig> for Config {
-    fn from(config: &EccConfig) -> Self {
+impl Config {
+    pub(crate) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        canon_advices: [Column<Advice>; 3],
+        lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+        super_config: super::Config,
+    ) -> Self {
+        for advice in canon_advices.iter() {
+            meta.enable_equality((*advice).into());
+        }
+
         let config = Self {
-            q_mul_fixed_running_sum: config.q_mul_fixed_running_sum,
-            q_mul_fixed_base_field: config.q_mul_fixed_base_field,
-            canon_advices: [config.advices[6], config.advices[7], config.advices[8]],
-            lookup_config: config.lookup_config.clone(),
-            running_sum_config: config.running_sum_config.clone(),
-            super_config: config.into(),
+            q_mul_fixed_base_field: meta.selector(),
+            canon_advices,
+            lookup_config,
+            super_config,
         };
 
         let add_incomplete_advices = config.super_config.add_incomplete_config.advice_columns();
@@ -46,14 +52,12 @@ impl From<&EccConfig> for Config {
             );
         }
 
-        assert_eq!(config.running_sum_config.z, config.super_config.window);
+        config.create_gate(meta);
 
         config
     }
-}
 
-impl Config {
-    pub fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // Check that the base field element is canonical.
         meta.create_gate("Canonicity checks", |meta| {
             let q_mul_fixed_base_field = meta.query_selector(self.q_mul_fixed_base_field);
@@ -85,7 +89,7 @@ impl Config {
                 let alpha_2_range_check = range_check(alpha_2.clone(), 1 << 1);
                 // Check that α_1 + 2^2 α_2 = z_84_alpha
                 let z_84_alpha_check = z_84_alpha.clone()
-                    - (alpha_1.clone() + alpha_2.clone() * pallas::Base::from_u64(1 << 2));
+                    - (alpha_1.clone() + alpha_2.clone() * pallas::Base::from(1 << 2));
 
                 std::iter::empty()
                     .chain(Some(("alpha_1_range_check", alpha_1_range_check)))
@@ -156,7 +160,7 @@ impl Config {
     pub fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        scalar: CellValue<pallas::Base>,
+        scalar: AssignedCell<pallas::Base, pallas::Base>,
         base: NullifierK,
     ) -> Result<EccPoint, Error> {
         let (scalar, acc, mul_b) = layouter.assign_region(
@@ -166,27 +170,29 @@ impl Config {
 
                 // Decompose scalar
                 let scalar = {
-                    let running_sum = self.running_sum_config.copy_decompose(
+                    let running_sum = self.super_config.running_sum_config.copy_decompose(
                         &mut region,
                         offset,
-                        scalar,
+                        scalar.clone(),
                         true,
                         constants::L_ORCHARD_BASE,
                         constants::NUM_WINDOWS,
                     )?;
                     EccBaseFieldElemFixed {
-                        base_field_elem: running_sum[0],
+                        base_field_elem: running_sum[0].clone(),
                         running_sum: (*running_sum).as_slice().try_into().unwrap(),
                     }
                 };
 
-                let (acc, mul_b) = self.super_config.assign_region_inner(
-                    &mut region,
-                    offset,
-                    &(&scalar).into(),
-                    base.into(),
-                    self.q_mul_fixed_running_sum,
-                )?;
+                let (acc, mul_b) = self
+                    .super_config
+                    .assign_region_inner::<{ constants::NUM_WINDOWS }>(
+                        &mut region,
+                        offset,
+                        &(&scalar).into(),
+                        base.into(),
+                        self.super_config.running_sum_config.q_range_check,
+                    )?;
 
                 Ok((scalar, acc, mul_b))
             },
@@ -197,8 +203,8 @@ impl Config {
             || "Base-field elem fixed-base mul (complete addition)",
             |mut region| {
                 self.super_config.add_config.assign_region(
-                    &mul_b.into(),
-                    &acc.into(),
+                    &mul_b.clone().into(),
+                    &acc.clone().into(),
                     0,
                     &mut region,
                 )
@@ -208,13 +214,13 @@ impl Config {
         #[cfg(test)]
         // Check that the correct multiple is obtained.
         {
-            use group::Curve;
+            use group::{ff::PrimeField, Curve};
 
             let base: super::OrchardFixedBases = base.into();
             let scalar = &scalar
                 .base_field_elem()
                 .value()
-                .map(|scalar| pallas::Scalar::from_bytes(&scalar.to_bytes()).unwrap());
+                .map(|scalar| pallas::Scalar::from_repr(scalar.to_repr()).unwrap());
             let real_mul = scalar.map(|scalar| base.generator() * scalar);
             let result = result.point();
 
@@ -243,9 +249,9 @@ impl Config {
         //                => z_13_alpha_0_prime = 0
         //
         let (alpha, running_sum) = (scalar.base_field_elem, &scalar.running_sum);
-        let z_43_alpha = running_sum[43];
-        let z_44_alpha = running_sum[44];
-        let z_84_alpha = running_sum[84];
+        let z_43_alpha = running_sum[43].clone();
+        let z_44_alpha = running_sum[44].clone();
+        let z_84_alpha = running_sum[84].clone();
 
         // α_0 = α - z_84_alpha * 2^252
         let alpha_0 = alpha
@@ -269,9 +275,9 @@ impl Config {
                 13,
                 false,
             )?;
-            let alpha_0_prime = zs[0];
+            let alpha_0_prime = zs[0].clone();
 
-            (alpha_0_prime, zs[13])
+            (alpha_0_prime, zs[13].clone())
         };
 
         layouter.assign_region(
@@ -285,21 +291,14 @@ impl Config {
                     let offset = 0;
 
                     // Copy α
-                    copy(
-                        &mut region,
-                        || "Copy α",
-                        self.canon_advices[0],
-                        offset,
-                        &alpha,
-                    )?;
+                    alpha.copy_advice(|| "Copy α", &mut region, self.canon_advices[0], offset)?;
 
                     // z_84_alpha = the top three bits of alpha.
-                    copy(
-                        &mut region,
+                    z_84_alpha.copy_advice(
                         || "Copy z_84_alpha",
+                        &mut region,
                         self.canon_advices[2],
                         offset,
-                        &z_84_alpha,
                     )?;
                 }
 
@@ -308,12 +307,11 @@ impl Config {
                     let offset = 1;
                     // Copy alpha_0_prime = alpha_0 + 2^130 - t_p.
                     // We constrain this in the custom gate to be derived correctly.
-                    copy(
-                        &mut region,
+                    alpha_0_prime.copy_advice(
                         || "Copy α_0 + 2^130 - t_p",
+                        &mut region,
                         self.canon_advices[0],
                         offset,
-                        &alpha_0_prime,
                     )?;
 
                     // Decompose α into three pieces,
@@ -325,7 +323,7 @@ impl Config {
                         || "α_1 = α[252..=253]",
                         self.canon_advices[1],
                         offset,
-                        || alpha_1.ok_or(Error::SynthesisError),
+                        || alpha_1.ok_or(Error::Synthesis),
                     )?;
 
                     // Witness the MSB α_2 = α[254]
@@ -334,7 +332,7 @@ impl Config {
                         || "α_2 = α[254]",
                         self.canon_advices[2],
                         offset,
-                        || alpha_2.ok_or(Error::SynthesisError),
+                        || alpha_2.ok_or(Error::Synthesis),
                     )?;
                 }
 
@@ -342,30 +340,27 @@ impl Config {
                 {
                     let offset = 2;
                     // Copy z_13_alpha_0_prime
-                    copy(
-                        &mut region,
+                    z_13_alpha_0_prime.copy_advice(
                         || "Copy z_13_alpha_0_prime",
+                        &mut region,
                         self.canon_advices[0],
                         offset,
-                        &z_13_alpha_0_prime,
                     )?;
 
                     // Copy z_44_alpha
-                    copy(
-                        &mut region,
+                    z_44_alpha.copy_advice(
                         || "Copy z_44_alpha",
+                        &mut region,
                         self.canon_advices[1],
                         offset,
-                        &z_44_alpha,
                     )?;
 
                     // Copy z_43_alpha
-                    copy(
-                        &mut region,
+                    z_43_alpha.copy_advice(
                         || "Copy z_43_alpha",
+                        &mut region,
                         self.canon_advices[2],
                         offset,
-                        &z_43_alpha,
                     )?;
                 }
 
@@ -379,7 +374,7 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
-    use group::Curve;
+    use group::{ff::PrimeField, Curve};
     use halo2::{
         circuit::{Chip, Layouter},
         plonk::Error,
@@ -426,7 +421,7 @@ pub mod tests {
             result: Point<pallas::Affine, EccChip>,
         ) -> Result<(), Error> {
             // Move scalar from base field into scalar field (which always fits for Pallas).
-            let scalar = pallas::Scalar::from_bytes(&scalar_val.to_bytes()).unwrap();
+            let scalar = pallas::Scalar::from_repr(scalar_val.to_repr()).unwrap();
             let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
@@ -460,11 +455,11 @@ pub mod tests {
         // (There is another *non-canonical* sequence
         // 5333333333333333333333333333333333333333332711161673731021062440252244051273333333333 in octal.)
         {
-            let h = pallas::Base::from_u64(constants::H as u64);
+            let h = pallas::Base::from(constants::H as u64);
             let scalar_fixed = "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334"
                         .chars()
                         .fold(pallas::Base::zero(), |acc, c| {
-                            acc * &h + &pallas::Base::from_u64(c.to_digit(8).unwrap().into())
+                            acc * &h + &pallas::Base::from(c.to_digit(8).unwrap() as u64)
                         });
             let result = {
                 let scalar_fixed = chip.load_private(
@@ -492,7 +487,9 @@ pub mod tests {
                     chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_fixed))?;
                 base.mul(layouter.namespace(|| "mul by zero"), scalar_fixed)?
             };
-            assert!(result.inner().is_identity().unwrap());
+            if let Some(is_identity) = result.inner().is_identity() {
+                assert!(is_identity);
+            }
         }
 
         // [-1]B is the largest base field element

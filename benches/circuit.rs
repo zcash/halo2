@@ -73,7 +73,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                 .unwrap()
                 .apply_signatures(rng, [0; 32], &[])
                 .unwrap();
-            assert_eq!(bundle.verify_proof(&vk), Ok(()));
+            assert!(bundle.verify_proof(&vk).is_ok());
             group.bench_function(BenchmarkId::new("bundle", num_recipients), |b| {
                 b.iter(|| bundle.authorization().proof().verify(&vk, &instances));
             });

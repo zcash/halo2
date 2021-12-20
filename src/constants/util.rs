@@ -1,5 +1,5 @@
 use ff::{Field, PrimeFieldBits};
-use halo2::arithmetic::{CurveAffine, FieldExt};
+use halo2::arithmetic::CurveAffine;
 
 /// Decompose a word `alpha` into `window_num_bits` bits (little-endian)
 /// For a window size of `w`, this returns [k_0, ..., k_n] where each `k_i`
@@ -10,7 +10,7 @@ use halo2::arithmetic::{CurveAffine, FieldExt};
 /// We are returning a `Vec<u8>` which means the window size is limited to
 /// <= 8 bits.
 pub fn decompose_word<F: PrimeFieldBits>(
-    word: F,
+    word: &F,
     word_num_bits: usize,
     window_num_bits: usize,
 ) -> Vec<u8> {
@@ -33,7 +33,7 @@ pub fn decompose_word<F: PrimeFieldBits>(
 
 /// Evaluate y = f(x) given the coefficients of f(x)
 pub fn evaluate<C: CurveAffine>(x: u8, coeffs: &[C::Base]) -> C::Base {
-    let x = C::Base::from_u64(x as u64);
+    let x = C::Base::from(x as u64);
     coeffs
         .iter()
         .rev()
@@ -86,7 +86,7 @@ mod tests {
             window_num_bits in 1u8..9
         ) {
             // Get decomposition into `window_num_bits` bits
-            let decomposed = decompose_word(scalar, pallas::Scalar::NUM_BITS as usize, window_num_bits as usize);
+            let decomposed = decompose_word(&scalar, pallas::Scalar::NUM_BITS as usize, window_num_bits as usize);
 
             // Flatten bits
             let bits = decomposed
@@ -102,7 +102,7 @@ mod tests {
             let bytes: Vec<u8> = bits.chunks_exact(8).map(|chunk| chunk.iter().rev().fold(0, |acc, b| (acc << 1) + (*b as u8))).collect();
 
             // Check that original scalar is recovered from decomposition
-            assert_eq!(scalar, pallas::Scalar::from_bytes(&bytes.try_into().unwrap()).unwrap());
+            assert_eq!(scalar, pallas::Scalar::from_repr(bytes.try_into().unwrap()).unwrap());
         }
     }
 }

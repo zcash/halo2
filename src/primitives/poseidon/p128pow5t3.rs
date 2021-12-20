@@ -25,11 +25,11 @@ impl Spec<Fp, 3, 2> for P128Pow5T3 {
         val.pow_vartime(&[5])
     }
 
-    fn secure_mds(&self) -> usize {
+    fn secure_mds() -> usize {
         unimplemented!()
     }
 
-    fn constants(&self) -> (Vec<[Fp; 3]>, Mds<Fp, 3>, Mds<Fp, 3>) {
+    fn constants() -> (Vec<[Fp; 3]>, Mds<Fp, 3>, Mds<Fp, 3>) {
         (
             super::fp::ROUND_CONSTANTS[..].to_vec(),
             super::fp::MDS,
@@ -51,11 +51,11 @@ impl Spec<Fq, 3, 2> for P128Pow5T3 {
         val.pow_vartime(&[5])
     }
 
-    fn secure_mds(&self) -> usize {
+    fn secure_mds() -> usize {
         unimplemented!()
     }
 
-    fn constants(&self) -> (Vec<[Fq; 3]>, Mds<Fq, 3>, Mds<Fq, 3>) {
+    fn constants() -> (Vec<[Fq; 3]>, Mds<Fq, 3>, Mds<Fq, 3>) {
         (
             super::fq::ROUND_CONSTANTS[..].to_vec(),
             super::fq::MDS,
@@ -80,21 +80,15 @@ mod tests {
     /// The same Poseidon specification as poseidon::P128Pow5T3, but constructed
     /// such that its constants will be generated at runtime.
     #[derive(Debug)]
-    pub struct P128Pow5T3Gen<F: FieldExt> {
-        secure_mds: usize,
-        _field: PhantomData<F>,
-    }
+    pub struct P128Pow5T3Gen<F: FieldExt, const SECURE_MDS: usize>(PhantomData<F>);
 
-    impl<F: FieldExt> P128Pow5T3Gen<F> {
-        pub fn new(secure_mds: usize) -> Self {
-            P128Pow5T3Gen {
-                secure_mds,
-                _field: PhantomData::default(),
-            }
+    impl<F: FieldExt, const SECURE_MDS: usize> P128Pow5T3Gen<F, SECURE_MDS> {
+        pub fn new() -> Self {
+            P128Pow5T3Gen(PhantomData::default())
         }
     }
 
-    impl<F: FieldExt> Spec<F, 3, 2> for P128Pow5T3Gen<F> {
+    impl<F: FieldExt, const SECURE_MDS: usize> Spec<F, 3, 2> for P128Pow5T3Gen<F, SECURE_MDS> {
         fn full_rounds() -> usize {
             8
         }
@@ -107,8 +101,8 @@ mod tests {
             val.pow_vartime(&[5])
         }
 
-        fn secure_mds(&self) -> usize {
-            self.secure_mds
+        fn secure_mds() -> usize {
+            SECURE_MDS
         }
     }
 
@@ -119,8 +113,7 @@ mod tests {
             expected_mds: [[F; 3]; 3],
             expected_mds_inv: [[F; 3]; 3],
         ) {
-            let poseidon = P128Pow5T3Gen::<F>::new(0);
-            let (round_constants, mds, mds_inv) = poseidon.constants();
+            let (round_constants, mds, mds_inv) = P128Pow5T3Gen::<F, 0>::constants();
 
             for (actual, expected) in round_constants
                 .iter()
@@ -196,7 +189,7 @@ mod tests {
                 ]),
             ];
 
-            permute::<Fp, P128Pow5T3Gen<Fp>, 3, 2>(&mut input, &fp::MDS, &fp::ROUND_CONSTANTS);
+            permute::<Fp, P128Pow5T3Gen<Fp, 0>, 3, 2>(&mut input, &fp::MDS, &fp::ROUND_CONSTANTS);
             assert_eq!(input, expected_output);
         }
 
@@ -247,7 +240,7 @@ mod tests {
                 ]),
             ];
 
-            permute::<Fq, P128Pow5T3Gen<Fq>, 3, 2>(&mut input, &fq::MDS, &fq::ROUND_CONSTANTS);
+            permute::<Fq, P128Pow5T3Gen<Fq, 0>, 3, 2>(&mut input, &fq::MDS, &fq::ROUND_CONSTANTS);
             assert_eq!(input, expected_output);
         }
     }
@@ -255,7 +248,7 @@ mod tests {
     #[test]
     fn permute_test_vectors() {
         {
-            let (round_constants, mds, _) = super::P128Pow5T3.constants();
+            let (round_constants, mds, _) = super::P128Pow5T3::constants();
 
             for tv in crate::primitives::poseidon::test_vectors::fp::permute() {
                 let mut state = [
@@ -273,7 +266,7 @@ mod tests {
         }
 
         {
-            let (round_constants, mds, _) = super::P128Pow5T3.constants();
+            let (round_constants, mds, _) = super::P128Pow5T3::constants();
 
             for tv in crate::primitives::poseidon::test_vectors::fq::permute() {
                 let mut state = [
@@ -299,7 +292,8 @@ mod tests {
                 Fp::from_repr(tv.input[1]).unwrap(),
             ];
 
-            let result = Hash::init(super::P128Pow5T3, ConstantLength).hash(message);
+            let result =
+                Hash::<_, super::P128Pow5T3, ConstantLength<2>, 3, 2>::init().hash(message);
 
             assert_eq!(result.to_repr(), tv.output);
         }
@@ -310,7 +304,8 @@ mod tests {
                 Fq::from_repr(tv.input[1]).unwrap(),
             ];
 
-            let result = Hash::init(super::P128Pow5T3, ConstantLength).hash(message);
+            let result =
+                Hash::<_, super::P128Pow5T3, ConstantLength<2>, 3, 2>::init().hash(message);
 
             assert_eq!(result.to_repr(), tv.output);
         }

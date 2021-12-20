@@ -1,7 +1,9 @@
 //! Gadget and chips for the Sinsemilla hash function.
-use crate::circuit::gadget::utilities::{CellValue, Var};
 use ff::PrimeFieldBits;
-use halo2::{arithmetic::FieldExt, circuit::Cell};
+use halo2::{
+    arithmetic::FieldExt,
+    circuit::{AssignedCell, Cell},
+};
 use std::fmt::Debug;
 
 /// A [`Message`] composed of several [`MessagePiece`]s.
@@ -32,17 +34,16 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize, const MAX_WORDS: usize> std::
 ///
 /// The piece must fit within a base field element, which means its length
 /// cannot exceed the base field's `NUM_BITS`.
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct MessagePiece<F: FieldExt, const K: usize> {
-    cell_value: CellValue<F>,
+    cell_value: AssignedCell<F, F>,
     /// The number of K-bit words in this message piece.
     num_words: usize,
 }
 
 impl<F: FieldExt + PrimeFieldBits, const K: usize> MessagePiece<F, K> {
-    pub fn new(cell: Cell, field_elem: Option<F>, num_words: usize) -> Self {
+    pub fn new(cell_value: AssignedCell<F, F>, num_words: usize) -> Self {
         assert!(num_words * K < F::NUM_BITS as usize);
-        let cell_value = CellValue::new(cell, field_elem);
         Self {
             cell_value,
             num_words,
@@ -58,10 +59,10 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> MessagePiece<F, K> {
     }
 
     pub fn field_elem(&self) -> Option<F> {
-        self.cell_value.value()
+        self.cell_value.value().cloned()
     }
 
-    pub fn cell_value(&self) -> CellValue<F> {
-        self.cell_value
+    pub fn cell_value(&self) -> AssignedCell<F, F> {
+        self.cell_value.clone()
     }
 }

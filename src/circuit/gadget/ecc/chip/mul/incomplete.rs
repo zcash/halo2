@@ -1,7 +1,6 @@
-use std::ops::Deref;
-
-use super::super::{copy, CellValue, EccConfig, NonIdentityEccPoint, Var};
-use super::{INCOMPLETE_HI_RANGE, INCOMPLETE_LO_RANGE, X, Y, Z};
+use super::super::NonIdentityEccPoint;
+use super::{X, Y, Z};
+use crate::circuit::gadget::utilities::bool_check;
 use ff::Field;
 use halo2::{
     circuit::Region,
@@ -11,10 +10,8 @@ use halo2::{
 
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
-#[derive(Copy, Clone)]
-pub(super) struct Config {
-    // Number of bits covered by this incomplete range.
-    num_bits: usize,
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) struct Config<const NUM_BITS: usize> {
     // Selectors used to constrain the cells used in incomplete addition.
     pub(super) q_mul: (Selector, Selector, Selector),
     // Cumulative sum used to decompose the scalar.
@@ -31,61 +28,36 @@ pub(super) struct Config {
     pub(super) lambda2: Column<Advice>,
 }
 
-// Columns used in processing the `hi` bits of the scalar.
-// `x_p, y_p` are shared across the `hi` and `lo` halves.
-pub(super) struct HiConfig(Config);
-impl From<&EccConfig> for HiConfig {
-    fn from(ecc_config: &EccConfig) -> Self {
-        let config = Config {
-            num_bits: INCOMPLETE_HI_RANGE.len(),
-            q_mul: ecc_config.q_mul_hi,
-            x_p: ecc_config.advices[0],
-            y_p: ecc_config.advices[1],
-            z: ecc_config.advices[9],
-            x_a: ecc_config.advices[3],
-            lambda1: ecc_config.advices[4],
-            lambda2: ecc_config.advices[5],
+impl<const NUM_BITS: usize> Config<NUM_BITS> {
+    pub(super) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        z: Column<Advice>,
+        x_a: Column<Advice>,
+        x_p: Column<Advice>,
+        y_p: Column<Advice>,
+        lambda1: Column<Advice>,
+        lambda2: Column<Advice>,
+    ) -> Self {
+        meta.enable_equality(z.into());
+        meta.enable_equality(lambda1.into());
+
+        let config = Self {
+            q_mul: (meta.selector(), meta.selector(), meta.selector()),
+            z,
+            x_a,
+            x_p,
+            y_p,
+            lambda1,
+            lambda2,
         };
-        Self(config)
-    }
-}
-impl Deref for HiConfig {
-    type Target = Config;
 
-    fn deref(&self) -> &Config {
-        &self.0
-    }
-}
+        config.create_gate(meta);
 
-// Columns used in processing the `lo` bits of the scalar.
-// `x_p, y_p` are shared across the `hi` and `lo` halves.
-pub(super) struct LoConfig(Config);
-impl From<&EccConfig> for LoConfig {
-    fn from(ecc_config: &EccConfig) -> Self {
-        let config = Config {
-            num_bits: INCOMPLETE_LO_RANGE.len(),
-            q_mul: ecc_config.q_mul_lo,
-            x_p: ecc_config.advices[0],
-            y_p: ecc_config.advices[1],
-            z: ecc_config.advices[6],
-            x_a: ecc_config.advices[7],
-            lambda1: ecc_config.advices[8],
-            lambda2: ecc_config.advices[2],
-        };
-        Self(config)
+        config
     }
-}
-impl Deref for LoConfig {
-    type Target = Config;
 
-    fn deref(&self) -> &Config {
-        &self.0
-    }
-}
-
-impl Config {
     // Gate for incomplete addition part of variable-base scalar multiplication.
-    pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // Closure to compute x_{R,i} = λ_{1,i}^2 - x_{A,i} - x_{P,i}
         let x_r = |meta: &mut VirtualCells<pallas::Base>, rotation: Rotation| {
             let x_a = meta.query_advice(self.x_a, rotation);
@@ -131,13 +103,13 @@ impl Config {
             // The current bit in the scalar decomposition, k_i = z_i - 2⋅z_{i+1}.
             // Recall that we assigned the cumulative variable `z_i` in descending order,
             // i from n down to 0. So z_{i+1} corresponds to the `z_prev` query.
-            let k = z_cur - z_prev * pallas::Base::from_u64(2);
+            let k = z_cur - z_prev * pallas::Base::from(2);
             // Check booleanity of decomposition.
-            let bool_check = k.clone() * (one.clone() - k.clone());
+            let bool_check = bool_check(k.clone());
 
             // λ_{1,i}⋅(x_{A,i} − x_{P,i}) − y_{A,i} + (2k_i - 1) y_{P,i} = 0
             let gradient_1 = lambda1_cur * (x_a_cur.clone() - x_p_cur) - y_a_cur.clone()
-                + (k * pallas::Base::from_u64(2) - one) * y_p_cur;
+                + (k * pallas::Base::from(2) - one) * y_p_cur;
 
             // λ_{2,i}^2 − x_{A,i-1} − x_{R,i} − x_{A,i} = 0
             let secant_line = lambda2_cur.clone().square()
@@ -215,21 +187,21 @@ impl Config {
         acc: (X<pallas::Base>, Y<pallas::Base>, Z<pallas::Base>),
     ) -> Result<(X<pallas::Base>, Y<pallas::Base>, Vec<Z<pallas::Base>>), Error> {
         // Check that we have the correct number of bits for this double-and-add.
-        assert_eq!(bits.len(), self.num_bits);
+        assert_eq!(bits.len(), NUM_BITS);
 
         // Handle exceptional cases
-        let (x_p, y_p) = (base.x.value(), base.y.value());
-        let (x_a, y_a) = (acc.0.value(), acc.1.value());
+        let (x_p, y_p) = (base.x.value().cloned(), base.y.value().cloned());
+        let (x_a, y_a) = (acc.0.value().cloned(), acc.1.value().cloned());
 
         if let (Some(x_a), Some(y_a), Some(x_p), Some(y_p)) = (x_a, y_a, x_p, y_p) {
             // A is point at infinity
-            if (x_p == pallas::Base::zero() && y_p == pallas::Base::zero())
+            if (x_p.is_zero_vartime() && y_p.is_zero_vartime())
             // Q is point at infinity
-            || (x_a == pallas::Base::zero() && y_a == pallas::Base::zero())
+            || (x_a.is_zero_vartime() && y_a.is_zero_vartime())
             // x_p = x_a
             || (x_p == x_a)
             {
-                return Err(Error::SynthesisError);
+                return Err(Error::Synthesis);
             }
         }
 
@@ -240,24 +212,28 @@ impl Config {
 
             let offset = offset + 1;
             // q_mul_2 = 1 on all rows after offset 0, excluding the last row.
-            for idx in 0..(self.num_bits - 1) {
+            for idx in 0..(NUM_BITS - 1) {
                 self.q_mul.1.enable(region, offset + idx)?;
             }
 
             // q_mul_3 = 1 on the last row.
-            self.q_mul.2.enable(region, offset + self.num_bits - 1)?;
+            self.q_mul.2.enable(region, offset + NUM_BITS - 1)?;
         }
 
         // Initialise double-and-add
         let (mut x_a, mut y_a, mut z) = {
             // Initialise the running `z` sum for the scalar bits.
-            let z = copy(region, || "starting z", self.z, offset, &acc.2)?;
+            let z = acc.2.copy_advice(|| "starting z", region, self.z, offset)?;
 
             // Initialise acc
-            let x_a = copy(region, || "starting x_a", self.x_a, offset + 1, &acc.0)?;
-            let y_a = copy(region, || "starting y_a", self.lambda1, offset, &acc.1)?;
+            let x_a = acc
+                .0
+                .copy_advice(|| "starting x_a", region, self.x_a, offset + 1)?;
+            let y_a = acc
+                .1
+                .copy_advice(|| "starting y_a", region, self.lambda1, offset)?;
 
-            (x_a, y_a.value(), z)
+            (x_a, y_a.value().cloned(), z)
         };
 
         // Increase offset by 1; we used row 0 for initializing `z`.
@@ -269,30 +245,30 @@ impl Config {
         // Incomplete addition
         for (row, k) in bits.iter().enumerate() {
             // z_{i} = 2 * z_{i+1} + k_i
-            let z_val = z.value().zip(k.as_ref()).map(|(z_val, k)| {
-                pallas::Base::from_u64(2) * z_val + pallas::Base::from_u64(*k as u64)
-            });
-            let z_cell = region.assign_advice(
+            let z_val = z
+                .value()
+                .zip(k.as_ref())
+                .map(|(z_val, k)| pallas::Base::from(2) * z_val + pallas::Base::from(*k as u64));
+            z = region.assign_advice(
                 || "z",
                 self.z,
                 row + offset,
-                || z_val.ok_or(Error::SynthesisError),
+                || z_val.ok_or(Error::Synthesis),
             )?;
-            z = CellValue::new(z_cell, z_val);
-            zs.push(Z(z));
+            zs.push(Z(z.clone()));
 
             // Assign `x_p`, `y_p`
             region.assign_advice(
                 || "x_p",
                 self.x_p,
                 row + offset,
-                || x_p.ok_or(Error::SynthesisError),
+                || x_p.ok_or(Error::Synthesis),
             )?;
             region.assign_advice(
                 || "y_p",
                 self.y_p,
                 row + offset,
-                || y_p.ok_or(Error::SynthesisError),
+                || y_p.ok_or(Error::Synthesis),
             )?;
 
             // If the bit is set, use `y`; if the bit is not set, use `-y`
@@ -310,7 +286,7 @@ impl Config {
                 || "lambda1",
                 self.lambda1,
                 row + offset,
-                || lambda1.ok_or(Error::SynthesisError),
+                || lambda1.ok_or(Error::Synthesis),
             )?;
 
             // x_R = λ1^2 - x_A - x_P
@@ -326,13 +302,13 @@ impl Config {
                     .zip(x_a.value())
                     .zip(x_r)
                     .map(|(((lambda1, y_a), x_a), x_r)| {
-                        pallas::Base::from_u64(2) * y_a * (x_a - x_r).invert().unwrap() - lambda1
+                        pallas::Base::from(2) * y_a * (x_a - x_r).invert().unwrap() - lambda1
                     });
             region.assign_advice(
                 || "lambda2",
                 self.lambda2,
                 row + offset,
-                || lambda2.ok_or(Error::SynthesisError),
+                || lambda2.ok_or(Error::Synthesis),
             )?;
 
             // Compute and assign `x_a` for the next row
@@ -341,30 +317,26 @@ impl Config {
                 .zip(x_r)
                 .map(|((lambda2, x_a), x_r)| lambda2.square() - x_a - x_r);
             y_a = lambda2
-                .zip(x_a.value())
+                .zip(x_a.value().cloned())
                 .zip(x_a_new)
                 .zip(y_a)
                 .map(|(((lambda2, x_a), x_a_new), y_a)| lambda2 * (x_a - x_a_new) - y_a);
             let x_a_val = x_a_new;
-            let x_a_cell = region.assign_advice(
+            x_a = region.assign_advice(
                 || "x_a",
                 self.x_a,
                 row + offset + 1,
-                || x_a_val.ok_or(Error::SynthesisError),
+                || x_a_val.ok_or(Error::Synthesis),
             )?;
-            x_a = CellValue::new(x_a_cell, x_a_val);
         }
 
         // Witness final y_a
-        let y_a = {
-            let cell = region.assign_advice(
-                || "y_a",
-                self.lambda1,
-                offset + self.num_bits,
-                || y_a.ok_or(Error::SynthesisError),
-            )?;
-            CellValue::new(cell, y_a)
-        };
+        let y_a = region.assign_advice(
+            || "y_a",
+            self.lambda1,
+            offset + NUM_BITS,
+            || y_a.ok_or(Error::Synthesis),
+        )?;
 
         Ok((X(x_a), Y(y_a), zs))
     }

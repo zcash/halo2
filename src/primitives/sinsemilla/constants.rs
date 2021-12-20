@@ -66,8 +66,8 @@ mod tests {
     use crate::constants::{
         COMMIT_IVK_PERSONALIZATION, MERKLE_CRH_PERSONALIZATION, NOTE_COMMITMENT_PERSONALIZATION,
     };
-    use group::Curve;
-    use halo2::arithmetic::{CurveAffine, CurveExt, FieldExt};
+    use group::{ff::PrimeField, Curve};
+    use halo2::arithmetic::{CurveAffine, CurveExt};
     use halo2::pasta::pallas;
 
     #[test]
@@ -93,11 +93,11 @@ mod tests {
 
         assert_eq!(
             *coords.x(),
-            pallas::Base::from_bytes(&Q_NOTE_COMMITMENT_M_GENERATOR.0).unwrap()
+            pallas::Base::from_repr(Q_NOTE_COMMITMENT_M_GENERATOR.0).unwrap()
         );
         assert_eq!(
             *coords.y(),
-            pallas::Base::from_bytes(&Q_NOTE_COMMITMENT_M_GENERATOR.1).unwrap()
+            pallas::Base::from_repr(Q_NOTE_COMMITMENT_M_GENERATOR.1).unwrap()
         );
     }
 
@@ -109,11 +109,11 @@ mod tests {
 
         assert_eq!(
             *coords.x(),
-            pallas::Base::from_bytes(&Q_COMMIT_IVK_M_GENERATOR.0).unwrap()
+            pallas::Base::from_repr(Q_COMMIT_IVK_M_GENERATOR.0).unwrap()
         );
         assert_eq!(
             *coords.y(),
-            pallas::Base::from_bytes(&Q_COMMIT_IVK_M_GENERATOR.1).unwrap()
+            pallas::Base::from_repr(Q_COMMIT_IVK_M_GENERATOR.1).unwrap()
         );
     }
 
@@ -125,18 +125,18 @@ mod tests {
 
         assert_eq!(
             *coords.x(),
-            pallas::Base::from_bytes(&Q_MERKLE_CRH.0).unwrap()
+            pallas::Base::from_repr(Q_MERKLE_CRH.0).unwrap()
         );
         assert_eq!(
             *coords.y(),
-            pallas::Base::from_bytes(&Q_MERKLE_CRH.1).unwrap()
+            pallas::Base::from_repr(Q_MERKLE_CRH.1).unwrap()
         );
     }
 
     #[test]
     fn inv_two_pow_k() {
-        let two_pow_k = pallas::Base::from_u64(1u64 << K);
-        let inv_two_pow_k = pallas::Base::from_bytes(&INV_TWO_POW_K).unwrap();
+        let two_pow_k = pallas::Base::from(1u64 << K);
+        let inv_two_pow_k = pallas::Base::from_repr(INV_TWO_POW_K).unwrap();
 
         assert_eq!(two_pow_k * inv_two_pow_k, pallas::Base::one());
     }

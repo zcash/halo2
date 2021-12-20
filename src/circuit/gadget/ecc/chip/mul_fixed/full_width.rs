@@ -1,33 +1,39 @@
-use super::super::{EccConfig, EccPoint, EccScalarFixed, OrchardFixedBasesFull};
+use super::super::{EccPoint, EccScalarFixed, OrchardFixedBasesFull};
 
 use crate::{
-    circuit::gadget::utilities::{range_check, CellValue, Var},
+    circuit::gadget::utilities::range_check,
     constants::{self, util, L_ORCHARD_SCALAR, NUM_WINDOWS},
 };
 use arrayvec::ArrayVec;
 use halo2::{
-    circuit::{Layouter, Region},
+    circuit::{AssignedCell, Layouter, Region},
     plonk::{ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
-use pasta_curves::{arithmetic::FieldExt, pallas};
+use pasta_curves::pallas;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Config {
     q_mul_fixed_full: Selector,
-    super_config: super::Config<NUM_WINDOWS>,
-}
-
-impl From<&EccConfig> for Config {
-    fn from(config: &EccConfig) -> Self {
-        Self {
-            q_mul_fixed_full: config.q_mul_fixed_full,
-            super_config: config.into(),
-        }
-    }
+    super_config: super::Config,
 }
 
 impl Config {
-    pub fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    pub(crate) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        super_config: super::Config,
+    ) -> Self {
+        let config = Self {
+            q_mul_fixed_full: meta.selector(),
+            super_config,
+        };
+
+        config.create_gate(meta);
+
+        config
+    }
+
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // Check that each window `k` is within 3 bits
         meta.create_gate("Full-width fixed-base scalar mul", |meta| {
             let q_mul_fixed_full = meta.query_selector(self.q_mul_fixed_full);
@@ -70,7 +76,7 @@ impl Config {
         scalar: Option<pallas::Scalar>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<ArrayVec<CellValue<pallas::Base>, NUM_WINDOWS>, Error> {
+    ) -> Result<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, NUM_WINDOWS>, Error> {
         // Enable `q_mul_fixed_full` selector
         for idx in 0..NUM_WINDOWS {
             self.q_mul_fixed_full.enable(region, offset + idx)?;
@@ -79,20 +85,21 @@ impl Config {
         // Decompose scalar into `k-bit` windows
         let scalar_windows: Option<Vec<u8>> = scalar.map(|scalar| {
             util::decompose_word::<pallas::Scalar>(
-                scalar,
+                &scalar,
                 SCALAR_NUM_BITS,
                 constants::FIXED_BASE_WINDOW_SIZE,
             )
         });
 
         // Store the scalar decomposition
-        let mut windows: ArrayVec<CellValue<pallas::Base>, NUM_WINDOWS> = ArrayVec::new();
+        let mut windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, NUM_WINDOWS> =
+            ArrayVec::new();
 
         let scalar_windows: Vec<Option<pallas::Base>> = if let Some(windows) = scalar_windows {
             assert_eq!(windows.len(), NUM_WINDOWS);
             windows
                 .into_iter()
-                .map(|window| Some(pallas::Base::from_u64(window as u64)))
+                .map(|window| Some(pallas::Base::from(window as u64)))
                 .collect()
         } else {
             vec![None; NUM_WINDOWS]
@@ -103,9 +110,9 @@ impl Config {
                 || format!("k[{:?}]", offset + idx),
                 self.super_config.window,
                 offset + idx,
-                || window.ok_or(Error::SynthesisError),
+                || window.ok_or(Error::Synthesis),
             )?;
-            windows.push(CellValue::new(window_cell, window));
+            windows.push(window_cell);
         }
 
         Ok(windows)
@@ -124,13 +131,15 @@ impl Config {
 
                 let scalar = self.witness(&mut region, offset, scalar)?;
 
-                let (acc, mul_b) = self.super_config.assign_region_inner(
-                    &mut region,
-                    offset,
-                    &(&scalar).into(),
-                    base.into(),
-                    self.q_mul_fixed_full,
-                )?;
+                let (acc, mul_b) = self
+                    .super_config
+                    .assign_region_inner::<{ constants::NUM_WINDOWS }>(
+                        &mut region,
+                        offset,
+                        &(&scalar).into(),
+                        base.into(),
+                        self.q_mul_fixed_full,
+                    )?;
 
                 Ok((scalar, acc, mul_b))
             },
@@ -141,8 +150,8 @@ impl Config {
             || "Full-width fixed-base mul (last window, complete addition)",
             |mut region| {
                 self.super_config.add_config.assign_region(
-                    &mul_b.into(),
-                    &acc.into(),
+                    &mul_b.clone().into(),
+                    &acc.clone().into(),
                     0,
                     &mut region,
                 )
@@ -263,11 +272,11 @@ pub mod tests {
         // (There is another *non-canonical* sequence
         // 5333333333333333333333333333333333333333332711161673731021062440252244051273333333333 in octal.)
         {
-            let h = pallas::Scalar::from_u64(constants::H as u64);
+            let h = pallas::Scalar::from(constants::H as u64);
             let scalar_fixed = "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334"
                         .chars()
                         .fold(pallas::Scalar::zero(), |acc, c| {
-                            acc * &h + &pallas::Scalar::from_u64(c.to_digit(8).unwrap().into())
+                            acc * &h + &pallas::Scalar::from(c.to_digit(8).unwrap() as u64)
                         });
             let (result, _) =
                 base.mul(layouter.namespace(|| "mul with double"), Some(scalar_fixed))?;
@@ -286,7 +295,9 @@ pub mod tests {
         {
             let scalar_fixed = pallas::Scalar::zero();
             let (result, _) = base.mul(layouter.namespace(|| "mul by zero"), Some(scalar_fixed))?;
-            assert!(result.inner().is_identity().unwrap());
+            if let Some(is_identity) = result.inner().is_identity() {
+                assert!(is_identity);
+            }
         }
 
         // [-1]B is the largest scalar field element.

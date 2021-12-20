@@ -1,9 +1,9 @@
 use std::{array, convert::TryInto};
 
-use super::super::{EccConfig, EccPoint, EccScalarFixedShort};
+use super::super::{EccPoint, EccScalarFixedShort};
 use crate::{
-    circuit::gadget::utilities::{copy, decompose_running_sum::RunningSumConfig, CellValue, Var},
-    constants::{ValueCommitV, FIXED_BASE_WINDOW_SIZE, L_VALUE, NUM_WINDOWS_SHORT},
+    circuit::gadget::{ecc::chip::MagnitudeSign, utilities::bool_check},
+    constants::{ValueCommitV, L_VALUE, NUM_WINDOWS_SHORT},
 };
 
 use halo2::{
@@ -13,28 +13,29 @@ use halo2::{
 };
 use pasta_curves::pallas;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Copy, Eq, PartialEq)]
 pub struct Config {
     // Selector used for fixed-base scalar mul with short signed exponent.
     q_mul_fixed_short: Selector,
-    q_mul_fixed_running_sum: Selector,
-    running_sum_config: RunningSumConfig<pallas::Base, { FIXED_BASE_WINDOW_SIZE }>,
-    super_config: super::Config<NUM_WINDOWS_SHORT>,
-}
-
-impl From<&EccConfig> for Config {
-    fn from(config: &EccConfig) -> Self {
-        Self {
-            q_mul_fixed_short: config.q_mul_fixed_short,
-            q_mul_fixed_running_sum: config.q_mul_fixed_running_sum,
-            running_sum_config: config.running_sum_config.clone(),
-            super_config: config.into(),
-        }
-    }
+    super_config: super::Config,
 }
 
 impl Config {
-    pub(crate) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    pub(crate) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        super_config: super::Config,
+    ) -> Self {
+        let config = Self {
+            q_mul_fixed_short: meta.selector(),
+            super_config,
+        };
+
+        config.create_gate(meta);
+
+        config
+    }
+
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("Short fixed-base mul gate", |meta| {
             let q_mul_fixed_short = meta.query_selector(self.q_mul_fixed_short);
             let y_p = meta.query_advice(self.super_config.y_p, Rotation::cur());
@@ -46,7 +47,7 @@ impl Config {
             let one = Expression::Constant(pallas::Base::one());
 
             // Check that last window is either 0 or 1.
-            let last_window_check = last_window.clone() * (one.clone() - last_window);
+            let last_window_check = bool_check(last_window);
             // Check that sign is either 1 or -1.
             let sign_check = sign.clone() * sign.clone() - one;
 
@@ -73,15 +74,15 @@ impl Config {
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        magnitude_sign: (CellValue<pallas::Base>, CellValue<pallas::Base>),
+        magnitude_sign: MagnitudeSign,
     ) -> Result<EccScalarFixedShort, Error> {
         let (magnitude, sign) = magnitude_sign;
 
         // Decompose magnitude
-        let running_sum = self.running_sum_config.copy_decompose(
+        let running_sum = self.super_config.running_sum_config.copy_decompose(
             region,
             offset,
-            magnitude,
+            magnitude.clone(),
             true,
             L_VALUE,
             NUM_WINDOWS_SHORT,
@@ -97,7 +98,7 @@ impl Config {
     pub fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        magnitude_sign: (CellValue<pallas::Base>, CellValue<pallas::Base>),
+        magnitude_sign: MagnitudeSign,
         base: &ValueCommitV,
     ) -> Result<(EccPoint, EccScalarFixedShort), Error> {
         let (scalar, acc, mul_b) = layouter.assign_region(
@@ -106,14 +107,14 @@ impl Config {
                 let offset = 0;
 
                 // Decompose the scalar
-                let scalar = self.decompose(&mut region, offset, magnitude_sign)?;
+                let scalar = self.decompose(&mut region, offset, magnitude_sign.clone())?;
 
-                let (acc, mul_b) = self.super_config.assign_region_inner(
+                let (acc, mul_b) = self.super_config.assign_region_inner::<NUM_WINDOWS_SHORT>(
                     &mut region,
                     offset,
                     &(&scalar).into(),
                     base.clone().into(),
-                    self.q_mul_fixed_running_sum,
+                    self.super_config.running_sum_config.q_range_check,
                 )?;
 
                 Ok((scalar, acc, mul_b))
@@ -127,8 +128,8 @@ impl Config {
                 let offset = 0;
                 // Add to the cumulative sum to get `[magnitude]B`.
                 let magnitude_mul = self.super_config.add_config.assign_region(
-                    &mul_b.into(),
-                    &acc.into(),
+                    &mul_b.clone().into(),
+                    &acc.clone().into(),
                     offset,
                     &mut region,
                 )?;
@@ -137,32 +138,25 @@ impl Config {
                 let offset = offset + 1;
 
                 // Copy sign to `window` column
-                let sign = copy(
-                    &mut region,
+                let sign = scalar.sign.copy_advice(
                     || "sign",
+                    &mut region,
                     self.super_config.window,
                     offset,
-                    &scalar.sign,
                 )?;
 
                 // Copy last window to `u` column.
                 // (Although the last window is not a `u` value; we are copying it into the `u`
                 // column because there is an available cell there.)
-                let z_21 = scalar.running_sum[21];
-                copy(
-                    &mut region,
-                    || "last_window",
-                    self.super_config.u,
-                    offset,
-                    &z_21,
-                )?;
+                let z_21 = scalar.running_sum[21].clone();
+                z_21.copy_advice(|| "last_window", &mut region, self.super_config.u, offset)?;
 
                 // Conditionally negate `y`-coordinate
                 let y_val = if let Some(sign) = sign.value() {
-                    if sign == -pallas::Base::one() {
-                        magnitude_mul.y.value().map(|y: pallas::Base| -y)
+                    if sign == &-pallas::Base::one() {
+                        magnitude_mul.y.value().cloned().map(|y: pallas::Base| -y)
                     } else {
-                        magnitude_mul.y.value()
+                        magnitude_mul.y.value().cloned()
                     }
                 } else {
                     None
@@ -176,12 +170,12 @@ impl Config {
                     || "y_var",
                     self.super_config.y_p,
                     offset,
-                    || y_val.ok_or(Error::SynthesisError),
+                    || y_val.ok_or(Error::Synthesis),
                 )?;
 
                 Ok(EccPoint {
                     x: magnitude_mul.x,
-                    y: CellValue::new(y_var, y_val),
+                    y: y_var,
                 })
             },
         )?;
@@ -193,12 +187,10 @@ impl Config {
         // Invalid values result in constraint failures which are
         // tested at the circuit-level.
         {
-            use group::Curve;
-            use pasta_curves::arithmetic::FieldExt;
+            use group::{ff::PrimeField, Curve};
 
             if let (Some(magnitude), Some(sign)) = (scalar.magnitude.value(), scalar.sign.value()) {
-                let magnitude_is_valid =
-                    magnitude <= pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64);
+                let magnitude_is_valid = magnitude <= &pallas::Base::from(0xFFFF_FFFF_FFFF_FFFFu64);
                 let sign_is_valid = sign * sign == pallas::Base::one();
                 if magnitude_is_valid && sign_is_valid {
                     let base: super::OrchardFixedBases = base.clone().into();
@@ -207,10 +199,9 @@ impl Config {
                         |(magnitude, sign)| {
                             // Move magnitude from base field into scalar field (which always fits
                             // for Pallas).
-                            let magnitude =
-                                pallas::Scalar::from_bytes(&magnitude.to_bytes()).unwrap();
+                            let magnitude = pallas::Scalar::from_repr(magnitude.to_repr()).unwrap();
 
-                            let sign = if sign == pallas::Base::one() {
+                            let sign = if sign == &pallas::Base::one() {
                                 pallas::Scalar::one()
                             } else {
                                 -pallas::Scalar::one()
@@ -236,16 +227,20 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
-    use group::Curve;
+    use group::{ff::PrimeField, Curve};
     use halo2::{
-        circuit::{Chip, Layouter},
+        arithmetic::CurveAffine,
+        circuit::{AssignedCell, Chip, Layouter},
         plonk::{Any, Error},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
 
     use crate::circuit::gadget::{
-        ecc::{chip::EccChip, FixedPointShort, NonIdentityPoint, Point},
-        utilities::{lookup_range_check::LookupRangeCheckConfig, CellValue, UtilitiesInstructions},
+        ecc::{
+            chip::{EccChip, MagnitudeSign},
+            FixedPointShort, NonIdentityPoint, Point,
+        },
+        utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
     };
     use crate::constants::load::ValueCommitV;
 
@@ -264,7 +259,7 @@ pub mod tests {
             mut layouter: impl Layouter<pallas::Base>,
             magnitude: pallas::Base,
             sign: pallas::Base,
-        ) -> Result<(CellValue<pallas::Base>, CellValue<pallas::Base>), Error> {
+        ) -> Result<MagnitudeSign, Error> {
             let column = chip.config().advices[0];
             let magnitude =
                 chip.load_private(layouter.namespace(|| "magnitude"), column, Some(magnitude))?;
@@ -289,25 +284,21 @@ pub mod tests {
         }
 
         let magnitude_signs = [
-            (
-                "random [a]B",
-                pallas::Base::from_u64(rand::random::<u64>()),
-                {
-                    let mut random_sign = pallas::Base::one();
-                    if rand::random::<bool>() {
-                        random_sign = -random_sign;
-                    }
-                    random_sign
-                },
-            ),
+            ("random [a]B", pallas::Base::from(rand::random::<u64>()), {
+                let mut random_sign = pallas::Base::one();
+                if rand::random::<bool>() {
+                    random_sign = -random_sign;
+                }
+                random_sign
+            }),
             (
                 "[2^64 - 1]B",
-                pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64),
+                pallas::Base::from(0xFFFF_FFFF_FFFF_FFFFu64),
                 pallas::Base::one(),
             ),
             (
                 "-[2^64 - 1]B",
-                pallas::Base::from_u64(0xFFFF_FFFF_FFFF_FFFFu64),
+                pallas::Base::from(0xFFFF_FFFF_FFFF_FFFFu64),
                 -pallas::Base::one(),
             ),
             // There is a single canonical sequence of window values for which a doubling occurs on the last step:
@@ -315,12 +306,12 @@ pub mod tests {
             // [0xB6DB_6DB6_DB6D_B6DC] B
             (
                 "mul_with_double",
-                pallas::Base::from_u64(0xB6DB_6DB6_DB6D_B6DCu64),
+                pallas::Base::from(0xB6DB_6DB6_DB6D_B6DCu64),
                 pallas::Base::one(),
             ),
             (
                 "mul_with_double negative",
-                pallas::Base::from_u64(0xB6DB_6DB6_DB6D_B6DCu64),
+                pallas::Base::from(0xB6DB_6DB6_DB6D_B6DCu64),
                 -pallas::Base::one(),
             ),
         ];
@@ -337,7 +328,7 @@ pub mod tests {
             };
             // Move from base field into scalar field
             let scalar = {
-                let magnitude = pallas::Scalar::from_bytes(&magnitude.to_bytes()).unwrap();
+                let magnitude = pallas::Scalar::from_repr(magnitude.to_repr()).unwrap();
                 let sign = if *sign == pallas::Base::one() {
                     pallas::Scalar::one()
                 } else {
@@ -369,7 +360,9 @@ pub mod tests {
                 )?;
                 value_commit_v.mul(layouter.namespace(|| *name), magnitude_sign)?
             };
-            assert!(result.inner().is_identity().unwrap());
+            if let Some(is_identity) = result.inner().is_identity() {
+                assert!(is_identity);
+            }
         }
 
         Ok(())
@@ -377,10 +370,7 @@ pub mod tests {
 
     #[test]
     fn invalid_magnitude_sign() {
-        use crate::circuit::gadget::{
-            ecc::chip::EccConfig,
-            utilities::{CellValue, UtilitiesInstructions},
-        };
+        use crate::circuit::gadget::{ecc::chip::EccConfig, utilities::UtilitiesInstructions};
         use halo2::{
             circuit::{Layouter, SimpleFloorPlanner},
             dev::{MockProver, VerifyFailure},
@@ -391,10 +381,12 @@ pub mod tests {
         struct MyCircuit {
             magnitude: Option<pallas::Base>,
             sign: Option<pallas::Base>,
+            // For test checking
+            magnitude_error: Option<pallas::Base>,
         }
 
         impl UtilitiesInstructions<pallas::Base> for MyCircuit {
-            type Var = CellValue<pallas::Base>;
+            type Var = AssignedCell<pallas::Base, pallas::Base>;
         }
 
         impl Circuit<pallas::Base> for MyCircuit {
@@ -445,7 +437,7 @@ pub mod tests {
             ) -> Result<(), Error> {
                 let column = config.advices[0];
 
-                let short_config: super::Config = (&config).into();
+                let short_config = config.mul_fixed_short;
                 let magnitude_sign = {
                     let magnitude = self.load_private(
                         layouter.namespace(|| "load magnitude"),
@@ -463,6 +455,25 @@ pub mod tests {
             }
         }
 
+        // Copied from halo2::dev::util
+        fn format_value(v: pallas::Base) -> String {
+            use ff::Field;
+            if v.is_zero_vartime() {
+                "0".into()
+            } else if v == pallas::Base::one() {
+                "1".into()
+            } else if v == -pallas::Base::one() {
+                "-1".into()
+            } else {
+                // Format value as hex.
+                let s = format!("{:?}", v);
+                // Remove leading zeroes.
+                let s = s.strip_prefix("0x").unwrap();
+                let s = s.trim_start_matches('0');
+                format!("0x{}", s)
+            }
+        }
+
         // Magnitude larger than 64 bits should fail
         {
             let circuits = [
@@ -470,31 +481,41 @@ pub mod tests {
                 MyCircuit {
                     magnitude: Some(pallas::Base::from_u128(1 << 64)),
                     sign: Some(pallas::Base::one()),
+                    magnitude_error: Some(pallas::Base::from(1 << 1)),
                 },
                 // -2^64
                 MyCircuit {
                     magnitude: Some(pallas::Base::from_u128(1 << 64)),
                     sign: Some(-pallas::Base::one()),
+                    magnitude_error: Some(pallas::Base::from(1 << 1)),
                 },
                 // 2^66
                 MyCircuit {
                     magnitude: Some(pallas::Base::from_u128(1 << 66)),
                     sign: Some(pallas::Base::one()),
+                    magnitude_error: Some(pallas::Base::from(1 << 3)),
                 },
                 // -2^66
                 MyCircuit {
                     magnitude: Some(pallas::Base::from_u128(1 << 66)),
                     sign: Some(-pallas::Base::one()),
+                    magnitude_error: Some(pallas::Base::from(1 << 3)),
                 },
                 // 2^254
                 MyCircuit {
                     magnitude: Some(pallas::Base::from_u128(1 << 127).square()),
                     sign: Some(pallas::Base::one()),
+                    magnitude_error: Some(
+                        pallas::Base::from_u128(1 << 95).square() * pallas::Base::from(2),
+                    ),
                 },
                 // -2^254
                 MyCircuit {
                     magnitude: Some(pallas::Base::from_u128(1 << 127).square()),
                     sign: Some(-pallas::Base::one()),
+                    magnitude_error: Some(
+                        pallas::Base::from_u128(1 << 95).square() * pallas::Base::from(2),
+                    ),
                 },
             ];
 
@@ -510,7 +531,11 @@ pub mod tests {
                                 "last_window_check"
                             )
                                 .into(),
-                            row: 26
+                            row: 26,
+                            cell_values: vec![(
+                                ((Any::Advice, 5).into(), 0).into(),
+                                format_value(circuit.magnitude_error.unwrap()),
+                            )],
                         },
                         VerifyFailure::Permutation {
                             column: (Any::Fixed, 9).into(),
@@ -527,9 +552,19 @@ pub mod tests {
 
         // Sign that is not +/- 1 should fail
         {
+            let magnitude_u64 = rand::random::<u64>();
             let circuit = MyCircuit {
-                magnitude: Some(pallas::Base::from_u64(rand::random::<u64>())),
+                magnitude: Some(pallas::Base::from(magnitude_u64)),
                 sign: Some(pallas::Base::zero()),
+                magnitude_error: None,
+            };
+
+            let negation_check_y = {
+                *(ValueCommitV::get().generator * pallas::Scalar::from(magnitude_u64))
+                    .to_affine()
+                    .coordinates()
+                    .unwrap()
+                    .y()
             };
 
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
@@ -539,7 +574,8 @@ pub mod tests {
                     VerifyFailure::ConstraintNotSatisfied {
                         constraint: ((17, "Short fixed-base mul gate").into(), 1, "sign_check")
                             .into(),
-                        row: 26
+                        row: 26,
+                        cell_values: vec![(((Any::Advice, 4).into(), 0).into(), "0".to_string())],
                     },
                     VerifyFailure::ConstraintNotSatisfied {
                         constraint: (
@@ -548,7 +584,18 @@ pub mod tests {
                             "negation_check"
                         )
                             .into(),
-                        row: 26
+                        row: 26,
+                        cell_values: vec![
+                            (
+                                ((Any::Advice, 1).into(), 0).into(),
+                                format_value(negation_check_y),
+                            ),
+                            (
+                                ((Any::Advice, 3).into(), 0).into(),
+                                format_value(negation_check_y),
+                            ),
+                            (((Any::Advice, 4).into(), 0).into(), "0".to_string()),
+                        ],
                     }
                 ])
             );

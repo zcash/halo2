@@ -1,12 +1,13 @@
 use super::super::SinsemillaInstructions;
-use super::{CellValue, NonIdentityEccPoint, SinsemillaChip, Var};
+use super::{NonIdentityEccPoint, SinsemillaChip};
 use crate::primitives::sinsemilla::{self, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S};
+use halo2::circuit::AssignedCell;
 use halo2::{
     circuit::{Chip, Region},
     plonk::Error,
 };
 
-use ff::{Field, PrimeFieldBits};
+use group::ff::{Field, PrimeField, PrimeFieldBits};
 use pasta_curves::{
     arithmetic::{CurveAffine, FieldExt},
     pallas,
@@ -26,7 +27,13 @@ impl SinsemillaChip {
             { sinsemilla::K },
             { sinsemilla::C },
         >>::Message,
-    ) -> Result<(NonIdentityEccPoint, Vec<Vec<CellValue<pallas::Base>>>), Error> {
+    ) -> Result<
+        (
+            NonIdentityEccPoint,
+            Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
+        ),
+        Error,
+    > {
         let config = self.config().clone();
         let mut offset = 0;
 
@@ -46,16 +53,13 @@ impl SinsemillaChip {
 
         // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
         let mut x_a: X<pallas::Base> = {
-            let x_a = {
-                let cell =
-                    region.assign_advice_from_constant(|| "fixed x_q", config.x_a, offset, x_q)?;
-                CellValue::new(cell, Some(x_q))
-            };
+            let x_a =
+                region.assign_advice_from_constant(|| "fixed x_q", config.x_a, offset, x_q)?;
 
             x_a.into()
         };
 
-        let mut zs_sum: Vec<Vec<CellValue<pallas::Base>>> = Vec::new();
+        let mut zs_sum: Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>> = Vec::new();
 
         // Hash each piece in the message.
         for (idx, piece) in message.iter().enumerate() {
@@ -81,7 +85,7 @@ impl SinsemillaChip {
                 || "y_a",
                 config.lambda_1,
                 offset,
-                || y_a.ok_or(Error::SynthesisError),
+                || y_a.ok_or(Error::Synthesis),
             )?;
 
             // Assign lambda_2 and x_p zero values since they are queried
@@ -102,7 +106,7 @@ impl SinsemillaChip {
                 )?;
             }
 
-            CellValue::new(y_a_cell, y_a.0)
+            y_a_cell
         };
 
         #[cfg(test)]
@@ -142,15 +146,15 @@ impl SinsemillaChip {
                     .chunks(K)
                     .fold(Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
                 let actual_point =
-                    pallas::Affine::from_xy(x_a.value().unwrap(), y_a.value().unwrap()).unwrap();
+                    pallas::Affine::from_xy(*x_a.value().unwrap(), *y_a.value().unwrap()).unwrap();
                 assert_eq!(expected_point.to_affine(), actual_point);
             }
         }
 
         if let Some(x_a) = x_a.value() {
             if let Some(y_a) = y_a.value() {
-                if x_a == pallas::Base::zero() || y_a == pallas::Base::zero() {
-                    return Err(Error::SynthesisError);
+                if x_a.is_zero_vartime() || y_a.is_zero_vartime() {
+                    return Err(Error::Synthesis);
                 }
             }
         }
@@ -183,7 +187,7 @@ impl SinsemillaChip {
         (
             X<pallas::Base>,
             Y<pallas::Base>,
-            Vec<CellValue<pallas::Base>>,
+            Vec<AssignedCell<pallas::Base, pallas::Base>>,
         ),
         Error,
     > {
@@ -220,7 +224,7 @@ impl SinsemillaChip {
                 offset + piece.num_words() - 1,
                 || {
                     Ok(if final_piece {
-                        pallas::Base::from_u64(2)
+                        pallas::Base::from(2)
                     } else {
                         pallas::Base::zero()
                     })
@@ -264,14 +268,13 @@ impl SinsemillaChip {
             let mut zs = Vec::with_capacity(piece.num_words() + 1);
 
             // Copy message and initialize running sum `z` to decompose message in-circuit
-            let cell = region.assign_advice(
+            let initial_z = piece.cell_value().copy_advice(
                 || "z_0 (copy of message piece)",
+                region,
                 config.bits,
                 offset,
-                || piece.field_elem().ok_or(Error::SynthesisError),
             )?;
-            region.constrain_equal(piece.cell(), cell)?;
-            zs.push(CellValue::new(cell, piece.field_elem()));
+            zs.push(initial_z);
 
             // Assign cumulative sum such that for 0 <= i < n,
             //          z_i = 2^K * z_{i + 1} + m_{i + 1}
@@ -281,21 +284,21 @@ impl SinsemillaChip {
             // We end up with z_n = 0. (z_n is not directly encoded as a cell value;
             // it is implicitly taken as 0 by adjusting the definition of m_{i+1}.)
             let mut z = piece.field_elem();
-            let inv_2_k = pallas::Base::from_bytes(&INV_TWO_POW_K).unwrap();
+            let inv_2_k = pallas::Base::from_repr(INV_TWO_POW_K).unwrap();
 
             // We do not assign the final z_n as it is constrained to be zero.
             for (idx, word) in words[0..(words.len() - 1)].iter().enumerate() {
                 // z_{i + 1} = (z_i - m_{i + 1}) / 2^K
                 z = z
                     .zip(*word)
-                    .map(|(z, word)| (z - pallas::Base::from_u64(word as u64)) * inv_2_k);
+                    .map(|(z, word)| (z - pallas::Base::from(word as u64)) * inv_2_k);
                 let cell = region.assign_advice(
                     || format!("z_{:?}", idx + 1),
                     config.bits,
                     offset + idx + 1,
-                    || z.ok_or(Error::SynthesisError),
+                    || z.ok_or(Error::Synthesis),
                 )?;
-                zs.push(CellValue::new(cell, z))
+                zs.push(cell)
             }
 
             zs
@@ -320,7 +323,7 @@ impl SinsemillaChip {
                 || "x_p",
                 config.x_p,
                 offset + row,
-                || x_p.ok_or(Error::SynthesisError),
+                || x_p.ok_or(Error::Synthesis),
             )?;
 
             // Compute and assign `lambda_1`
@@ -337,7 +340,7 @@ impl SinsemillaChip {
                     || "lambda_1",
                     config.lambda_1,
                     offset + row,
-                    || lambda_1.ok_or(Error::SynthesisError),
+                    || lambda_1.ok_or(Error::Synthesis),
                 )?;
 
                 lambda_1
@@ -353,7 +356,7 @@ impl SinsemillaChip {
             let lambda_2 = {
                 let lambda_2 = x_a.value().zip(y_a.0).zip(x_r).zip(lambda_1).map(
                     |(((x_a, y_a), x_r), lambda_1)| {
-                        pallas::Base::from_u64(2) * y_a * (x_a - x_r).invert().unwrap() - lambda_1
+                        pallas::Base::from(2) * y_a * (x_a - x_r).invert().unwrap() - lambda_1
                     },
                 );
 
@@ -361,7 +364,7 @@ impl SinsemillaChip {
                     || "lambda_2",
                     config.lambda_2,
                     offset + row,
-                    || lambda_2.ok_or(Error::SynthesisError),
+                    || lambda_2.ok_or(Error::Synthesis),
                 )?;
 
                 lambda_2
@@ -378,10 +381,10 @@ impl SinsemillaChip {
                     || "x_a",
                     config.x_a,
                     offset + row + 1,
-                    || x_a_new.ok_or(Error::SynthesisError),
+                    || x_a_new.ok_or(Error::Synthesis),
                 )?;
 
-                CellValue::new(x_a_cell, x_a_new).into()
+                x_a_cell.into()
             };
 
             // Compute y_a for the next row.
@@ -402,18 +405,18 @@ impl SinsemillaChip {
 }
 
 /// The x-coordinate of the accumulator in a Sinsemilla hash instance.
-struct X<F: FieldExt>(CellValue<F>);
+struct X<F: FieldExt>(AssignedCell<F, F>);
 
-impl<F: FieldExt> From<CellValue<F>> for X<F> {
-    fn from(cell_value: CellValue<F>) -> Self {
+impl<F: FieldExt> From<AssignedCell<F, F>> for X<F> {
+    fn from(cell_value: AssignedCell<F, F>) -> Self {
         X(cell_value)
     }
 }
 
 impl<F: FieldExt> Deref for X<F> {
-    type Target = CellValue<F>;
+    type Target = AssignedCell<F, F>;
 
-    fn deref(&self) -> &CellValue<F> {
+    fn deref(&self) -> &AssignedCell<F, F> {
         &self.0
     }
 }

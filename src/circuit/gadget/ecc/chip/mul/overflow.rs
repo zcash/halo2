@@ -1,9 +1,9 @@
-use super::super::{copy, CellValue, EccConfig, Var};
 use super::Z;
 use crate::{
     circuit::gadget::utilities::lookup_range_check::LookupRangeCheckConfig, constants::T_Q,
     primitives::sinsemilla,
 };
+use halo2::circuit::AssignedCell;
 use halo2::{
     circuit::Layouter,
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
@@ -15,6 +15,7 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 
 use std::iter;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
     // Selector to check z_0 = alpha + t_q (mod p)
     q_mul_overflow: Selector,
@@ -24,24 +25,28 @@ pub struct Config {
     advices: [Column<Advice>; 3],
 }
 
-impl From<&EccConfig> for Config {
-    fn from(ecc_config: &EccConfig) -> Self {
-        Self {
-            q_mul_overflow: ecc_config.q_mul_overflow,
-            lookup_config: ecc_config.lookup_config.clone(),
-            // Use advice columns that don't conflict with the either the incomplete
-            // additions in fixed-base scalar mul, or the lookup range checks.
-            advices: [
-                ecc_config.advices[6],
-                ecc_config.advices[7],
-                ecc_config.advices[8],
-            ],
-        }
-    }
-}
-
 impl Config {
-    pub(super) fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    pub(super) fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+        advices: [Column<Advice>; 3],
+    ) -> Self {
+        for advice in advices.iter() {
+            meta.enable_equality((*advice).into());
+        }
+
+        let config = Self {
+            q_mul_overflow: meta.selector(),
+            lookup_config,
+            advices,
+        };
+
+        config.create_gate(meta);
+
+        config
+    }
+
+    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("overflow checks", |meta| {
             let q_mul_overflow = meta.query_selector(self.q_mul_overflow);
 
@@ -94,7 +99,7 @@ impl Config {
     pub(super) fn overflow_check(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        alpha: CellValue<pallas::Base>,
+        alpha: AssignedCell<pallas::Base, pallas::Base>,
         zs: &[Z<pallas::Base>], // [z_0, z_1, ..., z_{254}, z_{255}]
     ) -> Result<(), Error> {
         // s = alpha + k_254 ⋅ 2^130 is witnessed here, and then copied into
@@ -102,7 +107,7 @@ impl Config {
         // In the overflow check gate, we check that s is properly derived
         // from alpha and k_254.
         let s = {
-            let k_254 = *zs[254];
+            let k_254 = zs[254].clone();
             let s_val = alpha
                 .value()
                 .zip(k_254.value())
@@ -111,13 +116,12 @@ impl Config {
             layouter.assign_region(
                 || "s = alpha + k_254 ⋅ 2^130",
                 |mut region| {
-                    let s_cell = region.assign_advice(
+                    region.assign_advice(
                         || "s = alpha + k_254 ⋅ 2^130",
                         self.advices[0],
                         0,
-                        || s_val.ok_or(Error::SynthesisError),
-                    )?;
-                    Ok(CellValue::new(s_cell, s_val))
+                        || s_val.ok_or(Error::Synthesis),
+                    )
                 },
             )?
         };
@@ -125,7 +129,7 @@ impl Config {
         // Subtract the first 130 low bits of s = alpha + k_254 ⋅ 2^130
         // using thirteen 10-bit lookups, s_{0..=129}
         let s_minus_lo_130 =
-            self.s_minus_lo_130(layouter.namespace(|| "decompose s_{0..=129}"), s)?;
+            self.s_minus_lo_130(layouter.namespace(|| "decompose s_{0..=129}"), s.clone())?;
 
         layouter.assign_region(
             || "overflow check",
@@ -136,21 +140,15 @@ impl Config {
                 self.q_mul_overflow.enable(&mut region, offset + 1)?;
 
                 // Copy `z_0`
-                copy(&mut region, || "copy z_0", self.advices[0], offset, &*zs[0])?;
+                zs[0].copy_advice(|| "copy z_0", &mut region, self.advices[0], offset)?;
 
                 // Copy `z_130`
-                copy(
-                    &mut region,
-                    || "copy z_130",
-                    self.advices[0],
-                    offset + 1,
-                    &*zs[130],
-                )?;
+                zs[130].copy_advice(|| "copy z_130", &mut region, self.advices[0], offset + 1)?;
 
                 // Witness η = inv0(z_130), where inv0(x) = 0 if x = 0, 1/x otherwise
                 {
                     let eta = zs[130].value().map(|z_130| {
-                        if z_130 == pallas::Base::zero() {
+                        if z_130.is_zero_vartime() {
                             pallas::Base::zero()
                         } else {
                             z_130.invert().unwrap()
@@ -160,39 +158,31 @@ impl Config {
                         || "η = inv0(z_130)",
                         self.advices[0],
                         offset + 2,
-                        || eta.ok_or(Error::SynthesisError),
+                        || eta.ok_or(Error::Synthesis),
                     )?;
                 }
 
                 // Copy `k_254` = z_254
-                copy(
-                    &mut region,
-                    || "copy k_254",
-                    self.advices[1],
-                    offset,
-                    &*zs[254],
-                )?;
+                zs[254].copy_advice(|| "copy k_254", &mut region, self.advices[1], offset)?;
 
                 // Copy original alpha
-                copy(
-                    &mut region,
+                alpha.copy_advice(
                     || "copy original alpha",
+                    &mut region,
                     self.advices[1],
                     offset + 1,
-                    &alpha,
                 )?;
 
                 // Copy weighted sum of the decomposition of s = alpha + k_254 ⋅ 2^130.
-                copy(
-                    &mut region,
+                s_minus_lo_130.copy_advice(
                     || "copy s_minus_lo_130",
+                    &mut region,
                     self.advices[1],
                     offset + 2,
-                    &s_minus_lo_130,
                 )?;
 
                 // Copy witnessed s to check that it was properly derived from alpha and k_254.
-                copy(&mut region, || "copy s", self.advices[2], offset + 1, &s)?;
+                s.copy_advice(|| "copy s", &mut region, self.advices[2], offset + 1)?;
 
                 Ok(())
             },
@@ -204,8 +194,8 @@ impl Config {
     fn s_minus_lo_130(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        s: CellValue<pallas::Base>,
-    ) -> Result<CellValue<pallas::Base>, Error> {
+        s: AssignedCell<pallas::Base, pallas::Base>,
+    ) -> Result<AssignedCell<pallas::Base, pallas::Base>, Error> {
         // Number of k-bit words we can use in the lookup decomposition.
         let num_words = 130 / sinsemilla::K;
         assert!(num_words * sinsemilla::K == 130);
@@ -218,6 +208,6 @@ impl Config {
             false,
         )?;
         // (s - (2^0 s_0 + 2^1 s_1 + ... + 2^129 s_129)) / 2^130
-        Ok(zs[zs.len() - 1])
+        Ok(zs[zs.len() - 1].clone())
     }
 }

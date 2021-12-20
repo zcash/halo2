@@ -103,7 +103,7 @@ $\begin{array}{l}
 \text{Initialize } A_{254} = [2] T. \\
 \\
 \text{for } i \text{ from } 254 \text{ down to } 4: \\
-\hspace{1.5em} (\mathbf{k}_i)(\mathbf{k}_i-1) = 0 \\
+\hspace{1.5em} \BoolCheck{\mathbf{k}_i} = 0 \\
 \hspace{1.5em} \mathbf{z}_{i} = 2\mathbf{z}_{i+1} + \mathbf{k}_{i} \\
 \hspace{1.5em} x_{P,i} = x_T \\
 \hspace{1.5em} y_{P,i} = (2 \mathbf{k}_i - 1) \cdot y_T  \hspace{2em}\text{(conditionally negate)} \\
@@ -114,7 +114,8 @@ $\begin{array}{l}
 \hspace{1.5em} \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A,i-1}, \\
 \end{array}$
 
-where $x_{R,i} = (\lambda_{1,i}^2 - x_{A,i} - x_T).$ After substitution of $x_{P,i}, y_{P,i}, x_{R,i}, y_{A,i}$, and $y_{A,i-1}$, this becomes:
+where $x_{R,i} = (\lambda_{1,i}^2 - x_{A,i} - x_T).$ The helper $\BoolCheck{x} = x \cdot (1 - x)$.
+After substitution of $x_{P,i}, y_{P,i}, x_{R,i}, y_{A,i}$, and $y_{A,i-1}$, this becomes:
 
 $\begin{array}{l}
 \text{Initialize } A_{254} = [2] T. \\
@@ -122,7 +123,7 @@ $\begin{array}{l}
 \text{for } i \text{ from } 254 \text{ down to } 4: \\
 \hspace{1.5em} \text{// let } \mathbf{k}_{i} = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\
 \hspace{1.5em} \text{// let } y_{A,i} = \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2} \\[2ex]
-\hspace{1.5em} (\mathbf{k}_i)(\mathbf{k}_i-1) = 0 \\
+\hspace{1.5em} \BoolCheck{\mathbf{k}_i} = 0 \\
 \hspace{1.5em} \lambda_{1,i} \cdot (x_{A,i} - x_T) = y_{A,i} - (2 \mathbf{k}_i - 1) \cdot y_T \\
 \hspace{1.5em} \lambda_{2,i}^2 = x_{A,i-1} + \lambda_{1,i}^2 - x_T \\[1ex]
 \hspace{1.5em} \begin{cases}
@@ -138,7 +139,7 @@ The bits $\mathbf{k}_{3 \dots 1}$ are used in three further steps, using [comple
 $\begin{array}{l}
 \text{for } i \text{ from } 3 \text{ down to } 1: \\
 \hspace{1.5em} \text{// let } \mathbf{k}_{i} = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\[0.5ex]
-\hspace{1.5em} (\mathbf{k}_i)(\mathbf{k}_i-1) = 0 \\
+\hspace{1.5em} \BoolCheck{\mathbf{k}_i} = 0 \\
 \hspace{1.5em} (x_{A,i-1}, y_{A,i-1}) = \left((x_{A,i}, y_{A,i}) + (x_T, y_T)\right) + (x_{A,i}, y_{A,i})
 \end{array}$
 
@@ -202,7 +203,7 @@ $$
 \text{Degree} & \text{Constraint} \\\hline
 2 & q_2 \cdot \left(x_{T,cur} - x_{T,next}\right) = 0 \\\hline
 2 & q_2 \cdot \left(y_{T,cur} - y_{T,next}\right) = 0 \\\hline
-3 & q_2 \cdot \mathbf{k}_i \cdot (\mathbf{k}_i - 1) = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
+3 & q_2 \cdot \BoolCheck{\mathbf{k}_i} = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
 4 & q_2 \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{T,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{T,i}\right) = 0 \\\hline
 3 & q_2 \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - \lambda_{1,i}^2 + x_{T,i}\right) = 0 \\\hline
 3 & q_2 \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}\right) = 0 \\\hline
@@ -222,7 +223,7 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-3 & q_3 \cdot \mathbf{k}_i \cdot (\mathbf{k}_i - 1) = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
+3 & q_3 \cdot \BoolCheck{\mathbf{k}_i} = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
 4 & q_3 \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{T,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{T,i}\right) = 0 \\\hline
 3 & q_3 \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - \lambda_{1,i}^2 + x_{T,i}\right) = 0 \\\hline
 3 & q_3 \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}^\text{witnessed}\right) = 0 \\\hline

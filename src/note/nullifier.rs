@@ -1,6 +1,6 @@
-use group::Group;
+use group::{ff::PrimeField, Group};
 use halo2::arithmetic::CurveExt;
-use pasta_curves::{arithmetic::FieldExt, pallas};
+use pasta_curves::pallas;
 use rand::RngCore;
 use subtle::CtOption;
 
@@ -33,12 +33,12 @@ impl Nullifier {
 
     /// Deserialize the nullifier from a byte array.
     pub fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
-        pallas::Base::from_bytes(bytes).map(Nullifier)
+        pallas::Base::from_repr(*bytes).map(Nullifier)
     }
 
     /// Serialize the nullifier to its canonical byte representation.
     pub fn to_bytes(self) -> [u8; 32] {
-        self.0.to_bytes()
+        self.0.to_repr()
     }
 
     /// $DeriveNullifier$.

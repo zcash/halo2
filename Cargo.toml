@@ -78,8 +78,15 @@ harness = false
 name = "circuit"
 harness = false
 
+[[bench]]
+name = "poseidon"
+harness = false
+
 [profile.release]
 debug = true
 
 [profile.bench]
 debug = true
+
+[patch.crates-io]
+halo2 = { git = "https://github.com/zcash/halo2.git", rev = "afd7bc5469674cd08eae1634225fd02706a36a4f" }

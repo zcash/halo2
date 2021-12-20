@@ -9,7 +9,7 @@ use crate::{
     primitives::sinsemilla::{i2lebsp_k, HashDomain},
 };
 use incrementalmerkletree::{Altitude, Hashable};
-use pasta_curves::{arithmetic::FieldExt, pallas};
+use pasta_curves::pallas;
 
 use ff::{Field, PrimeField, PrimeFieldBits};
 use lazy_static::lazy_static;
@@ -23,7 +23,7 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 // The uncommitted leaf is defined as pallas::Base(2).
 // <https://zips.z.cash/protocol/protocol.pdf#thmuncommittedorchard>
 lazy_static! {
-    static ref UNCOMMITTED_ORCHARD: pallas::Base = pallas::Base::from_u64(2);
+    static ref UNCOMMITTED_ORCHARD: pallas::Base = pallas::Base::from(2);
     pub(crate) static ref EMPTY_ROOTS: Vec<MerkleHashOrchard> = {
         iter::empty()
             .chain(Some(MerkleHashOrchard::empty_leaf()))
@@ -168,7 +168,7 @@ impl MerkleHashOrchard {
 
     /// Convert this digest to its canonical byte representation.
     pub fn to_bytes(&self) -> [u8; 32] {
-        self.0.to_bytes()
+        self.0.to_repr()
     }
 
     /// Parses a incremental tree leaf digest from the bytes of
@@ -177,7 +177,7 @@ impl MerkleHashOrchard {
     /// Returns the empty `CtOption` if the provided bytes represent
     /// a non-canonical encoding.
     pub fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
-        pallas::Base::from_bytes(bytes).map(MerkleHashOrchard)
+        pallas::Base::from_repr(*bytes).map(MerkleHashOrchard)
     }
 }
 
@@ -195,7 +195,7 @@ impl std::cmp::Eq for MerkleHashOrchard {}
 impl std::hash::Hash for MerkleHashOrchard {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         <Option<pallas::Base>>::from(self.0)
-            .map(|b| b.to_bytes())
+            .map(|b| b.to_repr())
             .hash(state)
     }
 }
@@ -272,7 +272,9 @@ pub mod testing {
     #[cfg(test)]
     use crate::tree::{MerkleHashOrchard, EMPTY_ROOTS};
     #[cfg(test)]
-    use pasta_curves::{arithmetic::FieldExt, pallas};
+    use group::ff::PrimeField;
+    #[cfg(test)]
+    use pasta_curves::pallas;
     #[cfg(test)]
     use std::convert::TryInto;
 
@@ -293,7 +295,7 @@ pub mod testing {
             tree.append(&cmx);
             tree.witness();
 
-            assert_eq!(tree.root().0, pallas::Base::from_bytes(&tv.root).unwrap());
+            assert_eq!(tree.root().0, pallas::Base::from_repr(tv.root).unwrap());
 
             // Check paths for all leaves up to this point. The test vectors include paths
             // for not-yet-appended leaves (using UNCOMMITTED_ORCHARD as the leaf value),
@@ -324,7 +326,7 @@ pub mod testing {
             assert_eq!(
                 MerkleHashOrchard::empty_root(Altitude::from(altitude as u8))
                     .0
-                    .to_bytes(),
+                    .to_repr(),
                 *tv_root,
                 "Empty root mismatch at altitude {}",
                 altitude
@@ -375,12 +377,9 @@ pub mod testing {
 
         let mut frontier = BridgeFrontier::<MerkleHashOrchard, 32>::empty();
         for commitment in commitments.iter() {
-            let cmx = MerkleHashOrchard(pallas::Base::from_bytes(commitment).unwrap());
+            let cmx = MerkleHashOrchard(pallas::Base::from_repr(*commitment).unwrap());
             frontier.append(&cmx);
         }
-        assert_eq!(
-            frontier.root().0,
-            pallas::Base::from_bytes(&anchor).unwrap()
-        );
+        assert_eq!(frontier.root().0, pallas::Base::from_repr(anchor).unwrap());
     }
 }

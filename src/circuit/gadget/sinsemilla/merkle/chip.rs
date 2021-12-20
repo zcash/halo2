@@ -1,5 +1,5 @@
 use halo2::{
-    circuit::{Chip, Layouter},
+    circuit::{AssignedCell, Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
@@ -15,7 +15,7 @@ use crate::{
     circuit::gadget::utilities::{
         bitrange_subset,
         cond_swap::{CondSwapChip, CondSwapConfig, CondSwapInstructions},
-        copy, CellValue, UtilitiesInstructions, Var,
+        UtilitiesInstructions,
     },
     constants::{L_ORCHARD_BASE, MERKLE_DEPTH_ORCHARD},
     primitives::sinsemilla,
@@ -82,7 +82,7 @@ impl MerkleChip {
             let q_decompose = meta.query_selector(q_decompose);
             let l_whole = meta.query_advice(advices[4], Rotation::next());
 
-            let two_pow_5 = pallas::Base::from_u64(1 << 5);
+            let two_pow_5 = pallas::Base::from(1 << 5);
             let two_pow_10 = two_pow_5.square();
 
             // a_whole is constrained by Sinsemilla to be 250 bits.
@@ -101,7 +101,7 @@ impl MerkleChip {
             let z1_a = meta.query_advice(advices[0], Rotation::next());
             let a_1 = z1_a;
             // a_0 = a - (a_1 * 2^10)
-            let a_0 = a_whole - a_1.clone() * pallas::Base::from_u64(1 << 10);
+            let a_0 = a_whole - a_1.clone() * pallas::Base::from(1 << 10);
             let l_check = a_0 - l_whole;
 
             // b = b_0||b_1||b_2
@@ -185,12 +185,12 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
         let a = {
             let a = {
                 // a_0 = l
-                let a_0 = bitrange_subset(pallas::Base::from_u64(l as u64), 0..10);
+                let a_0 = bitrange_subset(&pallas::Base::from(l as u64), 0..10);
 
                 // a_1 = (bits 0..=239 of `left`)
                 let a_1 = left.value().map(|value| bitrange_subset(value, 0..240));
 
-                a_1.map(|a_1| a_0 + a_1 * pallas::Base::from_u64(1 << 10))
+                a_1.map(|a_1| a_0 + a_1 * pallas::Base::from(1 << 10))
             };
 
             self.witness_message_piece(layouter.namespace(|| "Witness a = a_0 || a_1"), a, 25)?
@@ -233,8 +233,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                     .zip(b_1.value())
                     .zip(b_2.value())
                     .map(|((b_0, b_1), b_2)| {
-                        b_0 + b_1 * pallas::Base::from_u64(1 << 10)
-                            + b_2 * pallas::Base::from_u64(1 << 15)
+                        b_0 + b_1 * pallas::Base::from(1 << 10) + b_2 * pallas::Base::from(1 << 15)
                     });
                 self.witness_message_piece(
                     layouter.namespace(|| "Witness b = b_0 || b_1 || b_2"),
@@ -257,10 +256,10 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
         let (point, zs) = self.hash_to_point(
             layouter.namespace(|| format!("hash at l = {}", l)),
             Q,
-            vec![a, b, c].into(),
+            vec![a.clone(), b.clone(), c.clone()].into(),
         )?;
-        let z1_a = zs[0][1];
-        let z1_b = zs[1][1];
+        let z1_a = zs[0][1].clone();
+        let z1_b = zs[1][1].clone();
 
         // Check that the pieces have been decomposed properly.
         /*
@@ -282,48 +281,33 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                         || format!("l {}", l),
                         config.advices[4],
                         1,
-                        pallas::Base::from_u64(l as u64),
+                        pallas::Base::from(l as u64),
                     )?;
 
                     // Offset 0
                     // Copy and assign `a` at the correct position.
-                    copy(
-                        &mut region,
-                        || "copy a",
-                        config.advices[0],
-                        0,
-                        &a.cell_value(),
-                    )?;
+                    a.cell_value()
+                        .copy_advice(|| "copy a", &mut region, config.advices[0], 0)?;
                     // Copy and assign `b` at the correct position.
-                    copy(
-                        &mut region,
-                        || "copy b",
-                        config.advices[1],
-                        0,
-                        &b.cell_value(),
-                    )?;
+                    b.cell_value()
+                        .copy_advice(|| "copy b", &mut region, config.advices[1], 0)?;
                     // Copy and assign `c` at the correct position.
-                    copy(
-                        &mut region,
-                        || "copy c",
-                        config.advices[2],
-                        0,
-                        &c.cell_value(),
-                    )?;
+                    c.cell_value()
+                        .copy_advice(|| "copy c", &mut region, config.advices[2], 0)?;
                     // Copy and assign the left node at the correct position.
-                    copy(&mut region, || "left", config.advices[3], 0, &left)?;
+                    left.copy_advice(|| "left", &mut region, config.advices[3], 0)?;
                     // Copy and assign the right node at the correct position.
-                    copy(&mut region, || "right", config.advices[4], 0, &right)?;
+                    right.copy_advice(|| "right", &mut region, config.advices[4], 0)?;
 
                     // Offset 1
                     // Copy and assign z_1 of SinsemillaHash(a) = a_1
-                    copy(&mut region, || "z1_a", config.advices[0], 1, &z1_a)?;
+                    z1_a.copy_advice(|| "z1_a", &mut region, config.advices[0], 1)?;
                     // Copy and assign z_1 of SinsemillaHash(b) = b_1
-                    copy(&mut region, || "z1_b", config.advices[1], 1, &z1_b)?;
+                    z1_b.copy_advice(|| "z1_b", &mut region, config.advices[1], 1)?;
                     // Copy `b_1`, which has been constrained to be a 5-bit value
-                    copy(&mut region, || "b_1", config.advices[2], 1, &b_1)?;
+                    b_1.copy_advice(|| "b_1", &mut region, config.advices[2], 1)?;
                     // Copy `b_2`, which has been constrained to be a 5-bit value
-                    copy(&mut region, || "b_2", config.advices[3], 1, &b_2)?;
+                    b_2.copy_advice(|| "b_2", &mut region, config.advices[3], 1)?;
 
                     Ok(())
                 },
@@ -339,7 +323,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                 constants::MERKLE_CRH_PERSONALIZATION, primitives::sinsemilla::HashDomain,
                 spec::i2lebsp,
             };
-            use ff::PrimeFieldBits;
+            use group::ff::{PrimeField, PrimeFieldBits};
 
             if let (Some(left), Some(right)) = (left.value(), right.value()) {
                 let l = i2lebsp::<10>(l as u64);
@@ -363,7 +347,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
 
                 let expected = merkle_crh.hash(message.into_iter()).unwrap();
 
-                assert_eq!(expected.to_bytes(), result.value().unwrap().to_bytes());
+                assert_eq!(expected.to_repr(), result.value().unwrap().to_repr());
             }
         }
 
@@ -372,7 +356,7 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
 }
 
 impl UtilitiesInstructions<pallas::Base> for MerkleChip {
-    type Var = CellValue<pallas::Base>;
+    type Var = AssignedCell<pallas::Base, pallas::Base>;
 }
 
 impl CondSwapInstructions<pallas::Base> for MerkleChip {
