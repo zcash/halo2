@@ -1,6 +1,7 @@
 //! Tools for developing circuits.
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt;
 use std::iter;
 use std::ops::{Add, Mul, Neg, Range};
@@ -32,6 +33,29 @@ mod graph;
 #[cfg(feature = "dev-graph")]
 #[cfg_attr(docsrs, doc(cfg(feature = "dev-graph")))]
 pub use graph::{circuit_dot_graph, layout::CircuitLayout};
+
+/// The location at which a particular lookup is not satisfied.
+#[derive(Debug, PartialEq)]
+pub enum LookupFailure {
+    /// A location inside a region. This may be due to the intentional use of a lookup
+    /// (if its inputs are conditional on a complex selector), or an unintentional lookup
+    /// constraint that overlaps the region (indicating that the lookup's inputs should be
+    /// made conditional).
+    InRegion {
+        /// The region in which the lookup's input expressions were evaluated.
+        region: metadata::Region,
+        /// The offset (relative to the start of the region) at which the lookup's input
+        /// expressions were evaluated.
+        offset: usize,
+    },
+    /// A location outside of a region. This most likely means the input expressions do
+    /// not correctly constrain a default value that exists in the table when the lookup
+    /// is not being used.
+    OutsideRegion {
+        /// The circuit row on which this lookup is not satisfied.
+        row: usize,
+    },
+}
 
 /// The reasons why a particular circuit is not satisfied.
 #[derive(Debug, PartialEq)]
@@ -69,8 +93,8 @@ pub enum VerifyFailure {
         /// the order in which `ConstraintSystem::lookup` is called during
         /// `Circuit::configure`.
         lookup_index: usize,
-        /// The row on which this lookup is not satisfied.
-        row: usize,
+        /// The location at which the lookup is not satisfied.
+        location: LookupFailure,
     },
     /// A permutation did not preserve the original value of a cell.
     Permutation {
@@ -114,9 +138,19 @@ impl fmt::Display for VerifyFailure {
                     constraint
                 )
             }
-            Self::Lookup { lookup_index, row } => {
-                write!(f, "Lookup {} is not satisfied on row {}", lookup_index, row)
-            }
+            Self::Lookup {
+                lookup_index,
+                location,
+            } => match location {
+                LookupFailure::InRegion { region, offset } => write!(
+                    f,
+                    "Lookup {} is not satisfied in {} at offset {}",
+                    lookup_index, region, offset
+                ),
+                LookupFailure::OutsideRegion { row } => {
+                    write!(f, "Lookup {} is not satisfied on row {}", lookup_index, row)
+                }
+            },
             Self::Permutation { column, row } => {
                 write!(
                     f,
@@ -132,8 +166,10 @@ impl fmt::Display for VerifyFailure {
 struct Region {
     /// The name of the region. Not required to be unique.
     name: String,
-    /// The row that this region starts on, if known.
-    start: Option<usize>,
+    /// The columns involved in this region.
+    columns: HashSet<Column<Any>>,
+    /// The rows that this region starts and ends on, if known.
+    rows: Option<(usize, usize)>,
     /// The selectors that have been enabled in this region. All other selectors are by
     /// construction not enabled.
     enabled_selectors: HashMap<Selector, Vec<usize>>,
@@ -143,14 +179,20 @@ struct Region {
 }
 
 impl Region {
-    fn update_start(&mut self, row: usize) {
+    fn update_extent(&mut self, column: Column<Any>, row: usize) {
+        self.columns.insert(column);
+
         // The region start is the earliest row assigned to.
-        let mut start = self.start.unwrap_or(row);
+        // The region end is the latest row assigned to.
+        let (mut start, mut end) = self.rows.unwrap_or((row, row));
         if row < start {
             // The first row assigned was not at start 0 within the region.
             start = row;
         }
-        self.start = Some(start);
+        if row > end {
+            end = row;
+        }
+        self.rows = Some((start, end));
     }
 }
 
@@ -385,7 +427,8 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         assert!(self.current_region.is_none());
         self.current_region = Some(Region {
             name: name().into(),
-            start: None,
+            columns: HashSet::default(),
+            rows: None,
             enabled_selectors: HashMap::default(),
             cells: vec![],
         });
@@ -449,7 +492,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         }
 
         if let Some(region) = self.current_region.as_mut() {
-            region.update_start(row);
+            region.update_extent(column.into(), row);
             region.cells.push((column.into(), row));
         }
 
@@ -480,7 +523,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         }
 
         if let Some(region) = self.current_region.as_mut() {
-            region.update_start(row);
+            region.update_extent(column.into(), row);
             region.cells.push((column.into(), row));
         }
 
@@ -656,7 +699,7 @@ impl<F: FieldExt> MockProver<F> {
                                         gate: (gate_index, gate.name()).into(),
                                         region: (r_i, r.name.clone()).into(),
                                         column: cell.column,
-                                        offset: cell_row as isize - r.start.unwrap() as isize,
+                                        offset: cell_row as isize - r.rows.unwrap().0 as isize,
                                     })
                                 }
                             })
@@ -815,9 +858,64 @@ impl<F: FieldExt> MockProver<F> {
                         if lookup_passes {
                             None
                         } else {
+                            let input_columns: HashSet<Column<Any>> = lookup
+                                .input_expressions
+                                .iter()
+                                .flat_map(|expression| {
+                                    expression.evaluate(
+                                        &|_| vec![],
+                                        &|_| {
+                                            panic!(
+                                                "virtual selectors are removed during optimization"
+                                            )
+                                        },
+                                        &|index, _, _| vec![self.cs.fixed_queries[index].0.into()],
+                                        &|index, _, _| vec![self.cs.advice_queries[index].0.into()],
+                                        &|index, _, _| {
+                                            vec![self.cs.instance_queries[index].0.into()]
+                                        },
+                                        &|a| a,
+                                        &|mut a, mut b| {
+                                            a.append(&mut b);
+                                            a
+                                        },
+                                        &|mut a, mut b| {
+                                            a.append(&mut b);
+                                            a
+                                        },
+                                        &|a, _| a,
+                                    )
+                                })
+                                .collect();
+                            println!("Lookup input columns: {:?}", &input_columns);
+
+                            // Figure out whether the lookup location
+                            // overlaps an assigned region.
+                            let location = self
+                                .regions
+                                .iter()
+                                .enumerate()
+                                .find(|(_, r)| {
+                                    let (start, end) = r.rows.unwrap();
+                                    // We match the region if any input columns overlap,
+                                    // rather than all of them, because matching complex
+                                    // selector columns is hard. This is probably going to
+                                    // cause some mismatches, which we'll fix later.
+                                    input_row >= start
+                                        && input_row <= end
+                                        && !input_columns.is_disjoint(&r.columns)
+                                })
+                                .map(|(r_i, r)| LookupFailure::InRegion {
+                                    region: (r_i, r.name.clone()).into(),
+                                    offset: input_row as usize - r.rows.unwrap().0 as usize,
+                                })
+                                .unwrap_or_else(|| LookupFailure::OutsideRegion {
+                                    row: input_row as usize,
+                                });
+
                             Some(VerifyFailure::Lookup {
                                 lookup_index,
-                                row: input_row as usize,
+                                location,
                             })
                         }
                     })
@@ -891,10 +989,10 @@ impl<F: FieldExt> MockProver<F> {
 mod tests {
     use pasta_curves::Fp;
 
-    use super::{MockProver, VerifyFailure};
+    use super::{LookupFailure, MockProver, VerifyFailure};
     use crate::{
         circuit::{Layouter, SimpleFloorPlanner},
-        plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector},
+        plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector, TableColumn},
         poly::Rotation,
     };
 
@@ -966,6 +1064,112 @@ mod tests {
                 region: (0, "Faulty synthesis".to_owned()).into(),
                 column: Column::new(1, Any::Advice),
                 offset: 1,
+            }])
+        );
+    }
+
+    #[test]
+    fn bad_lookup() {
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        struct FaultyCircuitConfig {
+            a: Column<Advice>,
+            q: Selector,
+            table: TableColumn,
+        }
+
+        struct FaultyCircuit {}
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let q = meta.complex_selector();
+                let table = meta.lookup_table_column();
+
+                meta.lookup(|cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    let q = cells.query_selector(q);
+
+                    // If q is enabled, a must be in the table.
+                    // Zero is in the table, which satisfies the disabled case.
+                    vec![(q * a, table)]
+                });
+
+                FaultyCircuitConfig { a, q, table }
+            }
+
+            fn without_witnesses(&self) -> Self {
+                Self {}
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                layouter.assign_table(
+                    || "Doubling table",
+                    |mut table| {
+                        (0..(1 << (K - 1)))
+                            .map(|i| {
+                                table.assign_cell(
+                                    || format!("table[{}] = {}", i, 2 * i),
+                                    config.table,
+                                    i,
+                                    || Ok(Fp::from(2 * i as u64)),
+                                )
+                            })
+                            .fold(Ok(()), |acc, res| acc.and(res))
+                    },
+                )?;
+
+                layouter.assign_region(
+                    || "Good synthesis",
+                    |mut region| {
+                        // Enable the lookup on rows 0 and 1.
+                        config.q.enable(&mut region, 0)?;
+                        config.q.enable(&mut region, 1)?;
+
+                        // Assign a = 2 and a = 6.
+                        region.assign_advice(|| "a = 2", config.a, 0, || Ok(Fp::from(2)))?;
+                        region.assign_advice(|| "a = 6", config.a, 1, || Ok(Fp::from(6)))?;
+
+                        Ok(())
+                    },
+                )?;
+
+                layouter.assign_region(
+                    || "Faulty synthesis",
+                    |mut region| {
+                        // Enable the lookup on rows 0 and 1.
+                        config.q.enable(&mut region, 0)?;
+                        config.q.enable(&mut region, 1)?;
+
+                        // Assign a = 4.
+                        region.assign_advice(|| "a = 4", config.a, 0, || Ok(Fp::from(4)))?;
+
+                        // BUG: Assign a = 5, which doesn't exist in the table!
+                        region.assign_advice(|| "a = 5", config.a, 1, || Ok(Fp::from(5)))?;
+
+                        Ok(())
+                    },
+                )
+            }
+        }
+
+        let prover = MockProver::run(K, &FaultyCircuit {}, vec![]).unwrap();
+        assert_eq!(
+            prover.verify(),
+            Err(vec![VerifyFailure::Lookup {
+                lookup_index: 0,
+                location: LookupFailure::InRegion {
+                    region: (2, "Faulty synthesis".to_owned()).into(),
+                    offset: 1,
+                }
             }])
         );
     }

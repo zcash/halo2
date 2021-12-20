@@ -6,6 +6,9 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `halo2::dev::LookupFailure` (used in `VerifyFailure::Lookup`)
+
 ### Changed
 - `halo2::plonk::Error` has been overhauled:
   - `Error` now implements `std::fmt::Display` and `std::error::Error`.
@@ -19,8 +22,12 @@ and this project adheres to Rust's notion of
     underlying `io::Error`.
 - `halo2::dev::CircuitLayout::render` now takes `k` as a `u32`, matching the
   regular parameter APIs.
-- `halo2::dev::VerifyFailure::ConstraintNotSatisfied` now has a `cell_values`
-  field, storing the values of the cells used in the unsatisfied constraint.
+- `halo2::dev::VerifyFailure` has been overhauled:
+  - `VerifyFailure::ConstraintNotSatisfied` now has a `cell_values` field,
+    storing the values of the cells used in the unsatisfied constraint.
+  - The `row` field of `VerifyFailure::Lookup` has been replaced by a `location`
+    field, which can now indicate whether the location falls within an assigned
+    region.
 - `halo2::plonk::ConstraintSystem::enable_equality` and 
   `halo2::plonk::ConstraintSystem::query_any` now take `Into<Column<Any>>` instead 
   of `Column<Any>` as a parameter to avoid excesive `.into()` usage.
