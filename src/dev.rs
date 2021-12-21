@@ -63,6 +63,62 @@ impl fmt::Display for FailureLocation {
     }
 }
 
+impl FailureLocation {
+    fn find_expressions<'a, F: Field>(
+        cs: &ConstraintSystem<F>,
+        regions: &[Region],
+        failure_row: usize,
+        failure_expressions: impl Iterator<Item = &'a Expression<F>>,
+    ) -> Self {
+        let failure_columns: HashSet<Column<Any>> = failure_expressions
+            .flat_map(|expression| {
+                expression.evaluate(
+                    &|_| vec![],
+                    &|_| panic!("virtual selectors are removed during optimization"),
+                    &|index, _, _| vec![cs.fixed_queries[index].0.into()],
+                    &|index, _, _| vec![cs.advice_queries[index].0.into()],
+                    &|index, _, _| vec![cs.instance_queries[index].0.into()],
+                    &|a| a,
+                    &|mut a, mut b| {
+                        a.append(&mut b);
+                        a
+                    },
+                    &|mut a, mut b| {
+                        a.append(&mut b);
+                        a
+                    },
+                    &|a, _| a,
+                )
+            })
+            .collect();
+
+        Self::find(regions, failure_row, failure_columns)
+    }
+
+    /// Figures out whether the given row and columns overlap an assigned region.
+    fn find(regions: &[Region], failure_row: usize, failure_columns: HashSet<Column<Any>>) -> Self {
+        regions
+            .iter()
+            .enumerate()
+            .find(|(_, r)| {
+                let (start, end) = r.rows.unwrap();
+                // We match the region if any input columns overlap, rather than all of
+                // them, because matching complex selector columns is hard. As long as
+                // regions are rectangles, and failures occur due to assignments entirely
+                // within single regions, "any" will be equivalent to "all". If these
+                // assumptions change, we'll start getting bug reports from users :)
+                (start..=end).contains(&failure_row) && !failure_columns.is_disjoint(&r.columns)
+            })
+            .map(|(r_i, r)| FailureLocation::InRegion {
+                region: (r_i, r.name.clone()).into(),
+                offset: failure_row as usize - r.rows.unwrap().0 as usize,
+            })
+            .unwrap_or_else(|| FailureLocation::OutsideRegion {
+                row: failure_row as usize,
+            })
+    }
+}
+
 /// The reasons why a particular circuit is not satisfied.
 #[derive(Debug, PartialEq)]
 pub enum VerifyFailure {
@@ -866,64 +922,14 @@ impl<F: FieldExt> MockProver<F> {
                         if lookup_passes {
                             None
                         } else {
-                            let input_columns: HashSet<Column<Any>> = lookup
-                                .input_expressions
-                                .iter()
-                                .flat_map(|expression| {
-                                    expression.evaluate(
-                                        &|_| vec![],
-                                        &|_| {
-                                            panic!(
-                                                "virtual selectors are removed during optimization"
-                                            )
-                                        },
-                                        &|index, _, _| vec![self.cs.fixed_queries[index].0.into()],
-                                        &|index, _, _| vec![self.cs.advice_queries[index].0.into()],
-                                        &|index, _, _| {
-                                            vec![self.cs.instance_queries[index].0.into()]
-                                        },
-                                        &|a| a,
-                                        &|mut a, mut b| {
-                                            a.append(&mut b);
-                                            a
-                                        },
-                                        &|mut a, mut b| {
-                                            a.append(&mut b);
-                                            a
-                                        },
-                                        &|a, _| a,
-                                    )
-                                })
-                                .collect();
-                            println!("Lookup input columns: {:?}", &input_columns);
-
-                            // Figure out whether the lookup location
-                            // overlaps an assigned region.
-                            let location = self
-                                .regions
-                                .iter()
-                                .enumerate()
-                                .find(|(_, r)| {
-                                    let (start, end) = r.rows.unwrap();
-                                    // We match the region if any input columns overlap,
-                                    // rather than all of them, because matching complex
-                                    // selector columns is hard. This is probably going to
-                                    // cause some mismatches, which we'll fix later.
-                                    input_row >= start
-                                        && input_row <= end
-                                        && !input_columns.is_disjoint(&r.columns)
-                                })
-                                .map(|(r_i, r)| FailureLocation::InRegion {
-                                    region: (r_i, r.name.clone()).into(),
-                                    offset: input_row as usize - r.rows.unwrap().0 as usize,
-                                })
-                                .unwrap_or_else(|| FailureLocation::OutsideRegion {
-                                    row: input_row as usize,
-                                });
-
                             Some(VerifyFailure::Lookup {
                                 lookup_index,
-                                location,
+                                location: FailureLocation::find_expressions(
+                                    &self.cs,
+                                    &self.regions,
+                                    input_row,
+                                    lookup.input_expressions.iter(),
+                                ),
                             })
                         }
                     })
