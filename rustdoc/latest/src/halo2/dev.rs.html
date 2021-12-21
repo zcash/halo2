@@ -1254,7 +1254,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">VerifyFailure</span> {
     <span class="doccomment">/// A cell used in an active gate was not assigned to.</span>
-    <span class="ident">Cell</span> {
+    <span class="ident">CellNotAssigned</span> {
         <span class="doccomment">/// The index of the active gate.</span>
         <span class="ident">gate</span>: <span class="ident">metadata::Gate</span>,
         <span class="doccomment">/// The region in which this cell should be assigned.</span>
@@ -1301,7 +1301,7 @@
 <span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">VerifyFailure</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
         <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Cell</span> {
+            <span class="ident"><span class="self">Self</span>::CellNotAssigned</span> {
                 <span class="ident">gate</span>,
                 <span class="ident">region</span>,
                 <span class="ident">column</span>,
@@ -1888,7 +1888,7 @@
                                 <span class="kw">if</span> <span class="ident">r</span>.<span class="ident">cells</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span>(<span class="ident">cell</span>.<span class="ident">column</span>, <span class="ident">cell_row</span>)) {
                                     <span class="prelude-val">None</span>
                                 } <span class="kw">else</span> {
-                                    <span class="prelude-val">Some</span>(<span class="ident">VerifyFailure::Cell</span> {
+                                    <span class="prelude-val">Some</span>(<span class="ident">VerifyFailure::CellNotAssigned</span> {
                                         <span class="ident">gate</span>: (<span class="ident">gate_index</span>, <span class="ident">gate</span>.<span class="ident">name</span>()).<span class="ident">into</span>(),
                                         <span class="ident">region</span>: (<span class="ident">r_i</span>, <span class="ident">r</span>.<span class="ident">name</span>.<span class="ident">clone</span>()).<span class="ident">into</span>(),
                                         <span class="ident">column</span>: <span class="ident">cell</span>.<span class="ident">column</span>,
@@ -2252,7 +2252,7 @@
         <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver::run</span>(<span class="ident">K</span>, <span class="kw-2">&amp;</span><span class="ident">FaultyCircuit</span> {}, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
         <span class="macro">assert_eq!</span>(
             <span class="ident">prover</span>.<span class="ident">verify</span>(),
-            <span class="prelude-val">Err</span>(<span class="macro">vec!</span>[<span class="ident">VerifyFailure::Cell</span> {
+            <span class="prelude-val">Err</span>(<span class="macro">vec!</span>[<span class="ident">VerifyFailure::CellNotAssigned</span> {
                 <span class="ident">gate</span>: (<span class="number">0</span>, <span class="string">&quot;Equality check&quot;</span>).<span class="ident">into</span>(),
                 <span class="ident">region</span>: (<span class="number">0</span>, <span class="string">&quot;Faulty synthesis&quot;</span>.<span class="ident">to_owned</span>()).<span class="ident">into</span>(),
                 <span class="ident">column</span>: <span class="ident">Column::new</span>(<span class="number">1</span>, <span class="ident">Any::Advice</span>),
@@ -2368,5 +2368,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (e95e084a1 2021-12-19)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (23f69235a 2021-12-20)" ></div>
 </body></html>
