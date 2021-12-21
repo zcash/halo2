@@ -139,8 +139,11 @@ pub enum VerifyFailure {
     ConstraintNotSatisfied {
         /// The polynomial constraint that is not satisfied.
         constraint: metadata::Constraint,
-        /// The row on which this constraint is not satisfied.
-        row: usize,
+        /// The location at which this constraint is not satisfied.
+        ///
+        /// `FailureLocation::OutsideRegion` is usually caused by a constraint that does
+        /// not contain a selector, and as a result is active on every row.
+        location: FailureLocation,
         /// The values of the virtual cells used by this constraint.
         cell_values: Vec<(metadata::VirtualCell, String)>,
     },
@@ -195,10 +198,10 @@ impl fmt::Display for VerifyFailure {
             }
             Self::ConstraintNotSatisfied {
                 constraint,
-                row,
+                location,
                 cell_values,
             } => {
-                writeln!(f, "{} is not satisfied on row {}", constraint, row)?;
+                writeln!(f, "{} is not satisfied {}", constraint, location)?;
                 for (name, value) in cell_values {
                     writeln!(f, "- {} = {}", name, value)?;
                 }
@@ -357,7 +360,7 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 /// use halo2::{
 ///     arithmetic::FieldExt,
 ///     circuit::{Layouter, SimpleFloorPlanner},
-///     dev::{MockProver, VerifyFailure},
+///     dev::{FailureLocation, MockProver, VerifyFailure},
 ///     pasta::Fp,
 ///     plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector},
 ///     poly::Rotation,
@@ -438,7 +441,10 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 ///     prover.verify(),
 ///     Err(vec![VerifyFailure::ConstraintNotSatisfied {
 ///         constraint: ((0, "R1CS constraint").into(), 0, "buggy R1CS").into(),
-///         row: 0,
+///         location: FailureLocation::InRegion {
+///             region: (0, "Example region").into(),
+///             offset: 0,
+///         },
 ///         cell_values: vec![
 ///             (((Any::Advice, 0).into(), 0).into(), "0x2".to_string()),
 ///             (((Any::Advice, 1).into(), 0).into(), "0x4".to_string()),
@@ -829,7 +835,12 @@ impl<F: FieldExt> MockProver<F> {
                                         gate.constraint_name(poly_index),
                                     )
                                         .into(),
-                                    row: (row - n) as usize,
+                                    location: FailureLocation::find_expressions(
+                                        &self.cs,
+                                        &self.regions,
+                                        (row - n) as usize,
+                                        Some(poly).into_iter(),
+                                    ),
                                     cell_values: util::cell_values(
                                         gate,
                                         poly,
@@ -1181,7 +1192,7 @@ mod tests {
             Err(vec![VerifyFailure::Lookup {
                 lookup_index: 0,
                 location: FailureLocation::InRegion {
-                    region: (2, "Faulty synthesis".to_owned()).into(),
+                    region: (2, "Faulty synthesis").into(),
                     offset: 1,
                 }
             }])
