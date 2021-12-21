@@ -34,27 +34,33 @@ mod graph;
 #[cfg_attr(docsrs, doc(cfg(feature = "dev-graph")))]
 pub use graph::{circuit_dot_graph, layout::CircuitLayout};
 
-/// The location at which a particular lookup is not satisfied.
+/// The location within the circuit at which a particular [`VerifyFailure`] occurred.
 #[derive(Debug, PartialEq)]
-pub enum LookupFailure {
-    /// A location inside a region. This may be due to the intentional use of a lookup
-    /// (if its inputs are conditional on a complex selector), or an unintentional lookup
-    /// constraint that overlaps the region (indicating that the lookup's inputs should be
-    /// made conditional).
+pub enum FailureLocation {
+    /// A location inside a region.
     InRegion {
-        /// The region in which the lookup's input expressions were evaluated.
+        /// The region in which the failure occurred.
         region: metadata::Region,
-        /// The offset (relative to the start of the region) at which the lookup's input
-        /// expressions were evaluated.
+        /// The offset (relative to the start of the region) at which the failure
+        /// occurred.
         offset: usize,
     },
-    /// A location outside of a region. This most likely means the input expressions do
-    /// not correctly constrain a default value that exists in the table when the lookup
-    /// is not being used.
+    /// A location outside of a region.
     OutsideRegion {
-        /// The circuit row on which this lookup is not satisfied.
+        /// The circuit row on which the failure occurred.
         row: usize,
     },
+}
+
+impl fmt::Display for FailureLocation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InRegion { region, offset } => write!(f, "in {} at offset {}", region, offset),
+            Self::OutsideRegion { row } => {
+                write!(f, "on row {}", row)
+            }
+        }
+    }
 }
 
 /// The reasons why a particular circuit is not satisfied.
@@ -94,7 +100,18 @@ pub enum VerifyFailure {
         /// `Circuit::configure`.
         lookup_index: usize,
         /// The location at which the lookup is not satisfied.
-        location: LookupFailure,
+        ///
+        /// `FailureLocation::InRegion` is most common, and may be due to the intentional
+        /// use of a lookup (if its inputs are conditional on a complex selector), or an
+        /// unintentional lookup constraint that overlaps the region (indicating that the
+        /// lookup's inputs should be made conditional).
+        ///
+        /// `FailureLocation::OutsideRegion` is uncommon, and could mean that:
+        /// - The input expressions do not correctly constrain a default value that exists
+        ///   in the table when the lookup is not being used.
+        /// - The input expressions use a column queried at a non-zero `Rotation`, and the
+        ///   lookup is active on a row adjacent to an unrelated region.
+        location: FailureLocation,
     },
     /// A permutation did not preserve the original value of a cell.
     Permutation {
@@ -141,16 +158,7 @@ impl fmt::Display for VerifyFailure {
             Self::Lookup {
                 lookup_index,
                 location,
-            } => match location {
-                LookupFailure::InRegion { region, offset } => write!(
-                    f,
-                    "Lookup {} is not satisfied in {} at offset {}",
-                    lookup_index, region, offset
-                ),
-                LookupFailure::OutsideRegion { row } => {
-                    write!(f, "Lookup {} is not satisfied on row {}", lookup_index, row)
-                }
-            },
+            } => write!(f, "Lookup {} is not satisfied {}", lookup_index, location),
             Self::Permutation { column, row } => {
                 write!(
                     f,
@@ -905,11 +913,11 @@ impl<F: FieldExt> MockProver<F> {
                                         && input_row <= end
                                         && !input_columns.is_disjoint(&r.columns)
                                 })
-                                .map(|(r_i, r)| LookupFailure::InRegion {
+                                .map(|(r_i, r)| FailureLocation::InRegion {
                                     region: (r_i, r.name.clone()).into(),
                                     offset: input_row as usize - r.rows.unwrap().0 as usize,
                                 })
-                                .unwrap_or_else(|| LookupFailure::OutsideRegion {
+                                .unwrap_or_else(|| FailureLocation::OutsideRegion {
                                     row: input_row as usize,
                                 });
 
@@ -989,7 +997,7 @@ impl<F: FieldExt> MockProver<F> {
 mod tests {
     use pasta_curves::Fp;
 
-    use super::{LookupFailure, MockProver, VerifyFailure};
+    use super::{FailureLocation, MockProver, VerifyFailure};
     use crate::{
         circuit::{Layouter, SimpleFloorPlanner},
         plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector, TableColumn},
@@ -1166,7 +1174,7 @@ mod tests {
             prover.verify(),
             Err(vec![VerifyFailure::Lookup {
                 lookup_index: 0,
-                location: LookupFailure::InRegion {
+                location: FailureLocation::InRegion {
                     region: (2, "Faulty synthesis".to_owned()).into(),
                     offset: 1,
                 }

@@ -7,7 +7,7 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 ### Added
-- `halo2::dev::LookupFailure` (used in `VerifyFailure::Lookup`)
+- `halo2::dev::FailureLocation` (used in `VerifyFailure::Lookup`)
 
 ### Changed
 - `halo2::plonk::Error` has been overhauled:
