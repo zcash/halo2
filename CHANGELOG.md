@@ -23,6 +23,7 @@ and this project adheres to Rust's notion of
 - `halo2::dev::CircuitLayout::render` now takes `k` as a `u32`, matching the
   regular parameter APIs.
 - `halo2::dev::VerifyFailure` has been overhauled:
+  - `VerifyFailure::Cell` has been renamed to `VerifyFailure::CellNotAssigned`.
   - `VerifyFailure::ConstraintNotSatisfied` now has a `cell_values` field,
     storing the values of the cells used in the unsatisfied constraint.
   - The `row` field of `VerifyFailure::Lookup` has been replaced by a `location`
