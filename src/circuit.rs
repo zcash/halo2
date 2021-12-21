@@ -33,6 +33,7 @@ use crate::{
     tree::{Anchor, MerkleHashOrchard},
     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment},
 };
+use commit_ivk::CommitIvkConfig;
 use gadget::{
     ecc::{
         chip::{EccChip, EccConfig},
@@ -41,21 +42,20 @@ use gadget::{
     poseidon::{Hash as PoseidonHash, Pow5Chip as PoseidonChip, Pow5Config as PoseidonConfig},
     sinsemilla::{
         chip::{SinsemillaChip, SinsemillaConfig, SinsemillaHashDomains},
-        commit_ivk::CommitIvkConfig,
         merkle::{
             chip::{MerkleChip, MerkleConfig},
             MerklePath,
         },
-        note_commit::NoteCommitConfig,
     },
-    utilities::UtilitiesInstructions,
+    utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
 };
+use note_commit::NoteCommitConfig;
 
 use std::convert::TryInto;
 
-use self::gadget::utilities::lookup_range_check::LookupRangeCheckConfig;
-
+mod commit_ivk;
 pub mod gadget;
+mod note_commit;
 
 /// Size of the Orchard circuit.
 const K: u32 = 11;

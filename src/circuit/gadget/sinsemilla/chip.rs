@@ -73,6 +73,11 @@ impl SinsemillaConfig {
     pub(super) fn advices(&self) -> [Column<Advice>; 5] {
         [self.x_a, self.x_p, self.bits, self.lambda_1, self.lambda_2]
     }
+
+    /// Returns the lookup range check config used in this config.
+    pub fn lookup_config(&self) -> LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }> {
+        self.lookup_config
+    }
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]

@@ -8,14 +8,13 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 use crate::{
     circuit::gadget::{
         ecc::{chip::EccChip, X},
+        sinsemilla::{
+            chip::{SinsemillaChip, SinsemillaCommitDomains, SinsemillaConfig},
+            CommitDomain, Message, MessagePiece,
+        },
         utilities::{bitrange_subset, bool_check},
     },
     constants::T_P,
-};
-
-use super::{
-    chip::{SinsemillaChip, SinsemillaCommitDomains, SinsemillaConfig},
-    CommitDomain, Message, MessagePiece,
 };
 
 #[derive(Clone, Debug)]
@@ -263,13 +262,13 @@ impl CommitIvkConfig {
             });
 
             // Constrain b_0 to be 4 bits.
-            let b_0 = self.sinsemilla_config.lookup_config.witness_short_check(
+            let b_0 = self.sinsemilla_config.lookup_config().witness_short_check(
                 layouter.namespace(|| "b_0 is 4 bits"),
                 b_0,
                 4,
             )?;
             // Constrain b_2 to be 5 bits.
-            let b_2 = self.sinsemilla_config.lookup_config.witness_short_check(
+            let b_2 = self.sinsemilla_config.lookup_config().witness_short_check(
                 layouter.namespace(|| "b_2 is 5 bits"),
                 b_2,
                 5,
@@ -307,7 +306,7 @@ impl CommitIvkConfig {
                 .map(|(d_0, d_1)| d_0 + d_1 * pallas::Base::from(1 << 9));
 
             // Constrain d_0 to be 9 bits.
-            let d_0 = self.sinsemilla_config.lookup_config.witness_short_check(
+            let d_0 = self.sinsemilla_config.lookup_config().witness_short_check(
                 layouter.namespace(|| "d_0 is 9 bits"),
                 d_0,
                 9,
@@ -406,7 +405,7 @@ impl CommitIvkConfig {
             let t_p = pallas::Base::from_u128(T_P);
             a + two_pow_130 - t_p
         });
-        let zs = self.sinsemilla_config.lookup_config.witness_check(
+        let zs = self.sinsemilla_config.lookup_config().witness_check(
             layouter.namespace(|| "Decompose low 130 bits of (a + 2^130 - t_P)"),
             a_prime,
             13,
@@ -449,7 +448,7 @@ impl CommitIvkConfig {
             let t_p = pallas::Base::from_u128(T_P);
             b_2 + c * two_pow_5 + two_pow_140 - t_p
         });
-        let zs = self.sinsemilla_config.lookup_config.witness_check(
+        let zs = self.sinsemilla_config.lookup_config().witness_check(
             layouter.namespace(|| "Decompose low 140 bits of (b_2 + c * 2^5 + 2^140 - t_P)"),
             b2_c_prime,
             14,

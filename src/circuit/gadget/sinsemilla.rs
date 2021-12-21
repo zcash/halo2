@@ -9,10 +9,8 @@ use pasta_curves::arithmetic::CurveAffine;
 use std::fmt::Debug;
 
 pub mod chip;
-pub mod commit_ivk;
 pub mod merkle;
 mod message;
-pub mod note_commit;
 
 /// The set of circuit instructions required to use the [`Sinsemilla`](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html) gadget.
 /// This trait is bounded on two constant parameters: `K`, the number of bits
@@ -140,7 +138,7 @@ where
     /// Constructs a message from a vector of [`MessagePiece`]s.
     ///
     /// [`MessagePiece`]: SinsemillaInstructions::MessagePiece
-    fn from_pieces(
+    pub fn from_pieces(
         chip: SinsemillaChip,
         pieces: Vec<MessagePiece<C, SinsemillaChip, K, MAX_WORDS>>,
     ) -> Self {
@@ -169,7 +167,8 @@ impl<C: CurveAffine, SinsemillaChip, const K: usize, const MAX_WORDS: usize>
 where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
 {
-    fn inner(&self) -> SinsemillaChip::MessagePiece {
+    /// Returns the inner MessagePiece contained in this gadget.
+    pub fn inner(&self) -> SinsemillaChip::MessagePiece {
         self.inner.clone()
     }
 }
@@ -211,7 +210,8 @@ where
         Self::from_field_elem(chip, layouter, piece_value, num_words)
     }
 
-    fn from_field_elem(
+    /// Constructs a MessagePiece from a field element.
+    pub fn from_field_elem(
         chip: SinsemillaChip,
         layouter: impl Layouter<C::Base>,
         field_elem: Option<C::Base>,

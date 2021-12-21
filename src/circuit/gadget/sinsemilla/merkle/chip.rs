@@ -209,11 +209,10 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
                     .value()
                     .map(|value| bitrange_subset(value, 250..L_ORCHARD_BASE));
 
-                config.sinsemilla_config.lookup_config.witness_short_check(
-                    layouter.namespace(|| "Constrain b_1 to 5 bits"),
-                    b_1,
-                    5,
-                )?
+                config
+                    .sinsemilla_config
+                    .lookup_config()
+                    .witness_short_check(layouter.namespace(|| "Constrain b_1 to 5 bits"), b_1, 5)?
             };
 
             // b_2 = (bits 0..=4 of `right`)
@@ -221,11 +220,10 @@ impl MerkleInstructions<pallas::Affine, MERKLE_DEPTH_ORCHARD, { sinsemilla::K },
             let b_2 = {
                 let b_2 = right.value().map(|value| bitrange_subset(value, 0..5));
 
-                config.sinsemilla_config.lookup_config.witness_short_check(
-                    layouter.namespace(|| "Constrain b_2 to 5 bits"),
-                    b_2,
-                    5,
-                )?
+                config
+                    .sinsemilla_config
+                    .lookup_config()
+                    .witness_short_check(layouter.namespace(|| "Constrain b_2 to 5 bits"), b_2, 5)?
             };
 
             let b = {
