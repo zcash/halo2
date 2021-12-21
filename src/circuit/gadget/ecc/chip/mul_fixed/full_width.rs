@@ -1,8 +1,8 @@
 use super::super::{EccPoint, EccScalarFixed, FixedPoints};
 
 use crate::{
-    circuit::gadget::utilities::range_check,
-    constants::{self, util, L_ORCHARD_SCALAR, NUM_WINDOWS},
+    circuit::gadget::utilities::{decompose_word, range_check},
+    constants::{self, L_ORCHARD_SCALAR, NUM_WINDOWS},
 };
 use arrayvec::ArrayVec;
 use halo2::{
@@ -84,7 +84,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
         // Decompose scalar into `k-bit` windows
         let scalar_windows: Option<Vec<u8>> = scalar.map(|scalar| {
-            util::decompose_word::<pallas::Scalar>(
+            decompose_word::<pallas::Scalar>(
                 &scalar,
                 SCALAR_NUM_BITS,
                 constants::FIXED_BASE_WINDOW_SIZE,

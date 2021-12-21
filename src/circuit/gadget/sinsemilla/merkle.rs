@@ -6,11 +6,8 @@ use pasta_curves::arithmetic::CurveAffine;
 
 use super::{HashDomains, SinsemillaInstructions};
 
-use crate::{
-    circuit::gadget::utilities::{
-        cond_swap::CondSwapInstructions, transpose_option_array, UtilitiesInstructions,
-    },
-    spec::i2lebsp,
+use crate::circuit::gadget::utilities::{
+    cond_swap::CondSwapInstructions, i2lebsp, transpose_option_array, UtilitiesInstructions,
 };
 use std::iter;
 

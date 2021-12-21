@@ -30,7 +30,6 @@ use halo2::{
 };
 
 use super::range_check;
-use crate::constants::util::decompose_word;
 use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
@@ -166,7 +165,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         let words: Vec<Option<u8>> = {
             let words = z_0
                 .value()
-                .map(|word| decompose_word::<F>(word, word_num_bits, WINDOW_NUM_BITS));
+                .map(|word| super::decompose_word::<F>(word, word_num_bits, WINDOW_NUM_BITS));
 
             if let Some(words) = words {
                 words.into_iter().map(Some).collect()
