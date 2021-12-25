@@ -1,4 +1,5 @@
 use ff::Field;
+use rand::rngs::OsRng;
 
 use super::super::{
     commitment::{Guard, Params, MSM},
@@ -31,7 +32,7 @@ where
     // Scale the MSM by a random factor to ensure that if the existing MSM
     // has is_zero() == false then this argument won't be able to interfere
     // with it to make it true, with high probability.
-    msm.scale(C::Scalar::rand());
+    msm.scale(C::Scalar::random(OsRng));
 
     // Sample x_1 for compressing openings at the same point sets together
     let x_1: ChallengeX1<_> = transcript.squeeze_challenge_scalar();

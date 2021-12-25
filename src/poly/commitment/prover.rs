@@ -1,4 +1,5 @@
 use ff::Field;
+use rand::RngCore;
 
 use super::super::{Coeff, Polynomial};
 use super::{Blind, Params};
@@ -23,8 +24,14 @@ use std::io;
 /// opening v, and the point x. It's probably also nice for the transcript
 /// to have seen the elliptic curve description and the URS, if you want to
 /// be rigorous.
-pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
+pub fn create_proof<
+    C: CurveAffine,
+    E: EncodedChallenge<C>,
+    R: RngCore,
+    T: TranscriptWrite<C, E>,
+>(
     params: &Params<C>,
+    mut rng: R,
     transcript: &mut T,
     px: &Polynomial<C::Scalar, Coeff>,
     blind: Blind<C::Scalar>,
@@ -37,14 +44,14 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C
     // by setting all coefficients to random values.
     let mut s_poly = (*px).clone();
     for coeff in s_poly.iter_mut() {
-        *coeff = C::Scalar::rand();
+        *coeff = C::Scalar::random(&mut rng);
     }
     // Evaluate the random polynomial at x
     let v_prime = eval_polynomial(&s_poly[..], x);
     // Subtract constant coefficient to get a random polynomial with a root at x
     s_poly[0] = s_poly[0] - &v_prime;
     // And sample a random blind
-    let s_poly_blind = Blind(C::Scalar::rand());
+    let s_poly_blind = Blind(C::Scalar::random(&mut rng));
 
     // Write a commitment to the random polynomial to the transcript
     let s_poly_commitment = params.commit(&s_poly, s_poly_blind).to_affine();
@@ -99,8 +106,8 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C
         let r = best_multiexp(&a[0..half], &g[half..]);
         let value_l = compute_inner_product(&a[half..], &b[0..half]);
         let value_r = compute_inner_product(&a[0..half], &b[half..]);
-        let l_randomness = C::Scalar::rand();
-        let r_randomness = C::Scalar::rand();
+        let l_randomness = C::Scalar::random(&mut rng);
+        let r_randomness = C::Scalar::random(&mut rng);
         let l = l + &best_multiexp(&[value_l * &z, l_randomness], &[params.u, params.h]);
         let r = r + &best_multiexp(&[value_r * &z, r_randomness], &[params.u, params.h]);
         let l = l.to_affine();

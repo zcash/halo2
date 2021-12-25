@@ -16,6 +16,7 @@ use group::{
     ff::{BatchInvert, Field},
     Curve,
 };
+use rand::RngCore;
 use std::{
     collections::BTreeMap,
     iter,
@@ -73,6 +74,7 @@ impl<F: FieldExt> Argument<F> {
         'a,
         C,
         E: EncodedChallenge<C>,
+        R: RngCore,
         T: TranscriptWrite<C, E>,
     >(
         &self,
@@ -86,6 +88,7 @@ impl<F: FieldExt> Argument<F> {
         advice_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         fixed_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
         instance_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
+        mut rng: R,
         transcript: &mut T,
     ) -> Result<Permuted<C>, Error>
     where
@@ -173,14 +176,6 @@ impl<F: FieldExt> Argument<F> {
             )
         };
 
-        // Closure to construct commitment to vector of values
-        let commit_values = |values: &Polynomial<C::Scalar, LagrangeCoeff>| {
-            let poly = pk.vk.domain.lagrange_to_coeff(values.clone());
-            let blind = Blind(C::Scalar::rand());
-            let commitment = params.commit_lagrange(values, blind).to_affine();
-            (poly, blind, commitment)
-        };
-
         // Get values of input expressions involved in the lookup and compress them
         let (unpermuted_input_expressions, unpermuted_input_cosets, compressed_input_expression) =
             compress_expressions(&self.input_expressions);
@@ -190,13 +185,22 @@ impl<F: FieldExt> Argument<F> {
             compress_expressions(&self.table_expressions);
 
         // Permute compressed (InputExpression, TableExpression) pair
-        let (permuted_input_expression, permuted_table_expression) = permute_expression_pair::<C>(
+        let (permuted_input_expression, permuted_table_expression) = permute_expression_pair::<C, _>(
             pk,
             params,
             domain,
+            &mut rng,
             &compressed_input_expression,
             &compressed_table_expression,
         )?;
+
+        // Closure to construct commitment to vector of values
+        let mut commit_values = |values: &Polynomial<C::Scalar, LagrangeCoeff>| {
+            let poly = pk.vk.domain.lagrange_to_coeff(values.clone());
+            let blind = Blind(C::Scalar::random(&mut rng));
+            let commitment = params.commit_lagrange(values, blind).to_affine();
+            (poly, blind, commitment)
+        };
 
         // Commit to permuted input expression
         let (permuted_input_poly, permuted_input_blind, permuted_input_commitment) =
@@ -238,13 +242,18 @@ impl<C: CurveAffine> Permuted<C> {
     /// grand product polynomial over the lookup. The grand product polynomial
     /// is used to populate the Product<C> struct. The Product<C> struct is
     /// added to the Lookup and finally returned by the method.
-    pub(in crate::plonk) fn commit_product<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
+    pub(in crate::plonk) fn commit_product<
+        E: EncodedChallenge<C>,
+        R: RngCore,
+        T: TranscriptWrite<C, E>,
+    >(
         self,
         pk: &ProvingKey<C>,
         params: &Params<C>,
         theta: ChallengeTheta<C>,
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
+        mut rng: R,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
         let blinding_factors = pk.vk.cs.blinding_factors();
@@ -326,7 +335,7 @@ impl<C: CurveAffine> Permuted<C> {
             // be a boolean (and ideally 1, else soundness is broken)
             .take(params.n as usize - blinding_factors)
             // Chain random blinding factors.
-            .chain((0..blinding_factors).map(|_| C::Scalar::rand()))
+            .chain((0..blinding_factors).map(|_| C::Scalar::random(&mut rng)))
             .collect::<Vec<_>>();
         assert_eq!(z.len(), params.n as usize);
         let z = pk.vk.domain.lagrange_from_vec(z);
@@ -376,7 +385,7 @@ impl<C: CurveAffine> Permuted<C> {
             assert_eq!(z[u], C::Scalar::one());
         }
 
-        let product_blind = Blind(C::Scalar::rand());
+        let product_blind = Blind(C::Scalar::random(rng));
         let product_commitment = params.commit_lagrange(&z, product_blind).to_affine();
         let z = pk.vk.domain.lagrange_to_coeff(z);
         let product_coset = pk.vk.domain.coeff_to_extended(z.clone());
@@ -587,10 +596,11 @@ type ExpressionPair<F> = (Polynomial<F, LagrangeCoeff>, Polynomial<F, LagrangeCo
 /// - the first row in a sequence of like values in A' is the row
 ///   that has the corresponding value in S'.
 /// This method returns (A', S') if no errors are encountered.
-fn permute_expression_pair<C: CurveAffine>(
+fn permute_expression_pair<C: CurveAffine, R: RngCore>(
     pk: &ProvingKey<C>,
     params: &Params<C>,
     domain: &EvaluationDomain<C::Scalar>,
+    mut rng: R,
     input_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
     table_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
 ) -> Result<ExpressionPair<C::Scalar>, Error> {
@@ -645,8 +655,9 @@ fn permute_expression_pair<C: CurveAffine>(
     }
     assert!(repeated_input_rows.is_empty());
 
-    permuted_input_expression.extend((0..(blinding_factors + 1)).map(|_| C::Scalar::rand()));
-    permuted_table_coeffs.extend((0..(blinding_factors + 1)).map(|_| C::Scalar::rand()));
+    permuted_input_expression
+        .extend((0..(blinding_factors + 1)).map(|_| C::Scalar::random(&mut rng)));
+    permuted_table_coeffs.extend((0..(blinding_factors + 1)).map(|_| C::Scalar::random(&mut rng)));
     assert_eq!(permuted_input_expression.len(), params.n as usize);
     assert_eq!(permuted_table_coeffs.len(), params.n as usize);
 

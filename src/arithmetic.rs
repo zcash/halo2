@@ -403,12 +403,17 @@ pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
 }
 
 #[cfg(test)]
+use rand::rngs::OsRng;
+
+#[cfg(test)]
 use crate::pasta::Fp;
 
 #[test]
 fn test_lagrange_interpolate() {
-    let points = (0..5).map(|_| Fp::rand()).collect::<Vec<_>>();
-    let evals = (0..5).map(|_| Fp::rand()).collect::<Vec<_>>();
+    let rng = OsRng;
+
+    let points = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+    let evals = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
 
     for coeffs in 0..5 {
         let points = &points[0..coeffs];

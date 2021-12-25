@@ -513,7 +513,9 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
 
 #[allow(clippy::many_single_char_names)]
 fn main() {
+    use group::ff::Field;
     use halo2::{dev::MockProver, pasta::Fp};
+    use rand::rngs::OsRng;
 
     // ANCHOR: test-circuit
     // The number of rows in our circuit cannot exceed 2^k. Since our example
@@ -521,9 +523,10 @@ fn main() {
     let k = 4;
 
     // Prepare the private and public inputs to the circuit!
-    let a = Fp::rand();
-    let b = Fp::rand();
-    let c = Fp::rand();
+    let rng = OsRng;
+    let a = Fp::random(rng);
+    let b = Fp::random(rng);
+    let c = Fp::random(rng);
     let d = (a + b) * c;
 
     // Instantiate the circuit with the private inputs.

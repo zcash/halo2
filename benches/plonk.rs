@@ -2,12 +2,14 @@
 extern crate criterion;
 
 extern crate halo2;
+use group::ff::Field;
 use halo2::arithmetic::FieldExt;
 use halo2::circuit::{Cell, Layouter, SimpleFloorPlanner};
 use halo2::pasta::{EqAffine, Fp};
 use halo2::plonk::*;
 use halo2::poly::{commitment::Params, Rotation};
 use halo2::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
+use rand::rngs::OsRng;
 
 use std::marker::PhantomData;
 
@@ -253,13 +255,15 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 
     fn prover(k: u32, params: &Params<EqAffine>, pk: &ProvingKey<EqAffine>) -> Vec<u8> {
+        let rng = OsRng;
+
         let circuit: MyCircuit<Fp> = MyCircuit {
-            a: Some(Fp::rand()),
+            a: Some(Fp::random(rng)),
             k,
         };
 
         let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
-        create_proof(params, pk, &[circuit], &[&[]], &mut transcript)
+        create_proof(params, pk, &[circuit], &[&[]], rng, &mut transcript)
             .expect("proof generation should not fail");
         transcript.finalize()
     }
