@@ -89,7 +89,7 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
             cols.tag,
             row,
             || {
-                tag.map(|tag| pallas::Base::from_u64(tag as u64))
+                tag.map(|tag| pallas::Base::from(tag as u64))
                     .ok_or(Error::Synthesis)
             },
         )?;
@@ -271,7 +271,7 @@ impl SpreadTableConfig {
                     *spread = F::zero();
                     for b in 0..16 {
                         if (i >> b) & 1 != 0 {
-                            *spread += F::from_u64(1 << (2 * b));
+                            *spread += F::from(1 << (2 * b));
                         }
                     }
                 } else {
@@ -347,68 +347,60 @@ mod tests {
                         };
 
                         // Test the first few small values.
-                        add_row(F::zero(), F::from_u64(0b000), F::from_u64(0b000000))?;
-                        add_row(F::zero(), F::from_u64(0b001), F::from_u64(0b000001))?;
-                        add_row(F::zero(), F::from_u64(0b010), F::from_u64(0b000100))?;
-                        add_row(F::zero(), F::from_u64(0b011), F::from_u64(0b000101))?;
-                        add_row(F::zero(), F::from_u64(0b100), F::from_u64(0b010000))?;
-                        add_row(F::zero(), F::from_u64(0b101), F::from_u64(0b010001))?;
+                        add_row(F::zero(), F::from(0b000), F::from(0b000000))?;
+                        add_row(F::zero(), F::from(0b001), F::from(0b000001))?;
+                        add_row(F::zero(), F::from(0b010), F::from(0b000100))?;
+                        add_row(F::zero(), F::from(0b011), F::from(0b000101))?;
+                        add_row(F::zero(), F::from(0b100), F::from(0b010000))?;
+                        add_row(F::zero(), F::from(0b101), F::from(0b010001))?;
 
                         // Test the tag boundaries:
                         // 7-bit
-                        add_row(
-                            F::zero(),
-                            F::from_u64(0b1111111),
-                            F::from_u64(0b01010101010101),
-                        )?;
-                        add_row(
-                            F::one(),
-                            F::from_u64(0b10000000),
-                            F::from_u64(0b0100000000000000),
-                        )?;
+                        add_row(F::zero(), F::from(0b1111111), F::from(0b01010101010101))?;
+                        add_row(F::one(), F::from(0b10000000), F::from(0b0100000000000000))?;
                         // - 10-bit
                         add_row(
                             F::one(),
-                            F::from_u64(0b1111111111),
-                            F::from_u64(0b01010101010101010101),
+                            F::from(0b1111111111),
+                            F::from(0b01010101010101010101),
                         )?;
                         add_row(
-                            F::from_u64(2),
-                            F::from_u64(0b10000000000),
-                            F::from_u64(0b0100000000000000000000),
+                            F::from(2),
+                            F::from(0b10000000000),
+                            F::from(0b0100000000000000000000),
                         )?;
                         // - 11-bit
                         add_row(
-                            F::from_u64(2),
-                            F::from_u64(0b11111111111),
-                            F::from_u64(0b0101010101010101010101),
+                            F::from(2),
+                            F::from(0b11111111111),
+                            F::from(0b0101010101010101010101),
                         )?;
                         add_row(
-                            F::from_u64(3),
-                            F::from_u64(0b100000000000),
-                            F::from_u64(0b010000000000000000000000),
+                            F::from(3),
+                            F::from(0b100000000000),
+                            F::from(0b010000000000000000000000),
                         )?;
                         // - 13-bit
                         add_row(
-                            F::from_u64(3),
-                            F::from_u64(0b1111111111111),
-                            F::from_u64(0b01010101010101010101010101),
+                            F::from(3),
+                            F::from(0b1111111111111),
+                            F::from(0b01010101010101010101010101),
                         )?;
                         add_row(
-                            F::from_u64(4),
-                            F::from_u64(0b10000000000000),
-                            F::from_u64(0b0100000000000000000000000000),
+                            F::from(4),
+                            F::from(0b10000000000000),
+                            F::from(0b0100000000000000000000000000),
                         )?;
                         // - 14-bit
                         add_row(
-                            F::from_u64(4),
-                            F::from_u64(0b11111111111111),
-                            F::from_u64(0b0101010101010101010101010101),
+                            F::from(4),
+                            F::from(0b11111111111111),
+                            F::from(0b0101010101010101010101010101),
                         )?;
                         add_row(
-                            F::from_u64(5),
-                            F::from_u64(0b100000000000000),
-                            F::from_u64(0b010000000000000000000000000000),
+                            F::from(5),
+                            F::from(0b100000000000000),
+                            F::from(0b010000000000000000000000000000),
                         )?;
 
                         // Test random lookup values
@@ -426,9 +418,9 @@ mod tests {
                         for _ in 0..10 {
                             let word: u16 = rng.gen();
                             add_row(
-                                F::from_u64(get_tag(word).into()),
-                                F::from_u64(word.into()),
-                                F::from_u64(interleave_u16_with_zeros(word).into()),
+                                F::from(get_tag(word).into()),
+                                F::from(word.into()),
+                                F::from(interleave_u16_with_zeros(word).into()),
                             )?;
                         }
 

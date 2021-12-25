@@ -32,10 +32,10 @@ impl<F: FieldExt> Gate<F> {
             for i in 0..deg {
                 let i = i as u64;
                 if i != idx {
-                    expr = expr * (Self::ones() * (-F::one()) * F::from_u64(i) + var.clone());
+                    expr = expr * (Self::ones() * (-F::one()) * F::from(i) + var.clone());
                 }
             }
-            expr * F::from_u64(eval.into())
+            expr * F::from(u64::from(eval))
         };
         let denominator = |idx: i32| {
             let mut denom: i32 = 1;
@@ -46,9 +46,9 @@ impl<F: FieldExt> Gate<F> {
                 }
             }
             if denom < 0 {
-                -F::one() * F::from_u64(factor / (-denom as u64))
+                -F::one() * F::from(factor / (-denom as u64))
             } else {
-                F::from_u64(factor / (denom as u64))
+                F::from(factor / (denom as u64))
             }
         };
 
@@ -57,13 +57,13 @@ impl<F: FieldExt> Gate<F> {
             expr = expr + numerator(var.clone(), *eval, idx as u64) * denominator(idx as i32)
         }
 
-        (F::from_u64(factor), expr)
+        (F::from(factor), expr)
     }
 
     pub fn range_check(value: Expression<F>, lower_range: u64, upper_range: u64) -> Expression<F> {
         let mut expr = Self::ones();
         for i in lower_range..(upper_range + 1) {
-            expr = expr * (Self::ones() * (-F::one()) * F::from_u64(i) + value.clone())
+            expr = expr * (Self::ones() * (-F::one()) * F::from(i) + value.clone())
         }
         expr
     }

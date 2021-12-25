@@ -1,6 +1,6 @@
 use super::super::{util::*, AssignedBits, Bits, SpreadVar, SpreadWord, Table16Assignment};
 use super::{schedule_util::*, MessageScheduleConfig, MessageWord};
-use halo2::{arithmetic::FieldExt, circuit::Region, pasta::pallas, plonk::Error};
+use halo2::{circuit::Region, pasta::pallas, plonk::Error};
 use std::convert::TryInto;
 
 /// A word in subregion 2
@@ -252,7 +252,7 @@ impl MessageScheduleConfig {
                 a_5,
                 get_word_row(new_word_idx - 16) + 1,
                 || {
-                    word.map(|word| pallas::Base::from_u64(word as u64))
+                    word.map(|word| pallas::Base::from(word as u64))
                         .ok_or(Error::Synthesis)
                 },
             )?;
@@ -262,7 +262,7 @@ impl MessageScheduleConfig {
                 get_word_row(new_word_idx - 16) + 1,
                 || {
                     carry
-                        .map(|carry| pallas::Base::from_u64(carry as u64))
+                        .map(|carry| pallas::Base::from(carry as u64))
                         .ok_or(Error::Synthesis)
                 },
             )?;
