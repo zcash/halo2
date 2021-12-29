@@ -13,9 +13,11 @@ use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, Neg, RangeFrom, Range
 
 pub mod commitment;
 mod domain;
+mod evaluator;
 pub mod multiopen;
 
 pub use domain::*;
+pub use evaluator::*;
 
 /// This is an error that could occur during proving or circuit synthesis.
 // TODO: these errors need to be cleaned up
@@ -28,21 +30,21 @@ pub enum Error {
 }
 
 /// The basis over which a polynomial is described.
-pub trait Basis: Clone + Debug + Send + Sync {}
+pub trait Basis: Copy + Debug + Send + Sync {}
 
 /// The polynomial is defined as coefficients
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Coeff;
 impl Basis for Coeff {}
 
 /// The polynomial is defined as coefficients of Lagrange basis polynomials
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct LagrangeCoeff;
 impl Basis for LagrangeCoeff {}
 
 /// The polynomial is defined as coefficients of Lagrange basis polynomials in
 /// an extended size domain which supports multiplication
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct ExtendedLagrangeCoeff;
 impl Basis for ExtendedLagrangeCoeff {}
 
