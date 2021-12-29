@@ -108,7 +108,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
             .expect("Failed to write vk to file");
     }
 
-    let vk_fs = File::open(&vk_path).expect("couldn't load sha256_params");
+    let vk_fs = File::open(&vk_path).expect("couldn't load sha256_vk");
     let vk: VerifyingKey<EqAffine> =
         VerifyingKey::<EqAffine>::read::<_, MyCircuit>(&mut BufReader::new(vk_fs), &params)
             .expect("Failed to read vk");
