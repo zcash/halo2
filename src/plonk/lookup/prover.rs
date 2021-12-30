@@ -6,6 +6,7 @@ use super::Argument;
 use crate::{
     arithmetic::{eval_polynomial, parallelize, CurveAffine, FieldExt},
     poly::{
+        self,
         commitment::{Blind, Params},
         multiopen::ProverQuery,
         Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
@@ -74,6 +75,8 @@ impl<F: FieldExt> Argument<F> {
         'a,
         C,
         E: EncodedChallenge<C>,
+        Ev: Copy + Send + Sync,
+        Ec: Copy + Send + Sync,
         R: RngCore,
         T: TranscriptWrite<C, E>,
     >(
@@ -81,13 +84,15 @@ impl<F: FieldExt> Argument<F> {
         pk: &ProvingKey<C>,
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
+        value_evaluator: &poly::Evaluator<Ev, C::Scalar, LagrangeCoeff>,
+        coset_evaluator: &poly::Evaluator<Ec, C::Scalar, ExtendedLagrangeCoeff>,
         theta: ChallengeTheta<C>,
-        advice_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
-        fixed_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
-        instance_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
-        advice_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
-        fixed_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
-        instance_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
+        advice_values: &'a [poly::AstLeaf<Ev, LagrangeCoeff>],
+        fixed_values: &'a [poly::AstLeaf<Ev, LagrangeCoeff>],
+        instance_values: &'a [poly::AstLeaf<Ev, LagrangeCoeff>],
+        advice_cosets: &'a [poly::AstLeaf<Ec, ExtendedLagrangeCoeff>],
+        fixed_cosets: &'a [poly::AstLeaf<Ec, ExtendedLagrangeCoeff>],
+        instance_cosets: &'a [poly::AstLeaf<Ec, ExtendedLagrangeCoeff>],
         mut rng: R,
         transcript: &mut T,
     ) -> Result<Permuted<C>, Error>
@@ -102,32 +107,20 @@ impl<F: FieldExt> Argument<F> {
                 .iter()
                 .map(|expression| {
                     expression.evaluate(
-                        &|scalar| pk.vk.domain.constant_lagrange(scalar),
+                        &|scalar| poly::Ast::ConstantTerm(scalar),
                         &|_| panic!("virtual selectors are removed during optimization"),
                         &|_, column_index, rotation| {
-                            fixed_values[column_index].clone().rotate(rotation)
+                            fixed_values[column_index].with_rotation(rotation).into()
                         },
                         &|_, column_index, rotation| {
-                            advice_values[column_index].clone().rotate(rotation)
+                            advice_values[column_index].with_rotation(rotation).into()
                         },
                         &|_, column_index, rotation| {
-                            instance_values[column_index].clone().rotate(rotation)
+                            instance_values[column_index].with_rotation(rotation).into()
                         },
                         &|a| -a,
-                        &|a, b| a + &b,
-                        &|a, b| {
-                            let mut modified_a = vec![C::Scalar::one(); params.n as usize];
-                            parallelize(&mut modified_a, |modified_a, start| {
-                                for ((modified_a, a), b) in modified_a
-                                    .iter_mut()
-                                    .zip(a[start..].iter())
-                                    .zip(b[start..].iter())
-                                {
-                                    *modified_a *= *a * b;
-                                }
-                            });
-                            pk.vk.domain.lagrange_from_vec(modified_a)
-                        },
+                        &|a, b| a + b,
+                        &|a, b| a * b,
                         &|a, scalar| a * scalar,
                     )
                 })
@@ -137,42 +130,41 @@ impl<F: FieldExt> Argument<F> {
                 .iter()
                 .map(|expression| {
                     expression.evaluate(
-                        &|scalar| pk.vk.domain.constant_extended(scalar),
+                        &|scalar| poly::Ast::ConstantTerm(scalar),
                         &|_| panic!("virtual selectors are removed during optimization"),
                         &|_, column_index, rotation| {
-                            pk.vk
-                                .domain
-                                .rotate_extended(&fixed_cosets[column_index], rotation)
+                            fixed_cosets[column_index].with_rotation(rotation).into()
                         },
                         &|_, column_index, rotation| {
-                            pk.vk
-                                .domain
-                                .rotate_extended(&advice_cosets[column_index], rotation)
+                            advice_cosets[column_index].with_rotation(rotation).into()
                         },
                         &|_, column_index, rotation| {
-                            pk.vk
-                                .domain
-                                .rotate_extended(&instance_cosets[column_index], rotation)
+                            instance_cosets[column_index].with_rotation(rotation).into()
                         },
                         &|a| -a,
-                        &|a, b| a + &b,
-                        &|a, b| a * &b,
+                        &|a, b| a + b,
+                        &|a, b| a * b,
                         &|a, scalar| a * scalar,
                     )
                 })
                 .collect();
 
             // Compressed version of expressions
-            let compressed_expression = unpermuted_expressions
-                .iter()
-                .fold(domain.empty_lagrange(), |acc, expression| {
-                    acc * *theta + expression
-                });
+            let compressed_expression = unpermuted_expressions.iter().fold(
+                poly::Ast::ConstantTerm(C::Scalar::zero()),
+                |acc, expression| &(acc * *theta) + expression,
+            );
 
             (
-                unpermuted_expressions,
-                unpermuted_cosets,
-                compressed_expression,
+                unpermuted_expressions
+                    .iter()
+                    .map(|ast| value_evaluator.evaluate(ast, domain))
+                    .collect(),
+                unpermuted_cosets
+                    .iter()
+                    .map(|ast| coset_evaluator.evaluate(ast, domain))
+                    .collect(),
+                value_evaluator.evaluate(&compressed_expression, domain),
             )
         };
 

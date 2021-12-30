@@ -13,6 +13,7 @@ use super::{
     ChallengeY, Error, ProvingKey,
 };
 use crate::poly::{
+    self,
     commitment::{Blind, Params},
     multiopen::{self, ProverQuery},
     Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
@@ -330,13 +331,83 @@ pub fn create_proof<
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    // Create polynomial evaluator context for values.
+    let mut value_evaluator = poly::new_evaluator(|| {});
+
+    // Register fixed values with the polynomial evaluator.
+    let fixed_values: Vec<_> = pk
+        .fixed_values
+        .iter()
+        .map(|poly| value_evaluator.register_poly(poly.clone()))
+        .collect();
+
+    // Register advice values with the polynomial evaluator.
+    let advice_values: Vec<_> = advice
+        .iter()
+        .map(|advice| {
+            advice
+                .advice_values
+                .iter()
+                .map(|poly| value_evaluator.register_poly(poly.clone()))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    // Register instance values with the polynomial evaluator.
+    let instance_values: Vec<_> = instance
+        .iter()
+        .map(|instance| {
+            instance
+                .instance_values
+                .iter()
+                .map(|poly| value_evaluator.register_poly(poly.clone()))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    // Create polynomial evaluator context for cosets.
+    let mut coset_evaluator = poly::new_evaluator(|| {});
+
+    // Register fixed cosets with the polynomial evaluator.
+    let fixed_cosets: Vec<_> = pk
+        .fixed_cosets
+        .iter()
+        .map(|poly| coset_evaluator.register_poly(poly.clone()))
+        .collect();
+
+    // Register advice cosets with the polynomial evaluator.
+    let advice_cosets: Vec<_> = advice
+        .iter()
+        .map(|advice| {
+            advice
+                .advice_cosets
+                .iter()
+                .map(|poly| coset_evaluator.register_poly(poly.clone()))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    // Register instance cosets with the polynomial evaluator.
+    let instance_cosets: Vec<_> = instance
+        .iter()
+        .map(|instance| {
+            instance
+                .instance_cosets
+                .iter()
+                .map(|poly| coset_evaluator.register_poly(poly.clone()))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
 
-    let lookups: Vec<Vec<lookup::prover::Permuted<C>>> = instance
+    let lookups: Vec<Vec<lookup::prover::Permuted<C>>> = instance_values
         .iter()
-        .zip(advice.iter())
-        .map(|(instance, advice)| -> Result<Vec<_>, Error> {
+        .zip(instance_cosets.iter())
+        .zip(advice_values.iter())
+        .zip(advice_cosets.iter())
+        .map(|(((instance_values, instance_cosets), advice_values), advice_cosets)| -> Result<Vec<_>, Error> {
             // Construct and commit to permuted values for each lookup
             pk.vk
                 .cs
@@ -347,13 +418,15 @@ pub fn create_proof<
                         pk,
                         params,
                         domain,
+                        &value_evaluator,
+                        &coset_evaluator,
                         theta,
-                        &advice.advice_values,
-                        &pk.fixed_values,
-                        &instance.instance_values,
-                        &advice.advice_cosets,
-                        &pk.fixed_cosets,
-                        &instance.instance_cosets,
+                        advice_values,
+                        &fixed_values,
+                        instance_values,
+                        advice_cosets,
+                        &fixed_cosets,
+                        instance_cosets,
                         &mut rng,
                         transcript,
                     )
