@@ -185,7 +185,7 @@ representations of circuits.</p>
 }
 </code></pre>
 <ul>
-<li>Columns are layed out from left to right as instance, advice, and fixed. The order of
+<li>Columns are laid out from left to right as instance, advice and fixed. The order of
 columns is otherwise without meaning.
 <ul>
 <li>Instance columns have a white background.</li>
@@ -201,7 +201,7 @@ the surrounding cells.</li>
 </ul>
 <h3 id="circuit-structure"><a class="header" href="#circuit-structure">Circuit structure</a></h3>
 <p><code>halo2::dev::circuit_dot_graph</code> builds a <a href="https://graphviz.org/doc/info/lang.html">DOT graph string</a> representing the given
-circuit, which can then be rendered witha variety of <a href="https://en.wikipedia.org/wiki/DOT_(graph_description_language)#Layout_programs">layout programs</a>. The graph is built
+circuit, which can then be rendered with a variety of <a href="https://en.wikipedia.org/wiki/DOT_(graph_description_language)#Layout_programs">layout programs</a>. The graph is built
 from calls to <code>Layouter::namespace</code> both within the circuit, and inside the gadgets and
 chips that it uses.</p>
 <pre><code class="language-rust ignore no_run">fn main() {
