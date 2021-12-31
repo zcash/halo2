@@ -119,7 +119,7 @@ Since we can no longer rely on the wraparound to ensure that the product $Z$ bec
 again at $\omega^{2^k},$ we would instead need to constrain $Z(\omega^u)$ to $1.$ However,
 there is a potential difficulty: if any of the values $A_i + \beta$ or $S_i + \gamma$ are
 zero for $i \in [0, u),$ then it might not be possible to satisfy the permutation argument.
-This occurs with negligble probability over choices of $\beta$ and $\gamma,$ but is an
+This occurs with negligible probability over choices of $\beta$ and $\gamma,$ but is an
 obstacle to achieving *perfect* zero knowledge (because an adversary can rule out witnesses
 that would cause this situation), as well as perfect completeness.
 

@@ -29,7 +29,7 @@ sudo apt install cmake libexpat1-dev libfreetype6-dev
 {{#include ../../../examples/circuit-layout.rs:dev-graph}}
 ```
 
-- Columns are layed out from left to right as instance, advice, and fixed. The order of
+- Columns are laid out from left to right as instance, advice and fixed. The order of
   columns is otherwise without meaning.
   - Instance columns have a white background.
   - Advice columns have a red background.
@@ -43,7 +43,7 @@ sudo apt install cmake libexpat1-dev libfreetype6-dev
 ### Circuit structure
 
 `halo2::dev::circuit_dot_graph` builds a [DOT graph string] representing the given
-circuit, which can then be rendered witha variety of [layout programs]. The graph is built
+circuit, which can then be rendered with a variety of [layout programs]. The graph is built
 from calls to `Layouter::namespace` both within the circuit, and inside the gadgets and
 chips that it uses.
 

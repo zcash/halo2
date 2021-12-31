@@ -59,7 +59,7 @@ arguments are independent.)
 
 Let $c$ be the number of columns that are enabled for equality constraints.
 
-Let $m$ be the maximum number of columns that can accomodated by a
+Let $m$ be the maximum number of columns that can accommodated by a
 [column set](permutation.md#spanning-a-large-number-of-columns) without exceeding
 the PLONK configuration's polynomial degree bound.
 

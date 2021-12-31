@@ -11,7 +11,7 @@ numbers $\mathbb{R}$ are an example of a field with uncountably many elements.
 Halo makes use of _finite fields_ which have a finite number of elements. Finite fields
 are fully classified as follows:
 
-- if $\mathbb{F}$ is a finite field, it contains $|\mathbb{F}| = p^k$ elements  for some
+- if $\mathbb{F}$ is a finite field, it contains $|\mathbb{F}| = p^k$ elements for some
   integer $k \geq 1$ and some prime $p$;
 - any two finite fields with the same number of elements are isomorphic. In particular,
   all of the arithmetic in a prime field $\mathbb{F}_p$ is isomorphic to addition and
