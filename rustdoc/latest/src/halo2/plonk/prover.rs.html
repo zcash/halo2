@@ -620,8 +620,19 @@
 <span id="603">603</span>
 <span id="604">604</span>
 <span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ff::Field</span>;
 <span class="kw">use</span> <span class="ident">group::Curve</span>;
+<span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">rngs::OsRng</span>, <span class="ident">RngCore</span>};
 <span class="kw">use</span> <span class="ident">std::iter</span>;
 <span class="kw">use</span> <span class="ident">std::ops::RangeTo</span>;
 
@@ -654,6 +665,7 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_proof</span><span class="op">&lt;</span>
     <span class="ident">C</span>: <span class="ident">CurveAffine</span>,
     <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
+    <span class="ident">R</span>: <span class="ident">RngCore</span>,
     <span class="ident">T</span>: <span class="ident">TranscriptWrite</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>,
     <span class="ident">ConcreteCircuit</span>: <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
 <span class="op">&gt;</span>(
@@ -661,6 +673,7 @@
     <span class="ident">pk</span>: <span class="kw-2">&amp;</span><span class="ident">ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
     <span class="ident">circuits</span>: <span class="kw-2">&amp;</span>[<span class="ident">ConcreteCircuit</span>],
     <span class="ident">instances</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="ident">C::Scalar</span>]]],
+    <span class="kw-2">mut</span> <span class="ident">rng</span>: <span class="ident">R</span>,
     <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
 ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
     <span class="kw">for</span> <span class="ident">instance</span> <span class="kw">in</span> <span class="ident">instances</span>.<span class="ident">iter</span>() {
@@ -906,12 +919,15 @@
             <span class="comment">// Add blinding factors to advice columns</span>
             <span class="kw">for</span> <span class="ident">advice</span> <span class="kw">in</span> <span class="kw-2">&amp;mut</span> <span class="ident">advice</span> {
                 <span class="kw">for</span> <span class="ident">cell</span> <span class="kw">in</span> <span class="kw-2">&amp;mut</span> <span class="ident">advice</span>[<span class="ident">unusable_rows_start</span>..] {
-                    <span class="kw-2">*</span><span class="ident">cell</span> <span class="op">=</span> <span class="ident">C::Scalar::rand</span>();
+                    <span class="kw-2">*</span><span class="ident">cell</span> <span class="op">=</span> <span class="ident">C::Scalar::random</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>);
                 }
             }
 
             <span class="comment">// Compute commitments to advice column polynomials</span>
-            <span class="kw">let</span> <span class="ident">advice_blinds</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">advice</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Blind</span>(<span class="ident">C::Scalar::rand</span>())).<span class="ident">collect</span>();
+            <span class="kw">let</span> <span class="ident">advice_blinds</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">advice</span>
+                .<span class="ident">iter</span>()
+                .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Blind</span>(<span class="ident">C::Scalar::random</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>)))
+                .<span class="ident">collect</span>();
             <span class="kw">let</span> <span class="ident">advice_commitments_projective</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">advice</span>
                 .<span class="ident">iter</span>()
                 .<span class="ident">zip</span>(<span class="ident">advice_blinds</span>.<span class="ident">iter</span>())
@@ -970,6 +986,7 @@
                         <span class="kw-2">&amp;</span><span class="ident">advice</span>.<span class="ident">advice_cosets</span>,
                         <span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">fixed_cosets</span>,
                         <span class="kw-2">&amp;</span><span class="ident">instance</span>.<span class="ident">instance_cosets</span>,
+                        <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>,
                         <span class="ident">transcript</span>,
                     )
                 })
@@ -997,6 +1014,7 @@
                 <span class="kw-2">&amp;</span><span class="ident">instance</span>.<span class="ident">instance_values</span>,
                 <span class="ident">beta</span>,
                 <span class="ident">gamma</span>,
+                <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>,
                 <span class="ident">transcript</span>,
             )
         })
@@ -1008,13 +1026,15 @@
             <span class="comment">// Construct and commit to products for each lookup</span>
             <span class="ident">lookups</span>
                 .<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">lookup</span><span class="op">|</span> <span class="ident">lookup</span>.<span class="ident">commit_product</span>(<span class="ident">pk</span>, <span class="ident">params</span>, <span class="ident">theta</span>, <span class="ident">beta</span>, <span class="ident">gamma</span>, <span class="ident">transcript</span>))
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">lookup</span><span class="op">|</span> {
+                    <span class="ident">lookup</span>.<span class="ident">commit_product</span>(<span class="ident">pk</span>, <span class="ident">params</span>, <span class="ident">theta</span>, <span class="ident">beta</span>, <span class="ident">gamma</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="ident">transcript</span>)
+                })
                 .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
         })
         .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
 
     <span class="comment">// Commit to the vanishing argument&#39;s random polynomial for blinding h(x_3)</span>
-    <span class="kw">let</span> <span class="ident">vanishing</span> <span class="op">=</span> <span class="ident">vanishing::Argument::commit</span>(<span class="ident">params</span>, <span class="ident">domain</span>, <span class="ident">transcript</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">vanishing</span> <span class="op">=</span> <span class="ident">vanishing::Argument::commit</span>(<span class="ident">params</span>, <span class="ident">domain</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="ident">transcript</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Obtain challenge for keeping all separate gates linearly independent</span>
     <span class="kw">let</span> <span class="ident">y</span>: <span class="ident">ChallengeY</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge_scalar</span>();
@@ -1095,7 +1115,7 @@
         );
 
     <span class="comment">// Construct the vanishing argument&#39;s h(X) commitments</span>
-    <span class="kw">let</span> <span class="ident">vanishing</span> <span class="op">=</span> <span class="ident">vanishing</span>.<span class="ident">construct</span>(<span class="ident">params</span>, <span class="ident">domain</span>, <span class="ident">expressions</span>, <span class="ident">y</span>, <span class="ident">transcript</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">vanishing</span> <span class="op">=</span> <span class="ident">vanishing</span>.<span class="ident">construct</span>(<span class="ident">params</span>, <span class="ident">domain</span>, <span class="ident">expressions</span>, <span class="ident">y</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="ident">transcript</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge_scalar</span>();
     <span class="kw">let</span> <span class="ident">xn</span> <span class="op">=</span> <span class="ident">x</span>.<span class="ident">pow</span>(<span class="kw-2">&amp;</span>[<span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
@@ -1223,8 +1243,8 @@
         <span class="comment">// We query the h(X) polynomial at x</span>
         .<span class="ident">chain</span>(<span class="ident">vanishing</span>.<span class="ident">open</span>(<span class="ident">x</span>));
 
-    <span class="ident">multiopen::create_proof</span>(<span class="ident">params</span>, <span class="ident">transcript</span>, <span class="ident">instances</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Error::Opening</span>)
+    <span class="ident">multiopen::create_proof</span>(<span class="ident">params</span>, <span class="ident">rng</span>, <span class="ident">transcript</span>, <span class="ident">instances</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Error::Opening</span>)
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (b60e32c82 2021-12-30)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0-nightly (8f3238f89 2022-01-02)" ></div>
 </body></html>
