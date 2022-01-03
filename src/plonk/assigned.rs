@@ -146,7 +146,7 @@ impl<F: Field> Assigned<F> {
         }
     }
 
-    /// Inverts this assigned value.
+    /// Inverts this assigned value (taking the inverse of zero to be zero).
     pub fn invert(&self) -> Self {
         match self {
             Self::Zero => Self::Zero,
@@ -179,27 +179,27 @@ mod tests {
     use pasta_curves::Fp;
 
     use super::Assigned;
-
+    // We use (numerator, denominator) in the comments below to denote a rational.
     #[test]
     fn add_trivial_to_inv0_rational() {
         // a = 2
-        // b = inv0(1/0)
+        // b = (1,0)
         let a = Assigned::Trivial(Fp::from(2));
         let b = Assigned::Rational(Fp::one(), Fp::zero());
 
-        // 2 + inv0(1/0) = 2 + 0 = 1/2
+        // 2 + (1,0) = 2 + 0 = 2
         // This fails if addition is implemented using normal rules for rationals.
         assert_eq!((a + b).evaluate(), a.evaluate());
     }
 
     #[test]
     fn add_rational_to_inv0_rational() {
-        // a = inv0(1/2)
-        // b = inv0(1/0)
+        // a = (1,2)
+        // b = (1,0)
         let a = Assigned::Rational(Fp::one(), Fp::from(2));
         let b = Assigned::Rational(Fp::one(), Fp::zero());
 
-        // inv0(1/2) + inv0(1/0) = 1/2 + 0 = 1/2
+        // (1,2) + (1,0) = (1,2) + 0 = (1,2)
         // This fails if addition is implemented using normal rules for rationals.
         assert_eq!((a + b).evaluate(), a.evaluate());
     }
@@ -207,35 +207,35 @@ mod tests {
     #[test]
     fn sub_trivial_from_inv0_rational() {
         // a = 2
-        // b = inv0(1/0)
+        // b = (1,0)
         let a = Assigned::Trivial(Fp::from(2));
         let b = Assigned::Rational(Fp::one(), Fp::zero());
 
-        // inv0(1/0) - 2 = 0 - 2 = -2
+        // (1,0) - 2 = 0 - 2 = -2
         // This fails if subtraction is implemented using normal rules for rationals.
         assert_eq!((b - a).evaluate(), (-a).evaluate());
     }
 
     #[test]
     fn sub_rational_from_inv0_rational() {
-        // a = inv0(1/2)
-        // b = inv0(1/0)
+        // a = (1,2)
+        // b = (1,0)
         let a = Assigned::Rational(Fp::one(), Fp::from(2));
         let b = Assigned::Rational(Fp::one(), Fp::zero());
 
-        // inv0(1/0) - inv0(1/2) = 0 - 1/2 = -1/2
+        // (1,0) - (1,2) = 0 - (1,2) = -(1,2)
         // This fails if subtraction is implemented using normal rules for rationals.
         assert_eq!((b - a).evaluate(), (-a).evaluate());
     }
 
     #[test]
     fn mul_rational_by_inv0_rational() {
-        // a = inv0(1/2)
-        // b = inv0(1/0)
+        // a = (1,2)
+        // b = (1,0)
         let a = Assigned::Rational(Fp::one(), Fp::from(2));
         let b = Assigned::Rational(Fp::one(), Fp::zero());
 
-        // inv0(1/2) * inv0(1/0) = 1/2 * 0 = 0
+        // (1,2) * (1,0) = (1,2) * 0 = 0
         assert_eq!((a * b).evaluate(), Fp::zero());
     }
 }
