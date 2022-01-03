@@ -186,6 +186,8 @@
 <span id="169">169</span>
 <span id="170">170</span>
 <span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module provides an implementation of a variant of (Turbo)[PLONK][plonk]</span>
 <span class="doccomment">//! that is designed specifically for the polynomial commitment scheme described</span>
 <span class="doccomment">//! in the [Halo][halo] paper.</span>
@@ -203,6 +205,7 @@
 };
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transcript</span>::{<span class="ident">ChallengeScalar</span>, <span class="ident">EncodedChallenge</span>, <span class="ident">Transcript</span>};
 
+<span class="kw">mod</span> <span class="ident">assigned</span>;
 <span class="kw">mod</span> <span class="ident">circuit</span>;
 <span class="kw">mod</span> <span class="ident">error</span>;
 <span class="kw">mod</span> <span class="ident">keygen</span>;
@@ -213,6 +216,7 @@
 <span class="kw">mod</span> <span class="ident">prover</span>;
 <span class="kw">mod</span> <span class="ident">verifier</span>;
 
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">assigned</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">circuit</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">error</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">keygen</span>::<span class="kw-2">*</span>;
