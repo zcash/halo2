@@ -10,6 +10,7 @@ and this project adheres to Rust's notion of
 - `halo2::dev::LookupFailure` (used in `VerifyFailure::Lookup`)
 
 ### Changed
+- `halo2::plonk::create_proof` now takes an `R: rand::RngCore` argument.
 - `halo2::plonk::Error` has been overhauled:
   - `Error` now implements `std::fmt::Display` and `std::error::Error`.
   - `Error` no longer implements `PartialEq`. Tests can check for specific error

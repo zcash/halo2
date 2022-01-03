@@ -2,6 +2,7 @@ use std::iter;
 
 use ff::Field;
 use group::Curve;
+use rand::RngCore;
 
 use super::Argument;
 use crate::{
@@ -33,18 +34,19 @@ pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Argument<C> {
-    pub(in crate::plonk) fn commit<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
+    pub(in crate::plonk) fn commit<E: EncodedChallenge<C>, R: RngCore, T: TranscriptWrite<C, E>>(
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
+        mut rng: R,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
         // Sample a random polynomial of degree n - 1
         let mut random_poly = domain.empty_coeff();
         for coeff in random_poly.iter_mut() {
-            *coeff = C::Scalar::rand();
+            *coeff = C::Scalar::random(&mut rng);
         }
         // Sample a random blinding factor
-        let random_blind = Blind(C::Scalar::rand());
+        let random_blind = Blind(C::Scalar::random(rng));
 
         // Commit
         let c = params.commit(&random_poly, random_blind).to_affine();
@@ -58,12 +60,17 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(in crate::plonk) fn construct<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
+    pub(in crate::plonk) fn construct<
+        E: EncodedChallenge<C>,
+        R: RngCore,
+        T: TranscriptWrite<C, E>,
+    >(
         self,
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
         expressions: impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
         y: ChallengeY<C>,
+        mut rng: R,
         transcript: &mut T,
     ) -> Result<Constructed<C>, Error> {
         // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
@@ -81,7 +88,10 @@ impl<C: CurveAffine> Committed<C> {
             .map(|v| domain.coeff_from_vec(v.to_vec()))
             .collect::<Vec<_>>();
         drop(h_poly);
-        let h_blinds: Vec<_> = h_pieces.iter().map(|_| Blind(C::Scalar::rand())).collect();
+        let h_blinds: Vec<_> = h_pieces
+            .iter()
+            .map(|_| Blind(C::Scalar::random(&mut rng)))
+            .collect();
 
         // Compute commitments to each h(X) piece
         let h_commitments_projective: Vec<_> = h_pieces

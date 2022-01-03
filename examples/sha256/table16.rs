@@ -3,7 +3,6 @@ use std::marker::PhantomData;
 
 use super::Sha256Instructions;
 use halo2::{
-    arithmetic::FieldExt,
     circuit::{AssignedCell, Chip, Layouter, Region},
     pasta::pallas,
     plonk::{Advice, Any, Assigned, Column, ConstraintSystem, Error},
@@ -84,7 +83,7 @@ impl<const LEN: usize> From<&Bits<LEN>> for [bool; LEN] {
 impl<const LEN: usize> From<&Bits<LEN>> for Assigned<pallas::Base> {
     fn from(bits: &Bits<LEN>) -> Assigned<pallas::Base> {
         assert!(LEN <= 64);
-        pallas::Base::from_u64(lebs2ip(&bits.0)).into()
+        pallas::Base::from(lebs2ip(&bits.0)).into()
     }
 }
 

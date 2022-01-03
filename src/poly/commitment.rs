@@ -256,6 +256,8 @@ impl<F: FieldExt> MulAssign<F> for Blind<F> {
 fn test_commit_lagrange_epaffine() {
     const K: u32 = 6;
 
+    use rand::rngs::OsRng;
+
     use crate::pasta::{EpAffine, Fq};
     let params = Params::<EpAffine>::new(K);
     let domain = super::EvaluationDomain::new(1, K);
@@ -268,7 +270,7 @@ fn test_commit_lagrange_epaffine() {
 
     let b = domain.lagrange_to_coeff(a.clone());
 
-    let alpha = Blind(Fq::rand());
+    let alpha = Blind(Fq::random(OsRng));
 
     assert_eq!(params.commit(&b, alpha), params.commit_lagrange(&a, alpha));
 }
@@ -276,6 +278,8 @@ fn test_commit_lagrange_epaffine() {
 #[test]
 fn test_commit_lagrange_eqaffine() {
     const K: u32 = 6;
+
+    use rand::rngs::OsRng;
 
     use crate::pasta::{EqAffine, Fp};
     let params = Params::<EqAffine>::new(K);
@@ -289,7 +293,7 @@ fn test_commit_lagrange_eqaffine() {
 
     let b = domain.lagrange_to_coeff(a.clone());
 
-    let alpha = Blind(Fp::rand());
+    let alpha = Blind(Fp::random(OsRng));
 
     assert_eq!(params.commit(&b, alpha), params.commit_lagrange(&a, alpha));
 }
@@ -299,6 +303,7 @@ fn test_opening_proof() {
     const K: u32 = 6;
 
     use ff::Field;
+    use rand::rngs::OsRng;
 
     use super::{
         commitment::{Blind, Params},
@@ -309,6 +314,8 @@ fn test_opening_proof() {
     use crate::transcript::{
         Blake2bRead, Blake2bWrite, Challenge255, Transcript, TranscriptRead, TranscriptWrite,
     };
+
+    let rng = OsRng;
 
     let params = Params::<EpAffine>::new(K);
     let mut params_buffer = vec![];
@@ -323,7 +330,7 @@ fn test_opening_proof() {
         *a = Fq::from(i as u64);
     }
 
-    let blind = Blind(Fq::rand());
+    let blind = Blind(Fq::random(rng));
 
     let p = params.commit(&px, blind).to_affine();
 
@@ -335,7 +342,7 @@ fn test_opening_proof() {
     transcript.write_scalar(v).unwrap();
 
     let (proof, ch_prover) = {
-        create_proof(&params, &mut transcript, &px, blind, *x).unwrap();
+        create_proof(&params, rng, &mut transcript, &px, blind, *x).unwrap();
         let ch_prover = transcript.squeeze_challenge();
         (transcript.finalize(), ch_prover)
     };

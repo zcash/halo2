@@ -1,5 +1,6 @@
 use ff::Field;
 use group::Curve;
+use rand::{rngs::OsRng, RngCore};
 use std::iter;
 use std::ops::RangeTo;
 
@@ -32,6 +33,7 @@ use crate::{
 pub fn create_proof<
     C: CurveAffine,
     E: EncodedChallenge<C>,
+    R: RngCore,
     T: TranscriptWrite<C, E>,
     ConcreteCircuit: Circuit<C::Scalar>,
 >(
@@ -39,6 +41,7 @@ pub fn create_proof<
     pk: &ProvingKey<C>,
     circuits: &[ConcreteCircuit],
     instances: &[&[&[C::Scalar]]],
+    mut rng: R,
     transcript: &mut T,
 ) -> Result<(), Error> {
     for instance in instances.iter() {
@@ -284,12 +287,15 @@ pub fn create_proof<
             // Add blinding factors to advice columns
             for advice in &mut advice {
                 for cell in &mut advice[unusable_rows_start..] {
-                    *cell = C::Scalar::rand();
+                    *cell = C::Scalar::random(&mut rng);
                 }
             }
 
             // Compute commitments to advice column polynomials
-            let advice_blinds: Vec<_> = advice.iter().map(|_| Blind(C::Scalar::rand())).collect();
+            let advice_blinds: Vec<_> = advice
+                .iter()
+                .map(|_| Blind(C::Scalar::random(&mut rng)))
+                .collect();
             let advice_commitments_projective: Vec<_> = advice
                 .iter()
                 .zip(advice_blinds.iter())
@@ -348,6 +354,7 @@ pub fn create_proof<
                         &advice.advice_cosets,
                         &pk.fixed_cosets,
                         &instance.instance_cosets,
+                        &mut rng,
                         transcript,
                     )
                 })
@@ -375,6 +382,7 @@ pub fn create_proof<
                 &instance.instance_values,
                 beta,
                 gamma,
+                &mut rng,
                 transcript,
             )
         })
@@ -386,13 +394,15 @@ pub fn create_proof<
             // Construct and commit to products for each lookup
             lookups
                 .into_iter()
-                .map(|lookup| lookup.commit_product(pk, params, theta, beta, gamma, transcript))
+                .map(|lookup| {
+                    lookup.commit_product(pk, params, theta, beta, gamma, &mut rng, transcript)
+                })
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
 
     // Commit to the vanishing argument's random polynomial for blinding h(x_3)
-    let vanishing = vanishing::Argument::commit(params, domain, transcript)?;
+    let vanishing = vanishing::Argument::commit(params, domain, &mut rng, transcript)?;
 
     // Obtain challenge for keeping all separate gates linearly independent
     let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
@@ -473,7 +483,7 @@ pub fn create_proof<
         );
 
     // Construct the vanishing argument's h(X) commitments
-    let vanishing = vanishing.construct(params, domain, expressions, y, transcript)?;
+    let vanishing = vanishing.construct(params, domain, expressions, y, &mut rng, transcript)?;
 
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
     let xn = x.pow(&[params.n as u64, 0, 0, 0]);
@@ -601,5 +611,5 @@ pub fn create_proof<
         // We query the h(X) polynomial at x
         .chain(vanishing.open(x));
 
-    multiopen::create_proof(params, transcript, instances).map_err(|_| Error::Opening)
+    multiopen::create_proof(params, rng, transcript, instances).map_err(|_| Error::Opening)
 }

@@ -554,14 +554,18 @@ pub struct PinnedEvaluationDomain<'a, G: Group> {
 
 #[test]
 fn test_rotate() {
+    use rand::rngs::OsRng;
+
     use crate::arithmetic::eval_polynomial;
     use crate::pasta::pallas::Scalar;
+
     let domain = EvaluationDomain::<Scalar>::new(1, 3);
+    let rng = OsRng;
 
     let mut poly = domain.empty_lagrange();
     assert_eq!(poly.len(), 8);
     for value in poly.iter_mut() {
-        *value = Scalar::rand();
+        *value = Scalar::random(rng);
     }
 
     let poly_rotated_cur = poly.rotate(Rotation::cur());
@@ -573,7 +577,7 @@ fn test_rotate() {
     let poly_rotated_next = domain.lagrange_to_coeff(poly_rotated_next);
     let poly_rotated_prev = domain.lagrange_to_coeff(poly_rotated_prev);
 
-    let x = Scalar::rand();
+    let x = Scalar::random(rng);
 
     assert_eq!(
         eval_polynomial(&poly[..], x),
@@ -591,6 +595,8 @@ fn test_rotate() {
 
 #[test]
 fn test_l_i() {
+    use rand::rngs::OsRng;
+
     use crate::arithmetic::{eval_polynomial, lagrange_interpolate};
     use crate::pasta::pallas::Scalar;
     let domain = EvaluationDomain::<Scalar>::new(1, 3);
@@ -607,7 +613,7 @@ fn test_l_i() {
         l.push(l_i);
     }
 
-    let x = Scalar::rand();
+    let x = Scalar::random(OsRng);
     let xn = x.pow(&[8, 0, 0, 0]);
 
     let evaluations = domain.l_i_range(x, xn, -7..=7);

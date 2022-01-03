@@ -2,6 +2,7 @@ use group::{
     ff::{BatchInvert, Field},
     Curve,
 };
+use rand::RngCore;
 use std::iter::{self, ExactSizeIterator};
 
 use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
@@ -44,6 +45,7 @@ impl Argument {
     pub(in crate::plonk) fn commit<
         C: CurveAffine,
         E: EncodedChallenge<C>,
+        R: RngCore,
         T: TranscriptWrite<C, E>,
     >(
         &self,
@@ -55,6 +57,7 @@ impl Argument {
         instance: &[Polynomial<C::Scalar, LagrangeCoeff>],
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
+        mut rng: R,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
         let domain = &pk.vk.domain;
@@ -155,12 +158,12 @@ impl Argument {
             let mut z = domain.lagrange_from_vec(z);
             // Set blinding factors
             for z in &mut z[params.n as usize - blinding_factors..] {
-                *z = C::Scalar::rand();
+                *z = C::Scalar::random(&mut rng);
             }
             // Set new last_z
             last_z = z[params.n as usize - (blinding_factors + 1)];
 
-            let blind = Blind(C::Scalar::rand());
+            let blind = Blind(C::Scalar::random(&mut rng));
 
             let permutation_product_commitment_projective = params.commit_lagrange(&z, blind);
             let permutation_product_blind = blind;

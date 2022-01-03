@@ -12,12 +12,21 @@ use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use ff::Field;
 use group::Curve;
+use rand::RngCore;
 use std::io;
 use std::marker::PhantomData;
 
 /// Create a multi-opening proof
-pub fn create_proof<'a, I, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
+pub fn create_proof<
+    'a,
+    I,
+    C: CurveAffine,
+    E: EncodedChallenge<C>,
+    R: RngCore,
+    T: TranscriptWrite<C, E>,
+>(
     params: &Params<C>,
+    mut rng: R,
     transcript: &mut T,
     queries: I,
 ) -> io::Result<()>
@@ -78,7 +87,7 @@ where
         })
         .unwrap();
 
-    let f_blind = Blind(C::Scalar::rand());
+    let f_blind = Blind(C::Scalar::random(&mut rng));
     let f_commitment = params.commit(&f_poly, f_blind).to_affine();
 
     transcript.write_point(f_commitment)?;
@@ -106,7 +115,7 @@ where
         },
     );
 
-    commitment::create_proof(params, transcript, &f_poly, f_blind_try, *x_3)
+    commitment::create_proof(params, rng, transcript, &f_poly, f_blind_try, *x_3)
 }
 
 #[doc(hidden)]

@@ -4,7 +4,6 @@ use super::{
 };
 use crate::table16::{util::*, AssignedBits, SpreadVar, SpreadWord, StateWord, Table16Assignment};
 use halo2::{
-    arithmetic::FieldExt,
     circuit::Region,
     pasta::pallas,
     plonk::{Advice, Column, Error},
@@ -782,7 +781,7 @@ impl CompressionConfig {
                 row + 1,
                 || {
                     h_prime_carry
-                        .map(|value| pallas::Base::from_u64(value as u64))
+                        .map(|value| pallas::Base::from(value as u64))
                         .ok_or(Error::Synthesis)
                 },
             )?;
@@ -831,11 +830,7 @@ impl CompressionConfig {
             || "e_new_carry",
             a_9,
             row + 1,
-            || {
-                e_new_carry
-                    .map(pallas::Base::from_u64)
-                    .ok_or(Error::Synthesis)
-            },
+            || e_new_carry.map(pallas::Base::from).ok_or(Error::Synthesis),
         )?;
 
         Ok(e_new_dense)
@@ -889,11 +884,7 @@ impl CompressionConfig {
             || "a_new_carry",
             a_9,
             row,
-            || {
-                a_new_carry
-                    .map(pallas::Base::from_u64)
-                    .ok_or(Error::Synthesis)
-            },
+            || a_new_carry.map(pallas::Base::from).ok_or(Error::Synthesis),
         )?;
 
         Ok(a_new_dense)
