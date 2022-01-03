@@ -190,6 +190,7 @@ mod tests {
         // 2 + (1,0) = 2 + 0 = 2
         // This fails if addition is implemented using normal rules for rationals.
         assert_eq!((a + b).evaluate(), a.evaluate());
+        assert_eq!((b + a).evaluate(), a.evaluate());
     }
 
     #[test]
@@ -202,6 +203,7 @@ mod tests {
         // (1,2) + (1,0) = (1,2) + 0 = (1,2)
         // This fails if addition is implemented using normal rules for rationals.
         assert_eq!((a + b).evaluate(), a.evaluate());
+        assert_eq!((b + a).evaluate(), a.evaluate());
     }
 
     #[test]
@@ -214,6 +216,9 @@ mod tests {
         // (1,0) - 2 = 0 - 2 = -2
         // This fails if subtraction is implemented using normal rules for rationals.
         assert_eq!((b - a).evaluate(), (-a).evaluate());
+
+        // 2 - (1,0) = 2 - 0 = 2
+        assert_eq!((a - b).evaluate(), a.evaluate());
     }
 
     #[test]
@@ -226,6 +231,9 @@ mod tests {
         // (1,0) - (1,2) = 0 - (1,2) = -(1,2)
         // This fails if subtraction is implemented using normal rules for rationals.
         assert_eq!((b - a).evaluate(), (-a).evaluate());
+
+        // (1,2) - (1,0) = (1,2) - 0 = (1,2)
+        assert_eq!((a - b).evaluate(), a.evaluate());
     }
 
     #[test]
@@ -237,6 +245,9 @@ mod tests {
 
         // (1,2) * (1,0) = (1,2) * 0 = 0
         assert_eq!((a * b).evaluate(), Fp::zero());
+
+        // (1,0) * (1,2) = 0 * (1,2) = 0
+        assert_eq!((b * a).evaluate(), Fp::zero());
     }
 }
 
