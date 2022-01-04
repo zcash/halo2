@@ -1200,6 +1200,31 @@
 <span id="1183">1183</span>
 <span id="1184">1184</span>
 <span id="1185">1185</span>
+<span id="1186">1186</span>
+<span id="1187">1187</span>
+<span id="1188">1188</span>
+<span id="1189">1189</span>
+<span id="1190">1190</span>
+<span id="1191">1191</span>
+<span id="1192">1192</span>
+<span id="1193">1193</span>
+<span id="1194">1194</span>
+<span id="1195">1195</span>
+<span id="1196">1196</span>
+<span id="1197">1197</span>
+<span id="1198">1198</span>
+<span id="1199">1199</span>
+<span id="1200">1200</span>
+<span id="1201">1201</span>
+<span id="1202">1202</span>
+<span id="1203">1203</span>
+<span id="1204">1204</span>
+<span id="1205">1205</span>
+<span id="1206">1206</span>
+<span id="1207">1207</span>
+<span id="1208">1208</span>
+<span id="1209">1209</span>
+<span id="1210">1210</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Tools for developing circuits.</span>
 
 <span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
@@ -1236,27 +1261,89 @@
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;dev-graph&quot;</span>)))]</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">graph</span>::{<span class="ident">circuit_dot_graph</span>, <span class="ident">layout::CircuitLayout</span>};
 
-<span class="doccomment">/// The location at which a particular lookup is not satisfied.</span>
+<span class="doccomment">/// The location within the circuit at which a particular [`VerifyFailure`] occurred.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">LookupFailure</span> {
-    <span class="doccomment">/// A location inside a region. This may be due to the intentional use of a lookup</span>
-    <span class="doccomment">/// (if its inputs are conditional on a complex selector), or an unintentional lookup</span>
-    <span class="doccomment">/// constraint that overlaps the region (indicating that the lookup&#39;s inputs should be</span>
-    <span class="doccomment">/// made conditional).</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">FailureLocation</span> {
+    <span class="doccomment">/// A location inside a region.</span>
     <span class="ident">InRegion</span> {
-        <span class="doccomment">/// The region in which the lookup&#39;s input expressions were evaluated.</span>
+        <span class="doccomment">/// The region in which the failure occurred.</span>
         <span class="ident">region</span>: <span class="ident">metadata::Region</span>,
-        <span class="doccomment">/// The offset (relative to the start of the region) at which the lookup&#39;s input</span>
-        <span class="doccomment">/// expressions were evaluated.</span>
+        <span class="doccomment">/// The offset (relative to the start of the region) at which the failure</span>
+        <span class="doccomment">/// occurred.</span>
         <span class="ident">offset</span>: <span class="ident">usize</span>,
     },
-    <span class="doccomment">/// A location outside of a region. This most likely means the input expressions do</span>
-    <span class="doccomment">/// not correctly constrain a default value that exists in the table when the lookup</span>
-    <span class="doccomment">/// is not being used.</span>
+    <span class="doccomment">/// A location outside of a region.</span>
     <span class="ident">OutsideRegion</span> {
-        <span class="doccomment">/// The circuit row on which this lookup is not satisfied.</span>
+        <span class="doccomment">/// The circuit row on which the failure occurred.</span>
         <span class="ident">row</span>: <span class="ident">usize</span>,
     },
+}
+
+<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">FailureLocation</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident"><span class="self">Self</span>::InRegion</span> { <span class="ident">region</span>, <span class="ident">offset</span> } =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;in {} at offset {}&quot;</span>, <span class="ident">region</span>, <span class="ident">offset</span>),
+            <span class="ident"><span class="self">Self</span>::OutsideRegion</span> { <span class="ident">row</span> } =&gt; {
+                <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;on row {}&quot;</span>, <span class="ident">row</span>)
+            }
+        }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">FailureLocation</span> {
+    <span class="kw">fn</span> <span class="ident">find_expressions</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(
+        <span class="ident">cs</span>: <span class="kw-2">&amp;</span><span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+        <span class="ident">regions</span>: <span class="kw-2">&amp;</span>[<span class="ident">Region</span>],
+        <span class="ident">failure_row</span>: <span class="ident">usize</span>,
+        <span class="ident">failure_expressions</span>: <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">failure_columns</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">failure_expressions</span>
+            .<span class="ident">flat_map</span>(<span class="op">|</span><span class="ident">expression</span><span class="op">|</span> {
+                <span class="ident">expression</span>.<span class="ident">evaluate</span>(
+                    <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">vec!</span>[],
+                    <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
+                    <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> <span class="macro">vec!</span>[<span class="ident">cs</span>.<span class="ident">fixed_queries</span>[<span class="ident">index</span>].<span class="number">0</span>.<span class="ident">into</span>()],
+                    <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> <span class="macro">vec!</span>[<span class="ident">cs</span>.<span class="ident">advice_queries</span>[<span class="ident">index</span>].<span class="number">0</span>.<span class="ident">into</span>()],
+                    <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> <span class="macro">vec!</span>[<span class="ident">cs</span>.<span class="ident">instance_queries</span>[<span class="ident">index</span>].<span class="number">0</span>.<span class="ident">into</span>()],
+                    <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>,
+                    <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw-2">mut</span> <span class="ident">a</span>, <span class="kw-2">mut</span> <span class="ident">b</span><span class="op">|</span> {
+                        <span class="ident">a</span>.<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="ident">b</span>);
+                        <span class="ident">a</span>
+                    },
+                    <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw-2">mut</span> <span class="ident">a</span>, <span class="kw-2">mut</span> <span class="ident">b</span><span class="op">|</span> {
+                        <span class="ident">a</span>.<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="ident">b</span>);
+                        <span class="ident">a</span>
+                    },
+                    <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="kw">_</span><span class="op">|</span> <span class="ident">a</span>,
+                )
+            })
+            .<span class="ident">collect</span>();
+
+        <span class="ident"><span class="self">Self</span>::find</span>(<span class="ident">regions</span>, <span class="ident">failure_row</span>, <span class="ident">failure_columns</span>)
+    }
+
+    <span class="doccomment">/// Figures out whether the given row and columns overlap an assigned region.</span>
+    <span class="kw">fn</span> <span class="ident">find</span>(<span class="ident">regions</span>: <span class="kw-2">&amp;</span>[<span class="ident">Region</span>], <span class="ident">failure_row</span>: <span class="ident">usize</span>, <span class="ident">failure_columns</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident">regions</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">enumerate</span>()
+            .<span class="ident">find</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">r</span>)<span class="op">|</span> {
+                <span class="kw">let</span> (<span class="ident">start</span>, <span class="ident">end</span>) <span class="op">=</span> <span class="ident">r</span>.<span class="ident">rows</span>.<span class="ident">unwrap</span>();
+                <span class="comment">// We match the region if any input columns overlap, rather than all of</span>
+                <span class="comment">// them, because matching complex selector columns is hard. As long as</span>
+                <span class="comment">// regions are rectangles, and failures occur due to assignments entirely</span>
+                <span class="comment">// within single regions, &quot;any&quot; will be equivalent to &quot;all&quot;. If these</span>
+                <span class="comment">// assumptions change, we&#39;ll start getting bug reports from users :)</span>
+                (<span class="ident">start</span>..<span class="op">=</span><span class="ident">end</span>).<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">failure_row</span>) <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">failure_columns</span>.<span class="ident">is_disjoint</span>(<span class="kw-2">&amp;</span><span class="ident">r</span>.<span class="ident">columns</span>)
+            })
+            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">r_i</span>, <span class="ident">r</span>)<span class="op">|</span> <span class="ident">FailureLocation::InRegion</span> {
+                <span class="ident">region</span>: (<span class="ident">r_i</span>, <span class="ident">r</span>.<span class="ident">name</span>.<span class="ident">clone</span>()).<span class="ident">into</span>(),
+                <span class="ident">offset</span>: <span class="ident">failure_row</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">-</span> <span class="ident">r</span>.<span class="ident">rows</span>.<span class="ident">unwrap</span>().<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span>,
+            })
+            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">FailureLocation::OutsideRegion</span> {
+                <span class="ident">row</span>: <span class="ident">failure_row</span> <span class="kw">as</span> <span class="ident">usize</span>,
+            })
+    }
 }
 
 <span class="doccomment">/// The reasons why a particular circuit is not satisfied.</span>
@@ -1279,8 +1366,11 @@
     <span class="ident">ConstraintNotSatisfied</span> {
         <span class="doccomment">/// The polynomial constraint that is not satisfied.</span>
         <span class="ident">constraint</span>: <span class="ident">metadata::Constraint</span>,
-        <span class="doccomment">/// The row on which this constraint is not satisfied.</span>
-        <span class="ident">row</span>: <span class="ident">usize</span>,
+        <span class="doccomment">/// The location at which this constraint is not satisfied.</span>
+        <span class="doccomment">///</span>
+        <span class="doccomment">/// `FailureLocation::OutsideRegion` is usually caused by a constraint that does</span>
+        <span class="doccomment">/// not contain a selector, and as a result is active on every row.</span>
+        <span class="ident">location</span>: <span class="ident">FailureLocation</span>,
         <span class="doccomment">/// The values of the virtual cells used by this constraint.</span>
         <span class="ident">cell_values</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">metadata::VirtualCell</span>, <span class="ident">String</span>)<span class="op">&gt;</span>,
     },
@@ -1296,7 +1386,18 @@
         <span class="doccomment">/// `Circuit::configure`.</span>
         <span class="ident">lookup_index</span>: <span class="ident">usize</span>,
         <span class="doccomment">/// The location at which the lookup is not satisfied.</span>
-        <span class="ident">location</span>: <span class="ident">LookupFailure</span>,
+        <span class="doccomment">///</span>
+        <span class="doccomment">/// `FailureLocation::InRegion` is most common, and may be due to the intentional</span>
+        <span class="doccomment">/// use of a lookup (if its inputs are conditional on a complex selector), or an</span>
+        <span class="doccomment">/// unintentional lookup constraint that overlaps the region (indicating that the</span>
+        <span class="doccomment">/// lookup&#39;s inputs should be made conditional).</span>
+        <span class="doccomment">///</span>
+        <span class="doccomment">/// `FailureLocation::OutsideRegion` is uncommon, and could mean that:</span>
+        <span class="doccomment">/// - The input expressions do not correctly constrain a default value that exists</span>
+        <span class="doccomment">///   in the table when the lookup is not being used.</span>
+        <span class="doccomment">/// - The input expressions use a column queried at a non-zero `Rotation`, and the</span>
+        <span class="doccomment">///   lookup is active on a row adjacent to an unrelated region.</span>
+        <span class="ident">location</span>: <span class="ident">FailureLocation</span>,
     },
     <span class="doccomment">/// A permutation did not preserve the original value of a cell.</span>
     <span class="ident">Permutation</span> {
@@ -1324,10 +1425,10 @@
             }
             <span class="ident"><span class="self">Self</span>::ConstraintNotSatisfied</span> {
                 <span class="ident">constraint</span>,
-                <span class="ident">row</span>,
+                <span class="ident">location</span>,
                 <span class="ident">cell_values</span>,
             } =&gt; {
-                <span class="macro">writeln!</span>(<span class="ident">f</span>, <span class="string">&quot;{} is not satisfied on row {}&quot;</span>, <span class="ident">constraint</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+                <span class="macro">writeln!</span>(<span class="ident">f</span>, <span class="string">&quot;{} is not satisfied {}&quot;</span>, <span class="ident">constraint</span>, <span class="ident">location</span>)<span class="question-mark">?</span>;
                 <span class="kw">for</span> (<span class="ident">name</span>, <span class="ident">value</span>) <span class="kw">in</span> <span class="ident">cell_values</span> {
                     <span class="macro">writeln!</span>(<span class="ident">f</span>, <span class="string">&quot;- {} = {}&quot;</span>, <span class="ident">name</span>, <span class="ident">value</span>)<span class="question-mark">?</span>;
                 }
@@ -1343,16 +1444,7 @@
             <span class="ident"><span class="self">Self</span>::Lookup</span> {
                 <span class="ident">lookup_index</span>,
                 <span class="ident">location</span>,
-            } =&gt; <span class="kw">match</span> <span class="ident">location</span> {
-                <span class="ident">LookupFailure::InRegion</span> { <span class="ident">region</span>, <span class="ident">offset</span> } =&gt; <span class="macro">write!</span>(
-                    <span class="ident">f</span>,
-                    <span class="string">&quot;Lookup {} is not satisfied in {} at offset {}&quot;</span>,
-                    <span class="ident">lookup_index</span>, <span class="ident">region</span>, <span class="ident">offset</span>
-                ),
-                <span class="ident">LookupFailure::OutsideRegion</span> { <span class="ident">row</span> } =&gt; {
-                    <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Lookup {} is not satisfied on row {}&quot;</span>, <span class="ident">lookup_index</span>, <span class="ident">row</span>)
-                }
-            },
+            } =&gt; <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Lookup {} is not satisfied {}&quot;</span>, <span class="ident">lookup_index</span>, <span class="ident">location</span>),
             <span class="ident"><span class="self">Self</span>::Permutation</span> { <span class="ident">column</span>, <span class="ident">row</span> } =&gt; {
                 <span class="macro">write!</span>(
                     <span class="ident">f</span>,
@@ -1495,7 +1587,7 @@
 <span class="doccomment">/// use halo2::{</span>
 <span class="doccomment">///     arithmetic::FieldExt,</span>
 <span class="doccomment">///     circuit::{Layouter, SimpleFloorPlanner},</span>
-<span class="doccomment">///     dev::{MockProver, VerifyFailure},</span>
+<span class="doccomment">///     dev::{FailureLocation, MockProver, VerifyFailure},</span>
 <span class="doccomment">///     pasta::Fp,</span>
 <span class="doccomment">///     plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector},</span>
 <span class="doccomment">///     poly::Rotation,</span>
@@ -1576,7 +1668,10 @@
 <span class="doccomment">///     prover.verify(),</span>
 <span class="doccomment">///     Err(vec![VerifyFailure::ConstraintNotSatisfied {</span>
 <span class="doccomment">///         constraint: ((0, &quot;R1CS constraint&quot;).into(), 0, &quot;buggy R1CS&quot;).into(),</span>
-<span class="doccomment">///         row: 0,</span>
+<span class="doccomment">///         location: FailureLocation::InRegion {</span>
+<span class="doccomment">///             region: (0, &quot;Example region&quot;).into(),</span>
+<span class="doccomment">///             offset: 0,</span>
+<span class="doccomment">///         },</span>
 <span class="doccomment">///         cell_values: vec![</span>
 <span class="doccomment">///             (((Any::Advice, 0).into(), 0).into(), &quot;0x2&quot;.to_string()),</span>
 <span class="doccomment">///             (((Any::Advice, 1).into(), 0).into(), &quot;0x4&quot;.to_string()),</span>
@@ -1971,7 +2066,12 @@
                                         <span class="ident">gate</span>.<span class="ident">constraint_name</span>(<span class="ident">poly_index</span>),
                                     )
                                         .<span class="ident">into</span>(),
-                                    <span class="ident">row</span>: (<span class="ident">row</span> <span class="op">-</span> <span class="ident">n</span>) <span class="kw">as</span> <span class="ident">usize</span>,
+                                    <span class="ident">location</span>: <span class="ident">FailureLocation::find_expressions</span>(
+                                        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">cs</span>,
+                                        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">regions</span>,
+                                        (<span class="ident">row</span> <span class="op">-</span> <span class="ident">n</span>) <span class="kw">as</span> <span class="ident">usize</span>,
+                                        <span class="prelude-val">Some</span>(<span class="ident">poly</span>).<span class="ident">into_iter</span>(),
+                                    ),
                                     <span class="ident">cell_values</span>: <span class="ident">util::cell_values</span>(
                                         <span class="ident">gate</span>,
                                         <span class="ident">poly</span>,
@@ -2064,64 +2164,14 @@
                         <span class="kw">if</span> <span class="ident">lookup_passes</span> {
                             <span class="prelude-val">None</span>
                         } <span class="kw">else</span> {
-                            <span class="kw">let</span> <span class="ident">input_columns</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">lookup</span>
-                                .<span class="ident">input_expressions</span>
-                                .<span class="ident">iter</span>()
-                                .<span class="ident">flat_map</span>(<span class="op">|</span><span class="ident">expression</span><span class="op">|</span> {
-                                    <span class="ident">expression</span>.<span class="ident">evaluate</span>(
-                                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">vec!</span>[],
-                                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                                            <span class="macro">panic!</span>(
-                                                <span class="string">&quot;virtual selectors are removed during optimization&quot;</span>
-                                            )
-                                        },
-                                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> <span class="macro">vec!</span>[<span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">fixed_queries</span>[<span class="ident">index</span>].<span class="number">0</span>.<span class="ident">into</span>()],
-                                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> <span class="macro">vec!</span>[<span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">advice_queries</span>[<span class="ident">index</span>].<span class="number">0</span>.<span class="ident">into</span>()],
-                                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> {
-                                            <span class="macro">vec!</span>[<span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">instance_queries</span>[<span class="ident">index</span>].<span class="number">0</span>.<span class="ident">into</span>()]
-                                        },
-                                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>,
-                                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw-2">mut</span> <span class="ident">a</span>, <span class="kw-2">mut</span> <span class="ident">b</span><span class="op">|</span> {
-                                            <span class="ident">a</span>.<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="ident">b</span>);
-                                            <span class="ident">a</span>
-                                        },
-                                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw-2">mut</span> <span class="ident">a</span>, <span class="kw-2">mut</span> <span class="ident">b</span><span class="op">|</span> {
-                                            <span class="ident">a</span>.<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="ident">b</span>);
-                                            <span class="ident">a</span>
-                                        },
-                                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="kw">_</span><span class="op">|</span> <span class="ident">a</span>,
-                                    )
-                                })
-                                .<span class="ident">collect</span>();
-                            <span class="macro">println!</span>(<span class="string">&quot;Lookup input columns: {:?}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">input_columns</span>);
-
-                            <span class="comment">// Figure out whether the lookup location</span>
-                            <span class="comment">// overlaps an assigned region.</span>
-                            <span class="kw">let</span> <span class="ident">location</span> <span class="op">=</span> <span class="self">self</span>
-                                .<span class="ident">regions</span>
-                                .<span class="ident">iter</span>()
-                                .<span class="ident">enumerate</span>()
-                                .<span class="ident">find</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">r</span>)<span class="op">|</span> {
-                                    <span class="kw">let</span> (<span class="ident">start</span>, <span class="ident">end</span>) <span class="op">=</span> <span class="ident">r</span>.<span class="ident">rows</span>.<span class="ident">unwrap</span>();
-                                    <span class="comment">// We match the region if any input columns overlap,</span>
-                                    <span class="comment">// rather than all of them, because matching complex</span>
-                                    <span class="comment">// selector columns is hard. This is probably going to</span>
-                                    <span class="comment">// cause some mismatches, which we&#39;ll fix later.</span>
-                                    <span class="ident">input_row</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">start</span>
-                                        <span class="op">&amp;&amp;</span> <span class="ident">input_row</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">end</span>
-                                        <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">input_columns</span>.<span class="ident">is_disjoint</span>(<span class="kw-2">&amp;</span><span class="ident">r</span>.<span class="ident">columns</span>)
-                                })
-                                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">r_i</span>, <span class="ident">r</span>)<span class="op">|</span> <span class="ident">LookupFailure::InRegion</span> {
-                                    <span class="ident">region</span>: (<span class="ident">r_i</span>, <span class="ident">r</span>.<span class="ident">name</span>.<span class="ident">clone</span>()).<span class="ident">into</span>(),
-                                    <span class="ident">offset</span>: <span class="ident">input_row</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">-</span> <span class="ident">r</span>.<span class="ident">rows</span>.<span class="ident">unwrap</span>().<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span>,
-                                })
-                                .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">LookupFailure::OutsideRegion</span> {
-                                    <span class="ident">row</span>: <span class="ident">input_row</span> <span class="kw">as</span> <span class="ident">usize</span>,
-                                });
-
                             <span class="prelude-val">Some</span>(<span class="ident">VerifyFailure::Lookup</span> {
                                 <span class="ident">lookup_index</span>,
-                                <span class="ident">location</span>,
+                                <span class="ident">location</span>: <span class="ident">FailureLocation::find_expressions</span>(
+                                    <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">cs</span>,
+                                    <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">regions</span>,
+                                    <span class="ident">input_row</span>,
+                                    <span class="ident">lookup</span>.<span class="ident">input_expressions</span>.<span class="ident">iter</span>(),
+                                ),
                             })
                         }
                     })
@@ -2195,7 +2245,7 @@
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="ident">pasta_curves::Fp</span>;
 
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">LookupFailure</span>, <span class="ident">MockProver</span>, <span class="ident">VerifyFailure</span>};
+    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">FailureLocation</span>, <span class="ident">MockProver</span>, <span class="ident">VerifyFailure</span>};
     <span class="kw">use</span> <span class="kw">crate</span>::{
         <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">SimpleFloorPlanner</span>},
         <span class="ident">plonk</span>::{
@@ -2377,8 +2427,8 @@
             <span class="ident">prover</span>.<span class="ident">verify</span>(),
             <span class="prelude-val">Err</span>(<span class="macro">vec!</span>[<span class="ident">VerifyFailure::Lookup</span> {
                 <span class="ident">lookup_index</span>: <span class="number">0</span>,
-                <span class="ident">location</span>: <span class="ident">LookupFailure::InRegion</span> {
-                    <span class="ident">region</span>: (<span class="number">2</span>, <span class="string">&quot;Faulty synthesis&quot;</span>.<span class="ident">to_owned</span>()).<span class="ident">into</span>(),
+                <span class="ident">location</span>: <span class="ident">FailureLocation::InRegion</span> {
+                    <span class="ident">region</span>: (<span class="number">2</span>, <span class="string">&quot;Faulty synthesis&quot;</span>).<span class="ident">into</span>(),
                     <span class="ident">offset</span>: <span class="number">1</span>,
                 }
             }])
