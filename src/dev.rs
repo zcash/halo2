@@ -553,12 +553,16 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
 
     fn fill_from_row(
         &mut self,
-        _: Column<Fixed>,
+        col: Column<Fixed>,
         from_row: usize,
-        _: Option<Assigned<F>>,
+        to: Option<Assigned<F>>,
     ) -> Result<(), Error> {
         if !self.usable_rows.contains(&from_row) {
             return Err(Error::not_enough_rows_available(self.k));
+        }
+
+        for row in self.usable_rows.clone().skip(from_row) {
+            self.assign_fixed(|| "", col, row, || to.ok_or(Error::Synthesis))?;
         }
 
         Ok(())
@@ -992,7 +996,10 @@ mod tests {
     use super::{LookupFailure, MockProver, VerifyFailure};
     use crate::{
         circuit::{Layouter, SimpleFloorPlanner},
-        plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector, TableColumn},
+        plonk::{
+            Advice, Any, Circuit, Column, ConstraintSystem, Error, Expression, Selector,
+            TableColumn,
+        },
         poly::Rotation,
     };
 
@@ -1095,8 +1102,10 @@ mod tests {
                     let q = cells.query_selector(q);
 
                     // If q is enabled, a must be in the table.
-                    // Zero is in the table, which satisfies the disabled case.
-                    vec![(q * a, table)]
+                    // When q is not enabled, lookup the default value instead.
+                    let not_q = Expression::Constant(Fp::one()) - q.clone();
+                    let default = Expression::Constant(Fp::from(2));
+                    vec![(q * a + not_q * default, table)]
                 });
 
                 FaultyCircuitConfig { a, q, table }
@@ -1114,12 +1123,12 @@ mod tests {
                 layouter.assign_table(
                     || "Doubling table",
                     |mut table| {
-                        (0..(1 << (K - 1)))
+                        (1..(1 << (K - 1)))
                             .map(|i| {
                                 table.assign_cell(
                                     || format!("table[{}] = {}", i, 2 * i),
                                     config.table,
-                                    i,
+                                    i - 1,
                                     || Ok(Fp::from(2 * i as u64)),
                                 )
                             })
