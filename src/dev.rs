@@ -553,12 +553,16 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
 
     fn fill_from_row(
         &mut self,
-        _: Column<Fixed>,
+        col: Column<Fixed>,
         from_row: usize,
-        _: Option<Assigned<F>>,
+        to: Option<Assigned<F>>,
     ) -> Result<(), Error> {
         if !self.usable_rows.contains(&from_row) {
             return Err(Error::not_enough_rows_available(self.k));
+        }
+
+        for row in self.usable_rows.clone().skip(from_row) {
+            self.assign_fixed(|| "", col, row, || to.ok_or(Error::Synthesis))?;
         }
 
         Ok(())
