@@ -1095,7 +1095,8 @@ mod tests {
                     let q = cells.query_selector(q);
 
                     // If q is enabled, a must be in the table.
-                    // Zero is in the table, which satisfies the disabled case.
+                    // FIXME: This lookup expression should fail when q = 0,
+                    // since 0 is not in the table.
                     vec![(q * a, table)]
                 });
 
@@ -1114,12 +1115,12 @@ mod tests {
                 layouter.assign_table(
                     || "Doubling table",
                     |mut table| {
-                        (0..(1 << (K - 1)))
+                        (1..(1 << (K - 1)))
                             .map(|i| {
                                 table.assign_cell(
                                     || format!("table[{}] = {}", i, 2 * i),
                                     config.table,
-                                    i,
+                                    i - 1,
                                     || Ok(Fp::from(2 * i as u64)),
                                 )
                             })
