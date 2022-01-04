@@ -996,7 +996,10 @@ mod tests {
     use super::{LookupFailure, MockProver, VerifyFailure};
     use crate::{
         circuit::{Layouter, SimpleFloorPlanner},
-        plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector, TableColumn},
+        plonk::{
+            Advice, Any, Circuit, Column, ConstraintSystem, Error, Expression, Selector,
+            TableColumn,
+        },
         poly::Rotation,
     };
 
@@ -1099,9 +1102,10 @@ mod tests {
                     let q = cells.query_selector(q);
 
                     // If q is enabled, a must be in the table.
-                    // FIXME: This lookup expression should fail when q = 0,
-                    // since 0 is not in the table.
-                    vec![(q * a, table)]
+                    // When q is not enabled, lookup the default value instead.
+                    let not_q = Expression::Constant(Fp::one()) - q.clone();
+                    let default = Expression::Constant(Fp::from(2));
+                    vec![(q * a + not_q * default, table)]
                 });
 
                 FaultyCircuitConfig { a, q, table }
