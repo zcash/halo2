@@ -34,27 +34,89 @@ mod graph;
 #[cfg_attr(docsrs, doc(cfg(feature = "dev-graph")))]
 pub use graph::{circuit_dot_graph, layout::CircuitLayout};
 
-/// The location at which a particular lookup is not satisfied.
+/// The location within the circuit at which a particular [`VerifyFailure`] occurred.
 #[derive(Debug, PartialEq)]
-pub enum LookupFailure {
-    /// A location inside a region. This may be due to the intentional use of a lookup
-    /// (if its inputs are conditional on a complex selector), or an unintentional lookup
-    /// constraint that overlaps the region (indicating that the lookup's inputs should be
-    /// made conditional).
+pub enum FailureLocation {
+    /// A location inside a region.
     InRegion {
-        /// The region in which the lookup's input expressions were evaluated.
+        /// The region in which the failure occurred.
         region: metadata::Region,
-        /// The offset (relative to the start of the region) at which the lookup's input
-        /// expressions were evaluated.
+        /// The offset (relative to the start of the region) at which the failure
+        /// occurred.
         offset: usize,
     },
-    /// A location outside of a region. This most likely means the input expressions do
-    /// not correctly constrain a default value that exists in the table when the lookup
-    /// is not being used.
+    /// A location outside of a region.
     OutsideRegion {
-        /// The circuit row on which this lookup is not satisfied.
+        /// The circuit row on which the failure occurred.
         row: usize,
     },
+}
+
+impl fmt::Display for FailureLocation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InRegion { region, offset } => write!(f, "in {} at offset {}", region, offset),
+            Self::OutsideRegion { row } => {
+                write!(f, "on row {}", row)
+            }
+        }
+    }
+}
+
+impl FailureLocation {
+    fn find_expressions<'a, F: Field>(
+        cs: &ConstraintSystem<F>,
+        regions: &[Region],
+        failure_row: usize,
+        failure_expressions: impl Iterator<Item = &'a Expression<F>>,
+    ) -> Self {
+        let failure_columns: HashSet<Column<Any>> = failure_expressions
+            .flat_map(|expression| {
+                expression.evaluate(
+                    &|_| vec![],
+                    &|_| panic!("virtual selectors are removed during optimization"),
+                    &|index, _, _| vec![cs.fixed_queries[index].0.into()],
+                    &|index, _, _| vec![cs.advice_queries[index].0.into()],
+                    &|index, _, _| vec![cs.instance_queries[index].0.into()],
+                    &|a| a,
+                    &|mut a, mut b| {
+                        a.append(&mut b);
+                        a
+                    },
+                    &|mut a, mut b| {
+                        a.append(&mut b);
+                        a
+                    },
+                    &|a, _| a,
+                )
+            })
+            .collect();
+
+        Self::find(regions, failure_row, failure_columns)
+    }
+
+    /// Figures out whether the given row and columns overlap an assigned region.
+    fn find(regions: &[Region], failure_row: usize, failure_columns: HashSet<Column<Any>>) -> Self {
+        regions
+            .iter()
+            .enumerate()
+            .find(|(_, r)| {
+                let (start, end) = r.rows.unwrap();
+                // We match the region if any input columns overlap, rather than all of
+                // them, because matching complex selector columns is hard. As long as
+                // regions are rectangles, and failures occur due to assignments entirely
+                // within single regions, "any" will be equivalent to "all". If these
+                // assumptions change, we'll start getting bug reports from users :)
+                (start..=end).contains(&failure_row) && !failure_columns.is_disjoint(&r.columns)
+            })
+            .map(|(r_i, r)| FailureLocation::InRegion {
+                region: (r_i, r.name.clone()).into(),
+                offset: failure_row as usize - r.rows.unwrap().0 as usize,
+            })
+            .unwrap_or_else(|| FailureLocation::OutsideRegion {
+                row: failure_row as usize,
+            })
+    }
 }
 
 /// The reasons why a particular circuit is not satisfied.
@@ -77,8 +139,11 @@ pub enum VerifyFailure {
     ConstraintNotSatisfied {
         /// The polynomial constraint that is not satisfied.
         constraint: metadata::Constraint,
-        /// The row on which this constraint is not satisfied.
-        row: usize,
+        /// The location at which this constraint is not satisfied.
+        ///
+        /// `FailureLocation::OutsideRegion` is usually caused by a constraint that does
+        /// not contain a selector, and as a result is active on every row.
+        location: FailureLocation,
         /// The values of the virtual cells used by this constraint.
         cell_values: Vec<(metadata::VirtualCell, String)>,
     },
@@ -94,7 +159,18 @@ pub enum VerifyFailure {
         /// `Circuit::configure`.
         lookup_index: usize,
         /// The location at which the lookup is not satisfied.
-        location: LookupFailure,
+        ///
+        /// `FailureLocation::InRegion` is most common, and may be due to the intentional
+        /// use of a lookup (if its inputs are conditional on a complex selector), or an
+        /// unintentional lookup constraint that overlaps the region (indicating that the
+        /// lookup's inputs should be made conditional).
+        ///
+        /// `FailureLocation::OutsideRegion` is uncommon, and could mean that:
+        /// - The input expressions do not correctly constrain a default value that exists
+        ///   in the table when the lookup is not being used.
+        /// - The input expressions use a column queried at a non-zero `Rotation`, and the
+        ///   lookup is active on a row adjacent to an unrelated region.
+        location: FailureLocation,
     },
     /// A permutation did not preserve the original value of a cell.
     Permutation {
@@ -122,10 +198,10 @@ impl fmt::Display for VerifyFailure {
             }
             Self::ConstraintNotSatisfied {
                 constraint,
-                row,
+                location,
                 cell_values,
             } => {
-                writeln!(f, "{} is not satisfied on row {}", constraint, row)?;
+                writeln!(f, "{} is not satisfied {}", constraint, location)?;
                 for (name, value) in cell_values {
                     writeln!(f, "- {} = {}", name, value)?;
                 }
@@ -141,16 +217,7 @@ impl fmt::Display for VerifyFailure {
             Self::Lookup {
                 lookup_index,
                 location,
-            } => match location {
-                LookupFailure::InRegion { region, offset } => write!(
-                    f,
-                    "Lookup {} is not satisfied in {} at offset {}",
-                    lookup_index, region, offset
-                ),
-                LookupFailure::OutsideRegion { row } => {
-                    write!(f, "Lookup {} is not satisfied on row {}", lookup_index, row)
-                }
-            },
+            } => write!(f, "Lookup {} is not satisfied {}", lookup_index, location),
             Self::Permutation { column, row } => {
                 write!(
                     f,
@@ -293,7 +360,7 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 /// use halo2::{
 ///     arithmetic::FieldExt,
 ///     circuit::{Layouter, SimpleFloorPlanner},
-///     dev::{MockProver, VerifyFailure},
+///     dev::{FailureLocation, MockProver, VerifyFailure},
 ///     pasta::Fp,
 ///     plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector},
 ///     poly::Rotation,
@@ -374,7 +441,10 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 ///     prover.verify(),
 ///     Err(vec![VerifyFailure::ConstraintNotSatisfied {
 ///         constraint: ((0, "R1CS constraint").into(), 0, "buggy R1CS").into(),
-///         row: 0,
+///         location: FailureLocation::InRegion {
+///             region: (0, "Example region").into(),
+///             offset: 0,
+///         },
 ///         cell_values: vec![
 ///             (((Any::Advice, 0).into(), 0).into(), "0x2".to_string()),
 ///             (((Any::Advice, 1).into(), 0).into(), "0x4".to_string()),
@@ -769,7 +839,12 @@ impl<F: FieldExt> MockProver<F> {
                                         gate.constraint_name(poly_index),
                                     )
                                         .into(),
-                                    row: (row - n) as usize,
+                                    location: FailureLocation::find_expressions(
+                                        &self.cs,
+                                        &self.regions,
+                                        (row - n) as usize,
+                                        Some(poly).into_iter(),
+                                    ),
                                     cell_values: util::cell_values(
                                         gate,
                                         poly,
@@ -862,64 +937,14 @@ impl<F: FieldExt> MockProver<F> {
                         if lookup_passes {
                             None
                         } else {
-                            let input_columns: HashSet<Column<Any>> = lookup
-                                .input_expressions
-                                .iter()
-                                .flat_map(|expression| {
-                                    expression.evaluate(
-                                        &|_| vec![],
-                                        &|_| {
-                                            panic!(
-                                                "virtual selectors are removed during optimization"
-                                            )
-                                        },
-                                        &|index, _, _| vec![self.cs.fixed_queries[index].0.into()],
-                                        &|index, _, _| vec![self.cs.advice_queries[index].0.into()],
-                                        &|index, _, _| {
-                                            vec![self.cs.instance_queries[index].0.into()]
-                                        },
-                                        &|a| a,
-                                        &|mut a, mut b| {
-                                            a.append(&mut b);
-                                            a
-                                        },
-                                        &|mut a, mut b| {
-                                            a.append(&mut b);
-                                            a
-                                        },
-                                        &|a, _| a,
-                                    )
-                                })
-                                .collect();
-                            println!("Lookup input columns: {:?}", &input_columns);
-
-                            // Figure out whether the lookup location
-                            // overlaps an assigned region.
-                            let location = self
-                                .regions
-                                .iter()
-                                .enumerate()
-                                .find(|(_, r)| {
-                                    let (start, end) = r.rows.unwrap();
-                                    // We match the region if any input columns overlap,
-                                    // rather than all of them, because matching complex
-                                    // selector columns is hard. This is probably going to
-                                    // cause some mismatches, which we'll fix later.
-                                    input_row >= start
-                                        && input_row <= end
-                                        && !input_columns.is_disjoint(&r.columns)
-                                })
-                                .map(|(r_i, r)| LookupFailure::InRegion {
-                                    region: (r_i, r.name.clone()).into(),
-                                    offset: input_row as usize - r.rows.unwrap().0 as usize,
-                                })
-                                .unwrap_or_else(|| LookupFailure::OutsideRegion {
-                                    row: input_row as usize,
-                                });
-
                             Some(VerifyFailure::Lookup {
                                 lookup_index,
-                                location,
+                                location: FailureLocation::find_expressions(
+                                    &self.cs,
+                                    &self.regions,
+                                    input_row,
+                                    lookup.input_expressions.iter(),
+                                ),
                             })
                         }
                     })
@@ -993,7 +1018,7 @@ impl<F: FieldExt> MockProver<F> {
 mod tests {
     use pasta_curves::Fp;
 
-    use super::{LookupFailure, MockProver, VerifyFailure};
+    use super::{FailureLocation, MockProver, VerifyFailure};
     use crate::{
         circuit::{Layouter, SimpleFloorPlanner},
         plonk::{
@@ -1175,8 +1200,8 @@ mod tests {
             prover.verify(),
             Err(vec![VerifyFailure::Lookup {
                 lookup_index: 0,
-                location: LookupFailure::InRegion {
-                    region: (2, "Faulty synthesis".to_owned()).into(),
+                location: FailureLocation::InRegion {
+                    region: (2, "Faulty synthesis").into(),
                     offset: 1,
                 }
             }])

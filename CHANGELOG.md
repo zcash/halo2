@@ -7,7 +7,7 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 ### Added
-- `halo2::dev::LookupFailure` (used in `VerifyFailure::Lookup`)
+- `halo2::dev::FailureLocation` (used in `VerifyFailure::Lookup`)
 
 ### Changed
 - `halo2::plonk::create_proof` now takes an `R: rand::RngCore` argument.
@@ -27,9 +27,9 @@ and this project adheres to Rust's notion of
   - `VerifyFailure::Cell` has been renamed to `VerifyFailure::CellNotAssigned`.
   - `VerifyFailure::ConstraintNotSatisfied` now has a `cell_values` field,
     storing the values of the cells used in the unsatisfied constraint.
-  - The `row` field of `VerifyFailure::Lookup` has been replaced by a `location`
-    field, which can now indicate whether the location falls within an assigned
-    region.
+  - The `row` fields of `VerifyFailure::{ConstraintNotSatisfied, Lookup}` have
+    been replaced by `location` fields, which can now indicate whether the
+    location falls within an assigned region.
 - `halo2::plonk::ConstraintSystem::enable_equality` and 
   `halo2::plonk::ConstraintSystem::query_any` now take `Into<Column<Any>>` instead 
   of `Column<Any>` as a parameter to avoid excesive `.into()` usage.

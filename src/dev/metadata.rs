@@ -164,3 +164,12 @@ impl From<(usize, String)> for Region {
         Region { index, name }
     }
 }
+
+impl From<(usize, &str)> for Region {
+    fn from((index, name): (usize, &str)) -> Self {
+        Region {
+            index,
+            name: name.to_owned(),
+        }
+    }
+}
