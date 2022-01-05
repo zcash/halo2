@@ -1,3 +1,4 @@
+use ff::Field;
 use halo2::{
     arithmetic::FieldExt,
     circuit::{Cell, Layouter, Region, SimpleFloorPlanner},
@@ -5,6 +6,7 @@ use halo2::{
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed, TableColumn},
     poly::Rotation,
 };
+use rand::rngs::OsRng;
 use std::marker::PhantomData;
 
 /// This represents an advice column at a certain row in the ConstraintSystem
@@ -288,7 +290,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
 fn main() {
     // Prepare the circuit you want to render.
     // You don't need to include any witness variables.
-    let a = Fp::rand();
+    let a = Fp::random(OsRng);
     let instance = Fp::one() + Fp::one();
     let lookup_table = vec![instance, a, a, Fp::zero()];
     let circuit: MyCircuit<Fp> = MyCircuit {
