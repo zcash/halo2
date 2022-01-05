@@ -155,7 +155,7 @@ representations of circuits.</p>
 <pre><code class="language-rust ignore no_run">fn main() {
     // Prepare the circuit you want to render.
     // You don't need to include any witness variables.
-    let a = Fp::rand();
+    let a = Fp::random(OsRng);
     let instance = Fp::one() + Fp::one();
     let lookup_table = vec![instance, a, a, Fp::zero()];
     let circuit: MyCircuit&lt;Fp&gt; = MyCircuit {
