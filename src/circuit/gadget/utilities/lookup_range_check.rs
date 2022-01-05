@@ -50,7 +50,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         running_sum: Column<Advice>,
         table_idx: TableColumn,
     ) -> Self {
-        meta.enable_equality(running_sum.into());
+        meta.enable_equality(running_sum);
 
         let q_lookup = meta.complex_selector();
         let q_running = meta.complex_selector();

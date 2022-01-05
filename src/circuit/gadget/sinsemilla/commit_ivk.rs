@@ -687,7 +687,7 @@ mod tests {
                 meta.enable_constant(constants);
 
                 for advice in advices.iter() {
-                    meta.enable_equality((*advice).into());
+                    meta.enable_equality(*advice);
                 }
 
                 let table_idx = meta.lookup_table_column();

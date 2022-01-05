@@ -31,10 +31,10 @@ impl Config {
         x_qr: Column<Advice>,
         y_qr: Column<Advice>,
     ) -> Self {
-        meta.enable_equality(x_p.into());
-        meta.enable_equality(y_p.into());
-        meta.enable_equality(x_qr.into());
-        meta.enable_equality(y_qr.into());
+        meta.enable_equality(x_p);
+        meta.enable_equality(y_p);
+        meta.enable_equality(x_qr);
+        meta.enable_equality(y_qr);
 
         let config = Self {
             q_add_incomplete: meta.selector(),

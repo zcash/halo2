@@ -198,11 +198,11 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
         // Instance column used for public inputs
         let primary = meta.instance_column();
-        meta.enable_equality(primary.into());
+        meta.enable_equality(primary);
 
         // Permutation over all advice columns.
         for advice in advices.iter() {
-            meta.enable_equality((*advice).into());
+            meta.enable_equality(*advice);
         }
 
         // Poseidon requires four advice columns, while ECC incomplete addition requires

@@ -70,7 +70,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
     ) -> Self {
         assert!(WINDOW_NUM_BITS <= 3);
 
-        meta.enable_equality(z.into());
+        meta.enable_equality(z);
 
         let config = Self {
             q_range_check,

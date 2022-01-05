@@ -26,7 +26,7 @@ impl Config {
         z_complete: Column<Advice>,
         add_config: add::Config,
     ) -> Self {
-        meta.enable_equality(z_complete.into());
+        meta.enable_equality(z_complete);
 
         let config = Self {
             q_mul_decompose_var: meta.selector(),

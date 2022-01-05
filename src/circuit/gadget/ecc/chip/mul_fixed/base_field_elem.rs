@@ -34,7 +34,7 @@ impl Config {
         super_config: super::Config,
     ) -> Self {
         for advice in canon_advices.iter() {
-            meta.enable_equality((*advice).into());
+            meta.enable_equality(*advice);
         }
 
         let config = Self {

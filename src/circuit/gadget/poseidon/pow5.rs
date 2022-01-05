@@ -4,7 +4,7 @@ use std::iter;
 use halo2::{
     arithmetic::FieldExt,
     circuit::{AssignedCell, Cell, Chip, Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector},
+    plonk::{Advice, Any, Column, ConstraintSystem, Error, Expression, Fixed, Selector},
     poly::Rotation,
 };
 
@@ -75,8 +75,8 @@ impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE
         // rounds, so we use rc_b as "scratch space" for fixed values (enabling potential
         // layouter optimisations).
         for column in iter::empty()
-            .chain(state.iter().cloned().map(|c| c.into()))
-            .chain(rc_b.iter().cloned().map(|c| c.into()))
+            .chain(state.iter().cloned().map(Column::<Any>::from))
+            .chain(rc_b.iter().cloned().map(Column::<Any>::from))
         {
             meta.enable_equality(column);
         }
