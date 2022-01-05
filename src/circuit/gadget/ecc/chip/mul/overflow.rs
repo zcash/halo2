@@ -32,7 +32,7 @@ impl Config {
         advices: [Column<Advice>; 3],
     ) -> Self {
         for advice in advices.iter() {
-            meta.enable_equality((*advice).into());
+            meta.enable_equality(*advice);
         }
 
         let config = Self {

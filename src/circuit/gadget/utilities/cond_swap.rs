@@ -143,7 +143,7 @@ impl<F: FieldExt> CondSwapChip<F> {
     ) -> CondSwapConfig {
         let a = advices[0];
         // Only column a is used in an equality constraint directly by this chip.
-        meta.enable_equality(a.into());
+        meta.enable_equality(a);
 
         let q_swap = meta.selector();
 

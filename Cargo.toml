@@ -89,4 +89,4 @@ debug = true
 debug = true
 
 [patch.crates-io]
-halo2 = { git = "https://github.com/zcash/halo2.git", rev = "afd7bc5469674cd08eae1634225fd02706a36a4f" }
+halo2 = { git = "https://github.com/zcash/halo2.git", rev = "f9b3ff2aef09a5a3cb5489d0e7e747e9523d2e6e" }

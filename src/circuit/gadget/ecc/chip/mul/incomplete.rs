@@ -38,8 +38,8 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         lambda1: Column<Advice>,
         lambda2: Column<Advice>,
     ) -> Self {
-        meta.enable_equality(z.into());
-        meta.enable_equality(lambda1.into());
+        meta.enable_equality(z);
+        meta.enable_equality(lambda1);
 
         let config = Self {
             q_mul: (meta.selector(), meta.selector(), meta.selector()),

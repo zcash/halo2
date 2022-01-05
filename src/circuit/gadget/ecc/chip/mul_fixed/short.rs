@@ -373,7 +373,7 @@ pub mod tests {
         use crate::circuit::gadget::{ecc::chip::EccConfig, utilities::UtilitiesInstructions};
         use halo2::{
             circuit::{Layouter, SimpleFloorPlanner},
-            dev::{MockProver, VerifyFailure},
+            dev::{FailureLocation, MockProver, VerifyFailure},
             plonk::{Circuit, ConstraintSystem, Error},
         };
 
@@ -531,7 +531,10 @@ pub mod tests {
                                 "last_window_check"
                             )
                                 .into(),
-                            row: 26,
+                            location: FailureLocation::InRegion {
+                                region: (3, "Short fixed-base mul (most significant word)").into(),
+                                offset: 1,
+                            },
                             cell_values: vec![(
                                 ((Any::Advice, 5).into(), 0).into(),
                                 format_value(circuit.magnitude_error.unwrap()),
@@ -574,7 +577,10 @@ pub mod tests {
                     VerifyFailure::ConstraintNotSatisfied {
                         constraint: ((17, "Short fixed-base mul gate").into(), 1, "sign_check")
                             .into(),
-                        row: 26,
+                        location: FailureLocation::InRegion {
+                            region: (3, "Short fixed-base mul (most significant word)").into(),
+                            offset: 1,
+                        },
                         cell_values: vec![(((Any::Advice, 4).into(), 0).into(), "0".to_string())],
                     },
                     VerifyFailure::ConstraintNotSatisfied {
@@ -584,7 +590,10 @@ pub mod tests {
                             "negation_check"
                         )
                             .into(),
-                        row: 26,
+                        location: FailureLocation::InRegion {
+                            region: (3, "Short fixed-base mul (most significant word)").into(),
+                            offset: 1,
+                        },
                         cell_values: vec![
                             (
                                 ((Any::Advice, 1).into(), 0).into(),

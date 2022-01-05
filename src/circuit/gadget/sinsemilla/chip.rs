@@ -121,7 +121,7 @@ impl SinsemillaChip {
     ) -> <Self as Chip<pallas::Base>>::Config {
         // Enable equality on all advice columns
         for advice in advices.iter() {
-            meta.enable_equality((*advice).into())
+            meta.enable_equality(*advice);
         }
 
         let config = SinsemillaConfig {

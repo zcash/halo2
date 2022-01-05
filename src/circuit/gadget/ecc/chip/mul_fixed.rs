@@ -110,8 +110,8 @@ impl Config {
         add_config: add::Config,
         add_incomplete_config: add_incomplete::Config,
     ) -> Self {
-        meta.enable_equality(window.into());
-        meta.enable_equality(u.into());
+        meta.enable_equality(window);
+        meta.enable_equality(u);
 
         let q_running_sum = meta.selector();
         let running_sum_config = RunningSumConfig::configure(meta, q_running_sum, window);

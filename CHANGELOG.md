@@ -6,6 +6,9 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+- pass in an additional `rng: impl RngCore` argument to `builder::InProgress::create_proof`, `builder::Bundle::create_proof`, `circuit::Proof::create`.
 ### Removed
 - `orchard::value::ValueSum::from_raw`
 

@@ -122,7 +122,7 @@ mod tests {
     use ff::PrimeField;
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
-        dev::{MockProver, VerifyFailure},
+        dev::{FailureLocation, MockProver, VerifyFailure},
         plonk::{Any, Circuit, ConstraintSystem, Error, Selector},
         poly::Rotation,
     };
@@ -199,7 +199,10 @@ mod tests {
                 prover.verify(),
                 Err(vec![VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((0, "range check").into(), 0, "").into(),
-                    row: 0,
+                    location: FailureLocation::InRegion {
+                        region: (0, "range constrain").into(),
+                        offset: 0,
+                    },
                     cell_values: vec![(((Any::Advice, 0).into(), 0).into(), "0x8".to_string())],
                 }])
             );

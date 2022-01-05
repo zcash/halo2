@@ -391,14 +391,19 @@ impl<S: InProgressSignatures> InProgress<Unproven, S> {
         &self,
         pk: &ProvingKey,
         instances: &[Instance],
+        rng: impl RngCore,
     ) -> Result<Proof, halo2::plonk::Error> {
-        Proof::create(pk, &self.proof.circuits, instances)
+        Proof::create(pk, &self.proof.circuits, instances, rng)
     }
 }
 
 impl<S: InProgressSignatures, V> Bundle<InProgress<Unproven, S>, V> {
     /// Creates the proof for this bundle.
-    pub fn create_proof(self, pk: &ProvingKey) -> Result<Bundle<InProgress<Proof, S>, V>, Error> {
+    pub fn create_proof(
+        self,
+        pk: &ProvingKey,
+        mut rng: impl RngCore,
+    ) -> Result<Bundle<InProgress<Proof, S>, V>, Error> {
         let instances: Vec<_> = self
             .actions()
             .iter()
@@ -408,7 +413,7 @@ impl<S: InProgressSignatures, V> Bundle<InProgress<Unproven, S>, V> {
             &mut (),
             |_, _, a| Ok(a),
             |_, auth| {
-                let proof = auth.create_proof(pk, &instances)?;
+                let proof = auth.create_proof(pk, &instances, &mut rng)?;
                 Ok(InProgress {
                     proof,
                     sigs: auth.sigs,
@@ -634,7 +639,7 @@ pub mod testing {
             builder
                 .build(&mut self.rng)
                 .unwrap()
-                .create_proof(&pk)
+                .create_proof(&pk, &mut self.rng)
                 .unwrap()
                 .prepare(&mut self.rng, [0; 32])
                 .sign(&mut self.rng, &SpendAuthorizingKey::from(&self.sk))
@@ -737,7 +742,7 @@ mod tests {
         let bundle: Bundle<Authorized, i64> = builder
             .build(&mut rng)
             .unwrap()
-            .create_proof(&pk)
+            .create_proof(&pk, &mut rng)
             .unwrap()
             .prepare(&mut rng, [0; 32])
             .finalize()

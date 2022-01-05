@@ -54,7 +54,7 @@ fn bench_note_decryption(c: &mut Criterion) {
             .unwrap();
         let bundle: Bundle<_, i64> = builder.build(rng).unwrap();
         bundle
-            .create_proof(&pk)
+            .create_proof(&pk, rng)
             .unwrap()
             .apply_signatures(rng, [0; 32], &[])
             .unwrap()
