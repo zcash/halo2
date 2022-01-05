@@ -53,7 +53,7 @@ proptest = "1.0.0"
 zcash_note_encryption = { version = "0.1", features = ["pre-zip-212"] }
 
 [target.'cfg(unix)'.dev-dependencies]
-pprof = { version = "0.6", features = ["criterion", "flamegraph"] }
+pprof = { version = "=0.6.1", features = ["criterion", "flamegraph"] }
 
 [lib]
 bench = false
