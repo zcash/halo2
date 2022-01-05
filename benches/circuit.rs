@@ -57,7 +57,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                 b.iter(|| {
                     bundle
                         .authorization()
-                        .create_proof(&pk, &instances)
+                        .create_proof(&pk, &instances, rng)
                         .unwrap()
                 });
             });
@@ -69,7 +69,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         for num_recipients in recipients_range {
             let (bundle, instances) = create_bundle(num_recipients);
             let bundle = bundle
-                .create_proof(&pk)
+                .create_proof(&pk, rng)
                 .unwrap()
                 .apply_signatures(rng, [0; 32], &[])
                 .unwrap();

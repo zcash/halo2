@@ -9,6 +9,7 @@ use halo2::{
 };
 use memuse::DynamicUsage;
 use pasta_curves::{arithmetic::CurveAffine, pallas, vesta};
+use rand::RngCore;
 
 use crate::{
     constants::{
@@ -840,6 +841,7 @@ impl Proof {
         pk: &ProvingKey,
         circuits: &[Circuit],
         instances: &[Instance],
+        mut rng: impl RngCore,
     ) -> Result<Self, plonk::Error> {
         let instances: Vec<_> = instances.iter().map(|i| i.to_halo2_instance()).collect();
         let instances: Vec<Vec<_>> = instances
@@ -849,7 +851,14 @@ impl Proof {
         let instances: Vec<_> = instances.iter().map(|i| &i[..]).collect();
 
         let mut transcript = Blake2bWrite::<_, vesta::Affine, _>::init(vec![]);
-        plonk::create_proof(&pk.params, &pk.pk, circuits, &instances, &mut transcript)?;
+        plonk::create_proof(
+            &pk.params,
+            &pk.pk,
+            circuits,
+            &instances,
+            &mut rng,
+            &mut transcript,
+        )?;
         Ok(Proof(transcript.finalize()))
     }
 
@@ -998,7 +1007,7 @@ mod tests {
         }
 
         let pk = ProvingKey::build();
-        let proof = Proof::create(&pk, &circuits, &instances).unwrap();
+        let proof = Proof::create(&pk, &circuits, &instances, &mut rng).unwrap();
         assert!(proof.verify(&vk, &instances).is_ok());
         assert_eq!(proof.0.len(), expected_proof_size);
     }

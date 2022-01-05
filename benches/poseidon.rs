@@ -203,7 +203,7 @@ fn bench_poseidon<S, const WIDTH: usize, const RATE: usize, const L: usize>(
     let prover_name = name.to_string() + "-prover";
     let verifier_name = name.to_string() + "-verifier";
 
-    let rng = OsRng;
+    let mut rng = OsRng;
     let message = (0..L)
         .map(|_| pallas::Base::random(rng))
         .collect::<Vec<_>>()
@@ -221,14 +221,14 @@ fn bench_poseidon<S, const WIDTH: usize, const RATE: usize, const L: usize>(
         b.iter(|| {
             // Create a proof
             let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
-            create_proof(&params, &pk, &[circuit], &[&[]], &mut transcript)
+            create_proof(&params, &pk, &[circuit], &[&[]], &mut rng, &mut transcript)
                 .expect("proof generation should not fail")
         })
     });
 
     // Create a proof
     let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
-    create_proof(&params, &pk, &[circuit], &[&[]], &mut transcript)
+    create_proof(&params, &pk, &[circuit], &[&[]], &mut rng, &mut transcript)
         .expect("proof generation should not fail");
     let proof = transcript.finalize();
 
