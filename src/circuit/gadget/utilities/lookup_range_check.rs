@@ -369,7 +369,7 @@ mod tests {
     use ff::{Field, PrimeFieldBits};
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
-        dev::{MockProver, VerifyFailure},
+        dev::{FailureLocation, MockProver, VerifyFailure},
         plonk::{Circuit, ConstraintSystem, Error},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -562,7 +562,10 @@ mod tests {
                 prover.verify(),
                 Err(vec![VerifyFailure::Lookup {
                     lookup_index: 0,
-                    row: 1
+                    location: FailureLocation::InRegion {
+                        region: (1, "Range check 6 bits").into(),
+                        offset: 1,
+                    },
                 }])
             );
         }
@@ -579,11 +582,17 @@ mod tests {
                 Err(vec![
                     VerifyFailure::Lookup {
                         lookup_index: 0,
-                        row: 0
+                        location: FailureLocation::InRegion {
+                            region: (1, "Range check 6 bits").into(),
+                            offset: 0,
+                        },
                     },
                     VerifyFailure::Lookup {
                         lookup_index: 0,
-                        row: 1
+                        location: FailureLocation::InRegion {
+                            region: (1, "Range check 6 bits").into(),
+                            offset: 1,
+                        },
                     },
                 ])
             );
@@ -609,7 +618,10 @@ mod tests {
                 prover.verify(),
                 Err(vec![VerifyFailure::Lookup {
                     lookup_index: 0,
-                    row: 0
+                    location: FailureLocation::InRegion {
+                        region: (1, "Range check 6 bits").into(),
+                        offset: 0,
+                    },
                 }])
             );
         }
