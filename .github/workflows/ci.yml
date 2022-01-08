@@ -45,7 +45,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --all-features
+          args: --all-features --target ${{ matrix.target }}
 
   bitrot:
     name: Bitrot check
