@@ -1,4 +1,5 @@
 use std::{
+    collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
     marker::PhantomData,
     ops::{Add, Mul, MulAssign, Neg, Sub},
@@ -10,6 +11,7 @@ use pasta_curves::arithmetic::FieldExt;
 use super::{
     Basis, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
 };
+use crate::{arithmetic::parallelize, multicore};
 
 /// A reference to a polynomial registered with an [`Evaluator`].
 #[derive(Clone, Copy, Debug)]
@@ -100,34 +102,136 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
         domain: &EvaluationDomain<F>,
     ) -> Polynomial<F, B>
     where
+        E: Copy + Send + Sync,
         F: FieldExt,
         B: BasisOps,
     {
-        match ast {
-            Ast::Poly(AstLeaf {
-                index, rotation, ..
-            }) => B::rotate(domain, &self.polys[*index], *rotation),
-            Ast::Add(a, b) => {
-                let a = self.evaluate(a, domain);
-                let b = self.evaluate(b, domain);
-                a + &b
-            }
-            Ast::Mul(AstMul(a, b)) => {
-                let mut a = self.evaluate(a, domain);
-                let b = self.evaluate(b, domain);
-                // We can only reach this point in Lagrange bases.
-                for (lhs, rhs) in a.iter_mut().zip(b.iter()) {
-                    *lhs *= *rhs;
+        // Traverse `ast` to collect the used leaves.
+        fn collect_rotations<E: Copy, F: Field, B: Basis>(
+            ast: &Ast<E, F, B>,
+        ) -> HashSet<AstLeaf<E, B>> {
+            match ast {
+                Ast::Poly(leaf) => vec![*leaf].into_iter().collect(),
+                Ast::Add(a, b) | Ast::Mul(AstMul(a, b)) => {
+                    let lhs = collect_rotations(a);
+                    let rhs = collect_rotations(b);
+                    lhs.union(&rhs).cloned().collect()
                 }
-                a
+                Ast::Scale(a, _) => collect_rotations(a),
+                Ast::LinearTerm(_) | Ast::ConstantTerm(_) => HashSet::default(),
             }
-            Ast::Scale(a, scalar) => {
-                let a = self.evaluate(a, domain);
-                a * *scalar
-            }
-            Ast::LinearTerm(scalar) => B::linear_term(domain, *scalar),
-            Ast::ConstantTerm(scalar) => B::constant_term(domain, *scalar),
         }
+        let leaves = collect_rotations(ast);
+
+        // Produce the rotated polynomials.
+        let rotated: HashMap<_, _> = leaves
+            .iter()
+            .cloned()
+            .map(|leaf| {
+                (
+                    leaf,
+                    B::rotate(domain, &self.polys[leaf.index], leaf.rotation),
+                )
+            })
+            .collect();
+
+        // We're working in a single basis, so all polynomials are the same length.
+        let poly_len = self.polys.first().unwrap().len();
+        // Check the level of parallelization we have available.
+        let num_threads = multicore::current_num_threads();
+        // We scale the number of chunks by a constant factor, to ensure that if not all
+        // threads are available, we can achieve more uniform throughput and don't end up
+        // waiting on a couple of threads to process the last chunks.
+        let num_chunks = num_threads * 4;
+        // Calculate the ideal chunk size for the desired throughput. We use ceiling
+        // division to ensure the minimum chunk size is 1.
+        //     chunk_size = ceil(poly_len / num_chunks)
+        let chunk_size = (poly_len + num_chunks - 1) / num_chunks;
+        // Now re-calculate num_chunks from the actual chunk size.
+        //     num_chunks = ceil(poly_len / chunk_size)
+        let num_chunks = (poly_len + chunk_size - 1) / chunk_size;
+
+        // Split each rotated polynomial into chunks.
+        let chunks: Vec<HashMap<_, _>> = (0..num_chunks)
+            .map(|i| {
+                rotated
+                    .iter()
+                    .map(|(leaf, poly)| {
+                        (
+                            *leaf,
+                            poly.chunks(chunk_size)
+                                .nth(i)
+                                .expect("num_chunks was calculated correctly"),
+                        )
+                    })
+                    .collect()
+            })
+            .collect();
+
+        struct AstContext<'a, E, F: FieldExt, B: Basis> {
+            domain: &'a EvaluationDomain<F>,
+            chunk_size: usize,
+            chunk_index: usize,
+            leaves: &'a HashMap<AstLeaf<E, B>, &'a [F]>,
+        }
+
+        fn recurse<E, F: FieldExt, B: BasisOps>(
+            ast: &Ast<E, F, B>,
+            ctx: &AstContext<'_, E, F, B>,
+        ) -> Vec<F> {
+            match ast {
+                Ast::Poly(leaf) => ctx.leaves.get(leaf).expect("We prepared this").to_vec(),
+                Ast::Add(a, b) => {
+                    let mut lhs = recurse(a, ctx);
+                    let rhs = recurse(b, ctx);
+                    for (lhs, rhs) in lhs.iter_mut().zip(rhs.iter()) {
+                        *lhs += *rhs;
+                    }
+                    lhs
+                }
+                Ast::Mul(AstMul(a, b)) => {
+                    let mut lhs = recurse(a, ctx);
+                    let rhs = recurse(b, ctx);
+                    for (lhs, rhs) in lhs.iter_mut().zip(rhs.iter()) {
+                        *lhs *= *rhs;
+                    }
+                    lhs
+                }
+                Ast::Scale(a, scalar) => {
+                    let mut lhs = recurse(a, ctx);
+                    for lhs in lhs.iter_mut() {
+                        *lhs *= scalar;
+                    }
+                    lhs
+                }
+                Ast::LinearTerm(scalar) => {
+                    B::linear_term(ctx.domain, ctx.chunk_size, ctx.chunk_index, *scalar)
+                }
+                Ast::ConstantTerm(scalar) => {
+                    B::constant_term(ctx.chunk_size, ctx.chunk_index, *scalar)
+                }
+            }
+        }
+
+        // Apply `ast` to each chunk in parallel, writing the result into an output
+        // polynomial.
+        let mut result = B::empty_poly(domain);
+        multicore::scope(|scope| {
+            for (chunk_index, (out, leaves)) in
+                result.chunks_mut(chunk_size).zip(chunks.iter()).enumerate()
+            {
+                scope.spawn(move |_| {
+                    let ctx = AstContext {
+                        domain,
+                        chunk_size,
+                        chunk_index,
+                        leaves,
+                    };
+                    out.copy_from_slice(&recurse(ast, &ctx));
+                });
+            }
+        });
+        result
     }
 }
 
@@ -307,8 +411,14 @@ impl<E: Clone, F: Field> MulAssign for Ast<E, F, ExtendedLagrangeCoeff> {
 
 /// Operations which can be performed over a given basis.
 pub(crate) trait BasisOps: Basis {
-    fn constant_term<F: FieldExt>(domain: &EvaluationDomain<F>, scalar: F) -> Polynomial<F, Self>;
-    fn linear_term<F: FieldExt>(domain: &EvaluationDomain<F>, scalar: F) -> Polynomial<F, Self>;
+    fn empty_poly<F: FieldExt>(domain: &EvaluationDomain<F>) -> Polynomial<F, Self>;
+    fn constant_term<F: FieldExt>(chunk_size: usize, chunk_index: usize, scalar: F) -> Vec<F>;
+    fn linear_term<F: FieldExt>(
+        domain: &EvaluationDomain<F>,
+        chunk_size: usize,
+        chunk_index: usize,
+        scalar: F,
+    ) -> Vec<F>;
     fn rotate<F: FieldExt>(
         domain: &EvaluationDomain<F>,
         poly: &Polynomial<F, Self>,
@@ -317,16 +427,34 @@ pub(crate) trait BasisOps: Basis {
 }
 
 impl BasisOps for Coeff {
-    fn constant_term<F: FieldExt>(domain: &EvaluationDomain<F>, scalar: F) -> Polynomial<F, Self> {
-        let mut poly = domain.empty_coeff();
-        poly[0] = scalar;
-        poly
+    fn empty_poly<F: FieldExt>(domain: &EvaluationDomain<F>) -> Polynomial<F, Self> {
+        domain.empty_coeff()
     }
 
-    fn linear_term<F: FieldExt>(domain: &EvaluationDomain<F>, scalar: F) -> Polynomial<F, Self> {
-        let mut result = domain.empty_coeff();
-        result[1] = scalar;
-        result
+    fn constant_term<F: FieldExt>(chunk_size: usize, chunk_index: usize, scalar: F) -> Vec<F> {
+        let mut chunk = vec![F::zero(); chunk_size];
+        if chunk_index == 0 {
+            chunk[0] = scalar;
+        }
+        chunk
+    }
+
+    fn linear_term<F: FieldExt>(
+        _: &EvaluationDomain<F>,
+        chunk_size: usize,
+        chunk_index: usize,
+        scalar: F,
+    ) -> Vec<F> {
+        let mut chunk = vec![F::zero(); chunk_size];
+        // If the chunk size is 1 (e.g. if we have a small k and many threads), then the
+        // linear coefficient is the second chunk. Otherwise, the chunk size is greater
+        // than one, and the linear coefficient is the second element of the first chunk.
+        if chunk_size == 1 && chunk_index == 1 {
+            chunk[0] = scalar;
+        } else if chunk_index == 0 {
+            chunk[1] = scalar;
+        }
+        chunk
     }
 
     fn rotate<F: FieldExt>(
@@ -339,20 +467,30 @@ impl BasisOps for Coeff {
 }
 
 impl BasisOps for LagrangeCoeff {
-    fn constant_term<F: FieldExt>(domain: &EvaluationDomain<F>, scalar: F) -> Polynomial<F, Self> {
-        domain.constant_lagrange(scalar)
+    fn empty_poly<F: FieldExt>(domain: &EvaluationDomain<F>) -> Polynomial<F, Self> {
+        domain.empty_lagrange()
     }
 
-    fn linear_term<F: FieldExt>(domain: &EvaluationDomain<F>, scalar: F) -> Polynomial<F, Self> {
+    fn constant_term<F: FieldExt>(chunk_size: usize, _: usize, scalar: F) -> Vec<F> {
+        vec![scalar; chunk_size]
+    }
+
+    fn linear_term<F: FieldExt>(
+        domain: &EvaluationDomain<F>,
+        chunk_size: usize,
+        chunk_index: usize,
+        scalar: F,
+    ) -> Vec<F> {
         // Take every power of omega within the chunk, and multiply by scalar.
         let omega = domain.get_omega();
-        let mut result = domain.empty_lagrange();
-        let mut cur_omega = scalar;
-        for coeff in result.as_mut() {
-            *coeff = cur_omega;
-            cur_omega *= omega;
-        }
-        result
+        let start = chunk_size * chunk_index;
+        (0..chunk_size)
+            .scan(omega.pow_vartime(&[start as u64]) * scalar, |acc, _| {
+                let ret = *acc;
+                *acc *= omega;
+                Some(ret)
+            })
+            .collect()
     }
 
     fn rotate<F: FieldExt>(
@@ -365,20 +503,33 @@ impl BasisOps for LagrangeCoeff {
 }
 
 impl BasisOps for ExtendedLagrangeCoeff {
-    fn constant_term<F: FieldExt>(domain: &EvaluationDomain<F>, scalar: F) -> Polynomial<F, Self> {
-        domain.constant_extended(scalar)
+    fn empty_poly<F: FieldExt>(domain: &EvaluationDomain<F>) -> Polynomial<F, Self> {
+        domain.empty_extended()
     }
 
-    fn linear_term<F: FieldExt>(domain: &EvaluationDomain<F>, scalar: F) -> Polynomial<F, Self> {
+    fn constant_term<F: FieldExt>(chunk_size: usize, _: usize, scalar: F) -> Vec<F> {
+        vec![scalar; chunk_size]
+    }
+
+    fn linear_term<F: FieldExt>(
+        domain: &EvaluationDomain<F>,
+        chunk_size: usize,
+        chunk_index: usize,
+        scalar: F,
+    ) -> Vec<F> {
         // Take every power of the extended omega within the chunk, and multiply by scalar.
         let omega = domain.get_extended_omega();
-        let mut result = domain.empty_extended();
-        let mut acc = F::ZETA * scalar;
-        for coeff in result.as_mut() {
-            *coeff = acc;
-            acc *= omega;
-        }
-        result
+        let start = chunk_size * chunk_index;
+        (0..chunk_size)
+            .scan(
+                omega.pow_vartime(&[start as u64]) * F::ZETA * scalar,
+                |acc, _| {
+                    let ret = *acc;
+                    *acc *= omega;
+                    Some(ret)
+                },
+            )
+            .collect()
     }
 
     fn rotate<F: FieldExt>(
