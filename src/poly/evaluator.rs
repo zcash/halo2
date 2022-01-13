@@ -163,6 +163,12 @@ impl<E, F: Field, B: Basis> From<AstLeaf<E, B>> for Ast<E, F, B> {
     }
 }
 
+impl<E, F: Field, B: Basis> Ast<E, F, B> {
+    pub(crate) fn one() -> Self {
+        Self::ConstantTerm(F::one())
+    }
+}
+
 impl<E, F: Field, B: Basis> Neg for Ast<E, F, B> {
     type Output = Ast<E, F, B>;
 
