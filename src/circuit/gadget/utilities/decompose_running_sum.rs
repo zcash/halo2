@@ -218,12 +218,14 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
 mod tests {
     use super::*;
     use crate::constants::{self, FIXED_BASE_WINDOW_SIZE, L_ORCHARD_BASE, L_VALUE};
+    use group::ff::Field;
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{MockProver, VerifyFailure},
         plonk::{Any, Circuit, ConstraintSystem, Error},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
+    use rand::rngs::OsRng;
 
     #[test]
     fn test_running_sum() {
@@ -301,7 +303,7 @@ mod tests {
 
         // Random base field element
         {
-            let alpha = pallas::Base::rand();
+            let alpha = pallas::Base::random(OsRng);
 
             // Strict full decomposition should pass.
             let circuit: MyCircuit<

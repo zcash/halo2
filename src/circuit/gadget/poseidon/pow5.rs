@@ -595,15 +595,15 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
 
 #[cfg(test)]
 mod tests {
-    use ff::PrimeField;
+    use group::ff::{Field, PrimeField};
     use halo2::{
-        arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         pasta::Fp,
         plonk::{Circuit, ConstraintSystem, Error},
     };
     use pasta_curves::pallas;
+    use rand::rngs::OsRng;
 
     use super::{PoseidonInstructions, Pow5Chip, Pow5Config, StateWord};
     use crate::{
@@ -812,7 +812,9 @@ mod tests {
 
     #[test]
     fn poseidon_hash() {
-        let message = [Fp::rand(), Fp::rand()];
+        let rng = OsRng;
+
+        let message = [Fp::random(rng), Fp::random(rng)];
         let output =
             poseidon::Hash::<_, OrchardNullifier, ConstantLength<2>, 3, 2>::init().hash(message);
 
@@ -828,7 +830,9 @@ mod tests {
 
     #[test]
     fn poseidon_hash_longer_input() {
-        let message = [Fp::rand(), Fp::rand(), Fp::rand()];
+        let rng = OsRng;
+
+        let message = [Fp::random(rng), Fp::random(rng), Fp::random(rng)];
         let output =
             poseidon::Hash::<_, OrchardNullifier, ConstantLength<3>, 3, 2>::init().hash(message);
 

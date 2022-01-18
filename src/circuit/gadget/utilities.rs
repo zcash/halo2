@@ -119,7 +119,7 @@ pub fn range_check<F: FieldExt>(word: Expression<F>, range: usize) -> Expression
 mod tests {
     use super::*;
     use bigint::U256;
-    use ff::PrimeField;
+    use group::ff::{Field, PrimeField};
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{FailureLocation, MockProver, VerifyFailure},
@@ -127,6 +127,7 @@ mod tests {
         poly::Rotation,
     };
     use pasta_curves::pallas;
+    use rand::rngs::OsRng;
 
     #[test]
     fn test_range_check() {
@@ -211,9 +212,11 @@ mod tests {
 
     #[test]
     fn test_bitrange_subset() {
+        let rng = OsRng;
+
         // Subset full range.
         {
-            let field_elem = pallas::Base::rand();
+            let field_elem = pallas::Base::random(rng);
             let bitrange = 0..(pallas::Base::NUM_BITS as usize);
             let subset = bitrange_subset(&field_elem, bitrange);
             assert_eq!(field_elem, subset);
@@ -221,7 +224,7 @@ mod tests {
 
         // Subset zero bits
         {
-            let field_elem = pallas::Base::rand();
+            let field_elem = pallas::Base::random(rng);
             let bitrange = 0..0;
             let subset = bitrange_subset(&field_elem, bitrange);
             assert_eq!(pallas::Base::zero(), subset);
@@ -270,13 +273,13 @@ mod tests {
             assert_eq!(field_elem, sum);
         };
 
-        decompose(pallas::Base::rand(), &[0..255]);
-        decompose(pallas::Base::rand(), &[0..1, 1..255]);
-        decompose(pallas::Base::rand(), &[0..254, 254..255]);
-        decompose(pallas::Base::rand(), &[0..127, 127..255]);
-        decompose(pallas::Base::rand(), &[0..128, 128..255]);
+        decompose(pallas::Base::random(rng), &[0..255]);
+        decompose(pallas::Base::random(rng), &[0..1, 1..255]);
+        decompose(pallas::Base::random(rng), &[0..254, 254..255]);
+        decompose(pallas::Base::random(rng), &[0..127, 127..255]);
+        decompose(pallas::Base::random(rng), &[0..128, 128..255]);
         decompose(
-            pallas::Base::rand(),
+            pallas::Base::random(rng),
             &[0..50, 50..100, 100..150, 150..200, 200..255],
         );
     }

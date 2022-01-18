@@ -639,13 +639,14 @@ mod tests {
         constants::{COMMIT_IVK_PERSONALIZATION, L_ORCHARD_BASE, T_Q},
         primitives::sinsemilla::CommitDomain,
     };
-    use ff::PrimeFieldBits;
+    use group::ff::{Field, PrimeFieldBits};
     use halo2::{
         circuit::{AssignedCell, Layouter, SimpleFloorPlanner},
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
+    use rand::rngs::OsRng;
 
     use std::convert::TryInto;
 
@@ -757,7 +758,7 @@ mod tests {
                 )?;
 
                 // Use a random scalar for rivk
-                let rivk = pallas::Scalar::rand();
+                let rivk = pallas::Scalar::random(OsRng);
 
                 let ivk = commit_ivk_config.assign_region(
                     sinsemilla_chip,

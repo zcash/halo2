@@ -374,12 +374,16 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
-    use group::{ff::PrimeField, Curve};
+    use group::{
+        ff::{Field, PrimeField},
+        Curve,
+    };
     use halo2::{
         circuit::{Chip, Layouter},
         plonk::Error,
     };
-    use pasta_curves::{arithmetic::FieldExt, pallas};
+    use pasta_curves::pallas;
+    use rand::rngs::OsRng;
 
     use crate::circuit::gadget::{
         ecc::{
@@ -411,6 +415,8 @@ pub mod tests {
         base: FixedPointBaseField<pallas::Affine, EccChip>,
         base_val: pallas::Affine,
     ) -> Result<(), Error> {
+        let rng = OsRng;
+
         let column = chip.config().advices[0];
 
         fn constrain_equal_non_id(
@@ -432,7 +438,7 @@ pub mod tests {
 
         // [a]B
         {
-            let scalar_fixed = pallas::Base::rand();
+            let scalar_fixed = pallas::Base::random(rng);
             let result = {
                 let scalar_fixed = chip.load_private(
                     layouter.namespace(|| "random base field element"),

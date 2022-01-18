@@ -411,6 +411,7 @@ mod tests {
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
+    use rand::rngs::OsRng;
 
     use super::{
         chip::{SinsemillaChip, SinsemillaCommitDomains, SinsemillaConfig, SinsemillaHashDomains},
@@ -429,8 +430,8 @@ mod tests {
         primitives::sinsemilla::{self, K},
     };
 
-    use group::Curve;
-    use pasta_curves::{arithmetic::FieldExt, pallas};
+    use group::{ff::Field, Curve};
+    use pasta_curves::pallas;
 
     use std::convert::TryInto;
 
@@ -510,6 +511,8 @@ mod tests {
             config: Self::Config,
             mut layouter: impl Layouter<pallas::Base>,
         ) -> Result<(), Error> {
+            let rng = OsRng;
+
             let ecc_chip = EccChip::construct(config.0);
 
             // The two `SinsemillaChip`s share the same lookup table.
@@ -601,7 +604,7 @@ mod tests {
                     ecc_chip.clone(),
                     &SinsemillaCommitDomains::CommitIvk,
                 );
-                let r_val = pallas::Scalar::rand();
+                let r_val = pallas::Scalar::random(rng);
                 let message: Vec<Option<bool>> =
                     (0..500).map(|_| Some(rand::random::<bool>())).collect();
 
