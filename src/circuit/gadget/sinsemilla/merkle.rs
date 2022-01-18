@@ -146,16 +146,15 @@ pub mod tests {
         tree,
     };
 
-    use group::ff::PrimeField;
+    use group::ff::{Field, PrimeField};
     use halo2::{
-        arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    use rand::random;
+    use rand::{rngs::OsRng, RngCore};
     use std::convert::TryInto;
 
     #[derive(Default)]
@@ -276,13 +275,15 @@ pub mod tests {
 
     #[test]
     fn merkle_chip() {
+        let mut rng = OsRng;
+
         // Choose a random leaf and position
-        let leaf = pallas::Base::rand();
-        let pos = random::<u32>();
+        let leaf = pallas::Base::random(rng);
+        let pos = rng.next_u32();
 
         // Choose a path of random inner nodes
         let path: Vec<_> = (0..(MERKLE_DEPTH_ORCHARD))
-            .map(|_| pallas::Base::rand())
+            .map(|_| pallas::Base::random(rng))
             .collect();
 
         // The root is provided as a public input in the Orchard circuit.

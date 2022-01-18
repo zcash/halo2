@@ -178,9 +178,10 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
-    use group::Curve;
+    use group::{ff::Field, Curve};
     use halo2::{circuit::Layouter, plonk::Error};
-    use pasta_curves::{arithmetic::FieldExt, pallas};
+    use pasta_curves::pallas;
+    use rand::rngs::OsRng;
 
     use crate::circuit::gadget::ecc::{
         chip::{EccChip, OrchardFixedBasesFull},
@@ -255,7 +256,7 @@ pub mod tests {
 
         // [a]B
         {
-            let scalar_fixed = pallas::Scalar::rand();
+            let scalar_fixed = pallas::Scalar::random(OsRng);
 
             let (result, _) = base.mul(layouter.namespace(|| "random [a]B"), Some(scalar_fixed))?;
             constrain_equal_non_id(

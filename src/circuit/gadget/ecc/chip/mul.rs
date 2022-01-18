@@ -463,12 +463,16 @@ fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> 
 
 #[cfg(test)]
 pub mod tests {
-    use group::{ff::PrimeField, Curve};
+    use group::{
+        ff::{Field, PrimeField},
+        Curve,
+    };
     use halo2::{
         circuit::{Chip, Layouter},
         plonk::Error,
     };
-    use pasta_curves::{arithmetic::FieldExt, pallas};
+    use pasta_curves::pallas;
+    use rand::rngs::OsRng;
 
     use crate::circuit::gadget::{
         ecc::{
@@ -508,7 +512,7 @@ pub mod tests {
 
         // [a]B
         {
-            let scalar_val = pallas::Base::rand();
+            let scalar_val = pallas::Base::random(OsRng);
             let (result, _) = {
                 let scalar = chip.load_private(
                     layouter.namespace(|| "random scalar"),

@@ -1640,7 +1640,7 @@ mod tests {
                     self.psi,
                 )?;
 
-                let rcm = pallas::Scalar::rand();
+                let rcm = pallas::Scalar::random(OsRng);
 
                 let cm = note_commit_config.assign_region(
                     layouter.namespace(|| "Hash NoteCommit pieces"),

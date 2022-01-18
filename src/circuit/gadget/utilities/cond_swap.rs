@@ -197,12 +197,14 @@ impl<F: FieldExt> CondSwapChip<F> {
 mod tests {
     use super::super::UtilitiesInstructions;
     use super::{CondSwapChip, CondSwapConfig, CondSwapInstructions};
+    use group::ff::Field;
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas::Base};
+    use rand::rngs::OsRng;
 
     #[test]
     fn cond_swap() {
@@ -265,11 +267,13 @@ mod tests {
             }
         }
 
+        let rng = OsRng;
+
         // Test swap case
         {
             let circuit: MyCircuit<Base> = MyCircuit {
-                a: Some(Base::rand()),
-                b: Some(Base::rand()),
+                a: Some(Base::random(rng)),
+                b: Some(Base::random(rng)),
                 swap: Some(true),
             };
             let prover = MockProver::<Base>::run(3, &circuit, vec![]).unwrap();
@@ -279,8 +283,8 @@ mod tests {
         // Test non-swap case
         {
             let circuit: MyCircuit<Base> = MyCircuit {
-                a: Some(Base::rand()),
-                b: Some(Base::rand()),
+                a: Some(Base::random(rng)),
+                b: Some(Base::random(rng)),
                 swap: Some(false),
             };
             let prover = MockProver::<Base>::run(3, &circuit, vec![]).unwrap();
