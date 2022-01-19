@@ -3,6 +3,7 @@ use std::{
     hash::{Hash, Hasher},
     marker::PhantomData,
     ops::{Add, Mul, MulAssign, Neg, Sub},
+    sync::Arc,
 };
 
 use group::ff::Field;
@@ -241,15 +242,15 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
 /// accidentally construct this case directly, because it can only be implemented for the
 /// [`ExtendedLagrangeCoeff`] basis.
 #[derive(Clone, Debug)]
-pub(crate) struct AstMul<E, F: Field, B: Basis>(Box<Ast<E, F, B>>, Box<Ast<E, F, B>>);
+pub(crate) struct AstMul<E, F: Field, B: Basis>(Arc<Ast<E, F, B>>, Arc<Ast<E, F, B>>);
 
 /// A polynomial operation backed by an [`Evaluator`].
 #[derive(Clone, Debug)]
 pub(crate) enum Ast<E, F: Field, B: Basis> {
     Poly(AstLeaf<E, B>),
-    Add(Box<Ast<E, F, B>>, Box<Ast<E, F, B>>),
+    Add(Arc<Ast<E, F, B>>, Arc<Ast<E, F, B>>),
     Mul(AstMul<E, F, B>),
-    Scale(Box<Ast<E, F, B>>, F),
+    Scale(Arc<Ast<E, F, B>>, F),
     /// The degree-1 term of a polynomial.
     ///
     /// The field element is the coeffient of the term in the standard basis, not the
@@ -277,7 +278,7 @@ impl<E, F: Field, B: Basis> Neg for Ast<E, F, B> {
     type Output = Ast<E, F, B>;
 
     fn neg(self) -> Self::Output {
-        Ast::Scale(Box::new(self), -F::one())
+        Ast::Scale(Arc::new(self), -F::one())
     }
 }
 
@@ -293,7 +294,7 @@ impl<E, F: Field, B: Basis> Add for Ast<E, F, B> {
     type Output = Ast<E, F, B>;
 
     fn add(self, other: Self) -> Self::Output {
-        Ast::Add(Box::new(self), Box::new(other))
+        Ast::Add(Arc::new(self), Arc::new(other))
     }
 }
 
@@ -309,7 +310,7 @@ impl<E, F: Field, B: Basis> Add<AstLeaf<E, B>> for Ast<E, F, B> {
     type Output = Ast<E, F, B>;
 
     fn add(self, other: AstLeaf<E, B>) -> Self::Output {
-        Ast::Add(Box::new(self), Box::new(other.into()))
+        Ast::Add(Arc::new(self), Arc::new(other.into()))
     }
 }
 
@@ -341,7 +342,7 @@ impl<E, F: Field> Mul for Ast<E, F, LagrangeCoeff> {
     type Output = Ast<E, F, LagrangeCoeff>;
 
     fn mul(self, other: Self) -> Self::Output {
-        Ast::Mul(AstMul(Box::new(self), Box::new(other)))
+        Ast::Mul(AstMul(Arc::new(self), Arc::new(other)))
     }
 }
 
@@ -357,7 +358,7 @@ impl<E, F: Field> Mul<AstLeaf<E, LagrangeCoeff>> for Ast<E, F, LagrangeCoeff> {
     type Output = Ast<E, F, LagrangeCoeff>;
 
     fn mul(self, other: AstLeaf<E, LagrangeCoeff>) -> Self::Output {
-        Ast::Mul(AstMul(Box::new(self), Box::new(other.into())))
+        Ast::Mul(AstMul(Arc::new(self), Arc::new(other.into())))
     }
 }
 
@@ -365,7 +366,7 @@ impl<E, F: Field> Mul for Ast<E, F, ExtendedLagrangeCoeff> {
     type Output = Ast<E, F, ExtendedLagrangeCoeff>;
 
     fn mul(self, other: Self) -> Self::Output {
-        Ast::Mul(AstMul(Box::new(self), Box::new(other)))
+        Ast::Mul(AstMul(Arc::new(self), Arc::new(other)))
     }
 }
 
@@ -383,7 +384,7 @@ impl<E, F: Field> Mul<AstLeaf<E, ExtendedLagrangeCoeff>> for Ast<E, F, ExtendedL
     type Output = Ast<E, F, ExtendedLagrangeCoeff>;
 
     fn mul(self, other: AstLeaf<E, ExtendedLagrangeCoeff>) -> Self::Output {
-        Ast::Mul(AstMul(Box::new(self), Box::new(other.into())))
+        Ast::Mul(AstMul(Arc::new(self), Arc::new(other.into())))
     }
 }
 
@@ -391,7 +392,7 @@ impl<E, F: Field, B: Basis> Mul<F> for Ast<E, F, B> {
     type Output = Ast<E, F, B>;
 
     fn mul(self, other: F) -> Self::Output {
-        Ast::Scale(Box::new(self), other)
+        Ast::Scale(Arc::new(self), other)
     }
 }
 
@@ -399,7 +400,7 @@ impl<E: Clone, F: Field, B: Basis> Mul<F> for &Ast<E, F, B> {
     type Output = Ast<E, F, B>;
 
     fn mul(self, other: F) -> Self::Output {
-        Ast::Scale(Box::new(self.clone()), other)
+        Ast::Scale(Arc::new(self.clone()), other)
     }
 }
 
