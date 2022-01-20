@@ -418,9 +418,9 @@ mod tests {
                         for _ in 0..10 {
                             let word: u16 = rng.gen();
                             add_row(
-                                F::from(get_tag(word).into()),
-                                F::from(word.into()),
-                                F::from(interleave_u16_with_zeros(word).into()),
+                                F::from(u64::from(get_tag(word))),
+                                F::from(u64::from(word)),
+                                F::from(u64::from(interleave_u16_with_zeros(word))),
                             )?;
                         }
 
