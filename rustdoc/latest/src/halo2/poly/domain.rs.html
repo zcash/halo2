@@ -1045,7 +1045,7 @@
 
 <span class="attribute">#[<span class="ident">test</span>]</span>
 <span class="kw">fn</span> <span class="ident">test_rotate</span>() {
-    <span class="kw">use</span> <span class="ident">rand::rngs::OsRng</span>;
+    <span class="kw">use</span> <span class="ident">rand_core::OsRng</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic::eval_polynomial</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::pasta::pallas::Scalar</span>;
@@ -1086,7 +1086,7 @@
 
 <span class="attribute">#[<span class="ident">test</span>]</span>
 <span class="kw">fn</span> <span class="ident">test_l_i</span>() {
-    <span class="kw">use</span> <span class="ident">rand::rngs::OsRng</span>;
+    <span class="kw">use</span> <span class="ident">rand_core::OsRng</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic</span>::{<span class="ident">eval_polynomial</span>, <span class="ident">lagrange_interpolate</span>};
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::pasta::pallas::Scalar</span>;

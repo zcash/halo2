@@ -165,8 +165,10 @@
 <span id="144">144</span>
 <span id="145">145</span>
 <span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ff::Field</span>;
-<span class="kw">use</span> <span class="ident">rand::rngs::OsRng</span>;
+<span class="kw">use</span> <span class="ident">rand_core::RngCore</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{
     <span class="ident">commitment</span>::{<span class="ident">Guard</span>, <span class="ident">Params</span>, <span class="ident">MSM</span>},
@@ -186,9 +188,11 @@
     <span class="ident">I</span>,
     <span class="ident">C</span>: <span class="ident">CurveAffine</span>,
     <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
+    <span class="ident">R</span>: <span class="ident">RngCore</span>,
     <span class="ident">T</span>: <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>,
 <span class="op">&gt;</span>(
     <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params</span> <span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
+    <span class="ident">rng</span>: <span class="ident">R</span>,
     <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
     <span class="ident">queries</span>: <span class="ident">I</span>,
     <span class="kw-2">mut</span> <span class="ident">msm</span>: <span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span>,
@@ -199,7 +203,7 @@
     <span class="comment">// Scale the MSM by a random factor to ensure that if the existing MSM</span>
     <span class="comment">// has is_zero() == false then this argument won&#39;t be able to interfere</span>
     <span class="comment">// with it to make it true, with high probability.</span>
-    <span class="ident">msm</span>.<span class="ident">scale</span>(<span class="ident">C::Scalar::random</span>(<span class="ident">OsRng</span>));
+    <span class="ident">msm</span>.<span class="ident">scale</span>(<span class="ident">C::Scalar::random</span>(<span class="ident">rng</span>));
 
     <span class="comment">// Sample x_1 for compressing openings at the same point sets together</span>
     <span class="kw">let</span> <span class="ident">x_1</span>: <span class="ident">ChallengeX1</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge_scalar</span>();

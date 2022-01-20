@@ -653,7 +653,7 @@
 <span class="kw">fn</span> <span class="ident">test_commit_lagrange_epaffine</span>() {
     <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">6</span>;
 
-    <span class="kw">use</span> <span class="ident">rand::rngs::OsRng</span>;
+    <span class="kw">use</span> <span class="ident">rand_core::OsRng</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::pasta</span>::{<span class="ident">EpAffine</span>, <span class="ident">Fq</span>};
     <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="ident">Params</span>::<span class="op">&lt;</span><span class="ident">EpAffine</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">K</span>);
@@ -676,7 +676,7 @@
 <span class="kw">fn</span> <span class="ident">test_commit_lagrange_eqaffine</span>() {
     <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">6</span>;
 
-    <span class="kw">use</span> <span class="ident">rand::rngs::OsRng</span>;
+    <span class="kw">use</span> <span class="ident">rand_core::OsRng</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::pasta</span>::{<span class="ident">EqAffine</span>, <span class="ident">Fp</span>};
     <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="ident">Params</span>::<span class="op">&lt;</span><span class="ident">EqAffine</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">K</span>);
@@ -700,7 +700,7 @@
     <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">6</span>;
 
     <span class="kw">use</span> <span class="ident">ff::Field</span>;
-    <span class="kw">use</span> <span class="ident">rand::rngs::OsRng</span>;
+    <span class="kw">use</span> <span class="ident">rand_core::OsRng</span>;
 
     <span class="kw">use</span> <span class="kw">super</span>::{
         <span class="ident">commitment</span>::{<span class="ident">Blind</span>, <span class="ident">Params</span>},
