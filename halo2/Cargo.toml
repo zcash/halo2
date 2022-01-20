@@ -1,0 +1,21 @@
+[package]
+name = "halo2"
+version = "0.1.0-beta.1"
+authors = [
+    "Sean Bowe <sean@electriccoin.co>",
+    "Ying Tong Lai <yingtong@electriccoin.co>",
+    "Daira Hopwood <daira@electriccoin.co>",
+    "Jack Grigg <jack@electriccoin.co>",
+]
+edition = "2018"
+license-file = "../COPYING"
+repository = "https://github.com/zcash/halo2"
+documentation = "https://docs.rs/halo2"
+readme = "../README.md"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "../katex-header.html"]
+
+[dependencies]
+halo2_proofs = { version = "0.1.0-beta.1", path = "../halo2_proofs" }
