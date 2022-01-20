@@ -59,6 +59,9 @@ gumdrop = "0.8"
 proptest = "1"
 rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
 
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+
 [features]
 dev-graph = ["plotters", "tabbycat"]
 gadget-traces = ["backtrace"]
