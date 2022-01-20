@@ -1,5 +1,5 @@
 use ff::Field;
-use halo2::{
+use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{Cell, Layouter, Region, SimpleFloorPlanner},
     pasta::Fp,
@@ -307,7 +307,7 @@ fn main() {
         .titled("Example Circuit Layout", ("sans-serif", 60))
         .unwrap();
 
-    halo2::dev::CircuitLayout::default()
+    halo2_proofs::dev::CircuitLayout::default()
         // You can optionally render only a section of the circuit.
         .view_width(0..2)
         .view_height(0..16)

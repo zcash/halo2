@@ -8,7 +8,7 @@ use std::{
 use ff::Field;
 use group::{Curve, Group};
 use gumdrop::Options;
-use halo2::{arithmetic::best_multiexp, pasta::pallas};
+use halo2_proofs::{arithmetic::best_multiexp, pasta::pallas};
 
 struct Estimator {
     /// Scalars for estimating multiexp performance.

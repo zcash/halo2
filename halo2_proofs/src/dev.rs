@@ -357,7 +357,7 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 /// # Examples
 ///
 /// ```
-/// use halo2::{
+/// use halo2_proofs::{
 ///     arithmetic::FieldExt,
 ///     circuit::{Layouter, SimpleFloorPlanner},
 ///     dev::{FailureLocation, MockProver, VerifyFailure},
