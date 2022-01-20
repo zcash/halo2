@@ -10,7 +10,10 @@ and this project adheres to Rust's notion of
 - `halo2::dev::FailureLocation` (used in `VerifyFailure::Lookup`)
 
 ### Changed
-- `halo2::plonk::create_proof` now takes an `R: rand::RngCore` argument.
+- `halo2` now depends on `rand_core` instead of `rand`, and requires the caller
+  to provide the specific RNG implementation:
+  - `halo2::plonk::{create_proof, verify_proof}` now take an argument
+    `R: rand_core::RngCore`.
 - `halo2::plonk::Error` has been overhauled:
   - `Error` now implements `std::fmt::Display` and `std::error::Error`.
   - `Error` no longer implements `PartialEq`. Tests can check for specific error

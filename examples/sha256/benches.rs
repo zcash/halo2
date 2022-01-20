@@ -8,7 +8,7 @@ use halo2::{
     poly::commitment::Params,
     transcript::{Blake2bRead, Blake2bWrite, Challenge255},
 };
-use rand::rngs::OsRng;
+use rand_core::OsRng;
 
 use std::{
     fs::File,
@@ -152,7 +152,8 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
         b.iter(|| {
             let msm = params.empty_msm();
             let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
-            let guard = verify_proof(&params, pk.get_vk(), msm, &[], &mut transcript).unwrap();
+            let guard =
+                verify_proof(&params, pk.get_vk(), msm, &[], OsRng, &mut transcript).unwrap();
             let msm = guard.clone().use_challenges();
             assert!(msm.eval());
         });

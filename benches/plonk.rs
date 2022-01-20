@@ -9,7 +9,7 @@ use halo2::pasta::{EqAffine, Fp};
 use halo2::plonk::*;
 use halo2::poly::{commitment::Params, Rotation};
 use halo2::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
-use rand::rngs::OsRng;
+use rand_core::OsRng;
 
 use std::marker::PhantomData;
 
@@ -269,9 +269,10 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 
     fn verifier(params: &Params<EqAffine>, vk: &VerifyingKey<EqAffine>, proof: &[u8]) {
+        let rng = OsRng;
         let msm = params.empty_msm();
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(proof);
-        let guard = verify_proof(params, vk, msm, &[&[]], &mut transcript).unwrap();
+        let guard = verify_proof(params, vk, msm, &[&[]], rng, &mut transcript).unwrap();
         let msm = guard.clone().use_challenges();
         assert!(msm.eval());
     }

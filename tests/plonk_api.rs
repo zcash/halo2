@@ -12,7 +12,7 @@ use halo2::plonk::{
 };
 use halo2::poly::{commitment::Params, Rotation};
 use halo2::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
-use rand::rngs::OsRng;
+use rand_core::OsRng;
 use std::marker::PhantomData;
 
 #[test]
@@ -456,6 +456,7 @@ fn plonk_api() {
             pk.get_vk(),
             msm,
             &[&[&pubinputs[..]], &[&pubinputs[..]]],
+            OsRng,
             &mut transcript,
         )
         .unwrap();
@@ -480,6 +481,7 @@ fn plonk_api() {
             &vk,
             msm,
             &[&[&pubinputs[..]], &[&pubinputs[..]]],
+            OsRng,
             &mut transcript,
         )
         .unwrap();

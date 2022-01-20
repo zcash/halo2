@@ -1,5 +1,6 @@
 use ff::Field;
 use group::Curve;
+use rand_core::RngCore;
 use std::iter;
 
 use super::{
@@ -14,11 +15,18 @@ use crate::poly::{
 use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
 
 /// Returns a boolean indicating whether or not the proof is valid
-pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
+pub fn verify_proof<
+    'params,
+    C: CurveAffine,
+    E: EncodedChallenge<C>,
+    R: RngCore,
+    T: TranscriptRead<C, E>,
+>(
     params: &'params Params<C>,
     vk: &VerifyingKey<C>,
     msm: MSM<'params, C>,
     instances: &[&[&[C::Scalar]]],
+    rng: R,
     transcript: &mut T,
 ) -> Result<Guard<'params, C, E>, Error> {
     // Check that instances matches the expected number of instance columns
@@ -285,5 +293,5 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
 
     // We are now convinced the circuit is satisfied so long as the
     // polynomial commitments open to the correct values.
-    multiopen::verify_proof(params, transcript, queries, msm).map_err(|_| Error::Opening)
+    multiopen::verify_proof(params, rng, transcript, queries, msm).map_err(|_| Error::Opening)
 }

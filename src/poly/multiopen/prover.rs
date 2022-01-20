@@ -12,7 +12,7 @@ use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use ff::Field;
 use group::Curve;
-use rand::RngCore;
+use rand_core::RngCore;
 use std::io;
 use std::marker::PhantomData;
 

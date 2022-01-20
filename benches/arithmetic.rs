@@ -9,7 +9,7 @@ use group::ff::Field;
 use halo2::*;
 
 use criterion::{black_box, Criterion};
-use rand::rngs::OsRng;
+use rand_core::OsRng;
 
 fn criterion_benchmark(c: &mut Criterion) {
     let rng = OsRng;

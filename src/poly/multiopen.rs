@@ -250,7 +250,7 @@ where
 #[test]
 fn test_roundtrip() {
     use group::Curve;
-    use rand::rngs::OsRng;
+    use rand_core::OsRng;
 
     use super::commitment::{Blind, Params};
     use crate::arithmetic::{eval_polynomial, FieldExt};
@@ -323,6 +323,7 @@ fn test_roundtrip() {
 
         let guard = verify_proof(
             &params,
+            rng,
             &mut transcript,
             std::iter::empty()
                 .chain(Some(VerifierQuery::new_commitment(&a, x, avx)))
@@ -345,6 +346,7 @@ fn test_roundtrip() {
 
         let guard = verify_proof(
             &params,
+            rng,
             &mut transcript,
             std::iter::empty()
                 .chain(Some(VerifierQuery::new_commitment(&a, x, avx)))

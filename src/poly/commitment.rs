@@ -256,7 +256,7 @@ impl<F: FieldExt> MulAssign<F> for Blind<F> {
 fn test_commit_lagrange_epaffine() {
     const K: u32 = 6;
 
-    use rand::rngs::OsRng;
+    use rand_core::OsRng;
 
     use crate::pasta::{EpAffine, Fq};
     let params = Params::<EpAffine>::new(K);
@@ -279,7 +279,7 @@ fn test_commit_lagrange_epaffine() {
 fn test_commit_lagrange_eqaffine() {
     const K: u32 = 6;
 
-    use rand::rngs::OsRng;
+    use rand_core::OsRng;
 
     use crate::pasta::{EqAffine, Fp};
     let params = Params::<EqAffine>::new(K);
@@ -303,7 +303,7 @@ fn test_opening_proof() {
     const K: u32 = 6;
 
     use ff::Field;
-    use rand::rngs::OsRng;
+    use rand_core::OsRng;
 
     use super::{
         commitment::{Blind, Params},

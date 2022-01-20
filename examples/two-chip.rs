@@ -515,7 +515,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
 fn main() {
     use group::ff::Field;
     use halo2::{dev::MockProver, pasta::Fp};
-    use rand::rngs::OsRng;
+    use rand_core::OsRng;
 
     // ANCHOR: test-circuit
     // The number of rows in our circuit cannot exceed 2^k. Since our example

@@ -6,7 +6,7 @@ use halo2::{
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed, TableColumn},
     poly::Rotation,
 };
-use rand::rngs::OsRng;
+use rand_core::OsRng;
 use std::marker::PhantomData;
 
 /// This represents an advice column at a certain row in the ConstraintSystem
