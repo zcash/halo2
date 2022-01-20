@@ -477,7 +477,7 @@ pub struct PinnedEvaluationDomain<'a, G: Group> {
 
 #[test]
 fn test_rotate() {
-    use rand::rngs::OsRng;
+    use rand_core::OsRng;
 
     use crate::arithmetic::eval_polynomial;
     use crate::pasta::pallas::Scalar;
@@ -518,7 +518,7 @@ fn test_rotate() {
 
 #[test]
 fn test_l_i() {
-    use rand::rngs::OsRng;
+    use rand_core::OsRng;
 
     use crate::arithmetic::{eval_polynomial, lagrange_interpolate};
     use crate::pasta::pallas::Scalar;

@@ -2,7 +2,7 @@ use group::{
     ff::{BatchInvert, Field},
     Curve,
 };
-use rand::RngCore;
+use rand_core::RngCore;
 use std::iter::{self, ExactSizeIterator};
 
 use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};

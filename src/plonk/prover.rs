@@ -1,6 +1,6 @@
 use ff::Field;
 use group::Curve;
-use rand::{rngs::OsRng, RngCore};
+use rand_core::RngCore;
 use std::iter;
 use std::ops::RangeTo;
 

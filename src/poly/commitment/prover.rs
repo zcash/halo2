@@ -1,5 +1,5 @@
 use ff::Field;
-use rand::RngCore;
+use rand_core::RngCore;
 
 use super::super::{Coeff, Polynomial};
 use super::{Blind, Params};

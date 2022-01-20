@@ -2,7 +2,7 @@ use std::iter;
 
 use ff::Field;
 use group::Curve;
-use rand::RngCore;
+use rand_core::RngCore;
 
 use super::Argument;
 use crate::{

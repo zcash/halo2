@@ -403,7 +403,7 @@ pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
 }
 
 #[cfg(test)]
-use rand::rngs::OsRng;
+use rand_core::OsRng;
 
 #[cfg(test)]
 use crate::pasta::Fp;

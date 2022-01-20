@@ -17,7 +17,7 @@ use group::{
     ff::{BatchInvert, Field},
     Curve,
 };
-use rand::RngCore;
+use rand_core::RngCore;
 use std::{
     collections::BTreeMap,
     iter,
