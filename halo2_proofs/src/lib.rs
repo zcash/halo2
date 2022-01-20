@@ -1,4 +1,4 @@
-//! # halo2
+//! # halo2_proofs
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 // Build without warnings on stable 1.51 and later.

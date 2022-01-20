@@ -2,16 +2,16 @@
 #![allow(clippy::op_ref)]
 
 use assert_matches::assert_matches;
-use halo2::arithmetic::FieldExt;
-use halo2::circuit::{Cell, Layouter, SimpleFloorPlanner};
-use halo2::dev::MockProver;
-use halo2::pasta::{Eq, EqAffine, Fp};
-use halo2::plonk::{
+use halo2_proofs::arithmetic::FieldExt;
+use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner};
+use halo2_proofs::dev::MockProver;
+use halo2_proofs::pasta::{Eq, EqAffine, Fp};
+use halo2_proofs::plonk::{
     create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column, ConstraintSystem,
     Error, Fixed, TableColumn, VerifyingKey,
 };
-use halo2::poly::{commitment::Params, Rotation};
-use halo2::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
+use halo2_proofs::poly::{commitment::Params, Rotation};
+use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
 use rand_core::OsRng;
 use std::marker::PhantomData;
 
@@ -444,7 +444,7 @@ fn plonk_api() {
         let proof: Vec<u8> = transcript.finalize();
         assert_eq!(
             proof.len(),
-            halo2::dev::CircuitCost::<Eq, MyCircuit<_>>::measure(K as usize, &circuit)
+            halo2_proofs::dev::CircuitCost::<Eq, MyCircuit<_>>::measure(K as usize, &circuit)
                 .proof_size(2)
                 .into(),
         );

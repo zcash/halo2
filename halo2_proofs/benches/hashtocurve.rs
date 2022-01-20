@@ -2,8 +2,8 @@
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use halo2::arithmetic::CurveExt;
-use halo2::pasta::{pallas, vesta};
+use halo2_proofs::arithmetic::CurveExt;
+use halo2_proofs::pasta::{pallas, vesta};
 
 fn criterion_benchmark(c: &mut Criterion) {
     bench_hash_to_curve(c);

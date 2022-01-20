@@ -1,12 +1,11 @@
 #[macro_use]
 extern crate criterion;
 
-extern crate halo2;
 use crate::arithmetic::small_multiexp;
 use crate::pasta::{EqAffine, Fp};
 use crate::poly::commitment::Params;
 use group::ff::Field;
-use halo2::*;
+use halo2_proofs::*;
 
 use criterion::{black_box, Criterion};
 use rand_core::OsRng;

@@ -25,7 +25,7 @@ associated types for their inputs and outputs, to allow the implementations to r
 these in a way that makes the most sense for their optimization goals.
 
 ```rust,ignore,no_run
-{{#include ../../../examples/simple-example.rs:instructions}}
+{{#include ../../../halo2_proofs/examples/simple-example.rs:instructions}}
 ```
 
 ## Define a chip implementation
@@ -34,7 +34,7 @@ For our circuit, we will build a [chip](../concepts/chips.md) that provides the 
 numeric instructions for a finite field.
 
 ```rust,ignore,no_run
-{{#include ../../../examples/simple-example.rs:chip}}
+{{#include ../../../halo2_proofs/examples/simple-example.rs:chip}}
 ```
 
 Every chip needs to implement the `Chip` trait. This defines the properties of the chip
@@ -42,7 +42,7 @@ that a `Layouter` may rely on when synthesizing a circuit, as well as enabling a
 state that the chip requires to be loaded into the circuit.
 
 ```rust,ignore,no_run
-{{#include ../../../examples/simple-example.rs:chip-impl}}
+{{#include ../../../halo2_proofs/examples/simple-example.rs:chip-impl}}
 ```
 
 ## Configure the chip
@@ -51,13 +51,13 @@ The chip needs to be configured with the columns, permutations, and gates that w
 required to implement all of the desired instructions.
 
 ```rust,ignore,no_run
-{{#include ../../../examples/simple-example.rs:chip-config}}
+{{#include ../../../halo2_proofs/examples/simple-example.rs:chip-config}}
 ```
 
 ## Implement chip traits
 
 ```rust,ignore,no_run
-{{#include ../../../examples/simple-example.rs:instructions-impl}}
+{{#include ../../../halo2_proofs/examples/simple-example.rs:instructions-impl}}
 ```
 
 ## Build the circuit
@@ -66,21 +66,21 @@ Now that we have the instructions we need, and a chip that implements them, we c
 build our circuit!
 
 ```rust,ignore,no_run
-{{#include ../../../examples/simple-example.rs:circuit}}
+{{#include ../../../halo2_proofs/examples/simple-example.rs:circuit}}
 ```
 
 ## Testing the circuit
 
-`halo2::dev::MockProver` can be used to test that the circuit is working correctly. The
+`halo2_proofs::dev::MockProver` can be used to test that the circuit is working correctly. The
 private and public inputs to the circuit are constructed as we will do to create a proof,
 but by passing them to `MockProver::run` we get an object that can test every constraint
 in the circuit, and tell us exactly what is failing (if anything).
 
 ```rust,ignore,no_run
-{{#include ../../../examples/simple-example.rs:test-circuit}}
+{{#include ../../../halo2_proofs/examples/simple-example.rs:test-circuit}}
 ```
 
 ## Full example
 
 You can find the source code for this example
-[here](https://github.com/zcash/halo2/tree/main/examples/simple-example.rs).
+[here](https://github.com/zcash/halo2/tree/main/halo2_proofs/examples/simple-example.rs).

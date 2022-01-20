@@ -1,0 +1,75 @@
+[package]
+name = "halo2_proofs"
+version = "0.1.0-beta.1"
+authors = [
+    "Sean Bowe <sean@electriccoin.co>",
+    "Ying Tong Lai <yingtong@electriccoin.co>",
+    "Daira Hopwood <daira@electriccoin.co>",
+    "Jack Grigg <jack@electriccoin.co>",
+]
+edition = "2018"
+description = """
+[BETA] Fast proof-carrying data implementation with no trusted setup
+"""
+license-file = "../COPYING"
+repository = "https://github.com/zcash/halo2"
+documentation = "https://docs.rs/halo2_proofs"
+readme = "README.md"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "../katex-header.html"]
+
+[[bench]]
+name = "arithmetic"
+harness = false
+
+[[bench]]
+name = "hashtocurve"
+harness = false
+
+[[bench]]
+name = "plonk"
+harness = false
+
+[dependencies]
+backtrace = { version = "0.3", optional = true }
+rayon = "1.5.1"
+ff = "0.11"
+group = "0.11"
+pasta_curves = "0.3"
+rand_core = { version = "0.6", default-features = false }
+blake2b_simd = "1"
+
+# Developer tooling dependencies
+plotters = { version = "0.3.0", optional = true }
+tabbycat = { version = "0.1", features = ["attributes"], optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# plotters depends on web-sys, which eventually depends on bumpalo 3. This dependency is
+# required because our MSRV is 1.51, but bumpalo 3.9 increased its MSRV to 1.54. We can
+# remove this once our MSRV is 1.54+ (and should do so, because currently this makes it a
+# required dependency even if the dev-graph feature flag is not enabled).
+bumpalo = ">=3,<3.9.0"
+
+[dev-dependencies]
+assert_matches = "1.5"
+criterion = "0.3"
+gumdrop = "0.8"
+proptest = "1"
+rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
+
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+
+[features]
+dev-graph = ["plotters", "tabbycat"]
+gadget-traces = ["backtrace"]
+sanity-checks = []
+
+[lib]
+bench = false
+
+[[example]]
+name = "circuit-layout"
+required-features = ["dev-graph"]

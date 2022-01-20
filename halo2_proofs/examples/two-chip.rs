@@ -1,8 +1,6 @@
-extern crate halo2;
-
 use std::marker::PhantomData;
 
-use halo2::{
+use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner},
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance, Selector},
@@ -514,7 +512,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
 #[allow(clippy::many_single_char_names)]
 fn main() {
     use group::ff::Field;
-    use halo2::{dev::MockProver, pasta::Fp};
+    use halo2_proofs::{dev::MockProver, pasta::Fp};
     use rand_core::OsRng;
 
     // ANCHOR: test-circuit

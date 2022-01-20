@@ -203,9 +203,9 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 ///
 /// Selectors can be used to conditionally enable (portions of) gates:
 /// ```
-/// use halo2::poly::Rotation;
-/// # use halo2::pasta::Fp;
-/// # use halo2::plonk::ConstraintSystem;
+/// use halo2_proofs::poly::Rotation;
+/// # use halo2_proofs::pasta::Fp;
+/// # use halo2_proofs::plonk::ConstraintSystem;
 ///
 /// # let mut meta = ConstraintSystem::<Fp>::default();
 /// let a = meta.advice_column();
@@ -226,9 +226,9 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// Selectors are disabled on all rows by default, and must be explicitly enabled on each
 /// row when required:
 /// ```
-/// use halo2::{arithmetic::FieldExt, circuit::{Chip, Layouter}, plonk::{Advice, Column, Error, Selector}};
+/// use halo2_proofs::{arithmetic::FieldExt, circuit::{Chip, Layouter}, plonk::{Advice, Column, Error, Selector}};
 /// # use ff::Field;
-/// # use halo2::plonk::Fixed;
+/// # use halo2_proofs::plonk::Fixed;
 ///
 /// struct Config {
 ///     a: Column<Advice>,

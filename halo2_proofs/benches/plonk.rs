@@ -1,14 +1,13 @@
 #[macro_use]
 extern crate criterion;
 
-extern crate halo2;
 use group::ff::Field;
-use halo2::arithmetic::FieldExt;
-use halo2::circuit::{Cell, Layouter, SimpleFloorPlanner};
-use halo2::pasta::{EqAffine, Fp};
-use halo2::plonk::*;
-use halo2::poly::{commitment::Params, Rotation};
-use halo2::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
+use halo2_proofs::arithmetic::FieldExt;
+use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner};
+use halo2_proofs::pasta::{EqAffine, Fp};
+use halo2_proofs::plonk::*;
+use halo2_proofs::poly::{commitment::Params, Rotation};
+use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
 use rand_core::OsRng;
 
 use std::marker::PhantomData;
