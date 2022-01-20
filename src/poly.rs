@@ -9,13 +9,15 @@ use group::ff::{BatchInvert, Field};
 use pasta_curves::arithmetic::FieldExt;
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, Neg, RangeFrom, RangeFull, Sub};
+use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, RangeFrom, RangeFull};
 
 pub mod commitment;
 mod domain;
+mod evaluator;
 pub mod multiopen;
 
 pub use domain::*;
+pub use evaluator::*;
 
 /// This is an error that could occur during proving or circuit synthesis.
 // TODO: these errors need to be cleaned up
@@ -28,21 +30,21 @@ pub enum Error {
 }
 
 /// The basis over which a polynomial is described.
-pub trait Basis: Clone + Debug + Send + Sync {}
+pub trait Basis: Copy + Debug + Send + Sync {}
 
 /// The polynomial is defined as coefficients
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Coeff;
 impl Basis for Coeff {}
 
 /// The polynomial is defined as coefficients of Lagrange basis polynomials
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct LagrangeCoeff;
 impl Basis for LagrangeCoeff {}
 
 /// The polynomial is defined as coefficients of Lagrange basis polynomials in
 /// an extended size domain which supports multiplication
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct ExtendedLagrangeCoeff;
 impl Basis for ExtendedLagrangeCoeff {}
 
@@ -179,32 +181,6 @@ impl<F: Field> Polynomial<Assigned<F>, LagrangeCoeff> {
     }
 }
 
-impl<F: Field> Polynomial<F, ExtendedLagrangeCoeff> {
-    /// Maps every coefficient `c` in `p` to `1 - c`.
-    pub fn one_minus(mut p: Self) -> Self {
-        parallelize(&mut p.values, |p, _start| {
-            for term in p {
-                *term = F::one() - *term;
-            }
-        });
-        p
-    }
-}
-
-impl<'a, F: Field, B: Basis> Neg for Polynomial<F, B> {
-    type Output = Polynomial<F, B>;
-
-    fn neg(mut self) -> Polynomial<F, B> {
-        parallelize(&mut self.values, |lhs, _| {
-            for lhs in lhs.iter_mut() {
-                *lhs = -*lhs;
-            }
-        });
-
-        self
-    }
-}
-
 impl<'a, F: Field, B: Basis> Add<&'a Polynomial<F, B>> for Polynomial<F, B> {
     type Output = Polynomial<F, B>;
 
@@ -212,39 +188,6 @@ impl<'a, F: Field, B: Basis> Add<&'a Polynomial<F, B>> for Polynomial<F, B> {
         parallelize(&mut self.values, |lhs, start| {
             for (lhs, rhs) in lhs.iter_mut().zip(rhs.values[start..].iter()) {
                 *lhs += *rhs;
-            }
-        });
-
-        self
-    }
-}
-
-impl<'a, F: Field, B: Basis> Sub<&'a Polynomial<F, B>> for Polynomial<F, B> {
-    type Output = Polynomial<F, B>;
-
-    fn sub(mut self, rhs: &'a Polynomial<F, B>) -> Polynomial<F, B> {
-        parallelize(&mut self.values, |lhs, start| {
-            for (lhs, rhs) in lhs.iter_mut().zip(rhs.values[start..].iter()) {
-                *lhs -= *rhs;
-            }
-        });
-
-        self
-    }
-}
-
-impl<'a, F: Field> Mul<&'a Polynomial<F, ExtendedLagrangeCoeff>>
-    for Polynomial<F, ExtendedLagrangeCoeff>
-{
-    type Output = Polynomial<F, ExtendedLagrangeCoeff>;
-
-    fn mul(
-        mut self,
-        rhs: &'a Polynomial<F, ExtendedLagrangeCoeff>,
-    ) -> Polynomial<F, ExtendedLagrangeCoeff> {
-        parallelize(&mut self.values, |lhs, start| {
-            for (lhs, rhs) in lhs.iter_mut().zip(rhs.values[start..].iter()) {
-                *lhs *= *rhs;
             }
         });
 

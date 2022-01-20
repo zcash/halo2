@@ -6,6 +6,7 @@ use super::Argument;
 use crate::{
     arithmetic::{eval_polynomial, parallelize, CurveAffine, FieldExt},
     poly::{
+        self,
         commitment::{Blind, Params},
         multiopen::ProverQuery,
         Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
@@ -24,26 +25,26 @@ use std::{
 };
 
 #[derive(Debug)]
-pub(in crate::plonk) struct Permuted<C: CurveAffine> {
+pub(in crate::plonk) struct Permuted<C: CurveAffine, Ev> {
     unpermuted_input_expressions: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
-    unpermuted_input_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
+    unpermuted_input_cosets: Vec<poly::Ast<Ev, C::Scalar, ExtendedLagrangeCoeff>>,
     permuted_input_expression: Polynomial<C::Scalar, LagrangeCoeff>,
     permuted_input_poly: Polynomial<C::Scalar, Coeff>,
-    permuted_input_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    permuted_input_coset: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
     permuted_input_blind: Blind<C::Scalar>,
     unpermuted_table_expressions: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
-    unpermuted_table_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
+    unpermuted_table_cosets: Vec<poly::Ast<Ev, C::Scalar, ExtendedLagrangeCoeff>>,
     permuted_table_expression: Polynomial<C::Scalar, LagrangeCoeff>,
     permuted_table_poly: Polynomial<C::Scalar, Coeff>,
-    permuted_table_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    permuted_table_coset: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
     permuted_table_blind: Blind<C::Scalar>,
 }
 
 #[derive(Debug)]
-pub(in crate::plonk) struct Committed<C: CurveAffine> {
-    permuted: Permuted<C>,
+pub(in crate::plonk) struct Committed<C: CurveAffine, Ev> {
+    permuted: Permuted<C, Ev>,
     product_poly: Polynomial<C::Scalar, Coeff>,
-    product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    product_coset: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
     product_blind: Blind<C::Scalar>,
 }
 
@@ -74,6 +75,8 @@ impl<F: FieldExt> Argument<F> {
         'a,
         C,
         E: EncodedChallenge<C>,
+        Ev: Copy + Send + Sync,
+        Ec: Copy + Send + Sync,
         R: RngCore,
         T: TranscriptWrite<C, E>,
     >(
@@ -81,16 +84,18 @@ impl<F: FieldExt> Argument<F> {
         pk: &ProvingKey<C>,
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
+        value_evaluator: &poly::Evaluator<Ev, C::Scalar, LagrangeCoeff>,
+        coset_evaluator: &mut poly::Evaluator<Ec, C::Scalar, ExtendedLagrangeCoeff>,
         theta: ChallengeTheta<C>,
-        advice_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
-        fixed_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
-        instance_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
-        advice_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
-        fixed_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
-        instance_cosets: &'a [Polynomial<C::Scalar, ExtendedLagrangeCoeff>],
+        advice_values: &'a [poly::AstLeaf<Ev, LagrangeCoeff>],
+        fixed_values: &'a [poly::AstLeaf<Ev, LagrangeCoeff>],
+        instance_values: &'a [poly::AstLeaf<Ev, LagrangeCoeff>],
+        advice_cosets: &'a [poly::AstLeaf<Ec, ExtendedLagrangeCoeff>],
+        fixed_cosets: &'a [poly::AstLeaf<Ec, ExtendedLagrangeCoeff>],
+        instance_cosets: &'a [poly::AstLeaf<Ec, ExtendedLagrangeCoeff>],
         mut rng: R,
         transcript: &mut T,
-    ) -> Result<Permuted<C>, Error>
+    ) -> Result<Permuted<C, Ec>, Error>
     where
         C: CurveAffine<ScalarExt = F>,
         C::Curve: Mul<F, Output = C::Curve> + MulAssign<F>,
@@ -102,32 +107,20 @@ impl<F: FieldExt> Argument<F> {
                 .iter()
                 .map(|expression| {
                     expression.evaluate(
-                        &|scalar| pk.vk.domain.constant_lagrange(scalar),
+                        &|scalar| poly::Ast::ConstantTerm(scalar),
                         &|_| panic!("virtual selectors are removed during optimization"),
                         &|_, column_index, rotation| {
-                            fixed_values[column_index].clone().rotate(rotation)
+                            fixed_values[column_index].with_rotation(rotation).into()
                         },
                         &|_, column_index, rotation| {
-                            advice_values[column_index].clone().rotate(rotation)
+                            advice_values[column_index].with_rotation(rotation).into()
                         },
                         &|_, column_index, rotation| {
-                            instance_values[column_index].clone().rotate(rotation)
+                            instance_values[column_index].with_rotation(rotation).into()
                         },
                         &|a| -a,
-                        &|a, b| a + &b,
-                        &|a, b| {
-                            let mut modified_a = vec![C::Scalar::one(); params.n as usize];
-                            parallelize(&mut modified_a, |modified_a, start| {
-                                for ((modified_a, a), b) in modified_a
-                                    .iter_mut()
-                                    .zip(a[start..].iter())
-                                    .zip(b[start..].iter())
-                                {
-                                    *modified_a *= *a * b;
-                                }
-                            });
-                            pk.vk.domain.lagrange_from_vec(modified_a)
-                        },
+                        &|a, b| a + b,
+                        &|a, b| a * b,
                         &|a, scalar| a * scalar,
                     )
                 })
@@ -137,42 +130,38 @@ impl<F: FieldExt> Argument<F> {
                 .iter()
                 .map(|expression| {
                     expression.evaluate(
-                        &|scalar| pk.vk.domain.constant_extended(scalar),
+                        &|scalar| poly::Ast::ConstantTerm(scalar),
                         &|_| panic!("virtual selectors are removed during optimization"),
                         &|_, column_index, rotation| {
-                            pk.vk
-                                .domain
-                                .rotate_extended(&fixed_cosets[column_index], rotation)
+                            fixed_cosets[column_index].with_rotation(rotation).into()
                         },
                         &|_, column_index, rotation| {
-                            pk.vk
-                                .domain
-                                .rotate_extended(&advice_cosets[column_index], rotation)
+                            advice_cosets[column_index].with_rotation(rotation).into()
                         },
                         &|_, column_index, rotation| {
-                            pk.vk
-                                .domain
-                                .rotate_extended(&instance_cosets[column_index], rotation)
+                            instance_cosets[column_index].with_rotation(rotation).into()
                         },
                         &|a| -a,
-                        &|a, b| a + &b,
-                        &|a, b| a * &b,
+                        &|a, b| a + b,
+                        &|a, b| a * b,
                         &|a, scalar| a * scalar,
                     )
                 })
                 .collect();
 
             // Compressed version of expressions
-            let compressed_expression = unpermuted_expressions
-                .iter()
-                .fold(domain.empty_lagrange(), |acc, expression| {
-                    acc * *theta + expression
-                });
+            let compressed_expression = unpermuted_expressions.iter().fold(
+                poly::Ast::ConstantTerm(C::Scalar::zero()),
+                |acc, expression| &(acc * *theta) + expression,
+            );
 
             (
-                unpermuted_expressions,
+                unpermuted_expressions
+                    .iter()
+                    .map(|ast| value_evaluator.evaluate(ast, domain))
+                    .collect(),
                 unpermuted_cosets,
-                compressed_expression,
+                value_evaluator.evaluate(&compressed_expression, domain),
             )
         };
 
@@ -216,8 +205,10 @@ impl<F: FieldExt> Argument<F> {
         // Hash permuted table commitment
         transcript.write_point(permuted_table_commitment)?;
 
-        let permuted_input_coset = pk.vk.domain.coeff_to_extended(permuted_input_poly.clone());
-        let permuted_table_coset = pk.vk.domain.coeff_to_extended(permuted_table_poly.clone());
+        let permuted_input_coset = coset_evaluator
+            .register_poly(pk.vk.domain.coeff_to_extended(permuted_input_poly.clone()));
+        let permuted_table_coset = coset_evaluator
+            .register_poly(pk.vk.domain.coeff_to_extended(permuted_table_poly.clone()));
 
         Ok(Permuted {
             unpermuted_input_expressions,
@@ -236,7 +227,7 @@ impl<F: FieldExt> Argument<F> {
     }
 }
 
-impl<C: CurveAffine> Permuted<C> {
+impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
     /// Given a Lookup with input expressions, table expressions, and the permuted
     /// input expression and permuted table expression, this method constructs the
     /// grand product polynomial over the lookup. The grand product polynomial
@@ -253,9 +244,10 @@ impl<C: CurveAffine> Permuted<C> {
         theta: ChallengeTheta<C>,
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
+        evaluator: &mut poly::Evaluator<Ev, C::Scalar, ExtendedLagrangeCoeff>,
         mut rng: R,
         transcript: &mut T,
-    ) -> Result<Committed<C>, Error> {
+    ) -> Result<Committed<C, Ev>, Error> {
         let blinding_factors = pk.vk.cs.blinding_factors();
         // Goal is to compute the products of fractions
         //
@@ -388,12 +380,12 @@ impl<C: CurveAffine> Permuted<C> {
         let product_blind = Blind(C::Scalar::random(rng));
         let product_commitment = params.commit_lagrange(&z, product_blind).to_affine();
         let z = pk.vk.domain.lagrange_to_coeff(z);
-        let product_coset = pk.vk.domain.coeff_to_extended(z.clone());
+        let product_coset = evaluator.register_poly(pk.vk.domain.coeff_to_extended(z.clone()));
 
         // Hash product commitment
         transcript.write_point(product_commitment)?;
 
-        Ok(Committed::<C> {
+        Ok(Committed::<C, _> {
             permuted: self,
             product_poly: z,
             product_coset,
@@ -402,36 +394,37 @@ impl<C: CurveAffine> Permuted<C> {
     }
 }
 
-impl<'a, C: CurveAffine> Committed<C> {
+impl<'a, C: CurveAffine, Ev: Copy + Send + Sync + 'a> Committed<C, Ev> {
     /// Given a Lookup with input expressions, table expressions, permuted input
     /// expression, permuted table expression, and grand product polynomial, this
     /// method constructs constraints that must hold between these values.
-    /// This method returns the constraints as a vector of polynomials in
+    /// This method returns the constraints as a vector of ASTs for polynomials in
     /// the extended evaluation domain.
     pub(in crate::plonk) fn construct(
         self,
-        pk: &'a ProvingKey<C>,
         theta: ChallengeTheta<C>,
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
+        l0: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
+        l_blind: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
+        l_last: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
     ) -> (
         Constructed<C>,
-        impl Iterator<Item = Polynomial<C::Scalar, ExtendedLagrangeCoeff>> + 'a,
+        impl Iterator<Item = poly::Ast<Ev, C::Scalar, ExtendedLagrangeCoeff>> + 'a,
     ) {
-        let domain = &pk.vk.domain;
         let permuted = self.permuted;
 
-        let active_rows = Polynomial::one_minus(pk.l_last.clone() + &pk.l_blind);
+        let active_rows = poly::Ast::one() - (poly::Ast::from(l_last) + l_blind);
+        let beta = poly::Ast::ConstantTerm(*beta);
+        let gamma = poly::Ast::ConstantTerm(*gamma);
 
         let expressions = iter::empty()
             // l_0(X) * (1 - z(X)) = 0
-            .chain(Some(
-                Polynomial::one_minus(self.product_coset.clone()) * &pk.l0,
-            ))
+            .chain(Some((poly::Ast::one() - self.product_coset) * l0))
             // l_last(X) * (z(X)^2 - z(X)) = 0
             .chain(Some(
-                (self.product_coset.clone() * &self.product_coset - &self.product_coset)
-                    * &pk.l_last,
+                (poly::Ast::from(self.product_coset) * self.product_coset - self.product_coset)
+                    * l_last,
             ))
             // (1 - (l_last(X) + l_blind(X))) * (
             //   z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
@@ -439,64 +432,44 @@ impl<'a, C: CurveAffine> Committed<C> {
             // ) = 0
             .chain({
                 // z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
-                let mut left = domain.rotate_extended(&self.product_coset, Rotation::next());
-                parallelize(&mut left, |left, start| {
-                    for ((left, permuted_input), permuted_table) in left
-                        .iter_mut()
-                        .zip(permuted.permuted_input_coset[start..].iter())
-                        .zip(permuted.permuted_table_coset[start..].iter())
-                    {
-                        *left *= &(*permuted_input + &(*beta));
-                        *left *= &(*permuted_table + &(*gamma));
-                    }
-                });
+                let left: poly::Ast<_, _, _> = poly::Ast::<_, C::Scalar, _>::from(
+                    self.product_coset.with_rotation(Rotation::next()),
+                ) * (poly::Ast::from(permuted.permuted_input_coset)
+                    + beta.clone())
+                    * (poly::Ast::from(permuted.permuted_table_coset) + gamma.clone());
 
                 //  z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
-                let mut right = self.product_coset;
-                parallelize(&mut right, |right, start| {
-                    for (i, right) in right.iter_mut().enumerate() {
-                        let i = i + start;
+                let compress_cosets = |cosets: &[poly::Ast<_, _, _>]| {
+                    cosets.iter().fold(
+                        poly::Ast::<_, _, ExtendedLagrangeCoeff>::ConstantTerm(C::Scalar::zero()),
+                        |acc, eval| acc * poly::Ast::ConstantTerm(*theta) + eval.clone(),
+                    )
+                };
+                let right: poly::Ast<_, _, _> = poly::Ast::from(self.product_coset)
+                    * (compress_cosets(&permuted.unpermuted_input_cosets) + beta)
+                    * (compress_cosets(&permuted.unpermuted_table_cosets) + gamma);
 
-                        // Compress the unpermuted input expressions
-                        let mut input_term = C::Scalar::zero();
-                        for input in permuted.unpermuted_input_cosets.iter() {
-                            input_term *= &*theta;
-                            input_term += &input[i];
-                        }
-
-                        // Compress the unpermuted table expressions
-                        let mut table_term = C::Scalar::zero();
-                        for table in permuted.unpermuted_table_cosets.iter() {
-                            table_term *= &*theta;
-                            table_term += &table[i];
-                        }
-
-                        // Add \beta and \gamma offsets
-                        *right *= &(input_term + &*beta);
-                        *right *= &(table_term + &*gamma);
-                    }
-                });
-
-                Some((left - &right) * &active_rows)
+                Some((left - right) * active_rows.clone())
             })
             // Check that the first values in the permuted input expression and permuted
             // fixed expression are the same.
             // l_0(X) * (a'(X) - s'(X)) = 0
             .chain(Some(
-                (permuted.permuted_input_coset.clone() - &permuted.permuted_table_coset) * &pk.l0,
+                (poly::Ast::from(permuted.permuted_input_coset) - permuted.permuted_table_coset)
+                    * l0,
             ))
             // Check that each value in the permuted lookup input expression is either
             // equal to the value above it, or the value at the same index in the
             // permuted table expression.
             // (1 - (l_last + l_blind)) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0
             .chain(Some(
-                (permuted.permuted_input_coset.clone() - &permuted.permuted_table_coset)
-                    * &(domain.sub_extended(
-                        permuted.permuted_input_coset.clone(),
-                        &permuted.permuted_input_coset,
-                        Rotation::prev(),
-                    ))
-                    * &active_rows,
+                (poly::Ast::<_, C::Scalar, _>::from(permuted.permuted_input_coset)
+                    - permuted.permuted_table_coset)
+                    * (poly::Ast::from(permuted.permuted_input_coset)
+                        - permuted
+                            .permuted_input_coset
+                            .with_rotation(Rotation::prev()))
+                    * active_rows,
             ));
 
         (

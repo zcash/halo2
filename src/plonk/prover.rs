@@ -13,6 +13,7 @@ use super::{
     ChallengeY, Error, ProvingKey,
 };
 use crate::poly::{
+    self,
     commitment::{Blind, Params},
     multiopen::{self, ProverQuery},
     Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
@@ -330,13 +331,96 @@ pub fn create_proof<
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    // Create polynomial evaluator context for values.
+    let mut value_evaluator = poly::new_evaluator(|| {});
+
+    // Register fixed values with the polynomial evaluator.
+    let fixed_values: Vec<_> = pk
+        .fixed_values
+        .iter()
+        .map(|poly| value_evaluator.register_poly(poly.clone()))
+        .collect();
+
+    // Register advice values with the polynomial evaluator.
+    let advice_values: Vec<_> = advice
+        .iter()
+        .map(|advice| {
+            advice
+                .advice_values
+                .iter()
+                .map(|poly| value_evaluator.register_poly(poly.clone()))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    // Register instance values with the polynomial evaluator.
+    let instance_values: Vec<_> = instance
+        .iter()
+        .map(|instance| {
+            instance
+                .instance_values
+                .iter()
+                .map(|poly| value_evaluator.register_poly(poly.clone()))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    // Create polynomial evaluator context for cosets.
+    let mut coset_evaluator = poly::new_evaluator(|| {});
+
+    // Register fixed cosets with the polynomial evaluator.
+    let fixed_cosets: Vec<_> = pk
+        .fixed_cosets
+        .iter()
+        .map(|poly| coset_evaluator.register_poly(poly.clone()))
+        .collect();
+
+    // Register advice cosets with the polynomial evaluator.
+    let advice_cosets: Vec<_> = advice
+        .iter()
+        .map(|advice| {
+            advice
+                .advice_cosets
+                .iter()
+                .map(|poly| coset_evaluator.register_poly(poly.clone()))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    // Register instance cosets with the polynomial evaluator.
+    let instance_cosets: Vec<_> = instance
+        .iter()
+        .map(|instance| {
+            instance
+                .instance_cosets
+                .iter()
+                .map(|poly| coset_evaluator.register_poly(poly.clone()))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    // Register permutation cosets with the polynomial evaluator.
+    let permutation_cosets: Vec<_> = pk
+        .permutation
+        .cosets
+        .iter()
+        .map(|poly| coset_evaluator.register_poly(poly.clone()))
+        .collect();
+
+    // Register boundary polynomials used in the lookup and permutation arguments.
+    let l0 = coset_evaluator.register_poly(pk.l0.clone());
+    let l_blind = coset_evaluator.register_poly(pk.l_blind.clone());
+    let l_last = coset_evaluator.register_poly(pk.l_last.clone());
+
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
 
-    let lookups: Vec<Vec<lookup::prover::Permuted<C>>> = instance
+    let lookups: Vec<Vec<lookup::prover::Permuted<C, _>>> = instance_values
         .iter()
-        .zip(advice.iter())
-        .map(|(instance, advice)| -> Result<Vec<_>, Error> {
+        .zip(instance_cosets.iter())
+        .zip(advice_values.iter())
+        .zip(advice_cosets.iter())
+        .map(|(((instance_values, instance_cosets), advice_values), advice_cosets)| -> Result<Vec<_>, Error> {
             // Construct and commit to permuted values for each lookup
             pk.vk
                 .cs
@@ -347,13 +431,15 @@ pub fn create_proof<
                         pk,
                         params,
                         domain,
+                        &value_evaluator,
+                        &mut coset_evaluator,
                         theta,
-                        &advice.advice_values,
-                        &pk.fixed_values,
-                        &instance.instance_values,
-                        &advice.advice_cosets,
-                        &pk.fixed_cosets,
-                        &instance.instance_cosets,
+                        advice_values,
+                        &fixed_values,
+                        instance_values,
+                        advice_cosets,
+                        &fixed_cosets,
+                        instance_cosets,
                         &mut rng,
                         transcript,
                     )
@@ -369,7 +455,7 @@ pub fn create_proof<
     let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
 
     // Commit to permutations.
-    let permutations: Vec<permutation::prover::Committed<C>> = instance
+    let permutations: Vec<permutation::prover::Committed<C, _>> = instance
         .iter()
         .zip(advice.iter())
         .map(|(instance, advice)| {
@@ -382,20 +468,30 @@ pub fn create_proof<
                 &instance.instance_values,
                 beta,
                 gamma,
+                &mut coset_evaluator,
                 &mut rng,
                 transcript,
             )
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let lookups: Vec<Vec<lookup::prover::Committed<C>>> = lookups
+    let lookups: Vec<Vec<lookup::prover::Committed<C, _>>> = lookups
         .into_iter()
         .map(|lookups| -> Result<Vec<_>, _> {
             // Construct and commit to products for each lookup
             lookups
                 .into_iter()
                 .map(|lookup| {
-                    lookup.commit_product(pk, params, theta, beta, gamma, &mut rng, transcript)
+                    lookup.commit_product(
+                        pk,
+                        params,
+                        theta,
+                        beta,
+                        gamma,
+                        &mut coset_evaluator,
+                        &mut rng,
+                        transcript,
+                    )
                 })
                 .collect::<Result<Vec<_>, _>>()
         })
@@ -410,16 +506,19 @@ pub fn create_proof<
     // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints.
     let (permutations, permutation_expressions): (Vec<_>, Vec<_>) = permutations
         .into_iter()
-        .zip(advice.iter())
-        .zip(instance.iter())
+        .zip(advice_cosets.iter())
+        .zip(instance_cosets.iter())
         .map(|((permutation, advice), instance)| {
             permutation.construct(
                 pk,
                 &pk.vk.cs.permutation,
-                &pk.permutation,
-                &advice.advice_cosets,
-                &pk.fixed_cosets,
-                &instance.instance_cosets,
+                advice,
+                &fixed_cosets,
+                instance,
+                &permutation_cosets,
+                l0,
+                l_blind,
+                l_last,
                 beta,
                 gamma,
             )
@@ -432,45 +531,38 @@ pub fn create_proof<
             // Evaluate the h(X) polynomial's constraint system expressions for the lookup constraints, if any.
             lookups
                 .into_iter()
-                .map(|p| p.construct(pk, theta, beta, gamma))
+                .map(|p| p.construct(theta, beta, gamma, l0, l_blind, l_last))
                 .unzip()
         })
         .unzip();
 
-    let expressions = advice
+    let expressions = advice_cosets
         .iter()
-        .zip(instance.iter())
+        .zip(instance_cosets.iter())
         .zip(permutation_expressions.into_iter())
         .zip(lookup_expressions.into_iter())
         .flat_map(
-            |(((advice, instance), permutation_expressions), lookup_expressions)| {
+            |(((advice_cosets, instance_cosets), permutation_expressions), lookup_expressions)| {
+                let fixed_cosets = &fixed_cosets;
                 iter::empty()
                     // Custom constraints
                     .chain(meta.gates.iter().flat_map(move |gate| {
-                        gate.polynomials().iter().map(move |poly| {
-                            poly.evaluate(
-                                &|scalar| pk.vk.domain.constant_extended(scalar),
+                        gate.polynomials().iter().map(move |expr| {
+                            expr.evaluate(
+                                &poly::Ast::ConstantTerm,
                                 &|_| panic!("virtual selectors are removed during optimization"),
                                 &|_, column_index, rotation| {
-                                    pk.vk
-                                        .domain
-                                        .rotate_extended(&pk.fixed_cosets[column_index], rotation)
+                                    fixed_cosets[column_index].with_rotation(rotation).into()
                                 },
                                 &|_, column_index, rotation| {
-                                    pk.vk.domain.rotate_extended(
-                                        &advice.advice_cosets[column_index],
-                                        rotation,
-                                    )
+                                    advice_cosets[column_index].with_rotation(rotation).into()
                                 },
                                 &|_, column_index, rotation| {
-                                    pk.vk.domain.rotate_extended(
-                                        &instance.instance_cosets[column_index],
-                                        rotation,
-                                    )
+                                    instance_cosets[column_index].with_rotation(rotation).into()
                                 },
                                 &|a| -a,
-                                &|a, b| a + &b,
-                                &|a, b| a * &b,
+                                &|a, b| a + b,
+                                &|a, b| a * b,
                                 &|a, scalar| a * scalar,
                             )
                         })
@@ -483,7 +575,15 @@ pub fn create_proof<
         );
 
     // Construct the vanishing argument's h(X) commitments
-    let vanishing = vanishing.construct(params, domain, expressions, y, &mut rng, transcript)?;
+    let vanishing = vanishing.construct(
+        params,
+        domain,
+        coset_evaluator,
+        expressions,
+        y,
+        &mut rng,
+        transcript,
+    )?;
 
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
     let xn = x.pow(&[params.n as u64, 0, 0, 0]);
