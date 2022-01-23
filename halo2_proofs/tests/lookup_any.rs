@@ -208,7 +208,4 @@ fn lookup_any() {
     // the odd number lookup will fail.
     let prover = MockProver::run(k, &circuit, vec![even_lookup]).unwrap();
     assert!(prover.verify().is_err())
-                name: "odd number",
-                name: "odd number",
-                name: "odd number",
 }
