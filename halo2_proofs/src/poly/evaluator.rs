@@ -1,6 +1,7 @@
 use std::{
     cmp,
     collections::{HashMap, HashSet},
+    fmt,
     hash::{Hash, Hasher},
     marker::PhantomData,
     ops::{Add, Mul, MulAssign, Neg, Sub},
@@ -36,11 +37,20 @@ fn get_chunk_params(poly_len: usize) -> (usize, usize) {
 }
 
 /// A reference to a polynomial registered with an [`Evaluator`].
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub(crate) struct AstLeaf<E, B: Basis> {
     index: usize,
     rotation: Rotation,
     _evaluator: PhantomData<(E, B)>,
+}
+
+impl<E, B: Basis> fmt::Debug for AstLeaf<E, B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AstLeaf")
+            .field("index", &self.index)
+            .field("rotation", &self.rotation)
+            .finish()
+    }
 }
 
 impl<E, B: Basis> PartialEq for AstLeaf<E, B> {
@@ -256,11 +266,20 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
 /// This struct exists to make the internals of this case private so that we don't
 /// accidentally construct this case directly, because it can only be implemented for the
 /// [`ExtendedLagrangeCoeff`] basis.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) struct AstMul<E, F: Field, B: Basis>(Arc<Ast<E, F, B>>, Arc<Ast<E, F, B>>);
 
+impl<E, F: Field, B: Basis> fmt::Debug for AstMul<E, F, B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("AstMul")
+            .field(&self.0)
+            .field(&self.1)
+            .finish()
+    }
+}
+
 /// A polynomial operation backed by an [`Evaluator`].
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) enum Ast<E, F: Field, B: Basis> {
     Poly(AstLeaf<E, B>),
     Add(Arc<Ast<E, F, B>>, Arc<Ast<E, F, B>>),
@@ -275,6 +294,19 @@ pub(crate) enum Ast<E, F: Field, B: Basis> {
     ///
     /// The field element is the same in both the standard and evaluation bases.
     ConstantTerm(F),
+}
+
+impl<E, F: Field, B: Basis> fmt::Debug for Ast<E, F, B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Poly(leaf) => f.debug_tuple("Poly").field(leaf).finish(),
+            Self::Add(lhs, rhs) => f.debug_tuple("Add").field(lhs).field(rhs).finish(),
+            Self::Mul(x) => f.debug_tuple("Mul").field(x).finish(),
+            Self::Scale(base, scalar) => f.debug_tuple("Scale").field(base).field(scalar).finish(),
+            Self::LinearTerm(x) => f.debug_tuple("LinearTerm").field(x).finish(),
+            Self::ConstantTerm(x) => f.debug_tuple("ConstantTerm").field(x).finish(),
+        }
+    }
 }
 
 impl<E, F: Field, B: Basis> From<AstLeaf<E, B>> for Ast<E, F, B> {
