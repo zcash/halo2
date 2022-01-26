@@ -323,7 +323,6 @@ fn test_roundtrip() {
 
         let guard = verify_proof(
             &params,
-            rng,
             &mut transcript,
             std::iter::empty()
                 .chain(Some(VerifierQuery::new_commitment(&a, x, avx)))
@@ -346,7 +345,6 @@ fn test_roundtrip() {
 
         let guard = verify_proof(
             &params,
-            rng,
             &mut transcript,
             std::iter::empty()
                 .chain(Some(VerifierQuery::new_commitment(&a, x, avx)))

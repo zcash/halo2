@@ -268,12 +268,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 
     fn verifier(params: &Params<EqAffine>, vk: &VerifyingKey<EqAffine>, proof: &[u8]) {
-        let rng = OsRng;
-        let msm = params.empty_msm();
+        let strategy = SingleVerifier::new(params);
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(proof);
-        let guard = verify_proof(params, vk, msm, &[&[]], rng, &mut transcript).unwrap();
-        let msm = guard.clone().use_challenges();
-        assert!(msm.eval());
+        assert!(verify_proof(params, vk, strategy, &[&[]], &mut transcript).is_ok());
     }
 
     let k_range = 8..=16;

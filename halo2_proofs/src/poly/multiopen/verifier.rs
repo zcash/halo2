@@ -19,11 +19,9 @@ pub fn verify_proof<
     I,
     C: CurveAffine,
     E: EncodedChallenge<C>,
-    R: RngCore,
     T: TranscriptRead<C, E>,
 >(
     params: &'params Params<C>,
-    rng: R,
     transcript: &mut T,
     queries: I,
     mut msm: MSM<'params, C>,
@@ -31,11 +29,6 @@ pub fn verify_proof<
 where
     I: IntoIterator<Item = VerifierQuery<'r, 'params, C>> + Clone,
 {
-    // Scale the MSM by a random factor to ensure that if the existing MSM
-    // has is_zero() == false then this argument won't be able to interfere
-    // with it to make it true, with high probability.
-    msm.scale(C::Scalar::random(rng));
-
     // Sample x_1 for compressing openings at the same point sets together
     let x_1: ChallengeX1<_> = transcript.squeeze_challenge_scalar();
 

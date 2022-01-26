@@ -9,13 +9,19 @@ and this project adheres to Rust's notion of
 (relative to `halo2 0.1.0-beta.1`)
 
 ### Added
+- `halo2_proofs::plonk`:
+  - `VerificationStrategy`
+  - `SingleVerifier`, an implementation of `VerificationStrategy` for verifying
+    proofs individually.
+  - `BatchVerifier`, an implementation of `VerificationStrategy` for verifying
+    multiple proofs in a batch.
 - `halo2_proofs::dev::FailureLocation` (used in `VerifyFailure::Lookup`)
 
 ### Changed
-- `halo2_proofs` now depends on `rand_core` instead of `rand`, and requires the
-  caller to provide the specific RNG implementation:
-  - `halo2_proofs::plonk::{create_proof, verify_proof}` now take an argument
-    `R: rand_core::RngCore`.
+- `halo2_proofs::plonk::verify_proof` now takes a `VerificationStrategy` instead
+  of an `MSM` directly.
+- `halo2_proofs` now depends on `rand_core` instead of `rand`.
+- `halo2_proofs::plonk::create_proof` now take an argument `R: rand_core::RngCore`.
 - `halo2_proofs::plonk::Error` has been overhauled:
   - `Error` now implements `std::fmt::Display` and `std::error::Error`.
   - `Error` no longer implements `PartialEq`. Tests can check for specific error
