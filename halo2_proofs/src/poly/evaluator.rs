@@ -14,6 +14,26 @@ use super::{
 };
 use crate::{arithmetic::parallelize, multicore};
 
+/// Returns `(chunk_size, num_chunks)` suitable for processing the given polynomial length
+/// in the current parallelization environment.
+fn get_chunk_params(poly_len: usize) -> (usize, usize) {
+    // Check the level of parallelization we have available.
+    let num_threads = multicore::current_num_threads();
+    // We scale the number of chunks by a constant factor, to ensure that if not all
+    // threads are available, we can achieve more uniform throughput and don't end up
+    // waiting on a couple of threads to process the last chunks.
+    let num_chunks = num_threads * 4;
+    // Calculate the ideal chunk size for the desired throughput. We use ceiling
+    // division to ensure the minimum chunk size is 1.
+    //     chunk_size = ceil(poly_len / num_chunks)
+    let chunk_size = (poly_len + num_chunks - 1) / num_chunks;
+    // Now re-calculate num_chunks from the actual chunk size.
+    //     num_chunks = ceil(poly_len / chunk_size)
+    let num_chunks = (poly_len + chunk_size - 1) / chunk_size;
+
+    (chunk_size, num_chunks)
+}
+
 /// A reference to a polynomial registered with an [`Evaluator`].
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct AstLeaf<E, B: Basis> {
@@ -138,19 +158,7 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
 
         // We're working in a single basis, so all polynomials are the same length.
         let poly_len = self.polys.first().unwrap().len();
-        // Check the level of parallelization we have available.
-        let num_threads = multicore::current_num_threads();
-        // We scale the number of chunks by a constant factor, to ensure that if not all
-        // threads are available, we can achieve more uniform throughput and don't end up
-        // waiting on a couple of threads to process the last chunks.
-        let num_chunks = num_threads * 4;
-        // Calculate the ideal chunk size for the desired throughput. We use ceiling
-        // division to ensure the minimum chunk size is 1.
-        //     chunk_size = ceil(poly_len / num_chunks)
-        let chunk_size = (poly_len + num_chunks - 1) / num_chunks;
-        // Now re-calculate num_chunks from the actual chunk size.
-        //     num_chunks = ceil(poly_len / chunk_size)
-        let num_chunks = (poly_len + chunk_size - 1) / chunk_size;
+        let (chunk_size, num_chunks) = get_chunk_params(poly_len);
 
         // Split each rotated polynomial into chunks.
         let chunks: Vec<HashMap<_, _>> = (0..num_chunks)
@@ -539,5 +547,57 @@ impl BasisOps for ExtendedLagrangeCoeff {
         rotation: Rotation,
     ) -> Polynomial<F, Self> {
         domain.rotate_extended(poly, rotation)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::iter;
+
+    use pasta_curves::pallas;
+
+    use super::{get_chunk_params, new_evaluator, Ast, BasisOps, Evaluator};
+    use crate::{
+        multicore,
+        poly::{Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff},
+    };
+
+    #[test]
+    fn short_chunk_regression_test() {
+        // Pick the smallest polynomial length that is guaranteed to produce a short chunk
+        // on this machine.
+        let k = match (1..16)
+            .map(|k| (k, get_chunk_params(1 << k)))
+            .find(|(k, (chunk_size, num_chunks))| (1 << k) < chunk_size * num_chunks)
+            .map(|(k, _)| k)
+        {
+            Some(k) => k,
+            None => {
+                // We are on a machine with a power-of-two number of threads, and cannot
+                // trigger the bug.
+                eprintln!(
+                    "can't find a polynomial length for short_chunk_regression_test; skipping"
+                );
+                return;
+            }
+        };
+        eprintln!("Testing short-chunk regression with k = {}", k);
+
+        fn test_case<E: Copy + Send + Sync, B: BasisOps>(
+            k: u32,
+            mut evaluator: Evaluator<E, pallas::Base, B>,
+        ) {
+            // Instantiate the evaluator with a trivial polynomial.
+            let domain = EvaluationDomain::new(1, k);
+            evaluator.register_poly(B::empty_poly(&domain));
+
+            // With the bug present, these will panic.
+            let _ = evaluator.evaluate(&Ast::ConstantTerm(pallas::Base::zero()), &domain);
+            let _ = evaluator.evaluate(&Ast::LinearTerm(pallas::Base::zero()), &domain);
+        }
+
+        test_case(k, new_evaluator::<_, _, Coeff>(|| {}));
+        test_case(k, new_evaluator::<_, _, LagrangeCoeff>(|| {}));
+        test_case(k, new_evaluator::<_, _, ExtendedLagrangeCoeff>(|| {}));
     }
 }
