@@ -1,4 +1,5 @@
 use std::{
+    cmp,
     collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
     marker::PhantomData,
@@ -179,6 +180,7 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
 
         struct AstContext<'a, E, F: FieldExt, B: Basis> {
             domain: &'a EvaluationDomain<F>,
+            poly_len: usize,
             chunk_size: usize,
             chunk_index: usize,
             leaves: &'a HashMap<AstLeaf<E, B>, &'a [F]>,
@@ -213,11 +215,15 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                     }
                     lhs
                 }
-                Ast::LinearTerm(scalar) => {
-                    B::linear_term(ctx.domain, ctx.chunk_size, ctx.chunk_index, *scalar)
-                }
+                Ast::LinearTerm(scalar) => B::linear_term(
+                    ctx.domain,
+                    ctx.poly_len,
+                    ctx.chunk_size,
+                    ctx.chunk_index,
+                    *scalar,
+                ),
                 Ast::ConstantTerm(scalar) => {
-                    B::constant_term(ctx.chunk_size, ctx.chunk_index, *scalar)
+                    B::constant_term(ctx.poly_len, ctx.chunk_size, ctx.chunk_index, *scalar)
                 }
             }
         }
@@ -232,6 +238,7 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                 scope.spawn(move |_| {
                     let ctx = AstContext {
                         domain,
+                        poly_len,
                         chunk_size,
                         chunk_index,
                         leaves,
@@ -421,9 +428,15 @@ impl<E: Clone, F: Field> MulAssign for Ast<E, F, ExtendedLagrangeCoeff> {
 /// Operations which can be performed over a given basis.
 pub(crate) trait BasisOps: Basis {
     fn empty_poly<F: FieldExt>(domain: &EvaluationDomain<F>) -> Polynomial<F, Self>;
-    fn constant_term<F: FieldExt>(chunk_size: usize, chunk_index: usize, scalar: F) -> Vec<F>;
+    fn constant_term<F: FieldExt>(
+        poly_len: usize,
+        chunk_size: usize,
+        chunk_index: usize,
+        scalar: F,
+    ) -> Vec<F>;
     fn linear_term<F: FieldExt>(
         domain: &EvaluationDomain<F>,
+        poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
         scalar: F,
@@ -440,8 +453,13 @@ impl BasisOps for Coeff {
         domain.empty_coeff()
     }
 
-    fn constant_term<F: FieldExt>(chunk_size: usize, chunk_index: usize, scalar: F) -> Vec<F> {
-        let mut chunk = vec![F::zero(); chunk_size];
+    fn constant_term<F: FieldExt>(
+        poly_len: usize,
+        chunk_size: usize,
+        chunk_index: usize,
+        scalar: F,
+    ) -> Vec<F> {
+        let mut chunk = vec![F::zero(); cmp::min(chunk_size, poly_len - chunk_size * chunk_index)];
         if chunk_index == 0 {
             chunk[0] = scalar;
         }
@@ -450,14 +468,18 @@ impl BasisOps for Coeff {
 
     fn linear_term<F: FieldExt>(
         _: &EvaluationDomain<F>,
+        poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
         scalar: F,
     ) -> Vec<F> {
-        let mut chunk = vec![F::zero(); chunk_size];
+        let mut chunk = vec![F::zero(); cmp::min(chunk_size, poly_len - chunk_size * chunk_index)];
         // If the chunk size is 1 (e.g. if we have a small k and many threads), then the
         // linear coefficient is the second chunk. Otherwise, the chunk size is greater
         // than one, and the linear coefficient is the second element of the first chunk.
+        // Note that we check against the original chunk size, not the potentially-short
+        // actual size of the current chunk, because we want to know whether the size of
+        // the previous chunk was 1.
         if chunk_size == 1 && chunk_index == 1 {
             chunk[0] = scalar;
         } else if chunk_index == 0 {
@@ -480,12 +502,18 @@ impl BasisOps for LagrangeCoeff {
         domain.empty_lagrange()
     }
 
-    fn constant_term<F: FieldExt>(chunk_size: usize, _: usize, scalar: F) -> Vec<F> {
-        vec![scalar; chunk_size]
+    fn constant_term<F: FieldExt>(
+        poly_len: usize,
+        chunk_size: usize,
+        chunk_index: usize,
+        scalar: F,
+    ) -> Vec<F> {
+        vec![scalar; cmp::min(chunk_size, poly_len - chunk_size * chunk_index)]
     }
 
     fn linear_term<F: FieldExt>(
         domain: &EvaluationDomain<F>,
+        poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
         scalar: F,
@@ -493,7 +521,7 @@ impl BasisOps for LagrangeCoeff {
         // Take every power of omega within the chunk, and multiply by scalar.
         let omega = domain.get_omega();
         let start = chunk_size * chunk_index;
-        (0..chunk_size)
+        (0..cmp::min(chunk_size, poly_len - start))
             .scan(omega.pow_vartime(&[start as u64]) * scalar, |acc, _| {
                 let ret = *acc;
                 *acc *= omega;
@@ -516,12 +544,18 @@ impl BasisOps for ExtendedLagrangeCoeff {
         domain.empty_extended()
     }
 
-    fn constant_term<F: FieldExt>(chunk_size: usize, _: usize, scalar: F) -> Vec<F> {
-        vec![scalar; chunk_size]
+    fn constant_term<F: FieldExt>(
+        poly_len: usize,
+        chunk_size: usize,
+        chunk_index: usize,
+        scalar: F,
+    ) -> Vec<F> {
+        vec![scalar; cmp::min(chunk_size, poly_len - chunk_size * chunk_index)]
     }
 
     fn linear_term<F: FieldExt>(
         domain: &EvaluationDomain<F>,
+        poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
         scalar: F,
@@ -529,7 +563,7 @@ impl BasisOps for ExtendedLagrangeCoeff {
         // Take every power of the extended omega within the chunk, and multiply by scalar.
         let omega = domain.get_extended_omega();
         let start = chunk_size * chunk_index;
-        (0..chunk_size)
+        (0..cmp::min(chunk_size, poly_len - start))
             .scan(
                 omega.pow_vartime(&[start as u64]) * F::ZETA * scalar,
                 |acc, _| {
