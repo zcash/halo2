@@ -2,7 +2,9 @@ use super::{
     AbcdVar, CompressionConfig, EfghVar, RoundWord, RoundWordA, RoundWordDense, RoundWordE,
     RoundWordSpread, State, UpperSigmaVar,
 };
-use crate::table16::{util::*, AssignedBits, SpreadVar, SpreadWord, StateWord, Table16Assignment};
+use crate::sha256::table16::{
+    util::*, AssignedBits, SpreadVar, SpreadWord, StateWord, Table16Assignment,
+};
 use halo2::{
     circuit::Region,
     pasta::pallas,

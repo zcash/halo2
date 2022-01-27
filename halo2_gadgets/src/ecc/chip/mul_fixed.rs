@@ -314,7 +314,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         };
 
         // Assign u = (y_p + z_w).sqrt()
-        let u_val = k_usize.map(|k| pallas::Base::from_bytes(&base_u[w][k]).unwrap());
+        let u_val = k_usize.map(|k| pallas::Base::from_repr(base_u[w][k]).unwrap());
         region.assign_advice(|| "u", self.u, offset + w, || u_val.ok_or(Error::Synthesis))?;
 
         Ok(mul_b)
@@ -376,7 +376,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         // Assign u = (y_p + z_w).sqrt() for the most significant window
         {
             let u_val = scalar.windows_usize()[NUM_WINDOWS - 1]
-                .map(|k| pallas::Base::from_bytes(&base.u()[NUM_WINDOWS - 1][k]).unwrap());
+                .map(|k| pallas::Base::from_repr(base.u()[NUM_WINDOWS - 1][k]).unwrap());
             region.assign_advice(
                 || "u",
                 self.u,
@@ -491,6 +491,8 @@ impl ScalarFixed {
             .iter()
             .map(|window| {
                 if let Some(window) = window {
+                    // TODO: Remove this trait dependency
+                    use pasta_curves::arithmetic::SqrtRatio;
                     let window = window.get_lower_32() as usize;
                     assert!(window < H);
                     Some(window)

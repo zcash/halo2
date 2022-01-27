@@ -3,12 +3,12 @@ use halo2::{
     pasta::{pallas, EqAffine},
     plonk::{
         create_proof, keygen_pk, keygen_vk, verify_proof, Circuit, ConstraintSystem, Error,
-        VerifyingKey,
+        SingleVerifier, VerifyingKey,
     },
     poly::commitment::Params,
     transcript::{Blake2bRead, Blake2bWrite, Challenge255},
 };
-use rand_core::OsRng;
+use rand::rngs::OsRng;
 
 use std::{
     fs::File,
@@ -18,7 +18,7 @@ use std::{
 
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use crate::{BlockWord, Sha256, Table16Chip, Table16Config, BLOCK_SIZE};
+use halo2_gadgets::sha256::{BlockWord, Sha256, Table16Chip, Table16Config, BLOCK_SIZE};
 
 #[allow(dead_code)]
 fn bench(name: &str, k: u32, c: &mut Criterion) {
@@ -150,12 +150,9 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
 
     c.bench_function(&verifier_name, |b| {
         b.iter(|| {
-            let msm = params.empty_msm();
+            let strategy = SingleVerifier::new(&params);
             let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
-            let guard =
-                verify_proof(&params, pk.get_vk(), msm, &[], OsRng, &mut transcript).unwrap();
-            let msm = guard.clone().use_challenges();
-            assert!(msm.eval());
+            assert!(verify_proof(&params, pk.get_vk(), strategy, &[], &mut transcript).is_ok());
         });
     });
 }

@@ -1,11 +1,4 @@
-//! # orchard
-//!
-//! ## Nomenclature
-//!
-//! All types in the `orchard` crate, unless otherwise specified, are Orchard-specific
-//! types. For example, [`Address`] is documented as being a shielded payment address; we
-//! implicitly mean it is an Orchard payment address (as opposed to e.g. a Sapling payment
-//! address, which is also shielded).
+//! # halo2_gadgets
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 // Temporary until we have more of the crate implemented.
@@ -18,6 +11,8 @@
 
 pub mod ecc;
 pub mod poseidon;
+#[cfg(feature = "unstable")]
+pub mod sha256;
 pub mod sinsemilla;
 pub mod utilities;
 

@@ -1,4 +1,4 @@
-# orchard [![Crates.io](https://img.shields.io/crates/v/orchard.svg)](https://crates.io/crates/orchard) #
+# halo2_gadgets [![Crates.io](https://img.shields.io/crates/v/halo2_gadgets.svg)](https://crates.io/crates/halo2_gadgets) #
 
 **IMPORTANT**: This library is being actively developed and should not be used in production software.
 
@@ -6,8 +6,8 @@ Requires Rust 1.51+.
 
 ## Documentation
 
-- [The Orchard Book](https://zcash.github.io/orchard/)
-- [Crate documentation](https://docs.rs/orchard)
+- [The Halo 2 Book](https://zcash.github.io/halo2/)
+- [Crate documentation](https://docs.rs/halo2_gadgets)
 
 ## License
 

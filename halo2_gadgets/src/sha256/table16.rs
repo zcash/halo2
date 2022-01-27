@@ -48,7 +48,8 @@ const IV: [u32; STATE] = [
 
 #[derive(Clone, Copy, Debug, Default)]
 /// A word in a `Table16` message block.
-pub struct BlockWord(pub(crate) Option<u32>);
+// TODO: Make the internals of this struct private.
+pub struct BlockWord(pub Option<u32>);
 
 #[derive(Clone, Debug)]
 /// Little-endian bits (up to 64 bits)
@@ -255,6 +256,7 @@ impl Chip<pallas::Base> for Table16Chip {
 }
 
 impl Table16Chip {
+    /// Reconstructs this chip from the given config.
     pub fn construct(config: <Self as Chip<pallas::Base>>::Config) -> Self {
         Self {
             config,
@@ -262,6 +264,7 @@ impl Table16Chip {
         }
     }
 
+    /// Configures a circuit to include this chip.
     pub fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
     ) -> <Self as Chip<pallas::Base>>::Config {
@@ -314,6 +317,7 @@ impl Table16Chip {
         }
     }
 
+    /// Loads the lookup table required by this chip into the circuit.
     pub fn load(
         config: Table16Config,
         layouter: &mut impl Layouter<pallas::Base>,

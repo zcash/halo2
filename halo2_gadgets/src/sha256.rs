@@ -12,7 +12,6 @@ use halo2::{
     plonk::Error,
 };
 
-mod benches;
 mod table16;
 
 pub use table16::{BlockWord, Table16Chip, Table16Config};
@@ -165,5 +164,3 @@ impl<F: FieldExt, Sha256Chip: Sha256Instructions<F>> Sha256<F, Sha256Chip> {
         hasher.finalize(layouter.namespace(|| "finalize"))
     }
 }
-
-fn main() {}

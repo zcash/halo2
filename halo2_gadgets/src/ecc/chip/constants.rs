@@ -39,7 +39,7 @@ pub(crate) const T_P: u128 = 45560315531419706090280762371685220353;
 
 /// For each fixed base, we calculate its scalar multiples in three-bit windows.
 /// Each window will have $2^3 = 8$ points. The tables are computed as described in
-/// [the Orchard book](https://zcash.github.io/orchard/design/circuit/gadgets/ecc/fixed-base-scalar-mul.html#load-fixed-base).
+/// [the Halo 2 book](https://zcash.github.io/halo2/design/gadgets/ecc/fixed-base-scalar-mul.html#load-fixed-base).
 fn compute_window_table<C: CurveAffine>(base: C, num_windows: usize) -> Vec<[C; H]> {
     let mut window_table: Vec<[C; H]> = Vec::with_capacity(num_windows);
 
@@ -160,9 +160,11 @@ pub fn test_zs_and_us<C: CurveAffine>(base: C, z: &[u64], u: &[[[u8; 32]; H]], n
     for ((u, z), window_points) in u.iter().zip(z.iter()).zip(window_table) {
         for (u, point) in u.iter().zip(window_points.iter()) {
             let y = *point.coordinates().unwrap().y();
-            let u = C::Base::from_bytes(u).unwrap();
-            assert_eq!(C::Base::from_u64(*z) + y, u * u); // allow either square root
-            assert!(bool::from((C::Base::from_u64(*z) - y).sqrt().is_none()));
+            let mut u_repr = <C::Base as PrimeField>::Repr::default();
+            u_repr.as_mut().copy_from_slice(u);
+            let u = C::Base::from_repr(u_repr).unwrap();
+            assert_eq!(C::Base::from(*z) + y, u * u); // allow either square root
+            assert!(bool::from((C::Base::from(*z) - y).sqrt().is_none()));
         }
     }
 }
