@@ -2928,11 +2928,11 @@ pub fn generator() -> pallas::Affine {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{
-        test_lagrange_coeffs, test_zs_and_us, NOTE_COMMITMENT_PERSONALIZATION, NUM_WINDOWS,
-    };
+    use super::super::{NOTE_COMMITMENT_PERSONALIZATION, NUM_WINDOWS};
     use super::*;
+    use crate::circuit::gadget::ecc::chip::constants::{test_lagrange_coeffs, test_zs_and_us};
     use crate::primitives::sinsemilla::CommitDomain;
+
     use group::Curve;
     use pasta_curves::{arithmetic::CurveAffine, pallas};
 

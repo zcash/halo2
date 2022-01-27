@@ -11,14 +11,13 @@ use crate::{
             chip::{EccChip, NonIdentityEccPoint},
             Point,
         },
+        sinsemilla::{
+            chip::{SinsemillaChip, SinsemillaConfig},
+            CommitDomain, Message, MessagePiece,
+        },
         utilities::{bitrange_subset, bool_check},
     },
-    constants::T_P,
-};
-
-use super::{
-    chip::{SinsemillaChip, SinsemillaCommitDomains, SinsemillaConfig},
-    CommitDomain, Message, MessagePiece,
+    constants::{OrchardCommitDomains, OrchardFixedBases, OrchardHashDomains, T_P},
 };
 
 /// The values of the running sum at the start and end of the range being used for a
@@ -56,7 +55,8 @@ pub struct NoteCommitConfig {
     q_notecommit_psi: Selector,
     q_y_canon: Selector,
     advices: [Column<Advice>; 10],
-    sinsemilla_config: SinsemillaConfig,
+    sinsemilla_config:
+        SinsemillaConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
 }
 
 impl NoteCommitConfig {
@@ -65,7 +65,11 @@ impl NoteCommitConfig {
     pub(in crate::circuit) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 10],
-        sinsemilla_config: SinsemillaConfig,
+        sinsemilla_config: SinsemillaConfig<
+            OrchardHashDomains,
+            OrchardCommitDomains,
+            OrchardFixedBases,
+        >,
     ) -> Self {
         let q_notecommit_b = meta.selector();
         let q_notecommit_d = meta.selector();
@@ -528,8 +532,8 @@ impl NoteCommitConfig {
     pub(in crate::circuit) fn assign_region(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        chip: SinsemillaChip,
-        ecc_chip: EccChip,
+        chip: SinsemillaChip<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
+        ecc_chip: EccChip<OrchardFixedBases>,
         g_d: &NonIdentityEccPoint,
         pk_d: &NonIdentityEccPoint,
         // TODO: Set V to Orchard value type
@@ -537,7 +541,7 @@ impl NoteCommitConfig {
         rho: AssignedCell<pallas::Base, pallas::Base>,
         psi: AssignedCell<pallas::Base, pallas::Base>,
         rcm: Option<pallas::Scalar>,
-    ) -> Result<Point<pallas::Affine, EccChip>, Error> {
+    ) -> Result<Point<pallas::Affine, EccChip<OrchardFixedBases>>, Error> {
         let (gd_x, gd_y) = (g_d.x(), g_d.y());
         let (pkd_x, pkd_y) = (pk_d.x(), pk_d.y());
         let (gd_x, gd_y) = (gd_x.value(), gd_y.value());
@@ -562,14 +566,14 @@ impl NoteCommitConfig {
                 let b_3 = pkd_x.map(|pkd_x| bitrange_subset(pkd_x, 0..4));
 
                 // Constrain b_0 to be 4 bits
-                let b_0 = self.sinsemilla_config.lookup_config.witness_short_check(
+                let b_0 = self.sinsemilla_config.lookup_config().witness_short_check(
                     layouter.namespace(|| "b_0 is 4 bits"),
                     b_0,
                     4,
                 )?;
 
                 // Constrain b_3 to be 4 bits
-                let b_3 = self.sinsemilla_config.lookup_config.witness_short_check(
+                let b_3 = self.sinsemilla_config.lookup_config().witness_short_check(
                     layouter.namespace(|| "b_3 is 4 bits"),
                     b_3,
                     4,
@@ -607,7 +611,7 @@ impl NoteCommitConfig {
             let d_3 = value_val.map(|value| bitrange_subset(value, 8..58));
 
             // Constrain d_2 to be 8 bits
-            let d_2 = self.sinsemilla_config.lookup_config.witness_short_check(
+            let d_2 = self.sinsemilla_config.lookup_config().witness_short_check(
                 layouter.namespace(|| "d_2 is 8 bits"),
                 d_2,
                 8,
@@ -638,14 +642,14 @@ impl NoteCommitConfig {
             let e_1 = rho_val.map(|rho| bitrange_subset(rho, 0..4));
 
             // Constrain e_0 to be 6 bits.
-            let e_0 = self.sinsemilla_config.lookup_config.witness_short_check(
+            let e_0 = self.sinsemilla_config.lookup_config().witness_short_check(
                 layouter.namespace(|| "e_0 is 6 bits"),
                 e_0,
                 6,
             )?;
 
             // Constrain e_1 to be 4 bits.
-            let e_1 = self.sinsemilla_config.lookup_config.witness_short_check(
+            let e_1 = self.sinsemilla_config.lookup_config().witness_short_check(
                 layouter.namespace(|| "e_1 is 4 bits"),
                 e_1,
                 4,
@@ -674,7 +678,7 @@ impl NoteCommitConfig {
             let g_2 = psi_val.map(|psi| bitrange_subset(psi, 9..249));
 
             // Constrain g_1 to be 9 bits.
-            let g_1 = self.sinsemilla_config.lookup_config.witness_short_check(
+            let g_1 = self.sinsemilla_config.lookup_config().witness_short_check(
                 layouter.namespace(|| "g_1 is 9 bits"),
                 g_1,
                 9,
@@ -700,7 +704,7 @@ impl NoteCommitConfig {
             let h_1 = psi_val.map(|psi| bitrange_subset(psi, 254..255));
 
             // Constrain h_0 to be 5 bits.
-            let h_0 = self.sinsemilla_config.lookup_config.witness_short_check(
+            let h_0 = self.sinsemilla_config.lookup_config().witness_short_check(
                 layouter.namespace(|| "h_0 is 5 bits"),
                 h_0,
                 5,
@@ -740,7 +744,7 @@ impl NoteCommitConfig {
                     h.clone(),
                 ],
             );
-            let domain = CommitDomain::new(chip, ecc_chip, &SinsemillaCommitDomains::NoteCommit);
+            let domain = CommitDomain::new(chip, ecc_chip, &OrchardCommitDomains::NoteCommit);
             domain.commit(
                 layouter.namespace(|| "Process NoteCommit inputs"),
                 message,
@@ -844,7 +848,7 @@ impl NoteCommitConfig {
             let t_p = pallas::Base::from_u128(T_P);
             a + two_pow_130 - t_p
         });
-        let zs = self.sinsemilla_config.lookup_config.witness_check(
+        let zs = self.sinsemilla_config.lookup_config().witness_check(
             layouter.namespace(|| "Decompose low 130 bits of (a + 2^130 - t_P)"),
             a_prime,
             13,
@@ -883,7 +887,7 @@ impl NoteCommitConfig {
             b_3 + (two_pow_4 * c) + two_pow_140 - t_p
         });
 
-        let zs = self.sinsemilla_config.lookup_config.witness_check(
+        let zs = self.sinsemilla_config.lookup_config().witness_check(
             layouter.namespace(|| "Decompose low 140 bits of (b_3 + 2^4 c + 2^140 - t_P)"),
             b3_c_prime,
             14,
@@ -922,7 +926,7 @@ impl NoteCommitConfig {
         // Decompose the low 140 bits of e1_f_prime = e_1 + 2^4 f + 2^140 - t_P,
         // and output the running sum at the end of it.
         // If e1_f_prime < 2^140, the running sum will be 0.
-        let zs = self.sinsemilla_config.lookup_config.witness_check(
+        let zs = self.sinsemilla_config.lookup_config().witness_check(
             layouter.namespace(|| "Decompose low 140 bits of (e_1 + 2^4 f + 2^140 - t_P)"),
             e1_f_prime,
             14,
@@ -959,7 +963,7 @@ impl NoteCommitConfig {
             g_1 + (two_pow_9 * g_2) + two_pow_130 - t_p
         });
 
-        let zs = self.sinsemilla_config.lookup_config.witness_check(
+        let zs = self.sinsemilla_config.lookup_config().witness_check(
             layouter.namespace(|| "Decompose low 130 bits of (g_1 + (2^9)g_2 + 2^130 - t_P)"),
             g1_g2_prime,
             13,
@@ -992,14 +996,14 @@ impl NoteCommitConfig {
         };
 
         // Range-constrain k_0 to be 9 bits.
-        let k_0 = self.sinsemilla_config.lookup_config.witness_short_check(
+        let k_0 = self.sinsemilla_config.lookup_config().witness_short_check(
             layouter.namespace(|| "Constrain k_0 to be 9 bits"),
             k_0,
             9,
         )?;
 
         // Range-constrain k_2 to be 4 bits.
-        let k_2 = self.sinsemilla_config.lookup_config.witness_short_check(
+        let k_2 = self.sinsemilla_config.lookup_config().witness_short_check(
             layouter.namespace(|| "Constrain k_2 to be 4 bits"),
             k_2,
             4,
@@ -1012,7 +1016,7 @@ impl NoteCommitConfig {
                 let two_pow_10 = pallas::Base::from(1 << 10);
                 lsb + two * k_0 + two_pow_10 * k_1
             });
-            let zs = self.sinsemilla_config.lookup_config.witness_check(
+            let zs = self.sinsemilla_config.lookup_config().witness_check(
                 layouter.namespace(|| "Decompose j = LSB + (2)k_0 + (2^10)k_1"),
                 j,
                 25,
@@ -1460,7 +1464,10 @@ mod tests {
             sinsemilla::chip::SinsemillaChip,
             utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
         },
-        constants::{L_ORCHARD_BASE, L_VALUE, NOTE_COMMITMENT_PERSONALIZATION, T_Q},
+        constants::{
+            fixed_bases::NOTE_COMMITMENT_PERSONALIZATION, OrchardCommitDomains, OrchardFixedBases,
+            OrchardHashDomains, L_ORCHARD_BASE, L_VALUE, T_Q,
+        },
         primitives::sinsemilla::CommitDomain,
     };
 
@@ -1496,7 +1503,7 @@ mod tests {
         }
 
         impl Circuit<pallas::Base> for MyCircuit {
-            type Config = (NoteCommitConfig, EccConfig);
+            type Config = (NoteCommitConfig, EccConfig<OrchardFixedBases>);
             type FloorPlanner = SimpleFloorPlanner;
 
             fn without_witnesses(&self) -> Self {
@@ -1543,7 +1550,11 @@ mod tests {
                 ];
 
                 let range_check = LookupRangeCheckConfig::configure(meta, advices[9], table_idx);
-                let sinsemilla_config = SinsemillaChip::configure(
+                let sinsemilla_config = SinsemillaChip::<
+                    OrchardHashDomains,
+                    OrchardCommitDomains,
+                    OrchardFixedBases,
+                >::configure(
                     meta,
                     advices[..5].try_into().unwrap(),
                     advices[2],
@@ -1554,7 +1565,12 @@ mod tests {
                 let note_commit_config =
                     NoteCommitConfig::configure(meta, advices, sinsemilla_config);
 
-                let ecc_config = EccChip::configure(meta, advices, lagrange_coeffs, range_check);
+                let ecc_config = EccChip::<OrchardFixedBases>::configure(
+                    meta,
+                    advices,
+                    lagrange_coeffs,
+                    range_check,
+                );
 
                 (note_commit_config, ecc_config)
             }
@@ -1567,7 +1583,11 @@ mod tests {
                 let (note_commit_config, ecc_config) = config;
 
                 // Load the Sinsemilla generator lookup table used by the whole circuit.
-                SinsemillaChip::load(note_commit_config.sinsemilla_config.clone(), &mut layouter)?;
+                SinsemillaChip::<
+                OrchardHashDomains,
+                OrchardCommitDomains,
+                OrchardFixedBases,
+            >::load(note_commit_config.sinsemilla_config.clone(), &mut layouter)?;
 
                 // Construct a Sinsemilla chip
                 let sinsemilla_chip =

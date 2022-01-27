@@ -1,10 +1,7 @@
 use std::{array, convert::TryInto};
 
-use super::super::{EccPoint, EccScalarFixedShort};
-use crate::{
-    circuit::gadget::{ecc::chip::MagnitudeSign, utilities::bool_check},
-    constants::{ValueCommitV, L_VALUE, NUM_WINDOWS_SHORT},
-};
+use super::super::{EccPoint, EccScalarFixedShort, FixedPoints, L_SCALAR_SHORT, NUM_WINDOWS_SHORT};
+use crate::circuit::gadget::{ecc::chip::MagnitudeSign, utilities::bool_check};
 
 use halo2::{
     circuit::{Layouter, Region},
@@ -13,17 +10,17 @@ use halo2::{
 };
 use pasta_curves::pallas;
 
-#[derive(Clone, Debug, Copy, Eq, PartialEq)]
-pub struct Config {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
     // Selector used for fixed-base scalar mul with short signed exponent.
     q_mul_fixed_short: Selector,
-    super_config: super::Config,
+    super_config: super::Config<Fixed>,
 }
 
-impl Config {
+impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
     pub(crate) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
-        super_config: super::Config,
+        super_config: super::Config<Fixed>,
     ) -> Self {
         let config = Self {
             q_mul_fixed_short: meta.selector(),
@@ -84,7 +81,7 @@ impl Config {
             offset,
             magnitude.clone(),
             true,
-            L_VALUE,
+            L_SCALAR_SHORT,
             NUM_WINDOWS_SHORT,
         )?;
 
@@ -99,8 +96,12 @@ impl Config {
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         magnitude_sign: MagnitudeSign,
-        base: &ValueCommitV,
-    ) -> Result<(EccPoint, EccScalarFixedShort), Error> {
+        base: &<Fixed as FixedPoints<pallas::Affine>>::ShortScalar,
+    ) -> Result<(EccPoint, EccScalarFixedShort), Error>
+    where
+        <Fixed as FixedPoints<pallas::Affine>>::ShortScalar:
+            super::super::FixedPoint<pallas::Affine>,
+    {
         let (scalar, acc, mul_b) = layouter.assign_region(
             || "Short fixed-base mul (incomplete addition)",
             |mut region| {
@@ -109,13 +110,15 @@ impl Config {
                 // Decompose the scalar
                 let scalar = self.decompose(&mut region, offset, magnitude_sign.clone())?;
 
-                let (acc, mul_b) = self.super_config.assign_region_inner::<NUM_WINDOWS_SHORT>(
-                    &mut region,
-                    offset,
-                    &(&scalar).into(),
-                    base.clone().into(),
-                    self.super_config.running_sum_config.q_range_check,
-                )?;
+                let (acc, mul_b) = self
+                    .super_config
+                    .assign_region_inner::<_, NUM_WINDOWS_SHORT>(
+                        &mut region,
+                        offset,
+                        &(&scalar).into(),
+                        base,
+                        self.super_config.running_sum_config.q_range_check,
+                    )?;
 
                 Ok((scalar, acc, mul_b))
             },
@@ -187,14 +190,13 @@ impl Config {
         // Invalid values result in constraint failures which are
         // tested at the circuit-level.
         {
+            use super::super::FixedPoint;
             use group::{ff::PrimeField, Curve};
 
             if let (Some(magnitude), Some(sign)) = (scalar.magnitude.value(), scalar.sign.value()) {
                 let magnitude_is_valid = magnitude <= &pallas::Base::from(0xFFFF_FFFF_FFFF_FFFFu64);
                 let sign_is_valid = sign * sign == pallas::Base::one();
                 if magnitude_is_valid && sign_is_valid {
-                    let base: super::OrchardFixedBases = base.clone().into();
-
                     let scalar = scalar.magnitude.value().zip(scalar.sign.value()).map(
                         |(magnitude, sign)| {
                             // Move magnitude from base field into scalar field (which always fits
@@ -237,25 +239,24 @@ pub mod tests {
 
     use crate::circuit::gadget::{
         ecc::{
-            chip::{EccChip, MagnitudeSign},
+            chip::{EccChip, FixedPoint, MagnitudeSign},
             FixedPointShort, NonIdentityPoint, Point,
         },
         utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
     };
-    use crate::constants::load::ValueCommitV;
+    use crate::constants::{OrchardFixedBases, ValueCommitV};
 
     #[allow(clippy::op_ref)]
     pub fn test_mul_fixed_short(
-        chip: EccChip,
+        chip: EccChip<OrchardFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
         // value_commit_v
-        let value_commit_v = ValueCommitV::get();
-        let base_val = value_commit_v.generator;
-        let value_commit_v = FixedPointShort::from_inner(chip.clone(), value_commit_v);
+        let base_val = ValueCommitV.generator();
+        let value_commit_v = FixedPointShort::from_inner(chip.clone(), ValueCommitV);
 
         fn load_magnitude_sign(
-            chip: EccChip,
+            chip: EccChip<OrchardFixedBases>,
             mut layouter: impl Layouter<pallas::Base>,
             magnitude: pallas::Base,
             sign: pallas::Base,
@@ -269,11 +270,11 @@ pub mod tests {
         }
 
         fn constrain_equal_non_id(
-            chip: EccChip,
+            chip: EccChip<OrchardFixedBases>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
             scalar_val: pallas::Scalar,
-            result: Point<pallas::Affine, EccChip>,
+            result: Point<pallas::Affine, EccChip<OrchardFixedBases>>,
         ) -> Result<(), Error> {
             let expected = NonIdentityPoint::new(
                 chip,
@@ -370,7 +371,10 @@ pub mod tests {
 
     #[test]
     fn invalid_magnitude_sign() {
-        use crate::circuit::gadget::{ecc::chip::EccConfig, utilities::UtilitiesInstructions};
+        use crate::circuit::gadget::{
+            ecc::chip::{EccConfig, FixedPoint},
+            utilities::UtilitiesInstructions,
+        };
         use halo2::{
             circuit::{Layouter, SimpleFloorPlanner},
             dev::{FailureLocation, MockProver, VerifyFailure},
@@ -390,7 +394,7 @@ pub mod tests {
         }
 
         impl Circuit<pallas::Base> for MyCircuit {
-            type Config = EccConfig;
+            type Config = EccConfig<OrchardFixedBases>;
             type FloorPlanner = SimpleFloorPlanner;
 
             fn without_witnesses(&self) -> Self {
@@ -427,7 +431,7 @@ pub mod tests {
                 meta.enable_constant(constants);
 
                 let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
-                EccChip::configure(meta, advices, lagrange_coeffs, range_check)
+                EccChip::<OrchardFixedBases>::configure(meta, advices, lagrange_coeffs, range_check)
             }
 
             fn synthesize(
@@ -449,7 +453,7 @@ pub mod tests {
                     (magnitude, sign)
                 };
 
-                short_config.assign(layouter, magnitude_sign, &ValueCommitV::get())?;
+                short_config.assign(layouter, magnitude_sign, &ValueCommitV)?;
 
                 Ok(())
             }
@@ -563,7 +567,7 @@ pub mod tests {
             };
 
             let negation_check_y = {
-                *(ValueCommitV::get().generator * pallas::Scalar::from(magnitude_u64))
+                *(ValueCommitV.generator() * pallas::Scalar::from(magnitude_u64))
                     .to_affine()
                     .coordinates()
                     .unwrap()

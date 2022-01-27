@@ -1,7 +1,6 @@
 //! Make use of a K-bit lookup table to decompose a field element into K-bit
 //! words.
 
-use crate::spec::lebs2ip;
 use halo2::{
     circuit::{AssignedCell, Layouter, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector, TableColumn},
@@ -364,8 +363,8 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
 mod tests {
     use super::LookupRangeCheckConfig;
 
+    use super::super::lebs2ip;
     use crate::primitives::sinsemilla::K;
-    use crate::spec::lebs2ip;
     use ff::{Field, PrimeFieldBits};
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},

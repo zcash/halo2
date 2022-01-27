@@ -1,7 +1,6 @@
-use super::{add, EccPoint, NonIdentityEccPoint};
+use super::{add, EccPoint, NonIdentityEccPoint, T_Q};
 use crate::{
     circuit::gadget::utilities::{bool_check, lookup_range_check::LookupRangeCheckConfig, ternary},
-    constants::T_Q,
     primitives::sinsemilla,
 };
 use std::{
@@ -481,11 +480,12 @@ pub mod tests {
         },
         utilities::UtilitiesInstructions,
     };
+    use crate::constants::OrchardFixedBases;
 
     pub fn test_mul(
-        chip: EccChip,
+        chip: EccChip<OrchardFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
-        p: &NonIdentityPoint<pallas::Affine, EccChip>,
+        p: &NonIdentityPoint<pallas::Affine, EccChip<OrchardFixedBases>>,
         p_val: pallas::Affine,
     ) -> Result<(), Error> {
         let column = chip.config().advices[0];

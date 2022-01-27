@@ -6,15 +6,15 @@ use pasta_curves::arithmetic::CurveAffine;
 
 use super::{HashDomains, SinsemillaInstructions};
 
-use crate::{
-    circuit::gadget::utilities::{
-        cond_swap::CondSwapInstructions, transpose_option_array, UtilitiesInstructions,
-    },
-    spec::i2lebsp,
+use crate::circuit::gadget::utilities::{
+    cond_swap::CondSwapInstructions, i2lebsp, transpose_option_array, UtilitiesInstructions,
 };
 use std::iter;
 
 pub(in crate::circuit) mod chip;
+
+/// SWU hash-to-curve personalization for the Merkle CRH generator
+pub const MERKLE_CRH_PERSONALIZATION: &str = "z.cash:Orchard-MerkleCRH";
 
 /// Instructions to check the validity of a Merkle path of a given `PATH_LENGTH`.
 /// The hash function used is a Sinsemilla instance with `K`-bit words.
@@ -32,7 +32,7 @@ pub trait MerkleInstructions<
 {
     /// Compute MerkleCRH for a given `layer`. The hash that computes the root
     /// is at layer 0, and the hashes that are applied to two leaves are at
-    /// layer `MERKLE_DEPTH_ORCHARD - 1` = layer 31.
+    /// layer `MERKLE_DEPTH - 1` = layer 31.
     #[allow(non_snake_case)]
     fn hash_layer(
         &self,
@@ -100,7 +100,7 @@ where
 
         let mut node = leaf;
         for (l, ((sibling, pos), chip)) in path.iter().zip(pos.iter()).zip(chips).enumerate() {
-            // `l` = MERKLE_DEPTH_ORCHARD - layer - 1, which is the index obtained from
+            // `l` = MERKLE_DEPTH - layer - 1, which is the index obtained from
             // enumerating this Merkle path (going from leaf to root).
             // For example, when `layer = 31` (the first sibling on the Merkle path),
             // we have `l` = 32 - 31 - 1 = 0.
@@ -138,10 +138,10 @@ pub mod tests {
 
     use crate::{
         circuit::gadget::{
-            sinsemilla::chip::{SinsemillaChip, SinsemillaHashDomains},
+            sinsemilla::chip::SinsemillaChip,
             utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
         },
-        constants::MERKLE_DEPTH_ORCHARD,
+        constants::{OrchardCommitDomains, OrchardFixedBases, OrchardHashDomains},
         note::commitment::ExtractedNoteCommitment,
         tree,
     };
@@ -157,15 +157,20 @@ pub mod tests {
     use rand::{rngs::OsRng, RngCore};
     use std::convert::TryInto;
 
+    const MERKLE_DEPTH: usize = 32;
+
     #[derive(Default)]
     struct MyCircuit {
         leaf: Option<pallas::Base>,
         leaf_pos: Option<u32>,
-        merkle_path: Option<[pallas::Base; MERKLE_DEPTH_ORCHARD]>,
+        merkle_path: Option<[pallas::Base; MERKLE_DEPTH]>,
     }
 
     impl Circuit<pallas::Base> for MyCircuit {
-        type Config = (MerkleConfig, MerkleConfig);
+        type Config = (
+            MerkleConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
+            MerkleConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
+        );
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
@@ -233,7 +238,10 @@ pub mod tests {
             mut layouter: impl Layouter<pallas::Base>,
         ) -> Result<(), Error> {
             // Load generator table (shared across both configs)
-            SinsemillaChip::load(config.0.sinsemilla_config.clone(), &mut layouter)?;
+            SinsemillaChip::<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>::load(
+                config.0.sinsemilla_config.clone(),
+                &mut layouter,
+            )?;
 
             // Construct Merkle chips which will be placed side-by-side in the circuit.
             let chip_1 = MerkleChip::construct(config.0.clone());
@@ -248,7 +256,7 @@ pub mod tests {
             let path = MerklePath {
                 chip_1,
                 chip_2,
-                domain: SinsemillaHashDomains::MerkleCrh,
+                domain: OrchardHashDomains::MerkleCrh,
                 leaf_pos: self.leaf_pos,
                 path: self.merkle_path,
             };
@@ -282,7 +290,7 @@ pub mod tests {
         let pos = rng.next_u32();
 
         // Choose a path of random inner nodes
-        let path: Vec<_> = (0..(MERKLE_DEPTH_ORCHARD))
+        let path: Vec<_> = (0..(MERKLE_DEPTH))
             .map(|_| pallas::Base::random(rng))
             .collect();
 

@@ -115,6 +115,70 @@ pub fn range_check<F: FieldExt>(word: Expression<F>, range: usize) -> Expression
     })
 }
 
+/// Decompose a word `alpha` into `window_num_bits` bits (little-endian)
+/// For a window size of `w`, this returns [k_0, ..., k_n] where each `k_i`
+/// is a `w`-bit value, and `scalar = k_0 + k_1 * w + k_n * w^n`.
+///
+/// # Panics
+///
+/// We are returning a `Vec<u8>` which means the window size is limited to
+/// <= 8 bits.
+pub fn decompose_word<F: PrimeFieldBits>(
+    word: &F,
+    word_num_bits: usize,
+    window_num_bits: usize,
+) -> Vec<u8> {
+    assert!(window_num_bits <= 8);
+
+    // Pad bits to multiple of window_num_bits
+    let padding = (window_num_bits - (word_num_bits % window_num_bits)) % window_num_bits;
+    let bits: Vec<bool> = word
+        .to_le_bits()
+        .into_iter()
+        .take(word_num_bits)
+        .chain(std::iter::repeat(false).take(padding))
+        .collect();
+    assert_eq!(bits.len(), word_num_bits + padding);
+
+    bits.chunks_exact(window_num_bits)
+        .map(|chunk| chunk.iter().rev().fold(0, |acc, b| (acc << 1) + (*b as u8)))
+        .collect()
+}
+
+/// The u64 integer represented by an L-bit little-endian bitstring.
+///
+/// # Panics
+///
+/// Panics if the bitstring is longer than 64 bits.
+pub fn lebs2ip<const L: usize>(bits: &[bool; L]) -> u64 {
+    assert!(L <= 64);
+    bits.iter()
+        .enumerate()
+        .fold(0u64, |acc, (i, b)| acc + if *b { 1 << i } else { 0 })
+}
+
+/// The sequence of bits representing a u64 in little-endian order.
+///
+/// # Panics
+///
+/// Panics if the expected length of the sequence `NUM_BITS` exceeds
+/// 64.
+pub fn i2lebsp<const NUM_BITS: usize>(int: u64) -> [bool; NUM_BITS] {
+    /// Takes in an FnMut closure and returns a constant-length array with elements of
+    /// type `Output`.
+    fn gen_const_array<Output: Copy + Default, const LEN: usize>(
+        mut closure: impl FnMut(usize) -> Output,
+    ) -> [Output; LEN] {
+        let mut ret: [Output; LEN] = [Default::default(); LEN];
+        for (bit, val) in ret.iter_mut().zip((0..LEN).map(|idx| closure(idx))) {
+            *bit = val;
+        }
+        ret
+    }
+    assert!(NUM_BITS <= 64);
+    gen_const_array(|mask: usize| (int & (1 << mask)) != 0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -126,8 +190,11 @@ mod tests {
         plonk::{Any, Circuit, ConstraintSystem, Error, Selector},
         poly::Rotation,
     };
-    use pasta_curves::pallas;
+    use pasta_curves::{arithmetic::FieldExt, pallas};
+    use proptest::prelude::*;
     use rand::rngs::OsRng;
+    use std::convert::TryInto;
+    use std::iter;
 
     #[test]
     fn test_range_check() {
@@ -282,5 +349,84 @@ mod tests {
             pallas::Base::random(rng),
             &[0..50, 50..100, 100..150, 150..200, 200..255],
         );
+    }
+
+    prop_compose! {
+        fn arb_scalar()(bytes in prop::array::uniform32(0u8..)) -> pallas::Scalar {
+            // Instead of rejecting out-of-range bytes, let's reduce them.
+            let mut buf = [0; 64];
+            buf[..32].copy_from_slice(&bytes);
+            pallas::Scalar::from_bytes_wide(&buf)
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_decompose_word(
+            scalar in arb_scalar(),
+            window_num_bits in 1u8..9
+        ) {
+            // Get decomposition into `window_num_bits` bits
+            let decomposed = decompose_word(&scalar, pallas::Scalar::NUM_BITS as usize, window_num_bits as usize);
+
+            // Flatten bits
+            let bits = decomposed
+                .iter()
+                .flat_map(|window| (0..window_num_bits).map(move |mask| (window & (1 << mask)) != 0));
+
+            // Ensure this decomposition contains 256 or fewer set bits.
+            assert!(!bits.clone().skip(32*8).any(|b| b));
+
+            // Pad or truncate bits to 32 bytes
+            let bits: Vec<bool> = bits.chain(iter::repeat(false)).take(32*8).collect();
+
+            let bytes: Vec<u8> = bits.chunks_exact(8).map(|chunk| chunk.iter().rev().fold(0, |acc, b| (acc << 1) + (*b as u8))).collect();
+
+            // Check that original scalar is recovered from decomposition
+            assert_eq!(scalar, pallas::Scalar::from_repr(bytes.try_into().unwrap()).unwrap());
+        }
+    }
+
+    #[test]
+    fn lebs2ip_round_trip() {
+        use rand::rngs::OsRng;
+
+        let mut rng = OsRng;
+        {
+            let int = rng.next_u64();
+            assert_eq!(lebs2ip::<64>(&i2lebsp(int)), int);
+        }
+
+        assert_eq!(lebs2ip::<64>(&i2lebsp(0)), 0);
+        assert_eq!(
+            lebs2ip::<64>(&i2lebsp(0xFFFFFFFFFFFFFFFF)),
+            0xFFFFFFFFFFFFFFFF
+        );
+    }
+
+    #[test]
+    fn i2lebsp_round_trip() {
+        {
+            let bitstring = (0..64).map(|_| rand::random()).collect::<Vec<_>>();
+            assert_eq!(
+                i2lebsp::<64>(lebs2ip::<64>(&bitstring.clone().try_into().unwrap())).to_vec(),
+                bitstring
+            );
+        }
+
+        {
+            let bitstring = [false; 64];
+            assert_eq!(i2lebsp(lebs2ip(&bitstring)), bitstring);
+        }
+
+        {
+            let bitstring = [true; 64];
+            assert_eq!(i2lebsp(lebs2ip(&bitstring)), bitstring);
+        }
+
+        {
+            let bitstring = [];
+            assert_eq!(i2lebsp(lebs2ip(&bitstring)), bitstring);
+        }
     }
 }

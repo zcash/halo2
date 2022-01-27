@@ -1,9 +1,8 @@
-use super::EccInstructions;
+use super::{EccInstructions, FixedPoints};
 use crate::{
     circuit::gadget::utilities::{
         lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions,
     },
-    constants::{self, NullifierK, OrchardFixedBasesFull, ValueCommitV},
     primitives::sinsemilla,
 };
 use arrayvec::ArrayVec;
@@ -20,9 +19,12 @@ use std::convert::TryInto;
 
 pub(super) mod add;
 pub(super) mod add_incomplete;
+pub mod constants;
 pub(super) mod mul;
 pub(super) mod mul_fixed;
 pub(super) mod witness_point;
+
+pub use constants::*;
 
 /// A curve point represented in affine (x, y) coordinates, or the
 /// identity represented as (0, 0).
@@ -131,7 +133,7 @@ impl From<NonIdentityEccPoint> for EccPoint {
 /// Configuration for the ECC chip
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[allow(non_snake_case)]
-pub struct EccConfig {
+pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>> {
     /// Advice columns needed by instructions in the ECC chip.
     pub advices: [Column<Advice>; 10],
 
@@ -145,11 +147,11 @@ pub struct EccConfig {
     mul: mul::Config,
 
     /// Fixed-base full-width scalar multiplication
-    mul_fixed_full: mul_fixed::full_width::Config,
+    mul_fixed_full: mul_fixed::full_width::Config<FixedPoints>,
     /// Fixed-base signed short scalar multiplication
-    mul_fixed_short: mul_fixed::short::Config,
+    mul_fixed_short: mul_fixed::short::Config<FixedPoints>,
     /// Fixed-base mul using a base field element as a scalar
-    mul_fixed_base_field: mul_fixed::base_field_elem::Config,
+    mul_fixed_base_field: mul_fixed::base_field_elem::Config<FixedPoints>,
 
     /// Witness point
     witness_point: witness_point::Config,
@@ -158,14 +160,59 @@ pub struct EccConfig {
     pub lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
 }
 
-/// A chip implementing EccInstructions
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct EccChip {
-    config: EccConfig,
+/// A trait representing the kind of scalar used with a particular `FixedPoint`.
+///
+/// This trait exists because of limitations around const generics.
+pub trait ScalarKind {
+    const NUM_WINDOWS: usize;
 }
 
-impl Chip<pallas::Base> for EccChip {
-    type Config = EccConfig;
+/// Type marker representing a full-width scalar for use in fixed-base scalar
+/// multiplication.
+pub enum FullScalar {}
+impl ScalarKind for FullScalar {
+    const NUM_WINDOWS: usize = NUM_WINDOWS;
+}
+
+/// Type marker representing a signed 64-bit scalar for use in fixed-base scalar
+/// multiplication.
+pub enum ShortScalar {}
+impl ScalarKind for ShortScalar {
+    const NUM_WINDOWS: usize = NUM_WINDOWS_SHORT;
+}
+
+/// Type marker representing a base field element being used as a scalar in fixed-base
+/// scalar multiplication.
+pub enum BaseFieldElem {}
+impl ScalarKind for BaseFieldElem {
+    const NUM_WINDOWS: usize = NUM_WINDOWS;
+}
+
+/// Returns information about a fixed point.
+///
+/// TODO: When associated consts can be used as const generics, introduce a
+/// `const NUM_WINDOWS: usize` associated const, and return `NUM_WINDOWS`-sized
+/// arrays instead of `Vec`s.
+pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
+    type ScalarKind: ScalarKind;
+
+    fn generator(&self) -> C;
+    fn u(&self) -> Vec<[[u8; 32]; H]>;
+    fn z(&self) -> Vec<u64>;
+
+    fn lagrange_coeffs(&self) -> Vec<[C::Base; H]> {
+        compute_lagrange_coeffs(self.generator(), Self::ScalarKind::NUM_WINDOWS)
+    }
+}
+
+/// A chip implementing EccInstructions
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EccChip<FixedPoints: super::FixedPoints<pallas::Affine>> {
+    config: EccConfig<FixedPoints>,
+}
+
+impl<FixedPoints: super::FixedPoints<pallas::Affine>> Chip<pallas::Base> for EccChip<FixedPoints> {
+    type Config = EccConfig<FixedPoints>;
     type Loaded = ();
 
     fn config(&self) -> &Self::Config {
@@ -177,11 +224,13 @@ impl Chip<pallas::Base> for EccChip {
     }
 }
 
-impl UtilitiesInstructions<pallas::Base> for EccChip {
+impl<Fixed: super::FixedPoints<pallas::Affine>> UtilitiesInstructions<pallas::Base>
+    for EccChip<Fixed>
+{
     type Var = AssignedCell<pallas::Base, pallas::Base>;
 }
 
-impl EccChip {
+impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
     pub fn construct(config: <Self as Chip<pallas::Base>>::Config) -> Self {
         Self { config }
     }
@@ -213,7 +262,7 @@ impl EccChip {
 
         // Create config that is shared across short, base-field, and full-width
         // fixed-base scalar mul.
-        let mul_fixed = mul_fixed::Config::configure(
+        let mul_fixed = mul_fixed::Config::<FixedPoints>::configure(
             meta,
             lagrange_coeffs,
             advices[4],
@@ -225,13 +274,15 @@ impl EccChip {
         );
 
         // Create gate that is only used in full-width fixed-base scalar mul.
-        let mul_fixed_full = mul_fixed::full_width::Config::configure(meta, mul_fixed);
+        let mul_fixed_full =
+            mul_fixed::full_width::Config::<FixedPoints>::configure(meta, mul_fixed.clone());
 
         // Create gate that is only used in short fixed-base scalar mul.
-        let mul_fixed_short = mul_fixed::short::Config::configure(meta, mul_fixed);
+        let mul_fixed_short =
+            mul_fixed::short::Config::<FixedPoints>::configure(meta, mul_fixed.clone());
 
         // Create gate that is only used in fixed-base mul using a base field element.
-        let mul_fixed_base_field = mul_fixed::base_field_elem::Config::configure(
+        let mul_fixed_base_field = mul_fixed::base_field_elem::Config::<FixedPoints>::configure(
             meta,
             advices[6..9].try_into().unwrap(),
             range_check,
@@ -260,7 +311,7 @@ impl EccChip {
 #[derive(Clone, Debug)]
 pub struct EccScalarFixed {
     value: Option<pallas::Scalar>,
-    windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { constants::NUM_WINDOWS }>,
+    windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS }>,
 }
 
 // TODO: Make V a `u64`
@@ -285,8 +336,7 @@ type MagnitudeSign = (MagnitudeCell, SignCell);
 pub struct EccScalarFixedShort {
     magnitude: MagnitudeCell,
     sign: SignCell,
-    running_sum:
-        ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { constants::NUM_WINDOWS_SHORT + 1 }>,
+    running_sum: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS_SHORT + 1 }>,
 }
 
 /// A base field element used for fixed-base scalar multiplication.
@@ -301,7 +351,7 @@ pub struct EccScalarFixedShort {
 #[derive(Clone, Debug)]
 struct EccBaseFieldElemFixed {
     base_field_elem: AssignedCell<pallas::Base, pallas::Base>,
-    running_sum: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { constants::NUM_WINDOWS + 1 }>,
+    running_sum: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS + 1 }>,
 }
 
 impl EccBaseFieldElemFixed {
@@ -310,16 +360,22 @@ impl EccBaseFieldElemFixed {
     }
 }
 
-impl EccInstructions<pallas::Affine> for EccChip {
+impl<Fixed: FixedPoints<pallas::Affine>> EccInstructions<pallas::Affine> for EccChip<Fixed>
+where
+    <Fixed as FixedPoints<pallas::Affine>>::Base:
+        FixedPoint<pallas::Affine, ScalarKind = BaseFieldElem>,
+    <Fixed as FixedPoints<pallas::Affine>>::FullScalar:
+        FixedPoint<pallas::Affine, ScalarKind = FullScalar>,
+    <Fixed as FixedPoints<pallas::Affine>>::ShortScalar:
+        FixedPoint<pallas::Affine, ScalarKind = ShortScalar>,
+{
     type ScalarFixed = EccScalarFixed;
     type ScalarFixedShort = EccScalarFixedShort;
     type ScalarVar = AssignedCell<pallas::Base, pallas::Base>;
     type Point = EccPoint;
     type NonIdentityPoint = NonIdentityEccPoint;
     type X = AssignedCell<pallas::Base, pallas::Base>;
-    type FixedPoints = OrchardFixedBasesFull;
-    type FixedPointsBaseField = NullifierK;
-    type FixedPointsShort = ValueCommitV;
+    type FixedPoints = Fixed;
 
     fn constrain_equal(
         &self,
@@ -413,13 +469,13 @@ impl EccInstructions<pallas::Affine> for EccChip {
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
         scalar: Option<pallas::Scalar>,
-        base: &Self::FixedPoints,
+        base: &<Self::FixedPoints as FixedPoints<pallas::Affine>>::FullScalar,
     ) -> Result<(Self::Point, Self::ScalarFixed), Error> {
-        let config = self.config().mul_fixed_full;
+        let config = self.config().mul_fixed_full.clone();
         config.assign(
             layouter.namespace(|| format!("fixed-base mul of {:?}", base)),
             scalar,
-            *base,
+            base,
         )
     }
 
@@ -427,9 +483,9 @@ impl EccInstructions<pallas::Affine> for EccChip {
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
         magnitude_sign: MagnitudeSign,
-        base: &Self::FixedPointsShort,
+        base: &<Self::FixedPoints as FixedPoints<pallas::Affine>>::ShortScalar,
     ) -> Result<(Self::Point, Self::ScalarFixedShort), Error> {
-        let config: mul_fixed::short::Config = self.config().mul_fixed_short;
+        let config = self.config().mul_fixed_short.clone();
         config.assign(
             layouter.namespace(|| format!("short fixed-base mul of {:?}", base)),
             magnitude_sign,
@@ -441,13 +497,13 @@ impl EccInstructions<pallas::Affine> for EccChip {
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
         base_field_elem: AssignedCell<pallas::Base, pallas::Base>,
-        base: &Self::FixedPointsBaseField,
+        base: &<Self::FixedPoints as FixedPoints<pallas::Affine>>::Base,
     ) -> Result<Self::Point, Error> {
-        let config = self.config().mul_fixed_base_field;
+        let config = self.config().mul_fixed_base_field.clone();
         config.assign(
             layouter.namespace(|| format!("base-field elem fixed-base mul of {:?}", base)),
             base_field_elem,
-            *base,
+            base,
         )
     }
 }

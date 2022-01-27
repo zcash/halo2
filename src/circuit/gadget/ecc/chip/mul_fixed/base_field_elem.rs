@@ -1,16 +1,16 @@
-use super::super::{EccBaseFieldElemFixed, EccPoint, NullifierK};
+use super::super::{EccBaseFieldElemFixed, EccPoint, FixedPoints, NUM_WINDOWS, T_P};
 use super::H_BASE;
 
 use crate::{
     circuit::gadget::utilities::{
         bitrange_subset, lookup_range_check::LookupRangeCheckConfig, range_check,
     },
-    constants::{self, T_P},
     primitives::sinsemilla,
 };
-use halo2::circuit::AssignedCell;
+
+use group::ff::PrimeField;
 use halo2::{
-    circuit::Layouter,
+    circuit::{AssignedCell, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
 };
@@ -18,20 +18,20 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 
 use std::convert::TryInto;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct Config {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
     q_mul_fixed_base_field: Selector,
     canon_advices: [Column<Advice>; 3],
     lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
-    super_config: super::Config,
+    super_config: super::Config<Fixed>,
 }
 
-impl Config {
+impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
     pub(crate) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         canon_advices: [Column<Advice>; 3],
         lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
-        super_config: super::Config,
+        super_config: super::Config<Fixed>,
     ) -> Self {
         for advice in canon_advices.iter() {
             meta.enable_equality(*advice);
@@ -161,8 +161,11 @@ impl Config {
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         scalar: AssignedCell<pallas::Base, pallas::Base>,
-        base: NullifierK,
-    ) -> Result<EccPoint, Error> {
+        base: &<Fixed as FixedPoints<pallas::Affine>>::Base,
+    ) -> Result<EccPoint, Error>
+    where
+        <Fixed as FixedPoints<pallas::Affine>>::Base: super::super::FixedPoint<pallas::Affine>,
+    {
         let (scalar, acc, mul_b) = layouter.assign_region(
             || "Base-field elem fixed-base mul (incomplete addition)",
             |mut region| {
@@ -175,8 +178,8 @@ impl Config {
                         offset,
                         scalar.clone(),
                         true,
-                        constants::L_ORCHARD_BASE,
-                        constants::NUM_WINDOWS,
+                        pallas::Base::NUM_BITS as usize,
+                        NUM_WINDOWS,
                     )?;
                     EccBaseFieldElemFixed {
                         base_field_elem: running_sum[0].clone(),
@@ -184,15 +187,13 @@ impl Config {
                     }
                 };
 
-                let (acc, mul_b) = self
-                    .super_config
-                    .assign_region_inner::<{ constants::NUM_WINDOWS }>(
-                        &mut region,
-                        offset,
-                        &(&scalar).into(),
-                        base.into(),
-                        self.super_config.running_sum_config.q_range_check,
-                    )?;
+                let (acc, mul_b) = self.super_config.assign_region_inner::<_, NUM_WINDOWS>(
+                    &mut region,
+                    offset,
+                    &(&scalar).into(),
+                    base,
+                    self.super_config.running_sum_config.q_range_check,
+                )?;
 
                 Ok((scalar, acc, mul_b))
             },
@@ -214,9 +215,9 @@ impl Config {
         #[cfg(test)]
         // Check that the correct multiple is obtained.
         {
-            use group::{ff::PrimeField, Curve};
+            use super::super::FixedPoint;
+            use group::Curve;
 
-            let base: super::OrchardFixedBases = base.into();
             let scalar = &scalar
                 .base_field_elem()
                 .value()
@@ -387,32 +388,31 @@ pub mod tests {
 
     use crate::circuit::gadget::{
         ecc::{
-            chip::{EccChip, NullifierK},
+            chip::{EccChip, FixedPoint, H},
             FixedPointBaseField, NonIdentityPoint, Point,
         },
         utilities::UtilitiesInstructions,
     };
-    use crate::constants;
+    use crate::constants::{NullifierK, OrchardFixedBases};
 
     pub fn test_mul_fixed_base_field(
-        chip: EccChip,
+        chip: EccChip<OrchardFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
         // nullifier_k
-        let nullifier_k = NullifierK;
         test_single_base(
             chip.clone(),
             layouter.namespace(|| "nullifier_k"),
-            FixedPointBaseField::from_inner(chip, nullifier_k),
-            nullifier_k.generator(),
+            FixedPointBaseField::from_inner(chip, NullifierK),
+            NullifierK.generator(),
         )
     }
 
     #[allow(clippy::op_ref)]
     fn test_single_base(
-        chip: EccChip,
+        chip: EccChip<OrchardFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
-        base: FixedPointBaseField<pallas::Affine, EccChip>,
+        base: FixedPointBaseField<pallas::Affine, EccChip<OrchardFixedBases>>,
         base_val: pallas::Affine,
     ) -> Result<(), Error> {
         let rng = OsRng;
@@ -420,11 +420,11 @@ pub mod tests {
         let column = chip.config().advices[0];
 
         fn constrain_equal_non_id(
-            chip: EccChip,
+            chip: EccChip<OrchardFixedBases>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
             scalar_val: pallas::Base,
-            result: Point<pallas::Affine, EccChip>,
+            result: Point<pallas::Affine, EccChip<OrchardFixedBases>>,
         ) -> Result<(), Error> {
             // Move scalar from base field into scalar field (which always fits for Pallas).
             let scalar = pallas::Scalar::from_repr(scalar_val.to_repr()).unwrap();
@@ -461,7 +461,7 @@ pub mod tests {
         // (There is another *non-canonical* sequence
         // 5333333333333333333333333333333333333333332711161673731021062440252244051273333333333 in octal.)
         {
-            let h = pallas::Base::from(constants::H as u64);
+            let h = pallas::Base::from(H as u64);
             let scalar_fixed = "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334"
                         .chars()
                         .fold(pallas::Base::zero(), |acc, c| {

@@ -2,11 +2,12 @@
 
 use crate::{
     constants::{
-        util::gen_const_array_with_default, L_ORCHARD_MERKLE, MERKLE_CRH_PERSONALIZATION,
+        sinsemilla::{i2lebsp_k, L_ORCHARD_MERKLE, MERKLE_CRH_PERSONALIZATION},
+        util::gen_const_array_with_default,
         MERKLE_DEPTH_ORCHARD,
     },
     note::commitment::ExtractedNoteCommitment,
-    primitives::sinsemilla::{i2lebsp_k, HashDomain},
+    primitives::sinsemilla::HashDomain,
 };
 use incrementalmerkletree::{Altitude, Hashable};
 use pasta_curves::pallas;

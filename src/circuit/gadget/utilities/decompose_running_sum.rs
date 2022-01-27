@@ -30,7 +30,6 @@ use halo2::{
 };
 
 use super::range_check;
-use crate::constants::util::decompose_word;
 use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
@@ -166,7 +165,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         let words: Vec<Option<u8>> = {
             let words = z_0
                 .value()
-                .map(|word| decompose_word::<F>(word, word_num_bits, WINDOW_NUM_BITS));
+                .map(|word| super::decompose_word::<F>(word, word_num_bits, WINDOW_NUM_BITS));
 
             if let Some(words) = words {
                 words.into_iter().map(Some).collect()
@@ -217,8 +216,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::constants::{self, FIXED_BASE_WINDOW_SIZE, L_ORCHARD_BASE, L_VALUE};
-    use group::ff::Field;
+    use group::ff::{Field, PrimeField};
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{MockProver, VerifyFailure},
@@ -226,6 +224,12 @@ mod tests {
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
     use rand::rngs::OsRng;
+
+    use crate::circuit::gadget::ecc::chip::{
+        FIXED_BASE_WINDOW_SIZE, L_SCALAR_SHORT as L_SHORT, NUM_WINDOWS, NUM_WINDOWS_SHORT,
+    };
+
+    const L_BASE: usize = pallas::Base::NUM_BITS as usize;
 
     #[test]
     fn test_running_sum() {
@@ -306,15 +310,11 @@ mod tests {
             let alpha = pallas::Base::random(OsRng);
 
             // Strict full decomposition should pass.
-            let circuit: MyCircuit<
-                pallas::Base,
-                L_ORCHARD_BASE,
-                FIXED_BASE_WINDOW_SIZE,
-                { constants::NUM_WINDOWS },
-            > = MyCircuit {
-                alpha: Some(alpha),
-                strict: true,
-            };
+            let circuit: MyCircuit<pallas::Base, L_BASE, FIXED_BASE_WINDOW_SIZE, { NUM_WINDOWS }> =
+                MyCircuit {
+                    alpha: Some(alpha),
+                    strict: true,
+                };
             let prover = MockProver::<pallas::Base>::run(8, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
         }
@@ -326,9 +326,9 @@ mod tests {
             // Strict full decomposition should pass.
             let circuit: MyCircuit<
                 pallas::Base,
-                L_VALUE,
+                L_SHORT,
                 FIXED_BASE_WINDOW_SIZE,
-                { constants::NUM_WINDOWS_SHORT },
+                { NUM_WINDOWS_SHORT },
             > = MyCircuit {
                 alpha: Some(alpha),
                 strict: true,
@@ -344,9 +344,9 @@ mod tests {
             // Strict partial decomposition should fail.
             let circuit: MyCircuit<
                 pallas::Base,
-                L_VALUE,
+                L_SHORT,
                 FIXED_BASE_WINDOW_SIZE,
-                { constants::NUM_WINDOWS_SHORT },
+                { NUM_WINDOWS_SHORT },
             > = MyCircuit {
                 alpha: Some(alpha),
                 strict: true,
@@ -377,9 +377,9 @@ mod tests {
             // Non-strict partial decomposition should pass.
             let circuit: MyCircuit<
                 pallas::Base,
-                { constants::L_VALUE },
+                { L_SHORT },
                 FIXED_BASE_WINDOW_SIZE,
-                { constants::NUM_WINDOWS_SHORT },
+                { NUM_WINDOWS_SHORT },
             > = MyCircuit {
                 alpha: Some(alpha),
                 strict: false,

@@ -1,12 +1,10 @@
 use super::{
-    add, add_incomplete, EccBaseFieldElemFixed, EccScalarFixed, EccScalarFixedShort,
-    NonIdentityEccPoint,
+    add, add_incomplete, EccBaseFieldElemFixed, EccScalarFixed, EccScalarFixedShort, FixedPoint,
+    NonIdentityEccPoint, FIXED_BASE_WINDOW_SIZE, H,
 };
 use crate::circuit::gadget::utilities::decompose_running_sum::RunningSumConfig;
-use crate::constants::{
-    self,
-    load::{NullifierK, OrchardFixedBase, OrchardFixedBasesFull, ValueCommitV, WindowUs},
-};
+
+use std::marker::PhantomData;
 
 use group::{ff::PrimeField, Curve};
 use halo2::{
@@ -27,60 +25,15 @@ pub mod short;
 lazy_static! {
     static ref TWO_SCALAR: pallas::Scalar = pallas::Scalar::from(2);
     // H = 2^3 (3-bit window)
-    static ref H_SCALAR: pallas::Scalar = pallas::Scalar::from(constants::H as u64);
-    static ref H_BASE: pallas::Base = pallas::Base::from(constants::H as u64);
+    static ref H_SCALAR: pallas::Scalar = pallas::Scalar::from(H as u64);
+    static ref H_BASE: pallas::Base = pallas::Base::from(H as u64);
 }
 
-// A sum type for both full-width and short bases. This enables us to use the
-// shared functionality of full-width and short fixed-base scalar multiplication.
-#[derive(Copy, Clone, Debug)]
-enum OrchardFixedBases {
-    Full(OrchardFixedBasesFull),
-    NullifierK,
-    ValueCommitV,
-}
-
-impl From<OrchardFixedBasesFull> for OrchardFixedBases {
-    fn from(full_width_base: OrchardFixedBasesFull) -> Self {
-        Self::Full(full_width_base)
-    }
-}
-
-impl From<ValueCommitV> for OrchardFixedBases {
-    fn from(_value_commit_v: ValueCommitV) -> Self {
-        Self::ValueCommitV
-    }
-}
-
-impl From<NullifierK> for OrchardFixedBases {
-    fn from(_nullifier_k: NullifierK) -> Self {
-        Self::NullifierK
-    }
-}
-
-impl OrchardFixedBases {
-    pub fn generator(self) -> pallas::Affine {
-        match self {
-            Self::ValueCommitV => constants::value_commit_v::generator(),
-            Self::NullifierK => constants::nullifier_k::generator(),
-            Self::Full(base) => base.generator(),
-        }
-    }
-
-    pub fn u(self) -> Vec<WindowUs> {
-        match self {
-            Self::ValueCommitV => ValueCommitV::get().u_short.0.as_ref().to_vec(),
-            Self::NullifierK => NullifierK.u().0.as_ref().to_vec(),
-            Self::Full(base) => base.u().0.as_ref().to_vec(),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Config {
-    running_sum_config: RunningSumConfig<pallas::Base, { constants::FIXED_BASE_WINDOW_SIZE }>,
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Config<FixedPoints: super::FixedPoints<pallas::Affine>> {
+    running_sum_config: RunningSumConfig<pallas::Base, FIXED_BASE_WINDOW_SIZE>,
     // The fixed Lagrange interpolation coefficients for `x_p`.
-    lagrange_coeffs: [Column<Fixed>; constants::H],
+    lagrange_coeffs: [Column<Fixed>; H],
     // The fixed `z` for each window such that `y + z = u^2`.
     fixed_z: Column<Fixed>,
     // Decomposition of an `n-1`-bit scalar into `k`-bit windows:
@@ -96,13 +49,14 @@ pub struct Config {
     add_config: add::Config,
     // Configuration for `add_incomplete`
     add_incomplete_config: add_incomplete::Config,
+    _marker: PhantomData<FixedPoints>,
 }
 
-impl Config {
+impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
-        lagrange_coeffs: [Column<Fixed>; constants::H],
+        lagrange_coeffs: [Column<Fixed>; H],
         window: Column<Advice>,
         x_p: Column<Advice>,
         y_p: Column<Advice>,
@@ -126,6 +80,7 @@ impl Config {
             u,
             add_config,
             add_incomplete_config,
+            _marker: PhantomData,
         };
 
         // Check relationships between this config and `add_config`.
@@ -182,7 +137,7 @@ impl Config {
 
             //    z_{i+1} = (z_i - a_i) / 2^3
             // => a_i = z_i - z_{i+1} * 2^3
-            let word = z_cur - z_next * pallas::Base::from(constants::H as u64);
+            let word = z_cur - z_next * pallas::Base::from(H as u64);
 
             self.coords_check(meta, q_mul_fixed_running_sum, word)
         });
@@ -200,7 +155,7 @@ impl Config {
         let z = meta.query_fixed(self.fixed_z, Rotation::cur());
         let u = meta.query_advice(self.u, Rotation::cur());
 
-        let window_pow: Vec<Expression<pallas::Base>> = (0..constants::H)
+        let window_pow: Vec<Expression<pallas::Base>> = (0..H)
             .map(|pow| {
                 (0..pow).fold(Expression::Constant(pallas::Base::one()), |acc, _| {
                     acc * window.clone()
@@ -231,63 +186,45 @@ impl Config {
     }
 
     #[allow(clippy::type_complexity)]
-    fn assign_region_inner<const NUM_WINDOWS: usize>(
+    fn assign_region_inner<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
         scalar: &ScalarFixed,
-        base: OrchardFixedBases,
+        base: &F,
         coords_check_toggle: Selector,
     ) -> Result<(NonIdentityEccPoint, NonIdentityEccPoint), Error> {
         // Assign fixed columns for given fixed base
-        self.assign_fixed_constants::<NUM_WINDOWS>(region, offset, base, coords_check_toggle)?;
+        self.assign_fixed_constants::<F, NUM_WINDOWS>(region, offset, base, coords_check_toggle)?;
 
         // Initialize accumulator
-        let acc = self.initialize_accumulator(region, offset, base, scalar)?;
+        let acc = self.initialize_accumulator::<F, NUM_WINDOWS>(region, offset, base, scalar)?;
 
         // Process all windows excluding least and most significant windows
-        let acc = self.add_incomplete(region, offset, acc, base, scalar)?;
+        let acc = self.add_incomplete::<F, NUM_WINDOWS>(region, offset, acc, base, scalar)?;
 
         // Process most significant window using complete addition
-        let mul_b = self.process_msb::<NUM_WINDOWS>(region, offset, base, scalar)?;
+        let mul_b = self.process_msb::<F, NUM_WINDOWS>(region, offset, base, scalar)?;
 
         Ok((acc, mul_b))
     }
 
-    fn assign_fixed_constants<const NUM_WINDOWS: usize>(
+    fn assign_fixed_constants<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        base: OrchardFixedBases,
+        base: &F,
         coords_check_toggle: Selector,
     ) -> Result<(), Error> {
         let mut constants = None;
+        let build_constants = || {
+            let lagrange_coeffs = base.lagrange_coeffs();
+            assert_eq!(lagrange_coeffs.len(), NUM_WINDOWS);
 
-        let build_constants = || match base {
-            OrchardFixedBases::ValueCommitV => {
-                assert_eq!(NUM_WINDOWS, constants::NUM_WINDOWS_SHORT);
-                let base = ValueCommitV::get();
-                (
-                    base.lagrange_coeffs_short.0.as_ref().to_vec(),
-                    base.z_short.0.as_ref().to_vec(),
-                )
-            }
-            OrchardFixedBases::Full(base) => {
-                assert_eq!(NUM_WINDOWS, constants::NUM_WINDOWS);
-                let base: OrchardFixedBase = base.into();
-                (
-                    base.lagrange_coeffs.0.as_ref().to_vec(),
-                    base.z.0.as_ref().to_vec(),
-                )
-            }
-            OrchardFixedBases::NullifierK => {
-                assert_eq!(NUM_WINDOWS, constants::NUM_WINDOWS);
-                let base: OrchardFixedBase = NullifierK.into();
-                (
-                    base.lagrange_coeffs.0.as_ref().to_vec(),
-                    base.z.0.as_ref().to_vec(),
-                )
-            }
+            let z = base.z();
+            assert_eq!(z.len(), NUM_WINDOWS);
+
+            (lagrange_coeffs, z)
         };
 
         // Assign fixed columns for given fixed base
@@ -295,7 +232,7 @@ impl Config {
             coords_check_toggle.enable(region, window + offset)?;
 
             // Assign x-coordinate Lagrange interpolation coefficients
-            for k in 0..(constants::H) {
+            for k in 0..H {
                 region.assign_fixed(
                     || {
                         format!(
@@ -310,7 +247,7 @@ impl Config {
                             constants = Some(build_constants());
                         }
                         let lagrange_coeffs = &constants.as_ref().unwrap().0;
-                        Ok(lagrange_coeffs[window].0[k])
+                        Ok(lagrange_coeffs[window][k])
                     },
                 )?;
             }
@@ -322,7 +259,7 @@ impl Config {
                 window + offset,
                 || {
                     let z = &constants.as_ref().unwrap().1;
-                    Ok(z[window])
+                    Ok(pallas::Base::from(z[window]))
                 },
             )?;
         }
@@ -330,17 +267,18 @@ impl Config {
         Ok(())
     }
 
-    fn process_window(
+    fn process_window<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
         w: usize,
         k: Option<pallas::Scalar>,
         k_usize: Option<usize>,
-        base: OrchardFixedBases,
+        base: &F,
     ) -> Result<NonIdentityEccPoint, Error> {
         let base_value = base.generator();
         let base_u = base.u();
+        assert_eq!(base_u.len(), NUM_WINDOWS);
 
         // Compute [(k_w + 2) ⋅ 8^w]B
         let mul_b = {
@@ -376,17 +314,17 @@ impl Config {
         };
 
         // Assign u = (y_p + z_w).sqrt()
-        let u_val = k_usize.map(|k| base_u[w].0[k]);
+        let u_val = k_usize.map(|k| pallas::Base::from_bytes(&base_u[w][k]).unwrap());
         region.assign_advice(|| "u", self.u, offset + w, || u_val.ok_or(Error::Synthesis))?;
 
         Ok(mul_b)
     }
 
-    fn initialize_accumulator(
+    fn initialize_accumulator<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        base: OrchardFixedBases,
+        base: &F,
         scalar: &ScalarFixed,
     ) -> Result<NonIdentityEccPoint, Error> {
         // Recall that the message at each window `w` is represented as
@@ -395,15 +333,15 @@ impl Config {
         let w = 0;
         let k0 = scalar.windows_field()[0];
         let k0_usize = scalar.windows_usize()[0];
-        self.process_window(region, offset, w, k0, k0_usize, base)
+        self.process_window::<_, NUM_WINDOWS>(region, offset, w, k0, k0_usize, base)
     }
 
-    fn add_incomplete(
+    fn add_incomplete<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
         mut acc: NonIdentityEccPoint,
-        base: OrchardFixedBases,
+        base: &F,
         scalar: &ScalarFixed,
     ) -> Result<NonIdentityEccPoint, Error> {
         let scalar_windows_field = scalar.windows_field();
@@ -417,7 +355,8 @@ impl Config {
             .skip(1)
         {
             // Compute [(k_w + 2) ⋅ 8^w]B
-            let mul_b = self.process_window(region, offset, w, *k, *k_usize, base)?;
+            let mul_b =
+                self.process_window::<_, NUM_WINDOWS>(region, offset, w, *k, *k_usize, base)?;
 
             // Add to the accumulator
             acc = self
@@ -427,17 +366,17 @@ impl Config {
         Ok(acc)
     }
 
-    fn process_msb<const NUM_WINDOWS: usize>(
+    fn process_msb<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        base: OrchardFixedBases,
+        base: &F,
         scalar: &ScalarFixed,
     ) -> Result<NonIdentityEccPoint, Error> {
         // Assign u = (y_p + z_w).sqrt() for the most significant window
         {
-            let u_val =
-                scalar.windows_usize()[NUM_WINDOWS - 1].map(|k| base.u()[NUM_WINDOWS - 1].0[k]);
+            let u_val = scalar.windows_usize()[NUM_WINDOWS - 1]
+                .map(|k| pallas::Base::from_bytes(&base.u()[NUM_WINDOWS - 1][k]).unwrap());
             region.assign_advice(
                 || "u",
                 self.u,
@@ -448,12 +387,7 @@ impl Config {
 
         // offset_acc = \sum_{j = 0}^{NUM_WINDOWS - 2} 2^{FIXED_BASE_WINDOW_SIZE*j + 1}
         let offset_acc = (0..(NUM_WINDOWS - 1)).fold(pallas::Scalar::zero(), |acc, w| {
-            acc + (*TWO_SCALAR).pow(&[
-                constants::FIXED_BASE_WINDOW_SIZE as u64 * w as u64 + 1,
-                0,
-                0,
-                0,
-            ])
+            acc + (*TWO_SCALAR).pow(&[FIXED_BASE_WINDOW_SIZE as u64 * w as u64 + 1, 0, 0, 0])
         });
 
         // `scalar = [k * 8^84 - offset_acc]`, where `offset_acc = \sum_{j = 0}^{83} 2^{FIXED_BASE_WINDOW_SIZE*j + 1}`.
@@ -558,7 +492,7 @@ impl ScalarFixed {
             .map(|window| {
                 if let Some(window) = window {
                     let window = window.get_lower_32() as usize;
-                    assert!(window < constants::H);
+                    assert!(window < H);
                     Some(window)
                 } else {
                     None

@@ -1,6 +1,6 @@
 //! Gadget and chips for the Sinsemilla hash function.
 use crate::circuit::gadget::{
-    ecc::{self, EccInstructions},
+    ecc::{self, EccInstructions, FixedPoints},
     utilities::Var,
 };
 use group::ff::{Field, PrimeField};
@@ -9,10 +9,8 @@ use pasta_curves::arithmetic::CurveAffine;
 use std::fmt::Debug;
 
 pub mod chip;
-pub mod commit_ivk;
 pub mod merkle;
 mod message;
-pub mod note_commit;
 
 /// The set of circuit instructions required to use the [`Sinsemilla`](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html) gadget.
 /// This trait is bounded on two constant parameters: `K`, the number of bits
@@ -49,7 +47,7 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     /// A point output of [`Self::hash_to_point`].
     type NonIdentityPoint: Clone + Debug;
     /// A type enumerating the fixed points used in `CommitDomains`.
-    type FixedPoints: Clone + Debug;
+    type FixedPoints: FixedPoints<C>;
 
     /// HashDomains used in this instruction.
     type HashDomains: HashDomains<C>;
@@ -140,7 +138,7 @@ where
     /// Constructs a message from a vector of [`MessagePiece`]s.
     ///
     /// [`MessagePiece`]: SinsemillaInstructions::MessagePiece
-    fn from_pieces(
+    pub fn from_pieces(
         chip: SinsemillaChip,
         pieces: Vec<MessagePiece<C, SinsemillaChip, K, MAX_WORDS>>,
     ) -> Self {
@@ -169,7 +167,8 @@ impl<C: CurveAffine, SinsemillaChip, const K: usize, const MAX_WORDS: usize>
 where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
 {
-    fn inner(&self) -> SinsemillaChip::MessagePiece {
+    /// Returns the inner MessagePiece contained in this gadget.
+    pub fn inner(&self) -> SinsemillaChip::MessagePiece {
         self.inner.clone()
     }
 }
@@ -211,7 +210,8 @@ where
         Self::from_field_elem(chip, layouter, piece_value, num_words)
     }
 
-    fn from_field_elem(
+    /// Constructs a MessagePiece from a field element.
+    pub fn from_field_elem(
         chip: SinsemillaChip,
         layouter: impl Layouter<C::Base>,
         field_elem: Option<C::Base>,
@@ -303,12 +303,12 @@ where
 }
 
 /// Trait allowing circuit's Sinsemilla CommitDomains to be enumerated.
-pub trait CommitDomains<C: CurveAffine, F: Clone + Debug, H: HashDomains<C>>:
+pub trait CommitDomains<C: CurveAffine, F: FixedPoints<C>, H: HashDomains<C>>:
     Clone + Debug
 {
     /// Returns the fixed point corresponding to the R constant used for
     /// randomization in this CommitDomain.
-    fn r(&self) -> F;
+    fn r(&self) -> F::FullScalar;
 
     /// Returns the HashDomain contained in this CommitDomain
     fn hash_domain(&self) -> H;
@@ -357,6 +357,7 @@ where
     pub fn new(
         sinsemilla_chip: SinsemillaChip,
         ecc_chip: EccChip,
+        // TODO: Instead of using SinsemilllaChip::CommitDomains, just use something that implements a CommitDomains trait
         domain: &SinsemillaChip::CommitDomains,
     ) -> Self {
         CommitDomain {
@@ -414,7 +415,7 @@ mod tests {
     use rand::rngs::OsRng;
 
     use super::{
-        chip::{SinsemillaChip, SinsemillaCommitDomains, SinsemillaConfig, SinsemillaHashDomains},
+        chip::{SinsemillaChip, SinsemillaConfig},
         CommitDomain, HashDomain, Message, MessagePiece,
     };
 
@@ -426,7 +427,10 @@ mod tests {
             },
             utilities::lookup_range_check::LookupRangeCheckConfig,
         },
-        constants::{COMMIT_IVK_PERSONALIZATION, MERKLE_CRH_PERSONALIZATION},
+        constants::{
+            fixed_bases::COMMIT_IVK_PERSONALIZATION, sinsemilla::MERKLE_CRH_PERSONALIZATION,
+            OrchardCommitDomains, OrchardFixedBases, OrchardHashDomains,
+        },
         primitives::sinsemilla::{self, K},
     };
 
@@ -438,7 +442,12 @@ mod tests {
     struct MyCircuit {}
 
     impl Circuit<pallas::Base> for MyCircuit {
-        type Config = (EccConfig, SinsemillaConfig, SinsemillaConfig);
+        #[allow(clippy::type_complexity)]
+        type Config = (
+            EccConfig<OrchardFixedBases>,
+            SinsemillaConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
+            SinsemillaConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
+        );
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
@@ -485,7 +494,12 @@ mod tests {
 
             let range_check = LookupRangeCheckConfig::configure(meta, advices[9], table_idx);
 
-            let ecc_config = EccChip::configure(meta, advices, lagrange_coeffs, range_check);
+            let ecc_config = EccChip::<OrchardFixedBases>::configure(
+                meta,
+                advices,
+                lagrange_coeffs,
+                range_check,
+            );
 
             let config1 = SinsemillaChip::configure(
                 meta,
@@ -516,7 +530,10 @@ mod tests {
             let ecc_chip = EccChip::construct(config.0);
 
             // The two `SinsemillaChip`s share the same lookup table.
-            SinsemillaChip::load(config.1.clone(), &mut layouter)?;
+            SinsemillaChip::<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>::load(
+                config.1.clone(),
+                &mut layouter,
+            )?;
 
             // This MerkleCRH example is purely for illustrative purposes.
             // It is not an implementation of the Orchard protocol spec.
@@ -526,10 +543,10 @@ mod tests {
                 let merkle_crh = HashDomain::new(
                     chip1.clone(),
                     ecc_chip.clone(),
-                    &SinsemillaHashDomains::MerkleCrh,
+                    &OrchardHashDomains::MerkleCrh,
                 );
 
-                // Layer 31, l = MERKLE_DEPTH_ORCHARD - 1 - layer = 0
+                // Layer 31, l = MERKLE_DEPTH - 1 - layer = 0
                 let l_bitstring = vec![Some(false); K];
                 let l = MessagePiece::from_bitstring(
                     chip1.clone(),
@@ -602,7 +619,7 @@ mod tests {
                 let commit_ivk = CommitDomain::new(
                     chip2.clone(),
                     ecc_chip.clone(),
-                    &SinsemillaCommitDomains::CommitIvk,
+                    &OrchardCommitDomains::CommitIvk,
                 );
                 let r_val = pallas::Scalar::random(rng);
                 let message: Vec<Option<bool>> =

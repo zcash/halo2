@@ -1,10 +1,8 @@
-use super::super::{EccPoint, EccScalarFixed, OrchardFixedBasesFull};
+use super::super::{EccPoint, EccScalarFixed, FixedPoints, FIXED_BASE_WINDOW_SIZE, H, NUM_WINDOWS};
 
-use crate::{
-    circuit::gadget::utilities::range_check,
-    constants::{self, util, L_ORCHARD_SCALAR, NUM_WINDOWS},
-};
+use crate::circuit::gadget::utilities::{decompose_word, range_check};
 use arrayvec::ArrayVec;
+use ff::PrimeField;
 use halo2::{
     circuit::{AssignedCell, Layouter, Region},
     plonk::{ConstraintSystem, Error, Selector},
@@ -12,16 +10,16 @@ use halo2::{
 };
 use pasta_curves::pallas;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Config {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
     q_mul_fixed_full: Selector,
-    super_config: super::Config,
+    super_config: super::Config<Fixed>,
 }
 
-impl Config {
+impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
     pub(crate) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
-        super_config: super::Config,
+        super_config: super::Config<Fixed>,
     ) -> Self {
         let config = Self {
             q_mul_fixed_full: meta.selector(),
@@ -46,7 +44,7 @@ impl Config {
                 // 1 * (window - 0) * (window - 1) * ... * (window - 7)
                 .chain(Some((
                     "window range check",
-                    q_mul_fixed_full * range_check(window, constants::H),
+                    q_mul_fixed_full * range_check(window, H),
                 )))
         });
     }
@@ -60,7 +58,9 @@ impl Config {
         offset: usize,
         scalar: Option<pallas::Scalar>,
     ) -> Result<EccScalarFixed, Error> {
-        let windows = self.decompose_scalar_fixed::<L_ORCHARD_SCALAR>(scalar, offset, region)?;
+        let windows = self.decompose_scalar_fixed::<{ pallas::Scalar::NUM_BITS as usize }>(
+            scalar, offset, region,
+        )?;
 
         Ok(EccScalarFixed {
             value: scalar,
@@ -84,11 +84,7 @@ impl Config {
 
         // Decompose scalar into `k-bit` windows
         let scalar_windows: Option<Vec<u8>> = scalar.map(|scalar| {
-            util::decompose_word::<pallas::Scalar>(
-                &scalar,
-                SCALAR_NUM_BITS,
-                constants::FIXED_BASE_WINDOW_SIZE,
-            )
+            decompose_word::<pallas::Scalar>(&scalar, SCALAR_NUM_BITS, FIXED_BASE_WINDOW_SIZE)
         });
 
         // Store the scalar decomposition
@@ -122,8 +118,12 @@ impl Config {
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         scalar: Option<pallas::Scalar>,
-        base: OrchardFixedBasesFull,
-    ) -> Result<(EccPoint, EccScalarFixed), Error> {
+        base: &<Fixed as FixedPoints<pallas::Affine>>::FullScalar,
+    ) -> Result<(EccPoint, EccScalarFixed), Error>
+    where
+        <Fixed as FixedPoints<pallas::Affine>>::FullScalar:
+            super::super::FixedPoint<pallas::Affine>,
+    {
         let (scalar, acc, mul_b) = layouter.assign_region(
             || "Full-width fixed-base mul (incomplete addition)",
             |mut region| {
@@ -131,15 +131,13 @@ impl Config {
 
                 let scalar = self.witness(&mut region, offset, scalar)?;
 
-                let (acc, mul_b) = self
-                    .super_config
-                    .assign_region_inner::<{ constants::NUM_WINDOWS }>(
-                        &mut region,
-                        offset,
-                        &(&scalar).into(),
-                        base.into(),
-                        self.q_mul_fixed_full,
-                    )?;
+                let (acc, mul_b) = self.super_config.assign_region_inner::<_, NUM_WINDOWS>(
+                    &mut region,
+                    offset,
+                    &(&scalar).into(),
+                    base,
+                    self.q_mul_fixed_full,
+                )?;
 
                 Ok((scalar, acc, mul_b))
             },
@@ -161,9 +159,9 @@ impl Config {
         #[cfg(test)]
         // Check that the correct multiple is obtained.
         {
+            use super::super::FixedPoint;
             use group::Curve;
 
-            let base: super::OrchardFixedBases = base.into();
             let real_mul = scalar.value.map(|scalar| base.generator() * scalar);
             let result = result.point();
 
@@ -184,13 +182,13 @@ pub mod tests {
     use rand::rngs::OsRng;
 
     use crate::circuit::gadget::ecc::{
-        chip::{EccChip, OrchardFixedBasesFull},
+        chip::{EccChip, FixedPoint as _, H},
         FixedPoint, NonIdentityPoint, Point,
     };
-    use crate::constants;
+    use crate::constants::{OrchardFixedBases, OrchardFixedBasesFull};
 
     pub fn test_mul_fixed(
-        chip: EccChip,
+        chip: EccChip<OrchardFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
         // commit_ivk_r
@@ -234,17 +232,17 @@ pub mod tests {
 
     #[allow(clippy::op_ref)]
     fn test_single_base(
-        chip: EccChip,
+        chip: EccChip<OrchardFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
-        base: FixedPoint<pallas::Affine, EccChip>,
+        base: FixedPoint<pallas::Affine, EccChip<OrchardFixedBases>>,
         base_val: pallas::Affine,
     ) -> Result<(), Error> {
         fn constrain_equal_non_id(
-            chip: EccChip,
+            chip: EccChip<OrchardFixedBases>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
             scalar_val: pallas::Scalar,
-            result: Point<pallas::Affine, EccChip>,
+            result: Point<pallas::Affine, EccChip<OrchardFixedBases>>,
         ) -> Result<(), Error> {
             let expected = NonIdentityPoint::new(
                 chip,
@@ -273,7 +271,7 @@ pub mod tests {
         // (There is another *non-canonical* sequence
         // 5333333333333333333333333333333333333333332711161673731021062440252244051273333333333 in octal.)
         {
-            let h = pallas::Scalar::from(constants::H as u64);
+            let h = pallas::Scalar::from(H as u64);
             let scalar_fixed = "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334"
                         .chars()
                         .fold(pallas::Scalar::zero(), |acc, c| {

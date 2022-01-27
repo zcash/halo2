@@ -5,6 +5,7 @@ use halo2::{
     poly::Rotation,
 };
 
+use super::{CommitDomains, FixedPoints, HashDomains};
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
 /// Table containing independent generators S[0..2^k]
@@ -21,7 +22,14 @@ impl GeneratorTableConfig {
     /// Even though the lookup table can be used in other parts of the circuit,
     /// this specific configuration sets up Sinsemilla-specific constraints
     /// controlled by `q_sinsemilla`, and would likely not apply to other chips.
-    pub fn configure(meta: &mut ConstraintSystem<pallas::Base>, config: super::SinsemillaConfig) {
+    pub fn configure<Hash, Commit, F>(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        config: super::SinsemillaConfig<Hash, Commit, F>,
+    ) where
+        Hash: HashDomains<pallas::Affine>,
+        F: FixedPoints<pallas::Affine>,
+        Commit: CommitDomains<pallas::Affine, F, Hash>,
+    {
         let (table_idx, table_x, table_y) = (
             config.generator_table.table_idx,
             config.generator_table.table_x,
