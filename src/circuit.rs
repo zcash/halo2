@@ -11,6 +11,23 @@ use memuse::DynamicUsage;
 use pasta_curves::{arithmetic::CurveAffine, pallas, vesta};
 use rand::RngCore;
 
+use self::commit_ivk::CommitIvkConfig;
+use self::gadget::{
+    ecc::{
+        chip::{EccChip, EccConfig},
+        FixedPoint, FixedPointBaseField, FixedPointShort, NonIdentityPoint, Point,
+    },
+    poseidon::{Hash as PoseidonHash, Pow5Chip as PoseidonChip, Pow5Config as PoseidonConfig},
+    sinsemilla::{
+        chip::{SinsemillaChip, SinsemillaConfig},
+        merkle::{
+            chip::{MerkleChip, MerkleConfig},
+            MerklePath,
+        },
+    },
+    utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
+};
+use self::note_commit::NoteCommitConfig;
 use crate::{
     constants::{
         util::gen_const_array, NullifierK, OrchardCommitDomains, OrchardFixedBases,
@@ -32,23 +49,6 @@ use crate::{
     tree::{Anchor, MerkleHashOrchard},
     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment},
 };
-use commit_ivk::CommitIvkConfig;
-use gadget::{
-    ecc::{
-        chip::{EccChip, EccConfig},
-        FixedPoint, FixedPointBaseField, FixedPointShort, NonIdentityPoint, Point,
-    },
-    poseidon::{Hash as PoseidonHash, Pow5Chip as PoseidonChip, Pow5Config as PoseidonConfig},
-    sinsemilla::{
-        chip::{SinsemillaChip, SinsemillaConfig},
-        merkle::{
-            chip::{MerkleChip, MerkleConfig},
-            MerklePath,
-        },
-    },
-    utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
-};
-use note_commit::NoteCommitConfig;
 
 use std::convert::TryInto;
 
