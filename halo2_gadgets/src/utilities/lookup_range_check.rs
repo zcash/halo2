@@ -1,7 +1,7 @@
 //! Make use of a K-bit lookup table to decompose a field element into K-bit
 //! words.
 
-use halo2::{
+use halo2_proofs::{
     circuit::{AssignedCell, Layouter, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector, TableColumn},
     poly::Rotation,
@@ -367,7 +367,7 @@ mod tests {
     use super::super::lebs2ip;
     use crate::primitives::sinsemilla::K;
     use ff::{Field, PrimeFieldBits};
-    use halo2::{
+    use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{FailureLocation, MockProver, VerifyFailure},
         plonk::{Circuit, ConstraintSystem, Error},

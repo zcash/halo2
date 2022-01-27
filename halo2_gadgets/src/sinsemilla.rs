@@ -4,7 +4,7 @@ use crate::{
     utilities::Var,
 };
 use group::ff::{Field, PrimeField};
-use halo2::{circuit::Layouter, plonk::Error};
+use halo2_proofs::{circuit::Layouter, plonk::Error};
 use pasta_curves::arithmetic::CurveAffine;
 use std::fmt::Debug;
 
@@ -413,7 +413,7 @@ where
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use halo2::{
+    use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
@@ -704,7 +704,7 @@ pub(crate) mod tests {
         let root = root.titled("SinsemillaHash", ("sans-serif", 60)).unwrap();
 
         let circuit = MyCircuit {};
-        halo2::dev::CircuitLayout::default()
+        halo2_proofs::dev::CircuitLayout::default()
             .render(11, &circuit, &root)
             .unwrap();
     }

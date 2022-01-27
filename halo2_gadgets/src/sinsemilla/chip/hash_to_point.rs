@@ -3,8 +3,8 @@ use super::{NonIdentityEccPoint, SinsemillaChip};
 
 use crate::ecc::FixedPoints;
 use crate::primitives::sinsemilla::{self, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S};
-use halo2::circuit::AssignedCell;
-use halo2::{
+use halo2_proofs::circuit::AssignedCell;
+use halo2_proofs::{
     circuit::{Chip, Region},
     plonk::Error,
 };

@@ -1,7 +1,7 @@
 use super::{T_Q, Z};
 use crate::{primitives::sinsemilla, utilities::lookup_range_check::LookupRangeCheckConfig};
-use halo2::circuit::AssignedCell;
-use halo2::{
+use halo2_proofs::circuit::AssignedCell;
+use halo2_proofs::{
     circuit::Layouter,
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,

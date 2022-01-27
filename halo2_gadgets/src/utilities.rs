@@ -1,7 +1,7 @@
 //! Utility gadgets.
 
 use ff::PrimeFieldBits;
-use halo2::{
+use halo2_proofs::{
     circuit::{AssignedCell, Cell, Layouter},
     plonk::{Advice, Column, Error, Expression},
 };
@@ -184,7 +184,7 @@ mod tests {
     use super::*;
     use bigint::U256;
     use group::ff::{Field, PrimeField};
-    use halo2::{
+    use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{FailureLocation, MockProver, VerifyFailure},
         plonk::{Any, Circuit, ConstraintSystem, Error, Selector},

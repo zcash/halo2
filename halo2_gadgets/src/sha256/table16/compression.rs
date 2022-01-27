@@ -3,7 +3,7 @@ use super::{
     util::{i2lebsp, lebs2ip},
     AssignedBits, BlockWord, SpreadInputs, SpreadVar, Table16Assignment, ROUNDS, STATE,
 };
-use halo2::{
+use halo2_proofs::{
     circuit::Layouter,
     pasta::pallas,
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
@@ -940,7 +940,7 @@ mod tests {
     use super::super::{
         super::BLOCK_SIZE, msg_schedule_test_input, BlockWord, Table16Chip, Table16Config, IV,
     };
-    use halo2::{
+    use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         pasta::pallas,

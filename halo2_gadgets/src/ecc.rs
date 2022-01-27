@@ -2,7 +2,7 @@
 
 use std::fmt::Debug;
 
-use halo2::{
+use halo2_proofs::{
     arithmetic::CurveAffine,
     circuit::{Chip, Layouter},
     plonk::Error,
@@ -493,7 +493,7 @@ pub(crate) mod tests {
     use ff::PrimeField;
     use group::{prime::PrimeCurveAffine, Curve, Group};
 
-    use halo2::{
+    use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
@@ -824,7 +824,7 @@ pub(crate) mod tests {
         let root = root.titled("Ecc Chip Layout", ("sans-serif", 60)).unwrap();
 
         let circuit = MyCircuit { test_errors: false };
-        halo2::dev::CircuitLayout::default()
+        halo2_proofs::dev::CircuitLayout::default()
             .render(13, &circuit, &root)
             .unwrap();
     }

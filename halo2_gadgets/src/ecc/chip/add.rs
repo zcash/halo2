@@ -2,7 +2,7 @@ use std::array;
 
 use super::EccPoint;
 use ff::{BatchInvert, Field};
-use halo2::{
+use halo2_proofs::{
     circuit::Region,
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
@@ -391,7 +391,7 @@ impl Config {
 #[cfg(test)]
 pub mod tests {
     use group::{prime::PrimeCurveAffine, Curve};
-    use halo2::{circuit::Layouter, plonk::Error};
+    use halo2_proofs::{circuit::Layouter, plonk::Error};
     use pasta_curves::{arithmetic::CurveExt, pallas};
 
     use crate::ecc::{chip::EccPoint, EccInstructions, NonIdentityPoint};

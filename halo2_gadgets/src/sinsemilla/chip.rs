@@ -13,7 +13,7 @@ use crate::{
 };
 use std::marker::PhantomData;
 
-use halo2::{
+use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter},
     plonk::{
         Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, TableColumn,

@@ -7,7 +7,7 @@ use crate::{
 };
 
 use group::ff::PrimeField;
-use halo2::{
+use halo2_proofs::{
     circuit::{AssignedCell, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
@@ -377,7 +377,7 @@ pub mod tests {
         ff::{Field, PrimeField},
         Curve,
     };
-    use halo2::{
+    use halo2_proofs::{
         circuit::{Chip, Layouter},
         plonk::Error,
     };

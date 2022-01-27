@@ -1,4 +1,4 @@
-use halo2::{
+use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,

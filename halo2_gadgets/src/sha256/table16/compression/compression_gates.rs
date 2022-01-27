@@ -1,5 +1,5 @@
 use super::super::{util::*, Gate};
-use halo2::{arithmetic::FieldExt, plonk::Expression};
+use halo2_proofs::{arithmetic::FieldExt, plonk::Expression};
 use std::{array, marker::PhantomData};
 
 pub struct CompressionGate<F: FieldExt>(PhantomData<F>);

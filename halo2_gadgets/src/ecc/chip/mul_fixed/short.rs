@@ -3,7 +3,7 @@ use std::{array, convert::TryInto};
 use super::super::{EccPoint, EccScalarFixedShort, FixedPoints, L_SCALAR_SHORT, NUM_WINDOWS_SHORT};
 use crate::{ecc::chip::MagnitudeSign, utilities::bool_check};
 
-use halo2::{
+use halo2_proofs::{
     circuit::{Layouter, Region},
     plonk::{ConstraintSystem, Error, Expression, Selector},
     poly::Rotation,
@@ -230,7 +230,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 #[cfg(test)]
 pub mod tests {
     use group::{ff::PrimeField, Curve};
-    use halo2::{
+    use halo2_proofs::{
         arithmetic::CurveAffine,
         circuit::{AssignedCell, Chip, Layouter},
         plonk::{Any, Error},
@@ -375,7 +375,7 @@ pub mod tests {
             ecc::chip::{EccConfig, FixedPoint},
             utilities::UtilitiesInstructions,
         };
-        use halo2::{
+        use halo2_proofs::{
             circuit::{Layouter, SimpleFloorPlanner},
             dev::{FailureLocation, MockProver, VerifyFailure},
             plonk::{Circuit, ConstraintSystem, Error},
@@ -459,7 +459,7 @@ pub mod tests {
             }
         }
 
-        // Copied from halo2::dev::util
+        // Copied from halo2_proofs::dev::util
         fn format_value(v: pallas::Base) -> String {
             use ff::Field;
             if v.is_zero_vartime() {

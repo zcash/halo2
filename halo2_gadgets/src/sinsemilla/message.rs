@@ -1,6 +1,6 @@
 //! Gadget and chips for the Sinsemilla hash function.
 use ff::PrimeFieldBits;
-use halo2::{
+use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{AssignedCell, Cell},
 };

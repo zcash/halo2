@@ -26,7 +26,7 @@ bigint = "4"
 bitvec = "0.22"
 ff = "0.11"
 group = "0.11"
-halo2 = { package = "halo2_proofs", version = "=0.1.0-beta.1", path = "../halo2_proofs" }
+halo2_proofs = { version = "=0.1.0-beta.1", path = "../halo2_proofs" }
 lazy_static = "1"
 pasta_curves = "0.3"
 proptest = { version = "1.0.0", optional = true }
@@ -47,7 +47,7 @@ pprof = { version = "=0.6.1", features = ["criterion", "flamegraph"] }
 bench = false
 
 [features]
-dev-graph = ["halo2/dev-graph", "plotters"]
+dev-graph = ["halo2_proofs/dev-graph", "plotters"]
 test-dependencies = ["proptest"]
 unstable = []
 

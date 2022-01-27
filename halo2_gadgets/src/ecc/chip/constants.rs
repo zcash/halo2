@@ -5,7 +5,7 @@ use group::{
     ff::{Field, PrimeField},
     Curve,
 };
-use halo2::arithmetic::lagrange_interpolate;
+use halo2_proofs::arithmetic::lagrange_interpolate;
 use pasta_curves::{
     arithmetic::{CurveAffine, FieldExt},
     pallas,

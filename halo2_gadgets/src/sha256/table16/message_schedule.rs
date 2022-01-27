@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 
 use super::{super::BLOCK_SIZE, AssignedBits, BlockWord, SpreadInputs, Table16Assignment, ROUNDS};
-use halo2::{
+use halo2_proofs::{
     circuit::Layouter,
     pasta::pallas,
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
@@ -397,7 +397,7 @@ mod tests {
         super::BLOCK_SIZE, util::lebs2ip, BlockWord, SpreadTableChip, Table16Chip, Table16Config,
     };
     use super::schedule_util::*;
-    use halo2::{
+    use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         pasta::pallas,

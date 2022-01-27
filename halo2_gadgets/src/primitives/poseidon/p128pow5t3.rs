@@ -1,4 +1,4 @@
-use halo2::arithmetic::Field;
+use halo2_proofs::arithmetic::Field;
 use pasta_curves::{pallas::Base as Fp, vesta::Base as Fq};
 
 use super::{Mds, Spec};

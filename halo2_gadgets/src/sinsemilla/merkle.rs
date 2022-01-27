@@ -1,6 +1,6 @@
 //! Gadgets for implementing a Merkle tree with Sinsemilla.
 
-use halo2::{
+use halo2_proofs::{
     circuit::{Chip, Layouter},
     plonk::Error,
 };
@@ -151,7 +151,7 @@ pub mod tests {
     };
 
     use group::ff::{Field, PrimeField, PrimeFieldBits};
-    use halo2::{
+    use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         pasta::pallas,
@@ -348,7 +348,7 @@ pub mod tests {
         let root = root.titled("MerkleCRH Path", ("sans-serif", 60)).unwrap();
 
         let circuit = MyCircuit::default();
-        halo2::dev::CircuitLayout::default()
+        halo2_proofs::dev::CircuitLayout::default()
             .show_labels(false)
             .render(11, &circuit, &root)
             .unwrap();

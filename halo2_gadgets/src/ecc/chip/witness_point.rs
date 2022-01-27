@@ -2,7 +2,7 @@ use super::{EccPoint, NonIdentityEccPoint};
 
 use group::prime::PrimeCurveAffine;
 
-use halo2::{
+use halo2_proofs::{
     circuit::{AssignedCell, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector, VirtualCells},
     poly::Rotation,
@@ -148,7 +148,7 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
-    use halo2::circuit::Layouter;
+    use halo2_proofs::circuit::Layouter;
     use pasta_curves::pallas;
 
     use super::*;

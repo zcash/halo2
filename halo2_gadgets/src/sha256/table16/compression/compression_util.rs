@@ -5,7 +5,7 @@ use super::{
 use crate::sha256::table16::{
     util::*, AssignedBits, SpreadVar, SpreadWord, StateWord, Table16Assignment,
 };
-use halo2::{
+use halo2_proofs::{
     circuit::Region,
     pasta::pallas,
     plonk::{Advice, Column, Error},

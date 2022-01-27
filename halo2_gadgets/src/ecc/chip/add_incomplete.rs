@@ -3,7 +3,7 @@ use std::{array, collections::HashSet};
 use super::NonIdentityEccPoint;
 use ff::Field;
 use group::Curve;
-use halo2::{
+use halo2_proofs::{
     circuit::Region,
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
@@ -160,7 +160,7 @@ impl Config {
 #[cfg(test)]
 pub mod tests {
     use group::Curve;
-    use halo2::{circuit::Layouter, plonk::Error};
+    use halo2_proofs::{circuit::Layouter, plonk::Error};
     use pasta_curves::pallas;
 
     use crate::ecc::{EccInstructions, NonIdentityPoint};

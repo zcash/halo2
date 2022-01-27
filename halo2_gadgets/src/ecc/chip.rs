@@ -9,7 +9,7 @@ use arrayvec::ArrayVec;
 
 use ff::Field;
 use group::prime::PrimeCurveAffine;
-use halo2::{
+use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
 };

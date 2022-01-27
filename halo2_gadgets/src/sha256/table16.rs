@@ -2,7 +2,7 @@ use std::convert::TryInto;
 use std::marker::PhantomData;
 
 use super::Sha256Instructions;
-use halo2::{
+use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, Region},
     pasta::pallas,
     plonk::{Advice, Any, Assigned, Column, ConstraintSystem, Error},
@@ -454,7 +454,7 @@ trait Table16Assignment {
 mod tests {
     use super::super::{Sha256, BLOCK_SIZE};
     use super::{message_schedule::msg_schedule_test_input, Table16Chip, Table16Config};
-    use halo2::{
+    use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
@@ -508,7 +508,7 @@ mod tests {
             .unwrap();
 
         let circuit = MyCircuit {};
-        halo2::dev::CircuitLayout::default()
+        halo2_proofs::dev::CircuitLayout::default()
             .render::<pallas::Base, _, _>(17, &circuit, &root)
             .unwrap();
     }

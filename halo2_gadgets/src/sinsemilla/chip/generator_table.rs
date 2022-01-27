@@ -1,5 +1,5 @@
 use crate::primitives::sinsemilla::{self, SINSEMILLA_S};
-use halo2::{
+use halo2_proofs::{
     circuit::Layouter,
     plonk::{ConstraintSystem, Error, Expression, TableColumn},
     poly::Rotation,

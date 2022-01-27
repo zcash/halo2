@@ -1,5 +1,5 @@
 use super::{util::*, AssignedBits};
-use halo2::{
+use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{Chip, Layouter, Region},
     pasta::pallas,
@@ -290,7 +290,7 @@ mod tests {
     use super::{get_tag, SpreadTableChip, SpreadTableConfig};
     use rand::Rng;
 
-    use halo2::{
+    use halo2_proofs::{
         arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,

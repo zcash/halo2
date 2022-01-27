@@ -7,7 +7,7 @@ use crate::utilities::decompose_running_sum::RunningSumConfig;
 use std::marker::PhantomData;
 
 use group::{ff::PrimeField, Curve};
-use halo2::{
+use halo2_proofs::{
     circuit::{AssignedCell, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, VirtualCells},
     poly::Rotation,

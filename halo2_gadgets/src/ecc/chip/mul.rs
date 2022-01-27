@@ -10,7 +10,7 @@ use std::{
 
 use bigint::U256;
 use ff::PrimeField;
-use halo2::{
+use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{AssignedCell, Layouter, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
@@ -466,7 +466,7 @@ pub mod tests {
         ff::{Field, PrimeField},
         Curve,
     };
-    use halo2::{
+    use halo2_proofs::{
         circuit::{Chip, Layouter},
         plonk::Error,
     };

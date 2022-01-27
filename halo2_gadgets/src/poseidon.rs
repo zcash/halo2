@@ -6,7 +6,7 @@ use std::fmt;
 use std::marker::PhantomData;
 
 use group::ff::Field;
-use halo2::{
+use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{AssignedCell, Chip, Layouter},
     plonk::Error,

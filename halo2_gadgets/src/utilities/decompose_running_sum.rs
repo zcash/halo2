@@ -23,7 +23,7 @@
 //! the range check constraint to stay within the degree bound.
 
 use ff::PrimeFieldBits;
-use halo2::{
+use halo2_proofs::{
     circuit::{AssignedCell, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
@@ -217,7 +217,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
 mod tests {
     use super::*;
     use group::ff::{Field, PrimeField};
-    use halo2::{
+    use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{MockProver, VerifyFailure},
         plonk::{Any, Circuit, ConstraintSystem, Error},

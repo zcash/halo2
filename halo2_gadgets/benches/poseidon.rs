@@ -1,5 +1,5 @@
 use ff::Field;
-use halo2::{
+use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner},
     pasta::Fp,
     plonk::{
