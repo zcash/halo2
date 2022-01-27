@@ -1,5 +1,7 @@
 use std::{
+    cmp,
     collections::{HashMap, HashSet},
+    fmt,
     hash::{Hash, Hasher},
     marker::PhantomData,
     ops::{Add, Mul, MulAssign, Neg, Sub},
@@ -14,12 +16,41 @@ use super::{
 };
 use crate::{arithmetic::parallelize, multicore};
 
+/// Returns `(chunk_size, num_chunks)` suitable for processing the given polynomial length
+/// in the current parallelization environment.
+fn get_chunk_params(poly_len: usize) -> (usize, usize) {
+    // Check the level of parallelization we have available.
+    let num_threads = multicore::current_num_threads();
+    // We scale the number of chunks by a constant factor, to ensure that if not all
+    // threads are available, we can achieve more uniform throughput and don't end up
+    // waiting on a couple of threads to process the last chunks.
+    let num_chunks = num_threads * 4;
+    // Calculate the ideal chunk size for the desired throughput. We use ceiling
+    // division to ensure the minimum chunk size is 1.
+    //     chunk_size = ceil(poly_len / num_chunks)
+    let chunk_size = (poly_len + num_chunks - 1) / num_chunks;
+    // Now re-calculate num_chunks from the actual chunk size.
+    //     num_chunks = ceil(poly_len / chunk_size)
+    let num_chunks = (poly_len + chunk_size - 1) / chunk_size;
+
+    (chunk_size, num_chunks)
+}
+
 /// A reference to a polynomial registered with an [`Evaluator`].
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub(crate) struct AstLeaf<E, B: Basis> {
     index: usize,
     rotation: Rotation,
     _evaluator: PhantomData<(E, B)>,
+}
+
+impl<E, B: Basis> fmt::Debug for AstLeaf<E, B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AstLeaf")
+            .field("index", &self.index)
+            .field("rotation", &self.rotation)
+            .finish()
+    }
 }
 
 impl<E, B: Basis> PartialEq for AstLeaf<E, B> {
@@ -138,19 +169,7 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
 
         // We're working in a single basis, so all polynomials are the same length.
         let poly_len = self.polys.first().unwrap().len();
-        // Check the level of parallelization we have available.
-        let num_threads = multicore::current_num_threads();
-        // We scale the number of chunks by a constant factor, to ensure that if not all
-        // threads are available, we can achieve more uniform throughput and don't end up
-        // waiting on a couple of threads to process the last chunks.
-        let num_chunks = num_threads * 4;
-        // Calculate the ideal chunk size for the desired throughput. We use ceiling
-        // division to ensure the minimum chunk size is 1.
-        //     chunk_size = ceil(poly_len / num_chunks)
-        let chunk_size = (poly_len + num_chunks - 1) / num_chunks;
-        // Now re-calculate num_chunks from the actual chunk size.
-        //     num_chunks = ceil(poly_len / chunk_size)
-        let num_chunks = (poly_len + chunk_size - 1) / chunk_size;
+        let (chunk_size, num_chunks) = get_chunk_params(poly_len);
 
         // Split each rotated polynomial into chunks.
         let chunks: Vec<HashMap<_, _>> = (0..num_chunks)
@@ -171,6 +190,7 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
 
         struct AstContext<'a, E, F: FieldExt, B: Basis> {
             domain: &'a EvaluationDomain<F>,
+            poly_len: usize,
             chunk_size: usize,
             chunk_index: usize,
             leaves: &'a HashMap<AstLeaf<E, B>, &'a [F]>,
@@ -205,11 +225,15 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                     }
                     lhs
                 }
-                Ast::LinearTerm(scalar) => {
-                    B::linear_term(ctx.domain, ctx.chunk_size, ctx.chunk_index, *scalar)
-                }
+                Ast::LinearTerm(scalar) => B::linear_term(
+                    ctx.domain,
+                    ctx.poly_len,
+                    ctx.chunk_size,
+                    ctx.chunk_index,
+                    *scalar,
+                ),
                 Ast::ConstantTerm(scalar) => {
-                    B::constant_term(ctx.chunk_size, ctx.chunk_index, *scalar)
+                    B::constant_term(ctx.poly_len, ctx.chunk_size, ctx.chunk_index, *scalar)
                 }
             }
         }
@@ -224,6 +248,7 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                 scope.spawn(move |_| {
                     let ctx = AstContext {
                         domain,
+                        poly_len,
                         chunk_size,
                         chunk_index,
                         leaves,
@@ -241,11 +266,20 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
 /// This struct exists to make the internals of this case private so that we don't
 /// accidentally construct this case directly, because it can only be implemented for the
 /// [`ExtendedLagrangeCoeff`] basis.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) struct AstMul<E, F: Field, B: Basis>(Arc<Ast<E, F, B>>, Arc<Ast<E, F, B>>);
 
+impl<E, F: Field, B: Basis> fmt::Debug for AstMul<E, F, B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("AstMul")
+            .field(&self.0)
+            .field(&self.1)
+            .finish()
+    }
+}
+
 /// A polynomial operation backed by an [`Evaluator`].
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) enum Ast<E, F: Field, B: Basis> {
     Poly(AstLeaf<E, B>),
     Add(Arc<Ast<E, F, B>>, Arc<Ast<E, F, B>>),
@@ -260,6 +294,19 @@ pub(crate) enum Ast<E, F: Field, B: Basis> {
     ///
     /// The field element is the same in both the standard and evaluation bases.
     ConstantTerm(F),
+}
+
+impl<E, F: Field, B: Basis> fmt::Debug for Ast<E, F, B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Poly(leaf) => f.debug_tuple("Poly").field(leaf).finish(),
+            Self::Add(lhs, rhs) => f.debug_tuple("Add").field(lhs).field(rhs).finish(),
+            Self::Mul(x) => f.debug_tuple("Mul").field(x).finish(),
+            Self::Scale(base, scalar) => f.debug_tuple("Scale").field(base).field(scalar).finish(),
+            Self::LinearTerm(x) => f.debug_tuple("LinearTerm").field(x).finish(),
+            Self::ConstantTerm(x) => f.debug_tuple("ConstantTerm").field(x).finish(),
+        }
+    }
 }
 
 impl<E, F: Field, B: Basis> From<AstLeaf<E, B>> for Ast<E, F, B> {
@@ -413,9 +460,15 @@ impl<E: Clone, F: Field> MulAssign for Ast<E, F, ExtendedLagrangeCoeff> {
 /// Operations which can be performed over a given basis.
 pub(crate) trait BasisOps: Basis {
     fn empty_poly<F: FieldExt>(domain: &EvaluationDomain<F>) -> Polynomial<F, Self>;
-    fn constant_term<F: FieldExt>(chunk_size: usize, chunk_index: usize, scalar: F) -> Vec<F>;
+    fn constant_term<F: FieldExt>(
+        poly_len: usize,
+        chunk_size: usize,
+        chunk_index: usize,
+        scalar: F,
+    ) -> Vec<F>;
     fn linear_term<F: FieldExt>(
         domain: &EvaluationDomain<F>,
+        poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
         scalar: F,
@@ -432,8 +485,13 @@ impl BasisOps for Coeff {
         domain.empty_coeff()
     }
 
-    fn constant_term<F: FieldExt>(chunk_size: usize, chunk_index: usize, scalar: F) -> Vec<F> {
-        let mut chunk = vec![F::zero(); chunk_size];
+    fn constant_term<F: FieldExt>(
+        poly_len: usize,
+        chunk_size: usize,
+        chunk_index: usize,
+        scalar: F,
+    ) -> Vec<F> {
+        let mut chunk = vec![F::zero(); cmp::min(chunk_size, poly_len - chunk_size * chunk_index)];
         if chunk_index == 0 {
             chunk[0] = scalar;
         }
@@ -442,14 +500,18 @@ impl BasisOps for Coeff {
 
     fn linear_term<F: FieldExt>(
         _: &EvaluationDomain<F>,
+        poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
         scalar: F,
     ) -> Vec<F> {
-        let mut chunk = vec![F::zero(); chunk_size];
+        let mut chunk = vec![F::zero(); cmp::min(chunk_size, poly_len - chunk_size * chunk_index)];
         // If the chunk size is 1 (e.g. if we have a small k and many threads), then the
         // linear coefficient is the second chunk. Otherwise, the chunk size is greater
         // than one, and the linear coefficient is the second element of the first chunk.
+        // Note that we check against the original chunk size, not the potentially-short
+        // actual size of the current chunk, because we want to know whether the size of
+        // the previous chunk was 1.
         if chunk_size == 1 && chunk_index == 1 {
             chunk[0] = scalar;
         } else if chunk_index == 0 {
@@ -472,12 +534,18 @@ impl BasisOps for LagrangeCoeff {
         domain.empty_lagrange()
     }
 
-    fn constant_term<F: FieldExt>(chunk_size: usize, _: usize, scalar: F) -> Vec<F> {
-        vec![scalar; chunk_size]
+    fn constant_term<F: FieldExt>(
+        poly_len: usize,
+        chunk_size: usize,
+        chunk_index: usize,
+        scalar: F,
+    ) -> Vec<F> {
+        vec![scalar; cmp::min(chunk_size, poly_len - chunk_size * chunk_index)]
     }
 
     fn linear_term<F: FieldExt>(
         domain: &EvaluationDomain<F>,
+        poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
         scalar: F,
@@ -485,7 +553,7 @@ impl BasisOps for LagrangeCoeff {
         // Take every power of omega within the chunk, and multiply by scalar.
         let omega = domain.get_omega();
         let start = chunk_size * chunk_index;
-        (0..chunk_size)
+        (0..cmp::min(chunk_size, poly_len - start))
             .scan(omega.pow_vartime(&[start as u64]) * scalar, |acc, _| {
                 let ret = *acc;
                 *acc *= omega;
@@ -508,12 +576,18 @@ impl BasisOps for ExtendedLagrangeCoeff {
         domain.empty_extended()
     }
 
-    fn constant_term<F: FieldExt>(chunk_size: usize, _: usize, scalar: F) -> Vec<F> {
-        vec![scalar; chunk_size]
+    fn constant_term<F: FieldExt>(
+        poly_len: usize,
+        chunk_size: usize,
+        chunk_index: usize,
+        scalar: F,
+    ) -> Vec<F> {
+        vec![scalar; cmp::min(chunk_size, poly_len - chunk_size * chunk_index)]
     }
 
     fn linear_term<F: FieldExt>(
         domain: &EvaluationDomain<F>,
+        poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
         scalar: F,
@@ -521,7 +595,7 @@ impl BasisOps for ExtendedLagrangeCoeff {
         // Take every power of the extended omega within the chunk, and multiply by scalar.
         let omega = domain.get_extended_omega();
         let start = chunk_size * chunk_index;
-        (0..chunk_size)
+        (0..cmp::min(chunk_size, poly_len - start))
             .scan(
                 omega.pow_vartime(&[start as u64]) * F::ZETA * scalar,
                 |acc, _| {
@@ -539,5 +613,57 @@ impl BasisOps for ExtendedLagrangeCoeff {
         rotation: Rotation,
     ) -> Polynomial<F, Self> {
         domain.rotate_extended(poly, rotation)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::iter;
+
+    use pasta_curves::pallas;
+
+    use super::{get_chunk_params, new_evaluator, Ast, BasisOps, Evaluator};
+    use crate::{
+        multicore,
+        poly::{Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff},
+    };
+
+    #[test]
+    fn short_chunk_regression_test() {
+        // Pick the smallest polynomial length that is guaranteed to produce a short chunk
+        // on this machine.
+        let k = match (1..16)
+            .map(|k| (k, get_chunk_params(1 << k)))
+            .find(|(k, (chunk_size, num_chunks))| (1 << k) < chunk_size * num_chunks)
+            .map(|(k, _)| k)
+        {
+            Some(k) => k,
+            None => {
+                // We are on a machine with a power-of-two number of threads, and cannot
+                // trigger the bug.
+                eprintln!(
+                    "can't find a polynomial length for short_chunk_regression_test; skipping"
+                );
+                return;
+            }
+        };
+        eprintln!("Testing short-chunk regression with k = {}", k);
+
+        fn test_case<E: Copy + Send + Sync, B: BasisOps>(
+            k: u32,
+            mut evaluator: Evaluator<E, pallas::Base, B>,
+        ) {
+            // Instantiate the evaluator with a trivial polynomial.
+            let domain = EvaluationDomain::new(1, k);
+            evaluator.register_poly(B::empty_poly(&domain));
+
+            // With the bug present, these will panic.
+            let _ = evaluator.evaluate(&Ast::ConstantTerm(pallas::Base::zero()), &domain);
+            let _ = evaluator.evaluate(&Ast::LinearTerm(pallas::Base::zero()), &domain);
+        }
+
+        test_case(k, new_evaluator::<_, _, Coeff>(|| {}));
+        test_case(k, new_evaluator::<_, _, LagrangeCoeff>(|| {}));
+        test_case(k, new_evaluator::<_, _, ExtendedLagrangeCoeff>(|| {}));
     }
 }
