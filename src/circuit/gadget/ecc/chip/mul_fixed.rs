@@ -216,11 +216,16 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         base: &F,
         coords_check_toggle: Selector,
     ) -> Result<(), Error> {
-        let lagrange_coeffs = base.lagrange_coeffs();
-        assert_eq!(lagrange_coeffs.len(), NUM_WINDOWS);
+        let mut constants = None;
+        let build_constants = || {
+            let lagrange_coeffs = base.lagrange_coeffs();
+            assert_eq!(lagrange_coeffs.len(), NUM_WINDOWS);
 
-        let z = base.z();
-        assert_eq!(z.len(), NUM_WINDOWS);
+            let z = base.z();
+            assert_eq!(z.len(), NUM_WINDOWS);
+
+            (lagrange_coeffs, z)
+        };
 
         // Assign fixed columns for given fixed base
         for window in 0..NUM_WINDOWS {
@@ -237,7 +242,13 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
                     },
                     self.lagrange_coeffs[k],
                     window + offset,
-                    || Ok(lagrange_coeffs[window][k]),
+                    || {
+                        if constants.as_ref().is_none() {
+                            constants = Some(build_constants());
+                        }
+                        let lagrange_coeffs = &constants.as_ref().unwrap().0;
+                        Ok(lagrange_coeffs[window][k])
+                    },
                 )?;
             }
 
@@ -246,7 +257,10 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
                 || format!("z-value for window: {:?}", window),
                 self.fixed_z,
                 window + offset,
-                || Ok(pallas::Base::from_u64(z[window])),
+                || {
+                    let z = &constants.as_ref().unwrap().1;
+                    Ok(pallas::Base::from_u64(z[window]))
+                },
             )?;
         }
 
