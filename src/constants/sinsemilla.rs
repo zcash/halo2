@@ -27,16 +27,6 @@ pub(crate) const L_ORCHARD_MERKLE: usize = 255;
 /// SWU hash-to-curve personalization for the Merkle CRH generator
 pub const MERKLE_CRH_PERSONALIZATION: &str = "z.cash:Orchard-MerkleCRH";
 
-// Sinsemilla Q generators
-
-/// SWU hash-to-curve personalization for Sinsemilla $Q$ generators.
-pub const Q_PERSONALIZATION: &str = "z.cash:SinsemillaQ";
-
-// Sinsemilla S generators
-
-/// SWU hash-to-curve personalization for Sinsemilla $S$ generators.
-pub const S_PERSONALIZATION: &str = "z.cash:SinsemillaS";
-
 /// Generator used in SinsemillaHashToPoint for note commitment
 pub const Q_NOTE_COMMITMENT_M_GENERATOR: ([u8; 32], [u8; 32]) = (
     [
