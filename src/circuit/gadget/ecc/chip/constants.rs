@@ -36,8 +36,9 @@ pub(crate) const T_Q: u128 = 45560315531506369815346746415080538113;
 pub(crate) const T_P: u128 = 45560315531419706090280762371685220353;
 
 /// For each fixed base, we calculate its scalar multiples in three-bit windows.
-/// Each window will have $2^3 = 8$ points.
-pub fn compute_window_table<C: CurveAffine>(base: C, num_windows: usize) -> Vec<[C; H]> {
+/// Each window will have $2^3 = 8$ points. The tables are computed as described in
+/// [the Orchard book](https://zcash.github.io/orchard/design/circuit/gadgets/ecc/fixed-base-scalar-mul.html#load-fixed-base).
+fn compute_window_table<C: CurveAffine>(base: C, num_windows: usize) -> Vec<[C; H]> {
     let mut window_table: Vec<[C; H]> = Vec::with_capacity(num_windows);
 
     // Generate window table entries for all windows but the last.

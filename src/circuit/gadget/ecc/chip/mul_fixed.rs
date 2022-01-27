@@ -232,7 +232,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
             coords_check_toggle.enable(region, window + offset)?;
 
             // Assign x-coordinate Lagrange interpolation coefficients
-            for k in 0..(H) {
+            for k in 0..H {
                 region.assign_fixed(
                     || {
                         format!(
