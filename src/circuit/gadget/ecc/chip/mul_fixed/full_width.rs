@@ -182,7 +182,7 @@ pub mod tests {
     use rand::rngs::OsRng;
 
     use crate::circuit::gadget::ecc::{
-        chip::{EccChip, FixedPoint as FixedPointTrait, H},
+        chip::{EccChip, FixedPoint as _, H},
         FixedPoint, NonIdentityPoint, Point,
     };
     use crate::constants::{OrchardFixedBases, OrchardFixedBasesFull};

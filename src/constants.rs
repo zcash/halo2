@@ -5,7 +5,6 @@ pub mod util;
 
 pub use fixed_bases::{NullifierK, OrchardFixedBases, OrchardFixedBasesFull, ValueCommitV, H};
 pub use sinsemilla::{OrchardCommitDomains, OrchardHashDomains};
-pub use util::{evaluate, gen_const_array};
 
 /// $\mathsf{MerkleDepth^{Orchard}}$
 pub(crate) const MERKLE_DEPTH_ORCHARD: usize = 32;

@@ -782,10 +782,9 @@ pub fn generator() -> pallas::Affine {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{
-        test_lagrange_coeffs, test_zs_and_us, NUM_WINDOWS_SHORT, VALUE_COMMITMENT_PERSONALIZATION,
-    };
+    use super::super::{NUM_WINDOWS_SHORT, VALUE_COMMITMENT_PERSONALIZATION};
     use super::*;
+    use crate::circuit::gadget::ecc::chip::constants::{test_lagrange_coeffs, test_zs_and_us};
     use group::Curve;
     use pasta_curves::{
         arithmetic::{CurveAffine, CurveExt},
@@ -803,13 +802,13 @@ mod tests {
     }
 
     #[test]
-    fn lagrange_coeffs_short() {
+    fn lagrange_coeffs() {
         let base = super::generator();
         test_lagrange_coeffs(base, NUM_WINDOWS_SHORT);
     }
 
     #[test]
-    fn z_short() {
+    fn z() {
         let base = super::generator();
         test_zs_and_us(base, &Z_SHORT, &U_SHORT, NUM_WINDOWS_SHORT);
     }

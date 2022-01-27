@@ -6,7 +6,6 @@ use crate::{
     primitives::sinsemilla,
 };
 use arrayvec::ArrayVec;
-use ff::PrimeField;
 
 use ff::Field;
 use group::prime::PrimeCurveAffine;
@@ -20,35 +19,12 @@ use std::convert::TryInto;
 
 pub(super) mod add;
 pub(super) mod add_incomplete;
+pub mod constants;
 pub(super) mod mul;
 pub(super) mod mul_fixed;
 pub(super) mod witness_point;
 
-/// Window size for fixed-base scalar multiplication
-pub const FIXED_BASE_WINDOW_SIZE: usize = 3;
-
-/// $2^{`FIXED_BASE_WINDOW_SIZE`}$
-pub const H: usize = 1 << FIXED_BASE_WINDOW_SIZE;
-
-/// Number of windows for a full-width scalar
-pub const NUM_WINDOWS: usize =
-    (pallas::Scalar::NUM_BITS as usize + FIXED_BASE_WINDOW_SIZE - 1) / FIXED_BASE_WINDOW_SIZE;
-
-/// Number of windows for a short signed scalar
-pub const NUM_WINDOWS_SHORT: usize =
-    (L_SCALAR_SHORT + FIXED_BASE_WINDOW_SIZE - 1) / FIXED_BASE_WINDOW_SIZE;
-
-/// $\ell_\mathsf{value}$
-/// Number of bits in an unsigned short scalar.
-pub(crate) const L_SCALAR_SHORT: usize = 64;
-
-/// The Pallas scalar field modulus is $q = 2^{254} + \mathsf{t_q}$.
-/// <https://github.com/zcash/pasta>
-pub(crate) const T_Q: u128 = 45560315531506369815346746415080538113;
-
-/// The Pallas base field modulus is $p = 2^{254} + \mathsf{t_p}$.
-/// <https://github.com/zcash/pasta>
-pub(crate) const T_P: u128 = 45560315531419706090280762371685220353;
+pub use constants::*;
 
 /// A curve point represented in affine (x, y) coordinates, or the
 /// identity represented as (0, 0).
@@ -184,16 +160,49 @@ pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>> {
     pub lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
 }
 
+/// A trait representing the kind of scalar used with a particular `FixedPoint`.
+///
+/// This trait exists because of limitations around const generics.
+pub trait ScalarKind {
+    const NUM_WINDOWS: usize;
+}
+
+/// Type marker representing a full-width scalar for use in fixed-base scalar
+/// multiplication.
+pub enum FullScalar {}
+impl ScalarKind for FullScalar {
+    const NUM_WINDOWS: usize = NUM_WINDOWS;
+}
+
+/// Type marker representing a signed 64-bit scalar for use in fixed-base scalar
+/// multiplication.
+pub enum ShortScalar {}
+impl ScalarKind for ShortScalar {
+    const NUM_WINDOWS: usize = NUM_WINDOWS_SHORT;
+}
+
+/// Type marker representing a base field element being used as a scalar in fixed-base
+/// scalar multiplication.
+pub enum BaseFieldElem {}
+impl ScalarKind for BaseFieldElem {
+    const NUM_WINDOWS: usize = NUM_WINDOWS;
+}
+
 /// Returns information about a fixed point.
 ///
 /// TODO: When associated consts can be used as const generics, introduce a
 /// `const NUM_WINDOWS: usize` associated const, and return `NUM_WINDOWS`-sized
 /// arrays instead of `Vec`s.
 pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
+    type ScalarKind: ScalarKind;
+
     fn generator(&self) -> C;
     fn u(&self) -> Vec<[[u8; 32]; H]>;
     fn z(&self) -> Vec<u64>;
-    fn lagrange_coeffs(&self) -> Vec<[C::Base; H]>;
+
+    fn lagrange_coeffs(&self) -> Vec<[C::Base; H]> {
+        compute_lagrange_coeffs(self.generator(), Self::ScalarKind::NUM_WINDOWS)
+    }
 }
 
 /// A chip implementing EccInstructions
@@ -353,9 +362,12 @@ impl EccBaseFieldElemFixed {
 
 impl<Fixed: FixedPoints<pallas::Affine>> EccInstructions<pallas::Affine> for EccChip<Fixed>
 where
-    <Fixed as FixedPoints<pallas::Affine>>::Base: FixedPoint<pallas::Affine>,
-    <Fixed as FixedPoints<pallas::Affine>>::FullScalar: FixedPoint<pallas::Affine>,
-    <Fixed as FixedPoints<pallas::Affine>>::ShortScalar: FixedPoint<pallas::Affine>,
+    <Fixed as FixedPoints<pallas::Affine>>::Base:
+        FixedPoint<pallas::Affine, ScalarKind = BaseFieldElem>,
+    <Fixed as FixedPoints<pallas::Affine>>::FullScalar:
+        FixedPoint<pallas::Affine, ScalarKind = FullScalar>,
+    <Fixed as FixedPoints<pallas::Affine>>::ShortScalar:
+        FixedPoint<pallas::Affine, ScalarKind = ShortScalar>,
 {
     type ScalarFixed = EccScalarFixed;
     type ScalarFixedShort = EccScalarFixedShort;

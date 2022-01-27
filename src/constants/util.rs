@@ -1,17 +1,3 @@
-use ff::Field;
-use halo2::arithmetic::CurveAffine;
-
-/// Evaluate y = f(x) given the coefficients of f(x)
-pub fn evaluate<C: CurveAffine>(x: u8, coeffs: &[C::Base]) -> C::Base {
-    let x = C::Base::from(x as u64);
-    coeffs
-        .iter()
-        .rev()
-        .cloned()
-        .reduce(|acc, coeff| acc * x + coeff)
-        .unwrap_or_else(C::Base::zero)
-}
-
 /// Takes in an FnMut closure and returns a constant-length array with elements of
 /// type `Output`.
 pub fn gen_const_array<Output: Copy + Default, const LEN: usize>(

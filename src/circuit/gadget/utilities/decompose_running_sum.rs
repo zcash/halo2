@@ -216,7 +216,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use group::ff::Field;
+    use group::ff::{Field, PrimeField};
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{MockProver, VerifyFailure},
@@ -225,11 +225,11 @@ mod tests {
     use pasta_curves::{arithmetic::FieldExt, pallas};
     use rand::rngs::OsRng;
 
-    const FIXED_BASE_WINDOW_SIZE: usize = 3;
-    const NUM_WINDOWS: usize = 85;
-    const NUM_WINDOWS_SHORT: usize = 22;
-    const L_BASE: usize = 255;
-    const L_SHORT: usize = 64;
+    use crate::circuit::gadget::ecc::chip::{
+        FIXED_BASE_WINDOW_SIZE, L_SCALAR_SHORT as L_SHORT, NUM_WINDOWS, NUM_WINDOWS_SHORT,
+    };
+
+    const L_BASE: usize = pallas::Base::NUM_BITS as usize;
 
     #[test]
     fn test_running_sum() {

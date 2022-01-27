@@ -25,8 +25,8 @@ pub mod short;
 lazy_static! {
     static ref TWO_SCALAR: pallas::Scalar = pallas::Scalar::from(2);
     // H = 2^3 (3-bit window)
-    static ref H_SCALAR: pallas::Scalar = pallas::Scalar::from_u64(H as u64);
-    static ref H_BASE: pallas::Base = pallas::Base::from_u64(H as u64);
+    static ref H_SCALAR: pallas::Scalar = pallas::Scalar::from(H as u64);
+    static ref H_BASE: pallas::Base = pallas::Base::from(H as u64);
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -259,7 +259,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
                 window + offset,
                 || {
                     let z = &constants.as_ref().unwrap().1;
-                    Ok(pallas::Base::from_u64(z[window]))
+                    Ok(pallas::Base::from(z[window]))
                 },
             )?;
         }
