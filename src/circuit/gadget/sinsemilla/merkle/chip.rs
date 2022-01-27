@@ -5,7 +5,7 @@ use halo2::{
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
-use super::{MerkleInstructions, MERKLE_DEPTH};
+use super::MerkleInstructions;
 
 use crate::{
     circuit::gadget::{
@@ -180,7 +180,7 @@ where
     }
 }
 
-impl<Hash, Commit, F>
+impl<Hash, Commit, F, const MERKLE_DEPTH: usize>
     MerkleInstructions<pallas::Affine, MERKLE_DEPTH, { sinsemilla::K }, { sinsemilla::C }>
     for MerkleChip<Hash, Commit, F>
 where

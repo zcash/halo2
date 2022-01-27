@@ -16,9 +16,6 @@ pub(in crate::circuit) mod chip;
 /// SWU hash-to-curve personalization for the Merkle CRH generator
 pub const MERKLE_CRH_PERSONALIZATION: &str = "z.cash:Orchard-MerkleCRH";
 
-/// Depth of Merkle tree
-pub(crate) const MERKLE_DEPTH: usize = 32;
-
 /// Instructions to check the validity of a Merkle path of a given `PATH_LENGTH`.
 /// The hash function used is a Sinsemilla instance with `K`-bit words.
 /// The hash function can process `MAX_WORDS` words.
@@ -136,7 +133,7 @@ where
 pub mod tests {
     use super::{
         chip::{MerkleChip, MerkleConfig},
-        MerklePath, MERKLE_DEPTH,
+        MerklePath,
     };
 
     use crate::{
@@ -159,6 +156,8 @@ pub mod tests {
 
     use rand::{rngs::OsRng, RngCore};
     use std::convert::TryInto;
+
+    const MERKLE_DEPTH: usize = 32;
 
     #[derive(Default)]
     struct MyCircuit {

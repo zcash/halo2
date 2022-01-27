@@ -392,7 +392,7 @@ impl plonk::Circuit<pallas::Base> for Circuit {
 
         // Merkle path validity check.
         let anchor = {
-            let path = self.path.map(|typed_path| {
+            let path: Option<[pallas::Base; MERKLE_DEPTH_ORCHARD]> = self.path.map(|typed_path| {
                 // TODO: Replace with array::map once MSRV is 1.55.0.
                 gen_const_array(|i| typed_path[i].inner())
             });
