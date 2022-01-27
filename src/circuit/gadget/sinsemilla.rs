@@ -416,6 +416,7 @@ mod tests {
 
     use super::{
         chip::{SinsemillaChip, SinsemillaConfig},
+        merkle::MERKLE_CRH_PERSONALIZATION,
         CommitDomain, HashDomain, Message, MessagePiece,
     };
 
@@ -426,10 +427,6 @@ mod tests {
                 NonIdentityPoint,
             },
             utilities::lookup_range_check::LookupRangeCheckConfig,
-        },
-        constants::{
-            fixed_bases::COMMIT_IVK_PERSONALIZATION, sinsemilla::MERKLE_CRH_PERSONALIZATION,
-            OrchardCommitDomains, OrchardFixedBases, OrchardHashDomains,
         },
         primitives::sinsemilla::{self, K},
     };

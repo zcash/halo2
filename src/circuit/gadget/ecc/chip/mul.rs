@@ -480,7 +480,6 @@ pub mod tests {
         },
         utilities::UtilitiesInstructions,
     };
-    use crate::constants::OrchardFixedBases;
 
     pub fn test_mul(
         chip: EccChip<OrchardFixedBases>,

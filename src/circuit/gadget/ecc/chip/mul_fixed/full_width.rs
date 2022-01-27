@@ -185,7 +185,6 @@ pub mod tests {
         chip::{EccChip, FixedPoint as _, H},
         FixedPoint, NonIdentityPoint, Point,
     };
-    use crate::constants::{OrchardFixedBases, OrchardFixedBasesFull};
 
     pub fn test_mul_fixed(
         chip: EccChip<OrchardFixedBases>,

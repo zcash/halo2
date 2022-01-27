@@ -498,7 +498,6 @@ mod tests {
 
     use super::chip::{EccChip, EccConfig};
     use crate::circuit::gadget::utilities::lookup_range_check::LookupRangeCheckConfig;
-    use crate::constants::OrchardFixedBases;
 
     struct MyCircuit {
         test_errors: bool,

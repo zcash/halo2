@@ -393,7 +393,6 @@ pub mod tests {
         },
         utilities::UtilitiesInstructions,
     };
-    use crate::constants::{NullifierK, OrchardFixedBases};
 
     pub fn test_mul_fixed_base_field(
         chip: EccChip<OrchardFixedBases>,

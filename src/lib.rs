@@ -16,25 +16,5 @@
 #![deny(missing_docs)]
 #![deny(unsafe_code)]
 
-mod address;
-pub mod builder;
-pub mod bundle;
 pub mod circuit;
-mod constants;
-pub mod keys;
-pub mod note;
-pub mod note_encryption;
 pub mod primitives;
-mod spec;
-pub mod tree;
-pub mod value;
-pub mod zip32;
-
-#[cfg(test)]
-mod test_vectors;
-
-pub use address::Address;
-pub use bundle::Bundle;
-pub use circuit::Proof;
-pub use note::Note;
-pub use tree::Anchor;

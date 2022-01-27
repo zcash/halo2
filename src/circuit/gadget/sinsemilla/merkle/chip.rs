@@ -346,7 +346,7 @@ where
         #[cfg(test)]
         {
             use super::MERKLE_CRH_PERSONALIZATION;
-            use crate::{primitives::sinsemilla::HashDomain, spec::i2lebsp};
+            use crate::{circuit::gadget::utilities::i2lebsp, primitives::sinsemilla::HashDomain};
             use group::ff::PrimeFieldBits;
 
             if let (Some(left), Some(right)) = (left.value(), right.value()) {

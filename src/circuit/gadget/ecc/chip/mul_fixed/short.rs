@@ -244,7 +244,6 @@ pub mod tests {
         },
         utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
     };
-    use crate::constants::{OrchardFixedBases, ValueCommitV};
 
     #[allow(clippy::op_ref)]
     pub fn test_mul_fixed_short(

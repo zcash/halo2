@@ -136,14 +136,9 @@ pub mod tests {
         MerklePath,
     };
 
-    use crate::{
-        circuit::gadget::{
-            sinsemilla::chip::SinsemillaChip,
-            utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
-        },
-        constants::{OrchardCommitDomains, OrchardFixedBases, OrchardHashDomains},
-        note::commitment::ExtractedNoteCommitment,
-        tree,
+    use crate::circuit::gadget::{
+        sinsemilla::chip::SinsemillaChip,
+        utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
     };
 
     use group::ff::{Field, PrimeField};
