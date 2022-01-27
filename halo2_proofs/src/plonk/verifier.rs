@@ -14,21 +14,111 @@ use crate::poly::{
 };
 use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
 
+/// Trait representing a strategy for verifying Halo 2 proofs.
+pub trait VerificationStrategy<'params, C: CurveAffine> {
+    /// The output type of this verification strategy after processing a proof.
+    type Output;
+
+    /// Obtains an MSM from the verifier strategy and yields back the strategy's
+    /// output.
+    fn process<E: EncodedChallenge<C>>(
+        self,
+        f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
+    ) -> Result<Self::Output, Error>;
+}
+
+/// A verifier that checks a single proof at a time.
+#[derive(Debug)]
+pub struct SingleVerifier<'params, C: CurveAffine> {
+    msm: MSM<'params, C>,
+}
+
+impl<'params, C: CurveAffine> SingleVerifier<'params, C> {
+    /// Constructs a new single proof verifier.
+    pub fn new(params: &'params Params<C>) -> Self {
+        SingleVerifier {
+            msm: MSM::new(params),
+        }
+    }
+}
+
+impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for SingleVerifier<'params, C> {
+    type Output = ();
+
+    fn process<E: EncodedChallenge<C>>(
+        self,
+        f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
+    ) -> Result<Self::Output, Error> {
+        let guard = f(self.msm)?;
+        let msm = guard.use_challenges();
+        if msm.eval() {
+            Ok(())
+        } else {
+            Err(Error::ConstraintSystemFailure)
+        }
+    }
+}
+
+/// A verifier that checks multiple proofs in a batch.
+#[derive(Debug)]
+pub struct BatchVerifier<'params, C: CurveAffine, R: RngCore> {
+    msm: MSM<'params, C>,
+    rng: R,
+}
+
+impl<'params, C: CurveAffine, R: RngCore> BatchVerifier<'params, C, R> {
+    /// Constructs a new batch verifier.
+    pub fn new(params: &'params Params<C>, rng: R) -> Self {
+        BatchVerifier {
+            msm: MSM::new(params),
+            rng,
+        }
+    }
+
+    /// Finalizes the batch and checks its validity.
+    ///
+    /// Returns `false` if *some* proof was invalid. If the caller needs to identify
+    /// specific failing proofs, it must re-process the proofs separately.
+    #[must_use]
+    pub fn finalize(self) -> bool {
+        self.msm.eval()
+    }
+}
+
+impl<'params, C: CurveAffine, R: RngCore> VerificationStrategy<'params, C>
+    for BatchVerifier<'params, C, R>
+{
+    type Output = Self;
+
+    fn process<E: EncodedChallenge<C>>(
+        mut self,
+        f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
+    ) -> Result<Self::Output, Error> {
+        // Scale the MSM by a random factor to ensure that if the existing MSM
+        // has is_zero() == false then this argument won't be able to interfere
+        // with it to make it true, with high probability.
+        self.msm.scale(C::Scalar::random(&mut self.rng));
+
+        let guard = f(self.msm)?;
+        let msm = guard.use_challenges();
+        Ok(Self { msm, rng: self.rng })
+    }
+}
+
 /// Returns a boolean indicating whether or not the proof is valid
 pub fn verify_proof<
     'params,
     C: CurveAffine,
     E: EncodedChallenge<C>,
-    R: RngCore,
     T: TranscriptRead<C, E>,
+    V: VerificationStrategy<'params, C>,
 >(
     params: &'params Params<C>,
     vk: &VerifyingKey<C>,
-    msm: MSM<'params, C>,
+    strategy: V,
     instances: &[&[&[C::Scalar]]],
-    rng: R,
     transcript: &mut T,
-) -> Result<Guard<'params, C, E>, Error> {
+) -> Result<V::Output, Error> {
     // Check that instances matches the expected number of instance columns
     for instances in instances.iter() {
         if instances.len() != vk.cs.num_instance_columns {
@@ -293,5 +383,7 @@ pub fn verify_proof<
 
     // We are now convinced the circuit is satisfied so long as the
     // polynomial commitments open to the correct values.
-    multiopen::verify_proof(params, rng, transcript, queries, msm).map_err(|_| Error::Opening)
+    strategy.process(|msm| {
+        multiopen::verify_proof(params, transcript, queries, msm).map_err(|_| Error::Opening)
+    })
 }

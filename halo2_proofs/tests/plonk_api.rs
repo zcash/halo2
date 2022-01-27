@@ -2,16 +2,18 @@
 #![allow(clippy::op_ref)]
 
 use assert_matches::assert_matches;
-use halo2_proofs::arithmetic::FieldExt;
+use halo2_proofs::arithmetic::{CurveAffine, FieldExt};
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::pasta::{Eq, EqAffine, Fp};
 use halo2_proofs::plonk::{
-    create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column, ConstraintSystem,
-    Error, Fixed, TableColumn, VerifyingKey,
+    create_proof, keygen_pk, keygen_vk, verify_proof, Advice, BatchVerifier, Circuit, Column,
+    ConstraintSystem, Error, Fixed, SingleVerifier, TableColumn, VerificationStrategy,
+    VerifyingKey,
 };
+use halo2_proofs::poly::commitment::{Guard, MSM};
 use halo2_proofs::poly::{commitment::Params, Rotation};
-use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
+use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge};
 use rand_core::OsRng;
 use std::marker::PhantomData;
 
@@ -449,50 +451,110 @@ fn plonk_api() {
                 .into(),
         );
 
-        let msm = params.empty_msm();
-        let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
-        let guard = verify_proof(
-            &params,
-            pk.get_vk(),
-            msm,
-            &[&[&pubinputs[..]], &[&pubinputs[..]]],
-            OsRng,
-            &mut transcript,
-        )
-        .unwrap();
+        // Test single-verifier strategy.
         {
-            let msm = guard.clone().use_challenges();
-            assert!(msm.eval());
+            let strategy = SingleVerifier::new(&params);
+            let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+            assert!(verify_proof(
+                &params,
+                pk.get_vk(),
+                strategy,
+                &[&[&pubinputs[..]], &[&pubinputs[..]]],
+                &mut transcript,
+            )
+            .is_ok());
         }
+
+        //
+        // Test accumulation-based strategy.
+        //
+
+        struct AccumulationVerifier<'params, C: CurveAffine> {
+            msm: MSM<'params, C>,
+        }
+
+        impl<'params, C: CurveAffine> AccumulationVerifier<'params, C> {
+            fn new(params: &'params Params<C>) -> Self {
+                AccumulationVerifier {
+                    msm: MSM::new(params),
+                }
+            }
+        }
+
+        impl<'params, C: CurveAffine> VerificationStrategy<'params, C>
+            for AccumulationVerifier<'params, C>
         {
-            let g = guard.compute_g();
-            let (msm, _) = guard.clone().use_g(g);
-            assert!(msm.eval());
+            type Output = ();
+
+            fn process<E: EncodedChallenge<C>>(
+                self,
+                f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
+            ) -> Result<Self::Output, Error> {
+                let guard = f(self.msm)?;
+                let g = guard.compute_g();
+                let (msm, _) = guard.use_g(g);
+                if msm.eval() {
+                    Ok(())
+                } else {
+                    Err(Error::ConstraintSystemFailure)
+                }
+            }
         }
-        let msm = guard.clone().use_challenges();
-        assert!(msm.clone().eval());
-        let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
-        let mut vk_buffer = vec![];
-        pk.get_vk().write(&mut vk_buffer).unwrap();
-        let vk = VerifyingKey::<EqAffine>::read::<_, MyCircuit<Fp>>(&mut &vk_buffer[..], &params)
+
+        {
+            let strategy = AccumulationVerifier::new(&params);
+            let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+            assert!(verify_proof(
+                &params,
+                pk.get_vk(),
+                strategy,
+                &[&[&pubinputs[..]], &[&pubinputs[..]]],
+                &mut transcript,
+            )
+            .is_ok());
+        }
+
+        //
+        // Test batch-verifier strategy.
+        //
+
+        {
+            let strategy = BatchVerifier::new(&params, OsRng);
+
+            // First proof.
+            let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+            let strategy = verify_proof(
+                &params,
+                pk.get_vk(),
+                strategy,
+                &[&[&pubinputs[..]], &[&pubinputs[..]]],
+                &mut transcript,
+            )
             .unwrap();
-        let guard = verify_proof(
-            &params,
-            &vk,
-            msm,
-            &[&[&pubinputs[..]], &[&pubinputs[..]]],
-            OsRng,
-            &mut transcript,
-        )
-        .unwrap();
-        {
-            let msm = guard.clone().use_challenges();
-            assert!(msm.eval());
-        }
-        {
-            let g = guard.compute_g();
-            let (msm, _) = guard.clone().use_g(g);
-            assert!(msm.eval());
+
+            // Write and then read the verification key in between (to check round-trip
+            // serialization).
+            // TODO: Figure out whether https://github.com/zcash/halo2/issues/449 should
+            // be caught by this, or if it is caused by downstream changes to halo2.
+            let mut vk_buffer = vec![];
+            pk.get_vk().write(&mut vk_buffer).unwrap();
+            let vk =
+                VerifyingKey::<EqAffine>::read::<_, MyCircuit<Fp>>(&mut &vk_buffer[..], &params)
+                    .unwrap();
+
+            // "Second" proof (just the first proof again).
+            let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+            let strategy = verify_proof(
+                &params,
+                &vk,
+                strategy,
+                &[&[&pubinputs[..]], &[&pubinputs[..]]],
+                &mut transcript,
+            )
+            .unwrap();
+
+            // Check the batch.
+            assert!(strategy.finalize());
         }
     }
 
