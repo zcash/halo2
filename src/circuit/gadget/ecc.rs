@@ -381,10 +381,7 @@ pub struct FixedPoint<C: CurveAffine, EccChip: EccInstructions<C>> {
 /// A constant elliptic curve point over the given curve, used in scalar multiplication
 /// with a base field element
 #[derive(Clone, Debug)]
-pub struct FixedPointBaseField<C: CurveAffine, EccChip>
-where
-    EccChip: EccInstructions<C> + Clone + Debug + Eq,
-{
+pub struct FixedPointBaseField<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
     inner: <EccChip::FixedPoints as FixedPoints<C>>::Base,
 }
@@ -392,10 +389,7 @@ where
 /// A constant elliptic curve point over the given curve, used in scalar multiplication
 /// with a short signed exponent
 #[derive(Clone, Debug)]
-pub struct FixedPointShort<C: CurveAffine, EccChip>
-where
-    EccChip: EccInstructions<C> + Clone + Debug + Eq,
-{
+pub struct FixedPointShort<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
     inner: <EccChip::FixedPoints as FixedPoints<C>>::ShortScalar,
 }
