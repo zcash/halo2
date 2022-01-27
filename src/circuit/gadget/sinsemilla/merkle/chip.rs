@@ -345,7 +345,6 @@ where
         // Check layer hash output against Sinsemilla primitives hash
         #[cfg(test)]
         {
-            use super::MERKLE_CRH_PERSONALIZATION;
             use crate::{circuit::gadget::utilities::i2lebsp, primitives::sinsemilla::HashDomain};
             use group::ff::PrimeFieldBits;
 
@@ -363,7 +362,7 @@ where
                     .by_val()
                     .take(pallas::Base::NUM_BITS as usize)
                     .collect();
-                let merkle_crh = HashDomain::new(MERKLE_CRH_PERSONALIZATION);
+                let merkle_crh = HashDomain::from_Q(Q.into());
 
                 let mut message = l.to_vec();
                 message.extend_from_slice(&left);

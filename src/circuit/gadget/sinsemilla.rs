@@ -406,7 +406,7 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
@@ -416,14 +416,14 @@ mod tests {
 
     use super::{
         chip::{SinsemillaChip, SinsemillaConfig},
-        merkle::MERKLE_CRH_PERSONALIZATION,
-        CommitDomain, HashDomain, Message, MessagePiece,
+        CommitDomain, CommitDomains, HashDomain, HashDomains, Message, MessagePiece,
     };
 
     use crate::{
         circuit::gadget::{
             ecc::{
-                chip::{EccChip, EccConfig},
+                chip::{find_zs_and_us, EccChip, EccConfig, H, NUM_WINDOWS},
+                tests::{FullWidth, TestFixedBases},
                 NonIdentityPoint,
             },
             utilities::lookup_range_check::LookupRangeCheckConfig,
@@ -432,18 +432,51 @@ mod tests {
     };
 
     use group::{ff::Field, Curve};
+    use lazy_static::lazy_static;
     use pasta_curves::pallas;
 
     use std::convert::TryInto;
+
+    pub(crate) const PERSONALIZATION: &'static str = "MerkleCRH";
+
+    lazy_static! {
+        static ref COMMIT_DOMAIN: sinsemilla::CommitDomain =
+            sinsemilla::CommitDomain::new(PERSONALIZATION);
+        static ref Q: pallas::Affine = COMMIT_DOMAIN.Q().to_affine();
+        static ref R: pallas::Affine = COMMIT_DOMAIN.R().to_affine();
+        static ref R_ZS_AND_US: Vec<(u64, [pallas::Base; H])> =
+            find_zs_and_us(*R, NUM_WINDOWS).unwrap();
+    }
+
+    #[derive(Debug, Clone, Eq, PartialEq)]
+    pub(crate) struct TestHashDomain;
+    impl HashDomains<pallas::Affine> for TestHashDomain {
+        fn Q(&self) -> pallas::Affine {
+            *Q
+        }
+    }
+
+    // This test does not make use of the CommitDomain.
+    #[derive(Debug, Clone, Eq, PartialEq)]
+    pub(crate) struct TestCommitDomain;
+    impl CommitDomains<pallas::Affine, TestFixedBases, TestHashDomain> for TestCommitDomain {
+        fn r(&self) -> FullWidth {
+            FullWidth::from_parts(*R, &R_ZS_AND_US)
+        }
+
+        fn hash_domain(&self) -> TestHashDomain {
+            TestHashDomain
+        }
+    }
 
     struct MyCircuit {}
 
     impl Circuit<pallas::Base> for MyCircuit {
         #[allow(clippy::type_complexity)]
         type Config = (
-            EccConfig<OrchardFixedBases>,
-            SinsemillaConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
-            SinsemillaConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
+            EccConfig<TestFixedBases>,
+            SinsemillaConfig<TestHashDomain, TestCommitDomain, TestFixedBases>,
+            SinsemillaConfig<TestHashDomain, TestCommitDomain, TestFixedBases>,
         );
         type FloorPlanner = SimpleFloorPlanner;
 
@@ -491,12 +524,8 @@ mod tests {
 
             let range_check = LookupRangeCheckConfig::configure(meta, advices[9], table_idx);
 
-            let ecc_config = EccChip::<OrchardFixedBases>::configure(
-                meta,
-                advices,
-                lagrange_coeffs,
-                range_check,
-            );
+            let ecc_config =
+                EccChip::<TestFixedBases>::configure(meta, advices, lagrange_coeffs, range_check);
 
             let config1 = SinsemillaChip::configure(
                 meta,
@@ -527,7 +556,7 @@ mod tests {
             let ecc_chip = EccChip::construct(config.0);
 
             // The two `SinsemillaChip`s share the same lookup table.
-            SinsemillaChip::<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>::load(
+            SinsemillaChip::<TestHashDomain, TestCommitDomain, TestFixedBases>::load(
                 config.1.clone(),
                 &mut layouter,
             )?;
@@ -537,11 +566,7 @@ mod tests {
             {
                 let chip1 = SinsemillaChip::construct(config.1);
 
-                let merkle_crh = HashDomain::new(
-                    chip1.clone(),
-                    ecc_chip.clone(),
-                    &OrchardHashDomains::MerkleCrh,
-                );
+                let merkle_crh = HashDomain::new(chip1.clone(), ecc_chip.clone(), &TestHashDomain);
 
                 // Layer 31, l = MERKLE_DEPTH - 1 - layer = 0
                 let l_bitstring = vec![Some(false); K];
@@ -578,7 +603,7 @@ mod tests {
                     let expected_parent = if let (Some(l), Some(left), Some(right)) =
                         (l_bitstring, left_bitstring, right_bitstring)
                     {
-                        let merkle_crh = sinsemilla::HashDomain::new(MERKLE_CRH_PERSONALIZATION);
+                        let merkle_crh = sinsemilla::HashDomain::from_Q((*Q).into());
                         let point = merkle_crh
                             .hash_to_point(
                                 l.into_iter()
@@ -613,11 +638,8 @@ mod tests {
             {
                 let chip2 = SinsemillaChip::construct(config.2);
 
-                let commit_ivk = CommitDomain::new(
-                    chip2.clone(),
-                    ecc_chip.clone(),
-                    &OrchardCommitDomains::CommitIvk,
-                );
+                let test_commit =
+                    CommitDomain::new(chip2.clone(), ecc_chip.clone(), &TestCommitDomain);
                 let r_val = pallas::Scalar::random(rng);
                 let message: Vec<Option<bool>> =
                     (0..500).map(|_| Some(rand::random::<bool>())).collect();
@@ -628,14 +650,14 @@ mod tests {
                         layouter.namespace(|| "witness message"),
                         message.clone(),
                     )?;
-                    commit_ivk.commit(layouter.namespace(|| "commit"), message, Some(r_val))?
+                    test_commit.commit(layouter.namespace(|| "commit"), message, Some(r_val))?
                 };
 
                 // Witness expected result.
                 let expected_result = {
                     let message: Option<Vec<bool>> = message.into_iter().collect();
                     let expected_result = if let Some(message) = message {
-                        let domain = sinsemilla::CommitDomain::new(COMMIT_IVK_PERSONALIZATION);
+                        let domain = sinsemilla::CommitDomain::new(PERSONALIZATION);
                         let point = domain.commit(message.into_iter(), &r_val).unwrap();
                         Some(point.to_affine())
                     } else {

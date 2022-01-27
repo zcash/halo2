@@ -137,11 +137,16 @@ pub mod tests {
     };
 
     use crate::circuit::gadget::{
-        sinsemilla::chip::SinsemillaChip,
-        utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
+        ecc::tests::TestFixedBases,
+        sinsemilla::{
+            chip::SinsemillaChip,
+            tests::{TestCommitDomain, TestHashDomain},
+            HashDomains,
+        },
+        utilities::{i2lebsp, lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
     };
 
-    use group::ff::{Field, PrimeField};
+    use group::ff::{Field, PrimeField, PrimeFieldBits};
     use halo2::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
@@ -150,7 +155,7 @@ pub mod tests {
     };
 
     use rand::{rngs::OsRng, RngCore};
-    use std::convert::TryInto;
+    use std::{convert::TryInto, iter};
 
     const MERKLE_DEPTH: usize = 32;
 
@@ -163,8 +168,8 @@ pub mod tests {
 
     impl Circuit<pallas::Base> for MyCircuit {
         type Config = (
-            MerkleConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
-            MerkleConfig<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>,
+            MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases>,
+            MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases>,
         );
         type FloorPlanner = SimpleFloorPlanner;
 
@@ -233,7 +238,7 @@ pub mod tests {
             mut layouter: impl Layouter<pallas::Base>,
         ) -> Result<(), Error> {
             // Load generator table (shared across both configs)
-            SinsemillaChip::<OrchardHashDomains, OrchardCommitDomains, OrchardFixedBases>::load(
+            SinsemillaChip::<TestHashDomain, TestCommitDomain, TestFixedBases>::load(
                 config.0.sinsemilla_config.clone(),
                 &mut layouter,
             )?;
@@ -251,7 +256,7 @@ pub mod tests {
             let path = MerklePath {
                 chip_1,
                 chip_2,
-                domain: OrchardHashDomains::MerkleCrh,
+                domain: TestHashDomain,
                 leaf_pos: self.leaf_pos,
                 path: self.merkle_path,
             };
@@ -261,15 +266,43 @@ pub mod tests {
 
             if let Some(leaf_pos) = self.leaf_pos {
                 // The expected final root
-                let final_root = {
-                    let path = tree::MerklePath::new(leaf_pos, self.merkle_path.unwrap());
-                    let leaf =
-                        ExtractedNoteCommitment::from_bytes(&self.leaf.unwrap().to_repr()).unwrap();
-                    path.root(leaf)
-                };
+                let final_root = self.merkle_path.unwrap().iter().enumerate().fold(
+                    self.leaf.unwrap(),
+                    |node, (l, sibling)| {
+                        let l = l as u8;
+                        let (left, right) = if leaf_pos & (1 << l) == 0 {
+                            (&node, sibling)
+                        } else {
+                            (sibling, &node)
+                        };
+
+                        use crate::primitives::sinsemilla;
+                        let merkle_crh = sinsemilla::HashDomain::from_Q(TestHashDomain.Q().into());
+
+                        merkle_crh
+                            .hash(
+                                iter::empty()
+                                    .chain(i2lebsp::<10>(l as u64).iter().copied())
+                                    .chain(
+                                        left.to_le_bits()
+                                            .iter()
+                                            .by_val()
+                                            .take(pallas::Base::NUM_BITS as usize),
+                                    )
+                                    .chain(
+                                        right
+                                            .to_le_bits()
+                                            .iter()
+                                            .by_val()
+                                            .take(pallas::Base::NUM_BITS as usize),
+                                    ),
+                            )
+                            .unwrap_or(pallas::Base::zero())
+                    },
+                );
 
                 // Check the computed final root against the expected final root.
-                assert_eq!(computed_final_root.value().unwrap(), &final_root.inner());
+                assert_eq!(computed_final_root.value().unwrap(), &final_root);
             }
 
             Ok(())

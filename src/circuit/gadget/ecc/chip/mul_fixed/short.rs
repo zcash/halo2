@@ -240,22 +240,23 @@ pub mod tests {
     use crate::circuit::gadget::{
         ecc::{
             chip::{EccChip, FixedPoint, MagnitudeSign},
+            tests::{Short, TestFixedBases},
             FixedPointShort, NonIdentityPoint, Point,
         },
         utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
     };
 
     #[allow(clippy::op_ref)]
-    pub fn test_mul_fixed_short(
-        chip: EccChip<OrchardFixedBases>,
+    pub(crate) fn test_mul_fixed_short(
+        chip: EccChip<TestFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
-        // value_commit_v
-        let base_val = ValueCommitV.generator();
-        let value_commit_v = FixedPointShort::from_inner(chip.clone(), ValueCommitV);
+        // test_short
+        let base_val = Short.generator();
+        let test_short = FixedPointShort::from_inner(chip.clone(), Short);
 
         fn load_magnitude_sign(
-            chip: EccChip<OrchardFixedBases>,
+            chip: EccChip<TestFixedBases>,
             mut layouter: impl Layouter<pallas::Base>,
             magnitude: pallas::Base,
             sign: pallas::Base,
@@ -269,11 +270,11 @@ pub mod tests {
         }
 
         fn constrain_equal_non_id(
-            chip: EccChip<OrchardFixedBases>,
+            chip: EccChip<TestFixedBases>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
             scalar_val: pallas::Scalar,
-            result: Point<pallas::Affine, EccChip<OrchardFixedBases>>,
+            result: Point<pallas::Affine, EccChip<TestFixedBases>>,
         ) -> Result<(), Error> {
             let expected = NonIdentityPoint::new(
                 chip,
@@ -324,7 +325,7 @@ pub mod tests {
                     *magnitude,
                     *sign,
                 )?;
-                value_commit_v.mul(layouter.namespace(|| *name), magnitude_sign)?
+                test_short.mul(layouter.namespace(|| *name), magnitude_sign)?
             };
             // Move from base field into scalar field
             let scalar = {
@@ -358,7 +359,7 @@ pub mod tests {
                     *magnitude,
                     *sign,
                 )?;
-                value_commit_v.mul(layouter.namespace(|| *name), magnitude_sign)?
+                test_short.mul(layouter.namespace(|| *name), magnitude_sign)?
             };
             if let Some(is_identity) = result.inner().is_identity() {
                 assert!(is_identity);
@@ -393,7 +394,7 @@ pub mod tests {
         }
 
         impl Circuit<pallas::Base> for MyCircuit {
-            type Config = EccConfig<OrchardFixedBases>;
+            type Config = EccConfig<TestFixedBases>;
             type FloorPlanner = SimpleFloorPlanner;
 
             fn without_witnesses(&self) -> Self {
@@ -430,7 +431,7 @@ pub mod tests {
                 meta.enable_constant(constants);
 
                 let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
-                EccChip::<OrchardFixedBases>::configure(meta, advices, lagrange_coeffs, range_check)
+                EccChip::<TestFixedBases>::configure(meta, advices, lagrange_coeffs, range_check)
             }
 
             fn synthesize(
@@ -452,7 +453,7 @@ pub mod tests {
                     (magnitude, sign)
                 };
 
-                short_config.assign(layouter, magnitude_sign, &ValueCommitV)?;
+                short_config.assign(layouter, magnitude_sign, &Short)?;
 
                 Ok(())
             }
@@ -566,7 +567,7 @@ pub mod tests {
             };
 
             let negation_check_y = {
-                *(ValueCommitV.generator() * pallas::Scalar::from(magnitude_u64))
+                *(Short.generator() * pallas::Scalar::from(magnitude_u64))
                     .to_affine()
                     .coordinates()
                     .unwrap()

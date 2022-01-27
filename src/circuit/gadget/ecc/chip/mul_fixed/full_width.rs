@@ -183,47 +183,20 @@ pub mod tests {
 
     use crate::circuit::gadget::ecc::{
         chip::{EccChip, FixedPoint as _, H},
+        tests::{FullWidth, TestFixedBases},
         FixedPoint, NonIdentityPoint, Point,
     };
 
-    pub fn test_mul_fixed(
-        chip: EccChip<OrchardFixedBases>,
+    pub(crate) fn test_mul_fixed(
+        chip: EccChip<TestFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
-        // commit_ivk_r
-        let commit_ivk_r = OrchardFixedBasesFull::CommitIvkR;
+        let test_base = FullWidth::from_pallas_generator();
         test_single_base(
             chip.clone(),
-            layouter.namespace(|| "commit_ivk_r"),
-            FixedPoint::from_inner(chip.clone(), commit_ivk_r),
-            commit_ivk_r.generator(),
-        )?;
-
-        // note_commit_r
-        let note_commit_r = OrchardFixedBasesFull::NoteCommitR;
-        test_single_base(
-            chip.clone(),
-            layouter.namespace(|| "note_commit_r"),
-            FixedPoint::from_inner(chip.clone(), note_commit_r),
-            note_commit_r.generator(),
-        )?;
-
-        // value_commit_r
-        let value_commit_r = OrchardFixedBasesFull::ValueCommitR;
-        test_single_base(
-            chip.clone(),
-            layouter.namespace(|| "value_commit_r"),
-            FixedPoint::from_inner(chip.clone(), value_commit_r),
-            value_commit_r.generator(),
-        )?;
-
-        // spend_auth_g
-        let spend_auth_g = OrchardFixedBasesFull::SpendAuthG;
-        test_single_base(
-            chip.clone(),
-            layouter.namespace(|| "spend_auth_g"),
-            FixedPoint::from_inner(chip, spend_auth_g),
-            spend_auth_g.generator(),
+            layouter.namespace(|| "full_width"),
+            FixedPoint::from_inner(chip.clone(), test_base.clone()),
+            test_base.generator(),
         )?;
 
         Ok(())
@@ -231,17 +204,17 @@ pub mod tests {
 
     #[allow(clippy::op_ref)]
     fn test_single_base(
-        chip: EccChip<OrchardFixedBases>,
+        chip: EccChip<TestFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
-        base: FixedPoint<pallas::Affine, EccChip<OrchardFixedBases>>,
+        base: FixedPoint<pallas::Affine, EccChip<TestFixedBases>>,
         base_val: pallas::Affine,
     ) -> Result<(), Error> {
         fn constrain_equal_non_id(
-            chip: EccChip<OrchardFixedBases>,
+            chip: EccChip<TestFixedBases>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
             scalar_val: pallas::Scalar,
-            result: Point<pallas::Affine, EccChip<OrchardFixedBases>>,
+            result: Point<pallas::Affine, EccChip<TestFixedBases>>,
         ) -> Result<(), Error> {
             let expected = NonIdentityPoint::new(
                 chip,

@@ -161,6 +161,15 @@ impl HashDomain {
         extract_p_bottom(self.hash_to_point(msg))
     }
 
+    /// Constructs a new `HashDomain` from a given `Q`.
+    ///
+    /// This is only for testing use.
+    #[cfg(test)]
+    #[allow(non_snake_case)]
+    pub(crate) fn from_Q(Q: pallas::Point) -> Self {
+        HashDomain { Q }
+    }
+
     /// Returns the Sinsemilla $Q$ constant for this domain.
     #[cfg(test)]
     #[allow(non_snake_case)]

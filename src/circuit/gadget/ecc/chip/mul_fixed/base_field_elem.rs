@@ -389,29 +389,29 @@ pub mod tests {
     use crate::circuit::gadget::{
         ecc::{
             chip::{EccChip, FixedPoint, H},
+            tests::{BaseField, TestFixedBases},
             FixedPointBaseField, NonIdentityPoint, Point,
         },
         utilities::UtilitiesInstructions,
     };
 
-    pub fn test_mul_fixed_base_field(
-        chip: EccChip<OrchardFixedBases>,
+    pub(crate) fn test_mul_fixed_base_field(
+        chip: EccChip<TestFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
-        // nullifier_k
         test_single_base(
             chip.clone(),
-            layouter.namespace(|| "nullifier_k"),
-            FixedPointBaseField::from_inner(chip, NullifierK),
-            NullifierK.generator(),
+            layouter.namespace(|| "base_field_elem"),
+            FixedPointBaseField::from_inner(chip, BaseField),
+            BaseField.generator(),
         )
     }
 
     #[allow(clippy::op_ref)]
     fn test_single_base(
-        chip: EccChip<OrchardFixedBases>,
+        chip: EccChip<TestFixedBases>,
         mut layouter: impl Layouter<pallas::Base>,
-        base: FixedPointBaseField<pallas::Affine, EccChip<OrchardFixedBases>>,
+        base: FixedPointBaseField<pallas::Affine, EccChip<TestFixedBases>>,
         base_val: pallas::Affine,
     ) -> Result<(), Error> {
         let rng = OsRng;
@@ -419,11 +419,11 @@ pub mod tests {
         let column = chip.config().advices[0];
 
         fn constrain_equal_non_id(
-            chip: EccChip<OrchardFixedBases>,
+            chip: EccChip<TestFixedBases>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
             scalar_val: pallas::Base,
-            result: Point<pallas::Affine, EccChip<OrchardFixedBases>>,
+            result: Point<pallas::Affine, EccChip<TestFixedBases>>,
         ) -> Result<(), Error> {
             // Move scalar from base field into scalar field (which always fits for Pallas).
             let scalar = pallas::Scalar::from_repr(scalar_val.to_repr()).unwrap();
