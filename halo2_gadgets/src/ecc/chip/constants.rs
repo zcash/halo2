@@ -154,6 +154,8 @@ pub fn find_zs_and_us<C: CurveAffine>(
 ///      1. z + y = u^2,
 ///      2. z - y is not a square
 /// for the y-coordinate of each fixed-base multiple in each window.
+#[cfg(any(test, feature = "test-dependencies"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "test-dependencies")))]
 pub fn test_zs_and_us<C: CurveAffine>(base: C, z: &[u64], u: &[[[u8; 32]; H]], num_windows: usize) {
     let window_table = compute_window_table(base, num_windows);
 
@@ -171,6 +173,8 @@ pub fn test_zs_and_us<C: CurveAffine>(base: C, z: &[u64], u: &[[[u8; 32]; H]], n
 
 /// Test that Lagrange interpolation coefficients reproduce the correct x-coordinate
 /// for each fixed-base multiple in each window.
+#[cfg(any(test, feature = "test-dependencies"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "test-dependencies")))]
 pub fn test_lagrange_coeffs<C: CurveAffine>(base: C, num_windows: usize) {
     /// Evaluate y = f(x) given the coefficients of f(x)
     fn evaluate<C: CurveAffine>(x: u8, coeffs: &[C::Base]) -> C::Base {

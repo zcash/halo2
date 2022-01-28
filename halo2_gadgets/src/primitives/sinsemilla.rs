@@ -171,9 +171,10 @@ impl HashDomain {
     }
 
     /// Returns the Sinsemilla $Q$ constant for this domain.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-dependencies"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "test-dependencies")))]
     #[allow(non_snake_case)]
-    pub(crate) fn Q(&self) -> pallas::Point {
+    pub fn Q(&self) -> pallas::Point {
         self.Q
     }
 }
@@ -225,16 +226,18 @@ impl CommitDomain {
     }
 
     /// Returns the Sinsemilla $R$ constant for this domain.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-dependencies"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "test-dependencies")))]
     #[allow(non_snake_case)]
-    pub(crate) fn R(&self) -> pallas::Point {
+    pub fn R(&self) -> pallas::Point {
         self.R
     }
 
     /// Returns the Sinsemilla $Q$ constant for this domain.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-dependencies"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "test-dependencies")))]
     #[allow(non_snake_case)]
-    pub(crate) fn Q(&self) -> pallas::Point {
+    pub fn Q(&self) -> pallas::Point {
         self.M.Q
     }
 }
