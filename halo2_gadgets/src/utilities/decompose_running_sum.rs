@@ -34,6 +34,7 @@ use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
 /// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
+#[derive(Debug)]
 pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<AssignedCell<F, F>>);
 impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
     type Target = Vec<AssignedCell<F, F>>;
@@ -43,16 +44,22 @@ impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
     }
 }
 
+/// Configuration that provides methods for running sum decomposition.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct RunningSumConfig<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> {
-    pub q_range_check: Selector,
-    pub z: Column<Advice>,
+    q_range_check: Selector,
+    z: Column<Advice>,
     _marker: PhantomData<F>,
 }
 
 impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
     RunningSumConfig<F, WINDOW_NUM_BITS>
 {
+    /// Returns the q_range_check selector of this [`RunningSumConfig`].
+    pub(crate) fn q_range_check(&self) -> Selector {
+        self.q_range_check
+    }
+
     /// `perm` MUST include the advice column `z`.
     ///
     /// # Panics

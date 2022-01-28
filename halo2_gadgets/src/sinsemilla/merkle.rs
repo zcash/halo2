@@ -13,7 +13,7 @@ use crate::utilities::{
 };
 use std::iter;
 
-pub(crate) mod chip;
+pub mod chip;
 
 /// SWU hash-to-curve personalization for the Merkle CRH generator
 pub const MERKLE_CRH_PERSONALIZATION: &str = "z.cash:Orchard-MerkleCRH";
@@ -58,12 +58,40 @@ pub struct MerklePath<
 > where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
-    pub(crate) chip_1: MerkleChip,
-    pub(crate) chip_2: MerkleChip,
-    pub(crate) domain: MerkleChip::HashDomains,
-    pub(crate) leaf_pos: Option<u32>,
+    chip_1: MerkleChip,
+    chip_2: MerkleChip,
+    domain: MerkleChip::HashDomains,
+    leaf_pos: Option<u32>,
     // The Merkle path is ordered from leaves to root.
-    pub(crate) path: Option<[C::Base; PATH_LENGTH]>,
+    path: Option<[C::Base; PATH_LENGTH]>,
+}
+
+impl<
+        C: CurveAffine,
+        MerkleChip,
+        const PATH_LENGTH: usize,
+        const K: usize,
+        const MAX_WORDS: usize,
+    > MerklePath<C, MerkleChip, PATH_LENGTH, K, MAX_WORDS>
+where
+    MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
+{
+    /// Constructs a [`MerklePath`].
+    pub fn construct(
+        chip_1: MerkleChip,
+        chip_2: MerkleChip,
+        domain: MerkleChip::HashDomains,
+        leaf_pos: Option<u32>,
+        path: Option<[C::Base; PATH_LENGTH]>,
+    ) -> Self {
+        Self {
+            chip_1,
+            chip_2,
+            domain,
+            leaf_pos,
+            path,
+        }
+    }
 }
 
 #[allow(non_snake_case)]
@@ -78,7 +106,7 @@ where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
     /// Calculates the root of the tree containing the given leaf at this Merkle path.
-    pub(crate) fn calculate_root(
+    pub fn calculate_root(
         &self,
         mut layouter: impl Layouter<C::Base>,
         leaf: MerkleChip::Var,
@@ -253,7 +281,7 @@ pub mod tests {
 
             let leaf = chip_1.load_private(
                 layouter.namespace(|| ""),
-                config.0.cond_swap_config.a,
+                config.0.cond_swap_config.a(),
                 self.leaf,
             )?;
 

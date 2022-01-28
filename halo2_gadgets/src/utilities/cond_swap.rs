@@ -1,3 +1,5 @@
+//! Gadget and chip for a conditional swap utility.
+
 use super::{bool_check, ternary, UtilitiesInstructions};
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter},
@@ -7,6 +9,7 @@ use halo2_proofs::{
 use pasta_curves::arithmetic::FieldExt;
 use std::{array, marker::PhantomData};
 
+/// Instructions for a conditional swap gadget.
 pub trait CondSwapInstructions<F: FieldExt>: UtilitiesInstructions<F> {
     #[allow(clippy::type_complexity)]
     /// Given an input pair (a,b) and a `swap` boolean flag, returns
@@ -42,14 +45,22 @@ impl<F: FieldExt> Chip<F> for CondSwapChip<F> {
     }
 }
 
+/// Configuration for the [`CondSwapChip`].
 #[derive(Clone, Debug)]
 pub struct CondSwapConfig {
-    pub q_swap: Selector,
-    pub a: Column<Advice>,
-    pub b: Column<Advice>,
-    pub a_swapped: Column<Advice>,
-    pub b_swapped: Column<Advice>,
-    pub swap: Column<Advice>,
+    q_swap: Selector,
+    a: Column<Advice>,
+    b: Column<Advice>,
+    a_swapped: Column<Advice>,
+    b_swapped: Column<Advice>,
+    swap: Column<Advice>,
+}
+
+#[cfg(test)]
+impl CondSwapConfig {
+    pub(crate) fn a(&self) -> Column<Advice> {
+        self.a
+    }
 }
 
 impl<F: FieldExt> UtilitiesInstructions<F> for CondSwapChip<F> {
@@ -185,6 +196,7 @@ impl<F: FieldExt> CondSwapChip<F> {
         config
     }
 
+    /// Constructs a [`CondSwapChip`] given a [`CondSwapConfig`].
     pub fn construct(config: CondSwapConfig) -> Self {
         CondSwapChip {
             config,

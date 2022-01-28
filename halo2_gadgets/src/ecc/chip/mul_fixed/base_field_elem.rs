@@ -190,7 +190,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                     offset,
                     &(&scalar).into(),
                     base,
-                    self.super_config.running_sum_config.q_range_check,
+                    self.super_config.running_sum_config.q_range_check(),
                 )?;
 
                 Ok((scalar, acc, mul_b))
