@@ -195,7 +195,7 @@ pub mod tests {
         test_single_base(
             chip.clone(),
             layouter.namespace(|| "full_width"),
-            FixedPoint::from_inner(chip.clone(), test_base.clone()),
+            FixedPoint::from_inner(chip, test_base.clone()),
             test_base.generator(),
         )?;
 

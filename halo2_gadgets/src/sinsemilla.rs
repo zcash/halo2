@@ -443,7 +443,7 @@ pub(crate) mod tests {
 
     use std::convert::TryInto;
 
-    pub(crate) const PERSONALIZATION: &'static str = "MerkleCRH";
+    pub(crate) const PERSONALIZATION: &str = "MerkleCRH";
 
     lazy_static! {
         static ref COMMIT_DOMAIN: sinsemilla::CommitDomain =

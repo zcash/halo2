@@ -978,10 +978,9 @@ mod tests {
                 let compression = config.compression.clone();
                 let initial_state = compression.initialize_with_iv(&mut layouter, IV)?;
 
-                let state =
-                    config
-                        .compression
-                        .compress(&mut layouter, initial_state.clone(), w_halves)?;
+                let state = config
+                    .compression
+                    .compress(&mut layouter, initial_state, w_halves)?;
 
                 let digest = config.compression.digest(&mut layouter, state)?;
                 for (idx, digest_word) in digest.iter().enumerate() {
