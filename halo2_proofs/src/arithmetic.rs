@@ -427,3 +427,27 @@ fn test_lagrange_interpolate() {
         }
     }
 }
+
+#[test]
+fn fft() {
+    use crate::poly::EvaluationDomain;
+    use ark_std::{end_timer, start_timer};
+    use rand_core::OsRng;
+
+    fn test_best_fft<G: Group>() {
+        let mut rng = OsRng;
+        let k = 19;
+        // polynomial degree n = 2^k
+        let n = 1u64 << k;
+        // polynomial coeffs
+        let mut coeffs: Vec<_> = (0..n).map(|_| G::Scalar::random(&mut rng)).collect();
+        let domain: EvaluationDomain<G> = EvaluationDomain::new(1, k);
+
+        let message = format!("best_fft");
+        let start = start_timer!(|| message);
+        best_fft(&mut coeffs, domain.get_omega(), k);
+        end_timer!(start);
+    }
+
+    test_best_fft::<Fp>();
+}
