@@ -130,7 +130,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
     fn running_sum_coords_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("Running sum coordinates check", |meta| {
             let q_mul_fixed_running_sum =
-                meta.query_selector(self.running_sum_config.q_range_check);
+                meta.query_selector(self.running_sum_config.q_range_check());
 
             let z_cur = meta.query_advice(self.window, Rotation::cur());
             let z_next = meta.query_advice(self.window, Rotation::next());

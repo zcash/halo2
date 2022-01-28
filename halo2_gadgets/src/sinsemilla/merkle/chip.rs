@@ -1,3 +1,5 @@
+//! Chip implementing a Merkle hash using Sinsemilla as the hash function.
+
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
@@ -25,6 +27,7 @@ use crate::{
 use group::ff::PrimeField;
 use std::array;
 
+/// Configuration for the `MerkleChip` implementation.
 #[derive(Clone, Debug)]
 pub struct MerkleConfig<Hash, Commit, Fixed>
 where
@@ -38,6 +41,7 @@ where
     pub(super) sinsemilla_config: SinsemillaConfig<Hash, Commit, Fixed>,
 }
 
+/// Chip implementing `MerkleInstructions`.
 #[derive(Clone, Debug)]
 pub struct MerkleChip<Hash, Commit, Fixed>
 where
@@ -72,6 +76,7 @@ where
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
 {
+    /// Configures the [`MerkleChip`].
     pub fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         sinsemilla_config: SinsemillaConfig<Hash, Commit, F>,
@@ -175,6 +180,7 @@ where
         }
     }
 
+    /// Constructs a [`MerkleChip`] given a [`MerkleConfig`].
     pub fn construct(config: MerkleConfig<Hash, Commit, F>) -> Self {
         MerkleChip { config }
     }

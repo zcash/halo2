@@ -23,12 +23,13 @@ impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
     }
 }
 
+/// Configuration that provides methods for a lookup range check.
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub struct LookupRangeCheckConfig<F: FieldExt + PrimeFieldBits, const K: usize> {
-    pub q_lookup: Selector,
-    pub q_running: Selector,
-    pub q_bitshift: Selector,
-    pub running_sum: Column<Advice>,
+    q_lookup: Selector,
+    q_running: Selector,
+    q_bitshift: Selector,
+    running_sum: Column<Advice>,
     table_idx: TableColumn,
     _marker: PhantomData<F>,
 }

@@ -8,9 +8,9 @@ use halo2_proofs::{
 use pasta_curves::arithmetic::FieldExt;
 use std::{array, ops::Range};
 
-pub(crate) mod cond_swap;
-pub(crate) mod decompose_running_sum;
-pub(crate) mod lookup_range_check;
+pub mod cond_swap;
+pub mod decompose_running_sum;
+pub mod lookup_range_check;
 
 /// Trait for a variable in the circuit.
 pub trait Var<F: FieldExt>: Clone + std::fmt::Debug + From<AssignedCell<F, F>> {
