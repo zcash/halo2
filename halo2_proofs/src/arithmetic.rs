@@ -8,7 +8,7 @@ use group::{
     Group as _,
 };
 
-pub use pasta_curves::arithmetic::*;
+pub use pairing::arithmetic::*;
 
 fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut C::Curve) {
     let coeffs: Vec<_> = coeffs.iter().map(|a| a.to_repr()).collect();
@@ -402,11 +402,33 @@ pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
     }
 }
 
+/// Given roots [a_0, a_1, ... a_n] returns vanising polynomials
+/// (x - a_0) * (x - a_1) * ... * (x - a_n)
+pub fn vanishing_polynomial<F: FieldExt>(roots: &[F]) -> Vec<F> {
+    fn mul_with<F: FieldExt>(coeffs: Vec<F>, root: &F) -> Vec<F> {
+        let mut ret = vec![F::zero(); coeffs.len() + 1];
+
+        for (i, coeff) in coeffs.iter().enumerate() {
+            ret[i] -= *coeff * root;
+            ret[i + 1] += coeff;
+        }
+
+        ret
+    }
+
+    let mut coeffs = vec![F::one()];
+    for root in roots {
+        coeffs = mul_with(coeffs, root);
+    }
+
+    coeffs
+}
+
 #[cfg(test)]
 use rand_core::OsRng;
 
 #[cfg(test)]
-use crate::pasta::Fp;
+use pairing::bn256::Fr as Fp;
 
 #[test]
 fn test_lagrange_interpolate() {

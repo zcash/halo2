@@ -6,18 +6,20 @@ use crate::arithmetic::parallelize;
 use crate::plonk::Assigned;
 
 use group::ff::{BatchInvert, Field};
-use pasta_curves::arithmetic::FieldExt;
+use pairing::arithmetic::FieldExt;
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, RangeFrom, RangeFull};
+use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, RangeFrom, RangeFull, Sub};
 
 pub mod commitment;
 mod domain;
 mod evaluator;
+mod msm;
 pub mod multiopen;
 
 pub use domain::*;
 pub use evaluator::*;
+pub use msm::{PairMSM, MSM};
 
 /// This is an error that could occur during proving or circuit synthesis.
 // TODO: these errors need to be cleaned up
@@ -195,6 +197,20 @@ impl<'a, F: Field, B: Basis> Add<&'a Polynomial<F, B>> for Polynomial<F, B> {
     }
 }
 
+impl<'a, F: Field, B: Basis> Sub<&'a Polynomial<F, B>> for Polynomial<F, B> {
+    type Output = Polynomial<F, B>;
+
+    fn sub(mut self, rhs: &'a Polynomial<F, B>) -> Polynomial<F, B> {
+        parallelize(&mut self.values, |lhs, start| {
+            for (lhs, rhs) in lhs.iter_mut().zip(rhs.values[start..].iter()) {
+                *lhs -= *rhs;
+            }
+        });
+
+        self
+    }
+}
+
 impl<'a, F: Field> Polynomial<F, LagrangeCoeff> {
     /// Rotates the values in a Lagrange basis polynomial by `Rotation`
     pub fn rotate(&self, rotation: Rotation) -> Polynomial<F, LagrangeCoeff> {
@@ -208,6 +224,16 @@ impl<'a, F: Field> Polynomial<F, LagrangeCoeff> {
             values,
             _marker: PhantomData,
         }
+    }
+}
+
+impl<'a, F: Field, B: Basis> Sub<F> for &'a Polynomial<F, B> {
+    type Output = Polynomial<F, B>;
+
+    fn sub(self, rhs: F) -> Polynomial<F, B> {
+        let mut res = self.clone();
+        res.values[0] -= rhs;
+        res
     }
 }
 

@@ -233,7 +233,7 @@ where
 mod tests {
     use super::*;
     use crate::poly::Rotation;
-    use pasta_curves::Fp;
+    use pairing::bn256::Fr as Fp;
     use proptest::collection::{vec, SizeRange};
     use proptest::prelude::*;
 

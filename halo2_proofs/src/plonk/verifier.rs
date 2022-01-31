@@ -2,56 +2,55 @@ use ff::Field;
 use group::Curve;
 use rand_core::RngCore;
 use std::iter;
+use std::marker::PhantomData;
+use std::ops::Mul;
 
 use super::{
     vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
     VerifyingKey,
 };
-use crate::arithmetic::{CurveAffine, FieldExt};
+use crate::arithmetic::{BaseExt, CurveAffine, FieldExt, MultiMillerLoop};
+
 use crate::poly::{
-    commitment::{Blind, Guard, Params, MSM},
+    commitment::{Blind, Params, ParamsVerifier},
+    multiopen::Decider,
     multiopen::{self, VerifierQuery},
+    PairMSM, MSM,
 };
 use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
 
 /// Trait representing a strategy for verifying Halo 2 proofs.
-pub trait VerificationStrategy<'params, C: CurveAffine> {
+pub trait VerificationStrategy<C: CurveAffine> {
     /// The output type of this verification strategy after processing a proof.
     type Output;
 
     /// Obtains an MSM from the verifier strategy and yields back the strategy's
     /// output.
-    fn process<E: EncodedChallenge<C>>(
-        self,
-        f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
-    ) -> Result<Self::Output, Error>;
+    fn process(self, f: impl FnOnce() -> Result<PairMSM<C>, Error>) -> Result<Self::Output, Error>;
 }
 
 /// A verifier that checks a single proof at a time.
 #[derive(Debug)]
-pub struct SingleVerifier<'params, C: CurveAffine> {
-    msm: MSM<'params, C>,
+pub struct SingleVerifier<'a, E: MultiMillerLoop> {
+    params: &'a ParamsVerifier<E>,
 }
 
-impl<'params, C: CurveAffine> SingleVerifier<'params, C> {
+impl<'a, C: MultiMillerLoop> SingleVerifier<'a, C> {
     /// Constructs a new single proof verifier.
-    pub fn new(params: &'params Params<C>) -> Self {
-        SingleVerifier {
-            msm: MSM::new(params),
-        }
+    pub fn new(params: &'a ParamsVerifier<C>) -> Self {
+        SingleVerifier { params }
     }
 }
 
-impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for SingleVerifier<'params, C> {
+impl<'a, C: MultiMillerLoop> VerificationStrategy<C::G1Affine> for SingleVerifier<'a, C> {
     type Output = ();
 
-    fn process<E: EncodedChallenge<C>>(
+    fn process(
         self,
-        f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
+        f: impl FnOnce() -> Result<PairMSM<C::G1Affine>, Error>,
     ) -> Result<Self::Output, Error> {
-        let guard = f(self.msm)?;
-        let msm = guard.use_challenges();
-        if msm.eval() {
+        let guard = f()?;
+        if Decider::verify(self.params, guard) {
             Ok(())
         } else {
             Err(Error::ConstraintSystemFailure)
@@ -61,16 +60,18 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for SingleVerifie
 
 /// A verifier that checks multiple proofs in a batch.
 #[derive(Debug)]
-pub struct BatchVerifier<'params, C: CurveAffine, R: RngCore> {
-    msm: MSM<'params, C>,
+pub struct BatchVerifier<'a, E: MultiMillerLoop, R: RngCore> {
+    params: &'a ParamsVerifier<E>,
+    msm: PairMSM<E::G1Affine>,
     rng: R,
 }
 
-impl<'params, C: CurveAffine, R: RngCore> BatchVerifier<'params, C, R> {
+impl<'a, E: MultiMillerLoop, R: RngCore> BatchVerifier<'a, E, R> {
     /// Constructs a new batch verifier.
-    pub fn new(params: &'params Params<C>, rng: R) -> Self {
+    pub fn new(params: &'a ParamsVerifier<E>, rng: R) -> Self {
         BatchVerifier {
-            msm: MSM::new(params),
+            params,
+            msm: PairMSM::default(),
             rng,
         }
     }
@@ -81,40 +82,44 @@ impl<'params, C: CurveAffine, R: RngCore> BatchVerifier<'params, C, R> {
     /// specific failing proofs, it must re-process the proofs separately.
     #[must_use]
     pub fn finalize(self) -> bool {
-        self.msm.eval()
+        Decider::verify(self.params, self.msm)
     }
 }
 
-impl<'params, C: CurveAffine, R: RngCore> VerificationStrategy<'params, C>
-    for BatchVerifier<'params, C, R>
+impl<'a, C: MultiMillerLoop, R: RngCore> VerificationStrategy<C::G1Affine>
+    for BatchVerifier<'a, C, R>
 {
     type Output = Self;
 
-    fn process<E: EncodedChallenge<C>>(
+    fn process(
         mut self,
-        f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
+        f: impl FnOnce() -> Result<PairMSM<C::G1Affine>, Error>,
     ) -> Result<Self::Output, Error> {
         // Scale the MSM by a random factor to ensure that if the existing MSM
         // has is_zero() == false then this argument won't be able to interfere
         // with it to make it true, with high probability.
         self.msm.scale(C::Scalar::random(&mut self.rng));
+        let to_add = f()?;
+        self.msm.add_msm(to_add);
 
-        let guard = f(self.msm)?;
-        let msm = guard.use_challenges();
-        Ok(Self { msm, rng: self.rng })
+        Ok(Self {
+            msm: self.msm,
+            rng: self.rng,
+            params: self.params,
+        })
     }
 }
 
 /// Returns a boolean indicating whether or not the proof is valid
 pub fn verify_proof<
     'params,
-    C: CurveAffine,
-    E: EncodedChallenge<C>,
-    T: TranscriptRead<C, E>,
-    V: VerificationStrategy<'params, C>,
+    C: MultiMillerLoop,
+    E: EncodedChallenge<C::G1Affine>,
+    T: TranscriptRead<C::G1Affine, E>,
+    V: VerificationStrategy<C::G1Affine>,
 >(
-    params: &'params Params<C>,
-    vk: &VerifyingKey<C>,
+    params: &'params ParamsVerifier<C>,
+    vk: &VerifyingKey<C::G1Affine>,
     strategy: V,
     instances: &[&[&[C::Scalar]]],
     transcript: &mut T,
@@ -135,11 +140,8 @@ pub fn verify_proof<
                     if instance.len() > params.n as usize - (vk.cs.blinding_factors() + 1) {
                         return Err(Error::InstanceTooLarge);
                     }
-                    let mut poly = instance.to_vec();
-                    poly.resize(params.n as usize, C::Scalar::zero());
-                    let poly = vk.domain.lagrange_from_vec(poly);
 
-                    Ok(params.commit_lagrange(&poly, Blind::default()).to_affine())
+                    Ok(params.commit_lagrange(instance.to_vec()).to_affine())
                 })
                 .collect::<Result<Vec<_>, _>>()
         })
@@ -319,7 +321,7 @@ pub fn verify_proof<
                     )
             });
 
-        vanishing.verify(params, expressions, y, xn)
+        vanishing.verify(expressions, y, xn)
     };
 
     let queries = instance_commitments
@@ -383,7 +385,7 @@ pub fn verify_proof<
 
     // We are now convinced the circuit is satisfied so long as the
     // polynomial commitments open to the correct values.
-    strategy.process(|msm| {
-        multiopen::verify_proof(params, transcript, queries, msm).map_err(|_| Error::Opening)
+    strategy.process(|| {
+        multiopen::verify_proof(params, transcript, queries).map_err(|_| Error::Opening)
     })
 }

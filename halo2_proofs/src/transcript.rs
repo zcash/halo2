@@ -5,7 +5,7 @@ use blake2b_simd::{Params as Blake2bParams, State as Blake2bState};
 use group::ff::PrimeField;
 use std::convert::TryInto;
 
-use crate::arithmetic::{Coordinates, CurveAffine, FieldExt};
+use crate::arithmetic::{BaseExt, Coordinates, CurveAffine, FieldExt};
 
 use std::io::{self, Read, Write};
 use std::marker::PhantomData;
@@ -130,8 +130,8 @@ impl<R: Read, C: CurveAffine> Transcript<C, Challenge255<C>>
                 "cannot write points at infinity to the transcript",
             )
         })?;
-        self.state.update(coords.x().to_repr().as_ref());
-        self.state.update(coords.y().to_repr().as_ref());
+        coords.x().write(&mut self.state)?;
+        coords.y().write(&mut self.state)?;
 
         Ok(())
     }
@@ -205,8 +205,8 @@ impl<W: Write, C: CurveAffine> Transcript<C, Challenge255<C>>
                 "cannot write points at infinity to the transcript",
             )
         })?;
-        self.state.update(coords.x().to_repr().as_ref());
-        self.state.update(coords.y().to_repr().as_ref());
+        coords.x().write(&mut self.state)?;
+        coords.y().write(&mut self.state)?;
 
         Ok(())
     }

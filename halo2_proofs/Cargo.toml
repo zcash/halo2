@@ -25,10 +25,6 @@ name = "arithmetic"
 harness = false
 
 [[bench]]
-name = "hashtocurve"
-harness = false
-
-[[bench]]
 name = "plonk"
 harness = false
 
@@ -37,9 +33,12 @@ backtrace = { version = "0.3", optional = true }
 rayon = "1.5.1"
 ff = "0.11"
 group = "0.11"
-pasta_curves = "0.3"
+rand = "0.8"
 rand_core = { version = "0.6", default-features = false }
 blake2b_simd = "1"
+pairing = { git = 'https://github.com/appliedzkp/pairing', package = "pairing_bn256" }
+subtle = "2.3"
+cfg-if = "0.1"
 
 # Developer tooling dependencies
 plotters = { version = "0.3.0", optional = true }
@@ -63,9 +62,12 @@ rand_core = { version = "0.6", default-features = false, features = ["getrandom"
 getrandom = { version = "0.2", features = ["js"] }
 
 [features]
+default = ["gwc"]
 dev-graph = ["plotters", "tabbycat"]
 gadget-traces = ["backtrace"]
 sanity-checks = []
+shplonk = []
+gwc = []
 
 [lib]
 bench = false
