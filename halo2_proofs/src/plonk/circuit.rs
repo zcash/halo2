@@ -940,6 +940,26 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
+    /// Add a lookup argument for some input expressions and table columns.
+    ///
+    /// `table_map` returns a map between input expressions and the table columns
+    /// they need to match.
+    ///
+    /// This API allows any column type to be used as table columns.
+    pub fn lookup_any(
+        &mut self,
+        table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, Expression<F>)>,
+    ) -> usize {
+        let mut cells = VirtualCells::new(self);
+        let table_map = table_map(&mut cells);
+
+        let index = self.lookups.len();
+
+        self.lookups.push(lookup::Argument::new(table_map));
+
+        index
+    }
+
     fn query_fixed_index(&mut self, column: Column<Fixed>, at: Rotation) -> usize {
         // Return existing query, if it exists
         for (index, fixed_query) in self.fixed_queries.iter().enumerate() {
