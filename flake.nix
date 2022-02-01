@@ -46,21 +46,6 @@
            defaultPackage =
              thing;
 
-           packages.example =
-             pkgs.stdenv.mkDerivation
-               { name = "circuit-layout";
-                 src = ./.;
-                 buildPhase =
-                   ''
-                     ${thing.runCargo} run --example circuit-layout --features="dev-graph"
-                   '';
-                 installPhase =
-                   ''
-                   mkdir $out
-                   ln -s layout.png $out
-                   '';
-               };
-
            devShell =
              pkgs.mkShell
                { buildInputs =
