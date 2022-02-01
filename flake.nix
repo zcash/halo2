@@ -43,15 +43,14 @@
            thing = (rustPkgs.workspace.halo2_proofs {});
          in
          { inherit rustPkgs;
-           defaultPackage =
-             thing;
+           defaultPackage = pkgs.cargo2nix;
 
            devShell =
              pkgs.mkShell
                { buildInputs =
                    with pkgs;
                    [ cargo
-                     cargo2nix
+                     cargo2nix.defaultPackage.${system}
                      gcc
                      rustc
                      cmake
