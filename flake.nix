@@ -8,12 +8,18 @@
     utils.for-default-systems
       ({ make-shell, pkgs, ... }:
          { devShell =
-             make-shell
-               { packages =
+             pkgs.mkShell
+               { nativeBuildInputs =
                    with pkgs;
                    [ cargo
                      gcc
                      rustc
+                     cmake
+                     expat
+                     freetype
+                     openssl
+                     pkg-config
+                     fontconfig
                    ];
                };
          }
