@@ -40,15 +40,6 @@ where
         intermediate_sets.super_point_set,
     );
 
-    let calculate_low_degree_equivalent =
-        |points: &[C::Scalar], evals: &[C::Scalar]| -> Polynomial<C::Scalar, Coeff> {
-            let values = lagrange_interpolate(points, evals);
-            Polynomial {
-                values,
-                _marker: PhantomData,
-            }
-        };
-
     let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
     let v: ChallengeV<_> = transcript.squeeze_challenge_scalar();
 
@@ -67,16 +58,15 @@ where
 
         let mut inner_msm: ProjectiveMSM<C> = ProjectiveMSM::new();
         for commitment_data in rotation_set.commitments.iter() {
-            let r_x = calculate_low_degree_equivalent(
-                &rotation_set.points[..],
-                &commitment_data.evals()[..],
-            );
-            let r_eval = eval_polynomial(&r_x.values, *u);
-            let low_degree_equivalent = params.g1 * r_eval;
+            // calculate low degree equivalent
+            let r_x = lagrange_interpolate(&rotation_set.points[..], &commitment_data.evals()[..]);
+            // soft commit to low degree equivalent
+            let r_eval = eval_polynomial(&r_x[..], *u);
+            let r = params.g1 * r_eval;
 
             let inner_contrib = match commitment_data.get() {
-                CommitmentReference::Commitment(c) => c.to_curve() - low_degree_equivalent,
-                CommitmentReference::MSM(msm) => msm.eval().to_curve() - low_degree_equivalent,
+                CommitmentReference::Commitment(c) => c.to_curve() - r,
+                CommitmentReference::MSM(msm) => msm.eval().to_curve() - r,
             };
 
             inner_msm.append_term(C::Scalar::one(), inner_contrib);

@@ -269,7 +269,7 @@ mod tests {
     fn test_multiopen() {
         const K: u32 = 3;
 
-        let params: Params<G1Affine> = Params::<G1Affine>::unsafe_setup::<Bn256>(K);
+        let params = Params::<G1Affine>::unsafe_setup::<Bn256>(K);
         let params_verifier: ParamsVerifier<Bn256> = params.verifier(0).unwrap();
 
         let rotation_sets_init = vec![
@@ -291,8 +291,8 @@ mod tests {
         let rotation_sets: Vec<Vec<Fr>> =
             rotation_sets_init.into_iter().map(rotation_set).collect();
 
-        let mut prover_queries: Vec<ProverQuery<G1Affine>> = vec![];
-        let mut verifier_queries: Vec<VerifierQuery<G1Affine>> = vec![];
+        let mut prover_queries = vec![];
+        let mut verifier_queries = vec![];
 
         #[allow(clippy::type_complexity)]
         let (polynomials, commitments): (

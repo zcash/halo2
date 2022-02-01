@@ -16,17 +16,9 @@ use std::io;
 use std::marker::PhantomData;
 
 fn div_by_vanising<F: FieldExt>(poly: Polynomial<F, Coeff>, roots: &[F]) -> Vec<F> {
-    let num_coeffs_before_div = poly.num_coeffs();
-
     let poly = roots
         .iter()
         .fold(poly.values, |poly, point| kate_division(&poly, *point));
-
-    {
-        // sanity check: expect perfect division
-        let num_coeffs_after_div = poly.len();
-        assert_eq!(num_coeffs_before_div, num_coeffs_after_div + roots.len());
-    }
 
     poly
 }
@@ -57,13 +49,11 @@ impl<'a, C: CurveAffine> CommitmentExtension<'a, C> {
     fn linearisation_contribution(&self, u: C::Scalar) -> Polynomial<C::Scalar, Coeff> {
         let p_x = self.commitment.get().poly;
         let r_eval = eval_polynomial(&self.low_degree_equivalent.values[..], u);
-
         p_x - r_eval
     }
 
     fn quotient_contribution(&self) -> Polynomial<C::Scalar, Coeff> {
         let p_x = self.commitment.get().poly.clone();
-
         p_x - &self.low_degree_equivalent
     }
 }
@@ -216,7 +206,7 @@ where
     }
 
     let h_x = Polynomial {
-        values: kate_division(&l_x.values, *u),
+        values: div_by_vanising(l_x, &[*u]),
         _marker: PhantomData,
     };
 
