@@ -4,12 +4,12 @@ use crate::plonk::{self, Any};
 use std::fmt;
 
 /// Metadata about a column within a circuit.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Column {
     /// The type of the column.
-    column_type: Any,
+    pub(super) column_type: Any,
     /// The index of the column.
-    index: usize,
+    pub(super) index: usize,
 }
 
 impl fmt::Display for Column {
@@ -38,8 +38,8 @@ impl From<plonk::Column<Any>> for Column {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct VirtualCell {
     name: &'static str,
-    column: Column,
-    rotation: i32,
+    pub(super) column: Column,
+    pub(super) rotation: i32,
 }
 
 impl From<(Column, i32)> for VirtualCell {
@@ -87,10 +87,10 @@ impl fmt::Display for VirtualCell {
 pub struct Gate {
     /// The index of the active gate. These indices are assigned in the order in which
     /// `ConstraintSystem::create_gate` is called during `Circuit::configure`.
-    index: usize,
+    pub(super) index: usize,
     /// The name of the active gate. These are specified by the gate creator (such as
     /// a chip implementation), and is not enforced to be unique.
-    name: &'static str,
+    pub(super) name: &'static str,
 }
 
 impl fmt::Display for Gate {
@@ -109,14 +109,14 @@ impl From<(usize, &'static str)> for Gate {
 #[derive(Debug, PartialEq)]
 pub struct Constraint {
     /// The gate containing the constraint.
-    gate: Gate,
+    pub(super) gate: Gate,
     /// The index of the polynomial constraint within the gate. These indices correspond
     /// to the order in which the constraints are returned from the closure passed to
     /// `ConstraintSystem::create_gate` during `Circuit::configure`.
-    index: usize,
+    pub(super) index: usize,
     /// The name of the constraint. This is specified by the gate creator (such as a chip
     /// implementation), and is not enforced to be unique.
-    name: &'static str,
+    pub(super) name: &'static str,
 }
 
 impl fmt::Display for Constraint {
@@ -150,7 +150,7 @@ pub struct Region {
     index: usize,
     /// The name of the region. This is specified by the region creator (such as a chip
     /// implementation), and is not enforced to be unique.
-    name: String,
+    pub(super) name: String,
 }
 
 impl fmt::Display for Region {
