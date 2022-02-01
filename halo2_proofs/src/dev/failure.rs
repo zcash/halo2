@@ -1,10 +1,11 @@
-use std::collections::HashSet;
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt;
+use std::iter;
 
 use group::ff::Field;
 
-use super::{metadata, Region};
-use crate::plonk::{Any, Column, ConstraintSystem, Expression};
+use super::{metadata, util, Region};
+use crate::plonk::{Any, Column, ConstraintSystem, Expression, Gate};
 
 /// The location within the circuit at which a particular [`VerifyFailure`] occurred.
 #[derive(Debug, PartialEq)]
@@ -201,10 +202,200 @@ impl fmt::Display for VerifyFailure {
     }
 }
 
+/// Renders `VerifyFailure::ConstraintNotSatisfied`.
+///
+/// ```text
+/// error: constraint not satisfied
+///   Cell layout in region 'somewhere':
+///     | Offset | A0 |
+///     +--------+----+
+///     |    0   | x0 | <--{ Gate 'foo' applied here
+///     |    1   | x1 |
+///
+///   Constraint 'bar':
+///     x1 + x1 * 0x100 + x1 * 0x10000 + x1 * 0x100_0000 - x0 = 0
+///
+///   Assigned cell values:
+///     x0 = 0x5
+///     x1 = 0x5
+/// ```
+fn render_constraint_not_satisfied<F: Field>(
+    gates: &[Gate<F>],
+    constraint: &metadata::Constraint,
+    location: &FailureLocation,
+    cell_values: &[(metadata::VirtualCell, String)],
+) {
+    // Collect the necessary rendering information:
+    // - The columns involved in this constraint.
+    // - How many cells are in each column.
+    // - The grid of cell values, indexed by rotation.
+    let mut columns = BTreeMap::<metadata::Column, usize>::default();
+    let mut layout = BTreeMap::<i32, BTreeMap<metadata::Column, usize>>::default();
+    for (i, (cell, _)) in cell_values.iter().enumerate() {
+        *columns.entry(cell.column).or_default() += 1;
+        layout
+            .entry(cell.rotation)
+            .or_default()
+            .entry(cell.column)
+            .or_insert(i);
+    }
+
+    let col_width = |cells: usize| cells.to_string().len() + 3;
+    let padded = |p: char, width: usize, text: &str| {
+        let pad = width - text.len();
+        format!(
+            "{}{}{}",
+            iter::repeat(p).take(pad - pad / 2).collect::<String>(),
+            text,
+            iter::repeat(p).take(pad / 2).collect::<String>(),
+        )
+    };
+
+    eprintln!("error: constraint not satisfied");
+
+    // If we are in a region, show rows at offsets relative to it. Otherwise, just show
+    // the rotations directly.
+    let start = match location {
+        FailureLocation::InRegion { region, offset } => {
+            eprintln!("  Cell layout in region '{}':", region.name);
+            eprint!("    | Offset |");
+            *offset as i32
+        }
+        FailureLocation::OutsideRegion { row } => {
+            eprintln!("  Cell layout at row {}:", row);
+            eprint!("    |Rotation|");
+            0
+        }
+    };
+
+    // Print the assigned cells, and their region offset or rotation.
+    for (column, cells) in &columns {
+        let width = col_width(*cells);
+        eprint!(
+            "{}|",
+            padded(
+                ' ',
+                width,
+                &format!(
+                    "{}{}",
+                    match column.column_type {
+                        Any::Advice => "A",
+                        Any::Fixed => "F",
+                        Any::Instance => "I",
+                    },
+                    column.index,
+                )
+            )
+        );
+    }
+    eprintln!();
+    eprint!("    +--------+");
+    for cells in columns.values() {
+        eprint!("{}+", padded('-', col_width(*cells), ""));
+    }
+    eprintln!();
+    for (rotation, row) in &layout {
+        eprint!("    |{}|", padded(' ', 8, &(start + rotation).to_string()));
+        for (col, cells) in &columns {
+            let width = col_width(*cells);
+            eprint!(
+                "{}|",
+                padded(
+                    ' ',
+                    width,
+                    &row.get(col).map(|i| format!("x{}", i)).unwrap_or_default()
+                )
+            );
+        }
+        if *rotation == 0 {
+            eprint!(" <--{{ Gate '{}' applied here", constraint.gate.name);
+        }
+        eprintln!();
+    }
+
+    // Print the unsatisfied constraint, in terms of the local variables.
+    eprintln!();
+    eprintln!("  Constraint '{}':", constraint.name);
+    eprintln!(
+        "    {} = 0",
+        gates[constraint.gate.index].polynomials()[constraint.index].evaluate(
+            &util::format_value,
+            &|_| panic!("virtual selectors are removed during optimization"),
+            &|query, column, rotation| if let Some(i) = layout
+                .get(&rotation.0)
+                .and_then(|row| row.get(&(Any::Fixed, column).into()))
+            {
+                format!("x{}", i)
+            } else if rotation.0 == 0 {
+                // This is most likely a merged selector
+                format!("S{}", query)
+            } else {
+                // No idea how we'd get here...
+                format!("F{}@{}", column, rotation.0)
+            },
+            &|_, column, rotation| format!(
+                "x{}",
+                layout
+                    .get(&rotation.0)
+                    .unwrap()
+                    .get(&(Any::Advice, column).into())
+                    .unwrap()
+            ),
+            &|_, column, rotation| format!(
+                "x{}",
+                layout
+                    .get(&rotation.0)
+                    .unwrap()
+                    .get(&(Any::Instance, column).into())
+                    .unwrap()
+            ),
+            &|a| {
+                if a.contains(' ') {
+                    format!("-({})", a)
+                } else {
+                    format!("-{}", a)
+                }
+            },
+            &|a, b| {
+                if let Some(b) = b.strip_prefix('-') {
+                    format!("{} - {}", a, b)
+                } else {
+                    format!("{} + {}", a, b)
+                }
+            },
+            &|a, b| match (a.contains(' '), b.contains(' ')) {
+                (false, false) => format!("{} * {}", a, b),
+                (false, true) => format!("{} * ({})", a, b),
+                (true, false) => format!("({}) * {}", a, b),
+                (true, true) => format!("({}) * ({})", a, b),
+            },
+            &|a, s| {
+                if a.contains(' ') {
+                    format!("({}) * {}", a, util::format_value(s))
+                } else {
+                    format!("{} * {}", a, util::format_value(s))
+                }
+            },
+        )
+    );
+
+    // Print the map from local variables to assigned values.
+    eprintln!();
+    eprintln!("  Assigned cell values:");
+    for (i, (_, value)) in cell_values.iter().enumerate() {
+        eprintln!("    x{} = {}", i, value);
+    }
+}
+
 impl VerifyFailure {
     /// Emits this failure in pretty-printed format to stderr.
-    pub(super) fn emit(&self) {
+    pub(super) fn emit<F: Field>(&self, gates: &[Gate<F>]) {
         match self {
+            Self::ConstraintNotSatisfied {
+                constraint,
+                location,
+                cell_values,
+            } => render_constraint_not_satisfied(gates, constraint, location, cell_values),
             _ => eprintln!("{}", self),
         }
     }

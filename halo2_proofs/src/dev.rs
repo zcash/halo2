@@ -833,7 +833,7 @@ impl<F: FieldExt> MockProver<F> {
     pub fn assert_satisfied(&self) {
         if let Err(errs) = self.verify() {
             for err in errs {
-                err.emit();
+                err.emit(&self.cs.gates);
                 eprintln!();
             }
             panic!("circuit was not satisfied");
