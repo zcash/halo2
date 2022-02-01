@@ -171,14 +171,16 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
                 // Decompose scalar
                 let scalar = {
-                    let running_sum = self.super_config.running_sum_config.copy_decompose(
-                        &mut region,
-                        offset,
-                        scalar.clone(),
-                        true,
-                        pallas::Base::NUM_BITS as usize,
-                        NUM_WINDOWS,
-                    )?;
+                    let running_sum =
+                        self.super_config
+                            .running_sum_config
+                            .copy_decompose::<{ pallas::Base::NUM_BITS as usize }>(
+                                &mut region,
+                                offset,
+                                scalar.clone(),
+                                true,
+                                NUM_WINDOWS,
+                            )?;
                     EccBaseFieldElemFixed {
                         base_field_elem: running_sum[0].clone(),
                         running_sum: (*running_sum).as_slice().try_into().unwrap(),

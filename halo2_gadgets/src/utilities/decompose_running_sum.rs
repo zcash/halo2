@@ -29,7 +29,7 @@ use halo2_proofs::{
     poly::Rotation,
 };
 
-use super::range_check;
+use super::{range_check, Window};
 use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
@@ -102,13 +102,12 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
     ///
     /// `strict` = true constrains the final running sum to be zero, i.e.
     /// constrains alpha to be within WINDOW_NUM_BITS * num_windows bits.
-    pub fn witness_decompose(
+    pub fn witness_decompose<const WORD_NUM_BITS: usize>(
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
         alpha: Option<F>,
         strict: bool,
-        word_num_bits: usize,
         num_windows: usize,
     ) -> Result<RunningSum<F>, Error> {
         let z_0 = region.assign_advice(
@@ -117,24 +116,23 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
             offset,
             || alpha.ok_or(Error::Synthesis),
         )?;
-        self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
+        self.decompose::<WORD_NUM_BITS>(region, offset, z_0, strict, num_windows)
     }
 
     /// Decompose an existing variable alpha that is copied into this helper.
     ///
     /// `strict` = true constrains the final running sum to be zero, i.e.
     /// constrains alpha to be within WINDOW_NUM_BITS * num_windows bits.
-    pub fn copy_decompose(
+    pub fn copy_decompose<const WORD_NUM_BITS: usize>(
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
         alpha: AssignedCell<F, F>,
         strict: bool,
-        word_num_bits: usize,
         num_windows: usize,
     ) -> Result<RunningSum<F>, Error> {
         let z_0 = alpha.copy_advice(|| "copy z_0 = alpha", region, self.z, offset)?;
-        self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
+        self.decompose::<WORD_NUM_BITS>(region, offset, z_0, strict, num_windows)
     }
 
     /// `z_0` must be the cell at `(self.z, offset)` in `region`.
@@ -142,13 +140,12 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
     /// # Panics
     ///
     /// Panics if there are too many windows for the given word size.
-    fn decompose(
+    fn decompose<const WORD_NUM_BITS: usize>(
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
         z_0: AssignedCell<F, F>,
         strict: bool,
-        word_num_bits: usize,
         num_windows: usize,
     ) -> Result<RunningSum<F>, Error> {
         // Make sure that we do not have more windows than required for the number
@@ -156,12 +153,12 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         // one bit of the word (no empty windows).
         //
         // For example, let:
-        //      - word_num_bits = 64
+        //      - WORD_NUM_BITS = 64
         //      - WINDOW_NUM_BITS = 3
         // In this case, the maximum allowed num_windows is 22:
         //                    3 * 22 < 64 + 3
         //
-        assert!(WINDOW_NUM_BITS * num_windows < word_num_bits + WINDOW_NUM_BITS);
+        assert!(WINDOW_NUM_BITS * num_windows < WORD_NUM_BITS + WINDOW_NUM_BITS);
 
         // Enable selectors
         for idx in 0..num_windows {
@@ -169,10 +166,10 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         }
 
         // Decompose base field element into K-bit words.
-        let words: Vec<Option<u8>> = {
+        let words: Vec<Option<Window<WINDOW_NUM_BITS>>> = {
             let words = z_0
                 .value()
-                .map(|word| super::decompose_word::<F>(word, word_num_bits, WINDOW_NUM_BITS));
+                .map(|word| super::decompose_element::<F, WORD_NUM_BITS, WINDOW_NUM_BITS>(word));
 
             if let Some(words) = words {
                 words.into_iter().map(Some).collect()
@@ -192,7 +189,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         for (i, word) in words.iter().enumerate() {
             // z_next = (z_cur - word) / (2^K)
             let z_next = {
-                let word = word.map(|word| F::from(word as u64));
+                let word: Option<F> = word.map(|word| word.value_field());
                 let z_next_val = z
                     .value()
                     .zip(word)
@@ -285,24 +282,22 @@ mod tests {
                     || "decompose",
                     |mut region| {
                         let offset = 0;
-                        let zs = config.witness_decompose(
+                        let zs = config.witness_decompose::<WORD_NUM_BITS>(
                             &mut region,
                             offset,
                             self.alpha,
                             self.strict,
-                            WORD_NUM_BITS,
                             NUM_WINDOWS,
                         )?;
                         let alpha = zs[0].clone();
 
                         let offset = offset + NUM_WINDOWS + 1;
 
-                        config.copy_decompose(
+                        config.copy_decompose::<WORD_NUM_BITS>(
                             &mut region,
                             offset,
                             alpha,
                             self.strict,
-                            WORD_NUM_BITS,
                             NUM_WINDOWS,
                         )?;
 

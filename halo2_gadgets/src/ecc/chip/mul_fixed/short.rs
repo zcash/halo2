@@ -76,14 +76,16 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         let (magnitude, sign) = magnitude_sign;
 
         // Decompose magnitude
-        let running_sum = self.super_config.running_sum_config.copy_decompose(
-            region,
-            offset,
-            magnitude.clone(),
-            true,
-            L_SCALAR_SHORT,
-            NUM_WINDOWS_SHORT,
-        )?;
+        let running_sum = self
+            .super_config
+            .running_sum_config
+            .copy_decompose::<L_SCALAR_SHORT>(
+                region,
+                offset,
+                magnitude.clone(),
+                true,
+                NUM_WINDOWS_SHORT,
+            )?;
 
         Ok(EccScalarFixedShort {
             magnitude,

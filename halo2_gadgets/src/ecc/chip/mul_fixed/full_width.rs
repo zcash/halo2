@@ -1,6 +1,6 @@
 use super::super::{EccPoint, EccScalarFixed, FixedPoints, FIXED_BASE_WINDOW_SIZE, H, NUM_WINDOWS};
 
-use crate::utilities::{decompose_word, range_check};
+use crate::utilities::{decompose_element, range_check, Window};
 use arrayvec::ArrayVec;
 use ff::PrimeField;
 use halo2_proofs::{
@@ -83,8 +83,8 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         }
 
         // Decompose scalar into `k-bit` windows
-        let scalar_windows: Option<Vec<u8>> = scalar.map(|scalar| {
-            decompose_word::<pallas::Scalar>(&scalar, SCALAR_NUM_BITS, FIXED_BASE_WINDOW_SIZE)
+        let scalar_windows: Option<Vec<Window<FIXED_BASE_WINDOW_SIZE>>> = scalar.map(|scalar| {
+            decompose_element::<pallas::Scalar, SCALAR_NUM_BITS, FIXED_BASE_WINDOW_SIZE>(&scalar)
         });
 
         // Store the scalar decomposition
@@ -95,7 +95,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             assert_eq!(windows.len(), NUM_WINDOWS);
             windows
                 .into_iter()
-                .map(|window| Some(pallas::Base::from(window as u64)))
+                .map(|window| Some(window.value_field()))
                 .collect()
         } else {
             vec![None; NUM_WINDOWS]
