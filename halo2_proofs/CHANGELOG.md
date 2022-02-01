@@ -6,6 +6,11 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `halo2_proofs::dev`:
+  - `MockProver::assert_satisfied`, for requiring that a circuit is satisfied.
+    It panics like `assert_eq!(mock_prover.verify(), Ok(()))`, but pretty-prints
+    any verification failures before panicking.
 
 ## [0.1.0-beta.2] - 2022-02-14
 (relative to `halo2 0.1.0-beta.1`)
