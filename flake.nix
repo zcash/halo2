@@ -18,32 +18,48 @@
                      rust-overlay.overlay
                    ];
                };
+
+             rustPkgs =
+               pkgs.rustBuilder.makePackageSet'
+                 { rustChannel = "1.56.1";
+                   packageFun = import ./Cargo.nix;
+                   packageOverrides =
+                     let
+                       expat-sys = pkgs.rustBuilder.rustLib.makeOverride {
+                         name = "expat-sys";
+                         overrideAttrs = drv: {
+                           propagatedBuildInputs = drv.propagatedBuildInputs or [ ] ++ [ pkgs.expat ];
+                         };
+                       };
+                       freetype-sys = pkgs.rustBuilder.rustLib.makeOverride {
+                         name = "freetype-sys";
+                         overrideAttrs = drv: {
+                           propagatedBuildInputs = drv.propagatedBuildInputs or [ ] ++ [ pkgs.freetype ];
+                         };
+                       };
+                    in
+                    pkgs: pkgs.rustBuilder.overrides.all ++ [ expat-sys freetype-sys ];
+                 };
+           thing = (rustPkgs.workspace.halo2_proofs {});
          in
-         { defaultPackage =
-             let
-               rustPkgs =
-                 pkgs.rustBuilder.makePackageSet'
-                   { rustChannel = "1.56.1";
-                     packageFun = import ./Cargo.nix;
-                     packageOverrides =
-                       let
-                         expat-sys = pkgs.rustBuilder.rustLib.makeOverride {
-                           name = "expat-sys";
-                           overrideAttrs = drv: {
-                             propagatedBuildInputs = drv.propagatedBuildInputs or [ ] ++ [ pkgs.expat ];
-                           };
-                         };
-                         freetype-sys = pkgs.rustBuilder.rustLib.makeOverride {
-                           name = "freetype-sys";
-                           overrideAttrs = drv: {
-                             propagatedBuildInputs = drv.propagatedBuildInputs or [ ] ++ [ pkgs.freetype ];
-                           };
-                         };
-                      in
-                      pkgs: pkgs.rustBuilder.overrides.all ++ [ expat-sys freetype-sys ];
-                   };
-             in
-             (rustPkgs.workspace.halo2_proofs {});
+         { inherit rustPkgs;
+           defaultPackage =
+             thing;
+
+           packages.example =
+             pkgs.stdenv.mkDerivation
+               { name = "circuit-layout";
+                 src = ./.;
+                 buildPhase =
+                   ''
+                     ${thing.runCargo} run --example circuit-layout --features="dev-graph"
+                   '';
+                 installPhase =
+                   ''
+                   mkdir $out
+                   ln -s layout.png $out
+                   '';
+               };
 
            devShell =
              pkgs.mkShell
