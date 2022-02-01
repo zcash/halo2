@@ -22,7 +22,7 @@ use crate::plonk::{
 /// # Examples
 ///
 /// ```ignore
-/// use halo2::dev::CircuitLayout;
+/// use halo2_proofs::dev::CircuitLayout;
 /// use plotters::prelude::*;
 ///
 /// let drawing_area = BitMapBackend::new("example-circuit-layout.png", (1024, 768))
