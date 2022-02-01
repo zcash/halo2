@@ -200,3 +200,12 @@ impl fmt::Display for VerifyFailure {
         }
     }
 }
+
+impl VerifyFailure {
+    /// Emits this failure in pretty-printed format to stderr.
+    pub(super) fn emit(&self) {
+        match self {
+            _ => eprintln!("{}", self),
+        }
+    }
+}

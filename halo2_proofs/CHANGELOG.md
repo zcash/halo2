@@ -15,7 +15,11 @@ and this project adheres to Rust's notion of
     proofs individually.
   - `BatchVerifier`, an implementation of `VerificationStrategy` for verifying
     multiple proofs in a batch.
-- `halo2_proofs::dev::FailureLocation` (used in `VerifyFailure::Lookup`)
+- `halo2_proofs::dev`:
+  - `FailureLocation` (used in `VerifyFailure::Lookup`)
+  - `MockProver::assert_satisfied`, for requiring that a circuit is satisfied.
+    It panics like `assert_eq!(mock_prover.verify(), Ok(()))`, but pretty-prints
+    any verification failures before panicking.
 
 ### Changed
 - `halo2_proofs::plonk::verify_proof` now takes a `VerificationStrategy` instead

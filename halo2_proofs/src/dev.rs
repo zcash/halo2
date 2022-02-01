@@ -820,6 +820,25 @@ impl<F: FieldExt> MockProver<F> {
             Err(errors)
         }
     }
+
+    /// Panics if the circuit being checked by this `MockProver` is not satisfied.
+    ///
+    /// Any verification failures will be pretty-printed to stderr before the function
+    /// panics.
+    ///
+    /// This method is equivalent to:
+    /// ```ignore
+    /// assert_eq!(prover.verify(), Ok(()));
+    /// ```
+    pub fn assert_satisfied(&self) {
+        if let Err(errs) = self.verify() {
+            for err in errs {
+                err.emit();
+                eprintln!();
+            }
+            panic!("circuit was not satisfied");
+        }
+    }
 }
 
 #[cfg(test)]
