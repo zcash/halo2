@@ -254,64 +254,9 @@ fn render_constraint_not_satisfied<F: Field>(
     eprintln!("  Constraint '{}':", constraint.name);
     eprintln!(
         "    {} = 0",
-        gates[constraint.gate.index].polynomials()[constraint.index].evaluate(
-            &util::format_value,
-            &|_| panic!("virtual selectors are removed during optimization"),
-            &|query, column, rotation| if let Some(i) = layout
-                .get(&rotation.0)
-                .and_then(|row| row.get(&(Any::Fixed, column).into()))
-            {
-                format!("x{}", i)
-            } else if rotation.0 == 0 {
-                // This is most likely a merged selector
-                format!("S{}", query)
-            } else {
-                // No idea how we'd get here...
-                format!("F{}@{}", column, rotation.0)
-            },
-            &|_, column, rotation| format!(
-                "x{}",
-                layout
-                    .get(&rotation.0)
-                    .unwrap()
-                    .get(&(Any::Advice, column).into())
-                    .unwrap()
-            ),
-            &|_, column, rotation| format!(
-                "x{}",
-                layout
-                    .get(&rotation.0)
-                    .unwrap()
-                    .get(&(Any::Instance, column).into())
-                    .unwrap()
-            ),
-            &|a| {
-                if a.contains(' ') {
-                    format!("-({})", a)
-                } else {
-                    format!("-{}", a)
-                }
-            },
-            &|a, b| {
-                if let Some(b) = b.strip_prefix('-') {
-                    format!("{} - {}", a, b)
-                } else {
-                    format!("{} + {}", a, b)
-                }
-            },
-            &|a, b| match (a.contains(' '), b.contains(' ')) {
-                (false, false) => format!("{} * {}", a, b),
-                (false, true) => format!("{} * ({})", a, b),
-                (true, false) => format!("({}) * {}", a, b),
-                (true, true) => format!("({}) * ({})", a, b),
-            },
-            &|a, s| {
-                if a.contains(' ') {
-                    format!("({}) * {}", a, util::format_value(s))
-                } else {
-                    format!("{} * {}", a, util::format_value(s))
-                }
-            },
+        emitter::expression_to_string(
+            &gates[constraint.gate.index].polynomials()[constraint.index],
+            &layout
         )
     );
 
