@@ -580,6 +580,7 @@ impl<F: FieldExt> MockProver<F> {
                                     Some(VerifyFailure::CellNotAssigned {
                                         gate: (gate_index, gate.name()).into(),
                                         region: (r_i, r.name.clone()).into(),
+                                        gate_offset: *selector_row,
                                         column: cell.column,
                                         offset: cell_row as isize - r.rows.unwrap().0 as isize,
                                     })
@@ -898,6 +899,7 @@ mod tests {
             Err(vec![VerifyFailure::CellNotAssigned {
                 gate: (0, "Equality check").into(),
                 region: (0, "Faulty synthesis".to_owned()).into(),
+                gate_offset: 1,
                 column: Column::new(1, Any::Advice),
                 offset: 1,
             }])

@@ -108,6 +108,9 @@ pub enum VerifyFailure {
         gate: metadata::Gate,
         /// The region in which this cell should be assigned.
         region: metadata::Region,
+        /// The offset (relative to the start of the region) at which the active gate
+        /// queries this cell.
+        gate_offset: usize,
         /// The column in which this cell should be assigned.
         column: Column<Any>,
         /// The offset (relative to the start of the region) at which this cell should be
@@ -167,13 +170,14 @@ impl fmt::Display for VerifyFailure {
             Self::CellNotAssigned {
                 gate,
                 region,
+                gate_offset,
                 column,
                 offset,
             } => {
                 write!(
                     f,
-                    "{} uses {}, which requires cell in column {:?} at offset {} to be assigned.",
-                    region, gate, column, offset
+                    "{} uses {} at offset {}, which requires cell in column {:?} at offset {} to be assigned.",
+                    region, gate, gate_offset, column, offset
                 )
             }
             Self::ConstraintNotSatisfied {

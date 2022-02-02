@@ -12,6 +12,12 @@ and this project adheres to Rust's notion of
     It panics like `assert_eq!(mock_prover.verify(), Ok(()))`, but pretty-prints
     any verification failures before panicking.
 
+### Changed
+- `halo2_proofs::dev`:
+  - `VerifyFailure::CellNotAssigned` now has a `gate_offset` field, storing the
+    offset in the region at which the gate queries the cell that needs to be
+    assigned.
+
 ## [0.1.0-beta.2] - 2022-02-14
 (relative to `halo2 0.1.0-beta.1`)
 
