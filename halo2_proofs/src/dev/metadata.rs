@@ -143,7 +143,7 @@ impl From<(Gate, usize, &'static str)> for Constraint {
 }
 
 /// Metadata about an assigned region within a circuit.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Region {
     /// The index of the region. These indices are assigned in the order in which
     /// `Layouter::assign_region` is called during `Circuit::synthesize`.
