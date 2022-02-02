@@ -39,7 +39,9 @@ and this project adheres to Rust's notion of
 - `halo2_proofs::dev::CircuitLayout::render` now takes `k` as a `u32`, matching
   the regular parameter APIs.
 - `halo2_proofs::dev::VerifyFailure` has been overhauled:
-  - `VerifyFailure::Cell` has been renamed to `VerifyFailure::CellNotAssigned`.
+  - `VerifyFailure::Cell` has been renamed to `VerifyFailure::CellNotAssigned`,
+    and now has a `gate_offset` field, storing the offset in the region at which
+    the gate queries the cell that needs to be assigned.
   - `VerifyFailure::ConstraintNotSatisfied` now has a `cell_values` field,
     storing the values of the cells used in the unsatisfied constraint.
   - The `row` fields of `VerifyFailure::{ConstraintNotSatisfied, Lookup}` have
