@@ -3,9 +3,9 @@ use std::collections::BTreeMap;
 use group::ff::Field;
 use pasta_curves::arithmetic::FieldExt;
 
-use super::{metadata, Value};
+use super::{metadata, CellValue, Value};
 use crate::{
-    plonk::{Any, Expression, Gate, VirtualCell},
+    plonk::{Any, Column, ColumnType, Expression, Gate, VirtualCell},
     poly::Rotation,
 };
 
@@ -23,6 +23,32 @@ pub(super) fn format_value<F: Field>(v: F) -> String {
         let s = s.strip_prefix("0x").unwrap();
         let s = s.trim_start_matches('0');
         format!("0x{}", s)
+    }
+}
+
+pub(super) fn load<'a, F: FieldExt, T: ColumnType>(
+    n: i32,
+    row: i32,
+    queries: &'a [(Column<T>, Rotation)],
+    cells: &'a [Vec<CellValue<F>>],
+) -> impl Fn(usize, usize, Rotation) -> Value<F> + 'a {
+    move |index, _, _| {
+        let (column, at) = &queries[index];
+        let resolved_row = (row + at.0) % n;
+        cells[column.index()][resolved_row as usize].into()
+    }
+}
+
+pub(super) fn load_instance<'a, F: FieldExt, T: ColumnType>(
+    n: i32,
+    row: i32,
+    queries: &'a [(Column<T>, Rotation)],
+    cells: &'a [Vec<F>],
+) -> impl Fn(usize, usize, Rotation) -> Value<F> + 'a {
+    move |index, _, _| {
+        let (column, at) = &queries[index];
+        let resolved_row = (row + at.0) % n;
+        Value::Real(cells[column.index()][resolved_row as usize])
     }
 }
 

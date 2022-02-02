@@ -599,41 +599,18 @@ impl<F: FieldExt> MockProver<F> {
                 .flat_map(|(gate_index, gate)| {
                     // We iterate from n..2n so we can just reduce to handle wrapping.
                     (n..(2 * n)).flat_map(move |row| {
-                        fn load_instance<'a, F: FieldExt, T: ColumnType>(
-                            n: i32,
-                            row: i32,
-                            queries: &'a [(Column<T>, Rotation)],
-                            cells: &'a [Vec<F>],
-                        ) -> impl Fn(usize, usize, Rotation) -> Value<F> + 'a
-                        {
-                            move |index, _, _| {
-                                let (column, at) = &queries[index];
-                                let resolved_row = (row + at.0) % n;
-                                Value::Real(cells[column.index()][resolved_row as usize])
-                            }
-                        }
-
-                        fn load<'a, F: FieldExt, T: ColumnType>(
-                            n: i32,
-                            row: i32,
-                            queries: &'a [(Column<T>, Rotation)],
-                            cells: &'a [Vec<CellValue<F>>],
-                        ) -> impl Fn(usize, usize, Rotation) -> Value<F> + 'a
-                        {
-                            move |index, _, _| {
-                                let (column, at) = &queries[index];
-                                let resolved_row = (row + at.0) % n;
-                                cells[column.index()][resolved_row as usize].into()
-                            }
-                        }
-
                         gate.polynomials().iter().enumerate().filter_map(
                             move |(poly_index, poly)| match poly.evaluate(
                                 &|scalar| Value::Real(scalar),
                                 &|_| panic!("virtual selectors are removed during optimization"),
-                                &load(n, row, &self.cs.fixed_queries, &self.fixed),
-                                &load(n, row, &self.cs.advice_queries, &self.advice),
-                                &load_instance(n, row, &self.cs.instance_queries, &self.instance),
+                                &util::load(n, row, &self.cs.fixed_queries, &self.fixed),
+                                &util::load(n, row, &self.cs.advice_queries, &self.advice),
+                                &util::load_instance(
+                                    n,
+                                    row,
+                                    &self.cs.instance_queries,
+                                    &self.instance,
+                                ),
                                 &|a| -a,
                                 &|a, b| a + b,
                                 &|a, b| a * b,
@@ -656,9 +633,9 @@ impl<F: FieldExt> MockProver<F> {
                                     cell_values: util::cell_values(
                                         gate,
                                         poly,
-                                        &load(n, row, &self.cs.fixed_queries, &self.fixed),
-                                        &load(n, row, &self.cs.advice_queries, &self.advice),
-                                        &load_instance(
+                                        &util::load(n, row, &self.cs.fixed_queries, &self.fixed),
+                                        &util::load(n, row, &self.cs.advice_queries, &self.advice),
+                                        &util::load_instance(
                                             n,
                                             row,
                                             &self.cs.instance_queries,
