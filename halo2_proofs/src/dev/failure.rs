@@ -3,9 +3,14 @@ use std::fmt;
 use std::iter;
 
 use group::ff::Field;
+use pasta_curves::arithmetic::FieldExt;
 
-use super::{metadata, util, Region};
-use crate::plonk::{Any, Column, ConstraintSystem, Expression, Gate};
+use super::{metadata, util, MockProver, Region};
+use crate::{
+    dev::Value,
+    plonk::{Any, Column, ConstraintSystem, Expression, Gate},
+    poly::Rotation,
+};
 
 mod emitter;
 
@@ -243,7 +248,7 @@ fn render_constraint_not_satisfied<F: Field>(
     }
 
     eprintln!("error: constraint not satisfied");
-    emitter::render_cell_layout(location, &columns, &layout, |_, rotation| {
+    emitter::render_cell_layout("  ", location, &columns, &layout, |_, rotation| {
         if rotation == 0 {
             eprint!(" <--{{ Gate '{}' applied here", constraint.gate.name);
         }
@@ -268,15 +273,171 @@ fn render_constraint_not_satisfied<F: Field>(
     }
 }
 
+/// Renders `VerifyFailure::Lookup`.
+///
+/// ```text
+/// error: lookup input does not exist in table
+///   (L0) ∉ (F0)
+///
+///   Lookup inputs:
+///     L0 = x1 * x0 + (1 - x1) * 0x2
+///     ^
+///     | Cell layout in region 'Faulty synthesis':
+///     |   | Offset | A0 | F1 |
+///     |   +--------+----+----+
+///     |   |    1   | x0 | x1 | <--{ Lookup inputs queried here
+///     |
+///     | Assigned cell values:
+///     |   x0 = 0x5
+///     |   x1 = 1
+/// ```
+fn render_lookup<F: FieldExt>(
+    prover: &MockProver<F>,
+    lookup_index: usize,
+    location: &FailureLocation,
+) {
+    let n = prover.n as i32;
+    let cs = &prover.cs;
+    let lookup = &cs.lookups[lookup_index];
+
+    // Get the absolute row on which the lookup's inputs are being queried, so we can
+    // fetch the input values.
+    let row = match location {
+        FailureLocation::InRegion { region, offset } => {
+            prover.regions[region.index].rows.unwrap().0 + offset
+        }
+        FailureLocation::OutsideRegion { row } => *row,
+    } as i32;
+
+    // Recover the fixed columns from the table expressions. We don't allow composite
+    // expressions for the table side of lookups.
+    let table_columns = lookup.table_expressions.iter().map(|expr| {
+        expr.evaluate(
+            &|_| panic!("no constants in table expressions"),
+            &|_| panic!("no selectors in table expressions"),
+            &|_, column, _| format!("F{}", column),
+            &|_, _, _| panic!("no advice columns in table expressions"),
+            &|_, _, _| panic!("no instance columns in table expressions"),
+            &|_| panic!("no negations in table expressions"),
+            &|_, _| panic!("no sums in table expressions"),
+            &|_, _| panic!("no products in table expressions"),
+            &|_, _| panic!("no scaling in table expressions"),
+        )
+    });
+
+    fn cell_value<'a, F: FieldExt>(
+        column_type: Any,
+        load: impl Fn(usize, usize, Rotation) -> Value<F> + 'a,
+    ) -> impl Fn(usize, usize, Rotation) -> BTreeMap<metadata::VirtualCell, String> + 'a {
+        move |query_index, column_index, rotation| {
+            Some((
+                ((column_type, column_index).into(), rotation.0).into(),
+                match load(query_index, column_index, rotation) {
+                    Value::Real(v) => util::format_value(v),
+                    Value::Poison => unreachable!(),
+                },
+            ))
+            .into_iter()
+            .collect()
+        }
+    }
+
+    eprintln!("error: lookup input does not exist in table");
+    eprint!("  (");
+    for i in 0..lookup.input_expressions.len() {
+        eprint!("{}L{}", if i == 0 { "" } else { ", " }, i);
+    }
+    eprint!(") ∉ (");
+    for (i, column) in table_columns.enumerate() {
+        eprint!("{}{}", if i == 0 { "" } else { ", " }, column);
+    }
+    eprintln!(")");
+
+    eprintln!();
+    eprintln!("  Lookup inputs:");
+    for (i, input) in lookup.input_expressions.iter().enumerate() {
+        // Fetch the cell values (since we don't store them in VerifyFailure::Lookup).
+        let cell_values = input.evaluate(
+            &|_| BTreeMap::default(),
+            &|_| panic!("virtual selectors are removed during optimization"),
+            &cell_value(
+                Any::Fixed,
+                &util::load(n, row, &cs.fixed_queries, &prover.fixed),
+            ),
+            &cell_value(
+                Any::Advice,
+                &util::load(n, row, &cs.advice_queries, &prover.advice),
+            ),
+            &cell_value(
+                Any::Instance,
+                &util::load_instance(n, row, &cs.instance_queries, &prover.instance),
+            ),
+            &|a| a,
+            &|mut a, mut b| {
+                a.append(&mut b);
+                a
+            },
+            &|mut a, mut b| {
+                a.append(&mut b);
+                a
+            },
+            &|a, _| a,
+        );
+
+        // Collect the necessary rendering information:
+        // - The columns involved in this constraint.
+        // - How many cells are in each column.
+        // - The grid of cell values, indexed by rotation.
+        let mut columns = BTreeMap::<metadata::Column, usize>::default();
+        let mut layout = BTreeMap::<i32, BTreeMap<metadata::Column, usize>>::default();
+        for (i, (cell, _)) in cell_values.iter().enumerate() {
+            *columns.entry(cell.column).or_default() += 1;
+            layout
+                .entry(cell.rotation)
+                .or_default()
+                .entry(cell.column)
+                .or_insert(i);
+        }
+
+        if i != 0 {
+            eprintln!();
+        }
+        eprintln!(
+            "    L{} = {}",
+            i,
+            emitter::expression_to_string(input, &layout)
+        );
+        eprintln!("    ^");
+        emitter::render_cell_layout("    | ", location, &columns, &layout, |_, rotation| {
+            if rotation == 0 {
+                eprint!(" <--{{ Lookup inputs queried here");
+            }
+        });
+
+        // Print the map from local variables to assigned values.
+        eprintln!("    |");
+        eprintln!("    | Assigned cell values:");
+        for (i, (_, value)) in cell_values.iter().enumerate() {
+            eprintln!("    |   x{} = {}", i, value);
+        }
+    }
+}
+
 impl VerifyFailure {
     /// Emits this failure in pretty-printed format to stderr.
-    pub(super) fn emit<F: Field>(&self, gates: &[Gate<F>]) {
+    pub(super) fn emit<F: FieldExt>(&self, prover: &MockProver<F>) {
         match self {
             Self::ConstraintNotSatisfied {
                 constraint,
                 location,
                 cell_values,
-            } => render_constraint_not_satisfied(gates, constraint, location, cell_values),
+            } => {
+                render_constraint_not_satisfied(&prover.cs.gates, constraint, location, cell_values)
+            }
+            Self::Lookup {
+                lookup_index,
+                location,
+            } => render_lookup(prover, *lookup_index, location),
             _ => eprintln!("{}", self),
         }
     }
