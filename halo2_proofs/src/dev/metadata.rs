@@ -147,7 +147,7 @@ impl From<(Gate, usize, &'static str)> for Constraint {
 pub struct Region {
     /// The index of the region. These indices are assigned in the order in which
     /// `Layouter::assign_region` is called during `Circuit::synthesize`.
-    index: usize,
+    pub(super) index: usize,
     /// The name of the region. This is specified by the region creator (such as a chip
     /// implementation), and is not enforced to be unique.
     pub(super) name: String,

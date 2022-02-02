@@ -25,6 +25,7 @@ fn padded(p: char, width: usize, text: &str) -> String {
 /// (if `location` is in a region), and the rotation of the current row relative to the
 /// active row.
 pub(super) fn render_cell_layout(
+    prefix: &str,
     location: &FailureLocation,
     columns: &BTreeMap<metadata::Column, usize>,
     layout: &BTreeMap<i32, BTreeMap<metadata::Column, usize>>,
@@ -36,13 +37,13 @@ pub(super) fn render_cell_layout(
     // the rotations directly.
     let offset = match location {
         FailureLocation::InRegion { region, offset } => {
-            eprintln!("  Cell layout in region '{}':", region.name);
-            eprint!("    | Offset |");
+            eprintln!("{}Cell layout in region '{}':", prefix, region.name);
+            eprint!("{}  | Offset |", prefix);
             Some(*offset as i32)
         }
         FailureLocation::OutsideRegion { row } => {
-            eprintln!("  Cell layout at row {}:", row);
-            eprint!("    |Rotation|");
+            eprintln!("{}Cell layout at row {}:", prefix, row);
+            eprint!("{}  |Rotation|", prefix);
             None
         }
     };
@@ -68,14 +69,15 @@ pub(super) fn render_cell_layout(
         );
     }
     eprintln!();
-    eprint!("    +--------+");
+    eprint!("{}  +--------+", prefix);
     for cells in columns.values() {
         eprint!("{}+", padded('-', col_width(*cells), ""));
     }
     eprintln!();
     for (rotation, row) in layout {
         eprint!(
-            "    |{}|",
+            "{}  |{}|",
+            prefix,
             padded(' ', 8, &(offset.unwrap_or(0) + rotation).to_string())
         );
         for (col, cells) in columns {
