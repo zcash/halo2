@@ -28,7 +28,7 @@ pub(super) fn render_cell_layout(
     prefix: &str,
     location: &FailureLocation,
     columns: &BTreeMap<metadata::Column, usize>,
-    layout: &BTreeMap<i32, BTreeMap<metadata::Column, usize>>,
+    layout: &BTreeMap<i32, BTreeMap<metadata::Column, String>>,
     highlight_row: impl Fn(Option<i32>, i32),
 ) {
     let col_width = |cells: usize| cells.to_string().len() + 3;
@@ -87,7 +87,7 @@ pub(super) fn render_cell_layout(
                 padded(
                     ' ',
                     width,
-                    &row.get(col).map(|i| format!("x{}", i)).unwrap_or_default()
+                    row.get(col).map(|s| s.as_str()).unwrap_or_default()
                 )
             );
         }
@@ -98,17 +98,17 @@ pub(super) fn render_cell_layout(
 
 pub(super) fn expression_to_string<F: Field>(
     expr: &Expression<F>,
-    layout: &BTreeMap<i32, BTreeMap<metadata::Column, usize>>,
+    layout: &BTreeMap<i32, BTreeMap<metadata::Column, String>>,
 ) -> String {
     expr.evaluate(
         &util::format_value,
         &|_| panic!("virtual selectors are removed during optimization"),
         &|query, column, rotation| {
-            if let Some(i) = layout
+            if let Some(label) = layout
                 .get(&rotation.0)
                 .and_then(|row| row.get(&(Any::Fixed, column).into()))
             {
-                format!("x{}", i)
+                label.clone()
             } else if rotation.0 == 0 {
                 // This is most likely a merged selector
                 format!("S{}", query)
@@ -118,24 +118,20 @@ pub(super) fn expression_to_string<F: Field>(
             }
         },
         &|_, column, rotation| {
-            format!(
-                "x{}",
-                layout
-                    .get(&rotation.0)
-                    .unwrap()
-                    .get(&(Any::Advice, column).into())
-                    .unwrap()
-            )
+            layout
+                .get(&rotation.0)
+                .unwrap()
+                .get(&(Any::Advice, column).into())
+                .unwrap()
+                .clone()
         },
         &|_, column, rotation| {
-            format!(
-                "x{}",
-                layout
-                    .get(&rotation.0)
-                    .unwrap()
-                    .get(&(Any::Instance, column).into())
-                    .unwrap()
-            )
+            layout
+                .get(&rotation.0)
+                .unwrap()
+                .get(&(Any::Instance, column).into())
+                .unwrap()
+                .clone()
         },
         &|a| {
             if a.contains(' ') {

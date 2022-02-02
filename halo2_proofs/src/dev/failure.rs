@@ -213,6 +213,70 @@ impl fmt::Display for VerifyFailure {
     }
 }
 
+/// Renders `VerifyFailure::CellNotAssigned`.
+///
+/// ```text
+/// error: cell not assigned
+///   Cell layout in region 'Faulty synthesis':
+///     | Offset | A0 | A1 |
+///     +--------+----+----+
+///     |    0   | x0 |    |
+///     |    1   |    |  X | <--{ X marks the spot! 🦜
+///
+///   Gate 'Equality check' (applied at offset 1) queries these cells.
+/// ```
+fn render_cell_not_assigned<F: Field>(
+    gates: &[Gate<F>],
+    gate: &metadata::Gate,
+    region: &metadata::Region,
+    gate_offset: usize,
+    column: Column<Any>,
+    offset: isize,
+) {
+    // Collect the necessary rendering information:
+    // - The columns involved in this gate.
+    // - How many cells are in each column.
+    // - The grid of cell values, indexed by rotation.
+    let mut columns = BTreeMap::<metadata::Column, usize>::default();
+    let mut layout = BTreeMap::<i32, BTreeMap<metadata::Column, _>>::default();
+    for (i, cell) in gates[gate.index].queried_cells().iter().enumerate() {
+        let cell_column = cell.column.into();
+        *columns.entry(cell_column).or_default() += 1;
+        layout
+            .entry(cell.rotation.0)
+            .or_default()
+            .entry(cell_column)
+            .or_insert_with(|| {
+                if cell.column == column && gate_offset as i32 + cell.rotation.0 == offset as i32 {
+                    "X".to_string()
+                } else {
+                    format!("x{}", i)
+                }
+            });
+    }
+
+    eprintln!("error: cell not assigned");
+    emitter::render_cell_layout(
+        "  ",
+        &FailureLocation::InRegion {
+            region: region.clone(),
+            offset: gate_offset,
+        },
+        &columns,
+        &layout,
+        |row_offset, rotation| {
+            if (row_offset.unwrap() + rotation) as isize == offset {
+                eprint!(" <--{{ X marks the spot! 🦜");
+            }
+        },
+    );
+    eprintln!();
+    eprintln!(
+        "  Gate '{}' (applied at offset {}) queries these cells.",
+        gate.name, gate_offset
+    );
+}
+
 /// Renders `VerifyFailure::ConstraintNotSatisfied`.
 ///
 /// ```text
@@ -241,14 +305,14 @@ fn render_constraint_not_satisfied<F: Field>(
     // - How many cells are in each column.
     // - The grid of cell values, indexed by rotation.
     let mut columns = BTreeMap::<metadata::Column, usize>::default();
-    let mut layout = BTreeMap::<i32, BTreeMap<metadata::Column, usize>>::default();
+    let mut layout = BTreeMap::<i32, BTreeMap<metadata::Column, _>>::default();
     for (i, (cell, _)) in cell_values.iter().enumerate() {
         *columns.entry(cell.column).or_default() += 1;
         layout
             .entry(cell.rotation)
             .or_default()
             .entry(cell.column)
-            .or_insert(i);
+            .or_insert(format!("x{}", i));
     }
 
     eprintln!("error: constraint not satisfied");
@@ -393,14 +457,14 @@ fn render_lookup<F: FieldExt>(
         // - How many cells are in each column.
         // - The grid of cell values, indexed by rotation.
         let mut columns = BTreeMap::<metadata::Column, usize>::default();
-        let mut layout = BTreeMap::<i32, BTreeMap<metadata::Column, usize>>::default();
+        let mut layout = BTreeMap::<i32, BTreeMap<metadata::Column, _>>::default();
         for (i, (cell, _)) in cell_values.iter().enumerate() {
             *columns.entry(cell.column).or_default() += 1;
             layout
                 .entry(cell.rotation)
                 .or_default()
                 .entry(cell.column)
-                .or_insert(i);
+                .or_insert(format!("x{}", i));
         }
 
         if i != 0 {
@@ -431,6 +495,20 @@ impl VerifyFailure {
     /// Emits this failure in pretty-printed format to stderr.
     pub(super) fn emit<F: FieldExt>(&self, prover: &MockProver<F>) {
         match self {
+            Self::CellNotAssigned {
+                gate,
+                region,
+                gate_offset,
+                column,
+                offset,
+            } => render_cell_not_assigned(
+                &prover.cs.gates,
+                gate,
+                region,
+                *gate_offset,
+                *column,
+                *offset,
+            ),
             Self::ConstraintNotSatisfied {
                 constraint,
                 location,
