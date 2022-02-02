@@ -7,6 +7,8 @@ use group::ff::Field;
 use super::{metadata, util, Region};
 use crate::plonk::{Any, Column, ConstraintSystem, Expression, Gate};
 
+mod emitter;
+
 /// The location within the circuit at which a particular [`VerifyFailure`] occurred.
 #[derive(Debug, PartialEq)]
 pub enum FailureLocation {
@@ -240,78 +242,12 @@ fn render_constraint_not_satisfied<F: Field>(
             .or_insert(i);
     }
 
-    let col_width = |cells: usize| cells.to_string().len() + 3;
-    let padded = |p: char, width: usize, text: &str| {
-        let pad = width - text.len();
-        format!(
-            "{}{}{}",
-            iter::repeat(p).take(pad - pad / 2).collect::<String>(),
-            text,
-            iter::repeat(p).take(pad / 2).collect::<String>(),
-        )
-    };
-
     eprintln!("error: constraint not satisfied");
-
-    // If we are in a region, show rows at offsets relative to it. Otherwise, just show
-    // the rotations directly.
-    let start = match location {
-        FailureLocation::InRegion { region, offset } => {
-            eprintln!("  Cell layout in region '{}':", region.name);
-            eprint!("    | Offset |");
-            *offset as i32
-        }
-        FailureLocation::OutsideRegion { row } => {
-            eprintln!("  Cell layout at row {}:", row);
-            eprint!("    |Rotation|");
-            0
-        }
-    };
-
-    // Print the assigned cells, and their region offset or rotation.
-    for (column, cells) in &columns {
-        let width = col_width(*cells);
-        eprint!(
-            "{}|",
-            padded(
-                ' ',
-                width,
-                &format!(
-                    "{}{}",
-                    match column.column_type {
-                        Any::Advice => "A",
-                        Any::Fixed => "F",
-                        Any::Instance => "I",
-                    },
-                    column.index,
-                )
-            )
-        );
-    }
-    eprintln!();
-    eprint!("    +--------+");
-    for cells in columns.values() {
-        eprint!("{}+", padded('-', col_width(*cells), ""));
-    }
-    eprintln!();
-    for (rotation, row) in &layout {
-        eprint!("    |{}|", padded(' ', 8, &(start + rotation).to_string()));
-        for (col, cells) in &columns {
-            let width = col_width(*cells);
-            eprint!(
-                "{}|",
-                padded(
-                    ' ',
-                    width,
-                    &row.get(col).map(|i| format!("x{}", i)).unwrap_or_default()
-                )
-            );
-        }
-        if *rotation == 0 {
+    emitter::render_cell_layout(location, &columns, &layout, |_, rotation| {
+        if rotation == 0 {
             eprint!(" <--{{ Gate '{}' applied here", constraint.gate.name);
         }
-        eprintln!();
-    }
+    });
 
     // Print the unsatisfied constraint, in terms of the local variables.
     eprintln!();
