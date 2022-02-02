@@ -8,7 +8,6 @@ use std::{
     ops::{Deref, Range},
 };
 
-use bigint::U256;
 use ff::PrimeField;
 use halo2_proofs::{
     arithmetic::FieldExt,
@@ -16,6 +15,7 @@ use halo2_proofs::{
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
+use uint::construct_uint;
 
 use pasta_curves::pallas;
 
@@ -425,6 +425,10 @@ impl<F: FieldExt> Deref for Z<F> {
 }
 
 fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> {
+    construct_uint! {
+        struct U256(4);
+    }
+
     let bitstring = scalar.map(|scalar| {
         // We use `k = scalar + t_q` in the double-and-add algorithm, where
         // the scalar field `F_q = 2^254 + t_q`.

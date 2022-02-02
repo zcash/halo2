@@ -182,7 +182,6 @@ pub fn i2lebsp<const NUM_BITS: usize>(int: u64) -> [bool; NUM_BITS] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bigint::U256;
     use group::ff::{Field, PrimeField};
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
@@ -195,6 +194,7 @@ mod tests {
     use rand::rngs::OsRng;
     use std::convert::TryInto;
     use std::iter;
+    use uint::construct_uint;
 
     #[test]
     fn test_range_check() {
@@ -280,6 +280,10 @@ mod tests {
     #[test]
     fn test_bitrange_subset() {
         let rng = OsRng;
+
+        construct_uint! {
+            struct U256(4);
+        }
 
         // Subset full range.
         {
