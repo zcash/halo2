@@ -1,6 +1,9 @@
 use super::super::{EccPoint, EccScalarFixed, FixedPoints, FIXED_BASE_WINDOW_SIZE, H, NUM_WINDOWS};
 
-use crate::utilities::{decompose_element, range_check, Window};
+use crate::utilities::{
+    decompose_running_sum::{decompose_element, Window},
+    range_check,
+};
 use arrayvec::ArrayVec;
 use ff::PrimeField;
 use halo2_proofs::{
