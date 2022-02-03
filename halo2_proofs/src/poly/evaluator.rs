@@ -287,7 +287,7 @@ pub(crate) enum Ast<E, F: Field, B: Basis> {
     Scale(Arc<Ast<E, F, B>>, F),
     /// The degree-1 term of a polynomial.
     ///
-    /// The field element is the coeffient of the term in the standard basis, not the
+    /// The field element is the coefficient of the term in the standard basis, not the
     /// coefficient basis.
     LinearTerm(F),
     /// The degree-0 term of a polynomial.
