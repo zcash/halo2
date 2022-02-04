@@ -47,7 +47,7 @@
                    # all of the packages marked with a # seem to make no difference in my ability to run `cargo run --example circuit-layout --features=dev-graph`
                    [ cargo
                      cargo2nix
-                     cmake
+                     cmake #
                      expat
                      fontconfig #
                      freetype
