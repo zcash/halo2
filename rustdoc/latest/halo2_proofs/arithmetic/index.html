@@ -1,0 +1,61 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="This module provides common utilities, traits and structures for group, field and polynomial arithmetic."><meta name="keywords" content="rust, rustlang, rust-lang, arithmetic"><title>halo2_proofs::arithmetic - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script>
+    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        renderMathInElement(document.body, {
+            delimiters: [
+                {left: "$$", right: "$$", display: true},
+                {left: "\\(", right: "\\)", display: false},
+                {left: "$", right: "$", display: false},
+                {left: "\\[", right: "\\]", display: true}
+            ]
+        });
+    });
+</script>
+</head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"><a href="#">Module arithmetic</a></h2><div class="sidebar-elems"><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#traits">Traits</a></li><li><a href="#functions">Functions</a></li></ul></div><div id="sidebar-vars" data-name="arithmetic" data-ty="mod" data-relpath="./"></div><script defer src="./sidebar-items.js"></script></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_proofs/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><div>
+                                <input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="main-heading">
+    <h1 class="fqn"><span class="in-band">Module <a href="../index.html">halo2_proofs</a>::<wbr><a class="mod" href="#">arithmetic</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="../../src/halo2_proofs/arithmetic.rs.html#1-429" title="goto source code">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>This module provides common utilities, traits and structures for group,
+field and polynomial arithmetic.</p>
+</div></details><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Coordinates.html" title="halo2_proofs::arithmetic::Coordinates struct">Coordinates</a></div><div class="item-right docblock-short"><p>The affine coordinates of a point on an elliptic curve.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.SqrtTables.html" title="halo2_proofs::arithmetic::SqrtTables struct">SqrtTables</a></div><div class="item-right docblock-short"><p>Tables used for square root computation.</p>
+</div></div></div><h2 id="traits" class="small-section-header"><a href="#traits">Traits</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.CurveAffine.html" title="halo2_proofs::arithmetic::CurveAffine trait">CurveAffine</a></div><div class="item-right docblock-short"><p>This trait is the affine counterpart to <code>Curve</code> and is used for
+serialization, storage in memory, and inspection of $x$ and $y$ coordinates.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.CurveExt.html" title="halo2_proofs::arithmetic::CurveExt trait">CurveExt</a></div><div class="item-right docblock-short"><p>This trait is a common interface for dealing with elements of an elliptic
+curve group in a “projective” form, where that arithmetic is usually more
+efficient.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.Field.html" title="halo2_proofs::arithmetic::Field trait">Field</a></div><div class="item-right docblock-short"><p>This trait represents an element of a field.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.FieldExt.html" title="halo2_proofs::arithmetic::FieldExt trait">FieldExt</a></div><div class="item-right docblock-short"><p>This trait is a common interface for dealing with elements of a finite
+field.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.Group.html" title="halo2_proofs::arithmetic::Group trait">Group</a></div><div class="item-right docblock-short"><p>This represents an element of a group with basic operations that can be
+performed. This allows an FFT implementation (for example) to operate
+generically over either a field or elliptic curve group.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.SqrtRatio.html" title="halo2_proofs::arithmetic::SqrtRatio trait">SqrtRatio</a></div><div class="item-right docblock-short"><p>A trait that exposes additional operations related to calculating square roots of
+prime-order finite fields.</p>
+</div></div></div><h2 id="functions" class="small-section-header"><a href="#functions">Functions</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.best_fft.html" title="halo2_proofs::arithmetic::best_fft fn">best_fft</a></div><div class="item-right docblock-short"><p>Performs a radix-$2$ Fast-Fourier Transformation (FFT) on a vector of size
+$n = 2^k$, when provided <code>log_n</code> = $k$ and an element of multiplicative
+order $n$ called <code>omega</code> ($\omega$). The result is that the vector <code>a</code>, when
+interpreted as the coefficients of a polynomial of degree $n - 1$, is
+transformed into the evaluations of this polynomial at each of the $n$
+distinct powers of $\omega$. This transformation is invertible by providing
+$\omega^{-1}$ in place of $\omega$ and dividing each resulting field element
+by $n$.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.best_multiexp.html" title="halo2_proofs::arithmetic::best_multiexp fn">best_multiexp</a></div><div class="item-right docblock-short"><p>Performs a multi-exponentiation operation.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.compute_inner_product.html" title="halo2_proofs::arithmetic::compute_inner_product fn">compute_inner_product</a></div><div class="item-right docblock-short"><p>This computes the inner product of two vectors <code>a</code> and <code>b</code>.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.eval_polynomial.html" title="halo2_proofs::arithmetic::eval_polynomial fn">eval_polynomial</a></div><div class="item-right docblock-short"><p>This evaluates a provided polynomial (in coefficient form) at <code>point</code>.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.kate_division.html" title="halo2_proofs::arithmetic::kate_division fn">kate_division</a></div><div class="item-right docblock-short"><p>Divides polynomial <code>a</code> in <code>X</code> by <code>X - b</code> with
+no remainder.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.lagrange_interpolate.html" title="halo2_proofs::arithmetic::lagrange_interpolate fn">lagrange_interpolate</a></div><div class="item-right docblock-short"><p>Returns coefficients of an n - 1 degree polynomial given a set of n points
+and their evaluations. This function will panic if two values in <code>points</code>
+are the same.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.parallelize.html" title="halo2_proofs::arithmetic::parallelize fn">parallelize</a></div><div class="item-right docblock-short"><p>This simple utility function will parallelize an operation that is to be
+performed over a mutable slice.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.small_multiexp.html" title="halo2_proofs::arithmetic::small_multiexp fn">small_multiexp</a></div><div class="item-right docblock-short"><p>Performs a small multi-exponentiation operation.
+Uses the double-and-add algorithm with doublings shared across points.</p>
+</div></div></div></section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.60.0-nightly (ee5d8d37b 2022-01-17)" ></div>
+</body></html>

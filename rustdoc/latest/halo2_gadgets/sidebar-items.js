@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["ecc","Gadgets for elliptic curve operations."],["poseidon","Gadget and chips for the Poseidon algebraic hash function."],["primitives","Primitives used in the Orchard protocol."],["sha256","Gadget and chips for the SHA-256 hash function."],["sinsemilla","Gadgets for the Sinsemilla hash function."],["utilities","Utility gadgets."]]});

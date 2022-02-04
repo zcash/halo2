@@ -1,0 +1,55 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Chip implementations for the ECC gadgets."><meta name="keywords" content="rust, rustlang, rust-lang, chip"><title>halo2_gadgets::ecc::chip - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><script defer src="../../../main.js"></script>
+    <noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        renderMathInElement(document.body, {
+            delimiters: [
+                {left: "$$", right: "$$", display: true},
+                {left: "\\(", right: "\\)", display: false},
+                {left: "$", right: "$", display: false},
+                {left: "\\[", right: "\\]", display: true}
+            ]
+        });
+    });
+</script>
+</head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"><a href="#">Module chip</a></h2><div class="sidebar-elems"><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#traits">Traits</a></li></ul></div><div id="sidebar-vars" data-name="chip" data-ty="mod" data-relpath="./"></div><script defer src="./sidebar-items.js"></script></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><div>
+                                <input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="main-heading">
+    <h1 class="fqn"><span class="in-band">Module <a href="../../index.html">halo2_gadgets</a>::<wbr><a href="../index.html">ecc</a>::<wbr><a class="mod" href="#">chip</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../../../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="../../../src/halo2_gadgets/ecc/chip.rs.html#1-526" title="goto source code">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Chip implementations for the ECC gadgets.</p>
+</div></details><h2 id="reexports" class="small-section-header"><a href="#reexports">Re-exports</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left import-item"><code>pub use <a class="mod" href="constants/index.html" title="mod halo2_gadgets::ecc::chip::constants">constants</a>::*;</code></div><div class="item-right docblock-short"></div></div></div><h2 id="modules" class="small-section-header"><a href="#modules">Modules</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="mod" href="constants/index.html" title="halo2_gadgets::ecc::chip::constants mod">constants</a></div><div class="item-right docblock-short"><p>Constants required for the ECC chip.</p>
+</div></div></div><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.EccChip.html" title="halo2_gadgets::ecc::chip::EccChip struct">EccChip</a></div><div class="item-right docblock-short"><p>A chip implementing EccInstructions</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.EccConfig.html" title="halo2_gadgets::ecc::chip::EccConfig struct">EccConfig</a></div><div class="item-right docblock-short"><p>Configuration for the ECC chip</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.EccPoint.html" title="halo2_gadgets::ecc::chip::EccPoint struct">EccPoint</a></div><div class="item-right docblock-short"><p>A curve point represented in affine (x, y) coordinates, or the
+identity represented as (0, 0).
+Each coordinate is assigned to a cell.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.EccScalarFixed.html" title="halo2_gadgets::ecc::chip::EccScalarFixed struct">EccScalarFixed</a></div><div class="item-right docblock-short"><p>A full-width scalar used for fixed-base scalar multiplication.
+This is decomposed into 85 3-bit windows in little-endian order,
+i.e. <code>windows</code> = [k_0, k_1, …, k_84] (for a 255-bit scalar)
+where <code>scalar = k_0 + k_1 * (2^3) + ... + k_84 * (2^3)^84</code> and
+each <code>k_i</code> is in the range [0..2^3).</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.EccScalarFixedShort.html" title="halo2_gadgets::ecc::chip::EccScalarFixedShort struct">EccScalarFixedShort</a></div><div class="item-right docblock-short"><p>A signed short scalar used for fixed-base scalar multiplication.
+A short scalar must have magnitude in the range [0..2^64), with
+a sign of either 1 or -1.
+This is decomposed into 3-bit windows in little-endian order
+using a running sum <code>z</code>, where z_{i+1} = (z_i - a_i) / (2^3)
+for element α = a_0 + (2^3) a_1 + … + (2^{3(n-1)}) a_{n-1}.
+Each <code>a_i</code> is in the range [0..2^3).</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.NonIdentityEccPoint.html" title="halo2_gadgets::ecc::chip::NonIdentityEccPoint struct">NonIdentityEccPoint</a></div><div class="item-right docblock-short"><p>A non-identity point represented in affine (x, y) coordinates.
+Each coordinate is assigned to a cell.</p>
+</div></div></div><h2 id="enums" class="small-section-header"><a href="#enums">Enums</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="enum" href="enum.BaseFieldElem.html" title="halo2_gadgets::ecc::chip::BaseFieldElem enum">BaseFieldElem</a></div><div class="item-right docblock-short"><p>Type marker representing a base field element being used as a scalar in fixed-base
+scalar multiplication.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="enum" href="enum.FullScalar.html" title="halo2_gadgets::ecc::chip::FullScalar enum">FullScalar</a></div><div class="item-right docblock-short"><p>Type marker representing a full-width scalar for use in fixed-base scalar
+multiplication.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="enum" href="enum.ShortScalar.html" title="halo2_gadgets::ecc::chip::ShortScalar enum">ShortScalar</a></div><div class="item-right docblock-short"><p>Type marker representing a signed 64-bit scalar for use in fixed-base scalar
+multiplication.</p>
+</div></div></div><h2 id="traits" class="small-section-header"><a href="#traits">Traits</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.FixedPoint.html" title="halo2_gadgets::ecc::chip::FixedPoint trait">FixedPoint</a></div><div class="item-right docblock-short"><p>Returns information about a fixed point that is required by <a href="struct.EccChip.html" title="EccChip"><code>EccChip</code></a>.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="trait" href="trait.ScalarKind.html" title="halo2_gadgets::ecc::chip::ScalarKind trait">ScalarKind</a></div><div class="item-right docblock-short"><p>A trait representing the kind of scalar used with a particular <code>FixedPoint</code>.</p>
+</div></div></div></section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.60.0-nightly (ee5d8d37b 2022-01-17)" ></div>
+</body></html>
