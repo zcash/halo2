@@ -32,8 +32,10 @@ jobs:
       - name: Build latest rustdocs
         uses: actions-rs/cargo@v1
         with:
-          command: rustdoc
-          args: -- --cfg docsrs --html-in-header katex-header.html
+          command: doc
+          args: --no-deps --workspace --all-features
+        env:
+          RUSTDOCFLAGS: -Z unstable-options --enable-index-page --cfg docsrs --html-in-header ${{ github.workspace }}/katex-header.html
 
       - name: Move latest rustdocs into book
         run: |
