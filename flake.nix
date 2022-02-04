@@ -6,6 +6,7 @@
     };
 
   outputs = { cargo2nix, nixpkgs, rust-overlay, utils, ... }@inputs:
+    with builtins;
     utils.make-flake
       { inherit inputs;
 
@@ -38,9 +39,7 @@
                     pkgs: pkgs.rustBuilder.overrides.all ++ [ expat-sys freetype-sys ];
                  };
          in
-         { defaultPackage = rustPkgs.workspace.halo2_proofs {};
-
-           devShell =
+         { devShell =
              pkgs.mkShell
                { buildInputs =
                    with pkgs;
@@ -57,6 +56,8 @@
                      rustc #
                    ];
                };
+
+           packages = mapAttrs (_: v: v {}) rustPkgs.workspace;
          }
       );
 }
