@@ -22,7 +22,7 @@ mod strategy;
 ///   circuit designer.
 /// - A dual-pass layouter is used to measures regions prior to assignment.
 /// - Regions are measured as rectangles, bounded on the cells they assign.
-/// - Regions are layed out using a greedy first-fit strategy, after sorting regions by
+/// - Regions are laid out using a greedy first-fit strategy, after sorting regions by
 ///   their "advice area" (number of advice columns * rows).
 #[derive(Debug)]
 pub struct V1;

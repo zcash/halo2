@@ -601,7 +601,7 @@ fn permute_expression_pair<C: CurveAffine, R: RngCore>(
         .zip(permuted_table_coeffs.iter_mut())
         .enumerate()
         .filter_map(|(row, (input_value, table_value))| {
-            // If this is the first occurence of `input_value` in the input expression
+            // If this is the first occurrence of `input_value` in the input expression
             if row == 0 || *input_value != permuted_input_expression[row - 1] {
                 *table_value = *input_value;
                 // Remove one instance of input_value from leftover_table_map
