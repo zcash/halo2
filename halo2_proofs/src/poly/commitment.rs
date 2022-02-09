@@ -30,7 +30,7 @@ pub struct Params<C: CurveAffine> {
     pub(crate) n: u64,
     pub(crate) g: Vec<C>,
     pub(crate) g_lagrange: Vec<C>,
-    pub(crate) h: C,
+    pub(crate) w: C,
     pub(crate) u: C,
 }
 
@@ -102,7 +102,7 @@ impl<C: CurveAffine> Params<C> {
         };
 
         let hasher = C::CurveExt::hash_to_curve("Halo2-Parameters");
-        let h = hasher(&[1]).to_affine();
+        let w = hasher(&[1]).to_affine();
         let u = hasher(&[2]).to_affine();
 
         Params {
@@ -110,7 +110,7 @@ impl<C: CurveAffine> Params<C> {
             n,
             g,
             g_lagrange,
-            h,
+            w,
             u,
         }
     }
@@ -126,7 +126,7 @@ impl<C: CurveAffine> Params<C> {
         tmp_scalars.push(r.0);
 
         tmp_bases.extend(self.g.iter());
-        tmp_bases.push(self.h);
+        tmp_bases.push(self.w);
 
         best_multiexp::<C>(&tmp_scalars, &tmp_bases)
     }
@@ -146,7 +146,7 @@ impl<C: CurveAffine> Params<C> {
         tmp_scalars.push(r.0);
 
         tmp_bases.extend(self.g_lagrange.iter());
-        tmp_bases.push(self.h);
+        tmp_bases.push(self.w);
 
         best_multiexp::<C>(&tmp_scalars, &tmp_bases)
     }
@@ -171,7 +171,7 @@ impl<C: CurveAffine> Params<C> {
         for g_lagrange_element in &self.g_lagrange {
             writer.write_all(g_lagrange_element.to_bytes().as_ref())?;
         }
-        writer.write_all(self.h.to_bytes().as_ref())?;
+        writer.write_all(self.w.to_bytes().as_ref())?;
         writer.write_all(self.u.to_bytes().as_ref())?;
 
         Ok(())
@@ -188,7 +188,7 @@ impl<C: CurveAffine> Params<C> {
         let g: Vec<_> = (0..n).map(|_| C::read(reader)).collect::<Result<_, _>>()?;
         let g_lagrange: Vec<_> = (0..n).map(|_| C::read(reader)).collect::<Result<_, _>>()?;
 
-        let h = C::read(reader)?;
+        let w = C::read(reader)?;
         let u = C::read(reader)?;
 
         Ok(Params {
@@ -196,7 +196,7 @@ impl<C: CurveAffine> Params<C> {
             n,
             g,
             g_lagrange,
-            h,
+            w,
             u,
         })
     }

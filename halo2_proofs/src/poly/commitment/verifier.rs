@@ -13,9 +13,9 @@ use crate::arithmetic::{best_multiexp, CurveAffine};
 #[derive(Debug, Clone)]
 pub struct Guard<'a, C: CurveAffine, E: EncodedChallenge<C>> {
     msm: MSM<'a, C>,
-    neg_a: C::Scalar,
-    challenges: Vec<C::Scalar>,
-    challenges_packed: Vec<E>,
+    neg_c: C::Scalar,
+    u: Vec<C::Scalar>,
+    u_packed: Vec<E>,
 }
 
 /// An accumulator instance consisting of an evaluation claim and a proof.
@@ -24,18 +24,18 @@ pub struct Accumulator<C: CurveAffine, E: EncodedChallenge<C>> {
     /// The claimed output of the linear-time polycommit opening protocol
     pub g: C,
 
-    /// A vector of 128-bit challenges sampled by the verifier, to be used in
-    /// computing g.
-    pub challenges_packed: Vec<E>,
+    /// A vector of 128-bit challenges u_0, ..., u_{k - 1} sampled by the
+    /// verifier, to be used in computing G'_0.
+    pub u_packed: Vec<E>,
 }
 
 impl<'a, C: CurveAffine, E: EncodedChallenge<C>> Guard<'a, C, E> {
     /// Lets caller supply the challenges and obtain an MSM with updated
     /// scalars and points.
     pub fn use_challenges(mut self) -> MSM<'a, C> {
-        let s = compute_s(&self.challenges, self.neg_a);
+        let s = compute_s(&self.u, self.neg_c);
         self.msm.add_to_g_scalars(&s);
-        self.msm.add_to_h_scalar(self.neg_a);
+        self.msm.add_to_w_scalar(self.neg_c);
 
         self.msm
     }
@@ -43,22 +43,22 @@ impl<'a, C: CurveAffine, E: EncodedChallenge<C>> Guard<'a, C, E> {
     /// Lets caller supply the purported G point and simply appends
     /// [-a] G to return an updated MSM.
     pub fn use_g(mut self, g: C) -> (MSM<'a, C>, Accumulator<C, E>) {
-        self.msm.append_term(self.neg_a, g);
+        self.msm.append_term(self.neg_c, g);
 
         let accumulator = Accumulator {
             g,
-            challenges_packed: self.challenges_packed,
+            u_packed: self.u_packed,
         };
 
         (self.msm, accumulator)
     }
 
-    /// Computes G + H, where G = ⟨s, params.g⟩ and H is used for blinding
+    /// Computes G + W, where G = ⟨s, params.g⟩ and W is used for blinding
     pub fn compute_g(&self) -> C {
-        let s = compute_s(&self.challenges, C::Scalar::one());
+        let s = compute_s(&self.u, C::Scalar::one());
 
         let mut tmp = best_multiexp(&s, &self.msm.params.g);
-        tmp += self.msm.params.h;
+        tmp += self.msm.params.w;
         tmp.to_affine()
     }
 }
@@ -75,14 +75,11 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
 ) -> Result<Guard<'a, C, E>, Error> {
     let k = params.k as usize;
 
-    //     P - [v] G_0 + S * iota
-    //   + \sum(L_i * u_i^2) + \sum(R_i * u_i^-2)
-    msm.add_constant_term(-v);
+    // P' = P - [v] G_0 + [\xi] S
+    msm.add_constant_term(-v); // add [-v] G_0
     let s_poly_commitment = transcript.read_point().map_err(|_| Error::OpeningError)?;
-
-    let iota = *transcript.squeeze_challenge_scalar::<()>();
-
-    msm.append_term(iota, s_poly_commitment);
+    let xi = *transcript.squeeze_challenge_scalar::<()>();
+    msm.append_term(xi, s_poly_commitment);
 
     let z = *transcript.squeeze_challenge_scalar::<()>();
 
@@ -92,92 +89,89 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
         let l = transcript.read_point().map_err(|_| Error::OpeningError)?;
         let r = transcript.read_point().map_err(|_| Error::OpeningError)?;
 
-        let challenge_packed = transcript.squeeze_challenge();
-        let challenge = *challenge_packed.as_challenge_scalar::<()>();
+        let u_j_packed = transcript.squeeze_challenge();
+        let u_j = *u_j_packed.as_challenge_scalar::<()>();
 
         rounds.push((
-            l,
-            r,
-            challenge,
-            /* to be inverted */ challenge,
-            challenge_packed,
+            l, r, u_j, u_j, // to be inverted
+            u_j_packed,
         ));
     }
 
     rounds
         .iter_mut()
-        .map(|&mut (_, _, _, ref mut challenge, _)| challenge)
+        .map(|&mut (_, _, _, ref mut u_j, _)| u_j)
         .batch_invert();
 
-    let mut challenges = Vec::with_capacity(k);
-    let mut challenges_packed: Vec<E> = Vec::with_capacity(k);
-    for (l, r, challenge, challenge_inv, challenge_packed) in rounds {
-        msm.append_term(challenge_inv, l);
-        msm.append_term(challenge, r);
+    // This is the left hand side of the verifier equation.
+    // P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
+    let mut u = Vec::with_capacity(k);
+    let mut u_packed: Vec<E> = Vec::with_capacity(k);
+    for (l, r, u_j, u_j_inv, u_j_packed) in rounds {
+        msm.append_term(u_j_inv, l);
+        msm.append_term(u_j, r);
 
-        challenges.push(challenge);
-        challenges_packed.push(challenge_packed);
+        u.push(u_j);
+        u_packed.push(u_j_packed);
     }
 
-    // Our goal is to open
-    //     msm - [v] G_0 + random_poly_commitment * iota
-    //   + \sum(L_i * u_i^2) + \sum(R_i * u_i^-2)
-    // at x to 0, by asking the prover to supply (a, \xi) such that it equals
-    //   = [a] (G + [b * z] U) + [\xi] H
-    // except that we wish for the prover to supply G as Commit(g(X); 1) so
-    // we must substitute to get
-    //   = [a] ((G - H) + [b * z] U) + [\xi] H
-    //   = [a] G + [-a] H + [abz] U + [\xi] H
-    //   = [a] G + [abz] U + [\xi - a] H
-    // but subtracting to get the desired equality
-    //   ... + [-a] G + [-abz] U + [a - \xi] H = 0
+    // Our goal is to check that the left hand side of the verifier
+    // equation
+    //     P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
+    // equals (given the prover's values c, f) the right hand side
+    //   = [c] (G'_0 + [b * z] U) + [f] W
+    // except that we wish for the prover to supply G'_0 as Commit(g(X); 1) so
+    // we must substitute G'_0 with G'_0 - W to get
+    //   = [c] ((G'_0 - W) + [b * z] U) + [f] W
+    //   = [c] G'_0 + [-c] W + [cbz] U + [f] W
+    //   = [c] G'_0 + [cbz] U + [f - c] W
+    // and then subtracting the right hand side from both sides
+    // to get
+    //   P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
+    //   + [-c] G'_0 + [-cbz] U + [c - f] W
+    //   = 0
 
-    let a = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
-    let neg_a = -a;
-    let xi = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
-    let b = compute_b(x, &challenges);
+    let c = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
+    let neg_c = -c;
+    let f = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
+    let b = compute_b(x, &u);
 
-    msm.add_to_u_scalar(neg_a * &b * &z);
-    msm.add_to_h_scalar(a - &xi);
+    msm.add_to_u_scalar(neg_c * &b * &z);
+    msm.add_to_w_scalar(c - &f);
 
     let guard = Guard {
         msm,
-        neg_a,
-        challenges,
-        challenges_packed,
+        neg_c,
+        u,
+        u_packed,
     };
 
     Ok(guard)
 }
 
-/// Computes $\prod\limits_{i=0}^{k-1} (1 + u_i x^{2^i})$.
-fn compute_b<F: Field>(x: F, challenges: &[F]) -> F {
+/// Computes $\prod\limits_{i=0}^{k-1} (1 + u_{k - 1 - i} x^{2^i})$.
+fn compute_b<F: Field>(x: F, u: &[F]) -> F {
     let mut tmp = F::one();
     let mut cur = x;
-    for challenge in challenges.iter().rev() {
-        tmp *= F::one() + &(*challenge * &cur);
+    for u_j in u.iter().rev() {
+        tmp *= F::one() + &(*u_j * &cur);
         cur *= cur;
     }
     tmp
 }
 
-/// Computes the coefficients of $g(X) = \prod\limits_{i=0}^{k-1} (1 + u_i X^{2^i})$.
-fn compute_s<F: Field>(challenges: &[F], init: F) -> Vec<F> {
-    assert!(!challenges.is_empty());
-    let mut v = vec![F::zero(); 1 << challenges.len()];
+/// Computes the coefficients of $g(X) = \prod\limits_{i=0}^{k-1} (1 + u_{k - 1 - i} X^{2^i})$.
+fn compute_s<F: Field>(u: &[F], init: F) -> Vec<F> {
+    assert!(!u.is_empty());
+    let mut v = vec![F::zero(); 1 << u.len()];
     v[0] = init;
 
-    for (len, challenge) in challenges
-        .iter()
-        .rev()
-        .enumerate()
-        .map(|(i, challenge)| (1 << i, challenge))
-    {
+    for (len, u_j) in u.iter().rev().enumerate().map(|(i, u_j)| (1 << i, u_j)) {
         let (left, right) = v.split_at_mut(len);
         let right = &mut right[0..len];
         right.copy_from_slice(left);
         for v in right {
-            *v *= challenge;
+            *v *= u_j;
         }
     }
 

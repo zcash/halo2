@@ -369,7 +369,7 @@ $$
 15. $\verifier$ responds with challenge $x_3$.
 16. $\prover$ sends $\mathbf{u} \in \field^{n_q}$ such that $\mathbf{u}_i = q_i(x_3)$ for all $i \in [0, n_q)$.
 17. $\verifier$ responds with challenge $x_4$.
-18. $\prover$ and $\verifier$ set $P = Q' + x_4 \sum\limits_{i=0}^{n_q - 1} [x_4^i] Q_i$ and $v = $
+18. $\verifier$ set $P = Q' + x_4 \sum\limits_{i=0}^{n_q - 1} [x_4^i] Q_i$ and $v = $
 $$
 \sum\limits_{i=0}^{n_q - 1}
 \left(
@@ -392,12 +392,12 @@ $$
 19. $\prover$ sets $p(X) = q'(X) + [x_4] \sum\limits_{i=0}^{n_q - 1} x_4^i q_i(X)$.
 20. $\prover$ samples a random polynomial $s(X)$ of degree $n - 1$ with a root at $x_3$ and sends a commitment $S = \innerprod{\mathbf{s}}{\mathbf{G}} + [\cdot] W$ where $\mathbf{s}$ defines the coefficients of $s(X)$.
 21. $\verifier$ responds with challenges $\xi, z$.
-22. $\prover$ and $\verifier$ set $P' = P - [v] \mathbf{G}_0 + [\xi] S$.
-23. $\prover$ sets $p'(X) = p(X) - v + \xi s(X)$.
+22. $\verifier$ sets $P' = P - [v] \mathbf{G}_0 + [\xi] S$.
+23. $\prover$ sets $p'(X) = p(X) - p(x_3) + \xi s(X)$ (where $p(x_3)$ should correspond with the verifier's computed value $v$).
 24. Initialize $\mathbf{p'}$ as the coefficients of $p'(X)$ and $\mathbf{G'} = \mathbf{G}$ and $\mathbf{b} = (x_3^0, x_3^1, ..., x_3^{n - 1})$. $\prover$ and $\verifier$ will interact in the following $k$ rounds, where in the $j$th round starting in round $j=0$ and ending in round $j=k-1$:
   * $\prover$ sends $L_j = \innerprod{\mathbf{p'}_\hi}{\mathbf{G'}_\lo} + [z \innerprod{\mathbf{p'}_\hi}{\mathbf{b}_\lo}] U + [\cdot] W$ and $R_j = \innerprod{\mathbf{p'}_\lo}{\mathbf{G'}_\hi} + [z \innerprod{\mathbf{p'}_\lo}{\mathbf{b}_\hi}] U + [\cdot] W$.
   * $\verifier$ responds with challenge $u_j$.
-  * $\prover$ and $\verifier$ set $\mathbf{G'} := \mathbf{G'}_\lo + u_j \mathbf{G'}_\hi$ and $\mathbf{b} = \mathbf{b}_\lo + u_j \mathbf{b}_\hi$.
+  * $\prover$ and $\verifier$ set $\mathbf{G'} := \mathbf{G'}_\lo + u_j \mathbf{G'}_\hi$ and $\mathbf{b} := \mathbf{b}_\lo + u_j \mathbf{b}_\hi$.
   * $\prover$ sets $\mathbf{p'} := \mathbf{p'}_\lo + u_j^{-1} \mathbf{p'}_\hi$.
-25. $\prover$ sends $c = \mathbf{p'}_0$ and synthetic blinding factor $f$.
+25. $\prover$ sends $c = \mathbf{p'}_0$ and synthetic blinding factor $f$ computed from the elided blinding factors.
 26. $\verifier$ accepts only if $\sum_{j=0}^{k - 1} [u_j^{-1}] L_j + P' + \sum_{j=0}^{k - 1} [u_j] R_j = [c] \mathbf{G'}_0 + [c \mathbf{b}_0 z] U + [f] W$.

@@ -64,10 +64,10 @@ where
         }
     }
 
-    let f_poly = point_sets
+    let q_prime_poly = point_sets
         .iter()
         .zip(q_polys.iter())
-        .fold(None, |f_poly, (points, poly)| {
+        .fold(None, |q_prime_poly, (points, poly)| {
             let mut poly = points
                 .iter()
                 .fold(poly.clone().unwrap().values, |poly, point| {
@@ -79,43 +79,40 @@ where
                 _marker: PhantomData,
             };
 
-            if f_poly.is_none() {
+            if q_prime_poly.is_none() {
                 Some(poly)
             } else {
-                f_poly.map(|f_poly| f_poly * *x_2 + &poly)
+                q_prime_poly.map(|q_prime_poly| q_prime_poly * *x_2 + &poly)
             }
         })
         .unwrap();
 
-    let f_blind = Blind(C::Scalar::random(&mut rng));
-    let f_commitment = params.commit(&f_poly, f_blind).to_affine();
+    let q_prime_blind = Blind(C::Scalar::random(&mut rng));
+    let q_prime_commitment = params.commit(&q_prime_poly, q_prime_blind).to_affine();
 
-    transcript.write_point(f_commitment)?;
+    transcript.write_point(q_prime_commitment)?;
 
     let x_3: ChallengeX3<_> = transcript.squeeze_challenge_scalar();
 
-    let q_evals: Vec<C::Scalar> = q_polys
-        .iter()
-        .map(|poly| eval_polynomial(poly.as_ref().unwrap(), *x_3))
-        .collect();
-
-    for eval in q_evals.iter() {
-        transcript.write_scalar(*eval)?;
+    // Prover sends u_i for all i, which correspond to the evaluation
+    // of each Q polynomial commitment at x_3.
+    for q_i_poly in &q_polys {
+        transcript.write_scalar(eval_polynomial(q_i_poly.as_ref().unwrap(), *x_3))?;
     }
 
     let x_4: ChallengeX4<_> = transcript.squeeze_challenge_scalar();
 
-    let (f_poly, f_blind_try) = q_polys.iter().zip(q_blinds.iter()).fold(
-        (f_poly, f_blind),
-        |(f_poly, f_blind), (poly, blind)| {
+    let (p_poly, p_poly_blind) = q_polys.into_iter().zip(q_blinds.into_iter()).fold(
+        (q_prime_poly, q_prime_blind),
+        |(q_prime_poly, q_prime_blind), (poly, blind)| {
             (
-                f_poly * *x_4 + poly.as_ref().unwrap(),
-                Blind((f_blind.0 * &(*x_4)) + &blind.0),
+                q_prime_poly * *x_4 + &poly.unwrap(),
+                Blind((q_prime_blind.0 * &(*x_4)) + &blind.0),
             )
         },
     );
 
-    commitment::create_proof(params, rng, transcript, &f_poly, f_blind_try, *x_3)
+    commitment::create_proof(params, rng, transcript, &p_poly, p_poly_blind, *x_3)
 }
 
 #[doc(hidden)]

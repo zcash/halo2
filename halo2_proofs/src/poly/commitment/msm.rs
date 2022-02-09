@@ -8,7 +8,7 @@ use group::Group;
 pub struct MSM<'a, C: CurveAffine> {
     pub(crate) params: &'a Params<C>,
     g_scalars: Option<Vec<C::Scalar>>,
-    h_scalar: Option<C::Scalar>,
+    w_scalar: Option<C::Scalar>,
     u_scalar: Option<C::Scalar>,
     other_scalars: Vec<C::Scalar>,
     other_bases: Vec<C>,
@@ -18,7 +18,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
     /// Create a new, empty MSM using the provided parameters.
     pub fn new(params: &'a Params<C>) -> Self {
         let g_scalars = None;
-        let h_scalar = None;
+        let w_scalar = None;
         let u_scalar = None;
         let other_scalars = vec![];
         let other_bases = vec![];
@@ -26,7 +26,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         MSM {
             params,
             g_scalars,
-            h_scalar,
+            w_scalar,
             u_scalar,
             other_scalars,
             other_bases,
@@ -42,8 +42,8 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
             self.add_to_g_scalars(g_scalars);
         }
 
-        if let Some(h_scalar) = &other.h_scalar {
-            self.add_to_h_scalar(*h_scalar);
+        if let Some(w_scalar) = &other.w_scalar {
+            self.add_to_w_scalar(*w_scalar);
         }
 
         if let Some(u_scalar) = &other.u_scalar {
@@ -83,9 +83,9 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         }
     }
 
-    /// Add to `h_scalar`
-    pub fn add_to_h_scalar(&mut self, scalar: C::Scalar) {
-        self.h_scalar = self.h_scalar.map_or(Some(scalar), |a| Some(a + &scalar));
+    /// Add to `w_scalar`
+    pub fn add_to_w_scalar(&mut self, scalar: C::Scalar) {
+        self.w_scalar = self.w_scalar.map_or(Some(scalar), |a| Some(a + &scalar));
     }
 
     /// Add to `u_scalar`
@@ -111,14 +111,14 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
             })
         }
 
-        self.h_scalar = self.h_scalar.map(|a| a * &factor);
+        self.w_scalar = self.w_scalar.map(|a| a * &factor);
         self.u_scalar = self.u_scalar.map(|a| a * &factor);
     }
 
     /// Perform multiexp and check that it results in zero
     pub fn eval(self) -> bool {
         let len = self.g_scalars.as_ref().map(|v| v.len()).unwrap_or(0)
-            + self.h_scalar.map(|_| 1).unwrap_or(0)
+            + self.w_scalar.map(|_| 1).unwrap_or(0)
             + self.u_scalar.map(|_| 1).unwrap_or(0)
             + self.other_scalars.len();
         let mut scalars: Vec<C::Scalar> = Vec::with_capacity(len);
@@ -127,9 +127,9 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         scalars.extend(&self.other_scalars);
         bases.extend(&self.other_bases);
 
-        if let Some(h_scalar) = self.h_scalar {
-            scalars.push(h_scalar);
-            bases.push(self.params.h);
+        if let Some(w_scalar) = self.w_scalar {
+            scalars.push(w_scalar);
+            bases.push(self.params.w);
         }
 
         if let Some(u_scalar) = self.u_scalar {
