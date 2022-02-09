@@ -96,6 +96,7 @@ impl<C: CurveAffine> Config<C> {
             };
 
             // (y_r + y_dblq)(x_p − x_dblq) − (y_p − y_dblq)(x_dblq − x_r) = 0
+            // FIXME degree too high, witness gradient instead of inv_yq
             let poly2 =
                 (y_r + y_dblq.clone()) * (x_p - x_dblq.clone()) - (y_p - y_dblq) * (x_dblq - x_r);
 

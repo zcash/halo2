@@ -817,3 +817,326 @@ where
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::recursion::endoscale::primitive::endoscale_scalar;
+
+    use super::{EndoscaleConfig, EndoscaleInstructions, TableConfig};
+    use ff::PrimeFieldBits;
+    use halo2_gadgets::utilities::{lebs2ip, UtilitiesInstructions};
+    use halo2_proofs::{
+        arithmetic::CurveAffine,
+        circuit::{AssignedCell, Layouter, SimpleFloorPlanner},
+        plonk::{Circuit, ConstraintSystem, Error},
+        poly::commitment::Params,
+    };
+    use pasta_curves::{pallas, vesta};
+
+    use std::{convert::TryInto, marker::PhantomData};
+
+    #[derive(Default)]
+    struct BaseCircuit<
+        C: CurveAffine,
+        const NUM_BITS: usize,
+        const NUM_BITS_DIV2: usize,
+        const NUM_BITS_DIV_K_CEIL: usize,
+    >
+    where
+        C::Base: PrimeFieldBits,
+    {
+        bitstring: Option<[bool; NUM_BITS]>,
+        pub_input_rows: Option<[usize; NUM_BITS_DIV_K_CEIL]>,
+        _marker: PhantomData<C>,
+    }
+
+    impl<
+            C: CurveAffine,
+            const NUM_BITS: usize,
+            const NUM_BITS_DIV2: usize,
+            const NUM_BITS_DIV_K_CEIL: usize,
+        > UtilitiesInstructions<C::Base>
+        for BaseCircuit<C, NUM_BITS, NUM_BITS_DIV2, NUM_BITS_DIV_K_CEIL>
+    where
+        C::Base: PrimeFieldBits,
+    {
+        type Var = AssignedCell<C::Base, C::Base>;
+    }
+
+    impl<
+            C: CurveAffine,
+            const NUM_BITS: usize,
+            const NUM_BITS_DIV2: usize,
+            const NUM_BITS_DIV_K_CEIL: usize,
+        > Circuit<C::Base> for BaseCircuit<C, NUM_BITS, NUM_BITS_DIV2, NUM_BITS_DIV_K_CEIL>
+    where
+        C::Base: PrimeFieldBits,
+    {
+        type Config = EndoscaleConfig<C, 10>;
+        type FloorPlanner = SimpleFloorPlanner;
+
+        fn without_witnesses(&self) -> Self {
+            Self::default()
+        }
+
+        fn configure(meta: &mut ConstraintSystem<C::Base>) -> Self::Config {
+            let table_config = TableConfig::configure(meta);
+
+            let constants = meta.fixed_column();
+            meta.enable_constant(constants);
+            let endoscalars = meta.instance_column();
+            let endoscalars_copy = meta.advice_column();
+            let acc = (meta.advice_column(), meta.advice_column());
+            let point = (meta.advice_column(), meta.advice_column());
+            let base = (meta.advice_column(), meta.advice_column());
+            let running_sum = meta.advice_column();
+            let pair = (meta.advice_column(), meta.advice_column());
+
+            EndoscaleConfig::<C, 10>::configure(
+                meta,
+                endoscalars,
+                endoscalars_copy,
+                acc,
+                point,
+                base,
+                running_sum,
+                pair,
+                table_config,
+            )
+        }
+
+        fn synthesize(
+            &self,
+            config: Self::Config,
+            mut layouter: impl Layouter<C::Base>,
+        ) -> Result<(), Error> {
+            config.table.load(&mut layouter)?;
+
+            let challenge = {
+                let challenge = self.bitstring.map(|b| lebs2ip::<NUM_BITS>(&b));
+                challenge.map(C::Base::from)
+            };
+            let challenge = self.load_private(
+                layouter.namespace(|| "load challenge"),
+                config.acc.0,
+                challenge,
+            )?;
+
+            // Alg 1
+            let g_lagrange = Params::<C>::new(11).g_lagrange();
+            config.endoscale_fixed_base::<_, NUM_BITS, NUM_BITS_DIV2>(
+                layouter.namespace(|| "commit to challenge"),
+                g_lagrange[0],
+                &challenge,
+            )?;
+
+            // Recover bitstring
+            config.recover_bitstring::<_, NUM_BITS, NUM_BITS_DIV_K_CEIL>(
+                layouter.namespace(|| "recover bitstring"),
+                &challenge,
+                self.pub_input_rows.unwrap(),
+            )?;
+
+            Ok(())
+        }
+    }
+
+    #[derive(Default)]
+    struct ScalarCircuit<
+        C: CurveAffine,
+        const NUM_BITS: usize,
+        const NUM_BITS_DIV2: usize,
+        const NUM_BITS_DIV_K_CEIL: usize,
+    >
+    where
+        C::Base: PrimeFieldBits,
+    {
+        bitstring: Option<[bool; NUM_BITS]>,
+        pub_input_rows: Option<[usize; NUM_BITS_DIV_K_CEIL]>,
+        _marker: PhantomData<C>,
+    }
+
+    impl<
+            C: CurveAffine,
+            const NUM_BITS: usize,
+            const NUM_BITS_DIV2: usize,
+            const NUM_BITS_DIV_K_CEIL: usize,
+        > UtilitiesInstructions<C::Base>
+        for ScalarCircuit<C, NUM_BITS, NUM_BITS_DIV2, NUM_BITS_DIV_K_CEIL>
+    where
+        C::Base: PrimeFieldBits,
+    {
+        type Var = AssignedCell<C::Base, C::Base>;
+    }
+
+    impl<
+            C: CurveAffine,
+            const NUM_BITS: usize,
+            const NUM_BITS_DIV2: usize,
+            const NUM_BITS_DIV_K_CEIL: usize,
+        > Circuit<C::Base> for ScalarCircuit<C, NUM_BITS, NUM_BITS_DIV2, NUM_BITS_DIV_K_CEIL>
+    where
+        C::Base: PrimeFieldBits,
+    {
+        type Config = EndoscaleConfig<C, 10>;
+        type FloorPlanner = SimpleFloorPlanner;
+
+        fn without_witnesses(&self) -> Self {
+            Self::default()
+        }
+
+        fn configure(meta: &mut ConstraintSystem<C::Base>) -> Self::Config {
+            let table_config = TableConfig::configure(meta);
+
+            let constants = meta.fixed_column();
+            meta.enable_constant(constants);
+            let endoscalars = meta.instance_column();
+            let endoscalars_copy = meta.advice_column();
+            let acc = (meta.advice_column(), meta.advice_column());
+            let point = (meta.advice_column(), meta.advice_column());
+            let base = (meta.advice_column(), meta.advice_column());
+            let running_sum = meta.advice_column();
+            let pair = (meta.advice_column(), meta.advice_column());
+
+            EndoscaleConfig::<C, 10>::configure(
+                meta,
+                endoscalars,
+                endoscalars_copy,
+                acc,
+                point,
+                base,
+                running_sum,
+                pair,
+                table_config,
+            )
+        }
+
+        fn synthesize(
+            &self,
+            config: Self::Config,
+            mut layouter: impl Layouter<C::Base>,
+        ) -> Result<(), Error> {
+            config.table.load(&mut layouter)?;
+
+            let challenge = {
+                let challenge = self.bitstring.map(|b| lebs2ip::<NUM_BITS>(&b));
+                challenge.map(C::Base::from)
+            };
+            let challenge = self.load_private(
+                layouter.namespace(|| "load challenge"),
+                config.acc.0,
+                challenge,
+            )?;
+
+            // Alg 2 with lookup
+            config.endoscale_scalar::<_, NUM_BITS, NUM_BITS_DIV_K_CEIL>(
+                layouter.namespace(|| "endoscale bitstring with lookup"),
+                &challenge,
+            )?;
+
+            // Recover bitstring
+            config.recover_bitstring::<_, NUM_BITS, NUM_BITS_DIV_K_CEIL>(
+                layouter.namespace(|| "recover bitstring"),
+                &challenge,
+                self.pub_input_rows.unwrap(),
+            )?;
+
+            Ok(())
+        }
+    }
+
+    fn test_endoscale_cycle<BaseCurve: CurveAffine, ScalarCurve: CurveAffine>()
+    where
+        BaseCurve::Base: PrimeFieldBits,
+        ScalarCurve::Base: PrimeFieldBits,
+    {
+        use ff::Field;
+        use halo2_proofs::dev::MockProver;
+
+        const K: usize = 10;
+        const NUM_BITS: usize = 64;
+        const NUM_BITS_DIV2: usize = NUM_BITS / 2;
+        const NUM_BITS_DIV_K_CEIL: usize = (NUM_BITS + K) / K;
+
+        // Random 64-bit value.
+        let bitstring: [bool; NUM_BITS] = (0..NUM_BITS)
+            .map(|_| rand::random::<bool>())
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap();
+
+        // Public input of endoscalars in the base field corresponding to the bits.
+        let pub_inputs_base: Vec<BaseCurve::Base> = {
+            // Pad bitstring to multiple of K.
+            let bitstring = bitstring
+                .iter()
+                .copied()
+                .chain(std::iter::repeat(false))
+                .take(K * NUM_BITS_DIV_K_CEIL)
+                .collect::<Vec<_>>();
+            (0..NUM_BITS_DIV_K_CEIL)
+                .rev()
+                .map(|chunk| {
+                    let idx = chunk * K;
+                    endoscale_scalar(Some(BaseCurve::Base::zero()), &bitstring[idx..(idx + K)])
+                })
+                .collect()
+        };
+
+        // Public input of endoscalars in the base field corresponding to the bits.
+        let pub_inputs_scalar: Vec<ScalarCurve::Base> = {
+            // Pad bitstring to multiple of K.
+            let bitstring = bitstring
+                .iter()
+                .copied()
+                .chain(std::iter::repeat(false))
+                .take(K * NUM_BITS_DIV_K_CEIL)
+                .collect::<Vec<_>>();
+            (0..NUM_BITS_DIV_K_CEIL)
+                .rev()
+                .map(|chunk| {
+                    let idx = chunk * K;
+                    endoscale_scalar(Some(ScalarCurve::Base::zero()), &bitstring[idx..(idx + K)])
+                })
+                .collect()
+        };
+
+        let base_circuit = BaseCircuit::<BaseCurve, NUM_BITS, NUM_BITS_DIV2, NUM_BITS_DIV_K_CEIL> {
+            bitstring: Some(bitstring.clone()),
+            pub_input_rows: Some(
+                (0..NUM_BITS_DIV_K_CEIL)
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .unwrap(),
+            ),
+            _marker: PhantomData,
+        };
+        let scalar_circuit =
+            ScalarCircuit::<ScalarCurve, NUM_BITS, NUM_BITS_DIV2, NUM_BITS_DIV_K_CEIL> {
+                bitstring: Some(bitstring),
+                pub_input_rows: Some(
+                    (0..NUM_BITS_DIV_K_CEIL)
+                        .collect::<Vec<_>>()
+                        .try_into()
+                        .unwrap(),
+                ),
+                _marker: PhantomData,
+            };
+
+        // Calls endoscale_base
+        let base_prover = MockProver::run(11, &base_circuit, vec![pub_inputs_base]).unwrap();
+        assert_eq!(base_prover.verify(), Ok(()));
+
+        // Calls endoscale_scalar
+        let scalar_prover = MockProver::run(11, &scalar_circuit, vec![pub_inputs_scalar]).unwrap();
+        assert_eq!(scalar_prover.verify(), Ok(()));
+
+        // TODO: Check consistency of resulting commitment / endoscalar
+    }
+
+    #[test]
+    fn test_endoscale() {
+        test_endoscale_cycle::<pallas::Affine, vesta::Affine>();
+        test_endoscale_cycle::<vesta::Affine, pallas::Affine>();
+    }
+}
