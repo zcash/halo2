@@ -162,6 +162,11 @@ impl<C: CurveAffine> Params<C> {
         self.g.clone()
     }
 
+    /// The `g_lagrange` bases
+    pub fn g_lagrange(&self) -> Vec<C> {
+        self.g_lagrange.clone()
+    }
+
     /// Writes params to a buffer.
     pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
         writer.write_all(&self.k.to_le_bytes())?;

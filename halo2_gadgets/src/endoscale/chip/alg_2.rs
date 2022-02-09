@@ -108,7 +108,7 @@ where
     // Configuration for running sum decomposition into K-bit chunks.
     pub(super) running_sum_chunks: RunningSumConfig<C::Base, K>,
     // Table mapping words to their corresponding endoscalars.
-    table: TableConfig<C::Base, K>,
+    pub(super) table: TableConfig<C::Base, K>,
     // Configuration for lookup range check of partial chunks.
     lookup_range_check: LookupRangeCheckConfig<C::Base, K>,
 }
