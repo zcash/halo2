@@ -130,6 +130,11 @@ mod tests {
 
         const T: usize = 3;
         let mut grain = Grain::new(super::super::grain::SboxType::Pow, T as u16, 8, 56);
+
+        // Skip over the bits the reference implementation uses to generate the round constants
+        for _ in 0..103020 {
+            grain.next();
+        }
         let (mds, mds_inv) = generate_mds::<Fp, T>(&mut grain, 0);
         assert_eq!(mds, mds_testvector);
 
