@@ -308,9 +308,11 @@ impl<C: CurveAffine> super::ProvingKey<C> {
         &self,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
-        self.polys
-            .iter()
-            .map(move |poly| ProverQuery { point: *x, poly })
+        self.polys.iter().map(move |poly| ProverQuery {
+            point: *x,
+            rotation: Rotation::cur(),
+            poly,
+        })
     }
 
     pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
@@ -393,10 +395,12 @@ impl<C: CurveAffine> Evaluated<C> {
                     // Open permutation product commitments at x and \omega x
                     .chain(Some(ProverQuery {
                         point: *x,
+                        rotation: Rotation::cur(),
                         poly: &set.permutation_product_poly,
                     }))
                     .chain(Some(ProverQuery {
                         point: x_next,
+                        rotation: Rotation::next(),
                         poly: &set.permutation_product_poly,
                     }))
             }))
@@ -412,6 +416,7 @@ impl<C: CurveAffine> Evaluated<C> {
                     .flat_map(move |set| {
                         Some(ProverQuery {
                             point: x_last,
+                            rotation: Rotation(-((blinding_factors + 1) as i32)),
                             poly: &set.permutation_product_poly,
                         })
                     }),

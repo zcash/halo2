@@ -10,6 +10,7 @@ use crate::{
     poly::{msm::MSM, Coeff, Error, Polynomial},
 };
 
+use crate::poly::Rotation;
 use ff::Field;
 use group::Group;
 use rand::RngCore;
@@ -65,6 +66,7 @@ impl<E: MultiMillerLoop> Decider<E> {
 pub struct ProverQuery<'a, C: CurveAffine> {
     /// point at which polynomial is queried
     pub point: C::Scalar,
+    pub rotation: Rotation,
     /// coefficients of polynomial
     pub poly: &'a Polynomial<C::Scalar, Coeff>,
 }
@@ -74,6 +76,8 @@ pub struct ProverQuery<'a, C: CurveAffine> {
 pub struct VerifierQuery<'r, C: CurveAffine> {
     /// point at which polynomial is queried
     point: C::Scalar,
+    /// rotation at which polynomial is queried
+    rotation: Rotation,
     /// commitment to polynomial
     commitment: CommitmentReference<'r, C>,
     /// evaluation of polynomial at query point
@@ -82,18 +86,25 @@ pub struct VerifierQuery<'r, C: CurveAffine> {
 
 impl<'r, 'params: 'r, C: CurveAffine> VerifierQuery<'r, C> {
     /// Create a new verifier query based on a commitment
-    pub fn new_commitment(commitment: &'r C, point: C::Scalar, eval: C::Scalar) -> Self {
+    pub fn new_commitment(
+        commitment: &'r C,
+        point: C::Scalar,
+        rotation: Rotation,
+        eval: C::Scalar,
+    ) -> Self {
         VerifierQuery {
             point,
+            rotation,
             eval,
             commitment: CommitmentReference::Commitment(commitment),
         }
     }
 
     /// Create a new verifier query based on a linear combination of commitments
-    pub fn new_msm(msm: &'r MSM<C>, point: C::Scalar, eval: C::Scalar) -> Self {
+    pub fn new_msm(msm: &'r MSM<C>, point: C::Scalar, rotation: Rotation, eval: C::Scalar) -> Self {
         VerifierQuery {
             point,
+            rotation,
             eval,
             commitment: CommitmentReference::MSM(msm),
         }
@@ -121,6 +132,7 @@ impl<'r, 'params: 'r, C: CurveAffine> PartialEq for CommitmentReference<'r, C> {
 trait Query<F: FieldExt>: Sized + Clone {
     type Commitment: PartialEq + Clone;
 
+    fn get_rotation(&self) -> Rotation;
     fn get_point(&self) -> F;
     fn get_eval(&self) -> F;
     fn get_commitment(&self) -> Self::Commitment;
@@ -134,7 +146,7 @@ mod tests {
     use crate::poly::{
         commitment::{Params, ParamsVerifier},
         multiopen::{create_proof, verify_proof, Decider, ProverQuery, Query, VerifierQuery},
-        Coeff, Polynomial,
+        Coeff, Polynomial, Rotation,
     };
     use crate::transcript::{
         Blake2bRead, Blake2bWrite, Challenge255, ChallengeScalar, Transcript, TranscriptRead,
@@ -146,10 +158,6 @@ mod tests {
     use rand_core::OsRng;
     use std::collections::BTreeSet;
     use std::marker::PhantomData;
-
-    fn rotation_set(points: Vec<u64>) -> Vec<Fr> {
-        points.into_iter().map(Fr::from).collect()
-    }
 
     fn rand_poly(n: usize, mut rng: impl RngCore) -> Polynomial<Fr, Coeff> {
         Polynomial {
@@ -198,8 +206,10 @@ mod tests {
         let b = params.commit(&bx).to_affine();
         let c = params.commit(&cx).to_affine();
 
+        let cur = Rotation::cur();
+        let next = Rotation::next();
         let x = Fp::random(rng);
-        let y = Fp::random(rng);
+        let y = domain.rotate_omega(x, next);
         let avx = eval_polynomial(&ax, x);
         let bvx = eval_polynomial(&bx, x);
         let cvy = eval_polynomial(&cx, y);
@@ -211,14 +221,17 @@ mod tests {
             std::iter::empty()
                 .chain(Some(ProverQuery {
                     point: x,
+                    rotation: cur,
                     poly: &ax,
                 }))
                 .chain(Some(ProverQuery {
                     point: x,
+                    rotation: cur,
                     poly: &bx,
                 }))
                 .chain(Some(ProverQuery {
                     point: y,
+                    rotation: Rotation::next(),
                     poly: &cx,
                 })),
         )
@@ -234,9 +247,9 @@ mod tests {
                 &params_verifier,
                 &mut transcript,
                 std::iter::empty()
-                    .chain(Some(VerifierQuery::new_commitment(&a, x, avx)))
-                    .chain(Some(VerifierQuery::new_commitment(&b, x, avx))) // NB: wrong!
-                    .chain(Some(VerifierQuery::new_commitment(&c, y, cvy))),
+                    .chain(Some(VerifierQuery::new_commitment(&a, x, cur, avx)))
+                    .chain(Some(VerifierQuery::new_commitment(&b, x, cur, avx))) // NB: wrong!
+                    .chain(Some(VerifierQuery::new_commitment(&c, y, next, cvy))),
             )
             .unwrap();
 
@@ -254,9 +267,9 @@ mod tests {
                 &params_verifier,
                 &mut transcript,
                 std::iter::empty()
-                    .chain(Some(VerifierQuery::new_commitment(&a, x, avx)))
-                    .chain(Some(VerifierQuery::new_commitment(&b, x, bvx)))
-                    .chain(Some(VerifierQuery::new_commitment(&c, y, cvy))),
+                    .chain(Some(VerifierQuery::new_commitment(&a, x, cur, avx)))
+                    .chain(Some(VerifierQuery::new_commitment(&b, x, cur, bvx)))
+                    .chain(Some(VerifierQuery::new_commitment(&c, y, next, cvy))),
             )
             .unwrap();
 
@@ -273,7 +286,7 @@ mod tests {
         let params_verifier: ParamsVerifier<Bn256> = params.verifier(0).unwrap();
 
         let rotation_sets_init = vec![
-            vec![1u64, 2, 3],
+            vec![1i32, 2, 3],
             vec![2, 3, 4],
             vec![2, 3, 4],
             vec![4, 5, 6, 7],
@@ -288,8 +301,15 @@ mod tests {
             .enumerate()
             .map(|(i, _)| i)
             .collect();
-        let rotation_sets: Vec<Vec<Fr>> =
-            rotation_sets_init.into_iter().map(rotation_set).collect();
+        let rotation_sets: Vec<Vec<(Rotation, Fr)>> = rotation_sets_init
+            .into_iter()
+            .map(|rot_set| {
+                rot_set
+                    .into_iter()
+                    .map(|i| (Rotation(i), Fr::from(i as u64)))
+                    .collect()
+            })
+            .collect();
 
         let mut prover_queries = vec![];
         let mut verifier_queries = vec![];
@@ -313,12 +333,13 @@ mod tests {
             .unzip();
 
         for (i, rotation_set) in rotation_sets.iter().enumerate() {
-            for point in rotation_set.iter() {
+            for (rot, point) in rotation_set.iter() {
                 for j in 0..commitment_per_set[i] {
                     {
                         let query: ProverQuery<G1Affine> = ProverQuery {
                             poly: &polynomials[i][j],
                             point: *point,
+                            rotation: *rot,
                         };
                         prover_queries.push(query);
                     }
@@ -326,8 +347,8 @@ mod tests {
                     {
                         let poly = &polynomials[i][j];
                         let commitment: &G1Affine = &commitments[i][j];
-                        let eval = eval_polynomial(poly, *point);
-                        let query = VerifierQuery::new_commitment(commitment, *point, eval);
+                        let eval = eval_polynomial(&poly, *point);
+                        let query = VerifierQuery::new_commitment(commitment, *point, *rot, eval);
                         verifier_queries.push(query);
                     }
                 }

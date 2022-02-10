@@ -7,7 +7,7 @@ use crate::poly::{
     commitment::{Params, ParamsVerifier},
     msm::{PairMSM, PreMSM, ProjectiveMSM, MSM},
     multiopen::{CommitmentReference, Query, VerifierQuery},
-    {Coeff, Error, Polynomial},
+    Rotation, {Coeff, Error, Polynomial},
 };
 use crate::transcript::{EncodedChallenge, TranscriptRead};
 
@@ -90,6 +90,9 @@ where
 impl<'a, 'b, C: CurveAffine> Query<C::Scalar> for VerifierQuery<'a, C> {
     type Commitment = CommitmentReference<'a, C>;
 
+    fn get_rotation(&self) -> Rotation {
+        self.rotation
+    }
     fn get_point(&self) -> C::Scalar {
         self.point
     }

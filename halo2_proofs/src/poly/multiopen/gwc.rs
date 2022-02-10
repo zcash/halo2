@@ -17,6 +17,7 @@ use std::{
     marker::PhantomData,
 };
 
+use crate::poly::Rotation;
 pub use prover::create_proof;
 pub use verifier::verify_proof;
 
@@ -38,22 +39,22 @@ fn construct_intermediate_sets<F: FieldExt, I, Q: Query<F>>(queries: I) -> Vec<C
 where
     I: IntoIterator<Item = Q> + Clone,
 {
-    let mut point_query_map: BTreeMap<F, Vec<Q>> = BTreeMap::new();
+    let mut point_query_map: BTreeMap<Rotation, Vec<Q>> = BTreeMap::new();
     for query in queries.clone() {
-        if let Some(queries) = point_query_map.get_mut(&query.get_point()) {
+        if let Some(queries) = point_query_map.get_mut(&query.get_rotation()) {
             queries.push(query);
         } else {
-            point_query_map.insert(query.get_point(), vec![query]);
+            point_query_map.insert(query.get_rotation(), vec![query]);
         }
     }
 
     point_query_map
         .keys()
-        .map(|point| {
-            let queries = point_query_map.get(point).unwrap();
+        .map(|rot| {
+            let queries = point_query_map.get(rot).unwrap();
             CommitmentData {
                 queries: queries.clone(),
-                point: *point,
+                point: queries[0].get_point(),
                 _marker: PhantomData,
             }
         })

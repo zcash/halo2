@@ -1,5 +1,6 @@
 use super::{construct_intermediate_sets, ChallengeU, ChallengeV};
 use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine, FieldExt};
+use crate::poly::Rotation;
 use crate::poly::{
     commitment::{Params, ParamsVerifier},
     multiopen::{CommitmentReference, Query, VerifierQuery},
@@ -94,6 +95,9 @@ impl<'a, 'b, C: CurveAffine> Query<C::Scalar> for VerifierQuery<'a, C> {
 
     fn get_point(&self) -> C::Scalar {
         self.point
+    }
+    fn get_rotation(&self) -> Rotation {
+        self.rotation
     }
     fn get_eval(&self) -> C::Scalar {
         self.eval

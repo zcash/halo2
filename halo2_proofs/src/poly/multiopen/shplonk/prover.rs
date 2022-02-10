@@ -6,7 +6,7 @@ use crate::arithmetic::{
     CurveAffine, FieldExt,
 };
 use crate::poly::multiopen::ProverQuery;
-use crate::poly::{commitment::Params, Coeff, Error, Polynomial};
+use crate::poly::{commitment::Params, Coeff, Error, Polynomial, Rotation};
 use crate::transcript::{ChallengeScalar, EncodedChallenge, Transcript, TranscriptWrite};
 
 use ff::Field;
@@ -230,11 +230,14 @@ impl<'a, C: CurveAffine> PartialEq for PolynomialPointer<'a, C> {
 impl<'a, C: CurveAffine> Query<C::Scalar> for ProverQuery<'a, C> {
     type Commitment = PolynomialPointer<'a, C>;
 
+    fn get_rotation(&self) -> Rotation {
+        self.rotation
+    }
     fn get_point(&self) -> C::Scalar {
         self.point
     }
     fn get_eval(&self) -> C::Scalar {
-        eval_polynomial(self.poly, self.point)
+        eval_polynomial(self.poly, self.get_point())
     }
     fn get_commitment(&self) -> Self::Commitment {
         PolynomialPointer { poly: self.poly }

@@ -13,6 +13,7 @@ use std::{
     marker::PhantomData,
 };
 
+use crate::poly::Rotation;
 pub use prover::create_proof;
 pub use verifier::verify_proof;
 
@@ -58,10 +59,15 @@ where
 {
     // 1. collect points to construct vanishing polynomial of all points
     let mut super_point_set = BTreeSet::new();
+    let mut super_rotation_set = BTreeSet::new();
+    let mut rot_to_point_map = BTreeMap::new();
     // point_set = { p_0, p_1, ... }
     for query in queries.clone() {
         super_point_set.insert(query.get_point());
+        super_rotation_set.insert(query.get_rotation());
+        rot_to_point_map.insert(query.get_rotation(), query.get_point());
     }
+    assert_eq!(super_rotation_set.len(), super_point_set.len());
 
     // 2. identify commitments
     // commitment_ids = [(1, c_0), (2, c_1), ... ]
@@ -106,7 +112,7 @@ where
         id
     };
 
-    // 3.a. map points to commitments
+    // 3.a. map commitments to points
     // commitment_id_point_map = { c_1: { p_0, p_1, ... }, c_2: { p_1, p_2, ... }, ... }
     let mut commitment_id_point_map = BTreeMap::new();
     // 3.b. map points to commitments
@@ -120,14 +126,14 @@ where
             // create new set for points
             .or_insert_with(BTreeSet::new)
             // insert the point, there won't be duplicates
-            .insert(query.get_point());
+            .insert(query.get_rotation());
 
         commitment_id_point_eval_map_map
             .entry(id)
             // create new map for point to eval map
             .or_insert_with(BTreeMap::new)
             // insert point eval key values
-            .insert(query.get_point(), query.get_eval());
+            .insert(query.get_rotation(), query.get_eval());
     }
 
     // 4. find diff points
@@ -138,7 +144,7 @@ where
         let commitment_point_set = commitment_id_point_map.get(&id).unwrap();
 
         // diff_set = super_point_set \ commitment_point_set
-        let diff_set: BTreeSet<F> = super_point_set
+        let diff_set: BTreeSet<Rotation> = super_rotation_set
             .difference(commitment_point_set)
             .cloned()
             .collect();
@@ -187,9 +193,14 @@ where
             .get(&some_id)
             .unwrap()
             .iter()
+            .map(|rot| rot_to_point_map.get(rot).unwrap())
             .cloned()
             .collect();
-        let points: Vec<F> = points.iter().cloned().collect();
+        let points: Vec<F> = points
+            .iter()
+            .map(|rot| rot_to_point_map.get(rot).unwrap())
+            .cloned()
+            .collect();
 
         let rotation_set = RotationSet {
             commitments,
@@ -216,7 +227,7 @@ mod tests {
         commitment::{Params, ParamsVerifier},
         multiopen::{create_proof, verify_proof},
         multiopen::{ProverQuery, Query, VerifierQuery},
-        Coeff, Polynomial,
+        Coeff, Polynomial, Rotation,
     };
     use crate::transcript::{
         Blake2bRead, Blake2bWrite, Challenge255, ChallengeScalar, Transcript, TranscriptRead,
@@ -233,12 +244,16 @@ mod tests {
     pub(super) struct MyQuery<F> {
         commitment: usize,
         point: F,
+        rotation: Rotation,
         eval: F,
     }
 
     impl<F: FieldExt> Query<F> for MyQuery<F> {
         type Commitment = usize;
 
+        fn get_rotation(&self) -> Rotation {
+            self.rotation
+        }
         fn get_point(&self) -> F {
             self.point
         }
@@ -250,14 +265,18 @@ mod tests {
         }
     }
 
-    fn rotation_set(points: Vec<u64>) -> Vec<Fr> {
-        points.into_iter().map(Fr::from).collect()
+    fn rotation_set(points: Vec<u64>) -> Vec<(Rotation, Fr)> {
+        points
+            .into_iter()
+            .map(|i| (Rotation(i as i32), Fr::from(i)))
+            .collect()
     }
 
-    fn make_query(commitment: usize, point: Fr) -> MyQuery<Fr> {
+    fn make_query(commitment: usize, rotation: Rotation, point: Fr) -> MyQuery<Fr> {
         MyQuery {
             commitment,
             point,
+            rotation,
             eval: point + Fr::from(commitment as u64),
         }
     }
@@ -274,12 +293,17 @@ mod tests {
 
         let rotation_sets_init = vec![vec![1u64, 2, 3], vec![2, 3, 4], vec![4, 5, 6, 7], vec![8]];
         let number_of_sets = rotation_sets_init.len();
-        let rotation_sets: Vec<Vec<Fr>> = rotation_sets_init
+        let rotation_sets: Vec<Vec<(Rotation, Fr)>> = rotation_sets_init
             .clone()
             .into_iter()
             .map(rotation_set)
             .collect();
-        let mut super_point_set: Vec<Fr> = rotation_sets.clone().into_iter().flatten().collect();
+        let mut super_point_set: Vec<Fr> = rotation_sets
+            .clone()
+            .into_iter()
+            .flatten()
+            .map(|(_, point)| point)
+            .collect();
         super_point_set.sort();
         super_point_set.dedup();
 
@@ -290,8 +314,8 @@ mod tests {
 
         for i in 0..number_of_commitments {
             let rotation_set = &rotation_sets[i % rotation_sets.len()];
-            for point in rotation_set.iter() {
-                let query = make_query(i, *point);
+            for (rot, point) in rotation_set.iter() {
+                let query = make_query(i, *rot, *point);
                 queries.push(query);
             }
         }
