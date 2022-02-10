@@ -369,7 +369,7 @@ $$
 15. $\verifier$ responds with challenge $x_3$.
 16. $\prover$ sends $\mathbf{u} \in \field^{n_q}$ such that $\mathbf{u}_i = q_i(x_3)$ for all $i \in [0, n_q)$.
 17. $\verifier$ responds with challenge $x_4$.
-18. $\verifier$ set $P = Q' + x_4 \sum\limits_{i=0}^{n_q - 1} [x_4^i] Q_i$ and $v = $
+18. $\verifier$ sets $P = Q' + x_4 \sum\limits_{i=0}^{n_q - 1} [x_4^i] Q_i$ and $v = $
 $$
 \sum\limits_{i=0}^{n_q - 1}
 \left(

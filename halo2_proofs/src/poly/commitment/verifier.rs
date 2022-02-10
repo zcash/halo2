@@ -24,8 +24,8 @@ pub struct Accumulator<C: CurveAffine, E: EncodedChallenge<C>> {
     /// The claimed output of the linear-time polycommit opening protocol
     pub g: C,
 
-    /// A vector of 128-bit challenges u_0, ..., u_{k - 1} sampled by the
-    /// verifier, to be used in computing G'_0.
+    /// A vector of challenges u_0, ..., u_{k - 1} sampled by the verifier, to
+    /// be used in computing G'_0.
     pub u_packed: Vec<E>,
 }
 
