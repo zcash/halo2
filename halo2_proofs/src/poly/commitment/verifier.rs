@@ -75,7 +75,7 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
 ) -> Result<Guard<'a, C, E>, Error> {
     let k = params.k as usize;
 
-    // P' = P - [v] G_0 + [\xi] S
+    // P' = P - [v] G_0 + [ξ] S
     msm.add_constant_term(-v); // add [-v] G_0
     let s_poly_commitment = transcript.read_point().map_err(|_| Error::OpeningError)?;
     let xi = *transcript.squeeze_challenge_scalar::<()>();
@@ -92,10 +92,7 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
         let u_j_packed = transcript.squeeze_challenge();
         let u_j = *u_j_packed.as_challenge_scalar::<()>();
 
-        rounds.push((
-            l, r, u_j, u_j, // to be inverted
-            u_j_packed,
-        ));
+        rounds.push((l, r, u_j, /* to be inverted */ u_j, u_j_packed));
     }
 
     rounds
@@ -103,7 +100,7 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
         .map(|&mut (_, _, _, ref mut u_j, _)| u_j)
         .batch_invert();
 
-    // This is the left hand side of the verifier equation.
+    // This is the left-hand side of the verifier equation.
     // P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
     let mut u = Vec::with_capacity(k);
     let mut u_packed: Vec<E> = Vec::with_capacity(k);
@@ -118,14 +115,15 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
     // Our goal is to check that the left hand side of the verifier
     // equation
     //     P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
-    // equals (given the prover's values c, f) the right hand side
+    // equals (given b = \mathbf{b}_0, and the prover's values c, f),
+    // the right-hand side
     //   = [c] (G'_0 + [b * z] U) + [f] W
     // except that we wish for the prover to supply G'_0 as Commit(g(X); 1) so
     // we must substitute G'_0 with G'_0 - W to get
     //   = [c] ((G'_0 - W) + [b * z] U) + [f] W
     //   = [c] G'_0 + [-c] W + [cbz] U + [f] W
     //   = [c] G'_0 + [cbz] U + [f - c] W
-    // and then subtracting the right hand side from both sides
+    // and then subtracting the right-hand side from both sides
     // to get
     //   P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
     //   + [-c] G'_0 + [-cbz] U + [c - f] W

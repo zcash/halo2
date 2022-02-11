@@ -35,21 +35,21 @@ pub fn create_proof<
     transcript: &mut T,
     p_poly: &Polynomial<C::Scalar, Coeff>,
     p_blind: Blind<C::Scalar>,
-    x: C::Scalar,
+    x_3: C::Scalar,
 ) -> io::Result<()> {
     // We're limited to polynomials of degree n - 1.
     assert_eq!(p_poly.len(), params.n as usize);
 
-    // Sample a random polynomial (of same degree) that has a root at x, first
+    // Sample a random polynomial (of same degree) that has a root at x_3, first
     // by setting all coefficients to random values.
     let mut s_poly = (*p_poly).clone();
     for coeff in s_poly.iter_mut() {
         *coeff = C::Scalar::random(&mut rng);
     }
-    // Evaluate the random polynomial at x
-    let s_at_x = eval_polynomial(&s_poly[..], x);
-    // Subtract constant coefficient to get a random polynomial with a root at x
-    s_poly[0] = s_poly[0] - &s_at_x;
+    // Evaluate the random polynomial at x_3
+    let s_at_x3 = eval_polynomial(&s_poly[..], x_3);
+    // Subtract constant coefficient to get a random polynomial with a root at x_3
+    s_poly[0] = s_poly[0] - &s_at_x3;
     // And sample a random blind
     let s_poly_blind = Blind(C::Scalar::random(&mut rng));
 
@@ -58,7 +58,7 @@ pub fn create_proof<
     transcript.write_point(s_poly_commitment)?;
 
     // Challenge that will ensure that the prover cannot change P but can only
-    // witness a random polynomial commitment that agrees with P at x, with high
+    // witness a random polynomial commitment that agrees with P at x_3, with high
     // probability.
     let xi = *transcript.squeeze_challenge_scalar::<()>();
 
@@ -66,10 +66,10 @@ pub fn create_proof<
     // in their commitments.
     let z = *transcript.squeeze_challenge_scalar::<()>();
 
-    // We'll be opening `P' = P - [v] G_0 + [\xi] S` to ensure it has a root at
+    // We'll be opening `P' = P - [v] G_0 + [ξ] S` to ensure it has a root at
     // zero.
     let mut p_prime_poly = s_poly * xi + p_poly;
-    let v = eval_polynomial(&p_prime_poly, x);
+    let v = eval_polynomial(&p_prime_poly, x_3);
     p_prime_poly[0] = p_prime_poly[0] - &v;
     let p_prime_blind = s_poly_blind * Blind(xi) + p_blind;
 
@@ -81,14 +81,14 @@ pub fn create_proof<
     let mut p_prime = p_prime_poly.values;
     assert_eq!(p_prime.len(), params.n as usize);
 
-    // Initialize the vector `b` as the powers of `x`. The inner product of
-    // `p_prime` and `b` is the evaluation of the polynomial at `x`.
+    // Initialize the vector `b` as the powers of `x_3`. The inner product of
+    // `p_prime` and `b` is the evaluation of the polynomial at `x_3`.
     let mut b = Vec::with_capacity(1 << params.k);
     {
         let mut cur = C::Scalar::one();
         for _ in 0..(1 << params.k) {
             b.push(cur);
-            cur *= &x;
+            cur *= &x_3;
         }
     }
 
