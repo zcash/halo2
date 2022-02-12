@@ -196,7 +196,7 @@ impl<C: CurveAffine> Params<C> {
         })
     }
 
-    /// Returns verifier params with size of lagrage bases equal to number of public inputs
+    /// Returns verifier params with size of Lagrange bases equal to number of public inputs
     pub fn verifier<E: Engine<G1Affine = C>>(
         &self,
         public_inputs_size: usize,

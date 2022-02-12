@@ -15,7 +15,7 @@ use rand::RngCore;
 use std::io;
 use std::marker::PhantomData;
 
-fn div_by_vanising<F: FieldExt>(poly: Polynomial<F, Coeff>, roots: &[F]) -> Vec<F> {
+fn div_by_vanishing<F: FieldExt>(poly: Polynomial<F, Coeff>, roots: &[F]) -> Vec<F> {
     let poly = roots
         .iter()
         .fold(poly.values, |poly, point| kate_division(&poly, *point));
@@ -114,7 +114,7 @@ where
             // quotient contribution of this evaluation set is
             // Q_i(X) = N_i(X) / Z_i(X) where
             // Z_i(X) = (x - r_i_0) * (x - r_i_1) * ...
-            let mut poly = div_by_vanising(n_x, points);
+            let mut poly = div_by_vanishing(n_x, points);
             poly.resize(params.n as usize, C::Scalar::zero());
 
             Polynomial {
@@ -161,7 +161,7 @@ where
 
     let linearisation_contribution =
         |rotation_set: RotationSetExtension<C>| -> Polynomial<C::Scalar, Coeff> {
-            // calculate difference vanising polynomial evaluation
+            // calculate difference vanishing polynomial evaluation
             let z_diff = vanishing_polynomial(&rotation_set.diffs[..]);
             let z_i = eval_polynomial(&z_diff[..], *u);
 
@@ -206,7 +206,7 @@ where
     }
 
     let h_x = Polynomial {
-        values: div_by_vanising(l_x, &[*u]),
+        values: div_by_vanishing(l_x, &[*u]),
         _marker: PhantomData,
     };
 

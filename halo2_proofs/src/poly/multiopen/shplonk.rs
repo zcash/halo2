@@ -56,7 +56,7 @@ fn construct_intermediate_sets<F: FieldExt, I, Q: Query<F>>(queries: I) -> Inter
 where
     I: IntoIterator<Item = Q> + Clone,
 {
-    // 1. collect points to construct vanising polynomial of all points
+    // 1. collect points to construct vanishing polynomial of all points
     let mut super_point_set = BTreeSet::new();
     // point_set = { p_0, p_1, ... }
     for query in queries.clone() {
@@ -73,6 +73,7 @@ where
         for (_, commitment) in commitment_ids.iter() {
             if *commitment == query.get_commitment() {
                 found = true;
+                break;
             }
         }
         if !found {
