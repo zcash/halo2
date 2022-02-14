@@ -1,6 +1,6 @@
 [package]
 name = "halo2_proofs"
-version = "0.1.0-beta.1"
+version = "0.1.0-beta.2"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
     "Ying Tong Lai <yingtong@electriccoin.co>",
@@ -9,12 +9,14 @@ authors = [
 ]
 edition = "2018"
 description = """
-[BETA] Fast proof-carrying data implementation with no trusted setup
+[BETA] Fast PLONK-based zero-knowledge proving system with no trusted setup
 """
 license-file = "../COPYING"
 repository = "https://github.com/zcash/halo2"
 documentation = "https://docs.rs/halo2_proofs"
 readme = "README.md"
+categories = ["cryptography"]
+keywords = ["halo", "proofs", "zkp", "zkSNARKs"]
 
 [package.metadata.docs.rs]
 all-features = true
