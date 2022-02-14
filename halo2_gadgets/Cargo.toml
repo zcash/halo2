@@ -1,6 +1,6 @@
 [package]
 name = "halo2_gadgets"
-version = "0.0.0"
+version = "0.1.0-beta.1"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
     "Jack Grigg <jack@electriccoin.co>",
@@ -14,7 +14,7 @@ license-file = "../COPYING"
 repository = "https://github.com/zcash/halo2"
 readme = "README.md"
 categories = ["cryptography"]
-keywords = ["zcash"]
+keywords = ["halo", "proofs", "zcash", "zkp", "zkSNARKs"]
 
 [package.metadata.docs.rs]
 all-features = true
