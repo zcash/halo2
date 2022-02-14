@@ -35,13 +35,12 @@ impl<'a, C: CurveAffine, E: EncodedChallenge<C>> Guard<'a, C, E> {
     pub fn use_challenges(mut self) -> MSM<'a, C> {
         let s = compute_s(&self.u, self.neg_c);
         self.msm.add_to_g_scalars(&s);
-        self.msm.add_to_w_scalar(self.neg_c);
 
         self.msm
     }
 
     /// Lets caller supply the purported G point and simply appends
-    /// [-a] G to return an updated MSM.
+    /// [-c] G to return an updated MSM.
     pub fn use_g(mut self, g: C) -> (MSM<'a, C>, Accumulator<C, E>) {
         self.msm.append_term(self.neg_c, g);
 
@@ -57,9 +56,7 @@ impl<'a, C: CurveAffine, E: EncodedChallenge<C>> Guard<'a, C, E> {
     pub fn compute_g(&self) -> C {
         let s = compute_s(&self.u, C::Scalar::one());
 
-        let mut tmp = best_multiexp(&s, &self.msm.params.g);
-        tmp += self.msm.params.w;
-        tmp.to_affine()
+        best_multiexp(&s, &self.msm.params.g).to_affine()
     }
 }
 
@@ -118,15 +115,10 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
     // equals (given b = \mathbf{b}_0, and the prover's values c, f),
     // the right-hand side
     //   = [c] (G'_0 + [b * z] U) + [f] W
-    // except that we wish for the prover to supply G'_0 as Commit(g(X); 1) so
-    // we must substitute G'_0 with G'_0 - W to get
-    //   = [c] ((G'_0 - W) + [b * z] U) + [f] W
-    //   = [c] G'_0 + [-c] W + [cbz] U + [f] W
-    //   = [c] G'_0 + [cbz] U + [f - c] W
     // and then subtracting the right-hand side from both sides
     // to get
     //   P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
-    //   + [-c] G'_0 + [-cbz] U + [c - f] W
+    //   + [-c] G'_0 + [-cbz] U + [-f] W
     //   = 0
 
     let c = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
@@ -135,7 +127,7 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
     let b = compute_b(x, &u);
 
     msm.add_to_u_scalar(neg_c * &b * &z);
-    msm.add_to_w_scalar(c - &f);
+    msm.add_to_w_scalar(-f);
 
     let guard = Guard {
         msm,
