@@ -161,9 +161,6 @@
 <span id="143">143</span>
 <span id="144">144</span>
 <span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{
     <span class="ident">commitment</span>::{<span class="self">self</span>, <span class="ident">Blind</span>, <span class="ident">Params</span>},
     <span class="ident">Coeff</span>, <span class="ident">Polynomial</span>,
@@ -230,10 +227,10 @@
         }
     }
 
-    <span class="kw">let</span> <span class="ident">f_poly</span> <span class="op">=</span> <span class="ident">point_sets</span>
+    <span class="kw">let</span> <span class="ident">q_prime_poly</span> <span class="op">=</span> <span class="ident">point_sets</span>
         .<span class="ident">iter</span>()
         .<span class="ident">zip</span>(<span class="ident">q_polys</span>.<span class="ident">iter</span>())
-        .<span class="ident">fold</span>(<span class="prelude-val">None</span>, <span class="op">|</span><span class="ident">f_poly</span>, (<span class="ident">points</span>, <span class="ident">poly</span>)<span class="op">|</span> {
+        .<span class="ident">fold</span>(<span class="prelude-val">None</span>, <span class="op">|</span><span class="ident">q_prime_poly</span>, (<span class="ident">points</span>, <span class="ident">poly</span>)<span class="op">|</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">points</span>
                 .<span class="ident">iter</span>()
                 .<span class="ident">fold</span>(<span class="ident">poly</span>.<span class="ident">clone</span>().<span class="ident">unwrap</span>().<span class="ident">values</span>, <span class="op">|</span><span class="ident">poly</span>, <span class="ident">point</span><span class="op">|</span> {
@@ -245,43 +242,40 @@
                 <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
             };
 
-            <span class="kw">if</span> <span class="ident">f_poly</span>.<span class="ident">is_none</span>() {
+            <span class="kw">if</span> <span class="ident">q_prime_poly</span>.<span class="ident">is_none</span>() {
                 <span class="prelude-val">Some</span>(<span class="ident">poly</span>)
             } <span class="kw">else</span> {
-                <span class="ident">f_poly</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">f_poly</span><span class="op">|</span> <span class="ident">f_poly</span> <span class="op">*</span> <span class="kw-2">*</span><span class="ident">x_2</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">poly</span>)
+                <span class="ident">q_prime_poly</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">q_prime_poly</span><span class="op">|</span> <span class="ident">q_prime_poly</span> <span class="op">*</span> <span class="kw-2">*</span><span class="ident">x_2</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">poly</span>)
             }
         })
         .<span class="ident">unwrap</span>();
 
-    <span class="kw">let</span> <span class="ident">f_blind</span> <span class="op">=</span> <span class="ident">Blind</span>(<span class="ident">C::Scalar::random</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>));
-    <span class="kw">let</span> <span class="ident">f_commitment</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">commit</span>(<span class="kw-2">&amp;</span><span class="ident">f_poly</span>, <span class="ident">f_blind</span>).<span class="ident">to_affine</span>();
+    <span class="kw">let</span> <span class="ident">q_prime_blind</span> <span class="op">=</span> <span class="ident">Blind</span>(<span class="ident">C::Scalar::random</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>));
+    <span class="kw">let</span> <span class="ident">q_prime_commitment</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">commit</span>(<span class="kw-2">&amp;</span><span class="ident">q_prime_poly</span>, <span class="ident">q_prime_blind</span>).<span class="ident">to_affine</span>();
 
-    <span class="ident">transcript</span>.<span class="ident">write_point</span>(<span class="ident">f_commitment</span>)<span class="question-mark">?</span>;
+    <span class="ident">transcript</span>.<span class="ident">write_point</span>(<span class="ident">q_prime_commitment</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="ident">x_3</span>: <span class="ident">ChallengeX3</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge_scalar</span>();
 
-    <span class="kw">let</span> <span class="ident">q_evals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">q_polys</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">poly</span><span class="op">|</span> <span class="ident">eval_polynomial</span>(<span class="ident">poly</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>(), <span class="kw-2">*</span><span class="ident">x_3</span>))
-        .<span class="ident">collect</span>();
-
-    <span class="kw">for</span> <span class="ident">eval</span> <span class="kw">in</span> <span class="ident">q_evals</span>.<span class="ident">iter</span>() {
-        <span class="ident">transcript</span>.<span class="ident">write_scalar</span>(<span class="kw-2">*</span><span class="ident">eval</span>)<span class="question-mark">?</span>;
+    <span class="comment">// Prover sends u_i for all i, which correspond to the evaluation</span>
+    <span class="comment">// of each Q polynomial commitment at x_3.</span>
+    <span class="kw">for</span> <span class="ident">q_i_poly</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">q_polys</span> {
+        <span class="ident">transcript</span>.<span class="ident">write_scalar</span>(<span class="ident">eval_polynomial</span>(<span class="ident">q_i_poly</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>(), <span class="kw-2">*</span><span class="ident">x_3</span>))<span class="question-mark">?</span>;
     }
 
     <span class="kw">let</span> <span class="ident">x_4</span>: <span class="ident">ChallengeX4</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge_scalar</span>();
 
-    <span class="kw">let</span> (<span class="ident">f_poly</span>, <span class="ident">f_blind_try</span>) <span class="op">=</span> <span class="ident">q_polys</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">q_blinds</span>.<span class="ident">iter</span>()).<span class="ident">fold</span>(
-        (<span class="ident">f_poly</span>, <span class="ident">f_blind</span>),
-        <span class="op">|</span>(<span class="ident">f_poly</span>, <span class="ident">f_blind</span>), (<span class="ident">poly</span>, <span class="ident">blind</span>)<span class="op">|</span> {
+    <span class="kw">let</span> (<span class="ident">p_poly</span>, <span class="ident">p_poly_blind</span>) <span class="op">=</span> <span class="ident">q_polys</span>.<span class="ident">into_iter</span>().<span class="ident">zip</span>(<span class="ident">q_blinds</span>.<span class="ident">into_iter</span>()).<span class="ident">fold</span>(
+        (<span class="ident">q_prime_poly</span>, <span class="ident">q_prime_blind</span>),
+        <span class="op">|</span>(<span class="ident">q_prime_poly</span>, <span class="ident">q_prime_blind</span>), (<span class="ident">poly</span>, <span class="ident">blind</span>)<span class="op">|</span> {
             (
-                <span class="ident">f_poly</span> <span class="op">*</span> <span class="kw-2">*</span><span class="ident">x_4</span> <span class="op">+</span> <span class="ident">poly</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">Blind</span>((<span class="ident">f_blind</span>.<span class="number">0</span> <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="kw-2">*</span><span class="ident">x_4</span>)) <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">blind</span>.<span class="number">0</span>),
+                <span class="ident">q_prime_poly</span> <span class="op">*</span> <span class="kw-2">*</span><span class="ident">x_4</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">poly</span>.<span class="ident">unwrap</span>(),
+                <span class="ident">Blind</span>((<span class="ident">q_prime_blind</span>.<span class="number">0</span> <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="kw-2">*</span><span class="ident">x_4</span>)) <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">blind</span>.<span class="number">0</span>),
             )
         },
     );
 
-    <span class="ident">commitment::create_proof</span>(<span class="ident">params</span>, <span class="ident">rng</span>, <span class="ident">transcript</span>, <span class="kw-2">&amp;</span><span class="ident">f_poly</span>, <span class="ident">f_blind_try</span>, <span class="kw-2">*</span><span class="ident">x_3</span>)
+    <span class="ident">commitment::create_proof</span>(<span class="ident">params</span>, <span class="ident">rng</span>, <span class="ident">transcript</span>, <span class="kw-2">&amp;</span><span class="ident">p_poly</span>, <span class="ident">p_poly_blind</span>, <span class="kw-2">*</span><span class="ident">x_3</span>)
 }
 
 <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
