@@ -18,6 +18,10 @@ and this project adheres to Rust's notion of
 - `halo2_proofs::dev::FailureLocation` (used in `VerifyFailure::Lookup`)
 
 ### Changed
+- `halo2_proofs::commitment::verifier::Guard`, which is returned from
+  `halo2_proofs::plonk::verify_proof`, has changed so that values
+  returned from its method `compute_g` and expected in its method `use_g`
+  are not backwards compatible with values in previous versions.
 - `halo2_proofs::plonk::verify_proof` now takes a `VerificationStrategy` instead
   of an `MSM` directly.
 - `halo2_proofs` now depends on `rand_core` instead of `rand`.
