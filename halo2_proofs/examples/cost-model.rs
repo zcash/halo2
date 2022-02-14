@@ -100,6 +100,7 @@ impl FromStr for Poly {
 
 #[derive(Debug)]
 struct Lookup {
+    #[allow(dead_code)]
     columns: usize,
     input_deg: usize,
     table_deg: usize,

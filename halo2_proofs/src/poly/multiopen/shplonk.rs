@@ -133,7 +133,7 @@ where
     // 4. find diff points
     // commitment_id_diff_points_map = { c_1:  { p_2, p_3, ... }, c_2: { p_0 }, ... }
     let mut commitment_id_diff_points_map = BTreeMap::new();
-    for query in queries.clone() {
+    for query in queries {
         let id = get_commitment_id(&query);
         let commitment_point_set = commitment_id_point_map.get(&id).unwrap();
 
@@ -320,8 +320,7 @@ mod tests {
 
             let points = vec_to_set(points);
             let diffs = vec_to_set(diffs);
-            let intersection: Vec<Fr> = points.intersection(&diffs).cloned().collect();
-            assert_eq!(intersection.len(), 0);
+            assert_eq!(points.intersection(&diffs).cloned().count(), 0);
             let union: Vec<Fr> = points.union(&diffs).cloned().collect();
             assert_eq!(union, super_point_set);
         }

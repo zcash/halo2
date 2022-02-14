@@ -326,7 +326,7 @@ mod tests {
                     {
                         let poly = &polynomials[i][j];
                         let commitment: &G1Affine = &commitments[i][j];
-                        let eval = eval_polynomial(&poly, *point);
+                        let eval = eval_polynomial(poly, *point);
                         let query = VerifierQuery::new_commitment(commitment, *point, eval);
                         verifier_queries.push(query);
                     }

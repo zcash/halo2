@@ -43,7 +43,6 @@ trait StandardCs<FF: FieldExt> {
 #[derive(Clone)]
 struct MyCircuit<F: FieldExt> {
     a: Option<F>,
-    zero: Option<F>,
     k: u32,
 }
 
@@ -168,11 +167,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
-        Self {
-            a: None,
-            zero: None,
-            k: self.k,
-        }
+        Self { a: None, k: self.k }
     }
 
     fn configure(meta: &mut ConstraintSystem<F>) -> PlonkConfig {
@@ -247,11 +242,7 @@ fn main() {
     let k = 8;
     let public_inputs_size = 0;
 
-    let empty_circuit: MyCircuit<Fp> = MyCircuit {
-        a: None,
-        zero: None,
-        k,
-    };
+    let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None, k };
 
     // Initialize the polynomial commitment parameters
     let params: Params<G1Affine> = Params::<G1Affine>::unsafe_setup::<Bn256>(k);
@@ -263,7 +254,6 @@ fn main() {
 
     let circuit: MyCircuit<Fp> = MyCircuit {
         a: Some(Fp::from(5)),
-        zero: Some(Fp::zero()),
         k,
     };
 
