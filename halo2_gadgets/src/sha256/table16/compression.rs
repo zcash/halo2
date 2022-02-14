@@ -5,7 +5,7 @@ use super::{
 };
 use halo2_proofs::{
     circuit::Layouter,
-    pasta::pallas,
+    pairing::bn256::Fr,
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
@@ -457,7 +457,7 @@ impl Table16Assignment for CompressionConfig {}
 
 impl CompressionConfig {
     pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystem<Fr>,
         lookup: SpreadInputs,
         message_schedule: Column<Advice>,
         extras: [Column<Advice>; 6],
@@ -863,7 +863,7 @@ impl CompressionConfig {
     /// Returns an initialized state.
     pub(super) fn initialize_with_iv(
         &self,
-        layouter: &mut impl Layouter<pallas::Base>,
+        layouter: &mut impl Layouter<Fr>,
         init_state: [u32; STATE],
     ) -> Result<State, Error> {
         let mut new_state = State::empty_state();
@@ -881,7 +881,7 @@ impl CompressionConfig {
     /// output from a previous compression round.
     pub(super) fn initialize_with_state(
         &self,
-        layouter: &mut impl Layouter<pallas::Base>,
+        layouter: &mut impl Layouter<Fr>,
         init_state: State,
     ) -> Result<State, Error> {
         let mut new_state = State::empty_state();
@@ -898,7 +898,7 @@ impl CompressionConfig {
     /// Given an initialized state and a message schedule, perform 64 compression rounds.
     pub(super) fn compress(
         &self,
-        layouter: &mut impl Layouter<pallas::Base>,
+        layouter: &mut impl Layouter<Fr>,
         initialized_state: State,
         w_halves: [(AssignedBits<16>, AssignedBits<16>); ROUNDS],
     ) -> Result<State, Error> {
@@ -919,7 +919,7 @@ impl CompressionConfig {
     /// After the final round, convert the state into the final digest.
     pub(super) fn digest(
         &self,
-        layouter: &mut impl Layouter<pallas::Base>,
+        layouter: &mut impl Layouter<Fr>,
         state: State,
     ) -> Result<[BlockWord; DIGEST_SIZE], Error> {
         let mut digest = [BlockWord(Some(0)); DIGEST_SIZE];
@@ -943,7 +943,7 @@ mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
-        pasta::pallas,
+        pairing::bn256::Fr,
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
@@ -951,7 +951,7 @@ mod tests {
     fn compress() {
         struct MyCircuit {}
 
-        impl Circuit<pallas::Base> for MyCircuit {
+        impl Circuit<Fr> for MyCircuit {
             type Config = Table16Config;
             type FloorPlanner = SimpleFloorPlanner;
 
@@ -959,14 +959,14 @@ mod tests {
                 MyCircuit {}
             }
 
-            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystem<Fr>) -> Self::Config {
                 Table16Chip::configure(meta)
             }
 
             fn synthesize(
                 &self,
                 config: Self::Config,
-                mut layouter: impl Layouter<pallas::Base>,
+                mut layouter: impl Layouter<Fr>,
             ) -> Result<(), Error> {
                 Table16Chip::load(config.clone(), &mut layouter)?;
 
@@ -996,7 +996,7 @@ mod tests {
 
         let circuit: MyCircuit = MyCircuit {};
 
-        let prover = match MockProver::<pallas::Base>::run(17, &circuit, vec![]) {
+        let prover = match MockProver::<Fr>::run(17, &circuit, vec![]) {
             Ok(prover) => prover,
             Err(e) => panic!("{:?}", e),
         };

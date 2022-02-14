@@ -9,11 +9,5 @@
 #![deny(missing_docs)]
 #![deny(unsafe_code)]
 
-pub mod ecc;
-pub mod poseidon;
-#[cfg(feature = "unstable")]
+#[cfg(featFure = "unstable")]
 pub mod sha256;
-pub mod sinsemilla;
-pub mod utilities;
-
-pub mod primitives;
