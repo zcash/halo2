@@ -77,23 +77,25 @@ where
     }
 
     // Obtain the commitment to the multi-point quotient polynomial f(X).
-    let f_commitment = transcript.read_point().map_err(|_| Error::SamplingError)?;
+    let q_prime_commitment = transcript.read_point().map_err(|_| Error::SamplingError)?;
 
     // Sample a challenge x_3 for checking that f(X) was committed to
     // correctly.
     let x_3: ChallengeX3<_> = transcript.squeeze_challenge_scalar();
 
-    let mut q_evals = Vec::with_capacity(q_eval_sets.len());
+    // u is a vector containing the evaluations of the Q polynomial
+    // commitments at x_3
+    let mut u = Vec::with_capacity(q_eval_sets.len());
     for _ in 0..q_eval_sets.len() {
-        q_evals.push(transcript.read_scalar().map_err(|_| Error::SamplingError)?);
+        u.push(transcript.read_scalar().map_err(|_| Error::SamplingError)?);
     }
 
-    // We can compute the expected msm_eval at x_3 using the q_evals provided
+    // We can compute the expected msm_eval at x_3 using the u provided
     // by the prover and from x_2
     let msm_eval = point_sets
         .iter()
         .zip(q_eval_sets.iter())
-        .zip(q_evals.iter())
+        .zip(u.iter())
         .fold(
             C::Scalar::zero(),
             |msm_eval, ((points, evals), proof_eval)| {
@@ -111,8 +113,8 @@ where
     let x_4: ChallengeX4<_> = transcript.squeeze_challenge_scalar();
 
     // Compute the final commitment that has to be opened
-    msm.append_term(C::Scalar::one(), f_commitment);
-    let (msm, msm_eval) = q_commitments.into_iter().zip(q_evals.iter()).fold(
+    msm.append_term(C::Scalar::one(), q_prime_commitment);
+    let (msm, v) = q_commitments.into_iter().zip(u.iter()).fold(
         (msm, msm_eval),
         |(mut msm, msm_eval), (q_commitment, q_eval)| {
             msm.scale(*x_4);
@@ -122,7 +124,7 @@ where
     );
 
     // Verify the opening proof
-    super::commitment::verify_proof(params, msm, transcript, *x_3, msm_eval)
+    super::commitment::verify_proof(params, msm, transcript, *x_3, v)
 }
 
 impl<'a, 'b, C: CurveAffine> Query<C::Scalar> for VerifierQuery<'a, 'b, C> {
