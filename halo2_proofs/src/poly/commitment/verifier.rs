@@ -52,7 +52,7 @@ impl<'a, C: CurveAffine, E: EncodedChallenge<C>> Guard<'a, C, E> {
         (self.msm, accumulator)
     }
 
-    /// Computes G + W, where G = ⟨s, params.g⟩ and W is used for blinding
+    /// Computes G = ⟨s, params.g⟩
     pub fn compute_g(&self) -> C {
         let s = compute_s(&self.u, C::Scalar::one());
 
@@ -115,8 +115,7 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
     // equals (given b = \mathbf{b}_0, and the prover's values c, f),
     // the right-hand side
     //   = [c] (G'_0 + [b * z] U) + [f] W
-    // and then subtracting the right-hand side from both sides
-    // to get
+    // Subtracting the right-hand side from both sides we get
     //   P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
     //   + [-c] G'_0 + [-cbz] U + [-f] W
     //   = 0
