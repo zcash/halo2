@@ -431,6 +431,21 @@ fn plonk_api() {
     };
     assert_eq!(prover.verify(), Ok(()));
 
+    {
+        // Check that a hardcoded proof is satisfied
+        let proof = include_bytes!("plonk_api_proof.bin");
+        let strategy = SingleVerifier::new(&params);
+        let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+        assert!(verify_proof(
+            &params,
+            pk.get_vk(),
+            strategy,
+            &[&[&pubinputs[..]], &[&pubinputs[..]]],
+            &mut transcript,
+        )
+        .is_ok());
+    }
+
     for _ in 0..10 {
         let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
         // Create a proof
