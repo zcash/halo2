@@ -106,9 +106,7 @@ jobs:
           command: tarpaulin
           args: --all-features --timeout 600 --out Xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{secrets.CODECOV_TOKEN}}
+        uses: codecov/codecov-action@v2.1.0
 
   doc-links:
     name: Intra-doc links
