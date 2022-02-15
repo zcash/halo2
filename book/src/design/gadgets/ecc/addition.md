@@ -9,43 +9,37 @@ derived from section 4.1 of [Hüseyin Hışıl's thesis](https://core.ac.uk/down
 The formulae from Hışıl's thesis are:
 
 - $x_3 = \left(\frac{y_1 - y_2}{x_1 - x_2}\right)^2 - x_1 - x_2$
-- $y_3 = \frac{y_1 - y_2}{x_1 - x_2} \cdot (x_1 - x_3) - y_1$
+- $y_3 = \frac{y_1 - y_2}{x_1 - x_2} \cdot (x_1 - x_3) - y_1.$
 
-Rename:
-- $(x_1, y_1)$ to $(x_q, y_q)$
-- $(x_2, y_2)$ to $(x_p, y_p)$
-- $(x_3, y_3)$ to $(x_r, y_r)$.
+Rename $(x_1, y_1)$ to $(x_q, y_q)$, $(x_2, y_2)$ to $(x_p, y_p)$, and $(x_3, y_3)$ to $(x_r, y_r)$, giving
 
-Let $\lambda = \frac{y_q - y_p}{x_q - x_p} = \frac{y_p - y_q}{x_p - x_q}$, which we implement as
-
-$\lambda \cdot (x_p - x_q) = y_p - y_q$
-
-Also,
-- $x_r = \lambda^2 - x_q - x_p$
-- $y_r = \lambda \cdot (x_q - x_r) - y_q$
+- $x_r = \left(\frac{y_q - y_p}{x_q - x_p}\right)^2 - x_q - x_p$
+- $y_r = \frac{y_q - y_p}{x_q - x_p} \cdot (x_q - x_r) - y_q$
 
 which is equivalent to
 
-- $x_r + x_q + x_p = \lambda^2$
+- $x_r + x_q + x_p = \left(\frac{y_p - y_q}{x_p - x_q}\right)^2$
+- $y_r + y_q = \frac{y_p - y_q}{x_p - x_q} \cdot (x_q - x_r).$
 
-Assuming $x_p \neq x_q$,
+Assuming $x_p \neq x_q$, we have
 
 $
 \begin{array}{lrrll}
-&&(x_r + x_q + x_p) \cdot (x_p - x_q)^2 &=& \lambda^2 \cdot (x_p - x_q)^2 \\
-&\implies &(x_r + x_q + x_p) \cdot (x_p - x_q)^2 &=& \big(\lambda \cdot (x_p - x_q)\big)^2 \\[1.2ex]
+&& x_r + x_q + x_p &=& \left(\frac{y_p - y_q}{x_p - x_q}\right)^2 \\[1.2ex]
+&\Longleftrightarrow &(x_r + x_q + x_p) \cdot (x_p - x_q)^2 &=& (y_p - y_q)^2 \\[1ex]
+&\Longleftrightarrow &(x_r + x_q + x_p) \cdot (x_p - x_q)^2 - (y_p - y_q)^2 &=& 0 \\[1.5ex]
 \text{and} \\
-&         &y_r &=& \lambda \cdot (x_q - x_r) - y_q \\
-&\implies &y_r + y_q &=& \lambda \cdot (x_q - x_r) \\
-&\implies &(y_r + y_q) \cdot (x_p - x_q) &=& \lambda \cdot (x_p - x_q) \cdot (x_q - x_r)
+&&y_r + y_q &=& \frac{y_p - y_q}{x_p - x_q} \cdot (x_q - x_r) \\[0.8ex]
+&\Longleftrightarrow &(y_r + y_q) \cdot (x_p - x_q) &=& (y_p - y_q) \cdot (x_q - x_r) \\[1ex]
+&\Longleftrightarrow &(y_r + y_q) \cdot (x_p - x_q) - (y_p - y_q) \cdot (x_q - x_r) &=& 0.
 \end{array}
 $
 
-Substituting for $\lambda \cdot (x_p - x_q)$, we get the constraints:
+So we get the constraints:
 - $(x_r + x_q + x_p) \cdot (x_p - x_q)^2 - (y_p - y_q)^2 = 0$
   - Note that this constraint is unsatisfiable for $P \;⸭\; (-P)$ (when $P \neq \mathcal{O}$),
     and so cannot be used with arbitrary inputs.
-- $(y_r + y_q) \cdot (x_p - x_q) - (y_p - y_q) \cdot (x_q - x_r) = 0$
+- $(y_r + y_q) \cdot (x_p - x_q) - (y_p - y_q) \cdot (x_q - x_r) = 0.$
 
 
 ## Complete addition
