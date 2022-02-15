@@ -1,6 +1,6 @@
 [package]
 name = "halo2_gadgets"
-version = "0.0.0"
+version = "0.1.0-beta.1"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
     "Jack Grigg <jack@electriccoin.co>",
@@ -14,7 +14,7 @@ license-file = "../COPYING"
 repository = "https://github.com/zcash/halo2"
 readme = "README.md"
 categories = ["cryptography"]
-keywords = ["zcash"]
+keywords = ["halo", "proofs", "zcash", "zkp", "zkSNARKs"]
 
 [package.metadata.docs.rs]
 all-features = true
@@ -25,7 +25,7 @@ arrayvec = "0.7.0"
 bitvec = "0.22"
 ff = "0.11"
 group = "0.11"
-halo2_proofs = { version = "=0.1.0-beta.1", path = "../halo2_proofs" }
+halo2_proofs = { version = "=0.1.0-beta.2", path = "../halo2_proofs" }
 lazy_static = "1"
 pasta_curves = "0.3"
 proptest = { version = "1.0.0", optional = true }

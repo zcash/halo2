@@ -18,7 +18,7 @@ The `RAYON_NUM_THREADS` environment variable can be used to set the number of th
 
 ## License
 
-Copyright 2020-2021 The Electric Coin Company.
+Copyright 2020-2022 The Electric Coin Company.
 
 You may use this package under the Bootstrap Open Source Licence, version 1.0,
 or at your option, any later version. See the file [`COPYING`](COPYING) for
