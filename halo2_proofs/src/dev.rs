@@ -915,8 +915,18 @@ impl<F: FieldExt> MockProver<F> {
                     };
 
                     assert!(lookup.table_expressions.len() == lookup.input_expressions.len());
-                    let fill_row = vec![Value::Real(F::zero()); lookup.table_expressions.len()];
-                    let mut table_has_fill_row = false;
+                    assert!(self.usable_rows.end > 0);
+
+                    // We optimize on the basis that the last usable row might have been repeated to fill
+                    // the table (it doesn't matter if it wasn't). Note that this "fill row" necessarily
+                    // exists in the table, and we use that fact to slightly simplify the optimization:
+                    // we're only trying to check that all input rows are contained in the table, and so
+                    // we can safely just drop input rows that match the fill row.
+                    let fill_row: Vec<_> = lookup
+                        .table_expressions
+                        .iter()
+                        .map(move |c| load(c, self.usable_rows.end - 1))
+                        .collect();
 
                     // In the real prover, the lookup expressions are never enforced on
                     // unusable rows, due to the (1 - (l_last(X) + l_blind(X))) term.
@@ -933,7 +943,6 @@ impl<F: FieldExt> MockProver<F> {
                             if t != fill_row {
                                 Some(t)
                             } else {
-                                table_has_fill_row = true;
                                 None
                             }
                         })
@@ -950,8 +959,7 @@ impl<F: FieldExt> MockProver<F> {
                                 .map(move |c| load(c, input_row))
                                 .collect();
 
-                            // Include fill rows in `inputs` only if `table` has no fill rows.
-                            if !table_has_fill_row || t != fill_row {
+                            if t != fill_row {
                                 // Also keep track of the original input row, since we're going to sort.
                                 Some((t, input_row))
                             } else {
