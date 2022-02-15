@@ -452,13 +452,6 @@ fn plonk_api() {
         .expect("proof generation should not fail");
         let proof: Vec<u8> = transcript.finalize();
 
-        // assert_eq!(
-        //     proof.len(),
-        //     halo2_proofs::dev::CircuitCost::<G1, MyCircuit<_>>::measure(K as usize, &circuit)
-        //         .proof_size(2)
-        //         .into(),
-        // );
-
         // Test single-verifier strategy.
         {
             let strategy = SingleVerifier::new(&params_verifier);
