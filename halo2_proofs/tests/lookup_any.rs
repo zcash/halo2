@@ -1,3 +1,4 @@
+
 use std::marker::PhantomData;
 
 use halo2_proofs::{
@@ -37,7 +38,7 @@ fn lookup_any() {
             };
 
             // Lookup on even numbers
-            meta.lookup_any(|meta| {
+            meta.lookup_any("even number", |meta| {
                 let input = meta.query_advice(config.input, Rotation::cur());
 
                 let q_even = meta.query_selector(config.q_even);
@@ -47,7 +48,7 @@ fn lookup_any() {
             });
 
             // Lookup on odd numbers
-            meta.lookup_any(|meta| {
+            meta.lookup_any("odd number", |meta| {
                 let input = meta.query_advice(config.input, Rotation::cur());
 
                 let q_odd = meta.query_selector(config.q_odd);
@@ -207,4 +208,7 @@ fn lookup_any() {
     // the odd number lookup will fail.
     let prover = MockProver::run(k, &circuit, vec![even_lookup]).unwrap();
     assert!(prover.verify().is_err())
+                name: "odd number",
+                name: "odd number",
+                name: "odd number",
 }
