@@ -154,6 +154,8 @@ pub enum VerifyFailure {
     },
     /// A lookup input did not exist in its corresponding table.
     Lookup {
+        /// The name of the lookup that is not satisfied.
+        name: &'static str,
         /// The index of the lookup that is not satisfied. These indices are assigned in
         /// the order in which `ConstraintSystem::lookup` is called during
         /// `Circuit::configure`.
@@ -215,9 +217,16 @@ impl fmt::Display for VerifyFailure {
                 )
             }
             Self::Lookup {
+                name,
                 lookup_index,
                 location,
-            } => write!(f, "Lookup {} is not satisfied {}", lookup_index, location),
+            } => {
+                write!(
+                    f,
+                    "Lookup {}(index: {}) is not satisfied {}",
+                    name, lookup_index, location
+                )
+            }
             Self::Permutation { column, row } => {
                 write!(
                     f,
@@ -938,6 +947,7 @@ impl<F: FieldExt> MockProver<F> {
                             None
                         } else {
                             Some(VerifyFailure::Lookup {
+                                name: lookup.name,
                                 lookup_index,
                                 location: FailureLocation::find_expressions(
                                     &self.cs,
@@ -1122,7 +1132,7 @@ mod tests {
                 let q = meta.complex_selector();
                 let table = meta.lookup_table_column();
 
-                meta.lookup(|cells| {
+                meta.lookup("lookup", |cells| {
                     let a = cells.query_advice(a, Rotation::cur());
                     let q = cells.query_selector(q);
 
@@ -1199,6 +1209,7 @@ mod tests {
         assert_eq!(
             prover.verify(),
             Err(vec![VerifyFailure::Lookup {
+                name: "lookup",
                 lookup_index: 0,
                 location: FailureLocation::InRegion {
                     region: (2, "Faulty synthesis").into(),
