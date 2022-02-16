@@ -22,7 +22,6 @@ use crate::{
 pub struct CommittedSet<C: CurveAffine, Ev> {
     permutation_product_poly: Polynomial<C::Scalar, Coeff>,
     permutation_product_coset: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
-    permutation_product_blind: Blind<C::Scalar>,
 }
 
 pub(crate) struct Committed<C: CurveAffine, Ev> {
@@ -31,7 +30,6 @@ pub(crate) struct Committed<C: CurveAffine, Ev> {
 
 pub struct ConstructedSet<C: CurveAffine> {
     permutation_product_poly: Polynomial<C::Scalar, Coeff>,
-    permutation_product_blind: Blind<C::Scalar>,
 }
 
 pub(crate) struct Constructed<C: CurveAffine> {
@@ -166,10 +164,7 @@ impl Argument {
             // Set new last_z
             last_z = z[params.n as usize - (blinding_factors + 1)];
 
-            let blind = Blind(C::Scalar::random(&mut rng));
-
-            let permutation_product_commitment_projective = params.commit_lagrange(&z, blind);
-            let permutation_product_blind = blind;
+            let permutation_product_commitment_projective = params.commit_lagrange(&z);
             let z = domain.lagrange_to_coeff(z);
             let permutation_product_poly = z.clone();
 
@@ -185,7 +180,6 @@ impl Argument {
             sets.push(CommittedSet {
                 permutation_product_poly,
                 permutation_product_coset,
-                permutation_product_blind,
             });
         }
 
@@ -221,7 +215,6 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Committed<C, Ev> {
                 .iter()
                 .map(|set| ConstructedSet {
                     permutation_product_poly: set.permutation_product_poly.clone(),
-                    permutation_product_blind: set.permutation_product_blind,
                 })
                 .collect(),
         };
@@ -315,11 +308,9 @@ impl<C: CurveAffine> super::ProvingKey<C> {
         &self,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
-        self.polys.iter().map(move |poly| ProverQuery {
-            point: *x,
-            poly,
-            blind: Blind::default(),
-        })
+        self.polys
+            .iter()
+            .map(move |poly| ProverQuery { point: *x, poly })
     }
 
     pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
@@ -403,12 +394,10 @@ impl<C: CurveAffine> Evaluated<C> {
                     .chain(Some(ProverQuery {
                         point: *x,
                         poly: &set.permutation_product_poly,
-                        blind: set.permutation_product_blind,
                     }))
                     .chain(Some(ProverQuery {
                         point: x_next,
                         poly: &set.permutation_product_poly,
-                        blind: set.permutation_product_blind,
                     }))
             }))
             // Open it at \omega^{last} x for all but the last set. This rotation is only
@@ -424,7 +413,6 @@ impl<C: CurveAffine> Evaluated<C> {
                         Some(ProverQuery {
                             point: x_last,
                             poly: &set.permutation_product_poly,
-                            blind: set.permutation_product_blind,
                         })
                     }),
             )

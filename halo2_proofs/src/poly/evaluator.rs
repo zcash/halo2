@@ -9,7 +9,7 @@ use std::{
 };
 
 use group::ff::Field;
-use pasta_curves::arithmetic::FieldExt;
+use pairing::arithmetic::FieldExt;
 
 use super::{
     Basis, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
@@ -620,7 +620,7 @@ impl BasisOps for ExtendedLagrangeCoeff {
 mod tests {
     use std::iter;
 
-    use pasta_curves::pallas;
+    use pairing::bn256::Fr;
 
     use super::{get_chunk_params, new_evaluator, Ast, BasisOps, Evaluator};
     use crate::{
@@ -651,15 +651,15 @@ mod tests {
 
         fn test_case<E: Copy + Send + Sync, B: BasisOps>(
             k: u32,
-            mut evaluator: Evaluator<E, pallas::Base, B>,
+            mut evaluator: Evaluator<E, Fr, B>,
         ) {
             // Instantiate the evaluator with a trivial polynomial.
             let domain = EvaluationDomain::new(1, k);
             evaluator.register_poly(B::empty_poly(&domain));
 
             // With the bug present, these will panic.
-            let _ = evaluator.evaluate(&Ast::ConstantTerm(pallas::Base::zero()), &domain);
-            let _ = evaluator.evaluate(&Ast::LinearTerm(pallas::Base::zero()), &domain);
+            let _ = evaluator.evaluate(&Ast::ConstantTerm(Fr::zero()), &domain);
+            let _ = evaluator.evaluate(&Ast::LinearTerm(Fr::zero()), &domain);
         }
 
         test_case(k, new_evaluator::<_, _, Coeff>(|| {}));

@@ -2,7 +2,7 @@ use super::{util::*, AssignedBits};
 use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{Chip, Layouter, Region},
-    pasta::pallas,
+    pairing::bn256::Fr,
     plonk::{Advice, Column, ConstraintSystem, Error, TableColumn},
     poly::Rotation,
 };
@@ -75,7 +75,7 @@ pub(super) struct SpreadVar<const DENSE: usize, const SPREAD: usize> {
 
 impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
     pub(super) fn with_lookup(
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         cols: &SpreadInputs,
         row: usize,
         word: Option<SpreadWord<DENSE, SPREAD>>,
@@ -88,10 +88,7 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
             || "tag",
             cols.tag,
             row,
-            || {
-                tag.map(|tag| pallas::Base::from(tag as u64))
-                    .ok_or(Error::Synthesis)
-            },
+            || tag.map(|tag| Fr::from(tag as u64)).ok_or(Error::Synthesis),
         )?;
 
         let dense =
@@ -104,7 +101,7 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
     }
 
     pub(super) fn without_lookup(
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         dense_col: Column<Advice>,
         dense_row: usize,
         spread_col: Column<Advice>,
@@ -294,7 +291,7 @@ mod tests {
         arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
-        pasta::Fp,
+        pairing::bn256::Fr,
         plonk::{Advice, Circuit, Column, ConstraintSystem, Error},
     };
 
@@ -432,7 +429,7 @@ mod tests {
 
         let circuit: MyCircuit = MyCircuit {};
 
-        let prover = match MockProver::<Fp>::run(17, &circuit, vec![]) {
+        let prover = match MockProver::<Fr>::run(17, &circuit, vec![]) {
             Ok(prover) => prover,
             Err(e) => panic!("{:?}", e),
         };

@@ -489,7 +489,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
 
 #[cfg(test)]
 mod tests {
-    use pasta_curves::vesta;
+    use pairing::bn256::Fr as Scalar;
 
     use crate::{
         dev::MockProver,
@@ -500,7 +500,7 @@ mod tests {
     fn not_enough_columns_for_constants() {
         struct MyCircuit {}
 
-        impl Circuit<vesta::Scalar> for MyCircuit {
+        impl Circuit<Scalar> for MyCircuit {
             type Config = Column<Advice>;
             type FloorPlanner = super::V1;
 
@@ -508,24 +508,19 @@ mod tests {
                 MyCircuit {}
             }
 
-            fn configure(meta: &mut crate::plonk::ConstraintSystem<vesta::Scalar>) -> Self::Config {
+            fn configure(meta: &mut crate::plonk::ConstraintSystem<Scalar>) -> Self::Config {
                 meta.advice_column()
             }
 
             fn synthesize(
                 &self,
                 config: Self::Config,
-                mut layouter: impl crate::circuit::Layouter<vesta::Scalar>,
+                mut layouter: impl crate::circuit::Layouter<Scalar>,
             ) -> Result<(), crate::plonk::Error> {
                 layouter.assign_region(
                     || "assign constant",
                     |mut region| {
-                        region.assign_advice_from_constant(
-                            || "one",
-                            config,
-                            0,
-                            vesta::Scalar::one(),
-                        )
+                        region.assign_advice_from_constant(|| "one", config, 0, Scalar::one())
                     },
                 )?;
 

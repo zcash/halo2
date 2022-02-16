@@ -226,7 +226,7 @@ where
 
     let fixed_commitments = fixed
         .iter()
-        .map(|poly| params.commit_lagrange(poly, Blind::default()).to_affine())
+        .map(|poly| params.commit_lagrange(poly).to_affine())
         .collect();
 
     Ok(VerifyingKey {

@@ -204,7 +204,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// Selectors can be used to conditionally enable (portions of) gates:
 /// ```
 /// use halo2_proofs::poly::Rotation;
-/// # use halo2_proofs::pasta::Fp;
+/// # use pairing::bn256::Fr as Fp;
 /// # use halo2_proofs::plonk::ConstraintSystem;
 ///
 /// # let mut meta = ConstraintSystem::<Fp>::default();
@@ -932,6 +932,26 @@ impl<F: Field> ConstraintSystem<F> {
                 (input, table)
             })
             .collect();
+
+        let index = self.lookups.len();
+
+        self.lookups.push(lookup::Argument::new(table_map));
+
+        index
+    }
+
+    /// Add a lookup argument for some input expressions and table columns.
+    ///
+    /// `table_map` returns a map between input expressions and the table columns
+    /// they need to match.
+    ///
+    /// This API allows any column type to be used as table columns.
+    pub fn lookup_any(
+        &mut self,
+        table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, Expression<F>)>,
+    ) -> usize {
+        let mut cells = VirtualCells::new(self);
+        let table_map = table_map(&mut cells);
 
         let index = self.lookups.len();
 

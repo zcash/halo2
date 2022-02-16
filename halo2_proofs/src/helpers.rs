@@ -1,6 +1,6 @@
 use std::io;
 
-use pasta_curves::arithmetic::CurveAffine;
+use pairing::arithmetic::CurveAffine;
 
 pub(crate) trait CurveRead: CurveAffine {
     /// Reads a compressed element from the buffer and attempts to parse it

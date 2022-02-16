@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use group::ff::Field;
-use pasta_curves::arithmetic::FieldExt;
+use pairing::arithmetic::FieldExt;
 
 use super::{metadata, Value};
 use crate::{

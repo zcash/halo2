@@ -7,7 +7,7 @@ use crate::sha256::table16::{
 };
 use halo2_proofs::{
     circuit::Region,
-    pasta::pallas,
+    pairing::bn256::Fr,
     plonk::{Advice, Column, Error},
 };
 use std::convert::TryInto;
@@ -202,7 +202,7 @@ pub fn get_digest_efgh_row() -> usize {
 impl CompressionConfig {
     pub(super) fn decompose_abcd(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         row: usize,
         val: Option<u32>,
     ) -> Result<AbcdVar, Error> {
@@ -273,7 +273,7 @@ impl CompressionConfig {
 
     pub(super) fn decompose_efgh(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         row: usize,
         val: Option<u32>,
     ) -> Result<EfghVar, Error> {
@@ -344,7 +344,7 @@ impl CompressionConfig {
 
     pub(super) fn decompose_a(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         round_idx: RoundIdx,
         a_val: Option<u32>,
     ) -> Result<RoundWordA, Error> {
@@ -357,7 +357,7 @@ impl CompressionConfig {
 
     pub(super) fn decompose_e(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         round_idx: RoundIdx,
         e_val: Option<u32>,
     ) -> Result<RoundWordE, Error> {
@@ -370,7 +370,7 @@ impl CompressionConfig {
 
     pub(super) fn assign_upper_sigma_0(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         round_idx: RoundIdx,
         word: AbcdVar,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
@@ -428,7 +428,7 @@ impl CompressionConfig {
 
     pub(super) fn assign_upper_sigma_1(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         round_idx: RoundIdx,
         word: EfghVar,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
@@ -487,7 +487,7 @@ impl CompressionConfig {
 
     fn assign_ch_outputs(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         row: usize,
         r_0_even: Option<[bool; 16]>,
         r_0_odd: Option<[bool; 16]>,
@@ -512,7 +512,7 @@ impl CompressionConfig {
 
     pub(super) fn assign_ch(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         round_idx: RoundIdx,
         spread_halves_e: RoundWordSpread,
         spread_halves_f: RoundWordSpread,
@@ -558,7 +558,7 @@ impl CompressionConfig {
 
     pub(super) fn assign_ch_neg(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         round_idx: RoundIdx,
         spread_halves_e: RoundWordSpread,
         spread_halves_g: RoundWordSpread,
@@ -637,7 +637,7 @@ impl CompressionConfig {
 
     fn assign_maj_outputs(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         row: usize,
         r_0_even: Option<[bool; 16]>,
         r_0_odd: Option<[bool; 16]>,
@@ -661,7 +661,7 @@ impl CompressionConfig {
 
     pub(super) fn assign_maj(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         round_idx: RoundIdx,
         spread_halves_a: RoundWordSpread,
         spread_halves_b: RoundWordSpread,
@@ -719,7 +719,7 @@ impl CompressionConfig {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn assign_h_prime(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         round_idx: RoundIdx,
         h: RoundWordDense,
         ch: (AssignedBits<16>, AssignedBits<16>),
@@ -783,7 +783,7 @@ impl CompressionConfig {
                 row + 1,
                 || {
                     h_prime_carry
-                        .map(|value| pallas::Base::from(value as u64))
+                        .map(|value| Fr::from(value as u64))
                         .ok_or(Error::Synthesis)
                 },
             )?;
@@ -804,7 +804,7 @@ impl CompressionConfig {
     // s_e_new to get E_new = H' + D
     pub(super) fn assign_e_new(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         round_idx: RoundIdx,
         d: &RoundWordDense,
         h_prime: &RoundWordDense,
@@ -832,7 +832,7 @@ impl CompressionConfig {
             || "e_new_carry",
             a_9,
             row + 1,
-            || e_new_carry.map(pallas::Base::from).ok_or(Error::Synthesis),
+            || e_new_carry.map(Fr::from).ok_or(Error::Synthesis),
         )?;
 
         Ok(e_new_dense)
@@ -841,7 +841,7 @@ impl CompressionConfig {
     // s_a_new to get A_new = H' + Maj(A, B, C) + s_upper_sigma_0(A)
     pub(super) fn assign_a_new(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         round_idx: RoundIdx,
         maj: (AssignedBits<16>, AssignedBits<16>),
         sigma_0: (AssignedBits<16>, AssignedBits<16>),
@@ -886,7 +886,7 @@ impl CompressionConfig {
             || "a_new_carry",
             a_9,
             row,
-            || a_new_carry.map(pallas::Base::from).ok_or(Error::Synthesis),
+            || a_new_carry.map(Fr::from).ok_or(Error::Synthesis),
         )?;
 
         Ok(a_new_dense)
@@ -894,7 +894,7 @@ impl CompressionConfig {
 
     pub fn assign_word_halves_dense(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         lo_row: usize,
         lo_col: Column<Advice>,
         hi_row: usize,
@@ -920,7 +920,7 @@ impl CompressionConfig {
     #[allow(clippy::type_complexity)]
     pub fn assign_word_halves(
         &self,
-        region: &mut Region<'_, pallas::Base>,
+        region: &mut Region<'_, Fr>,
         row: usize,
         word: Option<u32>,
     ) -> Result<(RoundWordDense, RoundWordSpread), Error> {
