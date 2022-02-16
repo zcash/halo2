@@ -973,7 +973,6 @@ impl<F: FieldExt> MockProver<F> {
                     inputs
                         .iter()
                         .filter_map(move |(input, input_row)| {
-                            let input_row = *input_row;
                             while i < table.len() && &table[i] < input {
                                 i += 1;
                             }
@@ -985,7 +984,7 @@ impl<F: FieldExt> MockProver<F> {
                                     location: FailureLocation::find_expressions(
                                         &self.cs,
                                         &self.regions,
-                                        input_row,
+                                        *input_row,
                                         lookup.input_expressions.iter(),
                                     ),
                                 })
