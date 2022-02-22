@@ -1,7 +1,7 @@
 use super::{construct_intermediate_sets, ChallengeU, ChallengeV, ChallengeY};
 use crate::arithmetic::{
-    eval_polynomial, lagrange_interpolate, vanishing_polynomial, CurveAffine, Engine, FieldExt,
-    MillerLoopResult, MultiMillerLoop,
+    eval_polynomial, evaluate_vanishing_polynomial, lagrange_interpolate, CurveAffine, Engine,
+    FieldExt, MillerLoopResult, MultiMillerLoop,
 };
 use crate::poly::{
     commitment::{Params, ParamsVerifier},
@@ -47,14 +47,12 @@ where
     let u: ChallengeU<_> = transcript.squeeze_challenge_scalar();
     let h2 = transcript.read_point().map_err(|_| Error::SamplingError)?;
 
-    let zt_x = vanishing_polynomial(&super_point_set[..]);
-    let zt_eval = eval_polynomial(&zt_x[..], *u);
+    let zt_eval = evaluate_vanishing_polynomial(&super_point_set[..], *u);
 
     let mut outer_msm: PreMSM<C> = PreMSM::new();
 
     for rotation_set in rotation_sets.iter() {
-        let z_diff = vanishing_polynomial(&rotation_set.diffs[..]);
-        let z_i = eval_polynomial(&z_diff[..], *u);
+        let z_i = evaluate_vanishing_polynomial(&rotation_set.diffs[..], *u);
 
         let mut inner_msm: ProjectiveMSM<C> = ProjectiveMSM::new();
         for commitment_data in rotation_set.commitments.iter() {

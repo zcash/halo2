@@ -402,26 +402,8 @@ pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
     }
 }
 
-/// Given roots [a_0, a_1, ... a_n] returns vanishing polynomials
-/// (x - a_0) * (x - a_1) * ... * (x - a_n)
-pub fn vanishing_polynomial<F: FieldExt>(roots: &[F]) -> Vec<F> {
-    fn mul_with<F: FieldExt>(coeffs: Vec<F>, root: &F) -> Vec<F> {
-        let mut ret = vec![F::zero(); coeffs.len() + 1];
-
-        for (i, coeff) in coeffs.iter().enumerate() {
-            ret[i] -= *coeff * root;
-            ret[i + 1] += coeff;
-        }
-
-        ret
-    }
-
-    let mut coeffs = vec![F::one()];
-    for root in roots {
-        coeffs = mul_with(coeffs, root);
-    }
-
-    coeffs
+pub(crate) fn evaluate_vanishing_polynomial<F: FieldExt>(roots: &[F], z: F) -> F {
+    roots.iter().fold(F::one(), |acc, point| (z - point) * acc)
 }
 
 #[cfg(test)]
