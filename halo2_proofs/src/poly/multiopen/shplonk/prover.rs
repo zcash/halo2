@@ -2,8 +2,8 @@ use super::{
     construct_intermediate_sets, ChallengeU, ChallengeV, ChallengeY, Commitment, Query, RotationSet,
 };
 use crate::arithmetic::{
-    eval_polynomial, kate_division, lagrange_interpolate, vanishing_polynomial, CurveAffine,
-    FieldExt,
+    eval_polynomial, evaluate_vanishing_polynomial, kate_division, lagrange_interpolate,
+    CurveAffine, FieldExt,
 };
 use crate::poly::multiopen::ProverQuery;
 use crate::poly::{commitment::Params, Coeff, Error, Polynomial};
@@ -156,14 +156,13 @@ where
     transcript.write_point(h)?;
     let u: ChallengeU<_> = transcript.squeeze_challenge_scalar();
 
-    let zt_x = vanishing_polynomial(&super_point_set[..]);
-    let zt_eval = eval_polynomial(&zt_x[..], *u);
+    let zt_eval = evaluate_vanishing_polynomial(&super_point_set[..], *u);
 
     let linearisation_contribution =
         |rotation_set: RotationSetExtension<C>| -> Polynomial<C::Scalar, Coeff> {
             // calculate difference vanishing polynomial evaluation
-            let z_diff = vanishing_polynomial(&rotation_set.diffs[..]);
-            let z_i = eval_polynomial(&z_diff[..], *u);
+
+            let z_i = evaluate_vanishing_polynomial(&rotation_set.diffs[..], *u);
 
             // inner linearisation contibutions are
             // [P_i_0(X) - r_i_0, P_i_1(X) - r_i_1, ... ] where
