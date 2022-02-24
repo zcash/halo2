@@ -61,7 +61,6 @@ impl<'a, C: CurveAffine> CommitmentExtension<'a, C> {
 struct RotationSetExtension<'a, C: CurveAffine> {
     commitments: Vec<CommitmentExtension<'a, C>>,
     points: Vec<C::Scalar>,
-    diffs: Vec<C::Scalar>,
 }
 
 impl<'a, C: CurveAffine> RotationSet<C::Scalar, PolynomialPointer<'a, C>> {
@@ -69,7 +68,6 @@ impl<'a, C: CurveAffine> RotationSet<C::Scalar, PolynomialPointer<'a, C>> {
         RotationSetExtension {
             commitments,
             points: self.points.clone(),
-            diffs: self.diffs.clone(),
         }
     }
 }
@@ -160,9 +158,15 @@ where
 
     let linearisation_contribution =
         |rotation_set: RotationSetExtension<C>| -> Polynomial<C::Scalar, Coeff> {
+            let diffs: Vec<C::Scalar> = super_point_set
+                .iter()
+                .filter(|point| !rotation_set.points.contains(point))
+                .copied()
+                .collect();
+
             // calculate difference vanishing polynomial evaluation
 
-            let z_i = evaluate_vanishing_polynomial(&rotation_set.diffs[..], *u);
+            let z_i = evaluate_vanishing_polynomial(&diffs[..], *u);
 
             // inner linearisation contibutions are
             // [P_i_0(X) - r_i_0, P_i_1(X) - r_i_1, ... ] where

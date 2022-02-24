@@ -52,7 +52,12 @@ where
     let mut outer_msm: PreMSM<C> = PreMSM::new();
 
     for rotation_set in rotation_sets.iter() {
-        let z_i = evaluate_vanishing_polynomial(&rotation_set.diffs[..], *u);
+        let diffs: Vec<C::Scalar> = super_point_set
+            .iter()
+            .filter(|point| !rotation_set.points.contains(point))
+            .copied()
+            .collect();
+        let z_i = evaluate_vanishing_polynomial(&diffs[..], *u);
 
         let mut inner_msm: ProjectiveMSM<C> = ProjectiveMSM::new();
         for commitment_data in rotation_set.commitments.iter() {
