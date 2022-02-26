@@ -948,9 +948,9 @@ impl<F: FieldExt> MockProver<F> {
                     let row_ids = row_ids.clone();
                     // In the real prover, the lookup expressions are never enforced on
                     // unusable rows, due to the (1 - (l_last(X) + l_blind(X))) term.
-                    let table: std::collections::BTreeSet<Vec<_>> = row_ids
+                    let table: std::collections::BTreeSet<Vec<_>> = self
+                        .usable_rows
                         .clone()
-                        .into_iter()
                         .map(|table_row| {
                             lookup
                                 .table_expressions
