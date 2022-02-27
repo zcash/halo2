@@ -1,6 +1,7 @@
 //! Constants required for the ECC chip.
 
-use arrayvec::ArrayVec;
+use std::convert::TryInto;
+
 use group::{
     ff::{Field, PrimeField},
     Curve,
@@ -55,8 +56,8 @@ fn compute_window_table<C: CurveAffine>(base: C, num_windows: usize) -> Vec<[C; 
                         * C::Scalar::from(H as u64).pow(&[w as u64, 0, 0, 0]);
                     (base * scalar).to_affine()
                 })
-                .collect::<ArrayVec<C, H>>()
-                .into_inner()
+                .collect::<Vec<_>>()
+                .try_into()
                 .unwrap(),
         );
     }
@@ -76,8 +77,8 @@ fn compute_window_table<C: CurveAffine>(base: C, num_windows: usize) -> Vec<[C; 
                     - sum;
                 (base * scalar).to_affine()
             })
-            .collect::<ArrayVec<C, H>>()
-            .into_inner()
+            .collect::<Vec<_>>()
+            .try_into()
             .unwrap(),
     );
 
@@ -101,8 +102,8 @@ pub fn compute_lagrange_coeffs<C: CurveAffine>(base: C, num_windows: usize) -> V
                 .collect();
             lagrange_interpolate(&points, &x_window_points)
                 .into_iter()
-                .collect::<ArrayVec<C::Base, H>>()
-                .into_inner()
+                .collect::<Vec<_>>()
+                .try_into()
                 .unwrap()
         })
         .collect()
@@ -138,8 +139,8 @@ pub fn find_zs_and_us<C: CurveAffine>(
                         None
                     }
                 })
-                .collect::<Option<ArrayVec<C::Base, H>>>()
-                .map(|us| (z, us.into_inner().unwrap()))
+                .collect::<Option<Vec<_>>>()
+                .map(|us| (z, us.try_into().unwrap()))
         })
     };
 

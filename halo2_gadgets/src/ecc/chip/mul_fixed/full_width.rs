@@ -4,7 +4,6 @@ use crate::utilities::{
     decompose_running_sum::{decompose_element, Window},
     range_check,
 };
-use arrayvec::ArrayVec;
 use ff::PrimeField;
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter, Region},
@@ -12,6 +11,7 @@ use halo2_proofs::{
     poly::Rotation,
 };
 use pasta_curves::pallas;
+use std::convert::TryInto;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
@@ -79,7 +79,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         scalar: Option<pallas::Scalar>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, NUM_WINDOWS>, Error> {
+    ) -> Result<[AssignedCell<pallas::Base, pallas::Base>; NUM_WINDOWS], Error> {
         // Enable `q_mul_fixed_full` selector
         for idx in 0..NUM_WINDOWS {
             self.q_mul_fixed_full.enable(region, offset + idx)?;
@@ -91,8 +91,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         });
 
         // Store the scalar decomposition
-        let mut windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, NUM_WINDOWS> =
-            ArrayVec::new();
+        let mut windows: Vec<AssignedCell<pallas::Base, pallas::Base>> = Vec::new();
 
         let scalar_windows: Vec<Option<pallas::Base>> = if let Some(windows) = scalar_windows {
             assert_eq!(windows.len(), NUM_WINDOWS);
@@ -114,7 +113,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             windows.push(window_cell);
         }
 
-        Ok(windows)
+        Ok(windows.try_into().unwrap())
     }
 
     pub fn assign(

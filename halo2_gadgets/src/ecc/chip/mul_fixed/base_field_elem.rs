@@ -14,8 +14,6 @@ use halo2_proofs::{
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
-use std::convert::TryInto;
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
     q_mul_fixed_base_field: Selector,
@@ -174,16 +172,15 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                     let running_sum =
                         self.super_config
                             .running_sum_config
-                            .copy_decompose::<{ pallas::Base::NUM_BITS as usize }>(
+                            .copy_decompose::<{ pallas::Base::NUM_BITS as usize }, NUM_WINDOWS>(
                                 &mut region,
                                 offset,
                                 scalar.clone(),
                                 true,
-                                NUM_WINDOWS,
                             )?;
                     EccBaseFieldElemFixed {
-                        base_field_elem: running_sum[0].clone(),
-                        running_sum: (*running_sum).as_slice().try_into().unwrap(),
+                        base_field_elem: running_sum.value().clone(),
+                        running_sum,
                     }
                 };
 
@@ -250,9 +247,9 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         //                => z_13_alpha_0_prime = 0
         //
         let (alpha, running_sum) = (scalar.base_field_elem, &scalar.running_sum);
-        let z_43_alpha = running_sum[43].clone();
-        let z_44_alpha = running_sum[44].clone();
-        let z_84_alpha = running_sum[84].clone();
+        let z_43_alpha = running_sum.windows()[42].clone();
+        let z_44_alpha = running_sum.windows()[43].clone();
+        let z_84_alpha = running_sum.windows()[83].clone();
 
         // α_0 = α - z_84_alpha * 2^252
         let alpha_0 = alpha

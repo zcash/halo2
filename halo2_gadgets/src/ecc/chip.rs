@@ -3,9 +3,11 @@
 use super::{EccInstructions, FixedPoints};
 use crate::{
     primitives::sinsemilla,
-    utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
+    utilities::{
+        decompose_running_sum::RunningSum, lookup_range_check::LookupRangeCheckConfig,
+        UtilitiesInstructions,
+    },
 };
-use arrayvec::ArrayVec;
 
 use ff::Field;
 use group::prime::PrimeCurveAffine;
@@ -328,7 +330,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
 #[derive(Clone, Debug)]
 pub struct EccScalarFixed {
     value: Option<pallas::Scalar>,
-    windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS }>,
+    windows: [AssignedCell<pallas::Base, pallas::Base>; NUM_WINDOWS],
 }
 
 // TODO: Make V a `u64`
@@ -353,7 +355,7 @@ type MagnitudeSign = (MagnitudeCell, SignCell);
 pub struct EccScalarFixedShort {
     magnitude: MagnitudeCell,
     sign: SignCell,
-    running_sum: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS_SHORT + 1 }>,
+    running_sum: RunningSum<pallas::Base, NUM_WINDOWS_SHORT>,
 }
 
 /// A base field element used for fixed-base scalar multiplication.
@@ -368,7 +370,7 @@ pub struct EccScalarFixedShort {
 #[derive(Clone, Debug)]
 struct EccBaseFieldElemFixed {
     base_field_elem: AssignedCell<pallas::Base, pallas::Base>,
-    running_sum: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS + 1 }>,
+    running_sum: RunningSum<pallas::Base, NUM_WINDOWS>,
 }
 
 impl EccBaseFieldElemFixed {
