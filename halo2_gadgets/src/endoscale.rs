@@ -7,6 +7,7 @@ use halo2_proofs::{
 use pasta_curves::arithmetic::CurveAffine;
 use std::fmt::Debug;
 
+pub(crate) mod chip;
 pub mod util;
 
 /// Instructions to map bitstrings to and from endoscalars.

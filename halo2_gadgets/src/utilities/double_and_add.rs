@@ -64,6 +64,10 @@ impl<F: FieldExt> std::ops::Deref for Y<F> {
 }
 
 impl<C: CurveAffine> DoubleAndAdd<C> {
+    pub(crate) fn advices(&self) -> [Column<Advice>; 4] {
+        [self.x_a, self.x_p, self.lambda_1, self.lambda_2]
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn configure(
         meta: &mut ConstraintSystem<C::Base>,

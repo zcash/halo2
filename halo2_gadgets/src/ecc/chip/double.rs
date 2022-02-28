@@ -24,7 +24,7 @@ pub struct Config<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Config<C> {
-    pub(super) fn configure(
+    pub(crate) fn configure(
         meta: &mut ConstraintSystem<C::Base>,
         x_p: Column<Advice>,
         y_p: Column<Advice>,
@@ -75,7 +75,7 @@ impl<C: CurveAffine> Config<C> {
         });
     }
 
-    pub(super) fn assign_region(
+    pub(crate) fn assign_region(
         &self,
         p: &NonIdentityEccPoint<C>,
         offset: usize,

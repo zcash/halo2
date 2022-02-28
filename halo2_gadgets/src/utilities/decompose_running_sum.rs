@@ -33,7 +33,7 @@ use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
 /// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RunningSum<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> {
     zs: Vec<AssignedCell<F, F>>,
     num_bits: usize,
