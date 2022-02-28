@@ -4,7 +4,7 @@ use super::{EccInstructions, FixedPoints};
 use crate::{
     primitives::sinsemilla,
     utilities::{
-        decompose_running_sum::RunningSum, lookup_range_check::LookupRangeCheckConfig,
+        decompose_running_sum::le, lookup_range_check::LookupRangeCheckConfig,
         UtilitiesInstructions,
     },
 };
@@ -355,7 +355,7 @@ type MagnitudeSign = (MagnitudeCell, SignCell);
 pub struct EccScalarFixedShort {
     magnitude: MagnitudeCell,
     sign: SignCell,
-    running_sum: RunningSum<pallas::Base, NUM_WINDOWS_SHORT>,
+    running_sum: le::RunningSum<pallas::Base, NUM_WINDOWS_SHORT>,
 }
 
 /// A base field element used for fixed-base scalar multiplication.
@@ -370,7 +370,7 @@ pub struct EccScalarFixedShort {
 #[derive(Clone, Debug)]
 struct EccBaseFieldElemFixed {
     base_field_elem: AssignedCell<pallas::Base, pallas::Base>,
-    running_sum: RunningSum<pallas::Base, NUM_WINDOWS>,
+    running_sum: le::RunningSum<pallas::Base, NUM_WINDOWS>,
 }
 
 impl EccBaseFieldElemFixed {

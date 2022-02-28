@@ -7,10 +7,7 @@ pub mod be;
 pub mod le;
 
 use ff::{PrimeField, PrimeFieldBits};
-use halo2_proofs::{
-    circuit::AssignedCell,
-    plonk::{Advice, Assigned, Column, Selector},
-};
+use halo2_proofs::plonk::{Advice, Assigned, Column, Selector};
 
 use super::{lebs2ip, range_check};
 use pasta_curves::arithmetic::FieldExt;
@@ -65,30 +62,6 @@ impl<const NUM_BITS: usize> Window<NUM_BITS> {
 impl<F: PrimeField, const NUM_BITS: usize> From<Window<NUM_BITS>> for Assigned<F> {
     fn from(window: Window<NUM_BITS>) -> Self {
         Assigned::Trivial(window.value_field())
-    }
-}
-
-/// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
-#[derive(Clone, Debug)]
-pub struct RunningSum<F, const W: usize>
-where
-    F: FieldExt + PrimeFieldBits,
-{
-    value: AssignedCell<F, F>,
-    windows: [AssignedCell<F, F>; W],
-}
-impl<F, const W: usize> RunningSum<F, W>
-where
-    F: FieldExt + PrimeFieldBits,
-{
-    /// The original value that was decomposed.
-    pub fn value(&self) -> &AssignedCell<F, F> {
-        &self.value
-    }
-
-    /// The windows of the running sum decomposition.
-    pub fn windows(&self) -> &[AssignedCell<F, F>; W] {
-        &self.windows
     }
 }
 

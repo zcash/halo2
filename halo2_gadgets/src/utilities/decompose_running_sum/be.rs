@@ -33,9 +33,36 @@ use halo2_proofs::{
     poly::Rotation,
 };
 
-use super::{decompose_element_le, range_check, RunningSum, RunningSumConfig, Window};
+use super::{decompose_element_le, range_check, RunningSumConfig, Window};
 use pasta_curves::arithmetic::FieldExt;
 use std::{convert::TryInto, marker::PhantomData};
+
+/// The running sum decomposition in big-endian windows.
+#[derive(Clone, Debug)]
+pub struct RunningSum<F, const W: usize>
+where
+    F: FieldExt + PrimeFieldBits,
+{
+    /// $z_0$, the original value decomposed by this helper.
+    value: AssignedCell<F, F>,
+    /// The windows [z_W, ..., z_1].  If created in strict mode, $z_W = 0$.
+    windows: [AssignedCell<F, F>; W],
+}
+
+impl<F, const W: usize> RunningSum<F, W>
+where
+    F: FieldExt + PrimeFieldBits,
+{
+    /// The original value that was decomposed.
+    pub fn value(&self) -> &AssignedCell<F, F> {
+        &self.value
+    }
+
+    /// The windows of the running sum decomposition.
+    pub fn windows(&self) -> &[AssignedCell<F, F>; W] {
+        &self.windows
+    }
+}
 
 /// Config for big-endian running sum decomposition.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
