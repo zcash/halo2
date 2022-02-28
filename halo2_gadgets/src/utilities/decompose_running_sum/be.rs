@@ -146,7 +146,7 @@ where
             offset + NUM_WINDOWS,
             || alpha.ok_or(Error::Synthesis),
         )?;
-        self.decompose::<WORD_NUM_BITS, NUM_WINDOWS>(region, offset, z_0, strict)
+        self.decompose::<WORD_NUM_BITS, NUM_WINDOWS>(region, offset, &z_0, strict)
     }
 
     /// Decompose an existing variable alpha that is copied into this helper.
@@ -157,11 +157,11 @@ where
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
-        alpha: AssignedCell<F, F>,
+        alpha: &AssignedCell<F, F>,
         strict: bool,
     ) -> Result<RunningSum<F, NUM_WINDOWS>, Error> {
         let z_0 = alpha.copy_advice(|| "copy z_0 = alpha", region, self.z, offset + NUM_WINDOWS)?;
-        self.decompose::<WORD_NUM_BITS, NUM_WINDOWS>(region, offset, z_0, strict)
+        self.decompose::<WORD_NUM_BITS, NUM_WINDOWS>(region, offset, &z_0, strict)
     }
 
     /// `z_w` must be the cell at `(self.z, offset + NUM_WINDOWS)` in `region`.
@@ -173,7 +173,7 @@ where
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
-        z_0: AssignedCell<F, F>,
+        z_0: &AssignedCell<F, F>,
         strict: bool,
     ) -> Result<RunningSum<F, NUM_WINDOWS>, Error> {
         // Make sure that we do not have more windows than required for the number
@@ -208,7 +208,7 @@ where
 
         // Initialize empty vector to store running sum values [z_0, ..., z_W].
         let mut zs: Vec<AssignedCell<F, F>> = vec![z_0.clone()];
-        let mut z = z_0;
+        let mut z = z_0.clone();
 
         // Assign running sum `z_{i+1}` = (z_i - k_i) / (2^K) for i = 0..=n-1.
         // Outside of this helper, z_0 = alpha must have already been loaded into the
@@ -330,7 +330,7 @@ mod tests {
                         config.copy_decompose::<WORD_NUM_BITS, NUM_WINDOWS>(
                             &mut region,
                             offset,
-                            alpha,
+                            &alpha,
                             self.strict,
                         )?;
 

@@ -80,10 +80,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             .super_config
             .running_sum_config
             .copy_decompose::<L_SCALAR_SHORT, NUM_WINDOWS_SHORT>(
-                region,
-                offset,
-                magnitude.clone(),
-                true,
+                region, offset, &magnitude, true,
             )?;
 
         Ok(EccScalarFixedShort {

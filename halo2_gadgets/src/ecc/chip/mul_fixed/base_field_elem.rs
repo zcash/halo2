@@ -175,7 +175,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                             .copy_decompose::<{ pallas::Base::NUM_BITS as usize }, NUM_WINDOWS>(
                                 &mut region,
                                 offset,
-                                scalar.clone(),
+                                &scalar,
                                 true,
                             )?;
                     EccBaseFieldElemFixed {
