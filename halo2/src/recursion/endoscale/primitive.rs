@@ -110,10 +110,24 @@ fn test_endoscale_primitives() {
     use rand::rngs::OsRng;
 
     let base = pallas::Point::random(OsRng);
-    let bits = [true, false, true, false];
+    let bits = [true, false, true, false, false, false, true, true];
 
     let endoscalar: pallas::Scalar = endoscale_scalar(None, &bits);
     let endoscaled_base = endoscale(&bits, base.to_affine());
 
     assert_eq!(base * endoscalar, endoscaled_base.to_curve());
+
+    fn endoscale_scalar_by_chunk<F: FieldExt, const K: usize>(bits: &[bool]) -> F {
+        assert_eq!(bits.len() % K, 0);
+
+        let mut acc = (F::ZETA + F::one()).double();
+        for chunk_idx in (0..(bits.len() / K)).rev() {
+            let idx = chunk_idx * K;
+            acc = endoscale_scalar(Some(acc), &bits[idx..(idx + K)]);
+        }
+        acc
+    }
+    let endoscalar_by_chunk: pallas::Scalar = endoscale_scalar_by_chunk::<_, 4>(&bits);
+    let endoscalar_by_pair: pallas::Scalar = endoscale_scalar(None, &bits);
+    assert_eq!(endoscalar_by_chunk, endoscalar_by_pair);
 }
