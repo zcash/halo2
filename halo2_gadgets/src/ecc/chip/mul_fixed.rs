@@ -73,7 +73,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         // Range-check each window in the running sum decomposition.
         meta.create_gate("range check", |meta| {
             let q_range_check = meta.query_selector(running_sum_config.q_range_check());
-            let word = running_sum_config.window_expr(meta);
+            let word = running_sum_config.window_expr_le(meta);
 
             Constraints::with_selector(
                 q_range_check,

@@ -1,6 +1,8 @@
 //! Primitives used in endoscaling.
 
-use group::{Curve, Group};
+#[cfg(test)]
+use group::Curve;
+use group::Group;
 use pasta_curves::arithmetic::{CurveAffine, FieldExt};
 
 use subtle::CtOption;
@@ -81,7 +83,7 @@ pub(crate) fn endoscale_point_pair<C: CurveAffine>(bits: [bool; 2], base: C) -> 
 /// # Panics
 /// Panics if the base is the identity.
 /// Panics if there is an odd number of bits.
-#[allow(dead_code)]
+#[cfg(test)]
 pub(crate) fn endoscale_point<C: CurveAffine>(bits: &[bool], base: C) -> C {
     assert_eq!(bits.len() % 2, 0);
     assert!(!bool::from(base.to_curve().is_identity()));

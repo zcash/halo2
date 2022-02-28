@@ -83,6 +83,11 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         self.q_range_check
     }
 
+    /// Returns the `z` advice column of this [`RunningSumConfig`].
+    pub(crate) fn z(&self) -> Column<Advice> {
+        self.z
+    }
+
     /// `perm` MUST include the advice column `z`.
     ///
     /// # Side-effects
@@ -108,13 +113,26 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         }
     }
 
-    /// Expression for a window
+    /// Expression for a window when the running sum is arranged in increasing order
+    /// z_0, z_1, ..., z_{W}, where z_0 is the original field element that was decomposed.
+    ///
     ///    z_i = 2^{K}⋅z_{i + 1} + k_i
     /// => k_i = z_i - 2^{K}⋅z_{i + 1}
-    pub(crate) fn window_expr(&self, meta: &mut VirtualCells<'_, F>) -> Expression<F> {
+    pub(crate) fn window_expr_le(&self, meta: &mut VirtualCells<'_, F>) -> Expression<F> {
         let z_cur = meta.query_advice(self.z, Rotation::cur());
         let z_next = meta.query_advice(self.z, Rotation::next());
         z_cur - z_next * F::from(1 << WINDOW_NUM_BITS)
+    }
+
+    /// Expression for a window when the running sum is arranged in decreasing order
+    /// z_{W}, z_{W-1}, ..., z_{0}, where z_0 is the original field element that was decomposed.
+    ///
+    ///    z_i = 2^{K}⋅z_{i + 1} + k_i
+    /// => k_i = z_i - 2^{K}⋅z_{i + 1}
+    pub(crate) fn window_expr_be(&self, meta: &mut VirtualCells<'_, F>) -> Expression<F> {
+        let z_cur = meta.query_advice(self.z, Rotation::cur());
+        let z_next = meta.query_advice(self.z, Rotation::next());
+        z_next - z_cur * F::from(1 << WINDOW_NUM_BITS)
     }
 
     /// Decompose a field element alpha that is witnessed in this helper.
