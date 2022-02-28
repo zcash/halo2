@@ -285,7 +285,7 @@ where
     type RunningSum = Vec<Self::CellValue>;
 
     type X = AssignedCell<pallas::Base, pallas::Base>;
-    type NonIdentityPoint = NonIdentityEccPoint;
+    type NonIdentityPoint = NonIdentityEccPoint<pallas::Affine>;
     type FixedPoints = F;
 
     type HashDomains = Hash;

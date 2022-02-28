@@ -214,11 +214,11 @@ impl Config {
 
     pub(super) fn assign_region(
         &self,
-        p: &EccPoint,
-        q: &EccPoint,
+        p: &EccPoint<pallas::Affine>,
+        q: &EccPoint<pallas::Affine>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<EccPoint, Error> {
+    ) -> Result<EccPoint<pallas::Affine>, Error> {
         // Enable `q_add` selector
         self.q_add.enable(region, offset)?;
 
@@ -398,7 +398,10 @@ pub mod tests {
 
     #[allow(clippy::too_many_arguments)]
     pub fn test_add<
-        EccChip: EccInstructions<pallas::Affine, Point = EccPoint> + Clone + Eq + std::fmt::Debug,
+        EccChip: EccInstructions<pallas::Affine, Point = EccPoint<pallas::Affine>>
+            + Clone
+            + Eq
+            + std::fmt::Debug,
     >(
         chip: EccChip,
         mut layouter: impl Layouter<pallas::Base>,

@@ -8,6 +8,7 @@ use halo2_proofs::{
 use pasta_curves::arithmetic::FieldExt;
 use std::{array, ops::Range};
 
+pub mod boolean;
 pub mod cond_swap;
 pub mod decompose_running_sum;
 pub mod lookup_range_check;
@@ -71,7 +72,20 @@ pub(crate) fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize
     ret
 }
 
-/// Checks that an expression is either 1 or 0.
+/// Transposes an Option<Vec<T>> to Vec<Option<T>>.
+pub fn transpose_option_vec<T: Copy + std::fmt::Debug>(
+    option_vec: Option<Vec<T>>,
+    len: usize,
+) -> Vec<Option<T>> {
+    if let Some(vec) = option_vec {
+        assert_eq!(vec.len(), len);
+        vec.into_iter().map(Some).collect()
+    } else {
+        vec![None; len]
+    }
+}
+
+/// Checks that an expresssion is either 1 or 0.
 pub fn bool_check<F: FieldExt>(value: Expression<F>) -> Expression<F> {
     range_check(value, 2)
 }

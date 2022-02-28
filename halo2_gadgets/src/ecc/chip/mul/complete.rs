@@ -86,11 +86,11 @@ impl Config {
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
         bits: &[Option<bool>],
-        base: &EccPoint,
+        base: &EccPoint<pallas::Affine>,
         x_a: X<pallas::Base>,
         y_a: Y<pallas::Base>,
         z: Z<pallas::Base>,
-    ) -> Result<(EccPoint, Vec<Z<pallas::Base>>), Error> {
+    ) -> Result<(EccPoint<pallas::Affine>, Vec<Z<pallas::Base>>), Error> {
         // Make sure we have the correct number of bits for the complete addition
         // part of variable-base scalar mul.
         assert_eq!(bits.len(), COMPLETE_RANGE.len());

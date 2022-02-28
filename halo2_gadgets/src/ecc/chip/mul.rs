@@ -164,126 +164,137 @@ impl Config {
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         alpha: AssignedCell<pallas::Base, pallas::Base>,
-        base: &NonIdentityEccPoint,
-    ) -> Result<(EccPoint, AssignedCell<pallas::Base, pallas::Base>), Error> {
-        let (result, zs): (EccPoint, Vec<Z<pallas::Base>>) = layouter.assign_region(
-            || "variable-base scalar mul",
-            |mut region| {
-                let offset = 0;
+        base: &NonIdentityEccPoint<pallas::Affine>,
+    ) -> Result<
+        (
+            EccPoint<pallas::Affine>,
+            AssignedCell<pallas::Base, pallas::Base>,
+        ),
+        Error,
+    > {
+        let (result, zs): (EccPoint<pallas::Affine>, Vec<Z<pallas::Base>>) = layouter
+            .assign_region(
+                || "variable-base scalar mul",
+                |mut region| {
+                    let offset = 0;
 
-                // Case `base` into an `EccPoint` for later use.
-                let base_point: EccPoint = base.clone().into();
+                    // Case `base` into an `EccPoint<pallas::Affine>` for later use.
+                    let base_point: EccPoint<pallas::Affine> = base.clone().into();
 
-                // Decompose `k = alpha + t_q` bitwise (big-endian bit order).
-                let bits = decompose_for_scalar_mul(alpha.value());
+                    // Decompose `k = alpha + t_q` bitwise (big-endian bit order).
+                    let bits = decompose_for_scalar_mul(alpha.value());
 
-                // Define ranges for each part of the algorithm.
-                let bits_incomplete_hi = &bits[INCOMPLETE_HI_RANGE];
-                let bits_incomplete_lo = &bits[INCOMPLETE_LO_RANGE];
-                let lsb = bits[pallas::Scalar::NUM_BITS as usize - 1];
+                    // Define ranges for each part of the algorithm.
+                    let bits_incomplete_hi = &bits[INCOMPLETE_HI_RANGE];
+                    let bits_incomplete_lo = &bits[INCOMPLETE_LO_RANGE];
+                    let lsb = bits[pallas::Scalar::NUM_BITS as usize - 1];
 
-                // Initialize the accumulator `acc = [2]base`
-                let acc =
-                    self.add_config
-                        .assign_region(&base_point, &base_point, offset, &mut region)?;
+                    // Initialize the accumulator `acc = [2]base`
+                    let acc = self.add_config.assign_region(
+                        &base_point,
+                        &base_point,
+                        offset,
+                        &mut region,
+                    )?;
 
-                // Increase the offset by 1 after complete addition.
-                let offset = offset + 1;
+                    // Increase the offset by 1 after complete addition.
+                    let offset = offset + 1;
 
-                // Initialize the running sum for scalar decomposition to zero
-                let z_init = Z(region.assign_advice_from_constant(
-                    || "z_init = 0",
-                    self.hi_config.z,
-                    offset,
-                    pallas::Base::zero(),
-                )?);
+                    // Initialize the running sum for scalar decomposition to zero
+                    let z_init = Z(region.assign_advice_from_constant(
+                        || "z_init = 0",
+                        self.hi_config.z,
+                        offset,
+                        pallas::Base::zero(),
+                    )?);
 
-                // Double-and-add (incomplete addition) for the `hi` half of the scalar decomposition
-                let (x_a, y_a, zs_incomplete_hi) = self.hi_config.double_and_add(
-                    &mut region,
-                    offset,
-                    base,
-                    bits_incomplete_hi,
-                    (X(acc.x), Y(acc.y), z_init.clone()),
-                )?;
-
-                // Double-and-add (incomplete addition) for the `lo` half of the scalar decomposition
-                let z = zs_incomplete_hi.last().expect("should not be empty");
-                let (x_a, y_a, zs_incomplete_lo) = self.lo_config.double_and_add(
-                    &mut region,
-                    offset,
-                    base,
-                    bits_incomplete_lo,
-                    (x_a, y_a, z.clone()),
-                )?;
-
-                // Move from incomplete addition to complete addition.
-                // Inside incomplete::double_and_add, the offset was increased once after initialization
-                // of the running sum.
-                // Then, the final assignment of double-and-add was made on row + offset + 1.
-                // Outside of incomplete addition, we must account for these offset increases by adding
-                // 2 to the incomplete addition length.
-                let offset = offset + INCOMPLETE_LO_RANGE.len() + 2;
-
-                // Complete addition
-                let (acc, zs_complete) = {
-                    let z = zs_incomplete_lo.last().expect("should not be empty");
-                    // Bits used in complete addition. k_{3} to k_{1} inclusive
-                    // The LSB k_{0} is handled separately.
-                    let bits_complete = &bits[COMPLETE_RANGE];
-                    self.complete_config.assign_region(
+                    // Double-and-add (incomplete addition) for the `hi` half of the scalar decomposition
+                    let (x_a, y_a, zs_incomplete_hi) = self.hi_config.double_and_add(
                         &mut region,
                         offset,
-                        bits_complete,
-                        &base_point,
-                        x_a,
-                        y_a,
-                        z.clone(),
-                    )?
-                };
+                        base,
+                        bits_incomplete_hi,
+                        (X(acc.x), Y(acc.y), z_init.clone()),
+                    )?;
 
-                // Each iteration of the complete addition uses two rows.
-                let offset = offset + COMPLETE_RANGE.len() * 2;
+                    // Double-and-add (incomplete addition) for the `lo` half of the scalar decomposition
+                    let z = zs_incomplete_hi.last().expect("should not be empty");
+                    let (x_a, y_a, zs_incomplete_lo) = self.lo_config.double_and_add(
+                        &mut region,
+                        offset,
+                        base,
+                        bits_incomplete_lo,
+                        (x_a, y_a, z.clone()),
+                    )?;
 
-                // Process the least significant bit
-                let z_1 = zs_complete.last().unwrap().clone();
-                let (result, z_0) = self.process_lsb(&mut region, offset, base, acc, z_1, lsb)?;
+                    // Move from incomplete addition to complete addition.
+                    // Inside incomplete::double_and_add, the offset was increased once after initialization
+                    // of the running sum.
+                    // Then, the final assignment of double-and-add was made on row + offset + 1.
+                    // Outside of incomplete addition, we must account for these offset increases by adding
+                    // 2 to the incomplete addition length.
+                    let offset = offset + INCOMPLETE_LO_RANGE.len() + 2;
 
-                #[cfg(test)]
-                // Check that the correct multiple is obtained.
-                {
-                    use group::Curve;
+                    // Complete addition
+                    let (acc, zs_complete) = {
+                        let z = zs_incomplete_lo.last().expect("should not be empty");
+                        // Bits used in complete addition. k_{3} to k_{1} inclusive
+                        // The LSB k_{0} is handled separately.
+                        let bits_complete = &bits[COMPLETE_RANGE];
+                        self.complete_config.assign_region(
+                            &mut region,
+                            offset,
+                            bits_complete,
+                            &base_point,
+                            x_a,
+                            y_a,
+                            z.clone(),
+                        )?
+                    };
 
-                    let base = base.point();
-                    let alpha = alpha
-                        .value()
-                        .map(|alpha| pallas::Scalar::from_repr(alpha.to_repr()).unwrap());
-                    let real_mul = base.zip(alpha).map(|(base, alpha)| base * alpha);
-                    let result = result.point();
+                    // Each iteration of the complete addition uses two rows.
+                    let offset = offset + COMPLETE_RANGE.len() * 2;
 
-                    if let (Some(real_mul), Some(result)) = (real_mul, result) {
-                        assert_eq!(real_mul.to_affine(), result);
+                    // Process the least significant bit
+                    let z_1 = zs_complete.last().unwrap().clone();
+                    let (result, z_0) =
+                        self.process_lsb(&mut region, offset, base, acc, z_1, lsb)?;
+
+                    #[cfg(test)]
+                    // Check that the correct multiple is obtained.
+                    {
+                        use group::Curve;
+
+                        let base = base.point();
+                        let alpha = alpha
+                            .value()
+                            .map(|alpha| pallas::Scalar::from_repr(alpha.to_repr()).unwrap());
+                        let real_mul = base.zip(alpha).map(|(base, alpha)| base * alpha);
+                        let result = result.point();
+
+                        if let (Some(real_mul), Some(result)) = (real_mul, result) {
+                            assert_eq!(real_mul.to_affine(), result);
+                        }
                     }
-                }
 
-                let zs = {
-                    let mut zs = std::iter::empty()
-                        .chain(Some(z_init))
-                        .chain(zs_incomplete_hi.into_iter())
-                        .chain(zs_incomplete_lo.into_iter())
-                        .chain(zs_complete.into_iter())
-                        .chain(Some(z_0))
-                        .collect::<Vec<_>>();
-                    assert_eq!(zs.len(), pallas::Scalar::NUM_BITS as usize + 1);
+                    let zs = {
+                        let mut zs = std::iter::empty()
+                            .chain(Some(z_init))
+                            .chain(zs_incomplete_hi.into_iter())
+                            .chain(zs_incomplete_lo.into_iter())
+                            .chain(zs_complete.into_iter())
+                            .chain(Some(z_0))
+                            .collect::<Vec<_>>();
+                        assert_eq!(zs.len(), pallas::Scalar::NUM_BITS as usize + 1);
 
-                    // This reverses zs to give us [z_0, z_1, ..., z_{254}, z_{255}].
-                    zs.reverse();
-                    zs
-                };
+                        // This reverses zs to give us [z_0, z_1, ..., z_{254}, z_{255}].
+                        zs.reverse();
+                        zs
+                    };
 
-                Ok((result, zs))
-            },
-        )?;
+                    Ok((result, zs))
+                },
+            )?;
 
         self.overflow_config.overflow_check(
             layouter.namespace(|| "overflow check"),
@@ -313,11 +324,11 @@ impl Config {
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        base: &NonIdentityEccPoint,
-        acc: EccPoint,
+        base: &NonIdentityEccPoint<pallas::Affine>,
+        acc: EccPoint<pallas::Affine>,
         z_1: Z<pallas::Base>,
         lsb: Option<bool>,
-    ) -> Result<(EccPoint, Z<pallas::Base>), Error> {
+    ) -> Result<(EccPoint<pallas::Affine>, Z<pallas::Base>), Error> {
         // Enforce switching logic on LSB using a custom gate
         self.q_mul_lsb.enable(region, offset)?;
 
@@ -495,7 +506,10 @@ pub mod tests {
         let column = chip.config().advices[0];
 
         fn constrain_equal_non_id<
-            EccChip: EccInstructions<pallas::Affine, Point = EccPoint> + Clone + Eq + std::fmt::Debug,
+            EccChip: EccInstructions<pallas::Affine, Point = EccPoint<pallas::Affine>>
+                + Clone
+                + Eq
+                + std::fmt::Debug,
         >(
             chip: EccChip,
             mut layouter: impl Layouter<pallas::Base>,

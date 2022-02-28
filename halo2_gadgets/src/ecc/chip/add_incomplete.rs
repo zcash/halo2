@@ -1,4 +1,6 @@
-use std::{array, collections::HashSet};
+//! Helper implementing incomplete addition.
+
+use std::{array, collections::HashSet, marker::PhantomData};
 
 use super::NonIdentityEccPoint;
 use ff::Field;
@@ -8,24 +10,27 @@ use halo2_proofs::{
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
-use pasta_curves::{arithmetic::CurveAffine, pallas};
+use pasta_curves::arithmetic::CurveAffine;
 
+/// Configuration implementing incomplete addition.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Config {
+pub struct Config<C: CurveAffine> {
     q_add_incomplete: Selector,
-    // x-coordinate of P in P + Q = R
+    /// x-coordinate of P in P + Q = R
     pub x_p: Column<Advice>,
-    // y-coordinate of P in P + Q = R
+    /// y-coordinate of P in P + Q = R
     pub y_p: Column<Advice>,
-    // x-coordinate of Q or R in P + Q = R
+    /// x-coordinate of Q or R in P + Q = R
     pub x_qr: Column<Advice>,
-    // y-coordinate of Q or R in P + Q = R
+    /// y-coordinate of Q or R in P + Q = R
     pub y_qr: Column<Advice>,
+    _marker: PhantomData<C>,
 }
 
-impl Config {
-    pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+impl<C: CurveAffine> Config<C> {
+    /// Configures this configuration.
+    pub fn configure(
+        meta: &mut ConstraintSystem<C::Base>,
         x_p: Column<Advice>,
         y_p: Column<Advice>,
         x_qr: Column<Advice>,
@@ -42,6 +47,7 @@ impl Config {
             y_p,
             x_qr,
             y_qr,
+            _marker: PhantomData,
         };
 
         config.create_gate(meta);
@@ -53,7 +59,7 @@ impl Config {
         core::array::IntoIter::new([self.x_p, self.y_p, self.x_qr, self.y_qr]).collect()
     }
 
-    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystem<C::Base>) {
         meta.create_gate("incomplete addition gates", |meta| {
             let q_add_incomplete = meta.query_selector(self.q_add_incomplete);
             let x_p = meta.query_advice(self.x_p, Rotation::cur());
@@ -79,13 +85,14 @@ impl Config {
         });
     }
 
-    pub(super) fn assign_region(
+    /// Assign region for incomplete addition.
+    pub fn assign_region(
         &self,
-        p: &NonIdentityEccPoint,
-        q: &NonIdentityEccPoint,
+        p: &NonIdentityEccPoint<C>,
+        q: &NonIdentityEccPoint<C>,
         offset: usize,
-        region: &mut Region<'_, pallas::Base>,
-    ) -> Result<NonIdentityEccPoint, Error> {
+        region: &mut Region<'_, C::Base>,
+    ) -> Result<NonIdentityEccPoint<C>, Error> {
         // Enable `q_add_incomplete` selector
         self.q_add_incomplete.enable(region, offset)?;
 

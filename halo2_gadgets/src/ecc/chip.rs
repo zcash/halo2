@@ -10,7 +10,6 @@ use crate::{
 };
 
 use ff::Field;
-use group::prime::PrimeCurveAffine;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter},
     plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
@@ -20,11 +19,11 @@ use pasta_curves::{arithmetic::CurveAffine, pallas};
 use std::convert::TryInto;
 
 pub(super) mod add;
-pub(super) mod add_incomplete;
+pub mod add_incomplete;
 pub mod constants;
 pub(super) mod mul;
 pub(super) mod mul_fixed;
-pub(super) mod witness_point;
+pub mod witness_point;
 
 pub use constants::*;
 
@@ -32,33 +31,33 @@ pub use constants::*;
 /// identity represented as (0, 0).
 /// Each coordinate is assigned to a cell.
 #[derive(Clone, Debug)]
-pub struct EccPoint {
+pub struct EccPoint<C: CurveAffine> {
     /// x-coordinate
-    x: AssignedCell<pallas::Base, pallas::Base>,
+    x: AssignedCell<C::Base, C::Base>,
     /// y-coordinate
-    y: AssignedCell<pallas::Base, pallas::Base>,
+    y: AssignedCell<C::Base, C::Base>,
 }
 
-impl EccPoint {
+impl<C: CurveAffine> EccPoint<C> {
     /// Constructs a point from its coordinates, without checking they are on the curve.
     ///
     /// This is an internal API that we only use where we know we have a valid curve point
     /// (specifically inside Sinsemilla).
     pub(crate) fn from_coordinates_unchecked(
-        x: AssignedCell<pallas::Base, pallas::Base>,
-        y: AssignedCell<pallas::Base, pallas::Base>,
+        x: AssignedCell<C::Base, C::Base>,
+        y: AssignedCell<C::Base, C::Base>,
     ) -> Self {
         EccPoint { x, y }
     }
 
     /// Returns the value of this curve point, if known.
-    pub fn point(&self) -> Option<pallas::Affine> {
+    pub fn point(&self) -> Option<C> {
         match (self.x.value(), self.y.value()) {
             (Some(x), Some(y)) => {
                 if x.is_zero_vartime() && y.is_zero_vartime() {
-                    Some(pallas::Affine::identity())
+                    Some(C::identity())
                 } else {
-                    Some(pallas::Affine::from_xy(*x, *y).unwrap())
+                    Some(C::from_xy(*x, *y).unwrap())
                 }
             }
             _ => None,
@@ -66,12 +65,12 @@ impl EccPoint {
     }
     /// The cell containing the affine short-Weierstrass x-coordinate,
     /// or 0 for the zero point.
-    pub fn x(&self) -> AssignedCell<pallas::Base, pallas::Base> {
+    pub fn x(&self) -> AssignedCell<C::Base, C::Base> {
         self.x.clone()
     }
     /// The cell containing the affine short-Weierstrass y-coordinate,
     /// or 0 for the zero point.
-    pub fn y(&self) -> AssignedCell<pallas::Base, pallas::Base> {
+    pub fn y(&self) -> AssignedCell<C::Base, C::Base> {
         self.y.clone()
     }
 
@@ -84,47 +83,47 @@ impl EccPoint {
 /// A non-identity point represented in affine (x, y) coordinates.
 /// Each coordinate is assigned to a cell.
 #[derive(Clone, Debug)]
-pub struct NonIdentityEccPoint {
+pub struct NonIdentityEccPoint<C: CurveAffine> {
     /// x-coordinate
-    x: AssignedCell<pallas::Base, pallas::Base>,
+    x: AssignedCell<C::Base, C::Base>,
     /// y-coordinate
-    y: AssignedCell<pallas::Base, pallas::Base>,
+    y: AssignedCell<C::Base, C::Base>,
 }
 
-impl NonIdentityEccPoint {
+impl<C: CurveAffine> NonIdentityEccPoint<C> {
     /// Constructs a point from its coordinates, without checking they are on the curve.
     ///
     /// This is an internal API that we only use where we know we have a valid non-identity
     /// curve point (specifically inside Sinsemilla).
     pub(crate) fn from_coordinates_unchecked(
-        x: AssignedCell<pallas::Base, pallas::Base>,
-        y: AssignedCell<pallas::Base, pallas::Base>,
+        x: AssignedCell<C::Base, C::Base>,
+        y: AssignedCell<C::Base, C::Base>,
     ) -> Self {
         NonIdentityEccPoint { x, y }
     }
 
     /// Returns the value of this curve point, if known.
-    pub fn point(&self) -> Option<pallas::Affine> {
+    pub fn point(&self) -> Option<C> {
         match (self.x.value(), self.y.value()) {
             (Some(x), Some(y)) => {
                 assert!(!x.is_zero_vartime() && !y.is_zero_vartime());
-                Some(pallas::Affine::from_xy(*x, *y).unwrap())
+                Some(C::from_xy(*x, *y).unwrap())
             }
             _ => None,
         }
     }
     /// The cell containing the affine short-Weierstrass x-coordinate.
-    pub fn x(&self) -> AssignedCell<pallas::Base, pallas::Base> {
+    pub fn x(&self) -> AssignedCell<C::Base, C::Base> {
         self.x.clone()
     }
     /// The cell containing the affine short-Weierstrass y-coordinate.
-    pub fn y(&self) -> AssignedCell<pallas::Base, pallas::Base> {
+    pub fn y(&self) -> AssignedCell<C::Base, C::Base> {
         self.y.clone()
     }
 }
 
-impl From<NonIdentityEccPoint> for EccPoint {
-    fn from(non_id_point: NonIdentityEccPoint) -> Self {
+impl From<NonIdentityEccPoint<pallas::Affine>> for EccPoint<pallas::Affine> {
+    fn from(non_id_point: NonIdentityEccPoint<pallas::Affine>) -> Self {
         Self {
             x: non_id_point.x,
             y: non_id_point.y,
@@ -140,7 +139,7 @@ pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>> {
     pub advices: [Column<Advice>; 10],
 
     /// Incomplete addition
-    add_incomplete: add_incomplete::Config,
+    add_incomplete: add_incomplete::Config<pallas::Affine>,
 
     /// Complete addition
     add: add::Config,
@@ -156,7 +155,7 @@ pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>> {
     mul_fixed_base_field: mul_fixed::base_field_elem::Config<FixedPoints>,
 
     /// Witness point
-    witness_point: witness_point::Config,
+    witness_point: witness_point::Config<pallas::Affine>,
 
     /// Lookup range check using 10-bit lookup table
     pub lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
@@ -391,8 +390,8 @@ where
     type ScalarFixed = EccScalarFixed;
     type ScalarFixedShort = EccScalarFixedShort;
     type ScalarVar = AssignedCell<pallas::Base, pallas::Base>;
-    type Point = EccPoint;
-    type NonIdentityPoint = NonIdentityEccPoint;
+    type Point = EccPoint<pallas::Affine>;
+    type NonIdentityPoint = NonIdentityEccPoint<pallas::Affine>;
     type X = AssignedCell<pallas::Base, pallas::Base>;
     type FixedPoints = Fixed;
 
@@ -438,7 +437,7 @@ where
     }
 
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X {
-        let point: EccPoint = (point.clone()).into();
+        let point: EccPoint<pallas::Affine> = (point.clone()).into();
         point.x()
     }
 
