@@ -3,6 +3,7 @@
 //! We constrain $K \leq 3$ for this helper.
 //!     $$\alpha = k_0 + (2^K) k_1 + (2^{2K}) k_2 + ... + (2^{(W-1)K}) k_{W-1}$$
 
+pub mod be;
 pub mod le;
 
 use ff::{PrimeField, PrimeFieldBits};
@@ -15,7 +16,7 @@ use super::{lebs2ip, range_check};
 use pasta_curves::arithmetic::FieldExt;
 use std::{convert::TryInto, marker::PhantomData};
 
-/// Decompose an element `alpha` into `window_num_bits` bits (little-endian)
+/// Decomposes an element `alpha` into `WINDOW_NUM_BITS` little-endian bits
 /// For a window size of `w`, this returns [k_0, ..., k_n] where each `k_i`
 /// is a `w`-bit value, and `scalar = k_0 + k_1 * w + k_n * w^n`.
 ///
