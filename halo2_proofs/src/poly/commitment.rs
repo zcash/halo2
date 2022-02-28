@@ -158,8 +158,13 @@ impl<C: CurveAffine> Params<C> {
     }
 
     /// Getter for g generators
-    pub fn get_g(&self) -> Vec<C> {
+    pub fn g(&self) -> Vec<C> {
         self.g.clone()
+    }
+
+    /// Getter for g_lagrange generators
+    pub fn g_lagrange(&self) -> Vec<C> {
+        self.g_lagrange.clone()
     }
 
     /// Writes params to a buffer.

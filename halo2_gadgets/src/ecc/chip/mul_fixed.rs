@@ -48,7 +48,7 @@ pub struct Config<FixedPoints: super::FixedPoints<pallas::Affine>> {
     // Configuration for `add`
     add_config: add::Config,
     // Configuration for `add_incomplete`
-    add_incomplete_config: add_incomplete::Config,
+    add_incomplete_config: add_incomplete::Config<pallas::Affine>,
     _marker: PhantomData<FixedPoints>,
 }
 
@@ -62,7 +62,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         y_p: Column<Advice>,
         u: Column<Advice>,
         add_config: add::Config,
-        add_incomplete_config: add_incomplete::Config,
+        add_incomplete_config: add_incomplete::Config<pallas::Affine>,
     ) -> Self {
         meta.enable_equality(window);
         meta.enable_equality(u);
@@ -201,7 +201,13 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         scalar: &ScalarFixed,
         base: &F,
         coords_check_toggle: Selector,
-    ) -> Result<(NonIdentityEccPoint, NonIdentityEccPoint), Error> {
+    ) -> Result<
+        (
+            NonIdentityEccPoint<pallas::Affine>,
+            NonIdentityEccPoint<pallas::Affine>,
+        ),
+        Error,
+    > {
         // Assign fixed columns for given fixed base
         self.assign_fixed_constants::<F, NUM_WINDOWS>(region, offset, base, coords_check_toggle)?;
 
@@ -283,7 +289,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         k: Option<pallas::Scalar>,
         k_usize: Option<usize>,
         base: &F,
-    ) -> Result<NonIdentityEccPoint, Error> {
+    ) -> Result<NonIdentityEccPoint<pallas::Affine>, Error> {
         let base_value = base.generator();
         let base_u = base.u();
         assert_eq!(base_u.len(), NUM_WINDOWS);
@@ -334,7 +340,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         offset: usize,
         base: &F,
         scalar: &ScalarFixed,
-    ) -> Result<NonIdentityEccPoint, Error> {
+    ) -> Result<NonIdentityEccPoint<pallas::Affine>, Error> {
         // Recall that the message at each window `w` is represented as
         // `m_w = [(k_w + 2) ⋅ 8^w]B`.
         // When `w = 0`, we have `m_0 = [(k_0 + 2)]B`.
@@ -348,10 +354,10 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        mut acc: NonIdentityEccPoint,
+        mut acc: NonIdentityEccPoint<pallas::Affine>,
         base: &F,
         scalar: &ScalarFixed,
-    ) -> Result<NonIdentityEccPoint, Error> {
+    ) -> Result<NonIdentityEccPoint<pallas::Affine>, Error> {
         let scalar_windows_field = scalar.windows_field();
         let scalar_windows_usize = scalar.windows_usize();
 
@@ -380,7 +386,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         offset: usize,
         base: &F,
         scalar: &ScalarFixed,
-    ) -> Result<NonIdentityEccPoint, Error> {
+    ) -> Result<NonIdentityEccPoint<pallas::Affine>, Error> {
         // Assign u = (y_p + z_w).sqrt() for the most significant window
         {
             let u_val = scalar.windows_usize()[NUM_WINDOWS - 1]

@@ -95,7 +95,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         mut layouter: impl Layouter<pallas::Base>,
         magnitude_sign: MagnitudeSign,
         base: &<Fixed as FixedPoints<pallas::Affine>>::ShortScalar,
-    ) -> Result<(EccPoint, EccScalarFixedShort), Error>
+    ) -> Result<(EccPoint<pallas::Affine>, EccScalarFixedShort), Error>
     where
         <Fixed as FixedPoints<pallas::Affine>>::ShortScalar:
             super::super::FixedPoint<pallas::Affine>,

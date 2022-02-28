@@ -1,32 +1,34 @@
+//! Helper implementing point witnessing.
+
 use super::{EccPoint, NonIdentityEccPoint};
 
-use group::prime::PrimeCurveAffine;
-
+use group::ff::Field;
 use halo2_proofs::{
     circuit::{AssignedCell, Region},
     plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector, VirtualCells},
     poly::Rotation,
 };
-use pasta_curves::{arithmetic::CurveAffine, pallas};
+use pasta_curves::arithmetic::CurveAffine;
+use std::marker::PhantomData;
 
-type Coordinates = (
-    AssignedCell<pallas::Base, pallas::Base>,
-    AssignedCell<pallas::Base, pallas::Base>,
-);
+type Coordinates<F> = (AssignedCell<F, F>, AssignedCell<F, F>);
 
+/// Configuration implementing point witnessing.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Config {
+pub struct Config<C: CurveAffine> {
     q_point: Selector,
     q_point_non_id: Selector,
-    // x-coordinate
+    /// x-coordinate
     pub x: Column<Advice>,
-    // y-coordinate
+    /// y-coordinate
     pub y: Column<Advice>,
+    _marker: PhantomData<C>,
 }
 
-impl Config {
-    pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+impl<C: CurveAffine> Config<C> {
+    /// Configures this configuration.
+    pub fn configure(
+        meta: &mut ConstraintSystem<C::Base>,
         x: Column<Advice>,
         y: Column<Advice>,
     ) -> Self {
@@ -35,6 +37,7 @@ impl Config {
             q_point_non_id: meta.selector(),
             x,
             y,
+            _marker: PhantomData,
         };
 
         config.create_gate(meta);
@@ -42,13 +45,13 @@ impl Config {
         config
     }
 
-    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
-        let curve_eqn = |meta: &mut VirtualCells<pallas::Base>| {
+    fn create_gate(&self, meta: &mut ConstraintSystem<C::Base>) {
+        let curve_eqn = |meta: &mut VirtualCells<C::Base>| {
             let x = meta.query_advice(self.x, Rotation::cur());
             let y = meta.query_advice(self.y, Rotation::cur());
 
             // y^2 = x^3 + b
-            y.square() - (x.clone().square() * x) - Expression::Constant(pallas::Affine::b())
+            y.square() - (x.clone().square() * x) - Expression::Constant(C::b())
         };
 
         meta.create_gate("witness point", |meta| {
@@ -78,10 +81,10 @@ impl Config {
 
     fn assign_xy(
         &self,
-        value: Option<(pallas::Base, pallas::Base)>,
+        value: Option<(C::Base, C::Base)>,
         offset: usize,
-        region: &mut Region<'_, pallas::Base>,
-    ) -> Result<Coordinates, Error> {
+        region: &mut Region<'_, C::Base>,
+    ) -> Result<Coordinates<C::Base>, Error> {
         // Assign `x` value
         let x_val = value.map(|value| value.0);
         let x_var =
@@ -98,17 +101,17 @@ impl Config {
     /// Assigns a point that can be the identity.
     pub(super) fn point(
         &self,
-        value: Option<pallas::Affine>,
+        value: Option<C>,
         offset: usize,
-        region: &mut Region<'_, pallas::Base>,
-    ) -> Result<EccPoint, Error> {
+        region: &mut Region<'_, C::Base>,
+    ) -> Result<EccPoint<C>, Error> {
         // Enable `q_point` selector
         self.q_point.enable(region, offset)?;
 
         let value = value.map(|value| {
             // Map the identity to (0, 0).
-            if value == pallas::Affine::identity() {
-                (pallas::Base::zero(), pallas::Base::zero())
+            if value == C::identity() {
+                (C::Base::zero(), C::Base::zero())
             } else {
                 let value = value.coordinates().unwrap();
                 (*value.x(), *value.y())
@@ -120,18 +123,18 @@ impl Config {
     }
 
     /// Assigns a non-identity point.
-    pub(super) fn point_non_id(
+    pub fn point_non_id(
         &self,
-        value: Option<pallas::Affine>,
+        value: Option<C>,
         offset: usize,
-        region: &mut Region<'_, pallas::Base>,
-    ) -> Result<NonIdentityEccPoint, Error> {
+        region: &mut Region<'_, C::Base>,
+    ) -> Result<NonIdentityEccPoint<C>, Error> {
         // Enable `q_point_non_id` selector
         self.q_point_non_id.enable(region, offset)?;
 
         if let Some(value) = value {
             // Return an error if the point is the identity.
-            if value == pallas::Affine::identity() {
+            if value == C::identity() {
                 return Err(Error::Synthesis);
             }
         };
@@ -151,8 +154,8 @@ pub mod tests {
     use halo2_proofs::circuit::Layouter;
     use pasta_curves::pallas;
 
-    use super::*;
     use crate::ecc::{EccInstructions, NonIdentityPoint};
+    use group::prime::PrimeCurveAffine;
 
     pub fn test_witness_non_id<
         EccChip: EccInstructions<pallas::Affine> + Clone + Eq + std::fmt::Debug,

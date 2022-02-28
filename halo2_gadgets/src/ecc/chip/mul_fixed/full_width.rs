@@ -121,7 +121,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         mut layouter: impl Layouter<pallas::Base>,
         scalar: Option<pallas::Scalar>,
         base: &<Fixed as FixedPoints<pallas::Affine>>::FullScalar,
-    ) -> Result<(EccPoint, EccScalarFixed), Error>
+    ) -> Result<(EccPoint<pallas::Affine>, EccScalarFixed), Error>
     where
         <Fixed as FixedPoints<pallas::Affine>>::FullScalar:
             super::super::FixedPoint<pallas::Affine>,
