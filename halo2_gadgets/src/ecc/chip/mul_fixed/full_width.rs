@@ -1,7 +1,7 @@
 use super::super::{EccPoint, EccScalarFixed, FixedPoints, FIXED_BASE_WINDOW_SIZE, H, NUM_WINDOWS};
 
 use crate::utilities::{
-    decompose_running_sum::{decompose_element, Window},
+    decompose_running_sum::{decompose_element_le, Window},
     range_check,
 };
 use ff::PrimeField;
@@ -87,7 +87,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
         // Decompose scalar into `k-bit` windows
         let scalar_windows: Option<Vec<Window<FIXED_BASE_WINDOW_SIZE>>> = scalar.map(|scalar| {
-            decompose_element::<pallas::Scalar, SCALAR_NUM_BITS, FIXED_BASE_WINDOW_SIZE>(&scalar)
+            decompose_element_le::<pallas::Scalar, SCALAR_NUM_BITS, FIXED_BASE_WINDOW_SIZE>(&scalar)
         });
 
         // Store the scalar decomposition

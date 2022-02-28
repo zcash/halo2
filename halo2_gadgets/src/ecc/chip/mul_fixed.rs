@@ -2,7 +2,7 @@ use super::{
     add, add_incomplete, EccBaseFieldElemFixed, EccScalarFixed, EccScalarFixedShort, FixedPoint,
     NonIdentityEccPoint, FIXED_BASE_WINDOW_SIZE, H,
 };
-use crate::utilities::decompose_running_sum::RunningSumConfig;
+use crate::utilities::decompose_running_sum::le;
 
 use std::marker::PhantomData;
 
@@ -31,7 +31,7 @@ lazy_static! {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config<FixedPoints: super::FixedPoints<pallas::Affine>> {
-    running_sum_config: RunningSumConfig<pallas::Base, FIXED_BASE_WINDOW_SIZE>,
+    running_sum_config: le::Config<pallas::Base, FIXED_BASE_WINDOW_SIZE>,
     // The fixed Lagrange interpolation coefficients for `x_p`.
     lagrange_coeffs: [Column<Fixed>; H],
     // The fixed `z` for each window such that `y + z = u^2`.
@@ -68,7 +68,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         meta.enable_equality(u);
 
         let q_running_sum = meta.selector();
-        let running_sum_config = RunningSumConfig::configure(meta, q_running_sum, window);
+        let running_sum_config = le::Config::configure(meta, q_running_sum, window);
 
         let config = Self {
             running_sum_config,
