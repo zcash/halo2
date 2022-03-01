@@ -746,23 +746,29 @@ impl<F: FieldExt> MockProver<F> {
     /// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating
     /// the reasons that the circuit is not satisfied.
     pub fn verify(&self) -> Result<(), Vec<VerifyFailure>> {
-        self.verify_at_rows(self.usable_rows.clone())
+        self.verify_at_rows(self.usable_rows.clone(), self.usable_rows.clone())
     }
 
     /// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating
     /// the reasons that the circuit is not satisfied.
-    /// Constraints and lookups are only checked at `row_ids`.
-    pub fn verify_at_rows<I: Iterator<Item = usize>>(
+    /// Constraints are only checked at `gate_row_ids`,
+    /// and lookup inputs are only checked at `lookup_input_row_ids`
+    pub fn verify_at_rows<I: Clone + Iterator<Item = usize>>(
         &self,
-        row_ids: I,
+        gate_row_ids: I,
+        lookup_input_row_ids: I,
     ) -> Result<(), Vec<VerifyFailure>> {
         let n = self.n as i32;
 
-        let row_ids: Vec<_> = row_ids.collect();
-        // check all the row_ids are valid
-        for row_id in row_ids.iter() {
-            if !self.usable_rows.contains(row_id) {
-                panic!("invalid row id {}", row_id)
+        // check all the row ids are valid
+        for row_id in gate_row_ids.clone() {
+            if !self.usable_rows.contains(&row_id) {
+                panic!("invalid gate row id {}", row_id)
+            }
+        }
+        for row_id in lookup_input_row_ids.clone() {
+            if !self.usable_rows.contains(&row_id) {
+                panic!("invalid lookup row id {}", row_id)
             }
         }
 
@@ -816,12 +822,13 @@ impl<F: FieldExt> MockProver<F> {
                 .iter()
                 .enumerate()
                 .flat_map(|(gate_index, gate)| {
-                    // We iterate from n..2n so we can just reduce to handle wrapping.
-                    let mut row_ids = row_ids.clone();
                     let blinding_rows =
                         (self.n as usize - (self.cs.blinding_factors() + 1))..(self.n as usize);
-                    row_ids.extend(blinding_rows);
-                    (row_ids.into_iter()).flat_map(move |row| {
+                    (gate_row_ids
+                        .clone()
+                        .into_iter()
+                        .chain(blinding_rows.into_iter()))
+                    .flat_map(move |row| {
                         fn load_instance<'a, F: FieldExt, T: ColumnType>(
                             n: i32,
                             row: i32,
@@ -945,7 +952,6 @@ impl<F: FieldExt> MockProver<F> {
                         )
                     };
 
-                    let row_ids = row_ids.clone();
                     // In the real prover, the lookup expressions are never enforced on
                     // unusable rows, due to the (1 - (l_last(X) + l_blind(X))) term.
                     let table: std::collections::BTreeSet<Vec<_>> = self
@@ -959,28 +965,31 @@ impl<F: FieldExt> MockProver<F> {
                                 .collect::<Vec<_>>()
                         })
                         .collect();
-                    row_ids.into_iter().filter_map(move |input_row| {
-                        let inputs: Vec<_> = lookup
-                            .input_expressions
-                            .iter()
-                            .map(|c| load(c, input_row))
-                            .collect();
-                        let lookup_passes = table.contains(&inputs);
-                        if lookup_passes {
-                            None
-                        } else {
-                            Some(VerifyFailure::Lookup {
-                                name: lookup.name,
-                                lookup_index,
-                                location: FailureLocation::find_expressions(
-                                    &self.cs,
-                                    &self.regions,
-                                    input_row,
-                                    lookup.input_expressions.iter(),
-                                ),
-                            })
-                        }
-                    })
+                    lookup_input_row_ids
+                        .clone()
+                        .into_iter()
+                        .filter_map(move |input_row| {
+                            let inputs: Vec<_> = lookup
+                                .input_expressions
+                                .iter()
+                                .map(|c| load(c, input_row))
+                                .collect();
+                            let lookup_passes = table.contains(&inputs);
+                            if lookup_passes {
+                                None
+                            } else {
+                                Some(VerifyFailure::Lookup {
+                                    name: lookup.name,
+                                    lookup_index,
+                                    location: FailureLocation::find_expressions(
+                                        &self.cs,
+                                        &self.regions,
+                                        input_row,
+                                        lookup.input_expressions.iter(),
+                                    ),
+                                })
+                            }
+                        })
                 });
 
         // Check that permutations preserve the original values of the cells.
