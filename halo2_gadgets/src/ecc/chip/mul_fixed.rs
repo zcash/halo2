@@ -472,12 +472,12 @@ impl ScalarFixed {
         match self {
             Self::BaseFieldElem(scalar) => running_sum_to_windows({
                 let mut vec = vec![scalar.running_sum.value().clone()];
-                vec.extend_from_slice(scalar.running_sum.windows());
+                vec.extend_from_slice(scalar.running_sum.running_sum());
                 vec
             }),
             Self::Short(scalar) => running_sum_to_windows({
                 let mut vec = vec![scalar.running_sum.value().clone()];
-                vec.extend_from_slice(scalar.running_sum.windows());
+                vec.extend_from_slice(scalar.running_sum.running_sum());
                 vec
             }),
             Self::FullWidth(scalar) => scalar

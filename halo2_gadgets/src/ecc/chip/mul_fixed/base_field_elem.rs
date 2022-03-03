@@ -247,9 +247,9 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         //                => z_13_alpha_0_prime = 0
         //
         let (alpha, running_sum) = (scalar.base_field_elem, &scalar.running_sum);
-        let z_43_alpha = running_sum.windows()[42].clone();
-        let z_44_alpha = running_sum.windows()[43].clone();
-        let z_84_alpha = running_sum.windows()[83].clone();
+        let z_43_alpha = running_sum.running_sum()[42].clone();
+        let z_44_alpha = running_sum.running_sum()[43].clone();
+        let z_84_alpha = running_sum.running_sum()[83].clone();
 
         // α_0 = α - z_84_alpha * 2^252
         let alpha_0 = alpha

@@ -45,8 +45,8 @@ where
 {
     /// $z_0$, the original value decomposed by this helper.
     value: AssignedCell<F, F>,
-    /// The windows [z_W, ..., z_1].  If created in strict mode, $z_W = 0$.
-    windows: [AssignedCell<F, F>; W],
+    /// The running sum [z_W, ..., z_1].  If created in strict mode, $z_W = 0$.
+    running_sum: [AssignedCell<F, F>; W],
 }
 
 impl<F, const W: usize> RunningSum<F, W>
@@ -58,9 +58,9 @@ where
         &self.value
     }
 
-    /// The windows of the running sum decomposition.
-    pub fn windows(&self) -> &[AssignedCell<F, F>; W] {
-        &self.windows
+    /// The running sum decomposition.
+    pub fn running_sum(&self) -> &[AssignedCell<F, F>; W] {
+        &self.running_sum
     }
 }
 
@@ -242,10 +242,10 @@ where
 
         Ok(RunningSum {
             value: zs[0].clone(),
-            windows: {
-                let mut windows = zs[1..].to_vec();
-                windows.reverse();
-                windows.try_into().unwrap()
+            running_sum: {
+                let mut zs = zs[1..].to_vec();
+                zs.reverse();
+                zs.try_into().unwrap()
             },
         })
     }

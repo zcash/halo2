@@ -149,7 +149,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                 // Copy last window to `u` column.
                 // (Although the last window is not a `u` value; we are copying it into the `u`
                 // column because there is an available cell there.)
-                let z_21 = scalar.running_sum.windows()[20].clone();
+                let z_21 = scalar.running_sum.running_sum()[20].clone();
                 z_21.copy_advice(|| "last_window", &mut region, self.super_config.u, offset)?;
 
                 // Conditionally negate `y`-coordinate
