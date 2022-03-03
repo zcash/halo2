@@ -39,17 +39,18 @@ use std::{convert::TryInto, marker::PhantomData};
 
 /// The running sum decomposition in big-endian windows.
 #[derive(Clone, Debug)]
-pub struct RunningSum<F, const W: usize>
+pub struct RunningSum<F, const WINDOW_NUM_BITS: usize, const NUM_WINDOWS: usize>
 where
     F: FieldExt + PrimeFieldBits,
 {
     /// $z_0$, the original value decomposed by this helper.
     value: AssignedCell<F, F>,
     /// The running sum [z_W, ..., z_1].  If created in strict mode, $z_W = 0$.
-    running_sum: [AssignedCell<F, F>; W],
+    running_sum: [AssignedCell<F, F>; NUM_WINDOWS],
 }
 
-impl<F, const W: usize> RunningSum<F, W>
+impl<F, const WINDOW_NUM_BITS: usize, const NUM_WINDOWS: usize>
+    RunningSum<F, WINDOW_NUM_BITS, NUM_WINDOWS>
 where
     F: FieldExt + PrimeFieldBits,
 {
@@ -59,8 +60,56 @@ where
     }
 
     /// The running sum decomposition.
-    pub fn running_sum(&self) -> &[AssignedCell<F, F>; W] {
+    pub fn running_sum(&self) -> &[AssignedCell<F, F>; NUM_WINDOWS] {
         &self.running_sum
+    }
+
+    /// z[i], where i ranges from 0..=W.
+    pub fn z(&self, i: usize) -> &AssignedCell<F, F> {
+        if i == 0 {
+            &self.value
+        } else {
+            &self.running_sum[NUM_WINDOWS - i]
+        }
+    }
+
+    /// Returns [z_W, ..., z_0].
+    /// TODO: Use fixed array when const evaluatable is stable.
+    pub fn zs(&self) -> impl Iterator<Item = &AssignedCell<F, F>> {
+        (0..=NUM_WINDOWS).rev().map(move |i| (&self).z(i))
+    }
+
+    /// The window k_i, where i ranges from 0..={W-1}.
+    pub fn window(&self, i: usize) -> Option<Window<WINDOW_NUM_BITS>> {
+        //    z_i = 2^{K}⋅z_{i + 1} + k_i
+        // => k_i = z_i - 2^{K}⋅z_{i + 1}
+
+        self.z(i)
+            .value()
+            .zip(self.z(i + 1).value())
+            .map(|(&z_i, &z_iplus1)| {
+                let val = z_i - F::from(1 << WINDOW_NUM_BITS) * z_iplus1;
+                let bits: [bool; WINDOW_NUM_BITS] = val
+                    .to_le_bits()
+                    .into_iter()
+                    .take(WINDOW_NUM_BITS)
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .unwrap();
+                let bits = Window(bits);
+                assert_eq!(bits.value_field::<F>(), val);
+                bits
+            })
+    }
+
+    /// Returns [k_{W-1}, ..., k_0].
+    pub fn windows(&self) -> [Option<Window<WINDOW_NUM_BITS>>; NUM_WINDOWS] {
+        (0..NUM_WINDOWS)
+            .rev()
+            .map(move |i| (&self).window(i))
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap()
     }
 }
 
@@ -139,7 +188,7 @@ where
         offset: usize,
         alpha: Option<F>,
         strict: bool,
-    ) -> Result<RunningSum<F, NUM_WINDOWS>, Error> {
+    ) -> Result<RunningSum<F, WINDOW_NUM_BITS, NUM_WINDOWS>, Error> {
         let z_0 = region.assign_advice(
             || "z_0 = alpha",
             self.z,
@@ -159,7 +208,7 @@ where
         offset: usize,
         alpha: &AssignedCell<F, F>,
         strict: bool,
-    ) -> Result<RunningSum<F, NUM_WINDOWS>, Error> {
+    ) -> Result<RunningSum<F, WINDOW_NUM_BITS, NUM_WINDOWS>, Error> {
         let z_0 = alpha.copy_advice(|| "copy z_0 = alpha", region, self.z, offset + NUM_WINDOWS)?;
         self.decompose::<WORD_NUM_BITS, NUM_WINDOWS>(region, offset, &z_0, strict)
     }
@@ -175,7 +224,7 @@ where
         offset: usize,
         z_0: &AssignedCell<F, F>,
         strict: bool,
-    ) -> Result<RunningSum<F, NUM_WINDOWS>, Error> {
+    ) -> Result<RunningSum<F, WINDOW_NUM_BITS, NUM_WINDOWS>, Error> {
         // Make sure that we do not have more windows than required for the number
         // of bits in the word. In other words, every window must contain at least
         // one bit of the word (no empty windows).
