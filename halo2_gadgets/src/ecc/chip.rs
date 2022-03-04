@@ -21,6 +21,7 @@ use std::convert::TryInto;
 pub(super) mod add;
 pub mod add_incomplete;
 pub mod constants;
+pub mod double_and_add;
 pub(super) mod mul;
 pub(super) mod mul_fixed;
 pub mod witness_point;
