@@ -345,6 +345,7 @@ pub fn verify_proof<
                             VerifierQuery::new_commitment(
                                 &instance_commitments[column.index()],
                                 vk.domain.rotate_omega(*x, at),
+                                at,
                                 instance_evals[query_index],
                             )
                         },
@@ -354,6 +355,7 @@ pub fn verify_proof<
                             VerifierQuery::new_commitment(
                                 &advice_commitments[column.index()],
                                 vk.domain.rotate_omega(*x, at),
+                                at,
                                 advice_evals[query_index],
                             )
                         },
@@ -376,6 +378,7 @@ pub fn verify_proof<
                     VerifierQuery::new_commitment(
                         &vk.fixed_commitments[column.index()],
                         vk.domain.rotate_omega(*x, at),
+                        at,
                         fixed_evals[query_index],
                     )
                 }),

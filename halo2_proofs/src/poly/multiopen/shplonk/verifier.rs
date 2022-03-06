@@ -7,7 +7,7 @@ use crate::poly::{
     commitment::{Params, ParamsVerifier},
     msm::{PairMSM, PreMSM, ProjectiveMSM, MSM},
     multiopen::{CommitmentReference, Query, VerifierQuery},
-    {Coeff, Error, Polynomial},
+    Rotation, {Coeff, Error, Polynomial},
 };
 use crate::transcript::{EncodedChallenge, TranscriptRead};
 
@@ -52,7 +52,12 @@ where
     let mut outer_msm: PreMSM<C> = PreMSM::new();
 
     for rotation_set in rotation_sets.iter() {
-        let z_i = evaluate_vanishing_polynomial(&rotation_set.diffs[..], *u);
+        let diffs: Vec<C::Scalar> = super_point_set
+            .iter()
+            .filter(|point| !rotation_set.points.contains(point))
+            .copied()
+            .collect();
+        let z_i = evaluate_vanishing_polynomial(&diffs[..], *u);
 
         let mut inner_msm: ProjectiveMSM<C> = ProjectiveMSM::new();
         for commitment_data in rotation_set.commitments.iter() {
@@ -90,6 +95,9 @@ where
 impl<'a, 'b, C: CurveAffine> Query<C::Scalar> for VerifierQuery<'a, C> {
     type Commitment = CommitmentReference<'a, C>;
 
+    fn get_rotation(&self) -> Rotation {
+        self.rotation
+    }
     fn get_point(&self) -> C::Scalar {
         self.point
     }

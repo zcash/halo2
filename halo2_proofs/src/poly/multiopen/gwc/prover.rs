@@ -1,6 +1,7 @@
 use super::{construct_intermediate_sets, ChallengeV, Query};
 use crate::arithmetic::{eval_polynomial, kate_division, CurveAffine, FieldExt};
 use crate::poly::multiopen::ProverQuery;
+use crate::poly::Rotation;
 use crate::poly::{commitment::Params, Coeff, Polynomial};
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
@@ -67,6 +68,9 @@ impl<'a, C: CurveAffine> Query<C::Scalar> for ProverQuery<'a, C> {
 
     fn get_point(&self) -> C::Scalar {
         self.point
+    }
+    fn get_rotation(&self) -> Rotation {
+        self.rotation
     }
     fn get_eval(&self) -> C::Scalar {
         eval_polynomial(self.poly, self.get_point())

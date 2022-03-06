@@ -6,7 +6,7 @@ use crate::arithmetic::{
     CurveAffine, FieldExt,
 };
 use crate::poly::multiopen::ProverQuery;
-use crate::poly::{commitment::Params, Coeff, Error, Polynomial};
+use crate::poly::{commitment::Params, Coeff, Error, Polynomial, Rotation};
 use crate::transcript::{ChallengeScalar, EncodedChallenge, Transcript, TranscriptWrite};
 
 use ff::Field;
@@ -61,7 +61,6 @@ impl<'a, C: CurveAffine> CommitmentExtension<'a, C> {
 struct RotationSetExtension<'a, C: CurveAffine> {
     commitments: Vec<CommitmentExtension<'a, C>>,
     points: Vec<C::Scalar>,
-    diffs: Vec<C::Scalar>,
 }
 
 impl<'a, C: CurveAffine> RotationSet<C::Scalar, PolynomialPointer<'a, C>> {
@@ -69,7 +68,6 @@ impl<'a, C: CurveAffine> RotationSet<C::Scalar, PolynomialPointer<'a, C>> {
         RotationSetExtension {
             commitments,
             points: self.points.clone(),
-            diffs: self.diffs.clone(),
         }
     }
 }
@@ -160,9 +158,15 @@ where
 
     let linearisation_contribution =
         |rotation_set: RotationSetExtension<C>| -> Polynomial<C::Scalar, Coeff> {
+            let diffs: Vec<C::Scalar> = super_point_set
+                .iter()
+                .filter(|point| !rotation_set.points.contains(point))
+                .copied()
+                .collect();
+
             // calculate difference vanishing polynomial evaluation
 
-            let z_i = evaluate_vanishing_polynomial(&rotation_set.diffs[..], *u);
+            let z_i = evaluate_vanishing_polynomial(&diffs[..], *u);
 
             // inner linearisation contibutions are
             // [P_i_0(X) - r_i_0, P_i_1(X) - r_i_1, ... ] where
@@ -230,11 +234,14 @@ impl<'a, C: CurveAffine> PartialEq for PolynomialPointer<'a, C> {
 impl<'a, C: CurveAffine> Query<C::Scalar> for ProverQuery<'a, C> {
     type Commitment = PolynomialPointer<'a, C>;
 
+    fn get_rotation(&self) -> Rotation {
+        self.rotation
+    }
     fn get_point(&self) -> C::Scalar {
         self.point
     }
     fn get_eval(&self) -> C::Scalar {
-        eval_polynomial(self.poly, self.point)
+        eval_polynomial(self.poly, self.get_point())
     }
     fn get_commitment(&self) -> Self::Commitment {
         PolynomialPointer { poly: self.poly }

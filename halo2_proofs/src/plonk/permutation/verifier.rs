@@ -218,11 +218,13 @@ impl<C: CurveAffine> Evaluated<C> {
                     .chain(Some(VerifierQuery::new_commitment(
                         &set.permutation_product_commitment,
                         *x,
+                        Rotation::cur(),
                         set.permutation_product_eval,
                     )))
                     .chain(Some(VerifierQuery::new_commitment(
                         &set.permutation_product_commitment,
                         x_next,
+                        Rotation::next(),
                         set.permutation_product_next_eval,
                     )))
             }))
@@ -231,6 +233,7 @@ impl<C: CurveAffine> Evaluated<C> {
                 Some(VerifierQuery::new_commitment(
                     &set.permutation_product_commitment,
                     x_last,
+                    Rotation(-((blinding_factors + 1) as i32)),
                     set.permutation_product_last_eval.unwrap(),
                 ))
             }))
@@ -247,6 +250,8 @@ impl<C: CurveAffine> CommonEvaluated<C> {
         vkey.commitments
             .iter()
             .zip(self.permutation_evals.iter())
-            .map(move |(commitment, &eval)| VerifierQuery::new_commitment(commitment, *x, eval))
+            .map(move |(commitment, &eval)| {
+                VerifierQuery::new_commitment(commitment, *x, Rotation::cur(), eval)
+            })
     }
 }
