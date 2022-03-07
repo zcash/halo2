@@ -2,7 +2,7 @@ use super::{
     add, add_incomplete, EccBaseFieldElemFixed, EccScalarFixed, EccScalarFixedShort, FixedPoint,
     NonIdentityEccPoint, FIXED_BASE_WINDOW_SIZE, H,
 };
-use crate::utilities::decompose_running_sum::le;
+use crate::utilities::{decompose_running_sum::le, range_check};
 
 use std::marker::PhantomData;
 
@@ -67,8 +67,16 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         meta.enable_equality(window);
         meta.enable_equality(u);
 
-        let q_running_sum = meta.selector();
-        let running_sum_config = le::Config::configure(meta, q_running_sum, window);
+        let q_range_check = meta.selector();
+        let running_sum_config = le::Config::configure(meta, q_range_check, window);
+
+        // Range-constrain windows
+        meta.create_gate("range-constrain running sum window", |meta| {
+            let window = running_sum_config.window_expr()(meta);
+            let q_range_check = meta.query_selector(q_range_check);
+
+            vec![q_range_check * range_check(window, 1 << FIXED_BASE_WINDOW_SIZE)]
+        });
 
         let config = Self {
             running_sum_config,

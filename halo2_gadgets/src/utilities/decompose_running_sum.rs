@@ -9,18 +9,13 @@ pub mod le;
 use ff::{PrimeField, PrimeFieldBits};
 use halo2_proofs::plonk::{Advice, Assigned, Column, Selector};
 
-use super::{lebs2ip, range_check};
+use super::lebs2ip;
 use pasta_curves::arithmetic::FieldExt;
 use std::{convert::TryInto, marker::PhantomData};
 
 /// Decomposes an element `alpha` into `WINDOW_NUM_BITS` little-endian bits
 /// For a window size of `w`, this returns [k_0, ..., k_n] where each `k_i`
 /// is a `w`-bit value, and `scalar = k_0 + k_1 * w + k_n * w^n`.
-///
-/// # Panics
-///
-/// We are returning a `Vec<Window>` which means the window size is limited to
-/// <= 8 bits.
 pub fn decompose_element_le<
     F: PrimeFieldBits,
     const ELEM_NUM_BITS: usize,
@@ -28,8 +23,6 @@ pub fn decompose_element_le<
 >(
     alpha: &F,
 ) -> Vec<Window<WINDOW_NUM_BITS>> {
-    assert!(WINDOW_NUM_BITS <= 8);
-
     // Pad bits to multiple of WINDOW_NUM_BITS
     let padding = (WINDOW_NUM_BITS - (ELEM_NUM_BITS % WINDOW_NUM_BITS)) % WINDOW_NUM_BITS;
     let bits: Vec<bool> = alpha

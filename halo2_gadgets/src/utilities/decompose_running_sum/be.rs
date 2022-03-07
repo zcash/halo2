@@ -10,21 +10,10 @@
 //! Shifting the index by 1, we get
 //!                $$z_{i} = z_{i+1} * (2^K) + k_{i}.$$
 //! $z_0$ is constrained to be $\alpha$.
-//! The difference between each interstitial running sum output is constrained
-//! to be $K$ bits, i.e.
-//!                      `range_check`($k_i$, $2^K$),
-//! where
-//! ```text
-//!   range_check(word, range)
-//!     = word * (1 - word) * (2 - word) * ... * ((range - 1) - word)
-//! ```
 //!
-//! Given that the `range_check` constraint will be toggled by a selector, in
-//! practice we will have a `selector * range_check(word, range)` expression
-//! of degree `range + 1`.
-//!
-//! This means that $2^K$ has to be at most `degree_bound - 1` in order for
-//! the range check constraint to stay within the degree bound.
+//! The difference between each interstitial running sum output MUST be
+//! constrained to be $K$ bits outside of this helper using the `q_range_check`
+//! Selector.
 
 use ff::PrimeFieldBits;
 use halo2_proofs::{
@@ -33,7 +22,9 @@ use halo2_proofs::{
     poly::Rotation,
 };
 
-use super::{decompose_element_le, range_check, RunningSumConfig, Window};
+use crate::utilities::range_check;
+
+use super::{decompose_element_le, RunningSumConfig, Window};
 use pasta_curves::arithmetic::FieldExt;
 use std::{convert::TryInto, marker::PhantomData};
 
@@ -153,10 +144,6 @@ where
 
     /// The advice column `z` MUST be equality-enabled.
     ///
-    /// # Panics
-    ///
-    /// Panics if WINDOW_NUM_BITS > 3.
-    ///
     /// # Side-effects
     ///
     /// `z` will be equality-enabled.
@@ -165,8 +152,6 @@ where
         q_range_check: Selector,
         z: Column<Advice>,
     ) -> Self {
-        assert!(WINDOW_NUM_BITS <= 3);
-
         meta.enable_equality(z);
 
         let config = RunningSumConfig {
@@ -322,8 +307,11 @@ mod tests {
     use proptest::prelude::*;
     use rand::rngs::OsRng;
 
-    use crate::ecc::chip::{
-        FIXED_BASE_WINDOW_SIZE, L_SCALAR_SHORT as L_SHORT, NUM_WINDOWS, NUM_WINDOWS_SHORT,
+    use crate::{
+        ecc::chip::{
+            FIXED_BASE_WINDOW_SIZE, L_SCALAR_SHORT as L_SHORT, NUM_WINDOWS, NUM_WINDOWS_SHORT,
+        },
+        utilities::range_check,
     };
 
     const L_BASE: usize = pallas::Base::NUM_BITS as usize;
@@ -363,7 +351,17 @@ mod tests {
                 let constants = meta.fixed_column();
                 meta.enable_constant(constants);
 
-                Config::<F, WINDOW_NUM_BITS>::configure(meta, q_range_check, z)
+                let config = Config::<F, WINDOW_NUM_BITS>::configure(meta, q_range_check, z);
+
+                // Range-constrain windows
+                meta.create_gate("range-constrain running sum window", |meta| {
+                    let window = config.window_expr()(meta);
+                    let q_range_check = meta.query_selector(q_range_check);
+
+                    vec![q_range_check * range_check(window, 1 << WINDOW_NUM_BITS)]
+                });
+
+                config
             }
 
             fn synthesize(
