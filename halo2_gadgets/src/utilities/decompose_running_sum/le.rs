@@ -26,7 +26,7 @@
 use ff::PrimeFieldBits;
 use halo2_proofs::{
     circuit::{AssignedCell, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector, VirtualCells},
     poly::Rotation,
 };
 
@@ -116,6 +116,18 @@ impl<F, const WINDOW_NUM_BITS: usize> Config<F, WINDOW_NUM_BITS>
 where
     F: FieldExt + PrimeFieldBits,
 {
+    /// The expression for a single window derived from the z-values.
+    pub fn window_expr<'a>(&self) -> impl Fn(&mut VirtualCells<F>) -> Expression<F> + 'a {
+        let config = *self;
+        move |meta: &mut VirtualCells<F>| {
+            let z_cur = meta.query_advice(config.z, Rotation::cur());
+            let z_next = meta.query_advice(config.z, Rotation::next());
+            //    z_i = 2^{K}⋅z_{i + 1} + k_i
+            // => k_i = z_i - 2^{K}⋅z_{i + 1}
+            z_cur - z_next * F::from(1 << WINDOW_NUM_BITS)
+        }
+    }
+
     /// Returns the q_range_check selector of this [`RunningSumConfig`].
     pub(crate) fn q_range_check(&self) -> Selector {
         self.q_range_check
@@ -144,19 +156,16 @@ where
             z,
             _marker: PhantomData,
         };
+        let config = Self(config);
 
         meta.create_gate("range check", |meta| {
             let q_range_check = meta.query_selector(config.q_range_check);
-            let z_cur = meta.query_advice(config.z, Rotation::cur());
-            let z_next = meta.query_advice(config.z, Rotation::next());
-            //    z_i = 2^{K}⋅z_{i + 1} + k_i
-            // => k_i = z_i - 2^{K}⋅z_{i + 1}
-            let word = z_cur - z_next * F::from(1 << WINDOW_NUM_BITS);
+            let window = config.window_expr()(meta);
 
-            vec![q_range_check * range_check(word, 1 << WINDOW_NUM_BITS)]
+            vec![q_range_check * range_check(window, 1 << WINDOW_NUM_BITS)]
         });
 
-        Self(config)
+        config
     }
 
     /// Decompose a field element alpha that is witnessed in this helper.
