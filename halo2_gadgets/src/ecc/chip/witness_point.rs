@@ -98,8 +98,23 @@ impl<C: CurveAffine> Config<C> {
         Ok((x_var, y_var))
     }
 
+    fn assign_xy_constant(
+        &self,
+        value: (C::Base, C::Base),
+        offset: usize,
+        region: &mut Region<'_, C::Base>,
+    ) -> Result<Coordinates<C::Base>, Error> {
+        // Assign `x` value
+        let x = region.assign_advice_from_constant(|| "x", self.x, offset, value.0)?;
+
+        // Assign `y` value
+        let y = region.assign_advice_from_constant(|| "y", self.y, offset, value.1)?;
+
+        Ok((x, y))
+    }
+
     /// Assigns a point that can be the identity.
-    pub(super) fn point(
+    pub fn point(
         &self,
         value: Option<C>,
         offset: usize,
@@ -119,6 +134,28 @@ impl<C: CurveAffine> Config<C> {
         });
 
         self.assign_xy(value, offset, region)
+            .map(|(x, y)| EccPoint { x, y })
+    }
+
+    /// Assigns a point that can be the identity from the constants column.
+    pub fn point_from_constant(
+        &self,
+        constant: C,
+        offset: usize,
+        region: &mut Region<'_, C::Base>,
+    ) -> Result<EccPoint<C>, Error> {
+        // Enable `q_point` selector
+        self.q_point.enable(region, offset)?;
+
+        // Map the identity to (0, 0).
+        let constant = if constant == C::identity() {
+            (C::Base::zero(), C::Base::zero())
+        } else {
+            let constant = constant.coordinates().unwrap();
+            (*constant.x(), *constant.y())
+        };
+
+        self.assign_xy_constant(constant, offset, region)
             .map(|(x, y)| EccPoint { x, y })
     }
 
@@ -145,6 +182,29 @@ impl<C: CurveAffine> Config<C> {
         });
 
         self.assign_xy(value, offset, region)
+            .map(|(x, y)| NonIdentityEccPoint { x, y })
+    }
+
+    /// Assigns a non-identity point from the constant column.
+    pub fn point_non_id_from_constant(
+        &self,
+        constant: C,
+        offset: usize,
+        region: &mut Region<'_, C::Base>,
+    ) -> Result<NonIdentityEccPoint<C>, Error> {
+        // Enable `q_point_non_id` selector
+        self.q_point_non_id.enable(region, offset)?;
+
+        if constant == C::identity() {
+            return Err(Error::Synthesis);
+        }
+
+        let constant = {
+            let constant = constant.coordinates().unwrap();
+            (*constant.x(), *constant.y())
+        };
+
+        self.assign_xy_constant(constant, offset, region)
             .map(|(x, y)| NonIdentityEccPoint { x, y })
     }
 }
