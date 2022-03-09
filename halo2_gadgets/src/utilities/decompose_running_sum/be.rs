@@ -147,11 +147,8 @@ where
     /// # Side-effects
     ///
     /// `z` will be equality-enabled.
-    pub fn configure(
-        meta: &mut ConstraintSystem<F>,
-        q_range_check: Selector,
-        z: Column<Advice>,
-    ) -> Self {
+    pub fn configure(meta: &mut ConstraintSystem<F>, z: Column<Advice>) -> Self {
+        let q_range_check = meta.complex_selector();
         meta.enable_equality(z);
 
         let config = RunningSumConfig {
@@ -159,17 +156,17 @@ where
             z,
             _marker: PhantomData,
         };
-        let config = Self(config);
+        Self(config)
+    }
 
-        // Note that `z`s are assigned in decreasing index, from z_w down to z_0.
+    /// Range check expression for small windows.
+    pub fn range_check_expression(&self, meta: &mut ConstraintSystem<F>) {
         meta.create_gate("range check", |meta| {
-            let q_range_check = meta.query_selector(config.q_range_check);
-            let window = config.window_expr()(meta);
+            let q_range_check = meta.query_selector(self.q_range_check);
+            let window = self.window_expr()(meta);
 
             vec![q_range_check * range_check(window, 1 << WINDOW_NUM_BITS)]
         });
-
-        config
     }
 
     /// Decompose a field element alpha that is witnessed in this helper.
@@ -347,16 +344,15 @@ mod tests {
 
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let z = meta.advice_column();
-                let q_range_check = meta.selector();
                 let constants = meta.fixed_column();
                 meta.enable_constant(constants);
 
-                let config = Config::<F, WINDOW_NUM_BITS>::configure(meta, q_range_check, z);
+                let config = Config::<F, WINDOW_NUM_BITS>::configure(meta, z);
 
                 // Range-constrain windows
                 meta.create_gate("range-constrain running sum window", |meta| {
                     let window = config.window_expr()(meta);
-                    let q_range_check = meta.query_selector(q_range_check);
+                    let q_range_check = meta.query_selector(config.q_range_check());
 
                     vec![q_range_check * range_check(window, 1 << WINDOW_NUM_BITS)]
                 });

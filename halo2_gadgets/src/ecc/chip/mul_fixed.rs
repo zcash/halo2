@@ -67,13 +67,13 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         meta.enable_equality(window);
         meta.enable_equality(u);
 
-        let q_range_check = meta.selector();
-        let running_sum_config = le::Config::configure(meta, q_range_check, window);
+        let running_sum_config = le::Config::configure(meta, window);
+        running_sum_config.range_check_expression(meta);
 
         // Range-constrain windows
         meta.create_gate("range-constrain running sum window", |meta| {
             let window = running_sum_config.window_expr()(meta);
-            let q_range_check = meta.query_selector(q_range_check);
+            let q_range_check = meta.query_selector(running_sum_config.q_range_check());
 
             vec![q_range_check * range_check(window, 1 << FIXED_BASE_WINDOW_SIZE)]
         });
