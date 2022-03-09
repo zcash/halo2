@@ -18,7 +18,7 @@
 use ff::PrimeFieldBits;
 use halo2_proofs::{
     circuit::{AssignedCell, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector, VirtualCells},
+    plonk::{Advice, Column, ConstraintSystem, Error, Expression, VirtualCells},
     poly::Rotation,
 };
 
@@ -135,11 +135,6 @@ where
             // => word = z_next - 2^K ⋅ z_cur
             z_next - z_cur * F::from(1 << WINDOW_NUM_BITS)
         }
-    }
-
-    /// Returns the q_range_check selector of this [`RunningSumConfig`].
-    pub(crate) fn q_range_check(&self) -> Selector {
-        self.q_range_check
     }
 
     /// The advice column `z` MUST be equality-enabled.

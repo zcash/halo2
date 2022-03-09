@@ -50,10 +50,20 @@ impl<const NUM_BITS: usize> Window<NUM_BITS> {
     pub fn value_field<F: PrimeField>(&self) -> F {
         F::from(lebs2ip(&self.0))
     }
+
+    /// Constructs a new `Window`.
+    pub fn new(bits: [bool; NUM_BITS]) -> Self {
+        Self(bits)
+    }
+
+    /// Returns bits contained in this `Window`.
+    pub fn bits(&self) -> [bool; NUM_BITS] {
+        self.0
+    }
 }
 
-impl<F: PrimeField, const NUM_BITS: usize> From<Window<NUM_BITS>> for Assigned<F> {
-    fn from(window: Window<NUM_BITS>) -> Self {
+impl<F: PrimeField, const NUM_BITS: usize> From<&Window<NUM_BITS>> for Assigned<F> {
+    fn from(window: &Window<NUM_BITS>) -> Self {
         Assigned::Trivial(window.value_field())
     }
 }
@@ -67,4 +77,19 @@ where
     q_range_check: Selector,
     z: Column<Advice>,
     _marker: PhantomData<F>,
+}
+
+impl<F, const WINDOW_NUM_BITS: usize> RunningSumConfig<F, WINDOW_NUM_BITS>
+where
+    F: FieldExt + PrimeFieldBits,
+{
+    /// Returns `q_range_check` selector.
+    pub fn q_range_check(&self) -> Selector {
+        self.q_range_check
+    }
+
+    /// Returns `z` advice column.
+    pub fn z(&self) -> Column<Advice> {
+        self.z
+    }
 }
