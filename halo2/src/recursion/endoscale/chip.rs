@@ -433,11 +433,64 @@ where
 
     fn recover_bitstring<L: Layouter<C::Base>, const NUM_BITS: usize, const NUM_WINDOWS: usize>(
         &self,
-        _layouter: L,
-        _bitstring: &Self::Bitstring,
-        _pub_input_rows: [usize; NUM_WINDOWS],
+        mut layouter: L,
+        bitstring: &Self::Bitstring,
+        pub_input_rows: [usize; NUM_WINDOWS],
     ) -> Result<(), Error> {
-        todo!()
+        // NUM_BITS must be an even number not greater than MAX_BITSTRING_LENGTH.
+        assert!(NUM_BITS <= Self::MAX_BITSTRING_LENGTH);
+        assert_eq!(NUM_BITS % 2, 0);
+
+        layouter.assign_region(
+            || "Recover bitstring from endoscalars",
+            |mut region| {
+                let offset = 0;
+
+                // Decompose the bitstring into `K`-bit chunks using a running sum.
+                // This internally enables the `q_range_check` selector, which is
+                // used in the "Endoscale scalar with lookup" gate.
+                let bitstring = self
+                    .running_sum_chunks
+                    .copy_decompose::<NUM_BITS, NUM_WINDOWS>(
+                        &mut region,
+                        offset,
+                        bitstring,
+                        false,
+                    )?;
+
+                // For each chunk, lookup the (chunk, endoscalar) pair.
+                for (idx, (chunk, pub_input_row)) in bitstring
+                    .windows()
+                    .iter()
+                    .zip(pub_input_rows.iter())
+                    .enumerate()
+                {
+                    self.q_lookup.enable(&mut region, offset)?;
+
+                    let _computed_endoscalar =
+                        chunk.map(|c| endoscale_scalar(Some(C::Base::zero()), &c.bits()));
+                    // Copy endoscalar from given row on instance column
+                    let _copied_endoscalar = region.assign_advice_from_instance(
+                        || format!("Endoscalar at row {:?}", pub_input_row),
+                        self.endoscalars,
+                        *pub_input_row,
+                        self.endoscalars_copy,
+                        offset + idx,
+                    )?;
+
+                    #[cfg(test)]
+                    {
+                        if let Some(&copied) = _copied_endoscalar.value() {
+                            if let Some(computed) = _computed_endoscalar {
+                                assert_eq!(copied, computed);
+                            }
+                        }
+                    }
+                }
+
+                Ok(())
+            },
+        )
     }
 }
 
