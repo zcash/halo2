@@ -16,6 +16,7 @@ use group::prime::PrimeCurveAffine;
 use group::{Curve, Group};
 use rand::rngs::OsRng;
 use std::marker::PhantomData;
+use std::ops::MulAssign;
 use subtle::Choice;
 
 /// Verify a multi-opening proof
@@ -47,16 +48,24 @@ where
     let u: ChallengeU<_> = transcript.squeeze_challenge_scalar();
     let h2 = transcript.read_point().map_err(|_| Error::SamplingError)?;
 
-    let zt_eval = evaluate_vanishing_polynomial(&super_point_set[..], *u);
-
+    let (mut z_0_diff_inverse, mut z_0) = (C::Scalar::zero(), C::Scalar::zero());
     let (mut outer_msm, mut r_outer_acc) = (PreMSM::<C>::new(), C::Scalar::zero());
-    for rotation_set in rotation_sets.iter() {
+    for (i, rotation_set) in rotation_sets.iter().enumerate() {
         let diffs: Vec<C::Scalar> = super_point_set
             .iter()
             .filter(|point| !rotation_set.points.contains(point))
             .copied()
             .collect();
-        let z_i = evaluate_vanishing_polynomial(&diffs[..], *u);
+        let mut z_diff_i = evaluate_vanishing_polynomial(&diffs[..], *u);
+
+        // normalize coefficients by the coefficient of the first commitment
+        if i == 0 {
+            z_0 = evaluate_vanishing_polynomial(&rotation_set.points[..], *u);
+            z_0_diff_inverse = z_diff_i.invert().unwrap();
+            z_diff_i = C::Scalar::one();
+        } else {
+            z_diff_i.mul_assign(z_0_diff_inverse);
+        }
 
         let (mut inner_msm, mut r_inner_acc) = (ProjectiveMSM::new(), C::Scalar::zero());
         for commitment_data in rotation_set.commitments.iter() {
@@ -73,16 +82,16 @@ where
             };
             inner_msm.append_term(C::Scalar::one(), inner_contrib);
         }
-        r_outer_acc = (*v * r_outer_acc) + (r_inner_acc * z_i);
+        r_outer_acc = (*v * r_outer_acc) + (r_inner_acc * z_diff_i);
 
         inner_msm.combine_with_base(*y);
-        inner_msm.scale(z_i);
+        inner_msm.scale(z_diff_i);
         outer_msm.add_msm(inner_msm);
     }
     outer_msm.combine_with_base(*v);
     let mut outer_msm = outer_msm.normalize();
     outer_msm.append_term(-r_outer_acc, params.g1);
-    outer_msm.append_term(-zt_eval, h1);
+    outer_msm.append_term(-z_0, h1);
     outer_msm.append_term(*u, h2);
 
     let mut left = params.empty_msm();

@@ -14,6 +14,7 @@ use group::Curve;
 use rand::RngCore;
 use std::io;
 use std::marker::PhantomData;
+use std::ops::MulAssign;
 
 fn div_by_vanishing<F: FieldExt>(poly: Polynomial<F, Coeff>, roots: &[F]) -> Vec<F> {
     let poly = roots
@@ -157,7 +158,7 @@ where
     let zt_eval = evaluate_vanishing_polynomial(&super_point_set[..], *u);
 
     let linearisation_contribution =
-        |rotation_set: RotationSetExtension<C>| -> Polynomial<C::Scalar, Coeff> {
+        |rotation_set: RotationSetExtension<C>| -> (Polynomial<C::Scalar, Coeff>, C::Scalar) {
             let diffs: Vec<C::Scalar> = super_point_set
                 .iter()
                 .filter(|point| !rotation_set.points.contains(point))
@@ -188,13 +189,15 @@ where
                 .fold(zero(), |acc, l_x| (acc * *y) + l_x);
 
             // finally scale l_x by difference vanishing polynomial evaluation z_i
-            l_x * z_i
+            (l_x * z_i, z_i)
         };
 
-    let linearisation_contibutions: Vec<Polynomial<C::Scalar, Coeff>> = rotation_sets
-        .into_iter()
-        .map(linearisation_contribution)
-        .collect();
+    #[allow(clippy::type_complexity)]
+    let (linearisation_contibutions, z): (Vec<Polynomial<C::Scalar, Coeff>>, Vec<C::Scalar>) =
+        rotation_sets
+            .into_iter()
+            .map(linearisation_contribution)
+            .unzip();
 
     let l_x: Polynomial<C::Scalar, Coeff> = linearisation_contibutions
         .iter()
@@ -208,8 +211,16 @@ where
         assert_eq!(must_be_zero, C::Scalar::zero());
     }
 
+    let mut h_x = div_by_vanishing(l_x, &[*u]);
+
+    // normalize coefficients by the coefficient of the first polynomial
+    let z_0_inv = z[0].invert().unwrap();
+    for h_i in h_x.iter_mut() {
+        h_i.mul_assign(z_0_inv)
+    }
+
     let h_x = Polynomial {
-        values: div_by_vanishing(l_x, &[*u]),
+        values: h_x,
         _marker: PhantomData,
     };
 
