@@ -49,8 +49,7 @@ where
 
     let zt_eval = evaluate_vanishing_polynomial(&super_point_set[..], *u);
 
-    let mut outer_msm: PreMSM<C> = PreMSM::new();
-
+    let (mut outer_msm, mut r_outer_acc) = (PreMSM::<C>::new(), C::Scalar::zero());
     for rotation_set in rotation_sets.iter() {
         let diffs: Vec<C::Scalar> = super_point_set
             .iter()
@@ -59,27 +58,30 @@ where
             .collect();
         let z_i = evaluate_vanishing_polynomial(&diffs[..], *u);
 
-        let mut inner_msm: ProjectiveMSM<C> = ProjectiveMSM::new();
+        let (mut inner_msm, mut r_inner_acc) = (ProjectiveMSM::new(), C::Scalar::zero());
         for commitment_data in rotation_set.commitments.iter() {
             // calculate low degree equivalent
             let r_x = lagrange_interpolate(&rotation_set.points[..], &commitment_data.evals()[..]);
-            // soft commit to low degree equivalent
             let r_eval = eval_polynomial(&r_x[..], *u);
-            let r = params.g1 * r_eval;
+            r_inner_acc = (*y * r_inner_acc) + r_eval;
 
             let inner_contrib = match commitment_data.get() {
-                CommitmentReference::Commitment(c) => c.to_curve() - r,
-                CommitmentReference::MSM(msm) => msm.eval().to_curve() - r,
+                CommitmentReference::Commitment(c) => c.to_curve(),
+                // TODO: we should support one more nested degree to append
+                // folded commitments to the inner_msm
+                CommitmentReference::MSM(msm) => msm.eval().to_curve(),
             };
-
             inner_msm.append_term(C::Scalar::one(), inner_contrib);
         }
+        r_outer_acc = (*v * r_outer_acc) + (r_inner_acc * z_i);
+
         inner_msm.combine_with_base(*y);
         inner_msm.scale(z_i);
         outer_msm.add_msm(inner_msm);
     }
     outer_msm.combine_with_base(*v);
     let mut outer_msm = outer_msm.normalize();
+    outer_msm.append_term(-r_outer_acc, params.g1);
     outer_msm.append_term(-zt_eval, h1);
     outer_msm.append_term(*u, h2);
 
