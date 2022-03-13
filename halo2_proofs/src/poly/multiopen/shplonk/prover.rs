@@ -193,11 +193,13 @@ where
         };
 
     #[allow(clippy::type_complexity)]
-    let (linearisation_contibutions, z): (Vec<Polynomial<C::Scalar, Coeff>>, Vec<C::Scalar>) =
-        rotation_sets
-            .into_iter()
-            .map(linearisation_contribution)
-            .unzip();
+    let (linearisation_contibutions, z_diffs): (
+        Vec<Polynomial<C::Scalar, Coeff>>,
+        Vec<C::Scalar>,
+    ) = rotation_sets
+        .into_iter()
+        .map(linearisation_contribution)
+        .unzip();
 
     let l_x: Polynomial<C::Scalar, Coeff> = linearisation_contibutions
         .iter()
@@ -214,9 +216,9 @@ where
     let mut h_x = div_by_vanishing(l_x, &[*u]);
 
     // normalize coefficients by the coefficient of the first polynomial
-    let z_0_inv = z[0].invert().unwrap();
+    let z_0_diff_inv = z_diffs[0].invert().unwrap();
     for h_i in h_x.iter_mut() {
-        h_i.mul_assign(z_0_inv)
+        h_i.mul_assign(z_0_diff_inv)
     }
 
     let h_x = Polynomial {
