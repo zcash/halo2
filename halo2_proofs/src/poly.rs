@@ -13,12 +13,10 @@ use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, RangeFrom, RangeFull,
 
 pub mod commitment;
 mod domain;
-mod evaluator;
 mod msm;
 pub mod multiopen;
 
 pub use domain::*;
-pub use evaluator::*;
 pub use msm::{PairMSM, MSM};
 
 /// This is an error that could occur during proving or circuit synthesis.

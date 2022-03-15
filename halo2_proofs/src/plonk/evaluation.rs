@@ -28,7 +28,12 @@ use std::{
 
 use super::{ConstraintSystem, Expression};
 
-/// Value for use in a calculation
+/// Return the index in the polynomial of size `isize` after rotation `rot`.
+fn get_rotation_idx(idx: usize, rot: i32, rot_scale: i32, isize: i32) -> usize {
+    (((idx as i32) + (rot * rot_scale)).rem_euclid(isize)) as usize
+}
+
+/// Value used in a calculation
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub enum ValueSource {
     /// This is a constant value
@@ -58,13 +63,13 @@ impl ValueSource {
             ValueSource::Constant(idx) => constants[*idx],
             ValueSource::Intermediate(idx) => intermediates[*idx],
             ValueSource::Fixed(column_index, rotation) => {
-                *fixed_values[*column_index].index(rotations[*rotation])
+                fixed_values[*column_index][rotations[*rotation]]
             }
             ValueSource::Advice(column_index, rotation) => {
-                *advice_values[*column_index].index(rotations[*rotation])
+                advice_values[*column_index][rotations[*rotation]]
             }
             ValueSource::Instance(column_index, rotation) => {
-                *instance_values[*column_index].index(rotations[*rotation])
+                instance_values[*column_index][rotations[*rotation]]
             }
         }
     }
@@ -233,9 +238,9 @@ impl Calculation {
 
 /// EvaluationData
 #[derive(Default, Debug)]
-pub struct EvaluationData<F: Field> {
+pub struct Evaluator<C: CurveAffine> {
     /// Constants
-    pub constants: Vec<F>,
+    pub constants: Vec<C::ScalarExt>,
     /// Rotations
     pub rotations: Vec<i32>,
     /// Calculations
@@ -255,12 +260,12 @@ pub struct CalculationInfo {
     pub counter: usize,
 }
 
-impl<F: Field> EvaluationData<F> {
+impl<C: CurveAffine> Evaluator<C> {
     /// Creates a new evaluation structure
-    pub fn new(cs: &ConstraintSystem<F>) -> Self {
-        let mut ev = EvaluationData::default();
-        ev.add_constant(&F::zero());
-        ev.add_constant(&F::one());
+    pub fn new(cs: &ConstraintSystem<C::ScalarExt>) -> Self {
+        let mut ev = Evaluator::default();
+        ev.add_constant(&C::ScalarExt::zero());
+        ev.add_constant(&C::ScalarExt::one());
 
         // Custom gates
         for gate in cs.gates.iter() {
@@ -272,7 +277,7 @@ impl<F: Field> EvaluationData<F> {
 
         // Lookups
         for lookup in cs.lookups.iter() {
-            let write_lc = |ev: &mut EvaluationData<_>, expressions: &Vec<Expression<_>>| {
+            let evaluate_lc = |ev: &mut Evaluator<_>, expressions: &Vec<Expression<_>>| {
                 let parts = expressions
                     .iter()
                     .map(|expr| ev.add_expression(expr))
@@ -284,9 +289,9 @@ impl<F: Field> EvaluationData<F> {
                 lc
             };
             // Input coset
-            let compressed_input_coset = write_lc(&mut ev, &lookup.input_expressions);
+            let compressed_input_coset = evaluate_lc(&mut ev, &lookup.input_expressions);
             // table coset
-            let compressed_table_coset = write_lc(&mut ev, &lookup.table_expressions);
+            let compressed_table_coset = evaluate_lc(&mut ev, &lookup.table_expressions);
             // z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
             let right_gamma = ev.add_calculation(Calculation::AddGamma(compressed_table_coset));
             ev.lookup_results
@@ -309,7 +314,7 @@ impl<F: Field> EvaluationData<F> {
     }
 
     /// Adds a constant
-    fn add_constant(&mut self, constant: &F) -> ValueSource {
+    fn add_constant(&mut self, constant: &C::ScalarExt) -> ValueSource {
         let position = self.constants.iter().position(|&c| c == *constant);
         ValueSource::Constant(match position {
             Some(pos) => pos,
@@ -320,7 +325,7 @@ impl<F: Field> EvaluationData<F> {
         })
     }
 
-    /// Adds a calculation
+    /// Adds a calculation.
     /// Currently does the simplest thing possible: just stores the
     /// resulting value so the result can be reused  when that calculation
     /// is done multiple times.
@@ -344,8 +349,8 @@ impl<F: Field> EvaluationData<F> {
         }
     }
 
-    /// Generates optimized evaluation for the expression
-    fn add_expression(&mut self, expr: &Expression<F>) -> ValueSource {
+    /// Generates an optimized evaluation for the expression
+    fn add_expression(&mut self, expr: &Expression<C::ScalarExt>) -> ValueSource {
         match expr {
             Expression::Constant(scalar) => self.add_constant(scalar),
             Expression::Selector(_selector) => unreachable!(),
@@ -437,9 +442,9 @@ impl<F: Field> EvaluationData<F> {
                 }
             }
             Expression::Scaled(a, f) => {
-                if *f == F::zero() {
+                if *f == C::ScalarExt::zero() {
                     ValueSource::Constant(0)
-                } else if *f == F::one() {
+                } else if *f == C::ScalarExt::one() {
                     self.add_expression(a)
                 } else {
                     let cst = self.add_constant(f);
@@ -448,6 +453,251 @@ impl<F: Field> EvaluationData<F> {
                 }
             }
         }
+    }
+
+    /// Evaluate h poly
+    pub(in crate::plonk) fn evaluate_h(
+        &self,
+        pk: &ProvingKey<C>,
+        advice: Vec<&Vec<Polynomial<C::ScalarExt, ExtendedLagrangeCoeff>>>,
+        instance: Vec<&Vec<Polynomial<C::ScalarExt, ExtendedLagrangeCoeff>>>,
+        y: C::ScalarExt,
+        beta: C::ScalarExt,
+        gamma: C::ScalarExt,
+        theta: C::ScalarExt,
+        lookups: &[Vec<lookup::prover::Committed<C>>],
+        permutations: &[permutation::prover::Committed<C>],
+    ) -> Polynomial<C::ScalarExt, ExtendedLagrangeCoeff> {
+        let domain = &pk.vk.domain;
+        let size = domain.extended_len();
+        let rot_scale = 1 << (domain.extended_k() - domain.k());
+        let fixed = &pk.fixed_cosets[..];
+        let extended_omega = domain.get_extended_omega();
+        let num_lookups = pk.vk.cs.lookups.len();
+        let isize = size as i32;
+        let one = C::ScalarExt::one();
+        let l0 = &pk.l0;
+        let l_last = &pk.l_last;
+        let l_active_row = &pk.l_active_row;
+        let p = &pk.vk.cs.permutation;
+
+        let mut values = domain.empty_extended();
+        let mut lookup_values = vec![C::Scalar::zero(); size * num_lookups];
+
+        // Core expression evaluations
+        let num_threads = multicore::current_num_threads();
+        let mut table_values_box = ThreadBox::wrap(&mut lookup_values);
+        for (((advice, instance), lookups), permutation) in advice
+            .iter()
+            .zip(instance.iter())
+            .zip(lookups.iter())
+            .zip(permutations.iter())
+        {
+            multicore::scope(|scope| {
+                let chunk_size = (size + num_threads - 1) / num_threads;
+                for (thread_idx, values) in values.chunks_mut(chunk_size).enumerate() {
+                    let start = thread_idx * chunk_size;
+                    scope.spawn(move |_| {
+                        let table_values = table_values_box.unwrap();
+                        let mut rotations = vec![0usize; self.rotations.len()];
+                        let mut intermediates: Vec<C::ScalarExt> =
+                            vec![C::ScalarExt::zero(); self.calculations.len()];
+                        for (i, value) in values.iter_mut().enumerate() {
+                            let idx = start + i;
+
+                            // All rotation index values
+                            for (rot_idx, rot) in self.rotations.iter().enumerate() {
+                                rotations[rot_idx] = get_rotation_idx(idx, *rot, rot_scale, isize);
+                            }
+
+                            // All calculations, with cached intermediate results
+                            for (i_idx, calc) in self.calculations.iter().enumerate() {
+                                intermediates[i_idx] = calc.calculation.evaluate(
+                                    &rotations,
+                                    &self.constants,
+                                    &intermediates,
+                                    fixed,
+                                    advice,
+                                    instance,
+                                    &beta,
+                                    &gamma,
+                                    &theta,
+                                );
+                            }
+
+                            // Accumulate value parts
+                            for value_part in self.value_parts.iter() {
+                                *value = *value * y
+                                    + value_part.evaluate(
+                                        &rotations,
+                                        &self.constants,
+                                        &intermediates,
+                                        fixed,
+                                        advice,
+                                        instance,
+                                    );
+                            }
+
+                            // Values required for the lookups
+                            for (t, table_result) in self.lookup_results.iter().enumerate() {
+                                table_values[t * size + idx] = table_result.evaluate(
+                                    &rotations,
+                                    &self.constants,
+                                    &intermediates,
+                                    fixed,
+                                    advice,
+                                    instance,
+                                    &beta,
+                                    &gamma,
+                                    &theta,
+                                );
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Permutations
+            let sets = &permutation.sets;
+            if !sets.is_empty() {
+                let blinding_factors = pk.vk.cs.blinding_factors();
+                let last_rotation = Rotation(-((blinding_factors + 1) as i32));
+                let chunk_len = pk.vk.cs.degree() - 2;
+                let delta_start = beta * &C::Scalar::ZETA;
+
+                let first_set = sets.first().unwrap();
+                let last_set = sets.last().unwrap();
+
+                // Permutation constraints
+                parallelize(&mut values, |values, start| {
+                    let mut beta_term = extended_omega.pow_vartime(&[start as u64, 0, 0, 0]);
+                    for (i, value) in values.iter_mut().enumerate() {
+                        let idx = start + i;
+                        let r_next = get_rotation_idx(idx, 1, rot_scale, isize);
+                        let r_last = get_rotation_idx(idx, last_rotation.0, rot_scale, isize);
+
+                        // Enforce only for the first set.
+                        // l_0(X) * (1 - z_0(X)) = 0
+                        *value = *value * y
+                            + ((one - first_set.permutation_product_coset[idx]) * l0[idx]);
+                        // Enforce only for the last set.
+                        // l_last(X) * (z_l(X)^2 - z_l(X)) = 0
+                        *value = *value * y
+                            + ((last_set.permutation_product_coset[idx]
+                                * last_set.permutation_product_coset[idx]
+                                - last_set.permutation_product_coset[idx])
+                                * l_last[idx]);
+                        // Except for the first set, enforce.
+                        // l_0(X) * (z_i(X) - z_{i-1}(\omega^(last) X)) = 0
+                        for (set_idx, set) in sets.iter().enumerate() {
+                            if set_idx != 0 {
+                                *value = *value * y
+                                    + ((set.permutation_product_coset[idx]
+                                        - permutation.sets[set_idx - 1].permutation_product_coset
+                                            [r_last])
+                                        * l0[idx]);
+                            }
+                        }
+                        // And for all the sets we enforce:
+                        // (1 - (l_last(X) + l_blind(X))) * (
+                        //   z_i(\omega X) \prod_j (p(X) + \beta s_j(X) + \gamma)
+                        // - z_i(X) \prod_j (p(X) + \delta^j \beta X + \gamma)
+                        // )
+                        let mut current_delta = delta_start * beta_term;
+                        for ((set, columns), cosets) in sets
+                            .iter()
+                            .zip(p.columns.chunks(chunk_len))
+                            .zip(pk.permutation.cosets.chunks(chunk_len))
+                        {
+                            let mut left = set.permutation_product_coset[r_next];
+                            for (values, permutation) in columns
+                                .iter()
+                                .map(|&column| match column.column_type() {
+                                    Any::Advice => &advice[column.index()],
+                                    Any::Fixed => &fixed[column.index()],
+                                    Any::Instance => &instance[column.index()],
+                                })
+                                .zip(cosets.iter())
+                            {
+                                left *= values[idx] + beta * permutation[idx] + gamma;
+                            }
+
+                            let mut right = set.permutation_product_coset[idx];
+                            for values in columns.iter().map(|&column| match column.column_type() {
+                                Any::Advice => &advice[column.index()],
+                                Any::Fixed => &fixed[column.index()],
+                                Any::Instance => &instance[column.index()],
+                            }) {
+                                right *= values[idx] + current_delta + gamma;
+                                current_delta *= &C::Scalar::DELTA;
+                            }
+
+                            *value = *value * y + ((left - right) * l_active_row[idx]);
+                        }
+                        beta_term *= &extended_omega;
+                    }
+                });
+            }
+
+            // Lookups
+            for (n, lookup) in lookups.iter().enumerate() {
+                // Polynomials required for this lookup.
+                // Calculated here so these only have to be kept in memory for the short time
+                // they are actually needed.
+                let product_coset = pk.vk.domain.coeff_to_extended(lookup.product_poly.clone());
+                let permuted_input_coset = pk
+                    .vk
+                    .domain
+                    .coeff_to_extended(lookup.permuted_input_poly.clone());
+                let permuted_table_coset = pk
+                    .vk
+                    .domain
+                    .coeff_to_extended(lookup.permuted_table_poly.clone());
+
+                // Lookup constraints
+                let table = &lookup_values[n * size..(n + 1) * size];
+                parallelize(&mut values, |values, start| {
+                    for (i, value) in values.iter_mut().enumerate() {
+                        let idx = start + i;
+
+                        let r_next = get_rotation_idx(idx, 1, rot_scale, isize);
+                        let r_prev = get_rotation_idx(idx, -1, rot_scale, isize);
+
+                        let a_minus_s = permuted_input_coset[idx] - permuted_table_coset[idx];
+                        // l_0(X) * (1 - z(X)) = 0
+                        *value = *value * y + ((one - product_coset[idx]) * l0[idx]);
+                        // l_last(X) * (z(X)^2 - z(X)) = 0
+                        *value = *value * y
+                            + ((product_coset[idx] * product_coset[idx] - product_coset[idx])
+                                * l_last[idx]);
+                        // (1 - (l_last(X) + l_blind(X))) * (
+                        //   z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
+                        //   - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta)
+                        //          (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
+                        // ) = 0
+                        *value = *value * y
+                            + ((product_coset[r_next]
+                                * (permuted_input_coset[idx] + beta)
+                                * (permuted_table_coset[idx] + gamma)
+                                - product_coset[idx] * table[idx])
+                                * l_active_row[idx]);
+                        // Check that the first values in the permuted input expression and permuted
+                        // fixed expression are the same.
+                        // l_0(X) * (a'(X) - s'(X)) = 0
+                        *value = *value * y + (a_minus_s * l0[idx]);
+                        // Check that each value in the permuted lookup input expression is either
+                        // equal to the value above it, or the value at the same index in the
+                        // permuted table expression.
+                        // (1 - (l_last + l_blind)) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0
+                        *value = *value * y
+                            + (a_minus_s
+                                * (permuted_input_coset[idx] - permuted_input_coset[r_prev])
+                                * l_active_row[idx]);
+                    }
+                });
+            }
+        }
+        values
     }
 }
 
@@ -473,230 +723,7 @@ impl<T> ThreadBox<T> {
     }
 }
 
-/// Evaluate the polynomial
-pub(in crate::plonk) fn evaluate_dynamic<C: CurveAffine, B: Basis>(
-    size: usize,
-    rot_scale: i32,
-    fixed: &[Polynomial<C::ScalarExt, B>],
-    advice: Vec<&Vec<Polynomial<C::ScalarExt, B>>>,
-    instance: Vec<&Vec<Polynomial<C::ScalarExt, B>>>,
-    y: C::ScalarExt,
-    beta: C::ScalarExt,
-    gamma: C::ScalarExt,
-    theta: C::ScalarExt,
-    pk: &ProvingKey<C>,
-    lookups: &[Vec<lookup::prover::Committed<C>>],
-    permutations: &[permutation::prover::Committed<C>],
-    extended_omega: C::ScalarExt,
-    ev: &EvaluationData<C::ScalarExt>,
-) -> Vec<C::ScalarExt> {
-    let num_lookups = pk.vk.cs.lookups.len();
-    let isize = size as i32;
-    let one = C::ScalarExt::one();
-    let l0 = &pk.l0;
-    let l_last = &pk.l_last;
-    let l_active_row = &pk.l_active_row;
-    let p = &pk.vk.cs.permutation;
-
-    let mut values = vec![C::ScalarExt::zero(); size];
-    let mut table_values = vec![C::Scalar::zero(); size * num_lookups];
-
-    // Core evaluations
-    let num_threads = multicore::current_num_threads();
-    let mut table_values_box = ThreadBox::wrap(&mut table_values);
-    for (((advice, instance), lookups), permutation) in advice
-        .iter()
-        .zip(instance.iter())
-        .zip(lookups.iter())
-        .zip(permutations.iter())
-    {
-        multicore::scope(|scope| {
-            let chunk_size = (size + num_threads - 1) / num_threads;
-            for (thread_idx, values) in values.chunks_mut(chunk_size).enumerate() {
-                let start = thread_idx * chunk_size;
-                scope.spawn(move |_| {
-                    let table_values = table_values_box.unwrap();
-                    let mut rotations = vec![0usize; ev.rotations.len()];
-                    let mut intermediates: Vec<C::ScalarExt> =
-                        vec![C::ScalarExt::zero(); ev.calculations.len()];
-                    for (i, value) in values.iter_mut().enumerate() {
-                        let idx = start + i;
-
-                        // All rotation index values
-                        for (rot_idx, rot) in ev.rotations.iter().enumerate() {
-                            rotations[rot_idx] =
-                                (((idx as i32) + (rot * rot_scale)).rem_euclid(isize)) as usize;
-                        }
-
-                        // All calculations
-                        for (i_idx, calc) in ev.calculations.iter().enumerate() {
-                            intermediates[i_idx] = calc.calculation.evaluate(
-                                &rotations,
-                                &ev.constants,
-                                &intermediates,
-                                fixed,
-                                advice,
-                                instance,
-                                &beta,
-                                &gamma,
-                                &theta,
-                            );
-                        }
-
-                        // Accumulate value parts
-                        for value_part in ev.value_parts.iter() {
-                            *value = *value * y
-                                + value_part.evaluate(
-                                    &rotations,
-                                    &ev.constants,
-                                    &intermediates,
-                                    fixed,
-                                    advice,
-                                    instance,
-                                );
-                        }
-
-                        // Values required for the lookups
-                        for (t, table_result) in ev.lookup_results.iter().enumerate() {
-                            table_values[t * size + idx] = table_result.evaluate(
-                                &rotations,
-                                &ev.constants,
-                                &intermediates,
-                                fixed,
-                                advice,
-                                instance,
-                                &beta,
-                                &gamma,
-                                &theta,
-                            );
-                        }
-                    }
-                });
-            }
-        });
-
-        // Permutations
-        let sets = &permutation.sets;
-        if !sets.is_empty() {
-            let blinding_factors = pk.vk.cs.blinding_factors();
-            let last_rotation = Rotation(-((blinding_factors + 1) as i32));
-            let chunk_len = pk.vk.cs.degree() - 2;
-            let delta_start = beta * &C::Scalar::ZETA;
-
-            let first_set = sets.first().unwrap();
-            let last_set = sets.last().unwrap();
-
-            parallelize(&mut values, |values, start| {
-                let mut beta_term = extended_omega.pow_vartime(&[start as u64, 0, 0, 0]);
-                for (i, value) in values.iter_mut().enumerate() {
-                    let idx = i + start;
-                    let r_next = (((idx as i32) + rot_scale).rem_euclid(isize)) as usize;
-                    let r_last =
-                        (((idx as i32) + (last_rotation.0 * rot_scale)).rem_euclid(isize)) as usize;
-
-                    // Permutation constraints
-                    *value =
-                        *value * y + ((one - first_set.permutation_product_coset[idx]) * l0[idx]);
-                    *value = *value * y
-                        + ((last_set.permutation_product_coset[idx]
-                            * last_set.permutation_product_coset[idx]
-                            - last_set.permutation_product_coset[idx])
-                            * l_last[idx]);
-                    for (set_idx, set) in sets.iter().enumerate() {
-                        if set_idx != 0 {
-                            *value = *value * y
-                                + ((set.permutation_product_coset[idx]
-                                    - permutation.sets[set_idx - 1].permutation_product_coset
-                                        [r_last])
-                                    * l0[idx]);
-                        }
-                    }
-
-                    let mut current_delta = delta_start * beta_term;
-                    for ((set, columns), cosets) in sets
-                        .iter()
-                        .zip(p.columns.chunks(chunk_len))
-                        .zip(pk.permutation.cosets.chunks(chunk_len))
-                    {
-                        let mut left = set.permutation_product_coset[r_next];
-                        for (values, permutation) in columns
-                            .iter()
-                            .map(|&column| match column.column_type() {
-                                Any::Advice => &advice[column.index()],
-                                Any::Fixed => &fixed[column.index()],
-                                Any::Instance => &instance[column.index()],
-                            })
-                            .zip(cosets.iter())
-                        {
-                            left *= values[idx] + beta * permutation[idx] + gamma;
-                        }
-
-                        let mut right = set.permutation_product_coset[idx];
-                        for values in columns.iter().map(|&column| match column.column_type() {
-                            Any::Advice => &advice[column.index()],
-                            Any::Fixed => &fixed[column.index()],
-                            Any::Instance => &instance[column.index()],
-                        }) {
-                            right *= values[idx] + current_delta + gamma;
-                            current_delta *= &C::Scalar::DELTA;
-                        }
-
-                        *value = *value * y + ((left - right) * l_active_row[idx]);
-                    }
-                    beta_term *= &extended_omega;
-                }
-            });
-        }
-
-        // Lookups
-        for (n, lookup) in lookups.iter().enumerate() {
-            // Polynomials required for this lookup
-            // Calculated here so these only have to be kept in memory for the short time
-            // they are actually needed
-            let product_coset = pk.vk.domain.coeff_to_extended(lookup.product_poly.clone());
-            let permuted_input_coset = pk
-                .vk
-                .domain
-                .coeff_to_extended(lookup.permuted_input_poly.clone());
-            let permuted_table_coset = pk
-                .vk
-                .domain
-                .coeff_to_extended(lookup.permuted_table_poly.clone());
-
-            // Lookup constraints
-            let table = &table_values[n * size..(n + 1) * size];
-            parallelize(&mut values, |values, start| {
-                for (i, value) in values.iter_mut().enumerate() {
-                    let idx = i + start;
-
-                    let r_next = (((idx as i32) + rot_scale).rem_euclid(isize)) as usize;
-                    let r_prev = (((idx as i32) - rot_scale).rem_euclid(isize)) as usize;
-
-                    let a_minus_s = permuted_input_coset[idx] - permuted_table_coset[idx];
-                    *value = *value * y + ((one - product_coset[idx]) * l0[idx]);
-                    *value = *value * y
-                        + ((product_coset[idx] * product_coset[idx] - product_coset[idx])
-                            * l_last[idx]);
-                    *value = *value * y
-                        + ((product_coset[r_next]
-                            * (permuted_input_coset[idx] + beta)
-                            * (permuted_table_coset[idx] + gamma)
-                            - product_coset[idx] * table[idx])
-                            * l_active_row[idx]);
-                    *value = *value * y + (a_minus_s * l0[idx]);
-                    *value = *value * y
-                        + (a_minus_s
-                            * (permuted_input_coset[idx] - permuted_input_coset[r_prev])
-                            * l_active_row[idx]);
-                }
-            });
-        }
-    }
-
-    values
-}
-
-/// TODO: replace with optimized evaluation
+/// Simple evaluation of an expression
 pub fn evaluate<F: FieldExt, B: Basis>(
     expression: &Expression<F>,
     size: usize,
@@ -706,27 +733,21 @@ pub fn evaluate<F: FieldExt, B: Basis>(
     instance: &[Polynomial<F, B>],
 ) -> Vec<F> {
     let mut values = vec![F::zero(); size];
+    let isize = size as i32;
     parallelize(&mut values, |values, start| {
-        let isize = size as i32;
         for (i, value) in values.iter_mut().enumerate() {
-            let idx = i + start;
+            let idx = start + i;
             *value = expression.evaluate(
                 &|scalar| scalar,
                 &|_| panic!("virtual selectors are removed during optimization"),
                 &|_, column_index, rotation| {
-                    let new_rotation = rot_scale * rotation.0;
-                    *fixed[column_index]
-                        .index((((idx as i32) + new_rotation).rem_euclid(isize)) as usize)
+                    fixed[column_index][get_rotation_idx(idx, rotation.0, rot_scale, isize)]
                 },
                 &|_, column_index, rotation| {
-                    let new_rotation = rot_scale * rotation.0;
-                    *advice[column_index]
-                        .index((((idx as i32) + new_rotation).rem_euclid(isize)) as usize)
+                    advice[column_index][get_rotation_idx(idx, rotation.0, rot_scale, isize)]
                 },
                 &|_, column_index, rotation| {
-                    let new_rotation = rot_scale * rotation.0;
-                    *instance[column_index]
-                        .index((((idx as i32) + new_rotation).rem_euclid(isize)) as usize)
+                    instance[column_index][get_rotation_idx(idx, rotation.0, rot_scale, isize)]
                 },
                 &|a| -a,
                 &|a, b| a + &b,

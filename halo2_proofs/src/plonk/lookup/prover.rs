@@ -45,14 +45,8 @@ pub(in crate::plonk) struct Committed<C: CurveAffine> {
     pub(in crate::plonk) product_poly: Polynomial<C::Scalar, Coeff>,
 }
 
-pub(in crate::plonk) struct Constructed<C: CurveAffine> {
-    permuted_input_poly: Polynomial<C::Scalar, Coeff>,
-    permuted_table_poly: Polynomial<C::Scalar, Coeff>,
-    product_poly: Polynomial<C::Scalar, Coeff>,
-}
-
 pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
-    constructed: Constructed<C>,
+    constructed: Committed<C>,
 }
 
 impl<F: FieldExt> Argument<F> {
@@ -209,8 +203,8 @@ impl<C: CurveAffine> Permuted<C> {
             for (i, product) in product.iter_mut().enumerate() {
                 let i = i + start;
 
-                *product *= &(*self.compressed_input_expression.index(i) + &*beta);
-                *product *= &(*self.compressed_table_expression.index(i) + &*gamma);
+                *product *= &(self.compressed_input_expression[i] + &*beta);
+                *product *= &(self.compressed_table_expression[i] + &*gamma);
             }
         });
 
@@ -266,8 +260,8 @@ impl<C: CurveAffine> Permuted<C> {
                 left *= &(*gamma + permuted_table_value);
 
                 let mut right = z[i];
-                let mut input_term = self.compressed_input_expression.values[i];
-                let mut table_term = self.compressed_table_expression.values[i];
+                let mut input_term = self.compressed_input_expression[i];
+                let mut table_term = self.compressed_table_expression[i];
 
                 input_term += &(*beta);
                 table_term += &(*gamma);
@@ -296,22 +290,7 @@ impl<C: CurveAffine> Permuted<C> {
     }
 }
 
-impl<'a, C: CurveAffine> Committed<C> {
-    /// Given a Lookup with input expressions, table expressions, permuted input
-    /// expression, permuted table expression, and grand product polynomial, this
-    /// method constructs constraints that must hold between these values.
-    /// This method returns the constraints as a vector of polynomials in
-    /// the extended evaluation domain.
-    pub(in crate::plonk) fn construct(self) -> Constructed<C> {
-        Constructed {
-            permuted_input_poly: self.permuted_input_poly,
-            permuted_table_poly: self.permuted_table_poly,
-            product_poly: self.product_poly,
-        }
-    }
-}
-
-impl<C: CurveAffine> Constructed<C> {
+impl<C: CurveAffine> Committed<C> {
     pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
         self,
         pk: &ProvingKey<C>,

@@ -15,8 +15,6 @@ use super::{
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
     ChallengeY, Error, ProvingKey,
 };
-use crate::plonk::evaluation::{evaluate, evaluate_dynamic};
-use crate::plonk::lookup::prover::Constructed;
 use crate::{
     arithmetic::{eval_polynomial, BaseExt, CurveAffine, FieldExt},
     plonk::Assigned,
@@ -403,45 +401,24 @@ pub fn create_proof<
     // Obtain challenge for keeping all separate gates linearly independent
     let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
 
-    let h_poly = pk.vk.domain.lagrange_from_vec_ext(evaluate_dynamic(
-        domain.extended_len(),
-        1 << (domain.extended_k() - params.k),
-        &pk.fixed_cosets,
+    // Evaluate the h(X) polynomial
+    let h_poly = pk.ev.evaluate_h(
+        pk,
         advice.iter().map(|a| &a.advice_cosets).collect(),
         instance.iter().map(|i| &i.instance_cosets).collect(),
         *y,
         *beta,
         *gamma,
         *theta,
-        pk,
         &lookups,
         &permutations,
-        domain.get_extended_omega(),
-        &pk.ev,
-    ));
-
-    // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints.
-    let permutations: Vec<_> = permutations
-        .into_iter()
-        .map(|permutation| permutation.construct())
-        .collect();
+    );
 
     // Construct the vanishing argument's h(X) commitments
     let vanishing = vanishing.construct(params, domain, h_poly, transcript)?;
 
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
     let xn = x.pow(&[params.n as u64, 0, 0, 0]);
-
-    let lookups: Vec<Vec<Constructed<C>>> = lookups
-        .into_iter()
-        .map(|lookups| {
-            // Evaluate the h(X) polynomial's constraint system expressions for the lookup constraints, if any.
-            lookups
-                .into_iter()
-                .map(|p| p.construct())
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
 
     // Compute and hash instance evals for each circuit instance
     for instance in instance.iter() {
@@ -505,7 +482,7 @@ pub fn create_proof<
     // Evaluate the permutations, if any, at omega^i x.
     let permutations: Vec<permutation::prover::Evaluated<C>> = permutations
         .into_iter()
-        .map(|permutation| -> Result<_, _> { permutation.evaluate(pk, x, transcript) })
+        .map(|permutation| -> Result<_, _> { permutation.construct().evaluate(pk, x, transcript) })
         .collect::<Result<Vec<_>, _>>()?;
 
     // Evaluate the lookups, if any, at omega^i x.

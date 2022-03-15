@@ -10,7 +10,7 @@ use super::{
         Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
         Selector,
     },
-    evaluation::EvaluationData,
+    evaluation::Evaluator,
     permutation, Assigned, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
 };
 use crate::{arithmetic::CurveAffine, poly::batch_invert_assigned};
@@ -335,12 +335,11 @@ where
     });
 
     // Compute the optimized evaluation data structure
-    let ev = EvaluationData::new(&vk.cs);
+    let ev = Evaluator::new(&vk.cs);
 
     Ok(ProvingKey {
         vk,
         l0,
-        l_blind,
         l_last,
         l_active_row,
         fixed_values: fixed,
