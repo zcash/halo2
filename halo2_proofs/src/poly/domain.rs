@@ -153,6 +153,17 @@ impl<G: Group> EvaluationDomain<G> {
         }
     }
 
+    /// This takes us from an n-length coefficient vector into a coset of the extended
+    /// evaluation domain, rotating by `rotation` if desired.
+    pub fn lagrange_from_vec_ext(&self, values: Vec<G>) -> Polynomial<G, ExtendedLagrangeCoeff> {
+        assert_eq!(values.len(), self.extended_len() as usize);
+
+        Polynomial {
+            values,
+            _marker: PhantomData,
+        }
+    }
+
     /// Obtains a polynomial in coefficient form when given a vector of
     /// coefficients of size `n`; panics if the provided vector is the wrong
     /// length.
@@ -358,6 +369,11 @@ impl<G: Group> EvaluationDomain<G> {
                 a.group_scale(&divisor);
             }
         });
+    }
+
+    /// Get the size of the extended domain
+    pub fn extended_k(&self) -> u32 {
+        self.extended_k
     }
 
     /// Get the size of the extended domain

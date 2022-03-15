@@ -18,6 +18,7 @@ use crate::transcript::{ChallengeScalar, EncodedChallenge, Transcript};
 mod assigned;
 mod circuit;
 mod error;
+mod evaluation;
 mod keygen;
 mod lookup;
 pub(crate) mod permutation;
@@ -34,6 +35,8 @@ pub use prover::*;
 pub use verifier::*;
 
 use std::io;
+
+use self::evaluation::EvaluationData;
 
 /// This is a verifying key which allows for the verification of proofs for a
 /// particular circuit.
@@ -132,10 +135,12 @@ pub struct ProvingKey<C: CurveAffine> {
     l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     l_blind: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     l_last: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    l_active_row: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     fixed_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
     fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
     fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     permutation: permutation::ProvingKey<C>,
+    ev: EvaluationData<C::ScalarExt>,
 }
 
 impl<C: CurveAffine> ProvingKey<C> {

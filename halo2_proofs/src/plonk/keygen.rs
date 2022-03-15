@@ -10,13 +10,19 @@ use super::{
         Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
         Selector,
     },
+    evaluation::EvaluationData,
     permutation, Assigned, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
 };
-use crate::poly::{
-    commitment::{Blind, Params},
-    EvaluationDomain,
-};
 use crate::{arithmetic::CurveAffine, poly::batch_invert_assigned};
+use crate::{
+    plonk::Expression,
+    poly::{
+        commitment::{Blind, Params},
+        EvaluationDomain, Rotation,
+    },
+};
+
+use crate::arithmetic::parallelize;
 
 pub(crate) fn create_domain<C, ConcreteCircuit>(
     params: &Params<C>,
@@ -318,14 +324,29 @@ where
     let l_last = vk.domain.lagrange_to_coeff(l_last);
     let l_last = vk.domain.coeff_to_extended(l_last);
 
+    // Compute l_active_row(X)
+    let one = C::Scalar::one();
+    let mut l_active_row = vk.domain.empty_extended();
+    parallelize(&mut l_active_row, |values, start| {
+        for (i, value) in values.iter_mut().enumerate() {
+            let idx = i + start;
+            *value = one - (l_last[idx] + l_blind[idx]);
+        }
+    });
+
+    // Compute the optimized evaluation data structure
+    let ev = EvaluationData::new(&vk.cs);
+
     Ok(ProvingKey {
         vk,
         l0,
         l_blind,
         l_last,
+        l_active_row,
         fixed_values: fixed,
         fixed_polys,
         fixed_cosets,
         permutation: permutation_pk,
+        ev,
     })
 }
