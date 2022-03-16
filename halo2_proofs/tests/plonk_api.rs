@@ -9,7 +9,6 @@ use halo2_proofs::pasta::{Eq, EqAffine, Fp};
 use halo2_proofs::plonk::{
     create_proof, keygen_pk, keygen_vk, verify_proof, Advice, BatchVerifier, Circuit, Column,
     ConstraintSystem, Error, Fixed, SingleVerifier, TableColumn, VerificationStrategy,
-    VerifyingKey,
 };
 use halo2_proofs::poly::commitment::{Guard, MSM};
 use halo2_proofs::poly::{commitment::Params, Rotation};
@@ -565,21 +564,11 @@ fn plonk_api() {
             )
             .unwrap();
 
-            // Write and then read the verification key in between (to check round-trip
-            // serialization).
-            // TODO: Figure out whether https://github.com/zcash/halo2/issues/449 should
-            // be caught by this, or if it is caused by downstream changes to halo2.
-            let mut vk_buffer = vec![];
-            pk.get_vk().write(&mut vk_buffer).unwrap();
-            let vk =
-                VerifyingKey::<EqAffine>::read::<_, MyCircuit<Fp>>(&mut &vk_buffer[..], &params)
-                    .unwrap();
-
             // "Second" proof (just the first proof again).
             let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
             let strategy = verify_proof(
                 &params,
-                &vk,
+                pk.get_vk(),
                 strategy,
                 &[&[&pubinputs[..]], &[&pubinputs[..]]],
                 &mut transcript,
