@@ -431,6 +431,24 @@ fn plonk_api() {
     };
     assert_eq!(prover.verify(), Ok(()));
 
+    if std::env::var_os("HALO2_PLONK_TEST_GENERATE_NEW_PROOF").is_some() {
+        let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+        // Create a proof
+        create_proof(
+            &params,
+            &pk,
+            &[circuit.clone(), circuit.clone()],
+            &[&[&[instance]], &[&[instance]]],
+            OsRng,
+            &mut transcript,
+        )
+        .expect("proof generation should not fail");
+        let proof: Vec<u8> = transcript.finalize();
+
+        std::fs::write("plonk_api_proof.bin", &proof[..])
+            .expect("should succeed to write new proof");
+    }
+
     {
         // Check that a hardcoded proof is satisfied
         let proof = include_bytes!("plonk_api_proof.bin");
