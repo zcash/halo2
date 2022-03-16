@@ -609,7 +609,6 @@ fn plonk_api() {
         num_advice_columns: 5,
         num_instance_columns: 1,
         num_selectors: 0,
-        selector_map: [],
         gates: [
             Sum(
                 Sum(
