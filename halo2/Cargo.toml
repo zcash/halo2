@@ -15,7 +15,7 @@ keywords = ["halo", "proofs", "recursive", "zkp", "zkSNARKs"]
 
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "../katex-header.html"]
+rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 
 [dependencies]
 halo2_proofs = { version = "0.1.0-beta.2", path = "../halo2_proofs" }

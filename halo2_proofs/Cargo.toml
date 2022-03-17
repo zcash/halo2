@@ -20,7 +20,7 @@ keywords = ["halo", "proofs", "zkp", "zkSNARKs"]
 
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "../katex-header.html"]
+rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 
 [[bench]]
 name = "arithmetic"
