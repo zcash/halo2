@@ -69,8 +69,8 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadWord<DENSE, SPREAD> {
 #[derive(Clone, Debug)]
 pub(super) struct SpreadVar<const DENSE: usize, const SPREAD: usize> {
     pub tag: Option<u8>,
-    pub dense: AssignedBits<DENSE>,
-    pub spread: AssignedBits<SPREAD>,
+    pub dense: AssignedBits<pallas::Base, DENSE>,
+    pub spread: AssignedBits<pallas::Base, SPREAD>,
 }
 
 impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
@@ -95,10 +95,15 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
         )?;
 
         let dense =
-            AssignedBits::<DENSE>::assign_bits(region, || "dense", cols.dense, row, dense_val)?;
+            AssignedBits::<_, DENSE>::assign_bits(region, || "dense", cols.dense, row, dense_val)?;
 
-        let spread =
-            AssignedBits::<SPREAD>::assign_bits(region, || "spread", cols.spread, row, spread_val)?;
+        let spread = AssignedBits::<_, SPREAD>::assign_bits(
+            region,
+            || "spread",
+            cols.spread,
+            row,
+            spread_val,
+        )?;
 
         Ok(SpreadVar { tag, dense, spread })
     }
@@ -115,7 +120,7 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
         let dense_val = word.map(|word| word.dense);
         let spread_val = word.map(|word| word.spread);
 
-        let dense = AssignedBits::<DENSE>::assign_bits(
+        let dense = AssignedBits::<_, DENSE>::assign_bits(
             region,
             || "dense",
             dense_col,
@@ -123,7 +128,7 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
             dense_val,
         )?;
 
-        let spread = AssignedBits::<SPREAD>::assign_bits(
+        let spread = AssignedBits::<_, SPREAD>::assign_bits(
             region,
             || "spread",
             spread_col,

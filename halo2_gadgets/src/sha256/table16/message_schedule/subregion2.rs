@@ -8,15 +8,15 @@ use std::convert::TryInto;
 #[derive(Clone, Debug)]
 pub struct Subregion2Word {
     index: usize,
-    a: AssignedBits<3>,
-    b: AssignedBits<4>,
-    c: AssignedBits<3>,
-    d: AssignedBits<7>,
-    e: AssignedBits<1>,
-    f: AssignedBits<1>,
-    g: AssignedBits<13>,
-    spread_d: AssignedBits<14>,
-    spread_g: AssignedBits<26>,
+    a: AssignedBits<pallas::Base, 3>,
+    b: AssignedBits<pallas::Base, 4>,
+    c: AssignedBits<pallas::Base, 3>,
+    d: AssignedBits<pallas::Base, 7>,
+    e: AssignedBits<pallas::Base, 1>,
+    f: AssignedBits<pallas::Base, 1>,
+    g: AssignedBits<pallas::Base, 13>,
+    spread_d: AssignedBits<pallas::Base, 14>,
+    spread_g: AssignedBits<pallas::Base, 26>,
 }
 
 impl Subregion2Word {
@@ -33,7 +33,7 @@ impl Subregion2Word {
     }
 
     fn spread_d(&self) -> Option<[bool; 14]> {
-        self.spread_d.value().map(|v| v.0)
+        self.spread_d.value().map(|v| **v)
     }
 
     fn spread_e(&self) -> Option<[bool; 2]> {
@@ -45,7 +45,7 @@ impl Subregion2Word {
     }
 
     fn spread_g(&self) -> Option<[bool; 26]> {
-        self.spread_g.value().map(|v| v.0)
+        self.spread_g.value().map(|v| **v)
     }
 
     fn xor_sigma_0(&self) -> Option<[bool; 64]> {
@@ -148,24 +148,41 @@ impl Subregion2Word {
 }
 
 impl MessageScheduleConfig {
-    // W_[14..49]
+    /// W_[14..49]
+    #[allow(clippy::type_complexity)]
     pub fn assign_subregion2(
         &self,
         region: &mut Region<'_, pallas::Base>,
-        lower_sigma_0_output: Vec<(AssignedBits<16>, AssignedBits<16>)>,
+        lower_sigma_0_output: Vec<(
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        )>,
         w: &mut Vec<MessageWord>,
-        w_halves: &mut Vec<(AssignedBits<16>, AssignedBits<16>)>,
-    ) -> Result<Vec<(AssignedBits<16>, AssignedBits<16>)>, Error> {
+        w_halves: &mut Vec<(
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        )>,
+    ) -> Result<
+        Vec<(
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        )>,
+        Error,
+    > {
         let a_5 = self.message_schedule;
         let a_6 = self.extras[2];
         let a_7 = self.extras[3];
         let a_8 = self.extras[4];
         let a_9 = self.extras[5];
 
-        let mut lower_sigma_0_v2_results =
-            Vec::<(AssignedBits<16>, AssignedBits<16>)>::with_capacity(SUBREGION_2_LEN);
-        let mut lower_sigma_1_v2_results =
-            Vec::<(AssignedBits<16>, AssignedBits<16>)>::with_capacity(SUBREGION_2_LEN);
+        let mut lower_sigma_0_v2_results = Vec::<(
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        )>::with_capacity(SUBREGION_2_LEN);
+        let mut lower_sigma_1_v2_results = Vec::<(
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        )>::with_capacity(SUBREGION_2_LEN);
 
         // Closure to compose new word
         // W_i = sigma_1(W_{i - 2}) + W_{i - 7} + sigma_0(W_{i - 15}) + W_{i - 16}
@@ -176,8 +193,17 @@ impl MessageScheduleConfig {
         // sigma_1_v2(W_[14..49]) will be used to get the W_[16..51]
         // The lowest-index words involved will be W_[0..13]
         let mut new_word = |idx: usize,
-                            sigma_0_output: &(AssignedBits<16>, AssignedBits<16>)|
-         -> Result<Vec<(AssignedBits<16>, AssignedBits<16>)>, Error> {
+                            sigma_0_output: &(
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        )|
+         -> Result<
+            Vec<(
+                AssignedBits<pallas::Base, 16>,
+                AssignedBits<pallas::Base, 16>,
+            )>,
+            Error,
+        > {
             // Decompose word into (3, 4, 3, 7, 1, 1, 13)-bit chunks
             let word = self.decompose_word(region, w[idx].value(), idx)?;
 
@@ -273,8 +299,10 @@ impl MessageScheduleConfig {
             Ok(lower_sigma_0_v2_results.clone())
         };
 
-        let mut tmp_lower_sigma_0_v2_results: Vec<(AssignedBits<16>, AssignedBits<16>)> =
-            Vec::with_capacity(SUBREGION_2_LEN);
+        let mut tmp_lower_sigma_0_v2_results: Vec<(
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        )> = Vec::with_capacity(SUBREGION_2_LEN);
 
         // Use up all the output from Subregion 1 lower_sigma_0
         for i in 14..27 {
@@ -317,24 +345,24 @@ impl MessageScheduleConfig {
         let a_4 = self.extras[1];
 
         // Assign `a` (3-bit piece)
-        let a = AssignedBits::<3>::assign_bits(region, || "a", a_3, row - 1, pieces[0].clone())?;
+        let a = AssignedBits::<_, 3>::assign_bits(region, || "a", a_3, row - 1, pieces[0].clone())?;
 
         // Assign `b` (4-bit piece) lookup
         let spread_b: Option<SpreadWord<4, 8>> = pieces[1].clone().map(SpreadWord::try_new);
         let spread_b = SpreadVar::with_lookup(region, &self.lookup, row + 1, spread_b)?;
 
         // Assign `c` (3-bit piece)
-        let c = AssignedBits::<3>::assign_bits(region, || "c", a_4, row - 1, pieces[2].clone())?;
+        let c = AssignedBits::<_, 3>::assign_bits(region, || "c", a_4, row - 1, pieces[2].clone())?;
 
         // Assign `d` (7-bit piece) lookup
         let spread_d: Option<SpreadWord<7, 14>> = pieces[3].clone().map(SpreadWord::try_new);
         let spread_d = SpreadVar::with_lookup(region, &self.lookup, row, spread_d)?;
 
         // Assign `e` (1-bit piece)
-        let e = AssignedBits::<1>::assign_bits(region, || "e", a_3, row + 1, pieces[4].clone())?;
+        let e = AssignedBits::<_, 1>::assign_bits(region, || "e", a_3, row + 1, pieces[4].clone())?;
 
         // Assign `f` (1-bit piece)
-        let f = AssignedBits::<1>::assign_bits(region, || "f", a_4, row + 1, pieces[5].clone())?;
+        let f = AssignedBits::<_, 1>::assign_bits(region, || "f", a_4, row + 1, pieces[5].clone())?;
 
         // Assign `g` (13-bit piece) lookup
         let spread_g = pieces[6].clone().map(SpreadWord::try_new);
@@ -373,27 +401,33 @@ impl MessageScheduleConfig {
         word.a.copy_advice(|| "a", region, a_3, row + 1)?;
 
         // Witness `spread_a`
-        AssignedBits::<6>::assign_bits(region, || "spread_a", a_4, row + 1, word.spread_a())?;
+        AssignedBits::<_, 6>::assign_bits(region, || "spread_a", a_4, row + 1, word.spread_a())?;
 
         // Split `b` (4-bit chunk) into `b_hi` and `b_lo`
         // Assign `b_lo`, `spread_b_lo`
 
-        let b_lo: Option<[bool; 2]> = word.b.value().map(|b| b.0[..2].try_into().unwrap());
+        let b_lo: Option<[bool; 2]> = word.b.value().map(|b| {
+            let b: [bool; 4] = **b;
+            b[..2].try_into().unwrap()
+        });
         let spread_b_lo = b_lo.map(spread_bits);
         {
-            AssignedBits::<2>::assign_bits(region, || "b_lo", a_3, row - 1, b_lo)?;
+            AssignedBits::<_, 2>::assign_bits(region, || "b_lo", a_3, row - 1, b_lo)?;
 
-            AssignedBits::<4>::assign_bits(region, || "spread_b_lo", a_4, row - 1, spread_b_lo)?;
+            AssignedBits::<_, 4>::assign_bits(region, || "spread_b_lo", a_4, row - 1, spread_b_lo)?;
         };
 
         // Split `b` (2-bit chunk) into `b_hi` and `b_lo`
         // Assign `b_hi`, `spread_b_hi`
-        let b_hi: Option<[bool; 2]> = word.b.value().map(|b| b.0[2..].try_into().unwrap());
+        let b_hi: Option<[bool; 2]> = word.b.value().map(|b| {
+            let b: [bool; 4] = **b;
+            b[2..].try_into().unwrap()
+        });
         let spread_b_hi = b_hi.map(spread_bits);
         {
-            AssignedBits::<2>::assign_bits(region, || "b_hi", a_5, row - 1, b_hi)?;
+            AssignedBits::<_, 2>::assign_bits(region, || "b_hi", a_5, row - 1, b_hi)?;
 
-            AssignedBits::<4>::assign_bits(region, || "spread_b_hi", a_6, row - 1, spread_b_hi)?;
+            AssignedBits::<_, 4>::assign_bits(region, || "spread_b_hi", a_6, row - 1, spread_b_hi)?;
         };
 
         // Assign `b` and copy constraint
@@ -403,7 +437,7 @@ impl MessageScheduleConfig {
         word.c.copy_advice(|| "c", region, a_5, row + 1)?;
 
         // Witness `spread_c`
-        AssignedBits::<6>::assign_bits(region, || "spread_c", a_6, row + 1, word.spread_c())?;
+        AssignedBits::<_, 6>::assign_bits(region, || "spread_c", a_6, row + 1, word.spread_c())?;
 
         // Assign `spread_d` and copy constraint
         word.spread_d.copy_advice(|| "spread_d", region, a_4, row)?;
@@ -424,7 +458,13 @@ impl MessageScheduleConfig {
         &self,
         region: &mut Region<'_, pallas::Base>,
         word: Subregion2Word,
-    ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
+    ) -> Result<
+        (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
+        Error,
+    > {
         let a_3 = self.extras[0];
         let row = get_word_row(word.index) + 3;
 
@@ -457,7 +497,13 @@ impl MessageScheduleConfig {
         &self,
         region: &mut Region<'_, pallas::Base>,
         word: Subregion2Word,
-    ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
+    ) -> Result<
+        (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
+        Error,
+    > {
         let a_3 = self.extras[0];
         let row = get_word_row(word.index) + SIGMA_0_V2_ROWS + 3;
 

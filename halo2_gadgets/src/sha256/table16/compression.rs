@@ -129,11 +129,11 @@ impl AbcdVar {
 
 impl UpperSigmaVar<4, 22, 18, 20> for AbcdVar {
     fn spread_a(&self) -> Option<[bool; 4]> {
-        self.a.spread.value().map(|v| v.0)
+        self.a.spread.value().map(|v| **v)
     }
 
     fn spread_b(&self) -> Option<[bool; 22]> {
-        self.b.spread.value().map(|v| v.0)
+        self.b.spread.value().map(|v| **v)
     }
 
     fn spread_c(&self) -> Option<[bool; 18]> {
@@ -154,7 +154,7 @@ impl UpperSigmaVar<4, 22, 18, 20> for AbcdVar {
     }
 
     fn spread_d(&self) -> Option<[bool; 20]> {
-        self.d.spread.value().map(|v| v.0)
+        self.d.spread.value().map(|v| **v)
     }
 }
 
@@ -248,19 +248,32 @@ impl UpperSigmaVar<12, 10, 28, 14> for EfghVar {
     }
 
     fn spread_c(&self) -> Option<[bool; 28]> {
-        self.c.spread.value().map(|v| v.0)
+        self.c.spread.value().map(|v| **v)
     }
 
     fn spread_d(&self) -> Option<[bool; 14]> {
-        self.d.spread.value().map(|v| v.0)
+        self.d.spread.value().map(|v| **v)
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct RoundWordDense(AssignedBits<16>, AssignedBits<16>);
+pub struct RoundWordDense(
+    AssignedBits<pallas::Base, 16>,
+    AssignedBits<pallas::Base, 16>,
+);
 
-impl From<(AssignedBits<16>, AssignedBits<16>)> for RoundWordDense {
-    fn from(halves: (AssignedBits<16>, AssignedBits<16>)) -> Self {
+impl
+    From<(
+        AssignedBits<pallas::Base, 16>,
+        AssignedBits<pallas::Base, 16>,
+    )> for RoundWordDense
+{
+    fn from(
+        halves: (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
+    ) -> Self {
         Self(halves.0, halves.1)
     }
 }
@@ -275,10 +288,23 @@ impl RoundWordDense {
 }
 
 #[derive(Clone, Debug)]
-pub struct RoundWordSpread(AssignedBits<32>, AssignedBits<32>);
+pub struct RoundWordSpread(
+    AssignedBits<pallas::Base, 32>,
+    AssignedBits<pallas::Base, 32>,
+);
 
-impl From<(AssignedBits<32>, AssignedBits<32>)> for RoundWordSpread {
-    fn from(halves: (AssignedBits<32>, AssignedBits<32>)) -> Self {
+impl
+    From<(
+        AssignedBits<pallas::Base, 32>,
+        AssignedBits<pallas::Base, 32>,
+    )> for RoundWordSpread
+{
+    fn from(
+        halves: (
+            AssignedBits<pallas::Base, 32>,
+            AssignedBits<pallas::Base, 32>,
+        ),
+    ) -> Self {
         Self(halves.0, halves.1)
     }
 }
@@ -900,7 +926,10 @@ impl CompressionConfig {
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
         initialized_state: State,
-        w_halves: [(AssignedBits<16>, AssignedBits<16>); ROUNDS],
+        w_halves: [(
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ); ROUNDS],
     ) -> Result<State, Error> {
         let mut state = State::empty_state();
         layouter.assign_region(

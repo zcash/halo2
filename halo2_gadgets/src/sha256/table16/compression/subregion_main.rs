@@ -9,7 +9,10 @@ impl CompressionConfig {
         region: &mut Region<'_, pallas::Base>,
         round_idx: RoundIdx,
         state: State,
-        schedule_word: &(AssignedBits<16>, AssignedBits<16>),
+        schedule_word: &(
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
     ) -> Result<State, Error> {
         assert!(matches!(round_idx, RoundIdx::Main(_)));
 

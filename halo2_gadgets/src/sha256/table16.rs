@@ -2,10 +2,11 @@ use std::convert::TryInto;
 use std::marker::PhantomData;
 
 use super::Sha256Instructions;
+use crate::utilities::bitstring::{AssignedBits, Bits};
 use halo2_proofs::{
-    circuit::{AssignedCell, Chip, Layouter, Region},
+    circuit::{Chip, Layouter, Region},
     pasta::pallas,
-    plonk::{Advice, Any, Assigned, Column, ConstraintSystem, Error},
+    plonk::{Advice, Any, Column, ConstraintSystem, Error},
 };
 
 mod compression;
@@ -51,79 +52,38 @@ const IV: [u32; STATE] = [
 // TODO: Make the internals of this struct private.
 pub struct BlockWord(pub Option<u32>);
 
-#[derive(Clone, Debug)]
-/// Little-endian bits (up to 64 bits)
-pub struct Bits<const LEN: usize>([bool; LEN]);
-
 impl<const LEN: usize> Bits<LEN> {
     fn spread<const SPREAD: usize>(&self) -> [bool; SPREAD] {
-        spread_bits(self.0)
-    }
-}
-
-impl<const LEN: usize> std::ops::Deref for Bits<LEN> {
-    type Target = [bool; LEN];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<const LEN: usize> From<[bool; LEN]> for Bits<LEN> {
-    fn from(bits: [bool; LEN]) -> Self {
-        Self(bits)
-    }
-}
-
-impl<const LEN: usize> From<&Bits<LEN>> for [bool; LEN] {
-    fn from(bits: &Bits<LEN>) -> Self {
-        bits.0
-    }
-}
-
-impl<const LEN: usize> From<&Bits<LEN>> for Assigned<pallas::Base> {
-    fn from(bits: &Bits<LEN>) -> Assigned<pallas::Base> {
-        assert!(LEN <= 64);
-        pallas::Base::from(lebs2ip(&bits.0)).into()
+        let bitstring: [bool; LEN] = **self;
+        spread_bits(bitstring)
     }
 }
 
 impl From<&Bits<16>> for u16 {
     fn from(bits: &Bits<16>) -> u16 {
-        lebs2ip(&bits.0) as u16
+        lebs2ip(&**bits) as u16
     }
 }
 
 impl From<u16> for Bits<16> {
     fn from(int: u16) -> Bits<16> {
-        Bits(i2lebsp::<16>(int.into()))
+        i2lebsp::<16>(int.into()).into()
     }
 }
 
 impl From<&Bits<32>> for u32 {
     fn from(bits: &Bits<32>) -> u32 {
-        lebs2ip(&bits.0) as u32
+        lebs2ip(&(*bits)) as u32
     }
 }
 
 impl From<u32> for Bits<32> {
     fn from(int: u32) -> Bits<32> {
-        Bits(i2lebsp::<32>(int.into()))
+        i2lebsp::<32>(int.into()).into()
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct AssignedBits<const LEN: usize>(AssignedCell<Bits<LEN>, pallas::Base>);
-
-impl<const LEN: usize> std::ops::Deref for AssignedBits<LEN> {
-    type Target = AssignedCell<Bits<LEN>, pallas::Base>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<const LEN: usize> AssignedBits<LEN> {
+impl<const LEN: usize> AssignedBits<pallas::Base, LEN> {
     fn assign_bits<A, AR, T: TryInto<[bool; LEN]> + std::fmt::Debug + Clone>(
         region: &mut Region<'_, pallas::Base>,
         annotation: A,
@@ -153,11 +113,11 @@ impl<const LEN: usize> AssignedBits<LEN> {
             }
             _ => panic!("Cannot assign to instance column"),
         }
-        .map(AssignedBits)
+        .map(|v| Self::from(&v))
     }
 }
 
-impl AssignedBits<16> {
+impl AssignedBits<pallas::Base, 16> {
     fn value_u16(&self) -> Option<u16> {
         self.value().map(|v| v.into())
     }
@@ -188,11 +148,11 @@ impl AssignedBits<16> {
             }
             _ => panic!("Cannot assign to instance column"),
         }
-        .map(AssignedBits)
+        .map(|v| Self::from(&v))
     }
 }
 
-impl AssignedBits<32> {
+impl AssignedBits<pallas::Base, 32> {
     fn value_u32(&self) -> Option<u32> {
         self.value().map(|v| v.into())
     }
@@ -223,7 +183,7 @@ impl AssignedBits<32> {
             }
             _ => panic!("Cannot assign to instance column"),
         }
-        .map(AssignedBits)
+        .map(|v| Self::from(&v))
     }
 }
 
@@ -390,8 +350,14 @@ trait Table16Assignment {
         r_1_odd: Option<[bool; 16]>,
     ) -> Result<
         (
-            (AssignedBits<16>, AssignedBits<16>),
-            (AssignedBits<16>, AssignedBits<16>),
+            (
+                AssignedBits<pallas::Base, 16>,
+                AssignedBits<pallas::Base, 16>,
+            ),
+            (
+                AssignedBits<pallas::Base, 16>,
+                AssignedBits<pallas::Base, 16>,
+            ),
         ),
         Error,
     > {
@@ -440,7 +406,13 @@ trait Table16Assignment {
         r_0_odd: Option<[bool; 16]>,
         r_1_even: Option<[bool; 16]>,
         r_1_odd: Option<[bool; 16]>,
-    ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
+    ) -> Result<
+        (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
+        Error,
+    > {
         let (even, _odd) = self.assign_spread_outputs(
             region, lookup, a_3, row, r_0_even, r_0_odd, r_1_even, r_1_odd,
         )?;

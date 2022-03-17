@@ -373,7 +373,13 @@ impl CompressionConfig {
         region: &mut Region<'_, pallas::Base>,
         round_idx: RoundIdx,
         word: AbcdVar,
-    ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
+    ) -> Result<
+        (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
+        Error,
+    > {
         // Rename these here for ease of matching the gates to the specification.
         let a_3 = self.extras[0];
         let a_4 = self.extras[1];
@@ -431,7 +437,13 @@ impl CompressionConfig {
         region: &mut Region<'_, pallas::Base>,
         round_idx: RoundIdx,
         word: EfghVar,
-    ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
+    ) -> Result<
+        (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
+        Error,
+    > {
         // Rename these here for ease of matching the gates to the specification.
         let a_3 = self.extras[0];
         let a_4 = self.extras[1];
@@ -493,7 +505,13 @@ impl CompressionConfig {
         r_0_odd: Option<[bool; 16]>,
         r_1_even: Option<[bool; 16]>,
         r_1_odd: Option<[bool; 16]>,
-    ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
+    ) -> Result<
+        (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
+        Error,
+    > {
         let a_3 = self.extras[0];
 
         let (_even, odd) = self.assign_spread_outputs(
@@ -516,7 +534,13 @@ impl CompressionConfig {
         round_idx: RoundIdx,
         spread_halves_e: RoundWordSpread,
         spread_halves_f: RoundWordSpread,
-    ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
+    ) -> Result<
+        (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
+        Error,
+    > {
         let a_3 = self.extras[0];
         let a_4 = self.extras[1];
 
@@ -562,7 +586,13 @@ impl CompressionConfig {
         round_idx: RoundIdx,
         spread_halves_e: RoundWordSpread,
         spread_halves_g: RoundWordSpread,
-    ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
+    ) -> Result<
+        (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
+        Error,
+    > {
         let row = get_ch_neg_row(round_idx);
 
         self.s_ch_neg.enable(region, row)?;
@@ -591,9 +621,9 @@ impl CompressionConfig {
         let spread_neg_e_lo = spread_halves_e
             .0
             .value()
-            .map(|spread_e_lo| negate_spread(spread_e_lo.0));
+            .map(|spread_e_lo| negate_spread(**spread_e_lo));
         // Assign spread_neg_e_lo
-        AssignedBits::<32>::assign_bits(
+        AssignedBits::<_, 32>::assign_bits(
             region,
             || "spread_neg_e_lo",
             a_3,
@@ -605,9 +635,9 @@ impl CompressionConfig {
         let spread_neg_e_hi = spread_halves_e
             .1
             .value()
-            .map(|spread_e_hi| negate_spread(spread_e_hi.0));
+            .map(|spread_e_hi| negate_spread(**spread_e_hi));
         // Assign spread_neg_e_hi
-        AssignedBits::<32>::assign_bits(
+        AssignedBits::<_, 32>::assign_bits(
             region,
             || "spread_neg_e_hi",
             a_4,
@@ -643,7 +673,13 @@ impl CompressionConfig {
         r_0_odd: Option<[bool; 16]>,
         r_1_even: Option<[bool; 16]>,
         r_1_odd: Option<[bool; 16]>,
-    ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
+    ) -> Result<
+        (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
+        Error,
+    > {
         let a_3 = self.extras[0];
         let (_even, odd) = self.assign_spread_outputs(
             region,
@@ -666,7 +702,13 @@ impl CompressionConfig {
         spread_halves_a: RoundWordSpread,
         spread_halves_b: RoundWordSpread,
         spread_halves_c: RoundWordSpread,
-    ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
+    ) -> Result<
+        (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
+        Error,
+    > {
         let a_4 = self.extras[1];
         let a_5 = self.message_schedule;
 
@@ -722,11 +764,23 @@ impl CompressionConfig {
         region: &mut Region<'_, pallas::Base>,
         round_idx: RoundIdx,
         h: RoundWordDense,
-        ch: (AssignedBits<16>, AssignedBits<16>),
-        ch_neg: (AssignedBits<16>, AssignedBits<16>),
-        sigma_1: (AssignedBits<16>, AssignedBits<16>),
+        ch: (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
+        ch_neg: (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
+        sigma_1: (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
         k: u32,
-        w: &(AssignedBits<16>, AssignedBits<16>),
+        w: &(
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
     ) -> Result<RoundWordDense, Error> {
         let row = get_h_prime_row(round_idx);
         self.s_h_prime.enable(region, row)?;
@@ -751,8 +805,8 @@ impl CompressionConfig {
         let k_lo: [bool; 16] = k[..16].try_into().unwrap();
         let k_hi: [bool; 16] = k[16..].try_into().unwrap();
         {
-            AssignedBits::<16>::assign_bits(region, || "k_lo", a_6, row - 1, Some(k_lo))?;
-            AssignedBits::<16>::assign_bits(region, || "k_hi", a_6, row, Some(k_hi))?;
+            AssignedBits::<_, 16>::assign_bits(region, || "k_lo", a_6, row - 1, Some(k_lo))?;
+            AssignedBits::<_, 16>::assign_bits(region, || "k_hi", a_6, row, Some(k_hi))?;
         }
 
         // Assign and copy w
@@ -792,10 +846,20 @@ impl CompressionConfig {
             let h_prime_lo: Option<[bool; 16]> = h_prime.map(|w| w[..16].try_into().unwrap());
             let h_prime_hi: Option<[bool; 16]> = h_prime.map(|w| w[16..].try_into().unwrap());
 
-            let h_prime_lo =
-                AssignedBits::<16>::assign_bits(region, || "h_prime_lo", a_7, row + 1, h_prime_lo)?;
-            let h_prime_hi =
-                AssignedBits::<16>::assign_bits(region, || "h_prime_hi", a_8, row + 1, h_prime_hi)?;
+            let h_prime_lo = AssignedBits::<_, 16>::assign_bits(
+                region,
+                || "h_prime_lo",
+                a_7,
+                row + 1,
+                h_prime_lo,
+            )?;
+            let h_prime_hi = AssignedBits::<_, 16>::assign_bits(
+                region,
+                || "h_prime_hi",
+                a_8,
+                row + 1,
+                h_prime_hi,
+            )?;
 
             Ok((h_prime_lo, h_prime_hi).into())
         }
@@ -843,8 +907,14 @@ impl CompressionConfig {
         &self,
         region: &mut Region<'_, pallas::Base>,
         round_idx: RoundIdx,
-        maj: (AssignedBits<16>, AssignedBits<16>),
-        sigma_0: (AssignedBits<16>, AssignedBits<16>),
+        maj: (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
+        sigma_0: (
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        ),
         h_prime: RoundWordDense,
     ) -> Result<RoundWordDense, Error> {
         let row = get_a_new_row(round_idx);
@@ -905,12 +975,12 @@ impl CompressionConfig {
 
         let lo = {
             let lo: Option<[bool; 16]> = word.map(|w| w[..16].try_into().unwrap());
-            AssignedBits::<16>::assign_bits(region, || "lo", lo_col, lo_row, lo)?
+            AssignedBits::<_, 16>::assign_bits(region, || "lo", lo_col, lo_row, lo)?
         };
 
         let hi = {
             let hi: Option<[bool; 16]> = word.map(|w| w[16..].try_into().unwrap());
-            AssignedBits::<16>::assign_bits(region, || "hi", hi_col, hi_row, hi)?
+            AssignedBits::<_, 16>::assign_bits(region, || "hi", hi_col, hi_row, hi)?
         };
 
         Ok((lo, hi).into())

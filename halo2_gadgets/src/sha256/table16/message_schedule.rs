@@ -21,10 +21,10 @@ use schedule_util::*;
 pub use schedule_util::msg_schedule_test_input;
 
 #[derive(Clone, Debug)]
-pub(super) struct MessageWord(AssignedBits<32>);
+pub(super) struct MessageWord(AssignedBits<pallas::Base, 32>);
 
 impl std::ops::Deref for MessageWord {
-    type Target = AssignedBits<32>;
+    type Target = AssignedBits<pallas::Base, 32>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -309,18 +309,27 @@ impl MessageScheduleConfig {
     ) -> Result<
         (
             [MessageWord; ROUNDS],
-            [(AssignedBits<16>, AssignedBits<16>); ROUNDS],
+            [(
+                AssignedBits<pallas::Base, 16>,
+                AssignedBits<pallas::Base, 16>,
+            ); ROUNDS],
         ),
         Error,
     > {
         let mut w = Vec::<MessageWord>::with_capacity(ROUNDS);
-        let mut w_halves = Vec::<(AssignedBits<16>, AssignedBits<16>)>::with_capacity(ROUNDS);
+        let mut w_halves = Vec::<(
+            AssignedBits<pallas::Base, 16>,
+            AssignedBits<pallas::Base, 16>,
+        )>::with_capacity(ROUNDS);
 
         layouter.assign_region(
             || "process message block",
             |mut region| {
                 w = Vec::<MessageWord>::with_capacity(ROUNDS);
-                w_halves = Vec::<(AssignedBits<16>, AssignedBits<16>)>::with_capacity(ROUNDS);
+                w_halves = Vec::<(
+                    AssignedBits<pallas::Base, 16>,
+                    AssignedBits<pallas::Base, 16>,
+                )>::with_capacity(ROUNDS);
 
                 // Assign all fixed columns
                 for index in 1..14 {
