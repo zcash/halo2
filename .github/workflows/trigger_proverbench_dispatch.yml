@@ -8,9 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_USER: ${{ github.actor }}
-      TOKEN: ${{ secrets.PAT2 }}
+      _TOKEN: ${{ secrets.BENCHMARKER }}
       REVISION: ${{ github.event.pull_request.head.sha }}
-      BRANCH: ${{ GITHUB_REF#refs/heads/ }}
       REPO: ${{ github.event.repository.name }}
       PR_NUMBER: ${{ github.event.number }}
     steps:
@@ -23,6 +22,6 @@ jobs:
           curl \
            -X POST \
            -H "Accept: application/vnd.github.v3+json" \
-           -u ZKEVMBOT:${{ env.TOKEN }} \
+           -u ZKEVMBOT:${{ env._TOKEN }} \
            https://api.github.com/repos/appliedzkp/zkevm-circuits/actions/workflows/ProverBenchFromHalo2.yml/dispatches \
            -d "{\"ref\":\"main\",\"inputs\":{\"halo2pr\":\"${{ env.PR_NUMBER }}\",\"revision\":\"${{ env.REVISION }}\",\"event-type\":\"halo2_wfdispatch\",\"ghuser\": \"${{ env.GH_USER }}\"}}"
