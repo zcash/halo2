@@ -18,7 +18,7 @@ keywords = ["halo", "proofs", "zcash", "zkp", "zkSNARKs"]
 
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "../katex-header.html"]
+rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 
 [dependencies]
 arrayvec = "0.7.0"
