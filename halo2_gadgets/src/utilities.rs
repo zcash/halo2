@@ -8,6 +8,7 @@ use halo2_proofs::{
 use pasta_curves::arithmetic::FieldExt;
 use std::{array, ops::Range};
 
+pub mod bitstring;
 pub mod cond_swap;
 pub mod decompose_running_sum;
 pub mod lookup_range_check;
