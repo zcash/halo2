@@ -343,7 +343,7 @@ In the following protocol, we take it for granted that each polynomial $a_i(X, \
 10. For all $i \in [0, n_a)$ $\prover$ and $\verifier$ set $s_i(X)$ to be the lowest degree univariate polynomial defined such that $s_i(\omega^{(\mathbf{p_i})_j} x) = (\mathbf{a_i})_j$ for all $j \in [0, n_e)$.
 11. $\verifier$ responds with challenges $x_1, x_2$ and initializes $Q_0, Q_1, ..., Q_{n_q - 1} = \zero$.
   * Starting at $i=0$ and ending at $n_a - 1$ $\verifier$ sets $Q_{\sigma(i)} := [x_1] Q_{\sigma(i)} + A_i$.
-  * $\verifier$ finally sets $Q_0 := [x_1^2] Q_i + [x_1] H' + R$.
+  * $\verifier$ finally sets $Q_0 := [x_1^2] Q_0 + [x_1] H' + R$.
 12. $\prover$ initializes $q_0(X), q_1(X), ..., q_{n_q - 1}(X) = 0$.
   * Starting at $i=0$ and ending at $n_a - 1$ $\prover$ sets $q_{\sigma(i)} := x_1 q_{\sigma(i)} + a'(X)$.
   * $\prover$ finally sets $q_0(X) := x_1^2 q_0(X) + x_1 h'(X) + r(X)$.
