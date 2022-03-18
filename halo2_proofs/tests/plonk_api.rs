@@ -9,7 +9,6 @@ use halo2_proofs::pasta::{Eq, EqAffine, Fp};
 use halo2_proofs::plonk::{
     create_proof, keygen_pk, keygen_vk, verify_proof, Advice, BatchVerifier, Circuit, Column,
     ConstraintSystem, Error, Fixed, SingleVerifier, TableColumn, VerificationStrategy,
-    VerifyingKey,
 };
 use halo2_proofs::poly::commitment::{Guard, MSM};
 use halo2_proofs::poly::{commitment::Params, Rotation};
@@ -431,6 +430,24 @@ fn plonk_api() {
     };
     assert_eq!(prover.verify(), Ok(()));
 
+    if std::env::var_os("HALO2_PLONK_TEST_GENERATE_NEW_PROOF").is_some() {
+        let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+        // Create a proof
+        create_proof(
+            &params,
+            &pk,
+            &[circuit.clone(), circuit.clone()],
+            &[&[&[instance]], &[&[instance]]],
+            OsRng,
+            &mut transcript,
+        )
+        .expect("proof generation should not fail");
+        let proof: Vec<u8> = transcript.finalize();
+
+        std::fs::write("plonk_api_proof.bin", &proof[..])
+            .expect("should succeed to write new proof");
+    }
+
     {
         // Check that a hardcoded proof is satisfied
         let proof = include_bytes!("plonk_api_proof.bin");
@@ -547,21 +564,11 @@ fn plonk_api() {
             )
             .unwrap();
 
-            // Write and then read the verification key in between (to check round-trip
-            // serialization).
-            // TODO: Figure out whether https://github.com/zcash/halo2/issues/449 should
-            // be caught by this, or if it is caused by downstream changes to halo2.
-            let mut vk_buffer = vec![];
-            pk.get_vk().write(&mut vk_buffer).unwrap();
-            let vk =
-                VerifyingKey::<EqAffine>::read::<_, MyCircuit<Fp>>(&mut &vk_buffer[..], &params)
-                    .unwrap();
-
             // "Second" proof (just the first proof again).
             let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
             let strategy = verify_proof(
                 &params,
-                &vk,
+                pk.get_vk(),
                 strategy,
                 &[&[&pubinputs[..]], &[&pubinputs[..]]],
                 &mut transcript,
@@ -591,7 +598,6 @@ fn plonk_api() {
         num_advice_columns: 5,
         num_instance_columns: 1,
         num_selectors: 0,
-        selector_map: [],
         gates: [
             Sum(
                 Sum(

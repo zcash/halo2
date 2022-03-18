@@ -46,37 +46,6 @@ pub struct VerifyingKey<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> VerifyingKey<C> {
-    /// Writes a verifying key to a buffer.
-    pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
-        for commitment in &self.fixed_commitments {
-            writer.write_all(commitment.to_bytes().as_ref())?;
-        }
-        self.permutation.write(writer)?;
-
-        Ok(())
-    }
-
-    /// Reads a verification key from a buffer.
-    pub fn read<R: io::Read, ConcreteCircuit: Circuit<C::Scalar>>(
-        reader: &mut R,
-        params: &Params<C>,
-    ) -> io::Result<Self> {
-        let (domain, cs, _) = keygen::create_domain::<C, ConcreteCircuit>(params);
-
-        let fixed_commitments: Vec<_> = (0..cs.num_fixed_columns)
-            .map(|_| C::read(reader))
-            .collect::<Result<_, _>>()?;
-
-        let permutation = permutation::VerifyingKey::read(reader, &cs.permutation)?;
-
-        Ok(VerifyingKey {
-            domain,
-            fixed_commitments,
-            permutation,
-            cs,
-        })
-    }
-
     /// Hashes a verification key into a transcript.
     pub fn hash_into<E: EncodedChallenge<C>, T: Transcript<C, E>>(
         &self,

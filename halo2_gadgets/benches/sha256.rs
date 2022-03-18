@@ -3,7 +3,7 @@ use halo2_proofs::{
     pasta::{pallas, EqAffine},
     plonk::{
         create_proof, keygen_pk, keygen_vk, verify_proof, Circuit, ConstraintSystem, Error,
-        SingleVerifier, VerifyingKey,
+        SingleVerifier,
     },
     poly::commitment::Params,
     transcript::{Blake2bRead, Blake2bWrite, Challenge255},
@@ -97,23 +97,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     let empty_circuit: MyCircuit = MyCircuit {};
 
     // Initialize the proving key
-    let vk_path = Path::new("./benches/sha256_assets/sha256_vk");
-    if File::open(&vk_path).is_err() {
-        let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
-        let mut buf = Vec::new();
-
-        vk.write(&mut buf).expect("Failed to write vk");
-        let mut file = File::create(&vk_path).expect("Failed to create sha256_vk");
-
-        file.write_all(&buf[..])
-            .expect("Failed to write vk to file");
-    }
-
-    let vk_fs = File::open(&vk_path).expect("couldn't load sha256_vk");
-    let vk: VerifyingKey<EqAffine> =
-        VerifyingKey::<EqAffine>::read::<_, MyCircuit>(&mut BufReader::new(vk_fs), &params)
-            .expect("Failed to read vk");
-
+    let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
     let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
 
     let circuit: MyCircuit = MyCircuit {};
