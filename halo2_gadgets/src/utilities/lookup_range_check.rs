@@ -299,7 +299,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     pub fn copy_short_check(
         &self,
         mut layouter: impl Layouter<F>,
-        element: AssignedCell<F, F>,
+        element: &AssignedCell<F, F>,
         num_bits: usize,
     ) -> Result<(), Error> {
         assert!(num_bits < K);
@@ -310,7 +310,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                 let element =
                     element.copy_advice(|| "element", &mut region, self.running_sum, 0)?;
 
-                self.short_range_check(&mut region, element, num_bits)
+                self.short_range_check(&mut region, &element, num_bits)
             },
         )
     }
@@ -334,7 +334,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
                 let element =
                     region.assign_advice(|| "Witness element", self.running_sum, 0, || element)?;
 
-                self.short_range_check(&mut region, element.clone(), num_bits)?;
+                self.short_range_check(&mut region, &element, num_bits)?;
 
                 Ok(element)
             },
@@ -347,7 +347,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
     fn short_range_check(
         &self,
         region: &mut Region<'_, F>,
-        element: AssignedCell<F, F>,
+        element: &AssignedCell<F, F>,
         num_bits: usize,
     ) -> Result<(), Error> {
         // Enable lookup for `element`, to constrain it to 10 bits.
