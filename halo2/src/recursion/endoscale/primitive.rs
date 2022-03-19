@@ -130,4 +130,32 @@ fn test_endoscale_primitives() {
     let endoscalar_by_chunk: pallas::Scalar = endoscale_scalar_by_chunk::<_, 4>(&bits);
     let endoscalar_by_pair: pallas::Scalar = endoscale_scalar(None, &bits);
     assert_eq!(endoscalar_by_chunk, endoscalar_by_pair);
+
+    fn endo_partial_chunk_lookup<F: FieldExt, const K: usize, const N: usize>(bits: &[bool]) -> F {
+        let k_prime = bits.len();
+        assert!(K % 2 == 0);
+        assert!(k_prime % 2 == 0);
+        assert!(k_prime <= K);
+
+        let padded_bits = bits
+            .iter()
+            .copied()
+            .chain(std::iter::repeat(false))
+            .take(K)
+            .collect::<Vec<_>>();
+        let padded_endo = endoscale_scalar(Some(F::zero()), &padded_bits);
+
+        let endo = {
+            //   (1 - 2^{(K - K')/2}) * 2^{K'/2}
+            // = 2^{K'/2} - 2^{K/2}
+            let shift = F::from(1 << (k_prime / 2)) - F::from(1 << (K / 2));
+            padded_endo - shift
+        };
+
+        assert_eq!(endo, endoscale_scalar(Some(F::zero()), bits));
+
+        endo
+    }
+
+    endo_partial_chunk_lookup::<pallas::Base, 10, 1024>(&bits);
 }

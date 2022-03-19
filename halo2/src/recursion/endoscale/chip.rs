@@ -6,12 +6,21 @@ use ff::{Field, PrimeFieldBits};
 use group::Curve;
 use halo2_gadgets::{
     ecc::chip::{double_and_add, witness_point, NonIdentityEccPoint},
-    utilities::{bool_check, boolean::Bit, decompose_running_sum::be, UtilitiesInstructions},
+    utilities::{
+        bool_check,
+        boolean::Bit,
+        decompose_running_sum::be,
+        lookup_range_check::{self, LookupRangeCheckConfig},
+        UtilitiesInstructions,
+    },
 };
 use halo2_proofs::{
     arithmetic::CurveAffine,
     circuit::{AssignedCell, Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Instance, Selector, TableColumn},
+    plonk::{
+        Advice, Column, ConstraintSystem, Error, Expression, Instance, Selector, TableColumn,
+        VirtualCells,
+    },
     poly::Rotation,
 };
 use pasta_curves::arithmetic::FieldExt;
@@ -68,8 +77,12 @@ where
 {
     // Selector enabling a lookup in the (bitstring, endoscalar) table.
     q_lookup: Selector,
+    // Selector handling lookups of partial chunks.
+    q_partial_lookup: Selector,
     // Selector for Alg 2 endoscaling.
     q_endoscale_scalar: Selector,
+    // Selector checking that partial chunks are correctly shifted.
+    q_partial_chunk_shift: Selector,
     // Public inputs are provided as endoscalars. Each endoscalar corresponds
     // to a K-bit chunk.
     endoscalars: Column<Instance>,
@@ -97,6 +110,8 @@ where
     acc_point_config: witness_point::Config<C>,
     // Config used in witnessing endoscaled points.
     endo_point_config: witness_point::Config<C>,
+    // Config used to range-check words not greater than K bits.
+    lookup_range_check_config: lookup_range_check::LookupRangeCheckConfig<C::Base, K>,
 }
 
 impl<C: CurveAffine, const K: usize> UtilitiesInstructions<C::Base> for EndoscaleConfig<C, K>
@@ -135,10 +150,14 @@ where
         let endo_point_config = witness_point::Config::configure(meta, point.0, point.1);
         let running_sum_pairs = be::Config::<C::Base, 2>::configure(meta, running_sum);
         let running_sum_chunks = be::Config::<C::Base, K>::configure(meta, running_sum);
+        let lookup_range_check_config =
+            LookupRangeCheckConfig::configure(meta, running_sum, table.bits);
 
         let config = Self {
             q_lookup: meta.complex_selector(),
+            q_partial_lookup: meta.complex_selector(),
             q_endoscale_scalar: meta.selector(),
+            q_partial_chunk_shift: meta.selector(),
             endoscalars,
             endoscalars_copy,
             acc,
@@ -151,6 +170,7 @@ where
             dbl_and_add_config,
             acc_point_config,
             endo_point_config,
+            lookup_range_check_config,
         };
 
         meta.enable_equality(config.endoscalars);
@@ -215,18 +235,24 @@ where
             .map(move |(name, poly)| (name, q_endoscale_base.clone() * poly))
         });
 
-        meta.create_gate("Endoscale scalar with lookup", |meta| {
-            let q_endoscale_scalar = meta.query_selector(config.q_endoscale_scalar);
+        let endoscale_scalar_acc_check = |meta: &mut VirtualCells<C::Base>| {
             let endo = meta.query_advice(config.endoscalars_copy, Rotation::cur());
             let acc = meta.query_advice(config.acc.0, Rotation::cur());
             let next_acc = meta.query_advice(config.acc.0, Rotation::next());
 
             // Check that next_acc = acc + endo * 2^{K/2}
             let expected_next_acc = acc + (endo * C::Base::from(1 << (K / 2)));
+            next_acc - expected_next_acc
+        };
 
-            vec![q_endoscale_scalar * (next_acc - expected_next_acc)]
+        meta.create_gate("Endoscale scalar with lookup", |meta| {
+            let q_endoscale_scalar = meta.query_selector(config.q_endoscale_scalar);
+            let acc_check = endoscale_scalar_acc_check(meta);
+
+            vec![q_endoscale_scalar * acc_check]
         });
 
+        // Endoscalar lookup for `K`-bit chunk.
         meta.lookup(|meta| {
             let q_lookup = meta.query_selector(config.q_lookup);
             let neg_q_lookup = Expression::Constant(C::Base::one()) - q_lookup.clone();
@@ -244,6 +270,43 @@ where
                     table.endoscalar,
                 ),
             ]
+        });
+
+        // Endoscalar lookup for partial chunk (less than `K` bits).
+        meta.lookup(|meta| {
+            let q_partial_lookup = meta.query_selector(config.q_partial_lookup);
+            let neg_q_partial_lookup =
+                Expression::Constant(C::Base::one()) - q_partial_lookup.clone();
+            let word = meta.query_advice(config.running_sum_chunks.z(), Rotation::cur());
+            let endo = meta.query_advice(config.point.0, Rotation::cur());
+            let default_endo = {
+                let val = endoscale_scalar(Some(C::Base::zero()), &[false; K]);
+                Expression::Constant(val)
+            };
+
+            vec![
+                (q_partial_lookup.clone() * word, table.bits),
+                (
+                    q_partial_lookup * endo + neg_q_partial_lookup * default_endo,
+                    table.endoscalar,
+                ),
+            ]
+        });
+
+        meta.create_gate("Endoscale scalar of partial chunk", |meta| {
+            let q_partial_chunk_shift = meta.query_selector(config.q_partial_chunk_shift);
+
+            let acc_check = endoscale_scalar_acc_check(meta);
+            let shift_check = {
+                let padded_endoscalar = meta.query_advice(config.point.0, Rotation::cur());
+                let shift = meta.query_advice(config.point.1, Rotation::cur());
+                let shifted_endoscalar =
+                    meta.query_advice(config.endoscalars_copy, Rotation::cur());
+                (padded_endoscalar - shift) - shifted_endoscalar
+            };
+
+            std::array::IntoIter::new([("acc_check", acc_check), ("shift_check", shift_check)])
+                .map(move |(name, poly)| (name, q_partial_chunk_shift.clone() * poly))
         });
 
         config
@@ -372,10 +435,15 @@ where
         assert!(NUM_BITS <= Self::MAX_BITSTRING_LENGTH);
         assert_eq!(NUM_BITS % 2, 0);
 
-        layouter.assign_region(
+        // The bitstring will be broken into K-bit chunks with a k_prime-bit
+        // partial chunk.
+        let k_prime = NUM_BITS % K;
+
+        let (acc, bitstring) = layouter.assign_region(
             || "Endoscale scalar using bitstring (lookup optimisation)",
             |mut region| {
                 let offset = 0;
+
                 // The endoscalar is initialised to 2 * (ζ + 1).
                 let mut acc = {
                     let init = (C::Base::ZETA + C::Base::one()).double();
@@ -426,9 +494,77 @@ where
                     )?;
                 }
 
-                Ok(acc)
+                Ok((acc, bitstring))
             },
-        )
+        )?;
+
+        // Handle the partial chunk.
+        let acc = if k_prime == 0 {
+            acc
+        } else {
+            let padded_endoscalar = self.partial_chunk_lookup(
+                layouter.namespace(|| "partial chunk lookup"),
+                bitstring.z(NUM_WINDOWS),
+                k_prime,
+            )?;
+
+            layouter.assign_region(
+                || "Add partial endo to acc",
+                |mut region| {
+                    let offset = 0;
+                    self.q_partial_chunk_shift.enable(&mut region, offset)?;
+
+                    // Copy padded_endoscalar to the correct offset.
+                    padded_endoscalar.copy_advice(
+                        || "padded endoscalar",
+                        &mut region,
+                        self.point.0,
+                        offset,
+                    )?;
+
+                    // Assign 2^{K'/2} - 2^{K/2} from a fixed column.
+                    let two_pow_k_prime_div2 = C::Base::from(1 << (k_prime / 2));
+                    let two_pow_k_div2 = C::Base::from(1 << (K / 2));
+                    let shift = two_pow_k_prime_div2 - two_pow_k_div2;
+                    region.assign_advice_from_constant(
+                        || "k_prime",
+                        self.point.1,
+                        offset,
+                        shift,
+                    )?;
+
+                    // Subtract 2^{K'/2} - 2^{K/2} from the padded_endoscalar to
+                    // recover the endoscalar corresponding to the unpadded
+                    // partial chunk.
+                    let shifted_endoscalar = padded_endoscalar.value().map(|&v| v - shift);
+                    region.assign_advice(
+                        || "shifted endoscalar",
+                        self.endoscalars_copy,
+                        offset,
+                        || shifted_endoscalar.ok_or(Error::Synthesis),
+                    )?;
+
+                    // Copy the current accumulator to the correct offset.
+                    acc.copy_advice(|| "current acc", &mut region, self.acc.0, offset)?;
+
+                    // Bitshift the endoscalar by {K / 2} and add to accumulator.
+                    let acc_val = acc
+                        .value()
+                        .zip(shifted_endoscalar)
+                        .map(|(&acc, endo)| acc + endo * two_pow_k_div2);
+                    println!("acc_val: {:?}", acc_val);
+
+                    region.assign_advice(
+                        || "Endoscalar for partial chunk",
+                        self.acc.0,
+                        offset + 1,
+                        || acc_val.ok_or(Error::Synthesis),
+                    )
+                },
+            )?
+        };
+
+        Ok(acc)
     }
 
     fn recover_bitstring<L: Layouter<C::Base>, const NUM_BITS: usize, const NUM_WINDOWS: usize>(
@@ -441,7 +577,11 @@ where
         assert!(NUM_BITS <= Self::MAX_BITSTRING_LENGTH);
         assert_eq!(NUM_BITS % 2, 0);
 
-        layouter.assign_region(
+        // The bitstring will be broken into K-bit chunks with a k_prime-bit
+        // partial chunk.
+        let k_prime = NUM_BITS % K;
+
+        let bitstring = layouter.assign_region(
             || "Recover bitstring from endoscalars",
             |mut region| {
                 let offset = 0;
@@ -465,7 +605,7 @@ where
                     .zip(pub_input_rows.iter())
                     .enumerate()
                 {
-                    self.q_lookup.enable(&mut region, offset)?;
+                    self.q_lookup.enable(&mut region, offset + idx)?;
 
                     let _computed_endoscalar =
                         chunk.map(|c| endoscale_scalar(Some(C::Base::zero()), &c.bits()));
@@ -488,9 +628,20 @@ where
                     }
                 }
 
-                Ok(())
+                Ok(bitstring)
             },
-        )
+        )?;
+
+        // Handle the partial chunk.
+        if k_prime > 0 {
+            self.partial_chunk_lookup(
+                layouter.namespace(|| "partial chunk lookup"),
+                bitstring.z(NUM_WINDOWS),
+                k_prime,
+            )?;
+        }
+
+        Ok(())
     }
 }
 
@@ -605,5 +756,64 @@ where
         }
 
         Ok((acc.x(), acc.y()))
+    }
+
+    fn partial_chunk_lookup<L: Layouter<C::Base>>(
+        &self,
+        mut layouter: L,
+        partial_chunk: &AssignedCell<C::Base, C::Base>,
+        partial_chunk_num_bits: usize,
+    ) -> Result<AssignedCell<C::Base, C::Base>, Error> {
+        // `z_w` of the running sum is the value of the partial chunk.
+        // Range-constrain the partial chunk to `k_prime` bits.
+        self.lookup_range_check_config.copy_short_check(
+            layouter.namespace(|| {
+                format!(
+                    "Check that partial_chunk is {} bits",
+                    partial_chunk_num_bits
+                )
+            }),
+            &partial_chunk,
+            partial_chunk_num_bits,
+        )?;
+
+        layouter.assign_region(
+            || "Endoscale partial chunk",
+            |mut region| {
+                let offset = 0;
+                self.q_partial_lookup.enable(&mut region, offset)?;
+
+                let partial_chunk = partial_chunk.copy_advice(
+                    || "partial chunk",
+                    &mut region,
+                    self.running_sum_chunks.z(),
+                    offset,
+                )?;
+
+                // Pad the partial chunk to `K` bits and lookup the corresponding
+                // padded_endoscalar.
+                let padded_endoscalar = {
+                    let padded_bits = partial_chunk.value().map(|v| {
+                        v.to_le_bits()
+                            .iter()
+                            .by_val()
+                            .take(partial_chunk_num_bits)
+                            .chain(std::iter::repeat(false))
+                            .take(K)
+                            .collect::<Vec<_>>()
+                    });
+                    let padded_endoscalar =
+                        padded_bits.map(|b| endoscale_scalar(Some(C::Base::zero()), &b));
+                    region.assign_advice(
+                        || "padded endoscalar",
+                        self.point.0,
+                        offset,
+                        || padded_endoscalar.ok_or(Error::Synthesis),
+                    )?
+                };
+
+                Ok(padded_endoscalar)
+            },
+        )
     }
 }
