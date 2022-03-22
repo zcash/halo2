@@ -7,6 +7,22 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+## [0.1.0-beta.3] - 2022-03-22
+### Added
+- `halo2_proofs::circuit`:
+  - `AssignedCell::<Assigned<F>, F>::evaluate -> AssignedCell<F, F>`
+  - `Assigned::{is_zero_vartime, double, square, cube}`
+  - Various trait impls for `Assigned<F>`:
+    - `From<&Assigned<F>>`
+    - `PartialEq, Eq`
+    - `Add<&Assigned<F>>, AddAssign, AddAssign<&Assigned<F>>`
+    - `Sub<&Assigned<F>>, SubAssign, SubAssign<&Assigned<F>>`
+    - `Mul<&Assigned<F>>, MulAssign, MulAssign<&Assigned<F>>`
+
+### Removed
+- `halo2_proofs::plonk::VerifyingKey::{read, write}` (for details see
+  [issue 449](https://github.com/zcash/halo2/issues/449))
+
 ## [0.1.0-beta.2] - 2022-02-14
 (relative to `halo2 0.1.0-beta.1`)
 
