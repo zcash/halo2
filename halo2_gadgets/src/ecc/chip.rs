@@ -471,7 +471,7 @@ where
     fn mul(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        scalar: &Self::Var,
+        scalar: &Self::ScalarVar,
         base: &Self::NonIdentityPoint,
     ) -> Result<(Self::Point, Self::ScalarVar), Error> {
         let config = self.config().mul;

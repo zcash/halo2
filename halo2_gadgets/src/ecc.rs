@@ -99,7 +99,7 @@ pub trait EccInstructions<C: CurveAffine>:
     fn mul(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        scalar: &Self::Var,
+        scalar: &Self::ScalarVar,
         base: &Self::NonIdentityPoint,
     ) -> Result<(Self::Point, Self::ScalarVar), Error>;
 
@@ -259,7 +259,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> NonIdentityPoint<C, EccChip> {
     pub fn mul(
         &self,
         mut layouter: impl Layouter<C::Base>,
-        by: &EccChip::Var,
+        by: &EccChip::ScalarVar,
     ) -> Result<(Point<C, EccChip>, ScalarVar<C, EccChip>), Error> {
         self.chip
             .mul(&mut layouter, by, &self.inner.clone())
