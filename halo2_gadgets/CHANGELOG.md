@@ -7,5 +7,9 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+## [0.1.0-beta.2] - 2022-03-22
+### Changed
+- Migrated to `halo2_proofs 0.1.0-beta.3`.
+
 ## [0.1.0-beta.1] - 2022-02-14
 Initial release!
