@@ -377,6 +377,26 @@ impl EccBaseFieldElemFixed {
     }
 }
 
+/// An enumeration of the possible types of scalars used in variable-base
+/// multiplication.
+#[derive(Clone, Debug)]
+pub enum ScalarVar {
+    /// An element of the elliptic curve's base field, that is used as a scalar
+    /// in variable-base scalar mul.
+    ///
+    /// It is not true in general that a scalar field element fits in a curve's
+    /// base field, and in particular it is untrue for the Pallas curve, whose
+    /// scalar field `Fq` is larger than its base field `Fp`.
+    ///
+    /// However, the only use of variable-base scalar mul in the Orchard protocol
+    /// is in deriving diversified addresses `[ivk] g_d`,  and `ivk` is guaranteed
+    /// to be in the base field of the curve. (See non-normative notes in
+    /// https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents.)
+    BaseFieldElem(AssignedCell<pallas::Base, pallas::Base>),
+    /// A full-width scalar. This is unimplemented for halo2_gadgets v0.1.0.
+    FullWidth,
+}
+
 impl<Fixed: FixedPoints<pallas::Affine>> EccInstructions<pallas::Affine> for EccChip<Fixed>
 where
     <Fixed as FixedPoints<pallas::Affine>>::Base:
@@ -388,7 +408,7 @@ where
 {
     type ScalarFixed = EccScalarFixed;
     type ScalarFixedShort = EccScalarFixedShort;
-    type ScalarVar = AssignedCell<pallas::Base, pallas::Base>;
+    type ScalarVar = ScalarVar;
     type Point = EccPoint;
     type NonIdentityPoint = NonIdentityEccPoint;
     type X = AssignedCell<pallas::Base, pallas::Base>;
@@ -484,11 +504,16 @@ where
         base: &Self::NonIdentityPoint,
     ) -> Result<(Self::Point, Self::ScalarVar), Error> {
         let config = self.config().mul;
-        config.assign(
-            layouter.namespace(|| "variable-base scalar mul"),
-            scalar.clone(),
-            base,
-        )
+        match scalar {
+            ScalarVar::BaseFieldElem(scalar) => config.assign(
+                layouter.namespace(|| "variable-base scalar mul"),
+                scalar.clone(),
+                base,
+            ),
+            ScalarVar::FullWidth => {
+                todo!()
+            }
+        }
     }
 
     fn mul_fixed(
@@ -549,6 +574,6 @@ where
         _layouter: &mut impl Layouter<pallas::Base>,
         base: &Self::Var,
     ) -> Result<Self::ScalarVar, Error> {
-        Ok(base.clone())
+        Ok(ScalarVar::BaseFieldElem(base.clone()))
     }
 }

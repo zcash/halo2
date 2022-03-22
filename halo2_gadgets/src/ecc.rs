@@ -16,17 +16,7 @@ pub mod chip;
 pub trait EccInstructions<C: CurveAffine>:
     Chip<C::Base> + UtilitiesInstructions<C::Base> + Clone + Debug + Eq
 {
-    /// Variable representing an element of the elliptic curve's base field, that
-    /// is used as a scalar in variable-base scalar mul.
-    ///
-    /// It is not true in general that a scalar field element fits in a curve's
-    /// base field, and in particular it is untrue for the Pallas curve, whose
-    /// scalar field `Fq` is larger than its base field `Fp`.
-    ///
-    /// However, the only use of variable-base scalar mul in the Orchard protocol
-    /// is in deriving diversified addresses `[ivk] g_d`,  and `ivk` is guaranteed
-    /// to be in the base field of the curve. (See non-normative notes in
-    /// https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents.)
+    /// Variable representing a scalar used in variable-base scalar mul.
     type ScalarVar: Clone + Debug;
     /// Variable representing a full-width element of the elliptic curve's
     /// scalar field, to be used for fixed-base scalar mul.

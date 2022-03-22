@@ -1,4 +1,4 @@
-use super::{add, EccPoint, NonIdentityEccPoint, T_Q};
+use super::{add, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q};
 use crate::{
     primitives::sinsemilla,
     utilities::{bool_check, lookup_range_check::LookupRangeCheckConfig, ternary},
@@ -167,7 +167,7 @@ impl Config {
         mut layouter: impl Layouter<pallas::Base>,
         alpha: AssignedCell<pallas::Base, pallas::Base>,
         base: &NonIdentityEccPoint,
-    ) -> Result<(EccPoint, AssignedCell<pallas::Base, pallas::Base>), Error> {
+    ) -> Result<(EccPoint, ScalarVar), Error> {
         let (result, zs): (EccPoint, Vec<Z<pallas::Base>>) = layouter.assign_region(
             || "variable-base scalar mul",
             |mut region| {
@@ -293,7 +293,7 @@ impl Config {
             &zs,
         )?;
 
-        Ok((result, alpha))
+        Ok((result, ScalarVar::BaseFieldElem(alpha)))
     }
 
     /// Processes the final scalar bit `k_0`.
@@ -483,7 +483,7 @@ pub mod tests {
         ecc::{
             chip::{EccChip, EccPoint},
             tests::TestFixedBases,
-            EccInstructions, NonIdentityPoint, Point,
+            BaseFitsInScalarInstructions, EccInstructions, NonIdentityPoint, Point,
         },
         utilities::UtilitiesInstructions,
     };
@@ -525,6 +525,7 @@ pub mod tests {
                     column,
                     Some(scalar_val),
                 )?;
+                let scalar = chip.scalar_var_from_base(&mut layouter, &scalar)?;
                 p.mul(layouter.namespace(|| "random [a]B"), &scalar)?
             };
             constrain_equal_non_id(
@@ -543,6 +544,7 @@ pub mod tests {
             let (result, _) = {
                 let scalar =
                     chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_val))?;
+                let scalar = chip.scalar_var_from_base(&mut layouter, &scalar)?;
                 p.mul(layouter.namespace(|| "[0]B"), &scalar)?
             };
             if let Some(is_identity) = result.inner().is_identity() {
@@ -556,6 +558,7 @@ pub mod tests {
             let (result, _) = {
                 let scalar =
                     chip.load_private(layouter.namespace(|| "-1"), column, Some(scalar_val))?;
+                let scalar = chip.scalar_var_from_base(&mut layouter, &scalar)?;
                 p.mul(layouter.namespace(|| "[-1]B"), &scalar)?
             };
             constrain_equal_non_id(
