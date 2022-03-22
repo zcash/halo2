@@ -122,6 +122,20 @@ where
     }
 }
 
+impl<F: Field> AssignedCell<Assigned<F>, F> {
+    /// Evaluates this assigned cell's value directly, performing an unbatched inversion
+    /// if necessary.
+    ///
+    /// If the denominator is zero, the returned cell's value is zero.
+    pub fn evaluate(self) -> AssignedCell<F, F> {
+        AssignedCell {
+            value: self.value.map(|v| v.evaluate()),
+            cell: self.cell,
+            _marker: Default::default(),
+        }
+    }
+}
+
 impl<V: Clone, F: Field> AssignedCell<V, F>
 where
     for<'v> Assigned<F>: From<&'v V>,
