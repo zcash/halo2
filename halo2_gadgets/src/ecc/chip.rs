@@ -1,6 +1,6 @@
 //! Chip implementations for the ECC gadgets.
 
-use super::{EccInstructions, FixedPoints};
+use super::{BaseFitsInScalarInstructions, EccInstructions, FixedPoints};
 use crate::{
     primitives::sinsemilla,
     utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
@@ -531,5 +531,24 @@ where
             base_field_elem,
             base,
         )
+    }
+}
+
+impl<Fixed: FixedPoints<pallas::Affine>> BaseFitsInScalarInstructions<pallas::Affine>
+    for EccChip<Fixed>
+where
+    <Fixed as FixedPoints<pallas::Affine>>::Base:
+        FixedPoint<pallas::Affine, ScalarKind = BaseFieldElem>,
+    <Fixed as FixedPoints<pallas::Affine>>::FullScalar:
+        FixedPoint<pallas::Affine, ScalarKind = FullScalar>,
+    <Fixed as FixedPoints<pallas::Affine>>::ShortScalar:
+        FixedPoint<pallas::Affine, ScalarKind = ShortScalar>,
+{
+    fn scalar_var_from_base(
+        &self,
+        _layouter: &mut impl Layouter<pallas::Base>,
+        base: &Self::Var,
+    ) -> Result<Self::ScalarVar, Error> {
+        Ok(base.clone())
     }
 }

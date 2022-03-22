@@ -138,6 +138,18 @@ pub trait EccInstructions<C: CurveAffine>:
     ) -> Result<Self::Point, Error>;
 }
 
+/// Instructions that can be implemented for a curve whose base field fits into
+/// its scalar field.
+pub trait BaseFitsInScalarInstructions<C: CurveAffine>: EccInstructions<C> {
+    /// Converts a base field element that exists as a variable in the circuit
+    /// into a scalar to be used in variable-base scalar multiplication.
+    fn scalar_var_from_base(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        base: &Self::Var,
+    ) -> Result<Self::ScalarVar, Error>;
+}
+
 /// Defines the fixed points for a given instantiation of the ECC chip.
 pub trait FixedPoints<C: CurveAffine>: Debug + Eq + Clone {
     /// Fixed points that can be used with full-width scalar multiplication.
