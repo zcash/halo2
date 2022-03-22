@@ -106,8 +106,7 @@ impl MessageScheduleConfig {
         let row = get_word_row(index);
 
         // Rename these here for ease of matching the gates to the specification.
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
+        let [a_3, a_4, ..] = self.extras;
 
         let pieces = word.map(|word| {
             vec![
@@ -152,10 +151,8 @@ impl MessageScheduleConfig {
         region: &mut Region<'_, pallas::Base>,
         word: Subregion1Word,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
         let a_5 = self.message_schedule;
-        let a_6 = self.extras[2];
+        let [a_3, a_4, a_6, ..] = self.extras;
 
         let row = get_word_row(word.index) + 3;
 

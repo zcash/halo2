@@ -9,7 +9,7 @@ impl CompressionConfig {
         region: &mut Region<'_, pallas::Base>,
         iv: [u32; STATE],
     ) -> Result<State, Error> {
-        let a_7 = self.extras[3];
+        let [.., a_7, _a_8, _a_9] = self.extras;
 
         // Decompose E into (6, 5, 14, 7)-bit chunks
         let e = self.decompose_e(region, RoundIdx::Init, Some(iv[4]))?;
@@ -51,7 +51,7 @@ impl CompressionConfig {
         region: &mut Region<'_, pallas::Base>,
         state: State,
     ) -> Result<State, Error> {
-        let a_7 = self.extras[3];
+        let [.., a_7, _a_8, _a_9] = self.extras;
         let (a, b, c, d, e, f, g, h) = match_state(state);
 
         // Decompose E into (6, 5, 14, 7)-bit chunks

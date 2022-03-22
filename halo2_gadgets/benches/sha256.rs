@@ -34,7 +34,15 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
         }
 
         fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
-            Table16Chip::configure(meta)
+            let digest = [meta.advice_column(), meta.advice_column()];
+            let extras = [
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+            ];
+            Table16Chip::configure(meta, digest, extras)
         }
 
         fn synthesize(

@@ -432,8 +432,7 @@ pub enum StateWord {
 #[derive(Clone, Debug)]
 pub(super) struct CompressionConfig {
     lookup: SpreadInputs,
-    message_schedule: Column<Advice>,
-    extras: [Column<Advice>; 6],
+    extras: [Column<Advice>; 7],
 
     s_ch: Selector,
     s_ch_neg: Selector,
@@ -459,8 +458,8 @@ impl CompressionConfig {
     pub(super) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         lookup: SpreadInputs,
-        message_schedule: Column<Advice>,
-        extras: [Column<Advice>; 6],
+        // Columns `a_3, ..., a_9`.
+        extras: [Column<Advice>; 7],
     ) -> Self {
         let s_ch = meta.selector();
         let s_ch_neg = meta.selector();
@@ -483,13 +482,7 @@ impl CompressionConfig {
         let a_0 = lookup.tag;
         let a_1 = lookup.dense;
         let a_2 = lookup.spread;
-        let a_3 = extras[0];
-        let a_4 = extras[1];
-        let a_5 = message_schedule;
-        let a_6 = extras[2];
-        let a_7 = extras[3];
-        let a_8 = extras[4];
-        let a_9 = extras[5];
+        let [a_3, a_4, a_5, a_6, a_7, a_8, a_9] = extras;
 
         // Decompose `A,B,C,D` words into (2, 11, 9, 10)-bit chunks.
         // `c` is split into (3, 3, 3)-bit c_lo, c_mid, c_hi.
@@ -843,7 +836,6 @@ impl CompressionConfig {
 
         CompressionConfig {
             lookup,
-            message_schedule,
             extras,
             s_ch,
             s_ch_neg,
@@ -960,7 +952,15 @@ mod tests {
             }
 
             fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
-                Table16Chip::configure(meta)
+                let digest = [meta.advice_column(), meta.advice_column()];
+                let extras = [
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                ];
+                Table16Chip::configure(meta, digest, extras)
             }
 
             fn synthesize(

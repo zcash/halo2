@@ -157,10 +157,7 @@ impl MessageScheduleConfig {
         w_halves: &mut Vec<(AssignedBits<16>, AssignedBits<16>)>,
     ) -> Result<Vec<(AssignedBits<16>, AssignedBits<16>)>, Error> {
         let a_5 = self.message_schedule;
-        let a_6 = self.extras[2];
-        let a_7 = self.extras[3];
-        let a_8 = self.extras[4];
-        let a_9 = self.extras[5];
+        let [.., a_6, a_7, a_8, a_9] = self.extras;
 
         let mut lower_sigma_0_v2_results =
             Vec::<(AssignedBits<16>, AssignedBits<16>)>::with_capacity(SUBREGION_2_LEN);
@@ -313,8 +310,7 @@ impl MessageScheduleConfig {
         let pieces = transpose_option_vec(pieces, 7);
 
         // Rename these here for ease of matching the gates to the specification.
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
+        let [a_3, a_4, ..] = self.extras;
 
         // Assign `a` (3-bit piece)
         let a = AssignedBits::<3>::assign_bits(region, || "a", a_3, row - 1, pieces[0].clone())?;
@@ -363,11 +359,8 @@ impl MessageScheduleConfig {
         row: usize,
         word: &Subregion2Word,
     ) -> Result<(), Error> {
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
         let a_5 = self.message_schedule;
-        let a_6 = self.extras[2];
-        let a_7 = self.extras[3];
+        let [a_3, a_4, a_6, a_7, ..] = self.extras;
 
         // Assign `a` and copy constraint
         word.a.copy_advice(|| "a", region, a_3, row + 1)?;

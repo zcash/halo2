@@ -208,10 +208,7 @@ impl CompressionConfig {
     ) -> Result<AbcdVar, Error> {
         self.s_decompose_abcd.enable(region, row)?;
 
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
-        let a_5 = self.message_schedule;
-        let a_6 = self.extras[2];
+        let [a_3, a_4, a_5, a_6, ..] = self.extras;
 
         let spread_pieces = val.map(AbcdVar::pieces);
         let spread_pieces = transpose_option_vec(spread_pieces, 6);
@@ -279,10 +276,7 @@ impl CompressionConfig {
     ) -> Result<EfghVar, Error> {
         self.s_decompose_efgh.enable(region, row)?;
 
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
-        let a_5 = self.message_schedule;
-        let a_6 = self.extras[2];
+        let [a_3, a_4, a_5, a_6, ..] = self.extras;
 
         let spread_pieces = val.map(EfghVar::pieces);
         let spread_pieces = transpose_option_vec(spread_pieces, 6);
@@ -375,9 +369,7 @@ impl CompressionConfig {
         word: AbcdVar,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
         // Rename these here for ease of matching the gates to the specification.
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
-        let a_5 = self.message_schedule;
+        let [a_3, a_4, a_5, ..] = self.extras;
 
         let row = get_upper_sigma_0_row(round_idx);
 
@@ -433,9 +425,7 @@ impl CompressionConfig {
         word: EfghVar,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
         // Rename these here for ease of matching the gates to the specification.
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
-        let a_5 = self.message_schedule;
+        let [a_3, a_4, a_5, ..] = self.extras;
 
         let row = get_upper_sigma_1_row(round_idx);
 
@@ -517,8 +507,7 @@ impl CompressionConfig {
         spread_halves_e: RoundWordSpread,
         spread_halves_f: RoundWordSpread,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
+        let [a_3, a_4, ..] = self.extras;
 
         let row = get_ch_row(round_idx);
 
@@ -567,9 +556,7 @@ impl CompressionConfig {
 
         self.s_ch_neg.enable(region, row)?;
 
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
-        let a_5 = self.message_schedule;
+        let [a_3, a_4, a_5, ..] = self.extras;
 
         // Assign and copy spread_e_lo, spread_e_hi
         spread_halves_e
@@ -667,8 +654,7 @@ impl CompressionConfig {
         spread_halves_b: RoundWordSpread,
         spread_halves_c: RoundWordSpread,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
-        let a_4 = self.extras[1];
-        let a_5 = self.message_schedule;
+        let [_a_3, a_4, a_5, ..] = self.extras;
 
         let row = get_maj_row(round_idx);
 
@@ -731,12 +717,7 @@ impl CompressionConfig {
         let row = get_h_prime_row(round_idx);
         self.s_h_prime.enable(region, row)?;
 
-        let a_4 = self.extras[1];
-        let a_5 = self.message_schedule;
-        let a_6 = self.extras[2];
-        let a_7 = self.extras[3];
-        let a_8 = self.extras[4];
-        let a_9 = self.extras[5];
+        let [_a_3, a_4, a_5, a_6, a_7, a_8, a_9] = self.extras;
 
         // Assign and copy h
         h.0.copy_advice(|| "h_lo", region, a_7, row - 1)?;
@@ -813,9 +794,7 @@ impl CompressionConfig {
 
         self.s_e_new.enable(region, row)?;
 
-        let a_7 = self.extras[3];
-        let a_8 = self.extras[4];
-        let a_9 = self.extras[5];
+        let [.., a_7, a_8, a_9] = self.extras;
 
         // Assign and copy d_lo, d_hi
         d.0.copy_advice(|| "d_lo", region, a_7, row)?;
@@ -851,11 +830,7 @@ impl CompressionConfig {
 
         self.s_a_new.enable(region, row)?;
 
-        let a_3 = self.extras[0];
-        let a_6 = self.extras[2];
-        let a_7 = self.extras[3];
-        let a_8 = self.extras[4];
-        let a_9 = self.extras[5];
+        let [a_3, _a_4, _a_5, a_6, a_7, a_8, a_9] = self.extras;
 
         // Assign and copy maj_1
         maj.1.copy_advice(|| "maj_1_hi", region, a_3, row - 1)?;
@@ -925,8 +900,7 @@ impl CompressionConfig {
         word: Option<u32>,
     ) -> Result<(RoundWordDense, RoundWordSpread), Error> {
         // Rename these here for ease of matching the gates to the specification.
-        let a_7 = self.extras[3];
-        let a_8 = self.extras[4];
+        let [.., a_7, a_8, _a_9] = self.extras;
 
         let word: Option<[bool; 32]> = word.map(|w| i2lebsp(w.into()));
         let lo: Option<[bool; 16]> = word.map(|w| w[..16].try_into().unwrap());

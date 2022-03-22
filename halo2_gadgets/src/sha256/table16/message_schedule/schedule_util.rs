@@ -153,8 +153,7 @@ impl MessageScheduleConfig {
         word_idx: usize,
     ) -> Result<(AssignedBits<32>, (AssignedBits<16>, AssignedBits<16>)), Error> {
         // Rename these here for ease of matching the gates to the specification.
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
+        let [a_3, a_4, ..] = self.extras;
 
         let row = get_word_row(word_idx);
 
