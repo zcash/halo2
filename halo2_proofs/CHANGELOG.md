@@ -6,6 +6,8 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.1.0-beta.3] - 2022-03-22
 ### Added
 - `halo2_proofs::circuit`:
   - `AssignedCell::<Assigned<F>, F>::evaluate -> AssignedCell<F, F>`
