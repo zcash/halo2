@@ -163,7 +163,7 @@ pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>> {
 /// A trait representing the kind of scalar used with a particular `FixedPoint`.
 ///
 /// This trait exists because of limitations around const generics.
-pub trait ScalarKind {
+pub trait FixedScalarKind {
     /// The number of windows that this scalar kind requires.
     const NUM_WINDOWS: usize;
 }
@@ -172,7 +172,7 @@ pub trait ScalarKind {
 /// multiplication.
 #[derive(Debug)]
 pub enum FullScalar {}
-impl ScalarKind for FullScalar {
+impl FixedScalarKind for FullScalar {
     const NUM_WINDOWS: usize = NUM_WINDOWS;
 }
 
@@ -180,7 +180,7 @@ impl ScalarKind for FullScalar {
 /// multiplication.
 #[derive(Debug)]
 pub enum ShortScalar {}
-impl ScalarKind for ShortScalar {
+impl FixedScalarKind for ShortScalar {
     const NUM_WINDOWS: usize = NUM_WINDOWS_SHORT;
 }
 
@@ -188,13 +188,13 @@ impl ScalarKind for ShortScalar {
 /// scalar multiplication.
 #[derive(Debug)]
 pub enum BaseFieldElem {}
-impl ScalarKind for BaseFieldElem {
+impl FixedScalarKind for BaseFieldElem {
     const NUM_WINDOWS: usize = NUM_WINDOWS;
 }
 
 /// Returns information about a fixed point that is required by [`EccChip`].
 ///
-/// For each window required by `Self::ScalarKind`, $z$ is a field element such that for
+/// For each window required by `Self::FixedScalarKind`, $z$ is a field element such that for
 /// each point $(x, y)$ in the window:
 /// - $z + y = u^2$ (some square in the field); and
 /// - $z - y$ is not a square.
@@ -204,7 +204,7 @@ impl ScalarKind for BaseFieldElem {
 /// arrays instead of `Vec`s.
 pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
     /// The kind of scalar that this fixed point can be multiplied by.
-    type ScalarKind: ScalarKind;
+    type FixedScalarKind: FixedScalarKind;
 
     /// Returns the generator for this fixed point.
     fn generator(&self) -> C;
@@ -217,7 +217,7 @@ pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
 
     /// Returns the Lagrange coefficients for this fixed point.
     fn lagrange_coeffs(&self) -> Vec<[C::Base; H]> {
-        compute_lagrange_coeffs(self.generator(), Self::ScalarKind::NUM_WINDOWS)
+        compute_lagrange_coeffs(self.generator(), Self::FixedScalarKind::NUM_WINDOWS)
     }
 }
 
@@ -380,11 +380,11 @@ impl EccBaseFieldElemFixed {
 impl<Fixed: FixedPoints<pallas::Affine>> EccInstructions<pallas::Affine> for EccChip<Fixed>
 where
     <Fixed as FixedPoints<pallas::Affine>>::Base:
-        FixedPoint<pallas::Affine, ScalarKind = BaseFieldElem>,
+        FixedPoint<pallas::Affine, FixedScalarKind = BaseFieldElem>,
     <Fixed as FixedPoints<pallas::Affine>>::FullScalar:
-        FixedPoint<pallas::Affine, ScalarKind = FullScalar>,
+        FixedPoint<pallas::Affine, FixedScalarKind = FullScalar>,
     <Fixed as FixedPoints<pallas::Affine>>::ShortScalar:
-        FixedPoint<pallas::Affine, ScalarKind = ShortScalar>,
+        FixedPoint<pallas::Affine, FixedScalarKind = ShortScalar>,
 {
     type ScalarFixed = EccScalarFixed;
     type ScalarFixedShort = EccScalarFixedShort;
@@ -538,11 +538,11 @@ impl<Fixed: FixedPoints<pallas::Affine>> BaseFitsInScalarInstructions<pallas::Af
     for EccChip<Fixed>
 where
     <Fixed as FixedPoints<pallas::Affine>>::Base:
-        FixedPoint<pallas::Affine, ScalarKind = BaseFieldElem>,
+        FixedPoint<pallas::Affine, FixedScalarKind = BaseFieldElem>,
     <Fixed as FixedPoints<pallas::Affine>>::FullScalar:
-        FixedPoint<pallas::Affine, ScalarKind = FullScalar>,
+        FixedPoint<pallas::Affine, FixedScalarKind = FullScalar>,
     <Fixed as FixedPoints<pallas::Affine>>::ShortScalar:
-        FixedPoint<pallas::Affine, ScalarKind = ShortScalar>,
+        FixedPoint<pallas::Affine, FixedScalarKind = ShortScalar>,
 {
     fn scalar_var_from_base(
         &self,

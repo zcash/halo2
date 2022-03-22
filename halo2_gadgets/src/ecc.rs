@@ -560,7 +560,7 @@ pub(crate) mod tests {
     }
 
     impl FixedPoint<pallas::Affine> for FullWidth {
-        type ScalarKind = FullScalar;
+        type FixedScalarKind = FullScalar;
 
         fn generator(&self) -> pallas::Affine {
             self.0
@@ -590,7 +590,7 @@ pub(crate) mod tests {
     }
 
     impl FixedPoint<pallas::Affine> for BaseField {
-        type ScalarKind = BaseFieldElem;
+        type FixedScalarKind = BaseFieldElem;
 
         fn generator(&self) -> pallas::Affine {
             *BASE
@@ -620,7 +620,7 @@ pub(crate) mod tests {
     }
 
     impl FixedPoint<pallas::Affine> for Short {
-        type ScalarKind = ShortScalar;
+        type FixedScalarKind = ShortScalar;
 
         fn generator(&self) -> pallas::Affine {
             *BASE
