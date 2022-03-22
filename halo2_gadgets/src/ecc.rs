@@ -74,6 +74,13 @@ pub trait EccInstructions<C: CurveAffine>:
         value: Option<C>,
     ) -> Result<Self::NonIdentityPoint, Error>;
 
+    /// Witnesses a full-width scalar to be used in variable-base multiplication.
+    fn witness_scalar_var(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        value: Option<C::Scalar>,
+    ) -> Result<Self::ScalarVar, Error>;
+
     /// Extracts the x-coordinate of a point.
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X;
 

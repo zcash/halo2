@@ -435,6 +435,15 @@ where
         )
     }
 
+    fn witness_scalar_var(
+        &self,
+        _layouter: &mut impl Layouter<pallas::Base>,
+        _value: Option<pallas::Scalar>,
+    ) -> Result<Self::ScalarVar, Error> {
+        // This is unimplemented for halo2_gadgets v0.1.0.
+        todo!()
+    }
+
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X {
         let point: EccPoint = (point.clone()).into();
         point.x()
