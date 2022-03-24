@@ -100,14 +100,27 @@ impl XorChip {
         let (default_l, default_r, default_o) = {
             let one = Expression::Constant(Fp::one());
             let zero = Expression::Constant(Fp::zero());
-            (not_q_lookup.clone() * one.clone(), not_q_lookup.clone() * one.clone(), not_q_lookup * zero)
+            (
+                not_q_lookup.clone() * one.clone(),
+                not_q_lookup.clone() * one.clone(),
+                not_q_lookup * zero,
+            )
         };
 
         let _ = cs.lookup(|cs| {
             vec![
-                (q_lookup.clone() * cs.query_advice(l_col, Rotation::cur()) + default_l, xor_l_col),
-                (q_lookup.clone() * cs.query_advice(r_col, Rotation::cur()) + default_r, xor_r_col),
-                (q_lookup * cs.query_advice(o_col, Rotation::cur()) + default_o, xor_o_col),
+                (
+                    q_lookup.clone() * cs.query_advice(l_col, Rotation::cur()) + default_l,
+                    xor_l_col,
+                ),
+                (
+                    q_lookup.clone() * cs.query_advice(r_col, Rotation::cur()) + default_r,
+                    xor_r_col,
+                ),
+                (
+                    q_lookup * cs.query_advice(o_col, Rotation::cur()) + default_o,
+                    xor_o_col,
+                ),
             ]
         });
 
