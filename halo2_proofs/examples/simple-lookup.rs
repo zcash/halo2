@@ -57,6 +57,7 @@ struct XorChipConfig {
     xor_r_col: TableColumn,
     xor_o_col: TableColumn,
     pub_col: Column<Instance>,
+    q_lookup: ComplexSelector,
 }
 
 impl Chip<Fp> for XorChip {
@@ -94,14 +95,14 @@ impl XorChip {
 
         let q_lookup = meta.complex_selector();
         let not_q_lookup = Expression::Constant(Fp::one()) - q_lookup.clone();
-        
+
         // Default values to provide to the lookup argument when `q_lookup` is not enabled.
         let (default_l, default_r, default_o) = {
             let one = Expression::Constant(Fp::one());
             let zero = Expression::Constant(Fp::zero());
             (not_q_lookup.clone() * one.clone(), not_q_lookup.clone() * one.clone(), not_q_lookup * zero)
         };
-        
+
         let _ = cs.lookup(|cs| {
             vec![
                 (q_lookup.clone() * cs.query_advice(l_col, Rotation::cur()) + default_l, xor_l_col),
@@ -118,6 +119,7 @@ impl XorChip {
             xor_r_col,
             xor_o_col,
             pub_col,
+            q_lookup,
         }
     }
 
