@@ -92,11 +92,21 @@ impl XorChip {
         let xor_r_col = cs.lookup_table_column();
         let xor_o_col = cs.lookup_table_column();
 
+        let q_lookup = meta.complex_selector();
+        let not_q_lookup = Expression::Constant(Fp::one()) - q_lookup.clone();
+        
+        // Default values to provide to the lookup argument when `q_lookup` is not enabled.
+        let (default_l, default_r, default_o) = {
+            let one = Expression::Constant(Fp::one());
+            let zero = Expression::Constant(Fp::zero());
+            (not_q_lookup.clone() * one.clone(), not_q_lookup.clone() * one.clone(), not_q_lookup * zero)
+        };
+        
         let _ = cs.lookup(|cs| {
             vec![
-                (cs.query_advice(l_col, Rotation::cur()), xor_l_col),
-                (cs.query_advice(r_col, Rotation::cur()), xor_r_col),
-                (cs.query_advice(o_col, Rotation::cur()), xor_o_col),
+                (q_lookup.clone() * cs.query_advice(l_col, Rotation::cur()) + default_l, xor_l_col),
+                (q_lookup.clone() * cs.query_advice(r_col, Rotation::cur()) + default_r, xor_r_col),
+                (q_lookup * cs.query_advice(o_col, Rotation::cur()) + default_o, xor_o_col),
             ]
         });
 
@@ -184,7 +194,7 @@ impl XorChip {
 }
 
 // Proves knowledge of `a` and `b` such that `xor(a, b) == c` for public input `c`.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 struct XorCircuit {
     // Private inputs.
     a: Option<Fp>,
@@ -197,7 +207,7 @@ impl Circuit<Fp> for XorCircuit {
     type Config = XorChipConfig;
 
     fn without_witnesses(&self) -> Self {
-        todo!()
+        Self::default()
     }
 
     fn configure(cs: &mut ConstraintSystem<Fp>) -> Self::Config {
