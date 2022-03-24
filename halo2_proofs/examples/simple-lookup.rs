@@ -38,7 +38,10 @@ use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, SimpleFloorPlanner},
     dev::{MockProver, VerifyFailure},
     pasta::Fp,
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance, TableColumn},
+    plonk::{
+        Advice, Circuit, Column, ConstraintSystem, Error, Expression, Instance, Selector,
+        TableColumn,
+    },
     poly::Rotation,
 };
 
@@ -57,7 +60,7 @@ struct XorChipConfig {
     xor_r_col: TableColumn,
     xor_o_col: TableColumn,
     pub_col: Column<Instance>,
-    q_lookup: ComplexSelector,
+    s_lookup: Selector,
 }
 
 impl Chip<Fp> for XorChip {
@@ -93,21 +96,22 @@ impl XorChip {
         let xor_r_col = cs.lookup_table_column();
         let xor_o_col = cs.lookup_table_column();
 
-        let q_lookup = meta.complex_selector();
-        let not_q_lookup = Expression::Constant(Fp::one()) - q_lookup.clone();
-
-        // Default values to provide to the lookup argument when `q_lookup` is not enabled.
-        let (default_l, default_r, default_o) = {
-            let one = Expression::Constant(Fp::one());
-            let zero = Expression::Constant(Fp::zero());
-            (
-                not_q_lookup.clone() * one.clone(),
-                not_q_lookup.clone() * one.clone(),
-                not_q_lookup * zero,
-            )
-        };
+        let s_lookup = cs.complex_selector();
 
         let _ = cs.lookup(|cs| {
+            let q_lookup = cs.query_selector(s_lookup);
+            let not_q_lookup = Expression::Constant(Fp::one()) - q_lookup.clone();
+
+            // Default values to provide to the lookup argument when `q_lookup` is not enabled.
+            let (default_l, default_r, default_o) = {
+                let one = Expression::Constant(Fp::one());
+                let zero = Expression::Constant(Fp::zero());
+                (
+                    not_q_lookup.clone() * one.clone(),
+                    not_q_lookup.clone() * one.clone(),
+                    not_q_lookup * zero,
+                )
+            };
             vec![
                 (
                     q_lookup.clone() * cs.query_advice(l_col, Rotation::cur()) + default_l,
@@ -132,7 +136,7 @@ impl XorChip {
             xor_r_col,
             xor_o_col,
             pub_col,
-            q_lookup,
+            s_lookup,
         }
     }
 
@@ -184,6 +188,10 @@ impl XorChip {
             || "private and public inputs",
             |mut region| {
                 let row_offset = 0;
+                self.config()
+                    .s_lookup
+                    .enable(&mut region, row_offset)
+                    .unwrap();
                 region.assign_advice(
                     || "private input `a`",
                     self.config.l_col,
