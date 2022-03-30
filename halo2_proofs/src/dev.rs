@@ -766,10 +766,15 @@ impl<F: FieldExt> MockProver<F> {
                         if original_cell == permuted_cell {
                             None
                         } else {
+                            let columns = self.cs.permutation.get_columns();
+                            let column = columns.get(column).unwrap();
                             Some(VerifyFailure::Permutation {
-                                column: (*self.cs.permutation.get_columns().get(column).unwrap())
-                                    .into(),
-                                row,
+                                column: (*column).into(),
+                                location: FailureLocation::find(
+                                    &self.regions,
+                                    row,
+                                    Some(column).into_iter().cloned().collect(),
+                                ),
                             })
                         }
                     })

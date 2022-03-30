@@ -17,6 +17,9 @@ and this project adheres to Rust's notion of
   - `VerifyFailure::CellNotAssigned` now has a `gate_offset` field, storing the
     offset in the region at which the gate queries the cell that needs to be
     assigned.
+  - The `row` field of `VerifyFailure::Permutation` has been replaced by a
+    `location` field, which can now indicate whether the location falls within
+    an assigned region.
 
 ## [0.1.0-beta.2] - 2022-02-14
 (relative to `halo2 0.1.0-beta.1`)

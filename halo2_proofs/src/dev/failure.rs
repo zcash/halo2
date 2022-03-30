@@ -76,7 +76,11 @@ impl FailureLocation {
     }
 
     /// Figures out whether the given row and columns overlap an assigned region.
-    fn find(regions: &[Region], failure_row: usize, failure_columns: HashSet<Column<Any>>) -> Self {
+    pub(super) fn find(
+        regions: &[Region],
+        failure_row: usize,
+        failure_columns: HashSet<Column<Any>>,
+    ) -> Self {
         regions
             .iter()
             .enumerate()
@@ -159,8 +163,8 @@ pub enum VerifyFailure {
     Permutation {
         /// The column in which this permutation is not satisfied.
         column: metadata::Column,
-        /// The row on which this permutation is not satisfied.
-        row: usize,
+        /// The location at which the permutation is not satisfied.
+        location: FailureLocation,
     },
 }
 
@@ -202,11 +206,11 @@ impl fmt::Display for VerifyFailure {
                 lookup_index,
                 location,
             } => write!(f, "Lookup {} is not satisfied {}", lookup_index, location),
-            Self::Permutation { column, row } => {
+            Self::Permutation { column, location } => {
                 write!(
                     f,
                     "Equality constraint not satisfied by cell ({:?}, {})",
-                    column, row
+                    column, location
                 )
             }
         }
