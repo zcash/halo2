@@ -3,6 +3,7 @@
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
 
+use super::super::multicore;
 use super::{Coeff, LagrangeCoeff, Polynomial, MSM};
 use crate::arithmetic::{
     best_fft, best_multiexp, parallelize, CurveAffine, CurveExt, Engine, FieldExt, Group,
@@ -59,15 +60,37 @@ impl<C: CurveAffine> Params<C> {
         assert!(k <= E::Scalar::S);
         let n: u64 = 1 << k;
 
+        // g = [G1, [s] G1, [s^2] G1, ..., [s^(n-1)] G1]  
+        let g1 = <E::G1Affine as PrimeCurveAffine>::generator();
         let s = E::Scalar::random(OsRng);
 
-        let mut g_projective: Vec<E::G1> = Vec::with_capacity(n as usize);
-        let g1 = <E::G1Affine as PrimeCurveAffine>::generator();
-        g_projective.push(g1.into());
-        // g = [G1, [s] G1, [s^2] G1, ..., [s^(n-1)] G1]
-        for i in 1..(n as usize) {
-            g_projective.push(g_projective[i - 1] * s);
-        }
+        // Prepare [s^0, s^1, ..., s^(n - 1)]
+        let mut coeffs = vec![E::Scalar::one(); n as usize];
+        let num_threads = multicore::current_num_threads();
+        let chunk = (n as usize + num_threads - 1) / num_threads;
+        multicore::scope(|scope| {
+            for (i, p) in coeffs.chunks_mut(chunk).enumerate() {
+                scope.spawn(move |_| {
+                    let mut current_p = s.pow_vartime(&[(i * chunk) as u64]);
+
+                    for p in p.iter_mut() {
+                        *p = current_p;
+                        current_p.mul_assign(&s);
+                    }
+                });
+            }
+        });
+
+        let mut g_projective = Vec::from(vec![g1.into(); n as usize]);
+        multicore::scope(|scope| {
+            for (g, p) in g_projective.chunks_mut(chunk).zip(coeffs.chunks(chunk)) {
+                scope.spawn(move |_| {
+                    for (g, p) in g.iter_mut().zip(p.iter()) {
+                        *g = *g * p;
+                    }
+                });
+            }
+        });
 
         let g = {
             let mut g = vec![E::G1Affine::identity(); n as usize];
