@@ -60,7 +60,7 @@ impl<C: CurveAffine> Params<C> {
         assert!(k <= E::Scalar::S);
         let n: u64 = 1 << k;
 
-        // g = [G1, [s] G1, [s^2] G1, ..., [s^(n-1)] G1]  
+        // Calculate g = [G1, [s] G1, [s^2] G1, ..., [s^(n-1)] G1] in parallel.
         let g1 = <E::G1Affine as PrimeCurveAffine>::generator();
         let s = E::Scalar::random(OsRng);
 
