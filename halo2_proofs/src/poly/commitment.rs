@@ -64,31 +64,13 @@ impl<C: CurveAffine> Params<C> {
         let g1 = <E::G1Affine as PrimeCurveAffine>::generator();
         let s = E::Scalar::random(OsRng);
 
-        // Prepare [s^0, s^1, ..., s^(n - 1)]
-        let mut coeffs = vec![E::Scalar::one(); n as usize];
-        let num_threads = multicore::current_num_threads();
-        let chunk = (n as usize + num_threads - 1) / num_threads;
-        multicore::scope(|scope| {
-            for (i, p) in coeffs.chunks_mut(chunk).enumerate() {
-                scope.spawn(move |_| {
-                    let mut current_p = s.pow_vartime(&[(i * chunk) as u64]);
-
-                    for p in p.iter_mut() {
-                        *p = current_p;
-                        current_p.mul_assign(&s);
-                    }
-                });
-            }
-        });
-
-        let mut g_projective = Vec::from(vec![g1.into(); n as usize]);
-        multicore::scope(|scope| {
-            for (g, p) in g_projective.chunks_mut(chunk).zip(coeffs.chunks(chunk)) {
-                scope.spawn(move |_| {
-                    for (g, p) in g.iter_mut().zip(p.iter()) {
-                        *g = *g * p;
-                    }
-                });
+        let mut g_projective = vec![E::G1::group_zero(); n as usize];
+        parallelize(&mut g_projective, |g, start| {
+            let mut current_g: E::G1 = g1.into();
+            current_g *= s.pow_vartime(&[start as u64]);
+            for g in g.iter_mut() {
+                *g = current_g;
+                current_g *= s;
             }
         });
 
