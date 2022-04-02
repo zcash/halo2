@@ -205,7 +205,10 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
             /// Returns the actual size of the chunk we're operating on in this
             /// context, which may be smaller than `chunk_size`.
             fn local_chunk_size(&self) -> usize {
-                cmp::min(self.chunk_size, self.poly_len - self.chunk_size * self.chunk_index)
+                cmp::min(
+                    self.chunk_size,
+                    self.poly_len - self.chunk_size * self.chunk_index,
+                )
             }
         }
 
