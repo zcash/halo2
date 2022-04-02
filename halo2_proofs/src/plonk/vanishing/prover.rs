@@ -77,9 +77,7 @@ impl<C: CurveAffine> Committed<C> {
         transcript: &mut T,
     ) -> Result<Constructed<C>, Error> {
         // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
-        let h_poly = expressions
-            .reduce(|h_poly, v| &(&h_poly * *y) + &v) // Fold the gates together with the y challenge
-            .unwrap_or_else(|| poly::Ast::ConstantTerm(C::Scalar::zero()));
+        let h_poly = poly::Ast::distribute_powers(expressions, *y); // Fold the gates together with the y challenge
         let h_poly = evaluator.evaluate(&h_poly, domain); // Evaluate the h(X) polynomial
 
         // Divide by t(X) = X^{params.n} - 1.
