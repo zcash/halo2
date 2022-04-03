@@ -154,7 +154,7 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                     .iter()
                     .map(|term| collect_rotations(term))
                     .reduce(|a, b| a.union(&b).cloned().collect())
-                    .unwrap_or(HashSet::new()),
+                    .unwrap_or_default(),
                 Ast::LinearTerm(_) | Ast::ConstantTerm(_) => HashSet::default(),
             }
         }
