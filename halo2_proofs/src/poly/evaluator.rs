@@ -152,9 +152,8 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                 Ast::Scale(a, _) => collect_rotations(a),
                 Ast::DistributePowers(terms, _) => terms
                     .iter()
-                    .map(|term| collect_rotations(term))
-                    .reduce(|a, b| a.union(&b).cloned().collect())
-                    .unwrap_or_default(),
+                    .flat_map(|term| collect_rotations(term).into_iter())
+                    .collect(),
                 Ast::LinearTerm(_) | Ast::ConstantTerm(_) => HashSet::default(),
             }
         }
@@ -201,17 +200,6 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
             leaves: &'a HashMap<AstLeaf<E, B>, &'a [F]>,
         }
 
-        impl<'a, E, F: FieldExt, B: Basis> AstContext<'a, E, F, B> {
-            /// Returns the actual size of the chunk we're operating on in this
-            /// context, which may be smaller than `chunk_size`.
-            fn local_chunk_size(&self) -> usize {
-                cmp::min(
-                    self.chunk_size,
-                    self.poly_len - self.chunk_size * self.chunk_index,
-                )
-            }
-        }
-
         fn recurse<E, F: FieldExt, B: BasisOps>(
             ast: &Ast<E, F, B>,
             ctx: &AstContext<'_, E, F, B>,
@@ -241,19 +229,17 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                     }
                     lhs
                 }
-                Ast::DistributePowers(terms, base) => {
-                    let mut acc = vec![F::zero(); ctx.local_chunk_size()];
-
-                    for term in terms.iter() {
+                Ast::DistributePowers(terms, base) => terms.iter().fold(
+                    B::constant_term(ctx.poly_len, ctx.chunk_size, ctx.chunk_index, F::zero()),
+                    |mut acc, term| {
                         let term = recurse(term, ctx);
                         for (acc, term) in acc.iter_mut().zip(term) {
                             *acc *= base;
                             *acc += term;
                         }
-                    }
-
-                    acc
-                }
+                        acc
+                    },
+                ),
                 Ast::LinearTerm(scalar) => B::linear_term(
                     ctx.domain,
                     ctx.poly_len,
@@ -315,7 +301,8 @@ pub(crate) enum Ast<E, F: Field, B: Basis> {
     Mul(AstMul<E, F, B>),
     Scale(Arc<Ast<E, F, B>>, F),
     /// Represents a linear combination of a vector of nodes and the powers of a
-    /// field element.
+    /// field element, where the nodes are ordered from highest to lowest degree
+    /// terms.
     DistributePowers(Arc<Vec<Ast<E, F, B>>>, F),
     /// The degree-1 term of a polynomial.
     ///
