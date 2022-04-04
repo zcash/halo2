@@ -150,6 +150,10 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                     lhs.union(&rhs).cloned().collect()
                 }
                 Ast::Scale(a, _) => collect_rotations(a),
+                Ast::DistributePowers(terms, _) => terms
+                    .iter()
+                    .flat_map(|term| collect_rotations(term).into_iter())
+                    .collect(),
                 Ast::LinearTerm(_) | Ast::ConstantTerm(_) => HashSet::default(),
             }
         }
@@ -225,6 +229,17 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                     }
                     lhs
                 }
+                Ast::DistributePowers(terms, base) => terms.iter().fold(
+                    B::constant_term(ctx.poly_len, ctx.chunk_size, ctx.chunk_index, F::zero()),
+                    |mut acc, term| {
+                        let term = recurse(term, ctx);
+                        for (acc, term) in acc.iter_mut().zip(term) {
+                            *acc *= base;
+                            *acc += term;
+                        }
+                        acc
+                    },
+                ),
                 Ast::LinearTerm(scalar) => B::linear_term(
                     ctx.domain,
                     ctx.poly_len,
@@ -285,6 +300,10 @@ pub(crate) enum Ast<E, F: Field, B: Basis> {
     Add(Arc<Ast<E, F, B>>, Arc<Ast<E, F, B>>),
     Mul(AstMul<E, F, B>),
     Scale(Arc<Ast<E, F, B>>, F),
+    /// Represents a linear combination of a vector of nodes and the powers of a
+    /// field element, where the nodes are ordered from highest to lowest degree
+    /// terms.
+    DistributePowers(Arc<Vec<Ast<E, F, B>>>, F),
     /// The degree-1 term of a polynomial.
     ///
     /// The field element is the coefficient of the term in the standard basis, not the
@@ -296,6 +315,12 @@ pub(crate) enum Ast<E, F: Field, B: Basis> {
     ConstantTerm(F),
 }
 
+impl<E, F: Field, B: Basis> Ast<E, F, B> {
+    pub fn distribute_powers<I: IntoIterator<Item = Self>>(i: I, base: F) -> Self {
+        Ast::DistributePowers(Arc::new(i.into_iter().collect()), base)
+    }
+}
+
 impl<E, F: Field, B: Basis> fmt::Debug for Ast<E, F, B> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -303,6 +328,11 @@ impl<E, F: Field, B: Basis> fmt::Debug for Ast<E, F, B> {
             Self::Add(lhs, rhs) => f.debug_tuple("Add").field(lhs).field(rhs).finish(),
             Self::Mul(x) => f.debug_tuple("Mul").field(x).finish(),
             Self::Scale(base, scalar) => f.debug_tuple("Scale").field(base).field(scalar).finish(),
+            Self::DistributePowers(terms, base) => f
+                .debug_tuple("DistributePowers")
+                .field(terms)
+                .field(base)
+                .finish(),
             Self::LinearTerm(x) => f.debug_tuple("LinearTerm").field(x).finish(),
             Self::ConstantTerm(x) => f.debug_tuple("ConstantTerm").field(x).finish(),
         }

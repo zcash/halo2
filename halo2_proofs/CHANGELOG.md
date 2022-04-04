@@ -7,6 +7,10 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+### Changed
+- PLONK prover was improved to avoid stack overflows when large numbers of gates
+  are involved in a proof.
+
 ## [0.1.0-beta.3] - 2022-03-22
 ### Added
 - `halo2_proofs::circuit`:
