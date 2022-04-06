@@ -1,6 +1,6 @@
 [package]
 name = "halo2_gadgets"
-version = "0.1.0-beta.2"
+version = "0.1.0-beta.3"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
     "Jack Grigg <jack@electriccoin.co>",
