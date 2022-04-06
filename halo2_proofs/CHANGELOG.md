@@ -7,6 +7,7 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+## [0.1.0-beta.4] - 2022-04-06
 ### Changed
 - PLONK prover was improved to avoid stack overflows when large numbers of gates
   are involved in a proof.
