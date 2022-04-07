@@ -6,7 +6,7 @@ authors = [
 ]
 edition = "2018"
 description = "[BETA] Fast zero-knowledge proof-carrying data implementation with no trusted setup"
-license-file = "../COPYING"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/zcash/halo2"
 documentation = "https://docs.rs/halo2"
 readme = "../README.md"
