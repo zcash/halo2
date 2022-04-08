@@ -50,7 +50,7 @@ pub enum ValueSource {
 
 impl ValueSource {
     /// Get the value for this source
-    pub fn evaluate<F: Field, B: Basis>(
+    pub fn get<F: Field, B: Basis>(
         &self,
         rotations: &[usize],
         constants: &[F],
@@ -112,7 +112,7 @@ impl Calculation {
     ) -> F {
         match self {
             Calculation::Add(a, b) => {
-                let a = a.evaluate(
+                let a = a.get(
                     rotations,
                     constants,
                     intermediates,
@@ -120,7 +120,7 @@ impl Calculation {
                     advice_values,
                     instance_values,
                 );
-                let b = b.evaluate(
+                let b = b.get(
                     rotations,
                     constants,
                     intermediates,
@@ -131,7 +131,7 @@ impl Calculation {
                 a + b
             }
             Calculation::Sub(a, b) => {
-                let a = a.evaluate(
+                let a = a.get(
                     rotations,
                     constants,
                     intermediates,
@@ -139,7 +139,7 @@ impl Calculation {
                     advice_values,
                     instance_values,
                 );
-                let b = b.evaluate(
+                let b = b.get(
                     rotations,
                     constants,
                     intermediates,
@@ -150,7 +150,7 @@ impl Calculation {
                 a - b
             }
             Calculation::Mul(a, b) => {
-                let a = a.evaluate(
+                let a = a.get(
                     rotations,
                     constants,
                     intermediates,
@@ -158,7 +158,7 @@ impl Calculation {
                     advice_values,
                     instance_values,
                 );
-                let b = b.evaluate(
+                let b = b.get(
                     rotations,
                     constants,
                     intermediates,
@@ -168,7 +168,7 @@ impl Calculation {
                 );
                 a * b
             }
-            Calculation::Negate(v) => -v.evaluate(
+            Calculation::Negate(v) => -v.get(
                 rotations,
                 constants,
                 intermediates,
@@ -177,7 +177,7 @@ impl Calculation {
                 instance_values,
             ),
             Calculation::LcBeta(a, b) => {
-                let a = a.evaluate(
+                let a = a.get(
                     rotations,
                     constants,
                     intermediates,
@@ -185,7 +185,7 @@ impl Calculation {
                     advice_values,
                     instance_values,
                 );
-                let b = b.evaluate(
+                let b = b.get(
                     rotations,
                     constants,
                     intermediates,
@@ -196,7 +196,7 @@ impl Calculation {
                 (a + beta) * b
             }
             Calculation::LcTheta(a, b) => {
-                let a = a.evaluate(
+                let a = a.get(
                     rotations,
                     constants,
                     intermediates,
@@ -204,7 +204,7 @@ impl Calculation {
                     advice_values,
                     instance_values,
                 );
-                let b = b.evaluate(
+                let b = b.get(
                     rotations,
                     constants,
                     intermediates,
@@ -215,7 +215,7 @@ impl Calculation {
                 a * theta + b
             }
             Calculation::AddGamma(v) => {
-                v.evaluate(
+                v.get(
                     rotations,
                     constants,
                     intermediates,
@@ -224,7 +224,7 @@ impl Calculation {
                     instance_values,
                 ) + gamma
             }
-            Calculation::Store(v) => v.evaluate(
+            Calculation::Store(v) => v.get(
                 rotations,
                 constants,
                 intermediates,
@@ -528,7 +528,7 @@ impl<C: CurveAffine> Evaluator<C> {
                             // Accumulate value parts
                             for value_part in self.value_parts.iter() {
                                 *value = *value * y
-                                    + value_part.evaluate(
+                                    + value_part.get(
                                         &rotations,
                                         &self.constants,
                                         &intermediates,
