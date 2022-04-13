@@ -58,11 +58,12 @@ fn construct_intermediate_sets<F: FieldExt, I, Q: Query<F>>(queries: I) -> Inter
 where
     I: IntoIterator<Item = Q> + Clone,
 {
+    let queries = queries.into_iter().collect::<Vec<_>>();
+
     // Find evaluation of a commitment at a rotation
     let get_eval = |commitment: Q::Commitment, rotation: Rotation| -> F {
         queries
-            .clone()
-            .into_iter()
+            .iter()
             .find(|query| query.get_commitment() == commitment && query.get_rotation() == rotation)
             .unwrap()
             .get_eval()
@@ -97,12 +98,8 @@ where
         {
             let (_, rotation_set) = &mut commitment_rotation_set_map[pos];
             rotation_set.insert(rotation);
-            // rotation_eval_map.insert(rotation, query.get_eval());
         } else {
-            let mut rotation_set = BTreeSet::new();
-            rotation_set.insert(rotation);
-            let mut rotation_eval_map = BTreeMap::new();
-            rotation_eval_map.insert(rotation, query.get_eval());
+            let rotation_set = BTreeSet::from([rotation]);
             commitment_rotation_set_map.push((query.get_commitment(), rotation_set));
         };
     }
