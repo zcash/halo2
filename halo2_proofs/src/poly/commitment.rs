@@ -3,7 +3,6 @@
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
 
-use super::super::multicore;
 use super::{Coeff, LagrangeCoeff, Polynomial, MSM};
 use crate::arithmetic::{
     best_fft, best_multiexp, parallelize, CurveAffine, CurveExt, Engine, FieldExt, Group,
