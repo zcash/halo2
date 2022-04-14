@@ -59,15 +59,19 @@ impl<C: CurveAffine> Params<C> {
         assert!(k <= E::Scalar::S);
         let n: u64 = 1 << k;
 
+        // Calculate g = [G1, [s] G1, [s^2] G1, ..., [s^(n-1)] G1] in parallel.
+        let g1 = <E::G1Affine as PrimeCurveAffine>::generator();
         let s = E::Scalar::random(OsRng);
 
-        let mut g_projective: Vec<E::G1> = Vec::with_capacity(n as usize);
-        let g1 = <E::G1Affine as PrimeCurveAffine>::generator();
-        g_projective.push(g1.into());
-        // g = [G1, [s] G1, [s^2] G1, ..., [s^(n-1)] G1]
-        for i in 1..(n as usize) {
-            g_projective.push(g_projective[i - 1] * s);
-        }
+        let mut g_projective = vec![E::G1::group_zero(); n as usize];
+        parallelize(&mut g_projective, |g, start| {
+            let mut current_g: E::G1 = g1.into();
+            current_g *= s.pow_vartime(&[start as u64]);
+            for g in g.iter_mut() {
+                *g = current_g;
+                current_g *= s;
+            }
+        });
 
         let g = {
             let mut g = vec![E::G1Affine::identity(); n as usize];
