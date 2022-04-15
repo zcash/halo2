@@ -81,18 +81,19 @@ impl<C: CurveAffine> Params<C> {
             g
         };
 
-        // Let's evaluate all of the Lagrange basis polynomials
-        // using an inverse FFT.
-        let mut alpha_inv = E::Scalar::ROOT_OF_UNITY_INV;
+        let mut g_lagrange_projective = vec![E::G1::group_zero(); n as usize];
+        let mut root = E::Scalar::ROOT_OF_UNITY_INV.invert().unwrap();
         for _ in k..E::Scalar::S {
-            alpha_inv = alpha_inv.square();
+            root = root.square();
         }
-        let mut g_lagrange_projective = g_projective;
-        best_fft(&mut g_lagrange_projective, alpha_inv, k);
-        let minv = E::Scalar::TWO_INV.pow_vartime(&[k as u64, 0, 0, 0]);
-        parallelize(&mut g_lagrange_projective, |g, _| {
-            for g in g.iter_mut() {
-                *g *= minv;
+        let multiplier =
+            (s.pow_vartime(&[n as u64]) - E::Scalar::one()) * E::Scalar::from(n).invert().unwrap();
+        parallelize(&mut g_lagrange_projective, |g, start| {
+            for (idx, g) in g.iter_mut().enumerate() {
+                let offset = start + idx;
+                let root_pow = root.pow_vartime(&[offset as u64]);
+                let scalar = multiplier * root_pow * (s - root_pow).invert().unwrap();
+                *g = g1 * scalar;
             }
         });
 
