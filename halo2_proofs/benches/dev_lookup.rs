@@ -15,7 +15,6 @@ use criterion::{BenchmarkId, Criterion};
 fn criterion_benchmark(c: &mut Criterion) {
     #[derive(Clone, Default)]
     struct MyCircuit<F: FieldExt> {
-        k: usize,
         _marker: PhantomData<F>,
     }
 
@@ -93,7 +92,6 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     fn prover(k: u32) {
         let circuit = MyCircuit::<pallas::Base> {
-            k: k as usize,
             _marker: PhantomData,
         };
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
@@ -104,7 +102,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     let mut prover_group = c.benchmark_group("dev-lookup");
     prover_group.sample_size(10);
-    for k in k_range.clone() {
+    for k in k_range {
         prover_group.bench_with_input(BenchmarkId::from_parameter(k), &k, |b, &k| {
             b.iter(|| prover(k));
         });
