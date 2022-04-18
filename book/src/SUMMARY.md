@@ -25,6 +25,7 @@
   - [Implementation](design/implementation.md)
     - [Proofs](design/implementation/proofs.md)
     - [Fields](design/implementation/fields.md)
+    - [Selector combining](design/implementation/selector-combining.md)
   - [Gadgets](design/gadgets.md)
     - [Elliptic curve cryptography](design/gadgets/ecc.md)
       - [Incomplete and complete addition](design/gadgets/ecc/addition.md)
