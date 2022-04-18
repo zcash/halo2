@@ -34,6 +34,10 @@ harness = false
 name = "plonk"
 harness = false
 
+[[bench]]
+name = "dev_lookup"
+harness = false
+
 [dependencies]
 backtrace = { version = "0.3", optional = true }
 rayon = "1.5.1"
