@@ -125,7 +125,7 @@ impl FromStr for Lookup {
 
 impl Lookup {
     fn required_degree(&self) -> usize {
-        1 + cmp::max(1, self.input_deg) + cmp::max(1, self.table_deg)
+        2 + cmp::max(1, self.input_deg) + cmp::max(1, self.table_deg)
     }
 
     fn queries(&self) -> impl Iterator<Item = Poly> {
