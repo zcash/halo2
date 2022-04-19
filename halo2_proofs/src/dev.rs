@@ -917,11 +917,12 @@ impl<F: FieldExt> MockProver<F> {
                     assert!(lookup.table_expressions.len() == lookup.input_expressions.len());
                     assert!(self.usable_rows.end > 0);
 
-                    // We optimize on the basis that the last usable row might have been repeated to fill
-                    // the table (it doesn't matter if it wasn't). Note that this "fill row" necessarily
-                    // exists in the table, and we use that fact to slightly simplify the optimization:
-                    // we're only trying to check that all input rows are contained in the table, and so
-                    // we can safely just drop input rows that match the fill row.
+                    // We optimize on the basis that the table might have been filled so that the last
+                    // usable row now has the fill contents (it doesn't matter if there was no filling).
+                    // Note that this "fill row" necessarily exists in the table, and we use that fact to
+                    // slightly simplify the optimization: we're only trying to check that all input rows
+                    // are contained in the table, and so we can safely just drop input rows that
+                    // match the fill row.
                     let fill_row: Vec<_> = lookup
                         .table_expressions
                         .iter()
