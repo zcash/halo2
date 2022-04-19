@@ -914,40 +914,86 @@ impl<F: FieldExt> MockProver<F> {
                         )
                     };
 
+                    assert!(lookup.table_expressions.len() == lookup.input_expressions.len());
+                    assert!(self.usable_rows.end > 0);
+
+                    // We optimize on the basis that the table might have been filled so that the last
+                    // usable row now has the fill contents (it doesn't matter if there was no filling).
+                    // Note that this "fill row" necessarily exists in the table, and we use that fact to
+                    // slightly simplify the optimization: we're only trying to check that all input rows
+                    // are contained in the table, and so we can safely just drop input rows that
+                    // match the fill row.
+                    let fill_row: Vec<_> = lookup
+                        .table_expressions
+                        .iter()
+                        .map(move |c| load(c, self.usable_rows.end - 1))
+                        .collect();
+
                     // In the real prover, the lookup expressions are never enforced on
                     // unusable rows, due to the (1 - (l_last(X) + l_blind(X))) term.
-                    let table: std::collections::BTreeSet<Vec<_>> = self
+                    let mut table: Vec<Vec<_>> = self
                         .usable_rows
                         .clone()
-                        .map(|table_row| {
-                            lookup
+                        .filter_map(|table_row| {
+                            let t = lookup
                                 .table_expressions
                                 .iter()
                                 .map(move |c| load(c, table_row))
-                                .collect::<Vec<_>>()
+                                .collect();
+
+                            if t != fill_row {
+                                Some(t)
+                            } else {
+                                None
+                            }
                         })
                         .collect();
-                    self.usable_rows.clone().filter_map(move |input_row| {
-                        let inputs: Vec<_> = lookup
-                            .input_expressions
-                            .iter()
-                            .map(|c| load(c, input_row))
-                            .collect();
-                        let lookup_passes = table.contains(&inputs);
-                        if lookup_passes {
-                            None
-                        } else {
-                            Some(VerifyFailure::Lookup {
-                                lookup_index,
-                                location: FailureLocation::find_expressions(
-                                    &self.cs,
-                                    &self.regions,
-                                    input_row,
-                                    lookup.input_expressions.iter(),
-                                ),
-                            })
-                        }
-                    })
+                    table.sort_unstable();
+
+                    let mut inputs: Vec<(Vec<_>, usize)> = self
+                        .usable_rows
+                        .clone()
+                        .filter_map(|input_row| {
+                            let t = lookup
+                                .input_expressions
+                                .iter()
+                                .map(move |c| load(c, input_row))
+                                .collect();
+
+                            if t != fill_row {
+                                // Also keep track of the original input row, since we're going to sort.
+                                Some((t, input_row))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect();
+                    inputs.sort_unstable();
+
+                    let mut i = 0;
+                    inputs
+                        .iter()
+                        .filter_map(move |(input, input_row)| {
+                            while i < table.len() && &table[i] < input {
+                                i += 1;
+                            }
+                            if i == table.len() || &table[i] > input {
+                                assert!(table.binary_search(input).is_err());
+
+                                Some(VerifyFailure::Lookup {
+                                    lookup_index,
+                                    location: FailureLocation::find_expressions(
+                                        &self.cs,
+                                        &self.regions,
+                                        *input_row,
+                                        lookup.input_expressions.iter(),
+                                    ),
+                                })
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<_>>()
                 });
 
         // Check that permutations preserve the original values of the cells.
