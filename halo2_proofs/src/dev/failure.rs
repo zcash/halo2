@@ -37,7 +37,7 @@ impl fmt::Display for FailureLocation {
         match self {
             Self::InRegion { region, offset } => write!(f, "in {} at offset {}", region, offset),
             Self::OutsideRegion { row } => {
-                write!(f, "on row {}", row)
+                write!(f, "outside any region, on row {}", row)
             }
         }
     }

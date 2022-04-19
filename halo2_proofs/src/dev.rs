@@ -809,7 +809,7 @@ impl<F: FieldExt> MockProver<F> {
     /// Any verification failures will be pretty-printed to stderr before the function
     /// panics.
     ///
-    /// This method is equivalent to:
+    /// Apart from the stderr output, this method is equivalent to:
     /// ```ignore
     /// assert_eq!(prover.verify(), Ok(()));
     /// ```
