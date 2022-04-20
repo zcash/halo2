@@ -226,7 +226,7 @@ mod tests {
     use group::ff::{Field, PrimeField};
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
-        dev::{MockProver, VerifyFailure},
+        dev::{FailureLocation, MockProver, VerifyFailure},
         plonk::{Any, Circuit, ConstraintSystem, Error},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -364,19 +364,25 @@ mod tests {
                 Err(vec![
                     VerifyFailure::Permutation {
                         column: (Any::Fixed, 0).into(),
-                        row: 0
+                        location: FailureLocation::OutsideRegion { row: 0 },
                     },
                     VerifyFailure::Permutation {
                         column: (Any::Fixed, 0).into(),
-                        row: 1
+                        location: FailureLocation::OutsideRegion { row: 1 },
                     },
                     VerifyFailure::Permutation {
                         column: (Any::Advice, 0).into(),
-                        row: 22
+                        location: FailureLocation::InRegion {
+                            region: (0, "decompose").into(),
+                            offset: 22,
+                        },
                     },
                     VerifyFailure::Permutation {
                         column: (Any::Advice, 0).into(),
-                        row: 45
+                        location: FailureLocation::InRegion {
+                            region: (0, "decompose").into(),
+                            offset: 45,
+                        },
                     },
                 ])
             );

@@ -6,6 +6,20 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `halo2_proofs::dev`:
+  - `MockProver::assert_satisfied`, for requiring that a circuit is satisfied.
+    It panics like `assert_eq!(mock_prover.verify(), Ok(()))`, but pretty-prints
+    any verification failures before panicking.
+
+### Changed
+- `halo2_proofs::dev`:
+  - `VerifyFailure::CellNotAssigned` now has a `gate_offset` field, storing the
+    offset in the region at which the gate queries the cell that needs to be
+    assigned.
+  - The `row` field of `VerifyFailure::Permutation` has been replaced by a
+    `location` field, which can now indicate whether the location falls within
+    an assigned region.
 
 ## [0.1.0-beta.4] - 2022-04-06
 ### Changed

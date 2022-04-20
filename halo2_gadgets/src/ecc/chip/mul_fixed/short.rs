@@ -546,11 +546,14 @@ pub mod tests {
                         },
                         VerifyFailure::Permutation {
                             column: (Any::Fixed, 9).into(),
-                            row: 0
+                            location: FailureLocation::OutsideRegion { row: 0 },
                         },
                         VerifyFailure::Permutation {
                             column: (Any::Advice, 4).into(),
-                            row: 24
+                            location: FailureLocation::InRegion {
+                                region: (2, "Short fixed-base mul (incomplete addition)").into(),
+                                offset: 22,
+                            },
                         }
                     ])
                 );
