@@ -38,6 +38,10 @@ harness = false
 name = "dev_lookup"
 harness = false
 
+[[bench]]
+name = "fft"
+harness = false
+
 [dependencies]
 backtrace = { version = "0.3", optional = true }
 rayon = "1.5.1"
