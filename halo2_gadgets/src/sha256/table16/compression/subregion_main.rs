@@ -13,9 +13,7 @@ impl CompressionConfig {
     ) -> Result<State, Error> {
         assert!(matches!(round_idx, RoundIdx::Main(_)));
 
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
-        let a_7 = self.extras[3];
+        let [a_3, a_4, _a_5, _a_6, a_7, ..] = self.extras;
 
         let (a, b, c, d, e, f, g, h) = match_state(state);
 

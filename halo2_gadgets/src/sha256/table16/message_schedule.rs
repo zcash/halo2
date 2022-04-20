@@ -91,13 +91,8 @@ impl MessageScheduleConfig {
         let a_0 = lookup.tag;
         let a_1 = lookup.dense;
         let a_2 = lookup.spread;
-        let a_3 = extras[0];
-        let a_4 = extras[1];
         let a_5 = message_schedule;
-        let a_6 = extras[2];
-        let a_7 = extras[3];
-        let a_8 = extras[4];
-        let a_9 = extras[5];
+        let [a_3, a_4, a_6, a_7, a_8, a_9] = extras;
 
         // s_word for W_[16..64]
         meta.create_gate("s_word for W_[16..64]", |meta| {
@@ -417,7 +412,15 @@ mod tests {
             }
 
             fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
-                Table16Chip::configure(meta)
+                let digest = [meta.advice_column(), meta.advice_column()];
+                let extras = [
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                ];
+                Table16Chip::configure(meta, digest, extras)
             }
 
             fn synthesize(

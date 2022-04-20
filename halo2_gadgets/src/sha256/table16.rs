@@ -267,48 +267,40 @@ impl Table16Chip {
     /// Configures a circuit to include this chip.
     pub fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
+        digest: [Column<Advice>; 2],
+        extras: [Column<Advice>; 5],
     ) -> <Self as Chip<pallas::Base>>::Config {
-        // Columns required by this chip:
-        let message_schedule = meta.advice_column();
-        let extras = [
-            meta.advice_column(),
-            meta.advice_column(),
-            meta.advice_column(),
-            meta.advice_column(),
-            meta.advice_column(),
-            meta.advice_column(),
-        ];
-
-        // - Three advice columns to interact with the lookup table.
-        let input_tag = meta.advice_column();
-        let input_dense = meta.advice_column();
-        let input_spread = meta.advice_column();
-
-        let lookup = SpreadTableChip::configure(meta, input_tag, input_dense, input_spread);
-        let lookup_inputs = lookup.input.clone();
-
         // Rename these here for ease of matching the gates to the specification.
-        let _a_0 = lookup_inputs.tag;
-        let a_1 = lookup_inputs.dense;
-        let a_2 = lookup_inputs.spread;
-        let a_3 = extras[0];
-        let a_4 = extras[1];
-        let a_5 = message_schedule;
-        let a_6 = extras[2];
-        let a_7 = extras[3];
-        let a_8 = extras[4];
-        let _a_9 = extras[5];
+        let a_0 = meta.advice_column();
+        let a_1 = meta.advice_column();
+        let a_2 = meta.advice_column();
+        let [a_5, a_8] = digest;
+        let [a_3, a_4, a_6, a_7, a_9] = extras;
 
-        // Add all advice columns to permutation
+        // Add advice columns to permutation
         for column in [a_1, a_2, a_3, a_4, a_5, a_6, a_7, a_8].iter() {
             meta.enable_equality(*column);
         }
 
-        let compression =
-            CompressionConfig::configure(meta, lookup_inputs.clone(), message_schedule, extras);
+        let input_tag = a_0;
+        let input_dense = a_1;
+        let input_spread = a_2;
+        let message_schedule = a_5;
 
-        let message_schedule =
-            MessageScheduleConfig::configure(meta, lookup_inputs, message_schedule, extras);
+        let lookup = SpreadTableChip::configure(meta, input_tag, input_dense, input_spread);
+
+        let compression = CompressionConfig::configure(
+            meta,
+            lookup.input.clone(),
+            [a_3, a_4, a_5, a_6, a_7, a_8, a_9],
+        );
+
+        let message_schedule = MessageScheduleConfig::configure(
+            meta,
+            lookup.input.clone(),
+            message_schedule,
+            [a_3, a_4, a_6, a_7, a_8, a_9],
+        );
 
         Table16Config {
             lookup,
@@ -450,19 +442,18 @@ trait Table16Assignment {
 }
 
 #[cfg(test)]
-#[cfg(feature = "dev-graph")]
 mod tests {
     use super::super::{Sha256, BLOCK_SIZE};
     use super::{message_schedule::msg_schedule_test_input, Table16Chip, Table16Config};
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
+        dev::MockProver,
         pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
     #[test]
     fn print_sha256_circuit() {
-        use plotters::prelude::*;
         struct MyCircuit {}
 
         impl Circuit<pallas::Base> for MyCircuit {
@@ -474,7 +465,15 @@ mod tests {
             }
 
             fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
-                Table16Chip::configure(meta)
+                let digest = [meta.advice_column(), meta.advice_column()];
+                let extras = [
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                ];
+                Table16Chip::configure(meta, digest, extras)
             }
 
             fn synthesize(
@@ -500,16 +499,25 @@ mod tests {
             }
         }
 
-        let root =
-            BitMapBackend::new("sha-256-table16-chip-layout.png", (1024, 3480)).into_drawing_area();
-        root.fill(&WHITE).unwrap();
-        let root = root
-            .titled("16-bit Table SHA-256 Chip", ("sans-serif", 60))
-            .unwrap();
-
         let circuit = MyCircuit {};
-        halo2_proofs::dev::CircuitLayout::default()
-            .render::<pallas::Base, _, _>(17, &circuit, &root)
-            .unwrap();
+
+        let prover = MockProver::run(17, &circuit, vec![]).unwrap();
+        assert!(prover.verify().is_ok());
+
+        #[cfg(feature = "dev-graph")]
+        {
+            use plotters::prelude::*;
+
+            let root =
+                BitMapBackend::new("sha-256-table16-chip-layout.png", (1024, 3480)).into_drawing_area();
+            root.fill(&WHITE).unwrap();
+            let root = root
+                .titled("16-bit Table SHA-256 Chip", ("sans-serif", 60))
+                .unwrap();
+
+            halo2_proofs::dev::CircuitLayout::default()
+                .render::<pallas::Base, _, _>(17, &circuit, &root)
+                .unwrap();
+        }
     }
 }

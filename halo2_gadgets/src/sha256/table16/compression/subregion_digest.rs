@@ -13,12 +13,7 @@ impl CompressionConfig {
         region: &mut Region<'_, pallas::Base>,
         state: State,
     ) -> Result<[BlockWord; DIGEST_SIZE], Error> {
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
-        let a_5 = self.message_schedule;
-        let a_6 = self.extras[2];
-        let a_7 = self.extras[3];
-        let a_8 = self.extras[4];
+        let [a_3, a_4, a_5, a_6, a_7, a_8, _a_9] = self.extras;
 
         let (a, b, c, d, e, f, g, h) = match_state(state);
 

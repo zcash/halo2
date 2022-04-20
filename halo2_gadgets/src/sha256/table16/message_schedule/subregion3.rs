@@ -82,10 +82,7 @@ impl MessageScheduleConfig {
         w_halves: &mut Vec<(AssignedBits<16>, AssignedBits<16>)>,
     ) -> Result<(), Error> {
         let a_5 = self.message_schedule;
-        let a_6 = self.extras[2];
-        let a_7 = self.extras[3];
-        let a_8 = self.extras[4];
-        let a_9 = self.extras[5];
+        let [.., a_6, a_7, a_8, a_9] = self.extras;
 
         // Closure to compose new word
         // W_i = sigma_1(W_{i - 2}) + W_{i - 7} + sigma_0(W_{i - 15}) + W_{i - 16}
@@ -206,8 +203,7 @@ impl MessageScheduleConfig {
         let row = get_word_row(index);
 
         // Rename these here for ease of matching the gates to the specification.
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
+        let [a_3, a_4, ..] = self.extras;
 
         let pieces = word.map(|word| {
             vec![
@@ -249,10 +245,8 @@ impl MessageScheduleConfig {
         region: &mut Region<'_, pallas::Base>,
         word: Subregion3Word,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
-        let a_3 = self.extras[0];
-        let a_4 = self.extras[1];
         let a_5 = self.message_schedule;
-        let a_6 = self.extras[2];
+        let [a_3, a_4, a_6, ..] = self.extras;
 
         let row = get_word_row(word.index) + 3;
 
