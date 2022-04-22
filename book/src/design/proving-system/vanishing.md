@@ -41,7 +41,7 @@ verifier samples $y$) linear combination of the circuit relations.
 
 ## Committing to $h(X)$
 
-$h(X)$ has degree $(d - 1)n - d$ (because the divisor $t(X)$ has degree $n$). However, the
+$h(X)$ has degree $d(n - 1) - n$ (because the divisor $t(X)$ has degree $n$). However, the
 polynomial commitment scheme we use for Halo 2 only supports committing to polynomials of
 degree $n - 1$ (which is the maximum degree that the rest of the protocol needs to commit
 to). Instead of increasing the cost of the polynomial commitment scheme, the prover split
