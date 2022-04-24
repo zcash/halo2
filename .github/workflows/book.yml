@@ -35,7 +35,7 @@ jobs:
           command: doc
           args: --no-deps --workspace --all-features
         env:
-          RUSTDOCFLAGS: -Z unstable-options --enable-index-page --cfg docsrs --html-in-header ${{ github.workspace }}/katex-header.html
+          RUSTDOCFLAGS: -Z unstable-options --enable-index-page --cfg docsrs --html-in-header ${{ github.workspace }}/halo2_proofs/katex-header.html
 
       - name: Move latest rustdocs into book
         run: |
