@@ -5,7 +5,7 @@ use arrayvec::ArrayVec;
 use ff::PrimeField;
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter, Region},
-    plonk::{ConstraintSystem, Error, Selector},
+    plonk::{ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
 use pasta_curves::pallas;
@@ -37,15 +37,15 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             let q_mul_fixed_full = meta.query_selector(self.q_mul_fixed_full);
             let window = meta.query_advice(self.super_config.window, Rotation::cur());
 
-            self.super_config
-                .coords_check(meta, q_mul_fixed_full.clone(), window.clone())
-                .into_iter()
-                // Constrain each window to a 3-bit value:
-                // 1 * (window - 0) * (window - 1) * ... * (window - 7)
-                .chain(Some((
-                    "window range check",
-                    q_mul_fixed_full * range_check(window, H),
-                )))
+            Constraints::with_selector(
+                q_mul_fixed_full,
+                self.super_config
+                    .coords_check(meta, window.clone())
+                    .into_iter()
+                    // Constrain each window to a 3-bit value:
+                    // 1 * (window - 0) * (window - 1) * ... * (window - 7)
+                    .chain(Some(("window range check", range_check(window, H)))),
+            )
         });
     }
 

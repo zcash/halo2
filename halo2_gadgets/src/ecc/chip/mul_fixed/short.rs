@@ -5,7 +5,7 @@ use crate::{ecc::chip::MagnitudeSign, utilities::bool_check};
 
 use halo2_proofs::{
     circuit::{Layouter, Region},
-    plonk::{ConstraintSystem, Error, Expression, Selector},
+    plonk::{ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
 use pasta_curves::pallas;
@@ -57,13 +57,15 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             // Check that the correct sign is witnessed s.t. sign * y_p = y_a
             let negation_check = sign * y_p - y_a;
 
-            array::IntoIter::new([
-                ("last_window_check", last_window_check),
-                ("sign_check", sign_check),
-                ("y_check", y_check),
-                ("negation_check", negation_check),
-            ])
-            .map(move |(name, poly)| (name, q_mul_fixed_short.clone() * poly))
+            Constraints::with_selector(
+                q_mul_fixed_short,
+                array::IntoIter::new([
+                    ("last_window_check", last_window_check),
+                    ("sign_check", sign_check),
+                    ("y_check", y_check),
+                    ("negation_check", negation_check),
+                ]),
+            )
         });
     }
 

@@ -16,8 +16,8 @@ use std::marker::PhantomData;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter},
     plonk::{
-        Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, TableColumn,
-        VirtualCells,
+        Advice, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
+        TableColumn, VirtualCells,
     },
     poly::Rotation,
 };
@@ -210,7 +210,7 @@ where
             // 2 * y_q - Y_{A,0} = 0
             let init_y_q_check = y_q * two - Y_A_cur;
 
-            vec![q_s4 * init_y_q_check]
+            Constraints::with_selector(q_s4, Some(("init_y_q_check", init_y_q_check)))
         });
 
         meta.create_gate("Sinsemilla gate", |meta| {
@@ -259,10 +259,10 @@ where
                 lhs - rhs
             };
 
-            vec![
-                ("Secant line", q_s1.clone() * secant_line),
-                ("y check", q_s1 * y_check),
-            ]
+            Constraints::with_selector(
+                q_s1,
+                std::array::IntoIter::new([("Secant line", secant_line), ("y check", y_check)]),
+            )
         });
 
         config

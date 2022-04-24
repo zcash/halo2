@@ -9,7 +9,10 @@ use std::marker::PhantomData;
 use group::{ff::PrimeField, Curve};
 use halo2_proofs::{
     circuit::{AssignedCell, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, VirtualCells},
+    plonk::{
+        Advice, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
+        VirtualCells,
+    },
     poly::Rotation,
 };
 use lazy_static::lazy_static;
@@ -139,7 +142,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
             // => a_i = z_i - z_{i+1} * 2^3
             let word = z_cur - z_next * pallas::Base::from(H as u64);
 
-            self.coords_check(meta, q_mul_fixed_running_sum, word)
+            Constraints::with_selector(q_mul_fixed_running_sum, self.coords_check(meta, word))
         });
     }
 
@@ -147,7 +150,6 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
     fn coords_check(
         &self,
         meta: &mut VirtualCells<'_, pallas::Base>,
-        toggle: Expression<pallas::Base>,
         window: Expression<pallas::Base>,
     ) -> Vec<(&'static str, Expression<pallas::Base>)> {
         let y_p = meta.query_advice(self.y_p, Rotation::cur());
@@ -179,9 +181,9 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
             y_p.square() - x_p.clone().square() * x_p - Expression::Constant(pallas::Affine::b());
 
         vec![
-            ("check x", toggle.clone() * x_check),
-            ("check y", toggle.clone() * y_check),
-            ("on-curve", toggle * on_curve),
+            ("check x", x_check),
+            ("check y", y_check),
+            ("on-curve", on_curve),
         ]
     }
 

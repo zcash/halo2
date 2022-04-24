@@ -186,7 +186,7 @@ mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{FailureLocation, MockProver, VerifyFailure},
-        plonk::{Any, Circuit, ConstraintSystem, Error, Selector},
+        plonk::{Any, Circuit, ConstraintSystem, Constraints, Error, Selector},
         poly::Rotation,
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -226,7 +226,7 @@ mod tests {
                     let selector = meta.query_selector(selector);
                     let advice = meta.query_advice(advice, Rotation::cur());
 
-                    vec![selector * range_check(advice, RANGE)]
+                    Constraints::with_selector(selector, Some(range_check(advice, RANGE)))
                 });
 
                 Config { selector, advice }

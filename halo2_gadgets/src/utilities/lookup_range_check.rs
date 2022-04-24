@@ -3,7 +3,7 @@
 
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Selector, TableColumn},
+    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector, TableColumn},
     poly::Rotation,
 };
 use std::{convert::TryInto, marker::PhantomData};
@@ -109,7 +109,10 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
 
             // shifted_word = word * 2^{K-s}
             //              = word * 2^K * inv_two_pow_s
-            vec![q_bitshift * (word * two_pow_k * inv_two_pow_s - shifted_word)]
+            Constraints::with_selector(
+                q_bitshift,
+                Some(word * two_pow_k * inv_two_pow_s - shifted_word),
+            )
         });
 
         config

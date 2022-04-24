@@ -2,7 +2,7 @@
 
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -163,13 +163,15 @@ where
             // <https://zips.z.cash/protocol/protocol.pdf#merklepath>
             let right_check = b_2 + c_whole * two_pow_5 - right_node;
 
-            array::IntoIter::new([
-                ("l_check", l_check),
-                ("left_check", left_check),
-                ("right_check", right_check),
-                ("b1_b2_check", b1_b2_check),
-            ])
-            .map(move |(name, poly)| (name, q_decompose.clone() * poly))
+            Constraints::with_selector(
+                q_decompose,
+                array::IntoIter::new([
+                    ("l_check", l_check),
+                    ("left_check", left_check),
+                    ("right_check", right_check),
+                    ("b1_b2_check", b1_b2_check),
+                ]),
+            )
         });
 
         MerkleConfig {

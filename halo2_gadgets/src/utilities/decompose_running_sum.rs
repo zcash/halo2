@@ -25,7 +25,7 @@
 use ff::PrimeFieldBits;
 use halo2_proofs::{
     circuit::{AssignedCell, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
 
@@ -92,7 +92,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
             // => k_i = z_i - 2^{K}⋅z_{i + 1}
             let word = z_cur - z_next * F::from(1 << WINDOW_NUM_BITS);
 
-            vec![q_range_check * range_check(word, 1 << WINDOW_NUM_BITS)]
+            Constraints::with_selector(q_range_check, Some(range_check(word, 1 << WINDOW_NUM_BITS)))
         });
 
         config

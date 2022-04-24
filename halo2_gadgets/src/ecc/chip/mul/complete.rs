@@ -4,7 +4,7 @@ use crate::utilities::{bool_check, ternary};
 
 use halo2_proofs::{
     circuit::Region,
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
 
@@ -72,8 +72,10 @@ impl Config {
                 // k_i = 1 => y_p = base_y
                 let y_switch = ternary(k, base_y.clone() - y_p.clone(), base_y + y_p);
 
-                std::array::IntoIter::new([("bool_check", bool_check), ("y_switch", y_switch)])
-                    .map(move |(name, poly)| (name, q_mul_decompose_var.clone() * poly))
+                Constraints::with_selector(
+                    q_mul_decompose_var,
+                    std::array::IntoIter::new([("bool_check", bool_check), ("y_switch", y_switch)]),
+                )
             },
         );
     }

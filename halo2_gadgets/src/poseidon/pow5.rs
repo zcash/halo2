@@ -4,7 +4,9 @@ use std::iter;
 use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{AssignedCell, Cell, Chip, Layouter, Region},
-    plonk::{Advice, Any, Column, ConstraintSystem, Error, Expression, Fixed, Selector},
+    plonk::{
+        Advice, Any, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
+    },
     poly::Rotation,
 };
 
@@ -94,20 +96,23 @@ impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE
         meta.create_gate("full round", |meta| {
             let s_full = meta.query_selector(s_full);
 
-            (0..WIDTH)
-                .map(|next_idx| {
-                    let state_next = meta.query_advice(state[next_idx], Rotation::next());
-                    let expr = (0..WIDTH)
-                        .map(|idx| {
-                            let state_cur = meta.query_advice(state[idx], Rotation::cur());
-                            let rc_a = meta.query_fixed(rc_a[idx], Rotation::cur());
-                            pow_5(state_cur + rc_a) * m_reg[next_idx][idx]
-                        })
-                        .reduce(|acc, term| acc + term)
-                        .expect("WIDTH > 0");
-                    s_full.clone() * (expr - state_next)
-                })
-                .collect::<Vec<_>>()
+            Constraints::with_selector(
+                s_full,
+                (0..WIDTH)
+                    .map(|next_idx| {
+                        let state_next = meta.query_advice(state[next_idx], Rotation::next());
+                        let expr = (0..WIDTH)
+                            .map(|idx| {
+                                let state_cur = meta.query_advice(state[idx], Rotation::cur());
+                                let rc_a = meta.query_fixed(rc_a[idx], Rotation::cur());
+                                pow_5(state_cur + rc_a) * m_reg[next_idx][idx]
+                            })
+                            .reduce(|acc, term| acc + term)
+                            .expect("WIDTH > 0");
+                        expr - state_next
+                    })
+                    .collect::<Vec<_>>(),
+            )
         });
 
         meta.create_gate("partial rounds", |meta| {
@@ -140,24 +145,20 @@ impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE
             };
 
             let partial_round_linear = |idx: usize, meta: &mut VirtualCells<F>| {
-                let expr = {
-                    let rc_b = meta.query_fixed(rc_b[idx], Rotation::cur());
-                    mid(idx, meta) + rc_b - next(idx, meta)
-                };
-                s_partial.clone() * expr
+                let rc_b = meta.query_fixed(rc_b[idx], Rotation::cur());
+                mid(idx, meta) + rc_b - next(idx, meta)
             };
 
-            std::iter::empty()
-                // state[0] round a
-                .chain(Some(
-                    s_partial.clone() * (pow_5(cur_0 + rc_a0) - mid_0.clone()),
-                ))
-                // state[0] round b
-                .chain(Some(
-                    s_partial.clone() * (pow_5(mid(0, meta) + rc_b0) - next(0, meta)),
-                ))
-                .chain((1..WIDTH).map(|idx| partial_round_linear(idx, meta)))
-                .collect::<Vec<_>>()
+            Constraints::with_selector(
+                s_partial,
+                std::iter::empty()
+                    // state[0] round a
+                    .chain(Some(pow_5(cur_0 + rc_a0) - mid_0.clone()))
+                    // state[0] round b
+                    .chain(Some(pow_5(mid(0, meta) + rc_b0) - next(0, meta)))
+                    .chain((1..WIDTH).map(|idx| partial_round_linear(idx, meta)))
+                    .collect::<Vec<_>>(),
+            )
         });
 
         meta.create_gate("pad-and-add", |meta| {
@@ -173,16 +174,17 @@ impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE
 
                 // We pad the input by storing the required padding in fixed columns and
                 // then constraining the corresponding input columns to be equal to it.
-                s_pad_and_add.clone() * (initial_state + input - output_state)
+                initial_state + input - output_state
             };
 
-            (0..RATE)
-                .map(pad_and_add)
-                // The capacity element is never altered by the input.
-                .chain(Some(
-                    s_pad_and_add.clone() * (initial_state_rate - output_state_rate),
-                ))
-                .collect::<Vec<_>>()
+            Constraints::with_selector(
+                s_pad_and_add,
+                (0..RATE)
+                    .map(pad_and_add)
+                    // The capacity element is never altered by the input.
+                    .chain(Some(initial_state_rate - output_state_rate))
+                    .collect::<Vec<_>>(),
+            )
         });
 
         Pow5Config {
