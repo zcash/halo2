@@ -7,13 +7,12 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
-          # Pinned until https://github.com/rust-lang/rust/issues/93476 is fixed.
-          toolchain: nightly-2022-01-18
+          toolchain: nightly
           override: true
 
       - name: Setup mdBook
