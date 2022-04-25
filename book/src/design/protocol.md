@@ -294,7 +294,7 @@ the verifier algorithm sends to the prover.
 
 Let $\omega \in \field$ be a $n = 2^k$ primitive root of unity forming the
 domain $D = (\omega^0, \omega^1, ..., \omega^{n - 1})$ with $t(X) = X^n - 1$ the
-vanishing polynomial over this domain. Let $n_g, n_a, n_e$ be positive integers with $n_a, n_e \lt n$.
+vanishing polynomial over this domain. Let $n_g, n_a, n_e$ be positive integers with $n_a, n_e \lt n$ and $n_g \geq 4$.
 We present an interactive argument $\halo = (\setup, \prover, \verifier)$ for
 the relation
 $$
@@ -315,7 +315,7 @@ a_0(X), a_1(X, C_0, a_0(X)), ..., a_{n_a - 1}\left(X, C_0, ..., C_{n_a - 1}, a_0
 \end{array}
 \right\}
 $$
-where $a_0, a_1, ..., a_{n_a - 1}$ are (multivariate) polynomials with degree $n - 1$ in $X$ and $g$ has degree $n_g(n - 1)$ at most in any indeterminates $X, C_0, C_1, ...$. In order to establish zero knowledge, any of the polynomials $a_i$ that aren't known to the verifier should have $n_e + 1$ random blinding factors as evaluations over $D$.
+where $a_0, a_1, ..., a_{n_a - 1}$ are (multivariate) polynomials with degree $n - 1$ in $X$ and $g$ has degree $n_g(n - 1)$ at most in any indeterminates $X, C_0, C_1, ...$.
 
 $\setup(\sec)$ returns $\pp = (\group, \field, \mathbf{G} \in \group^n, U, W \in \group)$.
 
@@ -436,7 +436,7 @@ we need only consider the _scalars_ in the transcript. $\sim$ acts just as the
 prover does except in the mentioned cases so we will analyze each case:
 
 1. $\sim$ and an honest prover reveal $n_e$ openings of each polynomial $a_i(X, \cdots)$, and at most one additional opening of each $a_i(X, \cdots)$ in step $16$. However, the honest prover blinds their polynomials $a_i(X, \cdots)$ (in $X$) with $n_e + 1$ random evaluations over the domain $D$. Thus, the openings of $a_i(X, \cdots)$ at the challenge $x$ (which is prohibited from being $0$ or in the domain $D$ by the protocol) are distributed identically between $\sim$ and an honest prover.
-2. Neither $\sim$ nor the honest prover reveal $h(x)$ as it is computed by the verifier. However, the honest prover may reveal $h'(x)$ --- which has a non-trivial relationship with $h(X)$ --- were it not for the fact that the honest prover also commits to a random degree $n - 1$ polynomial $r(X)$ in step $3$, producing a commitment $R$ and ensuring that in step $12$ when the prover sets $q_0(X) := x_1^2 q_0(X) + x_1 h'(X) + r(X)$ the distribution of $q_0(x)$ is uniformly random. Thus, $h'(x_3)$ is never revealed by the honest prover nor by $\sim$.
+2. Neither $\sim$ nor the honest prover reveal $h(x)$ as it is computed by the verifier. However, the honest prover may reveal $h'(x_3)$ --- which has a non-trivial relationship with $h(X)$ --- were it not for the fact that the honest prover also commits to a random degree $n - 1$ polynomial $r(X)$ in step $3$, producing a commitment $R$ and ensuring that in step $12$ when the prover sets $q_0(X) := x_1^2 q_0(X) + x_1 h'(X) + r(X)$ the distribution of $q_0(x_3)$ is uniformly random. Thus, $h'(x_3)$ is never revealed by the honest prover nor by $\sim$.
 3. The expected value of $q'(x_3)$ is computed by the verifier (in step $18$) and so the simulator's actual choice of $q'(X)$ is irrelevant.
 4. $p(X) - v + \xi s(X)$ is conditioned on having a root at $x_3$, but otherwise no conditions are placed on $s(X)$ and so the distribution of the degree $n - 1$ polynomial $p(X) - v + \xi s(X)$ is uniformly random whether or not $s(X)$ has a root at $x_3$. Thus, the distribution of $c$ produced in step $25$ is identical between $\sim$ and an honest prover. The synthetic blinding factor $f$ also revealed in step $25$ is a trivial function of the prover's other blinding factors and so is distributed identically between $\sim$ and an honest prover.
 
@@ -456,7 +456,7 @@ $$
 \adv^\srwee_{\protocol, \relation}(\alg{\prover}, \distinguisher, \extractor, \sec) \leq q\epsilon + \adv^\dlrel_{\group,n+2}(\dlreladv, \sec)
 $$
 
-where $\frac{(n_g - 1) \cdot (n - 1)}{|\ch|} \leq \epsilon$.
+where $\epsilon \leq \frac{n_g \cdot (n - 1)}{|\ch|}$.
 
 _Proof._ We will prove this by invoking Theorem 1 of [[GT20]](https://eprint.iacr.org/2020/1351). First, we note that the challenge space for all rounds is the same, i.e. $\forall i \ \ch = \ch_i$. Theorem 1 requires us to define:
 
@@ -825,4 +825,4 @@ Having established that these are each non-rational polynomials of degree at mos
 
 By construction of $h'(X)$ (from the representation $\repr{H'}{\mathbf{G}}$) in step 7 we know that $h'(x) = h(x)$ where by $h(X)$ we refer to the polynomial of degree at most $(n_g - 1) \cdot (n - 1)$ whose coefficients correspond to the concatenated representations of each $\repr{H_i}{\mathbf{G}}$. As before, suppose that $h(X)$ does _not_ take the form $g'(X) / t(X)$. Then because $h(X)$ is determined prior to the choice of $x$ then by the Schwartz-Zippel lemma we know that it would only agree with $g'(X) / t(X)$ at $(n_g - 1) \cdot (n - 1)$ points at most if the polynomials were not equal. By restricting again $|\badch(\trprefix{\tr'}{x})|/|\ch| \leq \frac{(n_g - 1) \cdot (n - 1)}{|\ch|} \leq \epsilon$ we obtain $h(X) = g'(X) / t(X)$ and because $h(X)$ is a non-rational polynomial by the factor theorem we obtain that $g'(X)$ vanishes over the domain $D$.
 
-We now have that $g'(X)$ vanishes over $D$ but wish to show that $g(X, C_0, C_1, \cdots)$ vanishes over $D$ at all points to complete the proof. This just involves a sequence of applying the same technique to each of the challenges; since the polynomial $g(\cdots)$ has degree at most $(n_g - 1) \cdot (n - 1)$ in any indeterminate by definition, and because each polynomial $a_i(X, C_0, C_1, ..., C_{i - 1}, \cdots)$ is determined prior to the choice of concrete challenge $c_i$ by similarly bounding $|\badch(\trprefix{\tr'}{c_i})|/|\ch| \leq \frac{(n_g - 1) \cdot (n - 1)}{|\ch|} \leq \epsilon$ we ensure that $g(X, C_0, C_1, \cdots)$ vanishes over $D$, completing the proof.
+We now have that $g'(X)$ vanishes over $D$ but wish to show that $g(X, C_0, C_1, \cdots)$ vanishes over $D$ at all points to complete the proof. This just involves a sequence of applying the same technique to each of the challenges; since the polynomial $g(\cdots)$ has degree at most $n_g \cdot (n - 1)$ in any indeterminate by definition, and because each polynomial $a_i(X, C_0, C_1, ..., C_{i - 1}, \cdots)$ is determined prior to the choice of concrete challenge $c_i$ by similarly bounding $|\badch(\trprefix{\tr'}{c_i})|/|\ch| \leq \frac{n_g \cdot (n - 1)}{|\ch|} \leq \epsilon$ we ensure that $g(X, C_0, C_1, \cdots)$ vanishes over $D$, completing the proof.
