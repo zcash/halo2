@@ -315,7 +315,7 @@ a_0(X), a_1(X, C_0, a_0(X)), ..., a_{n_a - 1}\left(X, C_0, ..., C_{n_a - 1}, a_0
 \end{array}
 \right\}
 $$
-where $a_0, a_1, ..., a_{n_a - 1}$ are (multivariate) polynomials with degree $n - 1$ in $X$ and $g$ has degree $n_g(n - 1)$ at most in any indeterminates $X, C_0, C_1, ...$. In order to establish zero knowledge, any of the polynomials $a_i$ that aren't known to the verifier should have $n_e + 1$ random blinding factors as evaluations over $D$.
+where $a_0, a_1, ..., a_{n_a - 1}$ are (multivariate) polynomials with degree $n - 1$ in $X$ and $g$ has degree $n_g(n - 1)$ at most in any indeterminates $X, C_0, C_1, ...$.
 
 $\setup(\sec)$ returns $\pp = (\group, \field, \mathbf{G} \in \group^n, U, W \in \group)$.
 
@@ -456,7 +456,7 @@ $$
 \adv^\srwee_{\protocol, \relation}(\alg{\prover}, \distinguisher, \extractor, \sec) \leq q\epsilon + \adv^\dlrel_{\group,n+2}(\dlreladv, \sec)
 $$
 
-where $\frac{(n_g - 1) \cdot (n - 1)}{|\ch|} \leq \epsilon$.
+where $\frac{n_g \cdot (n - 1)}{|\ch|} \leq \epsilon$.
 
 _Proof._ We will prove this by invoking Theorem 1 of [[GT20]](https://eprint.iacr.org/2020/1351). First, we note that the challenge space for all rounds is the same, i.e. $\forall i \ \ch = \ch_i$. Theorem 1 requires us to define:
 
