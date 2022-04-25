@@ -294,7 +294,7 @@ the verifier algorithm sends to the prover.
 
 Let $\omega \in \field$ be a $n = 2^k$ primitive root of unity forming the
 domain $D = (\omega^0, \omega^1, ..., \omega^{n - 1})$ with $t(X) = X^n - 1$ the
-vanishing polynomial over this domain. Let $n_g, n_a, n_e$ be positive integers with $n_a, n_e \lt n$.
+vanishing polynomial over this domain. Let $n_g, n_a, n_e$ be positive integers with $n_a, n_e \lt n$ and $n_g \geq 4$.
 We present an interactive argument $\halo = (\setup, \prover, \verifier)$ for
 the relation
 $$
@@ -825,4 +825,4 @@ Having established that these are each non-rational polynomials of degree at mos
 
 By construction of $h'(X)$ (from the representation $\repr{H'}{\mathbf{G}}$) in step 7 we know that $h'(x) = h(x)$ where by $h(X)$ we refer to the polynomial of degree at most $(n_g - 1) \cdot (n - 1)$ whose coefficients correspond to the concatenated representations of each $\repr{H_i}{\mathbf{G}}$. As before, suppose that $h(X)$ does _not_ take the form $g'(X) / t(X)$. Then because $h(X)$ is determined prior to the choice of $x$ then by the Schwartz-Zippel lemma we know that it would only agree with $g'(X) / t(X)$ at $(n_g - 1) \cdot (n - 1)$ points at most if the polynomials were not equal. By restricting again $|\badch(\trprefix{\tr'}{x})|/|\ch| \leq \frac{(n_g - 1) \cdot (n - 1)}{|\ch|} \leq \epsilon$ we obtain $h(X) = g'(X) / t(X)$ and because $h(X)$ is a non-rational polynomial by the factor theorem we obtain that $g'(X)$ vanishes over the domain $D$.
 
-We now have that $g'(X)$ vanishes over $D$ but wish to show that $g(X, C_0, C_1, \cdots)$ vanishes over $D$ at all points to complete the proof. This just involves a sequence of applying the same technique to each of the challenges; since the polynomial $g(\cdots)$ has degree at most $(n_g - 1) \cdot (n - 1)$ in any indeterminate by definition, and because each polynomial $a_i(X, C_0, C_1, ..., C_{i - 1}, \cdots)$ is determined prior to the choice of concrete challenge $c_i$ by similarly bounding $|\badch(\trprefix{\tr'}{c_i})|/|\ch| \leq \frac{(n_g - 1) \cdot (n - 1)}{|\ch|} \leq \epsilon$ we ensure that $g(X, C_0, C_1, \cdots)$ vanishes over $D$, completing the proof.
+We now have that $g'(X)$ vanishes over $D$ but wish to show that $g(X, C_0, C_1, \cdots)$ vanishes over $D$ at all points to complete the proof. This just involves a sequence of applying the same technique to each of the challenges; since the polynomial $g(\cdots)$ has degree at most $n_g \cdot (n - 1)$ in any indeterminate by definition, and because each polynomial $a_i(X, C_0, C_1, ..., C_{i - 1}, \cdots)$ is determined prior to the choice of concrete challenge $c_i$ by similarly bounding $|\badch(\trprefix{\tr'}{c_i})|/|\ch| \leq \frac{n_g \cdot (n - 1)}{|\ch|} \leq \epsilon$ we ensure that $g(X, C_0, C_1, \cdots)$ vanishes over $D$, completing the proof.
