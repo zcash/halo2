@@ -51,7 +51,7 @@
 \bottom:{\perp}
 \alg:{#1_\textnormal{alg}}
 \zero:{\mathcal{O}}
-\dlrel:{\mathsf{dl-rel}}
+\dlrel:{\textsf{dl-rel}}
 \game:{\mathsf{G}}
 \innerprod:{\langle{#1},{#2}\rangle}
 \dlgame:{\mathsf{G}^\dlrel_{\group,n}}
@@ -62,3 +62,14 @@
 \lo:{\textnormal{lo}}
 \hi:{\textnormal{hi}}
 \protocol:{\halo}
+\extractwitness:{\textnormal{ExtractWitness}}
+\pfail:{p_\textnormal{fail}}
+\repr:\{\kern-0.1em {#1} \kern-0.1em\}^{#2}
+\rep:{\repr{#1}{}}
+\repv:{\repr{#1}{\mathbf{#2}}_{#3}}
+\dlreladv:{\mathcal{H}}
+\mr:{\mathcal{M}^{#1}_{#2}({#3})}
+\mv:{\mr{\mathbf{#1}}{#2}{#3}}
+\m:{\mr{#1}{}{#2}}
+\z:{\mathcal{Z}_{#1}({#2}, {#3})}
+\trprefix:{{#1}|_{#2}}
