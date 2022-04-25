@@ -456,7 +456,7 @@ $$
 \adv^\srwee_{\protocol, \relation}(\alg{\prover}, \distinguisher, \extractor, \sec) \leq q\epsilon + \adv^\dlrel_{\group,n+2}(\dlreladv, \sec)
 $$
 
-where $\frac{n_g \cdot (n - 1)}{|\ch|} \leq \epsilon$.
+where $\epsilon \leq \frac{n_g \cdot (n - 1)}{|\ch|}$.
 
 _Proof._ We will prove this by invoking Theorem 1 of [[GT20]](https://eprint.iacr.org/2020/1351). First, we note that the challenge space for all rounds is the same, i.e. $\forall i \ \ch = \ch_i$. Theorem 1 requires us to define:
 
