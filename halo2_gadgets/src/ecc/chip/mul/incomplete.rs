@@ -4,7 +4,9 @@ use crate::utilities::bool_check;
 use ff::Field;
 use halo2_proofs::{
     circuit::Region,
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector, VirtualCells},
+    plonk::{
+        Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector, VirtualCells,
+    },
     poly::Rotation,
 };
 
@@ -77,7 +79,6 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
 
         // Constraints used for q_mul_{2, 3} == 1
         let for_loop = |meta: &mut VirtualCells<pallas::Base>,
-                        q_mul: Expression<pallas::Base>,
                         y_a_next: Expression<pallas::Base>| {
             let one = Expression::Constant(pallas::Base::one());
 
@@ -121,10 +122,10 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             let gradient_2 = lambda2_cur * (x_a_cur - x_a_next) - y_a_cur - y_a_next;
 
             std::iter::empty()
-                .chain(Some(("bool_check", q_mul.clone() * bool_check)))
-                .chain(Some(("gradient_1", q_mul.clone() * gradient_1)))
-                .chain(Some(("secant_line", q_mul.clone() * secant_line)))
-                .chain(Some(("gradient_2", q_mul * gradient_2)))
+                .chain(Some(("bool_check", bool_check)))
+                .chain(Some(("gradient_1", gradient_1)))
+                .chain(Some(("secant_line", secant_line)))
+                .chain(Some(("gradient_2", gradient_2)))
         };
 
         // q_mul_1 == 1 checks
@@ -133,7 +134,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
 
             let y_a_next = y_a(meta, Rotation::next());
             let y_a_witnessed = meta.query_advice(self.lambda1, Rotation::cur());
-            vec![("init y_a", q_mul_1 * (y_a_witnessed - y_a_next))]
+            Constraints::with_selector(q_mul_1, Some(("init y_a", y_a_witnessed - y_a_next)))
         });
 
         // q_mul_2 == 1 checks
@@ -156,17 +157,20 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             let x_p_check = x_p_cur - x_p_next;
             let y_p_check = y_p_cur - y_p_next;
 
-            std::iter::empty()
-                .chain(Some(("x_p_check", q_mul_2.clone() * x_p_check)))
-                .chain(Some(("y_p_check", q_mul_2.clone() * y_p_check)))
-                .chain(for_loop(meta, q_mul_2, y_a_next))
+            Constraints::with_selector(
+                q_mul_2,
+                std::iter::empty()
+                    .chain(Some(("x_p_check", x_p_check)))
+                    .chain(Some(("y_p_check", y_p_check)))
+                    .chain(for_loop(meta, y_a_next)),
+            )
         });
 
         // q_mul_3 == 1 checks
         meta.create_gate("q_mul_3 == 1 checks", |meta| {
             let q_mul_3 = meta.query_selector(self.q_mul.2);
             let y_a_final = meta.query_advice(self.lambda1, Rotation::next());
-            for_loop(meta, q_mul_3, y_a_final)
+            Constraints::with_selector(q_mul_3, for_loop(meta, y_a_final))
         });
     }
 

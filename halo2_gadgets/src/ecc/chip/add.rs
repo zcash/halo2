@@ -4,7 +4,7 @@ use super::EccPoint;
 use ff::{BatchInvert, Field};
 use halo2_proofs::{
     circuit::Region,
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -204,11 +204,13 @@ impl Config {
             // ((1 - (x_q - x_p) * α - (y_q + y_p) * δ)) * y_r
             let poly12 = (one - if_alpha - if_delta) * y_r;
 
-            array::IntoIter::new([
-                poly1, poly2, poly3, poly4, poly5, poly6, poly7, poly8, poly9, poly10, poly11,
-                poly12,
-            ])
-            .map(move |poly| q_add.clone() * poly)
+            Constraints::with_selector(
+                q_add,
+                array::IntoIter::new([
+                    poly1, poly2, poly3, poly4, poly5, poly6, poly7, poly8, poly9, poly10, poly11,
+                    poly12,
+                ]),
+            )
         });
     }
 

@@ -3,7 +3,7 @@ use crate::{primitives::sinsemilla, utilities::lookup_range_check::LookupRangeCh
 use halo2_proofs::circuit::AssignedCell;
 use halo2_proofs::{
     circuit::Layouter,
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
 
@@ -82,14 +82,15 @@ impl Config {
             // (1 - k_254) * (1 - z_130 * eta) * s_minus_lo_130 = 0
             let canonicity = (one.clone() - k_254) * (one - z_130 * eta) * s_minus_lo_130;
 
-            iter::empty()
-                .chain(Some(("s_check", s_check)))
-                .chain(Some(("recovery", recovery)))
-                .chain(Some(("lo_zero", lo_zero)))
-                .chain(Some(("s_minus_lo_130_check", s_minus_lo_130_check)))
-                .chain(Some(("canonicity", canonicity)))
-                .map(|(name, poly)| (name, q_mul_overflow.clone() * poly))
-                .collect::<Vec<_>>()
+            Constraints::with_selector(
+                q_mul_overflow,
+                iter::empty()
+                    .chain(Some(("s_check", s_check)))
+                    .chain(Some(("recovery", recovery)))
+                    .chain(Some(("lo_zero", lo_zero)))
+                    .chain(Some(("s_minus_lo_130_check", s_minus_lo_130_check)))
+                    .chain(Some(("canonicity", canonicity))),
+            )
         });
     }
 

@@ -9,7 +9,7 @@ use crate::{
 use group::ff::PrimeField;
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -148,10 +148,12 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                     )))
             };
 
-            canon_checks
-                .chain(decomposition_checks)
-                .chain(Some(("alpha_0_prime check", alpha_0_prime_check)))
-                .map(move |(name, poly)| (name, q_mul_fixed_base_field.clone() * poly))
+            Constraints::with_selector(
+                q_mul_fixed_base_field,
+                canon_checks
+                    .chain(decomposition_checks)
+                    .chain(Some(("alpha_0_prime check", alpha_0_prime_check))),
+            )
         });
     }
 

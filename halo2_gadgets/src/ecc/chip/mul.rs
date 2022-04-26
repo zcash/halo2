@@ -12,7 +12,7 @@ use ff::PrimeField;
 use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{AssignedCell, Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Selector},
+    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
 use uint::construct_uint;
@@ -151,12 +151,14 @@ impl Config {
             let lsb_x = ternary(lsb.clone(), x_p.clone(), x_p - base_x);
             let lsb_y = ternary(lsb, y_p.clone(), y_p + base_y);
 
-            std::array::IntoIter::new([
-                ("bool_check", bool_check),
-                ("lsb_x", lsb_x),
-                ("lsb_y", lsb_y),
-            ])
-            .map(move |(name, poly)| (name, q_mul_lsb.clone() * poly))
+            Constraints::with_selector(
+                q_mul_lsb,
+                std::array::IntoIter::new([
+                    ("bool_check", bool_check),
+                    ("lsb_x", lsb_x),
+                    ("lsb_y", lsb_y),
+                ]),
+            )
         });
     }
 

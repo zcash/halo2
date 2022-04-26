@@ -1,10 +1,14 @@
+use std::array;
+
 use super::{EccPoint, NonIdentityEccPoint};
 
 use group::prime::PrimeCurveAffine;
 
 use halo2_proofs::{
     circuit::{AssignedCell, Region},
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector, VirtualCells},
+    plonk::{
+        Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector, VirtualCells,
+    },
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
@@ -60,10 +64,14 @@ impl Config {
             let x = meta.query_advice(self.x, Rotation::cur());
             let y = meta.query_advice(self.y, Rotation::cur());
 
-            vec![
+            // We can't use `Constraints::with_selector` because that creates constraints
+            // of the form `q_point * (x * curve_eqn)`, but this was implemented without
+            // parentheses, and thus evaluates as `(q_point * x) * curve_eqn`, which is
+            // structurally different in the pinned verifying key.
+            array::IntoIter::new([
                 ("x == 0 v on_curve", q_point.clone() * x * curve_eqn(meta)),
                 ("y == 0 v on_curve", q_point * y * curve_eqn(meta)),
-            ]
+            ])
         });
 
         meta.create_gate("witness non-identity point", |meta| {
@@ -72,7 +80,7 @@ impl Config {
 
             let q_point_non_id = meta.query_selector(self.q_point_non_id);
 
-            vec![("on_curve", q_point_non_id * curve_eqn(meta))]
+            Constraints::with_selector(q_point_non_id, Some(("on_curve", curve_eqn(meta))))
         });
     }
 
