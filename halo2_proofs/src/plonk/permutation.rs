@@ -73,13 +73,13 @@ impl Argument {
 }
 
 /// The verifying key for a single permutation argument.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct VerifyingKey<C: CurveAffine> {
     commitments: Vec<C>,
 }
 
 /// The proving key for a single permutation argument.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct ProvingKey<C: CurveAffine> {
     permutations: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
     polys: Vec<Polynomial<C::Scalar, Coeff>>,
